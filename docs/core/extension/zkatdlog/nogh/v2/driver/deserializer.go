@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
@@ -74,11 +76,11 @@ func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, name driv
 type EIDRHDeserializer = deserializer.EIDRHDeserializer
 
 // NewEIDRHDeserializer returns an enrollmentService
-func NewEIDRHDeserializer() *EIDRHDeserializer {
+func NewEIDRHDeserializer(ctx context.Context) *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
-	d.AddDeserializer(idemix2.IdentityType, &idemix2.AuditInfoDeserializer{})
-	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
-	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix2.AuditInfoDeserializer{}))
-	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})
+	d.AddDeserializer(ctx, idemix2.IdentityType, &idemix2.AuditInfoDeserializer{})
+	d.AddDeserializer(ctx, x509.IdentityType, &x509.AuditInfoDeserializer{})
+	d.AddDeserializer(ctx, htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix2.AuditInfoDeserializer{}))
+	d.AddDeserializer(ctx, multisig.Multisig, &multisig.AuditInfoDeserializer{})
 	return d
 }

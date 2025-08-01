@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package metrics
 
 import (
+	"context"
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -40,28 +41,28 @@ func NewTMSProvider(tmsID token.TMSID, provider Provider) *tmsProvider {
 }
 
 func (p *tmsProvider) NewCounter(o CounterOpts) Counter {
-	defer func() { recoverFromDuplicate(recover()) }()
+	defer func() { recoverFromDuplicate(context.Background(), recover()) }()
 	return p.provider.NewCounter(o).With(p.tmsLabels...)
 }
 
 func (p *tmsProvider) NewGauge(o GaugeOpts) Gauge {
-	defer func() { recoverFromDuplicate(recover()) }()
+	defer func() { recoverFromDuplicate(context.Background(), recover()) }()
 	return p.provider.NewGauge(o).With(p.tmsLabels...)
 }
 
 func (p *tmsProvider) NewHistogram(o HistogramOpts) Histogram {
-	defer func() { recoverFromDuplicate(recover()) }()
+	defer func() { recoverFromDuplicate(context.Background(), recover()) }()
 	return p.provider.NewHistogram(o).With(p.tmsLabels...)
 }
 
-func recoverFromDuplicate(recovered any) {
+func recoverFromDuplicate(ctx context.Context, recovered any) {
 	if recovered == nil {
 		// Registered successfully
 		return
 	}
 	if err, ok := recovered.(error); ok && errors.As(err, &prometheus.AlreadyRegisteredError{}) {
 		// Different TMS's try to register the same metric
-		logger.Warnf("Recovered from panic: %v\n", err)
+		logger.WarnfContext(ctx, "Recovered from panic: %v\n", err)
 		return
 	}
 	panic(recovered)

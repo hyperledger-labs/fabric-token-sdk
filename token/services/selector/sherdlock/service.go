@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
+	"context"
 	"time"
 
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
@@ -28,7 +29,7 @@ func NewService(
 ) *SelectorService {
 	cfg, err := config.New(c)
 	if err != nil {
-		logger.Errorf("error getting selector config, using defaults. %s", err.Error())
+		logger.ErrorfContext(context.Background(), "error getting selector config, using defaults. %s", err.Error())
 	}
 
 	loader := &loader{

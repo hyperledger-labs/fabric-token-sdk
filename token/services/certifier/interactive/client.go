@@ -116,7 +116,7 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 	for i := range cc.maxAttempts {
 		resultBoxed, err = cc.viewManager.InitiateView(NewCertificationRequestView(cc.channel, cc.namespace, cc.certifiers[0], toBeCertified...))
 		if err != nil {
-			logger.Errorf("failed to request certification [%s], try again [%d] after [%s]...", err, i, cc.waitTime)
+			logger.ErrorfContext(ctx, "failed to request certification [%s], try again [%d] after [%s]...", err, i, cc.waitTime)
 			time.Sleep(cc.waitTime)
 			continue
 		}
@@ -135,8 +135,8 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 	return nil
 }
 
-func (cc *CertificationClient) Scan() error {
-	logger.Debugf("check the certification of unspent tokens from the vault...")
+func (cc *CertificationClient) Scan(ctx context.Context) error {
+	logger.DebugfContext(ctx, "check the certification of unspent tokens from the vault...")
 	// Check the unspent tokens
 
 	allTokens, err := cc.queryEngine.UnspentTokensIterator(cc.ctx)
@@ -153,11 +153,11 @@ func (cc *CertificationClient) Scan() error {
 
 	if len(toBeCertified) != 0 {
 		// Request certification
-		logger.Debugf("request certification of [%v]", toBeCertified)
+		logger.DebugfContext(ctx, "request certification of [%v]", toBeCertified)
 		if err := cc.RequestCertification(context.Background(), toBeCertified...); err != nil {
 			return errors.WithMessagef(err, "failed retrieving certification")
 		}
-		logger.Debugf("request certification of [%v] satisfied with no error", toBeCertified)
+		logger.DebugfContext(ctx, "request certification of [%v] satisfied with no error", toBeCertified)
 	}
 
 	return nil
@@ -170,7 +170,7 @@ func (cc *CertificationClient) Start() {
 func (cc *CertificationClient) OnReceive(event events.Event) {
 	t, ok := event.Message().(tokens.TokenMessage)
 	if !ok {
-		logger.Warnf("cannot cast to TokenMessage %v", event.Message())
+		logger.WarnfContext(context.Background(), "cannot cast to TokenMessage %v", event.Message())
 		// drop this event
 		return
 	}
@@ -178,7 +178,7 @@ func (cc *CertificationClient) OnReceive(event events.Event) {
 	// sanity check that we really registered for this type of event
 	_, ok = cc.eventOperationMap[event.Topic()]
 	if !ok {
-		logger.Warnf("receive an event we did not registered for %v", event.Message())
+		logger.WarnfContext(context.Background(), "receive an event we did not registered for %v", event.Message())
 		// drop this event
 		return
 	}
@@ -186,7 +186,7 @@ func (cc *CertificationClient) OnReceive(event events.Event) {
 	// accumulate token
 	if len(cc.tokens) >= cap(cc.tokens) {
 		// skip this
-		logger.Warnf("certification pipeline filled up, skipping id [%s:%d]", t.TxID, t.Index)
+		logger.WarnfContext(context.Background(), "certification pipeline filled up, skipping id [%s:%d]", t.TxID, t.Index)
 		return
 	}
 	cc.tokens <- &token.ID{
@@ -202,16 +202,16 @@ func (cc *CertificationClient) accumulatorCutter(ctx context.Context) {
 	for {
 		select {
 		case id := <-cc.tokens:
-			logger.Debugf("Accumulate token [%s]", id)
+			logger.DebugfContext(ctx, "Accumulate token [%s]", id)
 			accumulator = append(accumulator, id)
 			if len(accumulator) >= cc.batchSize {
-				logger.Debugf("Limit reached, certify accumulator...")
+				logger.DebugfContext(ctx, "Limit reached, certify accumulator...")
 				toCertify := accumulator
 				accumulator = nil
 				go cc.requestCertification(ctx, toCertify...)
 			}
 		case <-timeout.C:
-			logger.Debugf("Timeout, certify accumulator...")
+			logger.DebugfContext(ctx, "Timeout, certify accumulator...")
 			toCertify := accumulator
 			accumulator = nil
 			go cc.requestCertification(ctx, toCertify...)
@@ -225,20 +225,20 @@ func (cc *CertificationClient) accumulatorCutter(ctx context.Context) {
 func (cc *CertificationClient) requestCertification(ctx context.Context, tokens ...*token.ID) {
 	if len(tokens) == 0 {
 		// no tokens passed, check the vault
-		logger.Debugf("request certification of 0 tokens, check the vault...")
-		if err := cc.Scan(); err != nil {
-			logger.Errorf("failed to scan the vault for token to be certified [%s]", err)
+		logger.DebugfContext(ctx, "request certification of 0 tokens, check the vault...")
+		if err := cc.Scan(ctx); err != nil {
+			logger.ErrorfContext(ctx, "failed to scan the vault for token to be certified [%s]", err)
 		}
 		return
 	}
-	logger.Debugf("request certification of [%v]", tokens)
+	logger.DebugfContext(ctx, "request certification of [%v]", tokens)
 	if err := cc.RequestCertification(ctx, tokens...); err != nil {
 		// push back the ids
-		logger.Warnf("failed retrieving certification [%s], push back token ids [%s]", err, tokens)
+		logger.WarnfContext(ctx, "failed retrieving certification [%s], push back token ids [%s]", err, tokens)
 		for _, id := range tokens {
 			cc.tokens <- id
 		}
 		return
 	}
-	logger.Debugf("request certification of [%v] satisfied with no error", tokens)
+	logger.DebugfContext(ctx, "request certification of [%v] satisfied with no error", tokens)
 }

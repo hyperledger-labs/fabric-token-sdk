@@ -483,11 +483,11 @@ func (r *Request) Upgrade(
 }
 
 // Outputs returns the sequence of outputs of the request supporting sequential and parallel aggregate operations.
-func (r *Request) Outputs() (*OutputStream, error) {
-	return r.outputs(false)
+func (r *Request) Outputs(ctx context.Context) (*OutputStream, error) {
+	return r.outputs(ctx, false)
 }
 
-func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
+func (r *Request) outputs(ctx context.Context, failOnMissing bool) (*OutputStream, error) {
 	tms := r.TokenService.tms
 	pp := tms.PublicParamsManager().PublicParameters()
 	if pp == nil {
@@ -512,11 +512,11 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting issue metadata [%d]", i)
 		}
-		if err := issueMeta.Match(&IssueAction{a: issueAction}); err != nil {
+		if err := issueMeta.Match(ctx, &IssueAction{a: issueAction}); err != nil {
 			return nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]", i)
 		}
 
-		extractedOutputs, newCounter, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing, false)
+		extractedOutputs, newCounter, err := r.extractIssueOutputs(ctx, i, counter, issueAction, issueMeta, failOnMissing, false)
 		if err != nil {
 			return nil, err
 		}
@@ -536,13 +536,13 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
 		}
-		if err := transferMeta.Match(&TransferAction{transferAction}); err != nil {
+		if err := transferMeta.Match(ctx, &TransferAction{transferAction}); err != nil {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 		if len(transferAction.GetOutputs()) != len(transferMeta.Outputs) {
 			return nil, errors.Errorf("failed matching transfer action with its metadata [%d]: invalid metadata", i)
 		}
-		extractedOutputs, newCounter, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing, false)
+		extractedOutputs, newCounter, err := r.extractTransferOutputs(ctx, i, counter, transferAction, transferMeta, failOnMissing, false)
 		if err != nil {
 			return nil, err
 		}
@@ -552,7 +552,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 	return NewOutputStream(outputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
 }
 
-func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.IssueAction, issueMeta *IssueMetadata, failOnMissing, noOutputForRecipient bool) ([]*Output, uint64, error) {
+func (r *Request) extractIssueOutputs(ctx context.Context, i int, counter uint64, issueAction driver.IssueAction, issueMeta *IssueMetadata, failOnMissing, noOutputForRecipient bool) ([]*Output, uint64, error) {
 	if len(issueAction.GetOutputs()) != len(issueMeta.Outputs) {
 		return nil, 0, errors.Errorf("failed matching issue action with its metadata [%d]: invalid metadata, the number of outputs does not match", i)
 	}
@@ -576,7 +576,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 
 		// is the j-th meta present? It might have been filtered out
 		if issueMeta.IsOutputAbsent(j) {
-			r.TokenService.logger.Debugf("Issue Action Output [%d,%d] is absent", i, j)
+			r.TokenService.logger.DebugfContext(ctx, "Issue Action Output [%d,%d] is absent", i, j)
 			if failOnMissing {
 				return nil, 0, errors.Errorf("missing token info for output [%d,%d]", i, j)
 			}
@@ -599,7 +599,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		}
 
 		// is the j-th meta present? Yes
-		tok, issuer, recipients, format, err := tms.TokensService().Deobfuscate(raw, issueMeta.Outputs[j].OutputMetadata)
+		tok, issuer, recipients, format, err := tms.TokensService().Deobfuscate(ctx, raw, issueMeta.Outputs[j].OutputMetadata)
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
@@ -635,7 +635,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 				if !recipient.Equal(metaRecipient.Identity) {
 					return nil, 0, errors.Errorf("invalid recipient [%d,%d] [%s:%s]", i, j, recipient, metaRecipient.Identity)
 				}
-				eID, rID, err := tms.WalletService().GetEIDAndRH(recipient, metaRecipient.AuditInfo)
+				eID, rID, err := tms.WalletService().GetEIDAndRH(ctx, recipient, metaRecipient.AuditInfo)
 				if err != nil {
 					return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, j)
 				}
@@ -662,7 +662,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 	return outputs, counter, nil
 }
 
-func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction driver.TransferAction, transferMeta *TransferMetadata, failOnMissing, noOutputForRecipient bool) ([]*Output, uint64, error) {
+func (r *Request) extractTransferOutputs(ctx context.Context, i int, counter uint64, transferAction driver.TransferAction, transferMeta *TransferMetadata, failOnMissing, noOutputForRecipient bool) ([]*Output, uint64, error) {
 	tms := r.TokenService.tms
 	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
 		return nil, 0, errors.New("can't get inputs: invalid token service in request")
@@ -680,7 +680,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		}
 		// is the j-th meta present? It might have been filtered out
 		if transferMeta.IsOutputAbsent(j) || len(transferMeta.Outputs[j].OutputMetadata) == 0 {
-			r.TokenService.logger.Debugf("Transfer Action Output [%d,%d] is absent", i, j)
+			r.TokenService.logger.DebugfContext(ctx, "Transfer Action Output [%d,%d] is absent", i, j)
 			if failOnMissing {
 				return nil, 0, errors.Errorf("missing token info for output [%d,%d]", i, j)
 			}
@@ -702,7 +702,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			continue
 		}
 		// is the j-th meta present? Yes
-		tok, issuer, recipients, ledgerOutputFormat, err := tms.TokensService().Deobfuscate(ledgerOutput, transferMeta.Outputs[j].OutputMetadata)
+		tok, issuer, recipients, ledgerOutputFormat, err := tms.TokensService().Deobfuscate(ctx, ledgerOutput, transferMeta.Outputs[j].OutputMetadata)
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 		}
@@ -755,13 +755,13 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 				var targetLedgerOutput []byte
 				if len(tok.Owner) != 0 {
 					receiverAuditInfo = metaRecipient.AuditInfo
-					eID, rID, err = tms.WalletService().GetEIDAndRH(recipient, receiverAuditInfo)
+					eID, rID, err = tms.WalletService().GetEIDAndRH(ctx, recipient, receiverAuditInfo)
 					if err != nil {
 						return nil, 0, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", i, recipientCounter)
 					}
 					targetLedgerOutput = ledgerOutput
 				}
-				r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
+				r.TokenService.logger.DebugfContext(ctx, "Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
 				outputs = append(outputs, &Output{
 					Token:                *tok,
 					ActionIndex:          i,
@@ -788,11 +788,11 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 // Inputs returns the sequence of inputs of the request supporting sequential and parallel aggregate operations.
 // Notice that the inputs do not carry Type and Quantity because this information might be available to all parties.
 // If you are an auditor, you can use the AuditInputs method to get everything.
-func (r *Request) Inputs() (*InputStream, error) {
-	return r.inputs(false)
+func (r *Request) Inputs(ctx context.Context) (*InputStream, error) {
+	return r.inputs(ctx, false)
 }
 
-func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
+func (r *Request) inputs(ctx context.Context, failOnMissing bool) (*InputStream, error) {
 	tms := r.TokenService.tms
 	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
 		return nil, errors.New("can't get inputs: invalid token service in request")
@@ -814,7 +814,7 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
 		}
-		if err := transferMeta.Match(&TransferAction{transferAction}); err != nil {
+		if err := transferMeta.Match(ctx, &TransferAction{transferAction}); err != nil {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 
@@ -823,7 +823,7 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 			return nil, errors.Errorf("missing token ids for transfer [%d]", i)
 		}
 
-		extractedInputs, err := r.extractTransferInputs(i, transferMeta, failOnMissing)
+		extractedInputs, err := r.extractTransferInputs(ctx, i, transferMeta, failOnMissing)
 		if err != nil {
 			return nil, err
 		}
@@ -843,7 +843,7 @@ func (r *Request) extractIssueInputs(actionIndex int, metadata *IssueMetadata) (
 	return inputs, nil
 }
 
-func (r *Request) extractTransferInputs(actionIndex int, metadata *TransferMetadata, failOnMissing bool) ([]*Input, error) {
+func (r *Request) extractTransferInputs(ctx context.Context, actionIndex int, metadata *TransferMetadata, failOnMissing bool) ([]*Input, error) {
 	// Iterate over the metadata.SenderAuditInfos because we know that there will be at least one
 	// sender, but it might be that there are not token IDs due to filtering.
 	tms := r.TokenService.tms
@@ -858,7 +858,7 @@ func (r *Request) extractTransferInputs(actionIndex int, metadata *TransferMetad
 		}
 
 		for _, sender := range input.Senders {
-			eID, rID, err := tms.WalletService().GetEIDAndRH(sender.Identity, sender.AuditInfo)
+			eID, rID, err := tms.WalletService().GetEIDAndRH(ctx, sender.Identity, sender.AuditInfo)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", actionIndex, j)
 			}
@@ -915,7 +915,7 @@ func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyAct
 		if err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed getting issue metadata [%d]", i)
 		}
-		if err := issueMeta.Match(&IssueAction{a: issueAction}); err != nil {
+		if err := issueMeta.Match(ctx, &IssueAction{a: issueAction}); err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]", i)
 		}
 
@@ -931,7 +931,7 @@ func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyAct
 		}
 		inputs = append(inputs, extractedInputs...)
 
-		extractedOutputs, newCounter, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing, noOutputForRecipient)
+		extractedOutputs, newCounter, err := r.extractIssueOutputs(ctx, i, counter, issueAction, issueMeta, failOnMissing, noOutputForRecipient)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -954,7 +954,7 @@ func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyAct
 		if err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
 		}
-		if err := transferMeta.Match(&TransferAction{transferAction}); err != nil {
+		if err := transferMeta.Match(ctx, &TransferAction{transferAction}); err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 		if verifyActions {
@@ -968,13 +968,13 @@ func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyAct
 			return nil, nil, nil, errors.Errorf("missing token ids for transfer [%d]", i)
 		}
 
-		extractedInputs, err := r.extractTransferInputs(i, transferMeta, failOnMissing)
+		extractedInputs, err := r.extractTransferInputs(ctx, i, transferMeta, failOnMissing)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		inputs = append(inputs, extractedInputs...)
 
-		extractedOutputs, newCounter, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing, noOutputForRecipient)
+		extractedOutputs, newCounter, err := r.extractTransferOutputs(ctx, i, counter, transferAction, transferMeta, failOnMissing, noOutputForRecipient)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -1087,17 +1087,17 @@ func (r *Request) AddAuditorSignature(identity Identity, sigma []byte) {
 	})
 }
 
-func (r *Request) SetSignatures(sigmas map[string][]byte) bool {
+func (r *Request) SetSignatures(ctx context.Context, sigmas map[string][]byte) bool {
 	signers := append(r.IssueSigners(), r.TransferSigners()...)
 	signatures := make([][]byte, len(signers))
 	all := true
 	for i, signer := range signers {
 		if sigma, ok := sigmas[signer.UniqueID()]; ok {
 			signatures[i] = sigma
-			r.TokenService.logger.Debugf("signature [%d] for signer [%s] is [%s]", i, signer, hash.Hashable(sigma))
+			r.TokenService.logger.DebugfContext(ctx, "signature [%d] for signer [%s] is [%s]", i, signer, hash.Hashable(sigma))
 		} else {
 			all = false
-			r.TokenService.logger.Debugf("signature [%d] for signer [%s] not found", i, signer)
+			r.TokenService.logger.DebugfContext(ctx, "signature [%d] for signer [%s] not found", i, signer)
 		}
 	}
 	r.Actions.Signatures = signatures
@@ -1294,14 +1294,14 @@ func (r *Request) SetApplicationMetadata(k string, v []byte) {
 }
 
 // FilterMetadataBy returns a new Request with the metadata filtered by the given enrollment IDs.
-func (r *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
+func (r *Request) FilterMetadataBy(ctx context.Context, eIDs ...string) (*Request, error) {
 	meta := &Metadata{
 		TokenService:         r.TokenService.tms.TokensService(),
 		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
 		Logger:               r.TokenService.logger,
 	}
-	filteredMeta, err := meta.FilterBy(eIDs[0])
+	filteredMeta, err := meta.FilterBy(ctx, eIDs[0])
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed filtering metadata by [%s]", eIDs[0])
 	}

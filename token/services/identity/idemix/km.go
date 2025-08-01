@@ -64,12 +64,14 @@ type KeyManager struct {
 }
 
 func NewKeyManager(
+	ctx context.Context,
 	conf *crypto2.Config,
 	signerService SignerService,
 	sigType bccsp.SignatureType,
 	csp bccsp.BCCSP,
 ) (*KeyManager, error) {
 	return NewKeyManagerWithSchema(
+		ctx,
 		conf,
 		signerService,
 		sigType,
@@ -80,6 +82,7 @@ func NewKeyManager(
 }
 
 func NewKeyManagerWithSchema(
+	ctx context.Context,
 	conf *crypto2.Config,
 	signerService SignerService,
 	sigType bccsp.SignatureType,
@@ -94,7 +97,7 @@ func NewKeyManagerWithSchema(
 		return nil, errors.Errorf("unsupported protocol version [%d]", conf.Version)
 	}
 
-	logger.Debugf("setting up Idemix key manager instance %s", conf.Name)
+	logger.DebugfContext(ctx, "setting up Idemix key manager instance %s", conf.Name)
 
 	// get the opts from the schema manager
 	opts, err := sm.PublicKeyImportOpts(schemaName)
@@ -142,7 +145,7 @@ func NewKeyManagerWithSchema(
 	} else {
 		if len(conf.Signer.Sk) != 0 && len(conf.Signer.Cred) != 0 {
 			// A credential is present in the config, so we set up a default signer
-			logger.Debugf("the signer contains key material, load it")
+			logger.DebugfContext(ctx, "the signer contains key material, load it")
 
 			// Import User secret key
 			userKey, err = csp.KeyImport(conf.Signer.Sk, &bccsp.IdemixUserSecretKeyImportOpts{})
@@ -174,9 +177,9 @@ func NewKeyManagerWithSchema(
 		if err != nil || !valid {
 			return nil, errors.WithMessage(err, "credential is not cryptographically valid")
 		}
-		logger.Debugf("the signer contains key material, load it, done.")
+		logger.DebugfContext(ctx, "the signer contains key material, load it, done.")
 	} else {
-		logger.Debugf("the signer does not contain full key material, it will be considered remote [cred=%d,sk=%d]", len(conf.Signer.Cred), len(conf.Signer.Sk))
+		logger.DebugfContext(ctx, "the signer does not contain full key material, it will be considered remote [cred=%d,sk=%d]", len(conf.Signer.Cred), len(conf.Signer.Sk))
 	}
 
 	var verType bccsp.VerificationType
@@ -247,7 +250,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 	var signerMetadata *bccsp.IdemixSignerMetadata
 	if len(auditInfo) != 0 {
 		logger.DebugfContext(ctx, "deserialize passed audit info")
-		ai, err := p.DeserializeAuditInfo(auditInfo)
+		ai, err := p.DeserializeAuditInfo(ctx, auditInfo)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -280,7 +283,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 
 	// Set up default signer
 	logger.DebugfContext(ctx, "setup default signer")
-	id, err := crypto2.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
+	id, err := crypto2.NewIdentity(ctx, p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to create identity")
 	}
@@ -340,8 +343,8 @@ func (p *KeyManager) IsRemote() bool {
 	return len(p.userKeySKI) == 0
 }
 
-func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	r, err := p.Deserialize(raw)
+func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (driver.Verifier, error) {
+	r, err := p.Deserialize(ctx, raw)
 	if err != nil {
 		return nil, err
 	}
@@ -349,11 +352,11 @@ func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 	return r.Identity, nil
 }
 
-func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	return p.DeserializeSigningIdentity(raw)
+func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
+	return p.DeserializeSigningIdentity(ctx, raw)
 }
 
-func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
+func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
 	eid := ""
 	if len(auditInfo) != 0 {
 		ai := &crypto2.AuditInfo{
@@ -365,7 +368,7 @@ func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
 		if err := ai.FromBytes(auditInfo); err != nil {
 			return "", err
 		}
-		if err := ai.Match(raw); err != nil {
+		if err := ai.Match(ctx, raw); err != nil {
 			return "", err
 		}
 		eid = ai.EnrollmentID()
@@ -386,8 +389,8 @@ func (p *KeyManager) Anonymous() bool {
 	return true
 }
 
-func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentity, error) {
-	id, err := p.Deserialize(raw)
+func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (driver.SigningIdentity, error) {
+	id, err := p.Deserialize(ctx, raw)
 	if err != nil {
 		return nil, err
 	}

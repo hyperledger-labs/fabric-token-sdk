@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -61,7 +62,7 @@ func TestInfoMatcher_Match(t *testing.T) {
 	}
 	infoMatcher := &InfoMatcher{AuditInfoMatcher: matchers}
 
-	err = infoMatcher.Match(serialized)
+	err = infoMatcher.Match(context.Background(), serialized)
 	assert.NoError(t, err)
 }
 
@@ -77,7 +78,7 @@ func TestInfoMatcher_Match_Invalid(t *testing.T) {
 	}
 	infoMatcher := &InfoMatcher{AuditInfoMatcher: matchers}
 
-	err = infoMatcher.Match(serialized)
+	err = infoMatcher.Match(context.Background(), serialized)
 	assert.Error(t, err)
 }
 
@@ -124,7 +125,7 @@ func TestInfoMatcher_Match_Error(t *testing.T) {
 	}
 	infoMatcher := &InfoMatcher{AuditInfoMatcher: matchers}
 
-	err := infoMatcher.Match(invalidSerialized)
+	err := infoMatcher.Match(context.Background(), invalidSerialized)
 	assert.Error(t, err)
 }
 
@@ -158,7 +159,7 @@ type mockMatcher struct {
 	expected []byte
 }
 
-func (m *mockMatcher) Match(raw []byte) error {
+func (m *mockMatcher) Match(ctx context.Context, raw []byte) error {
 	if string(raw) != string(m.expected) {
 		return errors.New("mismatch")
 	}

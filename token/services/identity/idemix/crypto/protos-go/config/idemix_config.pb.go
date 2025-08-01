@@ -11,6 +11,7 @@
 package config
 
 import (
+	"context"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -303,7 +304,7 @@ func (x *IdemixSignerConfig) GetCredentialRevocationInformation() []byte {
 	return nil
 }
 
-func (x *IdemixSignerConfig) GetRevocationHandle() string {
+func (x *IdemixSignerConfig) GetRevocationHandle(ctx context.Context) string {
 	if x != nil {
 		return x.RevocationHandle
 	}

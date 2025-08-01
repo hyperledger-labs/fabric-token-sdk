@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package encoding
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"strconv"
@@ -57,7 +58,7 @@ func (e Encoding) New() EncodingFunc {
 			return f()
 		}
 	}
-	logger.Errorf("requested Encoding function %s is unavailable", strconv.Itoa(int(e)))
+	logger.ErrorfContext(context.Background(), "requested Encoding function %s is unavailable", strconv.Itoa(int(e)))
 	return nil
 }
 

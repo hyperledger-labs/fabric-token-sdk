@@ -138,7 +138,7 @@ func NewStreamExternalWalletSignerClientWithTimeout(sp SignerProvider, stream vi
 func (s *StreamExternalWalletSignerClient) init() {
 	i := 0
 	for {
-		logger.Infof("process signature request [%d]", i)
+		logger.InfofContext(ctx, "process signature request [%d]", i)
 
 		msg := &StreamExternalWalletMsg{}
 		if err := s.stream.Recv(msg); err != nil {
@@ -155,7 +155,7 @@ func (s *StreamExternalWalletSignerClient) init() {
 				s.input <- req
 			}
 		case Done:
-			logger.Infof("no more signatures required")
+			logger.InfofContext(ctx, "no more signatures required")
 			close(s.input)
 			return
 		}
@@ -177,7 +177,7 @@ func (s *StreamExternalWalletSignerClient) Respond() error {
 			if err := s.stream.Send(msg); err != nil {
 				return errors.Wrapf(err, "failed to send back signature, party [%s]", req.Party)
 			}
-			logger.Infof("process signature request done")
+			logger.InfofContext(ctx, "process signature request done")
 		case <-time.After(s.timeout):
 			return errors.Errorf("Timeout waiting for stream input exceeded: %v", s.timeout)
 		}

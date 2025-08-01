@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -72,24 +73,24 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 	replicas := make([]testutils.EnhancedManager, number)
 
 	for i := range number {
-		replica, err := createManager(pgConnStr, backoff, maxRetries)
+		replica, err := createManager(context.Background(), pgConnStr, backoff, maxRetries)
 		assert.NoError(t, err)
 		replicas[i] = replica
 	}
 	return replicas, terminate
 }
 
-func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
+func createManager(ctx context.Context, pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
 	d := postgres.NewDriverWithDbProvider(multiplexed.MockTypeConfig(postgres2.Persistence, postgres2.Config{
 		TablePrefix:  "test",
 		DataSource:   pgConnStr,
 		MaxOpenConns: 10,
 	}), &dbProvider{})
-	lockDB, err := d.NewTokenLock("")
+	lockDB, err := d.NewTokenLock(ctx, "")
 	if err != nil {
 		return nil, err
 	}
-	tokenDB, err := d.NewToken("")
+	tokenDB, err := d.NewToken(ctx, "")
 	if err != nil {
 		return nil, errors.Join(err, lockDB.Close())
 	}

@@ -71,8 +71,8 @@ type TokenChaincode struct {
 	TokenServicesFactory func([]byte) (PublicParameters, Validator, error)
 }
 
-func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) *pb.Response {
-	logger.Debugf("init token chaincode...")
+func (cc *TokenChaincode) Init(ctx context.Context, stub shim.ChaincodeStubInterface) *pb.Response {
+	logger.DebugfContext(ctx, "init token chaincode...")
 
 	ppRaw, err := cc.Params(Params)
 	if err != nil {
@@ -80,24 +80,24 @@ func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) *pb.Response {
 	}
 
 	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
-	if err := w.Write(&SetupAction{SetupParameters: ppRaw}); err != nil {
+	if err := w.Write(ctx, &SetupAction{SetupParameters: ppRaw}); err != nil {
 		return shim.Error(err.Error())
 	}
 
 	return shim.Success(nil)
 }
 
-func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res *pb.Response) {
+func (cc *TokenChaincode) Invoke(ctx context.Context, stub shim.ChaincodeStubInterface) (res *pb.Response) {
 	txID := stub.GetTxID()
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("[%s] invoke triggered panic: %s\n%s\n", txID, r, string(debug.Stack()))
+			logger.Error("[%s] invoke triggered panic: %s\n%s\n", txID, r, string(debug.Stack()))
 			res = shim.Error(fmt.Sprintf("failed responding [%s]", r))
 		} else {
 			if res.Status == 200 {
-				logger.Debugf("[%s] OK", txID)
+				logger.DebugfContext(ctx, "[%s] OK", txID)
 			} else {
-				logger.Errorf("[%s] %d: %s", txID, res.Status, res.Message)
+				logger.ErrorfContext(ctx, "[%s] %d: %s", txID, res.Status, res.Message)
 			}
 		}
 	}()
@@ -107,7 +107,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res *pb.Resp
 	case 0:
 		return shim.Error("missing parameters")
 	default:
-		logger.Debugf("[%s] %s", txID, string(args[0]))
+		logger.DebugfContext(ctx, "[%s] %s", txID, string(args[0]))
 		switch f := string(args[0]); f {
 		case InvokeFunction:
 			if len(args) != 1 {
@@ -146,8 +146,8 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res *pb.Resp
 	}
 }
 
-func (cc *TokenChaincode) Params(builtInParams string) ([]byte, error) {
-	params := cc.ReadParamsFromFile()
+func (cc *TokenChaincode) Params(ctx context.Context, builtInParams string) ([]byte, error) {
+	params := cc.ReadParamsFromFile(ctx)
 	if params == "" {
 		if len(builtInParams) == 0 {
 			return nil, errors.New("no params provided")
@@ -164,10 +164,10 @@ func (cc *TokenChaincode) Params(builtInParams string) ([]byte, error) {
 	return ppRaw, nil
 }
 
-func (cc *TokenChaincode) GetValidator(builtInParams string) (Validator, error) {
+func (cc *TokenChaincode) GetValidator(ctx context.Context, builtInParams string) (Validator, error) {
 	var firstInitError error
 	cc.initOnce.Do(func() {
-		if err := cc.Initialize(builtInParams); err != nil {
+		if err := cc.Initialize(ctx, builtInParams); err != nil {
 			firstInitError = err
 		}
 	})
@@ -178,17 +178,17 @@ func (cc *TokenChaincode) GetValidator(builtInParams string) (Validator, error) 
 	return cc.Validator, nil
 }
 
-func (cc *TokenChaincode) Initialize(builtInParams string) error {
-	logger.Debugf("reading public parameters...")
+func (cc *TokenChaincode) Initialize(ctx context.Context, builtInParams string) error {
+	logger.DebugfContext(ctx, "reading public parameters...")
 
-	ppRaw, err := cc.Params(builtInParams)
+	ppRaw, err := cc.Params(ctx, builtInParams)
 	if err != nil {
 		return errors.WithMessagef(err, "failed reading public parameters")
 	}
 
-	logger.Debugf("instantiate public parameter manager and validator...")
+	logger.DebugfContext(ctx, "instantiate public parameter manager and validator...")
 	ppm, validator, err := cc.TokenServicesFactory(ppRaw)
-	logger.Debugf("instantiate public parameter manager and validator done with err [%v]", err)
+	logger.DebugfContext(ctx, "instantiate public parameter manager and validator done with err [%v]", err)
 	if err != nil {
 		return errors.Wrap(err, "failed to instantiate public parameter manager and validator")
 	}
@@ -198,17 +198,17 @@ func (cc *TokenChaincode) Initialize(builtInParams string) error {
 	return nil
 }
 
-func (cc *TokenChaincode) ReadParamsFromFile() string {
+func (cc *TokenChaincode) ReadParamsFromFile(ctx context.Context) string {
 	publicParamsPath := os.Getenv(PublicParamsPathVarEnv)
 	if publicParamsPath == "" {
-		logger.Errorf("no PUBLIC_PARAMS_FILE_PATH provided")
+		logger.ErrorfContext(ctx, "no PUBLIC_PARAMS_FILE_PATH provided")
 		return ""
 	}
 
-	logger.Debugf("reading %s ...", publicParamsPath)
+	logger.DebugfContext(ctx, "reading %s ...", publicParamsPath)
 	paramsAsBytes, err := os.ReadFile(publicParamsPath)
 	if err != nil {
-		logger.Errorf(
+		logger.ErrorfContext(ctx,
 			"unable to read file %s (%s). continue looking pub params from init args or cc\n", publicParamsPath, err.Error(),
 		)
 		return ""
@@ -217,8 +217,8 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 	return base64.StdEncoding.EncodeToString(paramsAsBytes)
 }
 
-func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
-	validator, err := cc.GetValidator(Params)
+func (cc *TokenChaincode) ProcessRequest(ctx context.Context, raw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
+	validator, err := cc.GetValidator(ctx, Params)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -237,7 +237,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	// Write
 	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
 	for _, action := range actions {
-		err = w.Write(action)
+		err = w.Write(ctx, action)
 		if err != nil {
 			return shim.Error("failed to write token action: " + err.Error())
 		}
@@ -264,85 +264,85 @@ func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) *p
 		return shim.Error("need to initialize public parameters")
 	}
 
-	logger.Debugf("query public params, size [%d]", len(raw))
+	logger.DebugfContext(ctx, "query public params, size [%d]", len(raw))
 
 	return shim.Success(raw)
 }
 
-func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
+func (cc *TokenChaincode) QueryTokens(ctx context.Context, idsRaw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
 	var ids []*token2.ID
 	if err := json.Unmarshal(idsRaw, &ids); err != nil {
-		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
+		logger.ErrorfContext(ctx, "failed unmarshalling tokens ids: [%s]", err)
 		return shim.Error(err.Error())
 	}
 
-	logger.Debugf("query tokens [%v]...", ids)
+	logger.DebugfContext(ctx, "query tokens [%v]...", ids)
 
 	w := translator.New(
 		stub.GetTxID(),
 		translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()),
 		&keys.Translator{},
 	)
-	res, err := w.QueryTokens(ids)
+	res, err := w.QueryTokens(ctx, ids)
 	if err != nil {
-		logger.Errorf("failed query tokens [%v]: [%s]", ids, err)
+		logger.ErrorfContext(ctx, "failed query tokens [%v]: [%s]", ids, err)
 		return shim.Error(fmt.Sprintf("failed query tokens [%v]: [%s]", ids, err))
 	}
 	raw, err := json.Marshal(res)
 	if err != nil {
-		logger.Errorf("failed marshalling tokens: [%s]", err)
+		logger.ErrorfContext(ctx, "failed marshalling tokens: [%s]", err)
 		return shim.Error(fmt.Sprintf("failed marshalling tokens: [%s]", err))
 	}
 	return shim.Success(raw)
 }
 
-func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
-	_, err := cc.GetValidator(Params)
+func (cc *TokenChaincode) AreTokensSpent(ctx context.Context, idsRaw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
+	_, err := cc.GetValidator(ctx, Params)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
 	var ids []string
 	if err := json.Unmarshal(idsRaw, &ids); err != nil {
-		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
+		logger.ErrorfContext(ctx, "failed unmarshalling tokens ids: [%s]", err)
 		return shim.Error(err.Error())
 	}
 
-	logger.Debugf("check if tokens are spent [%v]...", ids)
+	logger.DebugfContext(ctx, "check if tokens are spent [%v]...", ids)
 
 	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
-	res, err := w.AreTokensSpent(ids, cc.PublicParameters.GraphHiding())
+	res, err := w.AreTokensSpent(ctx, ids, cc.PublicParameters.GraphHiding())
 	if err != nil {
-		logger.Errorf("failed to check if tokens are spent [%v]: [%s]", ids, err)
+		logger.ErrorfContext(ctx, "failed to check if tokens are spent [%v]: [%s]", ids, err)
 		return shim.Error(fmt.Sprintf("failed to check if tokens are spent [%v]: [%s]", ids, err))
 	}
 	raw, err := json.Marshal(res)
 	if err != nil {
-		logger.Errorf("failed marshalling spent flags: [%s]", err)
+		logger.ErrorfContext(ctx, "failed marshalling spent flags: [%s]", err)
 		return shim.Error(fmt.Sprintf("failed marshalling spent flags: [%s]", err))
 	}
 	return shim.Success(raw)
 }
 
-func (cc *TokenChaincode) QueryStates(idsRaw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
+func (cc *TokenChaincode) QueryStates(ctx context.Context, idsRaw []byte, stub shim.ChaincodeStubInterface) *pb.Response {
 	var keys []string
 	if err := json.Unmarshal(idsRaw, &keys); err != nil {
-		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
+		logger.ErrorfContext(ctx, "failed unmarshalling tokens ids: [%s]", err)
 		return shim.Error(err.Error())
 	}
 
-	logger.Debugf("query state for keys [%v]...", keys)
+	logger.DebugfContext(ctx, "query state for keys [%v]...", keys)
 	values := make([][]byte, 0, len(keys))
 	for _, key := range keys {
 		value, err := stub.GetState(key)
 		if err != nil {
-			logger.Debugf("failed querying state [%s]: [%s]", key, err)
+			logger.DebugfContext(ctx, "failed querying state [%s]: [%s]", key, err)
 		}
 		values = append(values, value)
 	}
 	raw, err := json.Marshal(values)
 	if err != nil {
-		logger.Errorf("failed marshalling values: [%s]", err)
+		logger.ErrorfContext(ctx, "failed marshalling values: [%s]", err)
 		return shim.Error(fmt.Sprintf("failed marshalling values: [%s]", err))
 	}
 	return shim.Success(raw)

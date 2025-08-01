@@ -68,7 +68,7 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 	unspentTokens = iterators.Filter(unspentTokens, filter.ContainsToken)
 
 	defer unspentTokens.Close()
-	logger.Debugf("select token for a quantity of [%s]", q)
+	logger.DebugfContext(ctx, "select token for a quantity of [%s]", q)
 
 	sum = token2.NewZeroQuantity(s.precision)
 	toBeSpent = nil
@@ -87,7 +87,7 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 		}
 
 		// Append token
-		logger.Debugf("adding quantity [%s]", q.Decimal())
+		logger.DebugfContext(ctx, "adding quantity [%s]", q.Decimal())
 		toBeSpent = append(toBeSpent, &t.Id)
 		sum = sum.Add(q)
 		if target.Cmp(sum) <= 0 {

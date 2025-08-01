@@ -105,7 +105,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	for id, signer := range externalWallets {
 		if err := signer.Done(); err != nil {
 			logger.ErrorfContext(context.Context(), "failed to signal done external wallet [%s]", id)
-			logger.Errorf("failed to signal done external wallet [%s]", id)
+			logger.ErrorfContext(ctx, "failed to signal done external wallet [%s]", id)
 		}
 	}
 
@@ -203,7 +203,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			TxID:    txIDRaw,
 			Signer:  signerIdentity,
 		}
-		logger.Debugf("collecting signature [%d] on request from [%s]", i, signerIdentity)
+		logger.DebugfContext(ctx, "collecting signature [%d] on request from [%s]", i, signerIdentity)
 
 		// Case: the identity is a multi-sig identity
 		ok, multiSigners, err := multisig.Unwrap(signerIdentity)
@@ -367,7 +367,7 @@ func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Ide
 		c.sessions[c.tx.Opts.Auditor.String()] = sessionBoxed.(view.Session)
 		return []view.Identity{c.tx.Opts.Auditor}, nil
 	} else {
-		logger.Warnf("no auditor specified, skip auditing, but # auditors in public parameters is [%d]", len(auditors))
+		logger.WarnfContext(ctx, "no auditor specified, skip auditing, but # auditors in public parameters is [%d]", len(auditors))
 	}
 	return nil, nil
 }
@@ -481,7 +481,7 @@ func (c *CollectEndorsementsView) distributeTxToParty(context view.Context, entr
 	if err != nil {
 		return errors.Wrapf(err, "failed getting sig service for [%s]", c.tx.Opts.Auditor)
 	}
-	verifier, err := sigService.GetVerifier(entry.LongTerm)
+	verifier, err := sigService.GetVerifier(context.Context(), entry.LongTerm)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for identity [%s]", entry.ID)
 	}
@@ -822,7 +822,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
 	}
 	if err := t.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
-		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
+		logger.WarnfContext(ctx, "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
 	}
 
 	return s.tx, nil

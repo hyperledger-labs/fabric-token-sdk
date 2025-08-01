@@ -202,7 +202,7 @@ func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.Unspen
 		ids[i] = &tok.Id
 	}
 	tms := w.wallet.TMS()
-	meta, err := tms.WalletManager().SpentIDs(ids)
+	meta, err := tms.WalletManager().SpentIDs(context.Context(), ids)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
 	}
@@ -256,7 +256,7 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
 	}
 
-	return iterators.Filter(it, IsScript(selector)), nil
+	return iterators.Filter(it, IsScript(ctx, selector)), nil
 }
 
 // GetWallet returns the wallet whose id is the passed id

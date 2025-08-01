@@ -33,7 +33,7 @@ type SelectorService struct {
 func NewService(lockerProvider LockerProvider, c core.ConfigProvider) *SelectorService {
 	cfg, err := config.New(c)
 	if err != nil {
-		logger.Errorf("error getting selector config, using defaults. %s", err.Error())
+		logger.ErrorfContext(context.Background(), "error getting selector config, using defaults. %s", err.Error())
 	}
 
 	loader := &loader{
@@ -83,8 +83,8 @@ type loader struct {
 	requestCertification bool
 }
 
-func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
-	logger.Debugf("new in-memory locker for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
+func (s *loader) load(ctx context.Context, tms *token.ManagementService) (token.SelectorManager, error) {
+	logger.DebugfContext(ctx, "new in-memory locker for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 
 	locker, err := s.lockerProvider.New(tms.Network(), tms.Channel(), tms.Namespace())
 	if err != nil {

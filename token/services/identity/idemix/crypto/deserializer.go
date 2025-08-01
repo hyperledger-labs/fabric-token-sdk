@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
+	"context"
+
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/pkg/errors"
@@ -31,11 +33,11 @@ type Deserializer struct {
 	Schema          string
 }
 
-func (d *Deserializer) Deserialize(raw []byte) (*DeserializedIdentity, error) {
-	return d.DeserializeAgainstNymEID(raw, nil)
+func (d *Deserializer) Deserialize(ctx context.Context, raw []byte) (*DeserializedIdentity, error) {
+	return d.DeserializeAgainstNymEID(ctx, raw, nil)
 }
 
-func (d *Deserializer) DeserializeAgainstNymEID(identity []byte, nymEID []byte) (*DeserializedIdentity, error) {
+func (d *Deserializer) DeserializeAgainstNymEID(ctx context.Context, identity []byte, nymEID []byte) (*DeserializedIdentity, error) {
 	if len(identity) == 0 {
 		return nil, errors.Errorf("empty identity")
 	}
@@ -77,7 +79,7 @@ func (d *Deserializer) DeserializeAgainstNymEID(identity []byte, nymEID []byte) 
 		}
 	}
 
-	id, err := NewIdentity(idemix, NymPublicKey, serialized.Proof, d.VerType, d.SchemaManager, d.Schema)
+	id, err := NewIdentity(ctx, idemix, NymPublicKey, serialized.Proof, d.VerType, d.SchemaManager, d.Schema)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot deserialize")
 	}
@@ -91,8 +93,8 @@ func (d *Deserializer) DeserializeAgainstNymEID(identity []byte, nymEID []byte) 
 	}, nil
 }
 
-func (d *Deserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
-	ai, err := DeserializeAuditInfo(raw)
+func (d *Deserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (*AuditInfo, error) {
+	ai, err := DeserializeAuditInfo(ctx, raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
 	}

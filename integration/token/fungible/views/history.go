@@ -112,7 +112,7 @@ type ListAcceptedTransactionsView struct {
 
 func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, error) {
 	// Get query executor
-	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(p.TMSID)...))
+	owner := ttx.NewOwner(context.Context(), context, token.GetManagementService(context, ServiceOpts(p.TMSID)...))
 	it, err := owner.Transactions(context.Context(), ttxdb.QueryTransactionsParams{
 		SenderWallet:    p.SenderWallet,
 		RecipientWallet: p.RecipientWallet,
@@ -150,7 +150,7 @@ type TransactionInfoView struct {
 }
 
 func (t *TransactionInfoView) Call(context view.Context) (interface{}, error) {
-	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(t.TMSID)...))
+	owner := ttx.NewOwner(context.Context(), context, token.GetManagementService(context, ServiceOpts(t.TMSID)...))
 	info, err := owner.TransactionInfo(context.Context(), t.TransactionID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting transaction info")

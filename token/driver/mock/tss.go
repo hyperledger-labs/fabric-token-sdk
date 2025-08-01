@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
@@ -10,12 +11,13 @@ import (
 )
 
 type TokensService struct {
-	CheckUpgradeProofStub        func([]byte, []byte, []token.LedgerToken) (bool, error)
+	CheckUpgradeProofStub        func(context.Context, []byte, []byte, []token.LedgerToken) (bool, error)
 	checkUpgradeProofMutex       sync.RWMutex
 	checkUpgradeProofArgsForCall []struct {
-		arg1 []byte
+		arg1 context.Context
 		arg2 []byte
-		arg3 []token.LedgerToken
+		arg3 []byte
+		arg4 []token.LedgerToken
 	}
 	checkUpgradeProofReturns struct {
 		result1 bool
@@ -25,11 +27,12 @@ type TokensService struct {
 		result1 bool
 		result2 error
 	}
-	DeobfuscateStub        func(driver.TokenOutput, driver.TokenOutputMetadata) (*token.Token, identity.Identity, []identity.Identity, token.Format, error)
+	DeobfuscateStub        func(context.Context, driver.TokenOutput, driver.TokenOutputMetadata) (*token.Token, identity.Identity, []identity.Identity, token.Format, error)
 	deobfuscateMutex       sync.RWMutex
 	deobfuscateArgsForCall []struct {
-		arg1 driver.TokenOutput
-		arg2 driver.TokenOutputMetadata
+		arg1 context.Context
+		arg2 driver.TokenOutput
+		arg3 driver.TokenOutputMetadata
 	}
 	deobfuscateReturns struct {
 		result1 *token.Token
@@ -45,12 +48,13 @@ type TokensService struct {
 		result4 token.Format
 		result5 error
 	}
-	GenUpgradeProofStub        func([]byte, []token.LedgerToken, []byte) ([]byte, error)
+	GenUpgradeProofStub        func(context.Context, []byte, []token.LedgerToken, []byte) ([]byte, error)
 	genUpgradeProofMutex       sync.RWMutex
 	genUpgradeProofArgsForCall []struct {
-		arg1 []byte
-		arg2 []token.LedgerToken
-		arg3 []byte
+		arg1 context.Context
+		arg2 []byte
+		arg3 []token.LedgerToken
+		arg4 []byte
 	}
 	genUpgradeProofReturns struct {
 		result1 []byte
@@ -72,10 +76,11 @@ type TokensService struct {
 		result1 []byte
 		result2 error
 	}
-	RecipientsStub        func(driver.TokenOutput) ([]identity.Identity, error)
+	RecipientsStub        func(context.Context, driver.TokenOutput) ([]identity.Identity, error)
 	recipientsMutex       sync.RWMutex
 	recipientsArgsForCall []struct {
-		arg1 driver.TokenOutput
+		arg1 context.Context
+		arg2 driver.TokenOutput
 	}
 	recipientsReturns struct {
 		result1 []identity.Identity
@@ -99,35 +104,36 @@ type TokensService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokensService) CheckUpgradeProof(arg1 []byte, arg2 []byte, arg3 []token.LedgerToken) (bool, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
+func (fake *TokensService) CheckUpgradeProof(arg1 context.Context, arg2 []byte, arg3 []byte, arg4 []token.LedgerToken) (bool, error) {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	var arg3Copy []token.LedgerToken
+	var arg3Copy []byte
 	if arg3 != nil {
-		arg3Copy = make([]token.LedgerToken, len(arg3))
+		arg3Copy = make([]byte, len(arg3))
 		copy(arg3Copy, arg3)
+	}
+	var arg4Copy []token.LedgerToken
+	if arg4 != nil {
+		arg4Copy = make([]token.LedgerToken, len(arg4))
+		copy(arg4Copy, arg4)
 	}
 	fake.checkUpgradeProofMutex.Lock()
 	ret, specificReturn := fake.checkUpgradeProofReturnsOnCall[len(fake.checkUpgradeProofArgsForCall)]
 	fake.checkUpgradeProofArgsForCall = append(fake.checkUpgradeProofArgsForCall, struct {
-		arg1 []byte
+		arg1 context.Context
 		arg2 []byte
-		arg3 []token.LedgerToken
-	}{arg1Copy, arg2Copy, arg3Copy})
+		arg3 []byte
+		arg4 []token.LedgerToken
+	}{arg1, arg2Copy, arg3Copy, arg4Copy})
 	stub := fake.CheckUpgradeProofStub
 	fakeReturns := fake.checkUpgradeProofReturns
-	fake.recordInvocation("CheckUpgradeProof", []interface{}{arg1Copy, arg2Copy, arg3Copy})
+	fake.recordInvocation("CheckUpgradeProof", []interface{}{arg1, arg2Copy, arg3Copy, arg4Copy})
 	fake.checkUpgradeProofMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -141,17 +147,17 @@ func (fake *TokensService) CheckUpgradeProofCallCount() int {
 	return len(fake.checkUpgradeProofArgsForCall)
 }
 
-func (fake *TokensService) CheckUpgradeProofCalls(stub func([]byte, []byte, []token.LedgerToken) (bool, error)) {
+func (fake *TokensService) CheckUpgradeProofCalls(stub func(context.Context, []byte, []byte, []token.LedgerToken) (bool, error)) {
 	fake.checkUpgradeProofMutex.Lock()
 	defer fake.checkUpgradeProofMutex.Unlock()
 	fake.CheckUpgradeProofStub = stub
 }
 
-func (fake *TokensService) CheckUpgradeProofArgsForCall(i int) ([]byte, []byte, []token.LedgerToken) {
+func (fake *TokensService) CheckUpgradeProofArgsForCall(i int) (context.Context, []byte, []byte, []token.LedgerToken) {
 	fake.checkUpgradeProofMutex.RLock()
 	defer fake.checkUpgradeProofMutex.RUnlock()
 	argsForCall := fake.checkUpgradeProofArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *TokensService) CheckUpgradeProofReturns(result1 bool, result2 error) {
@@ -180,19 +186,20 @@ func (fake *TokensService) CheckUpgradeProofReturnsOnCall(i int, result1 bool, r
 	}{result1, result2}
 }
 
-func (fake *TokensService) Deobfuscate(arg1 driver.TokenOutput, arg2 driver.TokenOutputMetadata) (*token.Token, identity.Identity, []identity.Identity, token.Format, error) {
+func (fake *TokensService) Deobfuscate(arg1 context.Context, arg2 driver.TokenOutput, arg3 driver.TokenOutputMetadata) (*token.Token, identity.Identity, []identity.Identity, token.Format, error) {
 	fake.deobfuscateMutex.Lock()
 	ret, specificReturn := fake.deobfuscateReturnsOnCall[len(fake.deobfuscateArgsForCall)]
 	fake.deobfuscateArgsForCall = append(fake.deobfuscateArgsForCall, struct {
-		arg1 driver.TokenOutput
-		arg2 driver.TokenOutputMetadata
-	}{arg1, arg2})
+		arg1 context.Context
+		arg2 driver.TokenOutput
+		arg3 driver.TokenOutputMetadata
+	}{arg1, arg2, arg3})
 	stub := fake.DeobfuscateStub
 	fakeReturns := fake.deobfuscateReturns
-	fake.recordInvocation("Deobfuscate", []interface{}{arg1, arg2})
+	fake.recordInvocation("Deobfuscate", []interface{}{arg1, arg2, arg3})
 	fake.deobfuscateMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3, ret.result4, ret.result5
@@ -206,17 +213,17 @@ func (fake *TokensService) DeobfuscateCallCount() int {
 	return len(fake.deobfuscateArgsForCall)
 }
 
-func (fake *TokensService) DeobfuscateCalls(stub func(driver.TokenOutput, driver.TokenOutputMetadata) (*token.Token, identity.Identity, []identity.Identity, token.Format, error)) {
+func (fake *TokensService) DeobfuscateCalls(stub func(context.Context, driver.TokenOutput, driver.TokenOutputMetadata) (*token.Token, identity.Identity, []identity.Identity, token.Format, error)) {
 	fake.deobfuscateMutex.Lock()
 	defer fake.deobfuscateMutex.Unlock()
 	fake.DeobfuscateStub = stub
 }
 
-func (fake *TokensService) DeobfuscateArgsForCall(i int) (driver.TokenOutput, driver.TokenOutputMetadata) {
+func (fake *TokensService) DeobfuscateArgsForCall(i int) (context.Context, driver.TokenOutput, driver.TokenOutputMetadata) {
 	fake.deobfuscateMutex.RLock()
 	defer fake.deobfuscateMutex.RUnlock()
 	argsForCall := fake.deobfuscateArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *TokensService) DeobfuscateReturns(result1 *token.Token, result2 identity.Identity, result3 []identity.Identity, result4 token.Format, result5 error) {
@@ -254,35 +261,36 @@ func (fake *TokensService) DeobfuscateReturnsOnCall(i int, result1 *token.Token,
 	}{result1, result2, result3, result4, result5}
 }
 
-func (fake *TokensService) GenUpgradeProof(arg1 []byte, arg2 []token.LedgerToken, arg3 []byte) ([]byte, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	var arg2Copy []token.LedgerToken
+func (fake *TokensService) GenUpgradeProof(arg1 context.Context, arg2 []byte, arg3 []token.LedgerToken, arg4 []byte) ([]byte, error) {
+	var arg2Copy []byte
 	if arg2 != nil {
-		arg2Copy = make([]token.LedgerToken, len(arg2))
+		arg2Copy = make([]byte, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	var arg3Copy []byte
+	var arg3Copy []token.LedgerToken
 	if arg3 != nil {
-		arg3Copy = make([]byte, len(arg3))
+		arg3Copy = make([]token.LedgerToken, len(arg3))
 		copy(arg3Copy, arg3)
+	}
+	var arg4Copy []byte
+	if arg4 != nil {
+		arg4Copy = make([]byte, len(arg4))
+		copy(arg4Copy, arg4)
 	}
 	fake.genUpgradeProofMutex.Lock()
 	ret, specificReturn := fake.genUpgradeProofReturnsOnCall[len(fake.genUpgradeProofArgsForCall)]
 	fake.genUpgradeProofArgsForCall = append(fake.genUpgradeProofArgsForCall, struct {
-		arg1 []byte
-		arg2 []token.LedgerToken
-		arg3 []byte
-	}{arg1Copy, arg2Copy, arg3Copy})
+		arg1 context.Context
+		arg2 []byte
+		arg3 []token.LedgerToken
+		arg4 []byte
+	}{arg1, arg2Copy, arg3Copy, arg4Copy})
 	stub := fake.GenUpgradeProofStub
 	fakeReturns := fake.genUpgradeProofReturns
-	fake.recordInvocation("GenUpgradeProof", []interface{}{arg1Copy, arg2Copy, arg3Copy})
+	fake.recordInvocation("GenUpgradeProof", []interface{}{arg1, arg2Copy, arg3Copy, arg4Copy})
 	fake.genUpgradeProofMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -296,17 +304,17 @@ func (fake *TokensService) GenUpgradeProofCallCount() int {
 	return len(fake.genUpgradeProofArgsForCall)
 }
 
-func (fake *TokensService) GenUpgradeProofCalls(stub func([]byte, []token.LedgerToken, []byte) ([]byte, error)) {
+func (fake *TokensService) GenUpgradeProofCalls(stub func(context.Context, []byte, []token.LedgerToken, []byte) ([]byte, error)) {
 	fake.genUpgradeProofMutex.Lock()
 	defer fake.genUpgradeProofMutex.Unlock()
 	fake.GenUpgradeProofStub = stub
 }
 
-func (fake *TokensService) GenUpgradeProofArgsForCall(i int) ([]byte, []token.LedgerToken, []byte) {
+func (fake *TokensService) GenUpgradeProofArgsForCall(i int) (context.Context, []byte, []token.LedgerToken, []byte) {
 	fake.genUpgradeProofMutex.RLock()
 	defer fake.genUpgradeProofMutex.RUnlock()
 	argsForCall := fake.genUpgradeProofArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *TokensService) GenUpgradeProofReturns(result1 []byte, result2 error) {
@@ -391,18 +399,19 @@ func (fake *TokensService) NewUpgradeChallengeReturnsOnCall(i int, result1 []byt
 	}{result1, result2}
 }
 
-func (fake *TokensService) Recipients(arg1 driver.TokenOutput) ([]identity.Identity, error) {
+func (fake *TokensService) Recipients(arg1 context.Context, arg2 driver.TokenOutput) ([]identity.Identity, error) {
 	fake.recipientsMutex.Lock()
 	ret, specificReturn := fake.recipientsReturnsOnCall[len(fake.recipientsArgsForCall)]
 	fake.recipientsArgsForCall = append(fake.recipientsArgsForCall, struct {
-		arg1 driver.TokenOutput
-	}{arg1})
+		arg1 context.Context
+		arg2 driver.TokenOutput
+	}{arg1, arg2})
 	stub := fake.RecipientsStub
 	fakeReturns := fake.recipientsReturns
-	fake.recordInvocation("Recipients", []interface{}{arg1})
+	fake.recordInvocation("Recipients", []interface{}{arg2})
 	fake.recipientsMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -416,17 +425,17 @@ func (fake *TokensService) RecipientsCallCount() int {
 	return len(fake.recipientsArgsForCall)
 }
 
-func (fake *TokensService) RecipientsCalls(stub func(driver.TokenOutput) ([]identity.Identity, error)) {
+func (fake *TokensService) RecipientsCalls(stub func(context.Context, driver.TokenOutput) ([]identity.Identity, error)) {
 	fake.recipientsMutex.Lock()
 	defer fake.recipientsMutex.Unlock()
 	fake.RecipientsStub = stub
 }
 
-func (fake *TokensService) RecipientsArgsForCall(i int) driver.TokenOutput {
+func (fake *TokensService) RecipientsArgsForCall(i int) (context.Context, driver.TokenOutput) {
 	fake.recipientsMutex.RLock()
 	defer fake.recipientsMutex.RUnlock()
 	argsForCall := fake.recipientsArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *TokensService) RecipientsReturns(result1 []identity.Identity, result2 error) {

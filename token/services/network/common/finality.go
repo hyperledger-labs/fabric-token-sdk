@@ -58,7 +58,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()
 	if err := t.retryRunner.Run(func() error { return t.runOnStatus(newCtx, txID, status, message, tokenRequestHash) }); err != nil {
-		t.logger.Errorf("Listener failed")
+		t.logger.ErrorfContext(newCtx, "Listener failed")
 	}
 }
 
@@ -89,7 +89,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 			}
 		}
 		t.logger.DebugfContext(ctx, "Check token request")
-		if err := t.checkTokenRequest(txID, tr, tokenRequestHash); err != nil {
+		if err := t.checkTokenRequest(ctx, txID, tr, tokenRequestHash); err != nil {
 			t.logger.ErrorfContext(ctx, "tx [%s], %s", txID, err)
 			txStatus = driver.Deleted
 			message = err.Error()
@@ -113,13 +113,13 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 	return nil
 }
 
-func (t *FinalityListener) checkTokenRequest(txID string, request *token.Request, reference []byte) error {
+func (t *FinalityListener) checkTokenRequest(ctx context.Context, txID string, request *token.Request, reference []byte) error {
 	trToSign, err := request.MarshalToSign()
 	if err != nil {
 		return errors.Errorf("can't get request hash '%s'", txID)
 	}
 	if base64.StdEncoding.EncodeToString(reference) != hash.Hashable(trToSign).String() {
-		t.logger.Errorf("tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(reference), hash.Hashable(trToSign))
+		t.logger.ErrorfContext(ctx, "tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(reference), hash.Hashable(trToSign))
 		// no further processing of the tokens of these transactions
 		return errors.Errorf(
 			"token requests do not match, tr hashes [%s][%s]",

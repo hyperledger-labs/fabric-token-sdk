@@ -93,7 +93,7 @@ func (m *ServiceManager) ServiceByTMSId(tmsID token.TMSID) (*Service, error) {
 }
 
 // RestoreTMS restores the ttxdb corresponding to the passed TMS ID.
-func (m *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
+func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) error {
 	net, err := m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
@@ -109,7 +109,7 @@ func (m *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
 	return iterators.ForEach(it, func(record *driver.TokenRequestRecord) error {
-		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
+		logger.DebugfContext(ctx, "restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
 		return net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, db.tmsProvider, db.tmsID, db.ttxStoreService, db.tokensService, db.finalityTracer))
 	})
 }
@@ -119,25 +119,25 @@ var (
 )
 
 // Get returns the Service instance for the passed TMS
-func Get(sp token.ServiceProvider, tms *token.ManagementService) *Service {
+func Get(ctx context.Context, sp token.ServiceProvider, tms *token.ManagementService) *Service {
 	if tms == nil {
-		logger.Debugf("no TMS provided")
+		logger.DebugfContext(ctx, "no TMS provided")
 		return nil
 	}
 	s, err := sp.GetService(managerType)
 	if err != nil {
-		logger.Errorf("failed to get manager service: [%s]", err)
+		logger.ErrorfContext(ctx, "failed to get manager service: [%s]", err)
 		return nil
 	}
 	auditor, err := s.(*ServiceManager).ServiceByTMSId(tms.ID())
 	if err != nil {
-		logger.Errorf("failed to get db for TMS [%s]: [%s]", tms.ID(), err)
+		logger.ErrorfContext(ctx, "failed to get db for TMS [%s]: [%s]", tms.ID(), err)
 		return nil
 	}
 	return auditor
 }
 
 // New returns the Service instance for the passed TMS
-func New(sp token.ServiceProvider, tms *token.ManagementService) *Service {
-	return Get(sp, tms)
+func New(ctx context.Context, sp token.ServiceProvider, tms *token.ManagementService) *Service {
+	return Get(ctx, sp, tms)
 }

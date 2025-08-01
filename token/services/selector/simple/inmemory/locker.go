@@ -117,7 +117,7 @@ func (d *locker) UnlockIDs(ctx context.Context, ids ...*token2.ID) []*token2.ID 
 		entry, ok := d.locked[k]
 		if !ok {
 			notFound = append(notFound, &k)
-			logger.Warnf("unlocking [%s] hold by no one, skipping [%s]", id, entry)
+			logger.WarnfContext(ctx, "unlocking [%s] hold by no one, skipping [%s]", id, entry)
 			continue
 		}
 		logger.DebugfContext(ctx, "unlocking [%s] hold by [%s]", id, entry)
@@ -173,7 +173,7 @@ func (d *locker) scan(ctx context.Context) {
 		for id, entry := range d.locked {
 			status, _, err := d.ttxdb.GetStatus(ctx, entry.TxID)
 			if err != nil {
-				logger.Warnf("failed getting status for token [%s] locked by [%s], remove", id, entry)
+				logger.WarnfContext(ctx, "failed getting status for token [%s] locked by [%s], remove", id, entry)
 				removeList = append(removeList, id)
 				continue
 			}

@@ -30,11 +30,11 @@ func AuditingSignaturesValidate[P driver.PublicParameters, T any, TA driver.Tran
 			return errors.Errorf("auditor [%s] is not in auditors", auditor)
 		}
 
-		verifier, err := ctx.Deserializer.GetAuditorVerifier(auditor)
+		verifier, err := ctx.Deserializer.GetAuditorVerifier(ctx.Ctx, auditor)
 		if err != nil {
 			return errors.Wrapf(err, "failed to deserialize auditor's public key")
 		}
-		_, err = ctx.SignatureProvider.HasBeenSignedBy(auditor, verifier)
+		_, err = ctx.SignatureProvider.HasBeenSignedBy(ctx.Ctx, auditor, verifier)
 		if err != nil {
 			return errors.Wrap(err, "failed to verify auditor's signature")
 		}

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -185,7 +186,7 @@ func (t *ManagementService) TokensService() *TokensService {
 func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {
 	ms, err := GetManagementServiceProvider(sp).GetManagementService(opts...)
 	if err != nil {
-		logger.Warnf("failed to get token manager service [%s]", err)
+		logger.WarnfContext(context.Background(), "failed to get token manager service [%s]", err)
 		return nil
 	}
 	return ms

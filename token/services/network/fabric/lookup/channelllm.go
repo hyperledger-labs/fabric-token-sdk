@@ -136,7 +136,7 @@ func (s *Scanner) Scan() {
 			return true, nil
 		}
 
-		logger.Debugf("scanning [%s]...", tx.TxID())
+		logger.DebugfContext(ctx, "scanning [%s]...", tx.TxID())
 
 		rws, err := v.InspectRWSet(s.context, tx.Results())
 		if err != nil {
@@ -144,7 +144,7 @@ func (s *Scanner) Scan() {
 		}
 
 		if !slices.Contains(rws.Namespaces(), s.namespace) {
-			logger.Debugf("scanning [%s] does not contain namespace [%s]", tx.TxID(), s.namespace)
+			logger.DebugfContext(ctx, "scanning [%s] does not contain namespace [%s]", tx.TxID(), s.namespace)
 			return false, nil
 		}
 
@@ -152,28 +152,28 @@ func (s *Scanner) Scan() {
 		for i := 0; i < rws.NumWrites(ns); i++ {
 			k, v, err := rws.GetWriteAt(ns, i)
 			if err != nil {
-				logger.Debugf("scanning [%s]: failed to get key [%s]", tx.TxID(), err)
+				logger.DebugfContext(ctx, "scanning [%s]: failed to get key [%s]", tx.TxID(), err)
 				return false, err
 			}
 			if k == s.key {
-				logger.Debugf("scanning [%s]: found key [%s]", tx.TxID(), k)
+				logger.DebugfContext(ctx, "scanning [%s]: found key [%s]", tx.TxID(), k)
 				keyValue = v
 				return true, nil
 			}
 		}
-		logger.Debugf("scanning for key [%s] on [%s] not found", s.key, tx.TxID())
+		logger.DebugfContext(ctx, "scanning for key [%s] on [%s] not found", s.key, tx.TxID())
 		if s.stopOnLastTx && lastTxID == tx.TxID() {
-			logger.Debugf("transaction [%s] reached, stop scan.", lastTxID)
+			logger.DebugfContext(ctx, "transaction [%s] reached, stop scan.", lastTxID)
 			return true, errors.Errorf("transaction [%s] reached, stop scan.", lastTxID)
 		}
 		return false, nil
 	}); err != nil {
-		logger.Errorf("failed scanning for key [%s]: [%s]", s.key, err)
+		logger.ErrorfContext(ctx, "failed scanning for key [%s]: [%s]", s.key, err)
 		s.listener.OnError(s.context, s.key, err)
 		return
 	}
 
-	logger.Debugf("scanning for key [%s] found [%s]", s.key, logging.Base64(keyValue))
+	logger.DebugfContext(ctx, "scanning for key [%s] found [%s]", s.key, logging.Base64(keyValue))
 
 	s.listener.OnStatus(s.context, s.key, keyValue)
 }

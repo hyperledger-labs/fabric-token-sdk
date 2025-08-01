@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -20,7 +21,7 @@ func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
 	t.Helper()
 	for _, c := range IdentityCases {
 		driver := cfgProvider(c.Name)
-		db, err := driver.NewIdentity("", c.Name)
+		db, err := driver.NewIdentity(context.Background(), "", c.Name)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -195,7 +195,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// Sanity checks:
 	// - the transaction is in pending state
 	logger.DebugfContext(context.Context(), "Verify owner")
-	owner := ttx.NewOwner(context, tx.TokenService())
+	owner := ttx.NewOwner(context.Context(), context, tx.TokenService())
 	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
@@ -345,7 +345,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 
 	// Sanity checks:
 	// - the transaction is in pending state
-	owner := ttx.NewOwner(context, tx.TokenService())
+	owner := ttx.NewOwner(context.Context(), context, tx.TokenService())
 	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
@@ -438,7 +438,7 @@ func (t *PrepareTransferView) Call(context view.Context) (interface{}, error) {
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign transaction")
 
-	txRaw, err := tx.Bytes()
+	txRaw, err := tx.Bytes(context.Context())
 	assert.NoError(err, "failed to serialize transaction")
 
 	return &PrepareTransferResult{TxID: tx.ID(), TXRaw: txRaw}, nil

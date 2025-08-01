@@ -76,7 +76,7 @@ func (db *TokenStore) StoreToken(ctx context.Context, tr driver.TokenRecord, own
 	}
 	if err = tx.StoreToken(context.TODO(), tr, owners); err != nil {
 		if err1 := tx.Rollback(); err1 != nil {
-			logger.Errorf("error rolling back: %s", err1.Error())
+			logger.ErrorfContext(ctx, "error rolling back: %s", err1.Error())
 		}
 		return
 	}
@@ -745,13 +745,13 @@ func (db *TokenStore) ExistsCertification(ctx context.Context, tokenID *token.ID
 
 	certification, err := common.QueryUnique[[]byte](db.readDB, query, args...)
 	if err != nil {
-		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
+		logger.WarnfContext(ctx, "tried to check certification existence for token id %s, err %s", tokenID, err)
 		return false
 	}
 
 	result := len(certification) != 0
 	if !result {
-		logger.Warnf("tried to check certification existence for token id %s, got an empty certification", tokenID)
+		logger.WarnfContext(ctx, "tried to check certification existence for token id %s, got an empty certification", tokenID)
 	}
 	return result
 }
@@ -1016,7 +1016,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		Format()
 	logger.Debug(query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
-		logger.Errorf("error storing token [%s] in table [%s] [%s]: [%s][%s]", tr.TxID, t.table.Tokens, query, err, string(debug.Stack()))
+		logger.ErrorfContext(ctx, "error storing token [%s] in table [%s] [%s]: [%s][%s]", tr.TxID, t.table.Tokens, query, err, string(debug.Stack()))
 		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.table.Tokens)
 	}
 
@@ -1036,7 +1036,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	logger.Debug(query, args)
 
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
-		logger.Errorf("error storing token ownerships [%s]: %s", query, err)
+		logger.ErrorfContext(ctx, "error storing token ownerships [%s]: %s", query, err)
 		return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
 	}
 

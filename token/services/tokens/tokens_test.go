@@ -30,7 +30,7 @@ func (a authMock) Issued(ctx context.Context, issuer driver.Identity, tok *token
 func (a authMock) IsMine(ctx context.Context, tok *token2.Token) (string, []string, bool) {
 	return "", []string{string(tok.Owner)}, true
 }
-func (a authMock) AmIAnAuditor() bool {
+func (a authMock) AmIAnAuditor(ctx context.Context) bool {
 	return false
 }
 func (a authMock) OwnerType(raw []byte) (string, []byte, error) {

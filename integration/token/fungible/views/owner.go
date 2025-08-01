@@ -27,7 +27,7 @@ type SetTransactionOwnerStatusView struct {
 }
 
 func (r *SetTransactionOwnerStatusView) Call(context view.Context) (interface{}, error) {
-	owner := ttx.NewOwner(context, token.GetManagementService(context))
+	owner := ttx.NewOwner(context.Context(), context, token.GetManagementService(context))
 	assert.NoError(owner.SetStatus(context.Context(), r.TxID, r.Status, r.Message), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
 
 	return nil, nil

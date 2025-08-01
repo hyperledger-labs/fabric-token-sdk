@@ -96,6 +96,7 @@ func (p *ManagementServiceProvider) NewManagementService(opts ...ServiceOption) 
 }
 
 func (p *ManagementServiceProvider) managementService(aNew bool, opts ...ServiceOption) (*ManagementService, error) {
+	ctx := context.Background()
 	opt, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to compile options")
@@ -105,7 +106,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 		return nil, errors.Wrap(err, "failed to normalize options")
 	}
 
-	p.logger.Debugf("get tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
+	p.logger.DebugfContext(ctx, "get tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 
 	var tokenService driver.TokenManagerService
 	driverOpts := driver.ServiceOptions{
@@ -125,7 +126,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", opt)
 	}
 
-	p.logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
+	p.logger.DebugfContext(ctx, "returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 
 	ms := &ManagementService{
 		logger:                      logging.DeriveDriverLogger(p.logger, "", opt.Network, opt.Channel, opt.Namespace),
@@ -226,8 +227,8 @@ func (p *tmsNormalizer) Normalize(opt *ServiceOptions) (*ServiceOptions, error) 
 	return p.normalizer.Normalize(opt)
 }
 
-func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
-	p.logger.Debugf("update tms [%s] with public params [%s]", tmsID, Hashable(val))
+func (p *ManagementServiceProvider) Update(ctx context.Context, tmsID TMSID, val []byte) error {
+	p.logger.DebugfContext(ctx, "update tms [%s] with public params [%s]", tmsID, Hashable(val))
 	err := p.tmsProvider.Update(driver.ServiceOptions{
 		Network:      tmsID.Network,
 		Channel:      tmsID.Channel,
@@ -237,7 +238,7 @@ func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed updating tms [%s]", tmsID)
 	}
-	p.logger.Debugf("update tms [%s] with public params [%s]...done", tmsID, Hashable(val))
+	p.logger.DebugfContext(ctx, "update tms [%s] with public params [%s]...done", tmsID, Hashable(val))
 	return nil
 }
 

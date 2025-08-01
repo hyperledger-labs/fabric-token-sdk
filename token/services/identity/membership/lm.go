@@ -32,7 +32,7 @@ const (
 var logger = logging.MustGetLogger()
 
 type KeyManagerProvider interface {
-	Get(identityConfig *driver.IdentityConfiguration) (KeyManager, error)
+	Get(ctx context.Context, identityConfig *driver.IdentityConfiguration) (KeyManager, error)
 }
 
 type KeyManager interface {
@@ -117,15 +117,15 @@ func (l *LocalMembership) IsMe(ctx context.Context, id driver.Identity) bool {
 	return l.signerService.IsMe(ctx, id)
 }
 
-func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
+func (l *LocalMembership) GetIdentifier(ctx context.Context, id driver.Identity) (string, error) {
 	l.localIdentitiesMutex.RLock()
 	defer l.localIdentitiesMutex.RUnlock()
 
 	for _, label := range []string{string(id), id.String()} {
-		l.logger.Debugf("get local identity by label [%s]", hash.Hashable(label))
-		r := l.getLocalIdentity(label)
+		l.logger.DebugfContext(ctx, "get local identity by label [%s]", hash.Hashable(label))
+		r := l.getLocalIdentity(ctx, label)
 		if r == nil {
-			l.logger.Debugf(
+			l.logger.DebugfContext(ctx,
 				"local identity not found for label [%s] [%v]",
 				logging.Keys(l.localIdentitiesByName),
 				logging.Printable(label),
@@ -144,12 +144,12 @@ func (l *LocalMembership) GetDefaultIdentifier() string {
 	return l.getDefaultIdentifier()
 }
 
-func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (idriver.IdentityInfo, error) {
+func (l *LocalMembership) GetIdentityInfo(ctx context.Context, label string, auditInfo []byte) (idriver.IdentityInfo, error) {
 	l.localIdentitiesMutex.RLock()
 	defer l.localIdentitiesMutex.RUnlock()
 
-	l.logger.Debugf("get identity info by label [%s][%s]", label, hash.Hashable(label))
-	localIdentity := l.getLocalIdentity(label)
+	l.logger.DebugfContext(ctx, "get identity info by label [%s][%s]", label, hash.Hashable(label))
+	localIdentity := l.getLocalIdentity(ctx, label)
 	if localIdentity == nil {
 		return nil, errors2.Errorf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
 	}
@@ -176,11 +176,11 @@ func (l *LocalMembership) IDs() ([]string, error) {
 	return set.ToSlice(), nil
 }
 
-func (l *LocalMembership) Load(identities []*idriver.ConfiguredIdentity, targets []view.Identity) error {
+func (l *LocalMembership) Load(ctx context.Context, identities []*idriver.ConfiguredIdentity, targets []view.Identity) error {
 	l.localIdentitiesMutex.Lock()
 	defer l.localIdentitiesMutex.Unlock()
 
-	l.logger.Debugf("load identities [%s][%+q]", l.IdentityType, identities)
+	l.logger.DebugfContext(ctx, "load identities [%s][%+q]", l.IdentityType, identities)
 
 	// init fields
 	l.targetIdentities = targets
@@ -222,35 +222,35 @@ func (l *LocalMembership) Load(identities []*idriver.ConfiguredIdentity, targets
 
 	// load identities from configuration
 	for i, identityConfiguration := range ics {
-		l.logger.Debugf("load identity configuration [%+v]", identityConfiguration)
+		l.logger.DebugfContext(ctx, "load identity configuration [%+v]", identityConfiguration)
 		if err := l.registerIdentityConfiguration(context.Background(), &identityConfiguration, defaults[i]); err != nil {
 			// we log the error so the user can fix it but it shouldn't stop the loading of the service.
-			l.logger.Errorf("failed loading identity with err [%s]", err)
+			l.logger.ErrorfContext(ctx, "failed loading identity with err [%s]", err)
 		} else {
-			l.logger.Debugf("load wallet for identity [%+v] done.", identityConfiguration)
+			l.logger.DebugfContext(ctx, "load wallet for identity [%+v] done.", identityConfiguration)
 		}
 	}
 
 	// if no default identity, use the first one
 	defaultIdentifier := l.getDefaultIdentifier()
 	if len(defaultIdentifier) == 0 {
-		l.logger.Warnf("no default identity, use the first one available")
+		l.logger.WarnfContext(ctx, "no default identity, use the first one available")
 		if len(l.localIdentities) > 0 {
 			defaultIdentity := l.firstDefaultIdentifier()
 			if defaultIdentity == nil {
-				l.logger.Warnf("no default identity can be set among the available identities [%d]", len(l.localIdentities))
+				l.logger.WarnfContext(ctx, "no default identity can be set among the available identities [%d]", len(l.localIdentities))
 			} else {
 				defaultIdentity.Default = true
 			}
-			l.logger.Warnf("default identity is [%s]", l.getDefaultIdentifier())
+			l.logger.WarnfContext(ctx, "default identity is [%s]", l.getDefaultIdentifier())
 		} else {
-			l.logger.Warnf("cannot set default identity, no identity available")
+			l.logger.WarnfContext(ctx, "cannot set default identity, no identity available")
 		}
 	} else {
-		l.logger.Debugf("default identifier is [%s]", defaultIdentifier)
+		l.logger.DebugfContext(ctx, "default identifier is [%s]", defaultIdentifier)
 	}
 
-	l.logger.Debugf("load identities [%s] done", l.IdentityType)
+	l.logger.DebugfContext(ctx, "load identities [%s] done", l.IdentityType)
 
 	return nil
 }
@@ -302,10 +302,10 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 	var errs []error
 	var keyManager KeyManager
 	var priority int
-	l.logger.Debugf("try to load identity with [%d] key managers [%v]", len(l.KeyManagerProviders), l.KeyManagerProviders)
+	l.logger.DebugfContext(ctx, "try to load identity with [%d] key managers [%v]", len(l.KeyManagerProviders), l.KeyManagerProviders)
 	for i, p := range l.KeyManagerProviders {
 		var err error
-		keyManager, err = p.Get(identityConfig)
+		keyManager, err = p.Get(ctx, identityConfig)
 		if err == nil && keyManager != nil && len(keyManager.EnrollmentID()) != 0 {
 			priority = i
 			break
@@ -322,20 +322,20 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 		)
 	}
 
-	l.logger.Debugf("append local identity for [%s]", identityConfig.ID)
-	if err := l.addLocalIdentity(identityConfig, keyManager, defaultIdentity, priority); err != nil {
+	l.logger.DebugfContext(ctx, "append local identity for [%s]", identityConfig.ID)
+	if err := l.addLocalIdentity(ctx, identityConfig, keyManager, defaultIdentity, priority); err != nil {
 		return errors2.Wrapf(err, "failed to add local identity for [%s]", identityConfig.ID)
 	}
 
 	if exists, _ := l.identityDB.ConfigurationExists(ctx, identityConfig.ID, l.IdentityType, identityConfig.URL); !exists {
-		l.logger.Debugf("does the configuration already exists for [%s]? no, add it", identityConfig.ID)
+		l.logger.DebugfContext(ctx, "does the configuration already exists for [%s]? no, add it", identityConfig.ID)
 		// enforce type
 		identityConfig.Type = l.IdentityType
 		if err := l.identityDB.AddConfiguration(ctx, *identityConfig); err != nil {
 			return err
 		}
 	}
-	l.logger.Debugf("added local identity for id [%s], remote [%v]", identityConfig.ID+"@"+keyManager.EnrollmentID(), keyManager.IsRemote())
+	l.logger.DebugfContext(ctx, "added local identity for id [%s], remote [%v]", identityConfig.ID+"@"+keyManager.EnrollmentID(), keyManager.IsRemote())
 	return nil
 }
 
@@ -343,7 +343,7 @@ func (l *LocalMembership) registerIdentityConfiguration(ctx context.Context, ide
 	// Try to register the local identity
 	identity.URL = l.config.TranslatePath(identity.URL)
 	if err := l.registerLocalIdentity(ctx, identity, defaultIdentity); err != nil {
-		l.logger.Warnf("failed to load local identity at [%s]:[%s]", identity.URL, err)
+		l.logger.WarnfContext(ctx, "failed to load local identity at [%s]:[%s]", identity.URL, err)
 		// Does path correspond to a folder containing multiple identities?
 		if err := l.registerLocalIdentities(ctx, identity); err != nil {
 			return errors2.WithMessagef(err, "failed to register local identity")
@@ -355,7 +355,7 @@ func (l *LocalMembership) registerIdentityConfiguration(ctx context.Context, ide
 func (l *LocalMembership) registerLocalIdentities(ctx context.Context, configuration *driver.IdentityConfiguration) error {
 	entries, err := os.ReadDir(configuration.URL)
 	if err != nil {
-		l.logger.Warnf("failed reading from [%s]: [%s]", configuration.URL, err)
+		l.logger.WarnfContext(ctx, "failed reading from [%s]: [%s]", configuration.URL, err)
 		return nil
 	}
 	found := 0
@@ -371,7 +371,7 @@ func (l *LocalMembership) registerLocalIdentities(ctx context.Context, configura
 			Config: configuration.Config,
 		}, false); err != nil {
 			errs = append(errs, err)
-			l.logger.Errorf("failed registering local identity [%s]: [%s]", id, err)
+			l.logger.ErrorfContext(ctx, "failed registering local identity [%s]: [%s]", id, err)
 			continue
 		}
 		found++
@@ -382,7 +382,7 @@ func (l *LocalMembership) registerLocalIdentities(ctx context.Context, configura
 	return nil
 }
 
-func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration, keyManager KeyManager, defaultID bool, priority int) error {
+func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *driver.IdentityConfiguration, keyManager KeyManager, defaultID bool, priority int) error {
 	var getIdentity GetIdentityFunc
 	var identity driver.Identity
 
@@ -411,14 +411,14 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	// check for duplicates
 	name := config.ID
 	if keyManager.Anonymous() || len(l.targetIdentities) == 0 {
-		l.logger.Debugf("no target identity check needed, skip it")
+		l.logger.DebugfContext(ctx, "no target identity check needed, skip it")
 	} else if found := slices.ContainsFunc(l.targetIdentities, identity.Equal); !found {
 		// the identity is not in the target identities, we should give it a lower priority
-		l.logger.Debugf("identity [%s:%s] not in target identities", name, config.URL)
+		l.logger.DebugfContext(ctx, "identity [%s:%s] not in target identities", name, config.URL)
 	} else {
 		// give it high priority
 		priority = MaxPriority
-		l.logger.Debugf("identity [%s:%s][%s] in target identities", name, config.URL, identity)
+		l.logger.DebugfContext(ctx, "identity [%s:%s][%s] in target identities", name, config.URL, identity)
 	}
 
 	eID := keyManager.EnrollmentID()
@@ -430,7 +430,7 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 		GetIdentity:  getIdentity,
 		Remote:       keyManager.IsRemote(),
 	}
-	l.logger.Debugf("new local identity for [%s:%s] - [%v]", name, eID, localIdentity)
+	l.logger.DebugfContext(ctx, "new local identity for [%s:%s] - [%v]", name, eID, localIdentity)
 
 	list, ok := l.localIdentitiesByName[name]
 	if !ok {
@@ -443,14 +443,14 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	slices.SortFunc(list, PriorityComparison)
 	l.localIdentitiesByName[name] = list
 
-	l.logger.Debugf("new local identity for [%s:%s] - [%d][%v]", name, eID, len(list), list)
+	l.logger.DebugfContext(ctx, "new local identity for [%s:%s] - [%d][%v]", name, eID, len(list), list)
 
 	// deserializer
-	l.deserializerManager.AddDeserializer(keyManager)
+	l.deserializerManager.AddDeserializer(ctx, keyManager)
 
 	// if the keyManager is not anonymous
 	if !keyManager.Anonymous() {
-		l.logger.Debugf("adding identity mapping for [%s]", identity)
+		l.logger.DebugfContext(ctx, "adding identity mapping for [%s]", identity)
 		l.localIdentitiesByIdentity[identity.String()] = localIdentity
 		if l.binderService != nil {
 			if err := l.binderService.Bind(context.Background(), l.defaultNetworkIdentity, identity, false); err != nil {
@@ -463,11 +463,11 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	return nil
 }
 
-func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
-	l.logger.Debugf("get local identity by label [%s]", hash.Hashable(label))
+func (l *LocalMembership) getLocalIdentity(ctx context.Context, label string) *LocalIdentity {
+	l.logger.DebugfContext(ctx, "get local identity by label [%s]", hash.Hashable(label))
 	identities, ok := l.localIdentitiesByName[label]
 	if ok {
-		l.logger.Debugf("get local identity by name found with label [%s]", hash.Hashable(label))
+		l.logger.DebugfContext(ctx, "get local identity by name found with label [%s]", hash.Hashable(label))
 		return identities[0].Identity
 	}
 	identity, ok := l.localIdentitiesByIdentity[label]
@@ -475,7 +475,7 @@ func (l *LocalMembership) getLocalIdentity(label string) *LocalIdentity {
 		return identity
 	}
 
-	l.logger.Debugf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
+	l.logger.DebugfContext(ctx, "local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
 	return nil
 }
 
@@ -486,7 +486,7 @@ func (l *LocalMembership) storedIdentityConfigurations(ctx context.Context) ([]i
 	}
 	defer func() {
 		err := it.Close()
-		l.logger.Errorf("failed to close identity configurations iterator: %v", err)
+		l.logger.ErrorfContext(ctx, "failed to close identity configurations iterator: %v", err)
 	}()
 	// copy the iterator
 	items := make([]idriver.IdentityConfiguration, 0)

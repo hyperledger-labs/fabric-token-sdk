@@ -276,7 +276,7 @@ var BobAcceptedTransactions = []TransactionRecord{
 
 type OnRestartFunc = func(*integration.Infrastructure, string)
 
-func TestAll(network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, aries bool, sel *token3.ReplicaSelector) {
+func TestAll(ctx context.Context, network *integration.Infrastructure, auditorId string, onRestart OnRestartFunc, aries bool, sel *token3.ReplicaSelector) {
 	auditor := sel.Get(auditorId)
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
@@ -367,7 +367,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 		Namespace: tms.Namespace,
 	}
 
-	newPP := PreparePublicParamsWithNewIssuer(network, newIssuerWalletPath, networkName)
+	newPP := PreparePublicParamsWithNewIssuer(ctx, network, newIssuerWalletPath, networkName)
 	UpdatePublicParamsAndWait(network, newPP, GetTMSByNetworkName(network, networkName), alice, bob, charlie, manager, issuer, auditor, custodian)
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
 
@@ -422,7 +422,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	gomega.Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(gomega.BeEquivalentTo(0), "got [%d], expected 111", ut.Sum(64).ToBigInt())
 	gomega.Expect(ut.ByType("USD").Count()).To(gomega.BeEquivalentTo(ut.Count()))
 
-	RedeemCashForTMSID(network, bob, "", "USD", 11, auditor, issuer, defaultTMSID)
+	RedeemCashForTMSID(ctx, network, bob, "", "USD", 11, auditor, issuer, defaultTMSID)
 	t10 := time.Now()
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[:6], nil, nil, nil)
 	CheckAcceptedTransactions(network, bob, "", BobAcceptedTransactions[5:6], nil, nil, nil, ttxdb.Redeem)
@@ -477,8 +477,8 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// it must be preceded by binding this network id with the issuer's signing id
 	// so the endorsement process could automatically identify the issuer
 	// that needs to sign the Redeem.
-	BindIssuerNetworkAndSigningIdentities(network, issuer, GetIssuerIdentity(GetTMSByNetworkName(network, networkName), issuer.Id()), bob)
-	RedeemCashForTMSID(network, bob, "", "USD", 10, auditor, nil, defaultTMSID)
+	BindIssuerNetworkAndSigningIdentities(network, issuer, GetIssuerIdentity(ctx, GetTMSByNetworkName(network, networkName), issuer.Id()), bob)
+	RedeemCashForTMSID(ctx, network, bob, "", "USD", 10, auditor, nil, defaultTMSID)
 	CheckBalanceAndHolding(network, bob, "", "USD", 110, auditor)
 	CheckSpending(network, bob, "", "USD", auditor, 21)
 
@@ -773,7 +773,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 		WhoDeletedToken(network, alice, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
 		WhoDeletedToken(network, auditor, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
 		// redeem newly created token
-		RedeemCashByIDs(network, networkName, bob, "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor, issuer)
+		RedeemCashByIDs(ctx, network, networkName, bob, "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor, issuer)
 	}
 
 	PruneInvalidUnspentTokens(network, issuer, auditor, alice, bob, charlie, manager)
@@ -960,7 +960,7 @@ func TestRevokeIdentity(network *integration.Infrastructure, auditorId string, s
 	CheckBalanceAndHolding(network, bob, "bob.id1", "USD", 90, auditor)
 }
 
-func TestMixed(network *integration.Infrastructure, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
+func TestMixed(ctx context.Context, network *integration.Infrastructure, onRestart OnRestartFunc, sel *token3.ReplicaSelector) {
 	auditor1 := sel.Get("auditor1")
 	auditor2 := sel.Get("auditor2")
 	issuer1 := sel.Get("issuer1")
@@ -985,7 +985,7 @@ func TestMixed(network *integration.Infrastructure, onRestart OnRestartFunc, sel
 	TransferCashForTMSID(network, alice, "", "USD", 20, bob, auditor1, dlogId)
 	TransferCashForTMSID(network, alice, "", "USD", 30, bob, auditor2, fabTokenId)
 
-	RedeemCashForTMSID(network, bob, "", "USD", 11, auditor1, issuer1, dlogId)
+	RedeemCashForTMSID(ctx, network, bob, "", "USD", 11, auditor1, issuer1, dlogId)
 	CheckSpendingForTMSID(network, bob, "", "USD", auditor1, 11, dlogId)
 
 	CheckBalanceAndHoldingForTMSID(network, alice, "", "USD", 90, auditor1, dlogId)
@@ -1464,7 +1464,7 @@ func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckCoOwnedBalance(network, manager, "", "USD", 0)
 }
 
-func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
+func TestRedeem(ctx context.Context, network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
 	auditor := sel.Get("auditor")
 	issuer := sel.Get("issuer")
 	alice := sel.Get("alice")
@@ -1489,7 +1489,7 @@ func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector
 	CheckBalance(network, issuer, "", "USD", 110)
 	CheckHolding(network, issuer, "", "USD", 110, auditor)
 
-	RedeemCashForTMSID(network, issuer, "", "USD", 10, auditor, issuer, defaultTMSID)
+	RedeemCashForTMSID(ctx, network, issuer, "", "USD", 10, auditor, issuer, defaultTMSID)
 	CheckBalance(network, issuer, "", "USD", 100)
 	CheckHolding(network, issuer, "", "USD", 100, auditor)
 }

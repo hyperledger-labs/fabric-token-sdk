@@ -429,7 +429,7 @@ func (w *AtomicWrite) Rollback() {
 		return
 	}
 	if err := w.txn.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-		logger.Errorf("error rolling back (ignoring...): %s", err.Error())
+		logger.ErrorfContext(context.Background(), "error rolling back (ignoring...): %s", err.Error())
 	}
 	w.txn = nil
 }

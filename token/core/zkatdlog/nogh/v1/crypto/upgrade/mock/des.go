@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
@@ -27,7 +28,7 @@ type Deserializer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Deserializer) GetOwnerVerifier(arg1 identity.Identity) (driver.Verifier, error) {
+func (fake *Deserializer) GetOwnerVerifier(ctx context.Context, arg1 identity.Identity) (driver.Verifier, error) {
 	fake.getOwnerVerifierMutex.Lock()
 	ret, specificReturn := fake.getOwnerVerifierReturnsOnCall[len(fake.getOwnerVerifierArgsForCall)]
 	fake.getOwnerVerifierArgsForCall = append(fake.getOwnerVerifierArgsForCall, struct {

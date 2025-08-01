@@ -165,7 +165,7 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 
 func (t *transaction) Notify(topic string, tmsID token.TMSID, walletID string, tokenType token2.Type, txID string, index uint64) {
 	if t.notifier == nil {
-		logger.Warnf("cannot notify others!")
+		logger.WarnfContext(ctx, "cannot notify others!")
 		return
 	}
 
@@ -177,7 +177,7 @@ func (t *transaction) Notify(topic string, tmsID token.TMSID, walletID string, t
 		Index:     index,
 	})
 
-	logger.Debugf("Publish new event %v", e)
+	logger.DebugfContext(ctx, "Publish new event %v", e)
 	t.notifier.Publish(e)
 }
 

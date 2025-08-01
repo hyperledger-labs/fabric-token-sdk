@@ -109,19 +109,19 @@ func (t *Transaction) Outputs() (*OutputStream, error) {
 }
 
 func (t *Transaction) setStateID(s interface{}) (string, error) {
-	logger.Debugf("setStateID %v...", s)
-	defer logger.Debugf("setStateID...done")
+	logger.DebugfContext(ctx, "setStateID %v...", s)
+	defer logger.DebugfContext(ctx, "setStateID...done")
 	var key string
 	var err error
 	switch d := s.(type) {
 	case AutoLinearState:
-		logger.Debugf("AutoLinearState...")
+		logger.DebugfContext(ctx, "AutoLinearState...")
 		key, err = d.GetLinearID()
 		if err != nil {
 			return "", err
 		}
 	case LinearState:
-		logger.Debugf("LinearState...")
+		logger.DebugfContext(ctx, "LinearState...")
 		key = GenerateUUID()
 		key = d.SetLinearID(key)
 	default:

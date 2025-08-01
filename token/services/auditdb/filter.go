@@ -86,12 +86,12 @@ func (f *HoldingsFilter) Execute(ctx context.Context) (*HoldingsFilter, error) {
 	return f, nil
 }
 
-func (f *HoldingsFilter) Sum() *big.Int {
+func (f *HoldingsFilter) Sum(ctx context.Context) *big.Int {
 	sum := big.NewInt(0)
-	logger.Debugf("HoldingsFilter [%v], sum [%d] records", f.params, len(f.records))
+	logger.DebugfContext(ctx, "HoldingsFilter [%v], sum [%d] records", f.params, len(f.records))
 	for _, record := range f.records {
 		sum = sum.Add(sum, record.Amount)
 	}
-	logger.Debugf("HoldingsFilter [%v], sum of [%d] records = [%d]", f.params, len(f.records), sum.String())
+	logger.DebugfContext(ctx, "HoldingsFilter [%v], sum of [%d] records = [%d]", f.params, len(f.records), sum.String())
 	return sum
 }

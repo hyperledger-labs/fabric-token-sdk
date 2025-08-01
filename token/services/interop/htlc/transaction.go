@@ -119,8 +119,8 @@ func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []by
 }
 
 // Outputs returns a new OutputStream of the transaction's outputs
-func (t *Transaction) Outputs() (*OutputStream, error) {
-	outs, err := t.TokenRequest.Outputs()
+func (t *Transaction) Outputs(ctx context.Context) (*OutputStream, error) {
+	outs, err := t.TokenRequest.Outputs(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (t *Transaction) Lock(ctx context.Context, wallet *token.OwnerWallet, sende
 			}
 		}
 	}
-	scriptID, preImage, script, err := t.recipientAsScript(sender, recipient, deadline, hash, hashFunc, hashEncoding)
+	scriptID, preImage, script, err := t.recipientAsScript(ctx, sender, recipient, deadline, hash, hashFunc, hashEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func (t *Transaction) Lock(ctx context.Context, wallet *token.OwnerWallet, sende
 }
 
 // Reclaim appends a reclaim (transfer) action to the token request of the transaction
-func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken, opts ...token.TransferOption) error {
+func (t *Transaction) Reclaim(ctx context.Context, wallet *token.OwnerWallet, tok *token2.UnspentToken, opts ...token.TransferOption) error {
 	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().PublicParameters().Precision())
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
@@ -220,11 +220,11 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	if err != nil {
 		return err
 	}
-	verifier, err := sigService.OwnerVerifier(script.Sender)
+	verifier, err := sigService.OwnerVerifier(ctx, script.Sender)
 	if err != nil {
 		return err
 	}
-	logger.Debugf("registering signer for reclaim...")
+	logger.DebugfContext(ctx, "registering signer for reclaim...")
 	if err := sigService.RegisterSigner(
 		t.Context,
 		tok.Owner,
@@ -248,7 +248,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 }
 
 // Claim appends a claim (transfer) action to the token request of the transaction
-func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte, opts ...token.TransferOption) error {
+func (t *Transaction) Claim(ctx context.Context, wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte, opts ...token.TransferOption) error {
 	if len(preImage) == 0 {
 		return errors.New("preImage is nil")
 	}
@@ -280,13 +280,13 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	}
 
 	// Register the signer for the claim
-	logger.Debugf("registering signer for claim...")
+	logger.DebugfContext(ctx, "registering signer for claim...")
 	sigService := t.TokenService().SigService()
 	recipientSigner, err := sigService.GetSigner(t.Context, script.Recipient)
 	if err != nil {
 		return err
 	}
-	recipientVerifier, err := sigService.OwnerVerifier(script.Recipient)
+	recipientVerifier, err := sigService.OwnerVerifier(ctx, script.Recipient)
 	if err != nil {
 		return err
 	}
@@ -322,7 +322,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	)
 }
 
-func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadline time.Duration, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, *Script, error) {
+func (t *Transaction) recipientAsScript(ctx context.Context, sender, recipient view.Identity, deadline time.Duration, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, *Script, error) {
 	// sample pre-image and its hash
 	var preImage []byte
 	var err error
@@ -346,7 +346,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 		}
 	}
 
-	logger.Debugf("pair (pre-image, hash) = (%s,%s)", base64.StdEncoding.EncodeToString(preImage), base64.StdEncoding.EncodeToString(h))
+	logger.DebugfContext(ctx, "pair (pre-image, hash) = (%s,%s)", base64.StdEncoding.EncodeToString(preImage), base64.StdEncoding.EncodeToString(h))
 
 	script := &Script{
 		HashInfo: HashInfo{

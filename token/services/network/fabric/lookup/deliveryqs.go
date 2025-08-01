@@ -69,13 +69,13 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 		chaincode := q.Channel.Chaincode(ns)
 		res, err := chaincode.Query(QueryStates, arg).Query()
 		if err != nil {
-			logger.Errorf("failed querying by ids [%v]: [%s]", keys, err)
+			logger.ErrorfContext(ctx, "failed querying by ids [%v]: [%s]", keys, err)
 			return
 		}
 		values := make([][]byte, 0, len(keys))
 		err = json.Unmarshal(res, &values)
 		if err != nil {
-			logger.Errorf("failed unmarshalling results for query by ids [%v]: [%s]", keys, err)
+			logger.ErrorfContext(ctx, "failed unmarshalling results for query by ids [%v]: [%s]", keys, err)
 			return
 		}
 		found := make([]KeyInfo, 0, len(values))
@@ -153,7 +153,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 		},
 	)
 	if err != nil {
-		logger.Errorf("failed scanning blocks [%s], started from [%d]", err, startingBlock)
+		logger.ErrorfContext(ctx, "failed scanning blocks [%s], started from [%d]", err, startingBlock)
 		return
 	}
 	logger.DebugfContext(ctx, "finished scanning blocks starting from [%d]", startingBlock)

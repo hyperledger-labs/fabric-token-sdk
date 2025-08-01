@@ -37,13 +37,13 @@ func IssueValidate(ctx *Context) error {
 	if issuers := ctx.PP.Issuers(); len(issuers) != 0 && !slices.ContainsFunc(issuers, action.Issuer.Equal) {
 		return errors.Errorf("issuer [%s] is not in issuers", action.Issuer)
 	}
-	logger.Debugf("Found issue owner [%s]", action.Issuer)
+	logger.DebugfContext(ctx.Ctx, "Found issue owner [%s]", action.Issuer)
 
-	verifier, err := ctx.Deserializer.GetIssuerVerifier(action.Issuer)
+	verifier, err := ctx.Deserializer.GetIssuerVerifier(ctx.Ctx, action.Issuer)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for issuer [%s]", action.Issuer.String())
 	}
-	if _, err := ctx.SignatureProvider.HasBeenSignedBy(action.Issuer, verifier); err != nil {
+	if _, err := ctx.SignatureProvider.HasBeenSignedBy(ctx.Ctx, action.Issuer, verifier); err != nil {
 		return errors.Wrapf(err, "failed verifying signature")
 	}
 	return nil

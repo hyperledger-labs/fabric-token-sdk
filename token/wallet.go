@@ -151,7 +151,7 @@ func (wm *WalletManager) GetEnrollmentID(ctx context.Context, identity Identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
-	return wm.walletService.GetEnrollmentID(identity, auditInfo)
+	return wm.walletService.GetEnrollmentID(ctx, identity, auditInfo)
 }
 
 // GetRevocationHandle returns the revocation handle of the passed identity
@@ -161,12 +161,12 @@ func (wm *WalletManager) GetRevocationHandle(ctx context.Context, identity Ident
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
 
-	return wm.walletService.GetRevocationHandle(identity, auditInfo)
+	return wm.walletService.GetRevocationHandle(ctx, identity, auditInfo)
 }
 
 // SpentIDs returns the spent keys corresponding to the passed token IDs
-func (wm *WalletManager) SpentIDs(ids []*token.ID) ([]string, error) {
-	return wm.walletService.SpendIDs(ids...)
+func (wm *WalletManager) SpentIDs(ctx context.Context, ids []*token.ID) ([]string, error) {
+	return wm.walletService.SpendIDs(ctx, ids...)
 }
 
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.

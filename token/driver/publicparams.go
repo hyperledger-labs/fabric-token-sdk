@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
+import "context"
+
 type (
 	// PPHash is used to model the hash of the raw public parameters.
 	// This should avoid confusion between the bytes of the public params themselves and its hash.
@@ -27,7 +29,7 @@ type PPMFactory interface {
 	// NewPublicParametersManager returns a new PublicParametersManager instance from the passed public parameters
 	NewPublicParametersManager(pp PublicParameters) (PublicParamsManager, error)
 	// DefaultValidator returns a new Validator instance from the passed public parameters
-	DefaultValidator(pp PublicParameters) (Validator, error)
+	DefaultValidator(ctx context.Context, pp PublicParameters) (Validator, error)
 }
 
 // PublicParamsFetcher models a public parameters fetcher.

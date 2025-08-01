@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	v2 "github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -37,7 +39,7 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 	return pp, nil
 }
 
-func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+func (d *base) DefaultValidator(ctx context.Context, pp driver.PublicParameters) (driver.Validator, error) {
 	deserializer, err := NewDeserializer(pp.(*v2.PublicParams))
 	if err != nil {
 		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
@@ -78,7 +80,7 @@ func (d *base) newWalletService(
 		return nil, errors.Wrapf(err, "failed to open keystore for tms [%s]", tmsID)
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
-	identityProvider := identity.NewProvider(logger.Named("identity"), identityDB, sigService, binder, NewEIDRHDeserializer())
+	identityProvider := identity.NewProvider(logger.Named("identity"), identityDB, sigService, binder, NewEIDRHDeserializer(context.Background()))
 	identityConfig, err := config.NewIdentityConfig(tmsConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create identity config")
@@ -113,22 +115,23 @@ func (d *base) newWalletService(
 	keyStore := x509.NewKeyStore(baseKeyStore)
 	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 
-	role, err := roleFactory.NewRole(identity.OwnerRole, true, nil, kmps...)
+	ctx := context.Background()
+	role, err := roleFactory.NewRole(ctx, identity.OwnerRole, true, nil, kmps...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
 	roles.Register(identity.OwnerRole, role)
-	role, err = roleFactory.NewRole(identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
+	role, err = roleFactory.NewRole(ctx, identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
 	roles.Register(identity.IssuerRole, role)
-	role, err = roleFactory.NewRole(identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
+	role, err = roleFactory.NewRole(ctx, identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}
 	roles.Register(identity.AuditorRole, role)
-	role, err = roleFactory.NewRole(identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
+	role, err = roleFactory.NewRole(ctx, identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create certifier role")
 	}

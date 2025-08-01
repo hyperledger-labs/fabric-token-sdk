@@ -218,7 +218,7 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 					assert.NoError(t, deleteTokensAndStoreChange(replica, tokens, change))
 				}
 				if tokenSum, err := replica.TokenSum(); err == nil {
-					logger.Infof("Current sum of tokens in the DB: %s", tokenSum.Decimal())
+					logger.InfofContext(context.Background(), "Current sum of tokens in the DB: %s", tokenSum.Decimal())
 				}
 				wg.Done()
 			}()
@@ -235,8 +235,8 @@ func storeTokens(m EnhancedManager, added []token.UnspentToken) error {
 	return m.UpdateTokens(nil, added)
 }
 
-func deleteTokensAndStoreChange(m EnhancedManager, spentTokens []*token.ID, change token.Quantity) error {
-	logger.Debugf("Deleting [%d] tokens [%s] and creating a new one with quantity %s", len(spentTokens), spentTokens, change.Decimal())
+func deleteTokensAndStoreChange(ctx context.Context, m EnhancedManager, spentTokens []*token.ID, change token.Quantity) error {
+	logger.DebugfContext(ctx, "Deleting [%d] tokens [%s] and creating a new one with quantity %s", len(spentTokens), spentTokens, change.Decimal())
 	var changeTokens []token.UnspentToken
 	if change.ToBigInt().Int64() > 0 {
 		changeTokens = createTokens(map[transaction.ID][]token.Quantity{
@@ -247,7 +247,7 @@ func deleteTokensAndStoreChange(m EnhancedManager, spentTokens []*token.ID, chan
 		if err := m.UpdateTokens(spentTokens, changeTokens); err == nil {
 			return nil
 		} else {
-			logger.Warnf("Failed to delete tokens: %v. Retrying", err)
+			logger.WarnfContext(ctx, "Failed to delete tokens: %v. Retrying", err)
 		}
 	}
 }

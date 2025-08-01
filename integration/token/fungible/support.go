@@ -851,13 +851,13 @@ func TransferCashWithSelector(network *integration.Infrastructure, sender *token
 	}
 }
 
-func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, tmsID *token2.TMSID) {
+func RedeemCashForTMSID(ctx context.Context, network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference, tmsID *token2.TMSID) {
 	issuerName := ""
 	var issuerPublicParamsPublicKey view.Identity = nil
 	if issuer != nil && tmsID != nil {
 		issuerName = issuer.Id()
 		tms := GetTMSByTMSID(network, *tmsID)
-		issuerPublicParamsPublicKey = GetIssuerIdentity(tms, issuer.Id())
+		issuerPublicParamsPublicKey = GetIssuerIdentity(ctx, tms, issuer.Id())
 	}
 
 	txID, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
@@ -873,13 +873,13 @@ func RedeemCashForTMSID(network *integration.Infrastructure, id *token3.NodeRefe
 	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txID), tmsID, false)
 }
 
-func RedeemCashByIDs(network *integration.Infrastructure, networkName string, id *token3.NodeReference, wallet string, ids []*token.ID, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference) {
+func RedeemCashByIDs(ctx context.Context, network *integration.Infrastructure, networkName string, id *token3.NodeReference, wallet string, ids []*token.ID, amount uint64, auditor *token3.NodeReference, issuer *token3.NodeReference) {
 	issuerName := ""
 	var issuerSigningKey view.Identity = nil
 	if issuer != nil {
 		issuerName = issuer.Id()
 		tms := GetTMSByNetworkName(network, networkName)
-		issuerSigningKey = GetIssuerIdentity(tms, issuer.Id())
+		issuerSigningKey = GetIssuerIdentity(ctx, tms, issuer.Id())
 	}
 
 	txid, err := network.Client(id.ReplicaName()).CallView("redeem", common.JSONMarshall(&views.Redeem{
@@ -1126,20 +1126,20 @@ func WhoDeletedToken(network *integration.Infrastructure, id *token3.NodeReferen
 	return result
 }
 
-func GetAuditorIdentity(tms *topology.TMS, id string) []byte {
-	return getIdentity(tms.Wallets.Auditors, id)
+func GetAuditorIdentity(ctx context.Context, tms *topology.TMS, id string) []byte {
+	return getIdentity(ctx, tms.Wallets.Auditors, id)
 }
 
-func GetIssuerIdentity(tms *topology.TMS, id string) []byte {
-	return getIdentity(tms.Wallets.Issuers, id)
+func GetIssuerIdentity(ctx context.Context, tms *topology.TMS, id string) []byte {
+	return getIdentity(ctx, tms.Wallets.Issuers, id)
 }
 
-func getIdentity(identities []topology.Identity, id string) []byte {
+func getIdentity(ctx context.Context, identities []topology.Identity, id string) []byte {
 	keyStore := x509.NewKeyStore(kvs.NewTrackedMemory())
 	for _, topologyIdentity := range identities {
 		if topologyIdentity.ID == id {
 			// Build an MSP Identity
-			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, nil, topologyIdentity.Opts, keyStore)
+			kmp, _, err := x509.NewKeyManager(ctx, topologyIdentity.Path, nil, topologyIdentity.Opts, keyStore)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			newIdentity, _, err := kmp.Identity(context.Background(), nil)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -1453,10 +1453,10 @@ func BindIssuerNetworkAndSigningIdentities(network *integration.Infrastructure, 
 		}
 	}
 }
-func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, issuer string, networkName string, appendIdentities bool) []byte {
+func PrepareUpdatedPublicParams(ctx context.Context, network *integration.Infrastructure, auditor string, issuer string, networkName string, appendIdentities bool) []byte {
 	tms := GetTMSByNetworkName(network, networkName)
-	auditorId := GetAuditorIdentity(tms, auditor)
-	issuerId := GetIssuerIdentity(tms, issuer)
+	auditorId := GetAuditorIdentity(ctx, tms, auditor)
+	issuerId := GetIssuerIdentity(ctx, tms, issuer)
 
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*tplatform.Platform)
 	gomega.Expect(ok).To(gomega.BeTrue(), "failed to get token platform from context")
@@ -1503,10 +1503,10 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	return ppBytes
 }
 
-func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issuerWalletPath string, networkName string) []byte {
+func PreparePublicParamsWithNewIssuer(ctx context.Context, network *integration.Infrastructure, issuerWalletPath string, networkName string) []byte {
 	tms := GetTMSByNetworkName(network, networkName)
 	keyStore := x509.NewKeyStore(kvs.NewTrackedMemory())
-	kmp, _, err := x509.NewKeyManager(issuerWalletPath, nil, nil, keyStore)
+	kmp, _, err := x509.NewKeyManager(ctx, issuerWalletPath, nil, nil, keyStore)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	newIdentity, _, err := kmp.Identity(context.Background(), nil)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())

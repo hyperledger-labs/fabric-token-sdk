@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package endorsement
 
 import (
+	"context"
 	"math/rand"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
@@ -66,7 +67,7 @@ func NewFSCService(
 			return nil, errors.WithMessagef(err, "failed to register approval view for [%s]", tmsID)
 		}
 	} else {
-		logger.Debugf("this node is an not endorser, is key set? [%v].", configuration.IsSet(AmIAnEndorserKey))
+		logger.DebugfContext(context.Background(), "this node is an not endorser, is key set? [%v].", configuration.IsSet(AmIAnEndorserKey))
 	}
 
 	policyType := configuration.GetString(PolicyType)
@@ -78,7 +79,7 @@ func NewFSCService(
 	if err := configuration.UnmarshalKey(EndorsersKey, &endorserIDs); err != nil {
 		return nil, errors.WithMessage(err, "failed to load endorsers")
 	}
-	logger.Debugf("defined [%s] as endorsers for [%s]", endorserIDs, tmsID)
+	logger.DebugfContext(context.Background(), "defined [%s] as endorsers for [%s]", endorserIDs, tmsID)
 	if len(endorserIDs) == 0 {
 		return nil, errors.Errorf("no endorsers found for [%s]", tmsID)
 	}

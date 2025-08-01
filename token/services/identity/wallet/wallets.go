@@ -287,6 +287,7 @@ type AnonymousOwnerWallet struct {
 }
 
 func NewAnonymousOwnerWallet(
+	ctx context.Context,
 	logger logging.Logger,
 	IdentityProvider driver.IdentityProvider,
 	TokenVault OwnerTokenVault,
@@ -309,7 +310,7 @@ func NewAnonymousOwnerWallet(
 		Deserializer:   Deserializer,
 	}
 	w.IdentityCache = NewRecipientDataCache(logger, w.getRecipientIdentity, cacheSize, NewMetrics(metricsProvider))
-	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
+	logger.DebugfContext(ctx, "added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
 	return w, nil
 }
 
@@ -342,12 +343,12 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(ctx context.Context, data *driv
 
 	// recognize identity and register it
 	// match identity and audit info
-	err := w.Deserializer.MatchIdentity(data.Identity, data.AuditInfo)
+	err := w.Deserializer.MatchIdentity(ctx, data.Identity, data.AuditInfo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to match identity to audit infor for [%s]:[%s]", data.Identity, utils.Hashable(data.AuditInfo))
 	}
 	// register verifier and audit info
-	v, err := w.Deserializer.GetOwnerVerifier(data.Identity)
+	v, err := w.Deserializer.GetOwnerVerifier(ctx, data.Identity)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for owner [%s]", data.Identity)
 	}

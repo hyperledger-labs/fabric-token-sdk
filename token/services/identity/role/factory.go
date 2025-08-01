@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package role
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -69,7 +70,7 @@ func NewFactory(
 	}
 }
 
-func (f *Factory) NewRole(role identity.RoleType, defaultAnon bool, targets []driver.Identity, kmps ...membership.KeyManagerProvider) (identity.Role, error) {
+func (f *Factory) NewRole(ctx context.Context, role identity.RoleType, defaultAnon bool, targets []driver.Identity, kmps ...membership.KeyManagerProvider) (identity.Role, error) {
 	identityDB, err := f.StorageProvider.IdentityStore(f.TMSID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
@@ -91,8 +92,8 @@ func (f *Factory) NewRole(role identity.RoleType, defaultAnon bool, targets []dr
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	if err := lm.Load(identities, targets); err != nil {
+	if err := lm.Load(ctx, identities, targets); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
-	return NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm), nil
+	return NewRole(ctx, f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm), nil
 }

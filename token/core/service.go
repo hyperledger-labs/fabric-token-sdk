@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package core
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -78,9 +79,9 @@ func (s *PPManagerFactoryService) NewPublicParametersManager(pp driver.PublicPar
 	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", DriverIdentifierFromPP(pp))
 }
 
-func (s *PPManagerFactoryService) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+func (s *PPManagerFactoryService) DefaultValidator(ctx context.Context, pp driver.PublicParameters) (driver.Validator, error) {
 	if instantiator, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
-		return instantiator.DefaultValidator(pp)
+		return instantiator.DefaultValidator(ctx, pp)
 	}
 	return nil, errors.Errorf("cannot load default validator, driver [%s] not found", DriverIdentifierFromPP(pp))
 }

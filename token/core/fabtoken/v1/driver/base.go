@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
@@ -34,9 +36,9 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 	return pp, nil
 }
 
-func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+func (d *base) DefaultValidator(ctx context.Context, pp driver.PublicParameters) (driver.Validator, error) {
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
-	deserializer := NewDeserializer()
+	deserializer := NewDeserializer(ctx)
 	return validator.NewValidator(logger, pp.(*core2.PublicParams), deserializer, nil, nil, nil), nil
 }
 
@@ -52,6 +54,7 @@ func (d *base) newWalletService(
 	ignoreRemote bool,
 ) (*wallet.Service, error) {
 	tmsID := tmsConfig.ID()
+	ctx := context.Background()
 
 	deserializerManager := sig.NewMultiplexDeserializer()
 	identityDB, err := storageProvider.IdentityStore(tmsID)
@@ -63,7 +66,7 @@ func (d *base) newWalletService(
 		return nil, errors.Wrapf(err, "failed to open keystore for tms [%s]", tmsID)
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
-	identityProvider := identity.NewProvider(logger.Named("identity"), identityDB, sigService, binder, NewEIDRHDeserializer())
+	identityProvider := identity.NewProvider(logger.Named("identity"), identityDB, sigService, binder, NewEIDRHDeserializer(ctx))
 	identityConfig, err := config.NewIdentityConfig(tmsConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create identity config")
@@ -72,23 +75,23 @@ func (d *base) newWalletService(
 	// Prepare roles
 	keyStore := x509.NewKeyStore(baseKeyStore)
 	roleFactory := role.NewFactory(logger, tmsID, identityConfig, fscIdentity, networkDefaultIdentity, identityProvider, identityProvider, identityProvider, storageProvider, deserializerManager)
-	role, err := roleFactory.NewRole(identity.OwnerRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
+	role, err := roleFactory.NewRole(ctx, identity.OwnerRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
 	roles := wallet.NewRoles()
 	roles.Register(identity.OwnerRole, role)
-	role, err = roleFactory.NewRole(identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
+	role, err = roleFactory.NewRole(ctx, identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
 	roles.Register(identity.IssuerRole, role)
-	role, err = roleFactory.NewRole(identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
+	role, err = roleFactory.NewRole(ctx, identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}
 	roles.Register(identity.AuditorRole, role)
-	role, err = roleFactory.NewRole(identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
+	role, err = roleFactory.NewRole(ctx, identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, identityProvider, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create certifier role")
 	}
@@ -99,7 +102,7 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	deserializer := NewDeserializer()
+	deserializer := NewDeserializer(ctx)
 	ws := wallet.NewService(
 		logger,
 		identityProvider,

@@ -82,18 +82,18 @@ func (v *KVS) Exists(_ context.Context, id string) bool {
 
 	secret, err := v.client.Logical().Read(id)
 	if err != nil {
-		logger.Debugf("failed to check existence of id [%s]: %v", id, err)
+		logger.DebugfContext(ctx, "failed to check existence of id [%s]: %v", id, err)
 		return false
 	}
 
 	if secret == nil || secret.Data == nil {
-		logger.Debugf("state of id [%s] does not exist", id)
+		logger.DebugfContext(ctx, "state of id [%s] does not exist", id)
 		return false
 	}
 
 	data, ok := secret.Data[Data].(map[string]interface{})
 	if !ok || len(data) == 0 {
-		logger.Debugf("state of id [%s] does not exist", id)
+		logger.DebugfContext(ctx, "state of id [%s] does not exist", id)
 		return false
 	}
 
@@ -108,7 +108,7 @@ func (v *KVS) Delete(id string) error {
 		return errors.Wrapf(err, "failed to delete state of id [%s]", id)
 	}
 
-	logger.Debugf("deleted state of id [%s] successfully", id)
+	logger.DebugfContext(ctx, "deleted state of id [%s] successfully", id)
 	return nil
 }
 
@@ -122,7 +122,7 @@ func (v *KVS) Put(_ context.Context, id string, state interface{}) error {
 	value := map[string]interface{}{Value: base64.StdEncoding.EncodeToString(raw)}
 	_, err = v.client.Logical().Write(id, map[string]interface{}{Data: value})
 	if err == nil {
-		logger.Debugf("put state of id [%s] successfully", id)
+		logger.DebugfContext(ctx, "put state of id [%s] successfully", id)
 		return nil
 	}
 
@@ -156,15 +156,15 @@ func (v *KVS) Get(_ context.Context, id string, state interface{}) error {
 	}
 	raw, err := base64.StdEncoding.DecodeString(value.(string))
 	if err != nil {
-		logger.Debugf("Failed to decode base64 string: %v, error: %v", value, err)
+		logger.DebugfContext(ctx, "Failed to decode base64 string: %v, error: %v", value, err)
 		return errors.Wrapf(err, "failed to decode base64 string: %v", value)
 	}
 
 	if err := json.Unmarshal(raw, state); err != nil {
-		logger.Debugf("failed retrieving state of id [%s], cannot unmarshal state, error [%s]", id, err)
+		logger.DebugfContext(ctx, "failed retrieving state of id [%s], cannot unmarshal state, error [%s]", id, err)
 		return errors.Wrapf(err, "failed retrieving state of id [%s], cannot unmarshal state", id)
 	}
-	logger.Debugf("got state of id [%s] successfully", id)
+	logger.DebugfContext(ctx, "got state of id [%s] successfully", id)
 	return nil
 }
 

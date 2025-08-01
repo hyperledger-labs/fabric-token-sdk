@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
+	"context"
+
 	csp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -52,7 +54,7 @@ func (a *AuditInfo) RevocationHandle() string {
 	return string(a.Attributes[3])
 }
 
-func (a *AuditInfo) Match(id []byte) error {
+func (a *AuditInfo) Match(ctx context.Context, id []byte) error {
 	serialized := new(SerializedIdemixIdentity)
 	err := proto.Unmarshal(id, serialized)
 	if err != nil {
@@ -102,7 +104,7 @@ func (a *AuditInfo) Match(id []byte) error {
 	return nil
 }
 
-func DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+func DeserializeAuditInfo(ctx context.Context, raw []byte) (*AuditInfo, error) {
 	auditInfo := &AuditInfo{}
 	err := auditInfo.FromBytes(raw)
 	if err != nil {

@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package common
 
+import "context"
+
 type Closer interface {
 	Close() error
 }
@@ -15,6 +17,6 @@ func Close(closer Closer) {
 		return
 	}
 	if err := closer.Close(); err != nil {
-		logger.Errorf("failed closing connection: %s", err)
+		logger.ErrorfContext(context.Background(), "failed closing connection: %s", err)
 	}
 }

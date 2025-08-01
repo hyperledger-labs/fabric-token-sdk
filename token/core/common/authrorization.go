@@ -24,7 +24,7 @@ type Authorization interface {
 	IsMine(ctx context.Context, tok *token2.Token) (string, []string, bool)
 	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
-	AmIAnAuditor() bool
+	AmIAnAuditor(ctx context.Context) bool
 	// Issued returns true if the passed issuer issued the passed token
 	Issued(ctx context.Context, issuer token.Identity, tok *token2.Token) bool
 }
@@ -37,7 +37,7 @@ type WalletBasedAuthorization struct {
 	amIAnAuditor     bool
 }
 
-func NewTMSAuthorization(logger logging.Logger, publicParameters driver.PublicParameters, walletService driver.WalletService) *WalletBasedAuthorization {
+func NewTMSAuthorization(ctx context.Context, logger logging.Logger, publicParameters driver.PublicParameters, walletService driver.WalletService) *WalletBasedAuthorization {
 	amIAnAuditor := false
 	var errs []error
 	for _, identity := range publicParameters.Auditors() {
@@ -48,7 +48,7 @@ func NewTMSAuthorization(logger logging.Logger, publicParameters driver.PublicPa
 		}
 		errs = append(errs, errors.Wrapf(err, "I'm not this auditor identity [%s]", identity))
 	}
-	logger.Debugf("am I an auditor? [%v], with errs [%v]", amIAnAuditor, errs)
+	logger.DebugfContext(ctx, "am I an auditor? [%v], with errs [%v]", amIAnAuditor, errs)
 	return &WalletBasedAuthorization{Logger: logger, PublicParameters: publicParameters, WalletService: walletService, amIAnAuditor: amIAnAuditor}
 }
 
@@ -64,7 +64,7 @@ func (w *WalletBasedAuthorization) IsMine(ctx context.Context, tok *token2.Token
 
 // AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 // defined in the public parameters of the passed TMS.
-func (w *WalletBasedAuthorization) AmIAnAuditor() bool {
+func (w *WalletBasedAuthorization) AmIAnAuditor(ctx context.Context) bool {
 	return w.amIAnAuditor
 }
 
@@ -95,9 +95,9 @@ func (o *AuthorizationMultiplexer) IsMine(ctx context.Context, tok *token2.Token
 }
 
 // AmIAnAuditor returns true it there exists an authorization checker that returns true
-func (o *AuthorizationMultiplexer) AmIAnAuditor() bool {
+func (o *AuthorizationMultiplexer) AmIAnAuditor(ctx context.Context) bool {
 	for _, authorization := range o.authorizations {
-		yes := authorization.AmIAnAuditor()
+		yes := authorization.AmIAnAuditor(ctx)
 		if yes {
 			return true
 		}

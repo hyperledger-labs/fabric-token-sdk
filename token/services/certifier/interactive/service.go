@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package interactive
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -35,21 +36,21 @@ type CertificationService struct {
 	metrics *Metrics
 }
 
-func NewCertificationService(responderRegistry ResponderRegistry, mp metrics.Provider, backend Backend) *CertificationService {
+func NewCertificationService(ctx context.Context, responderRegistry ResponderRegistry, mp metrics.Provider, backend Backend) *CertificationService {
 	return &CertificationService{
 		wallets:           map[string]string{},
-		metrics:           NewMetrics(mp),
+		metrics:           NewMetrics(ctx, mp),
 		backend:           backend,
 		ResponderRegistry: responderRegistry,
 	}
 }
 
 func (c *CertificationService) Start() (err error) {
-	logger.Debugf("starting certifier service...")
+	logger.DebugfContext(context.Background(), "starting certifier service...")
 	(&sync.Once{}).Do(func() {
 		err = c.ResponderRegistry.RegisterResponder(c, &CertificationRequestView{})
 	})
-	logger.Debugf("starting certifier service...done")
+	logger.DebugfContext(context.Background(), "starting certifier service...done")
 	return nil
 }
 
@@ -59,13 +60,13 @@ func (c *CertificationService) SetWallet(tms *token2.ManagementService, wallet s
 
 func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 	// 1. receive request
-	logger.Debugf("receive certification request [%s]", context.ID())
+	logger.DebugfContext(context.Context(), "receive certification request [%s]", context.ID())
 	s := session.JSON(context)
 	var cr *CertificationRequest
 	if err := s.Receive(&cr); err != nil {
 		return nil, errors.WithMessage(err, "failed receiving certification request")
 	}
-	logger.Debugf("received certification request [%v]", cr)
+	logger.DebugfContext(context.Context(), "received certification request [%v]", cr)
 
 	// TODO: 2. validate request, if needed
 
@@ -76,7 +77,7 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 	}
 
 	// 4. certify token output
-	logger.Debugf("certify commitments for [%v]...", cr.IDs)
+	logger.DebugfContext(context.Context(), "certify commitments for [%v]...", cr.IDs)
 	tms := token2.GetManagementService(
 		context,
 		token2.WithNetwork(cr.Network),
@@ -84,25 +85,25 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 		token2.WithNamespace(cr.Namespace),
 	)
 	walletKey := tms.Network() + ":" + tms.Channel() + ":" + tms.Namespace()
-	logger.Debugf("lookup wallet ID with key [%s]", walletKey)
+	logger.DebugfContext(context.Context(), "lookup wallet ID with key [%s]", walletKey)
 	walletID, ok := c.wallets[walletKey]
 	if !ok {
-		logger.Errorf("failed getting certifier wallet, namespace not registered [%s]: [%s]", cr, err)
+		logger.ErrorfContext(context.Context(), "failed getting certifier wallet, namespace not registered [%s]: [%s]", cr, err)
 		return nil, errors.WithMessagef(err, "failed getting certifier wallet, namespace not registered [%s]", cr)
 	}
-	logger.Debugf("certify with wallet [%s]", walletID)
+	logger.DebugfContext(context.Context(), "certify with wallet [%s]", walletID)
 	w := tms.WalletManager().CertifierWallet(context.Context(), walletID)
 	if w == nil {
 		return nil, errors.WithMessagef(err, "failed getting certifier wallet, wallet [%s] not found [%s:%s][%v]", walletID, cr.Channel, cr.Namespace, cr.IDs)
 	}
-	logger.Debugf("certify request [%v]", cr)
+	logger.DebugfContext(context.Context(), "certify request [%v]", cr)
 	certifications, err := tms.CertificationManager().Certify(w, cr.IDs, tokens, cr.Request)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed certifying tokens [%s:%s][%v]", cr.Channel, cr.Namespace, cr.IDs)
 	}
 
 	// 5. respond
-	logger.Debugf("send back certifications for [%v]", cr.IDs)
+	logger.DebugfContext(context.Context(), "send back certifications for [%v]", cr.IDs)
 	if err := s.Send(certifications); err != nil {
 		return nil, errors.WithMessagef(err, "failed sending certifications")
 	}
@@ -144,7 +145,7 @@ func NewCertificationRequestView(channel, ns string, certifier view.Identity, id
 
 func (i *CertificationRequestView) Call(context view.Context) (interface{}, error) {
 	// 1. prepare request
-	logger.Debugf("prepare certification request for [%v]", i.ids)
+	logger.DebugfContext(context.Context(), "prepare certification request for [%v]", i.ids)
 	cm := token2.GetManagementService(
 		context,
 		token2.WithNetwork(i.network),
@@ -157,7 +158,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	}
 
 	// 2. send request
-	logger.Debugf("send certification request for [%v]", i.ids)
+	logger.DebugfContext(context.Context(), "send certification request for [%v]", i.ids)
 	if i.certifier.IsNone() {
 		return nil, errors.Errorf("no certifiers defined")
 	}
@@ -176,21 +177,21 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	}
 
 	// 3. wait response
-	logger.Debugf("wait certification request response for [%v]", i.ids)
+	logger.DebugfContext(context.Context(), "wait certification request response for [%v]", i.ids)
 	var certifications [][]byte
 	if err := s.ReceiveWithTimeout(&certifications, 60*time.Second); err != nil {
 		return nil, errors.WithMessagef(err, "failed receiving certifications [%v] from [%s]", i.ids, i.certifier)
 	}
 
 	// 4. Validate response
-	logger.Debugf("validate certification request response for [%v]", i.ids)
+	logger.DebugfContext(context.Context(), "validate certification request response for [%v]", i.ids)
 	processedCertifications, err := cm.VerifyCertifications(i.ids, certifications)
 	if err != nil {
-		logger.Errorf("failed verifying certifications of [%v] from [%s] with err [%s]", i.ids, i.certifier, err)
+		logger.ErrorfContext(context.Context(), "failed verifying certifications of [%v] from [%s] with err [%s]", i.ids, i.certifier, err)
 		return nil, errors.WithMessagef(err, "failed verifying certifications of [%v] from [%s]", i.ids, i.certifier)
 	}
 
-	logger.Debugf("certifications of [%v] from [%s] are valid", i.ids, i.certifier)
+	logger.DebugfContext(context.Context(), "certifications of [%v] from [%s] are valid", i.ids, i.certifier)
 
 	// 5. return token certifications in the form of a map
 	result := map[*token.ID][]byte{}

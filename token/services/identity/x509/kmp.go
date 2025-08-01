@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
+	"context"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -46,7 +47,7 @@ func NewKeyManagerProvider(config idriver.Config, signerService idriver.SigServi
 	}
 }
 
-func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
+func (k *KeyManagerProvider) Get(ctx context.Context, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	identityConfig := &idriver.ConfiguredIdentity{
 		ID:   idConfig.ID,
 		Path: idConfig.URL,
@@ -66,33 +67,34 @@ func (k *KeyManagerProvider) Get(idConfig *driver.IdentityConfiguration) (member
 			return nil, errors.Wrapf(err, "failed to load config [%s]", idConfig.ID)
 		}
 	}
-	return k.registerIdentity(config, identityConfig, idConfig)
+	return k.registerIdentity(ctx, config, identityConfig, idConfig)
 }
 
-func (k *KeyManagerProvider) registerIdentity(conf *crypto.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
-	p, err := k.registerProvider(conf, identityConfig, idConfig)
+func (k *KeyManagerProvider) registerIdentity(ctx context.Context, conf *crypto.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
+	p, err := k.registerProvider(ctx, conf, identityConfig, idConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to register provider")
 	}
 	return p, nil
 }
 
-func (k *KeyManagerProvider) registerProvider(conf *crypto.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
+func (k *KeyManagerProvider) registerProvider(ctx context.Context, conf *crypto.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	opts, err := crypto.ToBCCSPOpts(identityConfig.Opts)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to extract BCCSP options")
 	}
 	if opts == nil {
-		logger.Debugf("no BCCSP options set for [%s], opts [%v]", identityConfig.ID, identityConfig.Opts)
+		logger.DebugfContext(ctx, "no BCCSP options set for [%s], opts [%v]", identityConfig.ID, identityConfig.Opts)
 	} else {
-		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", identityConfig.ID, opts, opts.PKCS11, opts.SW)
+		logger.DebugfContext(ctx, "BCCSP options set for [%s] to [%v:%v:%v]", identityConfig.ID, opts, opts.PKCS11, opts.SW)
 	}
 
 	translatedPath := k.config.TranslatePath(identityConfig.Path)
 	keyStorePath := k.keyStorePath()
-	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
+	logger.DebugfContext(ctx, "load provider at [%s][%s]", translatedPath, keyStorePath)
 	// Try without ExtraPathElement
 	provider, conf, err := NewKeyManagerFromConf(
+		ctx,
 		conf,
 		translatedPath,
 		keyStorePath,
@@ -101,9 +103,10 @@ func (k *KeyManagerProvider) registerProvider(conf *crypto.Config, identityConfi
 		k.keyStore,
 	)
 	if err != nil {
-		logger.Debugf("failed loading provider at [%s]: [%s]", translatedPath, err)
+		logger.DebugfContext(ctx, "failed loading provider at [%s]: [%s]", translatedPath, err)
 		// Try with ExtraPathElement
 		provider, conf, err = NewKeyManagerFromConf(
+			ctx,
 			conf,
 			filepath.Join(translatedPath, ExtraPathElement),
 			keyStorePath,
@@ -112,7 +115,7 @@ func (k *KeyManagerProvider) registerProvider(conf *crypto.Config, identityConfi
 			k.keyStore,
 		)
 		if err != nil {
-			logger.Debugf("failed loading provider at [%s]: [%s]", filepath.Join(translatedPath, ExtraPathElement), err)
+			logger.DebugfContext(ctx, "failed loading provider at [%s]: [%s]", filepath.Join(translatedPath, ExtraPathElement), err)
 			return nil, err
 		}
 	}

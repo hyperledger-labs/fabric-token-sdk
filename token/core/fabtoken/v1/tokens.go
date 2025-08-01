@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package v1
 
 import (
+	"context"
 	errors2 "errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -35,12 +36,12 @@ func NewTokensService(pp *setup.PublicParams, identityDeserializer driver.Deseri
 	}, nil
 }
 
-func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity, error) {
+func (s *TokensService) Recipients(ctx context.Context, output driver.TokenOutput) ([]driver.Identity, error) {
 	tok := &actions.Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling token")
 	}
-	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	recipients, err := s.IdentityDeserializer.Recipients(ctx, tok.Owner)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get recipients")
 	}
@@ -48,7 +49,7 @@ func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
-func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token2.Token, driver.Identity, []driver.Identity, token2.Format, error) {
+func (s *TokensService) Deobfuscate(ctx context.Context, output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token2.Token, driver.Identity, []driver.Identity, token2.Format, error) {
 	tok := &actions.Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
@@ -59,7 +60,7 @@ func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata dr
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
 	}
 
-	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	recipients, err := s.IdentityDeserializer.Recipients(ctx, tok.Owner)
 	if err != nil {
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
 	}
@@ -81,11 +82,11 @@ func (s *TokensUpgradeService) NewUpgradeChallenge() (driver.TokensUpgradeChalle
 	return nil, errors.New("not supported")
 }
 
-func (s *TokensUpgradeService) GenUpgradeProof(ch driver.TokensUpgradeChallenge, tokens []token2.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
+func (s *TokensUpgradeService) GenUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, tokens []token2.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
 	return nil, errors.New("not supported")
 }
 
-func (s *TokensUpgradeService) CheckUpgradeProof(ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token2.LedgerToken) (bool, error) {
+func (s *TokensUpgradeService) CheckUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token2.LedgerToken) (bool, error) {
 	return false, errors.New("not supported")
 }
 

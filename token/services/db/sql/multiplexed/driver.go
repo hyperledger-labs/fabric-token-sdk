@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package multiplexed
 
 import (
+	"context"
+
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
@@ -32,60 +34,60 @@ type Driver struct {
 	config  driver2.PersistenceConfig
 }
 
-func (d Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (driver.TokenLockStore, error) {
+func (d Driver) NewTokenLock(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.TokenLockStore, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {
 		return nil, err
 	}
-	return dr.NewTokenLock(name, params...)
+	return dr.NewTokenLock(ctx, name, params...)
 }
 
-func (d Driver) NewWallet(name driver2.PersistenceName, params ...string) (driver.WalletStore, error) {
+func (d Driver) NewWallet(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.WalletStore, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {
 		return nil, err
 	}
-	return dr.NewWallet(name, params...)
+	return dr.NewWallet(ctx, name, params...)
 }
 
-func (d Driver) NewIdentity(name driver2.PersistenceName, params ...string) (driver.IdentityStore, error) {
+func (d Driver) NewIdentity(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.IdentityStore, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {
 		return nil, err
 	}
-	return dr.NewIdentity(name, params...)
+	return dr.NewIdentity(ctx, name, params...)
 }
 
-func (d Driver) NewToken(name driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
+func (d Driver) NewToken(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {
 		return nil, err
 	}
-	return dr.NewToken(name, params...)
+	return dr.NewToken(ctx, name, params...)
 }
 
-func (d Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string) (driver.TokenNotifier, error) {
+func (d Driver) NewTokenNotifier(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.TokenNotifier, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {
 		return nil, err
 	}
-	return dr.NewTokenNotifier(name, params...)
+	return dr.NewTokenNotifier(ctx, name, params...)
 }
 
-func (d Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
+func (d Driver) NewAuditTransaction(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {
 		return nil, err
 	}
-	return dr.NewAuditTransaction(name, params...)
+	return dr.NewAuditTransaction(ctx, name, params...)
 }
 
-func (d Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...string) (driver.TokenTransactionStore, error) {
+func (d Driver) NewOwnerTransaction(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.TokenTransactionStore, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {
 		return nil, err
 	}
-	return dr.NewOwnerTransaction(name, params...)
+	return dr.NewOwnerTransaction(ctx, name, params...)
 }
 
 func (d Driver) getDriver(name driver2.PersistenceName) (driver.Driver, error) {

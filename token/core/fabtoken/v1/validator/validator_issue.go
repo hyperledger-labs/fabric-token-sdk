@@ -53,12 +53,12 @@ func IssueValidate(ctx *Context) error {
 	}
 
 	// deserialize verifier for the issuer
-	verifier, err := ctx.Deserializer.GetIssuerVerifier(action.Issuer)
+	verifier, err := ctx.Deserializer.GetIssuerVerifier(ctx.Ctx, action.Issuer)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for issuer identity [%s]", action.Issuer.String())
 	}
 	// verify if the token request concatenated with the anchor was signed by the issuer
-	if _, err := ctx.SignatureProvider.HasBeenSignedBy(action.Issuer, verifier); err != nil {
+	if _, err := ctx.SignatureProvider.HasBeenSignedBy(ctx.Ctx, action.Issuer, verifier); err != nil {
 		return errors.Wrapf(err, "failed verifying signature")
 	}
 	return nil

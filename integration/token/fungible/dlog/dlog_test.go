@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package dlog
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
@@ -35,7 +37,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("succeeded", Label("T1"), func() { fungible.TestAll(context.Background(), ts.II, "auditor", nil, true, selector) })
 		})
 
 		Describe("Extras with websockets", t.Label, func() {
@@ -46,7 +48,7 @@ var _ = Describe("EndToEnd", func() {
 				fungible.TestPublicParamsUpdate(
 					ts.II,
 					"newAuditor",
-					fungible.PrepareUpdatedPublicParams(ts.II, "newAuditor", "newIssuer", "default", false),
+					fungible.PrepareUpdatedPublicParams(context.Background(), ts.II, "newAuditor", "newIssuer", "default", false),
 					"default",
 					false,
 					selector,
@@ -57,7 +59,7 @@ var _ = Describe("EndToEnd", func() {
 				fungible.TestPublicParamsUpdate(
 					ts.II,
 					"newAuditor",
-					fungible.PrepareUpdatedPublicParams(ts.II, "newAuditor", "newIssuer", "default", true),
+					fungible.PrepareUpdatedPublicParams(context.Background(), ts.II, "newAuditor", "newIssuer", "default", true),
 					"default",
 					false,
 					selector,
@@ -73,12 +75,12 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries|AuditorAsIssuer, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T6"), func() { fungible.TestAll(ts.II, "issuer", nil, true, selector) })
+			It("succeeded", Label("T6"), func() { fungible.TestAll(context.Background(), ts.II, "issuer", nil, true, selector) })
 			It("Update public params", Label("T7"), func() {
 				fungible.TestPublicParamsUpdate(
 					ts.II,
 					"newIssuer",
-					fungible.PrepareUpdatedPublicParams(ts.II, "newIssuer", "newIssuer", "default", false),
+					fungible.PrepareUpdatedPublicParams(context.Background(), ts.II, "newIssuer", "newIssuer", "default", false),
 					"default",
 					true,
 					selector,
@@ -91,7 +93,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, None, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T8"), func() { fungible.TestAll(ts.II, "auditor", nil, false, selector) })
+			It("succeeded", Label("T8"), func() { fungible.TestAll(context.Background(), ts.II, "auditor", nil, false, selector) })
 		})
 
 		Describe("Malicious Transactions", t.Label, func() {
@@ -105,7 +107,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries|WithEndorsers, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T10"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("succeeded", Label("T10"), func() { fungible.TestAll(context.Background(), ts.II, "auditor", nil, true, selector) })
 		})
 
 		Describe("Multisig", t.Label, func() {
@@ -119,7 +121,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("Test redeem", Label("T13"), func() { fungible.TestRedeem(ts.II, selector, "default") })
+			It("Test redeem", Label("T13"), func() { fungible.TestRedeem(context.Background(), ts.II, selector, "default") })
 		})
 
 	}

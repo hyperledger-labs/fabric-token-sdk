@@ -93,15 +93,15 @@ type jsonFilter struct {
 func (j *jsonFilter) ContainsToken(token *token2.UnspentToken) bool {
 	decoded, err := base64.StdEncoding.DecodeString(string(token.Type))
 	if err != nil {
-		logger.Debugf("failed to decode token type [%s]", token.Type)
+		logger.DebugfContext(ctx, "failed to decode token type [%s]", token.Type)
 		return false
 	}
-	logger.Debugf("decoded token type [%s]", string(decoded))
+	logger.DebugfContext(ctx, "decoded token type [%s]", string(decoded))
 	jq := j.q.FromString(string(decoded))
 	res := jq.Find(j.key)
 	if v, ok := res.(string); ok {
 		return v == j.value
 	}
-	logger.Debugf("res [%s] for [%s,%s]", res, j.key, j.value)
+	logger.DebugfContext(ctx, "res [%s] for [%s,%s]", res, j.key, j.value)
 	return false
 }

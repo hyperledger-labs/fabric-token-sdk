@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
@@ -47,14 +48,14 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 
 	// check that version is enforced
 	config.Version = 0
-	_, err = NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	_, err = NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported protocol version [0]")
 	config.Version = crypto2.ProtobufProtocolVersionV1
 
 	// new key manager loaded from file
 	assert.Empty(t, config.Signer.Ski)
-	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
@@ -67,7 +68,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 
 	// the config has been updated, load a new key manager
 	assert.NotEmpty(t, config.Signer.Ski)
-	keyManager, err = NewKeyManager(config, sigService, types.Standard, cryptoProvider)
+	keyManager, err = NewKeyManager(context.Background(), config, sigService, types.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
@@ -81,7 +82,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 
 	// load a new key manager again
 	assert.NotEmpty(t, config.Signer.Ski)
-	keyManager, err = NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err = NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
@@ -94,7 +95,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 	assert.Equal(t, tracker.GetHistory[1].Key, hex.EncodeToString(config.Signer.Ski))
 
 	// invalid sig type
-	_, err = NewKeyManager(config, sigService, -1, cryptoProvider)
+	_, err = NewKeyManager(context.Background(), config, sigService, -1, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported signature type -1")
 
@@ -103,13 +104,13 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 	assert.Equal(t, tracker.GetHistory[2].Key, hex.EncodeToString(config.Signer.Ski))
 
 	// no config
-	_, err = NewKeyManager(nil, sigService, types.EidNymRhNym, cryptoProvider)
+	_, err = NewKeyManager(context.Background(), nil, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "no idemix config provided")
 
 	// no signer in config
 	config.Signer = nil
-	_, err = NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	_, err = NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "no signer information found")
 
@@ -124,6 +125,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 }
 
 func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	ctx := context.Background()
 	t.Helper()
 	// prepare
 	registry := view.NewServiceProvider()
@@ -142,11 +144,11 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 
 	// init key manager
 	// with invalid sig type
-	_, err = NewKeyManager(config, sigService, -1, cryptoProvider)
+	_, err = NewKeyManager(context.Background(), config, sigService, -1, cryptoProvider)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unsupported signature type -1")
 	// correctly
-	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
@@ -155,7 +157,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	info, err := keyManager.Info(id, audit)
+	info, err := keyManager.Info(context.Background(), id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
 
@@ -164,46 +166,46 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
-	info2, err := keyManager.Info(id2, audit2)
+	info2, err := keyManager.Info(context.Background(), id2, audit2)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info2, "Idemix: [alice]"))
 	assert.Equal(t, audit, audit2)
 
 	// deserialize the audit information
-	auditInfo, err := keyManager.DeserializeAuditInfo(audit)
+	auditInfo, err := keyManager.DeserializeAuditInfo(ctx, audit)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo.Match(id))
-	assert.NoError(t, auditInfo.Match(id2))
-	auditInfo2, err := keyManager.DeserializeAuditInfo(audit2)
+	assert.NoError(t, auditInfo.Match(ctx, id))
+	assert.NoError(t, auditInfo.Match(ctx, id2))
+	auditInfo2, err := keyManager.DeserializeAuditInfo(ctx, audit2)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo2.Match(id))
-	assert.NoError(t, auditInfo2.Match(id2))
+	assert.NoError(t, auditInfo2.Match(ctx, id))
+	assert.NoError(t, auditInfo2.Match(ctx, id2))
 
 	assert.Equal(t, 3, tracker.GetCounter)
 
 	// deserialize an invalid signer
-	_, err = keyManager.DeserializeSigner(nil)
+	_, err = keyManager.DeserializeSigner(ctx, nil)
 	assert.Error(t, err)
-	_, err = keyManager.DeserializeSigner([]byte{})
+	_, err = keyManager.DeserializeSigner(ctx, []byte{})
 	assert.Error(t, err)
-	_, err = keyManager.DeserializeSigner([]byte{0, 1, 2})
+	_, err = keyManager.DeserializeSigner(ctx, []byte{0, 1, 2})
 	assert.Error(t, err)
 	assert.Equal(t, 3, tracker.GetCounter)
 	// deserialize a valid signer
-	signer, err := keyManager.DeserializeSigner(id)
+	signer, err := keyManager.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
 	assert.Equal(t, 5, tracker.GetCounter) // this is due the call to Sign used to test if the signer belong to this key manager
 	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[4].Key)
 
 	// deserialize an invalid verifier
-	_, err = keyManager.DeserializeVerifier(nil)
+	_, err = keyManager.DeserializeVerifier(ctx, nil)
 	assert.Error(t, err)
-	_, err = keyManager.DeserializeVerifier([]byte{})
+	_, err = keyManager.DeserializeVerifier(ctx, []byte{})
 	assert.Error(t, err)
-	_, err = keyManager.DeserializeVerifier([]byte{0, 1, 2})
+	_, err = keyManager.DeserializeVerifier(ctx, []byte{0, 1, 2})
 	assert.Error(t, err)
 	// deserialize a valid verifier
-	verifier, err := keyManager.DeserializeVerifier(id)
+	verifier, err := keyManager.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 
 	// get the signer from the sigService as well
@@ -237,6 +239,7 @@ func TestIdentityStandard(t *testing.T) {
 }
 
 func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	ctx := context.Background()
 	t.Helper()
 	registry := view.NewServiceProvider()
 
@@ -253,7 +256,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
-	p, err := NewKeyManager(config, sigService, types.Standard, cryptoProvider)
+	p, err := NewKeyManager(context.Background(), config, sigService, types.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -262,9 +265,9 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
 
-	signer, err := p.DeserializeSigner(id)
+	signer, err := p.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err := p.DeserializeVerifier(id)
+	verifier, err := p.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 
 	sigma, err := signer.Sign([]byte("hello world!!!"))
@@ -275,7 +278,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
-	p, err = NewKeyManager(config, sigService, types.Standard, cryptoProvider)
+	p, err = NewKeyManager(context.Background(), config, sigService, types.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -284,9 +287,9 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
 
-	signer, err = p.DeserializeSigner(id)
+	signer, err = p.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err = p.DeserializeVerifier(id)
+	verifier, err = p.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 
 	sigma, err = signer.Sign([]byte("hello world!!!"))
@@ -297,7 +300,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
-	p, err = NewKeyManager(config, sigService, Any, cryptoProvider)
+	p, err = NewKeyManager(context.Background(), config, sigService, Any, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -306,9 +309,9 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
 
-	signer, err = p.DeserializeSigner(id)
+	signer, err = p.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err = p.DeserializeVerifier(id)
+	verifier, err = p.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 
 	sigma, err = signer.Sign([]byte("hello world!!!"))
@@ -322,6 +325,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 }
 
 func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	ctx := context.Background()
 	t.Helper()
 	registry := view.NewServiceProvider()
 
@@ -337,7 +341,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
-	p, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -347,7 +351,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID, aries)
 	assert.NoError(t, err)
-	p2, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p2, err := NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
@@ -360,16 +364,16 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
 
-	auditInfo, err := p.DeserializeAuditInfo(audit)
+	auditInfo, err := p.DeserializeAuditInfo(context.Background(), audit)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo.Match(id))
-	assert.Error(t, auditInfo.Match(id2))
+	assert.NoError(t, auditInfo.Match(ctx, id))
+	assert.Error(t, auditInfo.Match(ctx, id2))
 
-	auditInfo, err = p2.DeserializeAuditInfo(audit)
+	auditInfo, err = p2.DeserializeAuditInfo(context.Background(), audit)
 	assert.NoError(t, err)
 	assert.NoError(t, auditInfo.FromBytes(audit2))
-	assert.NoError(t, auditInfo.Match(id2))
-	assert.Error(t, auditInfo.Match(id))
+	assert.NoError(t, auditInfo.Match(ctx, id2))
+	assert.Error(t, auditInfo.Match(ctx, id))
 }
 
 func TestKeyManager_DeserializeSigner(t *testing.T) {
@@ -378,6 +382,7 @@ func TestKeyManager_DeserializeSigner(t *testing.T) {
 }
 
 func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	ctx := context.Background()
 	t.Helper()
 	// prepare
 	registry := view.NewServiceProvider()
@@ -394,14 +399,14 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	// first key manager
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
-	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
 	// second key manager
 	config, err = crypto2.NewConfig(configPath + "2")
 	assert.NoError(t, err)
-	keyManager2, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager2, err := NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager2)
 
@@ -414,9 +419,9 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	assert.NoError(t, err)
 
 	// This must work
-	signer, err := keyManager.DeserializeSigner(id)
+	signer, err := keyManager.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err := keyManager.DeserializeVerifier(id)
+	verifier, err := keyManager.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 	msg := []byte("Hello World!!!")
 	sigma, err := signer.Sign(msg)
@@ -424,18 +429,18 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	assert.NoError(t, verifier.Verify(msg, sigma))
 
 	// Try to deserialize id2 with provider for id, it should fail
-	_, err = keyManager.DeserializeSigner(id2)
+	_, err = keyManager.DeserializeSigner(ctx, id2)
 	assert.Error(t, err)
-	_, err = keyManager.DeserializeVerifier(id2)
+	_, err = keyManager.DeserializeVerifier(ctx, id2)
 	assert.NoError(t, err)
 
 	// this must work
 	des := sig.NewMultiplexDeserializer()
-	des.AddDeserializer(keyManager)
-	des.AddDeserializer(keyManager2)
-	signer, err = des.DeserializeSigner(id)
+	des.AddDeserializer(ctx, keyManager)
+	des.AddDeserializer(ctx, keyManager2)
+	signer, err = des.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err = des.DeserializeVerifier(id)
+	verifier, err = des.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 	sigma, err = signer.Sign(msg)
 	assert.NoError(t, err)
@@ -443,6 +448,7 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 }
 
 func TestIdentityFromFabricCA(t *testing.T) {
+	ctx := context.Background()
 	registry := view.NewServiceProvider()
 
 	kvs, err := kvs2.NewInMemory()
@@ -453,14 +459,14 @@ func TestIdentityFromFabricCA(t *testing.T) {
 
 	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
-	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
+	config, err := crypto2.NewConfigWithIPK(ctx, ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
 	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err := NewKeyManager(config, sigService, types.Standard, cryptoProvider)
+	p, err := NewKeyManager(ctx, config, sigService, types.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -469,9 +475,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
 
-	signer, err := p.DeserializeSigner(id)
+	signer, err := p.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err := p.DeserializeVerifier(id)
+	verifier, err := p.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 
 	sigma, err := signer.Sign([]byte("hello world!!!"))
@@ -482,7 +488,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = NewKeyManager(config, sigService, types.Standard, cryptoProvider)
+	p, err = NewKeyManager(ctx, config, sigService, types.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -491,9 +497,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
 
-	signer, err = p.DeserializeSigner(id)
+	signer, err = p.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err = p.DeserializeVerifier(id)
+	verifier, err = p.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 
 	sigma, err = signer.Sign([]byte("hello world!!!"))
@@ -504,7 +510,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = NewKeyManager(config, sigService, Any, cryptoProvider)
+	p, err = NewKeyManager(ctx, config, sigService, Any, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -513,9 +519,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
 
-	signer, err = p.DeserializeSigner(id)
+	signer, err = p.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err = p.DeserializeVerifier(id)
+	verifier, err = p.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 
 	sigma, err = signer.Sign([]byte("hello world!!!"))
@@ -524,6 +530,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 }
 
 func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
+	ctx := context.Background()
 	registry := view.NewServiceProvider()
 
 	kvs, err := kvs2.NewInMemory()
@@ -534,14 +541,14 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 
 	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
-	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
+	config, err := crypto2.NewConfigWithIPK(ctx, ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
 	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	assert.NoError(t, err)
 	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -551,17 +558,17 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	info, err := p.Info(id, audit)
+	info, err := p.Info(context.Background(), id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [charlie.ExtraId2]"))
 
-	auditInfo, err := p.DeserializeAuditInfo(audit)
+	auditInfo, err := p.DeserializeAuditInfo(ctx, audit)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo.Match(id))
+	assert.NoError(t, auditInfo.Match(ctx, id))
 
-	signer, err := p.DeserializeSigner(id)
+	signer, err := p.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err := p.DeserializeVerifier(id)
+	verifier, err := p.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 
 	sigma, err := signer.Sign([]byte("hello world!!!"))
@@ -572,7 +579,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254, false)
 	assert.NoError(t, err)
-	p, err = NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err = NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -580,17 +587,17 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	info, err = p.Info(id, audit)
+	info, err = p.Info(context.Background(), id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [charlie.ExtraId2]"))
 
-	auditInfo, err = p.DeserializeAuditInfo(audit)
+	auditInfo, err = p.DeserializeAuditInfo(ctx, audit)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo.Match(id))
+	assert.NoError(t, auditInfo.Match(ctx, id))
 
-	signer, err = p.DeserializeSigner(id)
+	signer, err = p.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
-	verifier, err = p.DeserializeVerifier(id)
+	verifier, err = p.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
 
 	sigma, err = signer.Sign([]byte("hello world!!!"))

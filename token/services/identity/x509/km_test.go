@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
@@ -14,18 +15,19 @@ import (
 )
 
 func TestDeserializer(t *testing.T) {
+	ctx := context.Background()
 	keyStore := NewKeyStore(kvs.NewTrackedMemory())
 
 	// load a full identity capable of signing as well
-	fullIdentityProvider, _, err := NewKeyManager("./testdata/msp", nil, nil, keyStore)
+	fullIdentityProvider, _, err := NewKeyManager(ctx, "./testdata/msp", nil, nil, keyStore)
 	assert.NoError(t, err)
 	assert.False(t, fullIdentityProvider.Anonymous())
 	// load a full identity capable of signing as well with a custom keystore path
-	fullIdentityProvider2, _, err := NewKeyManagerFromConf(nil, "./testdata/msp2", KeystoreFullFolder, nil, nil, keyStore)
+	fullIdentityProvider2, _, err := NewKeyManagerFromConf(ctx, nil, "./testdata/msp2", KeystoreFullFolder, nil, nil, keyStore)
 	assert.NoError(t, err)
 	assert.False(t, fullIdentityProvider.Anonymous())
 	// load a verifying only provider
-	verifyingIdentityProvider, _, err := NewKeyManager("./testdata/msp1", nil, nil, keyStore)
+	verifyingIdentityProvider, _, err := NewKeyManager(ctx, "./testdata/msp1", nil, nil, keyStore)
 	assert.NoError(t, err)
 
 	for _, provider := range []*KeyManager{fullIdentityProvider, fullIdentityProvider2} {
@@ -38,7 +40,7 @@ func TestDeserializer(t *testing.T) {
 		assert.Equal(t, eID, ai.EID)
 		assert.Equal(t, "auditor.org1.example.com", eID)
 		des := &IdentityDeserializer{}
-		verifier, err := des.DeserializeVerifier(id)
+		verifier, err := des.DeserializeVerifier(ctx, id)
 		assert.NoError(t, err)
 		signingIdentity := provider.SigningIdentity()
 		assert.NotNil(t, signingIdentity)
@@ -51,7 +53,7 @@ func TestDeserializer(t *testing.T) {
 		// check again a verifying identity
 		verifyingIdentity, _, err := verifyingIdentityProvider.Identity(t.Context(), nil)
 		assert.NoError(t, err)
-		verifier2, err := provider.DeserializeVerifier(verifyingIdentity)
+		verifier2, err := provider.DeserializeVerifier(ctx, verifyingIdentity)
 		assert.NoError(t, err)
 		err = verifier2.Verify([]byte("hello worlds"), sigma)
 		assert.NoError(t, err)

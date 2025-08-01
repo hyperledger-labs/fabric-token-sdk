@@ -61,7 +61,7 @@ func NewDriver(backendFactory BackendFactory, resolver Resolver, subscriber Subs
 	}
 }
 
-func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.CertificationClient, error) {
+func (d *Driver) NewCertificationClient(ctx context.Context, tms *token.ManagementService) (driver.CertificationClient, error) {
 	d.Sync.Lock()
 	defer d.Sync.Unlock()
 
@@ -93,8 +93,8 @@ func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.Ce
 			3,
 			10*time.Second,
 		)
-		if err := certificationClient.Scan(); err != nil {
-			logger.Warnf("failed to scan the vault for tokens to be certified [%s]", err)
+		if err := certificationClient.Scan(ctx); err != nil {
+			logger.WarnfContext(ctx, "failed to scan the vault for tokens to be certified [%s]", err)
 		}
 		certificationClient.Start()
 
@@ -104,7 +104,7 @@ func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.Ce
 	return cm, nil
 }
 
-func (d *Driver) NewCertificationService(tms *token.ManagementService, wallet string) (driver.CertificationService, error) {
+func (d *Driver) NewCertificationService(ctx context.Context, tms *token.ManagementService, wallet string) (driver.CertificationService, error) {
 	d.Sync.Lock()
 	defer d.Sync.Unlock()
 
@@ -113,7 +113,7 @@ func (d *Driver) NewCertificationService(tms *token.ManagementService, wallet st
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create backend")
 		}
-		d.CertificationService = NewCertificationService(d.ResponderRegistry, d.MetricsProvider, backend)
+		d.CertificationService = NewCertificationService(ctx, d.ResponderRegistry, d.MetricsProvider, backend)
 	}
 	d.CertificationService.SetWallet(tms, wallet)
 
@@ -123,7 +123,7 @@ func (d *Driver) NewCertificationService(tms *token.ManagementService, wallet st
 type ChaincodeBackend struct{}
 
 func (c *ChaincodeBackend) Load(context view.Context, cr *CertificationRequest) ([][]byte, error) {
-	logger.Debugf("invoke chaincode to get commitments for [%v]", cr.IDs)
+	logger.DebugfContext(context.Context(), "invoke chaincode to get commitments for [%v]", cr.IDs)
 	// TODO: if the certifier fetches all token transactions, it might have the tokens in its on vault.
 	tokensBoxed, err := context.RunView(tcc.NewGetTokensView(cr.Channel, cr.Namespace, cr.IDs...))
 	if err != nil {

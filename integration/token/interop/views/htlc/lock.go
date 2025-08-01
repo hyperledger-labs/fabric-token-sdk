@@ -118,13 +118,13 @@ func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
 	_, err = context.RunView(htlc.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed to commit htlc transaction")
 
-	outputs, err := tx.Outputs()
+	outputs, err := tx.Outputs(context.Context())
 	assert.NoError(err, "failed getting outputs")
 
 	return &LockInfo{
 		TxID:     tx.ID(),
 		PreImage: preImage,
-		Hash:     outputs.ScriptAt(0).HashInfo.Hash,
+		Hash:     outputs.ScriptAt(context.Context(), 0).HashInfo.Hash,
 	}, nil
 }
 
@@ -156,13 +156,13 @@ func (h *LockAcceptView) Call(context view.Context) (interface{}, error) {
 	// The recipient can perform any check on the transaction as required by the business process
 	// In particular, here, the recipient checks that the transaction contains at least one output, and
 	// that there is at least one output that names the recipient. The recipient is receiving something.
-	outputs, err := tx.Outputs()
+	outputs, err := tx.Outputs(context.Context())
 	assert.NoError(err, "failed getting outputs")
 	assert.True(outputs.Count() >= 1, "expected at least one output, got [%d]", outputs.Count())
 	outputs = outputs.ByScript()
 	assert.True(outputs.Count() == 1, "expected only one htlc output, got [%d]", outputs.Count())
 
-	script := outputs.ScriptAt(0)
+	script := outputs.ScriptAt(context.Context(), 0)
 	assert.NoError(script.Validate(time.Now()), "script is not valid")
 	assert.NotNil(script, "expected an htlc script")
 	assert.True(me.Equal(script.Recipient), "expected me as recipient of the script")

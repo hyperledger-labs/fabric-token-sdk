@@ -147,7 +147,7 @@ func TestOutputStream_EnrollmentIDs(t *testing.T) {
 
 	enrollmentIDs := stream.EnrollmentIDs()
 
-	assert.ElementsMatch(t, []string{"enroll1", "enroll2"}, enrollmentIDs)
+	assert.ElementsMatch(ctx, t, []string{"enroll1", "enroll2"}, enrollmentIDs)
 }
 
 func TestOutputStream_RevocationHandles(t *testing.T) {

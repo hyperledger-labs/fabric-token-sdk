@@ -37,12 +37,13 @@ type KeyManager struct {
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
 func NewKeyManager(
+	ctx context.Context,
 	path string,
 	signerService SignerService,
 	bccspConfig *crypto.BCCSP,
 	keyStore crypto.KeyStore,
 ) (*KeyManager, *crypto.Config, error) {
-	p, conf, err := NewKeyManagerFromConf(nil, path, "", signerService, bccspConfig, keyStore)
+	p, conf, err := NewKeyManagerFromConf(ctx, nil, path, "", signerService, bccspConfig, keyStore)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -50,6 +51,7 @@ func NewKeyManager(
 }
 
 func NewKeyManagerFromConf(
+	ctx context.Context,
 	conf *crypto.Config,
 	configPath, keyStoreDirName string,
 	signerService SignerService,
@@ -60,7 +62,7 @@ func NewKeyManagerFromConf(
 		return nil, nil, errors.New("no keyStore provided")
 	}
 	if conf == nil {
-		logger.Debugf("load x509 config from [%s]", configPath)
+		logger.DebugfContext(ctx, "load x509 config from [%s]", configPath)
 		var err error
 		conf, err = crypto.LoadConfig(configPath, keyStoreDirName)
 		if err != nil {
@@ -71,19 +73,19 @@ func NewKeyManagerFromConf(
 	if conf.Version != crypto.ProtobufProtocolVersionV1 {
 		return nil, nil, errors.Errorf("unsupported protocol version: %d", conf.Version)
 	}
-	p, err := newSigningKeyManager(conf, signerService, bccspConfig, keyStore)
+	p, err := newSigningKeyManager(ctx, conf, signerService, bccspConfig, keyStore)
 	if err == nil {
 		return p, conf, nil
 	}
 	// load as verify only
-	p, conf, err = newVerifyingKeyManager(conf)
+	p, conf, err = newVerifyingKeyManager(ctx, conf)
 	if err != nil {
 		return nil, nil, err
 	}
 	return p, conf, err
 }
 
-func newSigningKeyManager(conf *crypto.Config, signerService SignerService, bccspConfig *crypto.BCCSP, keyStore crypto.KeyStore) (*KeyManager, error) {
+func newSigningKeyManager(ctx context.Context, conf *crypto.Config, signerService SignerService, bccspConfig *crypto.BCCSP, keyStore crypto.KeyStore) (*KeyManager, error) {
 	sID, err := crypto.GetSigningIdentity(conf, bccspConfig, keyStore)
 	if err != nil {
 		return nil, err
@@ -93,16 +95,16 @@ func newSigningKeyManager(conf *crypto.Config, signerService SignerService, bccs
 		return nil, err
 	}
 	if signerService != nil {
-		logger.Debugf("register signer [%s]", driver.Identity(idRaw))
+		logger.DebugfContext(ctx, "register signer [%s]", driver.Identity(idRaw))
 		err = signerService.RegisterSigner(context.Background(), idRaw, sID, sID, nil)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed registering x509 signer")
 		}
 	}
-	return newKeyManager(sID, idRaw)
+	return newKeyManager(ctx, sID, idRaw)
 }
 
-func newVerifyingKeyManager(conf *crypto.Config) (*KeyManager, *crypto.Config, error) {
+func newVerifyingKeyManager(ctx context.Context, conf *crypto.Config) (*KeyManager, *crypto.Config, error) {
 	conf, err := crypto.RemovePrivateSigner(conf)
 	if err != nil {
 		return nil, nil, err
@@ -111,15 +113,15 @@ func newVerifyingKeyManager(conf *crypto.Config) (*KeyManager, *crypto.Config, e
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to load identity")
 	}
-	p, err := newKeyManager(nil, idRaw)
+	p, err := newKeyManager(ctx, nil, idRaw)
 	if err != nil {
 		return nil, nil, err
 	}
 	return p, conf, nil
 }
 
-func newKeyManager(sID driver.SigningIdentity, id []byte) (*KeyManager, error) {
-	enrollmentID, err := crypto.GetEnrollmentID(id)
+func newKeyManager(ctx context.Context, sID driver.SigningIdentity, id []byte) (*KeyManager, error) {
+	enrollmentID, err := crypto.GetEnrollmentID(ctx, id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get enrollment id")
 	}
@@ -130,8 +132,8 @@ func (p *KeyManager) IsRemote() bool {
 	return p.sID == nil
 }
 
-func (p *KeyManager) Identity(context.Context, []byte) (driver.Identity, []byte, error) {
-	revocationHandle, err := crypto.GetRevocationHandle(p.id)
+func (p *KeyManager) Identity(ctx context.Context, _ []byte) (driver.Identity, []byte, error) {
+	revocationHandle, err := crypto.GetRevocationHandle(ctx, p.id)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")
 	}
@@ -151,16 +153,16 @@ func (p *KeyManager) EnrollmentID() string {
 	return p.enrollmentID
 }
 
-func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	return crypto.DeserializeVerifier(raw)
+func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (driver.Verifier, error) {
+	return crypto.DeserializeVerifier(ctx, raw)
 }
 
-func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
+func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
 	return nil, errors.New("not supported")
 }
 
-func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
-	return crypto.Info(raw)
+func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
+	return crypto.Info(ctx, raw)
 }
 
 func (p *KeyManager) Anonymous() bool {

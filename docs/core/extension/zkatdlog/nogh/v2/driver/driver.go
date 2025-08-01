@@ -73,7 +73,8 @@ func NewDriver(
 func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
 	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
-	logger.Debugf("creating new token service with public parameters [%s]", hash.Hashable(publicParams))
+	ctx := context.Background()
+	logger.DebugfContext(ctx, "creating new token service with public parameters [%s]", hash.Hashable(publicParams))
 
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")
@@ -107,8 +108,8 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
-	pp := ppm.PublicParams(context.Background())
-	logger.Infof("new token driver for tms id [%s] with label and version [%s:%d]: [%s]", tmsID, pp.TokenDriverName(), pp.TokenDriverVersion(), pp)
+	pp := ppm.PublicParams(ctx)
+	logger.InfofContext(ctx, "new token driver for tms id [%s] with label and version [%s:%d]: [%s]", tmsID, pp.TokenDriverName(), pp.TokenDriverVersion(), pp)
 
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	qe := vault.QueryEngine()
@@ -131,7 +132,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	ip := ws.IdentityProvider
 
 	authorization := common.NewAuthorizationMultiplexer(
-		common.NewTMSAuthorization(logger, ppm.PublicParams(context.Background()), ws),
+		common.NewTMSAuthorization(ctx, logger, ppm.PublicParams(context.Background()), ws),
 		htlc.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
 	)
@@ -201,5 +202,5 @@ func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Val
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	return d.DefaultValidator(pp)
+	return d.DefaultValidator(context.Background(), pp)
 }

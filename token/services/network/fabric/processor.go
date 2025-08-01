@@ -47,18 +47,18 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 		}
 	}
 	if !found {
-		logger.Debugf("this processor cannot parse namespace [%s]", ns)
+		logger.DebugfContext(ctx, "this processor cannot parse namespace [%s]", ns)
 		return errors.Errorf("this processor cannot parse namespace [%s]", ns)
 	}
 
 	// Match the network name
 	if tx.Network() != r.network {
-		logger.Debugf("tx's network [%s]!=[%s]", tx.Network(), r.network)
+		logger.DebugfContext(ctx, "tx's network [%s]!=[%s]", tx.Network(), r.network)
 		return nil
 	}
 
 	fn, _ := tx.FunctionAndParameters()
-	logger.Debugf("process namespace and function [%s:%s]", ns, fn)
+	logger.DebugfContext(ctx, "process namespace and function [%s:%s]", ns, fn)
 	switch fn {
 	case "init":
 		return r.init(context.Background(), tx, rws, ns)
@@ -80,7 +80,7 @@ func (r *RWSetProcessor) init(ctx context.Context, tx fabric.ProcessTransaction,
 			return err
 		}
 		if key == setUpKey {
-			logger.Debugf("Parsing write key [%s] with hash value [%s]", key, hash.Hashable(val))
+			logger.DebugfContext(ctx, "Parsing write key [%s] with hash value [%s]", key, hash.Hashable(val))
 			if err := tsmProvider.Update(token.TMSID{
 				Network:   tx.Network(),
 				Channel:   tx.Channel(),

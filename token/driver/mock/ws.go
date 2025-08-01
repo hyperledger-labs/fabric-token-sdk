@@ -52,11 +52,12 @@ type WalletService struct {
 		result1 []byte
 		result2 error
 	}
-	GetEIDAndRHStub        func(driver.Identity, []byte) (string, string, error)
+	GetEIDAndRHStub        func(context.Context, driver.Identity, []byte) (string, string, error)
 	getEIDAndRHMutex       sync.RWMutex
 	getEIDAndRHArgsForCall []struct {
-		arg1 driver.Identity
-		arg2 []byte
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
 	}
 	getEIDAndRHReturns struct {
 		result1 string
@@ -68,11 +69,12 @@ type WalletService struct {
 		result2 string
 		result3 error
 	}
-	GetEnrollmentIDStub        func(driver.Identity, []byte) (string, error)
+	GetEnrollmentIDStub        func(context.Context, driver.Identity, []byte) (string, error)
 	getEnrollmentIDMutex       sync.RWMutex
 	getEnrollmentIDArgsForCall []struct {
-		arg1 driver.Identity
-		arg2 []byte
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
 	}
 	getEnrollmentIDReturns struct {
 		result1 string
@@ -82,11 +84,12 @@ type WalletService struct {
 		result1 string
 		result2 error
 	}
-	GetRevocationHandleStub        func(driver.Identity, []byte) (string, error)
+	GetRevocationHandleStub        func(context.Context, driver.Identity, []byte) (string, error)
 	getRevocationHandleMutex       sync.RWMutex
 	getRevocationHandleArgsForCall []struct {
-		arg1 driver.Identity
-		arg2 []byte
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
 	}
 	getRevocationHandleReturns struct {
 		result1 string
@@ -173,10 +176,11 @@ type WalletService struct {
 	registerRecipientIdentityReturnsOnCall map[int]struct {
 		result1 error
 	}
-	SpendIDsStub        func(...*token.ID) ([]string, error)
+	SpendIDsStub        func(context.Context, ...*token.ID) ([]string, error)
 	spendIDsMutex       sync.RWMutex
 	spendIDsArgsForCall []struct {
-		arg1 []*token.ID
+		arg1 context.Context
+		arg2 []*token.ID
 	}
 	spendIDsReturns struct {
 		result1 []string
@@ -397,24 +401,25 @@ func (fake *WalletService) GetAuditInfoReturnsOnCall(i int, result1 []byte, resu
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetEIDAndRH(arg1 driver.Identity, arg2 []byte) (string, string, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *WalletService) GetEIDAndRH(arg1 context.Context, arg2 driver.Identity, arg3 []byte) (string, string, error) {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.getEIDAndRHMutex.Lock()
 	ret, specificReturn := fake.getEIDAndRHReturnsOnCall[len(fake.getEIDAndRHArgsForCall)]
 	fake.getEIDAndRHArgsForCall = append(fake.getEIDAndRHArgsForCall, struct {
-		arg1 driver.Identity
-		arg2 []byte
-	}{arg1, arg2Copy})
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
 	stub := fake.GetEIDAndRHStub
 	fakeReturns := fake.getEIDAndRHReturns
-	fake.recordInvocation("GetEIDAndRH", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("GetEIDAndRH", []interface{}{arg1, arg2, arg3Copy})
 	fake.getEIDAndRHMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -428,17 +433,17 @@ func (fake *WalletService) GetEIDAndRHCallCount() int {
 	return len(fake.getEIDAndRHArgsForCall)
 }
 
-func (fake *WalletService) GetEIDAndRHCalls(stub func(driver.Identity, []byte) (string, string, error)) {
+func (fake *WalletService) GetEIDAndRHCalls(stub func(context.Context, driver.Identity, []byte) (string, string, error)) {
 	fake.getEIDAndRHMutex.Lock()
 	defer fake.getEIDAndRHMutex.Unlock()
 	fake.GetEIDAndRHStub = stub
 }
 
-func (fake *WalletService) GetEIDAndRHArgsForCall(i int) (driver.Identity, []byte) {
+func (fake *WalletService) GetEIDAndRHArgsForCall(i int) (context.Context, driver.Identity, []byte) {
 	fake.getEIDAndRHMutex.RLock()
 	defer fake.getEIDAndRHMutex.RUnlock()
 	argsForCall := fake.getEIDAndRHArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg2
 }
 
 func (fake *WalletService) GetEIDAndRHReturns(result1 string, result2 string, result3 error) {
@@ -470,24 +475,25 @@ func (fake *WalletService) GetEIDAndRHReturnsOnCall(i int, result1 string, resul
 	}{result1, result2, result3}
 }
 
-func (fake *WalletService) GetEnrollmentID(arg1 driver.Identity, arg2 []byte) (string, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *WalletService) GetEnrollmentID(arg1 context.Context, arg2 driver.Identity, arg3 []byte) (string, error) {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.getEnrollmentIDMutex.Lock()
 	ret, specificReturn := fake.getEnrollmentIDReturnsOnCall[len(fake.getEnrollmentIDArgsForCall)]
 	fake.getEnrollmentIDArgsForCall = append(fake.getEnrollmentIDArgsForCall, struct {
-		arg1 driver.Identity
-		arg2 []byte
-	}{arg1, arg2Copy})
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
 	stub := fake.GetEnrollmentIDStub
 	fakeReturns := fake.getEnrollmentIDReturns
-	fake.recordInvocation("GetEnrollmentID", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("GetEnrollmentID", []interface{}{arg2, arg3Copy})
 	fake.getEnrollmentIDMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -501,17 +507,17 @@ func (fake *WalletService) GetEnrollmentIDCallCount() int {
 	return len(fake.getEnrollmentIDArgsForCall)
 }
 
-func (fake *WalletService) GetEnrollmentIDCalls(stub func(driver.Identity, []byte) (string, error)) {
+func (fake *WalletService) GetEnrollmentIDCalls(stub func(context.Context, driver.Identity, []byte) (string, error)) {
 	fake.getEnrollmentIDMutex.Lock()
 	defer fake.getEnrollmentIDMutex.Unlock()
 	fake.GetEnrollmentIDStub = stub
 }
 
-func (fake *WalletService) GetEnrollmentIDArgsForCall(i int) (driver.Identity, []byte) {
+func (fake *WalletService) GetEnrollmentIDArgsForCall(i int) (context.Context, driver.Identity, []byte) {
 	fake.getEnrollmentIDMutex.RLock()
 	defer fake.getEnrollmentIDMutex.RUnlock()
 	argsForCall := fake.getEnrollmentIDArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *WalletService) GetEnrollmentIDReturns(result1 string, result2 error) {
@@ -540,24 +546,25 @@ func (fake *WalletService) GetEnrollmentIDReturnsOnCall(i int, result1 string, r
 	}{result1, result2}
 }
 
-func (fake *WalletService) GetRevocationHandle(arg1 driver.Identity, arg2 []byte) (string, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *WalletService) GetRevocationHandle(arg1 context.Context, arg2 driver.Identity, arg3 []byte) (string, error) {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.getRevocationHandleMutex.Lock()
 	ret, specificReturn := fake.getRevocationHandleReturnsOnCall[len(fake.getRevocationHandleArgsForCall)]
 	fake.getRevocationHandleArgsForCall = append(fake.getRevocationHandleArgsForCall, struct {
-		arg1 driver.Identity
-		arg2 []byte
-	}{arg1, arg2Copy})
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
 	stub := fake.GetRevocationHandleStub
 	fakeReturns := fake.getRevocationHandleReturns
-	fake.recordInvocation("GetRevocationHandle", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("GetRevocationHandle", []interface{}{arg1, arg3Copy})
 	fake.getRevocationHandleMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -571,17 +578,17 @@ func (fake *WalletService) GetRevocationHandleCallCount() int {
 	return len(fake.getRevocationHandleArgsForCall)
 }
 
-func (fake *WalletService) GetRevocationHandleCalls(stub func(driver.Identity, []byte) (string, error)) {
+func (fake *WalletService) GetRevocationHandleCalls(stub func(context.Context, driver.Identity, []byte) (string, error)) {
 	fake.getRevocationHandleMutex.Lock()
 	defer fake.getRevocationHandleMutex.Unlock()
 	fake.GetRevocationHandleStub = stub
 }
 
-func (fake *WalletService) GetRevocationHandleArgsForCall(i int) (driver.Identity, []byte) {
+func (fake *WalletService) GetRevocationHandleArgsForCall(i int) (context.Context, driver.Identity, []byte) {
 	fake.getRevocationHandleMutex.RLock()
 	defer fake.getRevocationHandleMutex.RUnlock()
 	argsForCall := fake.getRevocationHandleArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *WalletService) GetRevocationHandleReturns(result1 string, result2 error) {
@@ -990,18 +997,19 @@ func (fake *WalletService) RegisterRecipientIdentityReturnsOnCall(i int, result1
 	}{result1}
 }
 
-func (fake *WalletService) SpendIDs(arg1 ...*token.ID) ([]string, error) {
+func (fake *WalletService) SpendIDs(arg1 context.Context, arg2 ...*token.ID) ([]string, error) {
 	fake.spendIDsMutex.Lock()
 	ret, specificReturn := fake.spendIDsReturnsOnCall[len(fake.spendIDsArgsForCall)]
 	fake.spendIDsArgsForCall = append(fake.spendIDsArgsForCall, struct {
-		arg1 []*token.ID
-	}{arg1})
+		arg1 context.Context
+		arg2 []*token.ID
+	}{arg1, arg2})
 	stub := fake.SpendIDsStub
 	fakeReturns := fake.spendIDsReturns
 	fake.recordInvocation("SpendIDs", []interface{}{arg1})
 	fake.spendIDsMutex.Unlock()
 	if stub != nil {
-		return stub(arg1...)
+		return stub(arg1, arg2...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1015,17 +1023,17 @@ func (fake *WalletService) SpendIDsCallCount() int {
 	return len(fake.spendIDsArgsForCall)
 }
 
-func (fake *WalletService) SpendIDsCalls(stub func(...*token.ID) ([]string, error)) {
+func (fake *WalletService) SpendIDsCalls(stub func(context.Context, ...*token.ID) ([]string, error)) {
 	fake.spendIDsMutex.Lock()
 	defer fake.spendIDsMutex.Unlock()
 	fake.SpendIDsStub = stub
 }
 
-func (fake *WalletService) SpendIDsArgsForCall(i int) []*token.ID {
+func (fake *WalletService) SpendIDsArgsForCall(i int) (context.Context, []*token.ID) {
 	fake.spendIDsMutex.RLock()
 	defer fake.spendIDsMutex.RUnlock()
 	argsForCall := fake.spendIDsArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *WalletService) SpendIDsReturns(result1 []string, result2 error) {

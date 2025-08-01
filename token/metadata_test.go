@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -118,7 +119,7 @@ func testFilterByCase0(t *testing.T) {
 		Logger: logging.MustGetLogger(),
 	}
 	// Filter by Bob
-	filteredMetadata, err := metadata.FilterBy("Bob")
+	filteredMetadata, err := metadata.FilterBy(context.Background(), "Bob")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 2, ws.GetEnrollmentIDCallCount())
@@ -132,7 +133,7 @@ func testFilterByCase0(t *testing.T) {
 	assertEmptyTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1])
 
 	// Filter by Charlie
-	filteredMetadata, err = metadata.FilterBy("Charlie")
+	filteredMetadata, err = metadata.FilterBy(context.Background(), "Charlie")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 4, ws.GetEnrollmentIDCallCount())
@@ -146,7 +147,7 @@ func testFilterByCase0(t *testing.T) {
 	assertEqualTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1], true)
 
 	// Filter by Eve
-	filteredMetadata, err = metadata.FilterBy("Eve")
+	filteredMetadata, err = metadata.FilterBy(context.Background(), "Eve")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 6, ws.GetEnrollmentIDCallCount())
@@ -160,7 +161,7 @@ func testFilterByCase0(t *testing.T) {
 	assertEmptyTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1])
 
 	// Filter by Bob and Charlie
-	filteredMetadata, err = metadata.FilterBy("Bob", "Charlie")
+	filteredMetadata, err = metadata.FilterBy(context.Background(), "Bob", "Charlie")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
@@ -174,7 +175,7 @@ func testFilterByCase0(t *testing.T) {
 	assertEqualTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1], true)
 
 	// No Filter
-	filteredMetadata, err = metadata.FilterBy()
+	filteredMetadata, err = metadata.FilterBy(context.Background())
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
@@ -256,7 +257,7 @@ func testFilterByCase1(t *testing.T) {
 	}
 
 	// Filter by Alice
-	filteredMetadata, err := metadata.FilterBy("Alice")
+	filteredMetadata, err := metadata.FilterBy(context.Background(), "Alice")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 2, ws.GetEnrollmentIDCallCount())
@@ -270,7 +271,7 @@ func testFilterByCase1(t *testing.T) {
 	assertEmptyIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// Filter by Bob
-	filteredMetadata, err = metadata.FilterBy("Bob")
+	filteredMetadata, err = metadata.FilterBy(context.Background(), "Bob")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 4, ws.GetEnrollmentIDCallCount())
@@ -284,7 +285,7 @@ func testFilterByCase1(t *testing.T) {
 	assertEqualIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// Filter by Charlie
-	filteredMetadata, err = metadata.FilterBy("Charlie")
+	filteredMetadata, err = metadata.FilterBy(context.Background(), "Charlie")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 6, ws.GetEnrollmentIDCallCount())
@@ -298,7 +299,7 @@ func testFilterByCase1(t *testing.T) {
 	assertEmptyIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// Filter by Alice and Bob
-	filteredMetadata, err = metadata.FilterBy("Alice", "Bob")
+	filteredMetadata, err = metadata.FilterBy(context.Background(), "Alice", "Bob")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
@@ -312,7 +313,7 @@ func testFilterByCase1(t *testing.T) {
 	assertEqualIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// No Filter
-	filteredMetadata, err = metadata.FilterBy()
+	filteredMetadata, err = metadata.FilterBy(context.Background())
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
@@ -412,7 +413,7 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.meta.Match(tt.action)
+			err := tt.meta.Match(context.Background(), tt.action)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.EqualError(t, err, tt.expectedError)

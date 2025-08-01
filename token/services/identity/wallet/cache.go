@@ -48,7 +48,7 @@ func NewRecipientDataCache(Logger logging.Logger, backed RecipientDataBackendFun
 
 func (c *RecipientDataCache) RecipientData(ctx context.Context) (*driver.RecipientData, error) {
 	c.once.Do(func() {
-		c.Logger.Infof("provision wallet recipient data with cache size [%d]", cap(c.cache))
+		c.Logger.InfofContext(ctx, "provision wallet recipient data with cache size [%d]", cap(c.cache))
 		if cap(c.cache) > 0 {
 			go c.provisionIdentities()
 		}

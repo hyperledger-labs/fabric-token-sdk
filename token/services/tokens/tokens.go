@@ -198,7 +198,7 @@ func (t *Service) SetSpendableFlag(value bool, ids ...*token2.ID) error {
 	}
 	if err := tx.SetSpendableFlag(context.TODO(), value, ids); err != nil {
 		if err2 := tx.Rollback(); err2 != nil {
-			logger.Errorf("failed rolling back transaction that set spendable flag [%s]", err2)
+			logger.ErrorfContext(ctx, "failed rolling back transaction that set spendable flag [%s]", err2)
 		}
 		return errors.Wrapf(err, "failed setting spendable flag")
 	}
@@ -212,7 +212,7 @@ func (t *Service) SetSpendableBySupportedTokenTypes(types []token2.Format) error
 	}
 	if err := tx.SetSpendableBySupportedTokenTypes(context.TODO(), types); err != nil {
 		if err2 := tx.Rollback(); err2 != nil {
-			logger.Errorf("error rolling back transaction: %v", err2)
+			logger.ErrorfContext(ctx, "error rolling back transaction: %v", err2)
 		}
 		return errors.WithMessagef(err, "error setting supported tokens")
 	}
@@ -344,7 +344,7 @@ func (t *Service) extractActions(ctx context.Context, tmsID token.TMSID, anchor 
 	graphHiding := pp.GraphHiding()
 	precision := pp.Precision()
 	auth := tms.Authorization()
-	auditorFlag := auth.AmIAnAuditor()
+	auditorFlag := auth.AmIAnAuditor(ctx)
 	if auditorFlag {
 		logger.DebugfContext(ctx, "transaction [%s], I must be the auditor", anchor)
 	}

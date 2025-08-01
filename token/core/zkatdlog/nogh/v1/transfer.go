@@ -181,7 +181,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(t.Owner))
 		}
 		if len(auditInfo) == 0 {
-			s.Logger.ErrorfContext(ctx, "empty audit info for the owner [%s] of the i^th token [%s]", ids[i], driver.Identity(t.Owner))
+			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", ids[i], driver.Identity(t.Owner))
 		}
 		transferInputsMetadata = append(transferInputsMetadata, &driver.TransferInputMetadata{
 			TokenID: ids[i],
@@ -211,7 +211,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner))
 			}
-			recipients, err := s.IdentityDeserializer.Recipients(output.Owner)
+			recipients, err := s.IdentityDeserializer.Recipients(ctx, output.Owner)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "failed getting recipients")
 			}

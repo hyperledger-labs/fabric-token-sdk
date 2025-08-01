@@ -82,14 +82,14 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 	logger.DebugfContext(context.Context(), "Start session")
 	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
 	if err != nil {
-		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
+		logger.ErrorfContext(context.Context(), "failed to get session to [%s]: [%s]", r.Issuer, err)
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
 	logger.DebugfContext(context.Context(), "Send withdrawal request")
 	err = session.SendWithContext(context.Context(), wr)
 	if err != nil {
-		logger.Errorf("failed to send recipient data: [%s]", err)
+		logger.ErrorfContext(context.Context(), "failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
@@ -126,12 +126,12 @@ func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*tok
 		token.WithTMSID(r.TMSID),
 	)
 	if w == nil {
-		logger.Errorf("failed to get wallet [%s]", r.Wallet)
+		logger.ErrorfContext(context.Context(), "failed to get wallet [%s]", r.Wallet)
 		return nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
 	}
 	recipientData, err := w.GetRecipientData(context.Context())
 	if err != nil {
-		logger.Errorf("failed to get recipient data: [%s]", err)
+		logger.ErrorfContext(context.Context(), "failed to get recipient data: [%s]", err)
 		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
 	}
 
@@ -169,7 +169,7 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	}
 
 	if err := tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {
-		logger.Errorf("failed to register recipient identity: [%s]", err)
+		logger.ErrorfContext(context.Context(), "failed to register recipient identity: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}
 

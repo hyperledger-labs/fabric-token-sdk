@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package issue_test
 
 import (
+	"context"
 	"testing"
 
 	math "github.com/IBM/mathlib"
@@ -29,14 +30,14 @@ func prepareZKIssue(t *testing.T) (*issue2.Prover, *issue2.Verifier) {
 	t.Helper()
 	pp, err := v1.Setup(32, nil, math.BN254)
 	assert.NoError(t, err)
-	tw, tokens := prepareInputsForZKIssue(pp)
+	tw, tokens := prepareInputsForZKIssue(context.Background(), pp)
 	prover, err := issue2.NewProver(tw, tokens, pp)
 	assert.NoError(t, err)
 	verifier := issue2.NewVerifier(tokens, pp)
 	return prover, verifier
 }
 
-func prepareInputsForZKIssue(pp *v1.PublicParams) ([]*token.Metadata, []*math.G1) {
+func prepareInputsForZKIssue(ctx context.Context, pp *v1.PublicParams) ([]*token.Metadata, []*math.G1) {
 	values := make([]uint64, 2)
 	values[0] = 120
 	values[1] = 190
@@ -49,7 +50,7 @@ func prepareInputsForZKIssue(pp *v1.PublicParams) ([]*token.Metadata, []*math.G1
 
 	tokens := make([]*math.G1, len(values))
 	for i := range values {
-		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
+		tokens[i] = NewToken(ctx, curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
 	}
 	return token.NewMetadata(pp.Curve, "ABC", values, bf), tokens
 }

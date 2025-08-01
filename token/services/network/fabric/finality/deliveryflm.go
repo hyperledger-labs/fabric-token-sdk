@@ -166,11 +166,11 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 	}
 	code, message := committer.MapValidationCode(int32(committer.ValidationFlags(block.Metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER])[txNum]))
 
-	return m.mapTxInfo(rwSet, chdr.TxId, code, message)
+	return m.mapTxInfo(ctx, rwSet, chdr.TxId, code, message)
 }
 
-func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]TxInfo, error) {
-	logger.Debugf("Map processed tx [%s] with results of status [%v] and length [%d]", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
+func (m *endorserTxInfoMapper) MapProcessedTx(ctx context.Context, tx *fabric.ProcessedTransaction) ([]TxInfo, error) {
+	logger.DebugfContext(ctx, "Map processed tx [%s] with results of status [%v] and length [%d]", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
 	status, message := committer.MapValidationCode(tx.ValidationCode())
 	if status == driver.Invalid {
 		return []TxInfo{{TxId: tx.TxID(), Status: status, Message: message}}, nil
@@ -179,24 +179,24 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 	if err != nil {
 		return nil, err
 	}
-	infos, err := m.mapTxInfo(rwSet, tx.TxID(), status, message)
+	infos, err := m.mapTxInfo(ctx, rwSet, tx.TxID(), status, message)
 	if err != nil {
 		return nil, err
 	}
 	return collections.Values(infos), nil
 }
 
-func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string, code driver3.ValidationCode, message string) (map[driver2.Namespace]TxInfo, error) {
+func (m *endorserTxInfoMapper) mapTxInfo(ctx context.Context, rwSet vault2.ReadWriteSet, txID string, code driver3.ValidationCode, message string) (map[driver2.Namespace]TxInfo, error) {
 	key, err := m.keyTranslator.CreateTokenRequestKey(txID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)
 	}
 	txInfos := make(map[driver2.Namespace]TxInfo, len(rwSet.Writes))
-	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.Writes))
+	logger.DebugfContext(ctx, "TX [%s] has %d namespaces", txID, len(rwSet.Writes))
 	for ns, write := range rwSet.Writes {
-		logger.Debugf("TX [%s:%s] has %d writes", txID, ns, len(write))
+		logger.DebugfContext(ctx, "TX [%s:%s] has %d writes", txID, ns, len(write))
 		if requestHash, ok := write[key]; ok {
-			logger.Debugf("TX [%s:%s] did have key [%s]. Found: %v", txID, ns, key, write.Keys())
+			logger.DebugfContext(ctx, "TX [%s:%s] did have key [%s]. Found: %v", txID, ns, key, write.Keys())
 			txInfos[ns] = TxInfo{
 				TxId:        txID,
 				Namespace:   ns,
@@ -205,9 +205,9 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string,
 				RequestHash: requestHash,
 			}
 		} else {
-			logger.Debugf("TX [%s:%s] did not have key [%s]. Found: %v", txID, ns, key, write.Keys())
+			logger.DebugfContext(ctx, "TX [%s:%s] did not have key [%s]. Found: %v", txID, ns, key, write.Keys())
 		}
 	}
-	logger.Debugf("TX [%s] has [%d] infos", txID, len(txInfos))
+	logger.DebugfContext(ctx, "TX [%s] has [%d] infos", txID, len(txInfos))
 	return txInfos, nil
 }

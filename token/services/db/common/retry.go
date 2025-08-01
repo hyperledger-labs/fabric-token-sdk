@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -46,7 +47,7 @@ func (f *retryRunner) nextDelay(delay time.Duration) time.Duration {
 }
 
 func (f *retryRunner) Run(runner func() error) error {
-	return f.RunWithErrors(func() (bool, error) {
+	return f.RunWithErrors(context.Background(), func() (bool, error) {
 		err := runner()
 		return err == nil, err
 	})
@@ -55,7 +56,7 @@ func (f *retryRunner) Run(runner func() error) error {
 // RunWithErrors will retry until runner() returns true or until it returns maxTimes false.
 // If it returns true, then the error or nil will be returned.
 // If it returns maxTimes false, then it will always return an error: either a join of all errors it encountered or a ErrMaxRetriesExceeded.
-func (f *retryRunner) RunWithErrors(runner func() (bool, error)) error {
+func (f *retryRunner) RunWithErrors(ctx context.Context, runner func() (bool, error)) error {
 	errs := make([]error, 0)
 	var delay time.Duration
 	for i := 0; f.maxTimes < 0 || i < f.maxTimes; i++ {
@@ -67,7 +68,7 @@ func (f *retryRunner) RunWithErrors(runner func() (bool, error)) error {
 			errs = append(errs, err)
 		}
 		delay = f.nextDelay(delay)
-		f.logger.Warnf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
+		f.logger.WarnfContext(ctx, "Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
 		time.Sleep(delay)
 	}
 	if len(errs) == 0 {

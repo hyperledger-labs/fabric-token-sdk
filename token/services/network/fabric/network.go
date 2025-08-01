@@ -61,7 +61,7 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	if err != nil {
 		return driver.Unknown, errors.Wrapf(err, "failed to get transaction [%s]", id)
 	}
-	logger.Debugf("ledger status of [%s] is [%d]", id, tx.ValidationCode())
+	logger.DebugfContext(ctx, "ledger status of [%s] is [%d]", id, tx.ValidationCode())
 	switch peer.TxValidationCode(tx.ValidationCode()) {
 	case peer.TxValidationCode_VALID:
 		return driver.Valid, nil
@@ -170,10 +170,10 @@ func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions,
 
 	if len(opt.Namespace) == 0 {
 		if ns, err := n.configuration.LookupNamespace(opt.Network, opt.Channel); err == nil {
-			logger.Debugf("no namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
+			logger.DebugfContext(ctx, "no namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
 			opt.Namespace = ns
 		} else {
-			logger.Errorf("no namespace specified, and no default namespace found [%s], use default [%s]", err, ttx.TokenNamespace)
+			logger.ErrorfContext(ctx, "no namespace specified, and no default namespace found [%s], use default [%s]", err, ttx.TokenNamespace)
 			opt.Namespace = ttx.TokenNamespace
 		}
 	}
@@ -252,7 +252,7 @@ func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementSe
 }
 
 func (n *Network) ComputeTxID(id *driver.TxID) string {
-	logger.Debugf("compute tx id for [%s]", id.String())
+	logger.DebugfContext(ctx, "compute tx id for [%s]", id.String())
 	temp := &fabric.TxID{
 		Nonce:   id.Nonce,
 		Creator: id.Creator,
@@ -294,7 +294,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
 	}
-	logger.Debugf("lookup transfer metadata key [%s] from [%s] in namespace [%s]", key, transferMetadataKey, namespace)
+	logger.DebugfContext(ctx, "lookup transfer metadata key [%s] from [%s] in namespace [%s]", key, transferMetadataKey, namespace)
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	l := &lookupListener{wg: wg, key: transferMetadataKey}
@@ -303,13 +303,13 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	}
 	defer func() {
 		if err := n.llm.RemoveLookupListener(transferMetadataKey, l); err != nil {
-			logger.Debugf("failed to remove lookup listener [%s]: %v", transferMetadataKey, err)
+			logger.DebugfContext(ctx, "failed to remove lookup listener [%s]: %v", transferMetadataKey, err)
 		}
 	}()
 	if err := waitTimeout(wg, timeout); err != nil {
 		return nil, err
 	}
-	logger.Debugf("lookup transfer metadata key [%s] from [%s] in namespace [%s], done, result [%s][%s]", key, transferMetadataKey, namespace, l.value, l.err)
+	logger.DebugfContext(ctx, "lookup transfer metadata key [%s] from [%s] in namespace [%s], done, result [%s][%s]", key, transferMetadataKey, namespace, l.value, l.err)
 	return l.value, l.err
 }
 
@@ -385,17 +385,17 @@ type setupListener struct {
 }
 
 func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) {
-	logger.Infof("update TMS [%s] with key-value [%s][%s]", s.TMSID, key, utils.Hashable(value))
+	logger.InfofContext(ctx, "update TMS [%s] with key-value [%s][%s]", s.TMSID, key, utils.Hashable(value))
 	tsmProvider := s.GetTMSProvider()
 	if err := tsmProvider.Update(s.TMSID, value); err != nil {
-		logger.Warnf("failed to update TMS [%s]: [%v]", key, err)
+		logger.WarnfContext(ctx, "failed to update TMS [%s]: [%v]", key, err)
 	}
 	tokens, err := s.GetTokens()
 	if err != nil {
-		logger.Warnf("failed to get tokens db [%v]", err)
+		logger.WarnfContext(ctx, "failed to get tokens db [%v]", err)
 	}
 	if err := tokens.StorePublicParams(ctx, value); err != nil {
-		logger.Warnf("failed to store public parameter key [%s]: [%v]", key, err)
+		logger.WarnfContext(ctx, "failed to store public parameter key [%s]: [%v]", key, err)
 	}
 }
 

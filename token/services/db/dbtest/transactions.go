@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -28,7 +29,7 @@ func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
 	t.Helper()
 	for _, c := range tokenTransactionDBCases {
 		driver := cfgProvider(c.Name)
-		db, err := driver.NewOwnerTransaction("", c.Name)
+		db, err := driver.NewOwnerTransaction(context.Background(), "", c.Name)
 		if err != nil {
 			t.Fatal(err)
 		}

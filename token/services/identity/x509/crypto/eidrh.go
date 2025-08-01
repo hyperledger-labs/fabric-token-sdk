@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
+	"context"
 	"crypto/x509"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func GetEnrollmentID(id []byte) (string, error) {
+func GetEnrollmentID(ctx context.Context, id []byte) (string, error) {
 	cert, err := PemDecodeCert(id)
 	if err != nil {
 		return "", err
@@ -28,7 +29,7 @@ func GetEnrollmentID(id []byte) (string, error) {
 	return cn, nil
 }
 
-func GetRevocationHandle(id []byte) ([]byte, error) {
+func GetRevocationHandle(ctx context.Context, id []byte) ([]byte, error) {
 	cert, err := PemDecodeCert(id)
 	if err != nil {
 		return nil, err

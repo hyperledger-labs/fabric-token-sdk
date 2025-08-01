@@ -299,7 +299,7 @@ func (np *Provider) RegisterDriver(driver driver.Driver) {
 
 // GetNetwork returns a network instance for the given network and channel
 func (np *Provider) GetNetwork(network string, channel string) (*Network, error) {
-	logger.Debugf("GetNetwork: [%s:%s]", network, channel)
+	logger.DebugfContext(ctx, "GetNetwork: [%s:%s]", network, channel)
 	return np.networks.Get(netId{network: network, channel: channel})
 }
 
@@ -327,13 +327,13 @@ func (np *networkProvider) newNetwork(netId netId) (*Network, error) {
 	network, channel := netId.network, netId.channel
 	var errs []error
 	for _, d := range np.drivers {
-		logger.Debugf("new network service for [%s:%s]", network, channel)
+		logger.DebugfContext(ctx, "new network service for [%s:%s]", network, channel)
 		nw, err := d.New(network, channel)
 		if err != nil {
 			errs = append(errs, errors.WithMessagef(err, "failed to create network [%s:%s]", network, channel))
 			continue
 		}
-		logger.Debugf("new network [%s:%s]", network, channel)
+		logger.DebugfContext(ctx, "new network [%s:%s]", network, channel)
 		return &Network{n: nw}, nil
 	}
 	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
@@ -343,7 +343,7 @@ func (np *networkProvider) newNetwork(netId netId) (*Network, error) {
 func GetInstance(sp token.ServiceProvider, network, channel string) *Network {
 	n, err := GetProvider(sp).GetNetwork(network, channel)
 	if err != nil {
-		logger.Errorf("Failed to get network [%s:%s]: %s", network, channel, err)
+		logger.ErrorfContext(ctx, "Failed to get network [%s:%s]: %s", network, channel, err)
 		return nil
 	}
 	return n

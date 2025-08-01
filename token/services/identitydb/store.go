@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package identitydb
 
 import (
+	"context"
+
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
@@ -16,8 +18,8 @@ import (
 
 type StoreServiceManager db.StoreServiceManager[*StoreService]
 
-func NewStoreServiceManager(cp driver2.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
-	return db.NewStoreServiceManager(config.NewService(cp), "identitydb.persistence", drivers.NewIdentity, newStoreService)
+func NewStoreServiceManager(ctx context.Context, cp driver2.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
+	return db.NewStoreServiceManager(ctx, config.NewService(cp), "identitydb.persistence", drivers.NewIdentity, newStoreService)
 }
 
 // StoreService is a database that stores identity related information

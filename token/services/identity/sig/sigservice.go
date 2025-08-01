@@ -71,7 +71,7 @@ func (o *Service) RegisterSigner(ctx context.Context, identity driver.Identity, 
 	s, ok := o.signers[idHash]
 	o.sync.RUnlock()
 	if ok {
-		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
+		logger.WarnfContext(ctx, "another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
 		return nil
 	}
 
@@ -82,7 +82,7 @@ func (o *Service) RegisterSigner(ctx context.Context, identity driver.Identity, 
 	s, ok = o.signers[idHash]
 	if ok {
 		o.sync.Unlock()
-		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
+		logger.WarnfContext(ctx, "another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
 		return nil
 	}
 
@@ -126,7 +126,7 @@ func (o *Service) RegisterVerifier(ctx context.Context, identity driver.Identity
 	v, ok := o.verifiers[idHash]
 	o.sync.RUnlock()
 	if ok {
-		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, logging.Identifier(v), logging.Identifier(verifier), string(v.DebugStack))
+		logger.WarnfContext(ctx, "another verifier bound to [%s]:[%s][%s] from [%s]", idHash, logging.Identifier(v), logging.Identifier(verifier), string(v.DebugStack))
 		return nil
 	}
 
@@ -137,7 +137,7 @@ func (o *Service) RegisterVerifier(ctx context.Context, identity driver.Identity
 	v, ok = o.verifiers[idHash]
 	if ok {
 		o.sync.Unlock()
-		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, logging.Identifier(v), logging.Identifier(verifier), string(v.DebugStack))
+		logger.WarnfContext(ctx, "another verifier bound to [%s]:[%s][%s] from [%s]", idHash, logging.Identifier(v), logging.Identifier(verifier), string(v.DebugStack))
 		return nil
 	}
 
@@ -181,7 +181,7 @@ func (o *Service) AreMe(ctx context.Context, identities ...driver.Identity) []st
 	// check storage
 	found, err := o.storage.GetExistingSignerInfo(ctx, notFound...)
 	if err != nil {
-		logger.Errorf("failed checking if a signer exists [%s]", err)
+		logger.ErrorfContext(ctx, "failed checking if a signer exists [%s]", err)
 		return result.ToSlice()
 	}
 	result.Add(found...)
@@ -206,7 +206,7 @@ func (o *Service) IsMe(ctx context.Context, identity driver.Identity) bool {
 		logger.DebugfContext(ctx, "is me [%s]? ask the storage", identity)
 		exists, err := o.storage.SignerInfoExists(ctx, identity)
 		if err != nil {
-			logger.Errorf("failed checking if a signer exists [%s]", err)
+			logger.ErrorfContext(ctx, "failed checking if a signer exists [%s]", err)
 		}
 		if exists {
 			logger.DebugfContext(ctx, "is me [%s]? yes, from storage", identity)
@@ -266,7 +266,7 @@ func (o *Service) deserializeSigner(ctx context.Context, identity driver.Identit
 		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
 	}
 	var err error
-	signer, err := o.deserializer.DeserializeSigner(identity)
+	signer, err := o.deserializer.DeserializeSigner(ctx, identity)
 	if err == nil {
 		return signer, nil
 	}
@@ -292,7 +292,7 @@ func (o *Service) GetSignerInfo(ctx context.Context, identity driver.Identity) (
 	return o.storage.GetSignerInfo(ctx, identity)
 }
 
-func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error) {
+func (o *Service) GetVerifier(ctx context.Context, identity driver.Identity) (driver.Verifier, error) {
 	idHash := identity.UniqueID()
 
 	// check cache
@@ -317,7 +317,7 @@ func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error)
 		return nil, errors.Errorf("cannot find verifier for [%s], no deserializer set", identity)
 	}
 	var err error
-	verifier, err := o.deserializer.DeserializeVerifier(identity)
+	verifier, err := o.deserializer.DeserializeVerifier(ctx, identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing identity for verifier %v", identity)
 	}
@@ -327,7 +327,7 @@ func (o *Service) GetVerifier(identity driver.Identity) (driver.Verifier, error)
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
-	logger.Debugf("add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
+	logger.DebugfContext(ctx, "add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
 	o.verifiers[idHash] = entry
 	return verifier, nil
 }

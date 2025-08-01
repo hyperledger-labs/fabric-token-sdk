@@ -84,12 +84,12 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 	}, nil
 }
 
-func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity, error) {
+func (s *TokensService) Recipients(ctx context.Context, output driver.TokenOutput) ([]driver.Identity, error) {
 	tok := &Token{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize token")
 	}
-	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	recipients, err := s.IdentityDeserializer.Recipients(ctx, tok.Owner)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get recipients")
 	}
@@ -100,7 +100,7 @@ func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity
 // We assume here that the format of the output is the default output format supported
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
+func (s *TokensService) Deobfuscate(ctx context.Context, output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
 	// we support fabtoken.Type and comm.Type
 
 	// try first comm type
@@ -109,7 +109,7 @@ func (s *TokensService) Deobfuscate(output driver.TokenOutput, outputMetadata dr
 		return tok, issuer, recipients, format, nil
 	}
 	// try fabtoken type
-	return s.deobfuscateAsFabtokenType(output, outputMetadata)
+	return s.deobfuscateAsFabtokenType(ctx, output, outputMetadata)
 }
 
 func (s *TokensService) deobfuscateAsCommType(ctx context.Context, output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
@@ -117,14 +117,14 @@ func (s *TokensService) deobfuscateAsCommType(ctx context.Context, output driver
 	if err != nil {
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to deobfuscate token")
 	}
-	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	recipients, err := s.IdentityDeserializer.Recipients(ctx, tok.Owner)
 	if err != nil {
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
 	}
 	return tok, metadata.Issuer, recipients, s.OutputTokenFormat, nil
 }
 
-func (s *TokensService) deobfuscateAsFabtokenType(output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
+func (s *TokensService) deobfuscateAsFabtokenType(ctx context.Context, output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
 	// TODO: refer only to the protos
 	tok := &actions.Output{}
 	if err := tok.Deserialize(output); err != nil {
@@ -136,7 +136,7 @@ func (s *TokensService) deobfuscateAsFabtokenType(output driver.TokenOutput, out
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token information")
 	}
 
-	recipients, err := s.IdentityDeserializer.Recipients(tok.Owner)
+	recipients, err := s.IdentityDeserializer.Recipients(ctx, tok.Owner)
 	if err != nil {
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
 	}

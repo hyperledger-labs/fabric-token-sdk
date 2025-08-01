@@ -143,7 +143,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			// load current holding, add diff, and check that it is below the threshold
 			filter, err := auditor.NewHoldingsFilter().ByEnrollmentId(eID).ByType(tokenType).Execute(context.Context())
 			assert.NoError(err, "failed retrieving holding for [%s][%s]", eIDs, tokenTypes)
-			currentHolding := filter.Sum()
+			currentHolding := filter.Sum(context.Context())
 
 			fmt.Printf("Holding Limit: [%s] Current [%s], type [%s]\n", eID, currentHolding.Text(10), tokenType)
 
@@ -229,7 +229,7 @@ func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
 
 	filter, err := auditor.NewHoldingsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute(context.Context())
 	assert.NoError(err, "failed retrieving holding for [%s][%s]", r.EnrollmentID, r.TokenType)
-	currentHolding := filter.Sum()
+	currentHolding := filter.Sum(context.Context())
 	decimal := currentHolding.Text(10)
 	logger.Debugf("Current Holding: [%s][%s][%s]", r.EnrollmentID, r.TokenType, decimal)
 

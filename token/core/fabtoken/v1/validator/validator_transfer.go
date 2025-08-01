@@ -36,14 +36,14 @@ func TransferSignatureValidate(ctx *Context) error {
 
 		inputToken = append(inputToken, tok)
 		owner := tok.GetOwner()
-		ctx.Logger.Debugf("check sender [%s]", driver.Identity(owner).UniqueID())
-		verifier, err := ctx.Deserializer.GetOwnerVerifier(owner)
+		ctx.Logger.DebugfContext(ctx.Ctx, "check sender [%s]", driver.Identity(owner).UniqueID())
+		verifier, err := ctx.Deserializer.GetOwnerVerifier(ctx.Ctx, owner)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, driver.Identity(owner).UniqueID())
 		}
-		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
+		ctx.Logger.DebugfContext(ctx.Ctx, "signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
 
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(owner, verifier)
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(ctx.Ctx, owner, verifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
 		}
@@ -60,19 +60,19 @@ func TransferSignatureValidate(ctx *Context) error {
 
 	// If transfer action is a redeem, verify the signature of the issuer
 	if isRedeem {
-		ctx.Logger.Infof("action is a redeem, verify the signature of the issuer")
+		ctx.Logger.InfofContext(ctx.Ctx, "action is a redeem, verify the signature of the issuer")
 
 		issuer := ctx.TransferAction.GetIssuer()
 		if issuer == nil {
 			return errors.Errorf("On Redeem action, must have at least one issuer")
 		}
 
-		issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
+		issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(ctx.Ctx, issuer)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
 		}
 
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, issuerVerifier)
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(ctx.Ctx, issuer, issuerVerifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
 		}

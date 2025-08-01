@@ -244,7 +244,7 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 	logger.DebugfContext(context.Context(), "Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor, hash.Hashable(signed), a.tx.ID())
 
 	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
-		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
+		v, err := a.tx.TokenService().SigService().AuditorVerifier(ctx, auditorID)
 		if err != nil {
 			logger.DebugfContext(context.Context(), "failed to get auditor verifier for [%s]", auditorID)
 			continue
@@ -271,7 +271,7 @@ func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveV
 
 func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	// Append audit records
-	if err := auditor.New(context, a.w).Append(context.Context(), a.tx); err != nil {
+	if err := auditor.New(context.Context(), context, a.w).Append(context.Context(), a.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed appending audit records for transaction %s", a.tx.ID())
 	}
 
@@ -285,7 +285,7 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", a.tx.TMSID())
 	}
 	if err := t.CacheRequest(context.Context(), a.tx.TMSID(), a.tx.TokenRequest); err != nil {
-		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", a.tx.TokenRequest.Anchor, err)
+		logger.WarnfContext(ctx, "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", a.tx.TokenRequest.Anchor, err)
 	}
 
 	labels := []string{

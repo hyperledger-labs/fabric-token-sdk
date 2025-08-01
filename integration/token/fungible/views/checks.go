@@ -59,7 +59,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		assert.NoError(err, "failed to get auditor instance")
 		return db.Check(context.Context())
 	}
-	db := ttx.NewOwner(context, tms)
+	db := ttx.NewOwner(context.Context(), context, tms)
 	return db.Check(context.Context())
 }
 

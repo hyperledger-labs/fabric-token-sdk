@@ -221,9 +221,9 @@ func (t *Transaction) NetworkTxID() network.TxID {
 
 // Bytes returns the serialized version of the transaction.
 // If eIDs is not nil, then metadata is filtered by the passed eIDs.
-func (t *Transaction) Bytes(eIDs ...string) ([]byte, error) {
-	logger.Debugf("marshalling tx, id [%s], for EIDs [%x]", t.TxID, eIDs)
-	return marshal(t, eIDs...)
+func (t *Transaction) Bytes(ctx context.Context, eIDs ...string) ([]byte, error) {
+	logger.DebugfContext(ctx, "marshalling tx, id [%s], for EIDs [%x]", t.TxID, eIDs)
+	return marshal(ctx, t, eIDs...)
 }
 
 // Issue appends a new Issue operation to the TokenRequest inside this transaction
@@ -281,12 +281,12 @@ func (t *Transaction) Upgrade(
 	return err
 }
 
-func (t *Transaction) Outputs() (*token.OutputStream, error) {
-	return t.TokenRequest.Outputs()
+func (t *Transaction) Outputs(ctx context.Context) (*token.OutputStream, error) {
+	return t.TokenRequest.Outputs(ctx)
 }
 
-func (t *Transaction) Inputs() (*token.InputStream, error) {
-	return t.TokenRequest.Inputs()
+func (t *Transaction) Inputs(ctx context.Context) (*token.InputStream, error) {
+	return t.TokenRequest.Inputs(ctx)
 }
 
 func (t *Transaction) InputsAndOutputs(ctx context.Context) (*token.InputStream, *token.OutputStream, map[string][]byte, error) {
@@ -321,13 +321,14 @@ func (t *Transaction) CloseSelector() error {
 }
 
 func (t *Transaction) Release() {
-	logger.Debugf("releasing resources for tx [%s]", t.ID())
+	ctx := context.Background()
+	logger.DebugfContext(ctx, "releasing resources for tx [%s]", t.ID())
 	sm, err := t.TokenService().SelectorManager()
 	if err != nil {
-		logger.Warnf("failed to get token selector [%s]", err)
+		logger.WarnfContext(ctx, "failed to get token selector [%s]", err)
 	} else {
 		if err := sm.Unlock(context.Background(), t.ID()); err != nil {
-			logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
+			logger.WarnfContext(ctx, "failed releasing tokens locked by [%s], [%s]", t.ID(), err)
 		}
 	}
 }

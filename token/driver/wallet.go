@@ -144,7 +144,7 @@ type Authorization interface {
 	IsMine(ctx context.Context, tok *token.Token) (walletID string, additionalOwners []string, mine bool)
 	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
-	AmIAnAuditor() bool
+	AmIAnAuditor(ctx context.Context) bool
 	// Issued returns true if the passed issuer issued the passed token
 	Issued(ctx context.Context, issuer Identity, tok *token.Token) bool
 	// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
@@ -162,13 +162,13 @@ type WalletService interface {
 	GetAuditInfo(ctx context.Context, id Identity) ([]byte, error)
 
 	// GetEnrollmentID extracts the enrollment id from the passed audit information
-	GetEnrollmentID(identity Identity, auditInfo []byte) (string, error)
+	GetEnrollmentID(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
 	// GetRevocationHandle extracts the revocation handler from the passed audit information
-	GetRevocationHandle(identity Identity, auditInfo []byte) (string, error)
+	GetRevocationHandle(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
 	// GetEIDAndRH returns both enrollment ID and revocation handle
-	GetEIDAndRH(identity Identity, auditInfo []byte) (string, string, error)
+	GetEIDAndRH(ctx context.Context, identity Identity, auditInfo []byte) (string, string, error)
 
 	// Wallet returns the wallet bound to the passed identity, if any is available
 	Wallet(ctx context.Context, identity Identity) Wallet
@@ -199,7 +199,7 @@ type WalletService interface {
 	CertifierWallet(ctx context.Context, id WalletLookupID) (CertifierWallet, error)
 
 	// SpendIDs returns the spend ids for the passed token ids
-	SpendIDs(ids ...*token.ID) ([]string, error)
+	SpendIDs(ctx context.Context, ids ...*token.ID) ([]string, error)
 }
 
 type WalletServiceFactory interface {
@@ -211,7 +211,7 @@ type WalletServiceFactory interface {
 // Matcher models a matcher that can be used to match identities
 type Matcher interface {
 	// Match returns true if the passed identity matches this matcher
-	Match(identity []byte) error
+	Match(ctx context.Context, identity []byte) error
 }
 
 // AuditInfoProvider models a provider of audit information
@@ -226,18 +226,18 @@ type AuditInfoProvider interface {
 // get signature verifiers
 type Deserializer interface {
 	// GetOwnerVerifier returns the verifier associated to the passed owner identity
-	GetOwnerVerifier(id Identity) (Verifier, error)
+	GetOwnerVerifier(ctx context.Context, id Identity) (Verifier, error)
 	// GetIssuerVerifier returns the verifier associated to the passed issuer identity
-	GetIssuerVerifier(id Identity) (Verifier, error)
+	GetIssuerVerifier(ctx context.Context, id Identity) (Verifier, error)
 	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
-	GetAuditorVerifier(id Identity) (Verifier, error)
+	GetAuditorVerifier(ctx context.Context, id Identity) (Verifier, error)
 	// Recipients returns the recipient identities from the given serialized representation
-	Recipients(raw Identity) ([]Identity, error)
+	Recipients(ctx context.Context, raw Identity) ([]Identity, error)
 	// GetAuditInfoMatcher returns an identity matcher for the passed identity and audit data
-	GetAuditInfoMatcher(owner Identity, auditInfo []byte) (Matcher, error)
+	GetAuditInfoMatcher(ctx context.Context, owner Identity, auditInfo []byte) (Matcher, error)
 	// MatchIdentity returns nil if the given identity matches the given audit information.
 	// An error otherwise.
-	MatchIdentity(identity Identity, info []byte) error
+	MatchIdentity(ctx context.Context, identity Identity, info []byte) error
 	// GetAuditInfo returns the audit information for the passed identity
 	GetAuditInfo(ctx context.Context, id Identity, p AuditInfoProvider) ([]byte, error)
 }

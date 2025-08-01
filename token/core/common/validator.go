@@ -23,6 +23,7 @@ const (
 )
 
 type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
+	Ctx               context.Context
 	Logger            logging.Logger
 	PP                P
 	Anchor            driver.TokenRequestAnchor
@@ -113,10 +114,11 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 	}
 
 	backend := NewBackend(v.Logger, getState, signed, signatures)
-	return v.VerifyTokenRequest(backend, backend, anchor, tr, attributes)
+	return v.VerifyTokenRequest(ctx, backend, backend, anchor, tr, attributes)
 }
 
 func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequest(
+	ctx context.Context,
 	ledger driver.Ledger,
 	signatureProvider driver.SignatureProvider,
 	anchor driver.TokenRequestAnchor,
@@ -134,7 +136,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequest(
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to verify issue actions [%s]", anchor)
 	}
-	err = v.verifyTransfers(anchor, tr, ledger, ta, signatureProvider, attributes)
+	err = v.verifyTransfers(ctx, anchor, tr, ledger, ta, signatureProvider, attributes)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to verify transfer actions [%s]", anchor)
 	}
@@ -228,6 +230,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyIssue(
 }
 
 func (v *Validator[P, T, TA, IA, DS]) verifyTransfers(
+	ctx context.Context,
 	anchor driver.TokenRequestAnchor,
 	tokenRequest *driver.TokenRequest,
 	ledger driver.Ledger,
@@ -235,8 +238,8 @@ func (v *Validator[P, T, TA, IA, DS]) verifyTransfers(
 	signatureProvider driver.SignatureProvider,
 	attributes driver.ValidationAttributes,
 ) error {
-	v.Logger.Debugf("check sender start...")
-	defer v.Logger.Debugf("check sender finished.")
+	v.Logger.DebugfContext(ctx, "check sender start...")
+	defer v.Logger.DebugfContext(ctx, "check sender finished.")
 	for i, action := range transferActions {
 		if err := v.VerifyTransfer(anchor, tokenRequest, action, ledger, signatureProvider, attributes); err != nil {
 			return errors.Wrapf(err, "failed to verify transfer action at [%d]", i)

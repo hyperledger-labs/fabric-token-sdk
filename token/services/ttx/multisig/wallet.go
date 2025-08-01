@@ -113,9 +113,10 @@ func Wallet(context view.Context, wallet *token.OwnerWallet) *OwnerWallet {
 }
 
 func containsEscrow(tok *token2.UnspentToken) bool {
+	ctx := context.Background()
 	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 	if err != nil {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
 		return false
 	}
 	if owner.Type != multisig.Multisig {
@@ -123,10 +124,10 @@ func containsEscrow(tok *token2.UnspentToken) bool {
 	}
 
 	if err := (&multisig.MultiIdentity{}).Deserialize(owner.Identity); err != nil {
-		logger.Debugf("token [%s,%s,%s,%s] contains an escrow? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+		logger.DebugfContext(ctx, "token [%s,%s,%s,%s] contains an escrow? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 		return false
 	}
 
-	logger.Debugf("token [%s,%s,%s,%s] contains an escrow? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+	logger.DebugfContext(ctx, "token [%s,%s,%s,%s] contains an escrow? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 	return true
 }

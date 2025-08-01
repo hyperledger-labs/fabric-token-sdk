@@ -116,11 +116,11 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	defer func() {
 		if e := recover(); e != nil {
 			span.RecordError(fmt.Errorf("recovered from panic: %v", e))
-			logger.DebugfContext(ctx, "failed finality update for tx [%s]: [%s]", txID, e)
+			logger.DebugfContext(newCtx, "failed finality update for tx [%s]: [%s]", txID, e)
 			if err := t.flm.AddFinalityListener(txID, t.namespace, t.root); err != nil {
 				panic(err)
 			}
-			logger.DebugfContext(ctx, "added finality listener for tx [%s]...done", txID)
+			logger.DebugfContext(newCtx, "added finality listener for tx [%s]...done", txID)
 		}
 	}()
 
@@ -130,26 +130,26 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	}
 
 	v := t.ch.Vault()
-	qe, err := v.NewQueryExecutor(ctx)
+	qe, err := v.NewQueryExecutor(newCtx)
 	if err != nil {
 		panic(fmt.Sprintf("can't get query executor [%s]", txID))
 	}
 
 	// Fetch the token request hash. Retry in case some other replica committed it shortly before
-	logger.DebugfContext(ctx, "fetch token request hash")
+	logger.DebugfContext(newCtx, "fetch token request hash")
 	var tokenRequestHash *driver2.VaultRead
 	var retries int
-	for tokenRequestHash, err = qe.GetState(ctx, t.namespace, key); err == nil && (tokenRequestHash == nil || len(tokenRequestHash.Raw) == 0) && retries < t.maxRetries; tokenRequestHash, err = qe.GetState(ctx, t.namespace, key) {
-		logger.DebugfContext(ctx, "did not find token request [%s]. retrying...", txID)
+	for tokenRequestHash, err = qe.GetState(newCtx, t.namespace, key); err == nil && (tokenRequestHash == nil || len(tokenRequestHash.Raw) == 0) && retries < t.maxRetries; tokenRequestHash, err = qe.GetState(newCtx, t.namespace, key) {
+		logger.DebugfContext(newCtx, "did not find token request [%s]. retrying...", txID)
 		retries++
 		time.Sleep(t.retryWaitDuration)
 	}
 	if err := qe.Done(); err != nil {
-		logger.Warnf("failed to close query executor for tx [%s]: [%s]", txID, err)
+		logger.WarnfContext(newCtx, "failed to close query executor for tx [%s]: [%s]", txID, err)
 	}
 	if err != nil {
 		panic(fmt.Sprintf("can't get state [%s][%s]", txID, key))
 	}
-	logger.DebugfContext(ctx, "fetch token request hash done, emit event")
+	logger.DebugfContext(newCtx, "fetch token request hash done, emit event")
 	t.root.OnStatus(newCtx, txID, status, message, tokenRequestHash.Raw)
 }

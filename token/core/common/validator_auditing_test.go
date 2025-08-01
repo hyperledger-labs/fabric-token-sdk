@@ -131,7 +131,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 						Deserializer:      des,
 						SignatureProvider: sp,
 					}, func() bool {
-						id, ver2 := sp.HasBeenSignedByArgsForCall(0)
+						_, id, ver2 := sp.HasBeenSignedByArgsForCall(0)
 						if ver2 != ver {
 							return false
 						}
@@ -165,7 +165,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 						Deserializer:      des,
 						SignatureProvider: sp,
 					}, func() bool {
-						id, ver2 := sp.HasBeenSignedByArgsForCall(0)
+						_, id, ver2 := sp.HasBeenSignedByArgsForCall(0)
 						if ver2 != ver {
 							return false
 						}

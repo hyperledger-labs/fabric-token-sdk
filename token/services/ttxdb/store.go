@@ -33,7 +33,7 @@ var (
 )
 
 func NewStoreServiceManager(cp cdriver.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
-	return db.NewStoreServiceManager(config.NewService(cp), "ttxdb.persistence", drivers.NewOwnerTransaction, newStoreService)
+	return db.NewStoreServiceManager(context.Background(), config.NewService(cp), "ttxdb.persistence", drivers.NewOwnerTransaction, newStoreService)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {

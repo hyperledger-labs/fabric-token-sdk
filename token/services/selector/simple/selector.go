@@ -136,7 +136,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 				return toBeSpent, sum, nil
 			}
 			concurrencyIssue = true
-			logger.Errorf("concurrency issue, some of the tokens might not exist anymore [%s]", err)
+			logger.ErrorfContext(ctx, "concurrency issue, some of the tokens might not exist anymore [%s]", err)
 		}
 
 		// Unlock and check the conditions for a retry

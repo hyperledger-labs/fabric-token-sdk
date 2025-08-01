@@ -77,17 +77,18 @@ type loader struct {
 }
 
 func (l *loader) load(tmsID token2.TMSID) (Service, error) {
+	ctx := context.Background()
 	configuration, err := l.configService.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get configuration for [%s]", tmsID)
 	}
 
 	if !configuration.IsSet(FSCEndorsementKey) {
-		logger.Debugf("chaincode endorsement enabled...")
+		logger.DebugfContext(ctx, "chaincode endorsement enabled...")
 		return NewChaincodeEndorsementService(tmsID), nil
 	}
 
-	logger.Debugf("FSC endorsement enabled...")
+	logger.DebugfContext(ctx, "FSC endorsement enabled...")
 	return NewFSCService(
 		l.fnsp,
 		tmsID,

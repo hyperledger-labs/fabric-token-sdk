@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -58,6 +59,8 @@ func main() {
 		Writer:  os.Stderr,
 	})
 
+	ctx := context.Background()
+
 	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
 	if config.CCID == "" || config.CCaddress == "" {
 		fmt.Println("CC ID or CC address is empty... Running as usual...")
@@ -71,7 +74,7 @@ func main() {
 					if err != nil {
 						return nil, nil, err
 					}
-					v, err := is.DefaultValidator(ppm)
+					v, err := is.DefaultValidator(ctx, ppm)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -115,7 +118,7 @@ func main() {
 					if err != nil {
 						return nil, nil, err
 					}
-					v, err := is.DefaultValidator(ppm)
+					v, err := is.DefaultValidator(ctx, ppm)
 					if err != nil {
 						return nil, nil, err
 					}

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	"database/sql"
 	driver2 "database/sql/driver"
 	"math/big"
@@ -310,7 +311,7 @@ func TestSetStatus(t *testing.T, store transactionsStoreConstructor) {
 
 type AnyUUID struct{}
 
-func (a AnyUUID) Match(v driver2.Value) bool {
+func (a AnyUUID) Match(ctx context.Context, v driver2.Value) bool {
 	_, ok := v.(string)
 	return ok
 }

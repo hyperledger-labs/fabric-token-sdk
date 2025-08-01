@@ -67,7 +67,7 @@ var _ = Describe("Auditor", func() {
 	Describe("Audit a transfer", func() {
 		When("audit information is computed correctly", func() {
 			It("succeeds", func() {
-				transfer, metadata, tokens := createTransfer(pp)
+				transfer, metadata, tokens := createTransfer(context.Background(), pp)
 				raw, err := transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
 				err = auditor.Check(context.Background(), &driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []*driver.TransferMetadata{metadata}}, tokens, "1")
@@ -76,7 +76,7 @@ var _ = Describe("Auditor", func() {
 		})
 		When("token info does not match output", func() {
 			It("fails", func() {
-				transfer, metadata, tokens := createTransferWithBogusOutput(pp)
+				transfer, metadata, tokens := createTransferWithBogusOutput(context.Background(), pp)
 				raw, err := transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
 				err = auditor.Check(
@@ -92,9 +92,9 @@ var _ = Describe("Auditor", func() {
 		})
 		When("sender audit info does not match input", func() {
 			It("fails", func() {
-				transfer, metadata, tokens := createTransfer(pp)
+				transfer, metadata, tokens := createTransfer(context.Background(), pp)
 				// test idemix info
-				_, auditinfo := getIdemixInfo("./testdata/idemix")
+				_, auditinfo := getIdemixInfo(context.Background(), "./testdata/idemix")
 				raw, err := auditinfo.Bytes()
 				Expect(err).NotTo(HaveOccurred())
 				metadata.Inputs[0].Senders[0].AuditInfo = raw
@@ -109,9 +109,9 @@ var _ = Describe("Auditor", func() {
 		})
 		When("recipient audit info does not match output", func() {
 			It("fails", func() {
-				transfer, metadata, tokens := createTransfer(pp)
+				transfer, metadata, tokens := createTransfer(context.Background(), pp)
 				// test idemix info
-				_, auditinfo := getIdemixInfo("./testdata/idemix")
+				_, auditinfo := getIdemixInfo(context.Background(), "./testdata/idemix")
 				raw, err := auditinfo.Bytes()
 				Expect(err).NotTo(HaveOccurred())
 				metadata.Outputs[0].OutputAuditInfo = raw
@@ -127,8 +127,8 @@ var _ = Describe("Auditor", func() {
 	})
 })
 
-func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMetadata, [][]*token.Token) {
-	id, auditInfo := getIdemixInfo("./testdata/idemix")
+func createTransfer(ctx context.Context, pp *v1.PublicParams) (*transfer.Action, *driver.TransferMetadata, [][]*token.Token) {
+	id, auditInfo := getIdemixInfo(ctx, "./testdata/idemix")
 	transfer, meta, inputs := prepareTransfer(pp, id)
 
 	auditInfoRaw, err := auditInfo.Bytes()
@@ -167,8 +167,8 @@ func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMeta
 	return transfer, metadata, tokns
 }
 
-func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMetadata, [][]*token.Token) {
-	id, auditInfo := getIdemixInfo("./testdata/idemix")
+func createTransferWithBogusOutput(ctx context.Context, pp *v1.PublicParams) (*transfer.Action, *driver.TransferMetadata, [][]*token.Token) {
+	id, auditInfo := getIdemixInfo(ctx, "./testdata/idemix")
 	transfer, inf, inputs := prepareTransfer(pp, id)
 
 	c := math.Curves[pp.Curve]
@@ -260,7 +260,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 	return ""
 }
 
-func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
+func getIdemixInfo(ctx context.Context, dir string) (driver.Identity, *crypto.AuditInfo) {
 	sp := view.NewServiceProvider()
 	configService := &fakeProv{typ: "memory"}
 	Expect(sp.RegisterService(configService)).NotTo(HaveOccurred())
@@ -280,18 +280,18 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
 	Expect(err).NotTo(HaveOccurred())
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	Expect(err).NotTo(HaveOccurred())
-	p, err := idemix2.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix2.NewKeyManager(ctx, config, sigService, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
-	id, audit, err := p.Identity(context.Background(), nil)
+	id, audit, err := p.Identity(ctx, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 
-	auditInfo, err := p.DeserializeAuditInfo(audit)
+	auditInfo, err := p.DeserializeAuditInfo(ctx, audit)
 	Expect(err).NotTo(HaveOccurred())
-	err = auditInfo.Match(id)
+	err = auditInfo.Match(ctx, id)
 	Expect(err).NotTo(HaveOccurred())
 
 	id, err = identity.WrapWithType(idemix2.IdentityType, id)

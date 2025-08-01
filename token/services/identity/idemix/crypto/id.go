@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
+	"context"
+
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -33,7 +35,7 @@ type Identity struct {
 	Schema        Schema
 }
 
-func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType, schemaManager SchemaManager, schema Schema) (*Identity, error) {
+func NewIdentity(ctx context.Context, idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType, schemaManager SchemaManager, schema Schema) (*Identity, error) {
 	id := &Identity{
 		Idemix:           idemix,
 		NymPublicKey:     nymPublicKey,

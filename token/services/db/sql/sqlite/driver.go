@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
+	"context"
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
@@ -59,7 +60,7 @@ func NewDriverWithDbProvider(config driver.Config, dbProvider sqlite.DbProvider)
 	}
 }
 
-func (d *Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (driver.TokenLockStore, error) {
+func (d *Driver) NewTokenLock(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.TokenLockStore, error) {
 	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
@@ -67,7 +68,7 @@ func (d *Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (d
 	return d.TokenLock.Get(*opts)
 }
 
-func (d *Driver) NewWallet(name driver2.PersistenceName, params ...string) (driver.WalletStore, error) {
+func (d *Driver) NewWallet(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.WalletStore, error) {
 	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
@@ -75,7 +76,7 @@ func (d *Driver) NewWallet(name driver2.PersistenceName, params ...string) (driv
 	return d.Wallet.Get(*opts)
 }
 
-func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (driver.IdentityStore, error) {
+func (d *Driver) NewIdentity(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.IdentityStore, error) {
 	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
@@ -83,7 +84,7 @@ func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (dr
 	return d.Identity.Get(*opts)
 }
 
-func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
+func (d *Driver) NewToken(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.TokenStore, error) {
 	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
@@ -92,7 +93,7 @@ func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (drive
 	return d.Token.Get(*opts)
 }
 
-func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string) (driver.TokenNotifier, error) {
+func (d *Driver) NewTokenNotifier(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.TokenNotifier, error) {
 	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err
@@ -100,7 +101,7 @@ func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string
 	return d.TokenNotifier.Get(*opts)
 }
 
-func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
+func (d *Driver) NewAuditTransaction(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.AuditTransactionStore, error) {
 	opts, err := d.cp.GetOpts(name, append(params, "aud")...)
 	if err != nil {
 		return nil, err
@@ -108,7 +109,7 @@ func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...str
 	return d.AuditTx.Get(*opts)
 }
 
-func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...string) (driver.TokenTransactionStore, error) {
+func (d *Driver) NewOwnerTransaction(ctx context.Context, name driver2.PersistenceName, params ...string) (driver.TokenTransactionStore, error) {
 	opts, err := d.cp.GetOpts(name, params...)
 	if err != nil {
 		return nil, err

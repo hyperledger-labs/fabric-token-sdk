@@ -41,7 +41,7 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenL
 
 func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration) error {
 	if err := db.logStaleLocks(ctx, leaseExpiry); err != nil {
-		db.Logger.Warnf("Could not log stale locks: %v", err)
+		db.Logger.WarnfContext(ctx, "Could not log stale locks: %v", err)
 	}
 	tokenLocks, tokenRequests := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
 	query, args := common3.NewBuilder().
@@ -92,7 +92,7 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 		return err
 	}
 
-	db.Logger.Infof("Found following entries ready for deletion: [%v]", lockEntries)
+	db.Logger.InfofContext(ctx, "Found following entries ready for deletion: [%v]", lockEntries)
 	return nil
 }
 

@@ -177,7 +177,7 @@ func (p *UpdatePublicParamsView) Call(context view.Context) (interface{}, error)
 	assert.NotNil(tms.PublicParametersManager().PublicParameters(), "failed to validate local public parameters")
 	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
 	assert.NoError(err, "failed to fetch public parameters")
-	assert.NoError(token.GetManagementServiceProvider(context).Update(tms.ID(), fetchedPPRaw), "failed to update public parameters")
+	assert.NoError(token.GetManagementServiceProvider(context).Update(context.Context(), tms.ID(), fetchedPPRaw), "failed to update public parameters")
 	return nil, nil
 }
 
@@ -239,7 +239,7 @@ type TxStatusView struct {
 }
 
 func (p *TxStatusView) Call(context view.Context) (interface{}, error) {
-	owner := ttx.NewOwner(context, token.GetManagementService(context, token.WithTMSID(p.TMSID)))
+	owner := ttx.NewOwner(context.Context(), context, token.GetManagementService(context, token.WithTMSID(p.TMSID)))
 	vc, message, err := owner.GetStatus(context.Context(), p.TxID)
 	assert.NoError(err, "failed to retrieve status of [%s]", p.TxID)
 	return &TxStatusResponse{

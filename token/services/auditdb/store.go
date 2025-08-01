@@ -42,8 +42,8 @@ var (
 	logger      = logging.MustGetLogger()
 )
 
-func NewStoreServiceManager(cp cdriver.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
-	return db.NewStoreServiceManager(config.NewService(cp), "auditdb.persistence", drivers.NewAuditTransaction, newStoreService)
+func NewStoreServiceManager(ctx context.Context, cp cdriver.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
+	return db.NewStoreServiceManager(ctx, config.NewService(cp), "auditdb.persistence", drivers.NewAuditTransaction, newStoreService)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
@@ -290,7 +290,7 @@ func (d *StoreService) ReleaseLocks(ctx context.Context, anchor string) {
 	for _, id := range dedup {
 		lock, ok := d.eIDsLocks.Load(id)
 		if !ok {
-			logger.Warnf("unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
+			logger.WarnfContext(ctx, "unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
 			continue
 		}
 		logger.DebugfContext(ctx, "unlock lock for [%s:%v] enrollment id done", anchor, id)

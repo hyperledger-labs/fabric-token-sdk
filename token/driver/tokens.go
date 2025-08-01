@@ -6,7 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+import (
+	"context"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+)
 
 //go:generate counterfeiter -o mock/tss.go -fake-name TokensService . TokensService
 
@@ -29,9 +33,9 @@ type TokensUpgradeService interface {
 	// NewUpgradeChallenge generates a new upgrade challenge
 	NewUpgradeChallenge() (TokensUpgradeChallenge, error)
 	// GenUpgradeProof generates an upgrade proof for the given challenge and tokens
-	GenUpgradeProof(ch TokensUpgradeChallenge, tokens []token.LedgerToken, witness TokensUpgradeWitness) (TokensUpgradeProof, error)
+	GenUpgradeProof(ctx context.Context, ch TokensUpgradeChallenge, tokens []token.LedgerToken, witness TokensUpgradeWitness) (TokensUpgradeProof, error)
 	// CheckUpgradeProof checks the upgrade proof for the given challenge and tokens
-	CheckUpgradeProof(ch TokensUpgradeChallenge, proof TokensUpgradeProof, tokens []token.LedgerToken) (bool, error)
+	CheckUpgradeProof(ctx context.Context, ch TokensUpgradeChallenge, proof TokensUpgradeProof, tokens []token.LedgerToken) (bool, error)
 }
 
 // TokensService models the token service
@@ -44,8 +48,8 @@ type TokensService interface {
 	// - its issuer (if any),
 	// - the recipients defined by Token.Owner,
 	// = and the output format
-	Deobfuscate(output TokenOutput, outputMetadata TokenOutputMetadata) (*token.Token, Identity, []Identity, token.Format, error)
+	Deobfuscate(ctx context.Context, output TokenOutput, outputMetadata TokenOutputMetadata) (*token.Token, Identity, []Identity, token.Format, error)
 
 	// Recipients returns the recipients of the passed output
-	Recipients(output TokenOutput) ([]Identity, error)
+	Recipients(ctx context.Context, output TokenOutput) ([]Identity, error)
 }

@@ -189,7 +189,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	logger.DebugfContext(context.Context(), "Endorse proposal for TX [%s]", tx.ID())
 	endorsementResult, err := context.RunView(endorser.NewEndorsementOnProposalResponderView(tx, endorserID))
 	if err != nil {
-		logger.Errorf("failed to respond to endorsement [%s]", err)
+		logger.ErrorfContext(context.Context(), "failed to respond to endorsement [%s]", err)
 	}
 	logger.DebugfContext(context.Context(), "Finished endorsement on TX [%s]", tx.ID())
 	return endorsementResult, err

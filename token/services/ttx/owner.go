@@ -22,8 +22,8 @@ type TxOwner struct {
 }
 
 // NewOwner returns a new owner service.
-func NewOwner(sp token.ServiceProvider, tms *token.ManagementService) *TxOwner {
-	backend := New(sp, tms)
+func NewOwner(ctx context.Context, sp token.ServiceProvider, tms *token.ManagementService) *TxOwner {
+	backend := New(ctx, sp, tms)
 	return NewTxOwner(tms, backend)
 }
 

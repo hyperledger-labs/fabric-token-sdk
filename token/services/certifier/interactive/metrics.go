@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package interactive
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 )
 
@@ -24,7 +26,7 @@ type Metrics struct {
 	CertifiedTokens metrics.Counter
 }
 
-func NewMetrics(p metrics.Provider) *Metrics {
+func NewMetrics(ctx context.Context, p metrics.Provider) *Metrics {
 	return &Metrics{
 		CertifiedTokens: p.NewCounter(certifiedTokens),
 	}

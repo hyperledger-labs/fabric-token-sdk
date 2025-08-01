@@ -50,9 +50,9 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 		pt, err := q.Ledger.GetTransactionByID(txID)
 		if err == nil {
 			logger.DebugfContext(ctx, "transaction [%s] found on ledger", txID)
-			infos, err := q.Mapper.MapProcessedTx(pt)
+			infos, err := q.Mapper.MapProcessedTx(ctx, pt)
 			if err != nil {
-				logger.Errorf("failed to map tx [%s]: [%s]", txID, err)
+				logger.ErrorfContext(ctx, "failed to map tx [%s]: [%s]", txID, err)
 				return
 			}
 			keySet.Remove(txID)
@@ -66,7 +66,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			strings.Contains(err.Error(), fmt.Sprintf("no such transaction ID [%s]", txID)) ||
 			errors2.HasType(err, finality.TxNotFound) {
 			// transaction was not found
-			logger.Errorf("tx [%s] not found on the ledger [%s]", txID, err)
+			logger.ErrorfContext(ctx, "tx [%s] not found on the ledger [%s]", txID, err)
 			startDelivery = true
 			continue
 		}
@@ -93,9 +93,9 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 				return false, nil
 			}
 			logger.DebugfContext(ctx, "received result for tx [%s, %v, %d]...", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
-			infos, err := q.Mapper.MapProcessedTx(tx)
+			infos, err := q.Mapper.MapProcessedTx(ctx, tx)
 			if err != nil {
-				logger.Errorf("failed mapping tx [%s]: %v", tx.TxID(), err)
+				logger.ErrorfContext(ctx, "failed mapping tx [%s]: %v", tx.TxID(), err)
 				return true, err
 			}
 			ch <- infos
@@ -105,7 +105,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 		},
 	)
 	if err != nil {
-		logger.Errorf("failed scanning blocks [%s], started from [%d]", err, startingBlock)
+		logger.ErrorfContext(ctx, "failed scanning blocks [%s], started from [%d]", err, startingBlock)
 		return
 	}
 	logger.DebugfContext(ctx, "finished scanning blocks starting from [%d]", startingBlock)

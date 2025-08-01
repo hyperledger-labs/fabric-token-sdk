@@ -127,7 +127,7 @@ func (db *WalletStore) IdentityExists(ctx context.Context, identity token.Identi
 		Format(db.ci)
 	result, err := common.QueryUnique[driver.WalletID](db.readDB, query, args...)
 	if err != nil {
-		logger.Errorf("failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
+		logger.ErrorfContext(ctx, "failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
 	}
 	logger.DebugfContext(ctx, "found identity for wallet-identity [%v-%v]: %v", wID, idHash, result)
 

@@ -79,7 +79,7 @@ type localSession struct {
 	writeChannel chan *view.Message
 }
 
-func (s *localSession) Info() view.SessionInfo {
+func (s *localSession) Info(ctx context.Context) view.SessionInfo {
 	return s.info
 }
 

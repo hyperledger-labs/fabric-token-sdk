@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package identitydb_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
@@ -23,7 +24,7 @@ func TestDB(t *testing.T) {
 	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 
-	manager := identitydb.NewStoreServiceManager(cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp, sqlite2.NewDbProvider())))
+	manager := identitydb.NewStoreServiceManager(context.Background(), cp, multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp, sqlite2.NewDbProvider())))
 	_, err = manager.StoreServiceByTMSId(token2.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 }

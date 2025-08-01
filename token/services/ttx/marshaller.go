@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
 	"encoding/asn1"
 	"encoding/json"
 	"sort"
@@ -78,7 +79,7 @@ type TransactionSer struct {
 	Envelope     []byte
 }
 
-func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
+func marshal(ctx context.Context, t *Transaction, eIDs ...string) ([]byte, error) {
 	var err error
 
 	var transientRaw []byte
@@ -94,7 +95,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 		req := t.TokenRequest
 		// If eIDs are specified, we only marshal the metadata for the passed eIDs
 		if len(eIDs) != 0 {
-			req, err = t.TokenRequest.FilterMetadataBy(eIDs...)
+			req, err = t.TokenRequest.FilterMetadataBy(ctx, eIDs...)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to filter metadata")
 			}
@@ -112,7 +113,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 			return nil, errors.Wrap(err, "failed to marshal envelope")
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction envelope [%s]", hash.Hashable(t.Envelope.String()))
+			logger.DebugfContext(ctx, "transaction envelope [%s]", hash.Hashable(t.Envelope.String()))
 		}
 	}
 

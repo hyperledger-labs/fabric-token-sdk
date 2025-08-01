@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -27,6 +28,7 @@ func TestNewDeserializer(t *testing.T) {
 }
 
 func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+	ctx := context.Background()
 	t.Helper()
 	// init
 	backend, err := kvs2.NewInMemory()
@@ -40,7 +42,7 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	assert.NoError(t, err)
 
 	// key manager
-	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(context.Background(), config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
@@ -63,17 +65,17 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	assert.NoError(t, err)
 	assert.NotNil(t, d)
 	assert.Equal(t, fmt.Sprintf("Idemix with IPK [%s]", hash.Hashable(d.Ipk).String()), d.String())
-	_, err = d.DeserializeVerifier(nil)
+	_, err = d.DeserializeVerifier(ctx, nil)
 	assert.Error(t, err)
-	_, err = d.DeserializeVerifier([]byte{})
+	_, err = d.DeserializeVerifier(ctx, []byte{})
 	assert.Error(t, err)
-	_, err = d.DeserializeVerifier([]byte{0, 1, 2, 3})
+	_, err = d.DeserializeVerifier(ctx, []byte{0, 1, 2, 3})
 	assert.Error(t, err)
-	verifier1, err := d.DeserializeVerifierAgainstNymEID(id, nil)
+	verifier1, err := d.DeserializeVerifierAgainstNymEID(context.Background(), id, nil)
 	assert.NoError(t, err)
-	verifier2, err := d.DeserializeVerifier(id)
+	verifier2, err := d.DeserializeVerifier(ctx, id)
 	assert.NoError(t, err)
-	signer, err := keyManager.DeserializeSigner(id)
+	signer, err := keyManager.DeserializeSigner(ctx, id)
 	assert.NoError(t, err)
 
 	// sign and verify
@@ -86,41 +88,41 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	assert.NoError(t, err)
 
 	// check audit info
-	auditInfo, err := d.DeserializeAuditInfo(auditInfoRaw)
+	auditInfo, err := d.DeserializeAuditInfo(ctx, auditInfoRaw)
 	assert.NoError(t, err)
 	assert.NotNil(t, auditInfo)
 	assert.Equal(t, "alice", auditInfo.EnrollmentID())
 	assert.Equal(t, "150", auditInfo.RevocationHandle())
 	auditInfoDeser := &AuditInfoDeserializer{}
 	// check invalid input
-	_, err = auditInfoDeser.DeserializeAuditInfo(nil)
+	_, err = auditInfoDeser.DeserializeAuditInfo(ctx, nil)
 	assert.Error(t, err)
-	_, err = auditInfoDeser.DeserializeAuditInfo([]byte{})
+	_, err = auditInfoDeser.DeserializeAuditInfo(ctx, []byte{})
 	assert.Error(t, err)
-	_, err = auditInfoDeser.DeserializeAuditInfo([]byte{0, 1, 2, 3})
+	_, err = auditInfoDeser.DeserializeAuditInfo(ctx, []byte{0, 1, 2, 3})
 	assert.Error(t, err)
-	auditInfo2, err := auditInfoDeser.DeserializeAuditInfo(auditInfoRaw)
+	auditInfo2, err := auditInfoDeser.DeserializeAuditInfo(ctx, auditInfoRaw)
 	assert.NoError(t, err)
 	assert.Equal(t, "alice", auditInfo2.EnrollmentID())
 	assert.Equal(t, "150", auditInfo2.RevocationHandle())
 
 	// match audit info
-	auditInfoMatcher, err := d.GetAuditInfoMatcher(id, auditInfoRaw)
+	auditInfoMatcher, err := d.GetAuditInfoMatcher(ctx, id, auditInfoRaw)
 	assert.NoError(t, err)
 	assert.NotNil(t, auditInfoMatcher)
-	assert.NoError(t, auditInfoMatcher.Match(id))
-	assert.NoError(t, d.MatchIdentity(id, auditInfoRaw))
+	assert.NoError(t, auditInfoMatcher.Match(ctx, id))
+	assert.NoError(t, d.MatchIdentity(ctx, id, auditInfoRaw))
 
 	// check info
-	info, err := d.Info(id, []byte{})
+	info, err := d.Info(context.Background(), id, []byte{})
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: []"))
-	info, err = d.Info(id, nil)
+	info, err = d.Info(context.Background(), id, nil)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: []"))
-	_, err = d.Info(id, []byte{0, 1, 2})
+	_, err = d.Info(context.Background(), id, []byte{0, 1, 2})
 	assert.Error(t, err)
-	info, err = d.Info(id, auditInfoRaw)
+	info, err = d.Info(context.Background(), id, auditInfoRaw)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
 }

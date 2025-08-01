@@ -82,6 +82,7 @@ var _ = Describe("validator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		c := math.Curves[pp.Curve]
+		ctx := context.Background()
 
 		asigner, _ := prepareECDSASigner()
 		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.FP256BN_AMCL)
@@ -107,16 +108,16 @@ var _ = Describe("validator", func() {
 		)
 
 		// non-anonymous issue
-		_, ir, _ = prepareNonAnonymousIssueRequest(pp, auditor)
+		_, ir, _ = prepareNonAnonymousIssueRequest(ctx, pp, auditor)
 		Expect(ir).NotTo(BeNil())
 
 		// prepare redeem
-		sender, rr, _, inputsForRedeem = prepareRedeemRequest(pp, auditor)
+		sender, rr, _, inputsForRedeem = prepareRedeemRequest(ctx, pp, auditor)
 		Expect(sender).NotTo(BeNil())
 
 		// prepare transfer
 		var trmetadata *driver.TokenRequestMetadata
-		sender, tr, trmetadata, inputsForTransfer = prepareTransferRequest(pp, auditor)
+		sender, tr, trmetadata, inputsForTransfer = prepareTransferRequest(ctx, pp, auditor)
 		Expect(sender).NotTo(BeNil())
 		Expect(trmetadata).NotTo(BeNil())
 
@@ -137,9 +138,9 @@ var _ = Describe("validator", func() {
 		for i := range 2 {
 			tokns[0] = append(tokns[0], inputsForTransfer[i])
 		}
-		err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
+		err = auditor.Check(ctx, ar, metadata, tokns, "2")
 		Expect(err).NotTo(HaveOccurred())
-		sigma, err := auditor.Endorse(ar, "2")
+		sigma, err := auditor.Endorse(ctx, ar, "2")
 		Expect(err).NotTo(HaveOccurred())
 		ar.AuditorSignatures = append(ar.AuditorSignatures, &driver.AuditorSignature{
 			Identity:  araw,
@@ -301,7 +302,7 @@ func prepareECDSASigner() (*Signer, *Verifier) {
 	return signer, signer.Verifier
 }
 
-func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*issue2.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
+func prepareNonAnonymousIssueRequest(ctx context.Context, pp *v1.PublicParams, auditor *audit.Auditor) (*issue2.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
 	signer, err := NewECDSASigner()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -309,13 +310,13 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 	issuer.New("ABC", signer, pp)
 	issuerIdentity, err := signer.Serialize()
 	Expect(err).NotTo(HaveOccurred())
-	ir, metadata := prepareIssue(auditor, issuer, issuerIdentity)
+	ir, metadata := prepareIssue(ctx, auditor, issuer, issuerIdentity)
 
 	return issuer, ir, metadata
 }
 
-func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
-	id, auditInfo, signer := getIdemixInfo("./testdata/idemix")
+func prepareRedeemRequest(ctx context.Context, pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+	id, auditInfo, signer := getIdemixInfo(ctx, "./testdata/idemix")
 	owners := make([][]byte, 2)
 	owners[0] = id
 
@@ -327,16 +328,16 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfe
 	issuerIdentity, err := issuerSigner.Serialize()
 	Expect(err).NotTo(HaveOccurred())
 
-	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners, issuer, issuerIdentity)
+	return prepareTransfer(ctx, pp, signer, auditor, auditInfo, id, owners, issuer, issuerIdentity)
 }
 
-func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
-	id, auditInfo, signer := getIdemixInfo("./testdata/idemix")
+func prepareTransferRequest(ctx context.Context, pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+	id, auditInfo, signer := getIdemixInfo(ctx, "./testdata/idemix")
 	owners := make([][]byte, 2)
 	owners[0] = id
 	owners[1] = id
 
-	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners, nil, nil)
+	return prepareTransfer(ctx, pp, signer, auditor, auditInfo, id, owners, nil, nil)
 }
 
 func prepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
@@ -399,7 +400,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 	return ""
 }
 
-func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.SigningIdentity) {
+func getIdemixInfo(ctx context.Context, dir string) (driver.Identity, *crypto.AuditInfo, driver.SigningIdentity) {
 	registry := view.NewServiceProvider()
 	configService := &fakeProv{typ: "memory"}
 	Expect(registry.RegisterService(configService)).NotTo(HaveOccurred())
@@ -419,21 +420,21 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 	Expect(err).NotTo(HaveOccurred())
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	Expect(err).NotTo(HaveOccurred())
-	p, err := idemix2.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix2.NewKeyManager(ctx, config, sigService, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
-	id, audit, err := p.Identity(context.Background(), nil)
+	id, audit, err := p.Identity(ctx, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 
-	auditInfo, err := p.DeserializeAuditInfo(audit)
+	auditInfo, err := p.DeserializeAuditInfo(ctx, audit)
 	Expect(err).NotTo(HaveOccurred())
-	err = auditInfo.Match(id)
+	err = auditInfo.Match(ctx, id)
 	Expect(err).NotTo(HaveOccurred())
 
-	signer, err := p.DeserializeSigningIdentity(id)
+	signer, err := p.DeserializeSigningIdentity(ctx, id)
 	Expect(err).NotTo(HaveOccurred())
 
 	id, err = identity.WrapWithType(idemix2.IdentityType, id)
@@ -442,8 +443,8 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 	return id, auditInfo, signer
 }
 
-func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
-	id, auditInfo, _ := getIdemixInfo("./testdata/idemix")
+func prepareIssue(ctx context.Context, auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
+	id, auditInfo, _ := getIdemixInfo(ctx, "./testdata/idemix")
 	owners := make([][]byte, 1)
 	owners[0] = id
 	values := []uint64{40}
@@ -487,9 +488,9 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	ir.Signatures = append(ir.Signatures, sig)
 
 	issueMetadata := &driver.TokenRequestMetadata{Issues: []*driver.IssueMetadata{metadata}}
-	err = auditor.Check(context.Background(), ir, issueMetadata, nil, "1")
+	err = auditor.Check(ctx, ir, issueMetadata, nil, "1")
 	Expect(err).NotTo(HaveOccurred())
-	sigma, err := auditor.Endorse(ir, "1")
+	sigma, err := auditor.Endorse(ctx, ir, "1")
 	Expect(err).NotTo(HaveOccurred())
 	araw, err := auditor.Signer.Serialize()
 	Expect(err).NotTo(HaveOccurred())
@@ -501,7 +502,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	return ir, issueMetadata
 }
 
-func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+func prepareTransfer(ctx context.Context, pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 	signers := make([]driver.Signer, 2)
 	signers[0] = signer
 	signers[1] = signer
@@ -597,7 +598,7 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	err = auditor.Check(context.Background(), tr, transferMetadata, tokns, "1")
 	Expect(err).NotTo(HaveOccurred())
 
-	sigma, err := auditor.Endorse(tr, "1")
+	sigma, err := auditor.Endorse(ctx, tr, "1")
 	Expect(err).NotTo(HaveOccurred())
 	araw, err := auditor.Signer.Serialize()
 	Expect(err).NotTo(HaveOccurred())
@@ -780,7 +781,7 @@ type Deserializer struct {
 	auditInfo []byte
 }
 
-func (d *Deserializer) Match(id []byte) error {
+func (d *Deserializer) Match(ctx context.Context, id []byte) error {
 	identity, err := identity.WrapWithType(ix509.IdentityType, id)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
@@ -791,10 +792,10 @@ func (d *Deserializer) Match(id []byte) error {
 	return nil
 }
 
-func (d *Deserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (d *Deserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	return &Deserializer{auditInfo: auditInfo}, nil
 }
 
-func (d *Deserializer) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
+func (d *Deserializer) DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
 	panic("implement me")
 }

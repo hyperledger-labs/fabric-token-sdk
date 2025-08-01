@@ -182,11 +182,11 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 	if len(block.Metadata) < int(common.BlockMetadataIndex_TRANSACTIONS_FILTER) {
 		return nil, errors.Errorf("block metadata lacks transaction filter")
 	}
-	return m.mapTxInfo(rwSet, chdr.TxId)
+	return m.mapTxInfo(ctx, rwSet, chdr.TxId)
 }
 
-func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]KeyInfo, error) {
-	logger.Debugf("Map processed tx [%s] with results of status [%v] and length [%d]", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
+func (m *endorserTxInfoMapper) MapProcessedTx(ctx context.Context, tx *fabric.ProcessedTransaction) ([]KeyInfo, error) {
+	logger.DebugfContext(ctx, "Map processed tx [%s] with results of status [%v] and length [%d]", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
 	status, _ := committer.MapValidationCode(tx.ValidationCode())
 	if status == driver.Invalid {
 		return []KeyInfo{}, nil
@@ -195,21 +195,21 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 	if err != nil {
 		return nil, err
 	}
-	infos, err := m.mapTxInfo(rwSet, tx.TxID())
+	infos, err := m.mapTxInfo(ctx, rwSet, tx.TxID())
 	if err != nil {
 		return nil, err
 	}
 	return collections.Values(infos), nil
 }
 
-func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string) (map[driver2.Namespace]KeyInfo, error) {
+func (m *endorserTxInfoMapper) mapTxInfo(ctx context.Context, rwSet vault2.ReadWriteSet, txID string) (map[driver2.Namespace]KeyInfo, error) {
 	txInfos := make(map[driver2.Namespace]KeyInfo, len(rwSet.Writes))
-	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.Writes))
+	logger.DebugfContext(ctx, "TX [%s] has %d namespaces", txID, len(rwSet.Writes))
 	for ns, writes := range rwSet.Writes {
-		logger.Debugf("TX [%s:%s] has [%d] writes: %v", txID, ns, len(writes), logging.Keys(writes))
+		logger.DebugfContext(ctx, "TX [%s:%s] has [%d] writes: %v", txID, ns, len(writes), logging.Keys(writes))
 		for key, value := range writes {
 			if slices.ContainsFunc(m.prefixes, func(prefix string) bool { return strings.HasPrefix(key, prefix) }) {
-				logger.Debugf("TX [%s:%s] does have key [%s].", txID, ns, key)
+				logger.DebugfContext(ctx, "TX [%s:%s] does have key [%s].", txID, ns, key)
 				txInfos[ns] = KeyInfo{
 					Namespace: ns,
 					Key:       key,

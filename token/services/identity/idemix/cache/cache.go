@@ -37,8 +37,8 @@ type IdentityCache struct {
 	metrics *Metrics
 }
 
-func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byte, metrics *Metrics) *IdentityCache {
-	logger.Debugf("new identity cache with size [%d]", size)
+func NewIdentityCache(ctx context.Context, backed IdentityCacheBackendFunc, size int, auditInfo []byte, metrics *Metrics) *IdentityCache {
+	logger.DebugfContext(ctx, "new identity cache with size [%d]", size)
 	ci := &IdentityCache{
 		backed:       backed,
 		cache:        make(chan identityCacheEntry, size),
@@ -127,7 +127,7 @@ func (c *IdentityCache) provisionIdentities() {
 	for {
 		id, audit, err := c.backed(ctx, c.auditInfo)
 		if err != nil {
-			logger.Errorf("failed to provision identity [%s]", err)
+			logger.ErrorfContext(ctx, "failed to provision identity [%s]", err)
 			continue
 		}
 		logger.DebugfContext(ctx, "generated new idemix identity [%d]", count)

@@ -8,6 +8,7 @@ package crypto
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 
@@ -71,15 +72,15 @@ func NewConfig(dir string) (*Config, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read issuer public key file")
 	}
-	return NewConfigWithIPK(ipkBytes, dir, true)
+	return NewConfigWithIPK(context.Background(), ipkBytes, dir, true)
 }
 
-func NewConfigWithIPK(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet bool) (*Config, error) {
-	conf, err := newConfigWithIPK(issuerPublicKey, dir, ignoreVerifyOnlyWallet)
+func NewConfigWithIPK(ctx context.Context, issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet bool) (*Config, error) {
+	conf, err := newConfigWithIPK(ctx, issuerPublicKey, dir, ignoreVerifyOnlyWallet)
 	if err != nil {
-		logger.Debugf("failed reading idemix configuration from [%s]: [%s], try adding extra path element...", dir, err)
+		logger.DebugfContext(ctx, "failed reading idemix configuration from [%s]: [%s], try adding extra path element...", dir, err)
 		// Try with ExtraPathElement
-		conf, err = newConfigWithIPK(issuerPublicKey, filepath.Join(dir, ExtraPathElement), ignoreVerifyOnlyWallet)
+		conf, err = newConfigWithIPK(ctx, issuerPublicKey, filepath.Join(dir, ExtraPathElement), ignoreVerifyOnlyWallet)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed reading idemix configuration from [%s] and with extra path element", dir)
 		}
@@ -87,8 +88,8 @@ func NewConfigWithIPK(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet
 	return conf, nil
 }
 
-func newConfigWithIPK(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet bool) (*Config, error) {
-	config, err := NewIdemixConfig(issuerPublicKey, dir, ignoreVerifyOnlyWallet)
+func newConfigWithIPK(ctx context.Context, issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet bool) (*Config, error) {
+	config, err := NewIdemixConfig(ctx, issuerPublicKey, dir, ignoreVerifyOnlyWallet)
 	if err != nil {
 		// load it using the fabric-ca format
 		config2, err2 := NewFabricCAIdemixConfig(issuerPublicKey, dir)
@@ -101,15 +102,15 @@ func newConfigWithIPK(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet
 }
 
 // NewIdemixConfig returns the configuration for Idemix
-func NewIdemixConfig(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet bool) (*Config, error) {
+func NewIdemixConfig(ctx context.Context, issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet bool) (*Config, error) {
 	signerConfigPath := filepath.Join(dir, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner)
 	if ignoreVerifyOnlyWallet {
-		logger.Debugf("check the existence of SignerConfigFull")
+		logger.DebugfContext(ctx, "check the existence of SignerConfigFull")
 		// check if `SignerConfigFull` exists, if yes, use that file
 		path := filepath.Join(dir, idemix.IdemixConfigDirUser, SignerConfigFull)
 		_, err := os.Stat(path)
 		if err == nil {
-			logger.Debugf("SignerConfigFull found, use it")
+			logger.DebugfContext(ctx, "SignerConfigFull found, use it")
 			signerConfigPath = path
 		}
 	}
@@ -122,7 +123,7 @@ func NewIdemixConfig(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet 
 			return nil, err
 		}
 	} else {
-		logger.Debugf("cannot read the signer config file [%s]: [%s]", signerConfigPath, err)
+		logger.DebugfContext(ctx, "cannot read the signer config file [%s]: [%s]", signerConfigPath, err)
 	}
 
 	return assembleConfig(issuerPublicKey, signer)

@@ -177,13 +177,13 @@ func (f *cachedFetcher) update() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if !f.isCacheStale() && !f.isCacheOverused() {
-		logger.Debugf("Cache renewed in the meantime by another process")
+		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process")
 		return
 	}
-	logger.Debugf("Renew token cache")
+	logger.DebugfContext(ctx, "Renew token cache")
 	it, err := f.tokenDB.SpendableTokensIteratorBy(context.Background(), "", "")
 	if err != nil {
-		logger.Warnf("Failed to get token iterator: %v", err)
+		logger.WarnfContext(ctx, "Failed to get token iterator: %v", err)
 		return
 	}
 	defer it.Close()
@@ -191,7 +191,7 @@ func (f *cachedFetcher) update() {
 	m := map[string][]*token2.UnspentTokenInWallet{}
 	for t, err := it.Next(); err == nil && t != nil; t, err = it.Next() {
 		key := tokenKey(t.WalletID, t.Type)
-		logger.Debugf("Adding token with key [%s]", key)
+		logger.DebugfContext(ctx, "Adding token with key [%s]", key)
 		m[key] = append(m[key], t)
 	}
 	its := map[string]permutatableIterator[*token2.UnspentTokenInWallet]{}

@@ -84,7 +84,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 
 	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
 	if err != nil {
-		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
+		logger.ErrorfContext(context.Context(), "failed to get session to [%s]: [%s]", r.Issuer, err)
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
@@ -113,7 +113,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	if tms == nil {
 		return nil, errors.Errorf("tms not found for [%s]", tmsID)
 	}
-	proof, err := tms.TokensService().GenUpgradeProof(agreement.Challenge, r.Tokens)
+	proof, err := tms.TokensService().GenUpgradeProof(context.Context(), agreement.Challenge, r.Tokens)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate proof")
 	}
@@ -128,7 +128,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	}
 	err = session.SendWithContext(context.Context(), wr)
 	if err != nil {
-		logger.Errorf("failed to send recipient data: [%s]", err)
+		logger.ErrorfContext(context.Context(), "failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
@@ -165,12 +165,12 @@ func (r *UpgradeTokensInitiatorView) getRecipientData(context view.Context) (*to
 		token.WithTMSID(r.TMSID),
 	)
 	if w == nil {
-		logger.Errorf("failed to get wallet [%s]", r.Wallet)
+		logger.ErrorfContext(context.Context(), "failed to get wallet [%s]", r.Wallet)
 		return nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
 	}
 	recipientData, err := w.GetRecipientData(context.Context())
 	if err != nil {
-		logger.Errorf("failed to get recipient data: [%s]", err)
+		logger.ErrorfContext(context.Context(), "failed to get recipient data: [%s]", err)
 		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
 	}
 	tmsID := w.TMS().ID()

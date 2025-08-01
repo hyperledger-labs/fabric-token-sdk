@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -17,7 +18,7 @@ func WalletTest(t *testing.T, cfgProvider cfgProvider) {
 	t.Helper()
 	for _, c := range walletCases {
 		driver := cfgProvider(c.Name)
-		db, err := driver.NewWallet("", c.Name)
+		db, err := driver.NewWallet(context.Background(), "", c.Name)
 		if err != nil {
 			t.Fatal(err)
 		}

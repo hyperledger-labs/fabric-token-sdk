@@ -31,7 +31,7 @@ type (
 //go:generate counterfeiter -o mock/des.go -fake-name Deserializer . Deserializer
 
 type Deserializer interface {
-	GetOwnerVerifier(id driver.Identity) (driver.Verifier, error)
+	GetOwnerVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
 }
 
 //go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
@@ -91,7 +91,7 @@ func (s *Service) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
 
 // GenUpgradeProof does the following: For each token in input, it signs the concatenation of the challenge and the tokens to be upgraded.
 // These signatures are then added to the proof
-func (s *Service) GenUpgradeProof(ch driver.TokensUpgradeChallenge, ledgerTokens []token.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
+func (s *Service) GenUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, ledgerTokens []token.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
 	if len(ch) != ChallengeSize {
 		return nil, errors.Errorf("invalid challenge size, got [%d], expected [%d]", len(ch), ChallengeSize)
 	}
@@ -139,12 +139,12 @@ func (s *Service) GenUpgradeProof(ch driver.TokensUpgradeChallenge, ledgerTokens
 	return raw, nil
 }
 
-func (s *Service) CheckUpgradeProof(ch driver.TokensUpgradeChallenge, proofRaw driver.TokensUpgradeProof, ledgerTokens []token.LedgerToken) (bool, error) {
-	_, v, err := s.checkUpgradeProof(ch, proofRaw, ledgerTokens)
+func (s *Service) CheckUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, proofRaw driver.TokensUpgradeProof, ledgerTokens []token.LedgerToken) (bool, error) {
+	_, v, err := s.checkUpgradeProof(ctx, ch, proofRaw, ledgerTokens)
 	return v, err
 }
 
-func (s *Service) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequest) ([]token.Token, error) {
+func (s *Service) ProcessTokensUpgradeRequest(ctx context.Context, utp *driver.TokenUpgradeRequest) ([]token.Token, error) {
 	if utp == nil {
 		return nil, errors.New("nil token upgrade request")
 	}
@@ -157,7 +157,7 @@ func (s *Service) ProcessTokensUpgradeRequest(utp *driver.TokenUpgradeRequest) (
 	}
 
 	// check the upgrade proof
-	tokens, ok, err := s.checkUpgradeProof(utp.Challenge, utp.Proof, utp.Tokens)
+	tokens, ok, err := s.checkUpgradeProof(ctx, utp.Challenge, utp.Proof, utp.Tokens)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to check upgrade proof")
 	}
@@ -190,7 +190,7 @@ func (s *Service) ProcessTokens(ledgerTokens []token.LedgerToken) ([]token.Token
 	return tokens, nil
 }
 
-func (s *Service) checkUpgradeProof(ch driver.TokensUpgradeChallenge, proofRaw driver.TokensUpgradeProof, ledgerTokens []token.LedgerToken) ([]token.Token, bool, error) {
+func (s *Service) checkUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, proofRaw driver.TokensUpgradeProof, ledgerTokens []token.LedgerToken) ([]token.Token, bool, error) {
 	if len(ch) != ChallengeSize {
 		return nil, false, errors.Errorf("invalid challenge size, got [%d], expected [%d]", len(ch), ChallengeSize)
 	}
@@ -236,7 +236,7 @@ func (s *Service) checkUpgradeProof(ch driver.TokensUpgradeChallenge, proofRaw d
 		return nil, false, errors.Wrap(err, "failed to process ledgerTokens")
 	}
 	for i, token := range tokens {
-		verifier, err := s.Deserializer.GetOwnerVerifier(token.Owner)
+		verifier, err := s.Deserializer.GetOwnerVerifier(ctx, token.Owner)
 		if err != nil {
 			return nil, false, errors.Wrapf(err, "failed to get owner verifier")
 		}

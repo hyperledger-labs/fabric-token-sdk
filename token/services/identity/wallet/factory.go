@@ -60,6 +60,7 @@ func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleTy
 	case identity.OwnerRole:
 		if info.Anonymous() {
 			newWallet, err := NewAnonymousOwnerWallet(
+				ctx,
 				w.Logger,
 				w.IdentityProvider,
 				w.TokenVault,

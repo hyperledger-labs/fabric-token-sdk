@@ -8,6 +8,7 @@ package htlc
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"encoding/base64"
 	"time"
@@ -48,8 +49,8 @@ func WithStopOnLastTransaction() token.ServiceOption {
 }
 
 // ScanForPreImage scans the ledger for a preimage of the passed image, taking into account the timeout
-func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
-	logger.Debugf("scanning for preimage of [%s] with timeout [%s]", base64.StdEncoding.EncodeToString(image), timeout)
+func ScanForPreImage(ctx context.Context, sp token.ServiceProvider, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+	logger.DebugfContext(ctx, "scanning for preimage of [%s] with timeout [%s]", base64.StdEncoding.EncodeToString(image), timeout)
 
 	if !hashFunc.Available() {
 		return nil, errors.Errorf("passed hash function is not available [%d]", hashFunc)

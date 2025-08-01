@@ -104,7 +104,7 @@ func NewScriptAuth(walletService driver.WalletService) *ScriptAuth {
 }
 
 // AmIAnAuditor returns false for script ownership
-func (s *ScriptAuth) AmIAnAuditor() bool {
+func (s *ScriptAuth) AmIAnAuditor(ctx context.Context) bool {
 	return false
 }
 

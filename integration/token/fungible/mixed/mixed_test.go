@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package mixed
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
@@ -23,7 +25,7 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T1"), func() { fungible.TestMixed(ts.II, nil, selector) })
+			It("succeeded", Label("T1"), func() { fungible.TestMixed(context.Background(), ts.II, nil, selector) })
 		})
 	}
 },

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -28,7 +29,7 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range tokensCases {
 		t.Run(c.Name, func(xt *testing.T) {
 			driver := cfgProvider(c.Name)
-			db, err := driver.NewToken("", c.Name)
+			db, err := driver.NewToken(context.Background(), "", c.Name)
 			if err != nil {
 				t.Fatal(err)
 			}

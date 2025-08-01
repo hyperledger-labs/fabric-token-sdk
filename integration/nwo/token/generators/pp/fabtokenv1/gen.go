@@ -53,7 +53,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(auditor.Path, nil, auditor.Opts, keyStore)
+			km, _, err := x509.NewKeyManager(context.Background(), auditor.Path, nil, auditor.Opts, keyStore)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}
@@ -78,7 +78,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 		issuersSet := collections.NewSet(tms.Issuers...)
 		for _, issuer := range wallets.Issuers {
 			// Build an MSP Identity
-			km, _, err := x509.NewKeyManager(issuer.Path, nil, issuer.Opts, keyStore)
+			km, _, err := x509.NewKeyManager(context.Background(), issuer.Path, nil, issuer.Opts, keyStore)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 km")
 			}

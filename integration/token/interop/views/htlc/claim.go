@@ -59,6 +59,7 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		// Scan for the pre-image
 		var err error
 		preImage, err = htlc.ScanForPreImage(
+			context.Context(),
 			context,
 			r.Script.HashInfo.Hash,
 			r.Script.HashInfo.HashFunc,
@@ -84,7 +85,7 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		ttx.WithTMSID(r.TMSID),
 	)
 	assert.NoError(err, "failed to create an htlc transaction")
-	assert.NoError(tx.Claim(claimWallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
+	assert.NoError(tx.Claim(context.Context(), claimWallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
 	_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to collect endorsements on htlc transaction")

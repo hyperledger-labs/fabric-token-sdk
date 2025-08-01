@@ -49,6 +49,7 @@ func (s *ScanView) Call(context view.Context) (interface{}, error) {
 	}
 
 	preImage, err := htlc.ScanForPreImage(
+		context.Context(),
 		context,
 		s.Hash,
 		s.HashFunc,

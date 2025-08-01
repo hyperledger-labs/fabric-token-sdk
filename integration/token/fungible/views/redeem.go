@@ -96,7 +96,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 
 	// Sanity checks:
 	// - the transaction is in pending state
-	owner := ttx.NewOwner(context, tx.TokenService())
+	owner := ttx.NewOwner(context.Context(), context, tx.TokenService())
 	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())

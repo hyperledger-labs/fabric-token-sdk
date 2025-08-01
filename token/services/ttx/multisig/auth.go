@@ -29,7 +29,7 @@ func NewEscrowAuth(walletService driver.WalletService) *EscrowAuth {
 }
 
 // AmIAnAuditor returns false for script ownership
-func (s *EscrowAuth) AmIAnAuditor() bool {
+func (s *EscrowAuth) AmIAnAuditor(ctx context.Context) bool {
 	return false
 }
 

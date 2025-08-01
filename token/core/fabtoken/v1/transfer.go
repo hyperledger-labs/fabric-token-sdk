@@ -118,7 +118,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", driver.Identity(output.Owner).String())
 			}
-			recipients, err := s.Deserializer.Recipients(output.Owner)
+			recipients, err := s.Deserializer.Recipients(ctx, output.Owner)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "failed getting recipients")
 			}

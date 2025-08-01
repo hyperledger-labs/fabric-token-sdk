@@ -71,7 +71,8 @@ func NewDriver(
 func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
-	logger.Debugf("creating new token service with public parameters [%s]", hash.Hashable(publicParams))
+	ctx := context.Background()
+	logger.DebugfContext(ctx, "creating new token service with public parameters [%s]", hash.Hashable(publicParams))
 
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")
@@ -105,7 +106,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	}
 
 	pp := publicParamsManager.PublicParams(context.Background())
-	logger.Infof("new token driver for tms id [%s] with label and version [%s:%s]: [%s]", tmsID, pp.TokenDriverName(), pp.TokenDriverVersion(), pp)
+	logger.InfofContext(ctx, "new token driver for tms id [%s] with label and version [%s:%s]: [%s]", tmsID, pp.TokenDriverName(), pp.TokenDriverVersion(), pp)
 
 	networkLocalMembership := n.LocalMembership()
 	qe := vault.QueryEngine()
@@ -127,7 +128,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	ip := ws.IdentityProvider
 
 	authorization := common.NewAuthorizationMultiplexer(
-		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(context.Background()), ws),
+		common.NewTMSAuthorization(context.Background(), logger, publicParamsManager.PublicParams(context.Background()), ws),
 		htlc.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
 	)
@@ -170,5 +171,5 @@ func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Val
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	return d.DefaultValidator(pp)
+	return d.DefaultValidator(context.Background(), pp)
 }

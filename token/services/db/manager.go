@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package db
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
@@ -29,10 +31,10 @@ type ServiceManager[S any] interface {
 
 type manager[S any] struct{ lazy.Provider[token.TMSID, S] }
 
-func NewStoreServiceManager[S any, T any](config *config.Service, prefix string, constructor func(name driver2.PersistenceName, params ...string) (S, error), mapper func(S) (T, error)) StoreServiceManager[T] {
+func NewStoreServiceManager[S any, T any](ctx context.Context, config *config.Service, prefix string, constructor func(name driver2.PersistenceName, params ...string) (S, error), mapper func(S) (T, error)) StoreServiceManager[T] {
 	return &manager[T]{
 		Provider: lazy.NewProviderWithKeyMapper(Key, func(tmsID token.TMSID) (T, error) {
-			logger.Infof("Creating manager for %T for [%s] and prefix [%s]", new(T), tmsID, prefix)
+			logger.InfofContext(ctx, "Creating manager for %T for [%s] and prefix [%s]", new(T), tmsID, prefix)
 			cfg, err := config.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 			if err != nil {
 				return utils.Zero[T](), err

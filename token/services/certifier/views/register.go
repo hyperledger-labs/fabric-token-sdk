@@ -42,24 +42,24 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 	}
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {
-		logger.Debugf("public parameters not yet available, start a background task...")
+		logger.DebugfContext(context.Context(), "public parameters not yet available, start a background task...")
 		go func() {
 			for {
 				pp := tms.PublicParametersManager().PublicParameters()
 				if pp == nil {
-					logger.Debugf("public parameters not yet available, wait...")
+					logger.DebugfContext(context.Context(), "public parameters not yet available, wait...")
 					time.Sleep(500 * time.Millisecond)
 					continue
 				}
-				logger.Debugf("public parameters available, set certification service...")
+				logger.DebugfContext(context.Context(), "public parameters available, set certification service...")
 				if err := r.startCertificationService(context, tms, pp); err != nil {
-					logger.Errorf("failed to start certification service [%s]", err)
+					logger.ErrorfContext(context.Context(), "failed to start certification service [%s]", err)
 				}
 				break
 			}
 		}()
 	} else {
-		logger.Debugf("public parameters available, set certification service...")
+		logger.DebugfContext(context.Context(), "public parameters available, set certification service...")
 		if err := r.startCertificationService(context, tms, pp); err != nil {
 			return nil, err
 		}
@@ -70,13 +70,13 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 
 func (r *RegisterView) startCertificationService(context view.Context, tms *token.ManagementService, pp *token.PublicParameters) error {
 	if !pp.GraphHiding() {
-		logger.Warnf("the token management system for [%s:%s] does not support graph hiding, skipping certifier registration", r.Channel, r.Namespace)
+		logger.WarnfContext(context.Context(), "the token management system for [%s:%s] does not support graph hiding, skipping certifier registration", r.Channel, r.Namespace)
 		return nil
 	}
 
 	// Start Certifier
 	certificationDriver := pp.CertificationDriver()
-	logger.Debugf("start certification service with driver [%s]...", certificationDriver)
+	logger.DebugfContext(context.Context(), "start certification service with driver [%s]...", certificationDriver)
 	c, err := certifier.NewCertificationService(tms, r.Wallet)
 	if err != nil {
 		return errors.WithMessagef(err, "failed instantiating certifier [%s]", tms)

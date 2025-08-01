@@ -98,8 +98,8 @@ func (cm *ServiceManager) Auditor(tmsID token.TMSID) (*Service, error) {
 }
 
 // RestoreTMS restores the auditdb corresponding to the passed TMS ID.
-func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
-	logger.Infof("restore audit dbs for entry [%s]...", tmsID)
+func (cm *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) error {
+	logger.InfofContext(ctx, "restore audit dbs for entry [%s]...", tmsID)
 	net, err := cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
@@ -116,10 +116,10 @@ func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s]", tmsID)
 	}
-	defer logger.Infof("restore audit dbs for entry [%s]...done", tmsID)
+	defer logger.InfofContext(ctx, "restore audit dbs for entry [%s]...done", tmsID)
 
 	return iterators.ForEach(it, func(record *driver2.TokenRequestRecord) error {
-		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
+		logger.DebugfContext(ctx, "restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
 		return net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB, auditor.finalityTracer))
 	})
 }
@@ -129,30 +129,30 @@ var (
 )
 
 // Get returns the Service instance for the passed auditor wallet
-func Get(sp token.ServiceProvider, w *token.AuditorWallet) *Service {
+func Get(ctx context.Context, sp token.ServiceProvider, w *token.AuditorWallet) *Service {
 	if w == nil {
-		logger.Debugf("no wallet provided")
+		logger.DebugfContext(ctx, "no wallet provided")
 		return nil
 	}
-	return GetByTMSID(sp, w.TMS().ID())
+	return GetByTMSID(ctx, sp, w.TMS().ID())
 }
 
 // GetByTMSID returns the Service instance for the passed auditor wallet
-func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) *Service {
+func GetByTMSID(ctx context.Context, sp token.ServiceProvider, tmsID token.TMSID) *Service {
 	s, err := sp.GetService(managerType)
 	if err != nil {
-		logger.Errorf("failed to get manager service: [%s]", err)
+		logger.ErrorfContext(ctx, "failed to get manager service: [%s]", err)
 		return nil
 	}
 	auditor, err := s.(*ServiceManager).Auditor(tmsID)
 	if err != nil {
-		logger.Errorf("failed to get db for tms [%s]: [%s]", tmsID, err)
+		logger.ErrorfContext(ctx, "failed to get db for tms [%s]: [%s]", tmsID, err)
 		return nil
 	}
 	return auditor
 }
 
 // New returns the Service instance for the passed auditor wallet
-func New(sp token.ServiceProvider, w *token.AuditorWallet) *Service {
-	return Get(sp, w)
+func New(ctx context.Context, sp token.ServiceProvider, w *token.AuditorWallet) *Service {
+	return Get(ctx, sp, w)
 }

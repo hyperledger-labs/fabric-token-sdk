@@ -41,13 +41,13 @@ func TransferSignatureValidate(ctx *Context) error {
 		inputToken = append(inputToken, tok)
 
 		// check sender signature
-		ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
-		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
+		ctx.Logger.DebugfContext(ctx.Ctx, "check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
+		verifier, err := ctx.Deserializer.GetOwnerVerifier(ctx.Ctx, tok.Owner)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
 		}
-		ctx.Logger.Debugf("signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner, verifier)
+		ctx.Logger.DebugfContext(ctx.Ctx, "signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(ctx.Ctx, tok.Owner, verifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
 		}
@@ -65,19 +65,19 @@ func TransferSignatureValidate(ctx *Context) error {
 	}
 
 	if isRedeem {
-		ctx.Logger.Debugf("action is a redeem, verify the signature of the issuer")
+		ctx.Logger.DebugfContext(ctx.Ctx, "action is a redeem, verify the signature of the issuer")
 
 		issuer := ctx.TransferAction.GetIssuer()
 		if issuer == nil {
 			return errors.Errorf("On Redeem action, must have at least one issuer")
 		}
 
-		issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
+		issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(ctx.Ctx, issuer)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
 		}
 
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(issuer, issuerVerifier)
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(ctx.Ctx, issuer, issuerVerifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
 		}

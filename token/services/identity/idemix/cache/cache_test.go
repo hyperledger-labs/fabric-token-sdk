@@ -16,7 +16,7 @@ import (
 )
 
 func TestIdentityCache(t *testing.T) {
-	c := NewIdentityCache(func(context.Context, []byte) (driver.Identity, []byte, error) {
+	c := NewIdentityCache(context.Background(), func(context.Context, []byte) (driver.Identity, []byte, error) {
 		return []byte("hello world"), []byte("audit"), nil
 	}, 100, nil, NewMetrics(&disabled.Provider{}))
 	id, audit, err := c.Identity(t.Context(), nil)

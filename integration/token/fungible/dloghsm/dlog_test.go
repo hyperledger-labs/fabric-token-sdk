@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package dloghsm
 
 import (
+	"context"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
@@ -33,14 +35,14 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries|HSM, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T1"), func() { fungible.TestAll(ts.II, "auditor", nil, true, selector) })
+			It("succeeded", Label("T1"), func() { fungible.TestAll(context.Background(), ts.II, "auditor", nil, true, selector) })
 		})
 
 		Describe("Fungible with Auditor = Issuer", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, Aries|HSM|AuditorAsIssuer, t.ReplicationFactor, "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("succeeded", Label("T2"), func() { fungible.TestAll(ts.II, "issuer", nil, true, selector) })
+			It("succeeded", Label("T2"), func() { fungible.TestAll(context.Background(), ts.II, "issuer", nil, true, selector) })
 		})
 	}
 })

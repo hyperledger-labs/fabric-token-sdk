@@ -60,17 +60,17 @@ func NewKeyManagerProvider(
 	}
 }
 
-func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
+func (l *KeyManagerProvider) Get(ctx context.Context, identityConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	var conf *crypto2.Config
 	var err error
 	if len(identityConfig.Raw) != 0 {
 		// load the config directly from identityConfig.Raw
-		logger.Infof("load the config directly from identityConfig.Raw [%s][%s]", identityConfig.ID, hash.Hashable(identityConfig.Raw))
+		logger.InfofContext(ctx, "load the config directly from identityConfig.Raw [%s][%s]", identityConfig.ID, hash.Hashable(identityConfig.Raw))
 		conf, err = crypto2.NewConfigFromRaw(l.issuerPublicKey, identityConfig.Raw)
 	} else {
 		// load from URL
-		logger.Infof("load the config form identityConfig.URL [%s][%s]", identityConfig.ID, identityConfig.URL)
-		conf, err = crypto2.NewConfigWithIPK(l.issuerPublicKey, identityConfig.URL, l.ignoreVerifyOnlyWallet)
+		logger.InfofContext(ctx, "load the config form identityConfig.URL [%s][%s]", identityConfig.ID, identityConfig.URL)
+		conf, err = crypto2.NewConfigWithIPK(ctx, l.issuerPublicKey, identityConfig.URL, l.ignoreVerifyOnlyWallet)
 	}
 	if err != nil {
 		return nil, err
@@ -81,12 +81,12 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
-	keyManager, err := NewKeyManager(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(ctx, conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating idemix key manager provider from [%s]", identityConfig.URL)
 	}
 
-	cacheSize, err := l.cacheSizeForID(identityConfig.ID)
+	cacheSize, err := l.cacheSizeForID(ctx, identityConfig.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +98,7 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 		}
 	} else {
 		getIdentityFunc = cache.NewIdentityCache(
+			ctx,
 			keyManager.Identity,
 			cacheSize,
 			nil,
@@ -120,10 +121,10 @@ func (l *KeyManagerProvider) Get(identityConfig *driver.IdentityConfiguration) (
 	}, nil
 }
 
-func (l *KeyManagerProvider) cacheSizeForID(id string) (int, error) {
+func (l *KeyManagerProvider) cacheSizeForID(ctx context.Context, id string) (int, error) {
 	cacheSize := l.config.CacheSizeForOwnerID(id)
 	if cacheSize <= 0 {
-		logger.Debugf("cache size for %s not configured, using default (%d)", id, l.cacheSize)
+		logger.DebugfContext(ctx, "cache size for %s not configured, using default (%d)", id, l.cacheSize)
 		cacheSize = l.cacheSize
 	}
 	return cacheSize, nil
