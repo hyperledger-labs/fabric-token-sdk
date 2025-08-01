@@ -155,7 +155,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	info, err := keyManager.Info(id, audit)
+	info, err := keyManager.Info(t.Context(), id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
 
@@ -164,20 +164,20 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
-	info2, err := keyManager.Info(id2, audit2)
+	info2, err := keyManager.Info(t.Context(), id2, audit2)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info2, "Idemix: [alice]"))
 	assert.Equal(t, audit, audit2)
 
 	// deserialize the audit information
-	auditInfo, err := keyManager.DeserializeAuditInfo(audit)
+	auditInfo, err := keyManager.DeserializeAuditInfo(t.Context(), audit)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo.Match(id))
-	assert.NoError(t, auditInfo.Match(id2))
-	auditInfo2, err := keyManager.DeserializeAuditInfo(audit2)
+	assert.NoError(t, auditInfo.Match(t.Context(), id))
+	assert.NoError(t, auditInfo.Match(t.Context(), id2))
+	auditInfo2, err := keyManager.DeserializeAuditInfo(t.Context(), audit2)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo2.Match(id))
-	assert.NoError(t, auditInfo2.Match(id2))
+	assert.NoError(t, auditInfo2.Match(t.Context(), id))
+	assert.NoError(t, auditInfo2.Match(t.Context(), id2))
 
 	assert.Equal(t, 3, tracker.GetCounter)
 
@@ -360,16 +360,16 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
 
-	auditInfo, err := p.DeserializeAuditInfo(audit)
+	auditInfo, err := p.DeserializeAuditInfo(t.Context(), audit)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo.Match(id))
-	assert.Error(t, auditInfo.Match(id2))
+	assert.NoError(t, auditInfo.Match(t.Context(), id))
+	assert.Error(t, auditInfo.Match(t.Context(), id2))
 
-	auditInfo, err = p2.DeserializeAuditInfo(audit)
+	auditInfo, err = p2.DeserializeAuditInfo(t.Context(), audit)
 	assert.NoError(t, err)
 	assert.NoError(t, auditInfo.FromBytes(audit2))
-	assert.NoError(t, auditInfo.Match(id2))
-	assert.Error(t, auditInfo.Match(id))
+	assert.NoError(t, auditInfo.Match(t.Context(), id2))
+	assert.Error(t, auditInfo.Match(t.Context(), id))
 }
 
 func TestKeyManager_DeserializeSigner(t *testing.T) {
@@ -551,13 +551,13 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	info, err := p.Info(id, audit)
+	info, err := p.Info(t.Context(), id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [charlie.ExtraId2]"))
 
-	auditInfo, err := p.DeserializeAuditInfo(audit)
+	auditInfo, err := p.DeserializeAuditInfo(t.Context(), audit)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo.Match(id))
+	assert.NoError(t, auditInfo.Match(t.Context(), id))
 
 	signer, err := p.DeserializeSigner(t.Context(), id)
 	assert.NoError(t, err)
@@ -580,13 +580,13 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	info, err = p.Info(id, audit)
+	info, err = p.Info(t.Context(), id, audit)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [charlie.ExtraId2]"))
 
-	auditInfo, err = p.DeserializeAuditInfo(audit)
+	auditInfo, err = p.DeserializeAuditInfo(t.Context(), audit)
 	assert.NoError(t, err)
-	assert.NoError(t, auditInfo.Match(id))
+	assert.NoError(t, auditInfo.Match(t.Context(), id))
 
 	signer, err = p.DeserializeSigner(t.Context(), id)
 	assert.NoError(t, err)

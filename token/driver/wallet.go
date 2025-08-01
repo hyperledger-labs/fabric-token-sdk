@@ -38,10 +38,10 @@ type Wallet interface {
 	ID() string
 
 	// Contains returns true if the passed identity belongs to this wallet
-	Contains(identity Identity) bool
+	Contains(ctx context.Context, identity Identity) bool
 
 	// ContainsToken returns true if the passed token is owned by this wallet
-	ContainsToken(token *token.UnspentToken) bool
+	ContainsToken(ctx context.Context, token *token.UnspentToken) bool
 
 	// GetSigner returns the Signer bound to the passed identity
 	GetSigner(ctx context.Context, identity Identity) (Signer, error)
@@ -162,13 +162,13 @@ type WalletService interface {
 	GetAuditInfo(ctx context.Context, id Identity) ([]byte, error)
 
 	// GetEnrollmentID extracts the enrollment id from the passed audit information
-	GetEnrollmentID(identity Identity, auditInfo []byte) (string, error)
+	GetEnrollmentID(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
 	// GetRevocationHandle extracts the revocation handler from the passed audit information
-	GetRevocationHandle(identity Identity, auditInfo []byte) (string, error)
+	GetRevocationHandle(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
 	// GetEIDAndRH returns both enrollment ID and revocation handle
-	GetEIDAndRH(identity Identity, auditInfo []byte) (string, string, error)
+	GetEIDAndRH(ctx context.Context, identity Identity, auditInfo []byte) (string, string, error)
 
 	// Wallet returns the wallet bound to the passed identity, if any is available
 	Wallet(ctx context.Context, identity Identity) Wallet
@@ -211,7 +211,7 @@ type WalletServiceFactory interface {
 // Matcher models a matcher that can be used to match identities
 type Matcher interface {
 	// Match returns true if the passed identity matches this matcher
-	Match(identity []byte) error
+	Match(ctx context.Context, identity []byte) error
 }
 
 // AuditInfoProvider models a provider of audit information
@@ -234,10 +234,10 @@ type Deserializer interface {
 	// Recipients returns the recipient identities from the given serialized representation
 	Recipients(raw Identity) ([]Identity, error)
 	// GetAuditInfoMatcher returns an identity matcher for the passed identity and audit data
-	GetAuditInfoMatcher(owner Identity, auditInfo []byte) (Matcher, error)
+	GetAuditInfoMatcher(ctx context.Context, owner Identity, auditInfo []byte) (Matcher, error)
 	// MatchIdentity returns nil if the given identity matches the given audit information.
 	// An error otherwise.
-	MatchIdentity(identity Identity, info []byte) error
+	MatchIdentity(ctx context.Context, id Identity, ai []byte) error
 	// GetAuditInfo returns the audit information for the passed identity
 	GetAuditInfo(ctx context.Context, id Identity, p AuditInfoProvider) ([]byte, error)
 }

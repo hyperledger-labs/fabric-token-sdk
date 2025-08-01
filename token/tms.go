@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -123,8 +124,8 @@ func (t *ManagementService) CertificationManager() *CertificationManager {
 }
 
 // CertificationClient returns the certification client for this TMS
-func (t *ManagementService) CertificationClient() (*CertificationClient, error) {
-	certificationClient, err := t.certificationClientProvider.New(nil)
+func (t *ManagementService) CertificationClient(ctx context.Context) (*CertificationClient, error) {
+	certificationClient, err := t.certificationClientProvider.New(ctx, nil)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create ceritifacation client")
 	}

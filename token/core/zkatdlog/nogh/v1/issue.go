@@ -67,11 +67,11 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		opts = &driver.IssueOptions{}
 	}
 
-	pp := s.PublicParametersManager.PublicParams(ctx)
+	pp := s.PublicParametersManager.PublicParams()
 	if issuerIdentity.IsNone() && len(tokenType) == 0 && values == nil {
 		// this is a special case where the issue contains also redemption
 		// we need to extract token types and values from the passed tokens
-		tokensToUpgrade, err := s.TokensUpgradeService.ProcessTokensUpgradeRequest(opts.TokensUpgradeRequest)
+		tokensToUpgrade, err := s.TokensUpgradeService.ProcessTokensUpgradeRequest(ctx, opts.TokensUpgradeRequest)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to extract token types and values from the passed tokens")
 		}

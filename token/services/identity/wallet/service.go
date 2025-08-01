@@ -85,16 +85,16 @@ func (s *Service) GetAuditInfo(ctx context.Context, id driver.Identity) ([]byte,
 	return s.IdentityProvider.GetAuditInfo(ctx, id)
 }
 
-func (s *Service) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
-	return s.IdentityProvider.GetEnrollmentID(identity, auditInfo)
+func (s *Service) GetEnrollmentID(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
+	return s.IdentityProvider.GetEnrollmentID(ctx, identity, auditInfo)
 }
 
-func (s *Service) GetRevocationHandle(identity driver.Identity, auditInfo []byte) (string, error) {
-	return s.IdentityProvider.GetRevocationHandler(identity, auditInfo)
+func (s *Service) GetRevocationHandle(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
+	return s.IdentityProvider.GetRevocationHandler(ctx, identity, auditInfo)
 }
 
-func (s *Service) GetEIDAndRH(identity driver.Identity, auditInfo []byte) (string, string, error) {
-	return s.IdentityProvider.GetEIDAndRH(identity, auditInfo)
+func (s *Service) GetEIDAndRH(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, string, error) {
+	return s.IdentityProvider.GetEIDAndRH(ctx, identity, auditInfo)
 }
 
 func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.RecipientData) error {
@@ -110,7 +110,7 @@ func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.Re
 	s.Logger.DebugfContext(ctx, "register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
 
 	// match identity and audit info
-	err := s.Deserializer.MatchIdentity(data.Identity, data.AuditInfo)
+	err := s.Deserializer.MatchIdentity(ctx, data.Identity, data.AuditInfo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to match identity to audit infor for [%s]:[%s]", data.Identity, utils.Hashable(data.AuditInfo))
 	}

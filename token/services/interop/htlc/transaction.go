@@ -120,7 +120,7 @@ func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []by
 
 // Outputs returns a new OutputStream of the transaction's outputs
 func (t *Transaction) Outputs() (*OutputStream, error) {
-	outs, err := t.TokenRequest.Outputs()
+	outs, err := t.TokenRequest.Outputs(t.Context)
 	if err != nil {
 		return nil, err
 	}

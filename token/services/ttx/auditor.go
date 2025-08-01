@@ -201,7 +201,7 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 	// Prepare a bidirectional channel
 	// Give to the responder view the right channel, and keep for
 	// AuditingViewInitiator the left channel.
-	biChannel, err := NewLocalBidirectionalChannel("", context.ID(), "", nil)
+	biChannel, err := NewLocalBidirectionalChannel(context.Context(), "", context.ID(), "", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating session")
 	}

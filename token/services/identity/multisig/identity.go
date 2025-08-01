@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"context"
 	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -78,7 +79,7 @@ type InfoMatcher struct {
 	AuditInfoMatcher []driver.Matcher
 }
 
-func (e *InfoMatcher) Match(raw []byte) error {
+func (e *InfoMatcher) Match(ctx context.Context, raw []byte) error {
 	mid := MultiIdentity{}
 	err := mid.Deserialize(raw)
 	if err != nil {
@@ -88,7 +89,7 @@ func (e *InfoMatcher) Match(raw []byte) error {
 		return errors.Errorf("expected [%d] identities, received [%d]", len(e.AuditInfoMatcher), len(mid.Identities))
 	}
 	for k, id := range mid.Identities {
-		err = e.AuditInfoMatcher[k].Match(id)
+		err = e.AuditInfoMatcher[k].Match(ctx, id)
 		if err != nil {
 			return errors.Wrapf(err, "identity at index %d does not match the audit info", k)
 		}

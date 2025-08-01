@@ -44,9 +44,9 @@ func (d *MultiplexDeserializer) DeserializeSigner(ctx context.Context, raw []byt
 	})
 }
 
-func (d *MultiplexDeserializer) Info(raw []byte, auditInfo []byte) (string, error) {
-	return deserialize(context.Background(), d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (string, error) {
-		return deserializer.Info(raw, auditInfo)
+func (d *MultiplexDeserializer) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
+	return deserialize(ctx, d.threadSafeCopyDeserializers(), func(deserializer idriver.Deserializer) (string, error) {
+		return deserializer.Info(ctx, raw, auditInfo)
 	})
 }
 

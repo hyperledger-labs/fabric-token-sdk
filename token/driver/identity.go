@@ -41,13 +41,13 @@ type IdentityProvider interface {
 	IsMe(ctx context.Context, party Identity) bool
 
 	// GetEnrollmentID extracts the enrollment ID from the passed audit info
-	GetEnrollmentID(identity Identity, auditInfo []byte) (string, error)
+	GetEnrollmentID(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
 	// GetRevocationHandler extracts the revocation handler from the passed audit info
-	GetRevocationHandler(identity Identity, auditInfo []byte) (string, error)
+	GetRevocationHandler(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
 	// GetEIDAndRH returns both enrollment ID and revocation handle
-	GetEIDAndRH(identity Identity, auditInfo []byte) (string, string, error)
+	GetEIDAndRH(ctx context.Context, identity Identity, auditInfo []byte) (string, string, error)
 
 	// Bind binds longTerm to the passed ephemeral identity. The same signer, verifier, and audit of the long term
 	// identity is associated to id, if copyAll is true.

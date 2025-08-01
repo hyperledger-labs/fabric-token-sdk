@@ -49,11 +49,12 @@ type IdentityProvider struct {
 		result1 []byte
 		result2 error
 	}
-	GetEIDAndRHStub        func(driver.Identity, []byte) (string, string, error)
+	GetEIDAndRHStub        func(context.Context, driver.Identity, []byte) (string, string, error)
 	getEIDAndRHMutex       sync.RWMutex
 	getEIDAndRHArgsForCall []struct {
-		arg1 driver.Identity
-		arg2 []byte
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
 	}
 	getEIDAndRHReturns struct {
 		result1 string
@@ -65,11 +66,12 @@ type IdentityProvider struct {
 		result2 string
 		result3 error
 	}
-	GetEnrollmentIDStub        func(driver.Identity, []byte) (string, error)
+	GetEnrollmentIDStub        func(context.Context, driver.Identity, []byte) (string, error)
 	getEnrollmentIDMutex       sync.RWMutex
 	getEnrollmentIDArgsForCall []struct {
-		arg1 driver.Identity
-		arg2 []byte
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
 	}
 	getEnrollmentIDReturns struct {
 		result1 string
@@ -79,11 +81,12 @@ type IdentityProvider struct {
 		result1 string
 		result2 error
 	}
-	GetRevocationHandlerStub        func(driver.Identity, []byte) (string, error)
+	GetRevocationHandlerStub        func(context.Context, driver.Identity, []byte) (string, error)
 	getRevocationHandlerMutex       sync.RWMutex
 	getRevocationHandlerArgsForCall []struct {
-		arg1 driver.Identity
-		arg2 []byte
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
 	}
 	getRevocationHandlerReturns struct {
 		result1 string
@@ -366,24 +369,25 @@ func (fake *IdentityProvider) GetAuditInfoReturnsOnCall(i int, result1 []byte, r
 	}{result1, result2}
 }
 
-func (fake *IdentityProvider) GetEIDAndRH(arg1 driver.Identity, arg2 []byte) (string, string, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *IdentityProvider) GetEIDAndRH(arg1 context.Context, arg2 driver.Identity, arg3 []byte) (string, string, error) {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.getEIDAndRHMutex.Lock()
 	ret, specificReturn := fake.getEIDAndRHReturnsOnCall[len(fake.getEIDAndRHArgsForCall)]
 	fake.getEIDAndRHArgsForCall = append(fake.getEIDAndRHArgsForCall, struct {
-		arg1 driver.Identity
-		arg2 []byte
-	}{arg1, arg2Copy})
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
 	stub := fake.GetEIDAndRHStub
 	fakeReturns := fake.getEIDAndRHReturns
-	fake.recordInvocation("GetEIDAndRH", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("GetEIDAndRH", []interface{}{arg1, arg2, arg3Copy})
 	fake.getEIDAndRHMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -397,17 +401,17 @@ func (fake *IdentityProvider) GetEIDAndRHCallCount() int {
 	return len(fake.getEIDAndRHArgsForCall)
 }
 
-func (fake *IdentityProvider) GetEIDAndRHCalls(stub func(driver.Identity, []byte) (string, string, error)) {
+func (fake *IdentityProvider) GetEIDAndRHCalls(stub func(context.Context, driver.Identity, []byte) (string, string, error)) {
 	fake.getEIDAndRHMutex.Lock()
 	defer fake.getEIDAndRHMutex.Unlock()
 	fake.GetEIDAndRHStub = stub
 }
 
-func (fake *IdentityProvider) GetEIDAndRHArgsForCall(i int) (driver.Identity, []byte) {
+func (fake *IdentityProvider) GetEIDAndRHArgsForCall(i int) (context.Context, driver.Identity, []byte) {
 	fake.getEIDAndRHMutex.RLock()
 	defer fake.getEIDAndRHMutex.RUnlock()
 	argsForCall := fake.getEIDAndRHArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *IdentityProvider) GetEIDAndRHReturns(result1 string, result2 string, result3 error) {
@@ -439,24 +443,25 @@ func (fake *IdentityProvider) GetEIDAndRHReturnsOnCall(i int, result1 string, re
 	}{result1, result2, result3}
 }
 
-func (fake *IdentityProvider) GetEnrollmentID(arg1 driver.Identity, arg2 []byte) (string, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *IdentityProvider) GetEnrollmentID(arg1 context.Context, arg2 driver.Identity, arg3 []byte) (string, error) {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.getEnrollmentIDMutex.Lock()
 	ret, specificReturn := fake.getEnrollmentIDReturnsOnCall[len(fake.getEnrollmentIDArgsForCall)]
 	fake.getEnrollmentIDArgsForCall = append(fake.getEnrollmentIDArgsForCall, struct {
-		arg1 driver.Identity
-		arg2 []byte
-	}{arg1, arg2Copy})
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
 	stub := fake.GetEnrollmentIDStub
 	fakeReturns := fake.getEnrollmentIDReturns
-	fake.recordInvocation("GetEnrollmentID", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("GetEnrollmentID", []interface{}{arg1, arg2, arg3Copy})
 	fake.getEnrollmentIDMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -470,17 +475,17 @@ func (fake *IdentityProvider) GetEnrollmentIDCallCount() int {
 	return len(fake.getEnrollmentIDArgsForCall)
 }
 
-func (fake *IdentityProvider) GetEnrollmentIDCalls(stub func(driver.Identity, []byte) (string, error)) {
+func (fake *IdentityProvider) GetEnrollmentIDCalls(stub func(context.Context, driver.Identity, []byte) (string, error)) {
 	fake.getEnrollmentIDMutex.Lock()
 	defer fake.getEnrollmentIDMutex.Unlock()
 	fake.GetEnrollmentIDStub = stub
 }
 
-func (fake *IdentityProvider) GetEnrollmentIDArgsForCall(i int) (driver.Identity, []byte) {
+func (fake *IdentityProvider) GetEnrollmentIDArgsForCall(i int) (context.Context, driver.Identity, []byte) {
 	fake.getEnrollmentIDMutex.RLock()
 	defer fake.getEnrollmentIDMutex.RUnlock()
 	argsForCall := fake.getEnrollmentIDArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *IdentityProvider) GetEnrollmentIDReturns(result1 string, result2 error) {
@@ -509,24 +514,25 @@ func (fake *IdentityProvider) GetEnrollmentIDReturnsOnCall(i int, result1 string
 	}{result1, result2}
 }
 
-func (fake *IdentityProvider) GetRevocationHandler(arg1 driver.Identity, arg2 []byte) (string, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *IdentityProvider) GetRevocationHandler(arg1 context.Context, arg2 driver.Identity, arg3 []byte) (string, error) {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.getRevocationHandlerMutex.Lock()
 	ret, specificReturn := fake.getRevocationHandlerReturnsOnCall[len(fake.getRevocationHandlerArgsForCall)]
 	fake.getRevocationHandlerArgsForCall = append(fake.getRevocationHandlerArgsForCall, struct {
-		arg1 driver.Identity
-		arg2 []byte
-	}{arg1, arg2Copy})
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
 	stub := fake.GetRevocationHandlerStub
 	fakeReturns := fake.getRevocationHandlerReturns
-	fake.recordInvocation("GetRevocationHandler", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("GetRevocationHandler", []interface{}{arg1, arg2, arg3Copy})
 	fake.getRevocationHandlerMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -540,17 +546,17 @@ func (fake *IdentityProvider) GetRevocationHandlerCallCount() int {
 	return len(fake.getRevocationHandlerArgsForCall)
 }
 
-func (fake *IdentityProvider) GetRevocationHandlerCalls(stub func(driver.Identity, []byte) (string, error)) {
+func (fake *IdentityProvider) GetRevocationHandlerCalls(stub func(context.Context, driver.Identity, []byte) (string, error)) {
 	fake.getRevocationHandlerMutex.Lock()
 	defer fake.getRevocationHandlerMutex.Unlock()
 	fake.GetRevocationHandlerStub = stub
 }
 
-func (fake *IdentityProvider) GetRevocationHandlerArgsForCall(i int) (driver.Identity, []byte) {
+func (fake *IdentityProvider) GetRevocationHandlerArgsForCall(i int) (context.Context, driver.Identity, []byte) {
 	fake.getRevocationHandlerMutex.RLock()
 	defer fake.getRevocationHandlerMutex.RUnlock()
 	argsForCall := fake.getRevocationHandlerArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *IdentityProvider) GetRevocationHandlerReturns(result1 string, result2 error) {

@@ -93,7 +93,7 @@ func (d *Deserializer) DeserializeAgainstNymEID(identity []byte, nymEID []byte) 
 	}, nil
 }
 
-func (d *Deserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+func (d *Deserializer) DeserializeAuditInfo(_ context.Context, raw []byte) (*AuditInfo, error) {
 	ai, err := DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))

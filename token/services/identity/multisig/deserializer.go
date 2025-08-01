@@ -21,7 +21,7 @@ type VerifierDES interface {
 }
 
 type AuditInfoMatcher interface {
-	GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
+	GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
 type TypedIdentityDeserializer struct {
@@ -64,7 +64,7 @@ func (d *TypedIdentityDeserializer) GetAuditInfo(ctx context.Context, id driver.
 	return auditInfo.Bytes()
 }
 
-func (d *TypedIdentityDeserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (d *TypedIdentityDeserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	ei := &AuditInfo{}
 	err := json.Unmarshal(auditInfo, ei)
 	if err != nil {
@@ -84,7 +84,7 @@ func (d *TypedIdentityDeserializer) GetAuditInfoMatcher(owner driver.Identity, a
 	}
 	matchers := make([]driver.Matcher, len(ei.IdentityAuditInfos))
 	for k, info := range ei.IdentityAuditInfos {
-		matchers[k], err = d.AuditInfoMatcher.GetAuditInfoMatcher(mid.Identities[k], info.AuditInfo)
+		matchers[k], err = d.AuditInfoMatcher.GetAuditInfoMatcher(ctx, mid.Identities[k], info.AuditInfo)
 		if err != nil {
 			return nil, err
 		}

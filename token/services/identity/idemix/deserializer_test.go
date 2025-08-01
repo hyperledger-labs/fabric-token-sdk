@@ -105,22 +105,22 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	assert.Equal(t, "150", auditInfo2.RevocationHandle())
 
 	// match audit info
-	auditInfoMatcher, err := d.GetAuditInfoMatcher(id, auditInfoRaw)
+	auditInfoMatcher, err := d.GetAuditInfoMatcher(t.Context(), id, auditInfoRaw)
 	assert.NoError(t, err)
 	assert.NotNil(t, auditInfoMatcher)
-	assert.NoError(t, auditInfoMatcher.Match(id))
-	assert.NoError(t, d.MatchIdentity(id, auditInfoRaw))
+	assert.NoError(t, auditInfoMatcher.Match(t.Context(), id))
+	assert.NoError(t, d.MatchIdentity(t.Context(), id, auditInfoRaw))
 
 	// check info
-	info, err := d.Info(id, []byte{})
+	info, err := d.Info(t.Context(), id, []byte{})
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: []"))
-	info, err = d.Info(id, nil)
+	info, err = d.Info(t.Context(), id, nil)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: []"))
-	_, err = d.Info(id, []byte{0, 1, 2})
+	_, err = d.Info(t.Context(), id, []byte{0, 1, 2})
 	assert.Error(t, err)
-	info, err = d.Info(id, auditInfoRaw)
+	info, err = d.Info(t.Context(), id, auditInfoRaw)
 	assert.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
 }

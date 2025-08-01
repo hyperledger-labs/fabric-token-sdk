@@ -52,7 +52,7 @@ type SelectorManagerProvider interface {
 // CertificationClientProvider provides instances of CertificationClient
 type CertificationClientProvider interface {
 	// New returns a new CertificationClient instance for the passed inputs
-	New(tms *ManagementService) (driver.CertificationClient, error)
+	New(ctx context.Context, tms *ManagementService) (driver.CertificationClient, error)
 }
 
 // ManagementServiceProvider provides instances of the management service

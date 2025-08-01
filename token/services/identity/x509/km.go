@@ -159,7 +159,7 @@ func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.
 	return nil, errors.New("not supported")
 }
 
-func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
+func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
 	return crypto.Info(raw)
 }
 

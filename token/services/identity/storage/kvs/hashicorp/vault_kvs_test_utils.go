@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package hashicorp
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -86,7 +85,7 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 		},
 	}
 	// Create the container
-	ctx := context.Background()
+	ctx := t.Context()
 	containerName := ContainerNamePrefix + portStr
 	resp, err := cli.ContainerCreate(
 		ctx,

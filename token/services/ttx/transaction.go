@@ -282,11 +282,11 @@ func (t *Transaction) Upgrade(
 }
 
 func (t *Transaction) Outputs() (*token.OutputStream, error) {
-	return t.TokenRequest.Outputs()
+	return t.TokenRequest.Outputs(t.Context)
 }
 
 func (t *Transaction) Inputs() (*token.InputStream, error) {
-	return t.TokenRequest.Inputs()
+	return t.TokenRequest.Inputs(t.Context)
 }
 
 func (t *Transaction) InputsAndOutputs(ctx context.Context) (*token.InputStream, *token.OutputStream, map[string][]byte, error) {

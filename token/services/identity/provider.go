@@ -24,11 +24,11 @@ type StorageProvider = idriver.StorageProvider
 // enrollmentIDUnmarshaler decodes an enrollment ID form an audit info
 type enrollmentIDUnmarshaler interface {
 	// GetEnrollmentID returns the enrollment ID from the audit info
-	GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error)
+	GetEnrollmentID(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error)
 	// GetRevocationHandler returns the revocation handle from the audit info
-	GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error)
+	GetRevocationHandler(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error)
 	// GetEIDAndRH returns both enrollment ID and revocation handle
-	GetEIDAndRH(identity driver.Identity, auditInfo []byte) (string, string, error)
+	GetEIDAndRH(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, string, error)
 }
 
 type sigService interface {
@@ -155,16 +155,16 @@ func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (dri
 	return signer, nil
 }
 
-func (p *Provider) GetEIDAndRH(identity driver.Identity, auditInfo []byte) (string, string, error) {
-	return p.enrollmentIDUnmarshaler.GetEIDAndRH(identity, auditInfo)
+func (p *Provider) GetEIDAndRH(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, string, error) {
+	return p.enrollmentIDUnmarshaler.GetEIDAndRH(ctx, identity, auditInfo)
 }
 
-func (p *Provider) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
-	return p.enrollmentIDUnmarshaler.GetEnrollmentID(identity, auditInfo)
+func (p *Provider) GetEnrollmentID(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
+	return p.enrollmentIDUnmarshaler.GetEnrollmentID(ctx, identity, auditInfo)
 }
 
-func (p *Provider) GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error) {
-	return p.enrollmentIDUnmarshaler.GetRevocationHandler(identity, auditInfo)
+func (p *Provider) GetRevocationHandler(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
+	return p.enrollmentIDUnmarshaler.GetRevocationHandler(ctx, identity, auditInfo)
 }
 
 func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {

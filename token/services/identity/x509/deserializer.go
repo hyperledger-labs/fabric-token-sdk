@@ -24,7 +24,7 @@ func (d *IdentityDeserializer) DeserializeVerifier(ctx context.Context, id drive
 
 type AuditMatcherDeserializer struct{}
 
-func (a *AuditMatcherDeserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (a *AuditMatcherDeserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	ai := &AuditInfo{}
 	err := ai.FromBytes(auditInfo)
 	if err != nil {
@@ -37,7 +37,7 @@ type AuditInfoMatcher struct {
 	EnrollmentID string
 }
 
-func (a *AuditInfoMatcher) Match(id []byte) error {
+func (a *AuditInfoMatcher) Match(_ context.Context, id []byte) error {
 	eid, err := crypto.GetEnrollmentID(id)
 	if err != nil {
 		return errors.Wrap(err, "failed to get enrollment ID")

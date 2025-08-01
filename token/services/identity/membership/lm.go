@@ -176,7 +176,7 @@ func (l *LocalMembership) IDs() ([]string, error) {
 	return set.ToSlice(), nil
 }
 
-func (l *LocalMembership) Load(identities []*idriver.ConfiguredIdentity, targets []view.Identity) error {
+func (l *LocalMembership) Load(ctx context.Context, identities []*idriver.ConfiguredIdentity, targets []view.Identity) error {
 	l.localIdentitiesMutex.Lock()
 	defer l.localIdentitiesMutex.Unlock()
 
@@ -192,7 +192,7 @@ func (l *LocalMembership) Load(identities []*idriver.ConfiguredIdentity, targets
 	if err != nil {
 		return errors2.Wrap(err, "failed to prepare identity configurations")
 	}
-	storedIdentityConfigurations, err := l.storedIdentityConfigurations(context.Background())
+	storedIdentityConfigurations, err := l.storedIdentityConfigurations(ctx)
 	if err != nil {
 		return errors2.Wrap(err, "failed to load stored identity configurations")
 	}
@@ -223,7 +223,7 @@ func (l *LocalMembership) Load(identities []*idriver.ConfiguredIdentity, targets
 	// load identities from configuration
 	for i, identityConfiguration := range ics {
 		l.logger.Infof("load identity configuration [%+v]", identityConfiguration)
-		if err := l.registerIdentityConfiguration(context.Background(), &identityConfiguration, defaults[i]); err != nil {
+		if err := l.registerIdentityConfiguration(ctx, &identityConfiguration, defaults[i]); err != nil {
 			// we log the error so the user can fix it but it shouldn't stop the loading of the service.
 			l.logger.Errorf("failed loading identity with err [%s]", err)
 		} else {
@@ -323,7 +323,7 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 	}
 
 	l.logger.DebugfContext(ctx, "append local identity for [%s]", identityConfig.ID)
-	if err := l.addLocalIdentity(identityConfig, keyManager, defaultIdentity, priority); err != nil {
+	if err := l.addLocalIdentity(ctx, identityConfig, keyManager, defaultIdentity, priority); err != nil {
 		return errors2.Wrapf(err, "failed to add local identity for [%s]", identityConfig.ID)
 	}
 
@@ -382,7 +382,7 @@ func (l *LocalMembership) registerLocalIdentities(ctx context.Context, configura
 	return nil
 }
 
-func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration, keyManager KeyManager, defaultID bool, priority int) error {
+func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *driver.IdentityConfiguration, keyManager KeyManager, defaultID bool, priority int) error {
 	var getIdentity GetIdentityFunc
 	var identity driver.Identity
 
@@ -399,7 +399,7 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 	} else {
 		var auditInfo []byte
 		var err error
-		identity, auditInfo, err = typedIdentityInfo.Get(context.Background(), nil)
+		identity, auditInfo, err = typedIdentityInfo.Get(ctx, nil)
 		if err != nil {
 			return errors2.WithMessagef(err, "failed to get identity")
 		}
@@ -453,7 +453,7 @@ func (l *LocalMembership) addLocalIdentity(config *driver.IdentityConfiguration,
 		l.logger.Debugf("adding identity mapping for [%s]", identity)
 		l.localIdentitiesByIdentity[identity.String()] = localIdentity
 		if l.binderService != nil {
-			if err := l.binderService.Bind(context.Background(), l.defaultNetworkIdentity, identity, false); err != nil {
+			if err := l.binderService.Bind(ctx, l.defaultNetworkIdentity, identity, false); err != nil {
 				return errors2.WithMessagef(err, "cannot bind identity for [%s,%s]", identity, eID)
 			}
 		}

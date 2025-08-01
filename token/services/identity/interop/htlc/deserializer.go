@@ -19,7 +19,7 @@ import (
 
 type deserializer interface {
 	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
-	MatchIdentity(id driver.Identity, ai []byte) error
+	MatchIdentity(ctx context.Context, id driver.Identity, ai []byte) error
 }
 
 type TypedIdentityDeserializer struct {
@@ -97,7 +97,7 @@ func (t *TypedIdentityDeserializer) GetAuditInfo(ctx context.Context, id driver.
 	return auditInfoRaw, nil
 }
 
-func (t *TypedIdentityDeserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (t *TypedIdentityDeserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	return &AuditInfoMatcher{
 		auditInfo:    auditInfo,
 		deserializer: t.deserializer,
@@ -133,7 +133,7 @@ type AuditInfoMatcher struct {
 	deserializer deserializer
 }
 
-func (a *AuditInfoMatcher) Match(id []byte) error {
+func (a *AuditInfoMatcher) Match(ctx context.Context, id []byte) error {
 	scriptInf := &ScriptInfo{}
 	if err := json.Unmarshal(a.auditInfo, scriptInf); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal script info")
@@ -142,11 +142,11 @@ func (a *AuditInfoMatcher) Match(id []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "failed getting script sender and recipient")
 	}
-	err = a.deserializer.MatchIdentity(scriptSender, scriptInf.Sender)
+	err = a.deserializer.MatchIdentity(ctx, scriptSender, scriptInf.Sender)
 	if err != nil {
 		return errors.Wrapf(err, "failed matching sender identity [%s]", scriptSender.String())
 	}
-	err = a.deserializer.MatchIdentity(scriptRecipient, scriptInf.Recipient)
+	err = a.deserializer.MatchIdentity(ctx, scriptRecipient, scriptInf.Recipient)
 	if err != nil {
 		return errors.Wrapf(err, "failed matching recipient identity [%s]", scriptRecipient.String())
 	}

@@ -85,7 +85,7 @@ func TestGetOwnerMatcher_InvalidAuditInfo(t *testing.T) {
 	owner := []byte("valid_owner")
 	auditInfo := []byte("invalid")
 
-	matcher, err := deserializer.GetAuditInfoMatcher(owner, auditInfo)
+	matcher, err := deserializer.GetAuditInfoMatcher(t.Context(), owner, auditInfo)
 	require.Error(t, err)
 	assert.Nil(t, matcher)
 }
@@ -123,7 +123,7 @@ func (m *mockVerifierDES) DeserializeVerifier(ctx context.Context, id driver.Ide
 
 type mockAuditInfoMatcher struct{}
 
-func (m *mockAuditInfoMatcher) GetAuditInfoMatcher(owner token.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (m *mockAuditInfoMatcher) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	if string(auditInfo) == "valid_audit_info" {
 		return &mockMatcher{}, nil
 	}

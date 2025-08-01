@@ -15,7 +15,7 @@ import (
 type Deserializer interface {
 	DeserializeVerifier(ctx context.Context, raw []byte) (tdriver.Verifier, error)
 	DeserializeSigner(ctx context.Context, raw []byte) (tdriver.Signer, error)
-	Info(raw []byte, auditInfo []byte) (string, error)
+	Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error)
 }
 
 type DeserializerManager interface {

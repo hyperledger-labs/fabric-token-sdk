@@ -428,9 +428,9 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 
-	auditInfo, err := p.DeserializeAuditInfo(audit)
+	auditInfo, err := p.DeserializeAuditInfo(context.Background(), audit)
 	Expect(err).NotTo(HaveOccurred())
-	err = auditInfo.Match(id)
+	err = auditInfo.Match(context.Background(), id)
 	Expect(err).NotTo(HaveOccurred())
 
 	signer, err := p.DeserializeSigningIdentity(context.Background(), id)
@@ -780,7 +780,7 @@ type Deserializer struct {
 	auditInfo []byte
 }
 
-func (d *Deserializer) Match(id []byte) error {
+func (d *Deserializer) Match(ctx context.Context, id []byte) error {
 	identity, err := identity.WrapWithType(ix509.IdentityType, id)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
@@ -791,7 +791,7 @@ func (d *Deserializer) Match(id []byte) error {
 	return nil
 }
 
-func (d *Deserializer) GetAuditInfoMatcher(owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (d *Deserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	return &Deserializer{auditInfo: auditInfo}, nil
 }
 

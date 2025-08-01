@@ -22,6 +22,6 @@ type CertificationService interface {
 }
 
 type Driver interface {
-	NewCertificationClient(tms *token.ManagementService) (CertificationClient, error)
+	NewCertificationClient(ctx context.Context, tms *token.ManagementService) (CertificationClient, error)
 	NewCertificationService(tms *token.ManagementService, wallet string) (CertificationService, error)
 }
