@@ -23,8 +23,6 @@ import (
 var logger = logging.MustGetLogger()
 
 type Storage interface {
-	StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
-	GetAuditInfo(ctx context.Context, id []byte) ([]byte, error)
 	StoreSignerInfo(ctx context.Context, id, info []byte) error
 	GetExistingSignerInfo(ctx context.Context, ids ...driver.Identity) ([]string, error)
 	SignerInfoExists(ctx context.Context, id []byte) (bool, error)
@@ -94,12 +92,10 @@ func (o *Service) RegisterSigner(ctx context.Context, identity driver.Identity, 
 	o.sync.Unlock()
 
 	// store, if a failure happens then remove the entry
-	if o.storage != nil {
-		logger.DebugfContext(ctx, "checks done, store signer info")
-		if err := o.storage.StoreSignerInfo(ctx, identity, signerInfo); err != nil {
-			o.deleteSigner(idHash)
-			return errors.Wrap(err, "failed to store entry in storage for the passed signer")
-		}
+	logger.DebugfContext(ctx, "checks done, store signer info")
+	if err := o.storage.StoreSignerInfo(ctx, identity, signerInfo); err != nil {
+		o.deleteSigner(idHash)
+		return errors.Wrap(err, "failed to store entry in storage for the passed signer")
 	}
 
 	if verifier != nil {
@@ -174,7 +170,7 @@ func (o *Service) AreMe(ctx context.Context, identities ...driver.Identity) []st
 	}
 	o.sync.RUnlock()
 
-	if len(notFound) == 0 || o.storage == nil {
+	if len(notFound) == 0 {
 		return result.ToSlice()
 	}
 
@@ -202,18 +198,15 @@ func (o *Service) IsMe(ctx context.Context, identity driver.Identity) bool {
 	}
 
 	// check storage
-	if o.storage != nil {
-		logger.DebugfContext(ctx, "is me [%s]? ask the storage", identity)
-		exists, err := o.storage.SignerInfoExists(ctx, identity)
-		if err != nil {
-			logger.Errorf("failed checking if a signer exists [%s]", err)
-		}
-		if exists {
-			logger.DebugfContext(ctx, "is me [%s]? yes, from storage", identity)
-			return true
-		}
+	logger.DebugfContext(ctx, "is me [%s]? ask the storage", identity)
+	exists, err := o.storage.SignerInfoExists(ctx, identity)
+	if err != nil {
+		logger.Errorf("failed checking if a signer exists [%s]", err)
 	}
-
+	if exists {
+		logger.DebugfContext(ctx, "is me [%s]? yes, from storage", identity)
+		return true
+	}
 	return false
 }
 
@@ -253,10 +246,8 @@ func (o *Service) getSigner(ctx context.Context, identity driver.Identity, idHas
 		entry.DebugStack = debug.Stack()
 	}
 	o.signers[idHash] = entry
-	if o.storage != nil {
-		if err := o.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
-			return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
-		}
+	if err := o.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
+		return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
 	}
 	return entry.Signer, nil
 }

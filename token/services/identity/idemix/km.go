@@ -296,11 +296,9 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 		return nil, nil, errors.WithMessagef(err, "failed to serialize identity")
 	}
 
-	if p.SignerService != nil {
-		logger.DebugfContext(ctx, "register signer for identity")
-		if err := p.SignerService.RegisterSigner(ctx, raw, sID, sID, nil); err != nil {
-			return nil, nil, errors.WithMessagef(err, "failed to register signer")
-		}
+	logger.DebugfContext(ctx, "register signer for identity")
+	if err := p.SignerService.RegisterSigner(ctx, raw, sID, sID, nil); err != nil {
+		return nil, nil, errors.WithMessagef(err, "failed to register signer")
 	}
 
 	logger.DebugfContext(ctx, "prepare audit info")
