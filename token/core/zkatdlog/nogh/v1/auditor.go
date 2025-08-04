@@ -50,7 +50,7 @@ func NewAuditorService(
 		TokenCommitmentLoader:   tokenCommitmentLoader,
 		Deserializer:            deserializer,
 		Metrics:                 metrics,
-		tracer:                  tracerProvider.Tracer("auditor_service", tracing.WithMetricsOpts(tracing.MetricsOpts{Namespace: "nogh"})),
+		tracer:                  tracerProvider.Tracer("auditor_service", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
 	}
 }
 

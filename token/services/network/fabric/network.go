@@ -170,7 +170,6 @@ func NewNetwork(
 		tokenQueryExecutor:         tokenQueryExecutor,
 		spentTokenQueryExecutor:    spentTokenQueryExecutor,
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
-			Namespace:  "tokensdk_fabric",
 			LabelNames: []tracing.LabelName{},
 		})),
 		keyTranslator:         keyTranslator,
