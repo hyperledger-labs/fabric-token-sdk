@@ -69,7 +69,6 @@ func NewViewUser(username model.Username, auditor model.Username, client api2.Vi
 		metrics:    metrics,
 		logger:     logger,
 		tracer: tracerProvider.Tracer("user", tracing.WithMetricsOpts(tracing.MetricsOpts{
-			Namespace:  "token_sdk",
 			LabelNames: []metrics2.MetricLabel{successLabel},
 		})),
 	}
