@@ -79,12 +79,12 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to create x509 km")
 			}
-			id, _, err := km.Identity(context.Background(), nil)
+			identityDescriptor, err := km.Identity(context.Background(), nil)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get identity")
 			}
 			if tms.Auditors[0] == auditor.ID {
-				wrap, err := identity.WrapWithType(x509.IdentityType, id)
+				wrap, err := identity.WrapWithType(x509.IdentityType, identityDescriptor.Identity)
 				if err != nil {
 					return nil, errors.WithMessagef(err, "failed to create x509 identity for auditor [%v]", auditor)
 				}
@@ -104,12 +104,12 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to create x509 km")
 			}
-			id, _, err := km.Identity(context.Background(), nil)
+			identityDescriptor, err := km.Identity(context.Background(), nil)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get identity")
 			}
 			if issuersSet.Contains(issuer.ID) {
-				wrap, err := identity.WrapWithType(x509.IdentityType, id)
+				wrap, err := identity.WrapWithType(x509.IdentityType, identityDescriptor.Identity)
 				if err != nil {
 					return nil, errors.WithMessagef(err, "failed to create x509 identity for issuer [%v]", issuer)
 				}

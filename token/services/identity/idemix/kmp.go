@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/cache"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
@@ -30,7 +30,7 @@ type KeyManagerProvider struct {
 	curveID         math.CurveID
 	keyStore        bccsp.KeyStore
 	signerService   SignerService
-	config          driver2.Config
+	config          idriver.Config
 	cacheSize       int
 	metricsProvider metrics.Provider
 
@@ -43,7 +43,7 @@ func NewKeyManagerProvider(
 	curveID math.CurveID,
 	keyStore bccsp.KeyStore,
 	signerService SignerService,
-	config driver2.Config,
+	config idriver.Config,
 	cacheSize int,
 	ignoreVerifyOnlyWallet bool,
 	metricsProvider metrics.Provider,
@@ -91,11 +91,11 @@ func (l *KeyManagerProvider) Get(ctx context.Context, identityConfig *driver.Ide
 		return nil, err
 	}
 
-	var getIdentityFunc func(context.Context, []byte) (driver.Identity, []byte, error)
+	var getIdentityFunc func(context.Context, []byte) (*idriver.IdentityDescriptor, error)
 	if keyManager.IsRemote() {
 		id := identityConfig.ID
-		getIdentityFunc = func(context.Context, []byte) (driver.Identity, []byte, error) {
-			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms on wallet [%v]", id)
+		getIdentityFunc = func(context.Context, []byte) (*idriver.IdentityDescriptor, error) {
+			return nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms on wallet [%v]", id)
 		}
 	} else {
 		getIdentityFunc = cache.NewIdentityCache(
@@ -132,9 +132,9 @@ func (l *KeyManagerProvider) cacheSizeForID(id string) (int, error) {
 
 type WrappedKeyManager struct {
 	membership.KeyManager
-	getIdentityFunc func(context.Context, []byte) (driver.Identity, []byte, error)
+	getIdentityFunc func(context.Context, []byte) (*idriver.IdentityDescriptor, error)
 }
 
-func (k *WrappedKeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
+func (k *WrappedKeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	return k.getIdentityFunc(ctx, auditInfo)
 }

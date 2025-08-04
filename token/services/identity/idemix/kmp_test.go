@@ -106,8 +106,9 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 
 func signAndVerify(t *testing.T, km membership.KeyManager) {
 	t.Helper()
-	id, _, err := km.Identity(t.Context(), nil)
+	identityDescriptor, err := km.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id := identityDescriptor.Identity
 	signer, err := km.DeserializeSigner(t.Context(), id)
 	assert.NoError(t, err)
 	msg := []byte("message")

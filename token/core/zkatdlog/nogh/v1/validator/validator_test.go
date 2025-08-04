@@ -423,8 +423,10 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
-	id, audit, err := p.Identity(context.Background(), nil)
+	identityDescriptor, err := p.Identity(context.Background(), nil)
 	Expect(err).NotTo(HaveOccurred())
+	id := identityDescriptor.Identity
+	audit := identityDescriptor.AuditInfo
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 

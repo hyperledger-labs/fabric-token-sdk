@@ -41,7 +41,7 @@ type KeyManager interface {
 	IsRemote() bool
 	Anonymous() bool
 	IdentityType() identity.Type
-	Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error)
+	Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error)
 }
 
 type LocalIdentityWithPriority struct {
@@ -479,7 +479,7 @@ func (l *LocalMembership) storedIdentityConfigurations(ctx context.Context) ([]i
 }
 
 type TypedIdentityInfo struct {
-	GetIdentity  func(context.Context, []byte) (driver.Identity, []byte, error)
+	GetIdentity  func(context.Context, []byte) (*idriver.IdentityDescriptor, error)
 	IdentityType identity.Type
 
 	EnrollmentID     string
@@ -491,10 +491,13 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 	// get the identity
 	logger.DebugfContext(ctx, "fetch identity")
 
-	id, ai, err := i.GetIdentity(ctx, auditInfo)
+	identityDescriptor, err := i.GetIdentity(ctx, auditInfo)
 	if err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to get root identity for [%s]", i.EnrollmentID)
 	}
+	id := identityDescriptor.Identity
+	ai := identityDescriptor.AuditInfo
+
 	typedIdentity := id
 	if len(i.IdentityType) != 0 {
 		logger.DebugfContext(ctx, "wrap and bind as [%s]", i.IdentityType)

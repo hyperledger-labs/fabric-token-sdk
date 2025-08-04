@@ -45,8 +45,10 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	assert.NotNil(t, keyManager)
 
 	// get an identity
-	id, auditInfoRaw, err := keyManager.Identity(t.Context(), nil)
+	identityDescriptor, err := keyManager.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id := identityDescriptor.Identity
+	auditInfoRaw := identityDescriptor.AuditInfo
 
 	// instantiate a deserializer and check that it fils
 	_, err = NewDeserializer(config.Ipk, -1)

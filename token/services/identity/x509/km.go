@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
@@ -130,21 +131,26 @@ func (p *KeyManager) IsRemote() bool {
 	return p.sID == nil
 }
 
-func (p *KeyManager) Identity(context.Context, []byte) (driver.Identity, []byte, error) {
+func (p *KeyManager) Identity(context.Context, []byte) (*idriver.IdentityDescriptor, error) {
 	revocationHandle, err := crypto.GetRevocationHandle(p.id)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")
+		return nil, errors.Wrapf(err, "failed getting revocation handle")
 	}
 	ai := &AuditInfo{
 		EID: p.enrollmentID,
 		RH:  revocationHandle,
 	}
-	infoRaw, err := ai.Bytes()
+	auditInfoRaw, err := ai.Bytes()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return p.id, infoRaw, nil
+	return &idriver.IdentityDescriptor{
+		Identity:  p.id,
+		AuditInfo: auditInfoRaw,
+		Signer:    nil,
+		Verifier:  nil,
+	}, nil
 }
 
 func (p *KeyManager) EnrollmentID() string {

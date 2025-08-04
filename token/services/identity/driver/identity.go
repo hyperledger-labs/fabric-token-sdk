@@ -14,6 +14,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+type IdentityDescriptor struct {
+	Identity  driver.Identity
+	AuditInfo []byte
+	Signer    driver.Signer
+	Verifier  driver.Verifier
+}
+
 type IdentityConfigurationIterator = iterators.Iterator[*IdentityConfiguration]
 
 type WalletID = string

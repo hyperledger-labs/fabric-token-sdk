@@ -151,8 +151,10 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NotNil(t, keyManager)
 
 	// get an identity and check it
-	id, audit, err := keyManager.Identity(t.Context(), nil)
+	identityDescriptor, err := keyManager.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id := identityDescriptor.Identity
+	audit := identityDescriptor.AuditInfo
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
 	info, err := keyManager.Info(t.Context(), id, audit)
@@ -160,8 +162,10 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
 
 	// get another identity and compare the info
-	id2, audit2, err := keyManager.Identity(t.Context(), audit)
+	identityDescriptor2, err := keyManager.Identity(t.Context(), audit)
 	assert.NoError(t, err)
+	id2 := identityDescriptor2.Identity
+	audit2 := identityDescriptor2.AuditInfo
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
 	info2, err := keyManager.Info(t.Context(), id2, audit2)
@@ -257,8 +261,10 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err := p.Identity(t.Context(), nil)
+	identityDescriptor, err := p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id := identityDescriptor.Identity
+	audit := identityDescriptor.AuditInfo
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
 
@@ -279,7 +285,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(t.Context(), nil)
+	_, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -301,7 +307,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(t.Context(), nil)
+	_, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -351,12 +357,16 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
-	id, audit, err := p.Identity(t.Context(), nil)
+	identityDescriptor, err := p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id := identityDescriptor.Identity
+	audit := identityDescriptor.AuditInfo
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
-	id2, audit2, err := p2.Identity(t.Context(), nil)
+	identityDescriptor2, err := p2.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id2 := identityDescriptor2.Identity
+	audit2 := identityDescriptor2.AuditInfo
 	assert.NotNil(t, id2)
 	assert.NotNil(t, audit2)
 
@@ -407,11 +417,13 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 
 	// keyManager and keyManager2 use the same key store
 
-	id, _, err := keyManager.Identity(t.Context(), nil)
+	identityDescriptor, err := keyManager.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id := identityDescriptor.Identity
 
-	id2, _, err := keyManager2.Identity(t.Context(), nil)
+	identityDescriptor2, err := keyManager2.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id2 := identityDescriptor2.Identity
 
 	// This must work
 	signer, err := keyManager.DeserializeSigner(t.Context(), id)
@@ -464,8 +476,10 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err := p.Identity(t.Context(), nil)
+	identityDescriptor, err := p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id := identityDescriptor.Identity
+	audit := identityDescriptor.AuditInfo
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
 
@@ -486,7 +500,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(t.Context(), nil)
+	_, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -508,7 +522,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(t.Context(), nil)
+	_, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.Nil(t, audit)
@@ -547,8 +561,10 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 
 	// get an identity with its own audit info from the provider
 	// id is in its serialized form
-	id, audit, err := p.Identity(t.Context(), nil)
+	identityDescriptor, err := p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
+	id := identityDescriptor.Identity
+	audit := identityDescriptor.AuditInfo
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
 	info, err := p.Info(t.Context(), id, audit)
@@ -576,7 +592,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(t.Context(), nil)
+	_, err = p.Identity(t.Context(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)

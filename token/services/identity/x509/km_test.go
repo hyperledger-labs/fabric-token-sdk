@@ -29,8 +29,10 @@ func TestDeserializer(t *testing.T) {
 	assert.NoError(t, err)
 
 	for _, provider := range []*KeyManager{fullIdentityProvider, fullIdentityProvider2} {
-		id, auditInfo, err := provider.Identity(t.Context(), nil)
+		identityDescriptor, err := provider.Identity(t.Context(), nil)
 		assert.NoError(t, err)
+		id := identityDescriptor.Identity
+		auditInfo := identityDescriptor.AuditInfo
 		eID := provider.EnrollmentID()
 		ai := &AuditInfo{}
 		err = ai.FromBytes(auditInfo)
@@ -49,7 +51,7 @@ func TestDeserializer(t *testing.T) {
 		assert.NoError(t, err)
 
 		// check again a verifying identity
-		verifyingIdentity, _, err := verifyingIdentityProvider.Identity(t.Context(), nil)
+		verifyingIdentityDescriptor, err := verifyingIdentityProvider.Identity(t.Context(), nil)
 		assert.NoError(t, err)
 		verifier2, err := provider.DeserializeVerifier(t.Context(), verifyingIdentity)
 		assert.NoError(t, err)
