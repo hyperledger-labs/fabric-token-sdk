@@ -72,7 +72,6 @@ func NewServiceManager(
 				ttxStoreService: ttxStoreService,
 				tokensService:   tokensService,
 				finalityTracer: tracerProvider.Tracer("db", tracing.WithMetricsOpts(tracing.MetricsOpts{
-					Namespace:  "tokensdk",
 					LabelNames: []tracing.LabelName{txIdLabel},
 				})),
 				checkService: checkService,

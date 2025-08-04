@@ -119,9 +119,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 			Ledger:   ch.Ledger(),
 			Mapper:   mapper,
 		},
-		p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
-			Namespace: network,
-		})),
+		p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
 		mapper,
 	)
 	if err != nil {
