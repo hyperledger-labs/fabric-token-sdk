@@ -31,5 +31,7 @@ type IdentityProvider interface {
 	GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error)
 
 	// Bind an ephemeral identity to another identity
-	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error
+	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error
+
+	Copy(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error
 }

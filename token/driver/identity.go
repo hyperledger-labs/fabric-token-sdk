@@ -51,7 +51,7 @@ type IdentityProvider interface {
 
 	// Bind binds longTerm to the passed ephemeral identity. The same signer, verifier, and audit of the long term
 	// identity is associated to id, if copyAll is true.
-	Bind(ctx context.Context, longTerm Identity, ephemeral Identity, copyAll bool) error
+	Bind(ctx context.Context, longTerm Identity, ephemeral Identity) error
 
 	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
 	RegisterRecipientIdentity(ctx context.Context, id Identity) error

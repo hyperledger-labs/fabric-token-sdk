@@ -167,57 +167,62 @@ func (p *Provider) GetRevocationHandler(ctx context.Context, identity driver.Ide
 	return p.enrollmentIDUnmarshaler.GetRevocationHandler(ctx, identity, auditInfo)
 }
 
-func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity, copyAll bool) error {
+func (p *Provider) Copy(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error {
 	if ephemeral.Equal(longTerm) {
 		// no action required
 		return nil
 	}
 
-	if copyAll {
-		p.Logger.DebugfContext(ctx, "Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
-		setSV := true
-		signer, err := p.GetSigner(ctx, longTerm)
-		if err != nil {
-			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				p.Logger.DebugfContext(ctx, "failed getting signer for [%s][%s][%s]", longTerm, err, string(debug.Stack()))
-			}
-			setSV = false
+	p.Logger.DebugfContext(ctx, "Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
+	setSV := true
+	signer, err := p.GetSigner(ctx, longTerm)
+	if err != nil {
+		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+			p.Logger.DebugfContext(ctx, "failed getting signer for [%s][%s][%s]", longTerm, err, string(debug.Stack()))
 		}
-		verifier, err := p.SigService.GetVerifier(ctx, longTerm)
-		if err != nil {
-			if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-				p.Logger.DebugfContext(ctx, "failed getting verifier for identity [%s][%s][%s]", longTerm, err, string(debug.Stack()))
-			}
-			verifier = nil
+		setSV = false
+	}
+	verifier, err := p.SigService.GetVerifier(ctx, longTerm)
+	if err != nil {
+		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+			p.Logger.DebugfContext(ctx, "failed getting verifier for identity [%s][%s][%s]", longTerm, err, string(debug.Stack()))
 		}
+		verifier = nil
+	}
 
-		setAI := true
-		auditInfo, err := p.GetAuditInfo(ctx, longTerm)
-		if err != nil {
-			p.Logger.DebugfContext(ctx, "failed getting audit info for [%s][%s]", longTerm, err)
-			setAI = false
-		}
+	setAI := true
+	auditInfo, err := p.GetAuditInfo(ctx, longTerm)
+	if err != nil {
+		p.Logger.DebugfContext(ctx, "failed getting audit info for [%s][%s]", longTerm, err)
+		setAI = false
+	}
 
-		if setSV {
-			signerInfo, err := p.SigService.GetSignerInfo(ctx, longTerm)
-			if err != nil {
-				return err
-			}
-			if err := p.SigService.RegisterSigner(ctx, ephemeral, signer, verifier, signerInfo); err != nil {
-				return err
-			}
+	if setSV {
+		signerInfo, err := p.SigService.GetSignerInfo(ctx, longTerm)
+		if err != nil {
+			return err
 		}
-		if setAI {
-			if err := p.RegisterAuditInfo(ctx, ephemeral, auditInfo); err != nil {
-				return err
-			}
+		if err := p.SigService.RegisterSigner(ctx, ephemeral, signer, verifier, signerInfo); err != nil {
+			return err
+		}
+	}
+	if setAI {
+		if err := p.RegisterAuditInfo(ctx, ephemeral, auditInfo); err != nil {
+			return err
 		}
 	}
 
-	if p.Binder != nil {
-		if err := p.Binder.Bind(ctx, longTerm, ephemeral); err != nil {
-			return err
-		}
+	return nil
+}
+
+func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error {
+	if ephemeral.Equal(longTerm) {
+		// no action required
+		return nil
+	}
+
+	if err := p.Binder.Bind(ctx, longTerm, ephemeral); err != nil {
+		return err
 	}
 	return nil
 }

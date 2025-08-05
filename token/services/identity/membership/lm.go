@@ -445,7 +445,7 @@ func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *driver.I
 	if !keyManager.Anonymous() {
 		l.logger.Debugf("adding identity mapping for [%s]", identity)
 		l.localIdentitiesByIdentity[identity.String()] = localIdentity
-		if err := l.IdentityProvider.Bind(ctx, l.defaultNetworkIdentity, identity, false); err != nil {
+		if err := l.IdentityProvider.Bind(ctx, l.defaultNetworkIdentity, identity); err != nil {
 			return errors2.WithMessagef(err, "cannot bind identity for [%s,%s]", identity, eID)
 		}
 	}
@@ -512,13 +512,17 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 	if err := i.IdentityProvider.RegisterAuditInfo(ctx, id, ai); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 	}
-	// bind the identity to the default FSC node identity
+	// typedIdentity has id's signer and verifier
+	if err := i.IdentityProvider.Copy(ctx, id, typedIdentity); err != nil {
+		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
+	}
+
 	logger.DebugfContext(ctx, "bind to root identity")
-	if err := i.IdentityProvider.Bind(ctx, i.RootIdentity, id, false); err != nil {
+	if err := i.IdentityProvider.Bind(ctx, i.RootIdentity, id); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 	}
 	logger.DebugfContext(ctx, "bind wrapped")
-	if err := i.IdentityProvider.Bind(ctx, id, typedIdentity, true); err != nil {
+	if err := i.IdentityProvider.Bind(ctx, id, typedIdentity); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 	}
 	return typedIdentity, ai, nil
