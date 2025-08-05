@@ -94,7 +94,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 		req := t.TokenRequest
 		// If eIDs are specified, we only marshal the metadata for the passed eIDs
 		if len(eIDs) != 0 {
-			req, err = t.TokenRequest.FilterMetadataBy(eIDs...)
+			req, err = t.TokenRequest.FilterMetadataBy(t.Context, eIDs...)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to filter metadata")
 			}

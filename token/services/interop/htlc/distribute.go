@@ -75,7 +75,7 @@ func (v *DistributeTermsView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling terms")
 	}
-	err = session.Send(termsRaw)
+	err = session.SendWithContext(context.Context(), termsRaw)
 	if err != nil {
 		return nil, err
 	}

@@ -22,7 +22,7 @@ type LocalBidirectionalChannel struct {
 }
 
 // NewLocalBidirectionalChannel creates a new bidirectional channel
-func NewLocalBidirectionalChannel(caller string, contextID string, endpoint string, pkid []byte) (*LocalBidirectionalChannel, error) {
+func NewLocalBidirectionalChannel(ctx context.Context, caller string, contextID string, endpoint string, pkid []byte) (*LocalBidirectionalChannel, error) {
 	ID, err := GetRandomNonce()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate session ID")
@@ -40,6 +40,7 @@ func NewLocalBidirectionalChannel(caller string, contextID string, endpoint stri
 	}
 	return &LocalBidirectionalChannel{
 		left: &localSession{
+			ctx:          ctx,
 			name:         "left",
 			contextID:    contextID,
 			caller:       caller,
@@ -48,6 +49,7 @@ func NewLocalBidirectionalChannel(caller string, contextID string, endpoint stri
 			writeChannel: lr,
 		},
 		right: &localSession{
+			ctx:          ctx,
 			name:         "right",
 			contextID:    contextID,
 			caller:       caller,
@@ -71,6 +73,7 @@ func (c *LocalBidirectionalChannel) RightSession() view.Session {
 // localSession is a local session that is used to simulate a session between two views.
 // It has a read channel and a write channel.
 type localSession struct {
+	ctx          context.Context
 	name         string
 	contextID    string
 	caller       string
@@ -84,7 +87,7 @@ func (s *localSession) Info() view.SessionInfo {
 }
 
 func (s *localSession) Send(payload []byte) error {
-	return s.SendWithContext(context.Background(), payload)
+	return s.SendWithContext(s.ctx, payload)
 }
 
 func (s *localSession) SendWithContext(ctx context.Context, payload []byte) error {
@@ -92,7 +95,7 @@ func (s *localSession) SendWithContext(ctx context.Context, payload []byte) erro
 }
 
 func (s *localSession) SendError(payload []byte) error {
-	return s.SendErrorWithContext(context.Background(), payload)
+	return s.SendErrorWithContext(s.ctx, payload)
 }
 
 func (s *localSession) SendErrorWithContext(ctx context.Context, payload []byte) error {

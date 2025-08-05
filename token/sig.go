@@ -30,18 +30,18 @@ type SignatureService struct {
 }
 
 // AuditorVerifier returns a signature verifier for the given auditor identity
-func (s *SignatureService) AuditorVerifier(id Identity) (Verifier, error) {
-	return s.deserializer.GetAuditorVerifier(id)
+func (s *SignatureService) AuditorVerifier(ctx context.Context, id Identity) (Verifier, error) {
+	return s.deserializer.GetAuditorVerifier(ctx, id)
 }
 
 // OwnerVerifier returns a signature verifier for the given owner identity
-func (s *SignatureService) OwnerVerifier(id Identity) (Verifier, error) {
-	return s.deserializer.GetOwnerVerifier(id)
+func (s *SignatureService) OwnerVerifier(ctx context.Context, id Identity) (Verifier, error) {
+	return s.deserializer.GetOwnerVerifier(ctx, id)
 }
 
 // IssuerVerifier returns a signature verifier for the given issuer identity
-func (s *SignatureService) IssuerVerifier(id Identity) (Verifier, error) {
-	return s.deserializer.GetIssuerVerifier(id)
+func (s *SignatureService) IssuerVerifier(ctx context.Context, id Identity) (Verifier, error) {
+	return s.deserializer.GetIssuerVerifier(ctx, id)
 }
 
 // GetSigner returns a signer bound to the given identity

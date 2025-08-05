@@ -85,7 +85,7 @@ func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleTy
 		}
 
 		// non-anonymous
-		newWallet, err := NewLongTermOwnerWallet(w.IdentityProvider, w.TokenVault, id, info)
+		newWallet, err := NewLongTermOwnerWallet(ctx, w.IdentityProvider, w.TokenVault, id, info)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create owner wallet [%s]", id)
 		}

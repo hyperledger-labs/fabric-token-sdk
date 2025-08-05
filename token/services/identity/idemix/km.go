@@ -247,7 +247,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 	var signerMetadata *bccsp.IdemixSignerMetadata
 	if len(auditInfo) != 0 {
 		logger.DebugfContext(ctx, "deserialize passed audit info")
-		ai, err := p.DeserializeAuditInfo(auditInfo)
+		ai, err := p.DeserializeAuditInfo(ctx, auditInfo)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -340,8 +340,8 @@ func (p *KeyManager) IsRemote() bool {
 	return len(p.userKeySKI) == 0
 }
 
-func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	r, err := p.Deserialize(raw)
+func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (driver.Verifier, error) {
+	r, err := p.Deserialize(ctx, raw)
 	if err != nil {
 		return nil, err
 	}
@@ -349,11 +349,11 @@ func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 	return r.Identity, nil
 }
 
-func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	return p.DeserializeSigningIdentity(raw)
+func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
+	return p.DeserializeSigningIdentity(ctx, raw)
 }
 
-func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
+func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
 	eid := ""
 	if len(auditInfo) != 0 {
 		ai := &crypto2.AuditInfo{
@@ -365,7 +365,7 @@ func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
 		if err := ai.FromBytes(auditInfo); err != nil {
 			return "", err
 		}
-		if err := ai.Match(raw); err != nil {
+		if err := ai.Match(ctx, raw); err != nil {
 			return "", err
 		}
 		eid = ai.EnrollmentID()
@@ -386,8 +386,8 @@ func (p *KeyManager) Anonymous() bool {
 	return true
 }
 
-func (p *KeyManager) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentity, error) {
-	id, err := p.Deserialize(raw)
+func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (driver.SigningIdentity, error) {
+	id, err := p.Deserialize(ctx, raw)
 	if err != nil {
 		return nil, err
 	}

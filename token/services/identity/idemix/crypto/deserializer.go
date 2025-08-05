@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
+	"context"
+
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/pkg/errors"
@@ -31,7 +33,7 @@ type Deserializer struct {
 	Schema          string
 }
 
-func (d *Deserializer) Deserialize(raw []byte) (*DeserializedIdentity, error) {
+func (d *Deserializer) Deserialize(_ context.Context, raw []byte) (*DeserializedIdentity, error) {
 	return d.DeserializeAgainstNymEID(raw, nil)
 }
 
@@ -91,7 +93,7 @@ func (d *Deserializer) DeserializeAgainstNymEID(identity []byte, nymEID []byte) 
 	}, nil
 }
 
-func (d *Deserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+func (d *Deserializer) DeserializeAuditInfo(_ context.Context, raw []byte) (*AuditInfo, error) {
 	ai, err := DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))

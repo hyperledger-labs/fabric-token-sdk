@@ -113,7 +113,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	if tms == nil {
 		return nil, errors.Errorf("tms not found for [%s]", tmsID)
 	}
-	proof, err := tms.TokensService().GenUpgradeProof(agreement.Challenge, r.Tokens)
+	proof, err := tms.TokensService().GenUpgradeProof(context.Context(), agreement.Challenge, r.Tokens)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate proof")
 	}

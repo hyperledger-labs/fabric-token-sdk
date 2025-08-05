@@ -43,7 +43,7 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 
 		// check sender signature
 		ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
-		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
+		verifier, err := ctx.Deserializer.GetOwnerVerifier(c, tok.Owner)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
 		}
@@ -73,7 +73,7 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 			return errors.Errorf("On Redeem action, must have at least one issuer")
 		}
 
-		issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(issuer)
+		issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(c, issuer)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
 		}

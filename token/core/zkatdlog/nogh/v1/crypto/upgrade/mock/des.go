@@ -2,18 +2,19 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type Deserializer struct {
-	GetOwnerVerifierStub        func(identity.Identity) (driver.Verifier, error)
+	GetOwnerVerifierStub        func(context.Context, driver.Identity) (driver.Verifier, error)
 	getOwnerVerifierMutex       sync.RWMutex
 	getOwnerVerifierArgsForCall []struct {
-		arg1 identity.Identity
+		arg1 context.Context
+		arg2 driver.Identity
 	}
 	getOwnerVerifierReturns struct {
 		result1 driver.Verifier
@@ -27,18 +28,19 @@ type Deserializer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Deserializer) GetOwnerVerifier(arg1 identity.Identity) (driver.Verifier, error) {
+func (fake *Deserializer) GetOwnerVerifier(arg1 context.Context, arg2 driver.Identity) (driver.Verifier, error) {
 	fake.getOwnerVerifierMutex.Lock()
 	ret, specificReturn := fake.getOwnerVerifierReturnsOnCall[len(fake.getOwnerVerifierArgsForCall)]
 	fake.getOwnerVerifierArgsForCall = append(fake.getOwnerVerifierArgsForCall, struct {
-		arg1 identity.Identity
-	}{arg1})
+		arg1 context.Context
+		arg2 driver.Identity
+	}{arg1, arg2})
 	stub := fake.GetOwnerVerifierStub
 	fakeReturns := fake.getOwnerVerifierReturns
-	fake.recordInvocation("GetOwnerVerifier", []interface{}{arg1})
+	fake.recordInvocation("GetOwnerVerifier", []interface{}{arg1, arg2})
 	fake.getOwnerVerifierMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -52,17 +54,17 @@ func (fake *Deserializer) GetOwnerVerifierCallCount() int {
 	return len(fake.getOwnerVerifierArgsForCall)
 }
 
-func (fake *Deserializer) GetOwnerVerifierCalls(stub func(identity.Identity) (driver.Verifier, error)) {
+func (fake *Deserializer) GetOwnerVerifierCalls(stub func(context.Context, driver.Identity) (driver.Verifier, error)) {
 	fake.getOwnerVerifierMutex.Lock()
 	defer fake.getOwnerVerifierMutex.Unlock()
 	fake.GetOwnerVerifierStub = stub
 }
 
-func (fake *Deserializer) GetOwnerVerifierArgsForCall(i int) identity.Identity {
+func (fake *Deserializer) GetOwnerVerifierArgsForCall(i int) (context.Context, driver.Identity) {
 	fake.getOwnerVerifierMutex.RLock()
 	defer fake.getOwnerVerifierMutex.RUnlock()
 	argsForCall := fake.getOwnerVerifierArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *Deserializer) GetOwnerVerifierReturns(result1 driver.Verifier, result2 error) {

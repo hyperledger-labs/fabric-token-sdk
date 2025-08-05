@@ -289,9 +289,9 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 
-	auditInfo, err := p.DeserializeAuditInfo(audit)
+	auditInfo, err := p.DeserializeAuditInfo(context.Background(), audit)
 	Expect(err).NotTo(HaveOccurred())
-	err = auditInfo.Match(id)
+	err = auditInfo.Match(context.Background(), id)
 	Expect(err).NotTo(HaveOccurred())
 
 	id, err = identity.WrapWithType(idemix2.IdentityType, id)

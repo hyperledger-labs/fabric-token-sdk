@@ -31,7 +31,7 @@ type SigningIdentity interface {
 
 // InfoMatcher deserialize audit information
 type InfoMatcher interface {
-	MatchIdentity(id driver.Identity, ai []byte) error
+	MatchIdentity(ctx context.Context, id driver.Identity, ai []byte) error
 }
 
 type InspectableIdentity struct {
@@ -148,12 +148,12 @@ func (a *Auditor) Check(
 	}
 	// check validity of issue requests
 	a.Logger.DebugfContext(ctx, "Check %d issue outputs", len(outputsFromIssue))
-	err = a.CheckIssueRequests(outputsFromIssue, txID)
+	err = a.CheckIssueRequests(ctx, outputsFromIssue, txID)
 	if err != nil {
 		return errors.Wrapf(err, "failed checking issues for [%s]", txID)
 	}
 	for i, id := range identitiesFromIssue {
-		err = a.InspectIdentity(a.InfoMatcher, &id, i)
+		err = a.InspectIdentity(ctx, a.InfoMatcher, &id, i)
 		if err != nil {
 			return errors.Wrapf(err, "failed checking identity for issue [%s]", txID)
 		}
@@ -166,7 +166,7 @@ func (a *Auditor) Check(
 	}
 	// check validity of transfer requests
 	a.Logger.DebugfContext(ctx, "Check %d transfer outputs", len(outputsFromTransfer))
-	if err := a.CheckTransferRequests(auditableInputs, outputsFromTransfer, txID); err != nil {
+	if err := a.CheckTransferRequests(ctx, auditableInputs, outputsFromTransfer, txID); err != nil {
 		return errors.Wrapf(err, "failed checking transfers [%s]", txID)
 	}
 
@@ -174,16 +174,16 @@ func (a *Auditor) Check(
 }
 
 // CheckTransferRequests verifies that the commitments in transfer inputs and outputs match the information provided in the clear.
-func (a *Auditor) CheckTransferRequests(inputs [][]*InspectableToken, outputsFromTransfer [][]*InspectableToken, txID driver.TokenRequestAnchor) error {
+func (a *Auditor) CheckTransferRequests(ctx context.Context, inputs [][]*InspectableToken, outputsFromTransfer [][]*InspectableToken, txID driver.TokenRequestAnchor) error {
 	for k, transferred := range outputsFromTransfer {
-		err := a.InspectOutputs(transferred)
+		err := a.InspectOutputs(ctx, transferred)
 		if err != nil {
 			return errors.Wrapf(err, "audit of %d th transfer in tx [%s] failed", k, txID)
 		}
 	}
 
 	for k, i := range inputs {
-		err := a.InspectInputs(i)
+		err := a.InspectInputs(ctx, i)
 		if err != nil {
 			return errors.Wrapf(err, "audit of %d th transfer in tx [%s] failed", k, txID)
 		}
@@ -193,10 +193,10 @@ func (a *Auditor) CheckTransferRequests(inputs [][]*InspectableToken, outputsFro
 }
 
 // CheckIssueRequests verifies that the commitments in issue outputs match the information provided in the clear.
-func (a *Auditor) CheckIssueRequests(outputsFromIssue [][]*InspectableToken, txID driver.TokenRequestAnchor) error {
+func (a *Auditor) CheckIssueRequests(ctx context.Context, outputsFromIssue [][]*InspectableToken, txID driver.TokenRequestAnchor) error {
 	// Inspect
 	for k, issued := range outputsFromIssue {
-		err := a.InspectOutputs(issued)
+		err := a.InspectOutputs(ctx, issued)
 		if err != nil {
 			return errors.Wrapf(err, "audit of %d th issue in tx [%s] failed", k, txID)
 		}
@@ -205,9 +205,9 @@ func (a *Auditor) CheckIssueRequests(outputsFromIssue [][]*InspectableToken, txI
 }
 
 // InspectOutputs verifies that the commitments in an array of outputs matches the information provided in the clear.
-func (a *Auditor) InspectOutputs(tokens []*InspectableToken) error {
+func (a *Auditor) InspectOutputs(ctx context.Context, tokens []*InspectableToken) error {
 	for i, t := range tokens {
-		err := a.InspectOutput(t, i)
+		err := a.InspectOutput(ctx, t, i)
 		if err != nil {
 			return errors.Wrapf(err, "failed inspecting output [%d]", i)
 		}
@@ -218,7 +218,7 @@ func (a *Auditor) InspectOutputs(tokens []*InspectableToken) error {
 
 // InspectOutput verifies that the commitments in an output token of a given index
 // match the information provided in the clear.
-func (a *Auditor) InspectOutput(output *InspectableToken, index int) error {
+func (a *Auditor) InspectOutput(ctx context.Context, output *InspectableToken, index int) error {
 	if len(a.PedersenParams) != 3 {
 		return errors.Errorf("length of Pedersen basis != 3")
 	}
@@ -234,7 +234,7 @@ func (a *Auditor) InspectOutput(output *InspectableToken, index int) error {
 		return errors.Errorf("output at index [%d] does not match the provided opening", index)
 	}
 	if !output.Identity.Identity.IsNone() { // this is not a redeemed output
-		if err := a.InspectIdentity(a.InfoMatcher, &output.Identity, index); err != nil {
+		if err := a.InspectIdentity(ctx, a.InfoMatcher, &output.Identity, index); err != nil {
 			return errors.Wrapf(err, "failed inspecting output at index [%d]", index)
 		}
 	}
@@ -242,14 +242,14 @@ func (a *Auditor) InspectOutput(output *InspectableToken, index int) error {
 }
 
 // InspectInputs verifies that the commitment in an array of inputs matches the information provided in the clear.
-func (a *Auditor) InspectInputs(inputs []*InspectableToken) error {
+func (a *Auditor) InspectInputs(ctx context.Context, inputs []*InspectableToken) error {
 	for i, input := range inputs {
 		if input == nil {
 			return errors.Errorf("invalid input at index [%d]", i)
 		}
 
 		if !input.Identity.Identity.IsNone() {
-			if err := a.InspectIdentity(a.InfoMatcher, &input.Identity, i); err != nil {
+			if err := a.InspectIdentity(ctx, a.InfoMatcher, &input.Identity, i); err != nil {
 				return errors.Wrapf(err, "failed inspecting input at index [%d]", i)
 			}
 		}
@@ -258,7 +258,7 @@ func (a *Auditor) InspectInputs(inputs []*InspectableToken) error {
 }
 
 // InspectIdentity verifies that the audit info matches the token owner
-func (a *Auditor) InspectIdentity(matcher InfoMatcher, identity *InspectableIdentity, index int) error {
+func (a *Auditor) InspectIdentity(ctx context.Context, matcher InfoMatcher, identity *InspectableIdentity, index int) error {
 	if identity.Identity.IsNone() {
 		return errors.Errorf("identity at index [%d] is nil, cannot inspect it", index)
 	}
@@ -271,7 +271,7 @@ func (a *Auditor) InspectIdentity(matcher InfoMatcher, identity *InspectableIden
 			return errors.Errorf("failed to inspect identity at index [%d]: identity does not match the identity form metadata", index)
 		}
 	}
-	if err := matcher.MatchIdentity(identity.Identity, identity.AuditInfo); err != nil {
+	if err := matcher.MatchIdentity(ctx, identity.Identity, identity.AuditInfo); err != nil {
 		return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 	}
 	return nil

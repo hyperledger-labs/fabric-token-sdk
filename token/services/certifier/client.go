@@ -19,13 +19,13 @@ type CertificationClient struct {
 	c driver.CertificationClient
 }
 
-func NewCertificationClient(tms *token.ManagementService) (*CertificationClient, error) {
+func NewCertificationClient(ctx context.Context, tms *token.ManagementService) (*CertificationClient, error) {
 	driver := tms.PublicParametersManager().PublicParameters().CertificationDriver()
 	d, ok := holder.Drivers[driver]
 	if !ok {
 		return nil, errors.Errorf("certifier driver [%s] not found", driver)
 	}
-	c, err := d.NewCertificationClient(tms)
+	c, err := d.NewCertificationClient(ctx, tms)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating certification manager with driver [%s]", driver)
 	}

@@ -74,7 +74,7 @@ func (db *TokenStore) StoreToken(ctx context.Context, tr driver.TokenRecord, own
 	if err != nil {
 		return
 	}
-	if err = tx.StoreToken(context.TODO(), tr, owners); err != nil {
+	if err = tx.StoreToken(ctx, tr, owners); err != nil {
 		if err1 := tx.Rollback(); err1 != nil {
 			logger.Errorf("error rolling back: %s", err1.Error())
 		}
@@ -249,7 +249,7 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
 func (db *TokenStore) ListUnspentTokensBy(ctx context.Context, walletID string, typ token.Type) (*token.UnspentTokens, error) {
 	logger.DebugfContext(ctx, "list unspent token by [%s,%s]", walletID, typ)
-	it, err := db.UnspentTokensIteratorBy(context.TODO(), walletID, typ)
+	it, err := db.UnspentTokensIteratorBy(ctx, walletID, typ)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +397,7 @@ func (db *TokenStore) GetAllTokenInfos(ctx context.Context, ids []*token.ID) ([]
 	if len(ids) == 0 {
 		return [][]byte{}, nil
 	}
-	_, metas, _, err := db.getLedgerTokenAndMeta(context.TODO(), ids)
+	_, metas, _, err := db.getLedgerTokenAndMeta(ctx, ids)
 	return metas, err
 }
 

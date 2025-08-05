@@ -151,7 +151,7 @@ func (wm *WalletManager) GetEnrollmentID(ctx context.Context, identity Identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
-	return wm.walletService.GetEnrollmentID(identity, auditInfo)
+	return wm.walletService.GetEnrollmentID(ctx, identity, auditInfo)
 }
 
 // GetRevocationHandle returns the revocation handle of the passed identity
@@ -161,7 +161,7 @@ func (wm *WalletManager) GetRevocationHandle(ctx context.Context, identity Ident
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
 
-	return wm.walletService.GetRevocationHandle(identity, auditInfo)
+	return wm.walletService.GetRevocationHandle(ctx, identity, auditInfo)
 }
 
 // SpentIDs returns the spent keys corresponding to the passed token IDs
@@ -187,13 +187,13 @@ func (w *Wallet) TMS() *ManagementService {
 }
 
 // Contains returns true if the wallet contains the passed identity.
-func (w *Wallet) Contains(identity Identity) bool {
-	return w.w.Contains(identity)
+func (w *Wallet) Contains(ctx context.Context, identity driver.Identity) bool {
+	return w.w.Contains(ctx, identity)
 }
 
 // ContainsToken returns true if the wallet contains an identity that owns the passed token.
-func (w *Wallet) ContainsToken(token *token.UnspentToken) bool {
-	return w.w.ContainsToken(token)
+func (w *Wallet) ContainsToken(ctx context.Context, token *token.UnspentToken) bool {
+	return w.w.ContainsToken(ctx, token)
 }
 
 // AuditorWallet models the wallet of an auditor

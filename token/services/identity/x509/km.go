@@ -151,15 +151,15 @@ func (p *KeyManager) EnrollmentID() string {
 	return p.enrollmentID
 }
 
-func (p *KeyManager) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
+func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (driver.Verifier, error) {
 	return crypto.DeserializeVerifier(raw)
 }
 
-func (p *KeyManager) DeserializeSigner(raw []byte) (driver.Signer, error) {
+func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
 	return nil, errors.New("not supported")
 }
 
-func (p *KeyManager) Info(raw []byte, auditInfo []byte) (string, error) {
+func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
 	return crypto.Info(raw)
 }
 

@@ -118,7 +118,7 @@ func testFilterByCase0(t *testing.T) {
 		Logger: logging.MustGetLogger(),
 	}
 	// Filter by Bob
-	filteredMetadata, err := metadata.FilterBy("Bob")
+	filteredMetadata, err := metadata.FilterBy(t.Context(), "Bob")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 2, ws.GetEnrollmentIDCallCount())
@@ -132,7 +132,7 @@ func testFilterByCase0(t *testing.T) {
 	assertEmptyTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1])
 
 	// Filter by Charlie
-	filteredMetadata, err = metadata.FilterBy("Charlie")
+	filteredMetadata, err = metadata.FilterBy(t.Context(), "Charlie")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 4, ws.GetEnrollmentIDCallCount())
@@ -146,7 +146,7 @@ func testFilterByCase0(t *testing.T) {
 	assertEqualTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1], true)
 
 	// Filter by Eve
-	filteredMetadata, err = metadata.FilterBy("Eve")
+	filteredMetadata, err = metadata.FilterBy(t.Context(), "Eve")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 6, ws.GetEnrollmentIDCallCount())
@@ -160,7 +160,7 @@ func testFilterByCase0(t *testing.T) {
 	assertEmptyTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1])
 
 	// Filter by Bob and Charlie
-	filteredMetadata, err = metadata.FilterBy("Bob", "Charlie")
+	filteredMetadata, err = metadata.FilterBy(t.Context(), "Bob", "Charlie")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
@@ -174,7 +174,7 @@ func testFilterByCase0(t *testing.T) {
 	assertEqualTransferMetadata(t, charlieToDave, filteredMetadata.TokenRequestMetadata.Transfers[1], true)
 
 	// No Filter
-	filteredMetadata, err = metadata.FilterBy()
+	filteredMetadata, err = metadata.FilterBy(t.Context())
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
@@ -256,7 +256,7 @@ func testFilterByCase1(t *testing.T) {
 	}
 
 	// Filter by Alice
-	filteredMetadata, err := metadata.FilterBy("Alice")
+	filteredMetadata, err := metadata.FilterBy(t.Context(), "Alice")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 2, ws.GetEnrollmentIDCallCount())
@@ -270,7 +270,7 @@ func testFilterByCase1(t *testing.T) {
 	assertEmptyIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// Filter by Bob
-	filteredMetadata, err = metadata.FilterBy("Bob")
+	filteredMetadata, err = metadata.FilterBy(t.Context(), "Bob")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 4, ws.GetEnrollmentIDCallCount())
@@ -284,7 +284,7 @@ func testFilterByCase1(t *testing.T) {
 	assertEqualIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// Filter by Charlie
-	filteredMetadata, err = metadata.FilterBy("Charlie")
+	filteredMetadata, err = metadata.FilterBy(t.Context(), "Charlie")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 6, ws.GetEnrollmentIDCallCount())
@@ -298,7 +298,7 @@ func testFilterByCase1(t *testing.T) {
 	assertEmptyIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// Filter by Alice and Bob
-	filteredMetadata, err = metadata.FilterBy("Alice", "Bob")
+	filteredMetadata, err = metadata.FilterBy(t.Context(), "Alice", "Bob")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
@@ -312,7 +312,7 @@ func testFilterByCase1(t *testing.T) {
 	assertEqualIssueMetadata(t, bobIssue, filteredMetadata.TokenRequestMetadata.Issues[1])
 
 	// No Filter
-	filteredMetadata, err = metadata.FilterBy()
+	filteredMetadata, err = metadata.FilterBy(t.Context())
 	assert.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())

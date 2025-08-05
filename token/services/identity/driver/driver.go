@@ -6,17 +6,21 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+import (
+	"context"
+
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+)
 
 type Deserializer interface {
-	DeserializeVerifier(raw []byte) (tdriver.Verifier, error)
-	DeserializeSigner(raw []byte) (tdriver.Signer, error)
-	Info(raw []byte, auditInfo []byte) (string, error)
+	DeserializeVerifier(ctx context.Context, raw []byte) (tdriver.Verifier, error)
+	DeserializeSigner(ctx context.Context, raw []byte) (tdriver.Signer, error)
+	Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error)
 }
 
 type DeserializerManager interface {
 	AddDeserializer(deserializer Deserializer)
-	DeserializeSigner(raw []byte) (tdriver.Signer, error)
+	DeserializeSigner(ctx context.Context, raw []byte) (tdriver.Signer, error)
 }
 
 type AuditInfo interface {
@@ -25,5 +29,5 @@ type AuditInfo interface {
 }
 
 type AuditInfoDeserializer interface {
-	DeserializeAuditInfo([]byte) (AuditInfo, error)
+	DeserializeAuditInfo(ctx context.Context, raw []byte) (AuditInfo, error)
 }

@@ -59,7 +59,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	s.Logger.DebugfContext(ctx, "[%s] check token request validity, number of transfer actions [%d]...", anchor, len(metadata.Transfers))
 
 	actionDes := &validator.ActionDeserializer{
-		PublicParams: s.PublicParametersManager.PublicParams(ctx),
+		PublicParams: s.PublicParametersManager.PublicParams(),
 	}
 	_, transfers, err := actionDes.DeserializeActions(request)
 	if err != nil {
@@ -90,7 +90,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 		}
 	}
 
-	pp := s.PublicParametersManager.PublicParams(ctx)
+	pp := s.PublicParametersManager.PublicParams()
 	auditor := audit.NewAuditor(s.Logger, s.tracer, s.Deserializer, pp.PedersenGenerators, nil, math.Curves[pp.Curve])
 	s.Logger.DebugfContext(ctx, "Start auditor check")
 	err = auditor.Check(

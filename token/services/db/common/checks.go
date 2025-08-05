@@ -258,7 +258,7 @@ func (a *DefaultCheckers) CheckTokenSpendability(ctx context.Context) ([]string,
 
 		logger.DebugfContext(ctx, "deobfuscating token [%s][%s]...", tok.ID, tok.Format)
 		// extract the token's recipients and try to get a verifier for it
-		_, _, recipients, _, err := ts.Deobfuscate(tok.Token, tok.TokenMetadata)
+		_, _, recipients, _, err := ts.Deobfuscate(ctx, tok.Token, tok.TokenMetadata)
 		if err != nil {
 			errorMessages = append(errorMessages, fmt.Sprintf("failed to deobfuscate token [%s][%s], [%s]", tok.ID, tok.Format, err))
 			continue
@@ -269,7 +269,7 @@ func (a *DefaultCheckers) CheckTokenSpendability(ctx context.Context) ([]string,
 			continue
 		}
 		for _, recipient := range recipients {
-			_, err = sigService.OwnerVerifier(recipient)
+			_, err = sigService.OwnerVerifier(ctx, recipient)
 			if err != nil {
 				errorMessages = append(errorMessages, fmt.Sprintf("failed to verify recipient [%s][%s][%s], [%s]", tok.ID, recipient, tok.Format, err))
 			}

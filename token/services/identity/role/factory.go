@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package role
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -91,7 +92,7 @@ func (f *Factory) NewRole(role identity.RoleType, defaultAnon bool, targets []dr
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	if err := lm.Load(identities, targets); err != nil {
+	if err := lm.Load(context.Background(), identities, targets); err != nil {
 		return nil, errors.WithMessage(err, "failed to load identities")
 	}
 	return NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm), nil

@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"context"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	v2 "github.com/hyperledger-labs/fabric-token-sdk/docs/core/extension/zkatdlog/nogh/v2/setup"
@@ -107,7 +105,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
 	}
 
-	pp := ppm.PublicParams(context.Background())
+	pp := ppm.PublicParams()
 	logger.Infof("new token driver for tms id [%s] with label and version [%s:%d]: [%s]", tmsID, pp.TokenDriverName(), pp.TokenDriverVersion(), pp)
 
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
@@ -120,7 +118,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		logger,
 		d.identityProvider.DefaultIdentity(),
 		networkLocalMembership.DefaultIdentity(),
-		ppm.PublicParams(context.Background()),
+		ppm.PublicParams(),
 		false,
 		metricsProvider,
 	)
@@ -131,7 +129,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	ip := ws.IdentityProvider
 
 	authorization := common.NewAuthorizationMultiplexer(
-		common.NewTMSAuthorization(logger, ppm.PublicParams(context.Background()), ws),
+		common.NewTMSAuthorization(logger, ppm.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
 	)
@@ -141,13 +139,13 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
-	tokensUpgradeService, err := upgrade.NewService(logger, ppm.PublicParams(context.Background()).QuantityPrecision, deserializer, ip)
+	tokensUpgradeService, err := upgrade.NewService(logger, ppm.PublicParams().QuantityPrecision, deserializer, ip)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token upgrade service for [%s:%s]", tmsID.Network, tmsID.Namespace)
 	}
 	validator, err := validator.New(
 		logger,
-		ppm.PublicParams(context.Background()),
+		ppm.PublicParams(),
 		deserializer,
 		nil,
 		nil,

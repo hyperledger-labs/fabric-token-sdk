@@ -61,7 +61,7 @@ func NewDriver(backendFactory BackendFactory, resolver Resolver, subscriber Subs
 	}
 }
 
-func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.CertificationClient, error) {
+func (d *Driver) NewCertificationClient(ctx context.Context, tms *token.ManagementService) (driver.CertificationClient, error) {
 	d.Sync.Lock()
 	defer d.Sync.Unlock()
 
@@ -82,7 +82,7 @@ func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.Ce
 		}
 
 		var certificationClient = NewCertificationClient(
-			context.Background(),
+			ctx,
 			tms.Channel(),
 			tms.Namespace(),
 			tms.Vault().NewQueryEngine(),
