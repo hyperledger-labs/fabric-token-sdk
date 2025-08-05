@@ -81,7 +81,7 @@ func (l *KeyManagerProvider) Get(ctx context.Context, identityConfig *driver.Ide
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider")
 	}
-	keyManager, err := NewKeyManager(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(conf, bccsp.EidNymRhNym, cryptoProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating idemix key manager provider from [%s]", identityConfig.URL)
 	}

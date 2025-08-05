@@ -508,7 +508,16 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 	}
 
 	// register the audit info
-	logger.DebugfContext(ctx, "register audit info")
+	logger.DebugfContext(ctx, "register signer, audit info, and copy")
+	if err := i.IdentityProvider.RegisterSigner(
+		ctx,
+		identityDescriptor.Identity,
+		identityDescriptor.Signer,
+		identityDescriptor.Verifier,
+		identityDescriptor.SignerInfo,
+	); err != nil {
+		return nil, nil, errors2.Wrapf(err, "failed to register signer")
+	}
 	if err := i.IdentityProvider.RegisterAuditInfo(ctx, id, ai); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
 	}

@@ -53,9 +53,8 @@ type SignerService interface {
 
 type KeyManager struct {
 	*crypto.Deserializer
-	userKeySKI    SKI
-	conf          *config.IdemixConfig
-	SignerService SignerService
+	userKeySKI SKI
+	conf       *config.IdemixConfig
 
 	sigType bccsp.SignatureType
 	verType bccsp.VerificationType
@@ -66,23 +65,14 @@ type KeyManager struct {
 
 func NewKeyManager(
 	conf *crypto.Config,
-	signerService SignerService,
 	sigType bccsp.SignatureType,
 	csp bccsp.BCCSP,
 ) (*KeyManager, error) {
-	return NewKeyManagerWithSchema(
-		conf,
-		signerService,
-		sigType,
-		csp,
-		schema.NewDefaultManager(),
-		schema.DefaultSchema,
-	)
+	return NewKeyManagerWithSchema(conf, sigType, csp, schema.NewDefaultManager(), schema.DefaultSchema)
 }
 
 func NewKeyManagerWithSchema(
 	conf *crypto.Config,
-	signerService SignerService,
 	sigType bccsp.SignatureType,
 	csp bccsp.BCCSP,
 	sm SchemaManager,
@@ -209,7 +199,6 @@ func NewKeyManagerWithSchema(
 		},
 		userKeySKI:    userKeySKI,
 		conf:          conf,
-		SignerService: signerService,
 		sigType:       sigType,
 		verType:       verType,
 		SchemaManager: sm,

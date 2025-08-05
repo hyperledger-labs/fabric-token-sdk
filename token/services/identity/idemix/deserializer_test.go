@@ -14,9 +14,7 @@ import (
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +29,6 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	// init
 	backend, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(backend, token.TMSID{Network: "pineapple"}))
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 	keyStore, err := crypto2.NewKeyStore(curveID, kvs2.Keystore(backend))
@@ -40,7 +37,7 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	assert.NoError(t, err)
 
 	// key manager
-	keyManager, err := NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, keyManager)
 

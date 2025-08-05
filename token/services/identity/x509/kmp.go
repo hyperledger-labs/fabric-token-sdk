@@ -93,25 +93,11 @@ func (k *KeyManagerProvider) registerProvider(ctx context.Context, conf *crypto.
 	keyStorePath := k.keyStorePath()
 	logger.DebugfContext(ctx, "load provider at [%s][%s]", translatedPath, keyStorePath)
 	// Try without ExtraPathElement
-	provider, conf, err := NewKeyManagerFromConf(
-		conf,
-		translatedPath,
-		keyStorePath,
-		k.signerService,
-		opts,
-		k.keyStore,
-	)
+	provider, conf, err := NewKeyManagerFromConf(conf, translatedPath, keyStorePath, opts, k.keyStore)
 	if err != nil {
 		logger.DebugfContext(ctx, "failed loading provider at [%s]: [%s]", translatedPath, err)
 		// Try with ExtraPathElement
-		provider, conf, err = NewKeyManagerFromConf(
-			conf,
-			filepath.Join(translatedPath, ExtraPathElement),
-			keyStorePath,
-			k.signerService,
-			opts,
-			k.keyStore,
-		)
+		provider, conf, err = NewKeyManagerFromConf(conf, filepath.Join(translatedPath, ExtraPathElement), keyStorePath, opts, k.keyStore)
 		if err != nil {
 			logger.DebugfContext(ctx, "failed loading provider at [%s]: [%s]", filepath.Join(translatedPath, ExtraPathElement), err)
 			return nil, err

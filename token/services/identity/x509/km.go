@@ -39,11 +39,10 @@ type KeyManager struct {
 // then the provider can generate also signatures, otherwise it cannot.
 func NewKeyManager(
 	path string,
-	signerService SignerService,
 	bccspConfig *crypto.BCCSP,
 	keyStore crypto.KeyStore,
 ) (*KeyManager, *crypto.Config, error) {
-	p, conf, err := NewKeyManagerFromConf(nil, path, "", signerService, bccspConfig, keyStore)
+	p, conf, err := NewKeyManagerFromConf(nil, path, "", bccspConfig, keyStore)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -53,7 +52,6 @@ func NewKeyManager(
 func NewKeyManagerFromConf(
 	conf *crypto.Config,
 	configPath, keyStoreDirName string,
-	signerService SignerService,
 	bccspConfig *crypto.BCCSP,
 	keyStore crypto.KeyStore,
 ) (*KeyManager, *crypto.Config, error) {
@@ -72,7 +70,7 @@ func NewKeyManagerFromConf(
 	if conf.Version != crypto.ProtobufProtocolVersionV1 {
 		return nil, nil, errors.Errorf("unsupported protocol version: %d", conf.Version)
 	}
-	p, err := newSigningKeyManager(conf, signerService, bccspConfig, keyStore)
+	p, err := newSigningKeyManager(conf, bccspConfig, keyStore)
 	if err == nil {
 		return p, conf, nil
 	}
@@ -84,7 +82,7 @@ func NewKeyManagerFromConf(
 	return p, conf, err
 }
 
-func newSigningKeyManager(conf *crypto.Config, signerService SignerService, bccspConfig *crypto.BCCSP, keyStore crypto.KeyStore) (*KeyManager, error) {
+func newSigningKeyManager(conf *crypto.Config, bccspConfig *crypto.BCCSP, keyStore crypto.KeyStore) (*KeyManager, error) {
 	sID, err := crypto.GetSigningIdentity(conf, bccspConfig, keyStore)
 	if err != nil {
 		return nil, err
@@ -92,13 +90,6 @@ func newSigningKeyManager(conf *crypto.Config, signerService SignerService, bccs
 	idRaw, err := sID.Serialize()
 	if err != nil {
 		return nil, err
-	}
-	if signerService != nil {
-		logger.Debugf("register signer [%s]", driver.Identity(idRaw))
-		err = signerService.RegisterSigner(context.Background(), idRaw, sID, sID, nil)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed registering x509 signer")
-		}
 	}
 	return newKeyManager(sID, idRaw)
 }

@@ -17,8 +17,10 @@ import (
 type IdentityDescriptor struct {
 	Identity  driver.Identity
 	AuditInfo []byte
-	Signer    driver.Signer
-	Verifier  driver.Verifier
+
+	Signer     driver.Signer
+	SignerInfo []byte
+	Verifier   driver.Verifier
 }
 
 type IdentityConfigurationIterator = iterators.Iterator[*IdentityConfiguration]

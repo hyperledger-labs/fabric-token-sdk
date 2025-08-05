@@ -1139,7 +1139,7 @@ func getIdentity(identities []topology.Identity, id string) []byte {
 	for _, topologyIdentity := range identities {
 		if topologyIdentity.ID == id {
 			// Build an MSP Identity
-			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, nil, topologyIdentity.Opts, keyStore)
+			kmp, _, err := x509.NewKeyManager(topologyIdentity.Path, topologyIdentity.Opts, keyStore)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			identityDescriptor, err := kmp.Identity(context.Background(), nil)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -1506,7 +1506,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issuerWalletPath string, networkName string) []byte {
 	tms := GetTMSByNetworkName(network, networkName)
 	keyStore := x509.NewKeyStore(kvs.NewTrackedMemory())
-	kmp, _, err := x509.NewKeyManager(issuerWalletPath, nil, nil, keyStore)
+	kmp, _, err := x509.NewKeyManager(issuerWalletPath, nil, keyStore)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	identityDescriptor, err := kmp.Identity(context.Background(), nil)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
