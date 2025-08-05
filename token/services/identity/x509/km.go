@@ -29,9 +29,10 @@ type SignerService interface {
 }
 
 type KeyManager struct {
-	sID          driver.SigningIdentity
-	id           []byte
-	enrollmentID string
+	sID                driver.SigningIdentity
+	id                 []byte
+	enrollmentID       string
+	identityDescriptor *idriver.IdentityDescriptor
 }
 
 // NewKeyManager returns a new X509 provider with the passed BCCSP configuration.
@@ -115,7 +116,24 @@ func newKeyManager(sID driver.SigningIdentity, id []byte) (*KeyManager, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get enrollment id")
 	}
-	return &KeyManager{sID: sID, id: id, enrollmentID: enrollmentID}, nil
+	revocationHandle, err := crypto.GetRevocationHandle(id)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting revocation handle")
+	}
+	ai := &AuditInfo{
+		EID: enrollmentID,
+		RH:  revocationHandle,
+	}
+	auditInfoRaw, err := ai.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	identityDescriptor := &idriver.IdentityDescriptor{
+		Identity:  id,
+		AuditInfo: auditInfoRaw,
+		Signer:    sID,
+	}
+	return &KeyManager{identityDescriptor: identityDescriptor, sID: sID, id: id, enrollmentID: enrollmentID}, nil
 }
 
 func (p *KeyManager) IsRemote() bool {
@@ -123,25 +141,7 @@ func (p *KeyManager) IsRemote() bool {
 }
 
 func (p *KeyManager) Identity(context.Context, []byte) (*idriver.IdentityDescriptor, error) {
-	revocationHandle, err := crypto.GetRevocationHandle(p.id)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting revocation handle")
-	}
-	ai := &AuditInfo{
-		EID: p.enrollmentID,
-		RH:  revocationHandle,
-	}
-	auditInfoRaw, err := ai.Bytes()
-	if err != nil {
-		return nil, err
-	}
-
-	return &idriver.IdentityDescriptor{
-		Identity:  p.id,
-		AuditInfo: auditInfoRaw,
-		Signer:    nil,
-		Verifier:  nil,
-	}, nil
+	return p.identityDescriptor, nil
 }
 
 func (p *KeyManager) EnrollmentID() string {

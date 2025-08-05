@@ -58,49 +58,16 @@ func NewService(deserializer idriver.Deserializer, storage Storage) *Service {
 }
 
 func (o *Service) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
-	if signer == nil {
-		return errors.New("invalid signer, expected a valid instance")
-	}
-
 	idHash := identity.UniqueID()
 	logger.DebugfContext(ctx, "register signer and verifier [%s]:[%s][%s]", idHash, logging.Identifier(signer), logging.Identifier(verifier))
-	// First check with read lock
-	o.sync.RLock()
-	s, ok := o.signers[idHash]
-	o.sync.RUnlock()
-	if ok {
-		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
-		return nil
-	}
 
-	// write lock
-	o.sync.Lock()
-
-	// check again the cache
-	s, ok = o.signers[idHash]
-	if ok {
-		o.sync.Unlock()
-		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
-		return nil
-	}
-
-	entry := SignerEntry{Signer: signer}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
-	}
-	o.signers[idHash] = entry
-	o.sync.Unlock()
-
-	// store, if a failure happens then remove the entry
-	logger.DebugfContext(ctx, "checks done, store signer info")
-	if err := o.storage.StoreSignerInfo(ctx, identity, signerInfo); err != nil {
-		o.deleteSigner(idHash)
-		return errors.Wrap(err, "failed to store entry in storage for the passed signer")
+	if signer != nil {
+		if err := o.registerSigner(ctx, identity, signer, verifier, signerInfo); err != nil {
+			return err
+		}
 	}
 
 	if verifier != nil {
-		// store verifier
-		logger.DebugfContext(ctx, "checks done, store verifier")
 		if err := o.RegisterVerifier(ctx, identity, verifier); err != nil {
 			o.deleteSigner(idHash)
 			return err
@@ -227,6 +194,95 @@ func (o *Service) GetSigner(ctx context.Context, identity driver.Identity) (driv
 	return o.getSigner(ctx, identity, idHash)
 }
 
+func (o *Service) GetSignerInfo(ctx context.Context, identity driver.Identity) ([]byte, error) {
+	return o.storage.GetSignerInfo(ctx, identity)
+}
+
+func (o *Service) GetVerifier(ctx context.Context, identity driver.Identity) (driver.Verifier, error) {
+	idHash := identity.UniqueID()
+
+	// check cache
+	o.sync.RLock()
+	entry, ok := o.verifiers[idHash]
+	o.sync.RUnlock()
+	if ok {
+		return entry.Verifier, nil
+	}
+
+	o.sync.Lock()
+	defer o.sync.Unlock()
+
+	// check cache again
+	entry, ok = o.verifiers[idHash]
+	if ok {
+		return entry.Verifier, nil
+	}
+
+	// ask the deserializer
+	if o.deserializer == nil {
+		return nil, errors.Errorf("cannot find verifier for [%s], no deserializer set", identity)
+	}
+	var err error
+	verifier, err := o.deserializer.DeserializeVerifier(ctx, identity)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed deserializing identity for verifier %v", identity)
+	}
+
+	// store entry
+	entry = VerifierEntry{Verifier: verifier}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		entry.DebugStack = debug.Stack()
+	}
+	logger.DebugfContext(ctx, "add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
+	o.verifiers[idHash] = entry
+	return verifier, nil
+}
+
+func (o *Service) registerSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
+	if signer == nil {
+		// Nothing to do here
+		return nil
+	}
+
+	idHash := identity.UniqueID()
+	logger.DebugfContext(ctx, "register signer and verifier [%s]:[%s][%s]", idHash, logging.Identifier(signer), logging.Identifier(verifier))
+	// First check with read lock
+	o.sync.RLock()
+	s, ok := o.signers[idHash]
+	o.sync.RUnlock()
+	if ok {
+		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
+		return nil
+	}
+
+	// write lock
+	o.sync.Lock()
+
+	// check again the cache
+	s, ok = o.signers[idHash]
+	if ok {
+		o.sync.Unlock()
+		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
+		return nil
+	}
+
+	entry := SignerEntry{Signer: signer}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		entry.DebugStack = debug.Stack()
+	}
+	o.signers[idHash] = entry
+	o.sync.Unlock()
+
+	// store, if a failure happens then remove the entry
+	logger.DebugfContext(ctx, "checks done, store signer info")
+	if err := o.storage.StoreSignerInfo(ctx, identity, signerInfo); err != nil {
+		o.deleteSigner(idHash)
+		return errors.Wrap(err, "failed to store entry in storage for the passed signer")
+	}
+
+	return nil
+}
+
 func (o *Service) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
 	// check again the cache
 	entry, ok := o.signers[idHash]
@@ -277,50 +333,6 @@ func (o *Service) deserializeSigner(ctx context.Context, identity driver.Identit
 		return nil, errors.Wrapf(err, "failed getting signer for identity [%s]", ro.Identity)
 	}
 	return signer, nil
-}
-
-func (o *Service) GetSignerInfo(ctx context.Context, identity driver.Identity) ([]byte, error) {
-	return o.storage.GetSignerInfo(ctx, identity)
-}
-
-func (o *Service) GetVerifier(ctx context.Context, identity driver.Identity) (driver.Verifier, error) {
-	idHash := identity.UniqueID()
-
-	// check cache
-	o.sync.RLock()
-	entry, ok := o.verifiers[idHash]
-	o.sync.RUnlock()
-	if ok {
-		return entry.Verifier, nil
-	}
-
-	o.sync.Lock()
-	defer o.sync.Unlock()
-
-	// check cache again
-	entry, ok = o.verifiers[idHash]
-	if ok {
-		return entry.Verifier, nil
-	}
-
-	// ask the deserializer
-	if o.deserializer == nil {
-		return nil, errors.Errorf("cannot find verifier for [%s], no deserializer set", identity)
-	}
-	var err error
-	verifier, err := o.deserializer.DeserializeVerifier(ctx, identity)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed deserializing identity for verifier %v", identity)
-	}
-
-	// store entry
-	entry = VerifierEntry{Verifier: verifier}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
-	}
-	logger.DebugfContext(ctx, "add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
-	o.verifiers[idHash] = entry
-	return verifier, nil
 }
 
 func (o *Service) deleteSigner(id string) {
