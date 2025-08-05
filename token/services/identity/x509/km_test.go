@@ -53,7 +53,7 @@ func TestDeserializer(t *testing.T) {
 		// check again a verifying identity
 		verifyingIdentityDescriptor, err := verifyingIdentityProvider.Identity(t.Context(), nil)
 		assert.NoError(t, err)
-		verifier2, err := provider.DeserializeVerifier(t.Context(), verifyingIdentity)
+		verifier2, err := provider.DeserializeVerifier(t.Context(), verifyingIdentityDescriptor.Identity)
 		assert.NoError(t, err)
 		err = verifier2.Verify([]byte("hello worlds"), sigma)
 		assert.NoError(t, err)
