@@ -34,4 +34,6 @@ type IdentityProvider interface {
 	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error
 
 	Copy(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error
+
+	RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *IdentityDescriptor, alias driver.Identity) error
 }

@@ -82,6 +82,27 @@ func NewProvider(
 	}
 }
 
+func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *idriver.IdentityDescriptor, alias driver.Identity) error {
+	id := identityDescriptor.Identity
+	if err := p.RegisterSigner(
+		ctx,
+		id,
+		identityDescriptor.Signer,
+		identityDescriptor.Verifier,
+		identityDescriptor.SignerInfo,
+	); err != nil {
+		return errors2.Wrapf(err, "failed to register signer")
+	}
+	if err := p.RegisterAuditInfo(ctx, id, identityDescriptor.AuditInfo); err != nil {
+		return errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
+	}
+	// typedIdentity has id's signer and verifier
+	if err := p.Copy(ctx, id, alias); err != nil {
+		return errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", alias, id)
+	}
+	return nil
+}
+
 func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error {
 	return p.SigService.RegisterVerifier(ctx, identity, v)
 }

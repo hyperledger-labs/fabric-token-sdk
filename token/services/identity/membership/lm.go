@@ -508,22 +508,9 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 	}
 
 	// register the audit info
-	logger.DebugfContext(ctx, "register signer, audit info, and copy")
-	if err := i.IdentityProvider.RegisterSigner(
-		ctx,
-		identityDescriptor.Identity,
-		identityDescriptor.Signer,
-		identityDescriptor.Verifier,
-		identityDescriptor.SignerInfo,
-	); err != nil {
-		return nil, nil, errors2.Wrapf(err, "failed to register signer")
-	}
-	if err := i.IdentityProvider.RegisterAuditInfo(ctx, id, ai); err != nil {
-		return nil, nil, errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
-	}
-	// typedIdentity has id's signer and verifier
-	if err := i.IdentityProvider.Copy(ctx, id, typedIdentity); err != nil {
-		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
+	logger.DebugfContext(ctx, "register identity descriptor")
+	if err := i.IdentityProvider.RegisterIdentityDescriptor(ctx, identityDescriptor, typedIdentity); err != nil {
+		return nil, nil, errors2.Wrapf(err, "failed to register identity descriptor for [%s][%s]", id, typedIdentity)
 	}
 
 	logger.DebugfContext(ctx, "bind to root identity")
@@ -531,7 +518,7 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 	}
 	logger.DebugfContext(ctx, "bind wrapped")
-	if err := i.IdentityProvider.Bind(ctx, id, typedIdentity); err != nil {
+	if err := i.IdentityProvider.Bind(ctx, i.RootIdentity, typedIdentity); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 	}
 	return typedIdentity, ai, nil
