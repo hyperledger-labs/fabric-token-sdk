@@ -320,6 +320,7 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 		return errors.Wrapf(err, "failed to store signer info for descriptor's identity")
 	}
 	if exists {
+		CloseFunc(tx.Rollback)
 		// no need to continue
 		return nil
 	}
