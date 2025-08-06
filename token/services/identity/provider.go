@@ -103,7 +103,7 @@ func NewProvider(
 func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *idriver.IdentityDescriptor, alias driver.Identity) error {
 	// register in the storage
 	if err := p.Storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
-		return errors2.Wrapf(err, "failed to register identity descriptor")
+		return errors.Wrapf(err, "failed to register identity descriptor")
 	}
 
 	// update caches
