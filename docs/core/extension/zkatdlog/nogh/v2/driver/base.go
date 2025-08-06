@@ -16,12 +16,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -67,7 +67,7 @@ func (d *base) newWalletService(
 ) (*wallet.Service, error) {
 	pp := publicParams.(*v2.PublicParams)
 	roles := wallet.NewRoles()
-	deserializerManager := sig.NewMultiplexDeserializer()
+	deserializerManager := deserializer.NewMultiplexDeserializer()
 	tmsID := tmsConfig.ID()
 	identityDB, err := storageProvider.IdentityStore(tmsID)
 	if err != nil {

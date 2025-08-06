@@ -21,8 +21,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/stretchr/testify/assert"
@@ -133,7 +133,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
 	storage := kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"})
-	identityProvider := identity.NewProvider(logging.MustGetLogger(), storage, sig.NewMultiplexDeserializer(), nil, nil)
+	identityProvider := identity.NewProvider(logging.MustGetLogger(), storage, deserializer.NewMultiplexDeserializer(), nil, nil)
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 	tracker := kvs2.NewTrackedMemoryFrom(kvs)
@@ -439,7 +439,7 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	assert.NoError(t, err)
 
 	// this must work
-	des := sig.NewMultiplexDeserializer()
+	des := deserializer.NewMultiplexDeserializer()
 	des.AddDeserializer(keyManager)
 	des.AddDeserializer(keyManager2)
 	signer, err = des.DeserializeSigner(t.Context(), id)
