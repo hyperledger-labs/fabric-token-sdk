@@ -25,7 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 )
 
@@ -34,6 +34,10 @@ type cache[T any] interface {
 	GetOrLoad(key string, loader func() (T, error)) (T, bool, error)
 	Add(key string, value T)
 	Delete(key string)
+}
+
+type tx interface {
+	ExecContext(ctx context.Context, query string, args ...common3.Param) (sql.Result, error)
 }
 
 type identityTables struct {
@@ -115,7 +119,7 @@ func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.Identit
 	return err
 }
 
-func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (driver3.IdentityConfigurationIterator, error) {
+func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (idriver.IdentityConfigurationIterator, error) {
 	query, args := q.Select().
 		FieldsByName("id", "url", "conf", "raw").
 		From(q.Table(db.table.IdentityConfigurations)).
@@ -218,28 +222,7 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 }
 
 func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) error {
-	h := token.Identity(id).String()
-
-	logger.DebugfContext(ctx, "store signer info for [%s]", h)
-	query, args := q.InsertInto(db.table.Signers).
-		Fields("identity_hash", "identity", "info").
-		Row(h, id, info).
-		Format()
-
-	logger.Debug(query, h, hash.Hashable(info))
-	_, err := db.writeDB.ExecContext(ctx, query, args...)
-	if err != nil {
-		if exists, err2 := db.SignerInfoExists(ctx, id); err2 == nil && exists {
-			logger.DebugfContext(ctx, "signer info [%s] exists, no error to return", h)
-		} else {
-			return err
-		}
-	}
-
-	db.signerInfoCache.Add(h, true)
-
-	logger.DebugfContext(ctx, "store signer info done")
-	return nil
+	return db.storeSignerInfo(ctx, db.writeDB, id, info)
 }
 
 func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriver.Identity) ([]string, error) {
@@ -317,6 +300,39 @@ func (db *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]
 	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
+func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descriptor *idriver.IdentityDescriptor, alias tdriver.Identity) error {
+	if descriptor == nil {
+		return errors.New("identity descriptor is nil")
+	}
+	tx, err := db.writeDB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	if err := db.storeSignerInfo(ctx, tx, descriptor.Identity, descriptor.SignerInfo); err != nil {
+		CloseFunc(tx.Rollback)
+		return err
+	}
+
+	if err := db.storeIdentityData(ctx, tx, descriptor.Identity, descriptor.AuditInfo, nil, nil); err != nil {
+		CloseFunc(tx.Rollback)
+		return err
+	}
+
+	if !descriptor.Identity.Equal(alias) {
+		if err := db.storeSignerInfo(ctx, tx, alias, descriptor.SignerInfo); err != nil {
+			CloseFunc(tx.Rollback)
+			return err
+		}
+		if err := db.storeIdentityData(ctx, tx, alias, descriptor.AuditInfo, nil, nil); err != nil {
+			CloseFunc(tx.Rollback)
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (db *IdentityStore) Close() error {
 	return common2.Close(db.readDB, db.writeDB)
 }
@@ -361,4 +377,60 @@ func (db *IdentityStore) GetSchema() string {
 		db.table.Signers,
 		db.table.Signers, db.table.Signers,
 	)
+}
+
+func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, id, info []byte) error {
+	h := token.Identity(id).String()
+
+	logger.DebugfContext(ctx, "store signer info for [%s]", h)
+	query, args := q.InsertInto(db.table.Signers).
+		Fields("identity_hash", "identity", "info").
+		Row(h, id, info).
+		Format()
+
+	logger.Debug(query, h, hash.Hashable(info))
+	_, err := tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		if exists, err2 := db.SignerInfoExists(ctx, id); err2 == nil && exists {
+			logger.DebugfContext(ctx, "signer info [%s] exists, no error to return", h)
+		} else {
+			return err
+		}
+	}
+
+	db.signerInfoCache.Add(h, true)
+
+	logger.DebugfContext(ctx, "store signer info done")
+	return nil
+}
+
+func (db *IdentityStore) storeIdentityData(ctx context.Context, tx tx, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+	logger.DebugfContext(ctx, "store identity data for [%s]", view.Identity(id))
+	h := token.Identity(id).String()
+	query, args := q.InsertInto(db.table.IdentityInfo).
+		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
+		Row(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
+		Format()
+	logger.Debug(query, args)
+
+	_, err := tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		// does the record already exists?
+		logger.DebugfContext(ctx, "store identity data failed, check if audit info exists")
+		auditInfo, err2 := db.GetAuditInfo(ctx, id)
+		if err2 != nil {
+			return err
+		}
+		if !bytes.Equal(auditInfo, identityAudit) {
+			return errors.Wrapf(err, "different audit info stored for [%s], [%s]!=[%s]", h, hash.Hashable(auditInfo), hash.Hashable(identityAudit))
+		}
+		logger.DebugfContext(ctx, "audit info exists")
+		return nil
+	}
+
+	logger.DebugfContext(ctx, "audit info cache update")
+	db.auditInfoCache.Add(h, identityAudit)
+	logger.DebugfContext(ctx, "audit info cache update done")
+
+	return err
 }

@@ -63,6 +63,7 @@ type IdentityStoreService interface {
 	SignerInfoExists(ctx context.Context, id []byte) (bool, error)
 	// GetSignerInfo returns the signer info bound to the given identity
 	GetSignerInfo(ctx context.Context, id []byte) ([]byte, error)
+	RegisterIdentityDescriptor(ctx context.Context, descriptor *IdentityDescriptor, alias driver.Identity) error
 	// Close closes the store
 	Close() error
 }

@@ -41,6 +41,7 @@ type storage interface {
 	GetExistingSignerInfo(ctx context.Context, ids ...driver.Identity) ([]string, error)
 	SignerInfoExists(ctx context.Context, id []byte) (bool, error)
 	GetSignerInfo(ctx context.Context, identity []byte) ([]byte, error)
+	RegisterIdentityDescriptor(ctx context.Context, descriptor *idriver.IdentityDescriptor, alias driver.Identity) error
 }
 
 type cache[T any] interface {
@@ -100,23 +101,14 @@ func NewProvider(
 }
 
 func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *idriver.IdentityDescriptor, alias driver.Identity) error {
-	id := identityDescriptor.Identity
-	if err := p.RegisterSigner(
-		ctx,
-		id,
-		identityDescriptor.Signer,
-		identityDescriptor.Verifier,
-		identityDescriptor.SignerInfo,
-	); err != nil {
-		return errors2.Wrapf(err, "failed to register signer")
+	// register in the storage
+	if err := p.Storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
+		return errors2.Wrapf(err, "failed to register identity descriptor")
 	}
-	if err := p.RegisterAuditInfo(ctx, id, identityDescriptor.AuditInfo); err != nil {
-		return errors2.Wrapf(err, "failed to register audit info for identity [%s]", id)
-	}
-	// typedIdentity has id's signer and verifier
-	if err := p.Copy(ctx, id, alias); err != nil {
-		return errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", alias, id)
-	}
+
+	// update caches
+	p.updateCaches(identityDescriptor, alias)
+
 	return nil
 }
 
@@ -460,4 +452,33 @@ func (p *Provider) deserializeSigner(ctx context.Context, identity driver.Identi
 
 func (p *Provider) deleteSigner(id string) {
 	p.signers.Delete(id)
+}
+
+func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias driver.Identity) {
+	id := descriptor.Identity.UniqueID()
+	aliasID := alias.UniqueID()
+
+	// isMe?
+	{
+		p.isMeCache.Add(id, true)
+	}
+
+	// signers
+	{
+		entry := &SignerEntry{Signer: descriptor.Signer}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			entry.DebugStack = debug.Stack()
+		}
+		p.signers.Add(id, entry)
+		p.signers.Add(aliasID, entry)
+	}
+	// verifiers
+	{
+		entry := &VerifierEntry{Verifier: descriptor.Verifier}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			entry.DebugStack = debug.Stack()
+		}
+		p.verifiers.Add(id, entry)
+		p.verifiers.Add(aliasID, entry)
+	}
 }
