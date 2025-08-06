@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/stretchr/testify/assert"
 )
@@ -46,7 +45,6 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 	t.Helper()
 	backend, err := kvs.NewInMemory()
 	assert.NoError(t, err)
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs.NewIdentityStore(backend, token.TMSID{Network: "pineapple"}))
 	config, err := crypto.NewConfig(configPath)
 	assert.NoError(t, err)
 	keyStore, err := crypto.NewKeyStore(curveID, kvs.Keystore(backend))
@@ -56,7 +54,6 @@ func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.Cur
 		config.Ipk,
 		curveID,
 		keyStore,
-		sigService,
 		&mockConfig{},
 		0,
 		false,

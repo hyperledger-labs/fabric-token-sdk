@@ -29,7 +29,6 @@ type KeyManagerProvider struct {
 	issuerPublicKey []byte
 	curveID         math.CurveID
 	keyStore        bccsp.KeyStore
-	signerService   SignerService
 	config          idriver.Config
 	cacheSize       int
 	metricsProvider metrics.Provider
@@ -42,7 +41,6 @@ func NewKeyManagerProvider(
 	issuerPublicKey []byte,
 	curveID math.CurveID,
 	keyStore bccsp.KeyStore,
-	signerService SignerService,
 	config idriver.Config,
 	cacheSize int,
 	ignoreVerifyOnlyWallet bool,
@@ -52,7 +50,6 @@ func NewKeyManagerProvider(
 		issuerPublicKey:        issuerPublicKey,
 		curveID:                curveID,
 		keyStore:               keyStore,
-		signerService:          signerService,
 		config:                 config,
 		cacheSize:              cacheSize,
 		ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet,

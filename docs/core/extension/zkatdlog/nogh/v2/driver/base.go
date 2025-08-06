@@ -107,7 +107,6 @@ func (d *base) newWalletService(
 			key.PublicKey,
 			key.Curve,
 			keyStore,
-			sigService,
 			identityConfig,
 			identityConfig.DefaultCacheSize(),
 			ignoreRemote,

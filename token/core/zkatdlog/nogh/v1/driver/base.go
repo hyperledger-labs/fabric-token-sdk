@@ -103,16 +103,7 @@ func (d *base) newWalletService(
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 		}
-		kmp := idemix.NewKeyManagerProvider(
-			key.PublicKey,
-			key.Curve,
-			keyStore,
-			sigService,
-			identityConfig,
-			identityConfig.DefaultCacheSize(),
-			ignoreRemote,
-			metricsProvider,
-		)
+		kmp := idemix.NewKeyManagerProvider(key.PublicKey, key.Curve, keyStore, identityConfig, identityConfig.DefaultCacheSize(), ignoreRemote, metricsProvider)
 		kmps = append(kmps, kmp)
 	}
 	keyStore := x509.NewKeyStore(baseKeyStore)
