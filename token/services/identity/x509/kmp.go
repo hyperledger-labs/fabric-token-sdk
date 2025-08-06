@@ -31,17 +31,15 @@ func NewKeyStore(kvs idriver.Keystore) crypto.KeyStore {
 }
 
 type KeyManagerProvider struct {
-	config        idriver.Config
-	signerService idriver.SigService
-	keyStore      crypto.KeyStore
+	config   idriver.Config
+	keyStore crypto.KeyStore
 	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
 	ignoreVerifyOnlyWallet bool
 }
 
-func NewKeyManagerProvider(config idriver.Config, signerService idriver.SigService, keyStore crypto.KeyStore, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
+func NewKeyManagerProvider(config idriver.Config, keyStore crypto.KeyStore, ignoreVerifyOnlyWallet bool) *KeyManagerProvider {
 	return &KeyManagerProvider{
 		config:                 config,
-		signerService:          signerService,
 		ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet,
 		keyStore:               keyStore,
 	}

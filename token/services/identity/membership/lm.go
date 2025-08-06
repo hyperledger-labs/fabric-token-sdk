@@ -514,12 +514,8 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 	}
 
 	logger.DebugfContext(ctx, "bind to root identity")
-	if err := i.IdentityProvider.Bind(ctx, i.RootIdentity, id); err != nil {
+	if err := i.IdentityProvider.Bind(ctx, i.RootIdentity, id, typedIdentity); err != nil {
 		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
-	}
-	logger.DebugfContext(ctx, "bind wrapped")
-	if err := i.IdentityProvider.Bind(ctx, i.RootIdentity, typedIdentity); err != nil {
-		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", typedIdentity, id)
 	}
 	return typedIdentity, ai, nil
 }

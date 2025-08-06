@@ -253,14 +253,15 @@ func (p *Provider) Copy(ctx context.Context, longTerm driver.Identity, ephemeral
 	return nil
 }
 
-func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error {
-	if ephemeral.Equal(longTerm) {
-		// no action required
-		return nil
-	}
-
-	if err := p.Binder.Bind(ctx, longTerm, ephemeral); err != nil {
-		return err
+func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeralIdentities ...driver.Identity) error {
+	for _, identity := range ephemeralIdentities {
+		if identity.Equal(longTerm) {
+			// no action required
+			continue
+		}
+		if err := p.Binder.Bind(ctx, longTerm, identity); err != nil {
+			return err
+		}
 	}
 	return nil
 }

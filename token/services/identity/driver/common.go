@@ -12,26 +12,16 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-type SigService interface {
-	IsMe(context.Context, driver.Identity) bool
-	RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
-	RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error
-}
-
 type NetworkBinderService interface {
 	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error
 }
 
 type IdentityProvider interface {
-	SigService
-	// RegisterAuditInfo binds the passed audit info to the passed identity
-	RegisterAuditInfo(ctx context.Context, identity driver.Identity, info []byte) error
-
-	// GetAuditInfo returns the audit info associated to the passed identity, nil if not found
-	GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error)
+	IsMe(context.Context, driver.Identity) bool
 
 	// Bind an ephemeral identity to another identity
-	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error
+	Bind(ctx context.Context, longTerm driver.Identity, ephemeralIdentities ...driver.Identity) error
 
+	// RegisterIdentityDescriptor register the passed identity descriptor with an alias
 	RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *IdentityDescriptor, alias driver.Identity) error
 }
