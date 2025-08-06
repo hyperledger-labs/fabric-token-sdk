@@ -11,7 +11,7 @@ import (
 	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"gopkg.in/yaml.v2"
 )
 

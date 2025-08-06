@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 type Backend interface {
@@ -63,7 +63,7 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 	s := session.JSON(context)
 	var cr *CertificationRequest
 	if err := s.Receive(&cr); err != nil {
-		return nil, errors.WithMessage(err, "failed receiving certification request")
+		return nil, errors.WithMessagef(err, "failed receiving certification request")
 	}
 	logger.Debugf("received certification request [%v]", cr)
 

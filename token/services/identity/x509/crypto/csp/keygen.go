@@ -11,8 +11,8 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger/fabric-lib-go/bccsp"
-	"github.com/pkg/errors"
 )
 
 type ecdsaKeyGenerator struct {

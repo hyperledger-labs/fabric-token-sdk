@@ -10,8 +10,8 @@ import (
 	"context"
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/pkg/errors"
 )
 
 type DeserializedIdentity struct {
@@ -61,7 +61,7 @@ func (d *Deserializer) DeserializeAgainstNymEID(identity []byte, nymEID []byte) 
 		&bccsp.IdemixNymPublicKeyImportOpts{Temporary: true},
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to import nym public key")
+		return nil, errors.WithMessagef(err, "failed to import nym public key")
 	}
 
 	idemix := d

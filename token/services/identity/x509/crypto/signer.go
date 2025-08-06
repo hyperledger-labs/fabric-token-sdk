@@ -10,8 +10,8 @@ import (
 	"crypto"
 	"io"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger/fabric-lib-go/bccsp"
-	"github.com/pkg/errors"
 )
 
 // SKIBasedSigner implements a crypto.Signer based on the bccsp

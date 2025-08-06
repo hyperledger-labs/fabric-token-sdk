@@ -9,8 +9,8 @@ package tokens
 import (
 	"encoding/asn1"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/driver"
-	"github.com/pkg/errors"
 )
 
 // TypedToken encodes a token with a type.

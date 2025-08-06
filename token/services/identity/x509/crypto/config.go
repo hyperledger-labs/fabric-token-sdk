@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/pkcs11"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/protos-go/config"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 )
 
 type (

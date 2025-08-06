@@ -9,8 +9,8 @@ package csp
 import (
 	"encoding/hex"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger/fabric-lib-go/bccsp"
-	"github.com/pkg/errors"
 )
 
 type serializer interface {
@@ -57,14 +57,14 @@ func (ks *KVSStore) GetKey(ski []byte) (bccsp.Key, error) {
 		privateKey := &ecdsaPrivateKey{}
 		err = privateKey.unmarshall(value.Raw)
 		if err != nil {
-			return nil, errors.WithMessage(err, "could not unmarshall ECDSA private key")
+			return nil, errors.WithMessagef(err, "could not unmarshall ECDSA private key")
 		}
 		return privateKey, nil
 	case "ecdsaPublicKey":
 		publicKey := &ecdsaPublicKey{}
 		err = publicKey.unmarshall(value.Raw)
 		if err != nil {
-			return nil, errors.WithMessage(err, "could not unmarshall ECDSA public key")
+			return nil, errors.WithMessagef(err, "could not unmarshall ECDSA public key")
 		}
 		return publicKey, nil
 	default:

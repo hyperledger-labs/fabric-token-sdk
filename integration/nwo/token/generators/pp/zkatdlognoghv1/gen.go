@@ -14,6 +14,7 @@ import (
 
 	msp "github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
@@ -21,7 +22,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
-	"github.com/pkg/errors"
 )
 
 type DLogPublicParamsGenerator struct {
@@ -77,11 +77,11 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			// Build an MSP Identity
 			km, _, err := x509.NewKeyManager(auditor.Path, nil, auditor.Opts, keyStore)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 km")
+				return nil, errors.WithMessagef(err, "failed to create x509 km")
 			}
 			id, _, err := km.Identity(context.Background(), nil)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
+				return nil, errors.WithMessagef(err, "failed to get identity")
 			}
 			if tms.Auditors[0] == auditor.ID {
 				wrap, err := identity.WrapWithType(x509.IdentityType, id)
@@ -102,11 +102,11 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			// Build an MSP Identity
 			km, _, err := x509.NewKeyManager(issuer.Path, nil, issuer.Opts, keyStore)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 km")
+				return nil, errors.WithMessagef(err, "failed to create x509 km")
 			}
 			id, _, err := km.Identity(context.Background(), nil)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
+				return nil, errors.WithMessagef(err, "failed to get identity")
 			}
 			if issuersSet.Contains(issuer.ID) {
 				wrap, err := identity.WrapWithType(x509.IdentityType, id)

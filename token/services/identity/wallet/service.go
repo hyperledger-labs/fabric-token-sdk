@@ -10,12 +10,12 @@ import (
 	"context"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -99,7 +99,7 @@ func (s *Service) GetEIDAndRH(ctx context.Context, identity driver.Identity, aud
 
 func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.RecipientData) error {
 	if data == nil {
-		return errors.WithStack(ErrNilRecipientData)
+		return errors.Wrapf(ErrNilRecipientData, "invalid recipient data")
 	}
 
 	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.

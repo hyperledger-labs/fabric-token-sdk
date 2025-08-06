@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -22,7 +23,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
-	"github.com/pkg/errors"
 )
 
 type TxAuditor struct {
@@ -139,7 +139,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		session, err = a.startRemote(context)
 	}
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed starting auditing session")
+		return nil, errors.WithMessagef(err, "failed starting auditing session")
 	}
 
 	// Receive signature
@@ -149,7 +149,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
 		logger.ErrorfContext(context.Context(), "failed to read audit event: %s", err)
-		return nil, errors.WithMessage(err, "failed to read audit event")
+		return nil, errors.WithMessagef(err, "failed to read audit event")
 	}
 	logger.DebugfContext(context.Context(), "reply received from %s", a.tx.Opts.Auditor)
 

@@ -11,13 +11,13 @@ import (
 	"fmt"
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -117,11 +117,11 @@ func NewKeyManagerWithSchema(
 		&bccsp.IdemixRevocationKeyGenOpts{Temporary: true},
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to generate revocation key")
+		return nil, errors.WithMessagef(err, "failed to generate revocation key")
 	}
 	RevocationPublicKey, err := RevocationKey.PublicKey()
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to extract revocation public key")
+		return nil, errors.WithMessagef(err, "failed to extract revocation public key")
 	}
 
 	if conf.Signer == nil {
@@ -147,7 +147,7 @@ func NewKeyManagerWithSchema(
 			// Import User secret key
 			userKey, err = csp.KeyImport(conf.Signer.Sk, &bccsp.IdemixUserSecretKeyImportOpts{})
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed importing signer secret key")
+				return nil, errors.WithMessagef(err, "failed importing signer secret key")
 			}
 		}
 	}
@@ -172,7 +172,7 @@ func NewKeyManagerWithSchema(
 			},
 		)
 		if err != nil || !valid {
-			return nil, errors.WithMessage(err, "credential is not cryptographically valid")
+			return nil, errors.WithMessagef(err, "credential is not cryptographically valid")
 		}
 		logger.Debugf("the signer contains key material, load it, done.")
 	} else {
@@ -234,7 +234,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 		},
 	)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "failed deriving nym")
+		return nil, nil, errors.WithMessagef(err, "failed deriving nym")
 	}
 	nymPublicKey, err := nymKey.PublicKey()
 	if err != nil {
@@ -275,14 +275,14 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 		sigOpts,
 	)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "failed to setup cryptographic proof of identity")
+		return nil, nil, errors.WithMessagef(err, "failed to setup cryptographic proof of identity")
 	}
 
 	// Set up default signer
 	logger.DebugfContext(ctx, "setup default signer")
 	id, err := crypto2.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "failed to create identity")
+		return nil, nil, errors.WithMessagef(err, "failed to create identity")
 	}
 	sID := &crypto2.SigningIdentity{
 		CSP:          p.Csp,
@@ -293,13 +293,13 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 	}
 	raw, err := sID.Serialize()
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "failed to serialize identity")
+		return nil, nil, errors.WithMessagef(err, "failed to serialize identity")
 	}
 
 	if p.SignerService != nil {
 		logger.DebugfContext(ctx, "register signer for identity")
 		if err := p.SignerService.RegisterSigner(ctx, raw, sID, sID, nil); err != nil {
-			return nil, nil, errors.WithMessage(err, "failed to register signer")
+			return nil, nil, errors.WithMessagef(err, "failed to register signer")
 		}
 	}
 
@@ -326,7 +326,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 		logger.DebugfContext(ctx, "new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(rh))
 		infoRaw, err = auditInfo.Bytes()
 		if err != nil {
-			return nil, nil, errors.WithMessage(err, "failed to serialize auditInfo")
+			return nil, nil, errors.WithMessagef(err, "failed to serialize auditInfo")
 		}
 	default:
 		return nil, nil, errors.Errorf("unsupported signature type [%d]", sigType)

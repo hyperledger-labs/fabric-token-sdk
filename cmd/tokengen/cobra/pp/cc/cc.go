@@ -15,7 +15,7 @@ import (
 	"text/template"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 // GeneratePackage generates the chaincode package for the given raw public parameters

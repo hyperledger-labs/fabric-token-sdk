@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/onsi/gomega"
-	"github.com/pkg/errors"
 )
 
 type (

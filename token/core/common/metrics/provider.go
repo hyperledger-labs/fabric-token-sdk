@@ -9,9 +9,9 @@ package metrics
 import (
 	"strings"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -59,7 +59,7 @@ func recoverFromDuplicate(recovered any) {
 		// Registered successfully
 		return
 	}
-	if err, ok := recovered.(error); ok && errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+	if err, ok := recovered.(error); ok && errors.Is(err, &prometheus.AlreadyRegisteredError{}) {
 		// Different TMS's try to register the same metric
 		logger.Warnf("Recovered from panic: %v\n", err)
 		return

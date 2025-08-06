@@ -13,10 +13,10 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/pkg/errors"
 )
 
 type CallbackFunc func(tms driver.TokenManagerService, network, channel, namespace string) error
@@ -150,7 +150,7 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 		// unload the old service, if set
 		if service != nil {
 			if err := service.Done(); err != nil {
-				return errors.WithMessage(err, "failed to unload token service")
+				return errors.WithMessagef(err, "failed to unload token service")
 			}
 		}
 		// register the new service
@@ -162,7 +162,7 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 func (m *TMSProvider) Configurations() ([]driver.Configuration, error) {
 	tmsConfigs, err := m.configProvider.Configurations()
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get token managers")
+		return nil, errors.WithMessagef(err, "failed to get token managers")
 	}
 	res := make([]driver.Configuration, len(tmsConfigs))
 	copy(res, tmsConfigs)
@@ -232,7 +232,7 @@ func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {
 func (m *TMSProvider) ppFromStorage(opts *driver.ServiceOptions) ([]byte, error) {
 	ppRaw, err := m.publicParametersStorage.PublicParams(context.Background(), opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to load public params from the publicParametersStorage")
+		return nil, errors.WithMessagef(err, "failed to load public params from the publicParametersStorage")
 	}
 	if len(ppRaw) == 0 {
 		return nil, errors.Errorf("no public parames found in publicParametersStorage")
@@ -247,7 +247,7 @@ func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) 
 	}
 	cPP := &PublicParameters{}
 	if err := tmsConfig.UnmarshalKey("publicParameters", cPP); err != nil {
-		return nil, errors.WithMessage(err, "failed to unmarshal public parameters")
+		return nil, errors.WithMessagef(err, "failed to unmarshal public parameters")
 	}
 	if len(cPP.Path) != 0 {
 		m.logger.Infof("load public parameters from [%s]...", cPP.Path)
@@ -264,7 +264,7 @@ func (m *TMSProvider) ppFromFetcher(opts *driver.ServiceOptions) ([]byte, error)
 	if opts.PublicParamsFetcher != nil {
 		ppRaw, err := opts.PublicParamsFetcher.Fetch()
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed fetching public parameters")
+			return nil, errors.WithMessagef(err, "failed fetching public parameters")
 		}
 		if len(ppRaw) == 0 {
 			return nil, errors.Errorf("no public parames found in publicParametersStorage")

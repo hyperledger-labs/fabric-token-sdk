@@ -9,6 +9,7 @@ package upgrade_test
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
@@ -16,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 

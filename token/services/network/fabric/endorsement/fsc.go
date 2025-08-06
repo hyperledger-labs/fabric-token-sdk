@@ -9,13 +9,13 @@ package endorsement
 import (
 	"math/rand"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -76,7 +76,7 @@ func NewFSCService(
 
 	var endorserIDs []string
 	if err := configuration.UnmarshalKey(EndorsersKey, &endorserIDs); err != nil {
-		return nil, errors.WithMessage(err, "failed to load endorsers")
+		return nil, errors.WithMessagef(err, "failed to load endorsers")
 	}
 	logger.Debugf("defined [%s] as endorsers for [%s]", endorserIDs, tmsID)
 	if len(endorserIDs) == 0 {

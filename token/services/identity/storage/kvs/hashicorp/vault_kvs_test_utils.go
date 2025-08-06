@@ -19,7 +19,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	vault "github.com/hashicorp/vault/api"
 	docker2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/docker"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 const (

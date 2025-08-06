@@ -9,6 +9,7 @@ package wallet
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -16,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 type OwnerTokenVault interface {
@@ -336,7 +336,7 @@ func (w *AnonymousOwnerWallet) GetRecipientData(ctx context.Context) (*driver.Re
 
 func (w *AnonymousOwnerWallet) RegisterRecipient(ctx context.Context, data *driver.RecipientData) error {
 	if data == nil {
-		return errors.WithStack(ErrNilRecipientData)
+		return errors.Wrapf(ErrNilRecipientData, "invalid recipient data")
 	}
 	w.Logger.DebugfContext(ctx, "register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
 

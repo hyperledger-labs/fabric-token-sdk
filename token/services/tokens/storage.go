@@ -9,13 +9,12 @@ package tokens
 import (
 	"context"
 
-	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -148,7 +147,7 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 		Auditor:        tta.flags.Auditor,
 		Issuer:         tta.flags.Issuer,
 	}, tta.owners)
-	if err != nil && !errors2.HasCause(err, driver.UniqueKeyViolation) {
+	if err != nil && !errors.HasCause(err, driver.UniqueKeyViolation) {
 		return errors.Wrapf(err, "cannot store token in db")
 	}
 

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -23,7 +24,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/multisig"
-	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -157,7 +157,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		validator,
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create token service")
+		return nil, errors.WithMessagef(err, "failed to create token service")
 	}
 	return service, nil
 }

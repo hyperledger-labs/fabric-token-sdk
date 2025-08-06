@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	"github.com/pkg/errors"
 )
 
 type PublicParamsDeserializer[T driver.PublicParameters] interface {
@@ -42,7 +42,7 @@ func NewPublicParamsManager[T driver.PublicParameters](
 		return nil, err
 	}
 	if err := pp.Validate(); err != nil {
-		return nil, errors.WithMessage(err, "invalid public parameters")
+		return nil, errors.WithMessagef(err, "invalid public parameters")
 	}
 	ppm.publicParameters = pp
 	ppm.ppHash = utils.Hashable(ppRaw).Raw()
@@ -52,7 +52,7 @@ func NewPublicParamsManager[T driver.PublicParameters](
 
 func NewPublicParamsManagerFromParams[T driver.PublicParameters](pp T) (*PublicParamsManager[T], error) {
 	if err := pp.Validate(); err != nil {
-		return nil, errors.WithMessage(err, "invalid public parameters")
+		return nil, errors.WithMessagef(err, "invalid public parameters")
 	}
 	return &PublicParamsManager[T]{
 		publicParameters: pp,

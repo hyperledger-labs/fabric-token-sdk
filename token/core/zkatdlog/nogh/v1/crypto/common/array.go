@@ -11,7 +11,7 @@ import (
 	"encoding/hex"
 
 	math "github.com/IBM/mathlib"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 // Separator is used to delimit to end an array of bytes.

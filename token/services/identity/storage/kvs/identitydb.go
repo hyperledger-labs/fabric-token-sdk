@@ -11,12 +11,12 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -72,7 +72,7 @@ func (s *IdentityStore) IteratorConfigurations(ctx context.Context, configuratio
 		},
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get registered identities from kvs")
+		return nil, errors.WithMessagef(err, "failed to get registered identities from kvs")
 	}
 	return &IdentityConfigurationsIterator{Iterator: it}, nil
 }

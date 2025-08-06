@@ -10,6 +10,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
@@ -20,7 +21,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 type IssueService struct {
@@ -148,7 +148,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	for i, owner := range owners {
 		raw, err := zkOutputsMetadata[i].Serialize()
 		if err != nil {
-			return nil, nil, errors.WithMessage(err, "failed serializing token info")
+			return nil, nil, errors.WithMessagef(err, "failed serializing token info")
 		}
 		auditInfo, err := s.Deserializer.GetAuditInfo(ctx, owner, s.WalletService)
 		if err != nil {
