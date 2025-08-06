@@ -212,7 +212,19 @@ func (s *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]b
 }
 
 func (s *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descriptor *idriver.IdentityDescriptor, alias tdriver.Identity) error {
-	return errors.New("not implemented")
+	if err := s.StoreSignerInfo(ctx, descriptor.Identity, descriptor.SignerInfo); err != nil {
+		return err
+	}
+	if err := s.StoreSignerInfo(ctx, alias, descriptor.SignerInfo); err != nil {
+		return err
+	}
+	if err := s.StoreIdentityData(ctx, descriptor.Identity, descriptor.AuditInfo, nil, nil); err != nil {
+		return err
+	}
+	if err := s.StoreIdentityData(ctx, alias, descriptor.AuditInfo, nil, nil); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *IdentityStore) Close() error {

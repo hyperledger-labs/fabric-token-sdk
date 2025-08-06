@@ -300,7 +300,7 @@ func (db *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]
 	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
-func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descriptor *idriver.IdentityDescriptor, alias tdriver.Identity) error {
+func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descriptor *idriver.IdentityDescriptor, alias tdriver.Identity) (err error) {
 	if descriptor == nil {
 		return errors.New("identity descriptor is nil")
 	}
@@ -308,28 +308,32 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err != nil {
+			CloseFunc(tx.Rollback)
+		}
+	}()
 
-	if err := db.storeSignerInfo(ctx, tx, descriptor.Identity, descriptor.SignerInfo); err != nil {
-		CloseFunc(tx.Rollback)
-		return err
+	err = db.storeSignerInfo(ctx, tx, descriptor.Identity, descriptor.SignerInfo)
+	if err != nil {
+		return errors.Wrapf(err, "failed to store signer info for descriptor's identity")
 	}
 
-	if err := db.storeIdentityData(ctx, tx, descriptor.Identity, descriptor.AuditInfo, nil, nil); err != nil {
-		CloseFunc(tx.Rollback)
-		return err
+	err = db.storeIdentityData(ctx, tx, descriptor.Identity, descriptor.AuditInfo, nil, nil)
+	if err != nil {
+		return errors.Wrapf(err, "failed to store audit info for descriptor's identity")
 	}
 
 	if !descriptor.Identity.Equal(alias) {
-		if err := db.storeSignerInfo(ctx, tx, alias, descriptor.SignerInfo); err != nil {
-			CloseFunc(tx.Rollback)
-			return err
+		err = db.storeSignerInfo(ctx, tx, alias, descriptor.SignerInfo)
+		if err != nil {
+			return errors.Wrapf(err, "failed to store signer info for alias")
 		}
-		if err := db.storeIdentityData(ctx, tx, alias, descriptor.AuditInfo, nil, nil); err != nil {
-			CloseFunc(tx.Rollback)
-			return err
+		err = db.storeIdentityData(ctx, tx, alias, descriptor.AuditInfo, nil, nil)
+		if err != nil {
+			return errors.Wrapf(err, "failed to store audit info for alias")
 		}
 	}
-
 	return tx.Commit()
 }
 
