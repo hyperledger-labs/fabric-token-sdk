@@ -147,8 +147,8 @@ func (s *IdentityStore) GetTokenInfo(ctx context.Context, identity []byte) ([]by
 	return res.TokenMetadata, res.TokenMetadataAuditInfo, nil
 }
 
-func (s *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) error {
-	idHash := tdriver.Identity(id).UniqueID()
+func (s *IdentityStore) StoreSignerInfo(ctx context.Context, id tdriver.Identity, info []byte) error {
+	idHash := id.UniqueID()
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
 		[]string{

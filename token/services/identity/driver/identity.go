@@ -56,7 +56,7 @@ type IdentityStoreService interface {
 	// GetTokenInfo returns the token information related to the passed identity
 	GetTokenInfo(ctx context.Context, id []byte) ([]byte, []byte, error)
 	// StoreSignerInfo stores the passed signer info and bound it to the given identity
-	StoreSignerInfo(ctx context.Context, id, info []byte) error
+	StoreSignerInfo(ctx context.Context, id driver.Identity, info []byte) error
 	// GetExistingSignerInfo returns the hashes of the identities for which StoreSignerInfo was called
 	GetExistingSignerInfo(ctx context.Context, ids ...driver.Identity) ([]string, error)
 	// SignerInfoExists returns true if StoreSignerInfo was called on input the given identity

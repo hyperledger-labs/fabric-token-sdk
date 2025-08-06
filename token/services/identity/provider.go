@@ -37,7 +37,7 @@ type enrollmentIDUnmarshaler interface {
 type storage interface {
 	GetAuditInfo(ctx context.Context, id []byte) ([]byte, error)
 	StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
-	StoreSignerInfo(ctx context.Context, id, info []byte) error
+	StoreSignerInfo(ctx context.Context, id driver.Identity, info []byte) error
 	GetExistingSignerInfo(ctx context.Context, ids ...driver.Identity) ([]string, error)
 	SignerInfoExists(ctx context.Context, id []byte) (bool, error)
 	GetSignerInfo(ctx context.Context, identity []byte) ([]byte, error)
@@ -197,54 +197,6 @@ func (p *Provider) GetRevocationHandler(ctx context.Context, identity driver.Ide
 	return p.enrollmentIDUnmarshaler.GetRevocationHandler(ctx, identity, auditInfo)
 }
 
-func (p *Provider) Copy(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error {
-	if ephemeral.Equal(longTerm) {
-		// no action required
-		return nil
-	}
-
-	p.Logger.DebugfContext(ctx, "Binding ephemeral identity [%s] longTerm identity [%s]", ephemeral, longTerm)
-	setSV := true
-	signer, err := p.GetSigner(ctx, longTerm)
-	if err != nil {
-		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			p.Logger.DebugfContext(ctx, "failed getting signer for [%s][%s][%s]", longTerm, err, string(debug.Stack()))
-		}
-		setSV = false
-	}
-	verifier, err := p.localGetVerifier(ctx, longTerm)
-	if err != nil {
-		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			p.Logger.DebugfContext(ctx, "failed getting verifier for identity [%s][%s][%s]", longTerm, err, string(debug.Stack()))
-		}
-		verifier = nil
-	}
-
-	setAI := true
-	auditInfo, err := p.GetAuditInfo(ctx, longTerm)
-	if err != nil {
-		p.Logger.DebugfContext(ctx, "failed getting audit info for [%s][%s]", longTerm, err)
-		setAI = false
-	}
-
-	if setSV {
-		signerInfo, err := p.localGetSignerInfo(ctx, longTerm)
-		if err != nil {
-			return err
-		}
-		if err := p.localRegisterSigner(ctx, ephemeral, signer, verifier, signerInfo); err != nil {
-			return err
-		}
-	}
-	if setAI {
-		if err := p.RegisterAuditInfo(ctx, ephemeral, auditInfo); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeralIdentities ...driver.Identity) error {
 	for _, identity := range ephemeralIdentities {
 		if identity.Equal(longTerm) {
@@ -332,39 +284,6 @@ func (p *Provider) localAreMe(ctx context.Context, identities ...driver.Identity
 func (p *Provider) localGetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	idHash := identity.UniqueID()
 	return p.getSigner(ctx, identity, idHash)
-}
-
-func (p *Provider) localGetSignerInfo(ctx context.Context, identity driver.Identity) ([]byte, error) {
-	return p.storage.GetSignerInfo(ctx, identity)
-}
-
-func (p *Provider) localGetVerifier(ctx context.Context, identity driver.Identity) (driver.Verifier, error) {
-	idHash := identity.UniqueID()
-
-	// check cache
-	entry, ok := p.verifiers.Get(idHash)
-	if ok {
-		return entry.Verifier, nil
-	}
-
-	// ask the deserializer
-	if p.deserializer == nil {
-		return nil, errors.Errorf("cannot find verifier for [%s], no deserializer set", identity)
-	}
-	var err error
-	verifier, err := p.deserializer.DeserializeVerifier(ctx, identity)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed deserializing identity for verifier %v", identity)
-	}
-
-	// store entry
-	entry = &VerifierEntry{Verifier: verifier}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
-	}
-	logger.DebugfContext(ctx, "add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
-	p.verifiers.Add(idHash, entry)
-	return verifier, nil
 }
 
 func (p *Provider) registerSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {

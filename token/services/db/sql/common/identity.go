@@ -221,8 +221,8 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 	return tokenMetadata, tokenMetadataAuditInfo, nil
 }
 
-func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) error {
-	_, err := db.storeSignerInfo(ctx, db.writeDB, id, info)
+func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id tdriver.Identity, info []byte) error {
+	_, err := db.storeSignerInfo(ctx, db.writeDB, id.UniqueID(), id, info)
 	return err
 }
 
@@ -315,7 +315,9 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 		}
 	}()
 
-	exists, err := db.storeSignerInfo(ctx, tx, descriptor.Identity, descriptor.SignerInfo)
+	h := descriptor.Identity.UniqueID()
+
+	exists, err := db.storeSignerInfo(ctx, tx, h, descriptor.Identity, descriptor.SignerInfo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to store signer info for descriptor's identity")
 	}
@@ -325,17 +327,18 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 		return nil
 	}
 
-	err = db.storeIdentityData(ctx, tx, descriptor.Identity, descriptor.AuditInfo, nil, nil)
+	err = db.storeIdentityData(ctx, tx, h, descriptor.Identity, descriptor.AuditInfo, nil, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to store audit info for descriptor's identity")
 	}
 
 	if !descriptor.Identity.Equal(alias) {
-		_, err = db.storeSignerInfo(ctx, tx, alias, descriptor.SignerInfo)
+		h = alias.UniqueID()
+		_, err = db.storeSignerInfo(ctx, tx, h, alias, descriptor.SignerInfo)
 		if err != nil {
 			return errors.Wrapf(err, "failed to store signer info for alias")
 		}
-		err = db.storeIdentityData(ctx, tx, alias, descriptor.AuditInfo, nil, nil)
+		err = db.storeIdentityData(ctx, tx, h, alias, descriptor.AuditInfo, nil, nil)
 		if err != nil {
 			return errors.Wrapf(err, "failed to store audit info for alias")
 		}
@@ -389,9 +392,7 @@ func (db *IdentityStore) GetSchema() string {
 	)
 }
 
-func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, id, info []byte) (bool, error) {
-	h := token.Identity(id).String()
-
+func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, h string, id tdriver.Identity, info []byte) (bool, error) {
 	logger.DebugfContext(ctx, "store signer info for [%s]", h)
 	query, args := q.InsertInto(db.table.Signers).
 		Fields("identity_hash", "identity", "info").
@@ -414,9 +415,8 @@ func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, id, info []
 	return exists, nil
 }
 
-func (db *IdentityStore) storeIdentityData(ctx context.Context, tx tx, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
-	logger.DebugfContext(ctx, "store identity data for [%s]", view.Identity(id))
-	h := token.Identity(id).String()
+func (db *IdentityStore) storeIdentityData(ctx context.Context, tx tx, h string, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+	logger.DebugfContext(ctx, "store identity data for [%s]", h)
 	query, args := q.InsertInto(db.table.IdentityInfo).
 		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
 		Row(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
