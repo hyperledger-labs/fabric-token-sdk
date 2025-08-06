@@ -9,11 +9,11 @@ package nfttx
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 // Filter is a filter for NFTCC
@@ -48,7 +48,7 @@ func (s *filter) Filter(filter Filter, q string) ([]*token2.ID, error) {
 	}
 	ids, _, err := s.selectByFilter(filter, q)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to select tokens")
+		return nil, errors.WithMessagef(err, "failed to select tokens")
 	}
 	return ids, nil
 }

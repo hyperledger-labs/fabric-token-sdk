@@ -9,12 +9,12 @@ package sherdlock
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
-	"github.com/pkg/errors"
 )
 
 type SelectorService struct {

@@ -8,8 +8,8 @@ package rp
 
 import (
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
-	"github.com/pkg/errors"
 )
 
 type RangeCorrectness struct {

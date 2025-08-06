@@ -13,9 +13,9 @@ import (
 	errors2 "errors"
 	"reflect"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger/fabric-lib-go/bccsp"
 	"github.com/hyperledger/fabric-lib-go/bccsp/sw"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 )
 

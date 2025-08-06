@@ -9,9 +9,9 @@ package htlc
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/pkg/errors"
 )
 
 // NewCollectEndorsementsView returns an instance of the ttx collectEndorsementsView struct

@@ -53,12 +53,6 @@ linters:
     # wrapcheck is not working as expected. It is categorizing internal packages as external.
     #- wrapcheck
   settings:
-    depguard:
-      rules:
-        main:
-          deny:
-            - pkg: github.com/pkg/errors
-              desc: github.com/pkg/errors is no longer maintained
     errcheck:
       # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
       # Such cases aren't reported by default.

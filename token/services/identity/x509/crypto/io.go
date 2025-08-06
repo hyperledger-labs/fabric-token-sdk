@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 func readFile(file string) ([]byte, error) {
@@ -79,7 +79,7 @@ func PemDecodeCert(pemBytes []byte) (*x509.Certificate, error) {
 	case "CERTIFICATE":
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return nil, errors.WithMessage(err, "pem bytes are not cert encoded ")
+			return nil, errors.WithMessagef(err, "pem bytes are not cert encoded ")
 		}
 		return cert, nil
 	default:

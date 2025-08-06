@@ -10,13 +10,13 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
-	"github.com/pkg/errors"
 )
 
 type FabTokenPublicParamsGenerator struct{}
@@ -55,11 +55,11 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 			// Build an MSP Identity
 			km, _, err := x509.NewKeyManager(auditor.Path, nil, auditor.Opts, keyStore)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 km")
+				return nil, errors.WithMessagef(err, "failed to create x509 km")
 			}
 			id, _, err := km.Identity(context.Background(), nil)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
+				return nil, errors.WithMessagef(err, "failed to get identity")
 			}
 			if tms.Auditors[0] == auditor.ID {
 				wrap, err := identity.WrapWithType(x509.IdentityType, id)
@@ -80,11 +80,11 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 			// Build an MSP Identity
 			km, _, err := x509.NewKeyManager(issuer.Path, nil, issuer.Opts, keyStore)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 km")
+				return nil, errors.WithMessagef(err, "failed to create x509 km")
 			}
 			id, _, err := km.Identity(context.Background(), nil)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
+				return nil, errors.WithMessagef(err, "failed to get identity")
 			}
 			if issuersSet.Contains(issuer.ID) {
 				wrap, err := identity.WrapWithType(x509.IdentityType, id)

@@ -15,7 +15,7 @@ import (
 	"encoding/pem"
 	"math/big"
 
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 var (
@@ -99,18 +99,18 @@ func PemDecodeKey(keyBytes []byte) (interface{}, error) {
 	case "PRIVATE KEY":
 		key, err = x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, errors.WithMessage(err, "pem bytes are not PKCS8 encoded ")
+			return nil, errors.WithMessagef(err, "pem bytes are not PKCS8 encoded ")
 		}
 	case "CERTIFICATE":
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return nil, errors.WithMessage(err, "pem bytes are not cert encoded ")
+			return nil, errors.WithMessagef(err, "pem bytes are not cert encoded ")
 		}
 		return cert.PublicKey, nil
 	case "PUBLIC KEY":
 		key, err = x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
-			return nil, errors.WithMessage(err, "pem bytes are not PKIX encoded ")
+			return nil, errors.WithMessagef(err, "pem bytes are not PKIX encoded ")
 		}
 	default:
 		return nil, errors.Errorf("bad key type %s", block.Type)

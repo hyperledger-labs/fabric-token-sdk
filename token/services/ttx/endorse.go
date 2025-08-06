@@ -13,6 +13,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
@@ -26,7 +27,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
-	"github.com/pkg/errors"
 )
 
 type distributionListEntry struct {
@@ -92,12 +92,12 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	// 1. First collect signatures on the token request
 	issueSigmas, err := c.requestSignaturesOnIssues(context, externalWallets)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed requesting signatures on issues")
+		return nil, errors.WithMessagef(err, "failed requesting signatures on issues")
 	}
 
 	transferSigmas, err := c.requestSignaturesOnTransfers(context, externalWallets)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed requesting signatures on transfers")
+		return nil, errors.WithMessagef(err, "failed requesting signatures on transfers")
 	}
 
 	// signal the external wallets that the process is completed
@@ -119,7 +119,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	if !c.Opts.SkipAuditing {
 		_, err := c.requestAudit(context)
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed requesting auditing")
+			return nil, errors.WithMessagef(err, "failed requesting auditing")
 		}
 	}
 	// 3. Endorse and return the transaction envelope
@@ -127,7 +127,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 		logger.DebugfContext(context.Context(), "Request approval from endorser")
 		_, err = c.requestApproval(context)
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed requesting approval")
+			return nil, errors.WithMessagef(err, "failed requesting approval")
 		}
 	}
 	// Distribute Env to all parties
@@ -135,14 +135,14 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	logger.DebugfContext(context.Context(), "distribute tx to [%d] involved parties", len(distributionList))
 	if err := c.distributeTxToParties(context, distributionList, nil); err != nil {
 		logger.ErrorfContext(context.Context(), "failed distributing tx: %s", err)
-		return nil, errors.WithMessage(err, "failed distributing tx")
+		return nil, errors.WithMessagef(err, "failed distributing tx")
 	}
 
 	// Cleanup audit
 	logger.DebugfContext(context.Context(), "Cleanup audit")
 	if err := c.cleanupAudit(context); err != nil {
 		logger.ErrorfContext(context.Context(), "failed cleaning up audit: %s", err)
-		return nil, errors.WithMessage(err, "failed cleaning up audit")
+		return nil, errors.WithMessagef(err, "failed cleaning up audit")
 	}
 
 	logger.DebugfContext(context.Context(), "CollectEndorsementsView done.")
@@ -215,12 +215,12 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			// collect the signatures from multiSigners
 			multiSignersSigmas, err := c.requestSignatures(multiSigners, verifierGetter, context, externalWallets)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed requesting signatures")
+				return nil, errors.WithMessagef(err, "failed requesting signatures")
 			}
 			logger.DebugfContext(context.Context(), "collected [%d] signatures for multi-sig identity [%s]", len(multiSignersSigmas), signerIdentity)
 			sigma, err := multisig.JoinSignatures(multiSigners, multiSignersSigmas)
 			if err != nil {
-				return nil, errors.WithMessage(err, "failed joining multi-sig signatures")
+				return nil, errors.WithMessagef(err, "failed joining multi-sig signatures")
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
 			continue
@@ -809,11 +809,11 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	}
 	sigma, err := signer.Sign(receivedTx.FromRaw)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to sign ack response")
+		return nil, errors.WithMessagef(err, "failed to sign ack response")
 	}
 	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
 	if err := session.SendWithContext(context.Context(), sigma); err != nil {
-		return nil, errors.WithMessage(err, "failed sending ack")
+		return nil, errors.WithMessagef(err, "failed sending ack")
 	}
 
 	// cache the token request into the tokens db

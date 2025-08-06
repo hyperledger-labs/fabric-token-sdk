@@ -9,11 +9,11 @@ import (
 	"encoding/base64"
 	"os"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	chaincode2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 )
 
 var _ = Describe("ccvalidator", func() {

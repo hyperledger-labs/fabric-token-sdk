@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package setup
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -15,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
-	"github.com/pkg/errors"
 )
 
 const (

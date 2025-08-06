@@ -11,6 +11,7 @@ import (
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -20,7 +21,6 @@ import (
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/pkg/errors"
 )
 
 var logger = logging.MustGetLogger()
@@ -79,7 +79,7 @@ func (l *KeyManagerProvider) Get(ctx context.Context, identityConfig *driver.Ide
 	// instantiate provider from configuration
 	cryptoProvider, err := crypto2.NewBCCSP(l.keyStore, l.curveID, l.curveID == math.BLS12_381_BBS)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to instantiate crypto provider")
+		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider")
 	}
 	keyManager, err := NewKeyManager(conf, l.signerService, bccsp.EidNymRhNym, cryptoProvider)
 	if err != nil {
@@ -111,7 +111,7 @@ func (l *KeyManagerProvider) Get(ctx context.Context, identityConfig *driver.Ide
 	conf.Signer.Sk = nil
 	identityConfigurationRawField, err := proto.Marshal(conf)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to marshal identity configuration")
+		return nil, errors.WithMessagef(err, "failed to marshal identity configuration")
 	}
 	identityConfig.Raw = identityConfigurationRawField
 

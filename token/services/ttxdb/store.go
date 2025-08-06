@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -22,7 +23,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/pkg/errors"
 )
 
 type StoreServiceManager db.StoreServiceManager[*StoreService]
@@ -228,7 +228,7 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 	}
 	txs, err := TransactionRecords(ctx, record, time.Now().UTC())
 	if err != nil {
-		return errors.WithMessage(err, "failed parsing transactions from audit record")
+		return errors.WithMessagef(err, "failed parsing transactions from audit record")
 	}
 
 	logger.DebugfContext(ctx, "storing new records... [%d,%d]", len(raw), len(txs))

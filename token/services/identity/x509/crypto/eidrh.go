@@ -10,8 +10,8 @@ import (
 	"crypto/x509"
 	"strings"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
-	"github.com/pkg/errors"
 )
 
 func GetEnrollmentID(id []byte) (string, error) {
@@ -35,7 +35,7 @@ func GetRevocationHandle(id []byte) ([]byte, error) {
 	}
 	encoded, err := x509.MarshalPKIXPublicKey(cert.PublicKey)
 	if err != nil {
-		return nil, errors.WithMessage(err, "Failed to marshal PKI public key")
+		return nil, errors.WithMessagef(err, "Failed to marshal PKI public key")
 	}
 	return []byte(hash.Hashable(encoded).String()), nil
 }

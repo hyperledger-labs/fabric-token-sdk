@@ -10,8 +10,8 @@ import (
 	"context"
 	"encoding/base64"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
 )
 
 // LocalBidirectionalChannel is a bidirectional channel that is used to simulate

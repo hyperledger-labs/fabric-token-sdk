@@ -12,14 +12,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	dcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
 	qcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
-	"github.com/pkg/errors"
 )
 
 type keystoreTables struct {
@@ -82,7 +81,7 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 	logger.Debug(query, args)
 
 	_, err = db.writeDB.Exec(query, args...)
-	if err != nil && errors2.HasCause(db.errorWrapper.WrapError(err), driver.UniqueKeyViolation) {
+	if err != nil && errors.HasCause(db.errorWrapper.WrapError(err), driver.UniqueKeyViolation) {
 		// then check that raw is equal to what is stored
 		rawFromDB, err := db.GetRaw(key)
 		if err != nil {

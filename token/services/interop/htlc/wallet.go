@@ -9,6 +9,7 @@ package htlc
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -17,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 type Vault interface {
@@ -171,7 +171,7 @@ func (w *OwnerWallet) ListExpiredReceivedTokensIterator(ctx context.Context, opt
 func (w *OwnerWallet) DeleteExpiredReceivedTokens(context view.Context, opts ...token.ListTokensOption) error {
 	it, err := w.ListExpiredReceivedTokensIterator(context.Context(), opts...)
 	if err != nil {
-		return errors.WithMessage(err, "failed to get an iterator of expired received tokens")
+		return errors.WithMessagef(err, "failed to get an iterator of expired received tokens")
 	}
 
 	return iterators.ForEach(iterators.Batch(it, w.bufferSize), func(buffer *[]*token2.UnspentToken) error {
@@ -183,7 +183,7 @@ func (w *OwnerWallet) DeleteExpiredReceivedTokens(context view.Context, opts ...
 func (w *OwnerWallet) DeleteClaimedSentTokens(context view.Context, opts ...token.ListTokensOption) error {
 	it, err := w.ListTokensAsSender(context.Context(), opts...)
 	if err != nil {
-		return errors.WithMessage(err, "failed to get an iterator of expired received tokens")
+		return errors.WithMessagef(err, "failed to get an iterator of expired received tokens")
 	}
 	return iterators.ForEach(iterators.Batch(it, w.bufferSize), func(buffer *[]*token2.UnspentToken) error {
 		return w.deleteTokens(context, *buffer)

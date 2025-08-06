@@ -10,12 +10,12 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/csp"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -73,7 +73,7 @@ func (k *KeyManagerProvider) Get(ctx context.Context, idConfig *driver.IdentityC
 func (k *KeyManagerProvider) registerIdentity(ctx context.Context, conf *crypto.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	p, err := k.registerProvider(ctx, conf, identityConfig, idConfig)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to register provider")
+		return nil, errors.WithMessagef(err, "failed to register provider")
 	}
 	return p, nil
 }
@@ -81,7 +81,7 @@ func (k *KeyManagerProvider) registerIdentity(ctx context.Context, conf *crypto.
 func (k *KeyManagerProvider) registerProvider(ctx context.Context, conf *crypto.Config, identityConfig *idriver.ConfiguredIdentity, idConfig *driver.IdentityConfiguration) (membership.KeyManager, error) {
 	opts, err := crypto.ToBCCSPOpts(identityConfig.Opts)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to extract BCCSP options")
+		return nil, errors.WithMessagef(err, "failed to extract BCCSP options")
 	}
 	if opts == nil {
 		logger.DebugfContext(ctx, "no BCCSP options set for [%s], opts [%v]", identityConfig.ID, identityConfig.Opts)

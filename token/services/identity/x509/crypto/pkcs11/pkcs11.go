@@ -11,9 +11,9 @@ package pkcs11
 import (
 	"os"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger/fabric-lib-go/bccsp"
 	"github.com/hyperledger/fabric-lib-go/bccsp/pkcs11"
-	"github.com/pkg/errors"
 )
 
 const (

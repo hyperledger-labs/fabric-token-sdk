@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
@@ -18,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
-	"github.com/pkg/errors"
 )
 
 type AcceptView struct {
@@ -64,7 +64,7 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	logger.DebugfContext(context.Context(), "Sign ack for distribution")
 	sigma, err := signer.Sign(txRaw)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to sign ack response")
+		return nil, errors.WithMessagef(err, "failed to sign ack response")
 	}
 
 	// Ack for distribution
@@ -72,7 +72,7 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	session := context.Session()
 	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
 	if err := session.SendWithContext(context.Context(), sigma); err != nil {
-		return nil, errors.WithMessage(err, "failed sending ack")
+		return nil, errors.WithMessagef(err, "failed sending ack")
 	}
 
 	// cache the token request into the tokens db

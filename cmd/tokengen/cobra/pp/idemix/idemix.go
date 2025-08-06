@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/IBM/idemix"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 // LoadIssuerPublicKey reads the issuer public key from the config file

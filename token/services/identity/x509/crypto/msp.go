@@ -12,8 +12,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger/fabric-lib-go/bccsp"
-	"github.com/pkg/errors"
 )
 
 type verifyingIdentity struct {
@@ -35,17 +35,17 @@ func (f *verifyingIdentity) Serialize() ([]byte, error) {
 func (f *verifyingIdentity) Verify(message, sigma []byte) error {
 	hashOpt, err := getHashOpt(f.SignatureHashFamily)
 	if err != nil {
-		return errors.WithMessage(err, "failed getting hash function options")
+		return errors.WithMessagef(err, "failed getting hash function options")
 	}
 
 	digest, err := f.bccsp.Hash(message, hashOpt)
 	if err != nil {
-		return errors.WithMessage(err, "failed computing digest")
+		return errors.WithMessagef(err, "failed computing digest")
 	}
 
 	valid, err := f.bccsp.Verify(f.pk, sigma, digest, nil)
 	if err != nil {
-		return errors.WithMessage(err, "could not determine the validity of the signature")
+		return errors.WithMessagef(err, "could not determine the validity of the signature")
 	} else if !valid {
 		return errors.New("signature is invalid")
 	}
@@ -62,12 +62,12 @@ func (f *fullIdentity) Sign(msg []byte) ([]byte, error) {
 	// Compute Hash
 	hashOpt, err := getHashOpt(f.SignatureHashFamily)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed getting hash function options")
+		return nil, errors.WithMessagef(err, "failed getting hash function options")
 	}
 
 	digest, err := f.bccsp.Hash(msg, hashOpt)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed computing digest")
+		return nil, errors.WithMessagef(err, "failed computing digest")
 	}
 
 	// Sign
@@ -86,17 +86,17 @@ func (f *fullIdentity) Serialize() ([]byte, error) {
 func (f *fullIdentity) Verify(message, sigma []byte) error {
 	hashOpt, err := getHashOpt(f.SignatureHashFamily)
 	if err != nil {
-		return errors.WithMessage(err, "failed getting hash function options")
+		return errors.WithMessagef(err, "failed getting hash function options")
 	}
 
 	digest, err := f.bccsp.Hash(message, hashOpt)
 	if err != nil {
-		return errors.WithMessage(err, "failed computing digest")
+		return errors.WithMessagef(err, "failed computing digest")
 	}
 
 	valid, err := f.bccsp.Verify(f.pk, sigma, digest, nil)
 	if err != nil {
-		return errors.WithMessage(err, "could not determine the validity of the signature")
+		return errors.WithMessagef(err, "could not determine the validity of the signature")
 	} else if !valid {
 		return errors.New("signature is invalid")
 	}
@@ -137,14 +137,14 @@ func (f *IdentityFactory) GetFullIdentity(sidInfo *SigningIdentityInfo) (*fullId
 		}
 		_, err = f.bccsp.KeyImport(pemKey.Bytes, &bccsp.ECDSAPrivateKeyImportOpts{})
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed to import EC private key")
+			return nil, errors.WithMessagef(err, "failed to import EC private key")
 		}
 	}
 
 	// get the peer signer
 	identitySigner, err := NewSKIBasedSigner(f.bccsp, pubKey.SKI(), cryptoPK)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create identity signer")
+		return nil, errors.WithMessagef(err, "failed to create identity signer")
 	}
 
 	return &fullIdentity{

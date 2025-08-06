@@ -11,8 +11,8 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/pkg/errors"
 )
 
 // Quantity models an immutable token quantity and its basic operations.

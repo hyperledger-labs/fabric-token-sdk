@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -21,7 +22,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -376,7 +376,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 // CreateNonce generates a nonce using the common/crypto package
 func CreateNonce() ([]byte, error) {
 	nonce, err := getRandomNonce()
-	return nonce, errors.WithMessage(err, "error generating random nonce")
+	return nonce, errors.WithMessagef(err, "error generating random nonce")
 }
 
 func getRandomNonce() ([]byte, error) {

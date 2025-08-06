@@ -9,10 +9,10 @@ package custodian
 import (
 	errors2 "errors"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	"github.com/pkg/errors"
 )
 
 type SDK struct {
@@ -37,7 +37,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("FetchAndUpdatePublicParams", &views.UpdatePublicParamsViewFactory{}),
 		)
 	}); err != nil {
-		return errors.WithMessage(err, "failed to install endorser's views")
+		return errors.WithMessagef(err, "failed to install endorser's views")
 	}
 	return nil
 }

@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package db
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	"github.com/pkg/errors"
 )
 
 type ConfigProvider interface {

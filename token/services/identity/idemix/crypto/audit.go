@@ -10,9 +10,9 @@ import (
 	"context"
 
 	csp "github.com/IBM/idemix/bccsp/types"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
-	"github.com/pkg/errors"
 )
 
 type Schema = string

@@ -14,7 +14,7 @@ import (
 	"hash"
 
 	math "github.com/IBM/mathlib"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 type Hashable []byte
@@ -90,7 +90,7 @@ func (h *Hasher) HexDigest() string {
 func (h *Hasher) AddG1s(generators []*math.G1) error {
 	for _, g := range generators {
 		if err := h.AddBytes(g.Bytes()); err != nil {
-			return errors.WithMessage(err, "failed to add g1 element")
+			return errors.WithMessagef(err, "failed to add g1 element")
 		}
 	}
 	return nil

@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"unicode/utf8"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
-	"github.com/pkg/errors"
 )
 
 const (

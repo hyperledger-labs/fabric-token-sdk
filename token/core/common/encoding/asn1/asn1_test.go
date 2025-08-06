@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/stretchr/testify/assert"
 )
 

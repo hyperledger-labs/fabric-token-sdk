@@ -9,12 +9,12 @@ package ttx
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -49,7 +49,7 @@ type Transaction struct {
 func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := CompileOpts(opts...)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed compiling tx options")
+		return nil, errors.WithMessagef(err, "failed compiling tx options")
 	}
 	tms := token.GetManagementService(
 		context,
@@ -61,7 +61,7 @@ func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transacti
 	}
 	id, err := net.AnonymousIdentity()
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed getting anonymous identity for transaction")
+		return nil, errors.WithMessagef(err, "failed getting anonymous identity for transaction")
 	}
 
 	return NewTransaction(context, id, opts...)
@@ -73,7 +73,7 @@ func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transacti
 func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := CompileOpts(opts...)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed compiling tx options")
+		return nil, errors.WithMessagef(err, "failed compiling tx options")
 	}
 
 	if txOpts.AnonymousTransaction && signer == nil {
@@ -88,7 +88,7 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		}
 		id, err := net.AnonymousIdentity()
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed getting anonymous identity for transaction")
+			return nil, errors.WithMessagef(err, "failed getting anonymous identity for transaction")
 		}
 		signer = id
 	}
@@ -113,7 +113,7 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 	id := networkService.ComputeTxID(&txID)
 	tr, err := tms.NewRequest(token.RequestAnchor(id))
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed init token request")
+		return nil, errors.WithMessagef(err, "failed init token request")
 	}
 
 	tx := &Transaction{
@@ -176,7 +176,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 
 	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to receive transaction")
+		return nil, errors.WithMessagef(err, "failed to receive transaction")
 	}
 
 	cctx, ok := txBoxed.(*Transaction)

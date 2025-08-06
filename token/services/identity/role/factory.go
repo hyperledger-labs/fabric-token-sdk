@@ -10,12 +10,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/pkg/errors"
 )
 
 var toString = map[identity.RoleType]string{
@@ -93,7 +93,7 @@ func (f *Factory) NewRole(role identity.RoleType, defaultAnon bool, targets []dr
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
 	if err := lm.Load(context.Background(), identities, targets); err != nil {
-		return nil, errors.WithMessage(err, "failed to load identities")
+		return nil, errors.WithMessagef(err, "failed to load identities")
 	}
 	return NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm), nil
 }
