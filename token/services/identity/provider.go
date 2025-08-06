@@ -10,7 +10,6 @@ import (
 	"context"
 	"runtime/debug"
 	"slices"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
@@ -47,6 +46,7 @@ type storage interface {
 type cache[T any] interface {
 	Get(key string) (T, bool)
 	Add(key string, value T)
+	Delete(key string)
 }
 
 type VerifierEntry struct {
@@ -69,9 +69,8 @@ type Provider struct {
 	enrollmentIDUnmarshaler enrollmentIDUnmarshaler
 	isMeCache               cache[bool]
 
-	sync      sync.RWMutex
-	signers   map[string]SignerEntry
-	verifiers map[string]VerifierEntry
+	signers   cache[*SignerEntry]
+	verifiers cache[*VerifierEntry]
 
 	storage      storage
 	deserializer idriver.Deserializer
@@ -93,8 +92,8 @@ func NewProvider(
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		isMeCache:               secondcache.NewTyped[bool](1000),
 
-		signers:      map[string]SignerEntry{},
-		verifiers:    map[string]VerifierEntry{},
+		signers:      secondcache.NewTyped[*SignerEntry](1000),
+		verifiers:    secondcache.NewTyped[*VerifierEntry](1000),
 		deserializer: deserializer,
 		storage:      storage,
 	}
@@ -292,33 +291,12 @@ func (p *Provider) localRegisterVerifier(ctx context.Context, identity driver.Id
 		return errors.New("invalid verifier, expected a valid instance")
 	}
 
-	// First check with read lock
 	idHash := identity.UniqueID()
-	p.sync.RLock()
-	v, ok := p.verifiers[idHash]
-	p.sync.RUnlock()
-	if ok {
-		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, logging.Identifier(v), logging.Identifier(verifier), string(v.DebugStack))
-		return nil
-	}
-
-	// write lock
-	p.sync.Lock()
-
-	// check again
-	v, ok = p.verifiers[idHash]
-	if ok {
-		p.sync.Unlock()
-		logger.Warnf("another verifier bound to [%s]:[%s][%s] from [%s]", idHash, logging.Identifier(v), logging.Identifier(verifier), string(v.DebugStack))
-		return nil
-	}
-
-	entry := VerifierEntry{Verifier: verifier}
+	entry := &VerifierEntry{Verifier: verifier}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
-	p.verifiers[idHash] = entry
-	p.sync.Unlock()
+	p.verifiers.Add(idHash, entry)
 
 	logger.DebugfContext(ctx, "register verifier to [%s]:[%s]", idHash, logging.Identifier(verifier))
 	return nil
@@ -335,16 +313,14 @@ func (p *Provider) localAreMe(ctx context.Context, identities ...driver.Identity
 	notFound := make([]driver.Identity, 0)
 
 	// check local cache
-	p.sync.RLock()
 	for _, id := range identities {
-		if _, ok := p.signers[id.UniqueID()]; ok {
+		if _, ok := p.signers.Get(id.UniqueID()); ok {
 			logger.DebugfContext(ctx, "is me [%s]? yes, from cache", id)
 			result.Add(id.UniqueID())
 		} else {
 			notFound = append(notFound, id)
 		}
 	}
-	p.sync.RUnlock()
 
 	if len(notFound) == 0 {
 		return result.ToSlice()
@@ -362,18 +338,6 @@ func (p *Provider) localAreMe(ctx context.Context, identities ...driver.Identity
 
 func (p *Provider) localGetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	idHash := identity.UniqueID()
-	logger.DebugfContext(ctx, "get signer for [%s]", idHash)
-	// check the cache
-	p.sync.RLock()
-	entry, ok := p.signers[idHash]
-	p.sync.RUnlock()
-	if ok {
-		logger.DebugfContext(ctx, "signer for [%s] found", idHash)
-		return entry.Signer, nil
-	}
-	p.sync.Lock()
-	defer p.sync.Unlock()
-
 	return p.getSigner(ctx, identity, idHash)
 }
 
@@ -385,18 +349,7 @@ func (p *Provider) localGetVerifier(ctx context.Context, identity driver.Identit
 	idHash := identity.UniqueID()
 
 	// check cache
-	p.sync.RLock()
-	entry, ok := p.verifiers[idHash]
-	p.sync.RUnlock()
-	if ok {
-		return entry.Verifier, nil
-	}
-
-	p.sync.Lock()
-	defer p.sync.Unlock()
-
-	// check cache again
-	entry, ok = p.verifiers[idHash]
+	entry, ok := p.verifiers.Get(idHash)
 	if ok {
 		return entry.Verifier, nil
 	}
@@ -412,12 +365,12 @@ func (p *Provider) localGetVerifier(ctx context.Context, identity driver.Identit
 	}
 
 	// store entry
-	entry = VerifierEntry{Verifier: verifier}
+	entry = &VerifierEntry{Verifier: verifier}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
 	logger.DebugfContext(ctx, "add deserialized verifier for [%s]:[%s]", idHash, logging.Identifier(verifier))
-	p.verifiers[idHash] = entry
+	p.verifiers.Add(idHash, entry)
 	return verifier, nil
 }
 
@@ -430,31 +383,17 @@ func (p *Provider) registerSigner(ctx context.Context, identity driver.Identity,
 	idHash := identity.UniqueID()
 	logger.DebugfContext(ctx, "register signer and verifier [%s]:[%s][%s]", idHash, logging.Identifier(signer), logging.Identifier(verifier))
 	// First check with read lock
-	p.sync.RLock()
-	s, ok := p.signers[idHash]
-	p.sync.RUnlock()
+	s, ok := p.signers.Get(idHash)
 	if ok {
 		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
 		return nil
 	}
 
-	// write lock
-	p.sync.Lock()
-
-	// check again the cache
-	s, ok = p.signers[idHash]
-	if ok {
-		p.sync.Unlock()
-		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
-		return nil
-	}
-
-	entry := SignerEntry{Signer: signer}
+	entry := &SignerEntry{Signer: signer}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
-	p.signers[idHash] = entry
-	p.sync.Unlock()
+	p.signers.Add(idHash, entry)
 
 	// store, if a failure happens then remove the entry
 	logger.DebugfContext(ctx, "checks done, store signer info")
@@ -468,7 +407,7 @@ func (p *Provider) registerSigner(ctx context.Context, identity driver.Identity,
 
 func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
 	// check again the cache
-	entry, ok := p.signers[idHash]
+	entry, ok := p.signers.Get(idHash)
 	if ok {
 		logger.DebugfContext(ctx, "signer for [%s] found", idHash)
 		return entry.Signer, nil
@@ -480,11 +419,11 @@ func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHa
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing identity for signer [%s]", identity)
 	}
-	entry = SignerEntry{Signer: signer}
+	entry = &SignerEntry{Signer: signer}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
-	p.signers[idHash] = entry
+	p.signers.Add(idHash, entry)
 	if err := p.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
 		return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
 	}
@@ -519,7 +458,5 @@ func (p *Provider) deserializeSigner(ctx context.Context, identity driver.Identi
 }
 
 func (p *Provider) deleteSigner(id string) {
-	p.sync.Lock()
-	defer p.sync.Unlock()
-	delete(p.signers, id)
+	p.signers.Delete(id)
 }
