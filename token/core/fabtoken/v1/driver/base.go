@@ -62,8 +62,7 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open keystore for tms [%s]", tmsID)
 	}
-	sigService := sig.NewService(deserializerManager, identityDB)
-	identityProvider := identity.NewProvider(logger.Named("identity"), identityDB, sigService, binder, NewEIDRHDeserializer())
+	identityProvider := identity.NewProvider(logger.Named("identity"), identityDB, deserializerManager, binder, NewEIDRHDeserializer())
 	identityConfig, err := config.NewIdentityConfig(tmsConfig)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create identity config")

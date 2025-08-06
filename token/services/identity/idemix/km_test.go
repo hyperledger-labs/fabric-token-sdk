@@ -20,9 +20,11 @@ import (
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -130,7 +132,8 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	kvs, err := kvs2.NewInMemory()
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"}))
+	storage := kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"})
+	identityProvider := identity.NewProvider(logging.MustGetLogger(), storage, sig.NewMultiplexDeserializer(), nil, nil)
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 	tracker := kvs2.NewTrackedMemoryFrom(kvs)
@@ -154,7 +157,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 	id := identityDescriptor.Identity
 	audit := identityDescriptor.AuditInfo
-	require.NoError(t, sigService.RegisterSigner(t.Context(), id, identityDescriptor.Signer, identityDescriptor.Verifier, identityDescriptor.SignerInfo))
+	require.NoError(t, identityProvider.RegisterSigner(t.Context(), id, identityDescriptor.Signer, identityDescriptor.Verifier, identityDescriptor.SignerInfo))
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
 	info, err := keyManager.Info(t.Context(), id, audit)
@@ -211,7 +214,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 
 	// get the signer from the sigService as well
-	signer2, err := sigService.GetSigner(t.Context(), id)
+	signer2, err := identityProvider.GetSigner(t.Context(), id)
 	assert.NoError(t, err)
 	assert.NotNil(t, signer2)
 
