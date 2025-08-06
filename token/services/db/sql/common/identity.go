@@ -222,7 +222,8 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 }
 
 func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) error {
-	return db.storeSignerInfo(ctx, db.writeDB, id, info)
+	_, err := db.storeSignerInfo(ctx, db.writeDB, id, info)
+	return err
 }
 
 func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriver.Identity) ([]string, error) {
@@ -314,9 +315,13 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 		}
 	}()
 
-	err = db.storeSignerInfo(ctx, tx, descriptor.Identity, descriptor.SignerInfo)
+	exists, err := db.storeSignerInfo(ctx, tx, descriptor.Identity, descriptor.SignerInfo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to store signer info for descriptor's identity")
+	}
+	if exists {
+		// no need to continue
+		return nil
 	}
 
 	err = db.storeIdentityData(ctx, tx, descriptor.Identity, descriptor.AuditInfo, nil, nil)
@@ -325,7 +330,7 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 	}
 
 	if !descriptor.Identity.Equal(alias) {
-		err = db.storeSignerInfo(ctx, tx, alias, descriptor.SignerInfo)
+		_, err = db.storeSignerInfo(ctx, tx, alias, descriptor.SignerInfo)
 		if err != nil {
 			return errors.Wrapf(err, "failed to store signer info for alias")
 		}
@@ -383,7 +388,7 @@ func (db *IdentityStore) GetSchema() string {
 	)
 }
 
-func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, id, info []byte) error {
+func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, id, info []byte) (bool, error) {
 	h := token.Identity(id).String()
 
 	logger.DebugfContext(ctx, "store signer info for [%s]", h)
@@ -393,19 +398,19 @@ func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, id, info []
 		Format()
 
 	logger.Debug(query, h, hash.Hashable(info))
+	exists := false
 	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		if exists, err2 := db.SignerInfoExists(ctx, id); err2 == nil && exists {
+		if ok, err2 := db.SignerInfoExists(ctx, id); err2 == nil && ok {
 			logger.DebugfContext(ctx, "signer info [%s] exists, no error to return", h)
+			exists = true
 		} else {
-			return err
+			return exists, err
 		}
 	}
-
 	db.signerInfoCache.Add(h, true)
-
 	logger.DebugfContext(ctx, "store signer info done")
-	return nil
+	return exists, nil
 }
 
 func (db *IdentityStore) storeIdentityData(ctx context.Context, tx tx, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
