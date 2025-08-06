@@ -96,7 +96,6 @@ func NewTransferService(
 		IdentityDeserializer:    identityDeserializer,
 		Metrics:                 metrics,
 		tracer: tracerProvider.Tracer("transfer_service", tracing.WithMetricsOpts(tracing.MetricsOpts{
-			Namespace:  "tokensdk_dlog",
 			LabelNames: []tracing.LabelName{},
 		})),
 		TokenDeserializer: tokenDeserializer,

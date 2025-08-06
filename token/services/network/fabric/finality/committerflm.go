@@ -52,12 +52,10 @@ func (p *committerBasedFLMProvider) NewManager(network, channel string) (Listene
 		return nil, err
 	}
 	return &committerBasedFLM{
-		network:     network,
-		channel:     ch,
-		subscribers: events.NewSubscribers(),
-		tracer: p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{
-			Namespace: network,
-		})),
+		network:           network,
+		channel:           ch,
+		subscribers:       events.NewSubscribers(),
+		tracer:            p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
 		keyTranslator:     p.keyTranslator,
 		maxRetries:        p.config.MaxRetries,
 		retryWaitDuration: p.config.RetryWaitDuration,
