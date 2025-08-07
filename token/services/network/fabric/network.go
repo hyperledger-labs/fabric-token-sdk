@@ -8,6 +8,7 @@ package fabric
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -53,7 +54,8 @@ func (n *lm) AnonymousIdentity() (view.Identity, error) {
 }
 
 type ledger struct {
-	l *fabric.Ledger
+	l  *fabric.Ledger
+	ch *fabric.Channel
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
@@ -68,6 +70,25 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	default:
 		return driver.Invalid, nil
 	}
+}
+
+func (l *ledger) GetStates(ctx context.Context, namespace string, keys ...string) ([][]byte, error) {
+	arg, err := json.Marshal(keys)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling args for query by ids [%v]", keys)
+	}
+	logger.DebugfContext(ctx, "querying chaincode [%s] for the states of ids [%v]", namespace, keys)
+	chaincode := l.ch.Chaincode(namespace)
+	res, err := chaincode.Query(lookup.QueryStates, arg).Query()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to query for states of ids [%v]", keys)
+	}
+	values := make([][]byte, 0, len(keys))
+	err = json.Unmarshal(res, &values)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling results for query by ids [%v", keys)
+	}
+	return values, nil
 }
 
 type ViewManager interface {
