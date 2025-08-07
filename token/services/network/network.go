@@ -154,6 +154,16 @@ func (l *Ledger) Status(id string) (ValidationCode, string, error) {
 	return vc, "", nil
 }
 
+// GetStates returns the value corresponding to the given keys stored in the given namespace.
+func (l *Ledger) GetStates(ctx context.Context, namespace string, keys ...string) ([][]byte, error) {
+	return l.l.GetStates(ctx, namespace, keys...)
+}
+
+// TransferMetadataKey returns the transfer metadata key associated to the given key
+func (l *Ledger) TransferMetadataKey(k string) (string, error) {
+	return l.l.TransferMetadataKey(k)
+}
+
 // Network provides access to the remote network
 type Network struct {
 	n driver.Network

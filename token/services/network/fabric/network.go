@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
@@ -53,7 +54,13 @@ func (n *lm) AnonymousIdentity() (view.Identity, error) {
 }
 
 type ledger struct {
-	l *fabric.Ledger
+	l             *fabric.Ledger
+	ch            *fabric.Channel
+	keyTranslator translator.KeyTranslator
+}
+
+func newLedger(ch *fabric.Channel, keyTranslator translator.KeyTranslator) *ledger {
+	return &ledger{ch: ch, l: ch.Ledger(), keyTranslator: keyTranslator}
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
@@ -68,6 +75,32 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	default:
 		return driver.Invalid, nil
 	}
+}
+
+func (l *ledger) GetStates(ctx context.Context, namespace string, keys ...string) ([][]byte, error) {
+	if len(keys) == 0 {
+		return nil, errors.Errorf("keys cannot be empty")
+	}
+	arg, err := json.Marshal(keys)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling args for query by ids [%v]", keys)
+	}
+	logger.DebugfContext(ctx, "querying chaincode [%s] for the states of ids [%v]", namespace, keys)
+	chaincode := l.ch.Chaincode(namespace)
+	res, err := chaincode.Query(lookup.QueryStates, arg).Query()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to query for states of ids [%v]", keys)
+	}
+	var values [][]byte
+	err = json.Unmarshal(res, &values)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling results for query by ids [%v", keys)
+	}
+	return values, nil
+}
+
+func (l *ledger) TransferMetadataKey(k string) (string, error) {
+	return l.keyTranslator.CreateTransferActionMetadataKey(k)
 }
 
 type ViewManager interface {
@@ -126,7 +159,7 @@ func NewNetwork(
 		ch:                         ch,
 		tmsProvider:                tmsProvider,
 		viewManager:                viewManager,
-		ledger:                     &ledger{l: ch.Ledger()},
+		ledger:                     newLedger(ch, keyTranslator),
 		configuration:              configuration,
 		filterProvider:             filterProvider,
 		tokensProvider:             tokensProvider,

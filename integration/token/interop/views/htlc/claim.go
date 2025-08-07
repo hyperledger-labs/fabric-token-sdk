@@ -12,10 +12,12 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
@@ -67,6 +69,19 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 			token.WithTMSID(r.ScriptTMSID),
 		)
 		assert.NoError(err, "failed to receive the preImage")
+
+		// double-check the value of the key
+		tms := token.GetManagementService(context, token.WithTMSID(r.ScriptTMSID))
+		network := network.GetInstance(context, tms.Network(), tms.Channel())
+		assert.NotNil(network, "failed getting network")
+		ledger, err := network.Ledger()
+		assert.NoError(err, "failed getting ledger")
+		transferMetadataKey, err := ledger.TransferMetadataKey(htlc.ClaimKey(r.Script.HashInfo.Hash))
+		assert.NoError(err, "failed getting transfer metadata key")
+		stateValues, err := ledger.GetStates(context.Context(), tms.Namespace(), transferMetadataKey)
+		assert.NoError(err, "failed getting states")
+		assert.True(len(stateValues) == 1, "expected one state value")
+		assert.Equal(preImage, stateValues[0], "pre-image mismatch [%s] vs [%s]", hash.Hashable(preImage), hash.Hashable(stateValues[0]))
 	}
 
 	claimWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
