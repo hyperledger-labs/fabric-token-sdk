@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
@@ -54,9 +55,17 @@ type IdentityStore struct {
 
 	signerInfoCache cache[bool]
 	auditInfoCache  cache[[]byte]
+	errorWrapper    driver2.SQLErrorWrapper
 }
 
-func newIdentityStore(readDB, writeDB *sql.DB, tables identityTables, singerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common3.CondInterpreter) *IdentityStore {
+func newIdentityStore(
+	readDB, writeDB *sql.DB,
+	tables identityTables,
+	singerInfoCache cache[bool],
+	auditInfoCache cache[[]byte],
+	ci common3.CondInterpreter,
+	errorWrapper driver2.SQLErrorWrapper,
+) *IdentityStore {
 	return &IdentityStore{
 		readDB:          readDB,
 		writeDB:         writeDB,
@@ -64,10 +73,16 @@ func newIdentityStore(readDB, writeDB *sql.DB, tables identityTables, singerInfo
 		signerInfoCache: singerInfoCache,
 		auditInfoCache:  auditInfoCache,
 		ci:              ci,
+		errorWrapper:    errorWrapper,
 	}
 }
 
-func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*IdentityStore, error) {
+func NewCachedIdentityStore(
+	readDB, writeDB *sql.DB,
+	tables TableNames,
+	ci common3.CondInterpreter,
+	errorWrapper driver2.SQLErrorWrapper,
+) (*IdentityStore, error) {
 	return NewIdentityStore(
 		readDB,
 		writeDB,
@@ -75,10 +90,16 @@ func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci commo
 		secondcache.NewTyped[bool](1000),
 		secondcache.NewTyped[[]byte](1000),
 		ci,
+		errorWrapper,
 	)
 }
 
-func NewNoCacheIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*IdentityStore, error) {
+func NewNoCacheIdentityStore(
+	readDB, writeDB *sql.DB,
+	tables TableNames,
+	ci common3.CondInterpreter,
+	errorWrapper driver2.SQLErrorWrapper,
+) (*IdentityStore, error) {
 	return NewIdentityStore(
 		readDB,
 		writeDB,
@@ -86,10 +107,18 @@ func NewNoCacheIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci comm
 		cache2.NewNoCache[bool](),
 		cache2.NewNoCache[[]byte](),
 		ci,
+		errorWrapper,
 	)
 }
 
-func NewIdentityStore(readDB, writeDB *sql.DB, tables TableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common3.CondInterpreter) (*IdentityStore, error) {
+func NewIdentityStore(
+	readDB, writeDB *sql.DB,
+	tables TableNames,
+	signerInfoCache cache[bool],
+	auditInfoCache cache[[]byte],
+	ci common3.CondInterpreter,
+	errorWrapper driver2.SQLErrorWrapper,
+) (*IdentityStore, error) {
 	return newIdentityStore(
 		readDB,
 		writeDB,
@@ -101,6 +130,7 @@ func NewIdentityStore(readDB, writeDB *sql.DB, tables TableNames, signerInfoCach
 		signerInfoCache,
 		auditInfoCache,
 		ci,
+		errorWrapper,
 	), nil
 }
 
@@ -403,7 +433,7 @@ func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, h string, i
 	exists := false
 	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		if ok, err2 := db.SignerInfoExists(ctx, id); err2 == nil && ok {
+		if err != nil && errors.Is(db.errorWrapper.WrapError(err), driver2.UniqueKeyViolation) {
 			logger.DebugfContext(ctx, "signer info [%s] exists, no error to return", h)
 			exists = true
 		} else {
