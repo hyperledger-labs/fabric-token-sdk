@@ -159,6 +159,7 @@ func (l *Ledger) GetStates(ctx context.Context, namespace string, keys ...string
 	return l.l.GetStates(ctx, namespace, keys...)
 }
 
+// TransferMetadataKey returns the transfer metadata key associated to the given key
 func (l *Ledger) TransferMetadataKey(k string) (string, error) {
 	return l.l.TransferMetadataKey(k)
 }
