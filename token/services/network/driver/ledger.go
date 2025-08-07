@@ -16,4 +16,6 @@ type Ledger interface {
 	Status(id string) (ValidationCode, error)
 	// GetStates returns the value corresponding to the given keys stored in the given namespace.
 	GetStates(ctx context.Context, namespace string, keys ...string) ([][]byte, error)
+	// TransferMetadataKey returns the transfer metadata key associated to the given key
+	TransferMetadataKey(k string) (string, error)
 }

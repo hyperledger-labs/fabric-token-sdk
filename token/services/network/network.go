@@ -159,6 +159,10 @@ func (l *Ledger) GetStates(ctx context.Context, namespace string, keys ...string
 	return l.l.GetStates(ctx, namespace, keys...)
 }
 
+func (l *Ledger) TransferMetadataKey(k string) (string, error) {
+	return l.l.TransferMetadataKey(k)
+}
+
 // Network provides access to the remote network
 type Network struct {
 	n driver.Network

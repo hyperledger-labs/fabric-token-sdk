@@ -54,12 +54,13 @@ func (n *lm) AnonymousIdentity() (view.Identity, error) {
 }
 
 type ledger struct {
-	l  *fabric.Ledger
-	ch *fabric.Channel
+	l             *fabric.Ledger
+	ch            *fabric.Channel
+	keyTranslator translator.KeyTranslator
 }
 
-func newLedger(ch *fabric.Channel) *ledger {
-	return &ledger{ch: ch, l: ch.Ledger()}
+func newLedger(ch *fabric.Channel, keyTranslator translator.KeyTranslator) *ledger {
+	return &ledger{ch: ch, l: ch.Ledger(), keyTranslator: keyTranslator}
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
@@ -96,6 +97,10 @@ func (l *ledger) GetStates(ctx context.Context, namespace string, keys ...string
 		return nil, errors.Wrapf(err, "failed unmarshalling results for query by ids [%v", keys)
 	}
 	return values, nil
+}
+
+func (l *ledger) TransferMetadataKey(k string) (string, error) {
+	return l.keyTranslator.CreateTransferActionMetadataKey(k)
 }
 
 type ViewManager interface {
@@ -154,7 +159,7 @@ func NewNetwork(
 		ch:                         ch,
 		tmsProvider:                tmsProvider,
 		viewManager:                viewManager,
-		ledger:                     newLedger(ch),
+		ledger:                     newLedger(ch, keyTranslator),
 		configuration:              configuration,
 		filterProvider:             filterProvider,
 		tokensProvider:             tokensProvider,
