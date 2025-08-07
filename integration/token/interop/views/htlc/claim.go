@@ -75,7 +75,7 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		assert.NotNil(network, "failed getting network")
 		ledger, err := network.Ledger()
 		assert.NoError(err, "failed getting ledger")
-		stateValues, err := ledger.GetStates(context.Context(), htlc.ClaimKey(r.Script.HashInfo.Hash))
+		stateValues, err := ledger.GetStates(context.Context(), tms.Namespace(), htlc.ClaimKey(r.Script.HashInfo.Hash))
 		assert.NoError(err, "failed getting states")
 		assert.Equal(preImage, stateValues[0], "pre-image mismatch [%s] vs [%s]", preImage, stateValues[0])
 	}

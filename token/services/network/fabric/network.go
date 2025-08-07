@@ -77,6 +77,9 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 }
 
 func (l *ledger) GetStates(ctx context.Context, namespace string, keys ...string) ([][]byte, error) {
+	if len(keys) == 0 {
+		return nil, errors.Errorf("keys cannot be empty")
+	}
 	arg, err := json.Marshal(keys)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling args for query by ids [%v]", keys)
