@@ -12,26 +12,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"go.uber.org/zap/zapcore"
 )
 
 var logger = logging.MustGetLogger()
 
-type IdentityCacheBackendFunc func(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error)
-
-type identityCacheEntry struct {
-	Identity driver.Identity
-	Audit    []byte
-}
+type IdentityCacheBackendFunc func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error)
 
 type IdentityCache struct {
 	once      sync.Once
 	backed    IdentityCacheBackendFunc
 	auditInfo []byte
 
-	cache        chan identityCacheEntry
+	cache        chan *idriver.IdentityDescriptor
 	cacheTimeout time.Duration
 
 	metrics *Metrics
@@ -41,7 +36,7 @@ func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byt
 	logger.Debugf("new identity cache with size [%d]", size)
 	ci := &IdentityCache{
 		backed:       backed,
-		cache:        make(chan identityCacheEntry, size),
+		cache:        make(chan *idriver.IdentityDescriptor, size),
 		auditInfo:    auditInfo,
 		cacheTimeout: 5 * time.Millisecond,
 		metrics:      metrics,
@@ -50,7 +45,7 @@ func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byt
 	return ci
 }
 
-func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
+func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	// Is the auditInfo equal to that used to fill the cache? If yes, use the cache
 	if !bytes.Equal(auditInfo, c.auditInfo) {
 		return c.fetchIdentityFromBackend(ctx, auditInfo)
@@ -68,9 +63,8 @@ func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (driver.
 	return c.fetchIdentityFromCache(ctx)
 }
 
-func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (driver.Identity, []byte, error) {
-	var identity driver.Identity
-	var audit []byte
+func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (*idriver.IdentityDescriptor, error) {
+	var identityDescriptor *idriver.IdentityDescriptor
 
 	var start time.Time
 
@@ -84,54 +78,55 @@ func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (driver.Iden
 	logger.DebugfContext(ctx, "fetch identity")
 	select {
 	case entry := <-c.cache:
+		if entry == nil {
+			return c.backed(ctx, c.auditInfo)
+		}
+		identityDescriptor = entry
+
 		c.metrics.CacheLevelGauge.Add(-1)
 		logger.DebugfContext(ctx, "fetched identity from cache")
-		identity = entry.Identity
-		audit = entry.Audit
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.DebugfContext(ctx, "fetching identity from cache [%s][%d] took [%v]", identity, len(audit), time.Since(start))
+			logger.DebugfContext(ctx, "fetching identity from cache [%s][%d] took [%v]", identityDescriptor.Identity, len(identityDescriptor.AuditInfo), time.Since(start))
 		}
 	case <-timeout.C:
 		logger.DebugfContext(ctx, "generate identity on the spot")
-		id, a, err := c.backed(ctx, c.auditInfo)
+		var err error
+		identityDescriptor, err = c.backed(ctx, c.auditInfo)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		identity = id
-		audit = a
-
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.DebugfContext(ctx, "fetching identity from backend after a timeout [%s][%d] took [%v]", identity, len(audit), time.Since(start))
+			logger.DebugfContext(ctx, "fetching identity from backend after a timeout [%s][%d] took [%v]", identityDescriptor.Identity, len(identityDescriptor.AuditInfo), time.Since(start))
 		}
 	}
 	logger.DebugfContext(ctx, "fetch identity done")
 
-	return identity, audit, nil
+	return identityDescriptor, nil
 }
 
-func (c *IdentityCache) fetchIdentityFromBackend(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
+func (c *IdentityCache) fetchIdentityFromBackend(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	logger.DebugfContext(ctx, "fetching identity from backend")
-	id, audit, err := c.backed(ctx, auditInfo)
+	identityDescriptor, err := c.backed(ctx, auditInfo)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	logger.DebugfContext(ctx, "fetch identity from backend done [%s][%d]", id, len(audit))
+	logger.DebugfContext(ctx, "fetch identity from backend done [%s][%d]", identityDescriptor.Identity, len(identityDescriptor.AuditInfo))
 
-	return id, audit, nil
+	return identityDescriptor, nil
 }
 
 func (c *IdentityCache) provisionIdentities() {
 	count := 0
 	ctx := context.Background()
 	for {
-		id, audit, err := c.backed(ctx, c.auditInfo)
+		identityDescriptor, err := c.backed(ctx, c.auditInfo)
 		if err != nil {
 			logger.Errorf("failed to provision identity [%s]", err)
 			continue
 		}
 		logger.DebugfContext(ctx, "generated new idemix identity [%d]", count)
 		c.metrics.CacheLevelGauge.Add(1)
-		c.cache <- identityCacheEntry{Identity: id, Audit: audit}
+		c.cache <- identityDescriptor
 	}
 }

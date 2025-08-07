@@ -37,8 +37,6 @@ type Factory struct {
 	FSCIdentity            driver.Identity
 	NetworkDefaultIdentity driver.Identity
 	IdentityProvider       driver.IdentityProvider
-	SignerService          driver.SigService
-	BinderService          driver.BinderService
 	StorageProvider        StorageProvider
 	DeserializerManager    driver.DeserializerManager
 }
@@ -51,8 +49,6 @@ func NewFactory(
 	fscIdentity driver.Identity,
 	networkDefaultIdentity driver.Identity,
 	identityProvider driver.IdentityProvider,
-	signerService driver.SigService,
-	binderService driver.BinderService,
 	storageProvider StorageProvider,
 	deserializerManager driver.DeserializerManager,
 ) *Factory {
@@ -63,8 +59,6 @@ func NewFactory(
 		FSCIdentity:            fscIdentity,
 		NetworkDefaultIdentity: networkDefaultIdentity,
 		IdentityProvider:       identityProvider,
-		SignerService:          signerService,
-		BinderService:          binderService,
 		StorageProvider:        storageProvider,
 		DeserializerManager:    deserializerManager,
 	}
@@ -79,10 +73,8 @@ func (f *Factory) NewRole(role identity.RoleType, defaultAnon bool, targets []dr
 		f.Logger.Named(fmt.Sprintf("membership.role.%s", identity.RoleToString(role))),
 		f.Config,
 		f.NetworkDefaultIdentity,
-		f.SignerService,
 		f.DeserializerManager,
 		identityDB,
-		f.BinderService,
 		toString[role],
 		defaultAnon,
 		f.IdentityProvider,

@@ -11,6 +11,7 @@ import (
 	v2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
@@ -32,7 +33,7 @@ func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, 
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	return d.newWalletService(
 		tmsConfig,
-		nil,
+		&membership.NoBinder{},
 		d.storageProvider,
 		nil,
 		logger,

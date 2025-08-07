@@ -15,7 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 )
@@ -51,10 +52,9 @@ type SignerService interface {
 }
 
 type KeyManager struct {
-	*crypto2.Deserializer
-	userKeySKI    SKI
-	conf          *config.IdemixConfig
-	SignerService SignerService
+	*crypto.Deserializer
+	userKeySKI SKI
+	conf       *config.IdemixConfig
 
 	sigType bccsp.SignatureType
 	verType bccsp.VerificationType
@@ -64,24 +64,15 @@ type KeyManager struct {
 }
 
 func NewKeyManager(
-	conf *crypto2.Config,
-	signerService SignerService,
+	conf *crypto.Config,
 	sigType bccsp.SignatureType,
 	csp bccsp.BCCSP,
 ) (*KeyManager, error) {
-	return NewKeyManagerWithSchema(
-		conf,
-		signerService,
-		sigType,
-		csp,
-		schema.NewDefaultManager(),
-		schema.DefaultSchema,
-	)
+	return NewKeyManagerWithSchema(conf, sigType, csp, schema.NewDefaultManager(), schema.DefaultSchema)
 }
 
 func NewKeyManagerWithSchema(
-	conf *crypto2.Config,
-	signerService SignerService,
+	conf *crypto.Config,
 	sigType bccsp.SignatureType,
 	csp bccsp.BCCSP,
 	sm SchemaManager,
@@ -90,7 +81,7 @@ func NewKeyManagerWithSchema(
 	if conf == nil {
 		return nil, errors.New("no idemix config provided")
 	}
-	if conf.Version != crypto2.ProtobufProtocolVersionV1 {
+	if conf.Version != crypto.ProtobufProtocolVersionV1 {
 		return nil, errors.Errorf("unsupported protocol version [%d]", conf.Version)
 	}
 
@@ -195,7 +186,7 @@ func NewKeyManagerWithSchema(
 	}
 
 	return &KeyManager{
-		Deserializer: &crypto2.Deserializer{
+		Deserializer: &crypto.Deserializer{
 			Name:            conf.Name,
 			Csp:             csp,
 			Ipk:             conf.Ipk,
@@ -208,7 +199,6 @@ func NewKeyManagerWithSchema(
 		},
 		userKeySKI:    userKeySKI,
 		conf:          conf,
-		SignerService: signerService,
 		sigType:       sigType,
 		verType:       verType,
 		SchemaManager: sm,
@@ -216,12 +206,12 @@ func NewKeyManagerWithSchema(
 	}, nil
 }
 
-func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Identity, []byte, error) {
+func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	logger.DebugfContext(ctx, "get user secret key")
 	// Load the user key
 	userKey, err := p.Csp.GetKey(p.userKeySKI)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.userKeySKI)
+		return nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.userKeySKI)
 	}
 
 	// Derive nymPublicKey
@@ -234,11 +224,11 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 		},
 	)
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed deriving nym")
+		return nil, errors.WithMessagef(err, "failed deriving nym")
 	}
 	nymPublicKey, err := nymKey.PublicKey()
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed getting public nym key")
+		return nil, errors.Wrapf(err, "failed getting public nym key")
 	}
 
 	enrollmentID := p.conf.Signer.EnrollmentId
@@ -249,7 +239,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 		logger.DebugfContext(ctx, "deserialize passed audit info")
 		ai, err := p.DeserializeAuditInfo(ctx, auditInfo)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		signerMetadata = &bccsp.IdemixSignerMetadata{
 			EidNymAuditData: ai.EidNymAuditData,
@@ -261,7 +251,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 	logger.DebugfContext(ctx, "create crypto evidence for the identity")
 	sigOpts, err := p.SchemaManager.SignerOpts(p.Schema)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "could obtain signer sigOpts for schema %s", p.Schema)
+		return nil, errors.Wrapf(err, "could obtain signer sigOpts for schema %s", p.Schema)
 	}
 	sigOpts.Credential = p.conf.Signer.Cred
 	sigOpts.Nym = nymKey
@@ -275,32 +265,25 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 		sigOpts,
 	)
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to setup cryptographic proof of identity")
+		return nil, errors.WithMessagef(err, "failed to setup cryptographic proof of identity")
 	}
 
 	// Set up default signer
 	logger.DebugfContext(ctx, "setup default signer")
-	id, err := crypto2.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
+	id, err := crypto.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to create identity")
+		return nil, errors.WithMessagef(err, "failed to create identity")
 	}
-	sID := &crypto2.SigningIdentity{
+	sID := &crypto.SigningIdentity{
 		CSP:          p.Csp,
 		Identity:     id,
 		NymKeySKI:    nymPublicKey.SKI(),
 		UserKeySKI:   p.userKeySKI,
 		EnrollmentId: enrollmentID,
 	}
-	raw, err := sID.Serialize()
+	serializedIdentity, err := sID.Serialize()
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to serialize identity")
-	}
-
-	if p.SignerService != nil {
-		logger.DebugfContext(ctx, "register signer for identity")
-		if err := p.SignerService.RegisterSigner(ctx, raw, sID, sID, nil); err != nil {
-			return nil, nil, errors.WithMessagef(err, "failed to register signer")
-		}
+		return nil, errors.WithMessagef(err, "failed to serialize identity")
 	}
 
 	logger.DebugfContext(ctx, "prepare audit info")
@@ -309,7 +292,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 	case bccsp.Standard:
 		infoRaw = nil
 	case bccsp.EidNymRhNym:
-		auditInfo := &crypto2.AuditInfo{
+		auditInfo := &crypto.AuditInfo{
 			EidNymAuditData: sigOpts.Metadata.EidNymAuditData,
 			RhNymAuditData:  sigOpts.Metadata.RhNymAuditData,
 			Attributes: [][]byte{
@@ -326,14 +309,19 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (driver.Ide
 		logger.DebugfContext(ctx, "new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(rh))
 		infoRaw, err = auditInfo.Bytes()
 		if err != nil {
-			return nil, nil, errors.WithMessagef(err, "failed to serialize auditInfo")
+			return nil, errors.WithMessagef(err, "failed to serialize auditInfo")
 		}
 	default:
-		return nil, nil, errors.Errorf("unsupported signature type [%d]", sigType)
+		return nil, errors.Errorf("unsupported signature type [%d]", sigType)
 	}
 	logger.DebugfContext(ctx, "prepare audit info done")
 
-	return raw, infoRaw, nil
+	return &idriver.IdentityDescriptor{
+		Identity:  serializedIdentity,
+		AuditInfo: infoRaw,
+		Signer:    sID,
+		Verifier:  sID,
+	}, nil
 }
 
 func (p *KeyManager) IsRemote() bool {
@@ -356,7 +344,7 @@ func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.
 func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
 	eid := ""
 	if len(auditInfo) != 0 {
-		ai := &crypto2.AuditInfo{
+		ai := &crypto.AuditInfo{
 			Csp:             p.Csp,
 			IssuerPublicKey: p.IssuerPublicKey,
 			SchemaManager:   p.SchemaManager,
@@ -392,7 +380,7 @@ func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte)
 		return nil, err
 	}
 
-	si := &crypto2.SigningIdentity{
+	si := &crypto.SigningIdentity{
 		CSP:          p.Csp,
 		Identity:     id.Identity,
 		UserKeySKI:   p.userKeySKI,

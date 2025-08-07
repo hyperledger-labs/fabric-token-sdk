@@ -14,7 +14,6 @@ import (
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit/mock"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -25,7 +24,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
@@ -270,8 +268,6 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
 	err = sp.RegisterService(backend)
 	Expect(err).NotTo(HaveOccurred())
 
-	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityStore(backend, token2.TMSID{Network: "pineapple"}))
-	err = sp.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
 	config, err := crypto.NewConfig(dir)
 	Expect(err).NotTo(HaveOccurred())
@@ -280,12 +276,14 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
 	Expect(err).NotTo(HaveOccurred())
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	Expect(err).NotTo(HaveOccurred())
-	p, err := idemix2.NewKeyManager(config, sigService, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
-	id, audit, err := p.Identity(context.Background(), nil)
+	identityDescriptor, err := p.Identity(context.Background(), nil)
 	Expect(err).NotTo(HaveOccurred())
+	id := identityDescriptor.Identity
+	audit := identityDescriptor.AuditInfo
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 

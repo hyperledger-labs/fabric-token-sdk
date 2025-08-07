@@ -15,5 +15,11 @@ import (
 type IdentityStore = common.IdentityStore
 
 func NewIdentityStore(dbs *common2.RWDB, tableNames common.TableNames) (*IdentityStore, error) {
-	return common.NewCachedIdentityStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter())
+	return common.NewCachedIdentityStore(
+		dbs.ReadDB,
+		dbs.WriteDB,
+		tableNames,
+		sqlite.NewConditionInterpreter(),
+		&sqlite.ErrorMapper{},
+	)
 }

@@ -17,20 +17,22 @@ func TestDeserializer(t *testing.T) {
 	keyStore := NewKeyStore(kvs.NewTrackedMemory())
 
 	// load a full identity capable of signing as well
-	fullIdentityProvider, _, err := NewKeyManager("./testdata/msp", nil, nil, keyStore)
+	fullIdentityProvider, _, err := NewKeyManager("./testdata/msp", nil, keyStore)
 	assert.NoError(t, err)
 	assert.False(t, fullIdentityProvider.Anonymous())
 	// load a full identity capable of signing as well with a custom keystore path
-	fullIdentityProvider2, _, err := NewKeyManagerFromConf(nil, "./testdata/msp2", KeystoreFullFolder, nil, nil, keyStore)
+	fullIdentityProvider2, _, err := NewKeyManagerFromConf(nil, "./testdata/msp2", KeystoreFullFolder, nil, keyStore)
 	assert.NoError(t, err)
 	assert.False(t, fullIdentityProvider.Anonymous())
 	// load a verifying only provider
-	verifyingIdentityProvider, _, err := NewKeyManager("./testdata/msp1", nil, nil, keyStore)
+	verifyingIdentityProvider, _, err := NewKeyManager("./testdata/msp1", nil, keyStore)
 	assert.NoError(t, err)
 
 	for _, provider := range []*KeyManager{fullIdentityProvider, fullIdentityProvider2} {
-		id, auditInfo, err := provider.Identity(t.Context(), nil)
+		identityDescriptor, err := provider.Identity(t.Context(), nil)
 		assert.NoError(t, err)
+		id := identityDescriptor.Identity
+		auditInfo := identityDescriptor.AuditInfo
 		eID := provider.EnrollmentID()
 		ai := &AuditInfo{}
 		err = ai.FromBytes(auditInfo)
@@ -49,9 +51,9 @@ func TestDeserializer(t *testing.T) {
 		assert.NoError(t, err)
 
 		// check again a verifying identity
-		verifyingIdentity, _, err := verifyingIdentityProvider.Identity(t.Context(), nil)
+		verifyingIdentityDescriptor, err := verifyingIdentityProvider.Identity(t.Context(), nil)
 		assert.NoError(t, err)
-		verifier2, err := provider.DeserializeVerifier(t.Context(), verifyingIdentity)
+		verifier2, err := provider.DeserializeVerifier(t.Context(), verifyingIdentityDescriptor.Identity)
 		assert.NoError(t, err)
 		err = verifier2.Verify([]byte("hello worlds"), sigma)
 		assert.NoError(t, err)

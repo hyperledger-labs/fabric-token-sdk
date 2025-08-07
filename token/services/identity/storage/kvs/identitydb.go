@@ -14,9 +14,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
 const (
@@ -61,7 +61,7 @@ func (s *IdentityStore) AddConfiguration(ctx context.Context, wp driver.Identity
 	return s.kvs.Put(ctx, k, &wp)
 }
 
-func (s *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (driver3.IdentityConfigurationIterator, error) {
+func (s *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (idriver.IdentityConfigurationIterator, error) {
 	it, err := s.kvs.GetByPartialCompositeID(
 		ctx,
 		IdentityDBPrefix,
@@ -98,7 +98,7 @@ func (s *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identi
 		IdentityDBPrefix,
 		[]string{
 			IdentityDBData,
-			driver2.Identity(id).String(),
+			tdriver.Identity(id).String(),
 		},
 	)
 	if err := s.kvs.Put(ctx, k, &RecipientData{
@@ -116,7 +116,7 @@ func (s *IdentityStore) GetAuditInfo(ctx context.Context, identity []byte) ([]by
 		IdentityDBPrefix,
 		[]string{
 			IdentityDBData,
-			driver2.Identity(identity).String(),
+			tdriver.Identity(identity).String(),
 		},
 	)
 	if !s.kvs.Exists(ctx, k) {
@@ -134,7 +134,7 @@ func (s *IdentityStore) GetTokenInfo(ctx context.Context, identity []byte) ([]by
 		IdentityDBPrefix,
 		[]string{
 			IdentityDBData,
-			driver2.Identity(identity).String(),
+			tdriver.Identity(identity).String(),
 		},
 	)
 	if !s.kvs.Exists(ctx, k) {
@@ -147,8 +147,8 @@ func (s *IdentityStore) GetTokenInfo(ctx context.Context, identity []byte) ([]by
 	return res.TokenMetadata, res.TokenMetadataAuditInfo, nil
 }
 
-func (s *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) error {
-	idHash := driver2.Identity(id).UniqueID()
+func (s *IdentityStore) StoreSignerInfo(ctx context.Context, id tdriver.Identity, info []byte) error {
+	idHash := id.UniqueID()
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
 		[]string{
@@ -166,7 +166,7 @@ func (s *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) er
 	return nil
 }
 
-func (s *IdentityStore) GetExistingSignerInfo(ctx context.Context, identities ...driver2.Identity) ([]string, error) {
+func (s *IdentityStore) GetExistingSignerInfo(ctx context.Context, identities ...tdriver.Identity) ([]string, error) {
 	keys := make([]string, len(identities))
 	for i, id := range identities {
 		k, err := kvs.CreateCompositeKey(
@@ -193,7 +193,7 @@ func (s *IdentityStore) SignerInfoExists(ctx context.Context, id []byte) (bool, 
 }
 
 func (s *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]byte, error) {
-	idHash := driver2.Identity(identity).UniqueID()
+	idHash := tdriver.Identity(identity).UniqueID()
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
 		[]string{
@@ -209,6 +209,22 @@ func (s *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]b
 		return nil, err
 	}
 	return res, nil
+}
+
+func (s *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descriptor *idriver.IdentityDescriptor, alias tdriver.Identity) error {
+	if err := s.StoreSignerInfo(ctx, descriptor.Identity, descriptor.SignerInfo); err != nil {
+		return err
+	}
+	if err := s.StoreSignerInfo(ctx, alias, descriptor.SignerInfo); err != nil {
+		return err
+	}
+	if err := s.StoreIdentityData(ctx, descriptor.Identity, descriptor.AuditInfo, nil, nil); err != nil {
+		return err
+	}
+	if err := s.StoreIdentityData(ctx, alias, descriptor.AuditInfo, nil, nil); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *IdentityStore) Close() error {

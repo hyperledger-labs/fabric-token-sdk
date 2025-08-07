@@ -21,13 +21,12 @@ type IdentityProvider struct {
 	areMeReturnsOnCall map[int]struct {
 		result1 []string
 	}
-	BindStub        func(context.Context, driver.Identity, driver.Identity, bool) error
+	BindStub        func(context.Context, driver.Identity, ...driver.Identity) error
 	bindMutex       sync.RWMutex
 	bindArgsForCall []struct {
 		arg1 context.Context
 		arg2 driver.Identity
-		arg3 driver.Identity
-		arg4 bool
+		arg3 []driver.Identity
 	}
 	bindReturns struct {
 		result1 error
@@ -240,21 +239,20 @@ func (fake *IdentityProvider) AreMeReturnsOnCall(i int, result1 []string) {
 	}{result1}
 }
 
-func (fake *IdentityProvider) Bind(arg1 context.Context, arg2 driver.Identity, arg3 driver.Identity, arg4 bool) error {
+func (fake *IdentityProvider) Bind(arg1 context.Context, arg2 driver.Identity, arg3 ...driver.Identity) error {
 	fake.bindMutex.Lock()
 	ret, specificReturn := fake.bindReturnsOnCall[len(fake.bindArgsForCall)]
 	fake.bindArgsForCall = append(fake.bindArgsForCall, struct {
 		arg1 context.Context
 		arg2 driver.Identity
-		arg3 driver.Identity
-		arg4 bool
-	}{arg1, arg2, arg3, arg4})
+		arg3 []driver.Identity
+	}{arg1, arg2, arg3})
 	stub := fake.BindStub
 	fakeReturns := fake.bindReturns
-	fake.recordInvocation("Bind", []interface{}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Bind", []interface{}{arg1, arg2, arg3})
 	fake.bindMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4)
+		return stub(arg1, arg2, arg3...)
 	}
 	if specificReturn {
 		return ret.result1
@@ -268,17 +266,17 @@ func (fake *IdentityProvider) BindCallCount() int {
 	return len(fake.bindArgsForCall)
 }
 
-func (fake *IdentityProvider) BindCalls(stub func(context.Context, driver.Identity, driver.Identity, bool) error) {
+func (fake *IdentityProvider) BindCalls(stub func(context.Context, driver.Identity, ...driver.Identity) error) {
 	fake.bindMutex.Lock()
 	defer fake.bindMutex.Unlock()
 	fake.BindStub = stub
 }
 
-func (fake *IdentityProvider) BindArgsForCall(i int) (context.Context, driver.Identity, driver.Identity, bool) {
+func (fake *IdentityProvider) BindArgsForCall(i int) (context.Context, driver.Identity, []driver.Identity) {
 	fake.bindMutex.RLock()
 	defer fake.bindMutex.RUnlock()
 	argsForCall := fake.bindArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *IdentityProvider) BindReturns(result1 error) {

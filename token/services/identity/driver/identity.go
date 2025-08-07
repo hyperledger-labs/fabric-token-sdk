@@ -14,6 +14,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+type IdentityDescriptor struct {
+	Identity  driver.Identity
+	AuditInfo []byte
+
+	Signer     driver.Signer
+	SignerInfo []byte
+	Verifier   driver.Verifier
+}
+
 type IdentityConfigurationIterator = iterators.Iterator[*IdentityConfiguration]
 
 type WalletID = string
@@ -47,13 +56,14 @@ type IdentityStoreService interface {
 	// GetTokenInfo returns the token information related to the passed identity
 	GetTokenInfo(ctx context.Context, id []byte) ([]byte, []byte, error)
 	// StoreSignerInfo stores the passed signer info and bound it to the given identity
-	StoreSignerInfo(ctx context.Context, id, info []byte) error
+	StoreSignerInfo(ctx context.Context, id driver.Identity, info []byte) error
 	// GetExistingSignerInfo returns the hashes of the identities for which StoreSignerInfo was called
 	GetExistingSignerInfo(ctx context.Context, ids ...driver.Identity) ([]string, error)
 	// SignerInfoExists returns true if StoreSignerInfo was called on input the given identity
 	SignerInfoExists(ctx context.Context, id []byte) (bool, error)
 	// GetSignerInfo returns the signer info bound to the given identity
 	GetSignerInfo(ctx context.Context, id []byte) ([]byte, error)
+	RegisterIdentityDescriptor(ctx context.Context, descriptor *IdentityDescriptor, alias driver.Identity) error
 	// Close closes the store
 	Close() error
 }

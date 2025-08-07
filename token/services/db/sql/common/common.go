@@ -18,3 +18,12 @@ func Close(closer Closer) {
 		logger.Errorf("failed closing connection: %s", err)
 	}
 }
+
+func CloseFunc(closer func() error) {
+	if closer == nil {
+		return
+	}
+	if err := closer(); err != nil {
+		logger.Errorf("failed closing connection: %s", err)
+	}
+}

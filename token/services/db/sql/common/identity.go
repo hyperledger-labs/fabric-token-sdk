@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
@@ -25,7 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 )
 
@@ -34,6 +35,10 @@ type cache[T any] interface {
 	GetOrLoad(key string, loader func() (T, error)) (T, bool, error)
 	Add(key string, value T)
 	Delete(key string)
+}
+
+type tx interface {
+	ExecContext(ctx context.Context, query string, args ...common3.Param) (sql.Result, error)
 }
 
 type identityTables struct {
@@ -50,9 +55,17 @@ type IdentityStore struct {
 
 	signerInfoCache cache[bool]
 	auditInfoCache  cache[[]byte]
+	errorWrapper    driver2.SQLErrorWrapper
 }
 
-func newIdentityStore(readDB, writeDB *sql.DB, tables identityTables, singerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common3.CondInterpreter) *IdentityStore {
+func newIdentityStore(
+	readDB, writeDB *sql.DB,
+	tables identityTables,
+	singerInfoCache cache[bool],
+	auditInfoCache cache[[]byte],
+	ci common3.CondInterpreter,
+	errorWrapper driver2.SQLErrorWrapper,
+) *IdentityStore {
 	return &IdentityStore{
 		readDB:          readDB,
 		writeDB:         writeDB,
@@ -60,10 +73,16 @@ func newIdentityStore(readDB, writeDB *sql.DB, tables identityTables, singerInfo
 		signerInfoCache: singerInfoCache,
 		auditInfoCache:  auditInfoCache,
 		ci:              ci,
+		errorWrapper:    errorWrapper,
 	}
 }
 
-func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*IdentityStore, error) {
+func NewCachedIdentityStore(
+	readDB, writeDB *sql.DB,
+	tables TableNames,
+	ci common3.CondInterpreter,
+	errorWrapper driver2.SQLErrorWrapper,
+) (*IdentityStore, error) {
 	return NewIdentityStore(
 		readDB,
 		writeDB,
@@ -71,10 +90,16 @@ func NewCachedIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci commo
 		secondcache.NewTyped[bool](1000),
 		secondcache.NewTyped[[]byte](1000),
 		ci,
+		errorWrapper,
 	)
 }
 
-func NewNoCacheIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*IdentityStore, error) {
+func NewNoCacheIdentityStore(
+	readDB, writeDB *sql.DB,
+	tables TableNames,
+	ci common3.CondInterpreter,
+	errorWrapper driver2.SQLErrorWrapper,
+) (*IdentityStore, error) {
 	return NewIdentityStore(
 		readDB,
 		writeDB,
@@ -82,10 +107,18 @@ func NewNoCacheIdentityStore(readDB, writeDB *sql.DB, tables TableNames, ci comm
 		cache2.NewNoCache[bool](),
 		cache2.NewNoCache[[]byte](),
 		ci,
+		errorWrapper,
 	)
 }
 
-func NewIdentityStore(readDB, writeDB *sql.DB, tables TableNames, signerInfoCache cache[bool], auditInfoCache cache[[]byte], ci common3.CondInterpreter) (*IdentityStore, error) {
+func NewIdentityStore(
+	readDB, writeDB *sql.DB,
+	tables TableNames,
+	signerInfoCache cache[bool],
+	auditInfoCache cache[[]byte],
+	ci common3.CondInterpreter,
+	errorWrapper driver2.SQLErrorWrapper,
+) (*IdentityStore, error) {
 	return newIdentityStore(
 		readDB,
 		writeDB,
@@ -97,6 +130,7 @@ func NewIdentityStore(readDB, writeDB *sql.DB, tables TableNames, signerInfoCach
 		signerInfoCache,
 		auditInfoCache,
 		ci,
+		errorWrapper,
 	), nil
 }
 
@@ -115,7 +149,7 @@ func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.Identit
 	return err
 }
 
-func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (driver3.IdentityConfigurationIterator, error) {
+func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (idriver.IdentityConfigurationIterator, error) {
 	query, args := q.Select().
 		FieldsByName("id", "url", "conf", "raw").
 		From(q.Table(db.table.IdentityConfigurations)).
@@ -217,29 +251,9 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 	return tokenMetadata, tokenMetadataAuditInfo, nil
 }
 
-func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id, info []byte) error {
-	h := token.Identity(id).String()
-
-	logger.DebugfContext(ctx, "store signer info for [%s]", h)
-	query, args := q.InsertInto(db.table.Signers).
-		Fields("identity_hash", "identity", "info").
-		Row(h, id, info).
-		Format()
-
-	logger.Debug(query, h, hash.Hashable(info))
-	_, err := db.writeDB.ExecContext(ctx, query, args...)
-	if err != nil {
-		if exists, err2 := db.SignerInfoExists(ctx, id); err2 == nil && exists {
-			logger.DebugfContext(ctx, "signer info [%s] exists, no error to return", h)
-		} else {
-			return err
-		}
-	}
-
-	db.signerInfoCache.Add(h, true)
-
-	logger.DebugfContext(ctx, "store signer info done")
-	return nil
+func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id tdriver.Identity, info []byte) error {
+	_, err := db.storeSignerInfo(ctx, db.writeDB, id.UniqueID(), id, info)
+	return err
 }
 
 func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriver.Identity) ([]string, error) {
@@ -317,6 +331,53 @@ func (db *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]
 	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
+func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descriptor *idriver.IdentityDescriptor, alias tdriver.Identity) (err error) {
+	if descriptor == nil {
+		return errors.New("identity descriptor is nil")
+	}
+	tx, err := db.writeDB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			CloseFunc(tx.Rollback)
+		}
+	}()
+
+	h := descriptor.Identity.UniqueID()
+
+	exists, err := db.storeSignerInfo(ctx, tx, h, descriptor.Identity, descriptor.SignerInfo)
+	if err != nil {
+		return errors.Wrapf(err, "failed to store signer info for descriptor's identity")
+	}
+	if exists {
+		CloseFunc(tx.Rollback)
+		// no need to continue
+		return nil
+	}
+
+	if len(descriptor.AuditInfo) != 0 {
+		err = db.storeIdentityData(ctx, tx, h, descriptor.Identity, descriptor.AuditInfo, nil, nil)
+		if err != nil {
+			return errors.Wrapf(err, "failed to store audit info for descriptor's identity")
+		}
+	}
+
+	if !alias.IsNone() && !descriptor.Identity.Equal(alias) {
+		h = alias.UniqueID()
+		_, err = db.storeSignerInfo(ctx, tx, h, alias, descriptor.SignerInfo)
+		if err != nil {
+			return errors.Wrapf(err, "failed to store signer info for alias")
+		}
+		err = db.storeIdentityData(ctx, tx, h, alias, descriptor.AuditInfo, nil, nil)
+		if err != nil {
+			return errors.Wrapf(err, "failed to store audit info for alias")
+		}
+	}
+	return tx.Commit()
+}
+
 func (db *IdentityStore) Close() error {
 	return common2.Close(db.readDB, db.writeDB)
 }
@@ -361,4 +422,57 @@ func (db *IdentityStore) GetSchema() string {
 		db.table.Signers,
 		db.table.Signers, db.table.Signers,
 	)
+}
+
+func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, h string, id tdriver.Identity, info []byte) (bool, error) {
+	logger.DebugfContext(ctx, "store signer info for [%s]", h)
+	query, args := q.InsertInto(db.table.Signers).
+		Fields("identity_hash", "identity", "info").
+		Row(h, id, info).
+		Format()
+
+	logger.Debug(query, h, hash.Hashable(info))
+	exists := false
+	_, err := tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		if errors.Is(db.errorWrapper.WrapError(err), driver2.UniqueKeyViolation) {
+			logger.DebugfContext(ctx, "signer info [%s] exists, no error to return", h)
+			exists = true
+		} else {
+			return exists, err
+		}
+	}
+	db.signerInfoCache.Add(h, true)
+	logger.DebugfContext(ctx, "store signer info done")
+	return exists, nil
+}
+
+func (db *IdentityStore) storeIdentityData(ctx context.Context, tx tx, h string, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+	logger.DebugfContext(ctx, "store identity data for [%s]", h)
+	query, args := q.InsertInto(db.table.IdentityInfo).
+		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
+		Row(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
+		Format()
+	logger.Debug(query, args)
+
+	_, err := tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		// does the record already exists?
+		logger.DebugfContext(ctx, "store identity data failed, check if audit info exists")
+		auditInfo, err2 := db.GetAuditInfo(ctx, id)
+		if err2 != nil {
+			return err
+		}
+		if !bytes.Equal(auditInfo, identityAudit) {
+			return errors.Wrapf(err, "different audit info stored for [%s], [%s]!=[%s]", h, hash.Hashable(auditInfo), hash.Hashable(identityAudit))
+		}
+		logger.DebugfContext(ctx, "audit info exists")
+		return nil
+	}
+
+	logger.DebugfContext(ctx, "audit info cache update")
+	db.auditInfoCache.Add(h, identityAudit)
+	logger.DebugfContext(ctx, "audit info cache update done")
+
+	return err
 }
