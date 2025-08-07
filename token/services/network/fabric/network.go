@@ -58,6 +58,10 @@ type ledger struct {
 	ch *fabric.Channel
 }
 
+func newLedger(ch *fabric.Channel) *ledger {
+	return &ledger{ch: ch, l: ch.Ledger()}
+}
+
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	tx, err := l.l.GetTransactionByID(id)
 	if err != nil {
@@ -147,7 +151,7 @@ func NewNetwork(
 		ch:                         ch,
 		tmsProvider:                tmsProvider,
 		viewManager:                viewManager,
-		ledger:                     &ledger{l: ch.Ledger()},
+		ledger:                     newLedger(ch),
 		configuration:              configuration,
 		filterProvider:             filterProvider,
 		tokensProvider:             tokensProvider,
