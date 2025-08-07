@@ -433,7 +433,7 @@ func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, h string, i
 	exists := false
 	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		if err != nil && errors.Is(db.errorWrapper.WrapError(err), driver2.UniqueKeyViolation) {
+		if errors.Is(db.errorWrapper.WrapError(err), driver2.UniqueKeyViolation) {
 			logger.DebugfContext(ctx, "signer info [%s] exists, no error to return", h)
 			exists = true
 		} else {
