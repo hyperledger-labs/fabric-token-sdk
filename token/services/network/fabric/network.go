@@ -8,7 +8,6 @@ package fabric
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
@@ -90,7 +90,7 @@ func (l *ledger) GetStates(ctx context.Context, namespace string, keys ...string
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query for states of ids [%v]", keys)
 	}
-	values := make([][]byte, 0, len(keys))
+	var values [][]byte
 	err = json.Unmarshal(res, &values)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling results for query by ids [%v", keys)
