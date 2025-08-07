@@ -63,18 +63,15 @@ type SignerEntry struct {
 // Provider implements the driver.IdentityProvider interface.
 // Provider handles the long-term identities on top of which wallets are defined.
 type Provider struct {
-	Logger  logging.Logger
-	Binder  idriver.NetworkBinderService
-	Storage storage
-
+	Logger                  logging.Logger
+	Binder                  idriver.NetworkBinderService
 	enrollmentIDUnmarshaler enrollmentIDUnmarshaler
-	isMeCache               cache[bool]
+	storage                 storage
+	deserializer            idriver.Deserializer
 
+	isMeCache cache[bool]
 	signers   cache[*SignerEntry]
 	verifiers cache[*VerifierEntry]
-
-	storage      storage
-	deserializer idriver.Deserializer
 }
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
@@ -88,21 +85,19 @@ func NewProvider(
 ) *Provider {
 	return &Provider{
 		Logger:                  logger,
-		Storage:                 storage,
 		Binder:                  binder,
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
+		deserializer:            deserializer,
+		storage:                 storage,
 		isMeCache:               secondcache.NewTyped[bool](1000),
-
-		signers:      secondcache.NewTyped[*SignerEntry](1000),
-		verifiers:    secondcache.NewTyped[*VerifierEntry](1000),
-		deserializer: deserializer,
-		storage:      storage,
+		signers:                 secondcache.NewTyped[*SignerEntry](1000),
+		verifiers:               secondcache.NewTyped[*VerifierEntry](1000),
 	}
 }
 
 func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *idriver.IdentityDescriptor, alias driver.Identity) error {
 	// register in the storage
-	if err := p.Storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
+	if err := p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
 		return errors.Wrapf(err, "failed to register identity descriptor")
 	}
 
@@ -117,15 +112,15 @@ func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identit
 }
 
 func (p *Provider) RegisterAuditInfo(ctx context.Context, identity driver.Identity, info []byte) error {
-	return p.Storage.StoreIdentityData(ctx, identity, info, nil, nil)
+	return p.storage.StoreIdentityData(ctx, identity, info, nil, nil)
 }
 
 func (p *Provider) GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error) {
-	return p.Storage.GetAuditInfo(ctx, identity)
+	return p.storage.GetAuditInfo(ctx, identity)
 }
 
 func (p *Provider) RegisterRecipientData(ctx context.Context, data *driver.RecipientData) error {
-	return p.Storage.StoreIdentityData(ctx, data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
+	return p.storage.StoreIdentityData(ctx, data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
 }
 
 func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
@@ -384,20 +379,24 @@ func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias dr
 
 	// signers
 	{
-		entry := &SignerEntry{Signer: descriptor.Signer}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			entry.DebugStack = debug.Stack()
+		if descriptor.Signer != nil {
+			entry := &SignerEntry{Signer: descriptor.Signer}
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				entry.DebugStack = debug.Stack()
+			}
+			p.signers.Add(id, entry)
+			p.signers.Add(aliasID, entry)
 		}
-		p.signers.Add(id, entry)
-		p.signers.Add(aliasID, entry)
 	}
 	// verifiers
 	{
-		entry := &VerifierEntry{Verifier: descriptor.Verifier}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			entry.DebugStack = debug.Stack()
+		if descriptor.Verifier != nil {
+			entry := &VerifierEntry{Verifier: descriptor.Verifier}
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				entry.DebugStack = debug.Stack()
+			}
+			p.verifiers.Add(id, entry)
+			p.verifiers.Add(aliasID, entry)
 		}
-		p.verifiers.Add(id, entry)
-		p.verifiers.Add(aliasID, entry)
 	}
 }
