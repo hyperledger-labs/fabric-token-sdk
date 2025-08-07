@@ -20,8 +20,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = logging.MustGetLogger()
-
 type StorageProvider = idriver.StorageProvider
 
 // enrollmentIDUnmarshaler decodes an enrollment ID form an audit info
@@ -108,7 +106,17 @@ func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescr
 }
 
 func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error {
-	return p.localRegisterVerifier(ctx, identity, v)
+	if v == nil {
+		return errors.New("invalid verifier, expected a valid instance")
+	}
+	idHash := identity.UniqueID()
+	entry := &VerifierEntry{Verifier: v}
+	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		entry.DebugStack = debug.Stack()
+	}
+	p.verifiers.Add(idHash, entry)
+	p.Logger.DebugfContext(ctx, "register verifier to [%s]:[%s]", idHash, logging.Identifier(v))
+	return nil
 }
 
 func (p *Provider) RegisterAuditInfo(ctx context.Context, identity driver.Identity, info []byte) error {
@@ -124,10 +132,14 @@ func (p *Provider) RegisterRecipientData(ctx context.Context, data *driver.Recip
 }
 
 func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
-	defer func() {
-		p.isMeCache.Add(identity.UniqueID(), true)
-	}()
-	return p.localRegisterSigner(ctx, identity, signer, verifier, signerInfo)
+	identityDescriptor := &idriver.IdentityDescriptor{
+		Identity:   identity,
+		AuditInfo:  nil,
+		Signer:     signer,
+		SignerInfo: signerInfo,
+		Verifier:   verifier,
+	}
+	return p.RegisterIdentityDescriptor(ctx, identityDescriptor, nil)
 }
 
 func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []string {
@@ -148,7 +160,7 @@ func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []s
 		return result
 	}
 
-	found := p.localAreMe(ctx, notFound...)
+	found := p.areMe(ctx, notFound...)
 	for _, id := range notFound {
 		uniqueID := id.UniqueID()
 		p.isMeCache.Add(uniqueID, slices.Contains(found, uniqueID))
@@ -168,12 +180,12 @@ func (p *Provider) RegisterRecipientIdentity(ctx context.Context, id driver.Iden
 
 func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	found := false
+	idHash := identity.UniqueID()
 	defer func() {
-		p.isMeCache.Add(identity.UniqueID(), found)
+		p.isMeCache.Add(idHash, found)
 	}()
-	signer, err := p.localGetSigner(ctx, identity)
+	signer, err := p.getSigner(ctx, identity, idHash)
 	if err != nil {
-		p.Logger.Warn(err)
 		return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 	}
 	found = true
@@ -205,45 +217,8 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 	return nil
 }
 
-func (p *Provider) localRegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
-	idHash := identity.UniqueID()
-	logger.DebugfContext(ctx, "register signer and verifier [%s]:[%s][%s]", idHash, logging.Identifier(signer), logging.Identifier(verifier))
-
-	if signer != nil {
-		if err := p.registerSigner(ctx, identity, signer, verifier, signerInfo); err != nil {
-			return err
-		}
-	}
-
-	if verifier != nil {
-		if err := p.RegisterVerifier(ctx, identity, verifier); err != nil {
-			p.deleteSigner(idHash)
-			return err
-		}
-	}
-
-	logger.DebugfContext(ctx, "register signer and verifier [%s]:[%s][%s], done", idHash, logging.Identifier(signer), logging.Identifier(verifier))
-	return nil
-}
-
-func (p *Provider) localRegisterVerifier(ctx context.Context, identity driver.Identity, verifier driver.Verifier) error {
-	if verifier == nil {
-		return errors.New("invalid verifier, expected a valid instance")
-	}
-
-	idHash := identity.UniqueID()
-	entry := &VerifierEntry{Verifier: verifier}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
-	}
-	p.verifiers.Add(idHash, entry)
-
-	logger.DebugfContext(ctx, "register verifier to [%s]:[%s]", idHash, logging.Identifier(verifier))
-	return nil
-}
-
-func (p *Provider) localAreMe(ctx context.Context, identities ...driver.Identity) []string {
-	logger.DebugfContext(ctx, "is me [%s]?", identities)
+func (p *Provider) areMe(ctx context.Context, identities ...driver.Identity) []string {
+	p.Logger.DebugfContext(ctx, "is me [%s]?", identities)
 	idHashes := make([]string, len(identities))
 	for i, id := range identities {
 		idHashes[i] = id.UniqueID()
@@ -255,7 +230,7 @@ func (p *Provider) localAreMe(ctx context.Context, identities ...driver.Identity
 	// check local cache
 	for _, id := range identities {
 		if _, ok := p.signers.Get(id.UniqueID()); ok {
-			logger.DebugfContext(ctx, "is me [%s]? yes, from cache", id)
+			p.Logger.DebugfContext(ctx, "is me [%s]? yes, from cache", id)
 			result.Add(id.UniqueID())
 		} else {
 			notFound = append(notFound, id)
@@ -269,65 +244,29 @@ func (p *Provider) localAreMe(ctx context.Context, identities ...driver.Identity
 	// check storage
 	found, err := p.storage.GetExistingSignerInfo(ctx, notFound...)
 	if err != nil {
-		logger.Errorf("failed checking if a signer exists [%s]", err)
+		p.Logger.Errorf("failed checking if a signer exists [%s]", err)
 		return result.ToSlice()
 	}
 	result.Add(found...)
 	return result.ToSlice()
 }
 
-func (p *Provider) localGetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
-	idHash := identity.UniqueID()
-	return p.getSigner(ctx, identity, idHash)
-}
-
-func (p *Provider) registerSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
-	if signer == nil {
-		// Nothing to do here
-		return nil
-	}
-
-	idHash := identity.UniqueID()
-	logger.DebugfContext(ctx, "register signer and verifier [%s]:[%s][%s]", idHash, logging.Identifier(signer), logging.Identifier(verifier))
-	// First check with read lock
-	s, ok := p.signers.Get(idHash)
-	if ok {
-		logger.Warnf("another signer bound to [%s]:[%s][%s] from [%s]", identity, logging.Identifier(s), logging.Identifier(signer), string(s.DebugStack))
-		return nil
-	}
-
-	entry := &SignerEntry{Signer: signer}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
-	}
-	p.signers.Add(idHash, entry)
-
-	// store, if a failure happens then remove the entry
-	logger.DebugfContext(ctx, "checks done, store signer info")
-	if err := p.storage.StoreSignerInfo(ctx, identity, signerInfo); err != nil {
-		p.deleteSigner(idHash)
-		return errors.Wrap(err, "failed to store entry in storage for the passed signer")
-	}
-
-	return nil
-}
-
 func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
 	// check again the cache
 	entry, ok := p.signers.Get(idHash)
 	if ok {
-		logger.DebugfContext(ctx, "signer for [%s] found", idHash)
+		p.Logger.DebugfContext(ctx, "signer for [%s] found", idHash)
 		return entry.Signer, nil
 	}
 
-	logger.DebugfContext(ctx, "signer for [%s] not found, try to deserialize", idHash)
+	p.Logger.DebugfContext(ctx, "signer for [%s] not found, try to deserialize", idHash)
 	// ask the deserializer
 	signer, err := p.deserializeSigner(ctx, identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing identity for signer [%s]", identity)
 	}
 	entry = &SignerEntry{Signer: signer}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
+	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
 	p.signers.Add(idHash, entry)
@@ -364,38 +303,33 @@ func (p *Provider) deserializeSigner(ctx context.Context, identity driver.Identi
 	return signer, nil
 }
 
-func (p *Provider) deleteSigner(id string) {
-	p.signers.Delete(id)
-}
-
 func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias driver.Identity) {
 	id := descriptor.Identity.UniqueID()
+	setAlias := !alias.IsNone()
 	aliasID := alias.UniqueID()
 
-	// isMe?
-	{
-		p.isMeCache.Add(id, true)
-	}
-
 	// signers
-	{
-		if descriptor.Signer != nil {
-			entry := &SignerEntry{Signer: descriptor.Signer}
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				entry.DebugStack = debug.Stack()
-			}
-			p.signers.Add(id, entry)
+	if descriptor.Signer != nil {
+		// if the signer is set, this means that id belongs to this node
+		p.isMeCache.Add(id, true)
+
+		entry := &SignerEntry{Signer: descriptor.Signer}
+		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+			entry.DebugStack = debug.Stack()
+		}
+		p.signers.Add(id, entry)
+		if setAlias {
 			p.signers.Add(aliasID, entry)
 		}
 	}
 	// verifiers
-	{
-		if descriptor.Verifier != nil {
-			entry := &VerifierEntry{Verifier: descriptor.Verifier}
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				entry.DebugStack = debug.Stack()
-			}
-			p.verifiers.Add(id, entry)
+	if descriptor.Verifier != nil {
+		entry := &VerifierEntry{Verifier: descriptor.Verifier}
+		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+			entry.DebugStack = debug.Stack()
+		}
+		p.verifiers.Add(id, entry)
+		if setAlias {
 			p.verifiers.Add(aliasID, entry)
 		}
 	}

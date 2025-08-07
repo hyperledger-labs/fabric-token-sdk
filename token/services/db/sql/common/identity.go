@@ -357,12 +357,14 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 		return nil
 	}
 
-	err = db.storeIdentityData(ctx, tx, h, descriptor.Identity, descriptor.AuditInfo, nil, nil)
-	if err != nil {
-		return errors.Wrapf(err, "failed to store audit info for descriptor's identity")
+	if len(descriptor.AuditInfo) != 0 {
+		err = db.storeIdentityData(ctx, tx, h, descriptor.Identity, descriptor.AuditInfo, nil, nil)
+		if err != nil {
+			return errors.Wrapf(err, "failed to store audit info for descriptor's identity")
+		}
 	}
 
-	if !descriptor.Identity.Equal(alias) {
+	if !alias.IsNone() && !descriptor.Identity.Equal(alias) {
 		h = alias.UniqueID()
 		_, err = db.storeSignerInfo(ctx, tx, h, alias, descriptor.SignerInfo)
 		if err != nil {
