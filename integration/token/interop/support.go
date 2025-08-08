@@ -421,19 +421,3 @@ func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
-
-func scanWithError(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, errorMsgs []string, opts ...token.ServiceOption) {
-	options, err := token.CompileServiceOptions(opts...)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-	_, err = network.Client(id.ReplicaName()).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
-		TMSID:    options.TMSID(),
-		Timeout:  30 * time.Second,
-		Hash:     hash,
-		HashFunc: hashFunc,
-	}))
-	gomega.Expect(err).To(gomega.HaveOccurred())
-	for _, msg := range errorMsgs {
-		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
-	}
-}
