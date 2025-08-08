@@ -154,7 +154,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			if concurrencyIssue {
 				logger.DebugfContext(ctx, "concurrency issue, some of the tokens might not exist anymore")
 				return nil, nil, errors.WithMessagef(
-					token.SelectorSufficientFundsButConcurrencyIssue,
+					token.ErrSelectorSufficientFundsButConcurrencyIssue,
 					"token selection failed: sufficient funds but concurrency issue, potential [%s] tokens of type [%s] were available", potentialSumWithLocked, tokenType,
 				)
 			}
@@ -163,7 +163,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 				// funds are potentially enough but they are locked
 				logger.DebugfContext(ctx, "token selection: it is time to fail but how, sufficient funds but locked")
 				return nil, nil, errors.WithMessagef(
-					token.SelectorSufficientButLockedFunds,
+					token.ErrSelectorSufficientButLockedFunds,
 					"token selection failed: sufficient but partially locked funds, potential [%s] tokens of type [%s] are available", potentialSumWithLocked.Decimal(), tokenType,
 				)
 			}
@@ -171,7 +171,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			// funds are insufficient
 			logger.DebugfContext(ctx, "token selection: it is time to fail but how, insufficient funds")
 			return nil, nil, errors.WithMessagef(
-				token.SelectorInsufficientFunds,
+				token.ErrSelectorInsufficientFunds,
 				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum.Decimal(), tokenType,
 			)
 		}
