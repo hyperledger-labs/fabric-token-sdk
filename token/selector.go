@@ -13,17 +13,17 @@ import (
 )
 
 var (
-	// SelectorInsufficientFunds is returned when funds are not sufficient to cover the request
-	SelectorInsufficientFunds = errors.New("insufficient funds")
-	// SelectorSufficientButLockedFunds is returned when funds are sufficient to cover the request, but some tokens are locked
+	// ErrSelectorInsufficientFunds is returned when funds are not sufficient to cover the request
+	ErrSelectorInsufficientFunds = errors.New("insufficient funds")
+	// ErrSelectorSufficientButLockedFunds is returned when funds are sufficient to cover the request, but some tokens are locked
 	// by other transactions
-	SelectorSufficientButLockedFunds = errors.New("sufficient but partially locked funds")
-	// SelectorSufficientButNotCertifiedFunds is returned when funds are sufficient to cover the request, but some tokens
+	ErrSelectorSufficientButLockedFunds = errors.New("sufficient but partially locked funds")
+	// ErrSelectorSufficientButNotCertifiedFunds is returned when funds are sufficient to cover the request, but some tokens
 	// are not yet certified and therefore cannot be used.
-	SelectorSufficientButNotCertifiedFunds = errors.New("sufficient but partially not certified")
-	// SelectorSufficientFundsButConcurrencyIssue is returned when funds are sufficient to cover the request, but
+	ErrSelectorSufficientButNotCertifiedFunds = errors.New("sufficient but partially not certified")
+	// ErrSelectorSufficientFundsButConcurrencyIssue is returned when funds are sufficient to cover the request, but
 	// concurrency issues does not make some of the selected tokens available.
-	SelectorSufficientFundsButConcurrencyIssue = errors.New("sufficient funds but concurrency issue")
+	ErrSelectorSufficientFundsButConcurrencyIssue = errors.New("sufficient funds but concurrency issue")
 )
 
 // OwnerFilter tells if a passed identity is recognized

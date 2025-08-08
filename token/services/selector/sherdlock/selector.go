@@ -61,7 +61,7 @@ type stubbornSelector struct {
 
 func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	for retriesAfterBackoff := 0; retriesAfterBackoff <= m.maxRetriesAfterBackoff; retriesAfterBackoff++ {
-		if tokens, quantity, err := m.selector.Select(ctx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
+		if tokens, quantity, err := m.selector.Select(ctx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.ErrSelectorSufficientButLockedFunds) {
 			return tokens, quantity, err
 		}
 		backoffDuration := time.Duration(rand.Int63n(int64(m.backoffInterval)))
@@ -69,7 +69,7 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 		time.Sleep(backoffDuration)
 		m.logger.DebugfContext(ctx, "Now it is our turn to retry...")
 	}
-	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
+	return nil, nil, errors.Wrapf(token.ErrSelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
 
 func NewStubbornSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration, retries int) *stubbornSelector {
@@ -106,7 +106,7 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
 				return nil, nil, errors.Wrapf(
-					token.SelectorInsufficientFunds,
+					token.ErrSelectorInsufficientFunds,
 					"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked",
 					sum.Decimal(),
 					tokenType,
@@ -124,8 +124,8 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 				// Every time our token cache finishes, but we noted that one of the tokens we saw was used by someone,
 				// we retry to fetch, in case the other process did not spend and unlocked the token meanwhile.
 				// We do not unlock our tokens, yet.
-				// After some retries, we unlock the tokens and return a token.SelectorInsufficientFunds error
-				return nil, nil, token.SelectorSufficientButLockedFunds
+				// After some retries, we unlock the tokens and return a token.ErrSelectorInsufficientFunds error
+				return nil, nil, token.ErrSelectorSufficientButLockedFunds
 			}
 
 			s.logger.DebugfContext(ctx, "Fetch all non-deleted tokens from the DB and refresh the token cache.")

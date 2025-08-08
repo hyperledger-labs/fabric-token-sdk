@@ -5,7 +5,7 @@ linters:
 #    - contextcheck
 #    - depguard
 #    - dupl
-#    - errname
+    - errname
     - errorlint
 #    - fatcontext
 #    - forcetypeassert

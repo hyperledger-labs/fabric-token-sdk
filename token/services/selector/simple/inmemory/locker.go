@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	logger             = logging.MustGetLogger()
-	AlreadyLockedError = errors.New("already locked")
+	logger           = logging.MustGetLogger()
+	ErrAlreadyLocked = errors.New("already locked")
 )
 
 type TXStatusProvider interface {
@@ -67,7 +67,7 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 	if _, ok := d.locked[k]; ok && !reclaim {
 		// return immediately
 		d.lock.RUnlock()
-		return "", AlreadyLockedError
+		return "", ErrAlreadyLocked
 	}
 	d.lock.RUnlock()
 
@@ -87,7 +87,7 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					return e.TxID, errors.Errorf("already locked by [%s]", e)
 				}
-				return e.TxID, AlreadyLockedError
+				return e.TxID, ErrAlreadyLocked
 			}
 			logger.DebugfContext(ctx, "[%s] already locked by [%s], reclaimed successful, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
 		} else {
@@ -95,7 +95,7 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				return e.TxID, errors.Errorf("already locked by [%s]", e)
 			}
-			return e.TxID, AlreadyLockedError
+			return e.TxID, ErrAlreadyLocked
 		}
 	}
 	logger.DebugfContext(ctx, "locking [%s] for [%s]", id, txID)

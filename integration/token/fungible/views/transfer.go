@@ -283,13 +283,13 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 		if err != nil {
 			// If finally not enough tokens were available, the sender can check what was the cause of the error:
 			switch {
-			case errors.HasCause(err, token2.SelectorInsufficientFunds):
+			case errors.HasCause(err, token2.ErrSelectorInsufficientFunds):
 				assert.NoError(err, "pineapple")
-			case errors.HasCause(err, token2.SelectorSufficientButLockedFunds):
+			case errors.HasCause(err, token2.ErrSelectorSufficientButLockedFunds):
 				assert.NoError(err, "lemonade")
-			case errors.HasCause(err, token2.SelectorSufficientButNotCertifiedFunds):
+			case errors.HasCause(err, token2.ErrSelectorSufficientButNotCertifiedFunds):
 				assert.NoError(err, "mandarin")
-			case errors.HasCause(err, token2.SelectorSufficientFundsButConcurrencyIssue):
+			case errors.HasCause(err, token2.ErrSelectorSufficientFundsButConcurrencyIssue):
 				assert.NoError(err, "peach")
 			default:
 				assert.NoError(err, "system failure")
