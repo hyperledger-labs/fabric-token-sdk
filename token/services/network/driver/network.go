@@ -83,7 +83,7 @@ type Network interface {
 
 	// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
 	// The operation gets canceled if the passed timeout elapses or, if stopOnLastTx is true, when the last transaction in the vault is reached.
-	LookupTransferMetadataKey(namespace string, startingTxID string, subKey string, timeout time.Duration, stopOnLastTx bool) ([]byte, error)
+	LookupTransferMetadataKey(namespace string, key string, timeout time.Duration) ([]byte, error)
 
 	// Ledger gives access to the remote ledger
 	Ledger() (Ledger, error)

@@ -152,7 +152,7 @@ func (m *deliveryBasedLLM) AddPermanentLookupListener(namespace string, key stri
 	return m.lm.AddPermanentEventListener(key, &listenerEntry{namespace, listener})
 }
 
-func (m *deliveryBasedLLM) AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener Listener) error {
+func (m *deliveryBasedLLM) AddLookupListener(namespace string, key string, listener Listener) error {
 	return m.lm.AddEventListener(key, &listenerEntry{namespace, listener})
 }
 

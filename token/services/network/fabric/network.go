@@ -322,7 +322,7 @@ func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityLi
 	return n.flm.RemoveFinalityListener(txID, listener)
 }
 
-func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration, stopOnLastTx bool) ([]byte, error) {
+func (n *Network) LookupTransferMetadataKey(namespace string, key string, timeout time.Duration) ([]byte, error) {
 	transferMetadataKey, err := n.keyTranslator.CreateTransferActionMetadataKey(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
@@ -331,7 +331,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	l := &lookupListener{wg: wg, key: transferMetadataKey}
-	if err := n.llm.AddLookupListener(namespace, transferMetadataKey, startingTxID, stopOnLastTx, l); err != nil {
+	if err := n.llm.AddLookupListener(namespace, transferMetadataKey, l); err != nil {
 		return nil, errors.Wrapf(err, "failed to add lookup listener")
 	}
 	defer func() {

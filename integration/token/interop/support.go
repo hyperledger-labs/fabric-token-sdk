@@ -409,32 +409,28 @@ func fastExchange(network *integration.Infrastructure, id *token3.NodeReference,
 	time.Sleep(10 * time.Second)
 }
 
-func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, startingTransactionID string, stopOnLastTx bool, opts ...token.ServiceOption) {
+func scan(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = network.Client(id.ReplicaName()).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
-		TMSID:                 options.TMSID(),
-		Timeout:               3 * time.Minute,
-		Hash:                  hash,
-		HashFunc:              hashFunc,
-		StartingTransactionID: startingTransactionID,
-		StopOnLastTx:          stopOnLastTx,
+		TMSID:    options.TMSID(),
+		Timeout:  3 * time.Minute,
+		Hash:     hash,
+		HashFunc: hashFunc,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
-func scanWithError(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, startingTransactionID string, errorMsgs []string, stopOnLastTx bool, opts ...token.ServiceOption) {
+func scanWithError(network *integration.Infrastructure, id *token3.NodeReference, hash []byte, hashFunc crypto.Hash, errorMsgs []string, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = network.Client(id.ReplicaName()).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
-		TMSID:                 options.TMSID(),
-		Timeout:               30 * time.Second,
-		Hash:                  hash,
-		HashFunc:              hashFunc,
-		StartingTransactionID: startingTransactionID,
-		StopOnLastTx:          stopOnLastTx,
+		TMSID:    options.TMSID(),
+		Timeout:  30 * time.Second,
+		Hash:     hash,
+		HashFunc: hashFunc,
 	}))
 	gomega.Expect(err).To(gomega.HaveOccurred())
 	for _, msg := range errorMsgs {

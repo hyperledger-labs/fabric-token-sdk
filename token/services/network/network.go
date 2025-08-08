@@ -259,8 +259,8 @@ func (n *Network) RemoveFinalityListener(id string, listener FinalityListener) e
 
 // LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
 // The operation gets canceled if the passed timeout gets reached or, if stopOnLastTx is true, when the last transaction in the vault is reached.
-func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string, timeout time.Duration, stopOnLastTx bool, opts ...token.ServiceOption) ([]byte, error) {
-	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout, stopOnLastTx)
+func (n *Network) LookupTransferMetadataKey(namespace, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+	return n.n.LookupTransferMetadataKey(namespace, key, timeout)
 }
 
 func (n *Network) Ledger() (*Ledger, error) {

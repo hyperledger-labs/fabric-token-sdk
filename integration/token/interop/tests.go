@@ -239,8 +239,8 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 	IssueCashWithTMS(network, beta, issuer, "", USD, 30, sel.Get("bob.id1"), auditor)
 	CheckBalanceAndHolding(network, bob, "bob.id1", USD, 30, token.WithTMSID(beta))
 
-	aliceLockTxID, preImage, hash := HTLCLock(network, alpha, alice, "alice.id1", EUR, 10, sel.Get("alice.id2"), auditor, 30*time.Second, nil, 0)
-	bobLockTxID, _, _ := HTLCLock(network, beta, bob, "bob.id1", USD, 10, sel.Get("bob.id2"), auditor, 30*time.Second, hash, 0)
+	_, preImage, hash := HTLCLock(network, alpha, alice, "alice.id1", EUR, 10, sel.Get("alice.id2"), auditor, 30*time.Second, nil, 0)
+	_, _, _ = HTLCLock(network, beta, bob, "bob.id1", USD, 10, sel.Get("bob.id2"), auditor, 30*time.Second, hash, 0)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -256,11 +256,11 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 			htlcClaim(network, beta, bob, "bob.id2", preImage, auditor)
 		}).ToNot(gomega.Panic())
 	}()
-	scan(network, alice, hash, crypto.SHA256, "", false, token.WithTMSID(alpha))
-	scan(network, alice, hash, crypto.SHA256, aliceLockTxID, false, token.WithTMSID(alpha))
+	scan(network, alice, hash, crypto.SHA256, token.WithTMSID(alpha))
+	scan(network, alice, hash, crypto.SHA256, token.WithTMSID(alpha))
 
-	scan(network, bob, hash, crypto.SHA256, "", false, token.WithTMSID(beta))
-	scan(network, bob, hash, crypto.SHA256, bobLockTxID, false, token.WithTMSID(beta))
+	scan(network, bob, hash, crypto.SHA256, token.WithTMSID(beta))
+	scan(network, bob, hash, crypto.SHA256, token.WithTMSID(beta))
 
 	// wait the completion of the claims above
 	wg.Wait()
@@ -270,13 +270,10 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 	CheckBalanceWithLockedAndHolding(network, bob, "bob.id1", USD, 20, 0, 0, -1, token.WithTMSID(beta))
 	CheckBalanceWithLockedAndHolding(network, bob, "bob.id2", USD, 10, 0, 0, -1, token.WithTMSID(beta))
 
-	txID := IssueCashWithTMS(network, alpha, issuer, "", EUR, 30, sel.Get("alice.id1"), auditor)
+	IssueCashWithTMS(network, alpha, issuer, "", EUR, 30, sel.Get("alice.id1"), auditor)
 
-	scan(network, bob, hash, crypto.SHA256, bobLockTxID, true, token.WithTMSID(beta))
-	start := time.Now()
-	scanWithError(network, alice, hash, crypto.SHA256, txID, []string{"reached, stop scan."}, true, token.WithTMSID(alpha))
-	gomega.Expect(time.Since(start)).To(gomega.BeNumerically("<", time.Second*30), "scan should be canceled on last tx, before timeout")
-	scanWithError(network, alice, hash, crypto.SHA256, txID, []string{"context done"}, false, token.WithTMSID(alpha))
+	scan(network, bob, hash, crypto.SHA256, token.WithTMSID(beta))
+	scanWithError(network, alice, hash, crypto.SHA256, []string{"context done"}, token.WithTMSID(alpha))
 
 	CheckPublicParams(network, token.TMSID{}, alice, bob)
 	CheckPublicParams(network, alpha, issuer, auditor)
