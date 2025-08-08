@@ -7,7 +7,7 @@ linters:
 #    - dupl
     - errname
     - errorlint
-    - fatcontext
+#    - fatcontext
 #    - forcetypeassert
     - ginkgolinter
 #    - gocognit
