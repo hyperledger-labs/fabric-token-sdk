@@ -77,7 +77,6 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: fabtokenv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
-		FinalityType:    "committer",
 	}))
 	return ts, selector
 }
