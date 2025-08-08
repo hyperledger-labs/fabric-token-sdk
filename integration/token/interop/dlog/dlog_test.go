@@ -80,7 +80,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&fdlog.SDK{}},
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
-		FinalityType: config.Committer,
+		FinalityType: config.Delivery,
 	}))
 	return ts, selector
 }

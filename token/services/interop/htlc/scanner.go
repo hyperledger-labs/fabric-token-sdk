@@ -58,30 +58,14 @@ func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Has
 		return nil, errors.Errorf("passed hash endcoding is not available [%d]", hashEncoding)
 	}
 
-	tokenOptions, err := token.CompileServiceOptions(opts...)
-	if err != nil {
-		return nil, err
-	}
 	tms := token.GetManagementService(sp, opts...)
-
 	network := network.GetInstance(sp, tms.Network(), tms.Channel())
 	if network == nil {
 		return nil, errors.Errorf("cannot find network [%s:%s]", tms.Namespace(), tms.Channel())
 	}
 
-	startingTxID, err := tokenOptions.ParamAsString(ScanForPreImageStartingTransaction)
-	if err != nil {
-		return nil, errors.Wrapf(err, "invalid starting transaction param")
-	}
-	var stopOnLastTx bool
-	stop, err := tokenOptions.ParamAsString(StopScanningOnLastTransaction)
-	if err != nil {
-		return nil, errors.Wrapf(err, "invalid stop on last transaction param")
-	}
-	stopOnLastTx = stop == True
-
 	claimKey := ClaimKey(image)
-	preImage, err := network.LookupTransferMetadataKey(tms.Namespace(), startingTxID, claimKey, timeout, stopOnLastTx, opts...)
+	preImage, err := network.LookupTransferMetadataKey(tms.Namespace(), claimKey, timeout, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup key [%s]", claimKey)
 	}

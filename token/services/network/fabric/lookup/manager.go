@@ -24,7 +24,7 @@ type ListenerManagerProvider interface {
 type ListenerManager interface {
 	PermanentLookupListenerSupported() bool
 	AddPermanentLookupListener(namespace string, key string, listener Listener) error
-	AddLookupListener(namespace string, key string, startingTxID string, stopOnLastTx bool, listener Listener) error
+	AddLookupListener(namespace string, key string, listener Listener) error
 	RemoveLookupListener(id string, listener Listener) error
 }
 
@@ -38,11 +38,6 @@ func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvi
 			ListenerTimeout:         lmConfig.DeliveryListenerTimeout(),
 			LRUSize:                 lmConfig.DeliveryLRUSize(),
 			LRUBuffer:               lmConfig.DeliveryLRUBuffer(),
-		})
-	case config.Committer:
-		return NewChannelBasedFLMProvider(fnsp, tracerProvider, keyTranslator, ChannelListenerManagerConfig{
-			MaxRetries:        lmConfig.CommitterMaxRetries(),
-			RetryWaitDuration: lmConfig.CommitterRetryWaitDuration(),
 		})
 	}
 	panic("unknown config type: " + lmConfig.Type())
