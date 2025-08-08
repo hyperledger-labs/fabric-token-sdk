@@ -273,7 +273,7 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure, sel *t
 	IssueCashWithTMS(network, alpha, issuer, "", EUR, 30, sel.Get("alice.id1"), auditor)
 
 	scan(network, bob, hash, crypto.SHA256, token.WithTMSID(beta))
-	scanWithError(network, alice, hash, crypto.SHA256, []string{"context done"}, token.WithTMSID(alpha))
+	scan(network, alice, hash, crypto.SHA256, token.WithTMSID(alpha))
 
 	CheckPublicParams(network, token.TMSID{}, alice, bob)
 	CheckPublicParams(network, alpha, issuer, auditor)
