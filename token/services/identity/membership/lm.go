@@ -142,7 +142,7 @@ func (l *LocalMembership) GetIdentityInfo(ctx context.Context, label string, aud
 	l.localIdentitiesMutex.RLock()
 	defer l.localIdentitiesMutex.RUnlock()
 
-	l.logger.DebugfContext(ctx, "get identity info by label [%s][%s]", label, hash.Hashable(label))
+	l.logger.DebugfContext(ctx, "get identity info by label [%s][%s]", logging.Printable(label), hash.Hashable(label))
 	localIdentity := l.getLocalIdentity(ctx, label)
 	if localIdentity == nil {
 		return nil, errors2.Errorf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)

@@ -8,35 +8,16 @@ package logging
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 )
 
 func Prefix(id string) fmt.Stringer {
-	return prefix(id)
-}
-
-type prefix string
-
-func (w prefix) String() string {
-	s := string(w)
-	if len(s) <= 20 {
-		return strings.ToValidUTF8(s, "X")
-	}
-	return fmt.Sprintf("%s~%s", strings.ToValidUTF8(s[:20], "X"), hash.Hashable(s).String())
+	return logging.Prefix(id)
 }
 
 func Printable(id string) fmt.Stringer {
-	return printable(id)
-}
-
-type printable string
-
-func (w printable) String() string {
-	s := string(w)
-	return strings.ToValidUTF8(s, "X")
+	return logging.Printable(id)
 }
 
 func Keys[K comparable, V any](m map[K]V) fmt.Stringer {
