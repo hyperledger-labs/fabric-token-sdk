@@ -12,11 +12,10 @@ import (
 
 var (
 	certifiedTokens = metrics.CounterOpts{
-		Namespace:    "certification_interactive",
-		Name:         "certified_tokens",
-		Help:         "The number of tokens certified.",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
+		Namespace:  "certification_interactive",
+		Name:       "certified_tokens",
+		Help:       "The number of tokens certified.",
+		LabelNames: []string{"network", "channel", "namespace"},
 	}
 )
 
