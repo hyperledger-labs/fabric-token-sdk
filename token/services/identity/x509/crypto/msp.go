@@ -158,6 +158,40 @@ func (f *IdentityFactory) GetFullIdentity(sidInfo *SigningIdentityInfo) (*fullId
 	}, nil
 }
 
+func (f *IdentityFactory) DeserializeFullIdentity(raw []byte) (*fullIdentity, error) {
+	if len(raw) == 0 {
+		return nil, errors.New("nil identity")
+	}
+
+	// Extract the public part of the identity
+	idPub, pubKey, cryptoPK, err := f.getIdentityFromConf(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	// Find the matching private key in the BCCSP keystore
+	_, err = f.bccsp.GetKey(pubKey.SKI())
+	if err != nil {
+		return nil, err
+	}
+
+	// get the peer signer
+	identitySigner, err := NewSKIBasedSigner(f.bccsp, pubKey.SKI(), cryptoPK)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to create identity signer")
+	}
+
+	return &fullIdentity{
+		verifyingIdentity: &verifyingIdentity{
+			bccsp:               f.bccsp,
+			SignatureHashFamily: f.SignatureHashFamily,
+			cert:                idPub,
+			pk:                  pubKey,
+		},
+		signer: identitySigner,
+	}, nil
+}
+
 func (f *IdentityFactory) GetIdentity(sidInfo *SigningIdentityInfo) (*verifyingIdentity, error) {
 	if sidInfo == nil {
 		return nil, errors.New("nil signing identity info")

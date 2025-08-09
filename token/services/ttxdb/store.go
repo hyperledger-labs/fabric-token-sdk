@@ -169,7 +169,7 @@ func newStoreService(p driver.TokenTransactionStore) (*StoreService, error) {
 	return &StoreService{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,
-		cache:         secondcache.NewTyped[[]byte](1000),
+		cache:         secondcache.NewTyped[[]byte](5000),
 	}, nil
 }
 

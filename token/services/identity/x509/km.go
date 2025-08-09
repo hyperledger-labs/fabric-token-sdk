@@ -16,6 +16,7 @@ import (
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger/fabric-lib-go/bccsp"
 )
 
 const (
@@ -33,6 +34,8 @@ type KeyManager struct {
 	id                 []byte
 	enrollmentID       string
 	identityDescriptor *idriver.IdentityDescriptor
+	bccspConfig        *crypto.BCCSP
+	keyStore           bccsp.KeyStore
 }
 
 // NewKeyManager returns a new X509 provider with the passed BCCSP configuration.
@@ -76,7 +79,7 @@ func NewKeyManagerFromConf(
 		return p, conf, nil
 	}
 	// load as verify only
-	p, conf, err = newVerifyingKeyManager(conf)
+	p, conf, err = newVerifyingKeyManager(conf, bccspConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,10 +95,10 @@ func newSigningKeyManager(conf *crypto.Config, bccspConfig *crypto.BCCSP, keySto
 	if err != nil {
 		return nil, err
 	}
-	return newKeyManager(sID, idRaw)
+	return newKeyManager(sID, idRaw, bccspConfig, keyStore)
 }
 
-func newVerifyingKeyManager(conf *crypto.Config) (*KeyManager, *crypto.Config, error) {
+func newVerifyingKeyManager(conf *crypto.Config, bccspConfig *crypto.BCCSP) (*KeyManager, *crypto.Config, error) {
 	conf, err := crypto.RemovePrivateSigner(conf)
 	if err != nil {
 		return nil, nil, err
@@ -104,14 +107,14 @@ func newVerifyingKeyManager(conf *crypto.Config) (*KeyManager, *crypto.Config, e
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to load identity")
 	}
-	p, err := newKeyManager(nil, idRaw)
+	p, err := newKeyManager(nil, idRaw, bccspConfig, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	return p, conf, nil
 }
 
-func newKeyManager(sID driver.SigningIdentity, id []byte) (*KeyManager, error) {
+func newKeyManager(sID driver.SigningIdentity, id []byte, bccspConfig *crypto.BCCSP, keyStore bccsp.KeyStore) (*KeyManager, error) {
 	enrollmentID, err := crypto.GetEnrollmentID(id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get enrollment id")
@@ -133,7 +136,14 @@ func newKeyManager(sID driver.SigningIdentity, id []byte) (*KeyManager, error) {
 		AuditInfo: auditInfoRaw,
 		Signer:    sID,
 	}
-	return &KeyManager{identityDescriptor: identityDescriptor, sID: sID, id: id, enrollmentID: enrollmentID}, nil
+	return &KeyManager{
+		identityDescriptor: identityDescriptor,
+		sID:                sID,
+		id:                 id,
+		enrollmentID:       enrollmentID,
+		bccspConfig:        bccspConfig,
+		keyStore:           keyStore,
+	}, nil
 }
 
 func (p *KeyManager) IsRemote() bool {
@@ -153,7 +163,7 @@ func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (drive
 }
 
 func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
-	return nil, errors.New("not supported")
+	return crypto.DeserializeIdentity(raw, p.bccspConfig, p.keyStore)
 }
 
 func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
