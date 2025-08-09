@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -37,7 +36,7 @@ type cache[T any] interface {
 	Delete(key string)
 }
 
-type tx interface {
+type dbTransaction interface {
 	ExecContext(ctx context.Context, query string, args ...common3.Param) (sql.Result, error)
 }
 
@@ -87,8 +86,8 @@ func NewCachedIdentityStore(
 		readDB,
 		writeDB,
 		tables,
-		secondcache.NewTyped[bool](1000),
-		secondcache.NewTyped[[]byte](1000),
+		secondcache.NewTyped[bool](5000),
+		secondcache.NewTyped[[]byte](5000),
 		ci,
 		errorWrapper,
 	)
@@ -181,34 +180,7 @@ func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url s
 }
 
 func (db *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
-	logger.DebugfContext(ctx, "store identity data for [%s]", view.Identity(id))
-	h := token.Identity(id).String()
-	query, args := q.InsertInto(db.table.IdentityInfo).
-		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
-		Row(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
-		Format()
-	logger.Debug(query, args)
-
-	_, err := db.writeDB.ExecContext(ctx, query, args...)
-	if err != nil {
-		// does the record already exists?
-		logger.DebugfContext(ctx, "store identity data failed, check if audit info exists")
-		auditInfo, err2 := db.GetAuditInfo(ctx, id)
-		if err2 != nil {
-			return err
-		}
-		if !bytes.Equal(auditInfo, identityAudit) {
-			return errors.Wrapf(err, "different audit info stored for [%s], [%s]!=[%s]", h, hash.Hashable(auditInfo), hash.Hashable(identityAudit))
-		}
-		logger.DebugfContext(ctx, "audit info exists")
-		return nil
-	}
-
-	logger.DebugfContext(ctx, "audit info cache update")
-	db.auditInfoCache.Add(h, identityAudit)
-	logger.DebugfContext(ctx, "audit info cache update done")
-
-	return err
+	return db.storeIdentityData(ctx, db.writeDB, tdriver.Identity(id).UniqueID(), id, identityAudit, tokenMetadata, tokenMetadataAudit, true)
 }
 
 func (db *IdentityStore) GetAuditInfo(ctx context.Context, id []byte) ([]byte, error) {
@@ -252,7 +224,7 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 }
 
 func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id tdriver.Identity, info []byte) error {
-	_, err := db.storeSignerInfo(ctx, db.writeDB, id.UniqueID(), id, info)
+	_, err := db.storeSignerInfo(ctx, db.writeDB, id.UniqueID(), id, info, true)
 	return err
 }
 
@@ -331,7 +303,38 @@ func (db *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]
 	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
-func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descriptor *idriver.IdentityDescriptor, alias tdriver.Identity) (err error) {
+func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descriptor *idriver.IdentityDescriptor, alias tdriver.Identity) error {
+	// store
+	logger.DebugfContext(ctx, "register identity descriptor...")
+	if err := db.registerIdentityDescriptor(ctx, descriptor, alias); err != nil {
+		logger.ErrorfContext(ctx, "register identity descriptor...failed: %v", err)
+		return err
+	}
+	logger.DebugfContext(ctx, "register identity descriptor...done")
+
+	// update all caches
+	logger.DebugfContext(ctx, "register identity descriptor...update caches...")
+	h := descriptor.Identity.UniqueID()
+	db.signerInfoCache.Add(h, true)
+	if len(descriptor.AuditInfo) != 0 {
+		db.auditInfoCache.Add(h, descriptor.AuditInfo)
+	}
+	if !alias.IsNone() && !descriptor.Identity.Equal(alias) {
+		h = alias.UniqueID()
+		db.signerInfoCache.Add(h, true)
+		if len(descriptor.AuditInfo) != 0 {
+			db.auditInfoCache.Add(h, descriptor.AuditInfo)
+		}
+	}
+	logger.DebugfContext(ctx, "register identity descriptor...update caches...done")
+	return nil
+}
+
+func (db *IdentityStore) registerIdentityDescriptor(
+	ctx context.Context,
+	descriptor *idriver.IdentityDescriptor,
+	alias tdriver.Identity,
+) error {
 	if descriptor == nil {
 		return errors.New("identity descriptor is nil")
 	}
@@ -340,25 +343,26 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 		return err
 	}
 	defer func() {
-		if err != nil {
-			CloseFunc(tx.Rollback)
+		if tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.ErrorfContext(ctx, "failed closing connection: %s", err)
+			}
 		}
 	}()
 
 	h := descriptor.Identity.UniqueID()
 
-	exists, err := db.storeSignerInfo(ctx, tx, h, descriptor.Identity, descriptor.SignerInfo)
+	exists, err := db.storeSignerInfo(ctx, tx, h, descriptor.Identity, descriptor.SignerInfo, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to store signer info for descriptor's identity")
 	}
 	if exists {
-		CloseFunc(tx.Rollback)
 		// no need to continue
 		return nil
 	}
 
 	if len(descriptor.AuditInfo) != 0 {
-		err = db.storeIdentityData(ctx, tx, h, descriptor.Identity, descriptor.AuditInfo, nil, nil)
+		err = db.storeIdentityData(ctx, tx, h, descriptor.Identity, descriptor.AuditInfo, nil, nil, false)
 		if err != nil {
 			return errors.Wrapf(err, "failed to store audit info for descriptor's identity")
 		}
@@ -366,16 +370,24 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 
 	if !alias.IsNone() && !descriptor.Identity.Equal(alias) {
 		h = alias.UniqueID()
-		_, err = db.storeSignerInfo(ctx, tx, h, alias, descriptor.SignerInfo)
+		_, err = db.storeSignerInfo(ctx, tx, h, alias, descriptor.SignerInfo, false)
 		if err != nil {
 			return errors.Wrapf(err, "failed to store signer info for alias")
 		}
-		err = db.storeIdentityData(ctx, tx, h, alias, descriptor.AuditInfo, nil, nil)
-		if err != nil {
-			return errors.Wrapf(err, "failed to store audit info for alias")
+		if len(descriptor.AuditInfo) != 0 {
+			err = db.storeIdentityData(ctx, tx, h, alias, descriptor.AuditInfo, nil, nil, false)
+			if err != nil {
+				return errors.Wrapf(err, "failed to store audit info for alias")
+			}
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// no rollback to be performed
+	tx = nil
+	return nil
 }
 
 func (db *IdentityStore) Close() error {
@@ -424,7 +436,7 @@ func (db *IdentityStore) GetSchema() string {
 	)
 }
 
-func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, h string, id tdriver.Identity, info []byte) (bool, error) {
+func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx dbTransaction, h string, id tdriver.Identity, info []byte, updateCache bool) (bool, error) {
 	logger.DebugfContext(ctx, "store signer info for [%s]", h)
 	query, args := q.InsertInto(db.table.Signers).
 		Fields("identity_hash", "identity", "info").
@@ -442,12 +454,14 @@ func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx tx, h string, i
 			return exists, err
 		}
 	}
-	db.signerInfoCache.Add(h, true)
+	if updateCache {
+		db.signerInfoCache.Add(h, true)
+	}
 	logger.DebugfContext(ctx, "store signer info done")
 	return exists, nil
 }
 
-func (db *IdentityStore) storeIdentityData(ctx context.Context, tx tx, h string, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+func (db *IdentityStore) storeIdentityData(ctx context.Context, tx dbTransaction, h string, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte, updateCache bool) error {
 	logger.DebugfContext(ctx, "store identity data for [%s]", h)
 	query, args := q.InsertInto(db.table.IdentityInfo).
 		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
@@ -457,22 +471,17 @@ func (db *IdentityStore) storeIdentityData(ctx context.Context, tx tx, h string,
 
 	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		// does the record already exists?
-		logger.DebugfContext(ctx, "store identity data failed, check if audit info exists")
-		auditInfo, err2 := db.GetAuditInfo(ctx, id)
-		if err2 != nil {
+		if !errors.Is(db.errorWrapper.WrapError(err), driver2.UniqueKeyViolation) {
 			return err
 		}
-		if !bytes.Equal(auditInfo, identityAudit) {
-			return errors.Wrapf(err, "different audit info stored for [%s], [%s]!=[%s]", h, hash.Hashable(auditInfo), hash.Hashable(identityAudit))
-		}
-		logger.DebugfContext(ctx, "audit info exists")
-		return nil
+		logger.DebugfContext(ctx, "identity data [%s] exists, no error to return", h)
 	}
 
-	logger.DebugfContext(ctx, "audit info cache update")
-	db.auditInfoCache.Add(h, identityAudit)
-	logger.DebugfContext(ctx, "audit info cache update done")
-
+	if updateCache {
+		logger.DebugfContext(ctx, "audit info cache update")
+		db.auditInfoCache.Add(h, identityAudit)
+		logger.DebugfContext(ctx, "audit info cache update done")
+	}
+	logger.DebugfContext(ctx, "store identity data for [%s] done", h)
 	return err
 }

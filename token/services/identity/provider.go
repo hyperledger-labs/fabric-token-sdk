@@ -87,9 +87,9 @@ func NewProvider(
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		deserializer:            deserializer,
 		storage:                 storage,
-		isMeCache:               secondcache.NewTyped[bool](1000),
-		signers:                 secondcache.NewTyped[*SignerEntry](1000),
-		verifiers:               secondcache.NewTyped[*VerifierEntry](1000),
+		isMeCache:               secondcache.NewTyped[bool](5000),
+		signers:                 secondcache.NewTyped[*SignerEntry](5000),
+		verifiers:               secondcache.NewTyped[*VerifierEntry](5000),
 	}
 }
 
@@ -100,7 +100,9 @@ func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescr
 	}
 
 	// update caches
+	p.Logger.DebugfContext(ctx, "update identity provider caches...")
 	p.updateCaches(identityDescriptor, alias)
+	p.Logger.DebugfContext(ctx, "update identity provider caches...done")
 
 	return nil
 }
