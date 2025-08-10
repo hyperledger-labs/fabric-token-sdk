@@ -70,5 +70,4 @@ func TestDeserializer(t *testing.T) {
 		assert.NoError(t, verifier.Verify([]byte("hello worlds"), sigma))
 		assert.NoError(t, verifier2.Verify([]byte("hello worlds"), sigma))
 	}
-
 }

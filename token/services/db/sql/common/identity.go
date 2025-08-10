@@ -483,5 +483,5 @@ func (db *IdentityStore) storeIdentityData(ctx context.Context, tx dbTransaction
 		logger.DebugfContext(ctx, "audit info cache update done")
 	}
 	logger.DebugfContext(ctx, "store identity data for [%s] done", h)
-	return err
+	return nil
 }
