@@ -12,11 +12,10 @@ import (
 
 var (
 	CacheLevelOpts = metrics.GaugeOpts{
-		Namespace:    "wallet",
-		Name:         "recipient_data_cache_level",
-		Help:         "Level of the wallet recipient data cache",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
+		Namespace:  "wallet",
+		Name:       "recipient_data_cache_level",
+		Help:       "Level of the wallet recipient data cache",
+		LabelNames: []string{"network", "channel", "namespace"},
 	}
 )
 

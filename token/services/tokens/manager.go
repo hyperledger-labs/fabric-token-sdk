@@ -58,7 +58,7 @@ func NewServiceManager(
 				TMSProvider:     tmsProvider,
 				NetworkProvider: networkProvider,
 				Storage:         storage,
-				RequestsCache:   secondcache.NewTyped[*CacheEntry](1000),
+				RequestsCache:   secondcache.NewTyped[*CacheEntry](5000),
 			}
 			return tokens, nil
 		}),

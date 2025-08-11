@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/reporting/prometheus"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -1341,7 +1342,7 @@ func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName str
 	gomega.Expect(metrics).NotTo(gomega.BeEmpty())
 
 	var sum float64
-	for _, m := range metrics["fsc_view_operations"].GetMetric() {
+	for _, m := range metrics[prometheus.ViewCallsOperationsMetric].GetMetric() {
 		for _, labelPair := range m.Label {
 			if labelPair.GetName() == "view" && labelPair.GetValue() == viewName {
 				sum += m.Counter.GetValue()
@@ -1349,7 +1350,13 @@ func CheckLocalMetrics(ii *integration.Infrastructure, user string, viewName str
 		}
 	}
 
-	logger.Infof("Received in total %f view operations for [%s] for user %s: %v", sum, viewName, user, metrics["fsc_view_operations"].GetMetric())
+	logger.Infof(
+		"Received in total %f view operations for [%s] for user %s: %v",
+		sum,
+		viewName,
+		user,
+		metrics[prometheus.ViewCallsOperationsMetric].GetMetric(),
+	)
 	gomega.Expect(sum).NotTo(gomega.BeZero())
 }
 
@@ -1358,7 +1365,7 @@ func CheckPrometheusMetrics(ii *integration.Infrastructure, viewName string) {
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 	vector, err := cli.GetVector(model.Metric{
-		"__name__": "fsc_view_operations",
+		"__name__": prometheus.ViewCallsOperationsMetric,
 		"view":     model.LabelValue(viewName),
 	})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())

@@ -12,7 +12,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,6 +40,7 @@ var IdentityCases = []struct {
 	{"SignerInfo", TSignerInfo},
 	{"Configurations", TConfigurations},
 	{"SignerInfoConcurrent", TSignerInfoConcurrent},
+	{"RegisterIdentityDescriptor", TRegisterIdentityDescriptor},
 }
 
 func TConfigurations(t *testing.T, db driver.IdentityStore) {
@@ -100,6 +103,9 @@ func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
 	assert.NoError(t, err, "failed to retrieve token info for [%s]", id)
 	assert.Equal(t, tokMeta, tokMeta2)
 	assert.Equal(t, tokMetaAudit, tokMetaAudit2)
+
+	// should not fail
+	assert.NoError(t, db.StoreIdentityData(ctx, id, auditInfo, tokMeta, tokMetaAudit))
 }
 
 func TSignerInfo(t *testing.T, db driver.IdentityStore) {
@@ -147,4 +153,26 @@ func tSignerInfo(t *testing.T, db driver.IdentityStore, index int) {
 	exists, err = db.SignerInfoExists(ctx, bob)
 	assert.NoError(t, err, "failed to check signer info existence for [%s]", bob)
 	assert.False(t, exists)
+}
+
+func TRegisterIdentityDescriptor(t *testing.T, db driver.IdentityStore) {
+	t.Helper()
+	ctx := t.Context()
+	id := []byte("alice")
+	aliasID := []byte("pineapple")
+	auditInfo := []byte("alice_audit_info")
+	SignerInfo := []byte("signer_info")
+
+	signer := &mock.Signer{}
+	verifier := &mock.Verifier{}
+
+	descriptor := &idriver.IdentityDescriptor{
+		Identity:   id,
+		AuditInfo:  auditInfo,
+		Signer:     signer,
+		SignerInfo: SignerInfo,
+		Verifier:   verifier,
+	}
+	assert.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
+	assert.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
 }

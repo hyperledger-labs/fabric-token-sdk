@@ -12,11 +12,10 @@ import (
 
 var (
 	LevelOpts = metrics.GaugeOpts{
-		Namespace:    "idemix",
-		Name:         "cache_level",
-		Help:         "Level of the idemix cache",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
+		Namespace:  "idemix",
+		Name:       "cache_level",
+		Help:       "Level of the idemix cache",
+		LabelNames: []string{"network", "channel", "namespace"},
 	}
 )
 

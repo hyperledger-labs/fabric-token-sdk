@@ -12,18 +12,16 @@ import (
 
 var (
 	zkIssueDurationOpts = metrics.HistogramOpts{
-		Namespace:    "token_sdk_zkatdlog_nogh",
-		Name:         "issue_duration",
-		Help:         "Duration of zk issue token",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
+		Namespace:  "token_sdk_zkatdlog_nogh",
+		Name:       "issue_duration",
+		Help:       "Duration of zk issue token",
+		LabelNames: []string{"network", "channel", "namespace"},
 	}
 	zkTransferDurationOpts = metrics.HistogramOpts{
-		Namespace:    "token_sdk_zkatdlog_nogh",
-		Name:         "transfer_duration",
-		Help:         "Duration of zk transfer token",
-		LabelNames:   []string{"network", "channel", "namespace"},
-		StatsdFormat: "%{#fqname}.%{network}.%{channel}.%{namespace}",
+		Namespace:  "token_sdk_zkatdlog_nogh",
+		Name:       "transfer_duration",
+		Help:       "Duration of zk transfer token",
+		LabelNames: []string{"network", "channel", "namespace"},
 	}
 )
 
