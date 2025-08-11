@@ -39,19 +39,16 @@ func NewMetrics(p metrics.Provider) *Metrics {
 		supportsGetters: supportsGetters,
 
 		RequestsSent: p.NewCounter(metrics.CounterOpts{
-			Namespace:  "tx_gen",
 			Name:       "sent",
 			Help:       "Total transfer requests executed",
 			LabelNames: []string{OperationLabel},
 		}),
 		RequestsReceived: p.NewCounter(metrics.CounterOpts{
-			Namespace:  "tx_gen",
 			Name:       "received",
 			Help:       "Success transfer requests executed",
 			LabelNames: []string{OperationLabel, SuccessLabel},
 		}),
 		RequestDuration: p.NewHistogram(metrics.HistogramOpts{
-			Namespace:  "tx_gen",
 			Name:       "duration",
 			Help:       "Duration of transfer requests executed",
 			Buckets:    utils.ExponentialBucketTimeRange(0, 50*time.Second, 15),

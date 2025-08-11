@@ -17,19 +17,16 @@ var (
 	spKey = reflect.TypeOf((*Metrics)(nil))
 
 	endorsedTransactions = metrics.CounterOpts{
-		Namespace:  "ttx",
 		Name:       "endorsed_transactions",
 		Help:       "The number of endorsed transactions.",
 		LabelNames: []string{"network", "channel", "namespace"},
 	}
 	auditApprovedTransactions = metrics.CounterOpts{
-		Namespace:  "ttx",
 		Name:       "audit_approved_transactions",
 		Help:       "The number of approved transactions by the auditor.",
 		LabelNames: []string{"network", "channel", "namespace"},
 	}
 	acceptedTransactions = metrics.CounterOpts{
-		Namespace:  "ttx",
 		Name:       "accepted_transactions",
 		Help:       "The number of accepted transactions.",
 		LabelNames: []string{"network", "channel", "namespace"},

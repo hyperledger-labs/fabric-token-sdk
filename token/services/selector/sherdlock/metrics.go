@@ -24,7 +24,6 @@ type Metrics struct {
 func newMetrics(p metrics.Provider) *Metrics {
 	return &Metrics{
 		UnspentTokensInvocations: p.NewCounter(metrics.CounterOpts{
-			Namespace:  "sherdlock",
 			Name:       "unspent_tokens_invocations",
 			Help:       "The number of invocations",
 			LabelNames: []string{fetcherTypeLabel},
