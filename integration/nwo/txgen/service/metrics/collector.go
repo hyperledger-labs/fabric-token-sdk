@@ -20,46 +20,38 @@ func NewCollector(p metrics.Provider) *collector {
 		supportsGetters: supportsGetters,
 
 		TotalTransferRequests: p.NewCounter(metrics.CounterOpts{
-			Namespace: "tx_gen",
-			Name:      "total_transfer",
-			Help:      "Total transfer requests executed",
+			Name: "total_transfer",
+			Help: "Total transfer requests executed",
 		}),
 		TotalSuccessTransferRequests: p.NewCounter(metrics.CounterOpts{
-			Namespace: "tx_gen",
-			Name:      "success_transfer",
-			Help:      "Success transfer requests executed",
+			Name: "success_transfer",
+			Help: "Success transfer requests executed",
 		}),
 		TransferDuration: p.NewHistogram(metrics.HistogramOpts{
-			Namespace: "tx_gen",
-			Name:      "transfer_duration",
-			Help:      "Duration of transfer requests executed",
+			Name: "transfer_duration",
+			Help: "Duration of transfer requests executed",
 		}),
 
 		TotalWithdrawRequests: p.NewCounter(metrics.CounterOpts{
-			Namespace: "tx_gen",
-			Name:      "total_withdraw",
-			Help:      "Total withdraw requests executed",
+			Name: "total_withdraw",
+			Help: "Total withdraw requests executed",
 		}),
 		TotalSuccessWithdrawRequests: p.NewCounter(metrics.CounterOpts{
-			Namespace: "tx_gen",
-			Name:      "success_withdraw",
-			Help:      "Success withdraw requests executed",
+			Name: "success_withdraw",
+			Help: "Success withdraw requests executed",
 		}),
 		WithdrawDuration: p.NewHistogram(metrics.HistogramOpts{
-			Namespace: "tx_gen",
-			Name:      "withdraw_duration",
-			Help:      "Duration of withdraw requests executed",
+			Name: "withdraw_duration",
+			Help: "Duration of withdraw requests executed",
 		}),
 
 		ActiveRequests: p.NewGauge(metrics.GaugeOpts{
-			Namespace: "tx_gen",
-			Name:      "active_requests",
-			Help:      "Currently active requests",
+			Name: "active_requests",
+			Help: "Currently active requests",
 		}),
 		TotalRequests: p.NewGauge(metrics.GaugeOpts{
-			Namespace: "tx_gen",
-			Name:      "total_transfer",
-			Help:      "Total requests executed (issue/transfer/balance/initiate)",
+			Name: "total_transfer",
+			Help: "Total requests executed (issue/transfer/balance/initiate)",
 		}),
 	}
 }
