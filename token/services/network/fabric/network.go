@@ -25,7 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
-	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -40,6 +40,9 @@ const (
 )
 
 var logger = logging.MustGetLogger()
+
+type GetTokensFunc = func() (*tokens.Service, error)
+type GetTMSProviderFunc = func() *token2.ManagementServiceProvider
 
 type lm struct {
 	lm *fabric.LocalMembership
@@ -123,7 +126,7 @@ type Network struct {
 	ledger         *ledger
 	configuration  common2.Configuration
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
-	tokensProvider *tokens2.ServiceManager
+	tokensProvider *tokens.ServiceManager
 	finalityTracer trace.Tracer
 
 	setupListenerProvider      SetupListenerProvider
@@ -141,7 +144,7 @@ func NewNetwork(
 	ch *fabric.Channel,
 	configuration common2.Configuration,
 	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
-	tokensProvider *tokens2.ServiceManager,
+	tokensProvider *tokens.ServiceManager,
 	viewManager ViewManager,
 	tmsProvider *token2.ManagementServiceProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
@@ -226,38 +229,12 @@ func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
 		Namespace: ns,
 	}
 
-	if n.llm.PermanentLookupListenerSupported() {
-		setUpKey, err := n.keyTranslator.CreateSetupKey()
-		if err != nil {
-			return nil, errors.Errorf("failed creating setup key")
-		}
-		if err := n.llm.AddPermanentLookupListener(ns, setUpKey, n.setupListenerProvider.GetListener(tmsID)); err != nil {
-			return nil, errors.Errorf("failed adding setup key listener")
-		}
-	} else {
-		if err := n.n.ProcessorManager().AddProcessor(
-			ns,
-			NewTokenRWSetProcessor(
-				n.Name(),
-				ns,
-				lazy.NewGetter[*tokens2.Service](func() (*tokens2.Service, error) {
-					return n.tokensProvider.ServiceByTMSId(tmsID)
-				}).Get,
-				func() *token2.ManagementServiceProvider {
-					return n.tmsProvider
-				},
-				n.keyTranslator,
-			)); err != nil {
-			return nil, errors.WithMessagef(err, "failed to add processor to fabric network [%s]", n.n.Name())
-		}
-		transactionFilter, err := n.filterProvider.New(tmsID)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
-		}
-		committer := n.ch.Committer()
-		if err := committer.AddTransactionFilter(transactionFilter); err != nil {
-			return nil, errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
-		}
+	setUpKey, err := n.keyTranslator.CreateSetupKey()
+	if err != nil {
+		return nil, errors.Errorf("failed creating setup key")
+	}
+	if err := n.llm.AddPermanentLookupListener(ns, setUpKey, n.setupListenerProvider.GetListener(tmsID)); err != nil {
+		return nil, errors.Errorf("failed adding setup key listener")
 	}
 
 	// Let the endorsement service initialize itself, if needed
@@ -388,7 +365,7 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) error {
 	}
 }
 
-func NewSetupListenerProvider(tmsProvider *token2.ManagementServiceProvider, tokensProvider *tokens2.ServiceManager) *setupListenerProvider {
+func NewSetupListenerProvider(tmsProvider *token2.ManagementServiceProvider, tokensProvider *tokens.ServiceManager) *setupListenerProvider {
 	return &setupListenerProvider{
 		tmsProvider:    tmsProvider,
 		tokensProvider: tokensProvider,
@@ -397,13 +374,13 @@ func NewSetupListenerProvider(tmsProvider *token2.ManagementServiceProvider, tok
 
 type setupListenerProvider struct {
 	tmsProvider    *token2.ManagementServiceProvider
-	tokensProvider *tokens2.ServiceManager
+	tokensProvider *tokens.ServiceManager
 }
 
 func (p *setupListenerProvider) GetListener(tmsID token2.TMSID) lookup.Listener {
 	return &setupListener{
 		GetTMSProvider: func() *token2.ManagementServiceProvider { return p.tmsProvider },
-		GetTokens: lazy.NewGetter[*tokens2.Service](func() (*tokens2.Service, error) {
+		GetTokens: lazy.NewGetter[*tokens.Service](func() (*tokens.Service, error) {
 			return p.tokensProvider.ServiceByTMSId(tmsID)
 		}).Get,
 		TMSID: tmsID,
