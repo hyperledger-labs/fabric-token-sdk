@@ -68,10 +68,11 @@ Flags:
   -h, --help               help for fabtoken.v1
   -s, --issuers strings    list of issuer MSP directories containing the corresponding issuer certificate
   -o, --output string      output folder (default ".")
-
+  -v, --version uint       allows the caller of tokengen to override the version number put in the public params
 ```
 
-The public parameters are stored in the output folder with name `fabtoken_pp.json`.
+The public parameters are stored in the output folder with name `fabtokenv1_pp.json`.
+If version is overridden, then file name will be `("fabtokenv%d_pp.json", version)`.
 
 ### tokengen gen zkatdlog.v1
 
@@ -88,9 +89,11 @@ Flags:
   -i, --idemix string      idemix msp dir
   -s, --issuers strings    list of issuer MSP directories containing the corresponding issuer certificate
   -o, --output string      output folder (default ".")
+  -v, --version uint       allows the caller of tokengen to override the version number put in the public params
 ``` 
 
 The public parameters are stored in the output folder with name `zkatdlognoghv1_pp.json`.
+If version is overridden, then file name will be `("zkatdlognogh%d_pp.json", version)`.
 
 ### tokengen update zkatdlog.v1
 
@@ -106,6 +109,7 @@ Flags:
   -i, --input string       path of the public param file
   -s, --issuers strings    list of issuer MSP directories containing the corresponding issuer certificate
   -o, --output string      output folder (default ".")
+  -v, --version uint       allows the caller of tokengen to override the version number put in the public params
 ```
 
 ## tokengen pp

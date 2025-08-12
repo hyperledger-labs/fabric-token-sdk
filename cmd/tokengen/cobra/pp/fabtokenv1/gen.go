@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/spf13/cobra"
@@ -31,6 +32,8 @@ var (
 	Issuers []string
 	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
 	Auditors []string
+	// Version allows the caller of tokengen to override the version number put in the public params
+	Version uint
 )
 
 // Cmd returns the Cobra Command for Version
@@ -41,6 +44,7 @@ func Cmd() *cobra.Command {
 	flags.BoolVarP(&GenerateCCPackage, "cc", "", false, "generate chaincode package")
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
+	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
 	return cobraCommand
 }
 
@@ -88,7 +92,11 @@ type GeneratorArgs struct {
 // Gen generates the public parameters for the FabToken driver
 func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Setup
-	pp, err := v1.Setup(v1.DefaultPrecision)
+	ver := v1.ProtocolV1
+	if Version != 0 {
+		ver = driver.TokenDriverVersion(Version)
+	}
+	pp, err := v1.SetupWithVersion(v1.DefaultPrecision, ver)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}
@@ -100,7 +108,10 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
-	path := filepath.Join(args.OutputDir, "fabtoken_pp.json")
+	path := filepath.Join(
+		args.OutputDir,
+		fmt.Sprintf("fabtoken%d_pp.json", ver),
+	)
 	if err := os.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}

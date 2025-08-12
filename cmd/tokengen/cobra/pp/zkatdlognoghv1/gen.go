@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +39,8 @@ type GeneratorArgs struct {
 	Exponent uint
 	// Aries is a flag to indicate that aries should be used as backend for idemix
 	Aries bool
+	// Version allows the caller of tokengen to override the version number put in the public params
+	Version uint
 }
 
 var (
@@ -59,6 +62,8 @@ var (
 	Exponent uint
 	// Aries is a flag to indicate that aries should be used as backend for idemix
 	Aries bool
+	// Version allows the caller of tokengen to override the version number put in the public params
+	Version uint
 )
 
 // Cmd returns the Cobra Command for Version
@@ -73,6 +78,7 @@ func Cmd() *cobra.Command {
 	flags.UintVarP(&Base, "base", "b", 100, "base is used to define the maximum quantity a token can contain as Base^Exponent")
 	flags.UintVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")
 	flags.BoolVarP(&Aries, "aries", "r", false, "flag to indicate that aries should be used as backend for idemix")
+	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
 
 	return cobraCommand
 }
@@ -96,6 +102,7 @@ var cobraCommand = &cobra.Command{
 			Base:              Base,
 			Exponent:          Exponent,
 			Aries:             Aries,
+			Version:           Version,
 		})
 		if err != nil {
 			fmt.Printf("failed to generate public parameters [%s]\n", err)
@@ -127,7 +134,11 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 		curveID = math3.BLS12_381_BBS
 	}
 	// todo range is hardcoded, to be changed
-	pp, err := v1.Setup(64, ipkBytes, curveID)
+	ver := v1.ProtocolV1
+	if args.Version != 0 {
+		ver = driver.TokenDriverVersion(args.Version)
+	}
+	pp, err := v1.SetupWithVersion(64, ipkBytes, curveID, ver)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}
@@ -143,7 +154,10 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
-	path := filepath.Join(args.OutputDir, "zkatdlognoghv1_pp.json")
+	path := filepath.Join(
+		args.OutputDir,
+		fmt.Sprintf("zkatdlognoghv%d_pp.json", ver),
+	)
 	if err := os.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
