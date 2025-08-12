@@ -30,7 +30,7 @@ import (
 
 const (
 	DLogNoGHDriverName = "zkatdlognogh"
-	ProtocolV1         = 1
+	ProtocolV1         = driver.TokenDriverVersion(1)
 )
 
 var (
@@ -196,6 +196,11 @@ func NewPublicParamsFromBytes(
 
 func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	return NewWith(DLogNoGHDriverName, ProtocolV1, bitLength, idemixIssuerPK, idemixCurveID)
+}
+
+// SetupWithVersion is like Setup with the additional possibility to specify the version number
+func SetupWithVersion(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID, version driver.TokenDriverVersion) (*PublicParams, error) {
+	return NewWith(DLogNoGHDriverName, version, bitLength, idemixIssuerPK, idemixCurveID)
 }
 
 func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion, bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {

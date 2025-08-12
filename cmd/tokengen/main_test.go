@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	. "github.com/onsi/gomega"
@@ -65,6 +66,45 @@ func TestGenFullSuccess(t *testing.T) {
 		"./testdata/auditors/msp",
 		"./testdata/issuers/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
+		v1.ProtocolV1,
+	)
+}
+
+func TestGenFullSuccessWithVersionOverride(t *testing.T) {
+	gt := NewGomegaWithT(t)
+	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
+	gt.Expect(err).NotTo(HaveOccurred())
+	defer gexec.CleanupBuildArtifacts()
+
+	tempOutput := t.TempDir()
+	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
+
+	testGenRun(
+		gt,
+		tokengen,
+		[]string{
+			"gen",
+			zkatdlognoghv1.DriverIdentifier,
+			"--idemix",
+			"./testdata/idemix",
+			"--issuers",
+			"./testdata/issuers/msp",
+			"--auditors",
+			"./testdata/auditors/msp",
+			"--output",
+			tempOutput,
+			"--version",
+			"2",
+		},
+	)
+
+	validateOutputEquivalent(
+		gt,
+		tempOutput,
+		"./testdata/auditors/msp",
+		"./testdata/issuers/msp",
+		"./testdata/idemix/msp/IssuerPublicKey",
+		driver.TokenDriverVersion(2),
 	)
 }
 
@@ -101,6 +141,7 @@ func TestFullUpdate(t *testing.T) {
 		"./testdata/issuers/msp",
 		"./testdata/auditors/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
+		v1.ProtocolV1,
 	)
 }
 
@@ -136,6 +177,45 @@ func TestPartialUpdate(t *testing.T) {
 		"./testdata/auditors/msp",
 		"./testdata/auditors/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
+		v1.ProtocolV1,
+	)
+}
+
+func TestPartialUpdateWithVersion(t *testing.T) {
+	gt := NewWithT(t)
+	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
+	gt.Expect(err).NotTo(HaveOccurred())
+	defer gexec.CleanupBuildArtifacts()
+
+	tempOutput := t.TempDir()
+	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
+
+	// Only changing the issuer cert to also use the auditor cert.
+	// The other auditor cert should stay the same.
+	testGenRun(
+		gt,
+		tokengen,
+		[]string{
+			"update",
+			zkatdlognoghv1.DriverIdentifier,
+			"--issuers",
+			"./testdata/auditors/msp",
+			"--input",
+			"./testdata/zkatdlognoghv1_pp.json",
+			"--output",
+			tempOutput,
+			"--version",
+			"2",
+		},
+	)
+
+	validateOutputEquivalent(
+		gt,
+		tempOutput,
+		"./testdata/auditors/msp",
+		"./testdata/auditors/msp",
+		"./testdata/idemix/msp/IssuerPublicKey",
+		driver.TokenDriverVersion(2),
 	)
 }
 
@@ -214,11 +294,18 @@ func TestGenFailure(t *testing.T) {
 	}
 }
 
-func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPdir, idemixMSPdir string) {
-	ppRaw, err := os.ReadFile(filepath.Join(tempOutput, "zkatdlognoghv1_pp.json"))
+func validateOutputEquivalent(
+	gt *WithT,
+	tempOutput, auditorsMSPdir, issuersMSPdir, idemixMSPdir string,
+	version driver.TokenDriverVersion,
+) {
+	ppRaw, err := os.ReadFile(filepath.Join(
+		tempOutput,
+		fmt.Sprintf("zkatdlognoghv%d_pp.json", version),
+	))
 	gt.Expect(err).NotTo(HaveOccurred())
 
-	pp, err := v1.NewPublicParamsFromBytes(ppRaw, v1.DLogNoGHDriverName, v1.ProtocolV1)
+	pp, err := v1.NewPublicParamsFromBytes(ppRaw, v1.DLogNoGHDriverName, version)
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(pp.Validate()).NotTo(HaveOccurred())
 

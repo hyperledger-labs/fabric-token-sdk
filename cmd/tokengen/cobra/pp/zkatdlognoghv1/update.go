@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/spf13/cobra"
 )
 
@@ -30,6 +31,8 @@ type UpdateArgs struct {
 	Issuers []string
 	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
 	Auditors []string
+	// Version allows the caller of tokengen to override the version number put in the public params
+	Version uint
 }
 
 // UpdateCmd returns the Cobra Command for Update
@@ -40,6 +43,7 @@ func UpdateCmd() *cobra.Command {
 	flags.StringVarP(&OutputDir, "output", "o", ".", "output folder")
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
+	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
 
 	return cmd
 }
@@ -59,6 +63,7 @@ var cmd = &cobra.Command{
 			OutputDir: OutputDir,
 			Issuers:   Issuers,
 			Auditors:  Auditors,
+			Version:   Version,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to generate public parameters")
@@ -99,14 +104,25 @@ func Update(args *UpdateArgs) error {
 		return err
 	}
 
+	// update version if needed
+	ver := v1.ProtocolV1
+	if args.Version != 0 {
+		ver = driver.TokenDriverVersion(args.Version)
+	}
+	pp.DriverVersion = ver
+
 	// Store Public Params
 	raw, err := pp.Serialize()
 	if err != nil {
 		return errors.Wrap(err, "failed serializing public parameters")
 	}
-	path := filepath.Join(args.OutputDir, "zkatdlognoghv1_pp.json")
+	fileName := fmt.Sprintf("zkatdlognoghv%d_pp.json", ver)
+	path := filepath.Join(
+		args.OutputDir,
+		fileName,
+	)
 	if _, err := os.Stat(path); err == nil {
-		return errors.New("zkatdlognoghv1_pp.json exists in current directory. Specify another output folder with -o")
+		return errors.Errorf("%s exists in current directory. Specify another output folder with -o", fileName)
 	}
 	if err := os.WriteFile(path, raw, 0755); err != nil {
 		return errors.Wrap(err, "failed writing public parameters to file")

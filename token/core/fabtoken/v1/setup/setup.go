@@ -47,6 +47,11 @@ func Setup(precision uint64) (*PublicParams, error) {
 	return NewWith(FabTokenDriverName, ProtocolV1, precision)
 }
 
+// SetupWithVersion is like Setup with the additional possibility to specify the version number
+func SetupWithVersion(precision uint64, version driver.TokenDriverVersion) (*PublicParams, error) {
+	return NewWith(FabTokenDriverName, version, precision)
+}
+
 // NewPublicParamsFromBytes deserializes the raw bytes into public parameters
 // The resulting public parameters are labeled with the passed label
 func NewPublicParamsFromBytes(raw []byte, driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion) (*PublicParams, error) {
