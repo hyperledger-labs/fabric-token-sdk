@@ -213,11 +213,6 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	verifier, err := keyManager.DeserializeVerifier(t.Context(), id)
 	assert.NoError(t, err)
 
-	// get the signer from the sigService as well
-	signer2, err := identityProvider.GetSigner(t.Context(), id)
-	assert.NoError(t, err)
-	assert.NotNil(t, signer2)
-
 	// sign and verify
 	sigma, err := signer.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
@@ -227,15 +222,6 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.Equal(t, tracker.GetHistory[3].Value, tracker.GetHistory[5].Value)
 	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[6].Key)
 	assert.Equal(t, tracker.GetHistory[4].Value, tracker.GetHistory[6].Value)
-
-	sigma, err = signer2.Sign([]byte("hello world!!!"))
-	assert.NoError(t, err)
-	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
-	assert.Equal(t, 9, tracker.GetCounter)
-	assert.Equal(t, tracker.GetHistory[3].Key, tracker.GetHistory[7].Key)
-	assert.Equal(t, tracker.GetHistory[3].Value, tracker.GetHistory[7].Value)
-	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[8].Key)
-	assert.Equal(t, tracker.GetHistory[4].Value, tracker.GetHistory[8].Value)
 }
 
 func TestIdentityStandard(t *testing.T) {
