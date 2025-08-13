@@ -86,7 +86,7 @@ var _ = Describe("Transfer", func() {
 })
 
 func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := v1.Setup(32, nil, math.FP256BN_AMCL)
+	pp, err := v1.Setup(32, nil, math.BN254)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(pp)
@@ -99,7 +99,7 @@ func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := v1.Setup(32, nil, math.FP256BN_AMCL)
+	pp, err := v1.Setup(32, nil, math.BN254)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInvalidInputsForZKTransfer(pp)
@@ -112,7 +112,7 @@ func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := v1.Setup(8, nil, math.FP256BN_AMCL)
+	pp, err := v1.Setup(8, nil, math.BN254)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(pp)

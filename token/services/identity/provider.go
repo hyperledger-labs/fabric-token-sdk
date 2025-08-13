@@ -12,11 +12,11 @@ import (
 	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -87,9 +87,9 @@ func NewProvider(
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		deserializer:            deserializer,
 		storage:                 storage,
-		isMeCache:               secondcache.NewTyped[bool](5000),
-		signers:                 secondcache.NewTyped[*SignerEntry](5000),
-		verifiers:               secondcache.NewTyped[*VerifierEntry](5000),
+		isMeCache:               cache2.NewNoCache[bool](),
+		signers:                 cache2.NewNoCache[*SignerEntry](),
+		verifiers:               cache2.NewNoCache[*VerifierEntry](),
 	}
 }
 
