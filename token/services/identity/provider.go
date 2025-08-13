@@ -188,7 +188,7 @@ func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (dri
 	}()
 	signer, err := p.getSigner(ctx, identity, idHash)
 	if err != nil {
-		return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
+		return nil, errors.Wrapf(err, "failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 	}
 	found = true
 	return signer, nil
