@@ -25,7 +25,6 @@ import (
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
@@ -74,15 +73,15 @@ var _ = Describe("validator", func() {
 		fakeLedger = &mock.Ledger{}
 		var err error
 		// prepare public parameters
-		ipk, err = os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+		ipk, err = os.ReadFile("./testdata/bls12_381_bbs/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		pp, err = v1.Setup(32, ipk, math.BN254)
+		pp, err = v1.Setup(32, ipk, math.BLS12_381_BBS_GURVY)
 		Expect(err).NotTo(HaveOccurred())
 
 		c := math.Curves[pp.Curve]
 
 		asigner, _ := prepareECDSASigner()
-		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.BN254)
+		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.BLS12_381_BBS_GURVY)
 		Expect(err).NotTo(HaveOccurred())
 		des := deserializer.NewTypedVerifierDeserializerMultiplex()
 		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
@@ -285,7 +284,7 @@ var _ = Describe("validator", func() {
 				})
 				It("fails", func() {
 					_, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
-					Expect(err.Error()).To(ContainSubstring("pseudonym signature invalid"))
+					Expect(err.Error()).To(ContainSubstring("failed signature verification"))
 
 				})
 			})
@@ -313,7 +312,7 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 }
 
 func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
-	id, auditInfo, signer := getIdemixInfo("./testdata/idemix")
+	id, auditInfo, signer := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
 	owners := make([][]byte, 2)
 	owners[0] = id
 
@@ -329,7 +328,7 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfe
 }
 
 func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
-	id, auditInfo, signer := getIdemixInfo("./testdata/idemix")
+	id, auditInfo, signer := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
 	owners := make([][]byte, 2)
 	owners[0] = id
 	owners[1] = id
@@ -398,22 +397,14 @@ func (f *fakeProv) TranslatePath(path string) string {
 }
 
 func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.SigningIdentity) {
-	registry := view.NewServiceProvider()
-	configService := &fakeProv{typ: "memory"}
-	Expect(registry.RegisterService(configService)).NotTo(HaveOccurred())
-
 	backend, err := kvs.NewInMemory()
-	Expect(err).NotTo(HaveOccurred())
-	err = registry.RegisterService(backend)
-	Expect(err).NotTo(HaveOccurred())
-
 	Expect(err).NotTo(HaveOccurred())
 	config, err := crypto.NewConfig(dir)
 	Expect(err).NotTo(HaveOccurred())
-
-	keyStore, err := crypto.NewKeyStore(math.BN254, kvs.Keystore(backend))
+	curveID := math.BLS12_381_BBS_GURVY
+	keyStore, err := crypto.NewKeyStore(curveID, kvs.Keystore(backend))
 	Expect(err).NotTo(HaveOccurred())
-	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.BN254, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID, true)
 	Expect(err).NotTo(HaveOccurred())
 	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
@@ -441,7 +432,7 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 }
 
 func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
-	id, auditInfo, _ := getIdemixInfo("./testdata/idemix")
+	id, auditInfo, _ := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
 	owners := make([][]byte, 1)
 	owners[0] = id
 	values := []uint64{40}
