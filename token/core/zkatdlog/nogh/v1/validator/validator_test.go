@@ -76,13 +76,13 @@ var _ = Describe("validator", func() {
 		// prepare public parameters
 		ipk, err = os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		pp, err = v1.Setup(32, ipk, math.FP256BN_AMCL)
+		pp, err = v1.Setup(32, ipk, math.BN254)
 		Expect(err).NotTo(HaveOccurred())
 
 		c := math.Curves[pp.Curve]
 
 		asigner, _ := prepareECDSASigner()
-		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.FP256BN_AMCL)
+		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.BN254)
 		Expect(err).NotTo(HaveOccurred())
 		des := deserializer.NewTypedVerifierDeserializerMultiplex()
 		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
@@ -411,9 +411,9 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 	config, err := crypto.NewConfig(dir)
 	Expect(err).NotTo(HaveOccurred())
 
-	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, kvs.Keystore(backend))
+	keyStore, err := crypto.NewKeyStore(math.BN254, kvs.Keystore(backend))
 	Expect(err).NotTo(HaveOccurred())
-	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.BN254, false)
 	Expect(err).NotTo(HaveOccurred())
 	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
