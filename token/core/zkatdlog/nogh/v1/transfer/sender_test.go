@@ -40,7 +40,7 @@ var _ = Describe("Sender", func() {
 	)
 	BeforeEach(func() {
 		var err error
-		pp, err = v1.Setup(8, nil, math.FP256BN_AMCL)
+		pp, err = v1.Setup(8, nil, math.BN254)
 		Expect(err).NotTo(HaveOccurred())
 		owners = make([][]byte, 2)
 		owners[0] = []byte("bob")

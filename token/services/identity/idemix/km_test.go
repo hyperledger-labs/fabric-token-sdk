@@ -31,7 +31,7 @@ import (
 
 func TestNewKeyManager(t *testing.T) {
 	testNewKeyManager(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testNewKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testNewKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
@@ -122,7 +122,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 
 func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	testIdentityWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testIdentityWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testIdentityWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
@@ -240,7 +240,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 
 func TestIdentityStandard(t *testing.T) {
 	testIdentityStandard(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testIdentityStandard(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testIdentityStandard(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
@@ -325,7 +325,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 
 func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	testAuditWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testAuditWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testAuditWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
@@ -383,7 +383,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 
 func TestKeyManager_DeserializeSigner(t *testing.T) {
 	testKeyManager_DeserializeSigner(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testKeyManager_DeserializeSigner(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testKeyManager_DeserializeSigner(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID math.CurveID, aries bool) {

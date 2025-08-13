@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/IBM/idemix"
-	math3 "github.com/IBM/mathlib"
+	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
@@ -65,12 +65,12 @@ type CryptoMaterialGenerator struct {
 	RevocationHandlerIndex int
 }
 
-func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, defaultCurveID math3.CurveID, builder api.Builder) *CryptoMaterialGenerator {
+func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, defaultCurveID mathlib.CurveID, builder api.Builder) *CryptoMaterialGenerator {
 	return &CryptoMaterialGenerator{
 		FabTokenGenerator: fabtokenv1.NewCryptoMaterialGenerator(tokenPlatform, builder),
 		TokenPlatform:     tokenPlatform,
 		EventuallyTimeout: 10 * time.Minute,
-		DefaultCurve:      CurveIDToString(defaultCurveID),
+		DefaultCurve:      mathlib.CurveIDToString(defaultCurveID),
 	}
 }
 
@@ -91,7 +91,7 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 
 	curveID := d.DefaultCurve
 	if IsAries(tms) {
-		curveID = CurveIDToString(math3.BLS12_381_BBS)
+		curveID = mathlib.CurveIDToString(mathlib.BLS12_381_BBS_GURVY)
 	}
 
 	// notice that if aries is enabled, curve is ignored
@@ -117,7 +117,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 
 	curveID := d.DefaultCurve
 	if IsAries(tms) {
-		curveID = CurveIDToString(math3.BLS12_381_BBS)
+		curveID = mathlib.CurveIDToString(mathlib.BLS12_381_BBS_GURVY)
 	}
 
 	var res []topology.Identity
@@ -238,21 +238,4 @@ func (d *CryptoMaterialGenerator) nextColor() string {
 
 	d.ColorIndex++
 	return fmt.Sprintf("%dm", color)
-}
-
-func CurveIDToString(id math3.CurveID) string {
-	switch id {
-	case math3.BN254:
-		return "BN254"
-	case math3.FP256BN_AMCL:
-		return "FP256BN_AMCL"
-	case math3.FP256BN_AMCL_MIRACL:
-		return "FP256BN_AMCL_MIRACL"
-	case math3.BLS12_377_GURVY:
-		return "BLS12_377_GURVY"
-	case math3.BLS12_381_BBS:
-		return "BLS12_381_BBS"
-	default:
-		panic("invalid curve id")
-	}
 }
