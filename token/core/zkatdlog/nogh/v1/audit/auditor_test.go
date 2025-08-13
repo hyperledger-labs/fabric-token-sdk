@@ -9,7 +9,6 @@ package audit_test
 import (
 	"context"
 	"os"
-	"time"
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
@@ -211,50 +210,6 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driv
 	tokns[0] = append(tokns[0], inputs...)
 
 	return transfer, metadata, tokns
-}
-
-type fakeProv struct {
-	typ string
-}
-
-func (f *fakeProv) GetString(key string) string {
-	return f.typ
-}
-
-func (f *fakeProv) GetInt(key string) int {
-	return 0
-}
-
-func (f *fakeProv) GetDuration(key string) time.Duration {
-	return time.Duration(0)
-}
-
-func (f *fakeProv) GetBool(key string) bool {
-	return false
-}
-
-func (f *fakeProv) GetStringSlice(key string) []string {
-	return nil
-}
-
-func (f *fakeProv) IsSet(key string) bool {
-	return false
-}
-
-func (f *fakeProv) UnmarshalKey(key string, rawVal interface{}) error {
-	return nil
-}
-
-func (f *fakeProv) ConfigFileUsed() string {
-	return ""
-}
-
-func (f *fakeProv) GetPath(key string) string {
-	return ""
-}
-
-func (f *fakeProv) TranslatePath(path string) string {
-	return ""
 }
 
 func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
