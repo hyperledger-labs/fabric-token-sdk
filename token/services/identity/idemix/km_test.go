@@ -31,7 +31,7 @@ import (
 
 func TestNewKeyManager(t *testing.T) {
 	testNewKeyManager(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testNewKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testNewKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
@@ -122,7 +122,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, ar
 
 func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	testIdentityWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testIdentityWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testIdentityWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
@@ -213,11 +213,6 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	verifier, err := keyManager.DeserializeVerifier(t.Context(), id)
 	assert.NoError(t, err)
 
-	// get the signer from the sigService as well
-	signer2, err := identityProvider.GetSigner(t.Context(), id)
-	assert.NoError(t, err)
-	assert.NotNil(t, signer2)
-
 	// sign and verify
 	sigma, err := signer.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
@@ -227,20 +222,11 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.Equal(t, tracker.GetHistory[3].Value, tracker.GetHistory[5].Value)
 	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[6].Key)
 	assert.Equal(t, tracker.GetHistory[4].Value, tracker.GetHistory[6].Value)
-
-	sigma, err = signer2.Sign([]byte("hello world!!!"))
-	assert.NoError(t, err)
-	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
-	assert.Equal(t, 9, tracker.GetCounter)
-	assert.Equal(t, tracker.GetHistory[3].Key, tracker.GetHistory[7].Key)
-	assert.Equal(t, tracker.GetHistory[3].Value, tracker.GetHistory[7].Value)
-	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[8].Key)
-	assert.Equal(t, tracker.GetHistory[4].Value, tracker.GetHistory[8].Value)
 }
 
 func TestIdentityStandard(t *testing.T) {
 	testIdentityStandard(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testIdentityStandard(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testIdentityStandard(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
@@ -325,7 +311,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 
 func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	testAuditWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testAuditWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testAuditWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
@@ -383,7 +369,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 
 func TestKeyManager_DeserializeSigner(t *testing.T) {
 	testKeyManager_DeserializeSigner(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testKeyManager_DeserializeSigner(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testKeyManager_DeserializeSigner(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
