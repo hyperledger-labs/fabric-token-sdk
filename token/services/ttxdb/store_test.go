@@ -37,9 +37,9 @@ func TestDB(t *testing.T) {
 		tms.NewConfigServiceWrapper(config2.NewService(cp)),
 		multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp, sqlite2.NewDbProvider())),
 	)
-	db1, err := manager.StoreServiceByTMSId(token.TMSID{Network: "pineapple"})
+	db1, err := manager.StoreServiceByTMSId(token.TMSID{Network: "pineapple", Namespace: "ns"})
 	assert.NoError(t, err)
-	db2, err := manager.StoreServiceByTMSId(token.TMSID{Network: "grapes"})
+	db2, err := manager.StoreServiceByTMSId(token.TMSID{Network: "grapes", Namespace: "ns"})
 	assert.NoError(t, err)
 
 	TEndorserAcks(t, db1, db2)

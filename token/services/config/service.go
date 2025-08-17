@@ -91,9 +91,9 @@ func (m *Service) LookupNamespace(network, channel string) (string, error) {
 		return hits[0].Namespace, nil
 	}
 	if len(hits) == 0 {
-		return "", errors.Errorf("no token-sdk configuration for network %s, channel %s", network, channel)
+		return "", errors.Errorf("no token-sdk configuration for network [%s], channel [%s]", network, channel)
 	}
-	return "", errors.Errorf("multiple token-sdk configurations for network %s, channel %s", network, channel)
+	return "", errors.Errorf("multiple token-sdk configurations for network [%s], channel [%s]", network, channel)
 }
 
 // ConfigurationFor returns a configuration for the given network, channel, and namespace.
