@@ -14,9 +14,10 @@ import (
 
 // Configuration is the configuration of a given configuration
 type Configuration struct {
-	cp    Provider
-	keyID string
-	tmsID driver.TMSID
+	cp         Provider
+	keyID      string
+	tmsID      driver.TMSID
+	validators []Validator
 }
 
 func NewConfiguration(cp Provider, keyID string, tmsID driver.TMSID) *Configuration {
@@ -36,6 +37,11 @@ func (m *Configuration) Validate() error {
 		return errors.New("missing namespace id")
 	}
 
+	for _, validator := range m.validators {
+		if err := validator.Validate(m); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
