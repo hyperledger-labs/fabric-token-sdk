@@ -22,7 +22,7 @@ import (
 func TestInvalidConf(t *testing.T) {
 	cp, err := config3.NewProvider("./testdata/invalid")
 	assert.NoError(t, err)
-	tms := config2.NewConfiguration(cp, "v1", "n1c1ns1", driver.TMSID{})
+	tms := config2.NewConfiguration(cp, "n1c1ns1", driver.TMSID{})
 	_, err = config.NewIdentityConfig(tms)
 	assert.Error(t, err, "should have failed due to invalid config")
 }
@@ -30,7 +30,7 @@ func TestInvalidConf(t *testing.T) {
 func TestCacheSizeIdentityConfig(t *testing.T) {
 	cp, err := config3.NewProvider("./testdata/token0")
 	assert.NoError(t, err)
-	tms := config2.NewConfiguration(cp, "v1", "n1c1ns1", driver.TMSID{})
+	tms := config2.NewConfiguration(cp, "n1c1ns1", driver.TMSID{})
 	identityConfig, err := config.NewIdentityConfig(tms)
 	assert.NoError(t, err, "failed creating identity config")
 	assert.Equal(t, 3, identityConfig.DefaultCacheSize(), "default cache size should be 3")
@@ -41,7 +41,7 @@ func TestCacheSizeIdentityConfig(t *testing.T) {
 func TestTranslatePath(t *testing.T) {
 	cp, err := config3.NewProvider("./testdata/token0")
 	assert.NoError(t, err)
-	tms := config2.NewConfiguration(cp, "v1", "n1c1ns1", driver.TMSID{})
+	tms := config2.NewConfiguration(cp, "n1c1ns1", driver.TMSID{})
 	identityConfig, err := config.NewIdentityConfig(tms)
 	assert.NoError(t, err, "failed creating identity config")
 	assert.Contains(t, identityConfig.TranslatePath("./testdata/token0"), "fabric-token-sdk", "translate path should contain fabric-token-sdk")
@@ -50,7 +50,7 @@ func TestTranslatePath(t *testing.T) {
 func TestIdentitiesForRole(t *testing.T) {
 	cp, err := config3.NewProvider("./testdata/token0")
 	assert.NoError(t, err)
-	tms := config2.NewConfiguration(cp, "v1", "n1c1ns1", driver.TMSID{})
+	tms := config2.NewConfiguration(cp, "n1c1ns1", driver.TMSID{})
 	identityConfig, err := config.NewIdentityConfig(tms)
 	assert.NoError(t, err, "failed creating identity config")
 

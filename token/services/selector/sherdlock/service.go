@@ -11,11 +11,14 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 )
+
+type ConfigProvider interface {
+	UnmarshalKey(key string, rawVal interface{}) error
+}
 
 type SelectorService struct {
 	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
@@ -24,7 +27,7 @@ type SelectorService struct {
 func NewService(
 	fetcherProvider FetcherProvider,
 	tokenLockStoreServiceManager tokenlockdb.StoreServiceManager,
-	c core.ConfigProvider,
+	c ConfigProvider,
 ) *SelectorService {
 	cfg, err := config.New(c)
 	if err != nil {
