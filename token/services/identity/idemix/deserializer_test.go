@@ -21,7 +21,7 @@ import (
 
 func TestNewDeserializer(t *testing.T) {
 	testNewDeserializer(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testNewDeserializer(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS, true)
+	testNewDeserializer(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
 }
 
 func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
