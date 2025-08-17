@@ -7,27 +7,39 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestGetTMSs tests the Configurations function
-func TestGetTMSs(t *testing.T) {
+// TestConfigurations tests the Configurations function
+func TestConfigurations(t *testing.T) {
 	// create a new config service by loading the config file
 	cp, err := config.NewProvider("./testdata/token0")
 	assert.NoError(t, err)
 
 	// instantiate the token sdk config
-	tokenSDKConfig := NewService(cp)
+	service := NewService(cp)
+	checkConfigurations(t, service, 2)
 
-	// compare the TMSs obtained from Configurations with the corresponding TMSs obtained from ConfigurationFor
-	tmss, err := tokenSDKConfig.Configurations()
+	// extend
+	raw, err := os.ReadFile("./testdata/token0/ext.yaml")
+	require.NoError(t, err)
+	require.NoError(t, service.AddConfiguration(raw))
+	checkConfigurations(t, service, 3)
+}
+
+func checkConfigurations(t *testing.T, service *Service, expectedTMSs int) {
+	t.Helper()
+	tmss, err := service.Configurations()
 	assert.NoError(t, err)
-	assert.Len(t, tmss, 2)
+	assert.Len(t, tmss, expectedTMSs)
 	for _, tms := range tmss {
-		tms2, err := tokenSDKConfig.ConfigurationFor(tms.ID().Network, tms.ID().Channel, tms.ID().Namespace)
+		tmsID := tms.ID()
+		tms2, err := service.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 		assert.NoError(t, err)
 		assert.Equal(t, tms, tms2)
 	}

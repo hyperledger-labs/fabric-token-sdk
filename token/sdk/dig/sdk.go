@@ -46,7 +46,7 @@ import (
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
-	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
@@ -61,7 +61,7 @@ import (
 var logger = logging.MustGetLogger()
 
 var selectorProviders = map[sdriver.Driver]any{
-	sdriver.Simple:    selector.NewService,
+	sdriver.Simple:    simple.NewService,
 	sdriver.Sherdlock: sherdlock.NewService,
 	"":                sherdlock.NewService,
 }
@@ -95,7 +95,7 @@ func (p *SDK) Install() error {
 		// config service
 		p.Container().Provide(
 			digutils.Identity[*fscconfig.Provider](),
-			dig.As(new(ftsconfig.Provider), new(sherdlock.ConfigProvider)),
+			dig.As(new(ftsconfig.Provider), new(sherdlock.ConfigProvider), new(simple.ConfigProvider)),
 		),
 		p.Container().Provide(ftsconfig.NewService),
 		p.Container().Provide(
@@ -126,7 +126,7 @@ func (p *SDK) Install() error {
 
 		p.Container().Provide(func(ttxStoreServiceManager ttxdb.StoreServiceManager) *network2.LockerProvider {
 			return network2.NewLockerProvider(ttxStoreServiceManager, 2*time.Second, 5*time.Minute)
-		}, dig.As(new(selector.LockerProvider))),
+		}, dig.As(new(simple.LockerProvider))),
 		p.Container().Provide(selectorProviders[sdriver.Driver(p.ConfigService().GetString("token.selector.driver"))], dig.As(new(token.SelectorManagerProvider))),
 		p.Container().Provide(network2.NewCertificationClientProvider, dig.As(new(token.CertificationClientProvider))),
 		p.Container().Provide(token.NewManagementServiceProvider),
