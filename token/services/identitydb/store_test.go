@@ -29,6 +29,6 @@ func TestDB(t *testing.T) {
 		tms.NewConfigServiceWrapper(config2.NewService(cp)),
 		multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp, sqlite2.NewDbProvider())),
 	)
-	_, err = manager.StoreServiceByTMSId(token2.TMSID{Network: "pineapple"})
+	_, err = manager.StoreServiceByTMSId(token2.TMSID{Network: "pineapple", Namespace: "ns"})
 	assert.NoError(t, err)
 }
