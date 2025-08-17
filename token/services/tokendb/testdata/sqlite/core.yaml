@@ -13,7 +13,7 @@ token:
     pineapple:
       network: pineapple
       channel:
-      namespace:
+      namespace: ns
       tokendb:
         persistence: token_persistence
       identitydb:
@@ -21,7 +21,7 @@ token:
     grapes:
       network: grapes
       channel:
-      namespace:
+      namespace: ns
       tokendb:
         persistence: token_persistence
       identitydb:
