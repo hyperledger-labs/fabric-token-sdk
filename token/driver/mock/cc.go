@@ -10,10 +10,11 @@ import (
 )
 
 type CertificationClient struct {
-	IsCertifiedStub        func(*token.ID) bool
+	IsCertifiedStub        func(context.Context, *token.ID) bool
 	isCertifiedMutex       sync.RWMutex
 	isCertifiedArgsForCall []struct {
-		arg1 *token.ID
+		arg1 context.Context
+		arg2 *token.ID
 	}
 	isCertifiedReturns struct {
 		result1 bool
@@ -21,10 +22,11 @@ type CertificationClient struct {
 	isCertifiedReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	RequestCertificationStub        func(...*token.ID) error
+	RequestCertificationStub        func(context.Context, ...*token.ID) error
 	requestCertificationMutex       sync.RWMutex
 	requestCertificationArgsForCall []struct {
-		arg1 []*token.ID
+		arg1 context.Context
+		arg2 []*token.ID
 	}
 	requestCertificationReturns struct {
 		result1 error
@@ -36,18 +38,19 @@ type CertificationClient struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *CertificationClient) IsCertified(ctx context.Context, arg1 *token.ID) bool {
+func (fake *CertificationClient) IsCertified(arg1 context.Context, arg2 *token.ID) bool {
 	fake.isCertifiedMutex.Lock()
 	ret, specificReturn := fake.isCertifiedReturnsOnCall[len(fake.isCertifiedArgsForCall)]
 	fake.isCertifiedArgsForCall = append(fake.isCertifiedArgsForCall, struct {
-		arg1 *token.ID
-	}{arg1})
+		arg1 context.Context
+		arg2 *token.ID
+	}{arg1, arg2})
 	stub := fake.IsCertifiedStub
 	fakeReturns := fake.isCertifiedReturns
-	fake.recordInvocation("IsCertified", []interface{}{arg1})
+	fake.recordInvocation("IsCertified", []interface{}{arg1, arg2})
 	fake.isCertifiedMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -61,17 +64,17 @@ func (fake *CertificationClient) IsCertifiedCallCount() int {
 	return len(fake.isCertifiedArgsForCall)
 }
 
-func (fake *CertificationClient) IsCertifiedCalls(stub func(*token.ID) bool) {
+func (fake *CertificationClient) IsCertifiedCalls(stub func(context.Context, *token.ID) bool) {
 	fake.isCertifiedMutex.Lock()
 	defer fake.isCertifiedMutex.Unlock()
 	fake.IsCertifiedStub = stub
 }
 
-func (fake *CertificationClient) IsCertifiedArgsForCall(i int) *token.ID {
+func (fake *CertificationClient) IsCertifiedArgsForCall(i int) (context.Context, *token.ID) {
 	fake.isCertifiedMutex.RLock()
 	defer fake.isCertifiedMutex.RUnlock()
 	argsForCall := fake.isCertifiedArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *CertificationClient) IsCertifiedReturns(result1 bool) {
@@ -97,18 +100,19 @@ func (fake *CertificationClient) IsCertifiedReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
-func (fake *CertificationClient) RequestCertification(ctx context.Context, arg1 ...*token.ID) error {
+func (fake *CertificationClient) RequestCertification(arg1 context.Context, arg2 ...*token.ID) error {
 	fake.requestCertificationMutex.Lock()
 	ret, specificReturn := fake.requestCertificationReturnsOnCall[len(fake.requestCertificationArgsForCall)]
 	fake.requestCertificationArgsForCall = append(fake.requestCertificationArgsForCall, struct {
-		arg1 []*token.ID
-	}{arg1})
+		arg1 context.Context
+		arg2 []*token.ID
+	}{arg1, arg2})
 	stub := fake.RequestCertificationStub
 	fakeReturns := fake.requestCertificationReturns
-	fake.recordInvocation("RequestCertification", []interface{}{arg1})
+	fake.recordInvocation("RequestCertification", []interface{}{arg1, arg2})
 	fake.requestCertificationMutex.Unlock()
 	if stub != nil {
-		return stub(arg1...)
+		return stub(arg1, arg2...)
 	}
 	if specificReturn {
 		return ret.result1
@@ -122,17 +126,17 @@ func (fake *CertificationClient) RequestCertificationCallCount() int {
 	return len(fake.requestCertificationArgsForCall)
 }
 
-func (fake *CertificationClient) RequestCertificationCalls(stub func(...*token.ID) error) {
+func (fake *CertificationClient) RequestCertificationCalls(stub func(context.Context, ...*token.ID) error) {
 	fake.requestCertificationMutex.Lock()
 	defer fake.requestCertificationMutex.Unlock()
 	fake.RequestCertificationStub = stub
 }
 
-func (fake *CertificationClient) RequestCertificationArgsForCall(i int) []*token.ID {
+func (fake *CertificationClient) RequestCertificationArgsForCall(i int) (context.Context, []*token.ID) {
 	fake.requestCertificationMutex.RLock()
 	defer fake.requestCertificationMutex.RUnlock()
 	argsForCall := fake.requestCertificationArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *CertificationClient) RequestCertificationReturns(result1 error) {
@@ -161,10 +165,6 @@ func (fake *CertificationClient) RequestCertificationReturnsOnCall(i int, result
 func (fake *CertificationClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.isCertifiedMutex.RLock()
-	defer fake.isCertifiedMutex.RUnlock()
-	fake.requestCertificationMutex.RLock()
-	defer fake.requestCertificationMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

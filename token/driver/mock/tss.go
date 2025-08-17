@@ -253,12 +253,6 @@ func (fake *TokensService) SupportedTokenFormatsReturnsOnCall(i int, result1 []t
 func (fake *TokensService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.deobfuscateMutex.RLock()
-	defer fake.deobfuscateMutex.RUnlock()
-	fake.recipientsMutex.RLock()
-	defer fake.recipientsMutex.RUnlock()
-	fake.supportedTokenFormatsMutex.RLock()
-	defer fake.supportedTokenFormatsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
