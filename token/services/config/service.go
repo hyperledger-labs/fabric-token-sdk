@@ -32,15 +32,17 @@ type Provider interface {
 	TranslatePath(path string) string
 	GetBool(s string) bool
 	MergeConfig(raw []byte) error
+	ProvideFromRaw(raw []byte) (*config.Provider, error)
 }
 
 // Service model the configuration service for the token sdk
 type Service struct {
 	cp Provider
 
-	version  string
-	enabled  bool
-	tmsCache lazy.Getter[map[string]*Configuration]
+	version              string
+	enabled              bool
+	configurationsHolder lazy.Holder[map[string]*Configuration]
+	validators           []Validator
 }
 
 // NewService creates a new Service configuration.
@@ -50,12 +52,13 @@ func NewService(cp Provider) *Service {
 		version = "v1"
 	}
 	enabled := cp.GetBool(EnabledPath)
-	loader := &loader{cp: cp}
+	loader := &loader{cp: cp, validators: nil}
 	return &Service{
-		cp:       cp,
-		version:  version,
-		enabled:  enabled,
-		tmsCache: lazy.NewGetter(loader.load),
+		cp:                   cp,
+		version:              version,
+		enabled:              enabled,
+		configurationsHolder: lazy.NewHolder(loader.load, loader.close),
+		validators:           []Validator{},
 	}
 }
 
@@ -119,26 +122,65 @@ func (m *Service) Configurations() ([]*Configuration, error) {
 	return collections.Values(tmsConfigs), nil
 }
 
+// AddConfiguration does the following:
+// - parse raw as a yaml stream
+// - extract the configuration
+// - validate it making sure it contains a new TMS
+// If all good, accept the new TMS
+// Updates to an existing TMS should be rejected.
 func (m *Service) AddConfiguration(raw []byte) error {
 	// Do the following:
 	// - parse raw as a yaml stream
-	// - extract the configuration
-	// - validate it making sure it contains a new TMS
-	// If all good, accept the new TMS
-	// Updates to an existing TMS should be rejected.
-	err := m.cp.MergeConfig(raw)
+	v, err := m.cp.ProvideFromRaw(raw)
 	if err != nil {
+		return errors.Wrapf(err, "failed loading configuration")
+	}
+	// - extract the configuration
+	loader := &loader{cp: v}
+	configurations, err := loader.load()
+	if err != nil {
+		return errors.Wrapf(err, "failed loading configurations from raw")
+	}
+	// - validate it making sure it contains a new TMS
+	for _, config := range configurations {
+		if err := config.Validate(); err != nil {
+			return errors.Wrapf(err, "failed validating configuration [%s]", config.ID())
+		}
+	}
+	// Updates to an existing TMS should be rejected.
+	existingConfigurations, err := m.configurations()
+	if err != nil {
+		return errors.Wrapf(err, "failed getting existing configurations")
+	}
+	for _, oldConfig := range existingConfigurations {
+		oldConfig.ID()
+		for _, newConf := range configurations {
+			if newConf.ID().Equal(oldConfig.ID()) {
+				return errors.Errorf("updating existing configuration is not supported [%s]", oldConfig.ID())
+			}
+		}
+	}
+
+	// If all good, merge into the main configuration service
+	if err := m.cp.MergeConfig(raw); err != nil {
 		return err
+	}
+
+	// append the new configurations
+	// here we just need to reset the holder
+	if err := m.configurationsHolder.Reset(); err != nil {
+		return errors.Wrapf(err, "failed resetting configurations holder")
 	}
 	return nil
 }
 
 func (m *Service) configurations() (map[string]*Configuration, error) {
-	return m.tmsCache.Get()
+	return m.configurationsHolder.Get()
 }
 
 type loader struct {
-	cp Provider
+	cp         Provider
+	validators []Validator
 }
 
 func (m *loader) load() (map[string]*Configuration, error) {
@@ -161,4 +203,8 @@ func (m *loader) load() (map[string]*Configuration, error) {
 		}
 	}
 	return tmsConfigs, nil
+}
+
+func (m *loader) close(map[string]*Configuration) error {
+	return nil
 }
