@@ -207,14 +207,8 @@ func (p *Provider) GetRevocationHandler(ctx context.Context, identity driver.Ide
 }
 
 func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeralIdentities ...driver.Identity) error {
-	for _, identity := range ephemeralIdentities {
-		if identity.Equal(longTerm) {
-			// no action required
-			continue
-		}
-		if err := p.Binder.Bind(ctx, longTerm, identity); err != nil {
-			return err
-		}
+	if err := p.Binder.Bind(ctx, longTerm, ephemeralIdentities); err != nil {
+		return err
 	}
 	return nil
 }

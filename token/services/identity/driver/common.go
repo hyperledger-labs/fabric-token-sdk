@@ -13,7 +13,7 @@ import (
 )
 
 type NetworkBinderService interface {
-	Bind(ctx context.Context, longTerm driver.Identity, ephemeral driver.Identity) error
+	Bind(ctx context.Context, longTerm driver.Identity, ephemeral ...driver.Identity) error
 }
 
 type IdentityProvider interface {
