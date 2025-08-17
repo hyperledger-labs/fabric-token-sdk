@@ -25,7 +25,7 @@ type PublicParametersStorage interface {
 	PublicParams(ctx context.Context, networkID string, channel string, namespace string) ([]byte, error)
 }
 
-type ConfigProvider interface {
+type ConfigService interface {
 	Configurations() ([]driver.Configuration, error)
 	ConfigurationFor(network string, channel string, namespace string) (driver.Configuration, error)
 }
@@ -38,7 +38,7 @@ type PublicParameters struct {
 // It is responsible for creating token management services for different networks.
 type TMSProvider struct {
 	logger                  logging.Logger
-	configProvider          ConfigProvider
+	configProvider          ConfigService
 	publicParametersStorage PublicParametersStorage
 	callback                CallbackFunc
 	tokenDriverService      *TokenDriverService
@@ -47,10 +47,14 @@ type TMSProvider struct {
 	services map[string]driver.TokenManagerService
 }
 
-func NewTMSProvider(logger logging.Logger, configProvider ConfigProvider, pps PublicParametersStorage, tokenDriverService *TokenDriverService) *TMSProvider {
+func NewTMSProvider(
+	configService ConfigService,
+	pps PublicParametersStorage,
+	tokenDriverService *TokenDriverService,
+) *TMSProvider {
 	ms := &TMSProvider{
-		logger:                  logger,
-		configProvider:          configProvider,
+		logger:                  logging.MustGetLogger(),
+		configProvider:          configService,
 		publicParametersStorage: pps,
 		services:                map[string]driver.TokenManagerService{},
 		tokenDriverService:      tokenDriverService,
@@ -157,16 +161,6 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 		m.services[key] = newService
 	}
 	return err
-}
-
-func (m *TMSProvider) Configurations() ([]driver.Configuration, error) {
-	tmsConfigs, err := m.configProvider.Configurations()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token managers")
-	}
-	res := make([]driver.Configuration, len(tmsConfigs))
-	copy(res, tmsConfigs)
-	return res, nil
 }
 
 func (m *TMSProvider) SetCallback(callback CallbackFunc) {

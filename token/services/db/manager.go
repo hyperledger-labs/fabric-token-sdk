@@ -13,11 +13,15 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 var logger = logging.MustGetLogger()
+
+type ConfigService interface {
+	ConfigurationFor(network string, channel string, namespace string) (driver.Configuration, error)
+}
 
 type StoreServiceManager[S any] interface {
 	StoreServiceByTMSId(token.TMSID) (S, error)
@@ -29,7 +33,7 @@ type ServiceManager[S any] interface {
 
 type manager[S any] struct{ lazy.Provider[token.TMSID, S] }
 
-func NewStoreServiceManager[S any, T any](config *config.Service, prefix string, constructor func(name driver2.PersistenceName, params ...string) (S, error), mapper func(S) (T, error)) StoreServiceManager[T] {
+func NewStoreServiceManager[S any, T any](config ConfigService, prefix string, constructor func(name driver2.PersistenceName, params ...string) (S, error), mapper func(S) (T, error)) StoreServiceManager[T] {
 	return &manager[T]{
 		Provider: lazy.NewProviderWithKeyMapper(Key, func(tmsID token.TMSID) (T, error) {
 			logger.Infof("Creating manager for %T for [%s] and prefix [%s]", new(T), tmsID, prefix)

@@ -95,6 +95,4 @@ type TokenManagerServiceProvider interface {
 	NewTokenManagerService(opts ServiceOptions) (TokenManagerService, error)
 
 	Update(options ServiceOptions) error
-
-	Configurations() ([]Configuration, error)
 }
