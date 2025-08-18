@@ -97,8 +97,6 @@ func (fake *Signer) SignReturnsOnCall(i int, result1 []byte, result2 error) {
 func (fake *Signer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.signMutex.RLock()
-	defer fake.signMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

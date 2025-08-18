@@ -5,16 +5,16 @@ import (
 	"context"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type SignatureProvider struct {
-	HasBeenSignedByStub        func(identity.Identity, driver.Verifier) ([]byte, error)
+	HasBeenSignedByStub        func(context.Context, driver.Identity, driver.Verifier) ([]byte, error)
 	hasBeenSignedByMutex       sync.RWMutex
 	hasBeenSignedByArgsForCall []struct {
-		arg1 identity.Identity
-		arg2 driver.Verifier
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 driver.Verifier
 	}
 	hasBeenSignedByReturns struct {
 		result1 []byte
@@ -38,19 +38,20 @@ type SignatureProvider struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *SignatureProvider) HasBeenSignedBy(ctx context.Context, arg1 identity.Identity, arg2 driver.Verifier) ([]byte, error) {
+func (fake *SignatureProvider) HasBeenSignedBy(arg1 context.Context, arg2 driver.Identity, arg3 driver.Verifier) ([]byte, error) {
 	fake.hasBeenSignedByMutex.Lock()
 	ret, specificReturn := fake.hasBeenSignedByReturnsOnCall[len(fake.hasBeenSignedByArgsForCall)]
 	fake.hasBeenSignedByArgsForCall = append(fake.hasBeenSignedByArgsForCall, struct {
-		arg1 identity.Identity
-		arg2 driver.Verifier
-	}{arg1, arg2})
+		arg1 context.Context
+		arg2 driver.Identity
+		arg3 driver.Verifier
+	}{arg1, arg2, arg3})
 	stub := fake.HasBeenSignedByStub
 	fakeReturns := fake.hasBeenSignedByReturns
-	fake.recordInvocation("HasBeenSignedBy", []interface{}{arg1, arg2})
+	fake.recordInvocation("HasBeenSignedBy", []interface{}{arg1, arg2, arg3})
 	fake.hasBeenSignedByMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -64,17 +65,17 @@ func (fake *SignatureProvider) HasBeenSignedByCallCount() int {
 	return len(fake.hasBeenSignedByArgsForCall)
 }
 
-func (fake *SignatureProvider) HasBeenSignedByCalls(stub func(identity.Identity, driver.Verifier) ([]byte, error)) {
+func (fake *SignatureProvider) HasBeenSignedByCalls(stub func(context.Context, driver.Identity, driver.Verifier) ([]byte, error)) {
 	fake.hasBeenSignedByMutex.Lock()
 	defer fake.hasBeenSignedByMutex.Unlock()
 	fake.HasBeenSignedByStub = stub
 }
 
-func (fake *SignatureProvider) HasBeenSignedByArgsForCall(i int) (identity.Identity, driver.Verifier) {
+func (fake *SignatureProvider) HasBeenSignedByArgsForCall(i int) (context.Context, driver.Identity, driver.Verifier) {
 	fake.hasBeenSignedByMutex.RLock()
 	defer fake.hasBeenSignedByMutex.RUnlock()
 	argsForCall := fake.hasBeenSignedByArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *SignatureProvider) HasBeenSignedByReturns(result1 []byte, result2 error) {
@@ -159,10 +160,6 @@ func (fake *SignatureProvider) SignaturesReturnsOnCall(i int, result1 [][]byte) 
 func (fake *SignatureProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.hasBeenSignedByMutex.RLock()
-	defer fake.hasBeenSignedByMutex.RUnlock()
-	fake.signaturesMutex.RLock()
-	defer fake.signaturesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

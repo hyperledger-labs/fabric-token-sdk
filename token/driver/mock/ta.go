@@ -4,21 +4,20 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type TransferAction struct {
-	ExtraSignersStub        func() []identity.Identity
+	ExtraSignersStub        func() []driver.Identity
 	extraSignersMutex       sync.RWMutex
 	extraSignersArgsForCall []struct {
 	}
 	extraSignersReturns struct {
-		result1 []identity.Identity
+		result1 []driver.Identity
 	}
 	extraSignersReturnsOnCall map[int]struct {
-		result1 []identity.Identity
+		result1 []driver.Identity
 	}
 	GetInputsStub        func() []*token.ID
 	getInputsMutex       sync.RWMutex
@@ -30,15 +29,15 @@ type TransferAction struct {
 	getInputsReturnsOnCall map[int]struct {
 		result1 []*token.ID
 	}
-	GetIssuerStub        func() identity.Identity
+	GetIssuerStub        func() driver.Identity
 	getIssuerMutex       sync.RWMutex
 	getIssuerArgsForCall []struct {
 	}
 	getIssuerReturns struct {
-		result1 identity.Identity
+		result1 driver.Identity
 	}
 	getIssuerReturnsOnCall map[int]struct {
-		result1 identity.Identity
+		result1 driver.Identity
 	}
 	GetMetadataStub        func() map[string][]byte
 	getMetadataMutex       sync.RWMutex
@@ -174,7 +173,7 @@ type TransferAction struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TransferAction) ExtraSigners() []identity.Identity {
+func (fake *TransferAction) ExtraSigners() []driver.Identity {
 	fake.extraSignersMutex.Lock()
 	ret, specificReturn := fake.extraSignersReturnsOnCall[len(fake.extraSignersArgsForCall)]
 	fake.extraSignersArgsForCall = append(fake.extraSignersArgsForCall, struct {
@@ -198,32 +197,32 @@ func (fake *TransferAction) ExtraSignersCallCount() int {
 	return len(fake.extraSignersArgsForCall)
 }
 
-func (fake *TransferAction) ExtraSignersCalls(stub func() []identity.Identity) {
+func (fake *TransferAction) ExtraSignersCalls(stub func() []driver.Identity) {
 	fake.extraSignersMutex.Lock()
 	defer fake.extraSignersMutex.Unlock()
 	fake.ExtraSignersStub = stub
 }
 
-func (fake *TransferAction) ExtraSignersReturns(result1 []identity.Identity) {
+func (fake *TransferAction) ExtraSignersReturns(result1 []driver.Identity) {
 	fake.extraSignersMutex.Lock()
 	defer fake.extraSignersMutex.Unlock()
 	fake.ExtraSignersStub = nil
 	fake.extraSignersReturns = struct {
-		result1 []identity.Identity
+		result1 []driver.Identity
 	}{result1}
 }
 
-func (fake *TransferAction) ExtraSignersReturnsOnCall(i int, result1 []identity.Identity) {
+func (fake *TransferAction) ExtraSignersReturnsOnCall(i int, result1 []driver.Identity) {
 	fake.extraSignersMutex.Lock()
 	defer fake.extraSignersMutex.Unlock()
 	fake.ExtraSignersStub = nil
 	if fake.extraSignersReturnsOnCall == nil {
 		fake.extraSignersReturnsOnCall = make(map[int]struct {
-			result1 []identity.Identity
+			result1 []driver.Identity
 		})
 	}
 	fake.extraSignersReturnsOnCall[i] = struct {
-		result1 []identity.Identity
+		result1 []driver.Identity
 	}{result1}
 }
 
@@ -280,7 +279,7 @@ func (fake *TransferAction) GetInputsReturnsOnCall(i int, result1 []*token.ID) {
 	}{result1}
 }
 
-func (fake *TransferAction) GetIssuer() identity.Identity {
+func (fake *TransferAction) GetIssuer() driver.Identity {
 	fake.getIssuerMutex.Lock()
 	ret, specificReturn := fake.getIssuerReturnsOnCall[len(fake.getIssuerArgsForCall)]
 	fake.getIssuerArgsForCall = append(fake.getIssuerArgsForCall, struct {
@@ -304,32 +303,32 @@ func (fake *TransferAction) GetIssuerCallCount() int {
 	return len(fake.getIssuerArgsForCall)
 }
 
-func (fake *TransferAction) GetIssuerCalls(stub func() identity.Identity) {
+func (fake *TransferAction) GetIssuerCalls(stub func() driver.Identity) {
 	fake.getIssuerMutex.Lock()
 	defer fake.getIssuerMutex.Unlock()
 	fake.GetIssuerStub = stub
 }
 
-func (fake *TransferAction) GetIssuerReturns(result1 identity.Identity) {
+func (fake *TransferAction) GetIssuerReturns(result1 driver.Identity) {
 	fake.getIssuerMutex.Lock()
 	defer fake.getIssuerMutex.Unlock()
 	fake.GetIssuerStub = nil
 	fake.getIssuerReturns = struct {
-		result1 identity.Identity
+		result1 driver.Identity
 	}{result1}
 }
 
-func (fake *TransferAction) GetIssuerReturnsOnCall(i int, result1 identity.Identity) {
+func (fake *TransferAction) GetIssuerReturnsOnCall(i int, result1 driver.Identity) {
 	fake.getIssuerMutex.Lock()
 	defer fake.getIssuerMutex.Unlock()
 	fake.GetIssuerStub = nil
 	if fake.getIssuerReturnsOnCall == nil {
 		fake.getIssuerReturnsOnCall = make(map[int]struct {
-			result1 identity.Identity
+			result1 driver.Identity
 		})
 	}
 	fake.getIssuerReturnsOnCall[i] = struct {
-		result1 identity.Identity
+		result1 driver.Identity
 	}{result1}
 }
 
@@ -1000,36 +999,6 @@ func (fake *TransferAction) ValidateReturnsOnCall(i int, result1 error) {
 func (fake *TransferAction) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.extraSignersMutex.RLock()
-	defer fake.extraSignersMutex.RUnlock()
-	fake.getInputsMutex.RLock()
-	defer fake.getInputsMutex.RUnlock()
-	fake.getIssuerMutex.RLock()
-	defer fake.getIssuerMutex.RUnlock()
-	fake.getMetadataMutex.RLock()
-	defer fake.getMetadataMutex.RUnlock()
-	fake.getOutputsMutex.RLock()
-	defer fake.getOutputsMutex.RUnlock()
-	fake.getSerialNumbersMutex.RLock()
-	defer fake.getSerialNumbersMutex.RUnlock()
-	fake.getSerializedInputsMutex.RLock()
-	defer fake.getSerializedInputsMutex.RUnlock()
-	fake.getSerializedOutputsMutex.RLock()
-	defer fake.getSerializedOutputsMutex.RUnlock()
-	fake.isGraphHidingMutex.RLock()
-	defer fake.isGraphHidingMutex.RUnlock()
-	fake.isRedeemAtMutex.RLock()
-	defer fake.isRedeemAtMutex.RUnlock()
-	fake.numInputsMutex.RLock()
-	defer fake.numInputsMutex.RUnlock()
-	fake.numOutputsMutex.RLock()
-	defer fake.numOutputsMutex.RUnlock()
-	fake.serializeMutex.RLock()
-	defer fake.serializeMutex.RUnlock()
-	fake.serializeOutputAtMutex.RLock()
-	defer fake.serializeOutputAtMutex.RUnlock()
-	fake.validateMutex.RLock()
-	defer fake.validateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
