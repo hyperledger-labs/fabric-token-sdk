@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	ftsconfig "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -283,6 +284,7 @@ func (n *Network) Connect(ns string) ([]token.ServiceOption, error) {
 type Provider struct {
 	networks        lazy.Provider[netId, *Network]
 	networkProvider *networkProvider
+	configService   *ftsconfig.Service
 }
 
 type netId struct {
@@ -294,34 +296,59 @@ func key(id netId) string {
 }
 
 // NewProvider returns a new instance of network provider
-func NewProvider() *Provider {
+func NewProvider(configService *ftsconfig.Service) *Provider {
 	ms := &networkProvider{drivers: make([]driver.Driver, 0)}
 
 	return &Provider{
 		networkProvider: ms,
 		networks:        lazy.NewProviderWithKeyMapper(key, ms.newNetwork),
+		configService:   configService,
 	}
 }
 
-func (np *Provider) RegisterDriver(driver driver.Driver) {
-	np.networkProvider.registerDriver(driver)
+func (p *Provider) RegisterDriver(driver driver.Driver) {
+	p.networkProvider.registerDriver(driver)
 }
 
 // GetNetwork returns a network instance for the given network and channel
-func (np *Provider) GetNetwork(network string, channel string) (*Network, error) {
+func (p *Provider) GetNetwork(network string, channel string) (*Network, error) {
 	logger.Debugf("GetNetwork: [%s:%s]", network, channel)
-	return np.networks.Get(netId{network: network, channel: channel})
+	return p.networks.Get(netId{network: network, channel: channel})
 }
 
-func (np *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
+// Normalize sets the unset options to their default values
+func (p *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
 	if opt == nil {
 		return nil, errors.New("no service options provided")
 	}
-	n, err := np.GetNetwork(opt.Network, opt.Channel)
+	n, err := p.GetNetwork(opt.Network, opt.Channel)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network [%s:%s]", opt.Network, opt.Channel)
 	}
 	return n.Normalize(opt)
+}
+
+// Connect invokes `Connect` on all configured TMS
+func (p *Provider) Connect() error {
+	configurations, err := p.configService.Configurations()
+	if err != nil {
+		return err
+	}
+	for _, tmsConfig := range configurations {
+		tmsID := tmsConfig.ID()
+		logger.Infof("start token management service [%s]...", tmsID)
+
+		// connect network
+		net, err := p.GetNetwork(tmsID.Network, tmsID.Channel)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get network [%s]", tmsID)
+		}
+		_, err = net.Connect(tmsID.Namespace)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
+		}
+	}
+	return nil
 }
 
 // networkProvider instantiates new networks based on the registered drivers
