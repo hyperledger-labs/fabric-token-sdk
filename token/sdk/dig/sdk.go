@@ -241,33 +241,19 @@ func (p *SDK) Start(ctx context.Context) error {
 	}
 	logger.Infof("Token platform enabled, starting...")
 
-	return errors2.Join(
+	if err := errors2.Join(
 		p.Container().Invoke(registerNetworkDrivers),
 		p.Container().Invoke(connectNetworks),
-	)
-}
-
-func connectNetworks(configService *ftsconfig.Service, networkProvider *network.Provider, _ *token.ManagementServiceProvider) error {
-	configurations, err := configService.Configurations()
-	if err != nil {
+	); err != nil {
+		logger.Errorf("Token platform enabled, starting...failed with error [%s]", err)
 		return err
-	}
-	for _, tmsConfig := range configurations {
-		tmsID := tmsConfig.ID()
-		logger.Infof("start token management service [%s]...", tmsID)
-
-		// connect network
-		net, err := networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get network [%s]", tmsID)
-		}
-		_, err = net.Connect(tmsID.Namespace)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
-		}
 	}
 	logger.Infof("Token platform enabled, starting...done")
 	return nil
+}
+
+func connectNetworks(networkProvider *network.Provider) error {
+	return networkProvider.Connect()
 }
 
 func registerNetworkDrivers(in struct {

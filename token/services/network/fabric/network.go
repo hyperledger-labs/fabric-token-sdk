@@ -118,6 +118,10 @@ type EndorsementService = endorsement.Service
 
 type EndorsementServiceProvider = lazy.Provider[token2.TMSID, EndorsementService]
 
+type SetupListenerProvider interface {
+	GetListener(token2.TMSID) lookup.Listener
+}
+
 type Network struct {
 	n              *fabric.NetworkService
 	ch             *fabric.Channel
@@ -137,6 +141,8 @@ type Network struct {
 	spentTokenQueryExecutor    driver.SpentTokenQueryExecutor
 	endorsementServiceProvider EndorsementServiceProvider
 	keyTranslator              translator.KeyTranslator
+
+	connectedNamespaces lazy.Provider[string, []token2.ServiceOption]
 }
 
 func NewNetwork(
@@ -157,7 +163,7 @@ func NewNetwork(
 	llm lookup.ListenerManager,
 	setupListenerProvider SetupListenerProvider,
 ) *Network {
-	return &Network{
+	network := &Network{
 		n:                          n,
 		ch:                         ch,
 		tmsProvider:                tmsProvider,
@@ -178,6 +184,10 @@ func NewNetwork(
 		keyTranslator:         keyTranslator,
 		setupListenerProvider: setupListenerProvider,
 	}
+	network.connectedNamespaces = lazy.NewProviderWithKeyMapper(func(s string) string {
+		return s
+	}, network.connect)
+	return network
 }
 
 func (n *Network) Name() string {
@@ -218,30 +228,8 @@ func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions,
 	return opt, nil
 }
 
-type SetupListenerProvider interface {
-	GetListener(token2.TMSID) lookup.Listener
-}
-
-func (n *Network) Connect(ns string) ([]token2.ServiceOption, error) {
-	tmsID := token2.TMSID{
-		Network:   n.n.Name(),
-		Channel:   n.ch.Name(),
-		Namespace: ns,
-	}
-
-	setUpKey, err := n.keyTranslator.CreateSetupKey()
-	if err != nil {
-		return nil, errors.Errorf("failed creating setup key")
-	}
-	if err := n.llm.AddPermanentLookupListener(ns, setUpKey, n.setupListenerProvider.GetListener(tmsID)); err != nil {
-		return nil, errors.Errorf("failed adding setup key listener")
-	}
-
-	// Let the endorsement service initialize itself, if needed
-	if _, err := n.endorsementServiceProvider.Get(tmsID); err != nil {
-		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
-	}
-	return nil, nil
+func (n *Network) Connect(ns string) (opts []token2.ServiceOption, err error) {
+	return n.connectedNamespaces.Get(ns)
 }
 
 func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
@@ -324,6 +312,29 @@ func (n *Network) LookupTransferMetadataKey(namespace string, key string, timeou
 
 func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
+}
+
+func (n *Network) connect(ns string) ([]token2.ServiceOption, error) {
+	tmsID := token2.TMSID{
+		Network:   n.n.Name(),
+		Channel:   n.ch.Name(),
+		Namespace: ns,
+	}
+
+	setUpKey, err := n.keyTranslator.CreateSetupKey()
+	if err != nil {
+		return nil, errors.Errorf("failed creating setup key")
+	}
+	if err := n.llm.AddPermanentLookupListener(ns, setUpKey, n.setupListenerProvider.GetListener(tmsID)); err != nil {
+		return nil, errors.Errorf("failed adding setup key listener")
+	}
+
+	// Let the endorsement service initialize itself, if needed
+	if _, err := n.endorsementServiceProvider.Get(tmsID); err != nil {
+		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
+	}
+
+	return nil, nil
 }
 
 type lookupListener struct {
