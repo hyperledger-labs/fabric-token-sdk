@@ -48,10 +48,16 @@ func TestPublicParams_Validate_Valid(t *testing.T) {
 		DriverName:        FabTokenDriverName,
 		QuantityPrecision: 32,
 		MaxToken:          1<<32 - 1,
-		IssuerIDs:         []driver.Identity{[]byte("issuer1"), []byte("issuer2")},
 	}
+	// without issuers
 	err := pp.Validate()
 	assert.NoError(t, err)
+
+	// with issuers
+	pp.IssuerIDs = []driver.Identity{[]byte("issuer1"), []byte("issuer2")}
+	err = pp.Validate()
+	assert.NoError(t, err)
+
 }
 
 func TestPublicParams_Validate_InvalidPrecision(t *testing.T) {

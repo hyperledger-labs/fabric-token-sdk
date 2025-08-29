@@ -50,34 +50,32 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 		}
 		ctx.Signatures = append(ctx.Signatures, sigma)
 	}
-
-	var isRedeem bool
-	for _, output := range ctx.TransferAction.Outputs {
-		if output.Owner == nil {
-			isRedeem = true
-			break
+	if len(ctx.PP.Issuers()) > 0 {
+		// In this case we must ensure that an issuer signed as well if the action redeems tokens as well
+		var isRedeem bool
+		for _, output := range ctx.TransferAction.Outputs {
+			if output.Owner == nil {
+				isRedeem = true
+				break
+			}
 		}
-	}
-
-	// If transfer action is a redeem, verify the signature of the issuer
-	if isRedeem {
-		ctx.Logger.Infof("action is a redeem, verify the signature of the issuer")
-
-		issuer := ctx.TransferAction.GetIssuer()
-		if issuer == nil {
-			return errors.Errorf("On Redeem action, must have at least one issuer")
+		// If transfer action is a redeem, verify the signature of the issuer
+		if isRedeem {
+			ctx.Logger.Infof("action is a redeem, verify the signature of the issuer")
+			issuer := ctx.TransferAction.GetIssuer()
+			if issuer == nil {
+				return errors.Errorf("On Redeem action, must have at least one issuer")
+			}
+			issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(c, issuer)
+			if err != nil {
+				return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
+			}
+			sigma, err := ctx.SignatureProvider.HasBeenSignedBy(c, issuer, issuerVerifier)
+			if err != nil {
+				return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
+			}
+			ctx.Signatures = append(ctx.Signatures, sigma)
 		}
-
-		issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(c, issuer)
-		if err != nil {
-			return errors.Wrapf(err, "failed deserializing issuer [%s]", issuer.UniqueID())
-		}
-
-		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(c, issuer, issuerVerifier)
-		if err != nil {
-			return errors.Wrapf(err, "failed signature verification [%s]", issuer.UniqueID())
-		}
-		ctx.Signatures = append(ctx.Signatures, sigma)
 	}
 
 	ctx.InputTokens = inputToken

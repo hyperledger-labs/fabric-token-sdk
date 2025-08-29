@@ -233,7 +233,8 @@ func (p *PublicParams) Precision() uint64 {
 	return p.QuantityPrecision
 }
 
-// Validate validates the public parameters
+// Validate validates the public parameters.
+// The list of issues can be empty meaning that anyone can create tokens.
 func (p *PublicParams) Validate() error {
 	if p.QuantityPrecision > 64 {
 		return errors.Errorf("invalid precision [%d], must be less than 64", p.QuantityPrecision)
@@ -244,9 +245,6 @@ func (p *PublicParams) Validate() error {
 	maxTokenValue := uint64(1<<p.Precision()) - 1
 	if p.MaxToken > maxTokenValue {
 		return errors.Errorf("max token value is invalid [%d]>[%d]", p.MaxToken, maxTokenValue)
-	}
-	if len(p.IssuerIDs) == 0 {
-		return errors.New("invalid public parameters: empty list of issuers")
 	}
 	return nil
 }
