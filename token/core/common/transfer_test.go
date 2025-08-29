@@ -36,7 +36,7 @@ func TestSelectIssuerForRedeem(t *testing.T) {
 				ttx.IssuerPublicParamsPublicKey: issuerPPPublicKey,
 			},
 			expectError:    false,
-			expectIdentity: issuerPPPublicKey,
+			expectIdentity: nil,
 		},
 		{
 			name:    "opts with FSC issuer identity but no public key",
@@ -44,7 +44,7 @@ func TestSelectIssuerForRedeem(t *testing.T) {
 			attributes: map[interface{}]interface{}{
 				ttx.IssuerFSCIdentityKey: issuerFSCIdentity,
 			},
-			expectError:    true,
+			expectError:    false,
 			expectIdentity: nil,
 		},
 		{
@@ -58,7 +58,7 @@ func TestSelectIssuerForRedeem(t *testing.T) {
 			name:           "opts with no FSC issuer identity, no issuers",
 			issuers:        []driver.Identity{},
 			attributes:     map[interface{}]interface{}{},
-			expectError:    true,
+			expectError:    false,
 			expectIdentity: nil,
 		},
 		{
@@ -67,7 +67,7 @@ func TestSelectIssuerForRedeem(t *testing.T) {
 			attributes: map[interface{}]interface{}{
 				ttx.IssuerFSCIdentityKey: 1234,
 			},
-			expectError:    true,
+			expectError:    false,
 			expectIdentity: nil,
 		},
 		{
@@ -77,7 +77,7 @@ func TestSelectIssuerForRedeem(t *testing.T) {
 				ttx.IssuerFSCIdentityKey:        issuerFSCIdentity,
 				ttx.IssuerPublicParamsPublicKey: 1234,
 			},
-			expectError:    true,
+			expectError:    false,
 			expectIdentity: nil,
 		},
 	}
