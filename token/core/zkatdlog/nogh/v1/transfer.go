@@ -123,7 +123,6 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 		return nil, nil, errors.Wrapf(err, "failed to prepare inputs")
 	}
 
-	var isRedeem bool
 	// get sender
 	pp := s.PublicParametersManager.PublicParams()
 	sender, err := transfer.NewSender(nil, prepareInputs.Tokens(), ids, prepareInputs.Metadata(), pp)
@@ -132,6 +131,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 	}
 	values := make([]uint64, 0, len(outputs))
 	owners := make([][]byte, 0, len(outputs))
+	var isRedeem bool
 	// get values and owners of outputs
 	s.Logger.DebugfContext(ctx, "Prepare %d output tokens", len(outputs))
 	for i, output := range outputs {
