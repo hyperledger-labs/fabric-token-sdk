@@ -57,7 +57,6 @@ func TestPublicParams_Validate_Valid(t *testing.T) {
 	pp.IssuerIDs = []driver.Identity{[]byte("issuer1"), []byte("issuer2")}
 	err = pp.Validate()
 	assert.NoError(t, err)
-
 }
 
 func TestPublicParams_Validate_InvalidPrecision(t *testing.T) {
