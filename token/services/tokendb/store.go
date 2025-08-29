@@ -10,9 +10,7 @@ import (
 	"reflect"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
@@ -29,12 +27,12 @@ type Notifier struct {
 
 var managerType = reflect.TypeOf((*StoreServiceManager)(nil))
 
-func NewNotifierManager(cp driver2.ConfigService, drivers multiplexed.Driver) NotifierManager {
-	return db.NewStoreServiceManager(config.NewService(cp), "tokendb.persistence", drivers.NewTokenNotifier, func(p driver.TokenNotifier) (*Notifier, error) { return &Notifier{p}, nil })
+func NewNotifierManager(cp db.ConfigService, drivers multiplexed.Driver) NotifierManager {
+	return db.NewStoreServiceManager(cp, "tokendb.persistence", drivers.NewTokenNotifier, func(p driver.TokenNotifier) (*Notifier, error) { return &Notifier{p}, nil })
 }
 
-func NewStoreServiceManager(cp driver2.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
-	return db.NewStoreServiceManager(config.NewService(cp), "tokendb.persistence", drivers.NewToken, newStoreService)
+func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
+	return db.NewStoreServiceManager(cp, "tokendb.persistence", drivers.NewToken, newStoreService)
 }
 
 func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {

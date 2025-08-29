@@ -67,7 +67,6 @@ type ManagementServiceProvider struct {
 
 // NewManagementServiceProvider returns a new instance of ManagementServiceProvider
 func NewManagementServiceProvider(
-	logger logging.Logger,
 	tmsProvider driver.TokenManagerServiceProvider,
 	normalizer TMSNormalizer,
 	vaultProvider VaultProvider,
@@ -75,7 +74,7 @@ func NewManagementServiceProvider(
 	selectorManagerProvider SelectorManagerProvider,
 ) *ManagementServiceProvider {
 	return &ManagementServiceProvider{
-		logger:                      logger,
+		logger:                      logging.MustGetLogger(),
 		tmsProvider:                 tmsProvider,
 		normalizer:                  normalizer,
 		vaultProvider:               vaultProvider,
@@ -147,7 +146,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 	return ms, nil
 }
 
-func NewTMSNormalizer(tmsProvider core.ConfigProvider, normalizer Normalizer) *tmsNormalizer {
+func NewTMSNormalizer(tmsProvider core.ConfigService, normalizer Normalizer) *tmsNormalizer {
 	return &tmsNormalizer{
 		tmsProvider: tmsProvider,
 		normalizer:  normalizer,
@@ -155,7 +154,7 @@ func NewTMSNormalizer(tmsProvider core.ConfigProvider, normalizer Normalizer) *t
 }
 
 type tmsNormalizer struct {
-	tmsProvider core.ConfigProvider
+	tmsProvider core.ConfigService
 	normalizer  Normalizer
 }
 
