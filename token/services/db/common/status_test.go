@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"context"
 	"testing"
 	"time"
 )
@@ -47,7 +46,7 @@ func TestNotify(t *testing.T) {
 	ss.AddStatusListener(txID, ch)
 
 	event := StatusEvent{
-		Ctx:               context.Background(),
+		Ctx:               t.Context(),
 		TxID:              txID,
 		ValidationCode:    0,
 		ValidationMessage: "ok",
@@ -133,7 +132,7 @@ func TestNotifyMultipleListeners(t *testing.T) {
 	}
 
 	event := StatusEvent{
-		Ctx:               context.Background(),
+		Ctx:               t.Context(),
 		TxID:              txID,
 		ValidationCode:    0,
 		ValidationMessage: "multi notify",
