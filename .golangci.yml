@@ -12,7 +12,7 @@ linters:
     - ginkgolinter
 #    - gocognit
 #    - goconst
-#    - gocritic
+    - gocritic
 #    - godot
 #    - gosec
 #    - intrange
@@ -25,7 +25,7 @@ linters:
     - nilnesserr
     - nolintlint
 #    - paralleltest
-#    - prealloc
+    - prealloc
 #    - promlinter
 #    - revive
 #    - rowserrcheck
@@ -38,7 +38,7 @@ linters:
     - wastedassign
     - whitespace
     - govet
-#    - staticcheck
+    - staticcheck
     - canonicalheader
 #    - copyloopvar
     - dupword
@@ -50,9 +50,16 @@ linters:
     - nakedret
     - sloglint
     - usestdlibvars
+    - bodyclose
     # wrapcheck is not working as expected. It is categorizing internal packages as external.
     #- wrapcheck
   settings:
+    gocritic:
+      settings:
+        hugeParam:
+          sizeThreshold: 64   # bytes; tune for your codebase
+        rangeValCopy:
+          sizeThreshold: 64
     errcheck:
       # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
       # Such cases aren't reported by default.
@@ -223,3 +230,5 @@ linters:
 #        - github.ibm.com/decentralized-trust-research/idap
 #  exclusions:
 #    generated: lax
+issues:
+  exclude-use-default: false

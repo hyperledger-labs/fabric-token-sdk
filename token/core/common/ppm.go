@@ -25,7 +25,7 @@ type PublicParamsManager[T driver.PublicParameters] struct {
 }
 
 func NewPublicParamsManager[T driver.PublicParameters](
-	PublicParamsDeserializer PublicParamsDeserializer[T],
+	publicParamsDeserializer PublicParamsDeserializer[T],
 	driverName driver.TokenDriverName,
 	driverVersion driver.TokenDriverVersion,
 	ppRaw []byte,
@@ -37,7 +37,7 @@ func NewPublicParamsManager[T driver.PublicParameters](
 	if len(ppRaw) == 0 {
 		return nil, errors.Errorf("empty public parameters")
 	}
-	pp, err := PublicParamsDeserializer.DeserializePublicParams(ppRaw, driverName, driverVersion)
+	pp, err := publicParamsDeserializer.DeserializePublicParams(ppRaw, driverName, driverVersion)
 	if err != nil {
 		return nil, err
 	}

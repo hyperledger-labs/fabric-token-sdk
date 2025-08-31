@@ -51,17 +51,17 @@ func GetX509Identity(entry string) (driver.Identity, error) {
 }
 
 // SetupIssuersAndAuditors sets up the issuers and auditors for the given public parameters
-func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
-	// Auditors
-	for _, auditor := range Auditors {
+func SetupIssuersAndAuditors(pp PP, auditors, issuers []string) error {
+	// auditors
+	for _, auditor := range auditors {
 		id, err := GetX509Identity(auditor)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get auditor identity [%s]", auditor)
 		}
 		pp.AddAuditor(id)
 	}
-	// Issuers
-	for _, issuer := range Issuers {
+	// issuers
+	for _, issuer := range issuers {
 		id, err := GetX509Identity(issuer)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get issuer identity [%s]", issuer)

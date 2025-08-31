@@ -39,7 +39,7 @@ type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driv
 }
 
 func (c *Context[P, T, TA, IA, DS]) CountMetadataKey(key string) {
-	c.MetadataCounter[key] = c.MetadataCounter[key] + 1
+	c.MetadataCounter[key]++
 }
 
 type ValidateTransferFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
@@ -64,7 +64,7 @@ type Validator[P driver.PublicParameters, T any, TA driver.TransferAction, IA dr
 }
 
 func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](
-	Logger logging.Logger,
+	logger logging.Logger,
 	publicParams P,
 	deserializer DS,
 	actionDeserializer ActionDeserializer[TA, IA],
@@ -73,7 +73,7 @@ func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA
 	auditingValidators []ValidateAuditingFunc[P, T, TA, IA, DS],
 ) *Validator[P, T, TA, IA, DS] {
 	return &Validator[P, T, TA, IA, DS]{
-		Logger:             Logger,
+		Logger:             logger,
 		PublicParams:       publicParams,
 		Deserializer:       deserializer,
 		ActionDeserializer: actionDeserializer,

@@ -216,7 +216,7 @@ func (is *InputStream) Count() int {
 // Owners returns a list of identities that own the tokens in the stream
 func (is *InputStream) Owners() *OwnerStream {
 	ownerMap := map[string]bool{}
-	var owners []string
+	owners := make([]string, 0, len(is.inputs))
 	for _, input := range is.inputs {
 		_, ok := ownerMap[input.Owner.UniqueID()]
 		if ok {
@@ -255,7 +255,7 @@ func (is *InputStream) At(i int) *Input {
 
 // IDs returns the IDs of the inputs.
 func (is *InputStream) IDs() []*token.ID {
-	var res []*token.ID
+	res := make([]*token.ID, 0, len(is.inputs))
 	for _, input := range is.inputs {
 		res = append(res, input.Id)
 	}
