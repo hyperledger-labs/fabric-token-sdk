@@ -86,6 +86,7 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.Requ
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to extract actions", txID)
 	}
+	defer t.removeCachedTokenRequest(string(txID))
 
 	logger.DebugfContext(ctx, "transaction [%s] start db transaction", txID)
 	ts, err := t.Storage.NewTransaction()
@@ -167,6 +168,10 @@ func (t *Service) GetCachedTokenRequest(txID string) (*token.Request, []byte) {
 		return nil, nil
 	}
 	return res.Request, res.MsgToSign
+}
+
+func (t *Service) removeCachedTokenRequest(txID string) {
+	t.RequestsCache.Delete(txID)
 }
 
 // AppendTransaction appends the content of the passed transaction to the token db.
@@ -331,7 +336,7 @@ func (t *Service) getActions(ctx context.Context, tmsID token.TMSID, anchor toke
 	// check the cache first
 	logger.DebugfContext(ctx, "check request cache for [%s]", anchor)
 	entry, ok := t.RequestsCache.Get(string(anchor))
-	if ok {
+	if ok && entry != nil {
 		logger.DebugfContext(ctx, "cache hit, return it")
 		return entry.ToSpend, entry.ToAppend, nil
 	}

@@ -91,9 +91,6 @@ type TokenManagerServiceProvider interface {
 	// If a TokenManagerService is not available, it creates one.
 	GetTokenManagerService(opts ServiceOptions) (TokenManagerService, error)
 
-	// NewTokenManagerService returns a new TokenManagerService instance for the passed parameters
-	NewTokenManagerService(opts ServiceOptions) (TokenManagerService, error)
-
 	Update(options ServiceOptions) error
 
 	Configurations() ([]Configuration, error)

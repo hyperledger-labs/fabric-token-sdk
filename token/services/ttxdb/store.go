@@ -14,7 +14,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -161,15 +160,13 @@ type Cache interface {
 // StoreService is a database that stores token transactions related information
 type StoreService struct {
 	*common.StatusSupport
-	db    driver.TokenTransactionStore
-	cache Cache
+	db driver.TokenTransactionStore
 }
 
 func newStoreService(p driver.TokenTransactionStore) (*StoreService, error) {
 	return &StoreService{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,
-		cache:         secondcache.NewTyped[[]byte](5000),
 	}, nil
 }
 
@@ -185,7 +182,7 @@ type QueryValidationRecordsParams = driver.QueryValidationRecordsParams
 // Pagination defines the pagination for querying movements
 type Pagination = cdriver.Pagination
 
-// Pagination iterator defines the pagination iterator for movements query results
+// PageTransactionsIterator iterator defines the pagination iterator for movements query results
 type PageTransactionsIterator = cdriver.PageIterator[*TransactionRecord]
 
 // Transactions returns an iterators of transaction records filtered by the given params.
@@ -237,7 +234,6 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
 	anchor := string(record.Anchor)
-	d.cache.Add(anchor, raw)
 	if err := w.AddTokenRequest(
 		ctx,
 		anchor,
@@ -294,10 +290,6 @@ func (d *StoreService) GetStatus(ctx context.Context, txID string) (TxStatus, st
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
 func (d *StoreService) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
-	res, ok := d.cache.Get(txID)
-	if ok {
-		return res, nil
-	}
 	return d.db.GetTokenRequest(ctx, txID)
 }
 
@@ -320,7 +312,6 @@ func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, 
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
 	// we store the token request, but don't have or care about the application metadata
-	d.cache.Add(txID, tokenRequest)
 	if err := w.AddTokenRequest(ctx, txID, tokenRequest, nil, nil, ppHash); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", txID)

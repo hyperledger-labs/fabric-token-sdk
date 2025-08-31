@@ -35,13 +35,15 @@ type ManagementService struct {
 	channel   string
 	namespace string
 	tms       driver.TokenManagerService
+	logger    logging.Logger
 
 	vaultProvider               VaultProvider
 	certificationClientProvider CertificationClientProvider
 	selectorManagerProvider     SelectorManagerProvider
 	signatureService            *SignatureService
 	vault                       *Vault
-	logger                      logging.Logger
+	publicParametersManager     *PublicParametersManager
+	walletManager               *WalletManager
 }
 
 // String returns a string representation of the TMS
@@ -110,7 +112,7 @@ func (t *ManagementService) Vault() *Vault {
 
 // WalletManager returns the wallet manager for this TMS
 func (t *ManagementService) WalletManager() *WalletManager {
-	return &WalletManager{managementService: t, walletService: t.tms.WalletService()}
+	return t.walletManager
 }
 
 // CertificationManager returns the certification manager for this TMS.
@@ -135,7 +137,7 @@ func (t *ManagementService) CertificationClient(ctx context.Context) (*Certifica
 // PublicParametersManager returns a manager that gives access to the public parameters
 // governing this TMS.
 func (t *ManagementService) PublicParametersManager() *PublicParametersManager {
-	return &PublicParametersManager{ppm: t.tms.PublicParamsManager()}
+	return t.publicParametersManager
 }
 
 // SelectorManager returns a manager that gives access to the token selectors
@@ -172,6 +174,8 @@ func (t *ManagementService) init() error {
 		return errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", t.namespace, t.channel, t.namespace)
 	}
 	t.vault = &Vault{v: v, logger: t.logger}
+	t.walletManager = &WalletManager{managementService: t, walletService: t.tms.WalletService()}
+
 	return nil
 }
 

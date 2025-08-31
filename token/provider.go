@@ -8,6 +8,7 @@ package token
 
 import (
 	"context"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -63,6 +64,9 @@ type ManagementServiceProvider struct {
 	certificationClientProvider CertificationClientProvider
 	selectorManagerProvider     SelectorManagerProvider
 	vaultProvider               VaultProvider
+
+	lock     sync.RWMutex
+	services map[string]*ManagementService
 }
 
 // NewManagementServiceProvider returns a new instance of ManagementServiceProvider
@@ -78,24 +82,53 @@ func NewManagementServiceProvider(
 		logger:                      logger,
 		tmsProvider:                 tmsProvider,
 		normalizer:                  normalizer,
-		vaultProvider:               vaultProvider,
 		certificationClientProvider: certificationClientProvider,
 		selectorManagerProvider:     selectorManagerProvider,
+		vaultProvider:               vaultProvider,
+		services:                    map[string]*ManagementService{},
 	}
+}
+
+// GetManagementServiceProvider returns the management service provider from the passed service provider.
+// The function panics if an error occurs.
+// An alternative way is to use `s, err := sp.GetService(&ManagementServiceProvider{}) and catch the error manually.`
+func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider {
+	s, err := sp.GetService(managementServiceProviderIndex)
+	if err != nil {
+		panic(err)
+	}
+	return s.(*ManagementServiceProvider)
 }
 
 // GetManagementService returns an instance of the management service for the passed options.
 // If the management service has not been created yet, it will be created.
 func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) (*ManagementService, error) {
-	return p.managementService(false, opts...)
+	return p.managementService(opts...)
 }
 
-// NewManagementService returns a new instance of the management service for the passed options.
-func (p *ManagementServiceProvider) NewManagementService(opts ...ServiceOption) (*ManagementService, error) {
-	return p.managementService(true, opts...)
+func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
+	p.logger.Debugf("update tms [%s] with public params [%s]", tmsID, Hashable(val))
+	err := p.tmsProvider.Update(driver.ServiceOptions{
+		Network:      tmsID.Network,
+		Channel:      tmsID.Channel,
+		Namespace:    tmsID.Namespace,
+		PublicParams: val,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed updating tms [%s]", tmsID)
+	}
+
+	// clear cache
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	key := tmsID.Network + tmsID.Channel + tmsID.Namespace
+	delete(p.services, key)
+
+	p.logger.Debugf("update tms [%s] with public params [%s]...done", tmsID, Hashable(val))
+	return nil
 }
 
-func (p *ManagementServiceProvider) managementService(aNew bool, opts ...ServiceOption) (*ManagementService, error) {
+func (p *ManagementServiceProvider) managementService(opts ...ServiceOption) (*ManagementService, error) {
 	opt, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to compile options")
@@ -105,7 +138,19 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 		return nil, errors.Wrap(err, "failed to normalize options")
 	}
 
-	p.logger.Debugf("get tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
+	key := opt.Network + opt.Channel + opt.Namespace
+	p.logger.Debugf("check existence token manager service for [%s]", key)
+	p.lock.RLock()
+	service, ok := p.services[key]
+	p.lock.RUnlock()
+	if ok {
+		return service, nil
+	}
+
+	p.logger.Debugf("lock to create token manager service for [%s]", key)
+
+	p.lock.Lock()
+	defer p.lock.Unlock()
 
 	var tokenService driver.TokenManagerService
 	driverOpts := driver.ServiceOptions{
@@ -116,11 +161,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 		PublicParams:        opt.PublicParams,
 		Params:              opt.Params,
 	}
-	if aNew {
-		tokenService, err = p.tmsProvider.NewTokenManagerService(driverOpts)
-	} else {
-		tokenService, err = p.tmsProvider.GetTokenManagerService(driverOpts)
-	}
+	tokenService, err = p.tmsProvider.GetTokenManagerService(driverOpts)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", opt)
 	}
@@ -140,11 +181,18 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 			deserializer:     tokenService.Deserializer(),
 			identityProvider: tokenService.IdentityProvider(),
 		},
+		publicParametersManager: &PublicParametersManager{ppm: tokenService.PublicParamsManager()},
 	}
 	if err := ms.init(); err != nil {
 		return nil, errors.WithMessagef(err, "failed to initialize token management service")
 	}
+	p.services[key] = ms
 	return ms, nil
+}
+
+type tmsNormalizer struct {
+	tmsProvider core.ConfigProvider
+	normalizer  Normalizer
 }
 
 func NewTMSNormalizer(tmsProvider core.ConfigProvider, normalizer Normalizer) *tmsNormalizer {
@@ -152,11 +200,6 @@ func NewTMSNormalizer(tmsProvider core.ConfigProvider, normalizer Normalizer) *t
 		tmsProvider: tmsProvider,
 		normalizer:  normalizer,
 	}
-}
-
-type tmsNormalizer struct {
-	tmsProvider core.ConfigProvider
-	normalizer  Normalizer
 }
 
 func (p *tmsNormalizer) Normalize(opt *ServiceOptions) (*ServiceOptions, error) {
@@ -224,30 +267,4 @@ func (p *tmsNormalizer) Normalize(opt *ServiceOptions) (*ServiceOptions, error) 
 
 	// last pass
 	return p.normalizer.Normalize(opt)
-}
-
-func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
-	p.logger.Debugf("update tms [%s] with public params [%s]", tmsID, Hashable(val))
-	err := p.tmsProvider.Update(driver.ServiceOptions{
-		Network:      tmsID.Network,
-		Channel:      tmsID.Channel,
-		Namespace:    tmsID.Namespace,
-		PublicParams: val,
-	})
-	if err != nil {
-		return errors.Wrapf(err, "failed updating tms [%s]", tmsID)
-	}
-	p.logger.Debugf("update tms [%s] with public params [%s]...done", tmsID, Hashable(val))
-	return nil
-}
-
-// GetManagementServiceProvider returns the management service provider from the passed service provider.
-// The function panics if an error occurs.
-// An alternative way is to use `s, err := sp.GetService(&ManagementServiceProvider{}) and catch the error manually.`
-func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider {
-	s, err := sp.GetService(managementServiceProviderIndex)
-	if err != nil {
-		panic(err)
-	}
-	return s.(*ManagementServiceProvider)
 }
