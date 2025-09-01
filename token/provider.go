@@ -107,7 +107,10 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 }
 
 func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
-	p.logger.Debugf("update tms [%s] with public params [%s]", tmsID, Hashable(val))
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.logger.Infof("update tms [%s] with public params [%s]", tmsID, Hashable(val))
 	err := p.tmsProvider.Update(driver.ServiceOptions{
 		Network:      tmsID.Network,
 		Channel:      tmsID.Channel,
@@ -119,12 +122,10 @@ func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
 	}
 
 	// clear cache
-	p.lock.Lock()
-	defer p.lock.Unlock()
 	key := tmsID.Network + tmsID.Channel + tmsID.Namespace
 	delete(p.services, key)
 
-	p.logger.Debugf("update tms [%s] with public params [%s]...done", tmsID, Hashable(val))
+	p.logger.Infof("update tms [%s] with public params [%s]...done", tmsID, Hashable(val))
 	return nil
 }
 
