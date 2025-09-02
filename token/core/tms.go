@@ -19,6 +19,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
+var logger = logging.MustGetLogger()
+
 type CallbackFunc func(tms driver.TokenManagerService, network, channel, namespace string) error
 
 type PublicParametersStorage interface {
@@ -37,8 +39,7 @@ type PublicParameters struct {
 // TMSProvider is a token management service provider.
 // It is responsible for creating token management services for different networks.
 type TMSProvider struct {
-	logger                  logging.Logger
-	configProvider          ConfigService
+	configService           ConfigService
 	publicParametersStorage PublicParametersStorage
 	callback                CallbackFunc
 	tokenDriverService      *TokenDriverService
@@ -53,8 +54,7 @@ func NewTMSProvider(
 	tokenDriverService *TokenDriverService,
 ) *TMSProvider {
 	ms := &TMSProvider{
-		logger:                  logging.MustGetLogger(),
-		configProvider:          configService,
+		configService:           configService,
 		publicParametersStorage: pps,
 		services:                map[string]driver.TokenManagerService{},
 		tokenDriverService:      tokenDriverService,
@@ -74,7 +74,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	}
 
 	key := tmsKey(opts)
-	m.logger.Debugf("check existence token manager service for [%s] with key [%s]", opts, key)
+	logger.Debugf("check existence token manager service for [%s] with key [%s]", opts, key)
 	m.lock.RLock()
 	service, ok := m.services[key]
 	if ok {
@@ -83,18 +83,18 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	}
 	m.lock.RUnlock()
 
-	m.logger.Debugf("lock to create token manager service for [%s] with key [%s]", opts, key)
+	logger.Debugf("lock to create token manager service for [%s] with key [%s]", opts, key)
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	service, ok = m.services[key]
 	if ok {
-		m.logger.Debugf("token manager service for [%s] with key [%s] exists, return it", opts, key)
+		logger.Debugf("token manager service for [%s] with key [%s] exists, return it", opts, key)
 		return service, nil
 	}
 
-	m.logger.Debugf("creating new token manager service for [%s] with key [%s]", opts, key)
+	logger.Debugf("creating new token manager service for [%s] with key [%s]", opts, key)
 	service, err = m.getTokenManagerService(opts)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (m *TMSProvider) NewTokenManagerService(opts driver.ServiceOptions) (driver
 	if len(opts.Namespace) == 0 {
 		return nil, errors.Errorf("namespace not specified")
 	}
-	m.logger.Debugf("creating new token manager service for [%s]", opts)
+	logger.Debugf("creating new token manager service for [%s]", opts)
 
 	service, err := m.newTMS(&opts)
 	if err != nil {
@@ -131,21 +131,21 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 	}
 
 	key := tmsKey(opts)
-	m.logger.Debugf("update tms for [%s] with key [%s]", opts, key)
+	logger.Debugf("update tms for [%s] with key [%s]", opts, key)
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	service, ok := m.services[key]
 	if !ok {
-		m.logger.Debugf("no service found, instantiate token management system for [%s:%s:%s] for key [%s]", opts.Network, opts.Channel, opts.Namespace, key)
+		logger.Debugf("no service found, instantiate token management system for [%s:%s:%s] for key [%s]", opts.Network, opts.Channel, opts.Namespace, key)
 	} else {
 		// update only if the public params are different from the current
 		if bytes.Equal(service.PublicParamsManager().PublicParamsHash(), hash.Hashable(opts.PublicParams).Raw()) {
-			m.logger.Debugf("service found, no need to update token management system for [%s:%s:%s] for key [%s], public params are the same", opts.Network, opts.Channel, opts.Namespace, key)
+			logger.Debugf("service found, no need to update token management system for [%s:%s:%s] for key [%s], public params are the same", opts.Network, opts.Channel, opts.Namespace, key)
 			return nil
 		}
 
-		m.logger.Debugf("service found, unload token management system for [%s:%s:%s] for key [%s] and reload it", opts.Network, opts.Channel, opts.Namespace, key)
+		logger.Debugf("service found, unload token management system for [%s:%s:%s] for key [%s] and reload it", opts.Network, opts.Channel, opts.Namespace, key)
 	}
 
 	// create the service for the new public params
@@ -168,7 +168,7 @@ func (m *TMSProvider) SetCallback(callback CallbackFunc) {
 }
 
 func (m *TMSProvider) getTokenManagerService(opts driver.ServiceOptions) (service driver.TokenManagerService, err error) {
-	m.logger.Debugf("creating new token manager service for [%s]", opts)
+	logger.Debugf("creating new token manager service for [%s]", opts)
 	service, err = m.newTMS(&opts)
 	if err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func (m *TMSProvider) getTokenManagerService(opts driver.ServiceOptions) (servic
 	if m.callback != nil {
 		err = m.callback(service, opts.Network, opts.Channel, opts.Namespace)
 		if err != nil {
-			m.logger.Fatalf("failed to initialize tms for [%s]: [%s]", opts, err)
+			logger.Fatalf("failed to initialize tms for [%s]: [%s]", opts, err)
 		}
 	}
 	return service, nil
@@ -189,7 +189,7 @@ func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerSe
 		return nil, errors.WithMessagef(err, "failed to get driver for [%s]", opts)
 	}
 	opts.PublicParams = ppRaw
-	m.logger.Debugf("instantiating token service for [%s]", opts)
+	logger.Debugf("instantiating token service for [%s]", opts)
 
 	ts, err := m.tokenDriverService.NewTokenService(driver.TMSID{Network: opts.Network, Channel: opts.Channel, Namespace: opts.Namespace}, opts.PublicParams)
 	if err != nil {
@@ -207,12 +207,12 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, err
 	// 4. public parameters fetcher, if any
 	for _, retriever := range []func(options *driver.ServiceOptions) ([]byte, error){m.ppFromOpts, m.ppFromStorage, m.ppFromConfig, m.ppFromFetcher} {
 		if ppRaw, err := retriever(opts); err != nil {
-			m.logger.Warnf("failed to retrieve params for [%s]: [%s]", opts, err)
+			logger.Warnf("failed to retrieve params for [%s]: [%s]", opts, err)
 		} else if len(ppRaw) != 0 {
 			return ppRaw, nil
 		}
 	}
-	m.logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, string(debug.Stack()))
+	logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, string(debug.Stack()))
 	return nil, errors.Errorf("cannot retrieve public params for [%s]", opts)
 }
 
@@ -235,7 +235,7 @@ func (m *TMSProvider) ppFromStorage(opts *driver.ServiceOptions) ([]byte, error)
 }
 
 func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) {
-	tmsConfig, err := m.configProvider.ConfigurationFor(opts.Network, opts.Channel, opts.Namespace)
+	tmsConfig, err := m.configService.ConfigurationFor(opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to identify driver from the configuration of [%s], loading driver from public parameters failed too [%s]", opts, err)
 	}
@@ -244,7 +244,7 @@ func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) 
 		return nil, errors.WithMessagef(err, "failed to unmarshal public parameters")
 	}
 	if len(cPP.Path) != 0 {
-		m.logger.Infof("load public parameters from [%s]...", cPP.Path)
+		logger.Infof("load public parameters from [%s]...", cPP.Path)
 		ppRaw, err := os.ReadFile(cPP.Path)
 		if err != nil {
 			return nil, errors.Errorf("failed to load public parameters from [%s]: [%s]", cPP.Path, err)

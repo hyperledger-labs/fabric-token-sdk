@@ -19,7 +19,7 @@ import (
 func TestConfigurations(t *testing.T) {
 	// create a new config service by loading the config file
 	cp, err := config.NewProvider("./testdata/token0")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// instantiate the token sdk config
 	service := NewService(cp)
