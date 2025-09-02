@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
@@ -86,6 +85,17 @@ func NewManagementServiceProvider(
 		vaultProvider:               vaultProvider,
 		services:                    map[string]*ManagementService{},
 	}
+}
+
+// GetManagementServiceProvider returns the management service provider from the passed service provider.
+// The function panics if an error occurs.
+// An alternative way is to use `s, err := sp.GetService(&ManagementServiceProvider{}) and catch the error manually.`
+func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider {
+	s, err := sp.GetService(managementServiceProviderIndex)
+	if err != nil {
+		panic(err)
+	}
+	return s.(*ManagementServiceProvider)
 }
 
 // GetManagementServiceProvider returns the management service provider from the passed service provider.
@@ -196,21 +206,25 @@ func (p *ManagementServiceProvider) managementService(opts ...ServiceOption) (*M
 	return ms, nil
 }
 
-type tmsNormalizer struct {
-	tmsProvider core.ConfigProvider
-	normalizer  Normalizer
+type ConfigService interface {
+	Configurations() ([]driver.Configuration, error)
 }
 
-func NewTMSNormalizer(tmsProvider core.ConfigService, normalizer Normalizer) *tmsNormalizer {
+type tmsNormalizer struct {
+	configService ConfigService
+	normalizer    Normalizer
+}
+
+func NewTMSNormalizer(tmsProvider ConfigService, normalizer Normalizer) *tmsNormalizer {
 	return &tmsNormalizer{
-		tmsProvider: tmsProvider,
-		normalizer:  normalizer,
+		configService: tmsProvider,
+		normalizer:    normalizer,
 	}
 }
 
 func (p *tmsNormalizer) Normalize(opt *ServiceOptions) (*ServiceOptions, error) {
 	// lookup configurations
-	configs, err := p.tmsProvider.Configurations()
+	configs, err := p.configService.Configurations()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting tms configs")
 	}

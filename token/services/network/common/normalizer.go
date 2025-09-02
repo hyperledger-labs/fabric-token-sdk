@@ -16,5 +16,6 @@ type Configuration interface {
 	// If multiple matching configurations are found, an error is returned.
 	LookupNamespace(network, channel string) (string, error)
 
+	// ConfigurationFor returns the configuration for the given coordinates
 	ConfigurationFor(network, channel, namespace string) (*config.Configuration, error)
 }
