@@ -16,6 +16,9 @@ const (
 	ZeroCost = 0
 )
 
+// Config is a shortcut for the ristretto Configuration.
+type Config[K ristretto.Key, V any] = ristretto.Config[K, V]
+
 // ristrettoCache is our implementation using Ristretto v2.
 type ristrettoCache[T any] struct {
 	cache *ristretto.Cache[string, T]

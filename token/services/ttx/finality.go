@@ -62,6 +62,9 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 	if timeout == 0 {
 		timeout = 5 * time.Minute
 	}
+	// Zero out any non-needed references to allow the garbage collector to reclaim them
+	f.opts = nil
+	options.Transaction = nil
 	return f.call(ctx, txID, tmsID, timeout)
 }
 
@@ -124,7 +127,8 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB finalityDB, startCounter, iterations int) (int, error) {
 	// notice that adding the listener can happen after the event we are looking for has already happened
 	// therefore we need to check more often before the timeout happens
-	dbChannel := make(chan common.StatusEvent, 200)
+	dbChannel := make(chan common.StatusEvent, 1)
+	defer close(dbChannel)
 	logger.DebugfContext(ctx, "Add status listener")
 	finalityDB.AddStatusListener(txID, dbChannel)
 	logger.DebugfContext(ctx, "Added status listener")

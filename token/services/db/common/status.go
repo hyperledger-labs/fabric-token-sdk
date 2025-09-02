@@ -56,13 +56,15 @@ func (c *StatusSupport) DeleteStatusListener(txID string, ch chan StatusEvent) {
 	}
 	for i, l := range ls {
 		if l == ch {
+			// Zero out the reference before slicing
+			// to allow the garbage collector to reclaim the memory
+			ls[i] = nil
 			ls = append(ls[:i], ls[i+1:]...)
 			c.listeners[txID] = ls
 			return
 		}
 	}
 }
-
 func (c *StatusSupport) Notify(event StatusEvent) {
 	logger.DebugfContext(event.Ctx, "Start notify for [%s]", event.TxID)
 	defer logger.DebugfContext(event.Ctx, "Notified for [%s]", event.TxID)

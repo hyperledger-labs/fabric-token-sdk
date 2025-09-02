@@ -153,4 +153,4 @@ lint-auto-fix:
 .PHONY: install-linter-tool
 install-linter-tool:
 	@echo "Installing golangci Linter"
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.1.6
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.4.0
