@@ -98,17 +98,6 @@ func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider
 	return s.(*ManagementServiceProvider)
 }
 
-// GetManagementServiceProvider returns the management service provider from the passed service provider.
-// The function panics if an error occurs.
-// An alternative way is to use `s, err := sp.GetService(&ManagementServiceProvider{}) and catch the error manually.`
-func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider {
-	s, err := sp.GetService(managementServiceProviderIndex)
-	if err != nil {
-		panic(err)
-	}
-	return s.(*ManagementServiceProvider)
-}
-
 // GetManagementService returns an instance of the management service for the passed options.
 // If the management service has not been created yet, it will be created.
 func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) (*ManagementService, error) {
