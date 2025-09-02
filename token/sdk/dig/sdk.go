@@ -100,7 +100,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(ftsconfig.NewService),
 		p.Container().Provide(
 			tms.NewConfigServiceWrapper,
-			dig.As(new(ftscore.ConfigService), new(db2.ConfigService)), new(token.ConfigService),
+			dig.As(new(ftscore.ConfigService), new(db2.ConfigService), new(token.ConfigService)),
 		),
 
 		// network service
