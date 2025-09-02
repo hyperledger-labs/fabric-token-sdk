@@ -62,6 +62,9 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 	if timeout == 0 {
 		timeout = 5 * time.Minute
 	}
+	// Zero out any non-needed references to allow the garbage collector to reclaim them
+	f.opts = nil
+	options.Transaction = nil
 	return f.call(ctx, txID, tmsID, timeout)
 }
 

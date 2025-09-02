@@ -106,6 +106,9 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 	return p.managementService(opts...)
 }
 
+// Update uses the given options to update the public parameters of a given TMS.
+// If the public parameters in the options are identical to those in the current TMS, then nothing happens.
+// If a TMS does not exist for the given options, one is created with the given public parameters.
 func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()

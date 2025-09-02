@@ -44,6 +44,23 @@ type ManagementService struct {
 	vault                       *Vault
 	publicParametersManager     *PublicParametersManager
 	walletManager               *WalletManager
+	validator                   *Validator
+	auth                        *Authorization
+	conf                        *Configuration
+	tokensService               *TokensService
+}
+
+// GetManagementService returns the management service for the passed options. If no options are passed,
+// the default management service is returned.
+// Options: WithNetwork, WithChannel, WithNamespace, WithPublicParameterFetcher, WithTMS, WithTMSID
+// The function panics if an error occurs. Use GetManagementServiceProvider(sp).GetManagementService(opts...) to handle any error directly
+func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {
+	ms, err := GetManagementServiceProvider(sp).GetManagementService(opts...)
+	if err != nil {
+		logger.Warnf("failed to get token manager service [%s]", err)
+		return nil
+	}
+	return ms
 }
 
 // String returns a string representation of the TMS
@@ -98,11 +115,7 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 
 // Validator returns a new token validator for this TMS
 func (t *ManagementService) Validator() (*Validator, error) {
-	v, err := t.tms.Validator()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get validator")
-	}
-	return &Validator{backend: v}, nil
+	return t.validator, nil
 }
 
 // Vault returns the Token Vault for this TMS
@@ -161,11 +174,15 @@ func (t *ManagementService) ID() TMSID {
 
 // Configuration returns the configuration for this TMS
 func (t *ManagementService) Configuration() *Configuration {
-	return &Configuration{cm: t.tms.Configuration()}
+	return t.conf
 }
 
 func (t *ManagementService) Authorization() *Authorization {
-	return &Authorization{Authorization: t.tms.Authorization()}
+	return t.auth
+}
+
+func (t *ManagementService) TokensService() *TokensService {
+	return t.tokensService
 }
 
 func (t *ManagementService) init() error {
@@ -175,25 +192,16 @@ func (t *ManagementService) init() error {
 	}
 	t.vault = &Vault{v: v, logger: t.logger}
 	t.walletManager = &WalletManager{managementService: t, walletService: t.tms.WalletService()}
+	validator, err := t.tms.Validator()
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get validator")
+	}
+	t.validator = &Validator{backend: validator}
+	t.auth = &Authorization{Authorization: t.tms.Authorization()}
+	t.conf = &Configuration{cm: t.tms.Configuration()}
+	t.tokensService = &TokensService{ts: t.tms.TokensService(), tus: t.tms.TokensUpgradeService()}
 
 	return nil
-}
-
-func (t *ManagementService) TokensService() *TokensService {
-	return &TokensService{ts: t.tms.TokensService(), tus: t.tms.TokensUpgradeService()}
-}
-
-// GetManagementService returns the management service for the passed options. If no options are passed,
-// the default management service is returned.
-// Options: WithNetwork, WithChannel, WithNamespace, WithPublicParameterFetcher, WithTMS, WithTMSID
-// The function panics if an error occurs. Use GetManagementServiceProvider(sp).GetManagementService(opts...) to handle any error directly
-func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {
-	ms, err := GetManagementServiceProvider(sp).GetManagementService(opts...)
-	if err != nil {
-		logger.Warnf("failed to get token manager service [%s]", err)
-		return nil
-	}
-	return ms
 }
 
 func NewWalletManager(walletService driver.WalletService) *WalletManager {
