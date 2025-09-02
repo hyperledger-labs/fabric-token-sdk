@@ -44,6 +44,9 @@ func NewPublicParamsManager[T driver.PublicParameters](
 	if err := pp.Validate(); err != nil {
 		return nil, errors.WithMessagef(err, "invalid public parameters")
 	}
+	if len(pp.Issuers()) == 0 {
+		logger.Warnf("no issuers definied in the public parameters")
+	}
 	ppm.publicParameters = pp
 	ppm.ppHash = utils.Hashable(ppRaw).Raw()
 
@@ -53,6 +56,9 @@ func NewPublicParamsManager[T driver.PublicParameters](
 func NewPublicParamsManagerFromParams[T driver.PublicParameters](pp T) (*PublicParamsManager[T], error) {
 	if err := pp.Validate(); err != nil {
 		return nil, errors.WithMessagef(err, "invalid public parameters")
+	}
+	if len(pp.Issuers()) == 0 {
+		logger.Warnf("no issuers definied in the public parameters")
 	}
 	return &PublicParamsManager[T]{
 		publicParameters: pp,

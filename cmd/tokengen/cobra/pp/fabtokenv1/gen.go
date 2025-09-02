@@ -103,6 +103,12 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return nil, err
 	}
+
+	// warn in case no issuers are specified
+	if len(pp.Issuers()) == 0 {
+		fmt.Println("No issuers specified. The public parameters allow anyone to create tokens.")
+	}
+
 	// Store Public Params
 	raw, err := pp.Serialize()
 	if err != nil {

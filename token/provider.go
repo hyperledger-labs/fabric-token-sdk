@@ -185,7 +185,10 @@ func (p *ManagementServiceProvider) managementService(opts ...ServiceOption) (*M
 			deserializer:     tokenService.Deserializer(),
 			identityProvider: tokenService.IdentityProvider(),
 		},
-		publicParametersManager: &PublicParametersManager{ppm: tokenService.PublicParamsManager()},
+		publicParametersManager: &PublicParametersManager{
+			ppm: tokenService.PublicParamsManager(),
+			pp:  &PublicParameters{PublicParameters: tokenService.PublicParamsManager().PublicParameters()},
+		},
 	}
 	if err := ms.init(); err != nil {
 		return nil, errors.WithMessagef(err, "failed to initialize token management service")

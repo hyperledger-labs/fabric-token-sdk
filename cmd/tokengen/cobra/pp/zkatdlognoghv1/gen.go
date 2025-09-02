@@ -149,6 +149,11 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed to validate public parameters")
 	}
 
+	// warn in case no issuers are specified
+	if len(pp.Issuers()) == 0 {
+		fmt.Println("No issuers specified. The public parameters allow anyone to create tokens.")
+	}
+
 	// Store Public Params
 	raw, err := pp.Serialize()
 	if err != nil {
