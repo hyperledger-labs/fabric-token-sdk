@@ -47,12 +47,12 @@ func (v *TypedSignerDeserializerMultiplex) DeserializeSigner(ctx context.Context
 	logger.DebugfContext(ctx, "deserializing [%s] with type [%s]", id, si.Type)
 	var errs []error
 	for _, deserializer := range dess {
-		verifier, err := deserializer.DeserializeSigner(ctx, si.Type, si.Identity)
+		signer, err := deserializer.DeserializeSigner(ctx, si.Type, si.Identity)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		return verifier, nil
+		return signer, nil
 	}
 	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%s]", si.Type)
 }

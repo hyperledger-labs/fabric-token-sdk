@@ -85,7 +85,7 @@ func (d *base) newWalletService(
 	}
 
 	// interop deserializer
-	deserializerManager.AddTypedSignerDeserializer(htlc.ScriptType, htlc.NewSenderSignerDeserializer(deserializerManager))
+	deserializerManager.AddTypedSignerDeserializer(htlc.ScriptType, htlc.NewSignerDeserializer(deserializerManager))
 
 	// Prepare roles
 	roleFactory := role.NewFactory(

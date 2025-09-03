@@ -427,10 +427,7 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	assert.NoError(t, err)
 
 	// this must work
-	des := deserializer.NewTypedSignerDeserializerMultiplex()
-	des.AddTypedSignerDeserializer(keyManager.IdentityType(), &TypedSignerDeserializer{KeyManager: keyManager})
-	des.AddTypedSignerDeserializer(keyManager2.IdentityType(), &TypedSignerDeserializer{KeyManager: keyManager2})
-	signer, err = des.DeserializeSigner(t.Context(), id)
+	signer, err = keyManager.DeserializeSigner(t.Context(), id)
 	assert.NoError(t, err)
 	verifier, err = keyManager.DeserializeVerifier(t.Context(), id)
 	assert.NoError(t, err)
