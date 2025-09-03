@@ -38,7 +38,7 @@ type Factory struct {
 	NetworkDefaultIdentity driver.Identity
 	IdentityProvider       driver.IdentityProvider
 	StorageProvider        StorageProvider
-	DeserializerManager    driver.DeserializerManager
+	DeserializerManager    driver.SignerDeserializerManager
 }
 
 // NewFactory creates a new Factory
@@ -50,7 +50,7 @@ func NewFactory(
 	networkDefaultIdentity driver.Identity,
 	identityProvider driver.IdentityProvider,
 	storageProvider StorageProvider,
-	deserializerManager driver.DeserializerManager,
+	deserializerManager driver.SignerDeserializerManager,
 ) *Factory {
 	return &Factory{
 		Logger:                 logger,

@@ -48,6 +48,10 @@ type cache[T any] interface {
 	Delete(key string)
 }
 
+type deserializer interface {
+	DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error)
+}
+
 type VerifierEntry struct {
 	Verifier   driver.Verifier
 	DebugStack []byte
@@ -65,7 +69,7 @@ type Provider struct {
 	Binder                  idriver.NetworkBinderService
 	enrollmentIDUnmarshaler enrollmentIDUnmarshaler
 	storage                 storage
-	deserializer            idriver.Deserializer
+	deserializer            deserializer
 
 	isMeCache cache[bool]
 	signers   cache[*SignerEntry]
@@ -77,7 +81,7 @@ type Provider struct {
 func NewProvider(
 	logger logging.Logger,
 	storage storage,
-	deserializer idriver.Deserializer,
+	deserializer deserializer,
 	binder idriver.NetworkBinderService,
 	enrollmentIDUnmarshaler enrollmentIDUnmarshaler,
 ) *Provider {
