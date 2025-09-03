@@ -15,16 +15,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
+	fscconfig "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	ftscore "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/tracing"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	ftsdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
@@ -33,7 +32,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	ftsconfig "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/postgres"
@@ -46,7 +46,7 @@ import (
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
-	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
@@ -61,7 +61,7 @@ import (
 var logger = logging.MustGetLogger()
 
 var selectorProviders = map[sdriver.Driver]any{
-	sdriver.Simple:    selector.NewService,
+	sdriver.Simple:    simple.NewService,
 	sdriver.Sherdlock: sherdlock.NewService,
 	"":                sherdlock.NewService,
 }
@@ -91,6 +91,19 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 	err := errors2.Join(
 		p.Container().Provide(common.NewAcceptTxInDBFilterProvider),
+
+		// config service
+		p.Container().Provide(
+			digutils.Identity[*fscconfig.Provider](),
+			dig.As(new(ftsconfig.Provider), new(sherdlock.ConfigProvider), new(simple.ConfigProvider)),
+		),
+		p.Container().Provide(ftsconfig.NewService),
+		p.Container().Provide(
+			tms.NewConfigServiceWrapper,
+			dig.As(new(ftscore.ConfigService), new(db2.ConfigService), new(token.ConfigService)),
+		),
+
+		// network service
 		p.Container().Provide(network.NewProvider),
 		p.Container().Provide(newTokenDriverService),
 		p.Container().Provide(
@@ -105,16 +118,15 @@ func (p *SDK) Install() error {
 		),
 		p.Container().Provide(func(vaultProvider *vault.Provider) *vault.PublicParamsStorage {
 			return &vault.PublicParamsStorage{Provider: vaultProvider}
-		}, dig.As(new(core2.PublicParametersStorage))),
-		p.Container().Provide(digutils.Identity[driver.ConfigService](), dig.As(new(core.ConfigProvider))),
-		p.Container().Provide(func() logging.Logger { return logging.MustGetLogger() }),
-		p.Container().Provide(core2.NewTMSProvider),
-		p.Container().Provide(digutils.Identity[*core2.TMSProvider](), dig.As(new(driver2.TokenManagerServiceProvider))),
-		p.Container().Provide(func(service driver.ConfigService) *config2.Service { return config2.NewService(service) }),
-		p.Container().Provide(digutils.Identity[*config2.Service](), dig.As(new(core2.ConfigProvider))),
+		}, dig.As(new(ftscore.PublicParametersStorage))),
+
+		p.Container().Provide(ftscore.NewTMSProvider),
+		p.Container().Provide(digutils.Identity[*ftscore.TMSProvider](), dig.As(new(ftsdriver.TokenManagerServiceProvider))),
+		p.Container().Provide(tms.NewPostInitializer),
+
 		p.Container().Provide(func(ttxStoreServiceManager ttxdb.StoreServiceManager) *network2.LockerProvider {
 			return network2.NewLockerProvider(ttxStoreServiceManager, 2*time.Second, 5*time.Minute)
-		}, dig.As(new(selector.LockerProvider))),
+		}, dig.As(new(simple.LockerProvider))),
 		p.Container().Provide(selectorProviders[sdriver.Driver(p.ConfigService().GetString("token.selector.driver"))], dig.As(new(token.SelectorManagerProvider))),
 		p.Container().Provide(network2.NewCertificationClientProvider, dig.As(new(token.CertificationClientProvider))),
 		p.Container().Provide(token.NewManagementServiceProvider),
@@ -128,12 +140,18 @@ func (p *SDK) Install() error {
 				new(common2.TokenManagementServiceProvider),
 			),
 		),
+
+		// selector service
+		p.Container().Provide(func(tokenStoreServiceManager tokendb.StoreServiceManager, notifierManager tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
+			return sherdlock.NewFetcherProvider(tokenStoreServiceManager, notifierManager, metricsProvider, sherdlock.Mixed)
+		}),
+
+		// storage
 		p.Container().Provide(ttxdb.NewStoreServiceManager),
 		p.Container().Provide(digutils.Identity[ttxdb.StoreServiceManager](), dig.As(new(ttx.StoreServiceManager))),
 		p.Container().Provide(tokendb.NewStoreServiceManager),
 		p.Container().Provide(tokendb.NewNotifierManager),
 		p.Container().Provide(digutils.Identity[tokendb.StoreServiceManager](), dig.As(new(tokens.StoreServiceManager))),
-		p.Container().Provide(newMultiplexedDriver),
 		p.Container().Provide(auditdb.NewStoreServiceManager),
 		p.Container().Provide(digutils.Identity[auditdb.StoreServiceManager](), dig.As(new(auditor.StoreServiceManager))),
 		p.Container().Provide(identitydb.NewStoreServiceManager),
@@ -142,25 +160,23 @@ func (p *SDK) Install() error {
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
-		p.Container().Provide(NewAuditorCheckServiceProvider),
 		p.Container().Provide(digutils.Identity[*db.AuditorCheckServiceProvider](), dig.As(new(auditor.CheckServiceProvider))),
 		p.Container().Provide(auditor.NewServiceManager),
-		p.Container().Provide(NewOwnerCheckServiceProvider),
 		p.Container().Provide(digutils.Identity[*db.OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
 		p.Container().Provide(ttx.NewServiceManager),
 		p.Container().Provide(tokens.NewServiceManager),
 		p.Container().Provide(digutils.Identity[*tokens.ServiceManager](), dig.As(new(ttx.TokensServiceManager), new(auditor.TokensServiceManager))),
 		p.Container().Provide(vault.NewVaultProvider),
 		p.Container().Provide(digutils.Identity[*vault.Provider](), dig.As(new(token.VaultProvider))),
-		p.Container().Provide(tms.NewPostInitializer),
-		p.Container().Provide(ttx.NewMetrics),
-		p.Container().Provide(tracing.NewTracerProvider),
 		p.Container().Provide(sqlite.NewNamedDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(postgres.NewNamedDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(memory.NewNamedDriver, dig.Group("token-db-drivers")),
-		p.Container().Provide(func(tokenStoreServiceManager tokendb.StoreServiceManager, notifierManager tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
-			return sherdlock.NewFetcherProvider(tokenStoreServiceManager, notifierManager, metricsProvider, sherdlock.Mixed)
-		}),
+		p.Container().Provide(newMultiplexedDriver),
+		p.Container().Provide(NewAuditorCheckServiceProvider),
+		p.Container().Provide(NewOwnerCheckServiceProvider),
+
+		// monitoring
+		p.Container().Provide(ttx.NewMetrics),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
@@ -181,7 +197,7 @@ func (p *SDK) Install() error {
 	// Backward compatibility with SP
 	err = errors2.Join(
 		digutils.Register[*kvs.KVS](p.Container()),
-		digutils.Register[*core2.TokenDriverService](p.Container()),
+		digutils.Register[*ftscore.TokenDriverService](p.Container()),
 		digutils.Register[*network.Provider](p.Container()),
 		digutils.Register[*token.ManagementServiceProvider](p.Container()),
 		digutils.Register[ttxdb.StoreServiceManager](p.Container()),
@@ -194,7 +210,7 @@ func (p *SDK) Install() error {
 		digutils.Register[*identity.DBStorageProvider](p.Container()),
 		digutils.Register[*ttx.Metrics](p.Container()),
 		digutils.Register[*auditor.ServiceManager](p.Container()),
-		digutils.Register[*config2.Service](p.Container()),
+		digutils.Register[*ftsconfig.Service](p.Container()),
 		digutils.Register[*ttx.ServiceManager](p.Container()),
 		digutils.Register[*tokens.ServiceManager](p.Container()),
 		digutils.Register[trace.TracerProvider](p.Container()),
@@ -205,7 +221,7 @@ func (p *SDK) Install() error {
 	}
 
 	err = errors2.Join(
-		p.Container().Invoke(func(tmsProvider *core2.TMSProvider, postInitializer *tms.PostInitializer) {
+		p.Container().Invoke(func(tmsProvider *ftscore.TMSProvider, postInitializer *tms.PostInitializer) {
 			tmsProvider.SetCallback(postInitializer.PostInit)
 		}),
 	)
@@ -225,33 +241,19 @@ func (p *SDK) Start(ctx context.Context) error {
 	}
 	logger.Infof("Token platform enabled, starting...")
 
-	return errors2.Join(
+	if err := errors2.Join(
 		p.Container().Invoke(registerNetworkDrivers),
 		p.Container().Invoke(connectNetworks),
-	)
-}
-
-func connectNetworks(configService *config2.Service, networkProvider *network.Provider, _ *token.ManagementServiceProvider) error {
-	configurations, err := configService.Configurations()
-	if err != nil {
+	); err != nil {
+		logger.Errorf("Token platform enabled, starting...failed with error [%s]", err)
 		return err
-	}
-	for _, tmsConfig := range configurations {
-		tmsID := tmsConfig.ID()
-		logger.Infof("start token management service [%s]...", tmsID)
-
-		// connect network
-		net, err := networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get network [%s]", tmsID)
-		}
-		_, err = net.Connect(tmsID.Namespace)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
-		}
 	}
 	logger.Infof("Token platform enabled, starting...done")
 	return nil
+}
+
+func connectNetworks(networkProvider *network.Provider) error {
+	return networkProvider.Connect()
 }
 
 func registerNetworkDrivers(in struct {

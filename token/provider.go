@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
@@ -71,7 +70,6 @@ type ManagementServiceProvider struct {
 
 // NewManagementServiceProvider returns a new instance of ManagementServiceProvider
 func NewManagementServiceProvider(
-	logger logging.Logger,
 	tmsProvider driver.TokenManagerServiceProvider,
 	normalizer TMSNormalizer,
 	vaultProvider VaultProvider,
@@ -79,7 +77,7 @@ func NewManagementServiceProvider(
 	selectorManagerProvider SelectorManagerProvider,
 ) *ManagementServiceProvider {
 	return &ManagementServiceProvider{
-		logger:                      logger,
+		logger:                      logging.MustGetLogger(),
 		tmsProvider:                 tmsProvider,
 		normalizer:                  normalizer,
 		certificationClientProvider: certificationClientProvider,
@@ -197,21 +195,25 @@ func (p *ManagementServiceProvider) managementService(opts ...ServiceOption) (*M
 	return ms, nil
 }
 
-type tmsNormalizer struct {
-	tmsProvider core.ConfigProvider
-	normalizer  Normalizer
+type ConfigService interface {
+	Configurations() ([]driver.Configuration, error)
 }
 
-func NewTMSNormalizer(tmsProvider core.ConfigProvider, normalizer Normalizer) *tmsNormalizer {
+type tmsNormalizer struct {
+	configService ConfigService
+	normalizer    Normalizer
+}
+
+func NewTMSNormalizer(tmsProvider ConfigService, normalizer Normalizer) *tmsNormalizer {
 	return &tmsNormalizer{
-		tmsProvider: tmsProvider,
-		normalizer:  normalizer,
+		configService: tmsProvider,
+		normalizer:    normalizer,
 	}
 }
 
 func (p *tmsNormalizer) Normalize(opt *ServiceOptions) (*ServiceOptions, error) {
 	// lookup configurations
-	configs, err := p.tmsProvider.Configurations()
+	configs, err := p.configService.Configurations()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting tms configs")
 	}

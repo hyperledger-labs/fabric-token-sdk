@@ -95,7 +95,4 @@ type TokenManagerServiceProvider interface {
 	// If the public parameters in the options are identical to those in the current TMS, then nothing happens.
 	// If a TMS does not exist for the given options, one is created with the given public parameters.
 	Update(options ServiceOptions) error
-
-	// Configurations returns the current TMS configurations.
-	Configurations() ([]Configuration, error)
 }

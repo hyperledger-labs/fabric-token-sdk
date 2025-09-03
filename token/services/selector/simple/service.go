@@ -12,7 +12,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -22,6 +21,10 @@ import (
 
 var logger = logging.MustGetLogger()
 
+type ConfigProvider interface {
+	UnmarshalKey(key string, rawVal interface{}) error
+}
+
 type LockerProvider interface {
 	New(network, channel, namespace string) (Locker, error)
 }
@@ -30,7 +33,7 @@ type SelectorService struct {
 	managerLazyCache lazy.Provider[*token.ManagementService, token.SelectorManager]
 }
 
-func NewService(lockerProvider LockerProvider, c core.ConfigProvider) *SelectorService {
+func NewService(lockerProvider LockerProvider, c ConfigProvider) *SelectorService {
 	cfg, err := config.New(c)
 	if err != nil {
 		logger.Errorf("error getting selector config, using defaults. %s", err.Error())

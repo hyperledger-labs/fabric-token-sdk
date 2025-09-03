@@ -1,0 +1,12 @@
+token:
+  tms:
+    n3c3ns3:
+      certification: null
+      network: n3
+      channel: c3
+      namespace: ns3
+      wallets:
+        auditors:
+          - default: true
+            id: alice
+            path: /token/crypto/default-testchannel-zkat/x509/auditor
