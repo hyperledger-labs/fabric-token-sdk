@@ -1194,7 +1194,7 @@ func (r *Request) Issues() []*Issue {
 
 // Transfers returns the list of transfers.
 func (r *Request) Transfers() []*Transfer {
-	var transfers []*Transfer
+	transfers := make([]*Transfer, 0, len(r.Metadata.Transfers))
 	for _, transfer := range r.Metadata.Transfers {
 		transfers = append(transfers, &Transfer{
 			Senders:      transfer.Senders(),

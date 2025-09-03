@@ -124,7 +124,7 @@ func (t *Translator) AddPublicParamsDependency() error {
 }
 
 func (t *Translator) QueryTokens(ctx context.Context, ids []*token.ID) ([][]byte, error) {
-	var res [][]byte
+	res := make([][]byte, 0, len(ids))
 	var errs []error
 	for _, id := range ids {
 		outputID, err := t.KeyTranslator.CreateOutputKey(id.TxId, id.Index)

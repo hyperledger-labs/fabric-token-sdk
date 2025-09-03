@@ -152,7 +152,7 @@ func (m *Service) Configurations() ([]Configuration, error) {
 		return nil, err
 	}
 
-	var tms []Configuration
+	tms := make([]Configuration, 0, len(tmsConfigs))
 	for key, config := range tmsConfigs {
 		tms = append(tms, NewConfiguration(m.cp, m.version, key, config.ID()))
 	}

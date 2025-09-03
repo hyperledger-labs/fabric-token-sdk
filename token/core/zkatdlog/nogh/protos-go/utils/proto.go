@@ -14,9 +14,7 @@ import (
 )
 
 func ToProtoG1Slice(input []*mathlib.G1) ([]*math.G1, error) {
-	return protos.ToProtosSliceFunc(input, func(s *mathlib.G1) (*math.G1, error) {
-		return ToProtoG1(s)
-	})
+	return protos.ToProtosSliceFunc(input, ToProtoG1)
 }
 
 func ToProtoG1(s *mathlib.G1) (*math.G1, error) {
