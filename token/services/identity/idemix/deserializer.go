@@ -32,7 +32,10 @@ func NewDeserializer(
 	if len(ipk) == 0 {
 		return nil, errors.New("invalid ipk")
 	}
-	cryptoProvider, err := crypto2.NewBCCSPWithDummyKeyStore(curveID, curveID == math.BLS12_381_BBS_GURVY)
+	cryptoProvider, err := crypto2.NewBCCSPWithDummyKeyStore(
+		curveID,
+		curveID == math.BLS12_381_BBS_GURVY || curveID == math.BLS12_381_BBS,
+	)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
 	}
