@@ -13,9 +13,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
+
+const ScriptType = htlc.ScriptType
 
 type deserializer interface {
 	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
@@ -105,14 +107,14 @@ func (t *TypedIdentityDeserializer) GetAuditInfoMatcher(ctx context.Context, own
 }
 
 type AuditDeserializer struct {
-	AuditInfoDeserializer driver2.AuditInfoDeserializer
+	AuditInfoDeserializer idriver.AuditInfoDeserializer
 }
 
-func NewAuditDeserializer(auditInfoDeserializer driver2.AuditInfoDeserializer) *AuditDeserializer {
+func NewAuditDeserializer(auditInfoDeserializer idriver.AuditInfoDeserializer) *AuditDeserializer {
 	return &AuditDeserializer{AuditInfoDeserializer: auditInfoDeserializer}
 }
 
-func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
+func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (idriver.AuditInfo, error) {
 	si := &ScriptInfo{}
 	err := json.Unmarshal(raw, si)
 	if err != nil || (len(si.Sender) == 0 && len(si.Recipient) == 0) {
@@ -161,4 +163,27 @@ func GetScriptSenderAndRecipient(id []byte) (sender, recipient driver.Identity, 
 		return nil, nil, errors.Wrapf(err, "failed to unmarshal htlc script")
 	}
 	return script.Sender, script.Recipient, nil
+}
+
+type SenderSignerDeserializer struct {
+	manager idriver.SignerDeserializerManager
+}
+
+func NewSenderSignerDeserializer(manager idriver.SignerDeserializerManager) *SenderSignerDeserializer {
+	return &SenderSignerDeserializer{
+		manager: manager,
+	}
+}
+
+func (d *SenderSignerDeserializer) DeserializeSigner(ctx context.Context, typ idriver.IdentityType, raw []byte) (driver.Signer, error) {
+	if typ != htlc.ScriptType {
+		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, htlc.ScriptType)
+	}
+
+	script := &htlc.Script{}
+	err := json.Unmarshal(raw, script)
+	if err != nil {
+		return nil, errors.Errorf("failed to unmarshal TypedIdentity as an htlc script")
+	}
+	return d.manager.DeserializeSigner(ctx, script.Sender)
 }

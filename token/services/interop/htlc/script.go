@@ -153,7 +153,7 @@ func (s *ScriptAuth) Issued(ctx context.Context, issuer driver.Identity, tok *to
 	return false
 }
 
-func (s *ScriptAuth) OwnerType(raw []byte) (string, []byte, error) {
+func (s *ScriptAuth) OwnerType(raw []byte) (driver.IdentityType, []byte, error) {
 	owner, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
 		return "", nil, err

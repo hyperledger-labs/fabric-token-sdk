@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
@@ -133,7 +135,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvs))
 	storage := kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"})
-	identityProvider := identity.NewProvider(logging.MustGetLogger(), storage, deserializer.NewMultiplexDeserializer(), nil, nil)
+	identityProvider := identity.NewProvider(logging.MustGetLogger(), storage, deserializer.NewTypedSignerDeserializerMultiplex(), nil, nil)
 	config, err := crypto2.NewConfig(configPath)
 	assert.NoError(t, err)
 	tracker := kvs2.NewTrackedMemoryFrom(kvs)
@@ -425,12 +427,12 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	assert.NoError(t, err)
 
 	// this must work
-	des := deserializer.NewMultiplexDeserializer()
-	des.AddDeserializer(keyManager)
-	des.AddDeserializer(keyManager2)
+	des := deserializer.NewTypedSignerDeserializerMultiplex()
+	des.AddTypedSignerDeserializer(keyManager.IdentityType(), &TypedSignerDeserializer{KeyManager: keyManager})
+	des.AddTypedSignerDeserializer(keyManager2.IdentityType(), &TypedSignerDeserializer{KeyManager: keyManager2})
 	signer, err = des.DeserializeSigner(t.Context(), id)
 	assert.NoError(t, err)
-	verifier, err = des.DeserializeVerifier(t.Context(), id)
+	verifier, err = keyManager.DeserializeVerifier(t.Context(), id)
 	assert.NoError(t, err)
 	sigma, err = signer.Sign(msg)
 	assert.NoError(t, err)
@@ -589,4 +591,12 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	sigma, err = signer.Sign([]byte("hello world!!!"))
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
+}
+
+type TypedSignerDeserializer struct {
+	*KeyManager
+}
+
+func (t *TypedSignerDeserializer) DeserializeSigner(ctx context.Context, typ identity.Type, raw []byte) (tdriver.Signer, error) {
+	return t.KeyManager.DeserializeSigner(ctx, raw)
 }

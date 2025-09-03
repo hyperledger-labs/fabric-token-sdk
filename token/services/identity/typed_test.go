@@ -27,7 +27,7 @@ func TestTypedIdentity_Bytes(t *testing.T) {
 
 func TestTypedIdentity_Bytes_Error(t *testing.T) {
 	ti := identity.TypedIdentity{
-		Type:     string([]byte{0xff, 0xfe, 0xfd}),
+		Type:     identity.Type([]byte{0xff, 0xfe, 0xfd}),
 		Identity: driver.Identity("testIdentity"),
 	}
 

@@ -113,10 +113,6 @@ func (d *Deserializer) DeserializeVerifier(ctx context.Context, id driver.Identi
 	}, nil
 }
 
-func (d *Deserializer) GetOwnerMatcher(ctx context.Context, raw []byte) (driver.Matcher, error) {
-	return d.Deserializer.DeserializeAuditInfo(ctx, raw)
-}
-
 func (d *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byte) (driver.Verifier, error) {
 	identity, err := d.DeserializeAgainstNymEID(raw, nymEID)
 	if err != nil {
@@ -130,10 +126,6 @@ func (d *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byt
 		SchemaManager: d.SchemaManager,
 		Schema:        d.Schema,
 	}, nil
-}
-
-func (i *Deserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	return nil, errors.New("not supported")
 }
 
 func (i *Deserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
@@ -150,14 +142,6 @@ func (i *Deserializer) MatchIdentity(ctx context.Context, id driver.Identity, ai
 		return errors.WithMessagef(err, "failed to deserialize audit info")
 	}
 	return matcher.Match(ctx, id)
-}
-
-func (i *Deserializer) GetAuditInfo(ctx context.Context, raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
-	auditInfo, err := p.GetAuditInfo(ctx, raw)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", driver.Identity(raw).String())
-	}
-	return [][]byte{auditInfo}, nil
 }
 
 func (i *Deserializer) Info(ctx context.Context, id []byte, auditInfoRaw []byte) (string, error) {

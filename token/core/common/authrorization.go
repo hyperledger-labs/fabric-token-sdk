@@ -116,7 +116,7 @@ func (o *AuthorizationMultiplexer) Issued(ctx context.Context, issuer token.Iden
 }
 
 // OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
-func (o *AuthorizationMultiplexer) OwnerType(raw []byte) (string, []byte, error) {
+func (o *AuthorizationMultiplexer) OwnerType(raw []byte) (driver.IdentityType, []byte, error) {
 	owner, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
 		return "", nil, err

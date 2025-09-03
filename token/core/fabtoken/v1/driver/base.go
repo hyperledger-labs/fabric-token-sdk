@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
@@ -53,7 +54,7 @@ func (d *base) newWalletService(
 ) (*wallet.Service, error) {
 	tmsID := tmsConfig.ID()
 
-	deserializerManager := deserializer.NewMultiplexDeserializer()
+	deserializerManager := deserializer.NewTypedSignerDeserializerMultiplex()
 	identityDB, err := storageProvider.IdentityStore(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
@@ -67,6 +68,9 @@ func (d *base) newWalletService(
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create identity config")
 	}
+
+	// interop deserializer
+	deserializerManager.AddTypedSignerDeserializer(htlc.ScriptType, htlc.NewSenderSignerDeserializer(deserializerManager))
 
 	// Prepare roles
 	keyStore := x509.NewKeyStore(baseKeyStore)
