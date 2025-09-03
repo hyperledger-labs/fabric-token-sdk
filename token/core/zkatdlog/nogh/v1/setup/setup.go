@@ -476,10 +476,9 @@ func (p *PublicParams) String() string {
 	return string(res)
 }
 
+// Validate validates the public parameters.
+// The list of issues can be empty meaning that anyone can create tokens.
 func (p *PublicParams) Validate() error {
-	// if p.DriverVersion != ProtocolV1 {
-	// 	return errors.Errorf("invalid version [%d], expected [%d]", p.DriverVersion, ProtocolV1)
-	// }
 	if int(p.Curve) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(p.Curve), len(mathlib.Curves)-1)
 	}
@@ -519,9 +518,6 @@ func (p *PublicParams) Validate() error {
 	maxToken := p.ComputeMaxTokenValue()
 	if maxToken != p.MaxToken {
 		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, p.MaxToken)
-	}
-	if len(p.IssuerIDs) == 0 {
-		return errors.New("invalid public parameters: empty list of issuers")
 	}
 	return nil
 }

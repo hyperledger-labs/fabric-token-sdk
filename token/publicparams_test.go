@@ -124,12 +124,16 @@ func TestPublicParametersManager_PublicParameters(t *testing.T) {
 	ppm := &PublicParametersManager{
 		ppm: &mock.PublicParamsManager{},
 	}
-
-	mockPPM := ppm.ppm.(*mock.PublicParamsManager)
-	mockPPM.PublicParametersReturns(&mock.PublicParameters{})
-
 	pp := ppm.PublicParameters()
+	assert.Nil(t, pp)
 
+	ppm = &PublicParametersManager{
+		ppm: &mock.PublicParamsManager{},
+		pp: &PublicParameters{
+			PublicParameters: &mock.PublicParameters{},
+		},
+	}
+	pp = ppm.PublicParameters()
 	assert.NotNil(t, pp)
 }
 

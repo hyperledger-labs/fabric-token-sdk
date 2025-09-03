@@ -16,6 +16,10 @@ import (
 // If opts specify an FSC issuer identity, then we expect to find the opts also the public key to add in the transfer action.
 // Otherwise, the first public key in the public params is used.
 func SelectIssuerForRedeem(issuers []driver.Identity, opts *driver.TransferOptions) (driver.Identity, error) {
+	if len(issuers) == 0 {
+		// nothing to do here
+		return nil, nil
+	}
 	issuerNetworkIdentity, err := ttx.GetFSCIssuerIdentityFromOpts(opts.Attributes)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get issuer network identity")

@@ -36,8 +36,10 @@ func TestSerialization(t *testing.T) {
 	assert.Equal(t, pp, pp2)
 	assert.Equal(t, ser, ser2)
 
-	assert.Error(t, pp.Validate())
+	// no issuers
+	assert.NoError(t, pp.Validate())
 
+	// with issuers
 	pp.IssuerIDs = []driver.Identity{[]byte("issuer")}
 	assert.NoError(t, pp.Validate())
 }
