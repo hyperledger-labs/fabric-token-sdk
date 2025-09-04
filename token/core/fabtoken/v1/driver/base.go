@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
@@ -70,7 +69,7 @@ func (d *base) newWalletService(
 	}
 
 	// interop deserializer
-	deserializerManager.AddTypedSignerDeserializer(htlc.ScriptType, htlc.NewSignerDeserializer(deserializerManager))
+	// deserializerManager.AddTypedSignerDeserializer(htlc.ScriptType, htlc.NewSignerDeserializer(deserializerManager))
 
 	// Prepare roles
 	keyStore := x509.NewKeyStore(baseKeyStore)

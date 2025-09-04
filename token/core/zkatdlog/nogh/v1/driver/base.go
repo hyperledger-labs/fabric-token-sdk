@@ -20,7 +20,6 @@ import (
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
@@ -85,7 +84,7 @@ func (d *base) newWalletService(
 	}
 
 	// interop deserializer
-	deserializerManager.AddTypedSignerDeserializer(htlc.ScriptType, htlc.NewSignerDeserializer(deserializerManager))
+	// deserializerManager.AddTypedSignerDeserializer(htlc.ScriptType, htlc.NewSignerDeserializer(deserializerManager))
 
 	// Prepare roles
 	roleFactory := role.NewFactory(
