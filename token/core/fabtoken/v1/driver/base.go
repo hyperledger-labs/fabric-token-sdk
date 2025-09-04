@@ -68,9 +68,6 @@ func (d *base) newWalletService(
 		return nil, errors.WithMessagef(err, "failed to create identity config")
 	}
 
-	// interop deserializer
-	// deserializerManager.AddTypedSignerDeserializer(htlc.ScriptType, htlc.NewSignerDeserializer(deserializerManager))
-
 	// Prepare roles
 	keyStore := x509.NewKeyStore(baseKeyStore)
 	roleFactory := role.NewFactory(

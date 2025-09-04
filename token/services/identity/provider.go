@@ -99,8 +99,10 @@ func NewProvider(
 
 func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *idriver.IdentityDescriptor, alias driver.Identity) error {
 	// register in the storage
-	if err := p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
-		return errors.Wrapf(err, "failed to register identity descriptor")
+	if !identityDescriptor.Ephemeral {
+		if err := p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
+			return errors.Wrapf(err, "failed to register identity descriptor")
+		}
 	}
 
 	// update caches
@@ -137,13 +139,14 @@ func (p *Provider) RegisterRecipientData(ctx context.Context, data *driver.Recip
 	return p.storage.StoreIdentityData(ctx, data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
 }
 
-func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
+func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte, ephemeral bool) error {
 	identityDescriptor := &idriver.IdentityDescriptor{
 		Identity:   identity,
 		AuditInfo:  nil,
 		Signer:     signer,
 		SignerInfo: signerInfo,
 		Verifier:   verifier,
+		Ephemeral:  ephemeral,
 	}
 	return p.RegisterIdentityDescriptor(ctx, identityDescriptor, nil)
 }

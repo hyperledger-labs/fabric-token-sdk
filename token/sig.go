@@ -51,7 +51,12 @@ func (s *SignatureService) GetSigner(ctx context.Context, id Identity) (Signer, 
 
 // RegisterSigner registers the pair (signer, verifier) bound to the given identity
 func (s *SignatureService) RegisterSigner(ctx context.Context, identity Identity, signer Signer, verifier Verifier) error {
-	return s.identityProvider.RegisterSigner(ctx, identity, signer, verifier, nil)
+	return s.identityProvider.RegisterSigner(ctx, identity, signer, verifier, nil, false)
+}
+
+// RegisterEphemeralSigner registers the pair (signer, verifier) bound to the given identity only in memory
+func (s *SignatureService) RegisterEphemeralSigner(ctx context.Context, identity Identity, signer Signer, verifier Verifier) error {
+	return s.identityProvider.RegisterSigner(ctx, identity, signer, verifier, nil, true)
 }
 
 // AreMe returns the hashes of the passed identities that have a signer registered before

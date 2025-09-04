@@ -32,7 +32,7 @@ type IdentityProvider interface {
 	RegisterVerifier(ctx context.Context, identity Identity, v Verifier) error
 
 	// RegisterSigner registers a Signer and a Verifier for passed identity.
-	RegisterSigner(ctx context.Context, identity Identity, signer Signer, verifier Verifier, signerInfo []byte) error
+	RegisterSigner(ctx context.Context, identity Identity, signer Signer, verifier Verifier, signerInfo []byte, ephemeral bool) error
 
 	// AreMe returns the hashes of the passed identities that have a signer registered before
 	AreMe(ctx context.Context, identities ...Identity) []string

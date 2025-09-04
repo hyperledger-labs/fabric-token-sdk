@@ -145,7 +145,7 @@ type IdentityProvider struct {
 	registerRecipientIdentityReturnsOnCall map[int]struct {
 		result1 error
 	}
-	RegisterSignerStub        func(context.Context, driver.Identity, driver.Signer, driver.Verifier, []byte) error
+	RegisterSignerStub        func(context.Context, driver.Identity, driver.Signer, driver.Verifier, []byte, bool) error
 	registerSignerMutex       sync.RWMutex
 	registerSignerArgsForCall []struct {
 		arg1 context.Context
@@ -153,6 +153,7 @@ type IdentityProvider struct {
 		arg3 driver.Signer
 		arg4 driver.Verifier
 		arg5 []byte
+		arg6 bool
 	}
 	registerSignerReturns struct {
 		result1 error
@@ -834,7 +835,7 @@ func (fake *IdentityProvider) RegisterRecipientIdentityReturnsOnCall(i int, resu
 	}{result1}
 }
 
-func (fake *IdentityProvider) RegisterSigner(arg1 context.Context, arg2 driver.Identity, arg3 driver.Signer, arg4 driver.Verifier, arg5 []byte) error {
+func (fake *IdentityProvider) RegisterSigner(arg1 context.Context, arg2 driver.Identity, arg3 driver.Signer, arg4 driver.Verifier, arg5 []byte, arg6 bool) error {
 	var arg5Copy []byte
 	if arg5 != nil {
 		arg5Copy = make([]byte, len(arg5))
@@ -848,13 +849,14 @@ func (fake *IdentityProvider) RegisterSigner(arg1 context.Context, arg2 driver.I
 		arg3 driver.Signer
 		arg4 driver.Verifier
 		arg5 []byte
-	}{arg1, arg2, arg3, arg4, arg5Copy})
+		arg6 bool
+	}{arg1, arg2, arg3, arg4, arg5Copy, arg6})
 	stub := fake.RegisterSignerStub
 	fakeReturns := fake.registerSignerReturns
-	fake.recordInvocation("RegisterSigner", []interface{}{arg1, arg2, arg3, arg4, arg5Copy})
+	fake.recordInvocation("RegisterSigner", []interface{}{arg1, arg2, arg3, arg4, arg5Copy, arg6})
 	fake.registerSignerMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4, arg5)
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1
@@ -868,17 +870,17 @@ func (fake *IdentityProvider) RegisterSignerCallCount() int {
 	return len(fake.registerSignerArgsForCall)
 }
 
-func (fake *IdentityProvider) RegisterSignerCalls(stub func(context.Context, driver.Identity, driver.Signer, driver.Verifier, []byte) error) {
+func (fake *IdentityProvider) RegisterSignerCalls(stub func(context.Context, driver.Identity, driver.Signer, driver.Verifier, []byte, bool) error) {
 	fake.registerSignerMutex.Lock()
 	defer fake.registerSignerMutex.Unlock()
 	fake.RegisterSignerStub = stub
 }
 
-func (fake *IdentityProvider) RegisterSignerArgsForCall(i int) (context.Context, driver.Identity, driver.Signer, driver.Verifier, []byte) {
+func (fake *IdentityProvider) RegisterSignerArgsForCall(i int) (context.Context, driver.Identity, driver.Signer, driver.Verifier, []byte, bool) {
 	fake.registerSignerMutex.RLock()
 	defer fake.registerSignerMutex.RUnlock()
 	argsForCall := fake.registerSignerArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *IdentityProvider) RegisterSignerReturns(result1 error) {

@@ -8,7 +8,6 @@ package htlc
 
 import (
 	"context"
-	errors2 "errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -164,36 +163,4 @@ func GetScriptSenderAndRecipient(id []byte) (sender, recipient driver.Identity, 
 		return nil, nil, errors.Wrapf(err, "failed to unmarshal htlc script")
 	}
 	return script.Sender, script.Recipient, nil
-}
-
-type SignerDeserializer struct {
-	manager idriver.SignerDeserializerManager
-}
-
-func NewSignerDeserializer(manager idriver.SignerDeserializerManager) *SignerDeserializer {
-	return &SignerDeserializer{
-		manager: manager,
-	}
-}
-
-func (d *SignerDeserializer) DeserializeSigner(ctx context.Context, typ idriver.IdentityType, raw []byte) (driver.Signer, error) {
-	if typ != htlc.ScriptType {
-		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, htlc.ScriptType)
-	}
-
-	script := &htlc.Script{}
-	err := json.Unmarshal(raw, script)
-	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal TypedIdentity as an htlc script")
-	}
-	s, err := d.manager.DeserializeSigner(ctx, script.Sender)
-	if err != nil {
-		// try the recipient
-		var err2 error
-		s, err2 = d.manager.DeserializeSigner(ctx, script.Recipient)
-		if err2 != nil {
-			return nil, errors.Wrapf(errors2.Join(err, err2), "failed deserializing signer")
-		}
-	}
-	return s, nil
 }
