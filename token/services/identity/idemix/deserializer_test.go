@@ -33,7 +33,7 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	assert.NoError(t, err)
 	keyStore, err := crypto2.NewKeyStore(curveID, kvs2.Keystore(backend))
 	assert.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID, aries)
+	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID)
 	assert.NoError(t, err)
 
 	// key manager

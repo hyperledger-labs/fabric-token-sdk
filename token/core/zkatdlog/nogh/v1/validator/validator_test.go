@@ -359,7 +359,7 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.Signi
 	curveID := math.BLS12_381_BBS_GURVY
 	keyStore, err := crypto.NewKeyStore(curveID, kvs.Keystore(backend))
 	Expect(err).NotTo(HaveOccurred())
-	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID, true)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	Expect(err).NotTo(HaveOccurred())
 	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
