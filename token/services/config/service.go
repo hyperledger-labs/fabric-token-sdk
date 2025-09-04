@@ -23,6 +23,9 @@ var (
 	TMSPath     = config.Join(RootKey, TMSKey)
 	VersionPath = config.Join(RootKey, "version")
 	EnabledPath = config.Join(RootKey, "enabled")
+
+	// ErrConfigurationNotFound is returned when a configuration is not found
+	ErrConfigurationNotFound = errors.Errorf("configuration not found")
 )
 
 type Provider interface {
@@ -110,7 +113,7 @@ func (m *Service) ConfigurationFor(network, channel, namespace string) (*Configu
 		}
 	}
 
-	return nil, errors.Errorf("no token-sdk configuration for network %s, channel %s, namespace %s", network, channel, namespace)
+	return nil, errors.Wrapf(ErrConfigurationNotFound, "no token-sdk configuration for network [%s], channel [%s], namespace [%s]", network, channel, namespace)
 }
 
 // Configurations returns all configuration configurations.
