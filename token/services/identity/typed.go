@@ -11,10 +11,11 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
 type (
-	Type     = string
+	Type     = driver2.IdentityType
 	Identity = driver.Identity
 )
 

@@ -55,7 +55,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&fdlog.SDK{}},
-		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
+		// FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -67,7 +67,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&fdlog.SDK{}},
-		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
+		// FSCLogSpec:      "debug",
 	}))
 	return ts, selector
 }
@@ -79,7 +79,7 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&fdlog.SDK{}},
-		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
+		// FSCLogSpec:      "debug",
 		FinalityType: config.Delivery,
 	}))
 	return ts, selector

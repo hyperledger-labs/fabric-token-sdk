@@ -224,8 +224,8 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	if err != nil {
 		return err
 	}
-	logger.Debugf("registering signer for reclaim...")
-	if err := sigService.RegisterSigner(
+	logger.Debugf("registering signer for reclaim for identity [%s] with sender [%s]", token.Identity(tok.Owner), script.Sender)
+	if err := sigService.RegisterEphemeralSigner(
 		t.Context,
 		tok.Owner,
 		signer,
@@ -290,7 +290,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	if err != nil {
 		return err
 	}
-	if err := sigService.RegisterSigner(
+	if err := sigService.RegisterEphemeralSigner(
 		t.Context,
 		tok.Owner,
 		&ClaimSigner{

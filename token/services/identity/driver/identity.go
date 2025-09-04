@@ -21,6 +21,9 @@ type IdentityDescriptor struct {
 	Signer     driver.Signer
 	SignerInfo []byte
 	Verifier   driver.Verifier
+
+	// Ephemeral if true, nothing will be stored in the storage space
+	Ephemeral bool
 }
 
 type IdentityConfigurationIterator = iterators.Iterator[*IdentityConfiguration]

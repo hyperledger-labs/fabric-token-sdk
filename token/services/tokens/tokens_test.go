@@ -33,7 +33,7 @@ func (a authMock) IsMine(ctx context.Context, tok *token2.Token) (string, []stri
 func (a authMock) AmIAnAuditor() bool {
 	return false
 }
-func (a authMock) OwnerType(raw []byte) (string, []byte, error) {
+func (a authMock) OwnerType(raw []byte) (driver.IdentityType, []byte, error) {
 	return "idemix", raw, nil
 }
 

@@ -67,7 +67,7 @@ func (d *base) newWalletService(
 ) (*wallet.Service, error) {
 	pp := publicParams.(*v2.PublicParams)
 	roles := wallet.NewRoles()
-	deserializerManager := deserializer.NewMultiplexDeserializer()
+	deserializerManager := deserializer.NewTypedSignerDeserializerMultiplex()
 	tmsID := tmsConfig.ID()
 	identityDB, err := storageProvider.IdentityStore(tmsID)
 	if err != nil {

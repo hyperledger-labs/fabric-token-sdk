@@ -17,7 +17,7 @@ import (
 )
 
 func NewKeyStore(curveID math.CurveID, backend keystore.KVS) (bccsp.KeyStore, error) {
-	curve, tr, err := GetCurveAndTranslator(curveID)
+	curve, tr, _, err := GetCurveAndTranslator(curveID)
 	if err != nil {
 		return nil, err
 	}
@@ -30,8 +30,8 @@ func NewKeyStore(curveID math.CurveID, backend keystore.KVS) (bccsp.KeyStore, er
 }
 
 // NewBCCSP returns an instance of the idemix BCCSP for the given curve and kvsStore
-func NewBCCSP(keyStore bccsp.KeyStore, curveID math.CurveID, aries bool) (bccsp.BCCSP, error) {
-	curve, tr, err := GetCurveAndTranslator(curveID)
+func NewBCCSP(keyStore bccsp.KeyStore, curveID math.CurveID) (bccsp.BCCSP, error) {
+	curve, tr, aries, err := GetCurveAndTranslator(curveID)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +50,8 @@ func NewBCCSP(keyStore bccsp.KeyStore, curveID math.CurveID, aries bool) (bccsp.
 }
 
 // NewBCCSPWithDummyKeyStore returns an instance of the idemix BCCSP for the given curve
-func NewBCCSPWithDummyKeyStore(curveID math.CurveID, aries bool) (bccsp.BCCSP, error) {
-	curve, tr, err := GetCurveAndTranslator(curveID)
+func NewBCCSPWithDummyKeyStore(curveID math.CurveID) (bccsp.BCCSP, error) {
+	curve, tr, aries, err := GetCurveAndTranslator(curveID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +67,18 @@ func NewBCCSPWithDummyKeyStore(curveID math.CurveID, aries bool) (bccsp.BCCSP, e
 	return cryptoProvider, nil
 }
 
-func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translator, error) {
+func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translator, bool, error) {
 	if curveID < 0 {
-		return nil, nil, errors.New("invalid curve")
+		return nil, nil, false, errors.New("invalid curve")
+	}
+	if curveID == math.BLS12_381_BBS {
+		// switch to math.BLS12_381_BBS_GURVY
+		logger.Warnf("selected curve BLS12_381_BBS, switching to BLS12_381_BBS_GURVY")
+		curveID = math.BLS12_381_BBS_GURVY
 	}
 	curve := math.Curves[curveID]
 	var tr idemix3.Translator
+	aries := false
 	switch curveID {
 	case math.BN254:
 		tr = &amcl.Gurvy{C: curve}
@@ -82,10 +88,11 @@ func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translato
 		tr = &amcl.Fp256bn{C: curve}
 	case math.FP256BN_AMCL_MIRACL:
 		tr = &amcl.Fp256bnMiracl{C: curve}
-	case math.BLS12_381_BBS:
+	case math.BLS12_381_BBS_GURVY:
 		tr = &amcl.Gurvy{C: curve}
+		aries = true
 	default:
-		return nil, nil, errors.Errorf("unsupported curve ID: %d", curveID)
+		return nil, nil, false, errors.Errorf("unsupported curve ID: %d", curveID)
 	}
-	return curve, tr, nil
+	return curve, tr, aries, nil
 }

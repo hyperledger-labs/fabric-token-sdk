@@ -133,6 +133,9 @@ type IdentityConfiguration struct {
 // Ultimately, it is the token driver to decide which types are allowed.
 type WalletLookupID = any
 
+// IdentityType identifies the type of identity
+type IdentityType = string
+
 // Authorization defines method to check the relation between a token
 // and wallets (owner, auditor, etc.)
 type Authorization interface {
@@ -148,7 +151,7 @@ type Authorization interface {
 	// Issued returns true if the passed issuer issued the passed token
 	Issued(ctx context.Context, issuer Identity, tok *token.Token) bool
 	// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
-	OwnerType(raw []byte) (string, []byte, error)
+	OwnerType(raw []byte) (IdentityType, []byte, error)
 }
 
 //go:generate counterfeiter -o mock/ws.go -fake-name WalletService . WalletService

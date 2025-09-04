@@ -62,7 +62,7 @@ var PriorityComparison = func(a, b LocalIdentityWithPriority) int {
 type LocalMembership struct {
 	config                 idriver.Config
 	defaultNetworkIdentity driver.Identity
-	deserializerManager    idriver.DeserializerManager
+	deserializerManager    idriver.SignerDeserializerManager
 	identityDB             idriver.IdentityStoreService
 	KeyManagerProviders    []KeyManagerProvider
 	IdentityType           string
@@ -81,7 +81,7 @@ func NewLocalMembership(
 	logger logging.Logger,
 	config idriver.Config,
 	defaultNetworkIdentity driver.Identity,
-	deserializerManager idriver.DeserializerManager,
+	deserializerManager idriver.SignerDeserializerManager,
 	identityDB idriver.IdentityStoreService,
 	identityType string,
 	defaultAnonymous bool,
@@ -439,7 +439,7 @@ func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *driver.I
 	l.logger.Debugf("new local identity for [%s:%s] - [%d][%v]", name, eID, len(list), list)
 
 	// deserializer
-	l.deserializerManager.AddDeserializer(keyManager)
+	l.deserializerManager.AddTypedSignerDeserializer(keyManager.IdentityType(), &TypedSignerDeserializer{KeyManager: keyManager})
 
 	// if the keyManager is not anonymous
 	if !keyManager.Anonymous() {
@@ -518,4 +518,12 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (driver.I
 		return nil, nil, errors2.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 	}
 	return typedIdentity, ai, nil
+}
+
+type TypedSignerDeserializer struct {
+	KeyManager
+}
+
+func (t *TypedSignerDeserializer) DeserializeSigner(ctx context.Context, typ identity.Type, raw []byte) (driver.Signer, error) {
+	return t.KeyManager.DeserializeSigner(ctx, raw)
 }
