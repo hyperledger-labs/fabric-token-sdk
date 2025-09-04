@@ -65,6 +65,7 @@ func (c *StatusSupport) DeleteStatusListener(txID string, ch chan StatusEvent) {
 		}
 	}
 }
+
 func (c *StatusSupport) Notify(event StatusEvent) {
 	logger.DebugfContext(event.Ctx, "Start notify for [%s]", event.TxID)
 	defer logger.DebugfContext(event.Ctx, "Notified for [%s]", event.TxID)
