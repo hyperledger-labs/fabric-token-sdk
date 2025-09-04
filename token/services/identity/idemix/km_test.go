@@ -159,7 +159,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.NoError(t, err)
 	id := identityDescriptor.Identity
 	audit := identityDescriptor.AuditInfo
-	require.NoError(t, identityProvider.RegisterSigner(t.Context(), id, identityDescriptor.Signer, identityDescriptor.Verifier, identityDescriptor.SignerInfo))
+	require.NoError(t, identityProvider.RegisterSigner(t.Context(), id, identityDescriptor.Signer, identityDescriptor.Verifier, identityDescriptor.SignerInfo, false))
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
 	info, err := keyManager.Info(t.Context(), id, audit)
