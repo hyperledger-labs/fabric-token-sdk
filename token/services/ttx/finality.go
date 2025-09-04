@@ -128,7 +128,7 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 	// notice that adding the listener can happen after the event we are looking for has already happened
 	// therefore we need to check more often before the timeout happens
 	dbChannel := make(chan common.StatusEvent, 1)
-	defer close(dbChannel)
+
 	logger.DebugfContext(ctx, "Add status listener")
 	finalityDB.AddStatusListener(txID, dbChannel)
 	logger.DebugfContext(ctx, "Added status listener")
