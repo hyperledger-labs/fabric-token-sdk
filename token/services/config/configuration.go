@@ -101,10 +101,12 @@ func (m *Configuration) Serialize(tmsID token.TMSID) ([]byte, error) {
 	return yaml.Marshal(c)
 }
 
+// TMSConfig is the TMS configuration
 type TMSConfig struct {
 	Token TokenConfig `yaml:"token"`
 }
 
+// TokenConfig is used to serialize a TMS configuration
 type TokenConfig struct {
 	TMS map[string]map[string]any `yaml:"tms" mapstructure:"tms"`
 }
