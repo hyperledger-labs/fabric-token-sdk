@@ -164,7 +164,7 @@ func (t *Service) CacheRequest(ctx context.Context, tmsID token.TMSID, request *
 
 func (t *Service) GetCachedTokenRequest(txID string) (*token.Request, []byte) {
 	res, ok := t.RequestsCache.Get(txID)
-	if !ok {
+	if !ok || res == nil {
 		return nil, nil
 	}
 	return res.Request, res.MsgToSign
