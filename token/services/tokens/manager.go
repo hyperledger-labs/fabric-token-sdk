@@ -10,13 +10,13 @@ import (
 	"reflect"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 )
 
 var managerType = reflect.TypeOf((*ServiceManager)(nil))
@@ -54,10 +54,10 @@ func NewServiceManager(
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get token store for [%s]", tmsID)
 			}
-			cacheInst, err := cache.NewDefaultRistrettoCache[*CacheEntry]()
-			if err != nil {
-				return nil, errors.WithMessagef(err, "failed to get token cache for [%s]", tmsID)
-			}
+			cacheInst := secondcache.NewTyped[*CacheEntry](5000)
+			// if err != nil {
+			// 	return nil, errors.WithMessagef(err, "failed to get token cache for [%s]", tmsID)
+			// }
 			tokens := &Service{
 				TMSProvider:     tmsProvider,
 				NetworkProvider: networkProvider,
