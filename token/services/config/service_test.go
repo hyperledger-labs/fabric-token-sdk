@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,6 +31,17 @@ func TestConfigurations(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.AddConfiguration(raw))
 	checkConfigurations(t, service, 3)
+
+	configs, err := service.Configurations()
+	require.NoError(t, err)
+	raw, err = configs[0].Serialize(token.TMSID{
+		Network:   "new_network",
+		Channel:   "new_channel",
+		Namespace: "new_namespace",
+	})
+	require.NoError(t, err)
+	require.NoError(t, service.AddConfiguration(raw))
+	checkConfigurations(t, service, 4)
 }
 
 func checkConfigurations(t *testing.T, service *Service, expectedTMSs int) {

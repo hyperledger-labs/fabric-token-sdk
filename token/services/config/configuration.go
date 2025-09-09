@@ -7,9 +7,19 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
+	"fmt"
+
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"gopkg.in/yaml.v2"
+)
+
+const (
+	Network   = "network"
+	Channel   = "channel"
+	Namespace = "namespace"
 )
 
 // Configuration is the configuration of a given configuration
@@ -69,4 +79,34 @@ func (m *Configuration) GetBool(key string) bool {
 
 func (m *Configuration) IsSet(key string) bool {
 	return m.cp.IsSet(config.Join(TMSPath, m.keyID, key))
+}
+
+// Serialize serializes this configuration with the respect to the passed tms ID
+func (m *Configuration) Serialize(tmsID token.TMSID) ([]byte, error) {
+	keyID := fmt.Sprintf("%s%s%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	keys := map[string]any{}
+	if err := m.cp.UnmarshalKey(config.Join(TMSPath, m.keyID), &keys); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling key [%s]", config.Join(TMSPath, m.keyID))
+	}
+	keys[Network] = tmsID.Network
+	keys[Channel] = tmsID.Channel
+	keys[Namespace] = tmsID.Namespace
+	c := &TMSConfig{
+		Token: TokenConfig{
+			TMS: map[string]map[string]any{
+				keyID: keys,
+			},
+		},
+	}
+	return yaml.Marshal(c)
+}
+
+// TMSConfig is the TMS configuration
+type TMSConfig struct {
+	Token TokenConfig `yaml:"token"`
+}
+
+// TokenConfig is used to serialize a TMS configuration
+type TokenConfig struct {
+	TMS map[string]map[string]any `yaml:"tms" mapstructure:"tms"`
 }
