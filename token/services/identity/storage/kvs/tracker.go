@@ -6,7 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package kvs
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 // Backend interface for key-value storage
 type Backend interface {
@@ -28,6 +31,8 @@ type TrackedKVS struct {
 	GetCounter int
 	PutHistory []KeyValuePair
 	GetHistory []KeyValuePair
+
+	mutex sync.RWMutex
 }
 
 func NewTrackedMemory() *TrackedKVS {
@@ -51,6 +56,9 @@ func NewTrackedMemoryFrom(backend Backend) *TrackedKVS {
 }
 
 func (f *TrackedKVS) Put(id string, entry interface{}) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
 	err := f.Backend.Put(context.Background(), id, entry)
 	f.PutCounter++
 	f.PutHistory = append(f.PutHistory, KeyValuePair{Key: id, Value: entry, Error: ""})
@@ -58,6 +66,9 @@ func (f *TrackedKVS) Put(id string, entry interface{}) error {
 }
 
 func (f *TrackedKVS) Get(id string, entry interface{}) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
 	f.GetCounter++
 
 	errorMsg := ""
