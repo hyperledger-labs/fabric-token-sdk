@@ -8,15 +8,14 @@ package transfer_test
 import (
 	"context"
 
+	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	transfer3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer/mock"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
-	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -40,7 +39,7 @@ var _ = Describe("Sender", func() {
 	)
 	BeforeEach(func() {
 		var err error
-		pp, err = v1.Setup(8, nil, math.FP256BN_AMCL)
+		pp, err = v1.Setup(8, nil, TestCurve)
 		Expect(err).NotTo(HaveOccurred())
 		owners = make([][]byte, 2)
 		owners[0] = []byte("bob")

@@ -74,7 +74,7 @@ func (l *KeyManagerProvider) Get(ctx context.Context, identityConfig *driver.Ide
 	}
 
 	// instantiate provider from configuration
-	cryptoProvider, err := crypto2.NewBCCSP(l.keyStore, l.curveID, l.curveID == math.BLS12_381_BBS)
+	cryptoProvider, err := crypto2.NewBCCSP(l.keyStore, l.curveID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider")
 	}

@@ -38,6 +38,8 @@ func TestParallelProveVerify(t *testing.T) {
 	wg.Wait()
 }*/
 
+const TestCurve = math.BN254
+
 var _ = Describe("Transfer", func() {
 	var (
 		prover   *transfer.Prover
@@ -86,7 +88,7 @@ var _ = Describe("Transfer", func() {
 })
 
 func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := v1.Setup(32, nil, math.FP256BN_AMCL)
+	pp, err := v1.Setup(32, nil, TestCurve)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(pp)
@@ -99,7 +101,7 @@ func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := v1.Setup(32, nil, math.FP256BN_AMCL)
+	pp, err := v1.Setup(32, nil, TestCurve)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInvalidInputsForZKTransfer(pp)
@@ -112,7 +114,7 @@ func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := v1.Setup(8, nil, math.FP256BN_AMCL)
+	pp, err := v1.Setup(8, nil, TestCurve)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(pp)

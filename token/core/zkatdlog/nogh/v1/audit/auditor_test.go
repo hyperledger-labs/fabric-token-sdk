@@ -9,11 +9,9 @@ package audit_test
 import (
 	"context"
 	"os"
-	"time"
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit/mock"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -22,7 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -42,14 +40,14 @@ var _ = Describe("Auditor", func() {
 	BeforeEach(func() {
 		var err error
 		fakeSigningIdentity = &mock.SigningIdentity{}
-		ipk, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+		ipk, err := os.ReadFile("./testdata/bls12_381_bbs/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		pp, err = v1.Setup(32, ipk, math.FP256BN_AMCL)
+		pp, err = v1.Setup(32, ipk, math.BLS12_381_BBS_GURVY)
 		Expect(err).NotTo(HaveOccurred())
-		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.FP256BN_AMCL)
+		idemixDes, err := idemix.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.BLS12_381_BBS_GURVY)
 		Expect(err).NotTo(HaveOccurred())
 		des := deserializer.NewTypedVerifierDeserializerMultiplex()
-		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+		des.AddTypedVerifierDeserializer(idemix.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 		auditor = audit.NewAuditor(
 			logging.MustGetLogger(),
 			&noop.Tracer{},
@@ -92,7 +90,7 @@ var _ = Describe("Auditor", func() {
 			It("fails", func() {
 				transfer, metadata, tokens := createTransfer(pp)
 				// test idemix info
-				_, auditinfo := getIdemixInfo("./testdata/idemix")
+				_, auditinfo := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
 				raw, err := auditinfo.Bytes()
 				Expect(err).NotTo(HaveOccurred())
 				metadata.Inputs[0].Senders[0].AuditInfo = raw
@@ -109,7 +107,7 @@ var _ = Describe("Auditor", func() {
 			It("fails", func() {
 				transfer, metadata, tokens := createTransfer(pp)
 				// test idemix info
-				_, auditinfo := getIdemixInfo("./testdata/idemix")
+				_, auditinfo := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
 				raw, err := auditinfo.Bytes()
 				Expect(err).NotTo(HaveOccurred())
 				metadata.Outputs[0].OutputAuditInfo = raw
@@ -126,7 +124,7 @@ var _ = Describe("Auditor", func() {
 })
 
 func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMetadata, [][]*token.Token) {
-	id, auditInfo := getIdemixInfo("./testdata/idemix")
+	id, auditInfo := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
 	transfer, meta, inputs := prepareTransfer(pp, id)
 
 	auditInfoRaw, err := auditInfo.Bytes()
@@ -166,7 +164,7 @@ func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMeta
 }
 
 func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMetadata, [][]*token.Token) {
-	id, auditInfo := getIdemixInfo("./testdata/idemix")
+	id, auditInfo := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
 	transfer, inf, inputs := prepareTransfer(pp, id)
 
 	c := math.Curves[pp.Curve]
@@ -214,69 +212,18 @@ func createTransferWithBogusOutput(pp *v1.PublicParams) (*transfer.Action, *driv
 	return transfer, metadata, tokns
 }
 
-type fakeProv struct {
-	typ string
-}
-
-func (f *fakeProv) GetString(key string) string {
-	return f.typ
-}
-
-func (f *fakeProv) GetInt(key string) int {
-	return 0
-}
-
-func (f *fakeProv) GetDuration(key string) time.Duration {
-	return time.Duration(0)
-}
-
-func (f *fakeProv) GetBool(key string) bool {
-	return false
-}
-
-func (f *fakeProv) GetStringSlice(key string) []string {
-	return nil
-}
-
-func (f *fakeProv) IsSet(key string) bool {
-	return false
-}
-
-func (f *fakeProv) UnmarshalKey(key string, rawVal interface{}) error {
-	return nil
-}
-
-func (f *fakeProv) ConfigFileUsed() string {
-	return ""
-}
-
-func (f *fakeProv) GetPath(key string) string {
-	return ""
-}
-
-func (f *fakeProv) TranslatePath(path string) string {
-	return ""
-}
-
 func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
-	sp := view.NewServiceProvider()
-	configService := &fakeProv{typ: "memory"}
-	Expect(sp.RegisterService(configService)).NotTo(HaveOccurred())
-
 	backend, err := kvs2.NewInMemory()
-	Expect(err).NotTo(HaveOccurred())
-	err = sp.RegisterService(backend)
-	Expect(err).NotTo(HaveOccurred())
-
 	Expect(err).NotTo(HaveOccurred())
 	config, err := crypto.NewConfig(dir)
 	Expect(err).NotTo(HaveOccurred())
+	curveID := math.BLS12_381_BBS_GURVY
 
-	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, kvs2.Keystore(backend))
+	keyStore, err := crypto.NewKeyStore(curveID, kvs2.Keystore(backend))
 	Expect(err).NotTo(HaveOccurred())
-	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	Expect(err).NotTo(HaveOccurred())
-	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
@@ -292,7 +239,7 @@ func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo) {
 	err = auditInfo.Match(context.Background(), id)
 	Expect(err).NotTo(HaveOccurred())
 
-	id, err = identity.WrapWithType(idemix2.IdentityType, id)
+	id, err = identity.WrapWithType(idemix.IdentityType, id)
 	Expect(err).NotTo(HaveOccurred())
 
 	return id, auditInfo

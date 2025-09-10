@@ -49,7 +49,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 
 	curveID := d.DefaultCurveID
 	if zkatdlognoghv1.IsAries(tms) {
-		curveID = math3.BLS12_381_BBS
+		curveID = math3.BLS12_381_BBS_GURVY
 	}
 
 	bits := uint64(64)

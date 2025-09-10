@@ -27,11 +27,6 @@ type TypedVerifierDeserializer interface {
 	GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
 }
 
-// AuditMatcherDeserializer deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID
-type AuditMatcherDeserializer interface {
-	GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
-}
-
 type TypedVerifierDeserializerMultiplex struct {
 	deserializers map[string][]TypedVerifierDeserializer
 }
@@ -195,21 +190,4 @@ func (t *TypedIdentityVerifierDeserializer) GetAuditInfo(ctx context.Context, id
 
 func (t *TypedIdentityVerifierDeserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	return t.MatcherDeserializer.GetAuditInfoMatcher(ctx, owner, auditInfo)
-}
-
-type TypedAuditInfoMatcher struct {
-	matcher driver.Matcher
-}
-
-func (t *TypedAuditInfoMatcher) Match(ctx context.Context, id []byte) error {
-	// match identity and audit info
-	recipient, err := identity.UnmarshalTypedIdentity(id)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
-	}
-	err = t.matcher.Match(ctx, recipient.Identity)
-	if err != nil {
-		return errors.Wrapf(err, "failed to match identity [%s] to audit infor", id)
-	}
-	return nil
 }

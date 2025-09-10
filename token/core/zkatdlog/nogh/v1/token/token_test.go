@@ -23,7 +23,7 @@ func TestToClear(t *testing.T) {
 		pp    *v1.PublicParams
 		err   error
 	)
-	pp, err = v1.Setup(64, nil, math.FP256BN_AMCL)
+	pp, err = v1.Setup(64, nil, math.BN254)
 	assert.NoError(t, err)
 	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
@@ -57,7 +57,7 @@ func FuzzSerialization(f *testing.F) {
 			Owner: owner,
 		}
 		if putData {
-			token.Data = math.Curves[math.FP256BN_AMCL].NewG1()
+			token.Data = math.Curves[math.BN254].NewG1()
 		}
 		raw, err := token.Serialize()
 		assert.NoError(f, err)

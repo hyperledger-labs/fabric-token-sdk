@@ -53,7 +53,7 @@ func (d *base) newWalletService(
 ) (*wallet.Service, error) {
 	tmsID := tmsConfig.ID()
 
-	deserializerManager := deserializer.NewMultiplexDeserializer()
+	deserializerManager := deserializer.NewTypedSignerDeserializerMultiplex()
 	identityDB, err := storageProvider.IdentityStore(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)

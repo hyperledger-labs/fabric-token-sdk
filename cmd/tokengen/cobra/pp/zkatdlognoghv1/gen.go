@@ -131,7 +131,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	// TODO: update the curve here
 	curveID := math3.BN254
 	if args.Aries {
-		curveID = math3.BLS12_381_BBS
+		curveID = math3.BLS12_381_BBS_GURVY
 	}
 	// todo range is hardcoded, to be changed
 	ver := v1.ProtocolV1

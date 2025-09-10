@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package transfer
+package transfer_test
 
 import (
 	"crypto/rand"
@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,28 +24,28 @@ import (
 func TestAction_Validate(t *testing.T) {
 	tests := []struct {
 		name          string
-		action        *Action
+		action        *transfer.Action
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name:          "",
-			action:        &Action{},
+			action:        &transfer.Action{},
 			wantErr:       true,
 			expectedError: "invalid number of token inputs, expected at least 1",
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{},
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{},
 			},
 			wantErr:       true,
 			expectedError: "invalid number of token inputs, expected at least 1",
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					nil,
 				},
 			},
@@ -53,8 +54,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID:             nil,
 						Token:          nil,
@@ -67,8 +68,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID:             &token.ID{},
 						Token:          nil,
@@ -81,8 +82,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID:             &token.ID{TxId: "txid"},
 						Token:          nil,
@@ -95,8 +96,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -112,8 +113,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -129,8 +130,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -146,8 +147,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -163,8 +164,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -182,8 +183,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -203,8 +204,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -225,8 +226,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -248,8 +249,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -272,8 +273,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -299,8 +300,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -326,8 +327,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -355,8 +356,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "A Redeem action must have an issuer",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -386,8 +387,8 @@ func TestAction_Validate(t *testing.T) {
 		},
 		{
 			name: "",
-			action: &Action{
-				Inputs: []*ActionInput{
+			action: &transfer.Action{
+				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
 						Token: &token2.Token{
@@ -430,11 +431,11 @@ func TestAction_Validate(t *testing.T) {
 }
 
 func TestSerialization(t *testing.T) {
-	action := randomAction(math.Curves[math.BN254], rand.Reader, t)
+	action := randomAction(math.Curves[TestCurve], rand.Reader, t)
 	raw, err := action.Serialize()
 	assert.NoError(t, err, "failed to serialize a new transfer action")
 
-	action2 := &Action{}
+	action2 := &transfer.Action{}
 	err = action2.Deserialize(raw)
 	assert.NoError(t, err, "failed to deserialize a new transfer action")
 	assert.Equal(t, action, action2, "deserialized action is not equal to the original one")
@@ -442,14 +443,14 @@ func TestSerialization(t *testing.T) {
 	raw2, err := action2.Serialize()
 	assert.NoError(t, err, "failed to serialize a new transfer action")
 
-	action3 := &Action{}
+	action3 := &transfer.Action{}
 	err = action3.Deserialize(raw2)
 	assert.NoError(t, err, "failed to deserialize a new transfer action")
 	assert.Equal(t, action2, action3, "deserialized action is not equal to the original one")
 }
 
 func BenchmarkActionMarshalling(b *testing.B) {
-	curve := math.Curves[math.BN254]
+	curve := math.Curves[TestCurve]
 
 	b.Run("With Protos", func(b *testing.B) {
 		rand, err := curve.Rand()
@@ -483,7 +484,7 @@ func getRandomBytes(b assert.TestingT, len int) []byte {
 	return key
 }
 
-func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *Action {
+func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *transfer.Action {
 	// generate an action at random
 	tokenIDs := []*token.ID{
 		{
@@ -514,7 +515,7 @@ func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *Action 
 		getRandomBytes(b, 32),
 	}
 	proof := getRandomBytes(b, 32)
-	action, err := NewTransfer(tokenIDs, inputToken, commitments, owners, proof)
+	action, err := transfer.NewTransfer(tokenIDs, inputToken, commitments, owners, proof)
 	assert.NoError(b, err, "failed to create a new transfer action")
 	action.Metadata = map[string][]byte{
 		"key1": getRandomBytes(b, 32),
@@ -526,7 +527,7 @@ func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *Action 
 
 func TestAction_GetIssuer(t *testing.T) {
 	issuerId := []byte("issuer")
-	action := &Action{
+	action := &transfer.Action{
 		Issuer: issuerId,
 	}
 	issuer := action.GetIssuer()

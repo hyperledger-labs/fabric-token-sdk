@@ -13,9 +13,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
+
+const ScriptType = htlc.ScriptType
 
 type deserializer interface {
 	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
@@ -105,14 +107,14 @@ func (t *TypedIdentityDeserializer) GetAuditInfoMatcher(ctx context.Context, own
 }
 
 type AuditDeserializer struct {
-	AuditInfoDeserializer driver2.AuditInfoDeserializer
+	AuditInfoDeserializer idriver.AuditInfoDeserializer
 }
 
-func NewAuditDeserializer(auditInfoDeserializer driver2.AuditInfoDeserializer) *AuditDeserializer {
+func NewAuditDeserializer(auditInfoDeserializer idriver.AuditInfoDeserializer) *AuditDeserializer {
 	return &AuditDeserializer{AuditInfoDeserializer: auditInfoDeserializer}
 }
 
-func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
+func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (idriver.AuditInfo, error) {
 	si := &ScriptInfo{}
 	err := json.Unmarshal(raw, si)
 	if err != nil || (len(si.Sender) == 0 && len(si.Recipient) == 0) {

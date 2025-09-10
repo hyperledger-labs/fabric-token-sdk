@@ -66,7 +66,7 @@ func (s *EscrowAuth) Issued(ctx context.Context, issuer driver.Identity, tok *to
 	return false
 }
 
-func (s *EscrowAuth) OwnerType(raw []byte) (string, []byte, error) {
+func (s *EscrowAuth) OwnerType(raw []byte) (driver.IdentityType, []byte, error) {
 	owner, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
 		return "", nil, err

@@ -48,6 +48,10 @@ type cache[T any] interface {
 	Delete(key string)
 }
 
+type deserializer interface {
+	DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error)
+}
+
 type VerifierEntry struct {
 	Verifier   driver.Verifier
 	DebugStack []byte
@@ -65,7 +69,7 @@ type Provider struct {
 	Binder                  idriver.NetworkBinderService
 	enrollmentIDUnmarshaler enrollmentIDUnmarshaler
 	storage                 storage
-	deserializer            idriver.Deserializer
+	deserializer            deserializer
 
 	isMeCache cache[bool]
 	signers   cache[*SignerEntry]
@@ -77,7 +81,7 @@ type Provider struct {
 func NewProvider(
 	logger logging.Logger,
 	storage storage,
-	deserializer idriver.Deserializer,
+	deserializer deserializer,
 	binder idriver.NetworkBinderService,
 	enrollmentIDUnmarshaler enrollmentIDUnmarshaler,
 ) *Provider {
@@ -95,8 +99,10 @@ func NewProvider(
 
 func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *idriver.IdentityDescriptor, alias driver.Identity) error {
 	// register in the storage
-	if err := p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
-		return errors.Wrapf(err, "failed to register identity descriptor")
+	if !identityDescriptor.Ephemeral {
+		if err := p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
+			return errors.Wrapf(err, "failed to register identity descriptor")
+		}
 	}
 
 	// update caches
@@ -133,13 +139,14 @@ func (p *Provider) RegisterRecipientData(ctx context.Context, data *driver.Recip
 	return p.storage.StoreIdentityData(ctx, data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
 }
 
-func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
+func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte, ephemeral bool) error {
 	identityDescriptor := &idriver.IdentityDescriptor{
 		Identity:   identity,
 		AuditInfo:  nil,
 		Signer:     signer,
 		SignerInfo: signerInfo,
 		Verifier:   verifier,
+		Ephemeral:  ephemeral,
 	}
 	return p.RegisterIdentityDescriptor(ctx, identityDescriptor, nil)
 }
@@ -188,7 +195,7 @@ func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (dri
 	}()
 	signer, err := p.getSigner(ctx, identity, idHash)
 	if err != nil {
-		return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
+		return nil, errors.Wrapf(err, "failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 	}
 	found = true
 	return signer, nil
