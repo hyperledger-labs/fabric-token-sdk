@@ -36,8 +36,11 @@ func TestIdentityCache(t *testing.T) {
 }
 
 func TestIdentityCacheForRace(t *testing.T) {
-	c := NewIdentityCache(func(context.Context, []byte) (driver.Identity, []byte, error) {
-		return []byte("hello world"), []byte("audit"), nil
+	c := NewIdentityCache(func(context.Context, []byte) (*idriver.IdentityDescriptor, error) {
+		return &idriver.IdentityDescriptor{
+			Identity:  []byte("hello world"),
+			AuditInfo: []byte("audit"),
+		}, nil
 	}, 10000, nil, NewMetrics(&disabled.Provider{}))
 
 	numRoutines := 4
@@ -48,10 +51,10 @@ func TestIdentityCacheForRace(t *testing.T) {
 			defer wg.Done()
 
 			for i := 0; i < 100; i++ {
-				id, audit, err := c.Identity(context.Background(), nil)
+				id, err := c.Identity(t.Context(), nil)
 				assert.NoError(t, err)
-				assert.Equal(t, driver.Identity([]byte("hello world")), id)
-				assert.Equal(t, []byte("audit"), audit)
+				assert.Equal(t, driver.Identity("hello world"), id.Identity)
+				assert.Equal(t, []byte("audit"), id.AuditInfo)
 			}
 		}()
 	}
