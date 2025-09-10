@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
@@ -85,8 +86,8 @@ func NewCachedIdentityStore(
 		readDB,
 		writeDB,
 		tables,
-		cache2.NewNoCache[bool](),
-		cache2.NewNoCache[[]byte](),
+		secondcache.NewTyped[bool](5000),
+		secondcache.NewTyped[[]byte](5000),
 		ci,
 		errorWrapper,
 	)
