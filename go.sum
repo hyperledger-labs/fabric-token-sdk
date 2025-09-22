@@ -1221,8 +1221,8 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/mattn/go-sqlite3 v1.14.14/go.mod h1:NyWgC/yNuGj7Q9rpYnZvas74GogHl5/Z4A/KQRfk6bU=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
-github.com/mbrandenburger/fabric-smart-client v0.5.1-0.20250904215632-0d8c0aaffc5e h1:vhsq20cauOluFJyEMeHnp0j+JfrE1NmQqh5Qn6Y8ZE8=
-github.com/mbrandenburger/fabric-smart-client v0.5.1-0.20250904215632-0d8c0aaffc5e/go.mod h1:ZL/HRmn79GeECtuQuc0rP5uzBAMyTzDKUbsUMMEuFW0=
+github.com/mbrandenburger/fabric-smart-client v0.5.1-0.20250922074053-0bfcee1dc13d h1:PG9G7O96hewmy4wMd6atHynW7lPjHIOWpgKNAO4jLi0=
+github.com/mbrandenburger/fabric-smart-client v0.5.1-0.20250922074053-0bfcee1dc13d/go.mod h1:ZL/HRmn79GeECtuQuc0rP5uzBAMyTzDKUbsUMMEuFW0=
 github.com/microcosm-cc/bluemonday v1.0.1/go.mod h1:hsXNsILzKxV+sX77C5b8FSuKF00vh2OMYv+xgHpAMF4=
 github.com/miekg/dns v1.1.62 h1:cN8OuEF1/x5Rq6Np+h1epln8OiyPWV+lROx9LxcGgIQ=
 github.com/miekg/dns v1.1.62/go.mod h1:mvDlcItzm+br7MToIKqkglaGhlFMHJ9DTNNWONWXbNQ=
