@@ -127,7 +127,8 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 			Logger:   logger,
 		},
 		&DeliveryScanQueryByID{
-			Channel: ch,
+			Delivery: ch.Delivery(),
+			Channel:  ch,
 		},
 		p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
 		p.newMapper(network, channel),
