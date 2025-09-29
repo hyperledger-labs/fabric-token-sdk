@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	idemix2 "github.com/IBM/idemix"
@@ -21,7 +22,6 @@ import (
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
@@ -32,11 +32,11 @@ import (
 )
 
 func TestNewKeyManager(t *testing.T) {
-	testNewKeyManager(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testNewKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
+	testNewKeyManager(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testNewKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
-func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 	t.Helper()
 	// prepare
 	kvs, err := kvs2.NewInMemory()
@@ -312,11 +312,11 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID,
 }
 
 func TestAuditWithEidRhNymPolicy(t *testing.T) {
-	testAuditWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testAuditWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
+	testAuditWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testAuditWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
-func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID) {
 	t.Helper()
 	registry := view.NewServiceProvider()
 
@@ -370,11 +370,11 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 }
 
 func TestKeyManager_DeserializeSigner(t *testing.T) {
-	testKeyManager_DeserializeSigner(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testKeyManager_DeserializeSigner(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
+	testKeyManager_DeserializeSigner(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testKeyManager_DeserializeSigner(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
-func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID math.CurveID) {
 	t.Helper()
 	// prepare
 	registry := view.NewServiceProvider()
@@ -590,10 +590,78 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 }
 
-type TypedSignerDeserializer struct {
-	*KeyManager
+func TestKeyManagerForRace(t *testing.T) {
+	t.Run("FP256BN_AMCL", func(t *testing.T) {
+		keyManager, cleanup := setupKeyManager(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+		defer cleanup()
+		runIdentityConcurrently(t, t.Context(), keyManager)
+	})
+
+	t.Run("BLS12_381_BBS", func(t *testing.T) {
+		keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS)
+		defer cleanup()
+		runIdentityConcurrently(t, t.Context(), keyManager)
+	})
+
+	t.Run("BLS12_381_BBS_GURVY", func(t *testing.T) {
+		keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
+		defer cleanup()
+		runIdentityConcurrently(t, t.Context(), keyManager)
+	})
 }
 
-func (t *TypedSignerDeserializer) DeserializeSigner(ctx context.Context, typ identity.Type, raw []byte) (tdriver.Signer, error) {
-	return t.KeyManager.DeserializeSigner(ctx, raw)
+func setupKeyManager(t assert.TestingT, configPath string, curveID math.CurveID) (*KeyManager, func()) {
+	kvs, err := kvs2.NewInMemory()
+	assert.NoError(t, err)
+	config, err := crypto2.NewConfig(configPath)
+	assert.NoError(t, err)
+	tracker := kvs2.NewTrackedMemoryFrom(kvs)
+	keyStore, err := crypto2.NewKeyStore(curveID, tracker)
+	assert.NoError(t, err)
+	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID)
+	assert.NoError(t, err)
+
+	// check that version is enforced
+	config.Version = 0
+	_, err = NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "unsupported protocol version [0]")
+	config.Version = crypto2.ProtobufProtocolVersionV1
+
+	// new key manager loaded from file
+	assert.Empty(t, config.Signer.Ski)
+	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	assert.NoError(t, err)
+	assert.NotNil(t, keyManager)
+	assert.False(t, keyManager.IsRemote())
+	assert.True(t, keyManager.Anonymous())
+	assert.Equal(t, "alice", keyManager.EnrollmentID())
+	assert.Equal(t, IdentityType, keyManager.IdentityType())
+	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
+	assert.Equal(t, tracker.PutCounter, 1)
+	assert.Equal(t, tracker.GetCounter, 0)
+
+	return keyManager, func() {
+		// cleanup
+	}
+}
+
+func runIdentityConcurrently(t assert.TestingT, ctx context.Context, keyManager *KeyManager) {
+	numRoutines := 4
+	var wg sync.WaitGroup
+	wg.Add(numRoutines)
+	for range numRoutines {
+		go func() {
+			defer wg.Done()
+
+			for range 10 {
+				id, err2 := keyManager.Identity(ctx, nil)
+				assert.NoError(t, err2)
+				assert.NotNil(t, id)
+				assert.NotEmpty(t, id.Identity)
+				assert.NotNil(t, id.Signer)
+			}
+		}()
+	}
+	wg.Wait()
 }
