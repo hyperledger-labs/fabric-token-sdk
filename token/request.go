@@ -30,7 +30,7 @@ const (
 )
 
 type Binder interface {
-	Bind(ctx context.Context, longTerm Identity, ephemeral Identity) error
+	Bind(ctx context.Context, longTerm Identity, ephemeral ...Identity) error
 }
 
 type (
