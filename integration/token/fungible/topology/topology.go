@@ -139,6 +139,7 @@ func Topology(opts common.Opts) []api.Topology {
 	)
 	manager.AddOptions(opts.ReplicationOpts.For("manager")...)
 
+	var endorserIDs []string
 	if opts.FSCBasedEndorsement {
 		endorserTemplate := fscTopology.NewTemplate("endorser")
 		endorserTemplate.AddOptions(
@@ -148,23 +149,25 @@ func Topology(opts common.Opts) []api.Topology {
 		)
 		endorserTemplate.RegisterViewFactory("TMSDeploy", &tmsdeploy.ViewFactory{})
 		fscTopology.AddNodeFromTemplate("endorser-1", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-1")...)
+		endorserIDs = append(endorserIDs, "endorser-1")
 		if opts.Backend != "fabricx" {
 			fscTopology.AddNodeFromTemplate("endorser-2", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-2")...)
 			fscTopology.AddNodeFromTemplate("endorser-3", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-3")...)
+			endorserIDs = append(endorserIDs, "endorser-2", "endorser-3")
 		}
 	}
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.TokenSelector = opts.TokenSelector
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendTopology, backendChannel, opts.DefaultTMSOpts.TokenSDKDriver)
-	tms.SetNamespace("token-chaincode")
+	tms.SetNamespace("token_chaincode")
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	if !opts.DefaultTMSOpts.Aries {
 		// Enable Fabric-CA
 		fabric2.WithFabricCA(tms)
 	}
 	if opts.FSCBasedEndorsement {
-		fabric2.WithFSCEndorsers(tms, "endorser-1", "endorser-2", "endorser-3")
+		fabric2.WithFSCEndorsers(tms, endorserIDs...)
 	}
 	fabric2.SetOrgs(tms, "Org1")
 	nodeList := fscTopology.ListNodes()
@@ -199,7 +202,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 		// endorsers
 		if opts.FSCBasedEndorsement {
-			for _, node := range fscTopology.ListNodes("endorser-1", "endorser-2", "endorser-3") {
+			for _, node := range fscTopology.ListNodes(endorserIDs...) {
 				node.AddSDKWithBase(opts.SDKs[0], &endorser.SDK{})
 			}
 		}
@@ -216,7 +219,7 @@ func Topology(opts common.Opts) []api.Topology {
 	for _, tmsOpts := range opts.ExtraTMSs {
 		tms := tokenTopology.AddTMS(nodeList, backendTopology, backendChannel, tmsOpts.TokenSDKDriver)
 		tms.Alias = tmsOpts.Alias
-		tms.Namespace = "token-chaincode"
+		tms.Namespace = "token_chaincode"
 		tms.Transient = true
 		if tmsOpts.Aries {
 			zkatdlognoghv1.WithAries(tms)
