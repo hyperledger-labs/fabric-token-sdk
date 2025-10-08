@@ -28,8 +28,8 @@ var (
 )
 
 const (
-	DLogNamespace     = "dlog-token-chaincode"
-	FabTokenNamespace = "fabtoken-token-chaincode"
+	DLogNamespace     = "dlog_token_chaincode"
+	FabTokenNamespace = "fabtoken_token_chaincode"
 )
 
 func Topology(opts common.Opts) []api.Topology {

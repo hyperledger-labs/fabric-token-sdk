@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	DLogNamespace     = "dlog-token-chaincode"
-	FabTokenNamespace = "fabtoken-token-chaincode"
+	DLogNamespace     = "dlog_token_chaincode"
+	FabTokenNamespace = "fabtoken_token_chaincode"
 )
 
 var AuditedTransactions = []TransactionRecord{

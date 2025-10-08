@@ -119,7 +119,7 @@ func gen(args []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "cannot instantate integration infrastructure")
 	}
-	network.RegisterPlatformFactory(token.NewPlatformFactory())
+	network.RegisterPlatformFactory(token.NewPlatformFactory(nil))
 	network.Generate()
 
 	return nil
