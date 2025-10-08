@@ -8,8 +8,8 @@ package translator
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 
-	"github.com/gobuffalo/packr/v2/file/resolver/encoding/hex"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
