@@ -2,6 +2,7 @@
 FABRIC_VERSION ?= 3.1.1
 FABRIC_CA_VERSION ?= 1.5.7
 FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
+FABRIC_X_TOOLS_VERSION ?= v0.0.5
 
 # need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
 FABRIC_BINARY_BASE=$(PWD)/../fabric
@@ -12,6 +13,15 @@ GINKGO_TEST_OPTS ?=
 GINKGO_TEST_OPTS += --keep-going
 
 TOP = .
+
+# include the checks target
+include $(TOP)/checks.mk
+# include fabricx target
+include $(TOP)/fabricx.mk
+# include the interop target
+include $(TOP)/interop.mk
+# include the fungible target
+include $(TOP)/fungible.mk
 
 all: install-tools install-softhsm checks unit-tests #integration-tests
 
@@ -25,13 +35,6 @@ install-tools:
 .PHONY: download-fabric
 download-fabric:
 	./ci/scripts/download_fabric.sh $(FABRIC_BINARY_BASE) $(FABRIC_VERSION) $(FABRIC_CA_VERSION)
-
-# include the checks target
-include $(TOP)/checks.mk
-# include the interop target
-include $(TOP)/interop.mk
-# include the fungible target
-include $(TOP)/fungible.mk
 
 .PHONY: unit-tests
 unit-tests:
@@ -103,6 +106,7 @@ clean:
 	docker volume prune -f
 	rm -rf ./integration/token/fungible/dlog/cmd/
 	rm -rf ./integration/token/fungible/dlog/testdata/
+	rm -rf ./integration/token/fungible/dlogx/cmd/
 	rm -rf ./integration/token/fungible/dloghsm/cmd/
 	rm -rf ./integration/token/fungible/dloghsm/testdata/
 	rm -rf ./integration/token/fungible/dlogstress/cmd/

@@ -9,6 +9,8 @@ package topology
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabricx"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabricx/extensions/scv2"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
@@ -21,18 +23,30 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/endorser"
 	issuer2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/issuer"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/party"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/fabricx/tmsdeploy"
 )
 
 func Topology(opts common.Opts) []api.Topology {
-	if opts.Backend != "fabric" {
+	var backendTopology api.Topology
+	var backendChannel string
+	switch opts.Backend {
+	case "fabric":
+		fabricTopology := fabric.NewDefaultTopology()
+		fabricTopology.EnableIdemix()
+		fabricTopology.AddOrganizationsByName("Org1", "Org2")
+		fabricTopology.SetNamespaceApproverOrgs("Org1")
+		backendTopology = fabricTopology
+		backendChannel = fabricTopology.Channels[0].Name
+	case "fabricx":
+		fabricTopology := fabricx.NewDefaultTopology()
+		fabricTopology.EnableIdemix()
+		fabricTopology.AddOrganizationsByName("Org1", "Org2")
+		fabricTopology.SetNamespaceApproverOrgs("Org1")
+		backendTopology = fabricTopology
+		backendChannel = fabricTopology.Channels[0].Name
+	default:
 		panic("unknown backend: " + opts.Backend)
 	}
-
-	fabricTopology := fabric.NewDefaultTopology()
-	fabricTopology.EnableIdemix()
-	fabricTopology.AddOrganizationsByName("Org1", "Org2")
-	fabricTopology.SetNamespaceApproverOrgs("Org1")
-	backendChannel := fabricTopology.Channels[0].Name
 
 	// FSC
 	fscTopology := fsc.NewTopology()
@@ -130,15 +144,19 @@ func Topology(opts common.Opts) []api.Topology {
 		endorserTemplate.AddOptions(
 			fabric.WithOrganization("Org1"),
 			fabric2.WithEndorserRole(),
+			scv2.WithApproverRole(),
 		)
+		endorserTemplate.RegisterViewFactory("TMSDeploy", &tmsdeploy.ViewFactory{})
 		fscTopology.AddNodeFromTemplate("endorser-1", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-1")...)
-		fscTopology.AddNodeFromTemplate("endorser-2", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-2")...)
-		fscTopology.AddNodeFromTemplate("endorser-3", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-3")...)
+		if opts.Backend != "fabricx" {
+			fscTopology.AddNodeFromTemplate("endorser-2", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-2")...)
+			fscTopology.AddNodeFromTemplate("endorser-3", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-3")...)
+		}
 	}
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.TokenSelector = opts.TokenSelector
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, backendChannel, opts.DefaultTMSOpts.TokenSDKDriver)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendTopology, backendChannel, opts.DefaultTMSOpts.TokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
 	common.SetDefaultParams(tms, opts.DefaultTMSOpts)
 	if !opts.DefaultTMSOpts.Aries {
@@ -196,7 +214,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 	// any extra TMS
 	for _, tmsOpts := range opts.ExtraTMSs {
-		tms := tokenTopology.AddTMS(nodeList, fabricTopology, backendChannel, tmsOpts.TokenSDKDriver)
+		tms := tokenTopology.AddTMS(nodeList, backendTopology, backendChannel, tmsOpts.TokenSDKDriver)
 		tms.Alias = tmsOpts.Alias
 		tms.Namespace = "token-chaincode"
 		tms.Transient = true
@@ -216,10 +234,10 @@ func Topology(opts common.Opts) []api.Topology {
 		// monitoringTopology.EnableHyperledgerExplorer()
 		monitoringTopology.EnablePrometheusGrafana()
 		return []api.Topology{
-			fabricTopology, tokenTopology, fscTopology,
+			backendTopology, tokenTopology, fscTopology,
 			monitoringTopology,
 		}
 	}
 
-	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
+	return []api.Topology{backendTopology, tokenTopology, fscTopology}
 }
