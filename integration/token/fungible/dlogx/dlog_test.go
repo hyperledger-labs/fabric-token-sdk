@@ -56,7 +56,7 @@ var _ = Describe("EndToEnd", func() {
 						Network:         tms.Network,
 						Channel:         tms.Channel,
 						Namespace:       tms.Namespace,
-						PublicParamsRaw: pps[0].LoadPublicParameters.Raw,
+						PublicParamsRaw: pps[0].PublicParameters.Raw,
 					},
 				))
 				Expect(err).NotTo(HaveOccurred())

@@ -9,40 +9,19 @@ package dlogx
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/fabricx/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
 )
 
-type LoadPublicParamsInputs struct {
-	FSCNodeIDs           []string
-	LoadPublicParameters pp.LoadPublicParameters
+type PublicParamsInputs struct {
+	FSCNodeIDs       []string
+	PublicParameters pp2.PublicParameters
 }
 
-func ReloadPublicParametersForNode(ii *integration.Infrastructure, pps []LoadPublicParamsInputs, id string) error {
-	for _, tms := range pps {
-		if _, err := ii.Client(id).CallView("LoadPublicParameters", common.JSONMarshall(tms.LoadPublicParameters)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func LoadPublicParamsForAll(ii *integration.Infrastructure, pps []LoadPublicParamsInputs) error {
-	for _, tms := range pps {
-		for _, nodeID := range tms.FSCNodeIDs {
-			if _, err := ii.Client(nodeID).CallView("LoadPublicParameters", common.JSONMarshall(tms.LoadPublicParameters)); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func GetPublicParamsInputs(ii *integration.Infrastructure) ([]LoadPublicParamsInputs, error) {
+func GetPublicParamsInputs(ii *integration.Infrastructure) ([]PublicParamsInputs, error) {
 	tp := find[api.Platform, *token.Platform](ii.NWO.Platforms)
 	if tp == nil {
 		return nil, errors.New("tp was nil")
@@ -55,15 +34,15 @@ func GetPublicParamsInputs(ii *integration.Infrastructure) ([]LoadPublicParamsIn
 		return nil, errors.New("no tmss found")
 	}
 
-	pps := make([]LoadPublicParamsInputs, len(ttp.TMSs))
+	pps := make([]PublicParamsInputs, len(ttp.TMSs))
 	for i, tms := range ttp.TMSs {
 		nodeIDs := make([]string, len(tms.FSCNodes))
 		for j, n := range tms.FSCNodes {
 			nodeIDs[j] = n.Name
 		}
-		pps[i] = LoadPublicParamsInputs{
+		pps[i] = PublicParamsInputs{
 			FSCNodeIDs: nodeIDs,
-			LoadPublicParameters: pp.LoadPublicParameters{
+			PublicParameters: pp2.PublicParameters{
 				TMSID: driver.TMSID{Network: tms.Network, Channel: tms.Channel, Namespace: tms.Namespace},
 				Raw:   tp.PublicParameters(tms),
 			},

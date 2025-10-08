@@ -8,7 +8,6 @@ package tmsdeploy
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
@@ -46,6 +45,8 @@ type ViewFactory struct{}
 func (p *ViewFactory) NewView(in []byte) (view.View, error) {
 	f := &View{Deploy: &Deploy{}}
 	err := json.Unmarshal(in, f.Deploy)
-	assert.NoError(err, "failed unmarshalling input")
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed unmarshalling input")
+	}
 	return f, nil
 }
