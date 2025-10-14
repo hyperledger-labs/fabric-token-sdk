@@ -14,13 +14,22 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+var (
+	ErrAuditorSignaturesMissing = errors.New("auditor signatures missing")
+	ErrAuditorSignaturesPresent = errors.New("auditor signatures present")
+)
+
 func AuditingSignaturesValidate[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](c context.Context, ctx *Context[P, T, TA, IA, DS]) error {
 	if len(ctx.PP.Auditors()) == 0 {
 		// enforce no auditor signatures are attached
 		if len(ctx.TokenRequest.AuditorSignatures) != 0 {
-			return errors.New("auditor signatures are not empty")
+			return ErrAuditorSignaturesPresent
 		}
 		return nil
+	}
+
+	if len(ctx.TokenRequest.AuditorSignatures) == 0 {
+		return ErrAuditorSignaturesMissing
 	}
 
 	auditors := ctx.PP.Auditors()

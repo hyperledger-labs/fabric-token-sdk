@@ -31,7 +31,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 		{
 			name:   "No auditors but token requests with auditor signatures",
 			err:    true,
-			errMsg: "auditor signatures are not empty",
+			errMsg: ErrAuditorSignaturesPresent.Error(),
 			context: func() (*TestContext, TestCheck) {
 				pp := &mock.PublicParameters{}
 				pp.AuditorsReturns(nil)
@@ -101,6 +101,30 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 						},
 					},
 					Deserializer: des,
+				}, nil
+			},
+		},
+		{
+			name:   "it is an auditor but no signatures to verify",
+			err:    true,
+			errMsg: ErrAuditorSignaturesMissing.Error(),
+			context: func() (*TestContext, TestCheck) {
+				auditor := driver.Identity("auditor")
+				pp := &mock.PublicParameters{}
+				pp.AuditorsReturns([]identity.Identity{auditor})
+				ver := &mock.Verifier{}
+				ver.VerifyReturns(errors.New("signature is not valid"))
+				des := &mock.Deserializer{}
+				des.GetAuditorVerifierReturns(ver, nil)
+				sp := &mock.SignatureProvider{}
+				sp.HasBeenSignedByReturns(nil, errors.New("signature is not valid"))
+				return &TestContext{
+					PP: pp,
+					TokenRequest: &driver.TokenRequest{
+						AuditorSignatures: nil,
+					},
+					Deserializer:      des,
+					SignatureProvider: sp,
 				}, nil
 			},
 		},
