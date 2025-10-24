@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token_test
 
 import (
+	"strings"
 	"testing"
 
 	math "github.com/IBM/mathlib"
@@ -353,7 +354,9 @@ func TestTokenDeserialize(t *testing.T) {
 			err = tok2.Deserialize(raw)
 			if tt.wantErr {
 				assert.Error(t, err)
-				assert.EqualError(t, err, tt.expectedError)
+				errMsg := err.Error()
+				errMsg = strings.ReplaceAll(errMsg, "\u00a0", " ")
+				assert.Equal(t, tt.expectedError, errMsg)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tok, tok2)
@@ -463,7 +466,9 @@ func TestMetadataDeserialize(t *testing.T) {
 			err = metadata2.Deserialize(raw)
 			if tt.wantErr {
 				assert.Error(t, err)
-				assert.EqualError(t, err, tt.expectedError)
+				errMsg := err.Error()
+				errMsg = strings.ReplaceAll(errMsg, "\u00a0", " ")
+				assert.Equal(t, tt.expectedError, errMsg)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, metadata, metadata2)
