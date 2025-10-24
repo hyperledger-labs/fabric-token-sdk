@@ -147,12 +147,12 @@ clean-all-containers:
 .PHONY: lint
 lint:
 	@echo "Running Go Linters..."
-	golangci-lint run --color=always --timeout=4m
+	golangci-lint run --color=always --timeout=10m
 
 .PHONY: lint-auto-fix
 lint-auto-fix:
 	@echo "Running Go Linters with auto-fix..."
-	golangci-lint run --color=always --timeout=4m --fix
+	golangci-lint run --color=always --timeout=10m --fix
 
 .PHONY: install-linter-tool
 install-linter-tool:

@@ -57,7 +57,7 @@ func NewService(
 	// compute supported tokens
 	var upgradeSupportedTokenFormatList []token.Format
 	for _, precision := range []uint64{16, 32, 64} {
-		format, err := v1.SupportedTokenFormat(precision)
+		format, err := v1.ComputeTokenFormat(precision)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed computing fabtoken token format with precision [%d]", precision)
 		}
