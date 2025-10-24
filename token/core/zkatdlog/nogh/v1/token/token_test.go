@@ -10,13 +10,13 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -571,9 +571,4 @@ func TestUpgradeWitnessValidate(t *testing.T) {
 			}
 		})
 	}
-			t.Errorf("failed to deserialize token [owner: %s, putData: %v]: [%v]", owner, putData, err)
-		}
-		assert.Len(t, token2.Owner, len(token.Owner), "owner mismatch [owner: %s, putData: %v]", owner, putData)
-		assert.Equal(t, token.Data, token2.Data)
-	})
 }

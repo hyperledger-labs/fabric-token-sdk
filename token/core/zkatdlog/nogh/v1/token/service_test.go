@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
@@ -20,7 +21,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -364,7 +364,7 @@ func TestTokensService_Deobfuscate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts, output, metadata, err := tt.inputs()
 			assert.NoError(t, err)
-			_, _, _, _, err = ts.Deobfuscate(output, metadata)
+			_, _, _, _, err = ts.Deobfuscate(t.Context(), output, metadata)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.EqualError(t, err, tt.expectedError)
