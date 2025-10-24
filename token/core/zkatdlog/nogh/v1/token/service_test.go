@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token_test
 
 import (
+	"strings"
 	"testing"
 
 	math "github.com/IBM/mathlib"
@@ -233,7 +234,9 @@ func TestTokensService_Recipients(t *testing.T) {
 			identities, err := ts.Recipients(outputs)
 			if tt.wantErr {
 				assert.Error(t, err)
-				assert.EqualError(t, err, tt.expectedError)
+				errMsg := err.Error()
+				errMsg = strings.ReplaceAll(errMsg, "\u00a0", " ")
+				assert.Equal(t, tt.expectedError, errMsg)
 				assert.Nil(t, identities)
 			} else {
 				assert.NoError(t, err)
