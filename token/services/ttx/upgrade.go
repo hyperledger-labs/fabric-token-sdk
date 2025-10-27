@@ -109,9 +109,9 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 		return nil, errors.Wrapf(err, "failed to get recipient identity")
 	}
 	// - proof
-	tms := token.GetManagementService(context, token.WithTMSID(*tmsID))
-	if tms == nil {
-		return nil, errors.Errorf("tms not found for [%s]", tmsID)
+	tms, err := token.GetManagementService(context, token.WithTMSID(*tmsID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found for [%s]", tmsID)
 	}
 	proof, err := tms.TokensService().GenUpgradeProof(context.Context(), agreement.Challenge, r.Tokens)
 	if err != nil {
@@ -155,7 +155,11 @@ func (r *UpgradeTokensInitiatorView) WithRecipientData(data *RecipientData) *Upg
 
 func (r *UpgradeTokensInitiatorView) getRecipientData(context view.Context) (*token.TMSID, *RecipientData, error) {
 	if r.RecipientData != nil {
-		tmsID := token.GetManagementService(context, token.WithTMSID(r.TMSID)).ID()
+		tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to get token management service")
+		}
+		tmsID := tms.ID()
 		return &tmsID, r.RecipientData, nil
 	}
 
@@ -201,9 +205,9 @@ func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, er
 	}
 	logger.DebugfContext(context.Context(), "Received upgrade request")
 	// sample agreement ID
-	tms := token.GetManagementService(context, token.WithTMSID(agreement.TMSID))
-	if tms == nil {
-		return nil, errors.Errorf("tms not found for [%s]", agreement.TMSID)
+	tms, err := token.GetManagementService(context, token.WithTMSID(agreement.TMSID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found for [%s]", agreement.TMSID)
 	}
 	challenge, err := tms.TokensService().NewUpgradeChallenge()
 	if err != nil {

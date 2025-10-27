@@ -77,12 +77,15 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 
 	// 4. certify token output
 	logger.Debugf("certify commitments for [%v]...", cr.IDs)
-	tms := token2.GetManagementService(
+	tms, err := token2.GetManagementService(
 		context,
 		token2.WithNetwork(cr.Network),
 		token2.WithChannel(cr.Channel),
 		token2.WithNamespace(cr.Namespace),
 	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get tms for [%s:%s:%s]", cr.Network, cr.Channel, cr.Namespace)
+	}
 	walletKey := tms.Network() + ":" + tms.Channel() + ":" + tms.Namespace()
 	logger.Debugf("lookup wallet ID with key [%s]", walletKey)
 	walletID, ok := c.wallets[walletKey]
@@ -145,12 +148,16 @@ func NewCertificationRequestView(channel, ns string, certifier view.Identity, id
 func (i *CertificationRequestView) Call(context view.Context) (interface{}, error) {
 	// 1. prepare request
 	logger.Debugf("prepare certification request for [%v]", i.ids)
-	cm := token2.GetManagementService(
+	tms, err := token2.GetManagementService(
 		context,
 		token2.WithNetwork(i.network),
 		token2.WithChannel(i.channel),
 		token2.WithNamespace(i.ns),
-	).CertificationManager()
+	)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting tms for [%s:%s:%s]", i.network, i.channel, i.ns)
+	}
+	cm := tms.CertificationManager()
 	cr, err := cm.NewCertificationRequest(i.ids)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed creating certification request for [%v]", i.ids)

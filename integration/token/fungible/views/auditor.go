@@ -218,7 +218,8 @@ type CurrentHoldingView struct {
 }
 
 func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	assert.NoError(err)
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 
 	w := tms.WalletManager().AuditorWallet(context.Context(), "")

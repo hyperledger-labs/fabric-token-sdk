@@ -50,9 +50,9 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed to create endorser transaction")
 	}
 
-	tms := token2.GetManagementService(context, token2.WithTMSID(r.TMSID))
-	if tms == nil {
-		return nil, errors.Errorf("no token management service for [%s]", r.TMSID)
+	tms, err := token2.GetManagementService(context, token2.WithTMSID(r.TMSID))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "no token management service for [%s]", r.TMSID)
 	}
 	tx.SetProposal(tms.Namespace(), "", InvokeFunction)
 	if err := tx.EndorseProposal(); err != nil {
@@ -143,9 +143,9 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	}
 
 	logger.DebugfContext(context.Context(), "evaluate token request on TMS [%s]", tmsID)
-	tms := token2.GetManagementService(context, token2.WithTMSID(tmsID))
-	if tms == nil {
-		return nil, errors.Errorf("cannot find TMS for [%s]", tmsID)
+	tms, err := token2.GetManagementService(context, token2.WithTMSID(tmsID))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "cannot find TMS for [%s]", tmsID)
 	}
 
 	rws, err := tx.RWSet()

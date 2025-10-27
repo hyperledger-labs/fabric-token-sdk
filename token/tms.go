@@ -53,14 +53,13 @@ type ManagementService struct {
 // GetManagementService returns the management service for the passed options. If no options are passed,
 // the default management service is returned.
 // Options: WithNetwork, WithChannel, WithNamespace, WithPublicParameterFetcher, WithTMS, WithTMSID
-// The function panics if an error occurs. Use GetManagementServiceProvider(sp).GetManagementService(opts...) to handle any error directly
-func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {
+// The function returns ErrFailedToGetTMS in an error occurs.
+func GetManagementService(sp ServiceProvider, opts ...ServiceOption) (*ManagementService, error) {
 	ms, err := GetManagementServiceProvider(sp).GetManagementService(opts...)
 	if err != nil {
-		logger.Warnf("failed to get token manager service [%s]", err)
-		return nil
+		return nil, errors.Join(err, ErrFailedToGetTMS)
 	}
-	return ms
+	return ms, nil
 }
 
 // String returns a string representation of the TMS

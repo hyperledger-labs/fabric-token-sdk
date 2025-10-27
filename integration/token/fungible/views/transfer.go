@@ -86,7 +86,9 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, ServiceOpts(t.TMSID, ttx.WithRecipientData(t.RecipientData), ttx.WithRecipientWalletID(t.RecipientWalletID))...)
 	assert.NoError(err, "failed getting recipient")
 
-	wm := token2.GetManagementService(context, ServiceOpts(t.TMSID)...).WalletManager()
+	tms, err := token2.GetManagementService(context, ServiceOpts(t.TMSID)...)
+	assert.NoError(err, "failed getting management service")
+	wm := tms.WalletManager()
 	// if there are more recipients, ask for their recipient identity
 	var additionalRecipients []view.Identity
 	for _, action := range t.TransferAction {
@@ -250,7 +252,9 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
 	// If no specific tokens are requested, then a custom token selection process start
-	precision := token2.GetManagementService(context).PublicParametersManager().PublicParameters().Precision()
+	tms, err := token2.GetManagementService(context)
+	assert.NoError(err, "failed getting management service")
+	precision := tms.PublicParametersManager().PublicParameters().Precision()
 	amount, err := token.UInt64ToQuantity(t.Amount, precision)
 	assert.NoError(err, "failed to convert to quantity")
 
@@ -499,7 +503,9 @@ type TokenSelectorUnlockView struct {
 }
 
 func (t *TokenSelectorUnlockView) Call(context view.Context) (interface{}, error) {
-	sm, err := token2.GetManagementService(context).SelectorManager()
+	tms, err := token2.GetManagementService(context)
+	assert.NoError(err, "failed getting management service")
+	sm, err := tms.SelectorManager()
 	assert.NoError(err, "failed to get selector manager")
 	assert.NoError(sm.Unlock(context.Context(), t.TxID), "failed to unlock tokens locked by transaction [%s]", t.TxID)
 
@@ -563,7 +569,9 @@ func (t *MaliciousTransferView) Call(context view.Context) (txID interface{}, er
 	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, ServiceOpts(t.TMSID, ttx.WithRecipientData(t.RecipientData))...)
 	assert.NoError(err, "failed getting recipient")
 
-	wm := token2.GetManagementService(context, ServiceOpts(t.TMSID)...).WalletManager()
+	tms, err := token2.GetManagementService(context, ServiceOpts(t.TMSID)...)
+	assert.NoError(err, "failed getting management service")
+	wm := tms.WalletManager()
 
 	// match recipient EID
 	eID, err := wm.GetEnrollmentID(context.Context(), recipient)

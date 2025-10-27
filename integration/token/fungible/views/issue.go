@@ -55,7 +55,9 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed getting recipient identity")
 
 	// match recipient EID
-	eID, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...).WalletManager().GetEnrollmentID(context.Context(), recipient)
+	tms, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
+	assert.NoError(err)
+	eID, err := tms.WalletManager().GetEnrollmentID(context.Context(), recipient)
 	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
 	assert.True(strings.HasPrefix(eID, p.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
 
@@ -67,7 +69,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(wallet, "issuer wallet [%s] not found", p.IssuerWallet)
 	if p.TokenType == "USD" {
 		// Retrieve the list of issued tokens using a specific wallet for a given token type.
-		precision := token.GetManagementService(context, ServiceOpts(p.TMSID)...).PublicParametersManager().PublicParameters().Precision()
+		precision := tms.PublicParametersManager().PublicParameters().Precision()
 
 		history, err := wallet.ListIssuedTokens(context.Context(), ttx.WithType(p.TokenType))
 		assert.NoError(err, "failed getting history for token type [%s]", p.TokenType)

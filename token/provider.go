@@ -220,59 +220,50 @@ func (p *tmsNormalizer) Normalize(opt *ServiceOptions) (*ServiceOptions, error) 
 	if len(configs) == 0 {
 		return nil, errors.Errorf("no token management service configs found")
 	}
-	var config driver.TMSID
-	if len(opt.Network) == 0 {
-		config = configs[0].ID()
-		opt.Network = config.Network
-	} else {
-		// search
-		found := false
-		for _, manager := range configs {
-			if manager.ID().Network == opt.Network {
-				found = true
-				config = manager.ID()
+
+	logger.Debugf("normalizing opts [%v]", opt)
+	if len(opt.Network) != 0 {
+		// filter configurations by netowkr
+		for i, c := range configs {
+			if c.ID().Network != opt.Network {
+				configs = append(configs[:i], configs[i+1:]...)
 			}
 		}
-		if !found {
+		if len(configs) == 0 {
 			return nil, errors.Errorf("no token management service config found for network [%s]", opt.Network)
 		}
 	}
 
-	if len(opt.Channel) == 0 {
-		opt.Channel = config.Channel
-	}
-	if opt.Channel != config.Channel {
-		// is there another TMS with the same network, but different channel? If yes, don't fail
-		found := false
-		for _, manager := range configs {
-			tms := manager.ID()
-			if tms.Network == opt.Network && tms.Channel == opt.Channel {
-				found = true
-				config = tms
+	if len(opt.Channel) != 0 {
+		// filter configurations by channel
+		for i, c := range configs {
+			if c.ID().Channel != opt.Channel {
+				configs = append(configs[:i], configs[i+1:]...)
 			}
 		}
-		if !found {
-			return nil, errors.Errorf("invalid channel [%s], expected [%s]", opt.Channel, config.Channel)
+		if len(configs) == 0 {
+			return nil, errors.Errorf("no token management service config found for network and channel [%s:%s]", opt.Network, opt.Channel)
 		}
 	}
 
-	if len(opt.Namespace) == 0 {
-		opt.Namespace = config.Namespace
-	}
-	if opt.Namespace != config.Namespace {
-		// is there another TMS with the same network and channel, but different namespace? If yes, don't fail
-		found := false
-		for _, manager := range configs {
-			tms := manager.ID()
-			if tms.Network == opt.Network && tms.Channel == opt.Channel && tms.Namespace == opt.Namespace {
-				found = true
-				config = tms
+	if len(opt.Namespace) != 0 {
+		// filter configurations by namespace
+		for i, c := range configs {
+			if c.ID().Namespace != opt.Namespace {
+				configs = append(configs[:i], configs[i+1:]...)
 			}
 		}
-		if !found {
-			return nil, errors.Errorf("invalid namespace [%s], expected [%s]", opt.Namespace, config.Namespace)
+		if len(configs) == 0 {
+			return nil, errors.Errorf("no token management service config found for network, channel, and namespace [%s:%s:%s]", opt.Network, opt.Channel, opt.Namespace)
 		}
 	}
+
+	// if we reach this point there must be at least one configuration
+	logger.Debugf("found [%d] matching configurations for opts [%v], take the first one", len(configs), opt)
+	id := configs[0].ID()
+	opt.Network = id.Network
+	opt.Channel = id.Channel
+	opt.Namespace = id.Namespace
 
 	// last pass
 	return p.normalizer.Normalize(opt)

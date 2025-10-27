@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -32,7 +33,8 @@ type BalanceView struct {
 }
 
 func (b *BalanceView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(b.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(b.TMSID))
+	assert.NoError(err)
 	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)

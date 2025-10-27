@@ -31,14 +31,14 @@ func NewRegisterView(network string, channel string, namespace string, wallet st
 
 func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 	// If the tms does not support graph hiding, skip
-	tms := token.GetManagementService(
+	tms, err := token.GetManagementService(
 		context,
 		token.WithNetwork(r.Network),
 		token.WithChannel(r.Channel),
 		token.WithNamespace(r.Namespace),
 	)
-	if tms == nil {
-		return nil, errors.Errorf("tms not found [%s:%s:%s]", r.Namespace, r.Channel, r.Namespace)
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found [%s:%s:%s]", r.Namespace, r.Channel, r.Namespace)
 	}
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {

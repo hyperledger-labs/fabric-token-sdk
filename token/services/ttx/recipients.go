@@ -137,9 +137,9 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 	results := make([]token.Identity, len(f.Recipients))
 	local := make([]bool, len(f.Recipients))
 	var err error
-	tms := token.GetManagementService(context, token.WithTMSID(f.TMSID))
-	if tms == nil {
-		return nil, errors.Errorf("failed getting token management service [%s]", f.TMSID)
+	tms, err := token.GetManagementService(context, token.WithTMSID(f.TMSID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting token management service [%s]", f.TMSID)
 	}
 	multiSig := len(f.Recipients) > 1
 	for i, recipient := range f.Recipients {
@@ -209,7 +209,11 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 	}
-	wm := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager()
+	tms, err := token.GetManagementService(context, token.WithTMSID(f.TMSID))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get token management service")
+	}
+	wm := tms.WalletManager()
 	logger.DebugfContext(context.Context(), "Register recipient identity")
 	if err := wm.RegisterRecipientIdentity(context.Context(), recipientData); err != nil {
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
@@ -311,9 +315,9 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		wallet = string(recipientRequest.WalletID)
 	}
 	logger.DebugfContext(context.Context(), "Respond request recipient identity using wallet [%s]", wallet)
-	tms := token.GetManagementService(context, token.WithTMSID(recipientRequest.TMSID))
-	if tms == nil {
-		return nil, errors.Errorf("failed getting token management service [%s]", recipientRequest.TMSID)
+	tms, err := token.GetManagementService(context, token.WithTMSID(recipientRequest.TMSID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting token management service [%s]", recipientRequest.TMSID)
 	}
 	w := tms.WalletManager().OwnerWallet(context.Context(), wallet)
 	if w == nil {
@@ -344,8 +348,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 
 	// Step 3: send the public key back to the invoker
 	logger.DebugfContext(context.Context(), "Send recipient identity response to %s", session.Info().Caller)
-	err := session.Send(recipientData)
-	if err != nil {
+	if err := session.Send(recipientData); err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
@@ -478,7 +481,10 @@ func ExchangeRecipientIdentities(context view.Context, walletID string, recipien
 }
 
 func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
-	ts := token.GetManagementService(context, token.WithTMSID(f.TMSID))
+	ts, err := token.GetManagementService(context, token.WithTMSID(f.TMSID))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get token management service")
+	}
 
 	if w := ts.WalletManager().OwnerWallet(context.Context(), f.Other); w != nil {
 		other, err := w.GetRecipientIdentity(context.Context())
@@ -570,7 +576,10 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, err
 	}
 
-	ts := token.GetManagementService(context, token.WithTMSID(request.TMSID))
+	ts, err := token.GetManagementService(context, token.WithTMSID(request.TMSID))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get token management service")
+	}
 	other := request.RecipientData.Identity
 	if err := ts.WalletManager().RegisterRecipientIdentity(context.Context(), &RecipientData{
 		Identity: other, AuditInfo: request.RecipientData.AuditInfo, TokenMetadata: request.RecipientData.TokenMetadata,

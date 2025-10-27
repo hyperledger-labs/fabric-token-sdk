@@ -71,7 +71,8 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		assert.NoError(err, "failed to receive the preImage")
 
 		// double-check the value of the key
-		tms := token.GetManagementService(context, token.WithTMSID(r.ScriptTMSID))
+		tms, err := token.GetManagementService(context, token.WithTMSID(r.ScriptTMSID))
+		assert.NoError(err, "failed getting management service")
 		network := network.GetInstance(context, tms.Network(), tms.Channel())
 		assert.NotNil(network, "failed getting network")
 		ledger, err := network.Ledger()

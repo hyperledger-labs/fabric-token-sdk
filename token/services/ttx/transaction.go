@@ -51,10 +51,13 @@ func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transacti
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed compiling tx options")
 	}
-	tms := token.GetManagementService(
+	tms, err := token.GetManagementService(
 		context,
 		token.WithTMSID(txOpts.TMSID),
 	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get token management service")
+	}
 	net := network.GetInstance(context, tms.Network(), tms.Channel())
 	if net == nil {
 		return nil, errors.New("failed to get network")
@@ -78,10 +81,13 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 
 	if txOpts.AnonymousTransaction && signer == nil {
 		// set the signer to anonymous
-		tms := token.GetManagementService(
+		tms, err := token.GetManagementService(
 			context,
 			token.WithTMSID(txOpts.TMSID),
 		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get token management service")
+		}
 		net := network.GetInstance(context, tms.Network(), tms.Channel())
 		if net == nil {
 			return nil, errors.New("failed to get network")
@@ -93,10 +99,13 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		signer = id
 	}
 
-	tms := token.GetManagementService(
+	tms, err := token.GetManagementService(
 		context,
 		token.WithTMSID(txOpts.TMSID),
 	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get token management service")
+	}
 	networkService := network.GetInstance(context, tms.Network(), tms.Channel())
 	networkProvider := network.GetProvider(context).GetNetwork
 
@@ -152,11 +161,14 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 		return nil, err
 	}
 	logger.DebugfContext(context.Context(), "unmarshalling tx, id [%s]", tx.TxID)
-	tms := token.GetManagementService(context,
+	tms, err := token.GetManagementService(context,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(tx.Namespace()),
 	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get token management service")
+	}
 	tx.TMS = tms
 	tx.NetworkProvider = networkProvider
 	tx.TokenRequest.SetTokenService(tms)

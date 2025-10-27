@@ -57,7 +57,8 @@ type GetRevocationHandleView struct {
 }
 
 func (r *GetRevocationHandle) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 	w := tms.WalletManager().OwnerWallet(context.Context(), r.Wallet)
 	assert.NotNil(w, "wallet not found [%s]", r.Wallet)

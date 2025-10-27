@@ -31,12 +31,15 @@ func (r *GetTokenView) Call(context view.Context) (interface{}, error) {
 	if len(r.IDs) == 0 {
 		return nil, errors.Errorf("no token ids provided")
 	}
-	tms := token.GetManagementService(
+	tms, err := token.GetManagementService(
 		context,
 		token.WithNetwork(r.Network),
 		token.WithChannel(r.Channel),
 		token.WithNamespace(r.Namespace),
 	)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token management service")
+	}
 	tokens, err := network.GetInstance(context, tms.Network(), tms.Channel()).QueryTokens(context.Context(), tms.Namespace(), r.IDs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying tokens")

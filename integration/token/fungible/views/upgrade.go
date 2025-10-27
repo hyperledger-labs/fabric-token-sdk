@@ -41,7 +41,8 @@ type TokensUpgradeInitiatorView struct {
 
 func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, error) {
 	// First, the initiator selects the tokens to upgrade, namely those that are unsupported.
-	tms := token.GetManagementService(context, token.WithTMSID(i.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(i.TMSID))
+	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "failed getting token management service for [%s]", i.TMSID)
 	w := tms.WalletManager().OwnerWallet(context.Context(), i.Wallet)
 	assert.NotNil(w, "cannot find wallet [%s:%s]", i.TMSID, i.Wallet)
@@ -147,7 +148,9 @@ func (p *TokensUpgradeResponderView) Call(context view.Context) (interface{}, er
 		// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
 		// have been issued already including the current request.
 		// No check is performed for other types.
-		wallet := token.GetManagementService(context, token.WithTMSID(upgradeRequest.TMSID)).WalletManager().IssuerWallet(context.Context(), "")
+		tms, err := token.GetManagementService(context, token.WithTMSID(upgradeRequest.TMSID))
+		assert.NoError(err, "failed to lookup TMS [%s]", upgradeRequest.TMSID)
+		wallet := tms.WalletManager().IssuerWallet(context.Context(), "")
 		assert.NotNil(wallet, "issuer wallet not found")
 
 		// At this point, the issuer is ready to prepare the token transaction.
