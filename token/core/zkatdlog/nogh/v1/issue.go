@@ -10,6 +10,7 @@ import (
 	"context"
 	"time"
 
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
@@ -195,23 +196,55 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed metadata
-func (s *IssueService) VerifyIssue(ia driver.IssueAction, metadata []*driver.IssueOutputMetadata) error {
+func (s *IssueService) VerifyIssue(ctx context.Context, ia driver.IssueAction, outputMetadata []*driver.IssueOutputMetadata) error {
+	// prepare
 	if ia == nil {
-		return errors.New("failed to verify issue: nil issue action")
+		return errors.Errorf("nil action")
 	}
 	action, ok := ia.(*issue.Action)
 	if !ok {
-		return errors.New("failed to verify issue: expected *zkatdlog.IssueAction")
+		return errors.Errorf("expected *zkatdlog.IssueAction")
 	}
-	pp := s.PublicParametersManager.PublicParameters()
-	coms, err := action.GetCommitments()
-	if err != nil {
-		return errors.New("failed to verify issue")
+	if err := action.Validate(); err != nil {
+		return errors.Wrap(err, "invalid action")
 	}
-	// todo check tokenInfo
-	return issue.NewVerifier(
-		coms,
-		pp.(*setup.PublicParams)).Verify(action.GetProof())
+	if len(action.Outputs) != len(outputMetadata) {
+		return errors.Errorf("number of outputs [%d] does not match number of metadata entries [%d]", len(action.Outputs), len(outputMetadata))
+	}
+
+	// check the metadata and extract the commitment
+	pp := s.PublicParametersManager.PublicParams()
+	coms := make([]*math.G1, len(action.Outputs))
+	for i := range len(action.Outputs) {
+		coms[i] = action.Outputs[i].Data
+
+		if outputMetadata[i] == nil || len(outputMetadata[i].OutputMetadata) == 0 {
+			return errors.Errorf("missing output metadata for output index [%d]", i)
+		}
+		// token information in cleartext
+		metadata := &token2.Metadata{}
+		if err := metadata.Deserialize(outputMetadata[i].OutputMetadata); err != nil {
+			return errors.Wrap(err, "failed unmarshalling metadata")
+		}
+		if err := metadata.Validate(); err != nil {
+			return errors.Wrap(err, "invalid metadata")
+		}
+
+		// check that token info matches output.
+		// If so, return token in cleartext. Else return an error.
+		tok, err := action.Outputs[i].ToClear(metadata, pp)
+		if err != nil {
+			return errors.Wrap(err, "failed getting token in the clear")
+		}
+		s.Logger.DebugfContext(ctx, "transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
+	}
+
+	// check the proof
+	if err := issue.NewVerifier(coms, pp).Verify(action.GetProof()); err != nil {
+		return errors.Wrap(err, "failed to verify issue proof")
+	}
+
+	return nil
 }
 
 // DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
