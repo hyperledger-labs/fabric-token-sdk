@@ -100,7 +100,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(ftsconfig.NewService),
 		p.Container().Provide(
 			tms.NewConfigServiceWrapper,
-			dig.As(new(ftscore.ConfigService), new(db2.ConfigService), new(token.ConfigService)),
+			dig.As(new(ftscore.ConfigService), new(db2.ConfigService), new(tms.ConfigService)),
 		),
 
 		// network service
@@ -130,7 +130,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(selectorProviders[sdriver.Driver(p.ConfigService().GetString("token.selector.driver"))], dig.As(new(token.SelectorManagerProvider))),
 		p.Container().Provide(network2.NewCertificationClientProvider, dig.As(new(token.CertificationClientProvider))),
 		p.Container().Provide(token.NewManagementServiceProvider),
-		p.Container().Provide(token.NewTMSNormalizer, dig.As(new(token.TMSNormalizer))),
+		p.Container().Provide(tms.NewTMSNormalizer, dig.As(new(token.TMSNormalizer))),
 		p.Container().Provide(
 			digutils.Identity[*token.ManagementServiceProvider](),
 			dig.As(
