@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -112,7 +113,9 @@ type ListAcceptedTransactionsView struct {
 
 func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, error) {
 	// Get query executor
-	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(p.TMSID)...))
+	tms, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
+	assert.NoError(err, "failed getting management service")
+	owner := ttx.NewOwner(context, tms)
 	it, err := owner.Transactions(context.Context(), ttxdb.QueryTransactionsParams{
 		SenderWallet:    p.SenderWallet,
 		RecipientWallet: p.RecipientWallet,
@@ -150,7 +153,9 @@ type TransactionInfoView struct {
 }
 
 func (t *TransactionInfoView) Call(context view.Context) (interface{}, error) {
-	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(t.TMSID)...))
+	tms, err := token.GetManagementService(context, ServiceOpts(t.TMSID)...)
+	assert.NoError(err, "failed getting management service")
+	owner := ttx.NewOwner(context, tms)
 	info, err := owner.TransactionInfo(context.Context(), t.TransactionID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting transaction info")

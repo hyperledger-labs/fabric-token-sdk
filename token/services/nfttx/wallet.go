@@ -40,7 +40,10 @@ func WithType(tokenType token2.Type) token.ListTokensOption {
 
 // MyWallet returns the default wallet, nil if not found.
 func MyWallet(context view.Context, opts ...token.ServiceOption) *OwnerWallet {
-	tms := token.GetManagementService(context, opts...)
+	tms, err := token.GetManagementService(context, opts...)
+	if err != nil {
+		return nil
+	}
 	w := tms.WalletManager().OwnerWallet(context.Context(), "")
 	if w == nil {
 		return nil
@@ -51,12 +54,15 @@ func MyWallet(context view.Context, opts ...token.ServiceOption) *OwnerWallet {
 // MyWalletFromTx returns the default wallet for the tuple (network, channel, namespace) as identified by the passed
 // transaction. Returns nil if no wallet is found.
 func MyWalletFromTx(context view.Context, tx *Transaction) *OwnerWallet {
-	tms := token.GetManagementService(
+	tms, err := token.GetManagementService(
 		context,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(tx.Namespace()),
 	)
+	if err != nil {
+		return nil
+	}
 	w := tms.WalletManager().OwnerWallet(context.Context(), "")
 	if w == nil {
 		return nil
@@ -68,7 +74,10 @@ func MyWalletFromTx(context view.Context, tx *Transaction) *OwnerWallet {
 // If the passed id is empty, GetWallet has the same behaviour of MyWallet.
 // It returns nil, if no wallet is found.
 func GetWallet(context view.Context, id string, opts ...token.ServiceOption) *OwnerWallet {
-	tms := token.GetManagementService(context, opts...)
+	tms, err := token.GetManagementService(context, opts...)
+	if err != nil {
+		return nil
+	}
 	w := tms.WalletManager().OwnerWallet(context.Context(), id)
 	if w == nil {
 		return nil
@@ -80,7 +89,10 @@ func GetWallet(context view.Context, id string, opts ...token.ServiceOption) *Ow
 // If the passed id is empty, GetWalletForChannel has the same behaviour of MyWalletFromTx.
 // It returns nil, if no wallet is found.
 func GetWalletForChannel(context view.Context, channel, id string, opts ...token.ServiceOption) *OwnerWallet {
-	tms := token.GetManagementService(context, append(opts, token.WithChannel(channel))...)
+	tms, err := token.GetManagementService(context, append(opts, token.WithChannel(channel))...)
+	if err != nil {
+		return nil
+	}
 	w := tms.WalletManager().OwnerWallet(context.Context(), id)
 	if w == nil {
 		return nil
@@ -90,7 +102,11 @@ func GetWalletForChannel(context view.Context, channel, id string, opts ...token
 
 // MyIssuerWallet returns the default issuer wallet, nil if not found
 func MyIssuerWallet(context view.Context, opts ...token.ServiceOption) *token.IssuerWallet {
-	w := token.GetManagementService(context, opts...).WalletManager().IssuerWallet(context.Context(), "")
+	tms, err := token.GetManagementService(context, opts...)
+	if err != nil {
+		return nil
+	}
+	w := tms.WalletManager().IssuerWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}
@@ -101,7 +117,11 @@ func MyIssuerWallet(context view.Context, opts ...token.ServiceOption) *token.Is
 // If the passed id is empty, GetIssuerWallet has the same behaviour of MyIssuerWallet.
 // It returns nil, if no wallet is found.
 func GetIssuerWallet(context view.Context, id string, opts ...token.ServiceOption) *token.IssuerWallet {
-	w := token.GetManagementService(context, opts...).WalletManager().IssuerWallet(context.Context(), id)
+	tms, err := token.GetManagementService(context, opts...)
+	if err != nil {
+		return nil
+	}
+	w := tms.WalletManager().IssuerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
@@ -112,7 +132,11 @@ func GetIssuerWallet(context view.Context, id string, opts ...token.ServiceOptio
 // If the passed id is empty, GetIssuerWalletForChannel has the same behaviour of MyIssuerWallet.
 // It returns nil, if no wallet is found.
 func GetIssuerWalletForChannel(context view.Context, channel, id string, opts ...token.ServiceOption) *token.IssuerWallet {
-	w := token.GetManagementService(context, append(opts, token.WithChannel(channel))...).WalletManager().IssuerWallet(context.Context(), id)
+	tms, err := token.GetManagementService(context, append(opts, token.WithChannel(channel))...)
+	if err != nil {
+		return nil
+	}
+	w := tms.WalletManager().IssuerWallet(context.Context(), id)
 	if w == nil {
 		return nil
 	}
@@ -121,7 +145,11 @@ func GetIssuerWalletForChannel(context view.Context, channel, id string, opts ..
 
 // MyAuditorWallet returns the default auditor wallet, nil if not found.
 func MyAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.AuditorWallet {
-	w := token.GetManagementService(context, opts...).WalletManager().AuditorWallet(context.Context(), "")
+	tms, err := token.GetManagementService(context, opts...)
+	if err != nil {
+		return nil
+	}
+	w := tms.WalletManager().AuditorWallet(context.Context(), "")
 	if w == nil {
 		return nil
 	}

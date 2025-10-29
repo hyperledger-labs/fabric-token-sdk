@@ -37,7 +37,8 @@ type BalanceView struct {
 }
 
 func (b *BalanceView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, ServiceOpts(b.TMSID)...)
+	tms, err := token.GetManagementService(context, ServiceOpts(b.TMSID)...)
+	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "TMSID is nil")
 	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
 	if wallet == nil {
@@ -99,7 +100,8 @@ type CoOwnedBalanceView struct {
 }
 
 func (b *CoOwnedBalanceView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, ServiceOpts(b.TMSID)...)
+	tms, err := token.GetManagementService(context, ServiceOpts(b.TMSID)...)
+	assert.NoError(err, "failed getting management service")
 	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)

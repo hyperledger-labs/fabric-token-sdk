@@ -135,9 +135,9 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			}
 		}
 		logger.DebugfContext(context.Context(), "Fetched request from session")
-		tms := token.GetManagementService(context, token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
-		if tms == nil {
-			return errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
+		tms, err := token.GetManagementService(context, token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
+		if err != nil {
+			return errors.Wrapf(err, "failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
 		}
 
 		if !tms.SigService().IsMe(context.Context(), signatureRequest.Signer) {

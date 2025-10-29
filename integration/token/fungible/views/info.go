@@ -39,7 +39,8 @@ type GetEnrollmentIDView struct {
 }
 
 func (r *GetEnrollmentIDView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, ServiceOpts(r.TMSID)...)
+	tms, err := token.GetManagementService(context, ServiceOpts(r.TMSID)...)
+	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 	w := tms.WalletManager().OwnerWallet(context.Context(), r.Wallet)
 	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
@@ -65,9 +66,9 @@ type CheckPublicParamsMatchView struct {
 }
 
 func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
+	tms, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
+	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS")
-
 	assert.NotNil(tms.PublicParametersManager().PublicParameters(), "failed to validate local public parameters")
 
 	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
@@ -114,7 +115,8 @@ type WhoDeletedTokenView struct {
 }
 
 func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(w.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(w.TMSID))
+	assert.NoError(err, "failed to lookup TMS [%s]", w.TMSID)
 	assert.NotNil(tms, "failed to get TMS [%s]", w.TMSID)
 	who, deleted, err := tms.Vault().NewQueryEngine().WhoDeletedTokens(context.Context(), w.TokenIDs...)
 	assert.NoError(err, "failed to lookup who deleted tokens")
@@ -143,7 +145,8 @@ type GetPublicParamsView struct {
 }
 
 func (p *GetPublicParamsView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS")
 	return GetTMSPublicParams(tms), nil
 }
@@ -172,7 +175,8 @@ type UpdatePublicParamsView struct {
 }
 
 func (p *UpdatePublicParamsView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, ServiceOpts(&p.TMSID)...)
+	tms, err := token.GetManagementService(context, ServiceOpts(&p.TMSID)...)
+	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS")
 	assert.NotNil(tms.PublicParametersManager().PublicParameters(), "failed to validate local public parameters")
 	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
@@ -201,7 +205,8 @@ type DoesWalletExistView struct {
 }
 
 func (p *DoesWalletExistView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS")
 	switch p.WalletType {
 	case OwnerWallet:
@@ -239,7 +244,10 @@ type TxStatusView struct {
 }
 
 func (p *TxStatusView) Call(context view.Context) (interface{}, error) {
-	owner := ttx.NewOwner(context, token.GetManagementService(context, token.WithTMSID(p.TMSID)))
+	tms, err := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
+	assert.NotNil(tms, "failed to get TMS [%s]", p.TMSID)
+	owner := ttx.NewOwner(context, tms)
 	vc, message, err := owner.GetStatus(context.Context(), p.TxID)
 	assert.NoError(err, "failed to retrieve status of [%s]", p.TxID)
 	return &TxStatusResponse{

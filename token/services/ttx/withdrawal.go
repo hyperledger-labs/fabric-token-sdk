@@ -116,7 +116,11 @@ func (r *RequestWithdrawalView) WithRecipientData(data *RecipientData) *RequestW
 
 func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*token.TMSID, *RecipientData, error) {
 	if r.RecipientData != nil {
-		tmsID := token.GetManagementService(context, token.WithTMSID(r.TMSID)).ID()
+		tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "tms not found for [%s]", r.TMSID)
+		}
+		tmsID := tms.ID()
 		return &tmsID, r.RecipientData, nil
 	}
 
@@ -163,9 +167,9 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	}
 
 	logger.DebugfContext(context.Context(), "Received withdrawal request")
-	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
-	if tms == nil {
-		return nil, errors.Errorf("tms not found for [%s]", request.TMSID)
+	tms, err := token.GetManagementService(context, token.WithTMSID(request.TMSID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found for [%s]", request.TMSID)
 	}
 
 	if err := tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {

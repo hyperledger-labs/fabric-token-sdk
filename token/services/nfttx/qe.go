@@ -37,7 +37,10 @@ type QueryExecutor struct {
 }
 
 func NewQueryExecutor(sp token.ServiceProvider, wallet string, precision uint64, opts ...token.ServiceOption) (*QueryExecutor, error) {
-	tms := token.GetManagementService(sp, opts...)
+	tms, err := token.GetManagementService(sp, opts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get token management service")
+	}
 	qe := tms.Vault().NewQueryEngine()
 	return &QueryExecutor{
 		selector: NewFilter(

@@ -58,7 +58,10 @@ func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Has
 		return nil, errors.Errorf("passed hash endcoding is not available [%d]", hashEncoding)
 	}
 
-	tms := token.GetManagementService(sp, opts...)
+	tms, err := token.GetManagementService(sp, opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get management service")
+	}
 	network := network.GetInstance(sp, tms.Network(), tms.Channel())
 	if network == nil {
 		return nil, errors.Errorf("cannot find network [%s:%s]", tms.Namespace(), tms.Channel())

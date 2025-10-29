@@ -129,9 +129,9 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 	logger.DebugfContext(context.Context(), "Notify %d parties about request", len(c.parties))
 	logger.DebugfContext(context.Context(), "Request [%v]", len(c.parties), request)
 	counter := 0
-	tms := token2.GetManagementService(context, token2.WithTMSID(c.options.TMSID()))
-	if tms == nil {
-		return nil, errors.Errorf("failed getting TMS for [%s]", c.options.TMSID())
+	tms, err := token2.GetManagementService(context, token2.WithTMSID(c.options.TMSID()))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", c.options.TMSID())
 	}
 	areMe := tms.SigService().AreMe(context.Context(), c.parties...)
 	for _, party := range c.parties {

@@ -50,7 +50,10 @@ func NewCollectActionsView(tx *Transaction, actions ...*ActionTransfer) *collect
 }
 
 func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
-	ts := token.GetManagementService(context, token.WithChannel(c.tx.Channel()))
+	ts, err := token.GetManagementService(context, token.WithChannel(c.tx.Channel()))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get token management service")
+	}
 
 	for _, actionTransfer := range c.actions.Transfers {
 		if w := ts.WalletManager().OwnerWallet(context.Context(), actionTransfer.From); w != nil {

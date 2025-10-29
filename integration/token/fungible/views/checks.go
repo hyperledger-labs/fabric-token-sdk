@@ -50,7 +50,8 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// check
-	tms := token.GetManagementService(context, token.WithTMSID(m.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(m.TMSID))
+	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "failed to get default tms")
 	if m.Auditor {
 		auditorWallet := tms.WalletManager().AuditorWallet(context.Context(), m.AuditorWalletID)
@@ -82,7 +83,8 @@ type PruneInvalidUnspentTokensView struct {
 }
 
 func (p *PruneInvalidUnspentTokensView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "cannot find tms [%s]", p.TMSID)
 	tokens, err := tokens.GetService(context, tms.ID())
 	assert.NoError(err, "failed to get tokens for [%s]", p.TMSID)
@@ -109,7 +111,8 @@ type ListVaultUnspentTokensView struct {
 }
 
 func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, error) {
-	net := token.GetManagementService(context, token.WithTMSID(l.TMSID))
+	net, err := token.GetManagementService(context, token.WithTMSID(l.TMSID))
+	assert.NoError(err, "failed getting management service")
 	assert.NotNil(net, "cannot find tms [%s]", l.TMSID)
 	return net.Vault().NewQueryEngine().ListUnspentTokens(context.Context())
 }
@@ -134,7 +137,8 @@ type CheckIfExistsInVaultView struct {
 }
 
 func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(c.TMSID))
+	tms, err := token.GetManagementService(context, token.WithTMSID(c.TMSID))
+	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "cannot find tms [%s]", c.TMSID)
 	qe := tms.Vault().NewQueryEngine()
 	var IDs []*token2.ID
