@@ -141,8 +141,8 @@ func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs 
 	witness := make([]*Metadata, len(values))
 	for i, v := range values {
 		witness[i] = &Metadata{Value: math.Curves[curve].NewZrFromUint64(v), BlindingFactor: bfs[i]}
+		witness[i].Type = tokenType
 	}
-	witness[0].Type = tokenType
 	return witness
 }
 
