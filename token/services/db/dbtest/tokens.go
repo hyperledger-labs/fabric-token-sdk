@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/common"
@@ -681,9 +680,9 @@ func TPublicParams(t *testing.T, db TestTokenDB) {
 	t.Helper()
 	ctx := t.Context()
 	b := []byte("test bytes")
-	bHash := hash.Hashable(b).Raw()
+	bHash := utils.Hashable(b).Raw()
 	b1 := []byte("test bytes1")
-	b1Hash := hash.Hashable(b1).Raw()
+	b1Hash := utils.Hashable(b1).Raw()
 
 	res, err := db.PublicParams(ctx)
 	assert.NoError(t, err) // not found

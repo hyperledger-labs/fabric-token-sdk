@@ -80,7 +80,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 		return
 	}
 
-	startingBlock := finality.MaxUint64(FirstBlock, lastBlock-NumberPastBlocks)
+	startingBlock := max(FirstBlock, lastBlock-NumberPastBlocks)
 	// startingBlock := uint64(0)
 	logger.DebugfContext(ctx, "start scanning blocks starting from [%d], looking for remaining keys [%s]", startingBlock, keySet)
 

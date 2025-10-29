@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -21,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 )
@@ -241,7 +241,7 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling message to sign")
 	}
-	logger.DebugfContext(context.Context(), "Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor, hash.Hashable(signed), a.tx.ID())
+	logger.DebugfContext(context.Context(), "Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor, utils.Hashable(signed), a.tx.ID())
 
 	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(context.Context(), auditorID)
@@ -251,13 +251,13 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 		}
 		logger.DebugfContext(context.Context(), "Verify auditor signature")
 		if err := v.Verify(signed, signature); err != nil {
-			logger.ErrorfContext(context.Context(), "failed verifying auditor signature [%s][%s][%s]", auditorID, hash.Hashable(signed), a.tx.TokenRequest.Anchor)
+			logger.ErrorfContext(context.Context(), "failed verifying auditor signature [%s][%s][%s]", auditorID, utils.Hashable(signed), a.tx.TokenRequest.Anchor)
 		} else {
-			logger.DebugfContext(context.Context(), "auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), hash.Hashable(signed))
+			logger.DebugfContext(context.Context(), "auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), utils.Hashable(signed))
 			return auditorID, nil
 		}
 	}
-	return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
+	return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", utils.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 }
 
 type AuditApproveView struct {
@@ -314,13 +314,13 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 		return errors.Wrapf(err, "failed marshalling tx [%s] to audit", a.tx.ID())
 	}
 
-	logger.DebugfContext(context.Context(), "Audit Approve [%s][%s][%s]", aid, hash.Hashable(raw), a.tx.TokenRequest.Anchor)
+	logger.DebugfContext(context.Context(), "Audit Approve [%s][%s][%s]", aid, utils.Hashable(raw), a.tx.TokenRequest.Anchor)
 	sigma, err := signer.Sign(raw)
 	if err != nil {
 		return errors.Wrapf(err, "failed sign audit message for tx [%s]", a.tx.ID())
 	}
 
-	logger.DebugfContext(context.Context(), "auditor sending sigma back", hash.Hashable(sigma))
+	logger.DebugfContext(context.Context(), "auditor sending sigma back", utils.Hashable(sigma))
 	if err := context.Session().SendWithContext(context.Context(), sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}

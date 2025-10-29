@@ -12,13 +12,13 @@ import (
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 const (
@@ -306,7 +306,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 			SchemaManager:   p.SchemaManager,
 			Schema:          p.Schema,
 		}
-		logger.DebugfContext(ctx, "new idemix identity generated with [%s:%s]", enrollmentID, hash.Hashable(rh))
+		logger.DebugfContext(ctx, "new idemix identity generated with [%s:%s]", enrollmentID, utils.Hashable(rh))
 		infoRaw, err = auditInfo.Bytes()
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to serialize auditInfo")
@@ -363,7 +363,7 @@ func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (st
 }
 
 func (p *KeyManager) String() string {
-	return fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(p.Ipk).String())
+	return fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(p.Ipk).String())
 }
 
 func (p *KeyManager) EnrollmentID() string {

@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	slices2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 )
@@ -105,7 +104,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 		return
 	}
 
-	startingBlock := finality.MaxUint64(FirstBlock, lastBlock-NumberPastBlocks)
+	startingBlock := max(FirstBlock, lastBlock-NumberPastBlocks)
 	// startingBlock := uint64(0)
 	logger.DebugfContext(ctx, "start scanning blocks starting from [%d], looking for remaining keys [%s]", startingBlock, keySet)
 

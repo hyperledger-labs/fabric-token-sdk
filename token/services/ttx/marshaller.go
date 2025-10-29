@@ -11,10 +11,10 @@ import (
 	"sort"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -126,7 +126,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 			return nil, errors.Wrap(err, "failed to marshal envelope")
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction envelope [%s]", hash.Hashable(t.Envelope.String()))
+			logger.Debugf("transaction envelope [%s]", utils.Hashable(t.Envelope.String()))
 		}
 	}
 

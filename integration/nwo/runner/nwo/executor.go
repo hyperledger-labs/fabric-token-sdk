@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring/optl"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring/otlp"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	runner2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen"
@@ -44,8 +44,8 @@ func NewSuiteExecutor(nw *integration.Infrastructure, auditor, issuer model.User
 		s.C.Provide(func() *integration.Infrastructure { return nw }),
 		s.C.Provide(func() (trace.TracerProvider, error) {
 			return tracing.NewProviderFromConfig(tracing.Config{
-				Provider: tracing.Otpl,
-				Otpl:     tracing.OtplConfig{Address: fmt.Sprintf(":%d", optl.JaegerCollectorPort)},
+				Provider: tracing.Otlp,
+				Otlp:     tracing.OtlpConfig{Address: fmt.Sprintf(":%d", otlp.JaegerCollectorPort)},
 			})
 		}),
 		s.C.Provide(func(nw *integration.Infrastructure, metrics *metrics.Metrics, tracerProvider trace.TracerProvider, logger logging.Logger) (*runner2.ViewUserProvider, error) {

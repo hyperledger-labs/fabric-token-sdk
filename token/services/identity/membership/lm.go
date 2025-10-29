@@ -16,12 +16,12 @@ import (
 
 	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -116,7 +116,7 @@ func (l *LocalMembership) GetIdentifier(ctx context.Context, id driver.Identity)
 	defer l.localIdentitiesMutex.RUnlock()
 
 	for _, label := range []string{string(id), id.String()} {
-		l.logger.DebugfContext(ctx, "get local identity by label [%s]", hash.Hashable(label))
+		l.logger.DebugfContext(ctx, "get local identity by label [%s]", utils.Hashable(label))
 		r := l.getLocalIdentity(ctx, label)
 		if r == nil {
 			l.logger.DebugfContext(ctx,
@@ -142,10 +142,10 @@ func (l *LocalMembership) GetIdentityInfo(ctx context.Context, label string, aud
 	l.localIdentitiesMutex.RLock()
 	defer l.localIdentitiesMutex.RUnlock()
 
-	l.logger.DebugfContext(ctx, "get identity info by label [%s][%s]", logging.Printable(label), hash.Hashable(label))
+	l.logger.DebugfContext(ctx, "get identity info by label [%s][%s]", logging.Printable(label), utils.Hashable(label))
 	localIdentity := l.getLocalIdentity(ctx, label)
 	if localIdentity == nil {
-		return nil, errors2.Errorf("local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
+		return nil, errors2.Errorf("local identity not found for label [%s][%v]", utils.Hashable(label), l.localIdentitiesByName)
 	}
 	return NewIdentityInfo(localIdentity, func(ctx context.Context) (driver.Identity, []byte, error) {
 		return localIdentity.GetIdentity(ctx, auditInfo)
@@ -455,10 +455,10 @@ func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *driver.I
 }
 
 func (l *LocalMembership) getLocalIdentity(ctx context.Context, label string) *LocalIdentity {
-	l.logger.DebugfContext(ctx, "get local identity by label [%s]", hash.Hashable(label))
+	l.logger.DebugfContext(ctx, "get local identity by label [%s]", utils.Hashable(label))
 	identities, ok := l.localIdentitiesByName[label]
 	if ok {
-		l.logger.DebugfContext(ctx, "get local identity by name found with label [%s]", hash.Hashable(label))
+		l.logger.DebugfContext(ctx, "get local identity by name found with label [%s]", utils.Hashable(label))
 		return identities[0].Identity
 	}
 	identity, ok := l.localIdentitiesByIdentity[label]
@@ -466,7 +466,7 @@ func (l *LocalMembership) getLocalIdentity(ctx context.Context, label string) *L
 		return identity
 	}
 
-	l.logger.DebugfContext(ctx, "local identity not found for label [%s][%v]", hash.Hashable(label), l.localIdentitiesByName)
+	l.logger.DebugfContext(ctx, "local identity not found for label [%s][%v]", utils.Hashable(label), l.localIdentitiesByName)
 	return nil
 }
 

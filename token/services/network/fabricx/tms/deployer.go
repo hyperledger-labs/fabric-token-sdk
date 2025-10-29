@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package tms
 
 import (
+	"crypto/sha256"
 	"reflect"
 
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -121,17 +121,14 @@ func (s *deployerService) createPublicParametersTx(ppRaw []byte, namespaceID cdr
 	if err != nil {
 		return nil, err
 	}
-	valueHash, err := utils.SHA256(ppRaw)
-	if err != nil {
-		return nil, err
-	}
 
+	valueHash := sha256.Sum256(ppRaw)
 	tx := &protoblocktx.Tx{
 		Namespaces: []*protoblocktx.TxNamespace{{
 			NsId:        namespaceID,
 			NsVersion:   0,
 			ReadsOnly:   []*protoblocktx.Read{{Key: []byte("initialized")}},
-			BlindWrites: []*protoblocktx.Write{{Key: []byte(key), Value: ppRaw}, {Key: []byte(keyHash), Value: valueHash}},
+			BlindWrites: []*protoblocktx.Write{{Key: []byte(key), Value: ppRaw}, {Key: []byte(keyHash), Value: valueHash[:]}},
 		}},
 	}
 

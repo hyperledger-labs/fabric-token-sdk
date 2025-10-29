@@ -12,12 +12,12 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -124,7 +124,7 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 		return nil, errors.Wrapf(err, "failed marshalling token request [%s]", txID)
 	}
 	// Sign
-	a.Logger.Debugf("Endorse [%s][%s]", hash.Hashable(bytes).String(), txID)
+	a.Logger.Debugf("Endorse [%s][%s]", utils.Hashable(bytes).String(), txID)
 	if a.Signer == nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: signer is nil", txID)
 	}

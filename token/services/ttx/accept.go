@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 )
 
@@ -52,7 +52,7 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	}
 	defaultIdentity := idProvider.DefaultIdentity()
 
-	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", hash.Hashable(txRaw), defaultIdentity)
+	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", utils.Hashable(txRaw), defaultIdentity)
 	sigService, err := sig.GetService(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get sig service")
@@ -70,7 +70,7 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	// Ack for distribution
 	// Send the signature back
 	session := context.Session()
-	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
+	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", utils.Hashable(sigma), defaultIdentity)
 	if err := session.SendWithContext(context.Context(), sigma); err != nil {
 		return nil, errors.WithMessagef(err, "failed sending ack")
 	}

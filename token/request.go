@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
@@ -1094,7 +1094,7 @@ func (r *Request) SetSignatures(sigmas map[string][]byte) bool {
 	for i, signer := range signers {
 		if sigma, ok := sigmas[signer.UniqueID()]; ok {
 			signatures[i] = sigma
-			r.TokenService.logger.Debugf("signature [%d] for signer [%s] is [%s]", i, signer, hash.Hashable(sigma))
+			r.TokenService.logger.Debugf("signature [%d] for signer [%s] is [%s]", i, signer, logging.SHA256Base64(sigma))
 		} else {
 			all = false
 			r.TokenService.logger.Debugf("signature [%d] for signer [%s] not found", i, signer)
