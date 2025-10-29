@@ -96,7 +96,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if Version != 0 {
 		ver = driver.TokenDriverVersion(Version)
 	}
-	pp, err := v1.SetupWithVersion(v1.DefaultPrecision, ver)
+	pp, err := v1.WithVersion(v1.DefaultPrecision, ver)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}

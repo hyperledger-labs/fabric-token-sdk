@@ -178,6 +178,8 @@ type PublicParams struct {
 	MaxToken uint64
 	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
+	// ExtraData contains any extra custom data
+	ExtraData map[string][]byte
 }
 
 func NewPublicParamsFromBytes(
@@ -198,8 +200,8 @@ func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveI
 	return NewWith(DLogNoGHDriverName, ProtocolV1, bitLength, idemixIssuerPK, idemixCurveID)
 }
 
-// SetupWithVersion is like Setup with the additional possibility to specify the version number
-func SetupWithVersion(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID, version driver.TokenDriverVersion) (*PublicParams, error) {
+// WithVersion is like Setup with the additional possibility to specify the version number
+func WithVersion(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID, version driver.TokenDriverVersion) (*PublicParams, error) {
 	return NewWith(DLogNoGHDriverName, version, bitLength, idemixIssuerPK, idemixCurveID)
 }
 
@@ -276,6 +278,9 @@ func (p *PublicParams) Precision() uint64 {
 }
 
 func (p *PublicParams) Serialize() ([]byte, error) {
+	if err := p.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize public parameters")
+	}
 	pg, err := utils2.ToProtoG1Slice(p.PedersenGenerators)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize public parameters")
@@ -318,6 +323,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 		Issuers:                issuers,
 		MaxToken:               p.MaxToken,
 		QuantityPrecision:      p.QuantityPrecision,
+		ExtraData:              p.ExtraData,
 	}
 	raw, err := proto.Marshal(publicParams)
 	if err != nil {
@@ -392,6 +398,8 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if err := p.RangeProofParams.FromProto(publicParams.RangeProofParams); err != nil {
 		return errors.Wrapf(err, "failed to deserialize range proof parameters")
 	}
+
+	p.ExtraData = publicParams.ExtraData
 
 	return nil
 }
