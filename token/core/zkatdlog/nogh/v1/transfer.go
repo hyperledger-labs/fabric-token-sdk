@@ -291,7 +291,7 @@ func (s *TransferService) VerifyTransfer(ctx context.Context, transferAction dri
 		if err := metadata.Deserialize(outputMetadata[i].OutputMetadata); err != nil {
 			return errors.Wrap(err, "failed unmarshalling metadata")
 		}
-		if err := metadata.Validate(); err != nil {
+		if err := metadata.Validate(false); err != nil {
 			return errors.Wrap(err, "invalid metadata")
 		}
 

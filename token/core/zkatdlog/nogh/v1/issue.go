@@ -224,7 +224,7 @@ func (s *IssueService) VerifyIssue(ctx context.Context, ia driver.IssueAction, o
 		if err := metadata.Deserialize(outputMetadata[i].OutputMetadata); err != nil {
 			return errors.Wrap(err, "failed unmarshalling metadata")
 		}
-		if err := metadata.Validate(); err != nil {
+		if err := metadata.Validate(true); err != nil {
 			return errors.Wrap(err, "invalid metadata")
 		}
 

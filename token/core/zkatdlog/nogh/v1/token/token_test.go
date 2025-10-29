@@ -28,14 +28,16 @@ func TestMetadata_Validate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		meta    *Metadata
-		wantErr string
+		name        string
+		meta        *Metadata
+		checkIssuer bool
+		wantErr     string
 	}{
 		{
-			name:    "valid metadata",
-			meta:    validMetadata,
-			wantErr: "",
+			name:        "valid metadata",
+			meta:        validMetadata,
+			checkIssuer: true,
+			wantErr:     "",
 		},
 		{
 			name: "missing type",
@@ -45,7 +47,8 @@ func TestMetadata_Validate(t *testing.T) {
 				BlindingFactor: validMetadata.BlindingFactor,
 				Issuer:         validMetadata.Issuer,
 			},
-			wantErr: "missing Type",
+			checkIssuer: true,
+			wantErr:     ErrEmptyType.Error(),
 		},
 		{
 			name: "missing value",
@@ -55,7 +58,8 @@ func TestMetadata_Validate(t *testing.T) {
 				BlindingFactor: validMetadata.BlindingFactor,
 				Issuer:         validMetadata.Issuer,
 			},
-			wantErr: "missing Value",
+			checkIssuer: true,
+			wantErr:     ErrEmptyValue.Error(),
 		},
 		{
 			name: "missing blinding factor",
@@ -65,7 +69,8 @@ func TestMetadata_Validate(t *testing.T) {
 				BlindingFactor: nil,
 				Issuer:         validMetadata.Issuer,
 			},
-			wantErr: "missing BlindingFactor",
+			checkIssuer: true,
+			wantErr:     ErrEmptyBlindingFactor.Error(),
 		},
 		{
 			name: "missing issuer",
@@ -75,13 +80,25 @@ func TestMetadata_Validate(t *testing.T) {
 				BlindingFactor: validMetadata.BlindingFactor,
 				Issuer:         nil,
 			},
-			wantErr: "missing Issuer",
+			checkIssuer: true,
+			wantErr:     ErrMissingIssuer.Error(),
+		},
+		{
+			name: "should not have the issuer",
+			meta: &Metadata{
+				Type:           validMetadata.Type,
+				Value:          validMetadata.Value,
+				BlindingFactor: validMetadata.BlindingFactor,
+				Issuer:         validMetadata.Issuer,
+			},
+			checkIssuer: false,
+			wantErr:     ErrUnexpectedIssuer.Error(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.meta.Validate()
+			err := tt.meta.Validate(tt.checkIssuer)
 			if tt.wantErr == "" {
 				assert.NoError(t, err)
 			} else {
