@@ -24,9 +24,7 @@ const (
 type Payload struct {
 	TxID      network.TxID
 	ID        string
-	Network   string
-	Channel   string
-	Namespace string
+	tmsID     token.TMSID
 	Signer    view.Identity
 	Transient network.TransientMap
 
@@ -132,9 +130,7 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 			Envelope:     nil,
 			TxID:         txID,
 			ID:           id,
-			Network:      tms.Network(),
-			Channel:      tms.Channel(),
-			Namespace:    tms.Namespace(),
+			tmsID:        tms.ID(),
 			Transient:    map[string][]byte{},
 		},
 		TMS:              tms,
@@ -148,32 +144,36 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 }
 
 func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, error) {
-	tx := &Transaction{
-		Payload: &Payload{
-			Transient:    map[string][]byte{},
-			TokenRequest: token.NewRequest(nil, ""),
-		},
-		Context: context.Context(),
-		FromRaw: raw,
-	}
 	networkProvider := network.GetProvider(context).GetNetwork
-	if err := unmarshal(networkProvider, tx.Payload, raw); err != nil {
+	payload := &Payload{
+		Transient:    map[string][]byte{},
+		TokenRequest: token.NewRequest(nil, ""),
+	}
+	if err := unmarshal(networkProvider, payload, raw); err != nil {
 		return nil, err
 	}
-	logger.DebugfContext(context.Context(), "unmarshalling tx, id [%s]", tx.TxID)
-	tms, err := token.GetManagementService(context,
-		token.WithNetwork(tx.Network()),
-		token.WithChannel(tx.Channel()),
-		token.WithNamespace(tx.Namespace()),
-	)
+	logger.DebugfContext(context.Context(), "unmarshalling tx, id [%s]", payload.TxID)
+	// check there exists a tms for this payload
+	tms, err := token.GetManagementService(context, token.WithTMSID(payload.tmsID))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
-	tx.TMS = tms
-	tx.NetworkProvider = networkProvider
-	tx.TokenRequest.SetTokenService(tms)
-	if tx.ID() != string(tx.TokenRequest.ID()) {
-		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
+	if tms.ID().Equal(payload.tmsID) {
+		return nil, errors.Errorf("failed to find tms for tmsID [%s], got [%s]", payload.tmsID, tms.ID())
+	}
+	// check transaction id
+	if payload.ID != string(payload.TokenRequest.ID()) {
+		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", payload.TxID, payload.TokenRequest.ID())
+	}
+
+	// finalize
+	payload.TokenRequest.SetTokenService(tms)
+	tx := &Transaction{
+		Payload:         payload,
+		TMS:             tms,
+		NetworkProvider: networkProvider,
+		Context:         context.Context(),
+		FromRaw:         raw,
 	}
 	context.OnError(tx.Release)
 	return tx, nil
@@ -212,15 +212,15 @@ func (t *Transaction) ID() string {
 }
 
 func (t *Transaction) Network() string {
-	return t.Payload.Network
+	return t.tmsID.Network
 }
 
 func (t *Transaction) Channel() string {
-	return t.Payload.Channel
+	return t.tmsID.Channel
 }
 
 func (t *Transaction) Namespace() string {
-	return t.Payload.Namespace
+	return t.tmsID.Namespace
 }
 
 func (t *Transaction) Request() *token.Request {

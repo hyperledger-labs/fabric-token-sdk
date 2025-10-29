@@ -8,13 +8,19 @@ package ttx
 
 import (
 	"encoding/asn1"
-	"encoding/json"
 	"sort"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"go.uber.org/zap/zapcore"
+)
+
+var (
+	ErrNetworkNotSet   = errors.New("network not set")
+	ErrNamespaceNotSet = errors.New("namespace not set")
 )
 
 func Marshal(v interface{}) ([]byte, error) {
@@ -79,6 +85,14 @@ type TransactionSer struct {
 }
 
 func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
+	// sanity checks
+	if len(t.Network()) == 0 {
+		return nil, ErrNetworkNotSet
+	}
+	if len(t.Namespace()) == 0 {
+		return nil, ErrNamespaceNotSet
+	}
+
 	var err error
 
 	var transientRaw []byte
@@ -120,9 +134,9 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 		Nonce:        t.TxID.Nonce,
 		Creator:      t.TxID.Creator,
 		ID:           t.Payload.ID,
-		Network:      t.Payload.Network,
-		Channel:      t.Payload.Channel,
-		Namespace:    t.Payload.Namespace,
+		Network:      t.tmsID.Network,
+		Channel:      t.tmsID.Channel,
+		Namespace:    t.tmsID.Namespace,
 		Signer:       t.Signer,
 		Transient:    transientRaw,
 		TokenRequest: tokenRequestRaw,
@@ -139,13 +153,22 @@ func unmarshal(getNetwork GetNetworkFunc, p *Payload, raw []byte) error {
 	if _, err := asn1.Unmarshal(raw, &ser); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling transaction [%s]", string(raw))
 	}
+	// sanity checks
+	if len(ser.Network) == 0 {
+		return ErrNetworkNotSet
+	}
+	if len(ser.Namespace) == 0 {
+		return ErrNamespaceNotSet
+	}
 
 	p.TxID.Nonce = ser.Nonce
 	p.TxID.Creator = ser.Creator
 	p.ID = ser.ID
-	p.Network = ser.Network
-	p.Channel = ser.Channel
-	p.Namespace = ser.Namespace
+	p.tmsID = token.TMSID{
+		Network:   ser.Network,
+		Channel:   ser.Channel,
+		Namespace: ser.Namespace,
+	}
 	p.Signer = ser.Signer
 	p.Transient = make(map[string][]byte)
 	if len(ser.Transient) != 0 {
@@ -161,7 +184,7 @@ func unmarshal(getNetwork GetNetworkFunc, p *Payload, raw []byte) error {
 		}
 	}
 	if p.Envelope == nil {
-		nws, err := getNetwork(p.Network, p.Channel)
+		nws, err := getNetwork(p.tmsID.Network, p.tmsID.Channel)
 		if err != nil {
 			return err
 		}
