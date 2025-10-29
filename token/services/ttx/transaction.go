@@ -158,7 +158,7 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
-	if tms.ID().Equal(payload.tmsID) {
+	if !tms.ID().Equal(payload.tmsID) {
 		return nil, errors.Errorf("failed to find tms for tmsID [%s], got [%s]", payload.tmsID, tms.ID())
 	}
 	// check transaction id
