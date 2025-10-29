@@ -67,7 +67,11 @@ func (t *Token) Deserialize(bytes []byte) error {
 
 // ToClear returns Token in the clear
 func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, error) {
-	com, err := commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
+	com, err := commit([]*math.Zr{
+		math.Curves[pp.Curve].HashToZr([]byte(meta.Type)),
+		meta.Value,
+		meta.BlindingFactor,
+	}, pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve token in the clear: failed to check token data")
 	}
@@ -196,6 +200,22 @@ func (m *Metadata) Clone() *Metadata {
 		Issuer:         m.Issuer,
 		Value:          m.Value,
 	}
+}
+
+func (m *Metadata) Validate() error {
+	if len(m.Type) == 0 {
+		return errors.New("missing Type")
+	}
+	if m.Value == nil {
+		return errors.New("missing Value")
+	}
+	if m.BlindingFactor == nil {
+		return errors.New("missing BlindingFactor")
+	}
+	if len(m.Issuer) == 0 {
+		return errors.New("missing Issuer")
+	}
+	return nil
 }
 
 func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, error) {

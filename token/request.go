@@ -920,7 +920,7 @@ func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyAct
 		}
 
 		if verifyActions {
-			if err := issueService.VerifyIssue(issueAction, issueMeta.Outputs); err != nil {
+			if err := issueService.VerifyIssue(ctx, issueAction, issueMeta.Outputs); err != nil {
 				return nil, nil, nil, errors.WithMessagef(err, "failed verifying issue action")
 			}
 		}
