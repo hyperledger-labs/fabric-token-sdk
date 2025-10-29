@@ -12,12 +12,10 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -26,7 +24,7 @@ import (
 
 type IssueService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common2.PublicParametersManager[*setup.PublicParams]
+	PublicParametersManager PublicParametersManager
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
@@ -36,7 +34,7 @@ type IssueService struct {
 
 func NewIssueService(
 	logger logging.Logger,
-	publicParametersManager common2.PublicParametersManager[*setup.PublicParams],
+	publicParametersManager PublicParametersManager,
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
