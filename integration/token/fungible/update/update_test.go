@@ -23,7 +23,7 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration.WebSocketNoReplicationOnly {
+	for _, t := range integration.AllTestTypes {
 		Describe("Tokens Upgrade with Auditor ne Issuer", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, 64, []common.TMSOpts{
 				{

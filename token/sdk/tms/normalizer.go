@@ -43,12 +43,10 @@ func (p *tmsNormalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOpti
 
 	logger.Debugf("normalizing opts [%v]", opt)
 	if len(opt.Network) != 0 {
-		// filter configurations by netowkr
-		for i, c := range configs {
-			if c.ID().Network != opt.Network {
-				configs = append(configs[:i], configs[i+1:]...)
-			}
-		}
+		// filter configurations by network
+		configs = Filter(configs, func(c driver.Configuration) bool {
+			return c.ID().Network == opt.Network
+		})
 		if len(configs) == 0 {
 			return nil, errors.Errorf("no token management service config found for network [%s]", opt.Network)
 		}
@@ -56,11 +54,9 @@ func (p *tmsNormalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOpti
 
 	if len(opt.Channel) != 0 {
 		// filter configurations by channel
-		for i, c := range configs {
-			if c.ID().Channel != opt.Channel {
-				configs = append(configs[:i], configs[i+1:]...)
-			}
-		}
+		configs = Filter(configs, func(c driver.Configuration) bool {
+			return c.ID().Channel == opt.Channel
+		})
 		if len(configs) == 0 {
 			return nil, errors.Errorf("no token management service config found for network and channel [%s:%s]", opt.Network, opt.Channel)
 		}
@@ -68,11 +64,9 @@ func (p *tmsNormalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOpti
 
 	if len(opt.Namespace) != 0 {
 		// filter configurations by namespace
-		for i, c := range configs {
-			if c.ID().Namespace != opt.Namespace {
-				configs = append(configs[:i], configs[i+1:]...)
-			}
-		}
+		configs = Filter(configs, func(c driver.Configuration) bool {
+			return c.ID().Namespace == opt.Namespace
+		})
 		if len(configs) == 0 {
 			return nil, errors.Errorf("no token management service config found for network, channel, and namespace [%s:%s:%s]", opt.Network, opt.Channel, opt.Namespace)
 		}
@@ -87,4 +81,15 @@ func (p *tmsNormalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOpti
 
 	// last pass
 	return p.normalizer.Normalize(opt)
+}
+
+// Filter keeps elements where keep(x) == true, allocating a new result slice.
+func Filter[E any](in []E, keep func(E) bool) []E {
+	out := make([]E, 0, len(in))
+	for _, x := range in {
+		if keep(x) {
+			out = append(out, x)
+		}
+	}
+	return out
 }

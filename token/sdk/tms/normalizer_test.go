@@ -123,6 +123,11 @@ func TestNormalize_FilterByChannel_NoMatchAndMatch(t *testing.T) {
 	require.Equal(t, "net1", res.Network)
 	require.Equal(t, "c2", res.Channel)
 	require.Equal(t, "ns2", res.Namespace)
+
+	opt = &token.ServiceOptions{Channel: "c3"}
+	_, err = n.Normalize(opt)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no token management service config found for network and channel")
 }
 
 func TestNormalize_FilterByNamespace_NoMatch(t *testing.T) {
