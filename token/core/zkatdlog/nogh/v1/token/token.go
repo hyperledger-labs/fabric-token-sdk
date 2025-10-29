@@ -77,7 +77,7 @@ func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, 
 	}
 	// check that token matches meta
 	if !com.Equals(t.Data) {
-		return nil, errors.New("cannot retrieve token in the clear: output does not match provided opening")
+		return nil, ErrTokenMismatch
 	}
 	return &token.Token{
 		Type:     meta.Type,
@@ -88,10 +88,10 @@ func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, 
 
 func (t *Token) Validate(checkOwner bool) error {
 	if checkOwner && len(t.Owner) == 0 {
-		return errors.Errorf("token owner cannot be empty")
+		return ErrEmptyOwner
 	}
 	if t.Data == nil {
-		return errors.Errorf("token data cannot be empty")
+		return ErrEmptyTokenData
 	}
 	return nil
 }
@@ -202,18 +202,24 @@ func (m *Metadata) Clone() *Metadata {
 	}
 }
 
-func (m *Metadata) Validate() error {
+// Validate checks that Metadata is well-formed.
+// If checkIssuer is true, it checks that the Issuer field is set.
+// If checkIssuer is false, it checks that the Issuer field is not set.
+func (m *Metadata) Validate(checkIssuer bool) error {
 	if len(m.Type) == 0 {
-		return errors.New("missing Type")
+		return ErrEmptyType
 	}
 	if m.Value == nil {
-		return errors.New("missing Value")
+		return ErrEmptyValue
 	}
 	if m.BlindingFactor == nil {
-		return errors.New("missing BlindingFactor")
+		return ErrEmptyBlindingFactor
 	}
-	if len(m.Issuer) == 0 {
-		return errors.New("missing Issuer")
+	if checkIssuer && len(m.Issuer) == 0 {
+		return ErrMissingIssuer
+	}
+	if !checkIssuer && len(m.Issuer) != 0 {
+		return ErrUnexpectedIssuer
 	}
 	return nil
 }
@@ -222,7 +228,7 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, 
 	com := c.NewG1()
 	for i := range vector {
 		if vector[i] == nil {
-			return nil, errors.New("cannot commit a nil element")
+			return nil, ErrNilCommitElement
 		}
 		com.Add(generators[i].Mul(vector[i]))
 	}
@@ -237,19 +243,19 @@ type UpgradeWitness struct {
 
 func (u *UpgradeWitness) Validate() error {
 	if u.FabToken == nil {
-		return errors.New("missing FabToken")
+		return ErrMissingFabToken
 	}
 	if len(u.FabToken.Owner) == 0 {
-		return errors.New("missing FabToken.Owner")
+		return ErrMissingFabTokenOwner
 	}
 	if len(u.FabToken.Type) == 0 {
-		return errors.New("missing FabToken.Type")
+		return ErrMissingFabTokenType
 	}
 	if len(u.FabToken.Quantity) == 0 {
-		return errors.New("missing FabToken.Quantity")
+		return ErrMissingFabTokenQuantity
 	}
 	if u.BlindingFactor == nil {
-		return errors.New("missing BlindingFactor")
+		return ErrMissingUpgradeBlindingFactor
 	}
 	return nil
 }
