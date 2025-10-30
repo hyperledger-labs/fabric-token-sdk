@@ -11,11 +11,11 @@ import (
 	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 type localMembership interface {
@@ -92,7 +92,7 @@ func (r *Role) mapStringToID(ctx context.Context, v string) (driver.Identity, st
 	r.logger.DebugfContext(ctx, "[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
 		r.networkID,
 		logging.Printable(v),
-		hash.Hashable(v),
+		utils.Hashable(v),
 		defaultNetworkIdentity,
 		r.nodeIdentity,
 	)
@@ -171,7 +171,7 @@ func (r *Role) mapIdentityToID(ctx context.Context, v driver.Identity) (driver.I
 		r.logger.DebugfContext(ctx, "failed getting identity info for [%s], returning the identity", id)
 		return id, "", nil
 	}
-	r.logger.DebugfContext(ctx, "looking up identifier for identity as label [%s]", hash.Hashable(id))
+	r.logger.DebugfContext(ctx, "looking up identifier for identity as label [%s]", utils.Hashable(id))
 
 	label := string(id)
 	if info, err := r.localMembership.GetIdentityInfo(ctx, label, nil); err == nil {

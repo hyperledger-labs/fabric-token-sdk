@@ -18,7 +18,6 @@ import (
 	idemix2 "github.com/IBM/idemix"
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -27,6 +26,7 @@ import (
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -65,7 +65,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
-	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
+	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, 1, tracker.PutCounter)
 	assert.Equal(t, 0, tracker.GetCounter)
 
@@ -78,7 +78,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
-	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
+	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, 1, tracker.PutCounter) // this is still 1 because the key is loaded using the SKI
 	assert.Equal(t, 1, tracker.GetCounter) // one get for the user key
 	assert.Equal(t, tracker.GetHistory[0].Key, hex.EncodeToString(config.Signer.Ski))
@@ -92,7 +92,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
-	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
+	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, 1, tracker.PutCounter) // this is still 1 because the key is loaded using the SKI
 	assert.Equal(t, 2, tracker.GetCounter) // another get for the user key
 	assert.Equal(t, tracker.GetHistory[1].Key, hex.EncodeToString(config.Signer.Ski))
@@ -637,7 +637,7 @@ func setupKeyManager(t assert.TestingT, configPath string, curveID math.CurveID)
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
 	assert.Equal(t, IdentityType, keyManager.IdentityType())
-	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", hash.Hashable(keyManager.Ipk).String()), keyManager.String())
+	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, tracker.PutCounter, 1)
 	assert.Equal(t, tracker.GetCounter, 0)
 

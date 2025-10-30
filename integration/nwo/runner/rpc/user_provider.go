@@ -7,9 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package rpc
 
 import (
-	"crypto/sha256"
 	"fmt"
-	"hash"
 	"net"
 	"os"
 	"time"
@@ -132,19 +130,7 @@ func newGrpcClient(configProvider driver.ConfigService, host string) (api2.ViewC
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create signing identity")
 	}
-	return grpcclient.NewClient(&grpcclient.Config{ConnectionConfig: cc}, signer, &hasher{}, noop.NewTracerProvider())
-}
-
-type hasher struct{}
-
-func (*hasher) GetHash() hash.Hash {
-	return sha256.New()
-}
-
-func (*hasher) Hash(msg []byte) ([]byte, error) {
-	h := sha256.New()
-	h.Write(msg)
-	return h.Sum(nil), nil
+	return grpcclient.NewClient(&grpcclient.Config{ConnectionConfig: cc}, signer, noop.NewTracerProvider())
 }
 
 func newWebClient(configProvider driver.ConfigService, host string) (api2.ViewClient, error) {

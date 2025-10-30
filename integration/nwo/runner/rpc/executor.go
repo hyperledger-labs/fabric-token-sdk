@@ -64,7 +64,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 		s.C.Provide(func(mp metrics.Provider) (trace.TracerProvider, error) {
 			tp, err := tracing.NewProviderFromConfig(tracing.Config{
 				Provider: config.Monitoring.TracerExporterType,
-				Otpl:     tracing.OtplConfig{Address: config.Monitoring.TracerCollectorEndpoint},
+				Otlp:     tracing.OtlpConfig{Address: config.Monitoring.TracerCollectorEndpoint},
 				File:     tracing.FileConfig{Path: config.Monitoring.TracerCollectorFile},
 				Sampling: tracing.SamplingConfig{Ratio: config.Monitoring.TracerSamplingRatio},
 			})

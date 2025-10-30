@@ -10,9 +10,9 @@ import (
 	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 // MultiSignature represents a multi-signature
@@ -60,7 +60,7 @@ func (v *Verifier) Verify(msg, raw []byte) error {
 	sig := &MultiSignature{}
 	err := sig.FromBytes(raw)
 	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal multisig [%s]", hash.Hashable(raw))
+		return errors.Wrapf(err, "failed to unmarshal multisig [%s]", utils.Hashable(raw))
 	}
 	if len(v.Verifiers) != len(sig.Signatures) {
 		return errors.Errorf("invalid multisig: expect [%d] signatures, but received [%d]", len(v.Verifiers), len(sig.Signatures))

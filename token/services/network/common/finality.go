@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -118,13 +118,13 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 }
 
 func (t *FinalityListener) checkTokenRequest(txID string, trToSign []byte, reference []byte) error {
-	if base64.StdEncoding.EncodeToString(reference) != hash.Hashable(trToSign).String() {
-		t.logger.Errorf("tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(reference), hash.Hashable(trToSign))
+	if base64.StdEncoding.EncodeToString(reference) != utils.Hashable(trToSign).String() {
+		t.logger.Errorf("tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(reference), utils.Hashable(trToSign))
 		// no further processing of the tokens of these transactions
 		return errors.Errorf(
 			"token requests do not match, tr hashes [%s][%s]",
 			base64.StdEncoding.EncodeToString(reference),
-			hash.Hashable(trToSign),
+			utils.Hashable(trToSign),
 		)
 	}
 	return nil

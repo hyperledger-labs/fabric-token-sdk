@@ -8,9 +8,8 @@ package driver
 
 import (
 	"bytes"
-	"encoding/base64"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 type (
@@ -30,7 +29,7 @@ func (id Token) UniqueID() string {
 	if len(id) == 0 {
 		return "<empty>"
 	}
-	return base64.StdEncoding.EncodeToString(utils.MustGet(utils.SHA256(id)))
+	return utils.Hashable(id).String()
 }
 
 // Hash returns the hash of this token
@@ -38,7 +37,7 @@ func (id Token) Hash() string {
 	if len(id) == 0 {
 		return "<empty>"
 	}
-	return string(utils.MustGet(utils.SHA256(id)))
+	return utils.Hashable(id).RawString()
 }
 
 // String returns a string representation of this token
@@ -69,7 +68,7 @@ func (id Metadata) UniqueID() string {
 	if len(id) == 0 {
 		return "<empty>"
 	}
-	return base64.StdEncoding.EncodeToString(utils.MustGet(utils.SHA256(id)))
+	return utils.Hashable(id).String()
 }
 
 // Hash returns the hash of this metadata
@@ -77,7 +76,7 @@ func (id Metadata) Hash() string {
 	if len(id) == 0 {
 		return "<empty>"
 	}
-	return string(utils.MustGet(utils.SHA256(id)))
+	return utils.Hashable(id).RawString()
 }
 
 // String returns a string representation of this metadata

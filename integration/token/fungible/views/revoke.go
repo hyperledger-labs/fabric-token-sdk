@@ -10,10 +10,10 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 type RevokeUser struct {
@@ -25,7 +25,7 @@ type RevokeUserView struct {
 }
 
 func (u *RevokeUserView) Call(context view.Context) (interface{}, error) {
-	rh := hash.Hashable(u.RH).String()
+	rh := utils.Hashable(u.RH).String()
 	logger.Infof("revoke [%s][%s]", u.RH, rh)
 	kvsInstance := GetKVS(context)
 	k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
@@ -65,7 +65,7 @@ func (r *GetRevocationHandle) Call(context view.Context) (interface{}, error) {
 	id, err := w.GetRecipientIdentity(context.Context())
 	assert.NoError(err, "error getting recipient id")
 	rh, err := tms.WalletManager().GetRevocationHandle(context.Context(), id)
-	logger.Infof("RH for [%s] is [%s]", r.Wallet, hash.Hashable(rh).String())
+	logger.Infof("RH for [%s] is [%s]", r.Wallet, utils.Hashable(rh).String())
 	return &RevocationHandle{RH: rh}, err
 }
 

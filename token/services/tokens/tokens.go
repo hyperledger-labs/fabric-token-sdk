@@ -11,11 +11,11 @@ import (
 	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.uber.org/zap/zapcore"
 )
@@ -424,7 +424,7 @@ func (t *Service) parse(
 			if issuerFlag {
 				logger.DebugfContext(ctx, "transaction [%s], found a token and I have issued it", requestAnchor)
 			}
-			logger.DebugfContext(ctx, "store token [%s:%d][%s]", requestAnchor, output.Index, hash.Hashable(output.LedgerOutput))
+			logger.DebugfContext(ctx, "store token [%s:%d][%s]", requestAnchor, output.Index, utils.Hashable(output.LedgerOutput))
 		}
 		if !mine && !auditorFlag && !issuerFlag {
 			logger.DebugfContext(ctx, "transaction [%s], discarding token, not mine, not an auditor, not an issuer", requestAnchor)

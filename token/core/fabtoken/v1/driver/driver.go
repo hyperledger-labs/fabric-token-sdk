@@ -8,7 +8,6 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -25,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/multisig"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -70,7 +70,7 @@ func NewDriver(
 func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
-	logger.Debugf("creating new token service with public parameters [%s]", hash.Hashable(publicParams))
+	logger.Debugf("creating new token service with public parameters [%s]", utils.Hashable(publicParams))
 
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")

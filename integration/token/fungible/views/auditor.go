@@ -13,11 +13,11 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -155,7 +155,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	kvsInstance := GetKVS(context)
 
 	for _, rID := range inputs.RevocationHandles() {
-		rh := hash.Hashable(rID).String()
+		rh := utils.Hashable(rID).String()
 		// logger.Infof("input RH [%s]", rh)
 		assert.NotNil(rID, "found an input with empty RH")
 		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
@@ -165,7 +165,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	}
 
 	for _, rID := range outputs.RevocationHandles() {
-		rh := hash.Hashable(rID).String()
+		rh := utils.Hashable(rID).String()
 		// logger.Infof("output RH [%s]", rh)
 		assert.NotNil(rID, "found an output with empty RH")
 		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})

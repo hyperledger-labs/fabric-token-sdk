@@ -13,9 +13,9 @@ import (
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,7 +61,7 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, 
 	d, err := NewDeserializer(config.Ipk, curveID)
 	assert.NoError(t, err)
 	assert.NotNil(t, d)
-	assert.Equal(t, fmt.Sprintf("Idemix with IPK [%s]", hash.Hashable(d.Ipk).String()), d.String())
+	assert.Equal(t, fmt.Sprintf("Idemix with IPK [%s]", utils.Hashable(d.Ipk).String()), d.String())
 	_, err = d.DeserializeVerifier(t.Context(), nil)
 	assert.Error(t, err)
 	_, err = d.DeserializeVerifier(t.Context(), []byte{})

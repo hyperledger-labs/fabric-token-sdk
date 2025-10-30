@@ -14,9 +14,9 @@ import (
 	"github.com/IBM/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 type (
@@ -165,7 +165,7 @@ func NewConfigFromRaw(issuerPublicKey []byte, configRaw []byte) (*Config, error)
 	}
 	// match public keys
 	if !bytes.Equal(issuerPublicKey, config.Ipk) {
-		return nil, errors.Errorf("public key does not match [%s]=[%s]", hash.Hashable(config.Ipk), hash.Hashable(issuerPublicKey))
+		return nil, errors.Errorf("public key does not match [%s]=[%s]", utils.Hashable(config.Ipk), utils.Hashable(issuerPublicKey))
 	}
 	// match version, supported are: ProtobufProtocolVersionV1
 	if config.Version != ProtobufProtocolVersionV1 {

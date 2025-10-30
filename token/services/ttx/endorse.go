@@ -15,7 +15,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
@@ -26,6 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 )
 
@@ -269,23 +269,23 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 }
 
 func (c *CollectEndorsementsView) signLocal(ctx context.Context, party view.Identity, signer token.Signer, signatureRequest *SignatureRequest) ([]byte, error) {
-	logger.DebugfContext(ctx, "signing [request_hash=%s][tx_id=%s][nonce=%s]", hash.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
+	logger.DebugfContext(ctx, "signing [request_hash=%s][tx_id=%s][nonce=%s]", utils.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
 
 	sigma, err := signer.Sign(signatureRequest.MessageToSign())
 	if err != nil {
 		return nil, err
 	}
-	logger.DebugfContext(ctx, "signature generated (local, me) [%s,%s,%s,%v]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party, logging.Identifier(signer))
+	logger.DebugfContext(ctx, "signature generated (local, me) [%s,%s,%s,%v]", utils.Hashable(signatureRequest.MessageToSign()), utils.Hashable(sigma), party, logging.Identifier(signer))
 	return sigma, nil
 }
 
 func (c *CollectEndorsementsView) signExternal(ctx context.Context, party view.Identity, signer ExternalWalletSigner, signatureRequest *SignatureRequest) ([]byte, error) {
-	logger.DebugfContext(ctx, "signing [request=%s][tx_id=%s][nonce=%s]", hash.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
+	logger.DebugfContext(ctx, "signing [request=%s][tx_id=%s][nonce=%s]", utils.Hashable(signatureRequest.Request), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
 	sigma, err := signer.Sign(party, signatureRequest.MessageToSign())
 	if err != nil {
 		return nil, err
 	}
-	logger.DebugfContext(ctx, "signature generated (external, me) [%s,%s,%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party)
+	logger.DebugfContext(ctx, "signature generated (external, me) [%s,%s,%s]", utils.Hashable(signatureRequest.MessageToSign()), utils.Hashable(sigma), party)
 	return sigma, nil
 }
 
@@ -312,14 +312,14 @@ func (c *CollectEndorsementsView) signRemote(context view.Context, party view.Id
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
 	}
-	logger.DebugfContext(context.Context(), "verify signature [%s][%s][%s] for txid [%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party, c.tx.ID())
+	logger.DebugfContext(context.Context(), "verify signature [%s][%s][%s] for txid [%s]", utils.Hashable(signatureRequest.MessageToSign()), utils.Hashable(sigma), party, c.tx.ID())
 
 	err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed verifying signature [%s] from [%s]", sigma, party)
 	}
 
-	logger.DebugfContext(context.Context(), "signature verified [%s,%s,%s]", hash.Hashable(signatureRequest.MessageToSign()), hash.Hashable(sigma), party)
+	logger.DebugfContext(context.Context(), "signature verified [%s,%s,%s]", utils.Hashable(signatureRequest.MessageToSign()), utils.Hashable(sigma), party)
 
 	return sigma, nil
 }
@@ -473,8 +473,8 @@ func (c *CollectEndorsementsView) distributeTxToParty(context view.Context, entr
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
 	logger.DebugfContext(context.Context(), "received ack from [%s] [%s], checking signature on [%s]",
-		entry.LongTerm, hash.Hashable(sigma).String(),
-		hash.Hashable(txRaw).String())
+		entry.LongTerm, utils.Hashable(sigma).String(),
+		utils.Hashable(txRaw).String())
 
 	logger.DebugfContext(context.Context(), "Verify signature")
 	sigService, err := sig.GetService(context)
@@ -651,7 +651,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	if err != nil {
 		logger.ErrorfContext(context.Context(), err.Error())
 	}
-	logger.DebugfContext(context.Context(), "ReceiveTransactionView: received transaction, len [%d][%s]", len(msg), hash.Hashable(msg))
+	logger.DebugfContext(context.Context(), "ReceiveTransactionView: received transaction, len [%d][%s]", len(msg), utils.Hashable(msg))
 
 	if len(msg) == 0 {
 		info := context.Session().Info()
@@ -774,7 +774,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed signing request")
 		}
-		logger.DebugfContext(context.Context(), "Send back signature [%s][%s]", signatureRequest.Signer, hash.Hashable(sigma))
+		logger.DebugfContext(context.Context(), "Send back signature [%s][%s]", signatureRequest.Signer, utils.Hashable(sigma))
 		err = session.SendWithContext(context.Context(), sigma)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed sending signature back")
@@ -798,7 +798,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed getting identity provider")
 	}
 	defaultIdentity := idProvider.DefaultIdentity()
-	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", hash.Hashable(receivedTx.FromRaw), defaultIdentity)
+	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", utils.Hashable(receivedTx.FromRaw), defaultIdentity)
 	sigService, err := sig.GetService(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting sig service")
@@ -811,7 +811,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to sign ack response")
 	}
-	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", hash.Hashable(sigma), defaultIdentity)
+	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", utils.Hashable(sigma), defaultIdentity)
 	if err := session.SendWithContext(context.Context(), sigma); err != nil {
 		return nil, errors.WithMessagef(err, "failed sending ack")
 	}

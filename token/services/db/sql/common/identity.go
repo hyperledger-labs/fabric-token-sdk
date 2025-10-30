@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
@@ -26,6 +25,7 @@ import (
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 )
 
@@ -443,7 +443,7 @@ func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx dbTransaction, 
 		Row(h, id, info).
 		Format()
 
-	logger.Debug(query, h, hash.Hashable(info))
+	logger.Debug(query, h, utils.Hashable(info))
 	exists := false
 	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {

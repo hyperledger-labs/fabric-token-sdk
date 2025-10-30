@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -21,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -127,7 +127,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 		return nil, errors.WithMessagef(err, "failed to marshal transaction [%s]", tx.ID())
 	}
 
-	logger.DebugfContext(context.Context(), "Respond to request of approval for tx [%s][%s]", tx.ID(), hash.Hashable(raw))
+	logger.DebugfContext(context.Context(), "Respond to request of approval for tx [%s][%s]", tx.ID(), utils.Hashable(raw))
 
 	var tmsID token2.TMSID
 	if err := tx.GetTransientState("tmsID", &tmsID); err != nil {

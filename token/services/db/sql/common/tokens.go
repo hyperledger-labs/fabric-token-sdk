@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
@@ -27,6 +26,7 @@ import (
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -671,7 +671,7 @@ func (db *TokenStore) TransactionExists(ctx context.Context, id string) (bool, e
 }
 
 func (db *TokenStore) StorePublicParams(ctx context.Context, raw []byte) error {
-	rawHash := hash.Hashable(raw).Raw()
+	rawHash := utils.Hashable(raw).Raw()
 
 	if pps, err := db.PublicParamsByHash(ctx, rawHash); err == nil && len(pps) > 0 {
 		logger.DebugfContext(ctx, "public params [%s] already in the database", logging.Base64(rawHash))

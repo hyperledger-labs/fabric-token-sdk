@@ -11,11 +11,11 @@ import (
 	errors2 "errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 var logger = logging.MustGetLogger()
@@ -137,7 +137,7 @@ func (v *TypedVerifierDeserializerMultiplex) MatchIdentity(ctx context.Context, 
 	}
 	err = matcher.Match(ctx, recipient.Identity)
 	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s]:[%s]", id, hash.Hashable(ai))
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s]:[%s]", id, utils.Hashable(ai))
 	}
 	return nil
 }
