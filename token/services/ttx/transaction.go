@@ -308,6 +308,9 @@ func (t *Transaction) InputsAndOutputs(ctx context.Context) (*token.InputStream,
 // IsValid checks that the transaction is well-formed.
 // This means checking that the embedded TokenRequest is valid.
 func (t *Transaction) IsValid(ctx context.Context) error {
+	if t.TokenRequest == nil {
+		return errors.New("invalid transaction: nil token request")
+	}
 	return t.TokenRequest.IsValid(ctx)
 }
 
