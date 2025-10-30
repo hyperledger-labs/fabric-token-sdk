@@ -67,10 +67,10 @@ func TestCleanup(t *testing.T) {
 		WithArgs(input).
 		WillReturnRows(mockDB.NewRows([]string{"consumer_tx_id", "tx_id", "idx", "status", "created_at", "now"}).AddRow(output...))
 
-	mockDB.ExpectExec("DELETE FROM TOKEN_LOCKS USING REQUESTS WHERE " +
-		"\\(TOKEN_LOCKS.consumer_tx_id = REQUESTS.tx_id\\) AND " +
-		"\\(\\(\\(\\(REQUESTS.status = \\$1\\)\\)\\) OR \\(TOKEN_LOCKS.created_at < NOW\\(\\) - INTERVAL '1 seconds'\\)\\)").
-		WithArgs(input).
+	mockDB.ExpectExec("DELETE FROM TOKEN_LOCKS WHERE " +
+		"TOKEN_LOCKS.created_at < NOW\\(\\) - INTERVAL '1 seconds'" +
+		" OR " +
+		"EXISTS \\(SELECT 1 FROM REQUESTS WHERE REQUESTS.tx_id = TOKEN_LOCKS.consumer_tx_id AND  REQUESTS.status IN \\(3\\)").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err = mockTokenLockStorePostgress(db).Cleanup(t.Context(), time.Second)
