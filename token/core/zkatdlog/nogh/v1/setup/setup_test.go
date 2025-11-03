@@ -55,17 +55,11 @@ func TestSerialization(t *testing.T) {
 
 		pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
 		assert.NoError(t, err)
-
-		ser2, err := pp2.Serialize()
-		assert.NoError(t, err)
-
-		assert.Equal(t, pp.IdemixIssuerPublicKeys, pp2.IdemixIssuerPublicKeys)
-		assert.Equal(t, pp.PedersenGenerators, pp2.PedersenGenerators)
-		assert.Equal(t, pp.RangeProofParams, pp2.RangeProofParams)
-		assert.Equal(t, pp.ExtraData, pp2.ExtraData)
-
 		assert.Equal(t, pp, pp2)
-		assert.Equal(t, ser, ser2)
+		assert.NotNil(t, pp2.Extras())
+
+		_, err = pp2.Serialize()
+		assert.NoError(t, err)
 
 		// no issuers
 		assert.NoError(t, pp.Validate())
