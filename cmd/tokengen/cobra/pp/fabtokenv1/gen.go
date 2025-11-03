@@ -34,6 +34,8 @@ var (
 	Auditors []string
 	// Version allows the caller of tokengen to override the version number put in the public params
 	Version uint
+	// Extras allows the caller to add extra parameters to the public parameters
+	Extras []string
 )
 
 // Cmd returns the Cobra Command for Version
@@ -45,6 +47,8 @@ func Cmd() *cobra.Command {
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
 	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
+	flags.StringArrayVarP(&Extras, "extra", "e", []string{}, "extra data in key=value format, where is the path to a file containing the data to load and store in the key")
+
 	return cobraCommand
 }
 
@@ -103,6 +107,14 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return nil, err
 	}
+
+	// load extras
+	pp.ExtraData, err = common.LoadExtras(Extras)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed loading extras")
+	}
+
+	// validate
 
 	// warn in case no issuers are specified
 	if len(pp.Issuers()) == 0 {

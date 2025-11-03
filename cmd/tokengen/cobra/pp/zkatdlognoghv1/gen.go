@@ -64,6 +64,8 @@ var (
 	Aries bool
 	// Version allows the caller of tokengen to override the version number put in the public params
 	Version uint
+	// Extras allows the caller to add extra parameters to the public parameters
+	Extras []string
 )
 
 // Cmd returns the Cobra Command for Version
@@ -79,6 +81,7 @@ func Cmd() *cobra.Command {
 	flags.UintVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")
 	flags.BoolVarP(&Aries, "aries", "r", false, "flag to indicate that aries should be used as backend for idemix")
 	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
+	flags.StringArrayVarP(&Extras, "extra", "e", []string{}, "extra data in key=value format, where is the path to a file containing the data to load and store in the key")
 
 	return cobraCommand
 }
@@ -145,6 +148,14 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return nil, errors.Wrap(err, "failed to setup issuer and auditors")
 	}
+
+	// load extras
+	pp.ExtraData, err = common.LoadExtras(Extras)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed loading extras")
+	}
+
+	// validate
 	if err := pp.Validate(); err != nil {
 		return nil, errors.Wrapf(err, "failed to validate public parameters")
 	}

@@ -130,3 +130,38 @@ func GetCertificatesFromDir(dir string) ([][]byte, error) {
 
 	return content, nil
 }
+
+// LoadExtras parses strings in the format "key:file_path" and returns a map
+// where keys are the extracted keys and values are the file contents as []byte.
+func LoadExtras(extraFiles []string) (map[string][]byte, error) {
+	result := make(map[string][]byte, len(extraFiles))
+
+	for _, entry := range extraFiles {
+		// Split on the first colon to get key and filepath
+		parts := strings.SplitN(entry, ":", 2)
+		if len(parts) != 2 {
+			return nil, errors.Errorf("invalid format %q: expected key:filepath", entry)
+		}
+
+		key := parts[0]
+		filepath := parts[1]
+
+		// Check for empty key or filepath
+		if key == "" {
+			return nil, errors.Errorf("empty key in entry %q", entry)
+		}
+		if filepath == "" {
+			return nil, errors.Errorf("empty filepath for key %q", key)
+		}
+
+		// Read the file
+		content, err := os.ReadFile(filepath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to read file for key %q (path: %s)", key, filepath)
+		}
+
+		result[key] = content
+	}
+
+	return result, nil
+}
