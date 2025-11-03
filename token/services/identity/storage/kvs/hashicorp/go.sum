@@ -924,6 +924,8 @@ github.com/hyperledger-labs/fabric-smart-client v0.6.0 h1:Wf8LT2uZ+FjqebOgji3U0X
 github.com/hyperledger-labs/fabric-smart-client v0.6.0/go.mod h1:E7q/iDZU7dBeAdHnYpzBKH0q2Kg9e3pfjvKhQN2BoSc=
 github.com/hyperledger-labs/fabric-smart-client v0.6.1-0.20251029162910-406634f14ec2 h1:Ee1fX0QylFc1zqoFHGviY9uJTh8IsWSjGBjxYNKv8lc=
 github.com/hyperledger-labs/fabric-smart-client v0.6.1-0.20251029162910-406634f14ec2/go.mod h1:Ib74lzDOsxuEGpl6Q3huBny9+X7b1HCEN6xhMbxIi9A=
+github.com/hyperledger-labs/fabric-smart-client v0.6.1-0.20251103092546-efa9438c1ae7 h1:/DsPQ2icpOn4zfQrM/7hDC7naogH2x/5hEeRp3PWoVM=
+github.com/hyperledger-labs/fabric-smart-client v0.6.1-0.20251103092546-efa9438c1ae7/go.mod h1:Ib74lzDOsxuEGpl6Q3huBny9+X7b1HCEN6xhMbxIi9A=
 github.com/hyperledger/aries-bbs-go v0.0.0-20240528084656-761671ea73bc h1:3Ykk6MtyfnlzMOQry9zkxsoLWpCWZwDPqehO/BJwArM=
 github.com/hyperledger/aries-bbs-go v0.0.0-20240528084656-761671ea73bc/go.mod h1:Kofn6A6WWea1ZM8Rys5aBW9dszwJ7Ywa0kyyYL0TPYw=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20250510200036-435a7f1a780a h1:l9dE3iuE+mKj7K8Tcx904cF8zJpaNQONh3GNZdXnnyc=
