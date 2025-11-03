@@ -109,6 +109,3 @@ In short, Services provide helpful abstractions and workflows on top of the Toke
 
 You can find the code for the various services in the [fabric-token-sdk/token
 /services](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/services) folder. Inside this folder, there are two driver implementations: one for Fabtoken and the other for Zkatdlog.
-
-### Resources
-- [Recording](https://ibm.ent.box.com/folder/348643434494)
