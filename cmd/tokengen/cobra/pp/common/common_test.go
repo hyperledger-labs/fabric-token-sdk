@@ -32,8 +32,8 @@ func TestLoadExtras(t *testing.T) {
 		}
 
 		extraFiles := []string{
-			"foo:" + file1Path,
-			"bar:" + file2Path,
+			"foo=" + file1Path,
+			"bar=" + file2Path,
 		}
 
 		result, err := LoadExtras(extraFiles)
@@ -71,7 +71,7 @@ func TestLoadExtras(t *testing.T) {
 	// Test case 3: File does not exist
 	t.Run("file_not_found", func(t *testing.T) {
 		extraFiles := []string{
-			"missing:" + filepath.Join(tempDir, "nonexistent.json"),
+			"missing=" + filepath.Join(tempDir, "nonexistent.json"),
 		}
 
 		result, err := LoadExtras(extraFiles)
@@ -100,7 +100,7 @@ func TestLoadExtras(t *testing.T) {
 
 	// Test case 5: Invalid format - empty key
 	t.Run("invalid_format_empty_key", func(t *testing.T) {
-		extraFiles := []string{":" + filepath.Join(tempDir, "test.json")}
+		extraFiles := []string{"=" + filepath.Join(tempDir, "test.json")}
 
 		result, err := LoadExtras(extraFiles)
 		if err == nil {
@@ -114,7 +114,7 @@ func TestLoadExtras(t *testing.T) {
 
 	// Test case 6: Invalid format - empty filepath
 	t.Run("invalid_format_empty_filepath", func(t *testing.T) {
-		extraFiles := []string{"key:"}
+		extraFiles := []string{"key="}
 
 		result, err := LoadExtras(extraFiles)
 		if err == nil {
@@ -136,7 +136,7 @@ func TestLoadExtras(t *testing.T) {
 
 		// Simulate a key with filepath that might have colons
 		extraFiles := []string{
-			"mykey:" + filePath,
+			"mykey=" + filePath,
 		}
 
 		result, err := LoadExtras(extraFiles)
@@ -157,7 +157,7 @@ func TestLoadExtras(t *testing.T) {
 			t.Fatalf("failed to create test file: %v", err)
 		}
 
-		extraFiles := []string{"binary:" + filePath}
+		extraFiles := []string{"binary=" + filePath}
 
 		result, err := LoadExtras(extraFiles)
 		if err != nil {

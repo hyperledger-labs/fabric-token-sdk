@@ -81,7 +81,7 @@ func Cmd() *cobra.Command {
 	flags.UintVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")
 	flags.BoolVarP(&Aries, "aries", "r", false, "flag to indicate that aries should be used as backend for idemix")
 	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
-	flags.StringArrayVarP(&Extras, "extra", "e", []string{}, "extra data in key=value format, where is the path to a file containing the data to load and store in the key")
+	flags.StringArrayVarP(&Extras, "extra", "x", []string{}, "extra data in key=value format, where is the path to a file containing the data to load and store in the key")
 
 	return cobraCommand
 }

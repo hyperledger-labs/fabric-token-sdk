@@ -138,7 +138,7 @@ func LoadExtras(extraFiles []string) (map[string][]byte, error) {
 
 	for _, entry := range extraFiles {
 		// Split on the first colon to get key and filepath
-		parts := strings.SplitN(entry, ":", 2)
+		parts := strings.SplitN(entry, "=", 2)
 		if len(parts) != 2 {
 			return nil, errors.Errorf("invalid format %q: expected key:filepath", entry)
 		}

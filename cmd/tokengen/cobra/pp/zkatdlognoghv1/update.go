@@ -44,6 +44,7 @@ func UpdateCmd() *cobra.Command {
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
 	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
+	flags.StringArrayVarP(&Extras, "extra", "x", []string{}, "extra data in key=value format, where is the path to a file containing the data to load and store in the key")
 
 	return cmd
 }
@@ -104,12 +105,21 @@ func Update(args *UpdateArgs) error {
 		return err
 	}
 
-	// update version if needed
+	// update version, if needed
 	ver := v1.ProtocolV1
 	if args.Version != 0 {
 		ver = driver.TokenDriverVersion(args.Version)
 	}
 	pp.DriverVersion = ver
+
+	// update extras, if needed
+	extraData, err := common.LoadExtras(Extras)
+	if err != nil {
+		return errors.Wrap(err, "failed loading extras")
+	}
+	for k, v := range extraData {
+		pp.ExtraData[k] = v
+	}
 
 	// Store Public Params
 	raw, err := pp.Serialize()
