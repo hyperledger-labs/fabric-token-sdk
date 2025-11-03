@@ -401,6 +401,9 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	}
 
 	p.ExtraData = publicParams.ExtraData
+	if p.ExtraData == nil {
+		p.ExtraData = driver.Extras{}
+	}
 
 	return nil
 }

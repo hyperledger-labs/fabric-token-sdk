@@ -27,39 +27,53 @@ func testingHelper(t *testing.T) []byte {
 }
 
 func TestSerialization(t *testing.T) {
-	// Use test helper instead of direct file read
-	issuerPK := testingHelper(t)
-	pp, err := Setup(32, issuerPK, math3.BN254)
-	assert.NoError(t, err)
-	assert.NotNil(t, pp.Extras())
-	pp.ExtraData = map[string][]byte{
-		"key1": []byte("value1"),
-		"key2": []byte("value2"),
-	}
-	assert.NoError(t, err)
-	ser, err := pp.Serialize()
-	assert.NoError(t, err)
+	t.Run("extras is not empty", func(t *testing.T) {
+		issuerPK := testingHelper(t)
+		pp, err := Setup(32, issuerPK, math3.BN254)
+		assert.NoError(t, err)
+		assert.NotNil(t, pp.Extras())
+		ser, err := pp.Serialize()
+		assert.NoError(t, err)
+		pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
+		assert.NoError(t, err)
+		assert.NotNil(t, pp2.Extras())
+	})
 
-	pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
-	assert.NoError(t, err)
+	t.Run("valid setup", func(t *testing.T) {
+		// Use test helper instead of direct file read
+		issuerPK := testingHelper(t)
+		pp, err := Setup(32, issuerPK, math3.BN254)
+		assert.NoError(t, err)
+		assert.NotNil(t, pp.Extras())
+		pp.ExtraData = map[string][]byte{
+			"key1": []byte("value1"),
+			"key2": []byte("value2"),
+		}
+		assert.NoError(t, err)
+		ser, err := pp.Serialize()
+		assert.NoError(t, err)
 
-	ser2, err := pp2.Serialize()
-	assert.NoError(t, err)
+		pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
+		assert.NoError(t, err)
 
-	assert.Equal(t, pp.IdemixIssuerPublicKeys, pp2.IdemixIssuerPublicKeys)
-	assert.Equal(t, pp.PedersenGenerators, pp2.PedersenGenerators)
-	assert.Equal(t, pp.RangeProofParams, pp2.RangeProofParams)
-	assert.Equal(t, pp.ExtraData, pp2.ExtraData)
+		ser2, err := pp2.Serialize()
+		assert.NoError(t, err)
 
-	assert.Equal(t, pp, pp2)
-	assert.Equal(t, ser, ser2)
+		assert.Equal(t, pp.IdemixIssuerPublicKeys, pp2.IdemixIssuerPublicKeys)
+		assert.Equal(t, pp.PedersenGenerators, pp2.PedersenGenerators)
+		assert.Equal(t, pp.RangeProofParams, pp2.RangeProofParams)
+		assert.Equal(t, pp.ExtraData, pp2.ExtraData)
 
-	// no issuers
-	assert.NoError(t, pp.Validate())
+		assert.Equal(t, pp, pp2)
+		assert.Equal(t, ser, ser2)
 
-	// with issuers
-	pp.IssuerIDs = []driver.Identity{[]byte("issuer")}
-	assert.NoError(t, pp.Validate())
+		// no issuers
+		assert.NoError(t, pp.Validate())
+
+		// with issuers
+		pp.IssuerIDs = []driver.Identity{[]byte("issuer")}
+		assert.NoError(t, pp.Validate())
+	})
 }
 
 func TestComputeMaxTokenValue(t *testing.T) {

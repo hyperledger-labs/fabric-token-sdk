@@ -39,6 +39,11 @@ func TestSetup(t *testing.T) {
 		pp, err := Setup(32)
 		assert.NoError(t, err)
 		assert.NotNil(t, pp.Extras())
+		ser, err := pp.Serialize()
+		assert.NoError(t, err)
+		pp2, err := NewPublicParamsFromBytes(ser, FabTokenDriverName, ProtocolV1)
+		assert.NoError(t, err)
+		assert.NotNil(t, pp2.Extras())
 	})
 }
 
