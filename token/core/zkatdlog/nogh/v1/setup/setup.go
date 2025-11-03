@@ -485,13 +485,13 @@ func (p *PublicParams) String() string {
 }
 
 // Validate validates the public parameters.
-// The list of issues can be empty meaning that anyone can create tokens.
+// The list of issuers can be empty meaning that anyone can create tokens.
 func (p *PublicParams) Validate() error {
 	if int(p.Curve) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(p.Curve), len(mathlib.Curves)-1)
 	}
-	if len(p.IdemixIssuerPublicKeys) != 1 {
-		return errors.Errorf("expected one idemix issuer public key, found [%d]", len(p.IdemixIssuerPublicKeys))
+	if len(p.IdemixIssuerPublicKeys) == 0 {
+		return errors.Errorf("expected at least one idemix issuer public key, found [%d]", len(p.IdemixIssuerPublicKeys))
 	}
 
 	for _, issuer := range p.IdemixIssuerPublicKeys {

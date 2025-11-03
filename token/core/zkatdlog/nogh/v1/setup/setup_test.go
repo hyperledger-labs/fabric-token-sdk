@@ -284,18 +284,7 @@ func TestPublicParamsValidation(t *testing.T) {
 				}
 				return pp
 			},
-			expectedError: "expected one idemix issuer public key",
-		},
-		{
-			name: "multiple idemix issuer public keys",
-			setupParams: func() *PublicParams {
-				pp := &PublicParams{
-					Curve:                  math3.BN254,
-					IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{validIssuerPK, validIssuerPK},
-				}
-				return pp
-			},
-			expectedError: "expected one idemix issuer public key",
+			expectedError: "expected at least one idemix issuer public key",
 		},
 		{
 			name: "nil idemix issuer public key",
