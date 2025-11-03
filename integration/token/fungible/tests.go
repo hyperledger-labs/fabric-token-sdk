@@ -749,7 +749,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	for _, transfer := range transferErrors2 {
 		errs = append(errs, <-transfer)
 	}
-	gomega.Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(gomega.BeTrue())
+	gomega.Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(gomega.BeTrue(), errs[0], errs[1])
 	var errStr string
 	if errs[0] == nil {
 		errStr = errs[1].Error()

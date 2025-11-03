@@ -347,7 +347,7 @@ func validateOutputEquivalent(
 		gt.Expect(extras["k1"]).To(BeEquivalentTo("f1"))
 		gt.Expect(extras["k2"]).To(BeEquivalentTo("f2"))
 	} else {
-		gt.Expect(extras).To(HaveLen(0))
+		gt.Expect(extras).To(BeEmpty())
 	}
 }
 
