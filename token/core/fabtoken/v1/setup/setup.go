@@ -79,6 +79,7 @@ func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriver
 		DriverVersion:     driverVersion,
 		QuantityPrecision: precision,
 		MaxToken:          uint64(1<<precision) - 1,
+		ExtraData:         driver.Extras{},
 	}, nil
 }
 
@@ -161,6 +162,9 @@ func (p *PublicParams) FromBytes(data []byte) error {
 		p.Auditor = publicParams.Auditor.Raw
 	}
 	p.ExtraData = publicParams.ExtraData
+	if p.ExtraData == nil {
+		p.ExtraData = driver.Extras{}
+	}
 	return nil
 }
 

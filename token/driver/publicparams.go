@@ -67,7 +67,7 @@ type PublicParameters interface {
 	// Validate returns true if the public parameters are well-formed
 	Validate() error
 	// Extras gives access to extra data, if available.
-	// Extras might return nil if no extra data is present.
+	// Extras always returns an initialized Extras that can be modified.
 	Extras() Extras
 }
 

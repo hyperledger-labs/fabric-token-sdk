@@ -30,6 +30,8 @@ func TestSerialization(t *testing.T) {
 	// Use test helper instead of direct file read
 	issuerPK := testingHelper(t)
 	pp, err := Setup(32, issuerPK, math3.BN254)
+	assert.NoError(t, err)
+	assert.NotNil(t, pp.Extras())
 	pp.ExtraData = map[string][]byte{
 		"key1": []byte("value1"),
 		"key2": []byte("value2"),

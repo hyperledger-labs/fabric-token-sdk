@@ -223,6 +223,7 @@ func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriver
 			},
 		},
 		QuantityPrecision: bitLength,
+		ExtraData:         driver.Extras{},
 	}
 	if err := pp.GeneratePedersenParameters(); err != nil {
 		return nil, errors.Wrapf(err, "failed to generated pedersen parameters")

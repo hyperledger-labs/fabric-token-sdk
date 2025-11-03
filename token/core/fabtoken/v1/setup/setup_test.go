@@ -34,6 +34,12 @@ func TestSetup(t *testing.T) {
 		assert.Nil(t, pp)
 		assert.Equal(t, "invalid precision, should be greater than 0", err.Error())
 	})
+
+	t.Run("extras is initialized", func(t *testing.T) {
+		pp, err := Setup(32)
+		assert.NoError(t, err)
+		assert.NotNil(t, pp.Extras())
+	})
 }
 
 func TestSetupWithVersion(t *testing.T) {
