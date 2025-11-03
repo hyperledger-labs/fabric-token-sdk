@@ -41,7 +41,7 @@ type PublicParams struct {
 	// This encodes the list of authorized issuers
 	IssuerIDs []driver.Identity
 	// ExtraData contains any extra custom data
-	ExtraData map[string][]byte
+	ExtraData driver.Extras
 }
 
 // Setup initializes PublicParams
@@ -259,4 +259,8 @@ func (p *PublicParams) String() string {
 		return err.Error()
 	}
 	return string(res)
+}
+
+func (p *PublicParams) Extras() driver.Extras {
+	return p.ExtraData
 }

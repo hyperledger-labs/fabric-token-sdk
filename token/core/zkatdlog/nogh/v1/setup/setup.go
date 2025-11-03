@@ -179,7 +179,7 @@ type PublicParams struct {
 	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
 	// ExtraData contains any extra custom data
-	ExtraData map[string][]byte
+	ExtraData driver.Extras
 }
 
 func NewPublicParamsFromBytes(
@@ -528,6 +528,10 @@ func (p *PublicParams) Validate() error {
 		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, p.MaxToken)
 	}
 	return nil
+}
+
+func (p *PublicParams) Extras() driver.Extras {
+	return p.ExtraData
 }
 
 func log2(x uint64) uint64 {

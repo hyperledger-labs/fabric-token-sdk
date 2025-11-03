@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	setupv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/spf13/cobra"
 )
@@ -134,11 +134,11 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 		curveID = math3.BLS12_381_BBS_GURVY
 	}
 	// todo range is hardcoded, to be changed
-	ver := v1.ProtocolV1
+	ver := setupv1.ProtocolV1
 	if args.Version != 0 {
 		ver = driver.TokenDriverVersion(args.Version)
 	}
-	pp, err := v1.WithVersion(64, ipkBytes, curveID, ver)
+	pp, err := setupv1.WithVersion(64, ipkBytes, curveID, ver)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}

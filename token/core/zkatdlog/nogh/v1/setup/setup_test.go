@@ -644,3 +644,23 @@ func TestRangeProofParamsInvalidPoints(t *testing.T) {
 		})
 	}
 }
+
+func TestExtras(t *testing.T) {
+	pp := &PublicParams{
+		ExtraData: map[string][]byte{
+			"key1": []byte("value1"),
+			"key2": []byte("value2"),
+		},
+	}
+
+	extras := pp.Extras()
+	assert.Equal(t, pp.ExtraData, extras)
+
+	// Verify nil case
+	pp = &PublicParams{}
+	assert.Nil(t, pp.Extras())
+
+	// Verify empty map case
+	pp.ExtraData = make(map[string][]byte)
+	assert.Empty(t, pp.Extras())
+}

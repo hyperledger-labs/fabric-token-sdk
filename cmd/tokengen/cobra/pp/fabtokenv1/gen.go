@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	setupv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -92,11 +92,11 @@ type GeneratorArgs struct {
 // Gen generates the public parameters for the FabToken driver
 func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Setup
-	ver := v1.ProtocolV1
+	ver := setupv1.ProtocolV1
 	if Version != 0 {
 		ver = driver.TokenDriverVersion(Version)
 	}
-	pp, err := v1.WithVersion(v1.DefaultPrecision, ver)
+	pp, err := setupv1.WithVersion(setupv1.DefaultPrecision, ver)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}
