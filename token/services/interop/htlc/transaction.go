@@ -73,7 +73,7 @@ func compileTransferOptions(opts ...token.TransferOption) (*token.TransferOption
 }
 
 type Binder interface {
-	Bind(ctx context.Context, longTerm view.Identity, ephemeral view.Identity) error
+	Bind(ctx context.Context, longTerm view.Identity, ephemeral ...view.Identity) error
 }
 
 // Transaction holds a ttx transaction

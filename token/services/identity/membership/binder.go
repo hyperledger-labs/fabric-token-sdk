@@ -15,6 +15,6 @@ import (
 // NoBinder implements a no-nop binder
 type NoBinder struct{}
 
-func (n *NoBinder) Bind(ctx context.Context, longTerm token.Identity, ephemeral token.Identity) error {
+func (n *NoBinder) Bind(ctx context.Context, longTerm token.Identity, ephemeral ...token.Identity) error {
 	return nil
 }
