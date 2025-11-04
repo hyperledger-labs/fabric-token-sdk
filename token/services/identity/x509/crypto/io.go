@@ -31,8 +31,21 @@ func readPemFile(file string) ([]byte, error) {
 	}
 
 	b, _ := pem.Decode(bytes)
-	if b == nil { // TODO: also check that the type is what we expect (cert vs key..)
+	if b == nil {
 		return nil, errors.Errorf("no pem content for file %s", file)
+	}
+
+	// Also check that the type is what we expect (cert vs key..)
+	expectedTypes := map[string]bool{
+		"CERTIFICATE":     true,
+		"PRIVATE KEY":     true,
+		"RSA PRIVATE KEY": true,
+		"EC PRIVATE KEY":  true,
+		"PUBLIC KEY":      true,
+	}
+
+	if !expectedTypes[b.Type] {
+		return nil, errors.Errorf("unexpected PEM block type %q in file %s", b.Type, file)
 	}
 
 	return bytes, nil
