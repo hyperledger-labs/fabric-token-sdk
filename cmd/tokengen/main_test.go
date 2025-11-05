@@ -57,6 +57,10 @@ func TestGenFullSuccess(t *testing.T) {
 			"./testdata/auditors/msp",
 			"--output",
 			tempOutput,
+			"--extra",
+			"k1=./testdata/extras/f1.txt",
+			"--extra",
+			"k2=./testdata/extras/f2.txt",
 		},
 	)
 
@@ -67,10 +71,11 @@ func TestGenFullSuccess(t *testing.T) {
 		"./testdata/issuers/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
 		v1.ProtocolV1,
+		true,
 	)
 }
 
-func TestGenFullSuccessWithVersionOverride(t *testing.T) {
+func TestGenFullSuccessWithVersionOverrideAndNewExtras(t *testing.T) {
 	gt := NewGomegaWithT(t)
 	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
 	gt.Expect(err).NotTo(HaveOccurred())
@@ -95,6 +100,10 @@ func TestGenFullSuccessWithVersionOverride(t *testing.T) {
 			tempOutput,
 			"--version",
 			"2",
+			"--extra",
+			"k1=./testdata/extras/f1.txt",
+			"--extra",
+			"k2=./testdata/extras/f2.txt",
 		},
 	)
 
@@ -105,6 +114,7 @@ func TestGenFullSuccessWithVersionOverride(t *testing.T) {
 		"./testdata/issuers/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
 		driver.TokenDriverVersion(2),
+		true,
 	)
 }
 
@@ -132,6 +142,10 @@ func TestFullUpdate(t *testing.T) {
 			"./testdata/zkatdlognoghv1_pp.json",
 			"--output",
 			tempOutput,
+			"--extra",
+			"k1=./testdata/extras/f1.txt",
+			"--extra",
+			"k2=./testdata/extras/f2.txt",
 		},
 	)
 
@@ -142,6 +156,7 @@ func TestFullUpdate(t *testing.T) {
 		"./testdata/auditors/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
 		v1.ProtocolV1,
+		true,
 	)
 }
 
@@ -178,6 +193,7 @@ func TestPartialUpdate(t *testing.T) {
 		"./testdata/auditors/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
 		v1.ProtocolV1,
+		false,
 	)
 }
 
@@ -216,6 +232,7 @@ func TestPartialUpdateWithVersion(t *testing.T) {
 		"./testdata/auditors/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
 		driver.TokenDriverVersion(2),
+		false,
 	)
 }
 
@@ -298,6 +315,7 @@ func validateOutputEquivalent(
 	gt *WithT,
 	tempOutput, auditorsMSPdir, issuersMSPdir, idemixMSPdir string,
 	version driver.TokenDriverVersion,
+	checkExtra bool,
 ) {
 	ppRaw, err := os.ReadFile(filepath.Join(
 		tempOutput,
@@ -322,6 +340,15 @@ func validateOutputEquivalent(
 	idemixPK, err := os.ReadFile(idemixMSPdir)
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(idemixPK).To(BeEquivalentTo(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey))
+
+	extras := pp.Extras()
+	if checkExtra {
+		gt.Expect(extras).To(HaveLen(2))
+		gt.Expect(extras["k1"]).To(BeEquivalentTo("f1"))
+		gt.Expect(extras["k2"]).To(BeEquivalentTo("f2"))
+	} else {
+		gt.Expect(extras).To(BeEmpty())
+	}
 }
 
 func testGenRunWithError(gt *WithT, tokengen string, args []string, errMsg string) {

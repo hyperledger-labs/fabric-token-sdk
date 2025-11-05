@@ -104,27 +104,27 @@ clean:
 	docker network prune -f
 	docker container prune -f
 	docker volume prune -f
-	rm -rf ./integration/token/fungible/dlog/cmd/
+	rm -rf ./integration/token/fungible/dlog/out/
 	rm -rf ./integration/token/fungible/dlog/testdata/
-	rm -rf ./integration/token/fungible/dlogx/cmd/
-	rm -rf ./integration/token/fungible/dloghsm/cmd/
+	rm -rf ./integration/token/fungible/dlogx/out/
+	rm -rf ./integration/token/fungible/dloghsm/out/
 	rm -rf ./integration/token/fungible/dloghsm/testdata/
-	rm -rf ./integration/token/fungible/dlogstress/cmd/
+	rm -rf ./integration/token/fungible/dlogstress/out/
 	rm -rf ./integration/token/fungible/dlogstress/testdata/
-	rm -rf ./integration/token/fungible/fabtoken/cmd/
+	rm -rf ./integration/token/fungible/fabtoken/out/
 	rm -rf ./integration/token/fungible/fabtoken/testdata/
-	rm -rf ./integration/token/fungible/odlog/cmd/
-	rm -rf ./integration/token/fungible/ofabtoken/cmd/
-	rm -rf ./integration/token/fungible/mixed/cmd/
-	rm -rf ./integration/token/nft/dlog/cmd/
-	rm -rf ./integration/token/nft/fabtoken/cmd/
-	rm -rf ./integration/token/nft/odlog/cmd/
-	rm -rf ./integration/token/nft/ofabtoken/cmd/
-	rm -rf ./integration/token/dvp/dlog/cmd/
-	rm -rf ./integration/token/dvp/fabtoken/cmd/
-	rm -rf ./integration/token/interop/fabtoken/cmd/
-	rm -rf ./integration/token/interop/dlog/cmd/
-	rm -rf ./integration/token/fungible/update/cmd/
+	rm -rf ./integration/token/fungible/odlog/out/
+	rm -rf ./integration/token/fungible/ofabtoken/out/
+	rm -rf ./integration/token/fungible/mixed/out/
+	rm -rf ./integration/token/nft/dlog/out/
+	rm -rf ./integration/token/nft/fabtoken/out/
+	rm -rf ./integration/token/nft/odlog/out/
+	rm -rf ./integration/token/nft/ofabtoken/out/
+	rm -rf ./integration/token/dvp/dlog/out/
+	rm -rf ./integration/token/dvp/fabtoken/out/
+	rm -rf ./integration/token/interop/fabtoken/out/
+	rm -rf ./integration/token/interop/dlog/out/
+	rm -rf ./integration/token/fungible/update/out/
 	rm -rf ./integration/token/fungible/update/testdata/
 
 .PHONY: clean-fabric-peer-images

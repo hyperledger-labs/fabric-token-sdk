@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	setupv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -34,6 +34,8 @@ var (
 	Auditors []string
 	// Version allows the caller of tokengen to override the version number put in the public params
 	Version uint
+	// Extras allows the caller to add extra parameters to the public parameters
+	Extras []string
 )
 
 // Cmd returns the Cobra Command for Version
@@ -45,6 +47,8 @@ func Cmd() *cobra.Command {
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
 	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
+	flags.StringArrayVarP(&Extras, "extra", "x", []string{}, "extra data in key=value format, where value is the path to a file containing the data to load and store in the key")
+
 	return cobraCommand
 }
 
@@ -92,16 +96,27 @@ type GeneratorArgs struct {
 // Gen generates the public parameters for the FabToken driver
 func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Setup
-	ver := v1.ProtocolV1
+	ver := setupv1.ProtocolV1
 	if Version != 0 {
 		ver = driver.TokenDriverVersion(Version)
 	}
-	pp, err := v1.SetupWithVersion(v1.DefaultPrecision, ver)
+	pp, err := setupv1.WithVersion(setupv1.DefaultPrecision, ver)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return nil, err
+	}
+
+	// load extras
+	pp.ExtraData, err = common.LoadExtras(Extras)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed loading extras")
+	}
+
+	// validate
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed to validate public parameters")
 	}
 
 	// warn in case no issuers are specified

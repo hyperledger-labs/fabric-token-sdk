@@ -36,6 +36,8 @@ type PublicParamsFetcher interface {
 	Fetch() ([]byte, error)
 }
 
+type Extras = map[string][]byte
+
 //go:generate counterfeiter -o mock/pp.go -fake-name PublicParameters . PublicParameters
 
 // PublicParameters is the interface that must be implemented by the driver public parameters.
@@ -64,11 +66,14 @@ type PublicParameters interface {
 	Serialize() ([]byte, error)
 	// Validate returns true if the public parameters are well-formed
 	Validate() error
+	// Extras gives access to extra data, if available.
+	// Extras always returns an initialized Extras that can be modified.
+	Extras() Extras
 }
 
 //go:generate counterfeiter -o mock/ppm.go -fake-name PublicParamsManager . PublicParamsManager
 
-// PublicParamsManager is the interface that must be implemented by the driver public parameters manager.
+// PublicParamsManager is the interface that must be implemented by the driver public parameters' manager.
 type PublicParamsManager interface {
 	// PublicParameters returns the public parameters.
 	PublicParameters() PublicParameters

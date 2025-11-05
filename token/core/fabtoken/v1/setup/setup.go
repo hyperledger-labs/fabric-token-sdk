@@ -40,6 +40,8 @@ type PublicParams struct {
 	Auditor []byte
 	// This encodes the list of authorized issuers
 	IssuerIDs []driver.Identity
+	// ExtraData contains any extra custom data
+	ExtraData driver.Extras
 }
 
 // Setup initializes PublicParams
@@ -47,8 +49,8 @@ func Setup(precision uint64) (*PublicParams, error) {
 	return NewWith(FabTokenDriverName, ProtocolV1, precision)
 }
 
-// SetupWithVersion is like Setup with the additional possibility to specify the version number
-func SetupWithVersion(precision uint64, version driver.TokenDriverVersion) (*PublicParams, error) {
+// WithVersion is like Setup with the additional possibility to specify the version number
+func WithVersion(precision uint64, version driver.TokenDriverVersion) (*PublicParams, error) {
 	return NewWith(FabTokenDriverName, version, precision)
 }
 
@@ -77,6 +79,7 @@ func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriver
 		DriverVersion:     driverVersion,
 		QuantityPrecision: precision,
 		MaxToken:          uint64(1<<precision) - 1,
+		ExtraData:         driver.Extras{},
 	}, nil
 }
 
@@ -132,6 +135,7 @@ func (p *PublicParams) Bytes() ([]byte, error) {
 		Issuers:           issuers,
 		MaxToken:          p.MaxToken,
 		QuantityPrecision: p.QuantityPrecision,
+		ExtraData:         p.ExtraData,
 	}
 	return proto.Marshal(params)
 }
@@ -156,6 +160,10 @@ func (p *PublicParams) FromBytes(data []byte) error {
 	p.IssuerIDs = issuers
 	if publicParams.Auditor != nil {
 		p.Auditor = publicParams.Auditor.Raw
+	}
+	p.ExtraData = publicParams.ExtraData
+	if p.ExtraData == nil {
+		p.ExtraData = driver.Extras{}
 	}
 	return nil
 }
@@ -255,4 +263,8 @@ func (p *PublicParams) String() string {
 		return err.Error()
 	}
 	return string(res)
+}
+
+func (p *PublicParams) Extras() driver.Extras {
+	return p.ExtraData
 }

@@ -74,12 +74,13 @@ func (x *Identity) GetRaw() []byte {
 // PublicParameters describes typed public parameters
 type PublicParameters struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	TokenDriverName    string                 `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`           // the name of the token driver
-	TokenDriverVersion uint64                 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"` // the version of token driver
-	Auditor            *Identity              `protobuf:"bytes,7,opt,name=auditor,proto3" json:"auditor,omitempty"`                                                    // is the public key of the auditor.
-	Issuers            []*Identity            `protobuf:"bytes,8,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                    // is a list of public keys of the entities that can issue tokens.
-	MaxToken           uint64                 `protobuf:"varint,9,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`                                 // is the maximum quantity a token can hold
-	QuantityPrecision  uint64                 `protobuf:"varint,10,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`     // is the precision used to represent quantities
+	TokenDriverName    string                 `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`                                                       // the name of the token driver
+	TokenDriverVersion uint64                 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                                             // the version of token driver
+	Auditor            *Identity              `protobuf:"bytes,3,opt,name=auditor,proto3" json:"auditor,omitempty"`                                                                                                // is the public key of the auditor.
+	Issuers            []*Identity            `protobuf:"bytes,4,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                                                // is a list of public keys of the entities that can issue tokens.
+	MaxToken           uint64                 `protobuf:"varint,5,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`                                                                             // is the maximum quantity a token can hold
+	QuantityPrecision  uint64                 `protobuf:"varint,6,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`                                                  // is the precision used to represent quantities
+	ExtraData          map[string][]byte      `protobuf:"bytes,7,rep,name=extra_data,json=extraData,proto3" json:"extra_data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // extra_data allows to store arbitrary data in the public parameters
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -156,6 +157,13 @@ func (x *PublicParameters) GetQuantityPrecision() uint64 {
 	return 0
 }
 
+func (x *PublicParameters) GetExtraData() map[string][]byte {
+	if x != nil {
+		return x.ExtraData
+	}
+	return nil
+}
+
 var File_ftpp_proto protoreflect.FileDescriptor
 
 const file_ftpp_proto_rawDesc = "" +
@@ -163,15 +171,19 @@ const file_ftpp_proto_rawDesc = "" +
 	"\n" +
 	"ftpp.proto\x12\bfabtoken\"\x1c\n" +
 	"\bIdentity\x12\x10\n" +
-	"\x03raw\x18\x01 \x01(\fR\x03raw\"\x98\x02\n" +
+	"\x03raw\x18\x01 \x01(\fR\x03raw\"\xa0\x03\n" +
 	"\x10PublicParameters\x12*\n" +
 	"\x11token_driver_name\x18\x01 \x01(\tR\x0ftokenDriverName\x120\n" +
 	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12,\n" +
-	"\aauditor\x18\a \x01(\v2\x12.fabtoken.IdentityR\aauditor\x12,\n" +
-	"\aissuers\x18\b \x03(\v2\x12.fabtoken.IdentityR\aissuers\x12\x1b\n" +
-	"\tmax_token\x18\t \x01(\x04R\bmaxToken\x12-\n" +
-	"\x12quantity_precision\x18\n" +
-	" \x01(\x04R\x11quantityPrecisionBOZMgithub.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/ppb\x06proto3"
+	"\aauditor\x18\x03 \x01(\v2\x12.fabtoken.IdentityR\aauditor\x12,\n" +
+	"\aissuers\x18\x04 \x03(\v2\x12.fabtoken.IdentityR\aissuers\x12\x1b\n" +
+	"\tmax_token\x18\x05 \x01(\x04R\bmaxToken\x12-\n" +
+	"\x12quantity_precision\x18\x06 \x01(\x04R\x11quantityPrecision\x12H\n" +
+	"\n" +
+	"extra_data\x18\a \x03(\v2).fabtoken.PublicParameters.ExtraDataEntryR\textraData\x1a<\n" +
+	"\x0eExtraDataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BOZMgithub.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/ppb\x06proto3"
 
 var (
 	file_ftpp_proto_rawDescOnce sync.Once
@@ -185,19 +197,21 @@ func file_ftpp_proto_rawDescGZIP() []byte {
 	return file_ftpp_proto_rawDescData
 }
 
-var file_ftpp_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_ftpp_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_ftpp_proto_goTypes = []any{
 	(*Identity)(nil),         // 0: fabtoken.Identity
 	(*PublicParameters)(nil), // 1: fabtoken.PublicParameters
+	nil,                      // 2: fabtoken.PublicParameters.ExtraDataEntry
 }
 var file_ftpp_proto_depIdxs = []int32{
 	0, // 0: fabtoken.PublicParameters.auditor:type_name -> fabtoken.Identity
 	0, // 1: fabtoken.PublicParameters.issuers:type_name -> fabtoken.Identity
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2, // 2: fabtoken.PublicParameters.extra_data:type_name -> fabtoken.PublicParameters.ExtraDataEntry
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_ftpp_proto_init() }
@@ -211,7 +225,7 @@ func file_ftpp_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ftpp_proto_rawDesc), len(file_ftpp_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

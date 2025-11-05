@@ -178,6 +178,8 @@ type PublicParams struct {
 	MaxToken uint64
 	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
+	// ExtraData contains any extra custom data
+	ExtraData driver.Extras
 }
 
 func NewPublicParamsFromBytes(
@@ -198,8 +200,8 @@ func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveI
 	return NewWith(DLogNoGHDriverName, ProtocolV1, bitLength, idemixIssuerPK, idemixCurveID)
 }
 
-// SetupWithVersion is like Setup with the additional possibility to specify the version number
-func SetupWithVersion(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID, version driver.TokenDriverVersion) (*PublicParams, error) {
+// WithVersion is like Setup with the additional possibility to specify the version number
+func WithVersion(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID, version driver.TokenDriverVersion) (*PublicParams, error) {
 	return NewWith(DLogNoGHDriverName, version, bitLength, idemixIssuerPK, idemixCurveID)
 }
 
@@ -221,6 +223,7 @@ func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriver
 			},
 		},
 		QuantityPrecision: bitLength,
+		ExtraData:         driver.Extras{},
 	}
 	if err := pp.GeneratePedersenParameters(); err != nil {
 		return nil, errors.Wrapf(err, "failed to generated pedersen parameters")
@@ -276,6 +279,9 @@ func (p *PublicParams) Precision() uint64 {
 }
 
 func (p *PublicParams) Serialize() ([]byte, error) {
+	if err := p.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize public parameters")
+	}
 	pg, err := utils2.ToProtoG1Slice(p.PedersenGenerators)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize public parameters")
@@ -318,6 +324,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 		Issuers:                issuers,
 		MaxToken:               p.MaxToken,
 		QuantityPrecision:      p.QuantityPrecision,
+		ExtraData:              p.ExtraData,
 	}
 	raw, err := proto.Marshal(publicParams)
 	if err != nil {
@@ -391,6 +398,11 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	p.RangeProofParams = &RangeProofParams{}
 	if err := p.RangeProofParams.FromProto(publicParams.RangeProofParams); err != nil {
 		return errors.Wrapf(err, "failed to deserialize range proof parameters")
+	}
+
+	p.ExtraData = publicParams.ExtraData
+	if p.ExtraData == nil {
+		p.ExtraData = driver.Extras{}
 	}
 
 	return nil
@@ -477,13 +489,13 @@ func (p *PublicParams) String() string {
 }
 
 // Validate validates the public parameters.
-// The list of issues can be empty meaning that anyone can create tokens.
+// The list of issuers can be empty meaning that anyone can create tokens.
 func (p *PublicParams) Validate() error {
 	if int(p.Curve) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(p.Curve), len(mathlib.Curves)-1)
 	}
-	if len(p.IdemixIssuerPublicKeys) != 1 {
-		return errors.Errorf("expected one idemix issuer public key, found [%d]", len(p.IdemixIssuerPublicKeys))
+	if len(p.IdemixIssuerPublicKeys) == 0 {
+		return errors.Errorf("expected at least one idemix issuer public key, found [%d]", len(p.IdemixIssuerPublicKeys))
 	}
 
 	for _, issuer := range p.IdemixIssuerPublicKeys {
@@ -520,6 +532,10 @@ func (p *PublicParams) Validate() error {
 		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, p.MaxToken)
 	}
 	return nil
+}
+
+func (p *PublicParams) Extras() driver.Extras {
+	return p.ExtraData
 }
 
 func log2(x uint64) uint64 {

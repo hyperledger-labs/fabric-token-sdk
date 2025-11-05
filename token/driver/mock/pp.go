@@ -28,6 +28,16 @@ type PublicParameters struct {
 	certificationDriverReturnsOnCall map[int]struct {
 		result1 string
 	}
+	ExtrasStub        func() driver.Extras
+	extrasMutex       sync.RWMutex
+	extrasArgsForCall []struct {
+	}
+	extrasReturns struct {
+		result1 driver.Extras
+	}
+	extrasReturnsOnCall map[int]struct {
+		result1 driver.Extras
+	}
 	GraphHidingStub        func() bool
 	graphHidingMutex       sync.RWMutex
 	graphHidingArgsForCall []struct {
@@ -237,6 +247,59 @@ func (fake *PublicParameters) CertificationDriverReturnsOnCall(i int, result1 st
 	}
 	fake.certificationDriverReturnsOnCall[i] = struct {
 		result1 string
+	}{result1}
+}
+
+func (fake *PublicParameters) Extras() driver.Extras {
+	fake.extrasMutex.Lock()
+	ret, specificReturn := fake.extrasReturnsOnCall[len(fake.extrasArgsForCall)]
+	fake.extrasArgsForCall = append(fake.extrasArgsForCall, struct {
+	}{})
+	stub := fake.ExtrasStub
+	fakeReturns := fake.extrasReturns
+	fake.recordInvocation("Extras", []interface{}{})
+	fake.extrasMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *PublicParameters) ExtrasCallCount() int {
+	fake.extrasMutex.RLock()
+	defer fake.extrasMutex.RUnlock()
+	return len(fake.extrasArgsForCall)
+}
+
+func (fake *PublicParameters) ExtrasCalls(stub func() driver.Extras) {
+	fake.extrasMutex.Lock()
+	defer fake.extrasMutex.Unlock()
+	fake.ExtrasStub = stub
+}
+
+func (fake *PublicParameters) ExtrasReturns(result1 driver.Extras) {
+	fake.extrasMutex.Lock()
+	defer fake.extrasMutex.Unlock()
+	fake.ExtrasStub = nil
+	fake.extrasReturns = struct {
+		result1 driver.Extras
+	}{result1}
+}
+
+func (fake *PublicParameters) ExtrasReturnsOnCall(i int, result1 driver.Extras) {
+	fake.extrasMutex.Lock()
+	defer fake.extrasMutex.Unlock()
+	fake.ExtrasStub = nil
+	if fake.extrasReturnsOnCall == nil {
+		fake.extrasReturnsOnCall = make(map[int]struct {
+			result1 driver.Extras
+		})
+	}
+	fake.extrasReturnsOnCall[i] = struct {
+		result1 driver.Extras
 	}{result1}
 }
 
@@ -780,6 +843,8 @@ func (fake *PublicParameters) Invocations() map[string][][]interface{} {
 	defer fake.auditorsMutex.RUnlock()
 	fake.certificationDriverMutex.RLock()
 	defer fake.certificationDriverMutex.RUnlock()
+	fake.extrasMutex.RLock()
+	defer fake.extrasMutex.RUnlock()
 	fake.graphHidingMutex.RLock()
 	defer fake.graphHidingMutex.RUnlock()
 	fake.issuersMutex.RLock()
