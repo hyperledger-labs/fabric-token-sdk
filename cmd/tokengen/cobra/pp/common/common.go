@@ -131,7 +131,7 @@ func GetCertificatesFromDir(dir string) ([][]byte, error) {
 	return content, nil
 }
 
-// LoadExtras parses strings in the format "key:file_path" and returns a map
+// LoadExtras parses strings in the format "key=file_path" and returns a map
 // where keys are the extracted keys and values are the file contents as []byte.
 func LoadExtras(extraFiles []string) (map[string][]byte, error) {
 	result := make(map[string][]byte, len(extraFiles))
