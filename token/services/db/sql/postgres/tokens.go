@@ -13,7 +13,8 @@ import (
 )
 
 type (
-	TokenStore    = common.TokenStore
+	TokenStore = common.TokenStore
+	//lint:ignore SA1019 remove when Notifier is migrated See https://github.com/hyperledger-labs/fabric-token-sdk/issues/1240
 	TokenNotifier = postgres.Notifier
 )
 
