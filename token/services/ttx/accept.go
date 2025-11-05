@@ -17,25 +17,27 @@ import (
 
 // AcceptView is used to accept tokens without the need to generate any signature.
 // This is a view executed by a responder.
+// This view is to be used in conjunction with CollectEndorsementsView.
+// Usually, AcceptView is preceded by an invocation of `tx.ReceiveTransaction(context)`
+// necessary if the initiator has invoked CollectEndorsementsView.
 type AcceptView struct {
-	tx      *Transaction
-	options *EndorsementsOpts
+	tx   *Transaction
+	opts []EndorsementsOpt
 }
 
 // NewAcceptView returns a new instance of AcceptView given in input a transaction.
-// Usually, AcceptView is preceded by an invocation of `tx.ReceiveTransaction(context)`
-// necessary if the initiator have invoked the CollectEndorsementsView
 func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *AcceptView {
-	options, err := CompileCollectEndorsementsOpts(opts...)
-	if err != nil {
-		panic(err)
-	}
-	return &AcceptView{tx: tx, options: options}
+	return &AcceptView{tx: tx, opts: opts}
 }
 
 // Call accepts the tokens created by the transaction this view has been created with.
 func (s *AcceptView) Call(context view.Context) (interface{}, error) {
-	// Store transaction in the token transaction database
+	// validate inputs
+	if s.tx == nil {
+		return nil, errors.WithMessagef(ErrInvalidInput, "transaction is nil")
+	}
+
+	// store transaction in the token transaction database
 	if err := StoreTransactionRecords(context, s.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
 	}
@@ -43,16 +45,6 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	// ack
 	if err := s.ack(context); err != nil {
 		return nil, errors.Wrapf(err, "failed acknowledging transaction %s", s.tx.ID())
-	}
-
-	// cache the token request into the tokens db
-	t, err := tokens.GetService(context, s.tx.TMSID())
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
-	}
-
-	if err := t.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
-		logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
 	}
 
 	// metrics
@@ -63,11 +55,17 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	}
 	GetMetrics(context).AcceptedTransactions.With(labels...).Add(1)
 
+	// cache request
+	if err := s.cacheRequest(context); err != nil {
+		return nil, errors.Wrapf(err, "failed caching request for [%s]", s.tx.ID())
+	}
+
 	return s.tx, nil
 }
 
+// ack sends back an acknowledgement by signing the received transaction
+// with the identity of the FSC node running this stack.
 func (s *AcceptView) ack(context view.Context) error {
-	// Send back an acknowledgement
 	txRaw := s.tx.FromRaw
 	idProvider, err := id.GetProvider(context)
 	if err != nil {
@@ -97,5 +95,19 @@ func (s *AcceptView) ack(context view.Context) error {
 	if err := session.SendWithContext(context.Context(), sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending ack")
 	}
+	return nil
+}
+
+func (s *AcceptView) cacheRequest(context view.Context) error {
+	// cache the token request into the tokens db
+	t, err := tokens.GetService(context, s.tx.TMSID())
+	if err != nil {
+		return errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
+	}
+
+	if err := t.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
+		logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
+	}
+
 	return nil
 }
