@@ -30,7 +30,7 @@ Contains end-to-end integration tests. These tests bootstrap minimal instances o
 
 #### token
 
-This is the core folder containing the actual implementation of the Token SDK. Most of the business logic and functionalities used by projects like IDAP come from this directory.
+This is the core folder containing the actual implementation of the Token SDK. 
 
 #### tools
 

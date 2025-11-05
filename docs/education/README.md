@@ -1,4 +1,4 @@
- # Education Resources
+ # Fabric Token SDK Education
 
 This folder contains educational materials designed to help you understand the key concepts, architecture, and usage of the Fabric Token SDK.
 
