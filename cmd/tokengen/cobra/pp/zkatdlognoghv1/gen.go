@@ -33,10 +33,8 @@ type GeneratorArgs struct {
 	Issuers []string
 	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
 	Auditors []string
-	// Base is a dlog driver related parameter
-	Base uint
-	// Exponent is a dlog driver related parameter
-	Exponent uint
+	// BitLength is a dlog driver related parameter
+	BitLength uint64
 	// Aries is a flag to indicate that aries should be used as backend for idemix
 	Aries bool
 	// Version allows the caller of tokengen to override the version number put in the public params
@@ -54,12 +52,9 @@ var (
 	Issuers []string
 	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
 	Auditors []string
-	// Base is a dlog driver related parameter.
-	// It is used to define the maximum quantity a token can contain as Base^Exponent
-	Base uint
-	// Exponent is a dlog driver related parameter
-	// It is used to define the maximum quantity a token can contain as Base^Exponent
-	Exponent uint
+	// BitLength is a dlog driver related parameter.
+	// It is used to define the maximum quantity a token can contain
+	BitLength uint64
 	// Aries is a flag to indicate that aries should be used as backend for idemix
 	Aries bool
 	// Version allows the caller of tokengen to override the version number put in the public params
@@ -77,11 +72,10 @@ func Cmd() *cobra.Command {
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
 	flags.StringVarP(&IdemixMSPDir, "idemix", "i", "", "idemix msp dir")
-	flags.UintVarP(&Base, "base", "b", 100, "base is used to define the maximum quantity a token can contain as Base^Exponent")
-	flags.UintVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")
+	flags.Uint64VarP(&BitLength, "bits", "b", 64, "bits is used to define the maximum quantity a token can contain")
 	flags.BoolVarP(&Aries, "aries", "r", false, "flag to indicate that aries should be used as backend for idemix")
 	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
-	flags.StringArrayVarP(&Extras, "extra", "x", []string{}, "extra data in key=value format, where is the path to a file containing the data to load and store in the key")
+	flags.StringArrayVarP(&Extras, "extra", "x", []string{}, "extra data in key=value format, where value is the path to a file containing the data to load and store in the key")
 
 	return cobraCommand
 }
@@ -102,8 +96,7 @@ var cobraCommand = &cobra.Command{
 			GenerateCCPackage: GenerateCCPackage,
 			Issuers:           Issuers,
 			Auditors:          Auditors,
-			Base:              Base,
-			Exponent:          Exponent,
+			BitLength:         BitLength,
 			Aries:             Aries,
 			Version:           Version,
 		})
@@ -136,15 +129,20 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if args.Aries {
 		curveID = math3.BLS12_381_BBS_GURVY
 	}
-	// todo range is hardcoded, to be changed
 	ver := setupv1.ProtocolV1
 	if args.Version != 0 {
 		ver = driver.TokenDriverVersion(args.Version)
 	}
-	pp, err := setupv1.WithVersion(64, ipkBytes, curveID, ver)
+	var bitLength uint64
+	if args.BitLength != 0 {
+		bitLength = args.BitLength
+	}
+	pp, err := setupv1.WithVersion(bitLength, ipkBytes, curveID, ver)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}
+
+	// issuers and auditors
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return nil, errors.Wrap(err, "failed to setup issuer and auditors")
 	}
