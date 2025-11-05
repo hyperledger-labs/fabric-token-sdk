@@ -21,29 +21,29 @@ import (
 func TestAnchorInContext(t *testing.T) {
 	anchor := driver.TokenRequestAnchor("hello world")
 	anotherAnchor := driver.TokenRequestAnchor("another anchor")
-	v := NewValidator[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer](
+	v := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
 		nil,
 		nil,
 		nil,
 		nil,
-		[]ValidateTransferFunc[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
-			func(c context.Context, ctx *Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+		[]ValidateTransferFunc[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
+			func(c context.Context, ctx *Context[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
 				if anchor != ctx.Anchor {
 					return fmt.Errorf("transfer, anchor does not match, expected %s, got %s", anchor, ctx.Anchor)
 				}
 				return nil
 			},
 		},
-		[]ValidateIssueFunc[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
-			func(c context.Context, ctx *Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+		[]ValidateIssueFunc[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
+			func(c context.Context, ctx *Context[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
 				if anchor != ctx.Anchor {
 					return fmt.Errorf("issue, anchor does not match, expected %s, got %s", anchor, ctx.Anchor)
 				}
 				return nil
 			},
 		},
-		[]ValidateAuditingFunc[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
-			func(c context.Context, ctx *Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+		[]ValidateAuditingFunc[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
+			func(c context.Context, ctx *Context[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
 				if anchor != ctx.Anchor {
 					return fmt.Errorf("audit, anchor does not match, expected %s, got %s", anchor, ctx.Anchor)
 				}

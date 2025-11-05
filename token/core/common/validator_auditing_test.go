@@ -17,7 +17,7 @@ import (
 )
 
 type (
-	TestContext = Context[driver.PublicParameters, any, driver.TransferAction, driver.IssueAction, driver.Deserializer]
+	TestContext = Context[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]
 	TestCheck   = func() bool
 )
 

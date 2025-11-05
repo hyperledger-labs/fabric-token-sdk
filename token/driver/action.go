@@ -39,6 +39,12 @@ type IssueAction interface {
 	ExtraSigners() []Identity
 }
 
+// Input models an input of an action
+type Input interface {
+	// GetOwner returns the owner of this token
+	GetOwner() []byte
+}
+
 // Output models an output of an action
 type Output interface {
 	// Serialize returns the serialized version of the output

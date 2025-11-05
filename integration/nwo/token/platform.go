@@ -84,8 +84,8 @@ func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platf
 		TokenGenPath:           DefaultTokenGenPath,
 		NetworkHandlers:        map[string]NetworkHandler{},
 	}
-	p.PublicParamsGenerators[fabtokenv1.DriverIdentifier] = fabtokenv2.NewFabTokenPublicParamsGenerator()
-	p.PublicParamsGenerators[zkatdlognoghv1.DriverIdentifier] = common2.NewDLogPublicParamsGenerator(math3.BN254)
+	p.PublicParamsGenerators[fabtokenv1.DriverIdentifier] = fabtokenv2.NewFabTokenPublicParamsGenerator(0)
+	p.PublicParamsGenerators[zkatdlognoghv1.DriverIdentifier] = common2.NewDLogPublicParamsGenerator(math3.BN254, 0)
 
 	return p
 }
