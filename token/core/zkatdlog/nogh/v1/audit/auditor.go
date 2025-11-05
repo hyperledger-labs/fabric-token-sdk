@@ -115,9 +115,6 @@ func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatc
 
 // Endorse is called to sign a valid token request
 func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
-	if tokenRequest == nil {
-		return nil, errors.Errorf("audit of tx [%s] failed: : token request is nil", txID)
-	}
 	// Marshal tokenRequest
 	bytes, err := tokenRequest.MarshalToMessageToSign([]byte(txID))
 	if err != nil {
@@ -212,16 +209,12 @@ func (a *Auditor) InspectOutputs(ctx context.Context, tokens []*InspectableToken
 			return errors.Wrapf(err, "failed inspecting output [%d]", i)
 		}
 	}
-
 	return nil
 }
 
 // InspectOutput verifies that the commitments in an output token of a given index
 // match the information provided in the clear.
 func (a *Auditor) InspectOutput(ctx context.Context, output *InspectableToken, index int) error {
-	if len(a.PedersenParams) != 3 {
-		return errors.Errorf("length of Pedersen basis != 3")
-	}
 	if output == nil || output.Data.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
@@ -311,10 +304,10 @@ func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver
 			if ia.Outputs[i].IsRedeem() {
 				return nil, nil, errors.Errorf("issue cannot redeem tokens")
 			}
-			if len(o.Receivers) == 0 {
+			if len(o.Receivers) == 0 || o.Receivers[0] == nil {
 				return nil, nil, errors.Errorf("issue must have at least one receiver")
 			}
-			// TODO: check that o.Receivers contains not-nil elements
+
 			outputs[k][i], err = NewInspectableToken(
 				ia.Outputs[i],
 				o.Receivers[0].AuditInfo,
@@ -356,6 +349,9 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			if inputs[k][i] == nil {
 				return nil, nil, errors.Errorf("input[%d][%d] is nil", k, i)
 			}
+			if transferMetadata.Inputs[i] == nil || len(transferMetadata.Inputs[i].Senders) == 0 || transferMetadata.Inputs[i].Senders[0] == nil {
+				return nil, nil, errors.Errorf("invalid metadata for input[%d][%d]", k, i)
+			}
 			auditableInputs[k][i], err = NewInspectableToken(inputs[k][i], transferMetadata.Inputs[i].Senders[0].AuditInfo, "", nil, nil)
 			if err != nil {
 				return nil, nil, err
@@ -375,6 +371,9 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
 
+			if transferMetadata.Outputs[i] == nil {
+				return nil, nil, errors.Errorf("metadata for output token at index [%d] is nil", i)
+			}
 			ti := &token.Metadata{}
 			err = ti.Deserialize(transferMetadata.Outputs[i].OutputMetadata)
 			if err != nil {
