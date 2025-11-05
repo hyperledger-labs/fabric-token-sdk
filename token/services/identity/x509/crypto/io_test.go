@@ -31,7 +31,6 @@ func writeTempFile(t *testing.T, content []byte) string {
 }
 
 func TestReadPemFile_ValidCert(t *testing.T) {
-
 	// Generate a private key
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NoError(t, err, "failed to generate RSA key")
