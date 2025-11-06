@@ -20,18 +20,16 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 )
 
+const DefaultDriverVersion = setup.ProtocolV1
+
 type FabTokenPublicParamsGenerator struct {
 	DriverVersion driver.TokenDriverVersion
 }
 
 func NewFabTokenPublicParamsGenerator(version driver.TokenDriverVersion) *FabTokenPublicParamsGenerator {
-	gen := &FabTokenPublicParamsGenerator{
-		DriverVersion: setup.ProtocolV1,
+	return &FabTokenPublicParamsGenerator{
+		DriverVersion: version,
 	}
-	if version > 0 {
-		gen.DriverVersion = version
-	}
-	return gen
 }
 
 func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error) {

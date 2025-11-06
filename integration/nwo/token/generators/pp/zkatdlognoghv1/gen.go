@@ -25,6 +25,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 )
 
+const DefaultDriverVersion = setup.ProtocolV1
+
 type DLogPublicParamsGenerator struct {
 	DefaultCurveID math3.CurveID
 	DriverVersion  driver.TokenDriverVersion
@@ -32,11 +34,10 @@ type DLogPublicParamsGenerator struct {
 
 // NewDLogPublicParamsGenerator creates a new generator. The version is optional and defaults to v1.
 func NewDLogPublicParamsGenerator(defaultCurveID math3.CurveID, version driver.TokenDriverVersion) *DLogPublicParamsGenerator {
-	gen := &DLogPublicParamsGenerator{DefaultCurveID: defaultCurveID, DriverVersion: setup.ProtocolV1}
-	if version > 0 {
-		gen.DriverVersion = version
+	return &DLogPublicParamsGenerator{
+		DefaultCurveID: defaultCurveID,
+		DriverVersion:  version,
 	}
-	return gen
 }
 
 func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error) {
