@@ -18,18 +18,26 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 )
 
+const DefaultDriverVersion = setup.ProtocolV1
+
 type DLogPublicParamsGenerator struct {
 	DefaultCurveID math3.CurveID
+	DriverVersion  driver.TokenDriverVersion
 }
 
-func NewDLogPublicParamsGenerator(defaultCurveID math3.CurveID) *DLogPublicParamsGenerator {
-	return &DLogPublicParamsGenerator{DefaultCurveID: defaultCurveID}
+// NewDLogPublicParamsGenerator creates a new generator. The version is optional and defaults to v1.
+func NewDLogPublicParamsGenerator(defaultCurveID math3.CurveID, version driver.TokenDriverVersion) *DLogPublicParamsGenerator {
+	return &DLogPublicParamsGenerator{
+		DefaultCurveID: defaultCurveID,
+		DriverVersion:  version,
+	}
 }
 
 func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error) {
@@ -63,7 +71,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topolog
 			return nil, err
 		}
 	}
-	pp, err := dlognoghv1.Setup(bits, ipkBytes, curveID)
+	pp, err := setup.WithVersion(bits, ipkBytes, curveID, d.DriverVersion)
 	if err != nil {
 		return nil, err
 	}

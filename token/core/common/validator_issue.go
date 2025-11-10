@@ -16,7 +16,7 @@ import (
 
 // IssueApplicationDataValidate accepts any metadata in the "pub" namespace.
 // This gives the user of the Token SDK the option to attach public data to the token transaction.
-func IssueApplicationDataValidate[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](c context.Context, ctx *Context[P, T, TA, IA, DS]) error {
+func IssueApplicationDataValidate[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](c context.Context, ctx *Context[P, T, TA, IA, DS]) error {
 	for key := range ctx.IssueAction.GetMetadata() {
 		if strings.HasPrefix(key, meta.PublicMetadataPrefix) {
 			ctx.CountMetadataKey(key)

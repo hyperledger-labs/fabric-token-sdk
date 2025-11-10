@@ -13,20 +13,27 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 )
 
-type FabTokenPublicParamsGenerator struct{}
+const DefaultDriverVersion = setup.ProtocolV1
 
-func NewFabTokenPublicParamsGenerator() *FabTokenPublicParamsGenerator {
-	return &FabTokenPublicParamsGenerator{}
+type FabTokenPublicParamsGenerator struct {
+	DriverVersion driver.TokenDriverVersion
+}
+
+func NewFabTokenPublicParamsGenerator(version driver.TokenDriverVersion) *FabTokenPublicParamsGenerator {
+	return &FabTokenPublicParamsGenerator{
+		DriverVersion: version,
+	}
 }
 
 func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error) {
-	precision := fabtokenv1.DefaultPrecision
+	precision := setup.DefaultPrecision
 	if len(args) == 2 {
 		// First is empty
 
@@ -41,7 +48,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *top
 			return nil, errors.Wrapf(err, "failed to parse max token value [%s] to uint64", precisionStr)
 		}
 	}
-	pp, err := fabtokenv1.Setup(precision)
+	pp, err := setup.WithVersion(precision, f.DriverVersion)
 	if err != nil {
 		return nil, err
 	}

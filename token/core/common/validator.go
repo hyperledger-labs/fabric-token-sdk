@@ -22,7 +22,7 @@ const (
 	TokenRequestSignatures driver.ValidationAttributeID = "sigs"
 )
 
-type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
+type Context[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
 	Logger            logging.Logger
 	PP                P
 	Anchor            driver.TokenRequestAnchor
@@ -42,17 +42,17 @@ func (c *Context[P, T, TA, IA, DS]) CountMetadataKey(key string) {
 	c.MetadataCounter[key] = c.MetadataCounter[key] + 1
 }
 
-type ValidateTransferFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
+type ValidateTransferFunc[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
 
-type ValidateIssueFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
+type ValidateIssueFunc[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
 
-type ValidateAuditingFunc[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
+type ValidateAuditingFunc[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
 
 type ActionDeserializer[TA driver.TransferAction, IA driver.IssueAction] interface {
 	DeserializeActions(tr *driver.TokenRequest) ([]IA, []TA, error)
 }
 
-type Validator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
+type Validator[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
 	Logger             logging.Logger
 	PublicParams       P
 	Deserializer       DS
@@ -63,7 +63,7 @@ type Validator[P driver.PublicParameters, T any, TA driver.TransferAction, IA dr
 	IssueValidators    []ValidateIssueFunc[P, T, TA, IA, DS]
 }
 
-func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](
+func NewValidator[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](
 	Logger logging.Logger,
 	publicParams P,
 	deserializer DS,
