@@ -35,10 +35,12 @@ type Payload struct {
 type Transaction struct {
 	*Payload
 
-	TMS              *token.ManagementService
-	NetworkProvider  GetNetworkFunc
-	Opts             *TxOptions
-	Context          context.Context
+	TMS             *token.ManagementService
+	NetworkProvider GetNetworkFunc
+	Opts            *TxOptions
+	Context         context.Context
+	// FromRaw contains the raw material used to unmarshall this transaction.
+	// It is nil if the transaction was created from scratch.
 	FromRaw          []byte
 	EndpointResolver *endpoint.Service
 }
