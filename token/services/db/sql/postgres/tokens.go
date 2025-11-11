@@ -13,8 +13,9 @@ import (
 )
 
 type (
-	TokenStore    = common.TokenStore
-	TokenNotifier = postgres.Notifier
+	TokenStore = common.TokenStore
+	//nolint:staticcheck
+	TokenNotifier = postgres.Notifier //lint:ignore SA1019  postgres.Notifier is deprecated: Notifier exists to track notification on tokens stored in postgres in the Token SDK. The Token SDK is the only user of this, thus, the code may be migrated. Notifier should not be used anymore.
 )
 
 func NewTokenStore(dbs *common2.RWDB, tableNames common.TableNames) (*TokenStore, error) {
