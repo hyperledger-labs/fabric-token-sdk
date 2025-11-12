@@ -16,6 +16,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
+// AllowedPEMTypes defines the valid PEM block types we accept
+var AllowedPEMTypes = []string{
+	"CERTIFICATE",
+	"PRIVATE KEY",
+	"RSA PRIVATE KEY",
+	"EC PRIVATE KEY",
+	"PUBLIC KEY",
+}
+
 func readFile(file string) ([]byte, error) {
 	fileCont, err := os.ReadFile(file)
 	if err != nil {
@@ -37,15 +46,6 @@ func readPemFile(file string) ([]byte, error) {
 	}
 
 	// Also check that the type is what we expect (cert vs key..)
-	// AllowedPEMTypes defines the valid PEM block types we accept
-	var AllowedPEMTypes = []string{
-		"CERTIFICATE",
-		"PRIVATE KEY",
-		"RSA PRIVATE KEY",
-		"EC PRIVATE KEY",
-		"PUBLIC KEY",
-	}
-
 	if !slices.Contains(AllowedPEMTypes, b.Type) {
 		return nil, errors.Errorf("unexpected PEM block type %q in file %s", b.Type, file)
 	}
