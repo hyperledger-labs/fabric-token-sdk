@@ -4,18 +4,22 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package endorsement
+package fsc
 
 import (
 	"math/rand"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+)
+
+var (
+	logger = logging.MustGetLogger()
 )
 
 const (
@@ -27,15 +31,14 @@ const (
 	AllPolicy     = "all"
 )
 
-type FSCService struct {
+type EndorsementService struct {
 	TmsID       token.TMSID
 	Endorsers   []view.Identity
 	ViewManager ViewManager
 	PolicyType  string
 }
 
-func NewFSCService(
-	fnsp *fabric.NetworkServiceProvider,
+func NewEndorsementService(
 	tmsID token.TMSID,
 	configuration tdriver.Configuration,
 	viewRegistry ViewRegistry,
@@ -43,22 +46,9 @@ func NewFSCService(
 	identityProvider IdentityProvider,
 	keyTranslator translator.KeyTranslator,
 	getTranslator TranslatorProviderFunc,
-) (*FSCService, error) {
-	nw, err := fnsp.FabricNetworkService(tmsID.Network)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting fabric network service for [%s]", tmsID.Network)
-	}
-	ch, err := nw.Channel(tmsID.Channel)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting channel [%s]", tmsID.Channel)
-	}
-	committer := ch.Committer()
+) (*EndorsementService, error) {
 	if configuration.GetBool(AmIAnEndorserKey) {
 		logger.Debug("this node is an endorser, prepare it...")
-		// if I'm an endorser, I need to process all token transactions
-		if err := committer.ProcessNamespace(tmsID.Namespace); err != nil {
-			return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", tmsID.Namespace)
-		}
 		if err := viewRegistry.RegisterResponder(
 			NewRequestApprovalResponderView(keyTranslator, getTranslator),
 			&RequestApprovalView{},
@@ -91,7 +81,7 @@ func NewFSCService(
 		}
 	}
 
-	return &FSCService{
+	return &EndorsementService{
 		Endorsers:   endorsers,
 		TmsID:       tmsID,
 		ViewManager: viewManager,
@@ -99,7 +89,7 @@ func NewFSCService(
 	}, nil
 }
 
-func (e *FSCService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
+func (e *EndorsementService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	var endorsers []view.Identity
 	switch e.PolicyType {
 	case OneOutNPolicy:

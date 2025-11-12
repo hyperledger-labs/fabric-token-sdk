@@ -74,7 +74,6 @@ func NewDriver(
 			config3.NewListenerManagerConfig(configService),
 		),
 		EndorsementServiceProvider: endorsement.NewServiceProvider(
-			fnsProvider,
 			configs,
 			viewManager,
 			viewManager,
