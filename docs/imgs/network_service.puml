@@ -1,0 +1,11 @@
+@startuml
+skinparam componentStyle rectangle
+
+title Token SDK Platform Architecture
+
+package "Network Service" {
+    [NetworkProvider] --> [Network] : Create instances of
+    [Network] --> [Ledger] : Ledger Ops
+}
+
+@enduml
