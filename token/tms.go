@@ -223,7 +223,7 @@ func (t *ManagementService) init() error {
 	}
 	t.validator = &Validator{backend: validator}
 	t.auth = &Authorization{Authorization: t.tms.Authorization()}
-	t.conf = &Configuration{cm: t.tms.Configuration()}
+	t.conf = NewConfiguration(t.tms.Configuration())
 	t.tokensService = &TokensService{ts: t.tms.TokensService(), tus: t.tms.TokensUpgradeService()}
 	t.publicParametersManager = &PublicParametersManager{
 		ppm: t.tms.PublicParamsManager(),
