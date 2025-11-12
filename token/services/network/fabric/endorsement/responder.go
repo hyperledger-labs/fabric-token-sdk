@@ -22,9 +22,8 @@ import (
 )
 
 const (
-	TransientTMSIDKey         = "tmsID"
-	TransientTokenRequestKey  = "token_request"
-	TransientRequestAnchorKey = "RequestAnchor"
+	TransientTMSIDKey        = "tmsID"
+	TransientTokenRequestKey = "token_request"
 
 	ChaincodeVersion = "1.0"
 )
@@ -94,8 +93,8 @@ func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, 
 
 	// we expect 3 transient keys
 	var tmsID token2.TMSID
-	if len(tx.Transaction.Transient()) != 3 {
-		return nil, errors.Wrapf(ErrInvalidTransient, "invalid number of transient field, expected 3, got %d", len(tx.Transaction.Transient()))
+	if len(tx.Transaction.Transient()) != 2 {
+		return nil, errors.Wrapf(ErrInvalidTransient, "invalid number of transient field, expected 2, got %d", len(tx.Transaction.Transient()))
 	}
 
 	// TMS ID
@@ -112,6 +111,7 @@ func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, 
 	if !tms.ID().Equal(tmsID) {
 		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "tms ids do not match")
 	}
+	logger.DebugfContext(context.Context(), "evaluate token request on TMS [%s]", tmsID)
 
 	// token request
 	requestRaw := tx.GetTransient(TransientTokenRequestKey)
@@ -120,11 +120,7 @@ func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, 
 	}
 
 	// request anchor
-	requestAnchor := string(tx.GetTransient(TransientRequestAnchorKey))
-	if len(requestAnchor) == 0 {
-		requestAnchor = tx.ID()
-	}
-	logger.DebugfContext(context.Context(), "evaluate token request on TMS [%s]", tmsID)
+	requestAnchor := tx.ID()
 
 	// rws
 	rws, err := tx.RWSet()

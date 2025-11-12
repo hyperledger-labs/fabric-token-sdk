@@ -21,9 +21,6 @@ type RequestApprovalView struct {
 	TMSID      token2.TMSID
 	TxID       driver.TxID
 	RequestRaw []byte
-	// RequestAnchor, if not nil it will instruct the approver to verify the token request using this anchor and not the transaction it.
-	// This is to be used only for testing.
-	RequestAnchor string
 	// Nonce, if not nil it will be appended to the messages to sign.
 	// This is to be used only for testing.
 	Nonce []byte
@@ -58,11 +55,6 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 	}
 	if err := tx.SetTransient(TransientTokenRequestKey, r.RequestRaw); err != nil {
 		return nil, errors.WithMessagef(err, "failed to set token request transient")
-	}
-	if len(r.RequestAnchor) != 0 {
-		if err := tx.SetTransient(TransientRequestAnchorKey, []byte(r.RequestAnchor)); err != nil {
-			return nil, errors.WithMessagef(err, "failed to set token request transient")
-		}
 	}
 
 	logger.DebugfContext(context.Context(), "request endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)
