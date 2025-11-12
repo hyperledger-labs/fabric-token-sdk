@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package endorsement
+package fsc
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
@@ -26,7 +27,13 @@ const (
 	TransientTokenRequestKey = "token_request"
 
 	ChaincodeVersion = "1.0"
+	InvokeFunction   = "invoke"
 )
+
+// Transaction models a transaction that requires endorsement
+type Transaction interface {
+	ID() string
+}
 
 type Request struct {
 	Tx         *endorser.Transaction
@@ -82,7 +89,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 
 func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, error) {
 	logger.DebugfContext(context.Context(), "Waiting for transaction on context [%s]", context.ID())
-	tx, err := endorser.ReceiveTransaction(context)
+	_, tx, err := endorser.NewTransactionFromBytes(context, session.ReadFirstMessageOrPanic(context))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to received transaction for approval")
 	}
@@ -157,10 +164,10 @@ func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, 
 
 func (r *RequestApprovalResponderView) translate(ctx context.Context, request *Request) error {
 	// prepare the rws as usual
-	txID := request.Tx.ID()
+	txID := request.Anchor
 	w, err := r.getTranslator(txID, request.TMSID.Namespace, request.Rws)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get translator for tx [%s]", request.Tx.ID())
+		return errors.Wrapf(err, "failed to get translator for tx [%s]", request.Anchor)
 	}
 	for _, action := range request.Actions {
 		if err := w.Write(ctx, action); err != nil {
@@ -179,16 +186,16 @@ func (r *RequestApprovalResponderView) translate(ctx context.Context, request *R
 }
 
 func (r *RequestApprovalResponderView) validate(context view.Context, request *Request, getState driver2.GetStateFnc) error {
-	logger.DebugfContext(context.Context(), "Validate TX [%s]", request.Tx.ID())
+	logger.DebugfContext(context.Context(), "Validate TX [%s]", request.Anchor)
 	tms := request.Tms
 
-	defer logger.DebugfContext(context.Context(), "Finished validation of TX [%s]", request.Tx.ID())
-	logger.DebugfContext(context.Context(), "Get validator for TX [%s]", request.Tx.ID())
+	defer logger.DebugfContext(context.Context(), "Finished validation of TX [%s]", request.Anchor)
+	logger.DebugfContext(context.Context(), "Get validator for TX [%s]", request.Anchor)
 	validator, err := tms.Validator()
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get validator [%s:%s]", tms.Network(), tms.Channel())
 	}
-	logger.DebugfContext(context.Context(), "Unmarshal and verify with metadata for TX [%s]", request.Tx.ID())
+	logger.DebugfContext(context.Context(), "Unmarshal and verify with metadata for TX [%s]", request.Anchor)
 	actions, meta, err := validator.UnmarshallAndVerifyWithMetadata(
 		context.Context(),
 		token2.NewLedgerFromGetter(getState),
@@ -196,21 +203,21 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *R
 		request.RequestRaw,
 	)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to verify token request for [%s]", request.Tx.ID())
+		return errors.WithMessagef(err, "failed to verify token request for [%s]", request.Anchor)
 	}
 	db, err := ttxdb.GetByTMSId(context, tms.ID())
 	if err != nil {
 		return errors.WithMessagef(err, "failed to retrieve db [%s]", tms.ID())
 	}
-	logger.DebugfContext(context.Context(), "Append validation record for TX [%s]", request.Tx.ID())
+	logger.DebugfContext(context.Context(), "Append validation record for TX [%s]", request.Anchor)
 	if err := db.AppendValidationRecord(
 		context.Context(),
-		request.Tx.ID(),
+		request.Anchor,
 		request.RequestRaw,
 		meta,
 		tms.PublicParametersManager().PublicParamsHash(),
 	); err != nil {
-		return errors.WithMessagef(err, "failed to append metadata for [%s]", request.Tx.ID())
+		return errors.WithMessagef(err, "failed to append metadata for [%s]", request.Anchor)
 	}
 	request.Actions = actions
 	request.Meta = meta
@@ -243,7 +250,7 @@ func (r *RequestApprovalResponderView) endorserID(tms *token2.ManagementService,
 
 func (r *RequestApprovalResponderView) endorse(ctx view.Context, request *Request) (any, error) {
 	// endorse
-	logger.DebugfContext(ctx.Context(), "Endorse TX [%s]", request.Tx.ID())
+	logger.DebugfContext(ctx.Context(), "Endorse TX [%s]", request.Anchor)
 	fns, err := fabric2.GetFabricNetworkService(ctx, request.TMSID.Network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "cannot find fabric network for [%s]", request.TMSID.Network)
@@ -254,18 +261,18 @@ func (r *RequestApprovalResponderView) endorse(ctx view.Context, request *Reques
 	}
 
 	// write actions into the transaction
-	logger.DebugfContext(ctx.Context(), "Translate TX [%s]", request.Tx.ID())
+	logger.DebugfContext(ctx.Context(), "Translate TX [%s]", request.Anchor)
 	err = r.translate(ctx.Context(), request)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.DebugfContext(ctx.Context(), "Endorse proposal for TX [%s]", request.Tx.ID())
+	logger.DebugfContext(ctx.Context(), "Endorse proposal for TX [%s]", request.Anchor)
 	endorsementResult, err := ctx.RunView(endorser.NewEndorsementOnProposalResponderView(request.Tx, endorserID))
 	if err != nil {
 		logger.Errorf("failed to respond to endorsement [%s]", err)
 	}
-	logger.DebugfContext(ctx.Context(), "Finished endorsement on TX [%s]", request.Tx.ID())
+	logger.DebugfContext(ctx.Context(), "Finished endorsement on TX [%s]", request.Anchor)
 	return endorsementResult, err
 }
 

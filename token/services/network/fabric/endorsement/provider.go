@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package endorsement
 
 import (
-	"context"
-
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
@@ -18,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc"
 )
 
 const (
@@ -28,18 +27,6 @@ var (
 	logger = logging.MustGetLogger()
 )
 
-type IdentityProvider interface {
-	Identity(string) view.Identity
-}
-
-type ViewManager interface {
-	InitiateView(view view.View, ctx context.Context) (interface{}, error)
-}
-
-type ViewRegistry interface {
-	RegisterResponder(responder view.View, initiatedBy interface{}) error
-}
-
 type ServiceProvider struct {
 	lazy.Provider[token2.TMSID, Service]
 }
@@ -47,9 +34,9 @@ type ServiceProvider struct {
 func NewServiceProvider(
 	fnsp *fabric.NetworkServiceProvider,
 	configService common.Configuration,
-	viewManager ViewManager,
-	viewRegistry ViewRegistry,
-	identityProvider IdentityProvider,
+	viewManager fsc.ViewManager,
+	viewRegistry fsc.ViewRegistry,
+	identityProvider fsc.IdentityProvider,
 	keyTranslator translator.KeyTranslator,
 ) *ServiceProvider {
 	l := &loader{
@@ -70,9 +57,9 @@ type Service interface {
 type loader struct {
 	fnsp             *fabric.NetworkServiceProvider
 	configService    common.Configuration
-	viewManager      ViewManager
-	viewRegistry     ViewRegistry
-	identityProvider IdentityProvider
+	viewManager      fsc.ViewManager
+	viewRegistry     fsc.ViewRegistry
+	identityProvider fsc.IdentityProvider
 	keyTranslator    translator.KeyTranslator
 }
 
@@ -88,22 +75,13 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 	}
 
 	logger.Debugf("FSC endorsement enabled...")
-	return NewFSCService(
-		l.fnsp,
-		tmsID,
-		configuration,
-		l.viewRegistry,
-		l.viewManager,
-		l.identityProvider,
-		l.keyTranslator,
-		func(txID string, namespace string, rws *fabric.RWSet) (Translator, error) {
-			return translator.New(
-				txID,
-				translator.NewRWSetWrapper(&RWSWrapper{Stub: rws}, namespace, txID),
-				l.keyTranslator,
-			), nil
-		},
-	)
+	return fsc.NewEndorsementService(tmsID, configuration, l.viewRegistry, l.viewManager, l.identityProvider, l.keyTranslator, func(txID string, namespace string, rws *fabric.RWSet) (fsc.Translator, error) {
+		return translator.New(
+			txID,
+			translator.NewRWSetWrapper(&fsc.RWSWrapper{Stub: rws}, namespace, txID),
+			l.keyTranslator,
+		), nil
+	})
 }
 
 func key(tmsID token2.TMSID) string {
