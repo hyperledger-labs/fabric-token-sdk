@@ -1,0 +1,29 @@
+@startuml
+!theme plain
+
+entity "IdentityConfigurations" as id_cfgs {
+    * id : TEXT <<PK>>
+    * type : TEXT <<PK>>
+    * url : TEXT <<PK>>
+    --
+    conf : BYTEA
+    raw : BYTEA
+}
+
+entity "IdentityInfo" as id_info {
+    * identity_hash : TEXT <<PK>>
+    --
+    identity : BYTEA
+    identity_audit_info : BYTEA
+    token_metadata : BYTEA
+    token_metadata_audit_info : BYTEA
+}
+
+entity "IdentitySigners" as id_signers {
+    * identity_hash : TEXT <<PK>>
+    --
+    identity : BYTEA
+    info : BYTEA
+}
+
+@enduml

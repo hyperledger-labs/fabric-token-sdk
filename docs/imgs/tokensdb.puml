@@ -1,0 +1,54 @@
+@startuml
+!theme plain
+
+entity "Tokens" as tokens {
+    * tx_id : TEXT <<PK>>
+    * idx : INT <<PK>>
+    --
+    amount : BIGINT
+    token_type : TEXT
+    quantity : TEXT
+    issuer_raw : BYTEA
+    owner_raw : BYTEA
+    owner_type : TEXT
+    owner_identity : BYTEA
+    owner_wallet_id : TEXT
+    ledger : BYTEA
+    ledger_type : TEXT = ''
+    ledger_metadata : BYTEA
+    stored_at : TIMESTAMP
+    is_deleted : BOOL = false
+    spent_by : TEXT = ''
+    spent_at : TIMESTAMP
+    owner : BOOL = false
+    auditor : BOOL = false
+    issuer : BOOL = false
+    spendable : BOOL = true
+}
+
+entity "TokenOwners" as tkn_own {
+    * tx_id : TEXT <<PK, FK>>
+    * idx : INT <<PK, FK>>
+    * wallet_id : TEXT <<PK>>
+}
+
+entity "PublicParameters" as public_params {
+    * raw_hash : BYTEA <<PK>>
+    --
+    raw : BYTEA
+    stored_at : TIMESTAMP
+}
+
+entity "TokenCertifications" as tkn_crts {
+    * tx_id : TEXT <<PK, FK>>
+    * idx : INT <<PK, FK>>
+    --
+    certification : BYTEA
+    stored_at : TIMESTAMP
+}
+
+' Relationships
+tkn_own }o--|| tokens : "(tx_id, idx) → (tx_id, idx)"
+tkn_crts }o--|| tokens : "(tx_id, idx) → (tx_id, idx)"
+
+@enduml

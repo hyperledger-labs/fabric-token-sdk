@@ -1,0 +1,27 @@
+@startuml
+skinparam componentStyle rectangle
+
+title Token SDK Platform Architecture
+
+package "Services" {
+
+  [services/ttx] --> [services/auditor] :  To be defined
+  [services/ttx] --> [services/tokens] :  To be defined
+  [services/ttx] --> [services/storage] :  AuditDB/TTXDB
+  [services/ttx] --> [services/network] : To be defined
+  [services/ttx] --> [services/identity] : To be defined
+
+  [services/auditor] --> [services/network] : To be defined
+  [services/auditor] --> [services/storage] : AuditDB
+  [services/auditor] --> [services/tokens] : To be defined
+
+  [services/tokens] --> [services/network] : To be defined
+  [services/tokens] --> [services/storage] : TokenDB/TokenLockDB/TTXDB
+  [services/tokens] --> [services/tokens] : To be defined
+
+  [services/identity] --> [services/storage] : DB Ops
+
+  [services/network] --> [events] : Fire
+}
+
+@enduml
