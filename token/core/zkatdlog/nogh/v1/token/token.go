@@ -67,13 +67,17 @@ func (t *Token) Deserialize(bytes []byte) error {
 
 // ToClear returns Token in the clear
 func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, error) {
-	com, err := commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
+	com, err := commit([]*math.Zr{
+		math.Curves[pp.Curve].HashToZr([]byte(meta.Type)),
+		meta.Value,
+		meta.BlindingFactor,
+	}, pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve token in the clear: failed to check token data")
 	}
 	// check that token matches meta
 	if !com.Equals(t.Data) {
-		return nil, errors.New("cannot retrieve token in the clear: output does not match provided opening")
+		return nil, ErrTokenMismatch
 	}
 	return &token.Token{
 		Type:     meta.Type,
@@ -84,10 +88,10 @@ func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, 
 
 func (t *Token) Validate(checkOwner bool) error {
 	if checkOwner && len(t.Owner) == 0 {
-		return errors.Errorf("token owner cannot be empty")
+		return ErrEmptyOwner
 	}
 	if t.Data == nil {
-		return errors.Errorf("token data cannot be empty")
+		return ErrEmptyTokenData
 	}
 	return nil
 }
@@ -137,8 +141,8 @@ func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs 
 	witness := make([]*Metadata, len(values))
 	for i, v := range values {
 		witness[i] = &Metadata{Value: math.Curves[curve].NewZrFromUint64(v), BlindingFactor: bfs[i]}
+		witness[i].Type = tokenType
 	}
-	witness[0].Type = tokenType
 	return witness
 }
 
@@ -198,11 +202,33 @@ func (m *Metadata) Clone() *Metadata {
 	}
 }
 
+// Validate checks that Metadata is well-formed.
+// If checkIssuer is true, it checks that the Issuer field is set.
+// If checkIssuer is false, it checks that the Issuer field is not set.
+func (m *Metadata) Validate(checkIssuer bool) error {
+	if len(m.Type) == 0 {
+		return ErrEmptyType
+	}
+	if m.Value == nil {
+		return ErrEmptyValue
+	}
+	if m.BlindingFactor == nil {
+		return ErrEmptyBlindingFactor
+	}
+	if checkIssuer && len(m.Issuer) == 0 {
+		return ErrMissingIssuer
+	}
+	if !checkIssuer && len(m.Issuer) != 0 {
+		return ErrUnexpectedIssuer
+	}
+	return nil
+}
+
 func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, error) {
 	com := c.NewG1()
 	for i := range vector {
 		if vector[i] == nil {
-			return nil, errors.New("cannot commit a nil element")
+			return nil, ErrNilCommitElement
 		}
 		com.Add(generators[i].Mul(vector[i]))
 	}
@@ -217,19 +243,19 @@ type UpgradeWitness struct {
 
 func (u *UpgradeWitness) Validate() error {
 	if u.FabToken == nil {
-		return errors.New("missing FabToken")
+		return ErrMissingFabToken
 	}
 	if len(u.FabToken.Owner) == 0 {
-		return errors.New("missing FabToken.Owner")
+		return ErrMissingFabTokenOwner
 	}
 	if len(u.FabToken.Type) == 0 {
-		return errors.New("missing FabToken.Type")
+		return ErrMissingFabTokenType
 	}
 	if len(u.FabToken.Quantity) == 0 {
-		return errors.New("missing FabToken.Quantity")
+		return ErrMissingFabTokenQuantity
 	}
 	if u.BlindingFactor == nil {
-		return errors.New("missing BlindingFactor")
+		return ErrMissingUpgradeBlindingFactor
 	}
 	return nil
 }

@@ -108,7 +108,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed tokenInfos
-func (s *IssueService) VerifyIssue(tr driver.IssueAction, metadata []*driver.IssueOutputMetadata) error {
+func (s *IssueService) VerifyIssue(ctx context.Context, ia driver.IssueAction, metadata []*driver.IssueOutputMetadata) error {
 	// TODO:
 	return nil
 }

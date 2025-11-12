@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -69,7 +68,7 @@ type TokenDeserializer interface {
 
 type TransferService struct {
 	Logger                  logging.Logger
-	PublicParametersManager common.PublicParametersManager[*setup.PublicParams]
+	PublicParametersManager PublicParametersManager
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	IdentityDeserializer    driver.Deserializer
@@ -80,7 +79,7 @@ type TransferService struct {
 
 func NewTransferService(
 	logger logging.Logger,
-	publicParametersManager common.PublicParametersManager[*setup.PublicParams],
+	publicParametersManager PublicParametersManager,
 	walletService driver.WalletService,
 	tokenLoader TokenLoader,
 	identityDeserializer driver.Deserializer,
@@ -264,40 +263,48 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 }
 
 // VerifyTransfer checks the outputs in the TransferActionMetadata against the passed metadata
-func (s *TransferService) VerifyTransfer(ctx context.Context, action driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
-	if action == nil {
-		return errors.New("failed to verify transfer: nil transfer action")
+func (s *TransferService) VerifyTransfer(ctx context.Context, transferAction driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
+	if transferAction == nil {
+		return errors.New("nil action")
 	}
-	tr, ok := action.(*transfer.Action)
+	action, ok := transferAction.(*transfer.Action)
 	if !ok {
-		return errors.New("failed to verify transfer: expected *zkatdlog.TransferActionMetadata")
+		return errors.New("expected *zkatdlog.TransferActionMetadata")
+	}
+	if err := action.Validate(); err != nil {
+		return errors.Wrap(err, "invalid action")
+	}
+	if len(action.Outputs) != len(outputMetadata) {
+		return errors.Errorf("number of outputs [%d] does not match number of metadata entries [%d]", len(action.Outputs), len(outputMetadata))
 	}
 
 	// get commitments from outputs
 	pp := s.PublicParametersManager.PublicParams()
-	com := make([]*math.G1, len(tr.Outputs))
-	for i := range len(tr.Outputs) {
-		com[i] = tr.Outputs[i].Data
+	com := make([]*math.G1, len(action.Outputs))
+	for i := range len(action.Outputs) {
+		com[i] = action.Outputs[i].Data
 
 		if outputMetadata[i] == nil || len(outputMetadata[i].OutputMetadata) == 0 {
 			continue
 		}
-		// TODO: complete this check...
-		// token information in cleartext
 		metadata := &token.Metadata{}
 		if err := metadata.Deserialize(outputMetadata[i].OutputMetadata); err != nil {
-			return errors.Wrap(err, "failed unmarshalling token information")
+			return errors.Wrap(err, "failed unmarshalling metadata")
+		}
+		if err := metadata.Validate(false); err != nil {
+			return errors.Wrap(err, "invalid metadata")
 		}
 
-		// check that token info matches output. If so, return token in cleartext. Else return an error.
-		tok, err := tr.Outputs[i].ToClear(metadata, pp)
+		// check that token info matches output.
+		// If so, return token in cleartext. Else return an error.
+		tok, err := action.Outputs[i].ToClear(metadata, pp)
 		if err != nil {
 			return errors.Wrap(err, "failed getting token in the clear")
 		}
 		s.Logger.DebugfContext(ctx, "transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 	}
 
-	return transfer.NewVerifier(getTokenData(tr.InputTokens()), com, pp).Verify(tr.Proof)
+	return transfer.NewVerifier(getTokenData(action.InputTokens()), com, pp).Verify(action.Proof)
 }
 
 // DeserializeTransferAction un-marshals a TransferActionMetadata from the passed array of bytes.
