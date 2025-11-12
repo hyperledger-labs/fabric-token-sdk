@@ -47,23 +47,20 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "no token management service for [%s]", r.TMSID)
 	}
-	tx.SetProposal(tms.Namespace(), "", InvokeFunction)
+	tx.SetProposal(tms.Namespace(), ChaincodeVersion, InvokeFunction)
 	if err := tx.EndorseProposal(); err != nil {
 		return nil, errors.WithMessagef(err, "failed to endorse proposal")
 	}
-	if err := tx.SetTransientState("tmsID", tms.ID()); err != nil {
+
+	// transient fields
+	if err := tx.SetTransientState(TransientTMSIDKey, tms.ID()); err != nil {
 		return nil, errors.WithMessagef(err, "failed to set TMS ID transient")
 	}
-	if err := tx.SetTransient("token_request", r.RequestRaw); err != nil {
+	if err := tx.SetTransient(TransientTokenRequestKey, r.RequestRaw); err != nil {
 		return nil, errors.WithMessagef(err, "failed to set token request transient")
 	}
 	if len(r.RequestAnchor) != 0 {
-		if err := tx.SetTransient("RequestAnchor", []byte(r.RequestAnchor)); err != nil {
-			return nil, errors.WithMessagef(err, "failed to set token request transient")
-		}
-	}
-	if len(r.Nonce) != 0 {
-		if err := tx.SetTransient("Nonce", r.Nonce); err != nil {
+		if err := tx.SetTransient(TransientRequestAnchorKey, []byte(r.RequestAnchor)); err != nil {
 			return nil, errors.WithMessagef(err, "failed to set token request transient")
 		}
 	}
