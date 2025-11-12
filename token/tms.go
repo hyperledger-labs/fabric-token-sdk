@@ -31,23 +31,49 @@ type ServiceProvider interface {
 // The TMS gives access, among other things, to the wallet manager, the public parameters,
 // the token selector, and so on.
 type ManagementService struct {
-	network   string
-	channel   string
-	namespace string
-	tms       driver.TokenManagerService
-	logger    logging.Logger
+	id     TMSID
+	tms    driver.TokenManagerService
+	logger logging.Logger
 
 	vaultProvider               VaultProvider
 	certificationClientProvider CertificationClientProvider
 	selectorManagerProvider     SelectorManagerProvider
 	signatureService            *SignatureService
-	vault                       *Vault
-	publicParametersManager     *PublicParametersManager
-	walletManager               *WalletManager
-	validator                   *Validator
-	auth                        *Authorization
-	conf                        *Configuration
-	tokensService               *TokensService
+
+	vault                   *Vault
+	publicParametersManager *PublicParametersManager
+	walletManager           *WalletManager
+	validator               *Validator
+	auth                    *Authorization
+	conf                    *Configuration
+	tokensService           *TokensService
+}
+
+// NewManagementService returns a new instance of ManagementService with the given arguments
+func NewManagementService(
+	id TMSID,
+	tms driver.TokenManagerService,
+	logger logging.Logger,
+	vaultProvider VaultProvider,
+	certificationClientProvider CertificationClientProvider,
+	selectorManagerProvider SelectorManagerProvider,
+) (*ManagementService, error) {
+	ms := &ManagementService{
+		id:                          id,
+		tms:                         tms,
+		logger:                      logger,
+		vaultProvider:               vaultProvider,
+		certificationClientProvider: certificationClientProvider,
+		selectorManagerProvider:     selectorManagerProvider,
+		signatureService: &SignatureService{
+			deserializer:     tms.Deserializer(),
+			identityProvider: tms.IdentityProvider(),
+		},
+	}
+	if err := ms.init(); err != nil {
+		return nil, err
+	}
+	return ms, nil
 }
 
 // GetManagementService returns the management service for the passed options. If no options are passed,
@@ -69,17 +95,17 @@ func (t *ManagementService) String() string {
 
 // Network returns the network identifier
 func (t *ManagementService) Network() string {
-	return t.network
+	return t.id.Network
 }
 
 // Channel returns the channel identifier
 func (t *ManagementService) Channel() string {
-	return t.channel
+	return t.id.Channel
 }
 
 // Namespace returns the namespace identifier, empty if not defined
 func (t *ManagementService) Namespace() string {
-	return t.namespace
+	return t.id.Namespace
 }
 
 // NewRequest returns a new Token Request whose anchor is the passed id
@@ -185,9 +211,9 @@ func (t *ManagementService) TokensService() *TokensService {
 }
 
 func (t *ManagementService) init() error {
-	v, err := t.vaultProvider.Vault(t.network, t.channel, t.namespace)
+	v, err := t.vaultProvider.Vault(t.id.Network, t.id.Channel, t.id.Namespace)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", t.namespace, t.channel, t.namespace)
+		return errors.WithMessagef(err, "failed to get vault for [%s]", t.id)
 	}
 	t.vault = &Vault{v: v, logger: t.logger}
 	t.walletManager = &WalletManager{managementService: t, walletService: t.tms.WalletService()}
@@ -199,7 +225,10 @@ func (t *ManagementService) init() error {
 	t.auth = &Authorization{Authorization: t.tms.Authorization()}
 	t.conf = &Configuration{cm: t.tms.Configuration()}
 	t.tokensService = &TokensService{ts: t.tms.TokensService(), tus: t.tms.TokensUpgradeService()}
-
+	t.publicParametersManager = &PublicParametersManager{
+		ppm: t.tms.PublicParamsManager(),
+		pp:  &PublicParameters{PublicParameters: t.tms.PublicParamsManager().PublicParameters()},
+	}
 	return nil
 }
 

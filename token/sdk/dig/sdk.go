@@ -52,6 +52,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	wrapper2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/wrapper"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/walletdb"
 	"go.opentelemetry.io/otel/trace"
@@ -109,7 +111,6 @@ func (p *SDK) Install() error {
 		p.Container().Provide(
 			digutils.Identity[*network.Provider](),
 			dig.As(
-				new(ttx.NetworkProvider),
 				new(token.Normalizer),
 				new(auditor.NetworkProvider),
 				new(common2.NetworkProvider),
@@ -134,7 +135,6 @@ func (p *SDK) Install() error {
 		p.Container().Provide(
 			digutils.Identity[*token.ManagementServiceProvider](),
 			dig.As(
-				new(ttx.TMSProvider),
 				new(tokens.TMSProvider),
 				new(auditor.TokenManagementServiceProvider),
 				new(common2.TokenManagementServiceProvider),
@@ -148,7 +148,6 @@ func (p *SDK) Install() error {
 
 		// storage
 		p.Container().Provide(ttxdb.NewStoreServiceManager),
-		p.Container().Provide(digutils.Identity[ttxdb.StoreServiceManager](), dig.As(new(ttx.StoreServiceManager))),
 		p.Container().Provide(tokendb.NewStoreServiceManager),
 		p.Container().Provide(tokendb.NewNotifierManager),
 		p.Container().Provide(digutils.Identity[tokendb.StoreServiceManager](), dig.As(new(tokens.StoreServiceManager))),
@@ -162,10 +161,8 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(digutils.Identity[*db.AuditorCheckServiceProvider](), dig.As(new(auditor.CheckServiceProvider))),
 		p.Container().Provide(auditor.NewServiceManager),
-		p.Container().Provide(digutils.Identity[*db.OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
-		p.Container().Provide(ttx.NewServiceManager),
 		p.Container().Provide(tokens.NewServiceManager),
-		p.Container().Provide(digutils.Identity[*tokens.ServiceManager](), dig.As(new(ttx.TokensServiceManager), new(auditor.TokensServiceManager))),
+		p.Container().Provide(digutils.Identity[*tokens.ServiceManager](), dig.As(new(auditor.TokensServiceManager))),
 		p.Container().Provide(vault.NewVaultProvider),
 		p.Container().Provide(digutils.Identity[*vault.Provider](), dig.As(new(token.VaultProvider))),
 		p.Container().Provide(sqlite.NewNamedDriver, dig.Group("token-db-drivers")),
@@ -175,8 +172,17 @@ func (p *SDK) Install() error {
 		p.Container().Provide(NewAuditorCheckServiceProvider),
 		p.Container().Provide(NewOwnerCheckServiceProvider),
 
-		// monitoring
+		// ttx service
+		p.Container().Provide(wrapper2.NewTokenManagementServiceProvider, dig.As(new(dep.TokenManagementServiceProvider))),
+		p.Container().Provide(wrapper2.NewNetworkProvider, dig.As(new(dep.NetworkProvider))),
+		p.Container().Provide(wrapper2.NewNetworkIdentityProvider),
+		p.Container().Provide(digutils.Identity[*wrapper2.NetworkIdentityProvider](), dig.As(new(dep.NetworkIdentityProvider))),
+		p.Container().Provide(wrapper2.NewStorageProvider),
+		p.Container().Provide(digutils.Identity[*tokens.ServiceManager](), dig.As(new(ttx.TokensServiceManager))),
+		p.Container().Provide(digutils.Identity[*db.OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
+		p.Container().Provide(ttx.NewServiceManager),
 		p.Container().Provide(ttx.NewMetrics),
+		p.Container().Provide(digutils.Identity[ttxdb.StoreServiceManager](), dig.As(new(ttx.StoreServiceManager))),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
@@ -215,6 +221,10 @@ func (p *SDK) Install() error {
 		digutils.Register[*tokens.ServiceManager](p.Container()),
 		digutils.Register[trace.TracerProvider](p.Container()),
 		digutils.Register[metrics.Provider](p.Container()),
+		digutils.Register[dep.TokenManagementServiceProvider](p.Container()),
+		digutils.Register[dep.NetworkProvider](p.Container()),
+		digutils.Register[*wrapper2.StorageProvider](p.Container()),
+		digutils.Register[*wrapper2.NetworkIdentityProvider](p.Container()),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting backward comaptibility with SP")

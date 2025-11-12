@@ -18,8 +18,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -41,7 +42,7 @@ type ServiceManager struct {
 
 	networkProvider     NetworkProvider
 	tokenServiceManager TokensServiceManager
-	tmsProvider         TokenManagementServiceProvider
+	tmsProvider         dep.TokenManagementServiceProvider
 }
 
 // NewServiceManager creates a new Service manager.
@@ -49,7 +50,7 @@ func NewServiceManager(
 	networkProvider NetworkProvider,
 	auditStoreServiceManager StoreServiceManager,
 	tokensServiceManager TokensServiceManager,
-	tmsProvider TokenManagementServiceProvider,
+	tmsProvider dep.TokenManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 	checkServiceProvider CheckServiceProvider,
 ) *ServiceManager {
@@ -119,7 +120,7 @@ func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 
 	return iterators.ForEach(it, func(record *driver2.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		return net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB, auditor.finalityTracer))
+		return net.AddFinalityListener(tmsID.Namespace, record.TxID, finality.NewListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB, auditor.finalityTracer))
 	})
 }
 

@@ -36,7 +36,7 @@ func TestWrapIdentities(t *testing.T) {
 	wrapped, err := WrapIdentities(identities...)
 	assert.NoError(t, err)
 
-	isMultisig, unwrapped, err := Unwrap(wrapped)
+	unwrapped, isMultisig, err := Unwrap(wrapped)
 	assert.NoError(t, err)
 	assert.True(t, isMultisig)
 	assert.Equal(t, identities, unwrapped)
@@ -44,7 +44,7 @@ func TestWrapIdentities(t *testing.T) {
 
 func TestUnwrap_InvalidIdentity(t *testing.T) {
 	invalidIdentity := []byte("invalid")
-	isMultisig, unwrapped, err := Unwrap(invalidIdentity)
+	unwrapped, isMultisig, err := Unwrap(invalidIdentity)
 	assert.Error(t, err)
 	assert.False(t, isMultisig)
 	assert.Nil(t, unwrapped)

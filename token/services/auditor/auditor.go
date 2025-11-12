@@ -16,9 +16,10 @@ import (
 	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -64,7 +65,7 @@ type Service struct {
 	tmsID           token.TMSID
 	auditDB         *auditdb.StoreService
 	tokenDB         *tokens.Service
-	tmsProvider     TokenManagementServiceProvider
+	tmsProvider     dep.TokenManagementServiceProvider
 	finalityTracer  trace.Tracer
 	checkService    CheckService
 }
@@ -102,7 +103,7 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 func (a *Service) Append(ctx context.Context, tx Transaction) error {
 	defer a.Release(ctx, tx)
 
-	tms, err := a.tmsProvider.GetManagementService(token.WithTMSID(a.tmsID))
+	tms, err := a.tmsProvider.TokenManagementService(token.WithTMSID(a.tmsID))
 	if err != nil {
 		return err
 	}
@@ -117,7 +118,14 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.DebugfContext(ctx, "register tx status listener for tx [%s] at network [%s]", tx.ID(), tx.Network())
-	var r driver.FinalityListener = common.NewFinalityListener(logger, a.tmsProvider, a.tmsID, a.auditDB, a.tokenDB, a.finalityTracer)
+	var r driver.FinalityListener = finality.NewListener(
+		logger,
+		a.tmsProvider,
+		a.tmsID,
+		a.auditDB,
+		a.tokenDB,
+		a.finalityTracer,
+	)
 	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), r); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
@@ -152,10 +160,10 @@ func (a *Service) Check(ctx context.Context) ([]string, error) {
 
 type requestWrapper struct {
 	r   *token.Request
-	tms *token.ManagementService
+	tms dep.TokenManagementService
 }
 
-func newRequestWrapper(r *token.Request, tms *token.ManagementService) *requestWrapper {
+func newRequestWrapper(r *token.Request, tms dep.TokenManagementService) *requestWrapper {
 	return &requestWrapper{r: r, tms: tms}
 }
 

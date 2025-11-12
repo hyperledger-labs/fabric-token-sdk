@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 )
 
 func TestMarshalUnmarshalJSON(t *testing.T) {
@@ -83,7 +84,7 @@ func TestTransactionMarshalUnmarshalRoundtrip(t *testing.T) {
 	}
 
 	// call unmarshal with a getNetwork func that should not be invoked
-	badGetNetwork := func(network string, channel string) (*network.Network, error) {
+	badGetNetwork := func(network string, channel string) (dep.Network, error) {
 		t.Fatalf("getNetwork should not be called")
 		return nil, nil
 	}
@@ -125,7 +126,7 @@ func TestUnmarshal_ErrorCases(t *testing.T) {
 		ser := TransactionSer{Network: "", Namespace: "ns"}
 		raw := m(ser)
 		p := &Payload{Transient: map[string][]byte{}, TokenRequest: token.NewRequest(nil, ""), Envelope: &network.Envelope{}}
-		if err := unmarshal(func(network, channel string) (*network.Network, error) { return nil, nil }, p, raw); !errors.Is(err, ErrNetworkNotSet) {
+		if err := unmarshal(func(network, channel string) (dep.Network, error) { return nil, nil }, p, raw); !errors.Is(err, ErrNetworkNotSet) {
 			t.Fatalf("expected ErrNetworkNotSet, got %v", err)
 		}
 	}
@@ -135,7 +136,7 @@ func TestUnmarshal_ErrorCases(t *testing.T) {
 		ser := TransactionSer{Network: "net", Namespace: ""}
 		raw := m(ser)
 		p := &Payload{Transient: map[string][]byte{}, TokenRequest: token.NewRequest(nil, ""), Envelope: &network.Envelope{}}
-		if err := unmarshal(func(network, channel string) (*network.Network, error) { return nil, nil }, p, raw); !errors.Is(err, ErrNamespaceNotSet) {
+		if err := unmarshal(func(network, channel string) (dep.Network, error) { return nil, nil }, p, raw); !errors.Is(err, ErrNamespaceNotSet) {
 			t.Fatalf("expected ErrNamespaceNotSet, got %v", err)
 		}
 	}
@@ -145,7 +146,7 @@ func TestUnmarshal_ErrorCases(t *testing.T) {
 		ser := TransactionSer{Network: "net", Namespace: "ns", Transient: []byte{1, 2, 3}}
 		raw := m(ser)
 		p := &Payload{Transient: map[string][]byte{}, TokenRequest: token.NewRequest(nil, ""), Envelope: &network.Envelope{}}
-		err := unmarshal(func(network, channel string) (*network.Network, error) { return nil, nil }, p, raw)
+		err := unmarshal(func(network, channel string) (dep.Network, error) { return nil, nil }, p, raw)
 		if err == nil || !strings.Contains(err.Error(), "failed unmarshalling transient") {
 			t.Fatalf("expected transient unmarshal error, got %v", err)
 		}
@@ -156,7 +157,7 @@ func TestUnmarshal_ErrorCases(t *testing.T) {
 		ser := TransactionSer{Network: "net", Namespace: "ns", TokenRequest: []byte{1, 2, 3}}
 		raw := m(ser)
 		p := &Payload{Transient: map[string][]byte{}, TokenRequest: token.NewRequest(nil, ""), Envelope: &network.Envelope{}}
-		err := unmarshal(func(network, channel string) (*network.Network, error) { return nil, nil }, p, raw)
+		err := unmarshal(func(network, channel string) (dep.Network, error) { return nil, nil }, p, raw)
 		if err == nil || !strings.Contains(err.Error(), "failed unmarshalling token request") {
 			t.Fatalf("expected token request unmarshal error, got %v", err)
 		}
@@ -168,7 +169,7 @@ func TestUnmarshal_ErrorCases(t *testing.T) {
 		raw := m(ser)
 		p := &Payload{Transient: map[string][]byte{}, TokenRequest: token.NewRequest(nil, ""), Envelope: nil}
 		expErr := errors.New("no network")
-		err := unmarshal(func(network, channel string) (*network.Network, error) { return nil, expErr }, p, raw)
+		err := unmarshal(func(network, channel string) (dep.Network, error) { return nil, expErr }, p, raw)
 		if err == nil || !strings.Contains(err.Error(), "no network") {
 			t.Fatalf("expected getNetwork error propagated, got %v", err)
 		}

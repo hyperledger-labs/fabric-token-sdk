@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"go.uber.org/zap/zapcore"
 )
@@ -69,7 +69,7 @@ type metaSer struct {
 	Vals [][]byte
 }
 
-type GetNetworkFunc = func(network string, channel string) (*network.Network, error)
+type GetNetworkFunc = func(network string, channel string) (dep.Network, error)
 
 type TransactionSer struct {
 	Nonce        []byte

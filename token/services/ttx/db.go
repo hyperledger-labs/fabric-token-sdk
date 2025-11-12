@@ -15,9 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -32,21 +32,17 @@ type TransactionRecord = driver.TransactionRecord
 
 type PageTransactionsIterator = driver2.PageIterator[*TransactionRecord]
 
-type NetworkProvider interface {
-	GetNetwork(network string, channel string) (*network.Network, error)
-}
-
 type CheckService interface {
 	Check(ctx context.Context) ([]string, error)
 }
 
 // Service is the interface for the owner service
 type Service struct {
-	networkProvider NetworkProvider
+	networkProvider dep.NetworkProvider
 	tmsID           token.TMSID
 	ttxStoreService *ttxdb.StoreService
 	tokensService   *tokens.Service
-	tmsProvider     TMSProvider
+	tmsProvider     dep.TokenManagementServiceProvider
 	finalityTracer  trace.Tracer
 	checkService    CheckService
 }
@@ -65,7 +61,11 @@ func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 	}
 	logger.DebugfContext(ctx, "register tx status listener for tx [%s:%s] at network", tx.ID(), tx.Network())
 
-	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), common.NewFinalityListener(logger, a.tmsProvider, a.tmsID, a.ttxStoreService, a.tokensService, a.finalityTracer)); err != nil {
+	if err := net.AddFinalityListener(
+		tx.Namespace(),
+		tx.ID(),
+		finality.NewListener(logger, a.tmsProvider, a.tmsID, a.ttxStoreService, a.tokensService, a.finalityTracer),
+	); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.DebugfContext(ctx, "append done for request %s", tx.ID())

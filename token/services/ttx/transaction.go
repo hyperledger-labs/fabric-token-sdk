@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -35,14 +36,15 @@ type Payload struct {
 type Transaction struct {
 	*Payload
 
-	TMS             *token.ManagementService
-	NetworkProvider GetNetworkFunc
-	Opts            *TxOptions
-	Context         context.Context
+	TMS              dep.TokenManagementServiceWithExtensions
+	NetworkProvider  GetNetworkFunc
+	Opts             *TxOptions
+	Context          context.Context
+	EndpointResolver *endpoint.Service
 	// FromRaw contains the raw material used to unmarshall this transaction.
 	// It is nil if the transaction was created from scratch.
-	FromRaw          []byte
-	EndpointResolver *endpoint.Service
+	FromRaw              []byte
+	FromSignatureRequest *SignatureRequest
 }
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
@@ -79,35 +81,32 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		return nil, errors.WithMessagef(err, "failed compiling tx options")
 	}
 
-	if txOpts.AnonymousTransaction && signer == nil {
-		// set the signer to anonymous
-		tms, err := token.GetManagementService(
-			context,
-			token.WithTMSID(txOpts.TMSID),
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get token management service")
-		}
-		net := network.GetInstance(context, tms.Network(), tms.Channel())
-		if net == nil {
-			return nil, errors.New("failed to get network")
-		}
-		id, err := net.AnonymousIdentity()
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed getting anonymous identity for transaction")
-		}
-		signer = id
-	}
-
-	tms, err := token.GetManagementService(
+	tms, err := dep.GetManagementService(
 		context,
 		token.WithTMSID(txOpts.TMSID),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
-	networkService := network.GetInstance(context, tms.Network(), tms.Channel())
-	networkProvider := network.GetProvider(context).GetNetwork
+
+	networkProvider, err := dep.GetNetworkProvider(context)
+	if err != nil {
+		return nil, errors.Join(err, ErrDepNotAvailableInContext)
+	}
+
+	networkService, err := networkProvider.GetNetwork(tms.Network(), tms.Channel())
+	if err != nil {
+		return nil, errors.New("failed to get network")
+	}
+
+	if txOpts.AnonymousTransaction && signer == nil {
+		// set the signer to anonymous
+		id, err := networkService.AnonymousIdentity()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed getting anonymous identity for transaction")
+		}
+		signer = id
+	}
 
 	var txID network.TxID
 	if len(txOpts.NetworkTxID.Creator) != 0 {
@@ -136,7 +135,7 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 			Transient:    map[string][]byte{},
 		},
 		TMS:              tms,
-		NetworkProvider:  networkProvider,
+		NetworkProvider:  networkProvider.GetNetwork,
 		Opts:             txOpts,
 		Context:          context.Context(),
 		EndpointResolver: endpoint.GetService(context),
@@ -146,17 +145,21 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 }
 
 func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, error) {
-	networkProvider := network.GetProvider(context).GetNetwork
+	provider, err := dep.GetNetworkProvider(context)
+	if err != nil {
+		return nil, errors.Join(err, ErrDepNotAvailableInContext)
+	}
+	networkProvider := provider.GetNetwork
 	payload := &Payload{
 		Transient:    map[string][]byte{},
 		TokenRequest: token.NewRequest(nil, ""),
 	}
 	if err := unmarshal(networkProvider, payload, raw); err != nil {
-		return nil, err
+		return nil, errors.Join(err, ErrTxUnmarshalling)
 	}
 	logger.DebugfContext(context.Context(), "unmarshalling tx, id [%s]", payload.TxID)
 	// check there exists a tms for this payload
-	tms, err := token.GetManagementService(context, token.WithTMSID(payload.tmsID))
+	tms, err := dep.GetManagementService(context, token.WithTMSID(payload.tmsID))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
@@ -165,11 +168,13 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	}
 	// check transaction id
 	if payload.ID != string(payload.TokenRequest.ID()) {
-		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", payload.TxID, payload.TokenRequest.ID())
+		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", payload.ID, payload.TokenRequest.ID())
 	}
 
 	// finalize
-	payload.TokenRequest.SetTokenService(tms)
+	if err := tms.SetTokenManagementService(payload.TokenRequest); err != nil {
+		return nil, errors.WithMessagef(err, "failed to set token management service")
+	}
 	tx := &Transaction{
 		Payload:         payload,
 		TMS:             tms,
@@ -181,6 +186,15 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	return tx, nil
 }
 
+func NewTransactionFromSignatureRequest(context view.Context, sr *SignatureRequest) (*Transaction, error) {
+	tx, err := NewTransactionFromBytes(context, sr.TX)
+	if err != nil {
+		return nil, err
+	}
+	tx.FromSignatureRequest = sr
+	return tx, nil
+}
+
 func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
 	opt, err := CompileOpts(opts...)
 	if err != nil {
@@ -188,7 +202,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 	}
 	logger.DebugfContext(context.Context(), "receive a new transaction...")
 
-	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
+	txBoxed, err := context.RunView(NewReceiveTransactionView(opts...), view.WithSameContext())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to receive transaction")
 	}
@@ -349,7 +363,7 @@ func (t *Transaction) Release() {
 	}
 }
 
-func (t *Transaction) TokenService() *token.ManagementService {
+func (t *Transaction) TokenService() dep.TokenManagementServiceWithExtensions {
 	return t.TMS
 }
 
@@ -362,7 +376,7 @@ func (t *Transaction) SetApplicationMetadata(k string, v []byte) {
 }
 
 func (t *Transaction) TMSID() token.TMSID {
-	return t.TokenRequest.TokenService.ID()
+	return t.tmsID
 }
 
 func (t *Transaction) appendPayload(payload *Payload) error {
