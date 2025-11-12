@@ -118,7 +118,8 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 
 		// check for the expected identity
 		if !signatureRequest.Signer.Equal(signerIdentity) {
-			return errors.Errorf(
+			return errors.Wrapf(
+				ErrSignerIdentityMismatch,
 				"signature request's signer does not match the expected signer, [%s] != [%s], required signatures [%d]",
 				signatureRequest.Signer,
 				signerIdentity,
@@ -148,7 +149,7 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 // receiveTransaction is used to intercept the last round of transaction distribution from CollectEndorsementsView.
 // Indeed, after having collected the auditor signatures, if needed, and the approval,
 // CollectEndorsementsView distributes the token request with the additional signatures.
-func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, error) {
+func (s *EndorseView) receiveTransaction(context view.Context) ([]byte, error) {
 	logger.DebugfContext(context.Context(), "receive transaction...")
 	tx, err := ReceiveTransaction(context)
 	if err != nil {
@@ -167,10 +168,10 @@ func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, er
 	if !bytes.Equal(m1, m2) {
 		return nil, errors.Errorf("token request's signer does not match the expected signer")
 	}
-	return tx, nil
+	return tx.FromRaw, nil
 }
 
-func (s *EndorseView) ack(context view.Context, receivedTx *Transaction) error {
+func (s *EndorseView) ack(context view.Context, msg []byte) error {
 	inSession := context.Session()
 	// Send back an acknowledgement
 	idProvider, err := dep.GetNetworkIdentityProvider(context)
@@ -178,12 +179,12 @@ func (s *EndorseView) ack(context view.Context, receivedTx *Transaction) error {
 		return errors.Wrapf(err, "failed getting identity provider")
 	}
 	defaultIdentity := idProvider.DefaultIdentity()
-	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", utils.Hashable(receivedTx.FromRaw), defaultIdentity)
+	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", utils.Hashable(msg), defaultIdentity)
 	signer, err := idProvider.GetSigner(defaultIdentity)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get signer for default identity")
 	}
-	sigma, err := signer.Sign(receivedTx.FromRaw)
+	sigma, err := signer.Sign(msg)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to sign ack response")
 	}

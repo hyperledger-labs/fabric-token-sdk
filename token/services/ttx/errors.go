@@ -25,4 +25,6 @@ var (
 	ErrTxUnmarshalling = errors.New("failed to unmarshal tx")
 	// ErrStorage signals a generic storage failure
 	ErrStorage = errors.New("storage failure")
+	// ErrSignerIdentityMismatch signals that an identity mismatch
+	ErrSignerIdentityMismatch = errors.New("signer identity mismatch")
 )
