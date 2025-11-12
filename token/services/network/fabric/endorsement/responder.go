@@ -22,6 +22,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+type Request struct {
+	Tx         *endorser.Transaction
+	Rws        *fabric2.RWSet
+	TMSID      token2.TMSID
+	Anchor     string
+	RequestRaw []byte
+	Actions    []interface{}
+	Meta       map[string][]byte
+	Tms        *token2.ManagementService
+}
+
 type Translator interface {
 	AddPublicParamsDependency() error
 	CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error)
@@ -40,8 +51,30 @@ func NewRequestApprovalResponderView(keyTranslator translator.KeyTranslator, get
 }
 
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
-	// When the borrower runs the CollectEndorsementsView, at some point, the borrower sends the assembled transaction
-	// to the approver. Therefore, the approver waits to receive the transaction.
+	// receive
+	request, err := r.receive(context)
+	if err != nil {
+		return nil, err
+	}
+	defer request.Rws.Done()
+
+	// validate
+	err = r.validate(context, request, func(id token.ID) ([]byte, error) {
+		key, err := r.keyTranslator.CreateOutputKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to create token key for id [%s]", id)
+		}
+		return request.Rws.GetDirectState(request.TMSID.Namespace, key)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// endorse
+	return r.endorse(context, request)
+}
+
+func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, error) {
 	logger.DebugfContext(context.Context(), "Waiting for transaction on context [%s]", context.ID())
 	tx, err := endorser.ReceiveTransaction(context)
 	if err != nil {
@@ -68,76 +101,29 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	if len(requestAnchor) == 0 {
 		requestAnchor = tx.ID()
 	}
-
 	logger.DebugfContext(context.Context(), "evaluate token request on TMS [%s]", tmsID)
-	tms, err := token2.GetManagementService(context, token2.WithTMSID(tmsID))
-	if err != nil {
-		return nil, errors.WithMessagef(err, "cannot find TMS for [%s]", tmsID)
-	}
-
 	rws, err := tx.RWSet()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get rws for tx [%s]", tx.ID())
 	}
-	defer rws.Done()
 
-	fns, err := fabric2.GetFabricNetworkService(context, tms.Network())
-	if err != nil {
-		return nil, errors.WithMessagef(err, "cannot find fabric network for [%s]", tms.Network())
-	}
-
-	// validate token request
-	logger.DebugfContext(context.Context(), "Validate TX [%s]", tx.ID())
-	actions, validationMetadata, err := r.validate(context, tms, tx, requestAnchor, requestRaw, func(id token.ID) ([]byte, error) {
-		key, err := r.keyTranslator.CreateOutputKey(id.TxId, id.Index)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to create token key for id [%s]", id)
-		}
-		return rws.GetDirectState(tms.Namespace(), key)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	// endorse
-	logger.DebugfContext(context.Context(), "Endorse TX [%s]", tx.ID())
-	endorserID, err := r.endorserID(tms, fns)
-	if err != nil {
-		return nil, err
-	}
-
-	// write actions into the transaction
-	logger.DebugfContext(context.Context(), "Translate TX [%s]", tx.ID())
-	err = r.translate(context.Context(), tms, tx, validationMetadata, rws, actions...)
-	if err != nil {
-		return nil, err
-	}
-
-	logger.DebugfContext(context.Context(), "Endorse proposal for TX [%s]", tx.ID())
-	endorsementResult, err := context.RunView(endorser.NewEndorsementOnProposalResponderView(tx, endorserID))
-	if err != nil {
-		logger.Errorf("failed to respond to endorsement [%s]", err)
-	}
-	logger.DebugfContext(context.Context(), "Finished endorsement on TX [%s]", tx.ID())
-	return endorsementResult, err
+	return &Request{
+		Tx:         tx,
+		Rws:        rws,
+		TMSID:      tmsID,
+		RequestRaw: requestRaw,
+		Anchor:     requestAnchor,
+	}, nil
 }
 
-func (r *RequestApprovalResponderView) translate(
-	ctx context.Context,
-	tms *token2.ManagementService,
-	tx *endorser.Transaction,
-	validationMetadata map[string][]byte,
-	rws *fabric2.RWSet,
-	actions ...any,
-) error {
+func (r *RequestApprovalResponderView) translate(ctx context.Context, request *Request) error {
 	// prepare the rws as usual
-	txID := tx.ID()
-	w, err := r.getTranslator(txID, tms.Namespace(), rws)
+	txID := request.Tx.ID()
+	w, err := r.getTranslator(txID, request.TMSID.Namespace, request.Rws)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get translator for tx [%s]", tx.ID())
+		return errors.Wrapf(err, "failed to get translator for tx [%s]", request.Tx.ID())
 	}
-	for _, action := range actions {
+	for _, action := range request.Actions {
 		if err := w.Write(ctx, action); err != nil {
 			return errors.Wrapf(err, "failed to write token action for tx [%s]", txID)
 		}
@@ -146,52 +132,54 @@ func (r *RequestApprovalResponderView) translate(
 	if err != nil {
 		return errors.Wrapf(err, "failed to add public params dependency")
 	}
-	_, err = w.CommitTokenRequest(validationMetadata[common.TokenRequestToSign], true)
+	_, err = w.CommitTokenRequest(request.Meta[common.TokenRequestToSign], true)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write token request")
 	}
 	return nil
 }
 
-func (r *RequestApprovalResponderView) validate(
-	context view.Context,
-	tms *token2.ManagementService,
-	tx *endorser.Transaction,
-	anchor string,
-	requestRaw []byte,
-	getState driver2.GetStateFnc,
-) ([]any, map[string][]byte, error) {
-	defer logger.DebugfContext(context.Context(), "Finished validation of TX [%s]", tx.ID())
-	logger.DebugfContext(context.Context(), "Get validator for TX [%s]", tx.ID())
+func (r *RequestApprovalResponderView) validate(context view.Context, request *Request, getState driver2.GetStateFnc) error {
+	logger.DebugfContext(context.Context(), "Validate TX [%s]", request.Tx.ID())
+	tms, err := token2.GetManagementService(context, token2.WithTMSID(request.TMSID))
+	if err != nil {
+		return errors.WithMessagef(err, "cannot find TMS for [%s]", request.TMSID)
+	}
+	request.Tms = tms
+
+	defer logger.DebugfContext(context.Context(), "Finished validation of TX [%s]", request.Tx.ID())
+	logger.DebugfContext(context.Context(), "Get validator for TX [%s]", request.Tx.ID())
 	validator, err := tms.Validator()
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to get validator [%s:%s]", tms.Network(), tms.Channel())
+		return errors.WithMessagef(err, "failed to get validator [%s:%s]", tms.Network(), tms.Channel())
 	}
-	logger.DebugfContext(context.Context(), "Unmarshal and verify with metadata for TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Unmarshal and verify with metadata for TX [%s]", request.Tx.ID())
 	actions, meta, err := validator.UnmarshallAndVerifyWithMetadata(
 		context.Context(),
 		token2.NewLedgerFromGetter(getState),
-		token2.RequestAnchor(anchor),
-		requestRaw,
+		token2.RequestAnchor(request.Anchor),
+		request.RequestRaw,
 	)
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to verify token request for [%s]", tx.ID())
+		return errors.WithMessagef(err, "failed to verify token request for [%s]", request.Tx.ID())
 	}
 	db, err := ttxdb.GetByTMSId(context, tms.ID())
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to retrieve db [%s]", tms.ID())
+		return errors.WithMessagef(err, "failed to retrieve db [%s]", tms.ID())
 	}
-	logger.DebugfContext(context.Context(), "Append validation record for TX [%s]", tx.ID())
+	logger.DebugfContext(context.Context(), "Append validation record for TX [%s]", request.Tx.ID())
 	if err := db.AppendValidationRecord(
 		context.Context(),
-		tx.ID(),
-		requestRaw,
+		request.Tx.ID(),
+		request.RequestRaw,
 		meta,
 		tms.PublicParametersManager().PublicParamsHash(),
 	); err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to append metadata for [%s]", tx.ID())
+		return errors.WithMessagef(err, "failed to append metadata for [%s]", request.Tx.ID())
 	}
-	return actions, meta, nil
+	request.Actions = actions
+	request.Meta = meta
+	return nil
 }
 
 func (r *RequestApprovalResponderView) endorserID(tms *token2.ManagementService, fns *fabric2.NetworkService) (view.Identity, error) {
@@ -216,6 +204,34 @@ func (r *RequestApprovalResponderView) endorserID(tms *token2.ManagementService,
 		return nil, errors.WithMessagef(err, "cannot find fabric signer for identity [%s:%s]", endorserIDLabel, endorserID)
 	}
 	return endorserID, nil
+}
+
+func (r *RequestApprovalResponderView) endorse(ctx view.Context, request *Request) (any, error) {
+	// endorse
+	logger.DebugfContext(ctx.Context(), "Endorse TX [%s]", request.Tx.ID())
+	fns, err := fabric2.GetFabricNetworkService(ctx, request.TMSID.Network)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "cannot find fabric network for [%s]", request.TMSID.Network)
+	}
+	endorserID, err := r.endorserID(request.Tms, fns)
+	if err != nil {
+		return nil, err
+	}
+
+	// write actions into the transaction
+	logger.DebugfContext(ctx.Context(), "Translate TX [%s]", request.Tx.ID())
+	err = r.translate(ctx.Context(), request)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.DebugfContext(ctx.Context(), "Endorse proposal for TX [%s]", request.Tx.ID())
+	endorsementResult, err := ctx.RunView(endorser.NewEndorsementOnProposalResponderView(request.Tx, endorserID))
+	if err != nil {
+		logger.Errorf("failed to respond to endorsement [%s]", err)
+	}
+	logger.DebugfContext(ctx.Context(), "Finished endorsement on TX [%s]", request.Tx.ID())
+	return endorsementResult, err
 }
 
 type RWSWrapper struct {
