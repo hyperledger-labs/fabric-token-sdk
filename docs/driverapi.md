@@ -137,7 +137,7 @@ For a transfer action, the validator does the following:
 - The owner of each and every input must have signed the token request. Recall, this driver is not graph hiding, therefore the action carries the inputs being spent.
 - If one of the outputs has a `empty` owner, this token signals a redeem operation. Therefore, at least one issuer in the list of the public params' issuers must have signed the token request.
 - It validates the ZK proof against the token commitments and the public parameters.
-  The input and ouput tokens must be valid Pedersen commitments under the public parameters.
+  The input and output tokens must be valid Pedersen commitments under the public parameters.
   Moreover, all tokens must have the same type and the value must be in the specific range.
   Finally, the same of the input values must be equal to the same of the output values.
 - Finally, it checks the metadata entries carried by the action. Only `public` metadata entries whose key has prefix `pub.` are allowed.
