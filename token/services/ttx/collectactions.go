@@ -130,7 +130,9 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	}
 
 	// Check
-	txPayload.TokenRequest.SetTokenService(c.tx.TokenService())
+	if err := c.tx.TokenService().SetTokenManagementService(txPayload.TokenRequest); err != nil {
+		return errors.Wrap(err, "failed setting token management service")
+	}
 	if err := txPayload.TokenRequest.IsValid(context.Context()); err != nil {
 		return errors.Wrap(err, "failed verifying response")
 	}

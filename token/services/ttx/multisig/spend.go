@@ -98,7 +98,7 @@ func NewRequestSpendView(unspentToken *token.UnspentToken, opts ...token2.Servic
 		return &RequestSpendView{err: errors.Wrap(err, "failed to compile service options")}
 	}
 
-	ok, identities, err := multisig.Unwrap(unspentToken.Owner)
+	identities, ok, err := multisig.Unwrap(unspentToken.Owner)
 	if err != nil {
 		return &RequestSpendView{err: errors.Wrap(err, "failed to unwrap identities")}
 	}

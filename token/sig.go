@@ -29,6 +29,11 @@ type SignatureService struct {
 	identityProvider driver.IdentityProvider
 }
 
+// NewSignatureService returns a instance of SignatureService
+func NewSignatureService(deserializer driver.Deserializer, identityProvider driver.IdentityProvider) *SignatureService {
+	return &SignatureService{deserializer: deserializer, identityProvider: identityProvider}
+}
+
 // AuditorVerifier returns a signature verifier for the given auditor identity
 func (s *SignatureService) AuditorVerifier(ctx context.Context, id Identity) (Verifier, error) {
 	return s.deserializer.GetAuditorVerifier(ctx, id)

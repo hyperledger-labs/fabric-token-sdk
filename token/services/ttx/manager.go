@@ -17,8 +17,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -26,10 +27,6 @@ import (
 type StoreServiceManager db.StoreServiceManager[*ttxdb.StoreService]
 
 type TokensServiceManager db.ServiceManager[*tokens.Service]
-
-type TMSProvider interface {
-	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
-}
 
 type CheckServiceProvider interface {
 	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Service) (CheckService, error)
@@ -39,13 +36,14 @@ type CheckServiceProvider interface {
 type ServiceManager struct {
 	p lazy.Provider[token.TMSID, *Service]
 
-	networkProvider NetworkProvider
+	networkProvider      dep.NetworkProvider
+	tokensServiceManager TokensServiceManager
 }
 
 // NewServiceManager creates a new Service manager.
 func NewServiceManager(
-	networkProvider NetworkProvider,
-	tmsProvider TMSProvider,
+	networkProvider dep.NetworkProvider,
+	tmsProvider dep.TokenManagementServiceProvider,
 	ttxStoreServiceManager StoreServiceManager,
 	tokensServiceManager TokensServiceManager,
 	tracerProvider trace.TracerProvider,
@@ -82,7 +80,8 @@ func NewServiceManager(
 			}
 			return wrapper, nil
 		}),
-		networkProvider: networkProvider,
+		networkProvider:      networkProvider,
+		tokensServiceManager: tokensServiceManager,
 	}
 }
 
@@ -109,8 +108,21 @@ func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) erro
 	}
 	return iterators.ForEach(it, func(record *driver.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		return net.AddFinalityListener(tmsID.Namespace, record.TxID, common.NewFinalityListener(logger, db.tmsProvider, db.tmsID, db.ttxStoreService, db.tokensService, db.finalityTracer))
+		return net.AddFinalityListener(
+			tmsID.Namespace,
+			record.TxID,
+			finality.NewListener(logger, db.tmsProvider, db.tmsID, db.ttxStoreService, db.tokensService, db.finalityTracer),
+		)
 	})
+}
+
+// CacheRequest stores the request's details for later use.
+func (m *ServiceManager) CacheRequest(ctx context.Context, tmsID token.TMSID, request *token.Request) error {
+	service, err := m.tokensServiceManager.ServiceByTMSId(tmsID)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get service for [%s]", tmsID)
+	}
+	return service.CacheRequest(ctx, tmsID, request)
 }
 
 var (
@@ -118,7 +130,7 @@ var (
 )
 
 // Get returns the Service instance for the passed TMS
-func Get(sp token.ServiceProvider, tms *token.ManagementService) *Service {
+func Get(sp token.ServiceProvider, tms dep.TokenManagementService) *Service {
 	if tms == nil {
 		logger.Debugf("no TMS provided")
 		return nil
@@ -134,9 +146,4 @@ func Get(sp token.ServiceProvider, tms *token.ManagementService) *Service {
 		return nil
 	}
 	return auditor
-}
-
-// New returns the Service instance for the passed TMS
-func New(sp token.ServiceProvider, tms *token.ManagementService) *Service {
-	return Get(sp, tms)
 }

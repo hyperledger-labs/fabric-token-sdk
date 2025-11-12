@@ -41,6 +41,8 @@ type UnsupportedTokensIterator = iterators.Iterator[*token.LedgerToken]
 
 type LedgerTokensIterator = iterators.Iterator[*token.LedgerToken]
 
+//go:generate counterfeiter -o mock/vault.go -fake-name Vault . Vault
+
 type Vault interface {
 	QueryEngine() QueryEngine
 	CertificationStorage() CertificationStorage
