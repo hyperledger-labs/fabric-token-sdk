@@ -18,8 +18,15 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+)
+
+const (
+	TransientTMSIDKey         = "tmsID"
+	TransientTokenRequestKey  = "token_request"
+	TransientRequestAnchorKey = "RequestAnchor"
+
+	ChaincodeVersion = "1.0"
 )
 
 type Request struct {
@@ -82,29 +89,64 @@ func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, 
 	}
 	logger.DebugfContext(context.Context(), "Received transaction [%s] for endorsement on context [%s]", tx.ID(), context.ID())
 	defer logger.DebugfContext(context.Context(), "Return endorsement result for TX [%s]", tx.ID())
-	raw, err := tx.Bytes()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to marshal transaction [%s]", tx.ID())
-	}
 
-	logger.DebugfContext(context.Context(), "Respond to request of approval for tx [%s][%s]", tx.ID(), utils.Hashable(raw))
+	// validate transient
 
+	// we expect 3 transient keys
 	var tmsID token2.TMSID
-	if err := tx.GetTransientState("tmsID", &tmsID); err != nil {
-		return nil, errors.WithMessagef(err, "failed to get TMS ID from transient [%s]", tx.ID())
+	if len(tx.Transaction.Transient()) != 3 {
+		return nil, errors.Wrapf(ErrInvalidTransient, "invalid number of transient field, expected 3, got %d", len(tx.Transaction.Transient()))
 	}
-	requestRaw := tx.GetTransient("token_request")
+
+	// TMS ID
+	if err := tx.GetTransientState(TransientTMSIDKey, &tmsID); err != nil {
+		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "empty tms id")
+	}
+	if len(tmsID.Network) == 0 || len(tmsID.Channel) == 0 || len(tmsID.Namespace) == 0 {
+		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "invalid tms id [%s]", tmsID)
+	}
+	tms, err := token2.GetManagementService(context, token2.WithTMSID(tmsID))
+	if err != nil {
+		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "cannot find TMS for [%s]", tmsID)
+	}
+	if !tms.ID().Equal(tmsID) {
+		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "tms ids do not match")
+	}
+
+	// token request
+	requestRaw := tx.GetTransient(TransientTokenRequestKey)
 	if len(requestRaw) == 0 {
-		return nil, errors.Errorf("failed to get token request from transient [%s], it is empty", tx.ID())
+		return nil, errors.Wrapf(ErrInvalidTransient, "empty token request")
 	}
-	requestAnchor := string(tx.GetTransient("RequestAnchor"))
+
+	// request anchor
+	requestAnchor := string(tx.GetTransient(TransientRequestAnchorKey))
 	if len(requestAnchor) == 0 {
 		requestAnchor = tx.ID()
 	}
 	logger.DebugfContext(context.Context(), "evaluate token request on TMS [%s]", tmsID)
+
+	// rws
 	rws, err := tx.RWSet()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get rws for tx [%s]", tx.ID())
+	}
+	// the rws must be empty
+	if len(rws.Namespaces()) != 0 {
+		rws.Done()
+		return nil, errors.Wrapf(ErrInvalidTransient, "non empty namespaces")
+	}
+
+	// TODO: check that tx contains a valid endorser proposal
+	if name, version := tx.Chaincode(); name != tmsID.Namespace || version != ChaincodeVersion {
+		return nil, errors.Wrapf(ErrInvalidProposal, "invalid chaincode")
+	}
+	fn, parms := tx.FunctionAndParameters()
+	if len(parms) != 0 {
+		return nil, errors.Wrapf(ErrInvalidProposal, "invalid parameters")
+	}
+	if fn != InvokeFunction {
+		return nil, errors.Wrapf(ErrInvalidProposal, "invalid function")
 	}
 
 	return &Request{
@@ -113,6 +155,7 @@ func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, 
 		TMSID:      tmsID,
 		RequestRaw: requestRaw,
 		Anchor:     requestAnchor,
+		Tms:        tms,
 	}, nil
 }
 
@@ -141,11 +184,7 @@ func (r *RequestApprovalResponderView) translate(ctx context.Context, request *R
 
 func (r *RequestApprovalResponderView) validate(context view.Context, request *Request, getState driver2.GetStateFnc) error {
 	logger.DebugfContext(context.Context(), "Validate TX [%s]", request.Tx.ID())
-	tms, err := token2.GetManagementService(context, token2.WithTMSID(request.TMSID))
-	if err != nil {
-		return errors.WithMessagef(err, "cannot find TMS for [%s]", request.TMSID)
-	}
-	request.Tms = tms
+	tms := request.Tms
 
 	defer logger.DebugfContext(context.Context(), "Finished validation of TX [%s]", request.Tx.ID())
 	logger.DebugfContext(context.Context(), "Get validator for TX [%s]", request.Tx.ID())

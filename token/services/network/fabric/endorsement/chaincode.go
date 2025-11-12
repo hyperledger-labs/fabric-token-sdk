@@ -14,7 +14,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 )
 
-const InvokeFunction = "invoke"
+const (
+	InvokeFunction = "invoke"
+)
 
 type ChaincodeEndorsementService struct {
 	TMSID token2.TMSID
