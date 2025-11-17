@@ -10,15 +10,15 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 )
 
+// RequestApprovalView is the initiator of the request approval protocol
 type RequestApprovalView struct {
-	TMSID      token2.TMSID
+	TMSID      token.TMSID
 	TxID       driver.TxID
 	RequestRaw []byte
 	// Nonce, if not nil it will be appended to the messages to sign.
@@ -26,21 +26,36 @@ type RequestApprovalView struct {
 	Nonce []byte
 	// Endorsers are the identities of the FSC node that play the role of endorser
 	Endorsers []view.Identity
+
+	// EndorserService is the endorser service
+	EndorserService EndorserService
 }
 
-func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
-	logger.DebugfContext(context.Context(), "request approval...")
+// NewRequestApprovalView returns a new instance of RequestApprovalView
+func NewRequestApprovalView(
+	TMSID token.TMSID,
+	txID driver.TxID,
+	requestRaw []byte,
+	nonce []byte,
+	endorsers []view.Identity,
+	endorserService EndorserService,
+) *RequestApprovalView {
+	return &RequestApprovalView{TMSID: TMSID, TxID: txID, RequestRaw: requestRaw, Nonce: nonce, Endorsers: endorsers, EndorserService: endorserService}
+}
 
-	_, tx, err := endorser.NewTransaction(
-		context,
-		fabric2.WithCreator(r.TxID.Creator),
-		fabric2.WithNonce(r.TxID.Nonce),
+func (r *RequestApprovalView) Call(ctx view.Context) (any, error) {
+	logger.DebugfContext(ctx.Context(), "request approval...")
+
+	tx, err := r.EndorserService.NewTransaction(
+		ctx,
+		fabric.WithCreator(r.TxID.Creator),
+		fabric.WithNonce(r.TxID.Nonce),
 	)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create endorser transaction")
 	}
 
-	tms, err := token2.GetManagementService(context, token2.WithTMSID(r.TMSID))
+	tms, err := token.GetManagementService(ctx, token.WithTMSID(r.TMSID))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "no token management service for [%s]", r.TMSID)
 	}
@@ -57,22 +72,19 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed to set token request transient")
 	}
 
-	logger.DebugfContext(context.Context(), "request endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)
-	_, err = context.RunView(endorser.NewParallelCollectEndorsementsOnProposalView(
-		tx,
-		r.Endorsers...,
-	).WithTimeout(2 * time.Minute))
+	logger.DebugfContext(ctx.Context(), "request endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)
+	err = r.EndorserService.CollectEndorsements(ctx, tx, 2*time.Minute, r.Endorsers...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to collect endorsements")
 	}
-	logger.DebugfContext(context.Context(), "request endorsement done")
+	logger.DebugfContext(ctx.Context(), "request endorsement done")
 
 	// Return envelope
 	env, err := tx.Envelope()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to retrieve envelope for endorsement")
 	}
-	logger.DebugfContext(context.Context(), "envelope ready")
+	logger.DebugfContext(ctx.Context(), "envelope ready")
 
 	return env, nil
 }

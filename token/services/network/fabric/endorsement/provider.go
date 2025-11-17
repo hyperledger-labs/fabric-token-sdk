@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package endorsement
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
@@ -150,4 +152,17 @@ func (e *EndorserService) ReceiveTx(ctx view.Context) (*endorser.Transaction, er
 func (e *EndorserService) Endorse(tx *endorser.Transaction, identities ...view.Identity) (any, error) {
 	// TODO implement me
 	panic("implement me")
+}
+
+func (e *EndorserService) NewTransaction(context view.Context, opts ...fabric.TransactionOption) (*endorser.Transaction, error) {
+	_, tx, err := endorser.NewTransaction(context, opts...)
+	return tx, err
+}
+
+func (e *EndorserService) CollectEndorsements(ctx view.Context, tx *endorser.Transaction, timeOut time.Duration, endorsers ...view.Identity) error {
+	_, err := ctx.RunView(endorser.NewParallelCollectEndorsementsOnProposalView(
+		tx,
+		endorsers...,
+	).WithTimeout(timeOut))
+	return err
 }

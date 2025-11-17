@@ -32,10 +32,11 @@ const (
 )
 
 type EndorsementService struct {
-	TmsID       token.TMSID
-	Endorsers   []view.Identity
-	ViewManager ViewManager
-	PolicyType  string
+	TmsID           token.TMSID
+	Endorsers       []view.Identity
+	ViewManager     ViewManager
+	PolicyType      string
+	EndorserService EndorserService
 }
 
 func NewEndorsementService(
@@ -91,10 +92,11 @@ func NewEndorsementService(
 	}
 
 	return &EndorsementService{
-		Endorsers:   endorsers,
-		TmsID:       tmsID,
-		ViewManager: viewManager,
-		PolicyType:  policyType,
+		Endorsers:       endorsers,
+		TmsID:           tmsID,
+		ViewManager:     viewManager,
+		PolicyType:      policyType,
+		EndorserService: endorserService,
 	}, nil
 }
 
@@ -110,12 +112,14 @@ func (e *EndorsementService) Endorse(context view.Context, requestRaw []byte, si
 	}
 	logger.DebugfContext(context.Context(), "request approval via fts endrosers with policy [%s]: [%d]...", e.PolicyType, len(endorsers))
 
-	envBoxed, err := e.ViewManager.InitiateView(&RequestApprovalView{
-		TMSID:      e.TmsID,
-		RequestRaw: requestRaw,
-		TxID:       txID,
-		Endorsers:  endorsers,
-	}, context.Context())
+	envBoxed, err := e.ViewManager.InitiateView(NewRequestApprovalView(
+		e.TmsID,
+		txID,
+		requestRaw,
+		nil,
+		endorsers,
+		e.EndorserService,
+	), context.Context())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to request approval")
 	}

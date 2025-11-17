@@ -8,11 +8,32 @@ package fsc
 
 import (
 	"context"
+	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
+
+type Translator interface {
+	AddPublicParamsDependency() error
+	CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error)
+	Write(ctx context.Context, action any) error
+}
+
+type TranslatorProviderFunc = func(txID string, namespace string, rws *fabric.RWSet) (Translator, error)
+
+// EndorserService defines the behaviors of the FSC's fabric endorser service that are needed by this package
+//
+//go:generate counterfeiter -o mock/endorser_service.go -fake-name EndorserService . EndorserService
+type EndorserService interface {
+	NewTransaction(context view.Context, opts ...fabric.TransactionOption) (*endorser.Transaction, error)
+	ReceiveTx(ctx view.Context) (*endorser.Transaction, error)
+	CollectEndorsements(ctx view.Context, tx *endorser.Transaction, timeOut time.Duration, parties ...view.Identity) error
+	Endorse(tx *endorser.Transaction, identities ...view.Identity) (any, error)
+}
 
 // Context is an alias for view.Context
 //

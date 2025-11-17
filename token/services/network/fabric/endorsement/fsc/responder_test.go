@@ -7,12 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package fsc_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc/mock"
 	"github.com/stretchr/testify/assert"
@@ -85,7 +87,90 @@ func TestNewRequestApprovalResponderView(t *testing.T) {
 			},
 			expectError:      true,
 			expectErrorType:  fsc.ErrReceivedProposal,
-			expectErrContain: "ransient map key [tmsID] does not exists",
+			expectErrContain: "transient map key [tmsID] does not exists",
+		},
+		{
+			name: "tmsid network empty",
+			setup: func() (*fsc.RequestApprovalResponderView, view.Context) {
+				ctx := &mock.Context{}
+				ctx.ContextReturns(t.Context())
+				es := &mock.EndorserService{}
+				fabricTx := &mock.FabricTransaction{}
+				fabricTx.IDReturns("a_tx_id")
+				tmsID := token.TMSID{}
+				tmsIDRaw, err := json.Marshal(tmsID)
+				require.NoError(t, err)
+				fabricTx.TransientReturns(map[string][]byte{
+					fsc.TransientTMSIDKey: tmsIDRaw,
+					"transient2":          []byte("transient2"),
+				})
+				es.ReceiveTxReturns(&endorser.Transaction{
+					Provider:    ctx,
+					Transaction: fabric.NewTransaction(nil, fabricTx),
+				}, nil)
+				view := fsc.NewRequestApprovalResponderView(nil, nil, es)
+				return view, ctx
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrReceivedProposal,
+			expectErrContain: "invalid tms id [,,]",
+		},
+		{
+			name: "tmsid channel empty",
+			setup: func() (*fsc.RequestApprovalResponderView, view.Context) {
+				ctx := &mock.Context{}
+				ctx.ContextReturns(t.Context())
+				es := &mock.EndorserService{}
+				fabricTx := &mock.FabricTransaction{}
+				fabricTx.IDReturns("a_tx_id")
+				tmsID := token.TMSID{
+					Network: "a_network",
+				}
+				tmsIDRaw, err := json.Marshal(tmsID)
+				require.NoError(t, err)
+				fabricTx.TransientReturns(map[string][]byte{
+					fsc.TransientTMSIDKey: tmsIDRaw,
+					"transient2":          []byte("transient2"),
+				})
+				es.ReceiveTxReturns(&endorser.Transaction{
+					Provider:    ctx,
+					Transaction: fabric.NewTransaction(nil, fabricTx),
+				}, nil)
+				view := fsc.NewRequestApprovalResponderView(nil, nil, es)
+				return view, ctx
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrReceivedProposal,
+			expectErrContain: "invalid tms id [a_network,,]",
+		},
+		{
+			name: "tmsid namespace empty",
+			setup: func() (*fsc.RequestApprovalResponderView, view.Context) {
+				ctx := &mock.Context{}
+				ctx.ContextReturns(t.Context())
+				es := &mock.EndorserService{}
+				fabricTx := &mock.FabricTransaction{}
+				fabricTx.IDReturns("a_tx_id")
+				tmsID := token.TMSID{
+					Network: "a_network",
+					Channel: "a_channel",
+				}
+				tmsIDRaw, err := json.Marshal(tmsID)
+				require.NoError(t, err)
+				fabricTx.TransientReturns(map[string][]byte{
+					fsc.TransientTMSIDKey: tmsIDRaw,
+					"transient2":          []byte("transient2"),
+				})
+				es.ReceiveTxReturns(&endorser.Transaction{
+					Provider:    ctx,
+					Transaction: fabric.NewTransaction(nil, fabricTx),
+				}, nil)
+				view := fsc.NewRequestApprovalResponderView(nil, nil, es)
+				return view, ctx
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrReceivedProposal,
+			expectErrContain: "invalid tms id [a_network,a_channel,]",
 		},
 	}
 

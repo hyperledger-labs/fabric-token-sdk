@@ -10,12 +10,12 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -29,36 +29,15 @@ const (
 	InvokeFunction   = "invoke"
 )
 
-// Transaction models a transaction that requires endorsement
-type Transaction interface {
-	ID() string
-}
-
 type Request struct {
 	Tx         *endorser.Transaction
-	Rws        *fabric2.RWSet
+	Rws        *fabric.RWSet
 	TMSID      token2.TMSID
 	Anchor     string
 	RequestRaw []byte
 	Actions    []interface{}
 	Meta       map[string][]byte
 	Tms        *token2.ManagementService
-}
-
-type Translator interface {
-	AddPublicParamsDependency() error
-	CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error)
-	Write(ctx context.Context, action any) error
-}
-
-type TranslatorProviderFunc = func(txID string, namespace string, rws *fabric2.RWSet) (Translator, error)
-
-//go:generate counterfeiter -o mock/endorser_service.go -fake-name EndorserService . EndorserService
-
-// EndorserService defines the behaviors of the FSC's fabric endorser service that are needed by this package
-type EndorserService interface {
-	ReceiveTx(ctx view.Context) (*endorser.Transaction, error)
-	Endorse(tx *endorser.Transaction, identities ...view.Identity) (any, error)
 }
 
 type RequestApprovalResponderView struct {
@@ -201,7 +180,7 @@ func (r *RequestApprovalResponderView) translate(ctx context.Context, request *R
 	return nil
 }
 
-func (r *RequestApprovalResponderView) validate(context view.Context, request *Request, getState driver2.GetStateFnc) error {
+func (r *RequestApprovalResponderView) validate(context view.Context, request *Request, getState tdriver.GetStateFnc) error {
 	logger.DebugfContext(context.Context(), "Validate TX [%s]", request.Anchor)
 	tms := request.Tms
 
@@ -221,9 +200,9 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *R
 	if err != nil {
 		return errors.WithMessagef(err, "failed to verify token request for [%s]", request.Anchor)
 	}
-	db, err := ttxdb.GetByTMSId(context, tms.ID())
+	db, err := ttxdb.GetByTMSId(context, request.TMSID)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to retrieve db [%s]", tms.ID())
+		return errors.WithMessagef(err, "failed to retrieve db [%s]", request.TMSID)
 	}
 	logger.DebugfContext(context.Context(), "Append validation record for TX [%s]", request.Anchor)
 	if err := db.AppendValidationRecord(
@@ -240,7 +219,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *R
 	return nil
 }
 
-func (r *RequestApprovalResponderView) endorserID(tms *token2.ManagementService, fns *fabric2.NetworkService) (view.Identity, error) {
+func (r *RequestApprovalResponderView) endorserID(tms *token2.ManagementService, fns *fabric.NetworkService) (view.Identity, error) {
 	var endorserIDLabel string
 	if err := tms.Configuration().UnmarshalKey("services.network.fabric.fsc_endorsement.id", &endorserIDLabel); err != nil {
 		return nil, errors.WithMessagef(err, "failed to load endorserID")
@@ -267,7 +246,7 @@ func (r *RequestApprovalResponderView) endorserID(tms *token2.ManagementService,
 func (r *RequestApprovalResponderView) endorse(ctx view.Context, request *Request) (any, error) {
 	// endorse
 	logger.DebugfContext(ctx.Context(), "Endorse TX [%s]", request.Anchor)
-	fns, err := fabric2.GetFabricNetworkService(ctx, request.TMSID.Network)
+	fns, err := fabric.GetFabricNetworkService(ctx, request.TMSID.Network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "cannot find fabric network for [%s]", request.TMSID.Network)
 	}
@@ -290,20 +269,4 @@ func (r *RequestApprovalResponderView) endorse(ctx view.Context, request *Reques
 	}
 	logger.DebugfContext(ctx.Context(), "Finished endorsement on TX [%s]", request.Anchor)
 	return endorsementResult, err
-}
-
-type RWSWrapper struct {
-	Stub *fabric2.RWSet
-}
-
-func (rwset *RWSWrapper) SetState(namespace string, key string, value []byte) error {
-	return rwset.Stub.SetState(namespace, key, value)
-}
-
-func (rwset *RWSWrapper) GetState(namespace string, key string) ([]byte, error) {
-	return rwset.Stub.GetState(namespace, key)
-}
-
-func (rwset *RWSWrapper) DeleteState(namespace string, key string) error {
-	return rwset.Stub.DeleteState(namespace, key)
 }
