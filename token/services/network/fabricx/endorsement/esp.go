@@ -87,6 +87,7 @@ func (l *loader) load(tmsID token2.TMSID) (endorsement.Service, error) {
 				l.keyTranslator,
 			), nil
 		},
+		endorsement.NewEndorserService(),
 	)
 }
 

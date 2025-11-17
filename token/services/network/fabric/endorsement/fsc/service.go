@@ -47,6 +47,7 @@ func NewEndorsementService(
 	identityProvider IdentityProvider,
 	keyTranslator translator.KeyTranslator,
 	getTranslator TranslatorProviderFunc,
+	endorserService EndorserService,
 ) (*EndorsementService, error) {
 	if configuration.GetBool(AmIAnEndorserKey) {
 		logger.Debug("this node is an endorser, prepare it...")
@@ -54,7 +55,11 @@ func NewEndorsementService(
 			return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", tmsID)
 		}
 		if err := viewRegistry.RegisterResponder(
-			NewRequestApprovalResponderView(keyTranslator, getTranslator),
+			NewRequestApprovalResponderView(
+				keyTranslator,
+				getTranslator,
+				endorserService,
+			),
 			&RequestApprovalView{},
 		); err != nil {
 			return nil, errors.WithMessagef(err, "failed to register approval view for [%s]", tmsID)

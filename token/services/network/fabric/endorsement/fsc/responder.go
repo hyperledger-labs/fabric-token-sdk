@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
@@ -54,13 +53,27 @@ type Translator interface {
 
 type TranslatorProviderFunc = func(txID string, namespace string, rws *fabric2.RWSet) (Translator, error)
 
-type RequestApprovalResponderView struct {
-	keyTranslator translator.KeyTranslator
-	getTranslator TranslatorProviderFunc
+type EndorserService interface {
+	ReceiveTx(ctx view.Context) (*endorser.Transaction, error)
+	Endorse(tx *endorser.Transaction, identities ...view.Identity) (any, error)
 }
 
-func NewRequestApprovalResponderView(keyTranslator translator.KeyTranslator, getTranslator TranslatorProviderFunc) *RequestApprovalResponderView {
-	return &RequestApprovalResponderView{keyTranslator: keyTranslator, getTranslator: getTranslator}
+type RequestApprovalResponderView struct {
+	endorserService EndorserService
+	keyTranslator   translator.KeyTranslator
+	getTranslator   TranslatorProviderFunc
+}
+
+func NewRequestApprovalResponderView(
+	keyTranslator translator.KeyTranslator,
+	getTranslator TranslatorProviderFunc,
+	endorserService EndorserService,
+) *RequestApprovalResponderView {
+	return &RequestApprovalResponderView{
+		keyTranslator:   keyTranslator,
+		getTranslator:   getTranslator,
+		endorserService: endorserService,
+	}
 }
 
 func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
@@ -87,14 +100,14 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	return r.endorse(context, request)
 }
 
-func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, error) {
-	logger.DebugfContext(context.Context(), "Waiting for transaction on context [%s]", context.ID())
-	_, tx, err := endorser.NewTransactionFromBytes(context, session.ReadFirstMessageOrPanic(context))
+func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, error) {
+	logger.DebugfContext(ctx.Context(), "Waiting for transaction on context [%s]", ctx.ID())
+	tx, err := r.endorserService.ReceiveTx(ctx)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to received transaction for approval")
 	}
-	logger.DebugfContext(context.Context(), "Received transaction [%s] for endorsement on context [%s]", tx.ID(), context.ID())
-	defer logger.DebugfContext(context.Context(), "Return endorsement result for TX [%s]", tx.ID())
+	logger.DebugfContext(ctx.Context(), "Received transaction [%s] for endorsement on context [%s]", tx.ID(), ctx.ID())
+	defer logger.DebugfContext(ctx.Context(), "Return endorsement result for TX [%s]", tx.ID())
 
 	// validate transient
 
@@ -111,14 +124,14 @@ func (r *RequestApprovalResponderView) receive(context view.Context) (*Request, 
 	if len(tmsID.Network) == 0 || len(tmsID.Channel) == 0 || len(tmsID.Namespace) == 0 {
 		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "invalid tms id [%s]", tmsID)
 	}
-	tms, err := token2.GetManagementService(context, token2.WithTMSID(tmsID))
+	tms, err := token2.GetManagementService(ctx, token2.WithTMSID(tmsID))
 	if err != nil {
 		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "cannot find TMS for [%s]", tmsID)
 	}
 	if !tms.ID().Equal(tmsID) {
 		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "tms ids do not match")
 	}
-	logger.DebugfContext(context.Context(), "evaluate token request on TMS [%s]", tmsID)
+	logger.DebugfContext(ctx.Context(), "evaluate token request on TMS [%s]", tmsID)
 
 	// token request
 	requestRaw := tx.GetTransient(TransientTokenRequestKey)

@@ -10,6 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -90,6 +92,7 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 				l.keyTranslator,
 			), nil
 		},
+		NewEndorserService(),
 	)
 }
 
@@ -125,4 +128,26 @@ func (n *NamespaceTxProcessor) EnableTxProcessing(tmsID token2.TMSID) error {
 	}
 
 	return nil
+}
+
+// EndorserService wraps the FSC's endorser service
+type EndorserService struct {
+}
+
+// NewEndorserService returns a new instance of EndorserService
+func NewEndorserService() *EndorserService {
+	return &EndorserService{}
+}
+
+func (e *EndorserService) ReceiveTx(ctx view.Context) (*endorser.Transaction, error) {
+	_, tx, err := endorser.NewTransactionFromBytes(ctx, session.ReadFirstMessageOrPanic(ctx))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to received transaction for approval")
+	}
+	return tx, nil
+}
+
+func (e *EndorserService) Endorse(tx *endorser.Transaction, identities ...view.Identity) (any, error) {
+	// TODO implement me
+	panic("implement me")
 }
