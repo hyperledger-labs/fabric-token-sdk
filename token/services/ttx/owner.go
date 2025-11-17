@@ -13,21 +13,22 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 )
 
 type TxOwner struct {
-	tms                     *token.ManagementService
+	tms                     dep.TokenManagementService
 	owner                   *Service
 	transactionInfoProvider *TransactionInfoProvider
 }
 
 // NewOwner returns a new owner service.
-func NewOwner(sp token.ServiceProvider, tms *token.ManagementService) *TxOwner {
-	backend := New(sp, tms)
+func NewOwner(sp token.ServiceProvider, tms dep.TokenManagementService) *TxOwner {
+	backend := Get(sp, tms)
 	return NewTxOwner(tms, backend)
 }
 
-func NewTxOwner(tms *token.ManagementService, backend *Service) *TxOwner {
+func NewTxOwner(tms dep.TokenManagementService, backend *Service) *TxOwner {
 	return &TxOwner{
 		tms:                     tms,
 		owner:                   backend,

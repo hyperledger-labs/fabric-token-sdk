@@ -28,6 +28,8 @@ func (t TMSID) Equal(tmsid TMSID) bool {
 	return t.Network == tmsid.Network && t.Channel == tmsid.Channel && t.Namespace == tmsid.Namespace
 }
 
+//go:generate counterfeiter -o mock/tms.go -fake-name TokenManagerService . TokenManagerService
+
 // TokenManagerService is the entry point of the Driver API and gives access to the rest of the API
 type TokenManagerService interface {
 	IssueService() IssueService

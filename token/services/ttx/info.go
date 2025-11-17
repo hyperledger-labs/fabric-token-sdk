@@ -10,7 +10,7 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 )
 
 type TokenTransactionDB interface {
@@ -30,11 +30,11 @@ type TransactionInfo struct {
 
 // TransactionInfoProvider allows the retrieval of the transaction info
 type TransactionInfoProvider struct {
-	tms   *token.ManagementService
+	tms   dep.TokenManagementService
 	ttxDB TokenTransactionDB
 }
 
-func newTransactionInfoProvider(tms *token.ManagementService, ttxDB TokenTransactionDB) *TransactionInfoProvider {
+func newTransactionInfoProvider(tms dep.TokenManagementService, ttxDB TokenTransactionDB) *TransactionInfoProvider {
 	return &TransactionInfoProvider{tms: tms, ttxDB: ttxDB}
 }
 

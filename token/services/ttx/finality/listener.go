@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package finality
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -28,13 +29,9 @@ type transactionDB interface {
 	SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error
 }
 
-type TokenManagementServiceProvider interface {
-	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
-}
-
-type FinalityListener struct {
+type Listener struct {
 	logger      logging.Logger
-	tmsProvider TokenManagementServiceProvider
+	tmsProvider dep.TokenManagementServiceProvider
 	tmsID       token.TMSID
 	ttxDB       transactionDB
 	tokens      *tokens.Service
@@ -42,8 +39,8 @@ type FinalityListener struct {
 	retryRunner common.RetryRunner
 }
 
-func NewFinalityListener(logger logging.Logger, tmsProvider TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Service, tracer trace.Tracer) *FinalityListener {
-	return &FinalityListener{
+func NewListener(logger logging.Logger, tmsProvider dep.TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Service, tracer trace.Tracer) *Listener {
+	return &Listener{
 		logger:      logger,
 		tmsProvider: tmsProvider,
 		tmsID:       tmsID,
@@ -54,7 +51,7 @@ func NewFinalityListener(logger logging.Logger, tmsProvider TokenManagementServi
 	}
 }
 
-func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
+func (t *Listener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
 	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()
 	if err := t.retryRunner.Run(func() error { return t.runOnStatus(newCtx, txID, status, message, tokenRequestHash) }); err != nil {
@@ -62,7 +59,7 @@ func (t *FinalityListener) OnStatus(ctx context.Context, txID string, status int
 	}
 }
 
-func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) error {
+func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) error {
 	t.logger.DebugfContext(ctx, "tx status changed for tx [%s]: [%s]", txID, status)
 	var txStatus driver.TxStatus
 	switch status {
@@ -79,7 +76,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 				return fmt.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
 			}
 			t.logger.DebugfContext(ctx, "Read token request")
-			tms, err := t.tmsProvider.GetManagementService(token.WithTMSID(t.tmsID))
+			tms, err := t.tmsProvider.TokenManagementService(token.WithTMSID(t.tmsID))
 			if err != nil {
 				return fmt.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
 			}
@@ -117,7 +114,7 @@ func (t *FinalityListener) runOnStatus(ctx context.Context, txID string, status 
 	return nil
 }
 
-func (t *FinalityListener) checkTokenRequest(txID string, trToSign []byte, reference []byte) error {
+func (t *Listener) checkTokenRequest(txID string, trToSign []byte, reference []byte) error {
 	if base64.StdEncoding.EncodeToString(reference) != utils.Hashable(trToSign).String() {
 		t.logger.Errorf("tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(reference), utils.Hashable(trToSign))
 		// no further processing of the tokens of these transactions

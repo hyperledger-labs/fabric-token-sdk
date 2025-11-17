@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -32,20 +33,23 @@ type Payload struct {
 	Envelope     *network.Envelope
 }
 
+// Transaction models a token transaction
 type Transaction struct {
 	*Payload
 
-	TMS             *token.ManagementService
-	NetworkProvider GetNetworkFunc
-	Opts            *TxOptions
-	Context         context.Context
+	TMS              dep.TokenManagementServiceWithExtensions
+	NetworkProvider  GetNetworkFunc
+	Opts             *TxOptions
+	Context          context.Context
+	EndpointResolver *endpoint.Service
 	// FromRaw contains the raw material used to unmarshall this transaction.
 	// It is nil if the transaction was created from scratch.
-	FromRaw          []byte
-	EndpointResolver *endpoint.Service
+	FromRaw              []byte
+	FromSignatureRequest *SignatureRequest
 }
 
-// NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
+// NewAnonymousTransaction returns a new Transaction whose envelope will be signed by an anonymous identities.
+// Options can be further used to customize the transaction.
 func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := CompileOpts(opts...)
 	if err != nil {
@@ -70,8 +74,10 @@ func NewAnonymousTransaction(context view.Context, opts ...TxOption) (*Transacti
 	return NewTransaction(context, id, opts...)
 }
 
-// NewTransaction returns a new token transaction customized with the passed opts that will be signed by the passed signer.
-// A valid signer is a signer that the target network recognizes as so. For example, in case of fabric, the signer must be a valid fabric identity.
+// NewTransaction returns a new token transaction whose envelope will be signed by the signer bound to the given identity..
+// Options can be further used to customize the transaction.
+// The given identity must be recognizable by the target network.
+// For example, in case of fabric, the signer must be a valid fabric identity.
 // If the passed signer is nil, then the default identity is used.
 func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := CompileOpts(opts...)
@@ -79,35 +85,32 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		return nil, errors.WithMessagef(err, "failed compiling tx options")
 	}
 
-	if txOpts.AnonymousTransaction && signer == nil {
-		// set the signer to anonymous
-		tms, err := token.GetManagementService(
-			context,
-			token.WithTMSID(txOpts.TMSID),
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get token management service")
-		}
-		net := network.GetInstance(context, tms.Network(), tms.Channel())
-		if net == nil {
-			return nil, errors.New("failed to get network")
-		}
-		id, err := net.AnonymousIdentity()
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed getting anonymous identity for transaction")
-		}
-		signer = id
-	}
-
-	tms, err := token.GetManagementService(
+	tms, err := dep.GetManagementService(
 		context,
 		token.WithTMSID(txOpts.TMSID),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
-	networkService := network.GetInstance(context, tms.Network(), tms.Channel())
-	networkProvider := network.GetProvider(context).GetNetwork
+
+	networkProvider, err := dep.GetNetworkProvider(context)
+	if err != nil {
+		return nil, errors.Join(err, ErrDepNotAvailableInContext)
+	}
+
+	networkService, err := networkProvider.GetNetwork(tms.Network(), tms.Channel())
+	if err != nil {
+		return nil, errors.New("failed to get network")
+	}
+
+	if txOpts.AnonymousTransaction && signer == nil {
+		// set the signer to anonymous
+		id, err := networkService.AnonymousIdentity()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed getting anonymous identity for transaction")
+		}
+		signer = id
+	}
 
 	var txID network.TxID
 	if len(txOpts.NetworkTxID.Creator) != 0 {
@@ -136,7 +139,7 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 			Transient:    map[string][]byte{},
 		},
 		TMS:              tms,
-		NetworkProvider:  networkProvider,
+		NetworkProvider:  networkProvider.GetNetwork,
 		Opts:             txOpts,
 		Context:          context.Context(),
 		EndpointResolver: endpoint.GetService(context),
@@ -145,18 +148,23 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 	return tx, nil
 }
 
+// NewTransactionFromBytes unmarshals the given bytes into a Transaction, if possible.
 func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, error) {
-	networkProvider := network.GetProvider(context).GetNetwork
+	provider, err := dep.GetNetworkProvider(context)
+	if err != nil {
+		return nil, errors.Join(err, ErrDepNotAvailableInContext)
+	}
+	networkProvider := provider.GetNetwork
 	payload := &Payload{
 		Transient:    map[string][]byte{},
 		TokenRequest: token.NewRequest(nil, ""),
 	}
 	if err := unmarshal(networkProvider, payload, raw); err != nil {
-		return nil, err
+		return nil, errors.Join(err, ErrTxUnmarshalling)
 	}
 	logger.DebugfContext(context.Context(), "unmarshalling tx, id [%s]", payload.TxID)
 	// check there exists a tms for this payload
-	tms, err := token.GetManagementService(context, token.WithTMSID(payload.tmsID))
+	tms, err := dep.GetManagementService(context, token.WithTMSID(payload.tmsID))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
@@ -165,11 +173,13 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	}
 	// check transaction id
 	if payload.ID != string(payload.TokenRequest.ID()) {
-		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", payload.TxID, payload.TokenRequest.ID())
+		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", payload.ID, payload.TokenRequest.ID())
 	}
 
 	// finalize
-	payload.TokenRequest.SetTokenService(tms)
+	if err := tms.SetTokenManagementService(payload.TokenRequest); err != nil {
+		return nil, errors.WithMessagef(err, "failed to set token management service")
+	}
 	tx := &Transaction{
 		Payload:         payload,
 		TMS:             tms,
@@ -181,6 +191,18 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	return tx, nil
 }
 
+// NewTransactionFromSignatureRequest calls NewTransactionFromBytes with the content of the signature request.
+// It sets the transaction's `FromSignatureRequest` upon a success in the deserialization.
+func NewTransactionFromSignatureRequest(context view.Context, sr *SignatureRequest) (*Transaction, error) {
+	tx, err := NewTransactionFromBytes(context, sr.TX)
+	if err != nil {
+		return nil, err
+	}
+	tx.FromSignatureRequest = sr
+	return tx, nil
+}
+
+// ReceiveTransaction reads from the context's session a message and tries to unmarshal the message payload as a Transaction.
 func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
 	opt, err := CompileOpts(opts...)
 	if err != nil {
@@ -188,7 +210,7 @@ func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, e
 	}
 	logger.DebugfContext(context.Context(), "receive a new transaction...")
 
-	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
+	txBoxed, err := context.RunView(NewReceiveTransactionView(opts...), view.WithSameContext())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to receive transaction")
 	}
@@ -213,22 +235,28 @@ func (t *Transaction) ID() string {
 	return t.Payload.ID
 }
 
+// Network returns the network ID of this transaction.
 func (t *Transaction) Network() string {
 	return t.tmsID.Network
 }
 
+// Channel returns the channel ID of this transaction.
 func (t *Transaction) Channel() string {
 	return t.tmsID.Channel
 }
 
+// Namespace returns the namespace ID of this transaction.
 func (t *Transaction) Namespace() string {
 	return t.tmsID.Namespace
 }
 
+// Request returns the underlying TokenRequest of this transaction.
 func (t *Transaction) Request() *token.Request {
 	return t.TokenRequest
 }
 
+// NetworkTxID returns the network transaction ID of this transaction.
+// The network transaction ID is the identifier the underlying network understands.
 func (t *Transaction) NetworkTxID() network.TxID {
 	return t.TxID
 }
@@ -240,18 +268,19 @@ func (t *Transaction) Bytes(eIDs ...string) ([]byte, error) {
 	return marshal(t, eIDs...)
 }
 
-// Issue appends a new Issue operation to the TokenRequest inside this transaction
+// Issue appends a new Issue action to the TokenRequest of this transaction
 func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver view.Identity, typ token2.Type, q uint64, opts ...token.IssueOption) error {
 	_, err := t.TokenRequest.Issue(t.Context, wallet, receiver, typ, q, opts...)
 	return err
 }
 
-// Transfer appends a new Transfer operation to the TokenRequest inside this transaction
+// Transfer appends a new Transfer action to the TokenRequest of this transaction
 func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ token2.Type, values []uint64, owners []view.Identity, opts ...token.TransferOption) error {
 	_, err := t.TokenRequest.Transfer(t.Context, wallet, typ, values, owners, opts...)
 	return err
 }
 
+// Redeem appends a new Redeem action to the TokenRequest of this transaction
 func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.Type, value uint64, opts ...token.TransferOption) error {
 	// build the redeem action
 	action, err := t.TokenRequest.Redeem(t.Context, wallet, typ, value, opts...)
@@ -295,15 +324,22 @@ func (t *Transaction) Upgrade(
 	return err
 }
 
+// Outputs returns the outputs of this transaction over all the actions.
+// The output stream returned can by further filter via the methods it exposes.
 func (t *Transaction) Outputs() (*token.OutputStream, error) {
 	return t.TokenRequest.Outputs(t.Context)
 }
 
+// Inputs returns the inputs of this transaction over all the actions.
+// The input stream returned can by further filter via the methods it exposes.
 func (t *Transaction) Inputs() (*token.InputStream, error) {
 	return t.TokenRequest.Inputs(t.Context)
 }
 
-func (t *Transaction) InputsAndOutputs(ctx context.Context) (*token.InputStream, *token.OutputStream, map[string][]byte, error) {
+// InputsAndOutputs returns the inputs and outputs of this transaction over all the actions.
+// The input and output streams returned can by further filter via the methods they expose.
+// The map returned contains the application metadata for all the involved tokens.
+func (t *Transaction) InputsAndOutputs(ctx context.Context) (*token.InputStream, *token.OutputStream, token.ActionMetadata, error) {
 	return t.TokenRequest.InputsAndOutputs(ctx)
 }
 
@@ -316,6 +352,7 @@ func (t *Transaction) IsValid(ctx context.Context) error {
 	return t.TokenRequest.IsValid(ctx)
 }
 
+// MarshallToAudit returns the marshalled version of this transaction for audit purposes.
 func (t *Transaction) MarshallToAudit() ([]byte, error) {
 	return t.TokenRequest.MarshalToAudit()
 }
@@ -329,6 +366,7 @@ func (t *Transaction) Selector() (token.Selector, error) {
 	return sm.NewSelector(t.ID())
 }
 
+// CloseSelector closes the token selector for this transaction.
 func (t *Transaction) CloseSelector() error {
 	sm, err := t.TokenService().SelectorManager()
 	if err != nil {
@@ -337,6 +375,8 @@ func (t *Transaction) CloseSelector() error {
 	return sm.Close(t.ID())
 }
 
+// Release releases all the resources held by this transaction.
+// In particular, all the tokens locked by this transaction are unlocked.
 func (t *Transaction) Release() {
 	logger.Debugf("releasing resources for tx [%s]", t.ID())
 	sm, err := t.TokenService().SelectorManager()
@@ -349,20 +389,24 @@ func (t *Transaction) Release() {
 	}
 }
 
-func (t *Transaction) TokenService() *token.ManagementService {
+// TokenService returns the token management service associated to this transaction.
+func (t *Transaction) TokenService() dep.TokenManagementServiceWithExtensions {
 	return t.TMS
 }
 
+// ApplicationMetadata returns the application metadata value for the given key.
 func (t *Transaction) ApplicationMetadata(k string) []byte {
 	return t.TokenRequest.ApplicationMetadata(k)
 }
 
+// SetApplicationMetadata sets the application metadata key-value pair.
 func (t *Transaction) SetApplicationMetadata(k string, v []byte) {
 	t.TokenRequest.SetApplicationMetadata(k, v)
 }
 
+// TMSID returns the TMSID of this transaction.
 func (t *Transaction) TMSID() token.TMSID {
-	return t.TokenRequest.TokenService.ID()
+	return t.tmsID
 }
 
 func (t *Transaction) appendPayload(payload *Payload) error {

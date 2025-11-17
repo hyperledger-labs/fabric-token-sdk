@@ -414,7 +414,7 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 	}
 
 	// register the audit info for each party too
-	ok, multisigIdentities, err := multisig.Unwrap(multisigRecipientData.RecipientData.Identity)
+	multisigIdentities, ok, err := multisig.Unwrap(multisigRecipientData.RecipientData.Identity)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unwrap multisig identity")
 	}

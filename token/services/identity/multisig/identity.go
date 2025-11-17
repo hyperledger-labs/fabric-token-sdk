@@ -57,20 +57,20 @@ func WrapIdentities(ids ...token.Identity) (token.Identity, error) {
 
 // Unwrap returns the identities wrapped in the given multisig identity
 // It returns the identities and a boolean indicating whether the given identity is a multisig identity
-func Unwrap(raw []byte) (bool, []token.Identity, error) {
+func Unwrap(raw []byte) ([]token.Identity, bool, error) {
 	ti, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
-		return false, nil, errors.Wrap(err, "failed unmarshalling typed identity")
+		return nil, false, errors.Wrap(err, "failed unmarshalling typed identity")
 	}
 	if ti.Type != Multisig {
-		return false, nil, nil
+		return nil, false, nil
 	}
 	mi := &MultiIdentity{}
 	err = mi.Deserialize(ti.Identity)
 	if err != nil {
-		return false, nil, errors.Wrap(err, "failed unmarshalling multi identity")
+		return nil, false, errors.Wrap(err, "failed unmarshalling multi identity")
 	}
-	return true, mi.Identities, nil
+	return mi.Identities, true, nil
 }
 
 // InfoMatcher matches a multisig identity to its own audit info.

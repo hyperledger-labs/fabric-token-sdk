@@ -27,6 +27,8 @@ type Normalizer interface {
 
 type TMSNormalizer Normalizer
 
+//go:generate counterfeiter -o mock/vp.go -fake-name VaultProvider . VaultProvider
+
 // VaultProvider provides token vault instances
 type VaultProvider interface {
 	// Vault returns a token vault instance for the passed inputs
@@ -170,25 +172,19 @@ func (p *ManagementServiceProvider) managementService(opts ...ServiceOption) (*M
 
 	p.logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 
-	ms := &ManagementService{
-		logger:                      logging.DeriveDriverLogger(p.logger, "", opt.Network, opt.Channel, opt.Namespace),
-		network:                     opt.Network,
-		channel:                     opt.Channel,
-		namespace:                   opt.Namespace,
-		tms:                         tokenService,
-		vaultProvider:               p.vaultProvider,
-		certificationClientProvider: p.certificationClientProvider,
-		selectorManagerProvider:     p.selectorManagerProvider,
-		signatureService: &SignatureService{
-			deserializer:     tokenService.Deserializer(),
-			identityProvider: tokenService.IdentityProvider(),
+	ms, err := NewManagementService(
+		TMSID{
+			Network:   opt.Network,
+			Channel:   opt.Channel,
+			Namespace: opt.Namespace,
 		},
-		publicParametersManager: &PublicParametersManager{
-			ppm: tokenService.PublicParamsManager(),
-			pp:  &PublicParameters{PublicParameters: tokenService.PublicParamsManager().PublicParameters()},
-		},
-	}
-	if err := ms.init(); err != nil {
+		tokenService,
+		logging.DeriveDriverLogger(p.logger, "", opt.Network, opt.Channel, opt.Namespace),
+		p.vaultProvider,
+		p.certificationClientProvider,
+		p.selectorManagerProvider,
+	)
+	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to initialize token management service")
 	}
 	p.services[key] = ms

@@ -29,6 +29,9 @@ const (
 	PublicMetadataPrefix = meta.PublicMetadataPrefix
 )
 
+// ActionMetadata models the action metadata as a map from string to byte array
+type ActionMetadata = map[string][]byte
+
 type Binder interface {
 	Bind(ctx context.Context, longTerm Identity, ephemeral Identity) error
 }
@@ -885,7 +888,7 @@ func (r *Request) InputsAndOutputsNoRecipients(ctx context.Context) (*InputStrea
 	return is, os, err
 }
 
-func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyActions, noOutputForRecipient bool) (*InputStream, *OutputStream, map[string][]byte, error) {
+func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyActions, noOutputForRecipient bool) (*InputStream, *OutputStream, ActionMetadata, error) {
 	tms := r.TokenService.tms
 	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
 		return nil, nil, nil, errors.New("can't get inputs: invalid token service in request")
