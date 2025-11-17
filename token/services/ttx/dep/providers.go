@@ -10,7 +10,7 @@ import (
 	"context"
 	"reflect"
 
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -24,6 +24,7 @@ var (
 
 //go:generate counterfeiter -o mock/network.go -fake-name Network . Network
 
+// Network defines the subset of function of the network service needed by the ttx service.
 type Network interface {
 	AddFinalityListener(namespace string, txID string, listener network.FinalityListener) error
 	NewEnvelope() *network.Envelope
@@ -34,10 +35,13 @@ type Network interface {
 
 //go:generate counterfeiter -o mock/network_provider.go -fake-name NetworkProvider . NetworkProvider
 
+// NetworkProvider given access to instances of the Network interface.
 type NetworkProvider interface {
+	// GetNetwork returns the Network instance for the given network and channel identifiers.
 	GetNetwork(network string, channel string) (Network, error)
 }
 
+// GetNetworkProvider retrieves the NetworkProvider from the given ServiceProvider.
 func GetNetworkProvider(sp token.ServiceProvider) (NetworkProvider, error) {
 	s, err := sp.GetService(networkProviderType)
 	if err != nil {
@@ -46,12 +50,15 @@ func GetNetworkProvider(sp token.ServiceProvider) (NetworkProvider, error) {
 	return s.(NetworkProvider), nil
 }
 
+// SignatureService defines the subset of function of the signature service needed by the ttx service.
 type SignatureService interface {
+	// IsMe checks if the given party is a local party meaning that a signer is bound to that identity.
 	IsMe(ctx context.Context, party token.Identity) bool
 }
 
 //go:generate counterfeiter -o mock/tms.go -fake-name TokenManagementService . TokenManagementService
 
+// TokenManagementService defines the interface of a token management service needed by ttx service.
 type TokenManagementService interface {
 	ID() token.TMSID
 	Network() string
@@ -67,6 +74,7 @@ type TokenManagementService interface {
 
 //go:generate counterfeiter -o mock/tmse.go -fake-name TokenManagementServiceWithExtensions . TokenManagementServiceWithExtensions
 
+// TokenManagementServiceWithExtensions extends TokenManagementService with additional functions needed by ttx service.
 type TokenManagementServiceWithExtensions interface {
 	TokenManagementService
 	SetTokenManagementService(req *token.Request) error
@@ -74,10 +82,13 @@ type TokenManagementServiceWithExtensions interface {
 
 //go:generate counterfeiter -o mock/tmsp.go -fake-name TokenManagementServiceProvider . TokenManagementServiceProvider
 
+// TokenManagementServiceProvider provides instances of TokenManagementServiceWithExtensions.
 type TokenManagementServiceProvider interface {
+	// TokenManagementService returns the TokenManagementServiceWithExtensions instance for the given options.
 	TokenManagementService(opts ...token.ServiceOption) (TokenManagementServiceWithExtensions, error)
 }
 
+// GetManagementService retrieves the TokenManagementServiceWithExtensions from the given ServiceProvider.
 func GetManagementService(sp token.ServiceProvider, opts ...token.ServiceOption) (TokenManagementServiceWithExtensions, error) {
 	s, err := sp.GetService(tmsProviderType)
 	if err != nil {
@@ -92,15 +103,18 @@ func GetManagementService(sp token.ServiceProvider, opts ...token.ServiceOption)
 
 //go:generate counterfeiter -o mock/nis.go -fake-name NetworkIdentitySigner . NetworkIdentitySigner
 
-type NetworkIdentitySigner = driver2.Signer
+// NetworkIdentitySigner is an alias for the FSC's Signer interface
+type NetworkIdentitySigner = cdriver.Signer
 
 //go:generate counterfeiter -o mock/nip.go -fake-name NetworkIdentityProvider . NetworkIdentityProvider
 
+// NetworkIdentityProvider defines the subset of function of the network identity provider needed by the ttx service.
 type NetworkIdentityProvider interface {
 	DefaultIdentity() view.Identity
 	GetSigner(identity view.Identity) (NetworkIdentitySigner, error)
 }
 
+// GetNetworkIdentityProvider retrieves the NetworkIdentityProvider from the given ServiceProvider.
 func GetNetworkIdentityProvider(sp token.ServiceProvider) (NetworkIdentityProvider, error) {
 	s, err := sp.GetService(networkIdentityProviderType)
 	if err != nil {

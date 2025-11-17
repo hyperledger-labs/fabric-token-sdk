@@ -19,17 +19,22 @@ var storageProviderType = reflect.TypeOf((*StorageProvider)(nil))
 
 //go:generate counterfeiter -o dep/mock/storage.go -fake-name Storage . Storage
 
+// Storage defines the interface for storing token transaction records
 type Storage interface {
 	Append(ctx context.Context, tx *Transaction) error
 }
 
 //go:generate counterfeiter -o dep/mock/storage_provider.go -fake-name StorageProvider . StorageProvider
 
+// StorageProvider defines the interface for obtaining token transaction storage instances
 type StorageProvider interface {
+	// GetStorage returns the Storage instance for the given TMS ID
 	GetStorage(id token.TMSID) (Storage, error)
+	// CacheRequest caches the given token request for the given TMS ID
 	CacheRequest(ctx context.Context, tmsID token.TMSID, request *token.Request) error
 }
 
+// GetStorageProvider retrieves the StorageProvider instance from the given service provider
 func GetStorageProvider(sp token.ServiceProvider) (StorageProvider, error) {
 	s, err := sp.GetService(storageProviderType)
 	if err != nil {
@@ -39,7 +44,7 @@ func GetStorageProvider(sp token.ServiceProvider) (StorageProvider, error) {
 }
 
 // StoreTransactionRecords stores the transaction records extracted from the passed transaction to the
-// token transaction db
+// Storage bound to the transaction's TMS ID
 func StoreTransactionRecords(ctx view.Context, tx *Transaction) error {
 	sp, err := GetStorageProvider(ctx)
 	if err != nil {

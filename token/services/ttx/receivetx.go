@@ -17,16 +17,25 @@ import (
 	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 )
 
+// ReceiveTransactionView is a view to read a transaction from the context's session.
 type ReceiveTransactionView struct {
 	opts []TxOption
 }
 
+// NewReceiveTransactionView returns a new instance of ReceiveTransactionView with the given options.
 func NewReceiveTransactionView(opts ...TxOption) *ReceiveTransactionView {
 	return &ReceiveTransactionView{
 		opts: opts,
 	}
 }
 
+// Call listens to a message from the context's session containing a transaction.
+// The transaction can be received in two forms:
+// - The serialization of the Transaction struct, or
+// - The serialization of a SignatureRequest.
+// The view first tries to deserialize directly as Transaction.
+// If a failure happens, then the view tries to deserialize as SignatureRequest.
+// If no timeout is specified via the opts, 1 minutes is used as default
 func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {
 	// options
 	options, err := CompileOpts(f.opts...)

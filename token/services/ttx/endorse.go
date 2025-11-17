@@ -64,6 +64,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
 	}
 
+	// acknowledge reception.
 	if err := s.ack(context, receivedTx); err != nil {
 		return nil, errors.Wrapf(err, "failed acknowledging transaction")
 	}
@@ -80,6 +81,8 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	return s.tx, nil
 }
 
+// handleSignatureRequests processes the signature requests for the transaction this view has been constructed with.
+// It expects to deal with messages coming from CollectEndorsementsView.
 func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 	// Process signature requests
 	logger.DebugfContext(context.Context(), "check expected number of requests to sign for tx id [%s]", s.tx.ID())
@@ -171,6 +174,7 @@ func (s *EndorseView) receiveTransaction(context view.Context) ([]byte, error) {
 	return tx.FromRaw, nil
 }
 
+// ack sends back an acknowledgement message to the initiator of the endorsement collection process.
 func (s *EndorseView) ack(context view.Context, msg []byte) error {
 	inSession := context.Session()
 	// Send back an acknowledgement
