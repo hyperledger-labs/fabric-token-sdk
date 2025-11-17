@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 type IdentityProvider interface {
@@ -22,4 +23,10 @@ type ViewManager interface {
 
 type ViewRegistry interface {
 	RegisterResponder(responder view.View, initiatedBy interface{}) error
+}
+
+// NamespaceTxProcessor models a namespace transaction processor.
+type NamespaceTxProcessor interface {
+	// EnableTxProcessing signals the backend to process all the transactions for the given tms id
+	EnableTxProcessing(tmsID token.TMSID) error
 }

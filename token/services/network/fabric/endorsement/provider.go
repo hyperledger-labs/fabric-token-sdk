@@ -75,15 +75,54 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 	}
 
 	logger.Debugf("FSC endorsement enabled...")
-	return fsc.NewEndorsementService(tmsID, configuration, l.viewRegistry, l.viewManager, l.identityProvider, l.keyTranslator, func(txID string, namespace string, rws *fabric.RWSet) (fsc.Translator, error) {
-		return translator.New(
-			txID,
-			translator.NewRWSetWrapper(&fsc.RWSWrapper{Stub: rws}, namespace, txID),
-			l.keyTranslator,
-		), nil
-	})
+	return fsc.NewEndorsementService(
+		NewNamespaceTxProcessor(l.fnsp),
+		tmsID,
+		configuration,
+		l.viewRegistry,
+		l.viewManager,
+		l.identityProvider,
+		l.keyTranslator,
+		func(txID string, namespace string, rws *fabric.RWSet) (fsc.Translator, error) {
+			return translator.New(
+				txID,
+				translator.NewRWSetWrapper(&fsc.RWSWrapper{Stub: rws}, namespace, txID),
+				l.keyTranslator,
+			), nil
+		},
+	)
 }
 
 func key(tmsID token2.TMSID) string {
 	return tmsID.Network + tmsID.Channel + tmsID.Namespace
+}
+
+// NamespaceTxProcessor models a namespace transaction processor for fabric
+type NamespaceTxProcessor struct {
+	networkServiceProvider *fabric.NetworkServiceProvider
+}
+
+// NewNamespaceTxProcessor returns a new instance of NamespaceTxProcessor
+func NewNamespaceTxProcessor(networkServiceProvider *fabric.NetworkServiceProvider) *NamespaceTxProcessor {
+	return &NamespaceTxProcessor{networkServiceProvider: networkServiceProvider}
+}
+
+// EnableTxProcessing signals the fabric committer to process all transactions in the network specified by the given tms id
+func (n *NamespaceTxProcessor) EnableTxProcessing(tmsID token2.TMSID) error {
+	nw, err := n.networkServiceProvider.FabricNetworkService(tmsID.Network)
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting fabric network service for [%s]", tmsID.Network)
+	}
+	ch, err := nw.Channel(tmsID.Channel)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting channel [%s]", tmsID.Channel)
+	}
+	committer := ch.Committer()
+	logger.Debug("this node is an endorser, prepare it...")
+	// if I'm an endorser, I need to process all token transactions
+	if err := committer.ProcessNamespace(tmsID.Namespace); err != nil {
+		return errors.WithMessagef(err, "failed to add namespace to committer [%s]", tmsID.Namespace)
+	}
+
+	return nil
 }

@@ -73,6 +73,7 @@ func (l *loader) load(tmsID token2.TMSID) (endorsement.Service, error) {
 		return nil, err
 	}
 	return fsc.NewEndorsementService(
+		&NamespaceTxProcessor{},
 		tmsID,
 		configuration,
 		l.viewRegistry,
@@ -91,4 +92,13 @@ func (l *loader) load(tmsID token2.TMSID) (endorsement.Service, error) {
 
 func key(tmsID token2.TMSID) string {
 	return tmsID.Network + tmsID.Channel + tmsID.Namespace
+}
+
+// NamespaceTxProcessor models a namespace transaction processor for fabric X
+type NamespaceTxProcessor struct {
+}
+
+// EnableTxProcessing does nothing because for FabricX the endorser is stateless
+func (n *NamespaceTxProcessor) EnableTxProcessing(tmsID token2.TMSID) error {
+	return nil
 }

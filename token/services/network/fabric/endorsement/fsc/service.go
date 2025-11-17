@@ -39,6 +39,7 @@ type EndorsementService struct {
 }
 
 func NewEndorsementService(
+	namespaceProcessor NamespaceTxProcessor,
 	tmsID token.TMSID,
 	configuration tdriver.Configuration,
 	viewRegistry ViewRegistry,
@@ -49,6 +50,9 @@ func NewEndorsementService(
 ) (*EndorsementService, error) {
 	if configuration.GetBool(AmIAnEndorserKey) {
 		logger.Debug("this node is an endorser, prepare it...")
+		if err := namespaceProcessor.EnableTxProcessing(tmsID); err != nil {
+			return nil, errors.WithMessagef(err, "failed to add namespace to committer [%s]", tmsID)
+		}
 		if err := viewRegistry.RegisterResponder(
 			NewRequestApprovalResponderView(keyTranslator, getTranslator),
 			&RequestApprovalView{},
