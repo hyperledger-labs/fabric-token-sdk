@@ -9,6 +9,7 @@ package fsc
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
@@ -17,6 +18,11 @@ import (
 //
 //go:generate counterfeiter -o mock/ctx.go -fake-name Context . Context
 type Context = view.Context
+
+// FabricTransaction is an alias for driver.Transaction
+//
+//go:generate counterfeiter -o mock/fabric_transaction.go -fake-name FabricTransaction . FabricTransaction
+type FabricTransaction = driver.Transaction
 
 type IdentityProvider interface {
 	Identity(string) view.Identity

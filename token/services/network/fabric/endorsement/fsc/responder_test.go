@@ -43,18 +43,49 @@ func TestNewRequestApprovalResponderView(t *testing.T) {
 			expectErrContain: "pineapple",
 		},
 		{
-			name: "failed to receive proposal",
+			name: "invalid number of transient field",
 			setup: func() (*fsc.RequestApprovalResponderView, view.Context) {
 				ctx := &mock.Context{}
+				ctx.ContextReturns(t.Context())
 				es := &mock.EndorserService{}
+				fabricTx := &mock.FabricTransaction{}
+				fabricTx.IDReturns("a_tx_id")
+				fabricTx.TransientReturns(map[string][]byte{
+					"transient": []byte("transient"),
+				})
 				es.ReceiveTxReturns(&endorser.Transaction{
 					Provider:    ctx,
-					Transaction: fabric.NewTransaction(nil, nil),
+					Transaction: fabric.NewTransaction(nil, fabricTx),
 				}, nil)
 				view := fsc.NewRequestApprovalResponderView(nil, nil, es)
 				return view, ctx
 			},
-			expectError: true,
+			expectError:      true,
+			expectErrorType:  fsc.ErrReceivedProposal,
+			expectErrContain: "invalid number of transient field, expected 2, got 1",
+		},
+		{
+			name: "missing TransientTMSIDKey",
+			setup: func() (*fsc.RequestApprovalResponderView, view.Context) {
+				ctx := &mock.Context{}
+				ctx.ContextReturns(t.Context())
+				es := &mock.EndorserService{}
+				fabricTx := &mock.FabricTransaction{}
+				fabricTx.IDReturns("a_tx_id")
+				fabricTx.TransientReturns(map[string][]byte{
+					"transient":  []byte("transient"),
+					"transient2": []byte("transient2"),
+				})
+				es.ReceiveTxReturns(&endorser.Transaction{
+					Provider:    ctx,
+					Transaction: fabric.NewTransaction(nil, fabricTx),
+				}, nil)
+				view := fsc.NewRequestApprovalResponderView(nil, nil, es)
+				return view, ctx
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrReceivedProposal,
+			expectErrContain: "ransient map key [tmsID] does not exists",
 		},
 	}
 
