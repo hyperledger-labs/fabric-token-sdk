@@ -53,6 +53,9 @@ type Translator interface {
 
 type TranslatorProviderFunc = func(txID string, namespace string, rws *fabric2.RWSet) (Translator, error)
 
+//go:generate counterfeiter -o mock/endorser_service.go -fake-name EndorserService . EndorserService
+
+// EndorserService defines the behaviors of the FSC's fabric endorser service that are needed by this package
 type EndorserService interface {
 	ReceiveTx(ctx view.Context) (*endorser.Transaction, error)
 	Endorse(tx *endorser.Transaction, identities ...view.Identity) (any, error)
@@ -80,7 +83,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	// receive
 	request, err := r.receive(context)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(ErrReceivedProposal, err)
 	}
 	defer request.Rws.Done()
 

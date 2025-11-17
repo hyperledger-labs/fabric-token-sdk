@@ -13,6 +13,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
+// Context is an alias for view.Context
+//
+//go:generate counterfeiter -o mock/ctx.go -fake-name Context . Context
+type Context = view.Context
+
 type IdentityProvider interface {
 	Identity(string) view.Identity
 }
