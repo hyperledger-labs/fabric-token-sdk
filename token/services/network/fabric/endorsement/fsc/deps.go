@@ -17,6 +17,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
+type TokenManagementSystem interface {
+}
+
+type TokenManagementSystemProvider interface {
+	Get(opts ...token.ServiceOption) (TokenManagementSystem, error)
+}
+
 type Translator interface {
 	AddPublicParamsDependency() error
 	CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error)

@@ -29,6 +29,8 @@ type RequestApprovalView struct {
 
 	// EndorserService is the endorser service
 	EndorserService EndorserService
+	// TokenManagementSystemProvider
+	TokenManagementSystemProvider TokenManagementSystemProvider
 }
 
 // NewRequestApprovalView returns a new instance of RequestApprovalView
@@ -40,11 +42,18 @@ func NewRequestApprovalView(
 	endorsers []view.Identity,
 	endorserService EndorserService,
 ) *RequestApprovalView {
-	return &RequestApprovalView{TMSID: TMSID, TxID: txID, RequestRaw: requestRaw, Nonce: nonce, Endorsers: endorsers, EndorserService: endorserService}
+	return &RequestApprovalView{
+		TMSID:           TMSID,
+		TxID:            txID,
+		RequestRaw:      requestRaw,
+		Nonce:           nonce,
+		Endorsers:       endorsers,
+		EndorserService: endorserService,
+	}
 }
 
 func (r *RequestApprovalView) Call(ctx view.Context) (any, error) {
-	logger.DebugfContext(ctx.Context(), "request approval...")
+	logger.DebugfContext(ctx.Context(), "request approval from tms id [%s]", r.TMSID)
 
 	tx, err := r.EndorserService.NewTransaction(
 		ctx,
@@ -55,17 +64,13 @@ func (r *RequestApprovalView) Call(ctx view.Context) (any, error) {
 		return nil, errors.WithMessagef(err, "failed to create endorser transaction")
 	}
 
-	tms, err := token.GetManagementService(ctx, token.WithTMSID(r.TMSID))
-	if err != nil {
-		return nil, errors.WithMessagef(err, "no token management service for [%s]", r.TMSID)
-	}
-	tx.SetProposal(tms.Namespace(), ChaincodeVersion, InvokeFunction)
+	tx.SetProposal(r.TMSID.Namespace, ChaincodeVersion, InvokeFunction)
 	if err := tx.EndorseProposal(); err != nil {
 		return nil, errors.WithMessagef(err, "failed to endorse proposal")
 	}
 
 	// transient fields
-	if err := tx.SetTransientState(TransientTMSIDKey, tms.ID()); err != nil {
+	if err := tx.SetTransientState(TransientTMSIDKey, r.TMSID); err != nil {
 		return nil, errors.WithMessagef(err, "failed to set TMS ID transient")
 	}
 	if err := tx.SetTransient(TransientTokenRequestKey, r.RequestRaw); err != nil {
