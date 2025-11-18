@@ -26,10 +26,35 @@ import (
 )
 
 type TxAuditor struct {
-	w                       *token.AuditorWallet
 	auditor                 *auditor.Service
 	auditDB                 *auditdb.StoreService
 	transactionInfoProvider *TransactionInfoProvider
+}
+
+// NewAuditorFromTMSID returns a new TxAuditor for the given TMS ID
+func NewAuditorFromTMSID(sp token.ServiceProvider, tmsID token.TMSID) (*TxAuditor, error) {
+	tms, err := token.GetManagementService(sp, token.WithTMSID(tmsID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get tms for [%s]", tmsID)
+	}
+	tmsID = tms.ID()
+	backend := auditor.GetByTMSID(sp, tmsID)
+	if backend == nil {
+		return nil, errors.Errorf("no auditor found for TMSID: %s", tmsID)
+	}
+	auditDB, err := auditdb.GetByTMSId(sp, tmsID)
+	if err != nil {
+		return nil, err
+	}
+	ttxDB, err := ttxdb.GetByTMSId(sp, tmsID)
+	if err != nil {
+		return nil, err
+	}
+	return &TxAuditor{
+		auditor:                 backend,
+		auditDB:                 auditDB,
+		transactionInfoProvider: newTransactionInfoProvider(tms, ttxDB),
+	}, nil
 }
 
 func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, error) {
@@ -47,7 +72,6 @@ func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, e
 
 func NewTxAuditor(w *token.AuditorWallet, backend *auditor.Service, auditDB *auditdb.StoreService, ttxDB *ttxdb.StoreService) *TxAuditor {
 	return &TxAuditor{
-		w:                       w,
 		auditor:                 backend,
 		auditDB:                 auditDB,
 		transactionInfoProvider: newTransactionInfoProvider(w.TMS(), ttxDB),
