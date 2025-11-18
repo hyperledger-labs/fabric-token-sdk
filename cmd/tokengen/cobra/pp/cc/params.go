@@ -11,5 +11,5 @@ package cc
 const DefaultParams = `
 package tcc
 
-const Params = "{{ Params }}"
+var Params = "{{ Params }}"
 `
