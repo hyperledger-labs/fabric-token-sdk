@@ -19,7 +19,7 @@ type Actions struct {
 	Transfers []*ActionTransfer
 }
 
-// ActionTransfer describe a transfer operation
+// ActionTransfer describe a transfer operation.
 type ActionTransfer struct {
 	// From is the sender
 	From view.Identity
