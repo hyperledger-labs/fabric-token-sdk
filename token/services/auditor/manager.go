@@ -151,8 +151,3 @@ func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) *Service {
 	}
 	return auditor
 }
-
-// New returns the Service instance for the passed auditor wallet
-func New(sp token.ServiceProvider, w *token.AuditorWallet) *Service {
-	return Get(sp, w)
-}

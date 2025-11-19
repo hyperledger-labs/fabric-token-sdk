@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 )
 
 type TxOwner struct {
@@ -42,7 +43,7 @@ func (a *TxOwner) Append(ctx context.Context, tx *Transaction) error {
 }
 
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (a *TxOwner) Transactions(ctx context.Context, params QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error) {
+func (a *TxOwner) Transactions(ctx context.Context, params db.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error) {
 	return a.owner.ttxStoreService.Transactions(ctx, params, pagination)
 }
 

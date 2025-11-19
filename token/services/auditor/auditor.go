@@ -61,8 +61,8 @@ type CheckService interface {
 
 // Service is the interface for the auditor service
 type Service struct {
-	networkProvider NetworkProvider
 	tmsID           token.TMSID
+	networkProvider NetworkProvider
 	auditDB         *auditdb.StoreService
 	tokenDB         *tokens.Service
 	tmsProvider     dep.TokenManagementServiceProvider
