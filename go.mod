@@ -12,7 +12,7 @@ require (
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.6.1-0.20251112155617-5577e92bc656
+	github.com/hyperledger-labs/fabric-smart-client v0.6.1-0.20251119154753-48f378621e89
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20250510200036-435a7f1a780a
 	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.0
 	github.com/hyperledger/fabric-lib-go v1.1.3-0.20240523144151-25edd1eaf5f5
@@ -131,7 +131,6 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
-	github.com/hashicorp/consul/sdk v0.16.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
