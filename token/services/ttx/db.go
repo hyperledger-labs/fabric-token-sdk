@@ -16,9 +16,19 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.opentelemetry.io/otel/trace"
+)
+
+type (
+	// TransactionRecord is a more finer-grained version of a movement record.
+	// Given a Token Transaction, for each token action in the Token Request,
+	// a transaction record is created for each unique enrollment ID found in the outputs.
+	// The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
+	// in that action.
+	TransactionRecord = db.TransactionRecord
 )
 
 const txIdLabel tracing.LabelName = "tx_id"
