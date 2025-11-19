@@ -82,7 +82,7 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 	if err != nil {
 		return nil, err
 	}
-	auditDB, err := auditdb.GetByTMSId(ctx, tmsID)
+	auditDB, err := auditdb.GetByTMSID(ctx, tmsID)
 	if err != nil {
 		return nil, err
 	}

@@ -27,4 +27,6 @@ var (
 	ErrStorage = errors.New("storage failure")
 	// ErrSignerIdentityMismatch signals that an identity mismatch
 	ErrSignerIdentityMismatch = errors.New("signer identity mismatch")
+	// ErrProvider signals a failure with a provider
+	ErrProvider = errors.New("provider failure")
 )

@@ -53,6 +53,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/auditor"
 	wrapper2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/wrapper"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/walletdb"
@@ -174,6 +175,7 @@ func (p *SDK) Install() error {
 
 		// ttx service
 		p.Container().Provide(wrapper2.NewTokenManagementServiceProvider, dig.As(new(dep.TokenManagementServiceProvider))),
+		p.Container().Provide(wrapper2.NewAuditServiceProvider, dig.As(new(auditor2.ServiceProvider))),
 		p.Container().Provide(wrapper2.NewNetworkProvider, dig.As(new(dep.NetworkProvider))),
 		p.Container().Provide(wrapper2.NewNetworkIdentityProvider),
 		p.Container().Provide(digutils.Identity[*wrapper2.NetworkIdentityProvider](), dig.As(new(dep.NetworkIdentityProvider))),
@@ -225,6 +227,7 @@ func (p *SDK) Install() error {
 		digutils.Register[dep.NetworkProvider](p.Container()),
 		digutils.Register[*wrapper2.StorageProvider](p.Container()),
 		digutils.Register[*wrapper2.NetworkIdentityProvider](p.Container()),
+		digutils.Register[auditor2.ServiceProvider](p.Container()),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting backward comaptibility with SP")

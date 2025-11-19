@@ -45,7 +45,7 @@ func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) Sto
 	return db.NewStoreServiceManager(cp, "auditdb.persistence", drivers.NewAuditTransaction, newStoreService)
 }
 
-func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
+func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")

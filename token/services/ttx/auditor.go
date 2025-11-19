@@ -19,80 +19,80 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	dauditor "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/auditor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 )
 
-type TxAuditor struct {
-	w                       *token.AuditorWallet
-	auditor                 *auditor.Service
-	auditDB                 *auditdb.StoreService
-	transactionInfoProvider *TransactionInfoProvider
+// Auditor wraps the functionalities of the auditor service and the audit db for the ttx service
+type Auditor struct {
+	dauditor.Service
+	dauditor.StoreService
 }
 
-func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, error) {
-	backend := auditor.New(sp, w)
-	auditDB, err := auditdb.GetByTMSId(sp, w.TMS().ID())
+// NewAuditorFromTMSID returns a new Auditor for the given TMS ID
+func NewAuditorFromTMSID(sp token.ServiceProvider, tmsID token.TMSID) (*Auditor, error) {
+	auditServiceProvider, err := dauditor.GetServiceProvider(sp)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(ErrProvider, err)
 	}
-	ttxDB, err := ttxdb.GetByTMSId(sp, w.TMS().ID())
+	auditService, auditStoreService, err := auditServiceProvider.AuditorService(tmsID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(ErrProvider, err)
 	}
-	return NewTxAuditor(w, backend, auditDB, ttxDB), nil
+	return &Auditor{
+		Service:      auditService,
+		StoreService: auditStoreService,
+	}, nil
 }
 
-func NewTxAuditor(w *token.AuditorWallet, backend *auditor.Service, auditDB *auditdb.StoreService, ttxDB *ttxdb.StoreService) *TxAuditor {
-	return &TxAuditor{
-		w:                       w,
-		auditor:                 backend,
-		auditDB:                 auditDB,
-		transactionInfoProvider: newTransactionInfoProvider(w.TMS(), ttxDB),
-	}
+// NewAuditor returns a new Auditor for the given wallet.
+// This constructor uses NewAuditorFromTMSID with the wallet's TMSID.
+func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*Auditor, error) {
+	return NewAuditorFromTMSID(sp, w.TMS().ID())
 }
 
-func (a *TxAuditor) Validate(tx *Transaction) error {
-	return a.auditor.Validate(tx.Context, tx.TokenRequest)
+func (a *Auditor) Validate(tx *Transaction) error {
+	return a.Service.Validate(tx.Context, tx.TokenRequest)
 }
 
-func (a *TxAuditor) Audit(ctx context.Context, tx *Transaction) (*token.InputStream, *token.OutputStream, error) {
-	return a.auditor.Audit(ctx, tx)
+func (a *Auditor) Audit(ctx context.Context, tx *Transaction) (*token.InputStream, *token.OutputStream, error) {
+	return a.Service.Audit(ctx, tx)
 }
 
 // Release unlocks the passed enrollment IDs.
-func (a *TxAuditor) Release(ctx context.Context, tx *Transaction) {
-	a.auditor.Release(ctx, tx)
+func (a *Auditor) Release(ctx context.Context, tx *Transaction) {
+	a.Service.Release(ctx, tx)
 }
 
 // Transactions returns an iterator of transaction records filtered by the given params.
-func (a *TxAuditor) Transactions(ctx context.Context, params QueryTransactionsParams, pagination Pagination) (*PageTransactionsIterator, error) {
-	return a.auditDB.Transactions(ctx, params, pagination)
+func (a *Auditor) Transactions(ctx context.Context, params db.QueryTransactionsParams, pagination db.Pagination) (*db.PageTransactionsIterator, error) {
+	return a.StoreService.Transactions(ctx, params, pagination)
 }
 
 // NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
-func (a *TxAuditor) NewPaymentsFilter() *auditdb.PaymentsFilter {
-	return a.auditDB.NewPaymentsFilter()
+func (a *Auditor) NewPaymentsFilter() *auditdb.PaymentsFilter {
+	return a.StoreService.NewPaymentsFilter()
 }
 
 // NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
-func (a *TxAuditor) NewHoldingsFilter() *auditdb.HoldingsFilter {
-	return a.auditDB.NewHoldingsFilter()
+func (a *Auditor) NewHoldingsFilter() *auditdb.HoldingsFilter {
+	return a.StoreService.NewHoldingsFilter()
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *TxAuditor) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
-	return a.auditDB.SetStatus(ctx, txID, status, message)
+func (a *Auditor) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+	return a.StoreService.SetStatus(ctx, txID, status, message)
 }
 
-func (a *TxAuditor) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
-	return a.auditor.GetTokenRequest(ctx, txID)
+func (a *Auditor) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
+	return a.Service.GetTokenRequest(ctx, txID)
 }
 
-func (a *TxAuditor) Check(ctx context.Context) ([]string, error) {
-	return a.auditor.Check(ctx)
+func (a *Auditor) Check(ctx context.Context) ([]string, error) {
+	return a.Service.Check(ctx)
 }
 
 type RegisterAuditorView struct {
@@ -271,7 +271,7 @@ func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveV
 
 func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	// Append audit records
-	if err := auditor.New(context, a.w).Append(context.Context(), a.tx); err != nil {
+	if err := auditor.Get(context, a.w).Append(context.Context(), a.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed appending audit records for transaction %s", a.tx.ID())
 	}
 
