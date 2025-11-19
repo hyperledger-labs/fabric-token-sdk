@@ -46,6 +46,9 @@ type GenericBackend struct {
 	TokenChaincodePath                string
 	TokenChaincodeParamsReplaceSuffix string
 	TokenPlatform                     common2.TokenPlatform
+
+	// SkipPaths is a list of substrings that if contained in a path will make that path to be skipped
+	SkipPaths []string
 }
 
 func NewDefaultGenericBackend(tokenPlatform common2.TokenPlatform) *GenericBackend {
@@ -142,6 +145,14 @@ func (p *GenericBackend) UpdatePublicParams(tms *topology3.TMS, ppRaw []byte) {
 				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
 				return "", paramsFile.Bytes()
 			}
+
+			for _, skipPath := range p.SkipPaths {
+				if strings.Contains(filePath, skipPath) {
+					logger.Debugf("skipping [%s:%s]? Yes", filePath, fileName)
+					return "", []byte{0}
+				}
+			}
+
 			return "", nil
 		},
 	)
@@ -175,6 +186,7 @@ func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 	gomega.Expect(os.MkdirAll(packageDir, 0766)).ToNot(gomega.HaveOccurred())
 	paramsFile := PublicParamsTemplate(ppRaw)
 	port := p.TokenPlatform.GetContext().ReservePort()
+
 	err = packager.New().PackageChaincode(
 		cc.Chaincode.Path,
 		cc.Chaincode.Lang,
@@ -186,6 +198,13 @@ func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
 				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
 				return "", paramsFile.Bytes()
+			}
+
+			for _, skipPath := range p.SkipPaths {
+				if strings.Contains(filePath, skipPath) {
+					logger.Debugf("skipping [%s:%s]? Yes", filePath, fileName)
+					return "", []byte{0}
+				}
 			}
 
 			// Is connection.json?
