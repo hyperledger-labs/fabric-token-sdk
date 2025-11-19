@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	config3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
+	endorsement2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/endorsement"
@@ -31,6 +32,7 @@ import (
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/qe"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -46,6 +48,7 @@ func NewDriver(
 	ppFetcher *pp2.PublicParametersService,
 	configService driver2.ConfigService,
 	qsProvider queryservice.Provider,
+	storeServiceManager ttxdb.StoreServiceManager,
 ) driver.Driver {
 	vkp := pp2.NewVersionKeeperProvider()
 	kt := &keys.Translator{}
@@ -74,13 +77,15 @@ func NewDriver(
 			config3.NewListenerManagerConfig(configService),
 		),
 		EndorsementServiceProvider: endorsement.NewServiceProvider(
-			fnsProvider,
 			configs,
 			viewManager,
 			viewManager,
 			identityProvider,
 			kt,
 			vkp,
+			tmsProvider,
+			endorsement2.NewStorageProvider(storeServiceManager),
+			fnsProvider,
 		),
 		setupListenerProvider: lookup2.NewSetupListenerProvider(
 			tmsProvider,

@@ -15,6 +15,11 @@ type Configuration struct {
 	cm driver.Configuration
 }
 
+// NewConfiguration returns a new instance of Configuration
+func NewConfiguration(cm driver.Configuration) *Configuration {
+	return &Configuration{cm: cm}
+}
+
 // IsSet checks to see if the key has been set in any of the data locations
 func (m *Configuration) IsSet(key string) bool {
 	return m.cm.IsSet(key)
