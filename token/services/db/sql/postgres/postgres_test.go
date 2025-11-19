@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common/mock"
@@ -69,8 +70,8 @@ func postgresCfg(pgConnStr string, name string) *mock.ConfigProvider {
 
 func startContainer(t *testing.T) (func(), string) {
 	t.Helper()
-	cfg := postgres.DefaultConfig("test-db")
-	terminate, err := postgres.StartPostgresWithFmt([]*postgres.ContainerConfig{cfg})
+	cfg := postgres.DefaultConfig(postgres.WithDBName("test-db"))
+	terminate, _, err := postgres.StartPostgres(context.Background(), cfg, nil)
 	assert.NoError(t, err)
 	return terminate, cfg.DataSource()
 }
