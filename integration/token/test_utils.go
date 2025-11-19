@@ -42,7 +42,7 @@ func NewReplicationOptions(factor int, names ...string) (*ReplicationOptions, *R
 	sqlConfigs := make(map[string]*postgres2.ContainerConfig, len(names))
 	for _, name := range names {
 		replicationFactors[name] = factor
-		sqlConfigs[name] = postgres2.DefaultConfig(fmt.Sprintf("%s-db", name))
+		sqlConfigs[name] = postgres2.DefaultConfig(postgres2.WithDBName(fmt.Sprintf("%s-db", name)))
 	}
 	return &ReplicationOptions{ReplicationOptions: &integration.ReplicationOptions{
 		ReplicationFactors: replicationFactors,
