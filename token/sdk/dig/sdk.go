@@ -227,7 +227,7 @@ func (p *SDK) Install() error {
 		digutils.Register[dep.NetworkProvider](p.Container()),
 		digutils.Register[*wrapper2.StorageProvider](p.Container()),
 		digutils.Register[*wrapper2.NetworkIdentityProvider](p.Container()),
-		digutils.Register[*wrapper2.AuditServiceProvider](p.Container()),
+		digutils.Register[auditor2.ServiceProvider](p.Container()),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting backward comaptibility with SP")
