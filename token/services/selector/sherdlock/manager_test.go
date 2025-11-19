@@ -102,8 +102,8 @@ func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (tes
 
 func startContainer(t *testing.T) (func(), string) {
 	t.Helper()
-	cfg := postgres2.DefaultConfig(t.Name())
-	terminate, err := postgres2.StartPostgresWithFmt([]*postgres2.ContainerConfig{cfg})
+	cfg := postgres2.DefaultConfig(postgres2.WithDBName(t.Name()))
+	terminate, _, err := postgres2.StartPostgres(t.Context(), cfg, nil)
 	assert.NoError(t, err)
 	return terminate, cfg.DataSource()
 }
