@@ -8,6 +8,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc"
 )
 
@@ -26,11 +27,12 @@ type EndorserService struct {
 	collectEndorsementsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	EndorseStub        func(*endorser.Transaction, ...view.Identity) (any, error)
+	EndorseStub        func(view.Context, *endorser.Transaction, ...view.Identity) (any, error)
 	endorseMutex       sync.RWMutex
 	endorseArgsForCall []struct {
-		arg1 *endorser.Transaction
-		arg2 []view.Identity
+		arg1 view.Context
+		arg2 *endorser.Transaction
+		arg3 []view.Identity
 	}
 	endorseReturns struct {
 		result1 any
@@ -38,6 +40,19 @@ type EndorserService struct {
 	}
 	endorseReturnsOnCall map[int]struct {
 		result1 any
+		result2 error
+	}
+	EndorserIDStub        func(token.TMSID) (view.Identity, error)
+	endorserIDMutex       sync.RWMutex
+	endorserIDArgsForCall []struct {
+		arg1 token.TMSID
+	}
+	endorserIDReturns struct {
+		result1 view.Identity
+		result2 error
+	}
+	endorserIDReturnsOnCall map[int]struct {
+		result1 view.Identity
 		result2 error
 	}
 	NewTransactionStub        func(view.Context, ...fabric.TransactionOption) (*endorser.Transaction, error)
@@ -135,19 +150,20 @@ func (fake *EndorserService) CollectEndorsementsReturnsOnCall(i int, result1 err
 	}{result1}
 }
 
-func (fake *EndorserService) Endorse(arg1 *endorser.Transaction, arg2 ...view.Identity) (any, error) {
+func (fake *EndorserService) Endorse(arg1 view.Context, arg2 *endorser.Transaction, arg3 ...view.Identity) (any, error) {
 	fake.endorseMutex.Lock()
 	ret, specificReturn := fake.endorseReturnsOnCall[len(fake.endorseArgsForCall)]
 	fake.endorseArgsForCall = append(fake.endorseArgsForCall, struct {
-		arg1 *endorser.Transaction
-		arg2 []view.Identity
-	}{arg1, arg2})
+		arg1 view.Context
+		arg2 *endorser.Transaction
+		arg3 []view.Identity
+	}{arg1, arg2, arg3})
 	stub := fake.EndorseStub
 	fakeReturns := fake.endorseReturns
-	fake.recordInvocation("Endorse", []interface{}{arg1, arg2})
+	fake.recordInvocation("Endorse", []interface{}{arg1, arg2, arg3})
 	fake.endorseMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2...)
+		return stub(arg1, arg2, arg3...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -161,17 +177,17 @@ func (fake *EndorserService) EndorseCallCount() int {
 	return len(fake.endorseArgsForCall)
 }
 
-func (fake *EndorserService) EndorseCalls(stub func(*endorser.Transaction, ...view.Identity) (any, error)) {
+func (fake *EndorserService) EndorseCalls(stub func(view.Context, *endorser.Transaction, ...view.Identity) (any, error)) {
 	fake.endorseMutex.Lock()
 	defer fake.endorseMutex.Unlock()
 	fake.EndorseStub = stub
 }
 
-func (fake *EndorserService) EndorseArgsForCall(i int) (*endorser.Transaction, []view.Identity) {
+func (fake *EndorserService) EndorseArgsForCall(i int) (view.Context, *endorser.Transaction, []view.Identity) {
 	fake.endorseMutex.RLock()
 	defer fake.endorseMutex.RUnlock()
 	argsForCall := fake.endorseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *EndorserService) EndorseReturns(result1 any, result2 error) {
@@ -196,6 +212,70 @@ func (fake *EndorserService) EndorseReturnsOnCall(i int, result1 any, result2 er
 	}
 	fake.endorseReturnsOnCall[i] = struct {
 		result1 any
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *EndorserService) EndorserID(arg1 token.TMSID) (view.Identity, error) {
+	fake.endorserIDMutex.Lock()
+	ret, specificReturn := fake.endorserIDReturnsOnCall[len(fake.endorserIDArgsForCall)]
+	fake.endorserIDArgsForCall = append(fake.endorserIDArgsForCall, struct {
+		arg1 token.TMSID
+	}{arg1})
+	stub := fake.EndorserIDStub
+	fakeReturns := fake.endorserIDReturns
+	fake.recordInvocation("EndorserID", []interface{}{arg1})
+	fake.endorserIDMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *EndorserService) EndorserIDCallCount() int {
+	fake.endorserIDMutex.RLock()
+	defer fake.endorserIDMutex.RUnlock()
+	return len(fake.endorserIDArgsForCall)
+}
+
+func (fake *EndorserService) EndorserIDCalls(stub func(token.TMSID) (view.Identity, error)) {
+	fake.endorserIDMutex.Lock()
+	defer fake.endorserIDMutex.Unlock()
+	fake.EndorserIDStub = stub
+}
+
+func (fake *EndorserService) EndorserIDArgsForCall(i int) token.TMSID {
+	fake.endorserIDMutex.RLock()
+	defer fake.endorserIDMutex.RUnlock()
+	argsForCall := fake.endorserIDArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *EndorserService) EndorserIDReturns(result1 view.Identity, result2 error) {
+	fake.endorserIDMutex.Lock()
+	defer fake.endorserIDMutex.Unlock()
+	fake.EndorserIDStub = nil
+	fake.endorserIDReturns = struct {
+		result1 view.Identity
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *EndorserService) EndorserIDReturnsOnCall(i int, result1 view.Identity, result2 error) {
+	fake.endorserIDMutex.Lock()
+	defer fake.endorserIDMutex.Unlock()
+	fake.EndorserIDStub = nil
+	if fake.endorserIDReturnsOnCall == nil {
+		fake.endorserIDReturnsOnCall = make(map[int]struct {
+			result1 view.Identity
+			result2 error
+		})
+	}
+	fake.endorserIDReturnsOnCall[i] = struct {
+		result1 view.Identity
 		result2 error
 	}{result1, result2}
 }
@@ -336,6 +416,8 @@ func (fake *EndorserService) Invocations() map[string][][]interface{} {
 	defer fake.collectEndorsementsMutex.RUnlock()
 	fake.endorseMutex.RLock()
 	defer fake.endorseMutex.RUnlock()
+	fake.endorserIDMutex.RLock()
+	defer fake.endorserIDMutex.RUnlock()
 	fake.newTransactionMutex.RLock()
 	defer fake.newTransactionMutex.RUnlock()
 	fake.receiveTxMutex.RLock()

@@ -17,13 +17,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-type TokenManagementSystem interface {
-}
+//go:generate counterfeiter -o mock/fabric_rws.go -fake-name FabricRWSet . FabricRWSet
+type FabricRWSet = driver.RWSet
 
+//go:generate counterfeiter -o mock/tmsp.go -fake-name TokenManagementSystemProvider . TokenManagementSystemProvider
 type TokenManagementSystemProvider interface {
-	Get(opts ...token.ServiceOption) (TokenManagementSystem, error)
+	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
 
+//go:generate counterfeiter -o mock/translator.go -fake-name Translator . Translator
 type Translator interface {
 	AddPublicParamsDependency() error
 	CommitTokenRequest(raw []byte, storeHash bool) ([]byte, error)
@@ -39,7 +41,8 @@ type EndorserService interface {
 	NewTransaction(context view.Context, opts ...fabric.TransactionOption) (*endorser.Transaction, error)
 	ReceiveTx(ctx view.Context) (*endorser.Transaction, error)
 	CollectEndorsements(ctx view.Context, tx *endorser.Transaction, timeOut time.Duration, parties ...view.Identity) error
-	Endorse(tx *endorser.Transaction, identities ...view.Identity) (any, error)
+	Endorse(ctx view.Context, tx *endorser.Transaction, identities ...view.Identity) (any, error)
+	EndorserID(tmsID token.TMSID) (view.Identity, error)
 }
 
 // Context is an alias for view.Context

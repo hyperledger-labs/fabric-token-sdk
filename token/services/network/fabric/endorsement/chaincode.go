@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	// InvokeFunction is the name of the function to use to request the approval of a token request
 	InvokeFunction = "invoke"
 )
 

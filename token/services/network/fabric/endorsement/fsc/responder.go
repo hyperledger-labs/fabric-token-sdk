@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -30,35 +29,42 @@ const (
 )
 
 type Request struct {
-	Tx         *endorser.Transaction
-	Rws        *fabric.RWSet
-	TMSID      token2.TMSID
-	Anchor     string
-	RequestRaw []byte
-	Actions    []interface{}
-	Meta       map[string][]byte
-	Tms        *token2.ManagementService
+	Tx               *endorser.Transaction
+	Rws              *fabric.RWSet
+	TMSID            token2.TMSID
+	Anchor           string
+	RequestRaw       []byte
+	Actions          []any
+	Meta             map[string][]byte
+	Tms              *token2.ManagementService
+	PublicParamsHash tdriver.PPHash
 }
 
 type RequestApprovalResponderView struct {
-	endorserService EndorserService
-	keyTranslator   translator.KeyTranslator
-	getTranslator   TranslatorProviderFunc
+	endorserService               EndorserService
+	keyTranslator                 translator.KeyTranslator
+	getTranslator                 TranslatorProviderFunc
+	tokenManagementSystemProvider TokenManagementSystemProvider
+	storageProvider               StorageProvider
 }
 
 func NewRequestApprovalResponderView(
 	keyTranslator translator.KeyTranslator,
 	getTranslator TranslatorProviderFunc,
 	endorserService EndorserService,
+	tokenManagementSystemProvider TokenManagementSystemProvider,
+	storageProvider StorageProvider,
 ) *RequestApprovalResponderView {
 	return &RequestApprovalResponderView{
-		keyTranslator:   keyTranslator,
-		getTranslator:   getTranslator,
-		endorserService: endorserService,
+		keyTranslator:                 keyTranslator,
+		getTranslator:                 getTranslator,
+		endorserService:               endorserService,
+		tokenManagementSystemProvider: tokenManagementSystemProvider,
+		storageProvider:               storageProvider,
 	}
 }
 
-func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, error) {
+func (r *RequestApprovalResponderView) Call(context view.Context) (any, error) {
 	// receive
 	request, err := r.receive(context)
 	if err != nil {
@@ -75,11 +81,15 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 		return request.Rws.GetDirectState(request.TMSID.Namespace, key)
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(ErrValidateProposal, err)
 	}
 
 	// endorse
-	return r.endorse(context, request)
+	res, err := r.endorse(context, request)
+	if err != nil {
+		return nil, errors.Join(ErrEndorseProposal, err)
+	}
+	return res, nil
 }
 
 func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, error) {
@@ -106,7 +116,7 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 	if len(tmsID.Network) == 0 || len(tmsID.Channel) == 0 || len(tmsID.Namespace) == 0 {
 		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "invalid tms id [%s]", tmsID)
 	}
-	tms, err := token2.GetManagementService(ctx, token2.WithTMSID(tmsID))
+	tms, err := r.tokenManagementSystemProvider.GetManagementService(token2.WithTMSID(tmsID))
 	if err != nil {
 		return nil, errors.Wrapf(errors.Join(err, ErrInvalidTransient), "cannot find TMS for [%s]", tmsID)
 	}
@@ -127,12 +137,18 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 	// rws
 	rws, err := tx.RWSet()
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get rws for tx [%s]", tx.ID())
+		return nil, errors.Wrapf(errors.Join(ErrInvalidProposal, err), "failed to get rws for tx [%s]", tx.ID())
 	}
+	defer func() {
+		// if an error occurred, then call Done on the rwset
+		if rws != nil {
+			rws.Done()
+		}
+	}()
+
 	// the rws must be empty
 	if len(rws.Namespaces()) != 0 {
-		rws.Done()
-		return nil, errors.Wrapf(ErrInvalidTransient, "non empty namespaces")
+		return nil, errors.Wrapf(ErrInvalidProposal, "non empty namespaces")
 	}
 
 	// TODO: check that tx contains a valid endorser proposal
@@ -144,16 +160,21 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 		return nil, errors.Wrapf(ErrInvalidProposal, "invalid parameters")
 	}
 	if fn != InvokeFunction {
-		return nil, errors.Wrapf(ErrInvalidProposal, "invalid function")
+		return nil, errors.Wrapf(ErrInvalidProposal, "invalid function [%s]", fn)
 	}
 
+	// copy rws to make sure Done is not invoked on it, see defer above
+	returnRws := rws
+	rws = nil
+
 	return &Request{
-		Tx:         tx,
-		Rws:        rws,
-		TMSID:      tmsID,
-		RequestRaw: requestRaw,
-		Anchor:     requestAnchor,
-		Tms:        tms,
+		Tx:               tx,
+		Rws:              returnRws,
+		TMSID:            tmsID,
+		RequestRaw:       requestRaw,
+		Anchor:           requestAnchor,
+		Tms:              tms,
+		PublicParamsHash: tms.PublicParametersManager().PublicParamsHash(),
 	}, nil
 }
 
@@ -182,13 +203,12 @@ func (r *RequestApprovalResponderView) translate(ctx context.Context, request *R
 
 func (r *RequestApprovalResponderView) validate(context view.Context, request *Request, getState tdriver.GetStateFnc) error {
 	logger.DebugfContext(context.Context(), "Validate TX [%s]", request.Anchor)
-	tms := request.Tms
 
 	defer logger.DebugfContext(context.Context(), "Finished validation of TX [%s]", request.Anchor)
 	logger.DebugfContext(context.Context(), "Get validator for TX [%s]", request.Anchor)
-	validator, err := tms.Validator()
+	validator, err := request.Tms.Validator()
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get validator [%s:%s]", tms.Network(), tms.Channel())
+		return errors.WithMessagef(err, "failed to get validator [%s]", request.TMSID)
 	}
 	logger.DebugfContext(context.Context(), "Unmarshal and verify with metadata for TX [%s]", request.Anchor)
 	actions, meta, err := validator.UnmarshallAndVerifyWithMetadata(
@@ -200,7 +220,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *R
 	if err != nil {
 		return errors.WithMessagef(err, "failed to verify token request for [%s]", request.Anchor)
 	}
-	db, err := ttxdb.GetByTMSId(context, request.TMSID)
+	db, err := r.storageProvider.GetStorage(request.TMSID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to retrieve db [%s]", request.TMSID)
 	}
@@ -210,7 +230,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *R
 		request.Anchor,
 		request.RequestRaw,
 		meta,
-		tms.PublicParametersManager().PublicParamsHash(),
+		request.PublicParamsHash,
 	); err != nil {
 		return errors.WithMessagef(err, "failed to append metadata for [%s]", request.Anchor)
 	}
@@ -219,38 +239,10 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *R
 	return nil
 }
 
-func (r *RequestApprovalResponderView) endorserID(tms *token2.ManagementService, fns *fabric.NetworkService) (view.Identity, error) {
-	var endorserIDLabel string
-	if err := tms.Configuration().UnmarshalKey("services.network.fabric.fsc_endorsement.id", &endorserIDLabel); err != nil {
-		return nil, errors.WithMessagef(err, "failed to load endorserID")
-	}
-	var endorserID view.Identity
-	if len(endorserIDLabel) == 0 {
-		endorserID = fns.LocalMembership().DefaultIdentity()
-	} else {
-		var err error
-		endorserID, err = fns.LocalMembership().GetIdentityByID(endorserIDLabel)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "cannot find local endorser identity for [%s]", endorserIDLabel)
-		}
-	}
-	if endorserID.IsNone() {
-		return nil, errors.Errorf("cannot find local endorser identity for [%s]", endorserIDLabel)
-	}
-	if _, err := fns.SignerService().GetSigner(endorserID); err != nil {
-		return nil, errors.WithMessagef(err, "cannot find fabric signer for identity [%s:%s]", endorserIDLabel, endorserID)
-	}
-	return endorserID, nil
-}
-
 func (r *RequestApprovalResponderView) endorse(ctx view.Context, request *Request) (any, error) {
 	// endorse
 	logger.DebugfContext(ctx.Context(), "Endorse TX [%s]", request.Anchor)
-	fns, err := fabric.GetFabricNetworkService(ctx, request.TMSID.Network)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "cannot find fabric network for [%s]", request.TMSID.Network)
-	}
-	endorserID, err := r.endorserID(request.Tms, fns)
+	endorserID, err := r.endorserService.EndorserID(request.TMSID)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +255,7 @@ func (r *RequestApprovalResponderView) endorse(ctx view.Context, request *Reques
 	}
 
 	logger.DebugfContext(ctx.Context(), "Endorse proposal for TX [%s]", request.Anchor)
-	endorsementResult, err := ctx.RunView(endorser.NewEndorsementOnProposalResponderView(request.Tx, endorserID))
+	endorsementResult, err := r.endorserService.Endorse(ctx, request.Tx, endorserID)
 	if err != nil {
 		logger.Errorf("failed to respond to endorsement [%s]", err)
 	}

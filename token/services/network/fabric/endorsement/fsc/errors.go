@@ -17,4 +17,8 @@ var (
 	ErrInvalidProposal = errors.New("invalid proposal")
 	// ErrReceivedProposal signals that an error occurred when receiving the proposal
 	ErrReceivedProposal = errors.New("failed to received proposal")
+	// ErrValidateProposal signals a failure in validating the proposal
+	ErrValidateProposal = errors.New("failed to validate proposal")
+	// ErrEndorseProposal signals a failure in endorsing the proposal
+	ErrEndorseProposal = errors.New("failed to endorse proposal")
 )

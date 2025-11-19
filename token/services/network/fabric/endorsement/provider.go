@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
 const (
@@ -37,19 +38,24 @@ type ServiceProvider struct {
 
 func NewServiceProvider(
 	fnsp *fabric.NetworkServiceProvider,
+	tmsp *token2.ManagementServiceProvider,
 	configService common.Configuration,
 	viewManager fsc.ViewManager,
 	viewRegistry fsc.ViewRegistry,
 	identityProvider fsc.IdentityProvider,
 	keyTranslator translator.KeyTranslator,
+	storeServiceManager ttxdb.StoreServiceManager,
 ) *ServiceProvider {
 	l := &loader{
-		fnsp:             fnsp,
-		configService:    configService,
-		viewManager:      viewManager,
-		viewRegistry:     viewRegistry,
-		identityProvider: identityProvider,
-		keyTranslator:    keyTranslator,
+		fnsp:                fnsp,
+		tmsp:                tmsp,
+		configService:       configService,
+		viewManager:         viewManager,
+		viewRegistry:        viewRegistry,
+		identityProvider:    identityProvider,
+		keyTranslator:       keyTranslator,
+		storeServiceManager: storeServiceManager,
+		fabricProvider:      fnsp,
 	}
 	return &ServiceProvider{Provider: lazy.NewProviderWithKeyMapper(key, l.load)}
 }
@@ -59,12 +65,15 @@ type Service interface {
 }
 
 type loader struct {
-	fnsp             *fabric.NetworkServiceProvider
-	configService    common.Configuration
-	viewManager      fsc.ViewManager
-	viewRegistry     fsc.ViewRegistry
-	identityProvider fsc.IdentityProvider
-	keyTranslator    translator.KeyTranslator
+	tmsp                *token2.ManagementServiceProvider
+	fnsp                *fabric.NetworkServiceProvider
+	configService       common.Configuration
+	viewManager         fsc.ViewManager
+	viewRegistry        fsc.ViewRegistry
+	identityProvider    fsc.IdentityProvider
+	keyTranslator       translator.KeyTranslator
+	storeServiceManager ttxdb.StoreServiceManager
+	fabricProvider      *fabric.NetworkServiceProvider
 }
 
 func (l *loader) load(tmsID token2.TMSID) (Service, error) {
@@ -94,7 +103,9 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 				l.keyTranslator,
 			), nil
 		},
-		NewEndorserService(),
+		NewEndorserService(l.tmsp, l.fabricProvider),
+		l.tmsp,
+		NewStorageProvider(l.storeServiceManager),
 	)
 }
 
@@ -134,11 +145,13 @@ func (n *NamespaceTxProcessor) EnableTxProcessing(tmsID token2.TMSID) error {
 
 // EndorserService wraps the FSC's endorser service
 type EndorserService struct {
+	tmsProvider    *token2.ManagementServiceProvider
+	fabricProvider *fabric.NetworkServiceProvider
 }
 
 // NewEndorserService returns a new instance of EndorserService
-func NewEndorserService() *EndorserService {
-	return &EndorserService{}
+func NewEndorserService(tmsProvider *token2.ManagementServiceProvider, fabricProvider *fabric.NetworkServiceProvider) *EndorserService {
+	return &EndorserService{tmsProvider: tmsProvider, fabricProvider: fabricProvider}
 }
 
 func (e *EndorserService) ReceiveTx(ctx view.Context) (*endorser.Transaction, error) {
@@ -149,9 +162,8 @@ func (e *EndorserService) ReceiveTx(ctx view.Context) (*endorser.Transaction, er
 	return tx, nil
 }
 
-func (e *EndorserService) Endorse(tx *endorser.Transaction, identities ...view.Identity) (any, error) {
-	// TODO implement me
-	panic("implement me")
+func (e *EndorserService) Endorse(ctx view.Context, tx *endorser.Transaction, identities ...view.Identity) (any, error) {
+	return ctx.RunView(endorser.NewEndorsementOnProposalResponderView(tx, identities...))
 }
 
 func (e *EndorserService) NewTransaction(context view.Context, opts ...fabric.TransactionOption) (*endorser.Transaction, error) {
@@ -165,4 +177,52 @@ func (e *EndorserService) CollectEndorsements(ctx view.Context, tx *endorser.Tra
 		endorsers...,
 	).WithTimeout(timeOut))
 	return err
+}
+
+func (e *EndorserService) EndorserID(tmsID token2.TMSID) (view.Identity, error) {
+	var endorserIDLabel string
+	tms, err := e.tmsProvider.GetManagementService(token2.WithTMSID(tmsID))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting management service for [%s]", tmsID)
+	}
+	if err := tms.Configuration().UnmarshalKey("services.network.fabric.fsc_endorsement.id", &endorserIDLabel); err != nil {
+		return nil, errors.WithMessagef(err, "failed to load endorserID")
+	}
+	fns, err := e.fabricProvider.FabricNetworkService(tmsID.Network)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "cannot find fabric network for [%s]", tmsID.Network)
+	}
+
+	var endorserID view.Identity
+	if len(endorserIDLabel) == 0 {
+		endorserID = fns.LocalMembership().DefaultIdentity()
+	} else {
+		var err error
+		endorserID, err = fns.LocalMembership().GetIdentityByID(endorserIDLabel)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "cannot find local endorser identity for [%s]", endorserIDLabel)
+		}
+	}
+	if endorserID.IsNone() {
+		return nil, errors.Errorf("cannot find local endorser identity for [%s]", endorserIDLabel)
+	}
+	if _, err := fns.SignerService().GetSigner(endorserID); err != nil {
+		return nil, errors.WithMessagef(err, "cannot find fabric signer for identity [%s:%s]", endorserIDLabel, endorserID)
+	}
+	return endorserID, nil
+}
+
+// StorageProvider wraps ttxdb.StoreServiceManager
+type StorageProvider struct {
+	ttxdb.StoreServiceManager
+}
+
+// NewStorageProvider returns a new instance of StorageProvider
+func NewStorageProvider(storeServiceManager ttxdb.StoreServiceManager) *StorageProvider {
+	return &StorageProvider{StoreServiceManager: storeServiceManager}
+}
+
+// GetStorage returns the fsc.Storage instance for the given tms id.
+func (s *StorageProvider) GetStorage(id token2.TMSID) (fsc.Storage, error) {
+	return s.StoreServiceByTMSId(id)
 }

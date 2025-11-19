@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
 type IdentityProvider interface {
@@ -42,25 +43,34 @@ func NewServiceProvider(
 	identityProvider IdentityProvider,
 	keyTranslator translator.KeyTranslator,
 	versionKeeperProvider pp.VersionKeeperProvider,
+	tokenManagementSystemProvider *token2.ManagementServiceProvider,
+	storeServiceManager ttxdb.StoreServiceManager,
+	fabricProvider *fabric.NetworkServiceProvider,
 ) *ServiceProvider {
 	l := &loader{
-		configService:         configService,
-		viewManager:           viewManager,
-		viewRegistry:          viewRegistry,
-		identityProvider:      identityProvider,
-		keyTranslator:         keyTranslator,
-		versionKeeperProvider: versionKeeperProvider,
+		configService:                 configService,
+		viewManager:                   viewManager,
+		viewRegistry:                  viewRegistry,
+		identityProvider:              identityProvider,
+		keyTranslator:                 keyTranslator,
+		versionKeeperProvider:         versionKeeperProvider,
+		tokenManagementSystemProvider: tokenManagementSystemProvider,
+		storeServiceManager:           storeServiceManager,
+		fabricProvider:                fabricProvider,
 	}
 	return &ServiceProvider{Provider: lazy.NewProviderWithKeyMapper(key, l.load)}
 }
 
 type loader struct {
-	configService         common.Configuration
-	viewManager           ViewManager
-	viewRegistry          ViewRegistry
-	identityProvider      IdentityProvider
-	keyTranslator         translator.KeyTranslator
-	versionKeeperProvider pp.VersionKeeperProvider
+	configService                 common.Configuration
+	viewManager                   ViewManager
+	viewRegistry                  ViewRegistry
+	identityProvider              IdentityProvider
+	keyTranslator                 translator.KeyTranslator
+	versionKeeperProvider         pp.VersionKeeperProvider
+	storeServiceManager           ttxdb.StoreServiceManager
+	tokenManagementSystemProvider *token2.ManagementServiceProvider
+	fabricProvider                *fabric.NetworkServiceProvider
 }
 
 func (l *loader) load(tmsID token2.TMSID) (endorsement.Service, error) {
@@ -87,7 +97,9 @@ func (l *loader) load(tmsID token2.TMSID) (endorsement.Service, error) {
 				l.keyTranslator,
 			), nil
 		},
-		endorsement.NewEndorserService(),
+		endorsement.NewEndorserService(l.tokenManagementSystemProvider, l.fabricProvider),
+		l.tokenManagementSystemProvider,
+		endorsement.NewStorageProvider(l.storeServiceManager),
 	)
 }
 

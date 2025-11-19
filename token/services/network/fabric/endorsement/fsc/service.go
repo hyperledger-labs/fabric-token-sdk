@@ -49,6 +49,8 @@ func NewEndorsementService(
 	keyTranslator translator.KeyTranslator,
 	getTranslator TranslatorProviderFunc,
 	endorserService EndorserService,
+	tokenManagementSystemProvider TokenManagementSystemProvider,
+	storageProvider StorageProvider,
 ) (*EndorsementService, error) {
 	if configuration.GetBool(AmIAnEndorserKey) {
 		logger.Debug("this node is an endorser, prepare it...")
@@ -60,6 +62,8 @@ func NewEndorsementService(
 				keyTranslator,
 				getTranslator,
 				endorserService,
+				tokenManagementSystemProvider,
+				storageProvider,
 			),
 			&RequestApprovalView{},
 		); err != nil {

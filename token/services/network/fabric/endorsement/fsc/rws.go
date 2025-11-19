@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package fsc
 
 import (
-	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 )
 
 type RWSWrapper struct {
-	Stub *fabric2.RWSet
+	Stub *fdriver.RWSet
 }
 
 func (rwset *RWSWrapper) SetState(namespace string, key string, value []byte) error {

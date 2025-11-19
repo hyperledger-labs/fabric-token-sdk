@@ -25,6 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -65,6 +66,7 @@ func NewGenericDriver(
 	tracerProvider trace.TracerProvider,
 	identityProvider view.IdentityProvider,
 	configService cdriver.ConfigService,
+	storeServiceManager ttxdb.StoreServiceManager,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
 	return NewDriver(
@@ -82,7 +84,16 @@ func NewGenericDriver(
 		keyTranslator,
 		finality.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
 		lookup.NewListenerManagerProvider(fnsProvider, tracerProvider, keyTranslator, config3.NewListenerManagerConfig(configService)),
-		endorsement.NewServiceProvider(fnsProvider, configProvider, viewManager, viewRegistry, identityProvider, keyTranslator),
+		endorsement.NewServiceProvider(
+			fnsProvider,
+			tmsProvider,
+			configProvider,
+			viewManager,
+			viewRegistry,
+			identityProvider,
+			keyTranslator,
+			storeServiceManager,
+		),
 		NewSetupListenerProvider(tmsProvider, tokensManager),
 		config2.GenericDriver,
 	)
