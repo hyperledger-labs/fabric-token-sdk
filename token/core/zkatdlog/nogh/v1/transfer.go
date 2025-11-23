@@ -155,7 +155,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", anchor)
 	}
-	s.Metrics.zkTransferDuration.Observe(float64(duration.Milliseconds()))
+	s.Metrics.zkTransferDuration.Observe(duration.Seconds())
 
 	// add transfer action's transferMetadata
 	if opts != nil {
