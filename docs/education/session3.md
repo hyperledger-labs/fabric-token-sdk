@@ -90,7 +90,7 @@ A wallet is a container for long-term identities and
 the wallet service provides access to long-term secret keys needed for signing operations.
 
 If an issuer wants to issue tokens, they must sign under one of the issuer identities published in the public parameters.
-Such a secret keys is stored in a wallet.
+Such a secret key is stored in a wallet.
 Wallets are accessed only through the Wallet Service.
 
 
@@ -208,9 +208,6 @@ Must be fast due to being on the critical path.
 
 Uses caches heavily.
 
-------
-HERE
-------
 
 ### Registries
 Each role has a registry.
