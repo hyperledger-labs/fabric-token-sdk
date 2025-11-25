@@ -124,7 +124,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, errors.WithMessagef(err, "failed to generate zk issue")
 	}
 	duration := time.Since(start)
-	s.Metrics.zkIssueDuration.Observe(float64(duration.Milliseconds()))
+	s.Metrics.zkIssueDuration.Observe(duration.Seconds())
 
 	// metadata
 
