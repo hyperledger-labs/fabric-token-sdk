@@ -160,7 +160,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 
 	a.tx.TokenRequest.AddAuditorSignature(auditorIdentity, signature)
 
-	logger.Debug("auditor signature verified")
+	logger.Debugf("auditor signature verified")
 	return session, nil
 }
 

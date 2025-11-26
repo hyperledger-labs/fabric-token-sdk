@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 type transactionTables struct {
@@ -107,7 +108,7 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver.Qu
 		Limit(params.NumRecords).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -142,7 +143,7 @@ func (db *TransactionStore) QueryTransactions(ctx context.Context, params driver
 		Paginated(pagination).
 		FormatPaginated(db.ci, db.pi)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -176,7 +177,7 @@ func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (driver.
 		From(q.Table(db.table.Requests)).
 		Where(cond.Eq("tx_id", txID)).
 		Format(db.ci)
-	logger.Debug(query, txID)
+	logging.Debug(logger, query, txID)
 
 	row := db.readDB.QueryRowContext(ctx, query, args...)
 	if err := row.Scan(&status, &statusMessage); err != nil {
@@ -202,7 +203,7 @@ func (db *TransactionStore) QueryValidations(ctx context.Context, params driver.
 		Where(HasValidationParams(params)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -229,7 +230,7 @@ func (db *TransactionStore) QueryTokenRequests(ctx context.Context, params drive
 		Where(cond.In("status", params.Statuses...)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -251,7 +252,7 @@ func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, tx
 		Row(id, txID, endorser, sigma, now).
 		Format()
 
-	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
+	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
 	if _, err = db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return ttxDBError(err)
 	}
@@ -264,7 +265,7 @@ func (db *TransactionStore) GetTransactionEndorsementAcks(ctx context.Context, t
 		From(q.Table(db.table.TransactionEndorseAck)).
 		Where(cond.Eq("tx_id", txID)).
 		Format(db.ci)
-	logger.Debug(query, txID)
+	logging.Debug(logger, query, txID)
 
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -304,7 +305,7 @@ func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status d
 			Where(cond.Eq("tx_id", txID)).
 			Format(db.ci)
 
-		logger.Debug(query, args)
+		logging.Debug(logger, query, args)
 		_, err = db.writeDB.ExecContext(ctx, query, args...)
 	} else {
 		query, args := q.Update(db.table.Requests).
@@ -312,7 +313,7 @@ func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status d
 			Where(cond.Eq("tx_id", txID)).
 			Format(db.ci)
 
-		logger.Debug(query, args)
+		logging.Debug(logger, query, args)
 		_, err = db.writeDB.ExecContext(ctx, query, args...)
 	}
 	if err != nil {
@@ -425,7 +426,7 @@ func (w *AtomicWrite) Commit() error {
 
 func (w *AtomicWrite) Rollback() {
 	if w.txn == nil {
-		logger.Debug("nothing to roll back")
+		logging.Debug(logger, "nothing to roll back")
 		return
 	}
 	if err := w.txn.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
@@ -455,7 +456,7 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver.Transacti
 		Fields("id", "tx_id", "action_type", "sender_eid", "recipient_eid", "token_type", "amount", "stored_at").
 		Rows(rows).
 		Format()
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	_, err := w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
@@ -485,7 +486,7 @@ func (w *AtomicWrite) AddTokenRequest(ctx context.Context, txID string, tr []byt
 		Fields("tx_id", "request", "status", "status_message", "application_metadata", "public_metadata", "pp_hash").
 		Row(txID, tr, driver.Pending, "", ja, jp, ppHash).
 		Format()
-	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(publicMetadata), len(ppHash))
+	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(publicMetadata), len(ppHash))
 	_, err = w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
@@ -515,7 +516,7 @@ func (w *AtomicWrite) AddMovement(ctx context.Context, rs ...driver.MovementReco
 		Fields("id", "tx_id", "enrollment_id", "token_type", "amount", "stored_at").
 		Rows(rows).
 		Format()
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	_, err := w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
@@ -536,7 +537,7 @@ func (w *AtomicWrite) AddValidationRecord(ctx context.Context, txID string, meta
 		Fields("tx_id", "metadata", "stored_at").
 		Row(txID, md, now).
 		Format()
-	logger.Debug(query, txID, len(md), now)
+	logging.Debug(logger, query, txID, len(md), now)
 
 	_, err = w.txn.ExecContext(ctx, query, args...)
 	return ttxDBError(err)

@@ -99,7 +99,7 @@ func (db *TokenStore) DeleteTokens(ctx context.Context, deletedBy string, ids ..
 		Set("spent_at", time.Now().UTC()).
 		Where(HasTokens("tx_id", "idx", ids...)).
 		Format(db.ci)
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	if _, err := db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error setting tokens to deleted [%v]", ids)
 	}
@@ -145,7 +145,7 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 		}, tokenTable)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func (db *TokenStore) SpendableTokensIteratorBy(ctx context.Context, walletID st
 		}, nil)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
@@ -209,7 +209,7 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 		Where(HasTokenDetails(details, nil)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 
@@ -289,7 +289,7 @@ func (db *TokenStore) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]
 		).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -348,7 +348,7 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 		Where(cond.Eq("issuer", true)).
 		Format(db.ci)
 
-	logger.Debug(query)
+	logging.Debug(logger, query)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -413,7 +413,7 @@ func (db *TokenStore) getLedgerToken(ctx context.Context, ids []*token.ID) ([][]
 		Where(HasTokens("tx_id", "idx", ids...)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -458,7 +458,7 @@ func (db *TokenStore) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID
 		Where(HasTokens("tx_id", "idx", ids...)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, nil, nil, err
@@ -511,7 +511,7 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 		)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -583,7 +583,7 @@ func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.Query
 		Where(HasTokenDetails(params, tokenTable)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -608,7 +608,7 @@ func (db *TokenStore) WhoDeletedTokens(ctx context.Context, inputs ...*token.ID)
 		Where(HasTokens("tx_id", "idx", inputs...)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, nil, err
@@ -767,7 +767,7 @@ func (db *TokenStore) GetCertifications(ctx context.Context, ids []*token.ID) ([
 		Where(HasTokens("tx_id", "idx", ids...)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query")
@@ -903,7 +903,7 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 		}, nil)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
@@ -945,7 +945,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, inclu
 		}, tokenTable)).
 		Format(t.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := t.tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, nil, err
@@ -996,7 +996,7 @@ func (t *TokenTransaction) Delete(ctx context.Context, tokenID token.ID, deleted
 		Where(cond.And(cond.Eq("tx_id", tokenID.TxId), cond.Eq("idx", tokenID.Index))).
 		Format(t.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error setting token to deleted [%s]", tokenID.TxId)
 	}
@@ -1014,7 +1014,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		Fields("tx_id", "idx", "issuer_raw", "owner_raw", "owner_type", "owner_identity", "owner_wallet_id", "ledger", "ledger_type", "ledger_metadata", "token_type", "quantity", "amount", "stored_at", "owner", "auditor", "issuer").
 		Row(tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.OwnerType, tr.OwnerIdentity, tr.OwnerWalletID, tr.Ledger, tr.LedgerFormat, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, time.Now().UTC(), tr.Owner, tr.Auditor, tr.Issuer).
 		Format()
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		logger.Errorf("error storing token [%s] in table [%s] [%s]: [%s][%s]", tr.TxID, t.table.Tokens, query, err, string(debug.Stack()))
 		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.table.Tokens)
@@ -1033,7 +1033,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 		Fields("tx_id", "idx", "wallet_id").
 		Rows(rows).
 		Format()
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		logger.Errorf("error storing token ownerships [%s]: %s", query, err)
@@ -1049,7 +1049,7 @@ func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, s
 		Where(cond.And(cond.Eq("tx_id", tokenID.TxId), cond.Eq("idx", tokenID.Index))).
 		Format(t.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error setting spendable flag to [%v] for [%s]", spendable, tokenID.TxId)
 	}
@@ -1062,7 +1062,7 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 		Set("spendable", false).
 		Format(t.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error setting spendable flag to false for all tokens")
 	}
@@ -1073,7 +1073,7 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 		Where(cond.In("ledger_type", formats...)).
 		Format(t.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	res, err := t.tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return errors.Wrapf(err, "error setting spendable flag to true for token types [%v]", formats)
