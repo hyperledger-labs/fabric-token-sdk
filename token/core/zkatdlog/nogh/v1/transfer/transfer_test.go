@@ -6,129 +6,119 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
+	"testing"
+
 	math "github.com/IBM/mathlib"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
-
-/*
-func TestParallelProveVerify(t *testing.T) {
-	parallelism := 1000
-
-	prover, verifier := prepareOwnershipTransfer()
-
-	var wg sync.WaitGroup
-	wg.Add(parallelism)
-
-	for i := 0; i < parallelism; i++ {
-		go func() {
-			defer wg.Done()
-			proof, err := prover.Prove()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(proof).NotTo(BeNil())
-			err = verifier.Verify(proof)
-			Expect(err).NotTo(HaveOccurred())
-		}()
-	}
-
-	wg.Wait()
-}*/
 
 const TestCurve = math.BN254
 
-var _ = Describe("Transfer", func() {
-	var (
-		prover   *transfer.Prover
-		verifier *transfer.Verifier
-	)
-	BeforeEach(func() {
-		prover, verifier = prepareZKTransfer()
-	})
-	Describe("Prove", func() {
-		Context("parameters and witness are initialized correctly", func() {
-			It("Succeeds", func() {
-				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(proof).NotTo(BeNil())
-				err = verifier.Verify(proof)
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-		Context("Output Values > Input Values", func() {
-			BeforeEach(func() {
-				prover, verifier = prepareZKTransferWithWrongSum()
-			})
-			It("fails", func() {
-				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(proof).NotTo(BeNil())
-				err = verifier.Verify(proof)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("invalid transfer proof: invalid sum and type proof"))
-			})
-		})
-		Context("Output Values out of range", func() {
-			BeforeEach(func() {
-				prover, verifier = prepareZKTransferWithInvalidRange()
-			})
-			It("fails during proof generation", func() {
-				proof, err := prover.Prove()
-				Expect(proof).NotTo(BeNil())
-				Expect(err).NotTo(HaveOccurred())
-				err = verifier.Verify(proof)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("invalid range proof at index 0: invalid range proof"))
-			})
-		})
-	})
-})
+type TransferEnv struct {
+	prover   *transfer.Prover
+	verifier *transfer.Verifier
+}
 
-func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
+func NewTransferEnv(tb testing.TB) *TransferEnv {
+	prover, verifier := prepareZKTransfer(tb)
+	return &TransferEnv{
+		prover:   prover,
+		verifier: verifier,
+	}
+}
+
+func NewTransferEnvWithWrongSum(tb testing.TB) *TransferEnv {
+	prover, verifier := prepareZKTransferWithWrongSum(tb)
+	return &TransferEnv{
+		prover:   prover,
+		verifier: verifier,
+	}
+}
+
+func NewTransferEnvWithInvalidRange(tb testing.TB) *TransferEnv {
+	prover, verifier := prepareZKTransferWithInvalidRange(tb)
+	return &TransferEnv{
+		prover:   prover,
+		verifier: verifier,
+	}
+}
+
+func TestTransfer(t *testing.T) {
+	t.Run("parameters and witness are initialized correctly", func(t *testing.T) {
+		env := NewTransferEnv(t)
+		proof, err := env.prover.Prove()
+		require.NoError(t, err)
+		require.NotNil(t, proof)
+		err = env.verifier.Verify(proof)
+		require.NoError(t, err)
+	})
+	t.Run("Output Values > Input Values", func(t *testing.T) {
+		env := NewTransferEnvWithWrongSum(t)
+
+		proof, err := env.prover.Prove()
+		require.NoError(t, err)
+		require.NotNil(t, proof)
+		err = env.verifier.Verify(proof)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid transfer proof: invalid sum and type proof")
+	})
+	t.Run("Output Values out of range", func(t *testing.T) {
+		env := NewTransferEnvWithInvalidRange(t)
+		proof, err := env.prover.Prove()
+		require.NotNil(t, proof)
+		require.NoError(t, err)
+		err = env.verifier.Verify(proof)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid range proof at index 0: invalid range proof")
+	})
+}
+
+func prepareZKTransfer(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 	pp, err := v1.Setup(32, nil, TestCurve)
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(tb, err)
 
-	intw, outtw, in, out := prepareInputsForZKTransfer(pp)
+	intw, outtw, in, out := prepareInputsForZKTransfer(tb, pp)
 
 	prover, err := transfer.NewProver(intw, outtw, in, out, pp)
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(tb, err)
 	verifier := transfer.NewVerifier(in, out, pp)
 
 	return prover, verifier
 }
 
-func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
+func prepareZKTransferWithWrongSum(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 	pp, err := v1.Setup(32, nil, TestCurve)
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(tb, err)
 
-	intw, outtw, in, out := prepareInvalidInputsForZKTransfer(pp)
+	intw, outtw, in, out := prepareInvalidInputsForZKTransfer(tb, pp)
 
 	prover, err := transfer.NewProver(intw, outtw, in, out, pp)
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(tb, err)
 	verifier := transfer.NewVerifier(in, out, pp)
 
 	return prover, verifier
 }
 
-func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) {
+func prepareZKTransferWithInvalidRange(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 	pp, err := v1.Setup(8, nil, TestCurve)
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(tb, err)
 
-	intw, outtw, in, out := prepareInputsForZKTransfer(pp)
+	intw, outtw, in, out := prepareInputsForZKTransfer(tb, pp)
 
 	prover, err := transfer.NewProver(intw, outtw, in, out, pp)
 	verifier := transfer.NewVerifier(in, out, pp)
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(tb, err)
 	return prover, verifier
 }
 
-func prepareInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1) {
+func prepareInputsForZKTransfer(tb testing.TB, pp *v1.PublicParams) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1) {
 	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(tb, err)
 
 	inBF := make([]*math.Zr, 2)
 	outBF := make([]*math.Zr, 2)
@@ -160,10 +150,10 @@ func prepareInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, []*toke
 	return intw, outtw, in, out
 }
 
-func prepareInvalidInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1) {
+func prepareInvalidInputsForZKTransfer(tb testing.TB, pp *v1.PublicParams) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1) {
 	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(tb, err)
 
 	inBF := make([]*math.Zr, 2)
 	outBF := make([]*math.Zr, 2)
@@ -193,4 +183,56 @@ func prepareInvalidInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, 
 	}
 
 	return intw, outtw, in, out
+}
+
+type SingleProverEnv struct {
+	a []*token.Metadata
+	b []*token.Metadata
+	c []*math.G1
+	d []*math.G1
+}
+
+type BenchmarkTransferEnv struct {
+	ProverEnvs []SingleProverEnv
+	pp         *v1.PublicParams
+}
+
+func NewBenchmarkTransferEnv(t *testing.B, n int) *BenchmarkTransferEnv {
+	pp, err := v1.Setup(32, nil, TestCurve)
+	require.NoError(t, err)
+
+	entries := make([]SingleProverEnv, n)
+	for i := 0; i < n; i++ {
+		intw, outtw, in, out := prepareInputsForZKTransfer(t, pp)
+		entries[i] = SingleProverEnv{
+			a: intw,
+			b: outtw,
+			c: in,
+			d: out,
+		}
+	}
+	return &BenchmarkTransferEnv{ProverEnvs: entries, pp: pp}
+}
+
+func BenchmarkTransfer(b *testing.B) {
+	b.ReportAllocs()
+
+	// prepare env
+	env := NewBenchmarkTransferEnv(b, b.N)
+
+	// Optional: Reset timer if you had expensive setup code above
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		prover, err := transfer.NewProver(
+			env.ProverEnvs[i].a,
+			env.ProverEnvs[i].b,
+			env.ProverEnvs[i].c,
+			env.ProverEnvs[i].d,
+			env.pp,
+		)
+		require.NoError(b, err)
+		_, err = prover.Prove()
+		require.NoError(b, err)
+	}
 }

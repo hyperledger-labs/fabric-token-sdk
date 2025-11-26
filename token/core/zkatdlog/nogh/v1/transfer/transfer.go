@@ -93,37 +93,29 @@ func (v *Verifier) Verify(proofRaw []byte) error {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	var tspErr, rangeErr error
-
 	// verify well-formedness of inputs and outputs
-	tspErr = v.TypeAndSum.Verify(proof.TypeAndSum)
-
-	go func() {
-		defer wg.Done()
-		// verify range proof
-		if v.RangeCorrectness != nil {
-			if proof.RangeCorrectness == nil {
-				rangeErr = errors.New("invalid transfer proof")
-			} else {
-				commitmentToType := proof.TypeAndSum.CommitmentToType.Copy()
-				coms := make([]*math.G1, len(v.TypeAndSum.Outputs))
-				for i := range len(v.TypeAndSum.Outputs) {
-					coms[i] = v.TypeAndSum.Outputs[i].Copy()
-					coms[i].Sub(commitmentToType)
-				}
-				v.RangeCorrectness.Commitments = coms
-				rangeErr = v.RangeCorrectness.Verify(proof.RangeCorrectness)
-			}
-		}
-	}()
-
-	wg.Wait()
-
+	tspErr := v.TypeAndSum.Verify(proof.TypeAndSum)
 	if tspErr != nil {
 		return errors.Wrap(tspErr, "invalid transfer proof")
 	}
 
-	return rangeErr
+	// verify range proof
+	if v.RangeCorrectness != nil {
+		if proof.RangeCorrectness == nil {
+			return errors.New("invalid transfer proof")
+		} else {
+			commitmentToType := proof.TypeAndSum.CommitmentToType.Copy()
+			coms := make([]*math.G1, len(v.TypeAndSum.Outputs))
+			for i := range len(v.TypeAndSum.Outputs) {
+				coms[i] = v.TypeAndSum.Outputs[i].Copy()
+				coms[i].Sub(commitmentToType)
+			}
+			v.RangeCorrectness.Commitments = coms
+			return v.RangeCorrectness.Verify(proof.RangeCorrectness)
+		}
+	}
+
+	return nil
 }
 
 // Prover produces a proof that a Action is valid
@@ -201,31 +193,22 @@ func (p *Prover) Prove() ([]byte, error) {
 
 	var tsProof *TypeAndSumProof
 	var rangeProof *rp.RangeCorrectness
-	var tsErr, rangeErr error
-
-	go func() {
-		defer wg.Done()
-		if p.RangeCorrectness != nil {
-			rangeProof, rangeErr = p.RangeCorrectness.Prove()
+	if p.RangeCorrectness != nil {
+		var err error
+		rangeProof, err = p.RangeCorrectness.Prove()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to generate range proof for transfer")
 		}
-	}()
-
-	tsProof, tsErr = p.TypeAndSum.Prove()
-
-	wg.Wait()
-
-	if tsErr != nil {
-		return nil, errors.Wrapf(tsErr, "failed to generate transfer proof")
 	}
 
-	if rangeErr != nil {
-		return nil, errors.Wrapf(rangeErr, "failed to generate range proof for transfer")
+	tsProof, err := p.TypeAndSum.Prove()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate transfer proof")
 	}
 
 	proof := &Proof{
 		TypeAndSum:       tsProof,
 		RangeCorrectness: rangeProof,
 	}
-
 	return proof.Serialize()
 }

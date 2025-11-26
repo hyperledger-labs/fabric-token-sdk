@@ -6,15 +6,26 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
+	"testing"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Describe("Input/Output well formedness", func() {
+type TypeAndSumEnv struct {
+	prover   *transfer.TypeAndSumProver
+	verifier *transfer.TypeAndSumVerifier
+	c        *math.Curve
+	inBF     []*math.Zr
+	pp       []*math.G1
+	outBF    []*math.Zr
+}
+
+func NewTypeAndSumEnv(t *testing.T) *TypeAndSumEnv {
+	t.Helper()
 	var (
 		iow      *transfer.TypeAndSumWitness
 		pp       []*math.G1
@@ -28,126 +39,102 @@ var _ = Describe("Input/Output well formedness", func() {
 		com      *math.G1
 		//		parallelism = 100
 	)
-	BeforeEach(func() {
-		c = math.Curves[1]
-		pp = preparePedersenParameters(c)
-		iow, in, out, inBF, outBF, com = prepareIOCProver(pp, c)
-		prover = transfer.NewTypeAndSumProver(iow, pp, in, out, com, c)
-		verifier = transfer.NewTypeAndSumVerifier(pp, in, out, c)
+	c = math.Curves[1]
+	pp = preparePedersenParameters(t, c)
+	iow, in, out, inBF, outBF, com = prepareIOCProver(t, pp, c)
+	prover = transfer.NewTypeAndSumProver(iow, pp, in, out, com, c)
+	verifier = transfer.NewTypeAndSumVerifier(pp, in, out, c)
+
+	return &TypeAndSumEnv{
+		c:        c,
+		prover:   prover,
+		verifier: verifier,
+		inBF:     inBF,
+		pp:       pp,
+		outBF:    outBF,
+	}
+}
+
+func TestTypeAndSum(t *testing.T) {
+	t.Run("parameters and witness are initialized correctly", func(t *testing.T) {
+		env := NewTypeAndSumEnv(t)
+		proof, err := env.prover.Prove()
+		require.NoError(t, err)
+		require.NotNil(t, proof)
+		require.NotNil(t, proof.Challenge)
+		require.NotNil(t, proof.EqualityOfSum)
+		require.NotNil(t, proof.Type)
+		require.Len(t, proof.InputBlindingFactors, 2)
+		require.Len(t, proof.InputValues, 2)
 	})
-	Describe("Prove", func() {
-		Context("parameters and witness are initialized correctly", func() {
-			It("Succeeds", func() {
-				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(proof).NotTo(BeNil())
-				Expect(proof.Challenge).NotTo(BeNil())
-				Expect(proof.EqualityOfSum).NotTo(BeNil())
-				Expect(proof.Type).NotTo(BeNil())
-				Expect(proof.InputBlindingFactors).To(HaveLen(2))
-				Expect(proof.InputValues).To(HaveLen(2))
-			})
-		})
+	t.Run("the proof is generated honestly", func(t *testing.T) {
+		env := NewTypeAndSumEnv(t)
+		proof, err := env.prover.Prove()
+		require.NoError(t, err)
+		// verify
+		err = env.verifier.Verify(proof)
+		require.NoError(t, err)
 	})
-	Describe("Verify", func() {
-		BeforeEach(func() {
-			prover = transfer.NewTypeAndSumProver(iow, pp, in, out, com, c)
-			verifier = transfer.NewTypeAndSumVerifier(pp, in, out, c)
-		})
-		Context("The proof is generated honestly", func() {
-			It("Succeeds", func() {
-				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
-				// verify
-				err = verifier.Verify(proof)
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-		/*Context("The proof is generated and verified in parallel", func() {
-			It("Succeeds", func() {
-				var wg sync.WaitGroup
-				wg.Add(parallelism)
 
-				for i := 0; i < parallelism; i++ {
-					go func() {
-						defer wg.Done()
-						proof, err := prover.Prove()
-						Expect(err).NotTo(HaveOccurred())
-
-						// verify
-						err = verifier.Verify(proof)
-						Expect(err).NotTo(HaveOccurred())
-					}()
-				}
-
-				wg.Wait()
-			})
-		})*/
-
-		Context("The proof is not generated correctly: wrong type", func() {
-			It("fails", func() {
-				// change type encoded in the commitments
-				token := prepareToken(c.NewZrFromInt(100), inBF[0], "XYZ", pp, c)
-				// prover assumed to guess the type (e.g. ABC)
-				prover.Inputs[0] = token
-				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
-				// verification fails
-				err = verifier.Verify(proof)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("invalid sum and type proof"))
-			})
-		})
-		Context("The proof is not generated correctly: wrong Values", func() {
-			It("fails", func() {
-				// change the value encoded in the input commitment
-				token := prepareToken(c.NewZrFromInt(80), inBF[0], "ABC", pp, c)
-				// prover guess the value of the committed Values (e.g. 100)
-				prover.Inputs[0] = token
-				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
-				// verification fails
-				err = verifier.Verify(proof)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("invalid sum and type proof"))
-			})
-		})
-		Context("The proof is not generated correctly: input sum != output sums", func() {
-			It("fails", func() {
-				// prover wants to increase the value of the output out of the blue
-				token := prepareToken(c.NewZrFromInt(90), outBF[0], "ABC", pp, c)
-				// prover generates a proof
-				prover.Outputs[0] = token
-				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
-				// verification should fail
-				err = verifier.Verify(proof)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("invalid sum and type proof"))
-			})
-		})
-		Context("The proof is not generated correctly: wrong blindingFactors", func() {
-			It("fails", func() {
-				// prover guess the blindingFactors
-				rand, err := c.Rand()
-				Expect(err).NotTo(HaveOccurred())
-				token := prepareToken(c.NewZrFromInt(100), c.NewRandomZr(rand), "ABC", pp, c)
-				verifier.Inputs[0] = token
-				// prover generate proof
-				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
-				// verification fails
-				err = verifier.Verify(proof)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("invalid sum and type proof"))
-			})
-		})
+	t.Run("The proof is not generated correctly: wrong type", func(t *testing.T) {
+		env := NewTypeAndSumEnv(t)
+		// change type encoded in the commitments
+		token := prepareToken(env.c.NewZrFromInt(100), env.inBF[0], "XYZ", env.pp, env.c)
+		// prover assumed to guess the type (e.g. ABC)
+		env.prover.Inputs[0] = token
+		proof, err := env.prover.Prove()
+		require.NoError(t, err)
+		// verification fails
+		err = env.verifier.Verify(proof)
+		require.Error(t, err)
+		require.EqualError(t, err, "invalid sum and type proof")
 	})
-})
+	t.Run("The proof is not generated correctly: wrong Values", func(t *testing.T) {
+		env := NewTypeAndSumEnv(t)
+		// change the value encoded in the input commitment
+		token := prepareToken(env.c.NewZrFromInt(80), env.inBF[0], "ABC", env.pp, env.c)
+		// prover guess the value of the committed Values (e.g. 100)
+		env.prover.Inputs[0] = token
+		proof, err := env.prover.Prove()
+		require.NoError(t, err)
+		// verification fails
+		err = env.verifier.Verify(proof)
+		require.Error(t, err)
+		require.EqualError(t, err, "invalid sum and type proof")
+	})
+	t.Run("The proof is not generated correctly: input sum != output sums", func(t *testing.T) {
+		env := NewTypeAndSumEnv(t)
+		// prover wants to increase the value of the output out of the blue
+		token := prepareToken(env.c.NewZrFromInt(90), env.outBF[0], "ABC", env.pp, env.c)
+		// prover generates a proof
+		env.prover.Outputs[0] = token
+		proof, err := env.prover.Prove()
+		require.NoError(t, err)
+		// verification should fail
+		err = env.verifier.Verify(proof)
+		require.Error(t, err)
+		require.EqualError(t, err, "invalid sum and type proof")
+	})
+	t.Run("The proof is not generated correctly: wrong blindingFactors", func(t *testing.T) {
+		env := NewTypeAndSumEnv(t)
+		// prover guess the blindingFactors
+		rand, err := env.c.Rand()
+		require.NoError(t, err)
+		token := prepareToken(env.c.NewZrFromInt(100), env.c.NewRandomZr(rand), "ABC", env.pp, env.c)
+		env.verifier.Inputs[0] = token
+		// prover generate proof
+		proof, err := env.prover.Prove()
+		require.NoError(t, err)
+		// verification fails
+		err = env.verifier.Verify(proof)
+		require.Error(t, err)
+		require.EqualError(t, err, "invalid sum and type proof")
+	})
+}
 
-func preparePedersenParameters(c *math.Curve) []*math.G1 {
+func preparePedersenParameters(t *testing.T, c *math.Curve) []*math.G1 {
 	rand, err := c.Rand()
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(t, err)
 
 	pp := make([]*math.G1, 3)
 
@@ -157,9 +144,9 @@ func preparePedersenParameters(c *math.Curve) []*math.G1 {
 	return pp
 }
 
-func prepareIOCProver(pp []*math.G1, c *math.Curve) (*transfer.TypeAndSumWitness, []*math.G1, []*math.G1, []*math.Zr, []*math.Zr, *math.G1) {
+func prepareIOCProver(t *testing.T, pp []*math.G1, c *math.Curve) (*transfer.TypeAndSumWitness, []*math.G1, []*math.G1, []*math.Zr, []*math.Zr, *math.G1) {
 	rand, err := c.Rand()
-	Expect(err).NotTo(HaveOccurred())
+	require.NoError(t, err)
 
 	inBF := make([]*math.Zr, 2)
 	outBF := make([]*math.Zr, 3)
