@@ -112,7 +112,6 @@ func NewSenderEnv(t testingEnv, pp *v1.PublicParams) *SenderEnv {
 }
 
 func TestSender(t *testing.T) {
-
 	t.Run("success", func(t *testing.T) {
 		env := NewSenderEnv(t, nil)
 
@@ -157,10 +156,11 @@ type BenchmarkSenderEnv struct {
 	SenderEnvs []*SenderEnv
 }
 
-func NewBenchmarkSenderEnv(t *testing.B, n int) *BenchmarkSenderEnv {
+func NewBenchmarkSenderEnv(b *testing.B, n int) *BenchmarkSenderEnv {
+	b.Helper()
 	envs := make([]*SenderEnv, n)
 	for i := range envs {
-		envs[i] = NewSenderEnv(t, nil)
+		envs[i] = NewSenderEnv(b, nil)
 	}
 	return &BenchmarkSenderEnv{SenderEnvs: envs}
 }

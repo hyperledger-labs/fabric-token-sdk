@@ -132,9 +132,10 @@ func TestTypeAndSum(t *testing.T) {
 	})
 }
 
-func preparePedersenParameters(t *testing.T, c *math.Curve) []*math.G1 {
+func preparePedersenParameters(tb testing.TB, c *math.Curve) []*math.G1 {
+	tb.Helper()
 	rand, err := c.Rand()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	pp := make([]*math.G1, 3)
 
@@ -144,9 +145,10 @@ func preparePedersenParameters(t *testing.T, c *math.Curve) []*math.G1 {
 	return pp
 }
 
-func prepareIOCProver(t *testing.T, pp []*math.G1, c *math.Curve) (*transfer.TypeAndSumWitness, []*math.G1, []*math.G1, []*math.Zr, []*math.Zr, *math.G1) {
+func prepareIOCProver(tb testing.TB, pp []*math.G1, c *math.Curve) (*transfer.TypeAndSumWitness, []*math.G1, []*math.G1, []*math.Zr, []*math.Zr, *math.G1) {
+	tb.Helper()
 	rand, err := c.Rand()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	inBF := make([]*math.Zr, 2)
 	outBF := make([]*math.Zr, 3)

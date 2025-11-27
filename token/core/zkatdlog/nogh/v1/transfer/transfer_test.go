@@ -24,6 +24,7 @@ type TransferEnv struct {
 }
 
 func NewTransferEnv(tb testing.TB) *TransferEnv {
+	tb.Helper()
 	prover, verifier := prepareZKTransfer(tb)
 	return &TransferEnv{
 		prover:   prover,
@@ -32,6 +33,7 @@ func NewTransferEnv(tb testing.TB) *TransferEnv {
 }
 
 func NewTransferEnvWithWrongSum(tb testing.TB) *TransferEnv {
+	tb.Helper()
 	prover, verifier := prepareZKTransferWithWrongSum(tb)
 	return &TransferEnv{
 		prover:   prover,
@@ -40,6 +42,7 @@ func NewTransferEnvWithWrongSum(tb testing.TB) *TransferEnv {
 }
 
 func NewTransferEnvWithInvalidRange(tb testing.TB) *TransferEnv {
+	tb.Helper()
 	prover, verifier := prepareZKTransferWithInvalidRange(tb)
 	return &TransferEnv{
 		prover:   prover,
@@ -78,6 +81,7 @@ func TestTransfer(t *testing.T) {
 }
 
 func prepareZKTransfer(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
+	tb.Helper()
 	pp, err := v1.Setup(32, nil, TestCurve)
 	require.NoError(tb, err)
 
@@ -91,6 +95,7 @@ func prepareZKTransfer(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithWrongSum(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
+	tb.Helper()
 	pp, err := v1.Setup(32, nil, TestCurve)
 	require.NoError(tb, err)
 
@@ -104,6 +109,7 @@ func prepareZKTransferWithWrongSum(tb testing.TB) (*transfer.Prover, *transfer.V
 }
 
 func prepareZKTransferWithInvalidRange(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
+	tb.Helper()
 	pp, err := v1.Setup(8, nil, TestCurve)
 	require.NoError(tb, err)
 
@@ -116,6 +122,7 @@ func prepareZKTransferWithInvalidRange(tb testing.TB) (*transfer.Prover, *transf
 }
 
 func prepareInputsForZKTransfer(tb testing.TB, pp *v1.PublicParams) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1) {
+	tb.Helper()
 	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
 	require.NoError(tb, err)
@@ -151,6 +158,8 @@ func prepareInputsForZKTransfer(tb testing.TB, pp *v1.PublicParams) ([]*token.Me
 }
 
 func prepareInvalidInputsForZKTransfer(tb testing.TB, pp *v1.PublicParams) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1) {
+	tb.Helper()
+
 	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
 	require.NoError(tb, err)
@@ -197,13 +206,14 @@ type BenchmarkTransferEnv struct {
 	pp         *v1.PublicParams
 }
 
-func NewBenchmarkTransferEnv(t *testing.B, n int) *BenchmarkTransferEnv {
+func NewBenchmarkTransferEnv(tb testing.TB, n int) *BenchmarkTransferEnv {
+	tb.Helper()
 	pp, err := v1.Setup(32, nil, TestCurve)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	entries := make([]SingleProverEnv, n)
 	for i := 0; i < n; i++ {
-		intw, outtw, in, out := prepareInputsForZKTransfer(t, pp)
+		intw, outtw, in, out := prepareInputsForZKTransfer(tb, pp)
 		entries[i] = SingleProverEnv{
 			a: intw,
 			b: outtw,
