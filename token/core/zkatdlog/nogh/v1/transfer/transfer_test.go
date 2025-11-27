@@ -16,7 +16,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const TestCurve = math.BN254
+const (
+	TestBits  = 32
+	TestCurve = math.BN254
+)
 
 type TransferEnv struct {
 	prover   *transfer.Prover
@@ -80,10 +83,16 @@ func TestTransfer(t *testing.T) {
 	})
 }
 
+func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
+	tb.Helper()
+	pp, err := v1.Setup(bits, nil, curveID)
+	require.NoError(tb, err)
+	return pp
+}
+
 func prepareZKTransfer(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 	tb.Helper()
-	pp, err := v1.Setup(32, nil, TestCurve)
-	require.NoError(tb, err)
+	pp := setup(tb, TestBits, TestBits)
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(tb, pp)
 
@@ -96,8 +105,7 @@ func prepareZKTransfer(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 
 func prepareZKTransferWithWrongSum(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 	tb.Helper()
-	pp, err := v1.Setup(32, nil, TestCurve)
-	require.NoError(tb, err)
+	pp := setup(tb, TestBits, TestBits)
 
 	intw, outtw, in, out := prepareInvalidInputsForZKTransfer(tb, pp)
 
@@ -110,8 +118,7 @@ func prepareZKTransferWithWrongSum(tb testing.TB) (*transfer.Prover, *transfer.V
 
 func prepareZKTransferWithInvalidRange(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 	tb.Helper()
-	pp, err := v1.Setup(8, nil, TestCurve)
-	require.NoError(tb, err)
+	pp := setup(tb, 8, TestBits)
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(tb, pp)
 
@@ -208,8 +215,7 @@ type BenchmarkTransferEnv struct {
 
 func NewBenchmarkTransferEnv(tb testing.TB, n int) *BenchmarkTransferEnv {
 	tb.Helper()
-	pp, err := v1.Setup(32, nil, TestCurve)
-	require.NoError(tb, err)
+	pp := setup(tb, TestBits, TestBits)
 
 	entries := make([]SingleProverEnv, n)
 	for i := 0; i < n; i++ {
