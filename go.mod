@@ -12,7 +12,7 @@ require (
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.6.1-0.20251125091810-0f15d56ca782
+	github.com/hyperledger-labs/fabric-smart-client v0.6.1-0.20251126143438-6cc7726dadb6
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20250510200036-435a7f1a780a
 	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.0
 	github.com/hyperledger/fabric-lib-go v1.1.3-0.20240523144151-25edd1eaf5f5
@@ -20,8 +20,8 @@ require (
 	github.com/hyperledger/fabric-x-committer v0.1.5
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/onsi/ginkgo/v2 v2.23.4
-	github.com/onsi/gomega v1.37.0
+	github.com/onsi/ginkgo/v2 v2.25.1
+	github.com/onsi/gomega v1.38.2
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.60.0
 	github.com/sourcegraph/conc v0.3.0
@@ -58,6 +58,7 @@ require (
 	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20250313153527-832db18b9478 // indirect
 	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/alecthomas/kingpin/v2 v2.4.0 // indirect
 	github.com/alecthomas/units v0.0.0-20240626203959-61d1e3462e30 // indirect
@@ -278,6 +279,7 @@ require (
 	go.uber.org/fx v1.23.0 // indirect
 	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.11.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/mod v0.29.0 // indirect
