@@ -591,3 +591,11 @@ Sender/Setup(bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3)   49.63k ± 0%
 geomean                                                        15.22k
 ```
 
+> **Remarks:** The performance of the zero-knowledge proof verification is dominated by range proof verification. 
+> Therefore, we see that performance does not vary when we change the number of inputs, but it does vary greatly when we increase the number of outputs. 
+> Indeed, the number of range proof verification is equal to the number of the outputs. The exception is (single input, single output). 
+> This corresponds to a pure transfer of ownership, during which there is no range proof verification. 
+> The assumption is that the input is already in the correct range, and we just check equality of input and output. 
+> Note that this assumption is valid since tokens are created as a result of an issue or a transfer (during which the output is verified to be in the correct range). 
+> The performance does not vary drastically when we change the curve. 
+> This could be due to the fact that while the field over BLS_381 is larger than that of BN_254, the subgroups on which the cryptographic operations are performed are of comparable sizes.

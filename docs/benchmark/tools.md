@@ -46,7 +46,7 @@ go install golang.org/x/perf/cmd/benchstat@latest
 or
 
 ```shell
-makefile install-tools
+make install-tools
 ```
 
 ### Step 2: Capture Baseline (Old)
