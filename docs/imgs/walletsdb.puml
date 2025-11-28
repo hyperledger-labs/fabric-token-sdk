@@ -1,0 +1,14 @@
+@startuml
+!theme plain
+
+entity "Wallets" as wallets {
+    * identity_hash : TEXT <<PK>>
+    * wallet_id : TEXT <<PK>>
+    * role_id : INT <<PK>>
+    --
+    meta : BYTEA
+    enrollment_id : TEXT
+    created_at : TIMESTAMP
+}
+
+@enduml

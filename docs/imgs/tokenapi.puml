@@ -1,0 +1,21 @@
+@startuml
+skinparam componentStyle rectangle
+
+title Token SDK Platform Architecture
+
+package "Token API" {
+
+    [token.ManagementServiceProvider] --> [token.ManagementService] : Create instances of
+    [token.ManagementService] --> [token.PublicParametersManager]
+    [token.ManagementService] --> [token.SelectorManager]
+    [token.ManagementService] --> [token.SigService]
+    [token.ManagementService] --> [token.Configuration]
+    [token.ManagementService] --> [token.Authorization]
+    [token.ManagementService] --> [token.TokensService]
+    [token.ManagementService] --> [token.WalletManager]
+    [token.ManagementService] --> [token.Vault]
+    [token.ManagementService] --> [token.Validator]
+    [token.ManagementService] --> [token.Requests]
+}
+
+@enduml
