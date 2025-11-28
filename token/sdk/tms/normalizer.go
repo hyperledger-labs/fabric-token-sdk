@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-var logger = logging.MustGetLogger("token-sdk")
+var logger = logging.MustGetLogger()
 
 type ConfigService interface {
 	Configurations() ([]driver.Configuration, error)

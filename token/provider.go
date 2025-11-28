@@ -79,7 +79,7 @@ func NewManagementServiceProvider(
 	selectorManagerProvider SelectorManagerProvider,
 ) *ManagementServiceProvider {
 	return &ManagementServiceProvider{
-		logger:                      logging.MustGetLogger(),
+		logger:                      logger,
 		tmsProvider:                 tmsProvider,
 		normalizer:                  normalizer,
 		certificationClientProvider: certificationClientProvider,
