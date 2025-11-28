@@ -19,6 +19,7 @@ import (
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
 	qcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 type keystoreTables struct {
@@ -78,7 +79,7 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 		Fields("key", "val").
 		Row(key, raw).
 		Format()
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 
 	_, err = db.writeDB.Exec(query, args...)
 	if err != nil && errors.HasCause(db.errorWrapper.WrapError(err), driver.UniqueKeyViolation) {

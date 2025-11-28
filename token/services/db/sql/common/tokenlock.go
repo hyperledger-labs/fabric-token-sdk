@@ -66,7 +66,7 @@ func (db *TokenLockStore) Lock(ctx context.Context, tokenID *token.ID, consumerT
 		Fields("consumer_tx_id", "tx_id", "idx", "created_at").
 		Row(consumerTxID, tokenID.TxId, tokenID.Index, time.Now().UTC()).
 		Format()
-	logger.Debug(query, tokenID, consumerTxID)
+	logging.Debug(logger, query, tokenID, consumerTxID)
 	_, err := db.WriteDB.ExecContext(ctx, query, args...)
 	return err
 }
@@ -75,7 +75,7 @@ func (db *TokenLockStore) UnlockByTxID(ctx context.Context, consumerTxID transac
 	query, args := q.DeleteFrom(db.Table.TokenLocks).
 		Where(cond.Eq("consumer_tx_id", consumerTxID)).
 		Format(db.ci)
-	logger.Debug(query, consumerTxID)
+	logging.Debug(logger, query, consumerTxID)
 
 	_, err := db.WriteDB.ExecContext(ctx, query, args...)
 	return err

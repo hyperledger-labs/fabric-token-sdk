@@ -25,6 +25,7 @@ import (
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 )
@@ -142,7 +143,7 @@ func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.Identit
 		Fields("id", "type", "url", "conf", "raw").
 		Row(wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw).
 		Format()
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 
 	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	return err
@@ -154,7 +155,7 @@ func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurati
 		From(q.Table(db.table.IdentityConfigurations)).
 		Where(cond.Eq("type", configurationType)).
 		Format(db.ci)
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -208,7 +209,7 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 		From(q.Table(db.table.IdentityInfo)).
 		Where(cond.Eq("identity_hash", h)).
 		Format(db.ci)
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 
 	row := db.readDB.QueryRowContext(ctx, query, args...)
 	var tokenMetadata []byte
@@ -269,7 +270,7 @@ func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriv
 		Where(cond.In("identity_hash", idHashes...)).
 		Format(db.ci)
 
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
@@ -443,7 +444,7 @@ func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx dbTransaction, 
 		Row(h, id, info).
 		Format()
 
-	logger.Debug(query, h, utils.Hashable(info))
+	logging.Debug(logger, query, h, utils.Hashable(info))
 	exists := false
 	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
@@ -467,7 +468,7 @@ func (db *IdentityStore) storeIdentityData(ctx context.Context, tx dbTransaction
 		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
 		Row(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
 		Format()
-	logger.Debug(query, args)
+	logging.Debug(logger, query, args)
 
 	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {

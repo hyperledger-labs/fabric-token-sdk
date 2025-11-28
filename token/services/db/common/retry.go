@@ -27,7 +27,7 @@ func NewRetryRunner(maxTimes int, delay time.Duration, expBackoff bool) *retryRu
 		initialDelay: delay,
 		expBackoff:   expBackoff,
 		maxTimes:     maxTimes,
-		logger:       logging2.MustGetLogger(),
+		logger:       logger,
 	}
 }
 

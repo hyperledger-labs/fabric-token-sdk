@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 type walletTables struct {
@@ -73,7 +74,7 @@ func (db *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.W
 		From(q.Table(db.table.Wallets)).
 		Where(cond.Eq("role_id", roleID)).
 		Format(db.ci)
-	logger.Debug(query)
+	logging.Debug(logger, query)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -93,7 +94,7 @@ func (db *WalletStore) StoreIdentity(ctx context.Context, identity token.Identit
 		Fields("identity_hash", "meta", "wallet_id", "role_id", "created_at", "enrollment_id").
 		Row(identity.UniqueID(), meta, wID, roleID, time.Now().UTC(), eID).
 		Format()
-	logger.Debug(query)
+	logging.Debug(logger, query)
 
 	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
