@@ -3,8 +3,12 @@
 Packages with benchmark tests:
 
 - `token/core/zkatdlog/nogh/v1/transfer`: `BenchmarkSender` and `BenchmarkSenderProofVerification`
+- `token/core/zkatdlog/nogh/v1/issue`: `BenchmarkIssuer` and `BenchmarkIssuerProofVerification`
 
 ## Benchmark: `token/core/zkatdlog/nogh/v1/transfer#BenchmarkSender`
+
+In this Section, we go through the steps necessary to run the benchmark and interpreter the results.
+For the other benchmarks the process is the same.
 
 ### Overview
 

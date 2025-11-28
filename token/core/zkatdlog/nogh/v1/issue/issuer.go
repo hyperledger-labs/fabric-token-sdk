@@ -29,11 +29,13 @@ type Issuer struct {
 	Type         token2.Type
 }
 
-// New returns an Issuer as a function of the passed parameters
-func (i *Issuer) New(ttype token2.Type, signer common.SigningIdentity, pp *v1.PublicParams) {
-	i.Signer = signer
-	i.Type = ttype
-	i.PublicParams = pp
+// NewIssuer returns an Issuer as a function of the passed parameters
+func NewIssuer(tokenType token2.Type, signer common.SigningIdentity, pp *v1.PublicParams) *Issuer {
+	return &Issuer{
+		Signer:       signer,
+		Type:         tokenType,
+		PublicParams: pp,
+	}
 }
 
 func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*token.Metadata, error) {

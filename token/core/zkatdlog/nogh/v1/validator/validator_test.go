@@ -301,8 +301,7 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 	signer, err := NewECDSASigner()
 	Expect(err).NotTo(HaveOccurred())
 
-	issuer := &issue2.Issuer{}
-	issuer.New("ABC", signer, pp)
+	issuer := issue2.NewIssuer("ABC", signer, pp)
 	issuerIdentity, err := signer.Serialize()
 	Expect(err).NotTo(HaveOccurred())
 	ir, metadata := prepareIssue(auditor, issuer, issuerIdentity)
@@ -318,8 +317,7 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfe
 	issuerSigner, err := NewECDSASigner()
 	Expect(err).NotTo(HaveOccurred())
 
-	issuer := &issue2.Issuer{}
-	issuer.New("ABC", issuerSigner, pp)
+	issuer := issue2.NewIssuer("ABC", issuerSigner, pp)
 	issuerIdentity, err := issuerSigner.Serialize()
 	Expect(err).NotTo(HaveOccurred())
 
