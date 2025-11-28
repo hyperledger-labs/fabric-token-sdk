@@ -449,6 +449,15 @@ func TestSerialization(t *testing.T) {
 	assert.Equal(t, action2, action3, "deserialized action is not equal to the original one")
 }
 
+func TestAction_GetIssuer(t *testing.T) {
+	issuerId := []byte("issuer")
+	action := &transfer.Action{
+		Issuer: issuerId,
+	}
+	issuer := action.GetIssuer()
+	assert.True(t, issuer.Equal(issuerId), "unexpected issuer id in Action")
+}
+
 func BenchmarkActionMarshalling(b *testing.B) {
 	curve := math.Curves[TestCurve]
 
@@ -523,13 +532,4 @@ func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *transfe
 	}
 	action.Issuer = getRandomBytes(b, 32)
 	return action
-}
-
-func TestAction_GetIssuer(t *testing.T) {
-	issuerId := []byte("issuer")
-	action := &transfer.Action{
-		Issuer: issuerId,
-	}
-	issuer := action.GetIssuer()
-	assert.True(t, issuer.Equal(issuerId), "unexpected issuer id in Action")
 }

@@ -6,28 +6,150 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
-	"context"
+	"fmt"
+	"strconv"
+	"testing"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
-	transfer3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Describe("Sender", func() {
+func TestSender(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		env := NewSenderEnv(t, nil, 3, 2)
+
+		transfer, _, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
+		require.NoError(t, err)
+		assert.NotNil(t, transfer)
+		raw, err := transfer.Serialize()
+		require.NoError(t, err)
+
+		sig, err := env.sender.SignTokenActions(raw)
+		require.NoError(t, err)
+		assert.Equal(t, 3, env.fakeSigningIdentity.SignCallCount())
+		assert.Len(t, sig, 3)
+	})
+
+	t.Run("when signature fails", func(t *testing.T) {
+		env := NewSenderEnv(t, nil, 3, 2)
+		env.fakeSigningIdentity.SignReturnsOnCall(2, nil, errors.New("banana republic"))
+		transfer, _, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
+		require.NoError(t, err)
+		assert.NotNil(t, transfer)
+		raw, err := transfer.Serialize()
+		require.NoError(t, err)
+
+		sig, err := env.sender.SignTokenActions(raw)
+		require.Error(t, err)
+		assert.Nil(t, sig)
+		assert.Equal(t, 3, env.fakeSigningIdentity.SignCallCount())
+		assert.Contains(t, err.Error(), "banana republic")
+	})
+}
+
+// BenchmarkSender benchmarks transfer action generation and serialization.
+// This includes the proof generation as well.
+func BenchmarkSender(b *testing.B) {
+	// Generate test cases programmatically instead of a static literal.
+	bits := []uint64{32, 64}
+	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
+	inputs := []int{1, 2, 3}
+	outputs := []int{1, 2, 3}
+
+	testCases := generateBenchmarkCases(bits, curves, inputs, outputs)
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			env := NewBenchmarkSenderEnv(b, b.N, tc.benchmarkCase)
+
+			// Optional: Reset timer if you had expensive setup code above
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				transfer, _, err := env.SenderEnvs[i].sender.GenerateZKTransfer(
+					b.Context(),
+					env.SenderEnvs[i].outvalues,
+					env.SenderEnvs[i].owners,
+				)
+				require.NoError(b, err)
+				assert.NotNil(b, transfer)
+				_, err = transfer.Serialize()
+				require.NoError(b, err)
+			}
+		})
+	}
+}
+
+// BenchmarkSenderProofVerification benchmarks transfer action deserialization and proof verification.
+func BenchmarkSenderProofVerification(b *testing.B) {
+	// Generate test cases programmatically instead of a static literal.
+	bits := []uint64{32, 64}
+	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
+	inputs := []int{1, 2, 3}
+	outputs := []int{1, 2, 3}
+
+	testCases := generateBenchmarkCases(bits, curves, inputs, outputs)
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			env := NewBenchmarkSenderProofVerificationEnv(b, b.N, tc.benchmarkCase)
+
+			// Optional: Reset timer if you had expensive setup code above
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				// deserialize action
+				ta := &transfer.Action{}
+				require.NoError(b, ta.Deserialize(env.SenderEnvs[i].transferRaw))
+				inputTokens := make([]*math.G1, len(ta.Inputs))
+				for j, in := range ta.Inputs {
+					inputTokens[j] = in.Token.Data
+				}
+
+				// instantiate the verifier and verify
+				require.NoError(b,
+					transfer.NewVerifier(
+						inputTokens,
+						ta.GetOutputCommitments(),
+						env.SenderEnvs[i].sender.PublicParams,
+					).Verify(ta.GetProof()),
+				)
+			}
+		})
+	}
+}
+
+func PrepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
+	tokens := make([]*math.G1, len(values))
+	for i := range values {
+		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
+	}
+	return tokens
+}
+
+type SenderEnv struct {
+	sender              *transfer.Sender
+	outvalues           []uint64
+	owners              [][]byte
+	fakeSigningIdentity *mock.SigningIdentity
+	transferRaw         []byte
+}
+
+func NewSenderEnv(tb testing.TB, pp *v1.PublicParams, numInputs int, numOutputs int) *SenderEnv {
+	tb.Helper()
 	var (
 		fakeSigningIdentity *mock.SigningIdentity
 		signers             []driver.Signer
-		pp                  *v1.PublicParams
 
-		transfer *transfer3.Action
-		sender   *transfer3.Sender
+		sender *transfer.Sender
 
 		invalues  []*math.Zr
 		outvalues []uint64
@@ -37,102 +159,140 @@ var _ = Describe("Sender", func() {
 		owners [][]byte
 		ids    []*token2.ID
 	)
-	BeforeEach(func() {
-		var err error
-		pp, err = v1.Setup(8, nil, TestCurve)
-		Expect(err).NotTo(HaveOccurred())
-		owners = make([][]byte, 2)
-		owners[0] = []byte("bob")
-		owners[1] = []byte("charlie")
-		signers = make([]driver.Signer, 3)
-		fakeSigningIdentity = &mock.SigningIdentity{}
-		signers[0] = fakeSigningIdentity
-		signers[1] = fakeSigningIdentity
-		signers[2] = fakeSigningIdentity
-
-		fakeSigningIdentity.SignReturnsOnCall(0, []byte("signer[0]"), nil)
-		fakeSigningIdentity.SignReturnsOnCall(1, []byte("signer[1]"), nil)
-		fakeSigningIdentity.SignReturnsOnCall(2, []byte("signer[2]"), nil)
-
-		c := math.Curves[pp.Curve]
-		invalues = make([]*math.Zr, 3)
-		invalues[0] = c.NewZrFromInt(50)
-		invalues[1] = c.NewZrFromInt(20)
-		invalues[2] = c.NewZrFromInt(30)
-
-		inBF = make([]*math.Zr, 3)
-		rand, err := c.Rand()
-		Expect(err).NotTo(HaveOccurred())
-		for i := range 3 {
-			inBF[i] = c.NewRandomZr(rand)
-		}
-		outvalues = make([]uint64, 2)
-		outvalues[0] = 65
-		outvalues[1] = 35
-
-		ids = make([]*token2.ID, 3)
-		ids[0] = &token2.ID{TxId: "0"}
-		ids[1] = &token2.ID{TxId: "1"}
-		ids[2] = &token2.ID{TxId: "3"}
-
-		inputs := PrepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
-		tokens = make([]*token.Token, 3)
-
-		tokens[0] = &token.Token{Data: inputs[0], Owner: []byte("alice-1")}
-		tokens[1] = &token.Token{Data: inputs[1], Owner: []byte("alice-2")}
-		tokens[2] = &token.Token{Data: inputs[2], Owner: []byte("alice-3")}
-
-		inputInf := make([]*token.Metadata, 3)
-		inputInf[0] = &token.Metadata{Type: "ABC", Value: invalues[0], BlindingFactor: inBF[0]}
-		inputInf[1] = &token.Metadata{Type: "ABC", Value: invalues[1], BlindingFactor: inBF[1]}
-		inputInf[2] = &token.Metadata{Type: "ABC", Value: invalues[2], BlindingFactor: inBF[2]}
-
-		sender, err = transfer3.NewSender(signers, tokens, ids, inputInf, pp)
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	Describe("Transfer", func() {
-		When("transfer is computed correctly", func() {
-			It("succeeds", func() {
-				var err error
-				transfer, _, err = sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(transfer).NotTo(BeNil())
-				raw, err := transfer.Serialize()
-				Expect(err).NotTo(HaveOccurred())
-
-				sig, err := sender.SignTokenActions(raw)
-				Expect(fakeSigningIdentity.SignCallCount()).To(Equal(3))
-				Expect(sig).To(HaveLen(3))
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-		When("when signature fails", func() {
-			BeforeEach(func() {
-				fakeSigningIdentity.SignReturnsOnCall(2, nil, errors.New("banana republic"))
-			})
-			It("no signature is returned", func() {
-				var err error
-				transfer, _, err = sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(transfer).NotTo(BeNil())
-				raw, err := transfer.Serialize()
-				Expect(err).NotTo(HaveOccurred())
-
-				sig, err := sender.SignTokenActions(raw)
-				Expect(err).To(HaveOccurred())
-				Expect(sig).To(BeNil())
-				Expect(fakeSigningIdentity.SignCallCount()).To(Equal(3))
-				Expect(err.Error()).To(ContainSubstring("banana republic"))
-			})
-		})
-	})
-})
-
-func PrepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
-	tokens := make([]*math.G1, len(values))
-	for i := range values {
-		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
+	var err error
+	if pp == nil {
+		pp = setup(tb, TestBits, TestCurve)
 	}
-	return tokens
+	signers = make([]driver.Signer, numInputs)
+	fakeSigningIdentity = &mock.SigningIdentity{}
+	invalues = make([]*math.Zr, numInputs)
+	c := math.Curves[pp.Curve]
+	inBF = make([]*math.Zr, numInputs)
+	ids = make([]*token2.ID, numInputs)
+	rand, err := c.Rand()
+	require.NoError(tb, err)
+	tokens = make([]*token.Token, numInputs)
+	inputInf := make([]*token.Metadata, numInputs)
+
+	owners = make([][]byte, numOutputs)
+	outvalues = make([]uint64, numOutputs)
+
+	// prepare inputs
+	sumInputs := int64(0)
+	for i := range numInputs {
+		signers[i] = fakeSigningIdentity
+		fakeSigningIdentity.SignReturnsOnCall(i, []byte(fmt.Sprintf("signer[%d]", i)), nil)
+		v := int64(i*10 + 10)
+		sumInputs += v
+		invalues[i] = c.NewZrFromInt(v)
+		inBF[i] = c.NewRandomZr(rand)
+		ids[i] = &token2.ID{TxId: strconv.Itoa(i)}
+	}
+	inputs := PrepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
+
+	for i := range numInputs {
+		tokens[i] = &token.Token{Data: inputs[i], Owner: []byte(fmt.Sprintf("alice-%d", i))}
+		inputInf[i] = &token.Metadata{Type: "ABC", Value: invalues[i], BlindingFactor: inBF[i]}
+	}
+
+	outputValue := uint64(sumInputs / int64(numOutputs))
+	sumOutputs := int64(0)
+	for i := range numOutputs {
+		owners[i] = []byte("bob")
+		outvalues[i] = outputValue
+		sumOutputs += int64(outputValue)
+	}
+	// add any adjustment to the last output
+	delta := sumInputs - sumOutputs
+	if delta > 0 {
+		outvalues[0] += uint64(delta)
+	}
+
+	sender, err = transfer.NewSender(signers, tokens, ids, inputInf, pp)
+	require.NoError(tb, err)
+
+	return &SenderEnv{
+		sender:              sender,
+		outvalues:           outvalues,
+		owners:              owners,
+		fakeSigningIdentity: fakeSigningIdentity,
+	}
+}
+
+type BenchmarkSenderCase struct {
+	Bits       uint64
+	CurveID    math.CurveID
+	NumInputs  int
+	NumOutputs int
+}
+
+// generateBenchmarkCases returns all combinations of BenchmarkSenderCase created
+// from the provided slices of bits, curve IDs, number of inputs and outputs.
+func generateBenchmarkCases(bits []uint64, curves []math.CurveID, inputs []int, outputs []int) []struct {
+	name          string
+	benchmarkCase *BenchmarkSenderCase
+} {
+	var cases []struct {
+		name          string
+		benchmarkCase *BenchmarkSenderCase
+	}
+	for _, b := range bits {
+		for _, c := range curves {
+			for _, ni := range inputs {
+				for _, no := range outputs {
+					name := fmt.Sprintf("Setup(bits %d, curve %s, #i %d, #o %d)", b, math.CurveIDToString(c), ni, no)
+					cases = append(cases, struct {
+						name          string
+						benchmarkCase *BenchmarkSenderCase
+					}{
+						name: name,
+						benchmarkCase: &BenchmarkSenderCase{
+							Bits:       b,
+							CurveID:    c,
+							NumInputs:  ni,
+							NumOutputs: no,
+						},
+					})
+				}
+			}
+		}
+	}
+	return cases
+}
+
+type BenchmarkSenderEnv struct {
+	SenderEnvs []*SenderEnv
+}
+
+func NewBenchmarkSenderEnv(b *testing.B, n int, benchmarkCase *BenchmarkSenderCase) *BenchmarkSenderEnv {
+	b.Helper()
+	envs := make([]*SenderEnv, n)
+	pp := setup(b, benchmarkCase.Bits, benchmarkCase.CurveID)
+	for i := range envs {
+		envs[i] = NewSenderEnv(b, pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
+	}
+	return &BenchmarkSenderEnv{SenderEnvs: envs}
+}
+
+func NewBenchmarkSenderProofVerificationEnv(b *testing.B, n int, benchmarkCase *BenchmarkSenderCase) *BenchmarkSenderEnv {
+	b.Helper()
+	envs := make([]*SenderEnv, n)
+	pp := setup(b, benchmarkCase.Bits, benchmarkCase.CurveID)
+	for i := range envs {
+		env := NewSenderEnv(b, pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
+		transfer, _, err := env.sender.GenerateZKTransfer(
+			b.Context(),
+			env.outvalues,
+			env.owners,
+		)
+		require.NoError(b, err)
+		assert.NotNil(b, transfer)
+		raw, err := transfer.Serialize()
+		require.NoError(b, err)
+
+		env.transferRaw = raw
+
+		envs[i] = env
+	}
+	return &BenchmarkSenderEnv{SenderEnvs: envs}
 }

@@ -112,8 +112,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		return nil, nil, err
 	}
 
-	issuer := &issue.Issuer{}
-	issuer.New(tokenType, &common.WrappedSigningIdentity{
+	issuer := issue.NewIssuer(tokenType, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
 		Signer:   signer,
 	}, pp)
