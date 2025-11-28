@@ -2,7 +2,7 @@
 
 Packages with benchmark tests:
 
-- `token/core/zkatdlog/nogh/v1/transfer`
+- `token/core/zkatdlog/nogh/v1/transfer`: `BenchmarkSender` and `BenchmarkSenderProofVerification`
 
 ## Benchmark: `token/core/zkatdlog/nogh/v1/transfer#BenchmarkSender`
 
@@ -81,10 +81,14 @@ Alternatively, edit the slices in the test file to temporarily contain just the 
 A typical run prints timings per sub-benchmark (ns/op) and allocation statistics. Example command to persist results:
 
 ```sh
-go test ./token/core/zkatdlog/nogh/v1/transfer -bench=BenchmarkSender -benchmem -count=10 -cpu=1 | tee bench.txt
+go test ./token/core/zkatdlog/nogh/v1/transfer -bench=BenchmarkSender -benchmem -count=10 -cpu=1 -timeout 0 -run=^ | tee bench.txt
 ```
 
-You can then aggregate/parse the output (e.g., with simple shell tools or a small script) to compute averages across `-count` repetitions.
+> Notice that: 
+> - `-run=^` has the effect to avoid running any other unit-test present in the package.
+> - `-timeout 0` disables the test timeout.
+
+You can then aggregate/parse the output (e.g., benchstat) to compute averages across `-count` repetitions.
 
 ### Results
 
