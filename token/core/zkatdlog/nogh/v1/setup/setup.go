@@ -196,16 +196,16 @@ func NewPublicParamsFromBytes(
 	return pp, nil
 }
 
-func Setup(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return NewWith(DLogNoGHDriverName, ProtocolV1, bitLength, idemixIssuerPK, idemixCurveID)
+func Setup(bitLength uint64, idemixIssuerPK []byte, curveID mathlib.CurveID) (*PublicParams, error) {
+	return NewWith(DLogNoGHDriverName, ProtocolV1, bitLength, idemixIssuerPK, curveID)
 }
 
 // WithVersion is like Setup with the additional possibility to specify the version number
-func WithVersion(bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID, version driver.TokenDriverVersion) (*PublicParams, error) {
-	return NewWith(DLogNoGHDriverName, version, bitLength, idemixIssuerPK, idemixCurveID)
+func WithVersion(bitLength uint64, idemixIssuerPK []byte, curveID mathlib.CurveID, version driver.TokenDriverVersion) (*PublicParams, error) {
+	return NewWith(DLogNoGHDriverName, version, bitLength, idemixIssuerPK, curveID)
 }
 
-func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion, bitLength uint64, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion, bitLength uint64, idemixIssuerPK []byte, curveID mathlib.CurveID) (*PublicParams, error) {
 	if bitLength > 64 {
 		return nil, errors.Errorf("invalid bit length [%d], should be smaller than 64", bitLength)
 	}
@@ -215,11 +215,11 @@ func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriver
 	pp := &PublicParams{
 		DriverName:    driverName,
 		DriverVersion: driverVersion,
-		Curve:         mathlib.BN254,
+		Curve:         curveID,
 		IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{
 			{
 				PublicKey: idemixIssuerPK,
-				Curve:     idemixCurveID,
+				Curve:     curveID,
 			},
 		},
 		QuantityPrecision: bitLength,

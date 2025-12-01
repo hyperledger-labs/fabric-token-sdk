@@ -47,7 +47,7 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 	maxPrecision := pp.RangeProofParams.BitLength
 
 	// dlog without graph hiding
-	outputTokenFormat, err := supportedTokenFormat(pp, maxPrecision)
+	outputTokenFormat, err := SupportedTokenFormat(pp, maxPrecision)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed computing comm token types")
 	}
@@ -56,7 +56,7 @@ func NewTokensService(logger logging.Logger, publicParametersManager common.Publ
 	for _, precision := range setup.SupportedPrecisions {
 		// these Precisions are supported directly
 		if precision <= maxPrecision {
-			format, err := supportedTokenFormat(pp, precision)
+			format, err := SupportedTokenFormat(pp, precision)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed computing comm token types")
 			}
@@ -250,7 +250,7 @@ func (s *TokensService) getOutput(ctx context.Context, outputRaw []byte, checkOw
 	return output, nil
 }
 
-func supportedTokenFormat(pp *setup.PublicParams, precision uint64) (token.Format, error) {
+func SupportedTokenFormat(pp *setup.PublicParams, precision uint64) (token.Format, error) {
 	hasher := utils2.NewSHA256Hasher()
 	if err := errors2.Join(
 		hasher.AddInt32(comm.Type),

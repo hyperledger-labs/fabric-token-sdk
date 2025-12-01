@@ -218,15 +218,17 @@ type Matcher interface {
 }
 
 // AuditInfoProvider models a provider of audit information
+//
+//go:generate counterfeiter -o mock/audit_info_provider.go -fake-name AuditInfoProvider . AuditInfoProvider
 type AuditInfoProvider interface {
 	// GetAuditInfo returns the audit information for the given identity, if available.
 	GetAuditInfo(ctx context.Context, identity Identity) ([]byte, error)
 }
 
-//go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
-
 // Deserializer models the deserializer of owner, issuer, and auditor identities to
 // get signature verifiers
+//
+//go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
 type Deserializer interface {
 	// GetOwnerVerifier returns the verifier associated to the passed owner identity
 	GetOwnerVerifier(ctx context.Context, id Identity) (Verifier, error)

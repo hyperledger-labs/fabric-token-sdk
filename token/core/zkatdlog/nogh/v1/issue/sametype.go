@@ -126,7 +126,7 @@ func (p *SameTypeProver) Prove() (*SameType, error) {
 	return proof, nil
 }
 
-// computeCommitment compute the commitmentsto the randomness used in the same type proof
+// computeCommitment compute the commitments to the randomness used in the same type proof
 func (p *SameTypeProver) computeCommitment() error {
 	// get random number generator
 	rand, err := p.Curve.Rand()

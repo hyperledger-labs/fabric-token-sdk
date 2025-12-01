@@ -14,6 +14,7 @@ import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 )
 
 func NewKeyStore(curveID math.CurveID, backend keystore.KVS) (bccsp.KeyStore, error) {
@@ -89,6 +90,9 @@ func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translato
 	case math.FP256BN_AMCL_MIRACL:
 		tr = &amcl.Fp256bnMiracl{C: curve}
 	case math.BLS12_381_BBS_GURVY:
+		tr = &amcl.Gurvy{C: curve}
+		aries = true
+	case math2.BLS12_381_BBS_GURVY_FAST_RNG:
 		tr = &amcl.Gurvy{C: curve}
 		aries = true
 	default:

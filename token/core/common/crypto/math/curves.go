@@ -1,0 +1,96 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package math
+
+import (
+	"fmt"
+	"io"
+
+	math "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib/driver"
+	"github.com/IBM/mathlib/driver/gurvy"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/rng"
+)
+
+var (
+	BLS12_381_BBS_GURVY_FAST_RNG math.CurveID
+)
+
+func init() {
+	BLS12_381_BBS_GURVY_FAST_RNG = math.CurveID(len(math.Curves))
+	math.Curves = append(math.Curves, math.NewCurve(
+		NewCurveWithFastRNG(gurvy.NewBls12_381BBS()),
+		math.NewG1(gurvy.NewBls12_381BBS().GenG1(), BLS12_381_BBS_GURVY_FAST_RNG),
+		math.NewG2(gurvy.NewBls12_381BBS().GenG2(), BLS12_381_BBS_GURVY_FAST_RNG),
+		math.NewGt(gurvy.NewBls12_381BBS().GenGt(), BLS12_381_BBS_GURVY_FAST_RNG),
+		math.NewZr(gurvy.NewBls12_381().GroupOrder(), BLS12_381_BBS_GURVY_FAST_RNG),
+		gurvy.NewBls12_381BBS().CoordinateByteSize(),
+		gurvy.NewBls12_381BBS().G1ByteSize(),
+		gurvy.NewBls12_381BBS().CompressedG1ByteSize(),
+		gurvy.NewBls12_381BBS().G2ByteSize(),
+		gurvy.NewBls12_381BBS().CompressedG2ByteSize(),
+		gurvy.NewBls12_381BBS().ScalarByteSize(),
+		BLS12_381_BBS_GURVY_FAST_RNG,
+	))
+}
+
+type CurveWithFastRNG struct {
+	driver.Curve
+	rng *rng.SecureRNG
+}
+
+func NewCurveWithFastRNG(c driver.Curve) *CurveWithFastRNG {
+	return &CurveWithFastRNG{Curve: c, rng: rng.NewSecureRNG()}
+}
+
+func (c *CurveWithFastRNG) Rand() (io.Reader, error) {
+	return c.rng, nil
+}
+
+func CurveIDToString(id math.CurveID) string {
+	switch id {
+	case math.FP256BN_AMCL:
+		return "FP256BN_AMCL"
+	case math.BN254:
+		return "BN254"
+	case math.FP256BN_AMCL_MIRACL:
+		return "FP256BN_AMCL_MIRACL"
+	case math.BLS12_381:
+		return "BLS12_381"
+	case math.BLS12_377_GURVY:
+		return "BLS12_377_GURVY"
+	case math.BLS12_381_GURVY:
+		return "BLS12_381_GURVY"
+	case math.BLS12_381_BBS:
+		return "BLS12_381_BBS"
+	case math.BLS12_381_BBS_GURVY:
+		return "BLS12_381_BBS_GURVY"
+	case BLS12_381_BBS_GURVY_FAST_RNG:
+		return "BLS12_381_BBS_GURVY_FAST_RNG"
+	default:
+		panic(fmt.Sprintf("unknown curve %d", id))
+	}
+}
+
+func StringToCurveID(s string) math.CurveID {
+	switch s {
+	case "FP256BN_AMCL":
+		return math.FP256BN_AMCL
+	case "BN254":
+		return math.BN254
+	case "FP256BN_AMCL_MIRACL":
+		return math.FP256BN_AMCL_MIRACL
+	case "BLS12_381_BBS":
+		return math.BLS12_381_BBS
+	case "BLS12_381_BBS_GURVY":
+		return math.BLS12_381_BBS_GURVY
+	case "BLS12_381_BBS_GURVY_FAST_RNG":
+		return BLS12_381_BBS_GURVY_FAST_RNG
+	default:
+		panic(fmt.Sprintf("unknown curve %s", s))
+	}
+}

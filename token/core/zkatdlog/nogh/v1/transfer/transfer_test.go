@@ -3,12 +3,14 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package transfer_test
 
 import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
@@ -16,9 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	TestBits  = 32
-	TestCurve = math.BN254
+var (
+	TestBits  = uint64(32)
+	TestCurve = math2.BLS12_381_BBS_GURVY_FAST_RNG
 )
 
 type TransferEnv struct {
@@ -83,16 +85,18 @@ func TestTransfer(t *testing.T) {
 	})
 }
 
-func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
-	tb.Helper()
+func setup(bits uint64, curveID math.CurveID) (*v1.PublicParams, error) {
 	pp, err := v1.Setup(bits, nil, curveID)
-	require.NoError(tb, err)
-	return pp
+	if err != nil {
+		return nil, err
+	}
+	return pp, nil
 }
 
 func prepareZKTransfer(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 	tb.Helper()
-	pp := setup(tb, TestBits, TestBits)
+	pp, err := setup(TestBits, TestCurve)
+	require.NoError(tb, err)
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(tb, pp)
 
@@ -105,7 +109,8 @@ func prepareZKTransfer(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 
 func prepareZKTransferWithWrongSum(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 	tb.Helper()
-	pp := setup(tb, TestBits, TestBits)
+	pp, err := setup(TestBits, TestCurve)
+	require.NoError(tb, err)
 
 	intw, outtw, in, out := prepareInvalidInputsForZKTransfer(tb, pp)
 
@@ -118,7 +123,8 @@ func prepareZKTransferWithWrongSum(tb testing.TB) (*transfer.Prover, *transfer.V
 
 func prepareZKTransferWithInvalidRange(tb testing.TB) (*transfer.Prover, *transfer.Verifier) {
 	tb.Helper()
-	pp := setup(tb, 8, TestBits)
+	pp, err := setup(8, TestCurve)
+	require.NoError(tb, err)
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(tb, pp)
 
@@ -215,7 +221,8 @@ type BenchmarkTransferEnv struct {
 
 func NewBenchmarkTransferEnv(tb testing.TB, n int) *BenchmarkTransferEnv {
 	tb.Helper()
-	pp := setup(tb, TestBits, TestBits)
+	pp, err := setup(TestBits, TestCurve)
+	require.NoError(tb, err)
 
 	entries := make([]SingleProverEnv, n)
 	for i := 0; i < n; i++ {
@@ -231,8 +238,6 @@ func NewBenchmarkTransferEnv(tb testing.TB, n int) *BenchmarkTransferEnv {
 }
 
 func BenchmarkTransfer(b *testing.B) {
-	b.ReportAllocs()
-
 	// prepare env
 	env := NewBenchmarkTransferEnv(b, b.N)
 

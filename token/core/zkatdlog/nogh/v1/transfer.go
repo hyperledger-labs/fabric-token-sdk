@@ -58,6 +58,7 @@ func (p *PreparedTransferInputs) Metadata() []*token.Metadata {
 	return metas
 }
 
+//go:generate counterfeiter -o mock/token_loader.go -fake-name TokenLoader . TokenLoader
 type TokenLoader interface {
 	LoadTokens(ctx context.Context, ids []*token2.ID) ([]LoadedToken, error)
 }
