@@ -9,10 +9,10 @@ package idemix
 import (
 	"runtime"
 	"testing"
-	"time"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkKmIdentity(b *testing.B) {
@@ -48,27 +48,16 @@ func BenchmarkKmIdentity(b *testing.B) {
 	})
 }
 
-func BenchmarkParallelKmIdentity(b *testing.B) {
-	b.Run("BLS12_381_BBS_GURVY", func(b *testing.B) {
-		b.ReportAllocs()
-
-		keyManager, cleanup := setupKeyManager(b, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
-		defer cleanup()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				_, _ = keyManager.Identity(b.Context(), nil)
-			}
-		})
-	})
-}
-
 func TestParallelBenchmarkIdemixKMIdentity(t *testing.T) {
 	keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	defer cleanup()
 
+	workers, err := benchmark.Workers(runtime.NumCPU())
+	require.NoError(t, err)
+
 	r := benchmark.RunBenchmark(
-		runtime.NumCPU(),
-		2*time.Minute,
+		workers[0],
+		benchmark.Duration(),
 		func() *KeyManager {
 			return keyManager
 		},

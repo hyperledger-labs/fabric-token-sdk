@@ -112,6 +112,8 @@ Example results have been produced on an Apple M1 Max and can be consulted [here
 This is a test that runs multiple instances of the above benchmark in parallel.
 This allows the analyst to understand if shared data structures are actual bottlenecks.
 
+It uses a custom-made runner whose documentation can be found [here](../../../token/core/common/benchmark/runner.md).
+
 ```shell
 go test ./token/core/zkatdlog/nogh/v1/transfer -test.run=TestParallelBenchmarkSender -test.v -test.benchmem -test.timeout 0 -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2" -workers="1,10" -duration="10s" | tee bench.txt
 ```
@@ -134,31 +136,116 @@ The test supports the following flags:
 
 ### Results
 
-```shell
+```go
 === RUN   TestParallelBenchmarkSender
 === RUN   TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_1_workers
-Metric           Value            Description
-------           -----            -----------
-Workers          1                
-Total Ops        166              Total completions
-Real Throughput  16.57/s          Ops/sec observed (includes setup overhead)
-Pure Throughput  17.56/s          Theoretical Max Ops/sec (if setup was 0ms)
-Avg Latency      56.934508ms      Time spent inside work()
-Memory           1225816 B/op     Allocated bytes per operation
-Allocs           17582 allocs/op  Allocations per operation
+Metric           Value          Description
+------           -----          -----------
+Workers          1              
+Total Ops        168            (Low Sample Size)
+Duration         10.023390959s  (Good Duration)
+Real Throughput  16.76/s        Observed Ops/sec (Wall Clock)
+Pure Throughput  17.77/s        Theoretical Max (Low Overhead)
+
+Latency Distribution:
+ Min           55.180375ms  
+ P50 (Median)  55.945812ms  
+ Average       56.290356ms  
+ P95           58.108814ms  
+ P99           58.758087ms  
+ Max           59.089958ms  (Stable Tail)
+
+Stability Metrics:
+ Std Dev  898.087µs   
+ IQR      1.383083ms  Interquartile Range
+ Jitter   590.076µs   Avg delta per worker
+ CV       1.60%       Excellent Stability (<5%)
+
+Memory  1301420 B/op     Allocated bytes per operation
+Allocs  18817 allocs/op  Allocations per operation
+
+Latency Heatmap (Dynamic Range):
+Range                     Freq  Distribution Graph
+ 55.180375ms-55.369563ms  17    █████████████████████████ (10.1%)
+ 55.369563ms-55.5594ms    18    ██████████████████████████ (10.7%)
+ 55.5594ms-55.749887ms    27    ████████████████████████████████████████ (16.1%)
+ 55.749887ms-55.941028ms  20    █████████████████████████████ (11.9%)
+ 55.941028ms-56.132824ms  13    ███████████████████ (7.7%)
+ 56.132824ms-56.325277ms  9     █████████████ (5.4%)
+ 56.325277ms-56.51839ms   4     █████ (2.4%)
+ 56.51839ms-56.712165ms   6     ████████ (3.6%)
+ 56.712165ms-56.906605ms  9     █████████████ (5.4%)
+ 56.906605ms-57.101711ms  13    ███████████████████ (7.7%)
+ 57.101711ms-57.297486ms  10    ██████████████ (6.0%)
+ 57.297486ms-57.493933ms  3     ████ (1.8%)
+ 57.493933ms-57.691053ms  3     ████ (1.8%)
+ 57.691053ms-57.888849ms  4     █████ (2.4%)
+ 57.888849ms-58.087323ms  3     ████ (1.8%)
+ 58.087323ms-58.286478ms  2     ██ (1.2%)
+ 58.286478ms-58.486315ms  2     ██ (1.2%)
+ 58.486315ms-58.686837ms  2     ██ (1.2%)
+ 58.686837ms-58.888047ms  2     ██ (1.2%)
+ 58.888047ms-59.089958ms  1     █ (0.6%)
+
+--- Analysis & Recommendations ---
+[WARN] Low sample size (168). Results may not be statistically significant. Run for longer.
+[INFO] High Allocations (18817/op). This will trigger frequent GC cycles and increase Max Latency.
+----------------------------------
 === RUN   TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_10_workers
-Metric           Value            Description
-------           -----            -----------
-Workers          10               
-Total Ops        1205             Total completions
-Real Throughput  119.72/s         Ops/sec observed (includes setup overhead)
-Pure Throughput  127.50/s         Theoretical Max Ops/sec (if setup was 0ms)
-Avg Latency      78.430613ms      Time spent inside work()
-Memory           1225512 B/op     Allocated bytes per operation
-Allocs           17546 allocs/op  Allocations per operation
---- PASS: TestParallelBenchmarkSender (20.33s)
-    --- PASS: TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_1_workers (10.14s)
-    --- PASS: TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_10_workers (10.18s)
+Metric           Value          Description
+------           -----          -----------
+Workers          10             
+Total Ops        1232           (Low Sample Size)
+Duration         10.070877291s  (Good Duration)
+Real Throughput  122.33/s       Observed Ops/sec (Wall Clock)
+Pure Throughput  130.12/s       Theoretical Max (Low Overhead)
+
+Latency Distribution:
+ Min           61.2545ms     
+ P50 (Median)  75.461375ms   
+ Average       76.852256ms   
+ P95           93.50851ms    
+ P99           106.198982ms  
+ Max           144.872375ms  (Stable Tail)
+
+Stability Metrics:
+ Std Dev  9.28799ms    
+ IQR      10.909229ms  Interquartile Range
+ Jitter   9.755984ms   Avg delta per worker
+ CV       12.09%       Moderate Variance (10-20%)
+
+Memory  1282384 B/op     Allocated bytes per operation
+Allocs  18668 allocs/op  Allocations per operation
+
+Latency Heatmap (Dynamic Range):
+Range                       Freq  Distribution Graph
+ 61.2545ms-63.948502ms      36    ███████ (2.9%)
+ 63.948502ms-66.760987ms    86    █████████████████ (7.0%)
+ 66.760987ms-69.697167ms    152   ███████████████████████████████ (12.3%)
+ 69.697167ms-72.762481ms    181   █████████████████████████████████████ (14.7%)
+ 72.762481ms-75.962609ms    195   ████████████████████████████████████████ (15.8%)
+ 75.962609ms-79.303481ms    179   ████████████████████████████████████ (14.5%)
+ 79.303481ms-82.791286ms    152   ███████████████████████████████ (12.3%)
+ 82.791286ms-86.432486ms    94    ███████████████████ (7.6%)
+ 86.432486ms-90.233828ms    59    ████████████ (4.8%)
+ 90.233828ms-94.202355ms    40    ████████ (3.2%)
+ 94.202355ms-98.345419ms    29    █████ (2.4%)
+ 98.345419ms-102.670697ms   9     █ (0.7%)
+ 102.670697ms-107.186203ms  8     █ (0.6%)
+ 107.186203ms-111.900303ms  4      (0.3%)
+ 111.900303ms-116.821732ms  2      (0.2%)
+ 116.821732ms-121.959608ms  3      (0.2%)
+ 121.959608ms-127.32345ms   1      (0.1%)
+ 127.32345ms-132.923196ms   1      (0.1%)
+ 138.769222ms-144.872375ms  1      (0.1%)
+
+--- Analysis & Recommendations ---
+[WARN] Low sample size (1232). Results may not be statistically significant. Run for longer.
+[INFO] High Allocations (18668/op). This will trigger frequent GC cycles and increase Max Latency.
+----------------------------------
+--- PASS: TestParallelBenchmarkSender (20.83s)
+    --- PASS: TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_1_workers (10.39s)
+    --- PASS: TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_10_workers (10.44s)
 PASS
-ok      github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer       20.864s
+ok      github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer       21.409s
 ```
