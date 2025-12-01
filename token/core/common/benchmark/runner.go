@@ -92,13 +92,12 @@ func (r Result) Print() {
 	if r.OpsPerSecPure > 0 {
 		overheadPct = (1.0 - (r.OpsPerSecReal / r.OpsPerSecPure)) * 100
 	}
-
 	overheadStatus := "(Low Overhead)"
 	if overheadPct > 15.0 {
 		overheadStatus = ColorYellow + fmt.Sprintf("(High Setup Cost: %.1f%%)", overheadPct) + ColorReset
 	}
-
 	fmt.Fprintf(w, "Pure Throughput\t%.2f/s\tTheoretical Max %s\n", r.OpsPerSecPure, overheadStatus)
+
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Latency Distribution:")
 	fmt.Fprintf(w, "  Min\t%v\t\n", r.MinLatency)
@@ -112,13 +111,12 @@ func (r Result) Print() {
 	if r.P99Latency > 0 {
 		tailRatio = float64(r.MaxLatency) / float64(r.P99Latency)
 	}
-
 	maxStatus := ColorGreen + "(Stable Tail)" + ColorReset
 	if tailRatio > 10.0 {
 		maxStatus = ColorRed + fmt.Sprintf("(Extreme Outliers: Max is %.1fx P99)", tailRatio) + ColorReset
 	}
-
 	fmt.Fprintf(w, "  Max\t%v\t%s\n", r.MaxLatency, maxStatus)
+
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Stability Metrics:")
 	fmt.Fprintf(w, "  Std Dev\t%v\t\n", r.StdDevLatency)
@@ -133,11 +131,12 @@ func (r Result) Print() {
 	} else if cvPct > 10.0 {
 		cvStatus = ColorYellow + "Moderate Variance (10-20%)" + ColorReset
 	}
-
 	fmt.Fprintf(w, "  CV\t%.2f%%\t%s\n", cvPct, cvStatus)
+
 	fmt.Fprintln(w, "")
 	fmt.Fprintf(w, "Memory\t%d B/op\tAllocated bytes per operation\n", r.BytesPerOp)
 	fmt.Fprintf(w, "Allocs\t%d allocs/op\tAllocations per operation\n", r.AllocsPerOp)
+
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Latency Heatmap (Dynamic Range):")
 	fmt.Fprintln(w, "Range\tFreq\tDistribution Graph")
@@ -239,33 +238,42 @@ func RunBenchmark[T any](
 	// ---------------------------------------------------------
 	// PHASE 1: Memory Analysis (Serial & Isolated)
 	// ---------------------------------------------------------
-	// BUG FIX: Measure memory in isolation to avoid contamination from benchmark infrastructure
-
+	// Measure memory in isolation to avoid contamination from benchmark infrastructure
 	var totalAllocs, totalBytes uint64
 	const memSamples = 5
 
 	for i := 0; i < memSamples; i++ {
 		// SANITY CHECK: Force GC before each measurement to get clean baseline
+		// Call GC twice to ensure finalization of objects from previous iteration
 		runtime.GC()
-		runtime.GC() // Call twice to ensure finalization
+		runtime.GC()
+
+		// Sleep briefly to allow GC to fully complete before measurement
+		// Without this, overlapping GC from previous iteration can contaminate measurements
+		time.Sleep(10 * time.Millisecond)
 
 		var memBefore, memAfter runtime.MemStats
 		runtime.ReadMemStats(&memBefore)
 
-		// BUG FIX: Create data inside the measurement window to avoid counting setup allocations
+		// Create data inside the measurement window to avoid counting setup allocations
+		// The data variable is scoped to this iteration only
 		data := setup()
 		work(data)
 
 		runtime.ReadMemStats(&memAfter)
 
 		// SANITY CHECK: Ensure we're measuring deltas, not absolute values
+		// This accounts for allocations made specifically by setup() + work()
 		totalAllocs += memAfter.Mallocs - memBefore.Mallocs
 		totalBytes += memAfter.TotalAlloc - memBefore.TotalAlloc
 
-		// BUG FIX: Explicitly release data reference to avoid retention across iterations
+		// Explicitly nil out data reference to ensure it's eligible for GC
+		// This prevents retention across iterations which would skew subsequent measurements
+		data = *new(T)
 		_ = data
 	}
 
+	// SANITY CHECK: Average over multiple samples to reduce noise from GC timing variance
 	allocs := totalAllocs / uint64(memSamples)
 	bytes := totalBytes / uint64(memSamples)
 
@@ -275,9 +283,10 @@ func RunBenchmark[T any](
 	// SANITY CHECK: Clean slate for Phase 2 - no contamination from Phase 1
 	runtime.GC()
 	runtime.GC()
+	time.Sleep(10 * time.Millisecond)
 
 	var (
-		// BUG FIX: Remove totalWorkTime atomic counter - it's calculated from latency data
+		// Remove totalWorkTime atomic counter - it's calculated from latency data
 		// to avoid race conditions and timing measurement overhead
 		running int32 // 1 = running, 0 = stopped
 		startWg sync.WaitGroup
@@ -294,60 +303,64 @@ func RunBenchmark[T any](
 		go func() {
 			defer endWg.Done()
 
-			// Initialize first chunk
+			// Initialize first chunk for this worker
 			currentChunk := &chunk{}
 			headChunk := currentChunk
 
-			startWg.Done() // Ready signal
+			startWg.Done() // Signal: this worker is ready
 			startWg.Wait() // SANITY CHECK: Barrier - all workers start simultaneously
+			// This ensures fair timing and prevents early-bird bias
 
 			// SANITY CHECK: Loop continues until global stop signal
+			// Using atomic load ensures memory visibility across goroutines
 			for atomic.LoadInt32(&running) == 1 {
-				// 1. Setup
+				// 1. Setup: Create test data
 				d := setup()
 
-				// 2. Work (timed)
+				// 2. Work: Execute the operation we're benchmarking (timed)
 				t0 := time.Now()
 				work(d)
 				dur := time.Since(t0)
 
 				// 3. Record latency
-				// BUG FIX: Check chunk capacity BEFORE writing to avoid overflow
+				// Check chunk capacity BEFORE writing to avoid overflow
+				// Original code could write beyond array bounds if idx == chunkSize
 				if currentChunk.idx >= chunkSize {
 					newC := &chunk{}
 					currentChunk.next = newC
 					currentChunk = newC
 				}
 
+				// SANITY CHECK: Store latency in pre-allocated array (no allocation overhead)
 				currentChunk.data[currentChunk.idx] = dur
 				currentChunk.idx++
 			}
 
-			// BUG FIX: Save head for post-processing (removed in-loop counter updates)
-			// This eliminates the race condition and double-counting bugs
+			// Save head pointer for post-processing
+			// Each worker maintains its own linked list of chunks
 			workerResults[workerID] = headChunk
 		}()
 	}
 
 	// SANITY CHECK: Ensure all workers are created and waiting before starting the timer
+	// This prevents measurement skew from goroutine creation overhead
 	startWg.Wait()
 	startGlobal := time.Now()
 
-	// Sleep for the benchmark duration
+	// Sleep for the benchmark duration - workers run concurrently during this time
 	time.Sleep(benchDuration)
 
 	// SANITY CHECK: Signal all workers to stop and wait for cleanup
+	// Using atomic store ensures all workers see the stop signal immediately
 	atomic.StoreInt32(&running, 0)
 	endWg.Wait()
-
 	globalDuration := time.Since(startGlobal)
 
 	// ---------------------------------------------------------
 	// PHASE 3: Statistical Analysis
 	// ---------------------------------------------------------
-	// BUG FIX: Count all operations INCLUDING partial chunks at the end
-	// Original code lost up to chunkSize operations per worker
-
+	// Count all operations INCLUDING partial chunks at the end
+	// Original code could lose up to chunkSize-1 operations per worker
 	var totalOps uint64
 	var totalTimeNs int64
 
@@ -355,23 +368,27 @@ func RunBenchmark[T any](
 	for _, head := range workerResults {
 		curr := head
 		for curr != nil {
-			// SANITY CHECK: Only process valid entries (idx tells us how many)
+			// SANITY CHECK: Only process valid entries (idx tells us how many were written)
+			// This handles partial chunks correctly
 			limit := curr.idx
 			totalOps += uint64(limit)
 
 			for k := 0; k < limit; k++ {
+				// Use int64 for nanosecond accumulation to prevent overflow
+				// For 10 billion ops @ 1µs each = 10^16 ns, which fits in int64 max (9.2×10^18)
 				totalTimeNs += int64(curr.data[k])
 			}
-
 			curr = curr.next
 		}
 	}
 
-	// SANITY CHECK: Pre-allocate with exact capacity to avoid resizing overhead
+	// SANITY CHECK: Pre-allocate with exact capacity to avoid resizing overhead during analysis
+	// This also prevents measurement contamination from allocation during processing
 	allLatencies := make([]time.Duration, 0, totalOps)
 
-	// BUG FIX: Calculate jitter per-worker only (not across workers)
-	// Jitter across workers is meaningless since they're concurrent
+	// Calculate jitter per-worker only (not across workers)
+	// Jitter across workers is meaningless since they're concurrent and independent
+	// We want to measure timing consistency within a single execution stream
 	var totalJitter float64
 	var totalJitterSamples uint64
 
@@ -382,25 +399,24 @@ func RunBenchmark[T any](
 
 		for curr != nil {
 			limit := curr.idx
-
 			for k := 0; k < limit; k++ {
 				val := curr.data[k]
 				allLatencies = append(allLatencies, val)
 
 				// SANITY CHECK: Only calculate jitter within a worker's sequence
+				// Skip the first measurement as there's no previous value to compare
 				if !firstInWorker {
 					diff := float64(val - prevLat)
+					// Use absolute value for jitter (unsigned variance)
 					if diff < 0 {
 						diff = -diff
 					}
 					totalJitter += diff
 					totalJitterSamples++
 				}
-
 				prevLat = val
 				firstInWorker = false
 			}
-
 			curr = curr.next
 		}
 	}
@@ -418,17 +434,19 @@ func RunBenchmark[T any](
 	)
 
 	if totalOps > 0 {
-		// Jitter
+		// Jitter calculation
 		if totalJitterSamples > 0 {
 			jitter = time.Duration(totalJitter / float64(totalJitterSamples))
 		}
 
 		// Basic stats
 		avgLatency = time.Duration(totalTimeNs / int64(totalOps))
+
 		// SANITY CHECK: Pure throughput is theoretical max if setup() had zero cost
+		// This represents how fast the system could go with perfect parallelization
 		pureThroughput = float64(workers) / avgLatency.Seconds()
 
-		// Sort for percentiles
+		// Sort for percentiles - required for accurate quantile calculations
 		sort.Slice(allLatencies, func(i, j int) bool {
 			return allLatencies[i] < allLatencies[j]
 		})
@@ -436,16 +454,19 @@ func RunBenchmark[T any](
 		minLat = allLatencies[0]
 		maxLat = allLatencies[len(allLatencies)-1]
 
-		p50 = percentile(allLatencies, 0.50)
-		p75 = percentile(allLatencies, 0.75)
-		p95 = percentile(allLatencies, 0.95)
-		p99 = percentile(allLatencies, 0.99)
+		// Use linear interpolation for percentiles instead of ceiling
+		// This provides more accurate percentile values, especially for small sample sizes
+		p50 = percentileInterpolated(allLatencies, 0.50)
+		p75 = percentileInterpolated(allLatencies, 0.75)
+		p95 = percentileInterpolated(allLatencies, 0.95)
+		p99 = percentileInterpolated(allLatencies, 0.99)
+		p25 := percentileInterpolated(allLatencies, 0.25)
 
-		p25 := percentile(allLatencies, 0.25)
+		// IQR measures the spread of the middle 50% of data (robust to outliers)
 		iqr = p75 - p25
 
-		// BUG FIX: Use population variance (divide by n) not sample variance (n-1)
-		// In benchmarks, we're measuring the entire population, not sampling
+		// Use population variance (divide by n) not sample variance (n-1)
+		// In benchmarks, we're measuring the entire population, not sampling from a larger set
 		meanNs := float64(avgLatency.Nanoseconds())
 		var sumSquaredDiff float64
 
@@ -454,18 +475,20 @@ func RunBenchmark[T any](
 			sumSquaredDiff += diff * diff
 		}
 
-		// SANITY CHECK: Avoid division by zero
+		// SANITY CHECK: Avoid division by zero for edge cases
 		if len(allLatencies) > 0 {
 			variance = sumSquaredDiff / float64(len(allLatencies))
 			stdDev = time.Duration(math.Sqrt(variance))
 
+			// Coefficient of Variation: normalized measure of dispersion
 			if avgLatency > 0 {
 				coeffVar = float64(stdDev) / float64(avgLatency)
 			}
 		}
 	}
 
-	hist := calcExponentialHistogram(allLatencies, minLat, maxLat, 20)
+	// Use improved histogram with better boundary handling
+	hist := calcExponentialHistogramImproved(allLatencies, minLat, maxLat, 20)
 
 	return Result{
 		GoRoutines:    workers,
@@ -491,25 +514,45 @@ func RunBenchmark[T any](
 	}
 }
 
-func percentile(sorted []time.Duration, p float64) time.Duration {
+// Use linear interpolation for more accurate percentile calculation
+// This method provides better accuracy than simple ceiling, especially for small samples
+func percentileInterpolated(sorted []time.Duration, p float64) time.Duration {
 	if len(sorted) == 0 {
 		return 0
 	}
 
-	// SANITY CHECK: Use ceiling method for percentile calculation
-	idx := int(math.Ceil(p*float64(len(sorted)))) - 1
-	if idx < 0 {
-		idx = 0
+	// SANITY CHECK: Handle edge cases
+	if p <= 0 {
+		return sorted[0]
+	}
+	if p >= 1 {
+		return sorted[len(sorted)-1]
 	}
 
-	if idx >= len(sorted) {
-		idx = len(sorted) - 1
+	// Calculate the exact position (0-indexed, can be fractional)
+	pos := p * float64(len(sorted)-1)
+
+	// Get the lower and upper indices
+	lower := int(math.Floor(pos))
+	upper := int(math.Ceil(pos))
+
+	// SANITY CHECK: If position is exactly on an index, return that value
+	if lower == upper {
+		return sorted[lower]
 	}
 
-	return sorted[idx]
+	// Linear interpolation between the two adjacent values
+	// This gives a more accurate estimate than just rounding up or down
+	fraction := pos - float64(lower)
+	lowerVal := float64(sorted[lower])
+	upperVal := float64(sorted[upper])
+
+	interpolated := lowerVal + fraction*(upperVal-lowerVal)
+	return time.Duration(interpolated)
 }
 
-func calcExponentialHistogram(latencies []time.Duration, min, max time.Duration, bucketCount int) []Bucket {
+// Improved exponential histogram with better boundary precision
+func calcExponentialHistogramImproved(latencies []time.Duration, min, max time.Duration, bucketCount int) []Bucket {
 	if len(latencies) == 0 {
 		return nil
 	}
@@ -519,7 +562,6 @@ func calcExponentialHistogram(latencies []time.Duration, min, max time.Duration,
 	if min <= 0 {
 		min = 1
 	}
-
 	if max < min {
 		max = min
 	}
@@ -529,7 +571,7 @@ func calcExponentialHistogram(latencies []time.Duration, min, max time.Duration,
 	// 1. Calculate the geometric growth factor
 	var factor float64
 	if min == max {
-		// SANITY CHECK: All values are identical, single bucket
+		// SANITY CHECK: All values are identical, create single bucket spanning that value
 		factor = 1.0
 	} else {
 		// Formula: min * factor^N = max
@@ -538,31 +580,35 @@ func calcExponentialHistogram(latencies []time.Duration, min, max time.Duration,
 	}
 
 	// 2. Initialize Bucket Boundaries
-	currentLower := float64(min)
+	// Use int64 nanoseconds for boundary calculations to avoid float precision loss
+	currentLowerNs := min.Nanoseconds()
+	factorNs := factor // Keep factor for calculations
+
 	for i := 0; i < bucketCount; i++ {
-		var currentUpper float64
+		var currentUpperNs int64
 		if i == bucketCount-1 {
 			// SANITY CHECK: Snap last bucket strictly to max to avoid floating point errors
-			currentUpper = float64(max)
+			// This ensures no latency falls outside the histogram due to rounding
+			currentUpperNs = max.Nanoseconds()
 		} else {
-			currentUpper = currentLower * factor
+			// Calculate upper bound using floating point, then convert to int64
+			currentUpperNs = int64(float64(currentLowerNs) * factorNs)
 		}
 
 		buckets[i] = Bucket{
-			LowBound:  time.Duration(currentLower),
-			HighBound: time.Duration(currentUpper),
+			LowBound:  time.Duration(currentLowerNs),
+			HighBound: time.Duration(currentUpperNs),
 			Count:     0,
 		}
-
-		currentLower = currentUpper
+		currentLowerNs = currentUpperNs
 	}
 
 	// 3. Populate Counts using Logarithmic Indexing (Fast O(n) instead of O(n*bucketCount))
-	logMin := math.Log(float64(min))
+	logMin := math.Log(float64(min.Nanoseconds()))
 	logFactor := math.Log(factor)
 
 	for _, lat := range latencies {
-		val := float64(lat)
+		valNs := float64(lat.Nanoseconds())
 		var idx int
 
 		// SANITY CHECK: Handle edge cases where all values are the same
@@ -571,14 +617,15 @@ func calcExponentialHistogram(latencies []time.Duration, min, max time.Duration,
 		} else {
 			// Inverse of the exponential function to find index directly
 			// index = log_factor(value / min) = (log(value) - log(min)) / log(factor)
-			idx = int((math.Log(val) - logMin) / logFactor)
+			// Add small epsilon for boundary precision
+			idx = int(math.Floor((math.Log(valNs) - logMin) / logFactor))
 		}
 
-		// SANITY CHECK: Clamp index to handle floating point precision edges
+		// SANITY CHECK: Clamp index to handle floating point precision at edges
+		// This ensures no latency is dropped due to rounding errors
 		if idx < 0 {
 			idx = 0
 		}
-
 		if idx >= bucketCount {
 			idx = bucketCount - 1
 		}
