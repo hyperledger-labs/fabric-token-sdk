@@ -73,7 +73,8 @@ type Provider struct {
 
 	isMeCache cache[bool]
 	signers   cache[*SignerEntry]
-	// verifiers cache[*VerifierEntry]
+	// remove this cache
+	verifiers cache[*VerifierEntry]
 }
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
@@ -93,6 +94,7 @@ func NewProvider(
 		storage:                 storage,
 		isMeCache:               secondcache.NewTyped[bool](5000),
 		signers:                 secondcache.NewTyped[*SignerEntry](5000),
+		verifiers:               secondcache.NewTyped[*VerifierEntry](5000),
 	}
 }
 
@@ -121,6 +123,7 @@ func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identit
 	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
+	p.verifiers.Add(idHash, entry)
 	p.Logger.DebugfContext(ctx, "register verifier to [%s]:[%s]", idHash, logging.Identifier(v))
 	return nil
 }
@@ -266,6 +269,7 @@ func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHa
 		return entry.Signer, nil
 	}
 
+	p.Logger.DebugfContext(ctx, "signer for [%s] not found, try to deserialize", idHash)
 	// ask the deserializer
 	signer, err := p.deserializeSigner(ctx, identity)
 	if err != nil {
@@ -335,6 +339,10 @@ func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias dr
 		entry := &VerifierEntry{Verifier: descriptor.Verifier}
 		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
 			entry.DebugStack = debug.Stack()
+		}
+		p.verifiers.Add(id, entry)
+		if setAlias {
+			p.verifiers.Add(aliasID, entry)
 		}
 	}
 }
