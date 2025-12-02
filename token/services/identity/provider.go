@@ -12,11 +12,11 @@ import (
 	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -91,8 +91,8 @@ func NewProvider(
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		deserializer:            deserializer,
 		storage:                 storage,
-		isMeCache:               cache2.NewNoCache[bool](),
-		signers:                 cache2.NewNoCache[*SignerEntry](),
+		isMeCache:               secondcache.NewTyped[bool](5000),
+		signers:                 secondcache.NewTyped[*SignerEntry](5000),
 	}
 }
 
@@ -259,19 +259,11 @@ func (p *Provider) areMe(ctx context.Context, identities ...driver.Identity) []s
 }
 
 func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
-	oneShow := false
-
-	if !oneShow {
-		// check again the cache
-		entry, ok := p.signers.Get(idHash)
-		if ok {
-			p.Logger.DebugfContext(ctx, "signer for [%s] found", idHash)
-			return entry.Signer, nil
-		}
-
-		p.Logger.DebugfContext(ctx, "signer for [%s] not found, try to deserialize", idHash)
-	} else {
-		p.Logger.DebugfContext(ctx, "Skipping cache for one-show id [%s]", idHash)
+	// check again the cache
+	entry, ok := p.signers.Get(idHash)
+	if ok {
+		p.Logger.DebugfContext(ctx, "signer for [%s] found", idHash)
+		return entry.Signer, nil
 	}
 
 	// ask the deserializer
@@ -280,18 +272,16 @@ func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHa
 		return nil, errors.Wrapf(err, "failed deserializing identity for signer [%s]", identity)
 	}
 
-	if !oneShow {
-		entry := &SignerEntry{Signer: signer}
-		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			entry.DebugStack = debug.Stack()
-		}
-		// cache the signer
-		p.signers.Add(idHash, entry)
-		if err := p.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
-			return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
-		}
+	entry = &SignerEntry{Signer: signer}
+	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		entry.DebugStack = debug.Stack()
 	}
-	return signer, nil
+	p.signers.Add(idHash, entry)
+	if err := p.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
+		return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
+	}
+
+	return entry.Signer, nil
 }
 
 func (p *Provider) deserializeSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
