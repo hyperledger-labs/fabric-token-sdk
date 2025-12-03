@@ -74,7 +74,7 @@ type Provider struct {
 	isMeCache cache[bool]
 	signers   cache[*SignerEntry]
 	// remove this cache
-	verifiers cache[*VerifierEntry]
+	// verifiers cache[*VerifierEntry]
 }
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
