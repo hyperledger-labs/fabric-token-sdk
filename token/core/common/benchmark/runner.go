@@ -76,10 +76,25 @@ const (
 	ColorBlue   = "\033[34m"
 )
 
-//nolint:errcheck
 func (r Result) Print() {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
+	cvPct, tailRatio := r.printMainMetrics(w)
+
+	r.printHeatmap(w)
+
+	r.printAnalysis(w, cvPct, tailRatio)
+
+	if err := w.Flush(); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "benchmark: flush error:", err)
+	}
+}
+
+// printMainMetrics prints the main metrics, latency distribution and stability
+// related lines to the provided tabwriter and returns the coefficient of
+// variation percent and tailRatio which are later used by the analysis
+// section.
+func (r Result) printMainMetrics(w *tabwriter.Writer) (cvPct float64, tailRatio float64) {
 	// Helper for coloring status.
 	status := func(condition bool, goodMsg, badMsg string) string {
 		if condition {
@@ -89,23 +104,23 @@ func (r Result) Print() {
 	}
 
 	// --- Section 1: Main Metrics ---
-	fmt.Fprintln(w, "Metric\tValue\tDescription")
-	fmt.Fprintln(w, "------\t-----\t-----------")
-	fmt.Fprintf(w, "Workers\t%d\t\n", r.GoRoutines)
-	fmt.Fprintf(
+	writeLine(w, "Metric\tValue\tDescription")
+	writeLine(w, "------\t-----\t-----------")
+	writef(w, "Workers\t%d\t\n", r.GoRoutines)
+	writef(
 		w,
 		"Total Ops\t%d\t%s\n",
 		r.OpsTotal,
 		status(r.OpsTotal > 10000, "(Robust Sample)", "(Low Sample Size)"),
 	)
-	fmt.Fprintf(
+	writef(
 		w,
 		"Duration\t%v\t%s\n",
 		r.Duration,
 		status(r.Duration > 1*time.Second, "(Good Duration)", "(Too Short < 1s)"),
 	)
 
-	fmt.Fprintf(w, "Real Throughput\t%.2f/s\tObserved Ops/sec (Wall Clock)\n", r.OpsPerSecReal)
+	writef(w, "Real Throughput\t%.2f/s\tObserved Ops/sec (Wall Clock)\n", r.OpsPerSecReal)
 
 	// Overhead Check.
 	overheadPct := 0.0
@@ -120,18 +135,18 @@ func (r Result) Print() {
 		overheadStatus = ColorYellow + fmt.Sprintf("(High Setup Cost: %.1f%%)", overheadPct) + ColorReset
 	}
 
-	fmt.Fprintf(w, "Pure Throughput\t%.2f/s\tTheoretical Max %s\n", r.OpsPerSecPure, overheadStatus)
-	fmt.Fprintln(w, "")
+	writef(w, "Pure Throughput\t%.2f/s\tTheoretical Max %s\n", r.OpsPerSecPure, overheadStatus)
+	writeLine(w, "")
 
-	fmt.Fprintln(w, "Latency Distribution:")
-	fmt.Fprintf(w, " Min\t%v\t\n", r.MinLatency)
-	fmt.Fprintf(w, " P50 (Median)\t%v\t\n", r.P50Latency)
-	fmt.Fprintf(w, " Average\t%v\t\n", r.AvgLatency)
-	fmt.Fprintf(w, " P95\t%v\t\n", r.P95Latency)
-	fmt.Fprintf(w, " P99\t%v\t\n", r.P99Latency)
+	writeLine(w, "Latency Distribution:")
+	writef(w, " Min\t%v\t\n", r.MinLatency)
+	writef(w, " P50 (Median)\t%v\t\n", r.P50Latency)
+	writef(w, " Average\t%v\t\n", r.AvgLatency)
+	writef(w, " P95\t%v\t\n", r.P95Latency)
+	writef(w, " P99\t%v\t\n", r.P99Latency)
 
 	// Tail Latency Check.
-	tailRatio := 0.0
+	tailRatio = 0.0
 	if r.P99Latency > 0 {
 		tailRatio = float64(r.MaxLatency) / float64(r.P99Latency)
 	}
@@ -140,31 +155,36 @@ func (r Result) Print() {
 	if tailRatio > 10.0 {
 		maxStatus = ColorRed + fmt.Sprintf("(Extreme Outliers: Max is %.1fx P99)", tailRatio) + ColorReset
 	}
-	fmt.Fprintf(w, " Max\t%v\t%s\n", r.MaxLatency, maxStatus)
-	fmt.Fprintln(w, "")
+	writef(w, " Max\t%v\t%s\n", r.MaxLatency, maxStatus)
+	writeLine(w, "")
 
-	fmt.Fprintln(w, "Stability Metrics:")
-	fmt.Fprintf(w, " Std Dev\t%v\t\n", r.StdDevLatency)
-	fmt.Fprintf(w, " IQR\t%v\tInterquartile Range\n", r.IQR)
-	fmt.Fprintf(w, " Jitter\t%v\tAvg delta per worker\n", r.Jitter)
+	writeLine(w, "Stability Metrics:")
+	writef(w, " Std Dev\t%v\t\n", r.StdDevLatency)
+	writef(w, " IQR\t%v\tInterquartile Range\n", r.IQR)
+	writef(w, " Jitter\t%v\tAvg delta per worker\n", r.Jitter)
 
 	// CV Check.
-	cvPct := r.CoeffVar * 100
+	cvPct = r.CoeffVar * 100
 	cvStatus := ColorGreen + "Excellent Stability (<5%)" + ColorReset
 	if cvPct > 20.0 {
 		cvStatus = ColorRed + "Unstable (>20%) - Result is Noisy" + ColorReset
 	} else if cvPct > 10.0 {
 		cvStatus = ColorYellow + "Moderate Variance (10-20%)" + ColorReset
 	}
-	fmt.Fprintf(w, " CV\t%.2f%%\t%s\n", cvPct, cvStatus)
-	fmt.Fprintln(w, "")
+	writef(w, " CV\t%.2f%%\t%s\n", cvPct, cvStatus)
+	writeLine(w, "")
 
-	fmt.Fprintf(w, "Memory\t%d B/op\tAllocated bytes per operation\n", r.BytesPerOp)
-	fmt.Fprintf(w, "Allocs\t%d allocs/op\tAllocations per operation\n", r.AllocsPerOp)
-	fmt.Fprintln(w, "")
+	writef(w, "Memory\t%d B/op\tAllocated bytes per operation\n", r.BytesPerOp)
+	writef(w, "Allocs\t%d allocs/op\tAllocations per operation\n", r.AllocsPerOp)
+	writeLine(w, "")
 
-	fmt.Fprintln(w, "Latency Heatmap (Dynamic Range):")
-	fmt.Fprintln(w, "Range\tFreq\tDistribution Graph")
+	return cvPct, tailRatio
+}
+
+// printHeatmap renders the histogram heatmap section to the provided writer.
+func (r Result) printHeatmap(w *tabwriter.Writer) {
+	writeLine(w, "Latency Heatmap (Dynamic Range):")
+	writeLine(w, "Range\tFreq\tDistribution Graph")
 
 	maxCount := 0
 	for _, b := range r.Histogram {
@@ -219,7 +239,7 @@ func (r Result) Print() {
 			percentage = (float64(b.Count) / float64(r.OpsTotal)) * 100
 		}
 
-		fmt.Fprintf(
+		writef(
 			w,
 			" %s\t%d\t%s%s %s(%.1f%%)\n",
 			label,
@@ -230,15 +250,18 @@ func (r Result) Print() {
 			percentage,
 		)
 	}
+}
 
-	w.Flush()
-
-	// --- Section 2: Analysis & Recommendations ---
-	fmt.Println("\n" + ColorBlue + "--- Analysis & Recommendations ---" + ColorReset)
+// printAnalysis prints the analysis and recommendations section. It uses the
+// precomputed cvPct and tailRatio to produce the same messaging as before.
+func (r Result) printAnalysis(w *tabwriter.Writer, cvPct float64, tailRatio float64) {
+	writeLine(w, "")
+	writeLine(w, ColorBlue+"--- Analysis & Recommendations ---"+ColorReset)
 
 	// 1. Sample Size Check.
 	if r.OpsTotal < 5000 {
-		fmt.Printf(
+		writef(
+			w,
 			"%s[WARN] Low sample size (%d). Results may not be statistically significant. Run for longer.%s\n",
 			ColorRed,
 			r.OpsTotal,
@@ -248,7 +271,8 @@ func (r Result) Print() {
 
 	// 2. Duration Check.
 	if r.Duration < 1*time.Second {
-		fmt.Printf(
+		writef(
+			w,
 			"%s[WARN] Test ran for less than 1s. Go runtime/scheduler might not have stabilized.%s\n",
 			ColorYellow,
 			ColorReset,
@@ -257,7 +281,8 @@ func (r Result) Print() {
 
 	// 3. Variance Check.
 	if cvPct > 20.0 {
-		fmt.Printf(
+		writef(
+			w,
 			"%s[FAIL] High Variance (CV %.2f%%). System noise is affecting results. "+
 				"Isolate the machine or increase duration.%s\n",
 			ColorRed,
@@ -268,7 +293,8 @@ func (r Result) Print() {
 
 	// 4. Memory Check.
 	if r.AllocsPerOp > 100 {
-		fmt.Printf(
+		writef(
+			w,
 			"%s[INFO] High Allocations (%d/op). This will trigger frequent GC cycles and increase Max Latency.%s\n",
 			ColorYellow,
 			r.AllocsPerOp,
@@ -278,7 +304,8 @@ func (r Result) Print() {
 
 	// 5. Outlier Check.
 	if tailRatio > 20.0 {
-		fmt.Printf(
+		writef(
+			w,
 			"%s[CRITICAL] Massive Latency Spikes Detected. Max is %.0fx higher than P99. "+
 				"Check for Stop-The-World GC or Lock Contention.%s\n",
 			ColorRed,
@@ -288,14 +315,30 @@ func (r Result) Print() {
 	}
 
 	if cvPct < 10.0 && r.OpsTotal > 10000 && tailRatio < 10.0 {
-		fmt.Printf(
+		writef(
+			w,
 			"%s[PASS] Benchmark looks healthy and statistically sound.%s\n",
 			ColorGreen,
 			ColorReset,
 		)
 	}
 
-	fmt.Println("----------------------------------")
+	writeLine(w, "----------------------------------")
+}
+
+// safe write helpers used to centralize error handling for tabwriter writes.
+func writef(w *tabwriter.Writer, format string, a ...interface{}) {
+	_, err := fmt.Fprintf(w, format, a...)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "benchmark: write error:", err)
+	}
+}
+
+func writeLine(w *tabwriter.Writer, s string) {
+	_, err := fmt.Fprintln(w, s)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "benchmark: write error:", err)
+	}
 }
 
 func RunBenchmark[T any](

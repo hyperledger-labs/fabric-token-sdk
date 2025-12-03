@@ -96,6 +96,46 @@ func BenchmarkSender(b *testing.B) {
 	}
 }
 
+// TestParallelBenchmarkSender benchmarks transfer action generation and serialization when multiple go routines are doing the same thing.
+func TestParallelBenchmarkSender(t *testing.T) {
+	bits, err := benchmark.Bits(32)
+	require.NoError(t, err)
+	curves := benchmark.Curves(math.BN254)
+	inputs, err := benchmark.NumInputs(2)
+	require.NoError(t, err)
+	outputs, err := benchmark.NumOutputs(2)
+	require.NoError(t, err)
+	workers, err := benchmark.Workers(runtime.NumCPU())
+	require.NoError(t, err)
+	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, workers)
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			r := benchmark.RunBenchmark(
+				tc.BenchmarkCase.Workers,
+				benchmark.Duration(),
+				func() *benchmarkSenderEnv {
+					env, err := newBenchmarkSenderEnv(1, tc.BenchmarkCase)
+					require.NoError(t, err)
+					return env
+				},
+				func(env *benchmarkSenderEnv) {
+					transfer, _, err := env.SenderEnvs[0].sender.GenerateZKTransfer(
+						t.Context(),
+						env.SenderEnvs[0].outvalues,
+						env.SenderEnvs[0].owners,
+					)
+					require.NoError(t, err)
+					assert.NotNil(t, transfer)
+					_, err = transfer.Serialize()
+					require.NoError(t, err)
+				},
+			)
+			r.Print()
+		})
+	}
+}
+
 // BenchmarkVerificationSenderProof benchmarks transfer action deserialization and proof verification.
 func BenchmarkVerificationSenderProof(b *testing.B) {
 	bits, err := benchmark.Bits(32, 64)
@@ -136,7 +176,8 @@ func BenchmarkVerificationSenderProof(b *testing.B) {
 	}
 }
 
-func TestParallelBenchmarkSender(t *testing.T) {
+// TestParallelBenchmarkVerificationSenderProof benchmarks transfer action deserialization and proof verification when multiple go routines are doing the same thing.
+func TestParallelBenchmarkVerificationSenderProof(t *testing.T) {
 	bits, err := benchmark.Bits(32)
 	require.NoError(t, err)
 	curves := benchmark.Curves(math.BN254)
@@ -154,20 +195,27 @@ func TestParallelBenchmarkSender(t *testing.T) {
 				tc.BenchmarkCase.Workers,
 				benchmark.Duration(),
 				func() *benchmarkSenderEnv {
-					env, err := newBenchmarkSenderEnv(1, tc.BenchmarkCase)
+					env, err := newBenchmarkSenderProofVerificationEnv(t.Context(), 1, tc.BenchmarkCase)
 					require.NoError(t, err)
 					return env
 				},
 				func(env *benchmarkSenderEnv) {
-					transfer, _, err := env.SenderEnvs[0].sender.GenerateZKTransfer(
-						t.Context(),
-						env.SenderEnvs[0].outvalues,
-						env.SenderEnvs[0].owners,
+					// deserialize action
+					ta := &transfer.Action{}
+					require.NoError(t, ta.Deserialize(env.SenderEnvs[0].transferRaw))
+					inputTokens := make([]*math.G1, len(ta.Inputs))
+					for j, in := range ta.Inputs {
+						inputTokens[j] = in.Token.Data
+					}
+
+					// instantiate the verifier and verify
+					require.NoError(t,
+						transfer.NewVerifier(
+							inputTokens,
+							ta.GetOutputCommitments(),
+							env.SenderEnvs[0].sender.PublicParams,
+						).Verify(ta.GetProof()),
 					)
-					require.NoError(t, err)
-					assert.NotNil(t, transfer)
-					_, err = transfer.Serialize()
-					require.NoError(t, err)
 				},
 			)
 			r.Print()

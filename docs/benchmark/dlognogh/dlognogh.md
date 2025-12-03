@@ -2,7 +2,9 @@
 
 Packages with benchmark tests:
 
-- `token/core/zkatdlog/nogh/v1/transfer`: `BenchmarkSender`, `BenchmarkVerificationSenderProof`, `TestParallelBenchmarkSender`
+- `token/core/zkatdlog/nogh/v1/transfer`: 
+   - `BenchmarkSender`, `BenchmarkVerificationSenderProof`, `TestParallelBenchmarkSender`, and `TestParallelBenchmarkVerificationSenderProof` are used to benchmark the generation of a transfer action. This includes also the generation of ZK proof for a transfer operation.
+   - `BenchmarkTransferProofGeneration`, `TestParallelBenchmarkTransferProofGeneration` are used to benchmark the generation of ZK proof alone. 
 - `token/core/zkatdlog/nogh/v1/issue`: `BenchmarkIssuer` and `BenchmarkProofVerificationIssuer`
 - `token/core/zkatdlog/nogh/v1`: `BenchmarkTransfer` 
 
@@ -13,29 +15,42 @@ We give two examples here:
 
 ## Benchmark: `token/core/zkatdlog/nogh/v1/transfer#BenchmarkSender`
 
-In this Section, we go through the steps necessary to run the benchmark and interpreter the results.
+In this Section, we go through the steps necessary to run the benchmark and interpret the results.
 For the other benchmarks the process is the same.
 
 ### Overview
 
 `BenchmarkSender` measures the cost of generating a zero-knowledge transfer (ZK transfer) using the DLog no-graph-hiding sender implementation and serializing the resulting transfer object. 
-Concretely, each benchmark iteration constructs the required sender environment, invokes `GenerateZKTransfer(...)`, and calls `Serialize()` on the returned transfer — so the measured time includes ZK transfer construction and serialization.
+Concretely, each benchmark iteration constructs the required sender environment, invokes `GenerateZKTransfer(...)`, and calls `Serialize()` on the returned transfer - so the measured time includes ZK transfer construction and serialization.
 
 The benchmark is implemented to run the same workload across a matrix of parameters (bit sizes, curve choices, number of inputs and outputs). 
 A helper inside the test (`generateBenchmarkCases`) programmatically generates all combinations of the selected parameters.
 
 ### Parameters
 
-The benchmark accepts the following tunable parameters (configured from the command line):
+The benchmark accepts the following tunable parameters:
 
 - Bits: integer bit sizes used for some setup (e.g., 32, 64). This is passed to the test setup code.
 - CurveID: the `math.CurveID` used (examples: `BN254`, `BLS12_381_BBS_GURVY`).
 - NumInputs: number of input tokens provided to the sender (1, 2, ...).
 - NumOutputs: number of outputs produced by the transfer (1, 2, ...).
 
+These parameters can be configured from the command line using the following flags:
+
+```shell
+  -bits string
+        a comma-separated list of bit sizes (32, 64,...)
+  -curves string
+        comma-separated list of curves. Supported curves are: FP256BN_AMCL, BN254, FP256BN_AMCL_MIRACL, BLS12_381_BBS, BLS12_381_BBS_GURVY, BLS12_381_BBS_GURVY_FAST_RNG
+  -num_inputs string
+        a comma-separate list of number of inputs (1,2,3,...)
+  -num_outputs string
+        a comma-separate list of number of outputs (1,2,3,...)
+```
+
 ### Default parameter set used in the benchmark
 
-The test file currently uses the following parameter slices (so the resulting combinations are the Cartesian product of these lists):
+If no flag is used, the test file currently uses the following parameter slices (so the resulting combinations are the Cartesian product of these lists):
 
 - bits: [32, 64]
 - curves: [BN254, BLS12_381_BBS_GURVY, BLS12_381_BBS_GURVY_FAST_RNG]
@@ -73,18 +88,7 @@ go test ./token/core/zkatdlog/nogh/v1/transfer -test.bench=BenchmarkSender -test
 
 > Notice that in this the above case, the `go test` options must be prefixed with `test.` otherwise the tool will fail.
  
-The test supports the following flags:
 
-```shell
-  -bits string
-        a comma-separated list of bit sizes (32, 64,...)
-  -curves string
-        comma-separated list of curves. Supported curves are: FP256BN_AMCL, BN254, FP256BN_AMCL_MIRACL, BLS12_381_BBS, BLS12_381_BBS_GURVY, BLS12_381_BBS_GURVY_FAST_RNG
-  -num_inputs string
-        a comma-separate list of number of inputs (1,2,3,...)
-  -num_outputs string
-        a comma-separate list of number of outputs (1,2,3,...)
-```
 
 ### Notes and best practices
 
