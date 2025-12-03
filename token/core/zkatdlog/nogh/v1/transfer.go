@@ -58,6 +58,7 @@ func (p *PreparedTransferInputs) Metadata() []*token.Metadata {
 	return metas
 }
 
+//go:generate counterfeiter -o mock/token_loader.go -fake-name TokenLoader . TokenLoader
 type TokenLoader interface {
 	LoadTokens(ctx context.Context, ids []*token2.ID) ([]LoadedToken, error)
 }
@@ -69,7 +70,7 @@ type TokenDeserializer interface {
 type TransferService struct {
 	Logger                  logging.Logger
 	PublicParametersManager PublicParametersManager
-	WalletService           driver.WalletService
+	AuditInfoProvider       driver.AuditInfoProvider
 	TokenLoader             TokenLoader
 	IdentityDeserializer    driver.Deserializer
 	TokenDeserializer       TokenDeserializer
@@ -80,7 +81,7 @@ type TransferService struct {
 func NewTransferService(
 	logger logging.Logger,
 	publicParametersManager PublicParametersManager,
-	walletService driver.WalletService,
+	auditInfoProvider driver.AuditInfoProvider,
 	tokenLoader TokenLoader,
 	identityDeserializer driver.Deserializer,
 	metrics *Metrics,
@@ -90,7 +91,7 @@ func NewTransferService(
 	return &TransferService{
 		Logger:                  logger,
 		PublicParametersManager: publicParametersManager,
-		WalletService:           walletService,
+		AuditInfoProvider:       auditInfoProvider,
 		TokenLoader:             tokenLoader,
 		IdentityDeserializer:    identityDeserializer,
 		Metrics:                 metrics,
@@ -168,7 +169,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 	}
 
 	// prepare transferMetadata
-	ws := s.WalletService
+	ws := s.AuditInfoProvider
 
 	var transferInputsMetadata []*driver.TransferInputMetadata
 	tokens := prepareInputs.Tokens()

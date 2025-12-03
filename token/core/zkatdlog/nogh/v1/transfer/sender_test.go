@@ -3,15 +3,20 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package transfer_test
 
 import (
+	"context"
 	"fmt"
+	"runtime"
 	"strconv"
 	"testing"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
@@ -24,7 +29,8 @@ import (
 
 func TestSender(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		env := NewSenderEnv(t, nil, 3, 2)
+		env, err := newSenderEnv(nil, 3, 2)
+		require.NoError(t, err)
 
 		transfer, _, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
 		require.NoError(t, err)
@@ -39,7 +45,8 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("when signature fails", func(t *testing.T) {
-		env := NewSenderEnv(t, nil, 3, 2)
+		env, err := newSenderEnv(nil, 3, 2)
+		require.NoError(t, err)
 		env.fakeSigningIdentity.SignReturnsOnCall(2, nil, errors.New("banana republic"))
 		transfer, _, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
 		require.NoError(t, err)
@@ -58,22 +65,24 @@ func TestSender(t *testing.T) {
 // BenchmarkSender benchmarks transfer action generation and serialization.
 // This includes the proof generation as well.
 func BenchmarkSender(b *testing.B) {
-	// Generate test cases programmatically instead of a static literal.
-	bits := []uint64{32, 64}
-	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
-	inputs := []int{1, 2, 3}
-	outputs := []int{1, 2, 3}
-
-	testCases := generateBenchmarkCases(bits, curves, inputs, outputs)
+	bits, err := benchmark.Bits(32, 64)
+	require.NoError(b, err)
+	curves := benchmark.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
+	inputs, err := benchmark.NumInputs(1, 2, 3)
+	require.NoError(b, err)
+	outputs, err := benchmark.NumOutputs(1, 2, 3)
+	require.NoError(b, err)
+	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, []int{1})
 
 	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			env := NewBenchmarkSenderEnv(b, b.N, tc.benchmarkCase)
+		b.Run(tc.Name, func(b *testing.B) {
+			env, err := newBenchmarkSenderEnv(b.N, tc.BenchmarkCase)
+			require.NoError(b, err)
 
-			// Optional: Reset timer if you had expensive setup code above
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				transfer, _, err := env.SenderEnvs[i].sender.GenerateZKTransfer(
 					b.Context(),
 					env.SenderEnvs[i].outvalues,
@@ -83,29 +92,72 @@ func BenchmarkSender(b *testing.B) {
 				assert.NotNil(b, transfer)
 				_, err = transfer.Serialize()
 				require.NoError(b, err)
+				i++
 			}
 		})
 	}
 }
 
-// BenchmarkSenderProofVerification benchmarks transfer action deserialization and proof verification.
-func BenchmarkSenderProofVerification(b *testing.B) {
-	// Generate test cases programmatically instead of a static literal.
-	bits := []uint64{32, 64}
-	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
-	inputs := []int{1, 2, 3}
-	outputs := []int{1, 2, 3}
-
-	testCases := generateBenchmarkCases(bits, curves, inputs, outputs)
+// TestParallelBenchmarkSender benchmarks transfer action generation and serialization when multiple go routines are doing the same thing.
+func TestParallelBenchmarkSender(t *testing.T) {
+	bits, err := benchmark.Bits(32)
+	require.NoError(t, err)
+	curves := benchmark.Curves(math.BN254)
+	inputs, err := benchmark.NumInputs(2)
+	require.NoError(t, err)
+	outputs, err := benchmark.NumOutputs(2)
+	require.NoError(t, err)
+	workers, err := benchmark.Workers(runtime.NumCPU())
+	require.NoError(t, err)
+	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, workers)
 
 	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			env := NewBenchmarkSenderProofVerificationEnv(b, b.N, tc.benchmarkCase)
+		t.Run(tc.Name, func(t *testing.T) {
+			r := benchmark.RunBenchmark(
+				tc.BenchmarkCase.Workers,
+				benchmark.Duration(),
+				func() *benchmarkSenderEnv {
+					env, err := newBenchmarkSenderEnv(1, tc.BenchmarkCase)
+					require.NoError(t, err)
+					return env
+				},
+				func(env *benchmarkSenderEnv) {
+					transfer, _, err := env.SenderEnvs[0].sender.GenerateZKTransfer(
+						t.Context(),
+						env.SenderEnvs[0].outvalues,
+						env.SenderEnvs[0].owners,
+					)
+					require.NoError(t, err)
+					assert.NotNil(t, transfer)
+					_, err = transfer.Serialize()
+					require.NoError(t, err)
+				},
+			)
+			r.Print()
+		})
+	}
+}
 
-			// Optional: Reset timer if you had expensive setup code above
+// BenchmarkVerificationSenderProof benchmarks transfer action deserialization and proof verification.
+func BenchmarkVerificationSenderProof(b *testing.B) {
+	bits, err := benchmark.Bits(32, 64)
+	require.NoError(b, err)
+	curves := benchmark.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
+	inputs, err := benchmark.NumInputs(1, 2, 3)
+	require.NoError(b, err)
+	outputs, err := benchmark.NumOutputs(1, 2, 3)
+	require.NoError(b, err)
+	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, []int{1})
+
+	for _, tc := range testCases {
+		b.Run(tc.Name, func(b *testing.B) {
+			env, err := newBenchmarkSenderProofVerificationEnv(b.Context(), b.N, tc.BenchmarkCase)
+			require.NoError(b, err)
+
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				// deserialize action
 				ta := &transfer.Action{}
 				require.NoError(b, ta.Deserialize(env.SenderEnvs[i].transferRaw))
@@ -122,12 +174,60 @@ func BenchmarkSenderProofVerification(b *testing.B) {
 						env.SenderEnvs[i].sender.PublicParams,
 					).Verify(ta.GetProof()),
 				)
+				i++
 			}
 		})
 	}
 }
 
-func PrepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
+// TestParallelBenchmarkVerificationSenderProof benchmarks transfer action deserialization and proof verification when multiple go routines are doing the same thing.
+func TestParallelBenchmarkVerificationSenderProof(t *testing.T) {
+	bits, err := benchmark.Bits(32)
+	require.NoError(t, err)
+	curves := benchmark.Curves(math.BN254)
+	inputs, err := benchmark.NumInputs(2)
+	require.NoError(t, err)
+	outputs, err := benchmark.NumOutputs(2)
+	require.NoError(t, err)
+	workers, err := benchmark.Workers(runtime.NumCPU())
+	require.NoError(t, err)
+	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, workers)
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			r := benchmark.RunBenchmark(
+				tc.BenchmarkCase.Workers,
+				benchmark.Duration(),
+				func() *benchmarkSenderEnv {
+					env, err := newBenchmarkSenderProofVerificationEnv(t.Context(), 1, tc.BenchmarkCase)
+					require.NoError(t, err)
+					return env
+				},
+				func(env *benchmarkSenderEnv) {
+					// deserialize action
+					ta := &transfer.Action{}
+					require.NoError(t, ta.Deserialize(env.SenderEnvs[0].transferRaw))
+					inputTokens := make([]*math.G1, len(ta.Inputs))
+					for j, in := range ta.Inputs {
+						inputTokens[j] = in.Token.Data
+					}
+
+					// instantiate the verifier and verify
+					require.NoError(t,
+						transfer.NewVerifier(
+							inputTokens,
+							ta.GetOutputCommitments(),
+							env.SenderEnvs[0].sender.PublicParams,
+						).Verify(ta.GetProof()),
+					)
+				},
+			)
+			r.Print()
+		})
+	}
+}
+
+func prepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
 	tokens := make([]*math.G1, len(values))
 	for i := range values {
 		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
@@ -135,7 +235,7 @@ func PrepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *ma
 	return tokens
 }
 
-type SenderEnv struct {
+type senderEnv struct {
 	sender              *transfer.Sender
 	outvalues           []uint64
 	owners              [][]byte
@@ -143,8 +243,7 @@ type SenderEnv struct {
 	transferRaw         []byte
 }
 
-func NewSenderEnv(tb testing.TB, pp *v1.PublicParams, numInputs int, numOutputs int) *SenderEnv {
-	tb.Helper()
+func newSenderEnv(pp *v1.PublicParams, numInputs int, numOutputs int) (*senderEnv, error) {
 	var (
 		fakeSigningIdentity *mock.SigningIdentity
 		signers             []driver.Signer
@@ -161,7 +260,10 @@ func NewSenderEnv(tb testing.TB, pp *v1.PublicParams, numInputs int, numOutputs 
 	)
 	var err error
 	if pp == nil {
-		pp = setup(tb, TestBits, TestCurve)
+		pp, err = setup(TestBits, TestCurve)
+		if err != nil {
+			return nil, err
+		}
 	}
 	signers = make([]driver.Signer, numInputs)
 	fakeSigningIdentity = &mock.SigningIdentity{}
@@ -170,7 +272,9 @@ func NewSenderEnv(tb testing.TB, pp *v1.PublicParams, numInputs int, numOutputs 
 	inBF = make([]*math.Zr, numInputs)
 	ids = make([]*token2.ID, numInputs)
 	rand, err := c.Rand()
-	require.NoError(tb, err)
+	if err != nil {
+		return nil, err
+	}
 	tokens = make([]*token.Token, numInputs)
 	inputInf := make([]*token.Metadata, numInputs)
 
@@ -188,7 +292,7 @@ func NewSenderEnv(tb testing.TB, pp *v1.PublicParams, numInputs int, numOutputs 
 		inBF[i] = c.NewRandomZr(rand)
 		ids[i] = &token2.ID{TxId: strconv.Itoa(i)}
 	}
-	inputs := PrepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
+	inputs := prepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
 
 	for i := range numInputs {
 		tokens[i] = &token.Token{Data: inputs[i], Owner: []byte(fmt.Sprintf("alice-%d", i))}
@@ -209,90 +313,63 @@ func NewSenderEnv(tb testing.TB, pp *v1.PublicParams, numInputs int, numOutputs 
 	}
 
 	sender, err = transfer.NewSender(signers, tokens, ids, inputInf, pp)
-	require.NoError(tb, err)
+	if err != nil {
+		return nil, err
+	}
 
-	return &SenderEnv{
+	return &senderEnv{
 		sender:              sender,
 		outvalues:           outvalues,
 		owners:              owners,
 		fakeSigningIdentity: fakeSigningIdentity,
-	}
+	}, nil
 }
 
-type BenchmarkSenderCase struct {
-	Bits       uint64
-	CurveID    math.CurveID
-	NumInputs  int
-	NumOutputs int
+type benchmarkSenderEnv struct {
+	SenderEnvs []*senderEnv
 }
 
-// generateBenchmarkCases returns all combinations of BenchmarkSenderCase created
-// from the provided slices of bits, curve IDs, number of inputs and outputs.
-func generateBenchmarkCases(bits []uint64, curves []math.CurveID, inputs []int, outputs []int) []struct {
-	name          string
-	benchmarkCase *BenchmarkSenderCase
-} {
-	var cases []struct {
-		name          string
-		benchmarkCase *BenchmarkSenderCase
+func newBenchmarkSenderEnv(n int, benchmarkCase *benchmark.Case) (*benchmarkSenderEnv, error) {
+	envs := make([]*senderEnv, n)
+	pp, err := setup(benchmarkCase.Bits, benchmarkCase.CurveID)
+	if err != nil {
+		return nil, err
 	}
-	for _, b := range bits {
-		for _, c := range curves {
-			for _, ni := range inputs {
-				for _, no := range outputs {
-					name := fmt.Sprintf("Setup(bits %d, curve %s, #i %d, #o %d)", b, math.CurveIDToString(c), ni, no)
-					cases = append(cases, struct {
-						name          string
-						benchmarkCase *BenchmarkSenderCase
-					}{
-						name: name,
-						benchmarkCase: &BenchmarkSenderCase{
-							Bits:       b,
-							CurveID:    c,
-							NumInputs:  ni,
-							NumOutputs: no,
-						},
-					})
-				}
-			}
+	for i := range envs {
+		envs[i], err = newSenderEnv(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
+		if err != nil {
+			return nil, err
 		}
 	}
-	return cases
+	return &benchmarkSenderEnv{SenderEnvs: envs}, nil
 }
 
-type BenchmarkSenderEnv struct {
-	SenderEnvs []*SenderEnv
-}
-
-func NewBenchmarkSenderEnv(b *testing.B, n int, benchmarkCase *BenchmarkSenderCase) *BenchmarkSenderEnv {
-	b.Helper()
-	envs := make([]*SenderEnv, n)
-	pp := setup(b, benchmarkCase.Bits, benchmarkCase.CurveID)
-	for i := range envs {
-		envs[i] = NewSenderEnv(b, pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
+func newBenchmarkSenderProofVerificationEnv(ctx context.Context, n int, benchmarkCase *benchmark.Case) (*benchmarkSenderEnv, error) {
+	envs := make([]*senderEnv, n)
+	pp, err := setup(benchmarkCase.Bits, benchmarkCase.CurveID)
+	if err != nil {
+		return nil, err
 	}
-	return &BenchmarkSenderEnv{SenderEnvs: envs}
-}
-
-func NewBenchmarkSenderProofVerificationEnv(b *testing.B, n int, benchmarkCase *BenchmarkSenderCase) *BenchmarkSenderEnv {
-	b.Helper()
-	envs := make([]*SenderEnv, n)
-	pp := setup(b, benchmarkCase.Bits, benchmarkCase.CurveID)
 	for i := range envs {
-		env := NewSenderEnv(b, pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
+		env, err := newSenderEnv(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
+		if err != nil {
+			return nil, err
+		}
 		transfer, _, err := env.sender.GenerateZKTransfer(
-			b.Context(),
+			ctx,
 			env.outvalues,
 			env.owners,
 		)
-		require.NoError(b, err)
-		assert.NotNil(b, transfer)
+		if err != nil {
+			return nil, err
+		}
 		raw, err := transfer.Serialize()
-		require.NoError(b, err)
+		if err != nil {
+			return nil, err
+		}
 
 		env.transferRaw = raw
-
 		envs[i] = env
 	}
-	return &BenchmarkSenderEnv{SenderEnvs: envs}
+	return &benchmarkSenderEnv{SenderEnvs: envs}, nil
 }

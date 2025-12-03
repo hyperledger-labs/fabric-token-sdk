@@ -7,9 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"runtime"
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkKmIdentity(b *testing.B) {
@@ -43,4 +46,24 @@ func BenchmarkKmIdentity(b *testing.B) {
 			_, _ = keyManager.Identity(b.Context(), nil)
 		}
 	})
+}
+
+func TestParallelBenchmarkIdemixKMIdentity(t *testing.T) {
+	keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
+	defer cleanup()
+
+	workers, err := benchmark.Workers(runtime.NumCPU())
+	require.NoError(t, err)
+
+	r := benchmark.RunBenchmark(
+		workers[0],
+		benchmark.Duration(),
+		func() *KeyManager {
+			return keyManager
+		},
+		func(km *KeyManager) {
+			_, _ = keyManager.Identity(t.Context(), nil)
+		},
+	)
+	r.Print()
 }

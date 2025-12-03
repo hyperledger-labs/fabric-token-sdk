@@ -7,11 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package issue_test
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue/mock"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -44,21 +45,22 @@ func TestIssuer(t *testing.T) {
 }
 
 func BenchmarkIssuer(b *testing.B) {
-	// Generate test cases programmatically instead of a static literal.
-	bits := []uint64{32, 64}
-	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
-	outputs := []int{1, 2, 3}
-
-	testCases := generateBenchmarkCases(bits, curves, outputs)
+	bits, err := benchmark.Bits(32, 64)
+	require.NoError(b, err)
+	curves := benchmark.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
+	outputs, err := benchmark.NumOutputs(1, 2, 3)
+	require.NoError(b, err)
+	testCases := benchmark.GenerateCases(bits, curves, nil, outputs, nil)
 
 	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			env := NewBenchmarkIssuerEnv(b, b.N, tc.benchmarkCase)
+		b.Run(tc.Name, func(b *testing.B) {
+			env := newBenchmarkIssuerEnv(b, b.N, tc.BenchmarkCase)
 
 			// Optional: Reset timer if you had expensive setup code above
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				issuer := issue2.NewIssuer("ABC", &mock.SigningIdentity{}, env.IssuerEnvs[i].pp)
 				action, _, err := issuer.GenerateZKIssue(
 					env.IssuerEnvs[i].outputValues,
@@ -67,27 +69,29 @@ func BenchmarkIssuer(b *testing.B) {
 				require.NoError(b, err)
 				_, err = action.Serialize()
 				require.NoError(b, err)
+				i++
 			}
 		})
 	}
 }
 
-func BenchmarkIssuerProofVerification(b *testing.B) {
-	// Generate test cases programmatically instead of a static literal.
-	bits := []uint64{32, 64}
-	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
-	outputs := []int{1, 2, 3}
-
-	testCases := generateBenchmarkCases(bits, curves, outputs)
+func BenchmarkProofVerificationIssuer(b *testing.B) {
+	bits, err := benchmark.Bits(32, 64)
+	require.NoError(b, err)
+	curves := benchmark.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
+	outputs, err := benchmark.NumOutputs(1, 2, 3)
+	require.NoError(b, err)
+	testCases := benchmark.GenerateCases(bits, curves, nil, outputs, nil)
 
 	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			env := NewBenchmarkIssuerProofVerificationEnv(b, b.N, tc.benchmarkCase)
+		b.Run(tc.Name, func(b *testing.B) {
+			env := newBenchmarkIssuerProofVerificationEnv(b, b.N, tc.BenchmarkCase)
 
 			// Optional: Reset timer if you had expensive setup code above
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				// deserialize action
 				action := &issue2.Action{}
 				require.NoError(b, action.Deserialize(env.IssuerEnvs[i].actionRaw))
@@ -98,56 +102,20 @@ func BenchmarkIssuerProofVerification(b *testing.B) {
 					coms[i] = action.Outputs[i].Data
 				}
 				require.NoError(b, issue2.NewVerifier(coms, env.IssuerEnvs[i].pp).Verify(action.GetProof()))
+				i++
 			}
 		})
 	}
 }
 
-type BenchmarkCase struct {
-	Bits       uint64
-	CurveID    math.CurveID
-	NumOutputs int
-}
-
-// generateBenchmarkCases returns all combinations of BenchmarkCase created
-// from the provided slices of bits, curve IDs, number of inputs and outputs.
-func generateBenchmarkCases(bits []uint64, curves []math.CurveID, outputs []int) []struct {
-	name          string
-	benchmarkCase *BenchmarkCase
-} {
-	var cases []struct {
-		name          string
-		benchmarkCase *BenchmarkCase
-	}
-	for _, b := range bits {
-		for _, c := range curves {
-			for _, ni := range outputs {
-				name := fmt.Sprintf("Setup(bits %d, curve %s, #o %d)", b, math.CurveIDToString(c), ni)
-				cases = append(cases, struct {
-					name          string
-					benchmarkCase *BenchmarkCase
-				}{
-					name: name,
-					benchmarkCase: &BenchmarkCase{
-						Bits:       b,
-						CurveID:    c,
-						NumOutputs: ni,
-					},
-				})
-			}
-		}
-	}
-	return cases
-}
-
-type IssuerEnv struct {
+type issuerEnv struct {
 	pp           *v1.PublicParams
 	outputValues []uint64
 	outputOwners [][]byte
 	actionRaw    []byte
 }
 
-func NewIssuerEnv(pp *v1.PublicParams, numOutputs int) *IssuerEnv {
+func newIssuerEnv(pp *v1.PublicParams, numOutputs int) *issuerEnv {
 	outputValues := make([]uint64, numOutputs)
 	outputOwners := make([][]byte, numOutputs)
 	for i := range outputValues {
@@ -155,14 +123,14 @@ func NewIssuerEnv(pp *v1.PublicParams, numOutputs int) *IssuerEnv {
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
-	return &IssuerEnv{
+	return &issuerEnv{
 		pp:           pp,
 		outputValues: outputValues,
 		outputOwners: outputOwners,
 	}
 }
 
-func NewIssuerProofVerificationEnv(tb testing.TB, pp *v1.PublicParams, numOutputs int) *IssuerEnv {
+func newIssuerProofVerificationEnv(tb testing.TB, pp *v1.PublicParams, numOutputs int) *issuerEnv {
 	tb.Helper()
 	outputValues := make([]uint64, numOutputs)
 	outputOwners := make([][]byte, numOutputs)
@@ -180,34 +148,34 @@ func NewIssuerProofVerificationEnv(tb testing.TB, pp *v1.PublicParams, numOutput
 	actionRaw, err := action.Serialize()
 	require.NoError(tb, err)
 
-	return &IssuerEnv{
+	return &issuerEnv{
 		pp:        pp,
 		actionRaw: actionRaw,
 	}
 }
 
-type BenchmarkIssuerEnv struct {
-	IssuerEnvs []*IssuerEnv
+type benchmarkIssuerEnv struct {
+	IssuerEnvs []*issuerEnv
 }
 
-func NewBenchmarkIssuerEnv(b *testing.B, n int, benchmarkCase *BenchmarkCase) *BenchmarkIssuerEnv {
+func newBenchmarkIssuerEnv(b *testing.B, n int, benchmarkCase *benchmark.Case) *benchmarkIssuerEnv {
 	b.Helper()
-	envs := make([]*IssuerEnv, n)
+	envs := make([]*issuerEnv, n)
 	pp := setup(b, benchmarkCase.Bits, benchmarkCase.CurveID)
 	for i := range envs {
-		envs[i] = NewIssuerEnv(pp, benchmarkCase.NumOutputs)
+		envs[i] = newIssuerEnv(pp, benchmarkCase.NumOutputs)
 	}
-	return &BenchmarkIssuerEnv{IssuerEnvs: envs}
+	return &benchmarkIssuerEnv{IssuerEnvs: envs}
 }
 
-func NewBenchmarkIssuerProofVerificationEnv(b *testing.B, n int, benchmarkCase *BenchmarkCase) *BenchmarkIssuerEnv {
+func newBenchmarkIssuerProofVerificationEnv(b *testing.B, n int, benchmarkCase *benchmark.Case) *benchmarkIssuerEnv {
 	b.Helper()
-	envs := make([]*IssuerEnv, n)
+	envs := make([]*issuerEnv, n)
 	pp := setup(b, benchmarkCase.Bits, benchmarkCase.CurveID)
 	for i := range envs {
-		envs[i] = NewIssuerProofVerificationEnv(b, pp, benchmarkCase.NumOutputs)
+		envs[i] = newIssuerProofVerificationEnv(b, pp, benchmarkCase.NumOutputs)
 	}
-	return &BenchmarkIssuerEnv{IssuerEnvs: envs}
+	return &benchmarkIssuerEnv{IssuerEnvs: envs}
 }
 
 func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
