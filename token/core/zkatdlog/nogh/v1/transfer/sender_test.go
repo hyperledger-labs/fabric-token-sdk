@@ -81,7 +81,8 @@ func BenchmarkSender(b *testing.B) {
 
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				transfer, _, err := env.SenderEnvs[i].sender.GenerateZKTransfer(
 					b.Context(),
 					env.SenderEnvs[i].outvalues,
@@ -91,6 +92,7 @@ func BenchmarkSender(b *testing.B) {
 				assert.NotNil(b, transfer)
 				_, err = transfer.Serialize()
 				require.NoError(b, err)
+				i++
 			}
 		})
 	}
@@ -154,7 +156,8 @@ func BenchmarkVerificationSenderProof(b *testing.B) {
 
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				// deserialize action
 				ta := &transfer.Action{}
 				require.NoError(b, ta.Deserialize(env.SenderEnvs[i].transferRaw))
@@ -171,6 +174,7 @@ func BenchmarkVerificationSenderProof(b *testing.B) {
 						env.SenderEnvs[i].sender.PublicParams,
 					).Verify(ta.GetProof()),
 				)
+				i++
 			}
 		})
 	}

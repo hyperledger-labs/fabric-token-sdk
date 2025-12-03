@@ -79,7 +79,8 @@ func BenchmarkTransfer(b *testing.B) {
 			// Optional: Reset timer if you had expensive setup code above
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				action, _, err := env.Envs[i].ts.Transfer(
 					b.Context(),
 					"an_anchor",
@@ -90,6 +91,7 @@ func BenchmarkTransfer(b *testing.B) {
 				)
 				require.NoError(b, err)
 				assert.NotNil(b, action)
+				i++
 			}
 		})
 	}

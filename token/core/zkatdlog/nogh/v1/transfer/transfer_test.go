@@ -78,7 +78,8 @@ func BenchmarkTransferProofGeneration(b *testing.B) {
 
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				prover, err := transfer.NewProver(
 					env.ProverEnvs[i].a,
 					env.ProverEnvs[i].b,
@@ -89,6 +90,7 @@ func BenchmarkTransferProofGeneration(b *testing.B) {
 				require.NoError(b, err)
 				_, err = prover.Prove()
 				require.NoError(b, err)
+				i++
 			}
 		})
 	}

@@ -59,7 +59,8 @@ func BenchmarkIssuer(b *testing.B) {
 			// Optional: Reset timer if you had expensive setup code above
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				issuer := issue2.NewIssuer("ABC", &mock.SigningIdentity{}, env.IssuerEnvs[i].pp)
 				action, _, err := issuer.GenerateZKIssue(
 					env.IssuerEnvs[i].outputValues,
@@ -68,6 +69,7 @@ func BenchmarkIssuer(b *testing.B) {
 				require.NoError(b, err)
 				_, err = action.Serialize()
 				require.NoError(b, err)
+				i++
 			}
 		})
 	}
@@ -88,7 +90,8 @@ func BenchmarkProofVerificationIssuer(b *testing.B) {
 			// Optional: Reset timer if you had expensive setup code above
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				// deserialize action
 				action := &issue2.Action{}
 				require.NoError(b, action.Deserialize(env.IssuerEnvs[i].actionRaw))
@@ -99,6 +102,7 @@ func BenchmarkProofVerificationIssuer(b *testing.B) {
 					coms[i] = action.Outputs[i].Data
 				}
 				require.NoError(b, issue2.NewVerifier(coms, env.IssuerEnvs[i].pp).Verify(action.GetProof()))
+				i++
 			}
 		})
 	}

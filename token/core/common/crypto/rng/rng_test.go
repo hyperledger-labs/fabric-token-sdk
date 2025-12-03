@@ -135,7 +135,7 @@ func BenchmarkCryptoRand_Read(b *testing.B) {
 			b.SetBytes(int64(size.len))
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				// crypto/rand typically involves a syscall (getrandom/urandom)
 				// or a locked internal generator depending on OS/Go version.
 				_, err := rand.Read(buf)
@@ -157,7 +157,7 @@ func BenchmarkSecureRNG_Read(b *testing.B) {
 			b.SetBytes(int64(size.len))
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				// Should be faster due to user-space buffering and sync.Pool
 				_, err := rng.Read(buf)
 				if err != nil {
