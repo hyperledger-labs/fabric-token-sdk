@@ -341,8 +341,8 @@ func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias dr
 			entry.DebugStack = debug.Stack()
 		}
 		p.verifiers.Add(id, entry)
-		if setAlias {
-			p.verifiers.Add(aliasID, entry)
-		}
+		// if setAlias {
+		// 	p.verifiers.Add(aliasID, entry)
+		// }
 	}
 }
