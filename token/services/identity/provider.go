@@ -123,7 +123,7 @@ func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identit
 	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
 	}
-	p.verifiers.Add(idHash, entry)
+	// p.verifiers.Add(idHash, entry)
 	p.Logger.DebugfContext(ctx, "register verifier to [%s]:[%s]", idHash, logging.Identifier(v))
 	return nil
 }
