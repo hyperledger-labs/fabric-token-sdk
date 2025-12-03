@@ -94,7 +94,7 @@ func NewProvider(
 		storage:                 storage,
 		isMeCache:               secondcache.NewTyped[bool](5000),
 		signers:                 secondcache.NewTyped[*SignerEntry](5000),
-		verifiers:               secondcache.NewTyped[*VerifierEntry](5000),
+		// verifiers:               secondcache.NewTyped[*VerifierEntry](5000),
 	}
 }
 
