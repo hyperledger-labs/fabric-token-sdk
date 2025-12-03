@@ -73,8 +73,6 @@ type Provider struct {
 
 	isMeCache cache[bool]
 	signers   cache[*SignerEntry]
-	// remove this cache
-	// verifiers cache[*VerifierEntry]
 }
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
@@ -326,15 +324,4 @@ func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias dr
 			p.signers.Add(aliasID, entry)
 		}
 	}
-	// verifiers
-	// if descriptor.Verifier != nil {
-	// 	entry := &VerifierEntry{Verifier: descriptor.Verifier}
-	// 	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-	// 		entry.DebugStack = debug.Stack()
-	// 	}
-	// 	p.verifiers.Add(id, entry)
-	// 	if setAlias {
-	// 		p.verifiers.Add(aliasID, entry)
-	// 	}
-	// }
 }
