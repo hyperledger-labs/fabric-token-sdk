@@ -27,7 +27,7 @@ var (
 
 func TestTransfer(t *testing.T) {
 	t.Run("parameters and witness are initialized correctly", func(t *testing.T) {
-		env, err := NewTransferEnv(t)
+		env, err := newTransferEnv(t)
 		require.NoError(t, err)
 		proof, err := env.prover.Prove()
 		require.NoError(t, err)
@@ -36,7 +36,7 @@ func TestTransfer(t *testing.T) {
 		require.NoError(t, err)
 	})
 	t.Run("Output Values > Input Values", func(t *testing.T) {
-		env, err := NewTransferEnvWithWrongSum()
+		env, err := newTransferEnvWithWrongSum()
 		require.NoError(t, err)
 
 		proof, err := env.prover.Prove()
@@ -47,7 +47,7 @@ func TestTransfer(t *testing.T) {
 		require.Contains(t, err.Error(), "invalid transfer proof: invalid sum and type proof")
 	})
 	t.Run("Output Values out of range", func(t *testing.T) {
-		env, err := NewTransferEnvWithInvalidRange()
+		env, err := newTransferEnvWithInvalidRange()
 		require.NoError(t, err)
 
 		proof, err := env.prover.Prove()
@@ -73,7 +73,7 @@ func BenchmarkTransferProofGeneration(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(tc.Name, func(b *testing.B) {
 			// prepare env
-			env, err := NewBenchmarkTransferEnv(b.N, nil)
+			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase)
 			require.NoError(b, err)
 
 			b.ResetTimer()
@@ -112,12 +112,12 @@ func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
 			r := benchmark.RunBenchmark(
 				tc.BenchmarkCase.Workers,
 				benchmark.Duration(),
-				func() *BenchmarkTransferEnv {
-					env, err := NewBenchmarkTransferEnv(1, tc.BenchmarkCase)
+				func() *benchmarkTransferEnv {
+					env, err := newBenchmarkTransferEnv(1, tc.BenchmarkCase)
 					require.NoError(t, err)
 					return env
 				},
-				func(env *BenchmarkTransferEnv) {
+				func(env *benchmarkTransferEnv) {
 					prover, err := transfer.NewProver(
 						env.ProverEnvs[0].a,
 						env.ProverEnvs[0].b,
@@ -149,7 +149,7 @@ func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier, error) {
 		return nil, nil, err
 	}
 
-	intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, 0, 0)
+	intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, 2, 2)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -189,7 +189,7 @@ func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier, 
 		return nil, nil, err
 	}
 
-	intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, 0, 0)
+	intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, 2, 2)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -292,75 +292,75 @@ func prepareInvalidInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, 
 	return intw, outtw, in, out, nil
 }
 
-type TransferEnv struct {
+type transferEnv struct {
 	prover   *transfer.Prover
 	verifier *transfer.Verifier
 }
 
-func NewTransferEnv(tb testing.TB) (*TransferEnv, error) {
+func newTransferEnv(tb testing.TB) (*transferEnv, error) {
 	tb.Helper()
 	prover, verifier, err := prepareZKTransfer()
 	if err != nil {
 		return nil, err
 	}
-	return &TransferEnv{
+	return &transferEnv{
 		prover:   prover,
 		verifier: verifier,
 	}, nil
 }
 
-func NewTransferEnvWithWrongSum() (*TransferEnv, error) {
+func newTransferEnvWithWrongSum() (*transferEnv, error) {
 	prover, verifier, err := prepareZKTransferWithWrongSum()
 	if err != nil {
 		return nil, err
 	}
-	return &TransferEnv{
+	return &transferEnv{
 		prover:   prover,
 		verifier: verifier,
 	}, nil
 }
 
-func NewTransferEnvWithInvalidRange() (*TransferEnv, error) {
+func newTransferEnvWithInvalidRange() (*transferEnv, error) {
 	prover, verifier, err := prepareZKTransferWithInvalidRange()
 	if err != nil {
 		return nil, err
 	}
-	return &TransferEnv{
+	return &transferEnv{
 		prover:   prover,
 		verifier: verifier,
 	}, nil
 }
 
-type SingleProverEnv struct {
+type singleProverEnv struct {
 	a []*token.Metadata
 	b []*token.Metadata
 	c []*math.G1
 	d []*math.G1
 }
 
-type BenchmarkTransferEnv struct {
-	ProverEnvs []SingleProverEnv
+type benchmarkTransferEnv struct {
+	ProverEnvs []singleProverEnv
 	pp         *v1.PublicParams
 }
 
-func NewBenchmarkTransferEnv(n int, benchmarkCase *benchmark.Case) (*BenchmarkTransferEnv, error) {
+func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark.Case) (*benchmarkTransferEnv, error) {
 	pp, err := setup(benchmarkCase.Bits, benchmarkCase.CurveID)
 	if err != nil {
 		return nil, err
 	}
 
-	entries := make([]SingleProverEnv, n)
+	entries := make([]singleProverEnv, n)
 	for i := 0; i < n; i++ {
 		intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
 		if err != nil {
 			return nil, err
 		}
-		entries[i] = SingleProverEnv{
+		entries[i] = singleProverEnv{
 			a: intw,
 			b: outtw,
 			c: in,
 			d: out,
 		}
 	}
-	return &BenchmarkTransferEnv{ProverEnvs: entries, pp: pp}, nil
+	return &benchmarkTransferEnv{ProverEnvs: entries, pp: pp}, nil
 }
