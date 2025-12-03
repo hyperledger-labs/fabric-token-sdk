@@ -32,8 +32,8 @@ import (
 	tokn "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	enginedlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
@@ -49,9 +49,149 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-var fakeLedger *mock.Ledger
+func TestValidator(t *testing.T) {
+	t.Run("Validator is called correctly with a non-anonymous issue action", func(t *testing.T) {
+		env, err := newEnv()
+		require.NoError(t, err)
 
-type Env struct {
+		raw, err := env.ir.Bytes()
+		require.NoError(t, err)
+		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), env.fakeLedger.GetStateStub, "1", raw)
+		require.NoError(t, err)
+		require.Len(t, actions, 1)
+	})
+	t.Run("validator is called correctly with a transfer action", func(t *testing.T) {
+		env, err := newEnv()
+		require.NoError(t, err)
+
+		raw, err := env.inputsForTransfer[0].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(0, raw, nil)
+
+		raw, err = env.inputsForTransfer[1].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(1, raw, nil)
+
+		raw, err = env.inputsForTransfer[0].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(2, raw, nil)
+
+		raw, err = env.inputsForTransfer[1].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(3, raw, nil)
+
+		env.fakeLedger.GetStateReturnsOnCall(4, nil, nil)
+		env.fakeLedger.GetStateReturnsOnCall(5, nil, nil)
+
+		raw, err = env.tr.Bytes()
+		require.NoError(t, err)
+		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), env.fakeLedger.GetState, "1", raw)
+		require.NoError(t, err)
+		require.Len(t, actions, 1)
+	})
+	t.Run("validator is called correctly with a redeem action", func(t *testing.T) {
+		env, err := newEnv()
+		require.NoError(t, err)
+		raw, err := env.inputsForRedeem[0].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(0, raw, nil)
+
+		raw, err = env.inputsForRedeem[1].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(1, raw, nil)
+
+		raw, err = env.inputsForRedeem[0].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(2, raw, nil)
+
+		raw, err = env.inputsForRedeem[1].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(3, raw, nil)
+
+		env.fakeLedger.GetStateReturnsOnCall(4, nil, nil)
+
+		raw, err = env.rr.Bytes()
+		require.NoError(t, err)
+
+		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), env.fakeLedger.GetState, "1", raw)
+		require.NoError(t, err)
+		require.Len(t, actions, 1)
+	})
+	t.Run("engine is called correctly with atomic swap", func(t *testing.T) {
+		env, err := newEnv()
+		require.NoError(t, err)
+
+		raw, err := env.inputsForTransfer[0].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(0, raw, nil)
+
+		raw, err = env.inputsForTransfer[1].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(1, raw, nil)
+
+		env.fakeLedger.GetStateReturnsOnCall(2, nil, nil)
+
+		raw, err = env.inputsForTransfer[0].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(3, raw, nil)
+
+		raw, err = env.inputsForTransfer[1].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(4, raw, nil)
+
+		env.fakeLedger.GetStateReturnsOnCall(5, nil, nil)
+		env.fakeLedger.GetStateReturnsOnCall(6, nil, nil)
+
+		raw, err = env.ar.Bytes()
+		require.NoError(t, err)
+
+		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), env.fakeLedger.GetState, "2", raw)
+		require.NoError(t, err)
+		require.Len(t, actions, 1)
+	})
+	t.Run("when the sender's signature is not valid: wrong txID", func(t *testing.T) {
+		env, err := newEnv()
+		require.NoError(t, err)
+
+		raw, err := env.inputsForTransfer[0].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(0, raw, nil)
+
+		raw, err = env.inputsForTransfer[1].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(1, raw, nil)
+
+		env.fakeLedger.GetStateReturnsOnCall(2, nil, nil)
+
+		raw, err = env.inputsForTransfer[0].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(3, raw, nil)
+
+		raw, err = env.inputsForTransfer[1].Serialize()
+		require.NoError(t, err)
+		env.fakeLedger.GetStateReturnsOnCall(4, raw, nil)
+
+		env.fakeLedger.GetStateReturnsOnCall(5, nil, nil)
+		env.fakeLedger.GetStateReturnsOnCall(6, nil, nil)
+
+		request := &driver.TokenRequest{Issues: env.ar.Issues, Transfers: env.ar.Transfers}
+		raw, err = request.MarshalToMessageToSign([]byte("3"))
+		require.NoError(t, err)
+
+		signatures, err := env.sender.SignTokenActions(raw)
+		require.NoError(t, err)
+		env.ar.Signatures[1] = signatures[0]
+
+		raw, err = env.ar.Bytes()
+		require.NoError(t, err)
+
+		_, _, err = env.engine.VerifyTokenRequestFromRaw(t.Context(), env.fakeLedger.GetState, "2", raw)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed signature verification")
+	})
+}
+
+type env struct {
 	ir                *driver.TokenRequest
 	engine            *enginedlog.Validator
 	inputsForTransfer []*tokn.Token
@@ -60,9 +200,10 @@ type Env struct {
 	rr                *driver.TokenRequest
 	ar                *driver.TokenRequest
 	sender            *transfer.Sender
+	fakeLedger        *mock.Ledger
 }
 
-func NewEnv() (*Env, error) {
+func newEnv() (*env, error) {
 	var (
 		engine *enginedlog.Validator
 		pp     *v1.PublicParams
@@ -79,7 +220,7 @@ func NewEnv() (*Env, error) {
 		tr *driver.TokenRequest // transfer request
 		ar *driver.TokenRequest // atomic action request
 	)
-	fakeLedger = &mock.Ledger{}
+	fakeLedger := &mock.Ledger{}
 	var err error
 	// prepare public parameters
 	ipk, err = os.ReadFile("./testdata/bls12_381_bbs/idemix/msp/IssuerPublicKey")
@@ -132,7 +273,7 @@ func NewEnv() (*Env, error) {
 	}
 
 	// prepare redeem
-	sender, rr, _, inputsForRedeem, err = prepareRedeemRequest(pp, auditor)
+	_, rr, _, inputsForRedeem, err = prepareRedeemRequest(pp, auditor)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +321,7 @@ func NewEnv() (*Env, error) {
 
 	ar.Signatures = append(ar.Signatures, signatures...)
 
-	return &Env{
+	return &env{
 		ir:                ir,
 		tr:                tr,
 		engine:            engine,
@@ -189,151 +330,8 @@ func NewEnv() (*Env, error) {
 		rr:                rr,
 		ar:                ar,
 		sender:            sender,
+		fakeLedger:        fakeLedger,
 	}, nil
-}
-
-func TestValidator(t *testing.T) {
-	t.Run("Validator is called correctly with a non-anonymous issue action", func(t *testing.T) {
-		env, err := NewEnv()
-		require.NoError(t, err)
-
-		raw, err := env.ir.Bytes()
-		require.NoError(t, err)
-		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), fakeLedger.GetStateStub, "1", raw)
-		require.NoError(t, err)
-		require.Len(t, actions, 1)
-	})
-	t.Run("validator is called correctly with a transfer action", func(t *testing.T) {
-		env, err := NewEnv()
-		require.NoError(t, err)
-
-		raw, err := env.inputsForTransfer[0].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(0, raw, nil)
-
-		raw, err = env.inputsForTransfer[1].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-		raw, err = env.inputsForTransfer[0].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(2, raw, nil)
-
-		raw, err = env.inputsForTransfer[1].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-		fakeLedger.GetStateReturnsOnCall(4, nil, nil)
-		fakeLedger.GetStateReturnsOnCall(5, nil, nil)
-
-		raw, err = env.tr.Bytes()
-		require.NoError(t, err)
-		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), getState, "1", raw)
-		require.NoError(t, err)
-		require.Len(t, actions, 1)
-	})
-	t.Run("validator is called correctly with a redeem action", func(t *testing.T) {
-		env, err := NewEnv()
-		require.NoError(t, err)
-		raw, err := env.inputsForRedeem[0].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(0, raw, nil)
-
-		raw, err = env.inputsForRedeem[1].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-		raw, err = env.inputsForRedeem[0].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(2, raw, nil)
-
-		raw, err = env.inputsForRedeem[1].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-		fakeLedger.GetStateReturnsOnCall(4, nil, nil)
-
-		raw, err = env.rr.Bytes()
-		require.NoError(t, err)
-
-		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), getState, "1", raw)
-		require.NoError(t, err)
-		require.Len(t, actions, 1)
-	})
-	t.Run("engine is called correctly with atomic swap", func(t *testing.T) {
-		env, err := NewEnv()
-		require.NoError(t, err)
-
-		raw, err := env.inputsForTransfer[0].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(0, raw, nil)
-
-		raw, err = env.inputsForTransfer[1].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-		fakeLedger.GetStateReturnsOnCall(2, nil, nil)
-
-		raw, err = env.inputsForTransfer[0].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-		raw, err = env.inputsForTransfer[1].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(4, raw, nil)
-
-		fakeLedger.GetStateReturnsOnCall(5, nil, nil)
-		fakeLedger.GetStateReturnsOnCall(6, nil, nil)
-
-		raw, err = env.ar.Bytes()
-		require.NoError(t, err)
-
-		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), getState, "2", raw)
-		require.NoError(t, err)
-		require.Len(t, actions, 1)
-	})
-	t.Run("when the sender's signature is not valid: wrong txID", func(t *testing.T) {
-		env, err := NewEnv()
-		require.NoError(t, err)
-
-		raw, err := env.inputsForTransfer[0].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(0, raw, nil)
-
-		raw, err = env.inputsForTransfer[1].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-		fakeLedger.GetStateReturnsOnCall(2, nil, nil)
-
-		raw, err = env.inputsForTransfer[0].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-		raw, err = env.inputsForTransfer[1].Serialize()
-		require.NoError(t, err)
-		fakeLedger.GetStateReturnsOnCall(4, raw, nil)
-
-		fakeLedger.GetStateReturnsOnCall(5, nil, nil)
-		fakeLedger.GetStateReturnsOnCall(6, nil, nil)
-		raw, err = env.ar.Bytes()
-		require.NoError(t, err)
-
-		request := &driver.TokenRequest{Issues: env.ar.Issues, Transfers: env.ar.Transfers}
-		raw, err = request.MarshalToMessageToSign([]byte("3"))
-		require.NoError(t, err)
-
-		signatures, err := env.sender.SignTokenActions(raw)
-		require.NoError(t, err)
-		env.ar.Signatures[1] = signatures[0]
-
-		raw, err = env.ar.Bytes()
-		require.NoError(t, err)
-
-		_, _, err = env.engine.VerifyTokenRequestFromRaw(t.Context(), getState, "2", raw)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed signature verification")
-	})
 }
 
 func prepareECDSASigner() (*Signer, *Verifier, error) {
@@ -397,17 +395,17 @@ func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*trans
 	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners, nil, nil)
 }
 
-func prepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
+func prepareTokens(values, bf []*math.Zr, tokenType string, pp []*math.G1, curve *math.Curve) []*math.G1 {
 	tokens := make([]*math.G1, len(values))
 	for i := range values {
-		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
+		tokens[i] = prepareToken(values[i], bf[i], tokenType, pp, curve)
 	}
 	return tokens
 }
 
-func prepareToken(value *math.Zr, rand *math.Zr, ttype string, pp []*math.G1, curve *math.Curve) *math.G1 {
+func prepareToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1, curve *math.Curve) *math.G1 {
 	token := curve.NewG1()
-	token.Add(pp[0].Mul(curve.HashToZr([]byte(ttype))))
+	token.Add(pp[0].Mul(curve.HashToZr([]byte(tokenType))))
 	token.Add(pp[1].Mul(value))
 	token.Add(pp[2].Mul(rand))
 	return token
@@ -687,10 +685,6 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	}
 
 	return sender, tr, transferMetadata, tokens, nil
-}
-
-func getState(id token2.ID) ([]byte, error) {
-	return fakeLedger.GetState(id)
 }
 
 var (
