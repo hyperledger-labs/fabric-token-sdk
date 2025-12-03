@@ -9,6 +9,7 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
@@ -76,6 +77,30 @@ func (d *ecdsaVerifier) Verify(message, sigma []byte) error {
 	return nil
 }
 
+type ecdsaSigner struct {
+	sk *ecdsa.PrivateKey
+}
+
+func NewEcdsaSigner(sk *ecdsa.PrivateKey) *ecdsaSigner {
+	return &ecdsaSigner{sk: sk}
+}
+
+func (d *ecdsaSigner) Sign(message []byte) ([]byte, error) {
+	dgst := sha256.Sum256(message)
+
+	r, s, err := ecdsa.Sign(rand.Reader, d.sk, dgst[:])
+	if err != nil {
+		return nil, err
+	}
+
+	s, _, err = ToLowS(&d.sk.PublicKey, s)
+	if err != nil {
+		return nil, err
+	}
+
+	return asn1.Marshal(ECDSASignature{R: r, S: s})
+}
+
 // IsLowS checks that s is a low-S
 func IsLowS(k *ecdsa.PublicKey, s *big.Int) (bool, error) {
 	halfOrder, ok := curveHalfOrders[k.Curve]
@@ -84,6 +109,23 @@ func IsLowS(k *ecdsa.PublicKey, s *big.Int) (bool, error) {
 	}
 
 	return s.Cmp(halfOrder) != 1, nil
+}
+
+func ToLowS(k *ecdsa.PublicKey, s *big.Int) (*big.Int, bool, error) {
+	lowS, err := IsLowS(k, s)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if !lowS {
+		// Set s to N - s that will be then in the lower part of signature space
+		// less or equal to half order
+		s.Sub(k.Params().N, s)
+
+		return s, true, nil
+	}
+
+	return s, false, nil
 }
 
 // PemDecodeKey takes bytes and returns a Go key

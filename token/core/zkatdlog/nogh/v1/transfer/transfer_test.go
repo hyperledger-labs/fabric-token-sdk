@@ -9,13 +9,14 @@ package transfer_test
 import (
 	"runtime"
 	"testing"
+	"time"
 
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/require"
 )
@@ -61,14 +62,14 @@ func TestTransfer(t *testing.T) {
 
 // BenchmarkTransferProofGeneration benchmarks the ZK proof generation for a transfer operation
 func BenchmarkTransferProofGeneration(b *testing.B) {
-	bits, err := benchmark.Bits(32, 64)
+	bits, err := benchmark2.Bits(32, 64)
 	require.NoError(b, err)
-	curves := benchmark.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
-	inputs, err := benchmark.NumInputs(1, 2, 3)
+	curves := benchmark2.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
+	inputs, err := benchmark2.NumInputs(1, 2, 3)
 	require.NoError(b, err)
-	outputs, err := benchmark.NumOutputs(1, 2, 3)
+	outputs, err := benchmark2.NumOutputs(1, 2, 3)
 	require.NoError(b, err)
-	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, []int{1})
+	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, []int{1})
 
 	for _, tc := range testCases {
 		b.Run(tc.Name, func(b *testing.B) {
@@ -98,28 +99,29 @@ func BenchmarkTransferProofGeneration(b *testing.B) {
 
 // TestParallelBenchmarkTransferProofGeneration benchmarks ZK proof generation for a transfer operation when multiple go routines are doing the same thing.
 func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
-	bits, err := benchmark.Bits(32)
+	bits, err := benchmark2.Bits(32)
 	require.NoError(t, err)
-	curves := benchmark.Curves(math.BN254)
-	inputs, err := benchmark.NumInputs(2)
+	curves := benchmark2.Curves(math.BN254)
+	inputs, err := benchmark2.NumInputs(2)
 	require.NoError(t, err)
-	outputs, err := benchmark.NumOutputs(2)
+	outputs, err := benchmark2.NumOutputs(2)
 	require.NoError(t, err)
-	workers, err := benchmark.Workers(runtime.NumCPU())
+	workers, err := benchmark2.Workers(runtime.NumCPU())
 	require.NoError(t, err)
-	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, workers)
+	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, workers)
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			r := benchmark.RunBenchmark(
-				tc.BenchmarkCase.Workers,
-				benchmark.Duration(),
+			r := benchmark2.RunBenchmark(
+				benchmark2.NewConfig(tc.BenchmarkCase.Workers,
+					benchmark2.Duration(),
+					3*time.Second),
 				func() *benchmarkTransferEnv {
 					env, err := newBenchmarkTransferEnv(1, tc.BenchmarkCase)
 					require.NoError(t, err)
 					return env
 				},
-				func(env *benchmarkTransferEnv) {
+				func(env *benchmarkTransferEnv) error {
 					prover, err := transfer.NewProver(
 						env.ProverEnvs[0].a,
 						env.ProverEnvs[0].b,
@@ -127,9 +129,11 @@ func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
 						env.ProverEnvs[0].d,
 						env.pp,
 					)
-					require.NoError(t, err)
+					if err != nil {
+						return err
+					}
 					_, err = prover.Prove()
-					require.NoError(t, err)
+					return err
 				},
 			)
 			r.Print()
@@ -345,7 +349,7 @@ type benchmarkTransferEnv struct {
 	pp         *v1.PublicParams
 }
 
-func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark.Case) (*benchmarkTransferEnv, error) {
+func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkTransferEnv, error) {
 	pp, err := setup(benchmarkCase.Bits, benchmarkCase.CurveID)
 	if err != nil {
 		return nil, err

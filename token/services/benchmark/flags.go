@@ -19,12 +19,14 @@ import (
 )
 
 var (
-	bits       = flag.String("bits", "", "a comma-separated list of bit sizes (32, 64,...)")
-	duration   = flag.Duration("duration", 1*time.Second, "test duration (1s, 1m, 1h,...)")
-	curves     = flag.String("curves", "", "comma-separated list of curves. Supported curves are: BN254, BLS12_381_BBS_GURVY, BLS12_381_BBS_GURVY_FAST_RNG")
-	numInputs  = flag.String("num_inputs", "", "a comma-separate list of number of inputs (1,2,3,...)")
-	numOutputs = flag.String("num_outputs", "", "a comma-separate list of number of outputs (1,2,3,...)")
-	workers    = flag.String("workers", "", "a comma-separate list of workers (1,2,3,...,NumCPU), where NumCPU is converted to the number of available CPUs")
+	bits         = flag.String("bits", "", "a comma-separated list of bit sizes (32, 64,...)")
+	duration     = flag.Duration("duration", 1*time.Second, "test duration (1s, 1m, 1h,...)")
+	curves       = flag.String("curves", "", "comma-separated list of curves. Supported curves are: BN254, BLS12_381_BBS_GURVY, BLS12_381_BBS_GURVY_FAST_RNG")
+	numInputs    = flag.String("num_inputs", "", "a comma-separate list of number of inputs (1,2,3,...)")
+	numOutputs   = flag.String("num_outputs", "", "a comma-separate list of number of outputs (1,2,3,...)")
+	workers      = flag.String("workers", "", "a comma-separate list of workers (1,2,3,...,NumCPU), where NumCPU is converted to the number of available CPUs")
+	profile      = flag.Bool("profile", false, "write pprof profiles to file")
+	setupSamples = flag.Uint("setup_samples", 0, "number of setup samples, 0 disables it")
 )
 
 // Bits parses the package-level `-bits` flag and returns a slice of bit sizes.
@@ -128,4 +130,14 @@ func Integers[T constraints.Integer](str string, defaults ...T) ([]T, error) {
 		values = append(values, T(v))
 	}
 	return values, nil
+}
+
+// ProfileEnabled returns true if profiling has been requested, false otherwise
+func ProfileEnabled() bool {
+	return *profile
+}
+
+// SetupSamples returns the number of setup samples to use. When 0, a setup will be generated for each evaluation.
+func SetupSamples() uint {
+	return *setupSamples
 }

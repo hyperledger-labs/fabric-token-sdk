@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -160,7 +161,7 @@ type mockMatcher struct {
 }
 
 func (m *mockMatcher) Match(ctx context.Context, raw []byte) error {
-	if string(raw) != string(m.expected) {
+	if !bytes.Equal(raw, m.expected) {
 		return errors.New("mismatch")
 	}
 	return nil

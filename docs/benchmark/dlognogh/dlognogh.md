@@ -6,7 +6,8 @@ Packages with benchmark tests:
    - `BenchmarkSender`, `BenchmarkVerificationSenderProof`, `TestParallelBenchmarkSender`, and `TestParallelBenchmarkVerificationSenderProof` are used to benchmark the generation of a transfer action. This includes also the generation of ZK proof for a transfer operation.
    - `BenchmarkTransferProofGeneration`, `TestParallelBenchmarkTransferProofGeneration` are used to benchmark the generation of ZK proof alone. 
 - `token/core/zkatdlog/nogh/v1/issue`: `BenchmarkIssuer` and `BenchmarkProofVerificationIssuer`
-- `token/core/zkatdlog/nogh/v1`: `BenchmarkTransfer` 
+- `token/core/zkatdlog/nogh/v1/validator`: `TestParallelBenchmarkValidatorTransfer`.
+- `token/core/zkatdlog/nogh/v1`: `BenchmarkTransferServiceTransfer` and `TestParallelBenchmarkTransferServiceTransfer`.
 
 The steps necessary to run the benchmarks are very similar.
 We give two examples here:
@@ -116,10 +117,10 @@ Example results have been produced on an Apple M1 Max and can be consulted [here
 This is a test that runs multiple instances of the above benchmark in parallel.
 This allows the analyst to understand if shared data structures are actual bottlenecks.
 
-It uses a custom-made runner whose documentation can be found [here](../../../token/core/common/benchmark/runner.md).
+It uses a custom-made runner whose documentation can be found [here](../../../token/services/benchmark/runner.md).
 
 ```shell
-go test ./token/core/zkatdlog/nogh/v1/transfer -test.run=TestParallelBenchmarkSender -test.v -test.benchmem -test.timeout 0 -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2" -workers="1,10" -duration="10s" | tee bench.txt
+go test ./token/core/zkatdlog/nogh/v1/transfer -test.run=TestParallelBenchmarkSender -test.v -test.timeout 0 -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2" -workers="NumCPU" -duration="10s" -setup_samples=128 | tee bench.txt
 ```
 
 The test supports the following flags:
@@ -136,120 +137,82 @@ The test supports the following flags:
         a comma-separate list of number of outputs (1,2,3,...)
   -workers string
         a comma-separate list of workers (1,2,3,...,NumCPU), where NumCPU is converted to the number of available CPUs
+  -profile bool
+        write pprof profiles to file
+  -setup_samples uint
+        number of setup samples, 0 disables it
 ```
 
 ### Results
 
-```go
+```shell
 === RUN   TestParallelBenchmarkSender
-=== RUN   TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_1_workers
-Metric           Value          Description
-------           -----          -----------
-Workers          1              
-Total Ops        168            (Low Sample Size)
-Duration         10.023390959s  (Good Duration)
-Real Throughput  16.76/s        Observed Ops/sec (Wall Clock)
-Pure Throughput  17.77/s        Theoretical Max (Low Overhead)
-
-Latency Distribution:
- Min           55.180375ms  
- P50 (Median)  55.945812ms  
- Average       56.290356ms  
- P95           58.108814ms  
- P99           58.758087ms  
- Max           59.089958ms  (Stable Tail)
-
-Stability Metrics:
- Std Dev  898.087µs   
- IQR      1.383083ms  Interquartile Range
- Jitter   590.076µs   Avg delta per worker
- CV       1.60%       Excellent Stability (<5%)
-
-Memory  1301420 B/op     Allocated bytes per operation
-Allocs  18817 allocs/op  Allocations per operation
-
-Latency Heatmap (Dynamic Range):
-Range                     Freq  Distribution Graph
- 55.180375ms-55.369563ms  17    █████████████████████████ (10.1%)
- 55.369563ms-55.5594ms    18    ██████████████████████████ (10.7%)
- 55.5594ms-55.749887ms    27    ████████████████████████████████████████ (16.1%)
- 55.749887ms-55.941028ms  20    █████████████████████████████ (11.9%)
- 55.941028ms-56.132824ms  13    ███████████████████ (7.7%)
- 56.132824ms-56.325277ms  9     █████████████ (5.4%)
- 56.325277ms-56.51839ms   4     █████ (2.4%)
- 56.51839ms-56.712165ms   6     ████████ (3.6%)
- 56.712165ms-56.906605ms  9     █████████████ (5.4%)
- 56.906605ms-57.101711ms  13    ███████████████████ (7.7%)
- 57.101711ms-57.297486ms  10    ██████████████ (6.0%)
- 57.297486ms-57.493933ms  3     ████ (1.8%)
- 57.493933ms-57.691053ms  3     ████ (1.8%)
- 57.691053ms-57.888849ms  4     █████ (2.4%)
- 57.888849ms-58.087323ms  3     ████ (1.8%)
- 58.087323ms-58.286478ms  2     ██ (1.2%)
- 58.286478ms-58.486315ms  2     ██ (1.2%)
- 58.486315ms-58.686837ms  2     ██ (1.2%)
- 58.686837ms-58.888047ms  2     ██ (1.2%)
- 58.888047ms-59.089958ms  1     █ (0.6%)
-
---- Analysis & Recommendations ---
-[WARN] Low sample size (168). Results may not be statistically significant. Run for longer.
-[INFO] High Allocations (18817/op). This will trigger frequent GC cycles and increase Max Latency.
-----------------------------------
 === RUN   TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_10_workers
-Metric           Value          Description
-------           -----          -----------
-Workers          10             
-Total Ops        1232           (Low Sample Size)
-Duration         10.070877291s  (Good Duration)
-Real Throughput  122.33/s       Observed Ops/sec (Wall Clock)
-Pure Throughput  130.12/s       Theoretical Max (Low Overhead)
+Metric           Value     Description
+------           -----     -----------
+Workers          10        
+Total Ops        1230      (Low Sample Size)
+Duration         10.068s   (Good Duration)
+Real Throughput  122.17/s  Observed Ops/sec (Wall Clock)
+Pure Throughput  123.04/s  Theoretical Max (Low Overhead)
 
 Latency Distribution:
- Min           61.2545ms     
- P50 (Median)  75.461375ms   
- Average       76.852256ms   
- P95           93.50851ms    
- P99           106.198982ms  
- Max           144.872375ms  (Stable Tail)
+ Min           59.895916ms   
+ P50 (Median)  77.717333ms   
+ Average       81.27214ms    
+ P95           112.28194ms   
+ P99           137.126207ms  
+ P99.9         189.117473ms  
+ Max           215.981417ms  (Stable Tail)
 
 Stability Metrics:
- Std Dev  9.28799ms    
- IQR      10.909229ms  Interquartile Range
- Jitter   9.755984ms   Avg delta per worker
- CV       12.09%       Moderate Variance (10-20%)
+ Std Dev  16.96192ms   
+ IQR      19.050834ms  Interquartile Range
+ Jitter   15.937043ms  Avg delta per worker
+ CV       20.87%       Unstable (>20%) - Result is Noisy
 
-Memory  1282384 B/op     Allocated bytes per operation
-Allocs  18668 allocs/op  Allocations per operation
+System Health & Reliability:
+ Error Rate   0.0000%          (100% Success) (0 errors)
+ Memory       1159374 B/op     Allocated bytes per operation
+ Allocs       17213 allocs/op  Allocations per operation
+ Alloc Rate   133.20 MB/s      Memory pressure on system
+ GC Overhead  1.27%            (High GC Pressure)
+ GC Pause     127.435871ms     Total Stop-The-World time
+ GC Cycles    264              Full garbage collection cycles
 
 Latency Heatmap (Dynamic Range):
 Range                       Freq  Distribution Graph
- 61.2545ms-63.948502ms      36    ███████ (2.9%)
- 63.948502ms-66.760987ms    86    █████████████████ (7.0%)
- 66.760987ms-69.697167ms    152   ███████████████████████████████ (12.3%)
- 69.697167ms-72.762481ms    181   █████████████████████████████████████ (14.7%)
- 72.762481ms-75.962609ms    195   ████████████████████████████████████████ (15.8%)
- 75.962609ms-79.303481ms    179   ████████████████████████████████████ (14.5%)
- 79.303481ms-82.791286ms    152   ███████████████████████████████ (12.3%)
- 82.791286ms-86.432486ms    94    ███████████████████ (7.6%)
- 86.432486ms-90.233828ms    59    ████████████ (4.8%)
- 90.233828ms-94.202355ms    40    ████████ (3.2%)
- 94.202355ms-98.345419ms    29    █████ (2.4%)
- 98.345419ms-102.670697ms   9     █ (0.7%)
- 102.670697ms-107.186203ms  8     █ (0.6%)
- 107.186203ms-111.900303ms  4      (0.3%)
- 111.900303ms-116.821732ms  2      (0.2%)
- 116.821732ms-121.959608ms  3      (0.2%)
- 121.959608ms-127.32345ms   1      (0.1%)
- 127.32345ms-132.923196ms   1      (0.1%)
- 138.769222ms-144.872375ms  1      (0.1%)
+ 59.895916ms-63.862831ms    98    ██████████████████████ (8.0%)
+ 63.862831ms-68.092476ms    163   ████████████████████████████████████ (13.3%)
+ 68.092476ms-72.602251ms    170   ██████████████████████████████████████ (13.8%)
+ 72.602251ms-77.410709ms    172   ██████████████████████████████████████ (14.0%)
+ 77.410709ms-82.537631ms    177   ████████████████████████████████████████ (14.4%)
+ 82.537631ms-88.004111ms    128   ████████████████████████████ (10.4%)
+ 88.004111ms-93.832637ms    119   ██████████████████████████ (9.7%)
+ 93.832637ms-100.047186ms   73    ████████████████ (5.9%)
+ 100.047186ms-106.673326ms  40    █████████ (3.3%)
+ 106.673326ms-113.738317ms  32    ███████ (2.6%)
+ 113.738317ms-121.271222ms  20    ████ (1.6%)
+ 121.271222ms-129.303034ms  14    ███ (1.1%)
+ 129.303034ms-137.866793ms  12    ██ (1.0%)
+ 137.866793ms-146.997731ms  3      (0.2%)
+ 146.997731ms-156.733413ms  4      (0.3%)
+ 167.11389ms-178.181868ms   2      (0.2%)
+ 178.181868ms-189.98288ms   1      (0.1%)
+ 189.98288ms-202.565475ms   1      (0.1%)
+ 202.565475ms-215.981417ms  1      (0.1%)
 
 --- Analysis & Recommendations ---
-[WARN] Low sample size (1232). Results may not be statistically significant. Run for longer.
-[INFO] High Allocations (18668/op). This will trigger frequent GC cycles and increase Max Latency.
+[WARN] Low sample size (1230). Results may not be statistically significant. Run for longer.
+[FAIL] High Variance (CV 20.87%). System noise is affecting results. Isolate the machine or increase duration.
+[INFO] High Allocations (17213/op). This will trigger frequent GC cycles and increase Max Latency.
 ----------------------------------
---- PASS: TestParallelBenchmarkSender (20.83s)
-    --- PASS: TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_1_workers (10.39s)
-    --- PASS: TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_10_workers (10.44s)
+
+--- Throughput Timeline ---
+Timeline: [▇▇▇█▇▇▇▇▆▇] (Max: 131 ops/s)
+
+--- PASS: TestParallelBenchmarkSender (13.97s)
+    --- PASS: TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_10_workers (13.96s)
 PASS
-ok      github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer       21.409s
+ok      github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer       14.566s
 ```

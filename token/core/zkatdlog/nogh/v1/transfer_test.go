@@ -7,23 +7,21 @@ SPDX-License-Identifier: Apache-2.0
 package v1_test
 
 import (
-	"os"
-	"runtime"
 	"strconv"
 	"testing"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/mock"
-	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	v1token "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -32,6 +30,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace/noop"
 )
+
+var logger = logging.MustGetLogger()
 
 func TestTransferService_VerifyTransfer(t *testing.T) {
 	tests := []struct {
@@ -61,19 +61,19 @@ func TestTransferService_VerifyTransfer(t *testing.T) {
 	}
 }
 
-func BenchmarkTransfer(b *testing.B) {
-	bits, err := benchmark.Bits(32, 64)
+func BenchmarkTransferServiceTransfer(b *testing.B) {
+	bits, err := benchmark2.Bits(32, 64)
 	require.NoError(b, err)
-	curves := benchmark.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
-	inputs, err := benchmark.NumInputs(1, 2, 3)
+	curves := benchmark2.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
+	inputs, err := benchmark2.NumInputs(1, 2, 3)
 	require.NoError(b, err)
-	outputs, err := benchmark.NumOutputs(1, 2, 3)
+	outputs, err := benchmark2.NumOutputs(1, 2, 3)
 	require.NoError(b, err)
-	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, []int{1})
+	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, []int{1})
 
 	for _, tc := range testCases {
 		b.Run(tc.Name, func(b *testing.B) {
-			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase)
+			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase, nil)
 			require.NoError(b, err)
 
 			// Optional: Reset timer if you had expensive setup code above
@@ -97,47 +97,32 @@ func BenchmarkTransfer(b *testing.B) {
 	}
 }
 
-func TestBenchmarkTransferParallel(t *testing.T) {
-	bits, err := benchmark.Bits(32)
+func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
+	bits, curves, cases := benchmark2.GenerateCasesWithDefaults(t)
+	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves)
 	require.NoError(t, err)
-	curves := benchmark.Curves(math.BN254)
-	inputs, err := benchmark.NumInputs(2)
-	require.NoError(t, err)
-	outputs, err := benchmark.NumOutputs(2)
-	require.NoError(t, err)
-	workers, err := benchmark.Workers(runtime.NumCPU())
-	require.NoError(t, err)
-	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, workers)
 
-	for _, tc := range testCases {
-		t.Run(tc.Name, func(t *testing.T) {
-			r := benchmark.RunBenchmark(
-				tc.BenchmarkCase.Workers,
-				benchmark.Duration(),
-				func() *benchmarkTransferEnv {
-					env, err := newBenchmarkTransferEnv(1, tc.BenchmarkCase)
-					require.NoError(t, err)
-					return env
-				},
-				func(env *benchmarkTransferEnv) {
-					action, _, err := env.Envs[0].ts.Transfer(
-						t.Context(),
-						"an_anchor",
-						nil,
-						env.Envs[0].ids,
-						env.Envs[0].outputs,
-						nil,
-					)
-					require.NoError(t, err)
-					assert.NotNil(t, action)
-					raw, err := action.Serialize()
-					require.NoError(t, err)
-					require.NotEmpty(t, raw)
-				},
+	test := benchmark2.NewTest[*benchmarkTransferEnv](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*benchmarkTransferEnv, error) {
+			return newBenchmarkTransferEnv(1, c, configurations)
+		},
+		func(env *benchmarkTransferEnv) error {
+			action, _, err := env.Envs[0].ts.Transfer(
+				t.Context(),
+				"an_anchor",
+				nil,
+				env.Envs[0].ids,
+				env.Envs[0].outputs,
+				nil,
 			)
-			r.Print()
-		})
-	}
+			if err != nil {
+				return err
+			}
+			_, err = action.Serialize()
+			return err
+		},
+	)
 }
 
 type transferEnv struct {
@@ -146,27 +131,8 @@ type transferEnv struct {
 	ids     []*token.ID
 }
 
-func newTransferEnv(benchmarkCase *benchmark.Case) (*transferEnv, error) {
-	logger := logging.MustGetLogger()
-
-	var ipk []byte
-	var err error
-	switch benchmarkCase.CurveID {
-	case math.BN254:
-		ipk, err = os.ReadFile("./validator/testdata/bn254/idemix/msp/IssuerPublicKey")
-		if err != nil {
-			return nil, err
-		}
-	case math.BLS12_381_BBS_GURVY:
-		fallthrough
-	case math2.BLS12_381_BBS_GURVY_FAST_RNG:
-		ipk, err = os.ReadFile("./validator/testdata/bls12_381_bbs/idemix/msp/IssuerPublicKey")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	pp, err := v1setup.Setup(benchmarkCase.Bits, ipk, benchmarkCase.CurveID)
+func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*transferEnv, error) {
+	pp, err := configurations.GetPublicParams(benchmarkCase.Bits, benchmarkCase.CurveID)
 	if err != nil {
 		return nil, err
 	}
@@ -268,10 +234,10 @@ type benchmarkTransferEnv struct {
 	Envs []*transferEnv
 }
 
-func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark.Case) (*benchmarkTransferEnv, error) {
+func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*benchmarkTransferEnv, error) {
 	envs := make([]*transferEnv, n)
 	for i := 0; i < n; i++ {
-		env, err := newTransferEnv(benchmarkCase)
+		env, err := newTransferEnv(benchmarkCase, configurations)
 		if err != nil {
 			return nil, err
 		}
