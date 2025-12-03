@@ -58,6 +58,8 @@ type Env struct {
 	engine            *enginedlog.Validator
 	inputsForTransfer []*tokn.Token
 	tr                *driver.TokenRequest
+	inputsForRedeem   []*tokn.Token
+	rr                *driver.TokenRequest
 }
 
 func NewEnv() (*Env, error) {
@@ -175,6 +177,8 @@ func NewEnv() (*Env, error) {
 		tr: tr,
 		engine: engine,
 		inputsForTransfer: inputsForTransfer,
+		inputsForRedeem: inputsForRedeem,
+		rr: rr,
 	}, nil
 }
 
@@ -216,45 +220,38 @@ func TestValidator(t *testing.T) {
 
 			raw, err = env.tr.Bytes()
 			require.NoError(t, err)
-			actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actions).To(HaveLen(1))
-		})
-	})
-	t.Run("validator is called correctly with a redeem action", func() {
-		var (
-			err error
-			raw []byte
+			actions, _, err := env.engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
+			require.NoError(t, err)
+			require.Len(t, actions, 1)
+		},
 		)
-		BeforeEach(func() {
-
-			raw, err = inputsForRedeem[0].Serialize()
+	t.Run("validator is called correctly with a redeem action", func(t *testing.T) {
+		env, err := NewEnv()
+		require.NoError(t, err)
+			raw, err := env.inputsForRedeem[0].Serialize()
 			Expect(err).NotTo(HaveOccurred())
 			fakeLedger.GetStateReturnsOnCall(0, raw, nil)
 
-			raw, err = inputsForRedeem[1].Serialize()
+			raw, err = env.inputsForRedeem[1].Serialize()
 			Expect(err).NotTo(HaveOccurred())
 			fakeLedger.GetStateReturnsOnCall(1, raw, nil)
 
-			raw, err = inputsForRedeem[0].Serialize()
+			raw, err = env.inputsForRedeem[0].Serialize()
 			Expect(err).NotTo(HaveOccurred())
 			fakeLedger.GetStateReturnsOnCall(2, raw, nil)
 
-			raw, err = inputsForRedeem[1].Serialize()
+			raw, err = env.inputsForRedeem[1].Serialize()
 			Expect(err).NotTo(HaveOccurred())
 			fakeLedger.GetStateReturnsOnCall(3, raw, nil)
 
 			fakeLedger.GetStateReturnsOnCall(4, nil, nil)
 
-			raw, err = rr.Bytes()
+			raw, err = env.rr.Bytes()
 			Expect(err).NotTo(HaveOccurred())
 
-		})
-		It("succeeds", func() {
 			actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actions).To(HaveLen(1))
-		})
+			require.NoError(t, err)
+			require.Len(t, actions, 1)
 	})
 	t.Run("enginve is called correctly with atomic swap", func(t *testing.T) {
 		var (
