@@ -335,14 +335,14 @@ func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias dr
 		}
 	}
 	// verifiers
-	if descriptor.Verifier != nil {
-		entry := &VerifierEntry{Verifier: descriptor.Verifier}
-		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			entry.DebugStack = debug.Stack()
-		}
-		p.verifiers.Add(id, entry)
-		// if setAlias {
-		// 	p.verifiers.Add(aliasID, entry)
-		// }
-	}
+	// if descriptor.Verifier != nil {
+	// 	entry := &VerifierEntry{Verifier: descriptor.Verifier}
+	// 	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+	// 		entry.DebugStack = debug.Stack()
+	// 	}
+	// 	p.verifiers.Add(id, entry)
+	// 	if setAlias {
+	// 		p.verifiers.Add(aliasID, entry)
+	// 	}
+	// }
 }
