@@ -92,9 +92,8 @@ func NewProvider(
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		deserializer:            deserializer,
 		storage:                 storage,
-		isMeCache:               secondcache.NewTyped[bool](5000),
-		signers:                 secondcache.NewTyped[*SignerEntry](5000),
-		// verifiers:               secondcache.NewTyped[*VerifierEntry](5000),
+		isMeCache:               secondcache.NewTyped[bool](50),
+		signers:                 secondcache.NewTyped[*SignerEntry](50),
 	}
 }
 
@@ -118,13 +117,6 @@ func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identit
 	if v == nil {
 		return errors.New("invalid verifier, expected a valid instance")
 	}
-	idHash := identity.UniqueID()
-	entry := &VerifierEntry{Verifier: v}
-	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
-	}
-	// p.verifiers.Add(idHash, entry)
-	p.Logger.DebugfContext(ctx, "register verifier to [%s]:[%s]", idHash, logging.Identifier(v))
 	return nil
 }
 
