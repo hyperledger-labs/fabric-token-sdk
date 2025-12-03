@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"testing"
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
@@ -46,12 +47,20 @@ import (
 	"github.com/hyperledger/fabric-lib-go/bccsp/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
 var fakeLedger *mock.Ledger
 
-var _ = Describe("validator", func() {
+type Env struct {
+	ir                *driver.TokenRequest
+	engine            *enginedlog.Validator
+	inputsForTransfer []*tokn.Token
+	tr                *driver.TokenRequest
+}
+
+func NewEnv() (*Env, error) {
 	var (
 		engine *enginedlog.Validator
 		pp     *v1.PublicParams
@@ -68,224 +77,240 @@ var _ = Describe("validator", func() {
 		tr *driver.TokenRequest // transfer request
 		ar *driver.TokenRequest // atomic action request
 	)
-	BeforeEach(func() {
-		fakeLedger = &mock.Ledger{}
-		var err error
-		// prepare public parameters
-		ipk, err = os.ReadFile("./testdata/bls12_381_bbs/idemix/msp/IssuerPublicKey")
-		Expect(err).NotTo(HaveOccurred())
-		pp, err = v1.Setup(32, ipk, math.BLS12_381_BBS_GURVY)
-		Expect(err).NotTo(HaveOccurred())
+	fakeLedger = &mock.Ledger{}
+	var err error
+	// prepare public parameters
+	ipk, err = os.ReadFile("./testdata/bls12_381_bbs/idemix/msp/IssuerPublicKey")
+	if err != nil {
+		return nil, err
+	}
+	pp, err = v1.Setup(32, ipk, math.BLS12_381_BBS_GURVY)
+	if err != nil {
+		return nil, err
+	}
 
-		c := math.Curves[pp.Curve]
+	c := math.Curves[pp.Curve]
 
-		asigner, _ := prepareECDSASigner()
-		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.BLS12_381_BBS_GURVY)
-		Expect(err).NotTo(HaveOccurred())
-		des := deserializer.NewTypedVerifierDeserializerMultiplex()
-		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
-		des.AddTypedVerifierDeserializer(ix509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&Deserializer{}, &Deserializer{}))
-		auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, des, pp.PedersenGenerators, asigner, c)
-		araw, err := asigner.Serialize()
-		Expect(err).NotTo(HaveOccurred())
-		pp.SetAuditors([]driver.Identity{araw})
+	asigner, _ := prepareECDSASigner()
+	idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.BLS12_381_BBS_GURVY)
+	if err != nil {
+		return nil, err
+	}
+	des := deserializer.NewTypedVerifierDeserializerMultiplex()
+	des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+	des.AddTypedVerifierDeserializer(ix509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&Deserializer{}, &Deserializer{}))
+	auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, des, pp.PedersenGenerators, asigner, c)
+	araw, err := asigner.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	pp.SetAuditors([]driver.Identity{araw})
 
-		// initialize enginw with pp
-		deserializer, err := zkatdlog.NewDeserializer(pp)
-		Expect(err).NotTo(HaveOccurred())
-		engine = enginedlog.New(
-			logging.MustGetLogger(),
-			pp,
-			deserializer,
-			nil,
-			nil,
-			nil,
-		)
+	// initialize enginw with pp
+	deserializer, err := zkatdlog.NewDeserializer(pp)
+	if err != nil {
+		return nil, err
+	}
+	engine = enginedlog.New(
+		logging.MustGetLogger(),
+		pp,
+		deserializer,
+		nil,
+		nil,
+		nil,
+	)
 
-		// non-anonymous issue
-		_, ir, _ = prepareNonAnonymousIssueRequest(pp, auditor)
-		Expect(ir).NotTo(BeNil())
+	// non-anonymous issue
+	_, ir, _ = prepareNonAnonymousIssueRequest(pp, auditor)
+	Expect(ir).NotTo(BeNil())
 
-		// prepare redeem
-		sender, rr, _, inputsForRedeem = prepareRedeemRequest(pp, auditor)
-		Expect(sender).NotTo(BeNil())
+	// prepare redeem
+	sender, rr, _, inputsForRedeem = prepareRedeemRequest(pp, auditor)
+	Expect(sender).NotTo(BeNil())
 
-		// prepare transfer
-		var trmetadata *driver.TokenRequestMetadata
-		sender, tr, trmetadata, inputsForTransfer = prepareTransferRequest(pp, auditor)
-		Expect(sender).NotTo(BeNil())
-		Expect(trmetadata).NotTo(BeNil())
+	// prepare transfer
+	var trmetadata *driver.TokenRequestMetadata
+	sender, tr, trmetadata, inputsForTransfer = prepareTransferRequest(pp, auditor)
+	Expect(sender).NotTo(BeNil())
+	Expect(trmetadata).NotTo(BeNil())
 
-		// atomic action request
-		ar = &driver.TokenRequest{Transfers: tr.Transfers}
-		raw, err := ar.MarshalToMessageToSign([]byte("2"))
-		Expect(err).NotTo(HaveOccurred())
+	// atomic action request
+	ar = &driver.TokenRequest{Transfers: tr.Transfers}
+	raw, err := ar.MarshalToMessageToSign([]byte("2"))
+	if err != nil {
+		return nil, err
+	}
 
-		// sender signs request
-		signatures, err := sender.SignTokenActions(raw)
-		Expect(err).NotTo(HaveOccurred())
+	// sender signs request
+	signatures, err := sender.SignTokenActions(raw)
+	if err != nil {
+		return nil, err
+	}
 
-		// auditor inspect token
-		metadata := &driver.TokenRequestMetadata{}
-		metadata.Transfers = []*driver.TransferMetadata{trmetadata.Transfers[0]}
+	// auditor inspect token
+	metadata := &driver.TokenRequestMetadata{}
+	metadata.Transfers = []*driver.TransferMetadata{trmetadata.Transfers[0]}
 
-		tokns := make([][]*tokn.Token, 1)
-		for i := range 2 {
-			tokns[0] = append(tokns[0], inputsForTransfer[i])
-		}
-		err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
-		Expect(err).NotTo(HaveOccurred())
-		sigma, err := auditor.Endorse(ar, "2")
-		Expect(err).NotTo(HaveOccurred())
-		ar.AuditorSignatures = append(ar.AuditorSignatures, &driver.AuditorSignature{
-			Identity:  araw,
-			Signature: sigma,
-		})
-
-		ar.Signatures = append(ar.Signatures, signatures...)
+	tokns := make([][]*tokn.Token, 1)
+	for i := range 2 {
+		tokns[0] = append(tokns[0], inputsForTransfer[i])
+	}
+	err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
+	if err != nil {
+		return nil, err
+	}
+	sigma, err := auditor.Endorse(ar, "2")
+	if err != nil {
+		return nil, err
+	}
+	ar.AuditorSignatures = append(ar.AuditorSignatures, &driver.AuditorSignature{
+		Identity:  araw,
+		Signature: sigma,
 	})
-	Describe("Verify Token Requests", func() {
-		Context("Validator is called correctly with a non-anonymous issue action", func() {
-			var (
-				err error
-				raw []byte
-			)
-			BeforeEach(func() {
-				raw, err = ir.Bytes()
-				Expect(err).NotTo(HaveOccurred())
-			})
-			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), fakeLedger.GetStateStub, "1", raw)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(actions).To(HaveLen(1))
-			})
+
+	ar.Signatures = append(ar.Signatures, signatures...)
+
+	return &Env{
+		ir: ir,
+		tr: tr,
+		engine: engine,
+		inputsForTransfer: inputsForTransfer,
+	}, nil
+}
+
+func TestValidator(t *testing.T) {
+
+	t.Run("Validator is called correctly with a non-anonymous issue action", func(t *testing.T) {
+		env, err := NewEnv()
+		require.NoError(t, err)
+
+		raw, err := env.ir.Bytes()
+		require.NoError(t, err)
+		actions, _, err := env.engine.VerifyTokenRequestFromRaw(context.TODO(), fakeLedger.GetStateStub, "1", raw)
+		require.NoError(t, err)
+		require.Len(t, actions, 1)
+	})
+
+	t.Run("validator is called correctly with a transfer action", func(t *testing.T) {
+		env, err := NewEnv()
+		require.NoError(t, err)
+
+			raw, err := env.inputsForTransfer[0].Serialize()
+			require.NoError(t, err)
+			fakeLedger.GetStateReturnsOnCall(0, raw, nil)
+
+			raw, err = env.inputsForTransfer[1].Serialize()
+			require.NoError(t, err)
+			fakeLedger.GetStateReturnsOnCall(1, raw, nil)
+
+			raw, err = env.inputsForTransfer[0].Serialize()
+			require.NoError(t, err)
+			fakeLedger.GetStateReturnsOnCall(2, raw, nil)
+
+			raw, err = env.inputsForTransfer[1].Serialize()
+			require.NoError(t, err)
+			fakeLedger.GetStateReturnsOnCall(3, raw, nil)
+
+			fakeLedger.GetStateReturnsOnCall(4, nil, nil)
+			fakeLedger.GetStateReturnsOnCall(5, nil, nil)
+
+			raw, err = env.tr.Bytes()
+			require.NoError(t, err)
+			actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actions).To(HaveLen(1))
+		})
+	})
+	t.Run("validator is called correctly with a redeem action", func() {
+		var (
+			err error
+			raw []byte
+		)
+		BeforeEach(func() {
+
+			raw, err = inputsForRedeem[0].Serialize()
+			Expect(err).NotTo(HaveOccurred())
+			fakeLedger.GetStateReturnsOnCall(0, raw, nil)
+
+			raw, err = inputsForRedeem[1].Serialize()
+			Expect(err).NotTo(HaveOccurred())
+			fakeLedger.GetStateReturnsOnCall(1, raw, nil)
+
+			raw, err = inputsForRedeem[0].Serialize()
+			Expect(err).NotTo(HaveOccurred())
+			fakeLedger.GetStateReturnsOnCall(2, raw, nil)
+
+			raw, err = inputsForRedeem[1].Serialize()
+			Expect(err).NotTo(HaveOccurred())
+			fakeLedger.GetStateReturnsOnCall(3, raw, nil)
+
+			fakeLedger.GetStateReturnsOnCall(4, nil, nil)
+
+			raw, err = rr.Bytes()
+			Expect(err).NotTo(HaveOccurred())
+
+		})
+		It("succeeds", func() {
+			actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actions).To(HaveLen(1))
+		})
+	})
+	t.Run("enginve is called correctly with atomic swap", func(t *testing.T) {
+		var (
+			err error
+			raw []byte
+		)
+		BeforeEach(func() {
+			raw, err = inputsForTransfer[0].Serialize()
+			Expect(err).NotTo(HaveOccurred())
+			fakeLedger.GetStateReturnsOnCall(0, raw, nil)
+
+			raw, err = inputsForTransfer[1].Serialize()
+			Expect(err).NotTo(HaveOccurred())
+			fakeLedger.GetStateReturnsOnCall(1, raw, nil)
+
+			fakeLedger.GetStateReturnsOnCall(2, nil, nil)
+
+			raw, err = inputsForTransfer[0].Serialize()
+			Expect(err).NotTo(HaveOccurred())
+			fakeLedger.GetStateReturnsOnCall(3, raw, nil)
+
+			raw, err = inputsForTransfer[1].Serialize()
+			Expect(err).NotTo(HaveOccurred())
+			fakeLedger.GetStateReturnsOnCall(4, raw, nil)
+
+			fakeLedger.GetStateReturnsOnCall(5, nil, nil)
+			fakeLedger.GetStateReturnsOnCall(6, nil, nil)
+
+			raw, err = ar.Bytes()
+			Expect(err).NotTo(HaveOccurred())
+
+		})
+		It("succeeds", func() {
+			actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actions).To(HaveLen(1))
 		})
 
-		Context("validator is called correctly with a transfer action", func() {
-			var (
-				err error
-				raw []byte
-			)
+		t.Run("when the sender's signature is not valid: wrong txID", func() {
 			BeforeEach(func() {
-				raw, err = inputsForTransfer[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(0, raw, nil)
-
-				raw, err = inputsForTransfer[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-				raw, err = inputsForTransfer[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(2, raw, nil)
-
-				raw, err = inputsForTransfer[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-				fakeLedger.GetStateReturnsOnCall(4, nil, nil)
-				fakeLedger.GetStateReturnsOnCall(5, nil, nil)
-
-				raw, err = tr.Bytes()
-				Expect(err).NotTo(HaveOccurred())
-			})
-			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(actions).To(HaveLen(1))
-			})
-		})
-		Context("validator is called correctly with a redeem action", func() {
-			var (
-				err error
-				raw []byte
-			)
-			BeforeEach(func() {
-
-				raw, err = inputsForRedeem[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(0, raw, nil)
-
-				raw, err = inputsForRedeem[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-				raw, err = inputsForRedeem[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(2, raw, nil)
-
-				raw, err = inputsForRedeem[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-				fakeLedger.GetStateReturnsOnCall(4, nil, nil)
-
-				raw, err = rr.Bytes()
+				request := &driver.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
+				raw, err = request.MarshalToMessageToSign([]byte("3"))
 				Expect(err).NotTo(HaveOccurred())
 
-			})
-			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
+				signatures, err := sender.SignTokenActions(raw)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(actions).To(HaveLen(1))
-			})
-		})
-		Context("enginve is called correctly with atomic swap", func() {
-			var (
-				err error
-				raw []byte
-			)
-			BeforeEach(func() {
-				raw, err = inputsForTransfer[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(0, raw, nil)
-
-				raw, err = inputsForTransfer[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-				fakeLedger.GetStateReturnsOnCall(2, nil, nil)
-
-				raw, err = inputsForTransfer[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-				raw, err = inputsForTransfer[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(4, raw, nil)
-
-				fakeLedger.GetStateReturnsOnCall(5, nil, nil)
-				fakeLedger.GetStateReturnsOnCall(6, nil, nil)
+				ar.Signatures[1] = signatures[0]
 
 				raw, err = ar.Bytes()
 				Expect(err).NotTo(HaveOccurred())
 
 			})
-			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(actions).To(HaveLen(1))
-			})
+			It("fails", func() {
+				_, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
+				Expect(err.Error()).To(ContainSubstring("failed signature verification"))
 
-			Context("when the sender's signature is not valid: wrong txID", func() {
-				BeforeEach(func() {
-					request := &driver.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
-					raw, err = request.MarshalToMessageToSign([]byte("3"))
-					Expect(err).NotTo(HaveOccurred())
-
-					signatures, err := sender.SignTokenActions(raw)
-					Expect(err).NotTo(HaveOccurred())
-					ar.Signatures[1] = signatures[0]
-
-					raw, err = ar.Bytes()
-					Expect(err).NotTo(HaveOccurred())
-
-				})
-				It("fails", func() {
-					_, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
-					Expect(err.Error()).To(ContainSubstring("failed signature verification"))
-
-				})
 			})
 		})
 	})
