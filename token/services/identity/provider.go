@@ -73,7 +73,6 @@ type Provider struct {
 
 	isMeCache cache[bool]
 	signers   cache[*SignerEntry]
-	verifiers cache[*VerifierEntry]
 }
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
@@ -91,9 +90,8 @@ func NewProvider(
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		deserializer:            deserializer,
 		storage:                 storage,
-		isMeCache:               secondcache.NewTyped[bool](5000),
-		signers:                 secondcache.NewTyped[*SignerEntry](5000),
-		verifiers:               secondcache.NewTyped[*VerifierEntry](5000),
+		isMeCache:               secondcache.NewTyped[bool](50),
+		signers:                 secondcache.NewTyped[*SignerEntry](50),
 	}
 }
 
@@ -117,13 +115,6 @@ func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identit
 	if v == nil {
 		return errors.New("invalid verifier, expected a valid instance")
 	}
-	idHash := identity.UniqueID()
-	entry := &VerifierEntry{Verifier: v}
-	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
-	}
-	p.verifiers.Add(idHash, entry)
-	p.Logger.DebugfContext(ctx, "register verifier to [%s]:[%s]", idHash, logging.Identifier(v))
 	return nil
 }
 
@@ -274,6 +265,7 @@ func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHa
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing identity for signer [%s]", identity)
 	}
+
 	entry = &SignerEntry{Signer: signer}
 	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
 		entry.DebugStack = debug.Stack()
@@ -282,6 +274,7 @@ func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHa
 	if err := p.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
 		return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
 	}
+
 	return entry.Signer, nil
 }
 
@@ -329,17 +322,6 @@ func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias dr
 		p.signers.Add(id, entry)
 		if setAlias {
 			p.signers.Add(aliasID, entry)
-		}
-	}
-	// verifiers
-	if descriptor.Verifier != nil {
-		entry := &VerifierEntry{Verifier: descriptor.Verifier}
-		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			entry.DebugStack = debug.Stack()
-		}
-		p.verifiers.Add(id, entry)
-		if setAlias {
-			p.verifiers.Add(aliasID, entry)
 		}
 	}
 }
