@@ -12,7 +12,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"os"
 	"runtime"
 	"testing"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
-	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
@@ -56,7 +54,9 @@ var (
 
 func TestValidator(t *testing.T) {
 	t.Run("Validator is called correctly with a non-anonymous issue action", func(t *testing.T) {
-		env, err := newEnv(testUseCase)
+		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		require.NoError(t, err)
+		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
 
 		raw, err := env.ir.Bytes()
@@ -66,7 +66,9 @@ func TestValidator(t *testing.T) {
 		require.Len(t, actions, 1)
 	})
 	t.Run("validator is called correctly with a transfer action", func(t *testing.T) {
-		env, err := newEnv(testUseCase)
+		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		require.NoError(t, err)
+		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
 
 		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "1", env.transferRaw)
@@ -74,7 +76,9 @@ func TestValidator(t *testing.T) {
 		require.Len(t, actions, 1)
 	})
 	t.Run("validator is called correctly with a redeem action", func(t *testing.T) {
-		env, err := newEnv(testUseCase)
+		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		require.NoError(t, err)
+		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
 
 		raw, err := env.rr.Bytes()
@@ -85,7 +89,9 @@ func TestValidator(t *testing.T) {
 		require.Len(t, actions, 1)
 	})
 	t.Run("engine is called correctly with atomic swap", func(t *testing.T) {
-		env, err := newEnv(testUseCase)
+		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		require.NoError(t, err)
+		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
 
 		raw, err := env.ar.Bytes()
@@ -96,7 +102,9 @@ func TestValidator(t *testing.T) {
 		require.Len(t, actions, 1)
 	})
 	t.Run("when the sender's signature is not valid: wrong txID", func(t *testing.T) {
-		env, err := newEnv(testUseCase)
+		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		require.NoError(t, err)
+		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
 
 		request := &driver.TokenRequest{Issues: env.ar.Issues, Transfers: env.ar.Transfers}
@@ -128,13 +136,16 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 	require.NoError(t, err)
 	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, workers)
 
+	configurations, err := v1.NewConfigurations("./testdata", bits, curves)
+	require.NoError(t, err)
+
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			r := benchmark.RunBenchmark(
 				tc.BenchmarkCase.Workers,
 				benchmark.Duration(),
 				func() *env {
-					env, err := newEnv(tc.BenchmarkCase)
+					env, err := newEnv(tc.BenchmarkCase, configurations)
 					require.NoError(t, err)
 					return env
 				},
@@ -161,7 +172,7 @@ type env struct {
 	transferRaw       []byte
 }
 
-func newEnv(benchCase *benchmark.Case) (*env, error) {
+func newEnv(benchCase *benchmark.Case, configurations *v1.Configurations) (*env, error) {
 	var (
 		engine *enginedlog.Validator
 		pp     *v1.PublicParams
@@ -171,7 +182,6 @@ func newEnv(benchCase *benchmark.Case) (*env, error) {
 
 		sender  *transfer.Sender
 		auditor *audit.Auditor
-		ipk     []byte
 
 		ir *driver.TokenRequest // regular issue request
 		rr *driver.TokenRequest // redeem request
@@ -180,23 +190,7 @@ func newEnv(benchCase *benchmark.Case) (*env, error) {
 	)
 
 	// prepare public parameters
-	var err error
-	switch benchCase.CurveID {
-	case math.BN254:
-		ipk, err = os.ReadFile("./testdata/bn254/idemix/msp/IssuerPublicKey")
-		if err != nil {
-			return nil, err
-		}
-	case math.BLS12_381_BBS_GURVY:
-		fallthrough
-	case math2.BLS12_381_BBS_GURVY_FAST_RNG:
-		ipk, err = os.ReadFile("./testdata/bls12_381_bbs/idemix/msp/IssuerPublicKey")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	pp, err = v1.Setup(benchCase.Bits, ipk, benchCase.CurveID)
+	pp, err := configurations.Get(benchCase.Bits, benchCase.CurveID)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +201,7 @@ func newEnv(benchCase *benchmark.Case) (*env, error) {
 	if err != nil {
 		return nil, err
 	}
-	idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.BLS12_381_BBS_GURVY)
+	idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, benchCase.CurveID)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +330,7 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 }
 
 func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	id, auditInfo, signer, err := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
+	id, auditInfo, signer, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -358,7 +352,7 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfe
 }
 
 func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	id, auditInfo, signer, err := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
+	id, auditInfo, signer, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -385,60 +379,8 @@ func prepareToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1
 	return token
 }
 
-func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.SigningIdentity, error) {
-	backend, err := kvs.NewInMemory()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	config, err := crypto.NewConfig(dir)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	curveID := math.BLS12_381_BBS_GURVY
-	keyStore, err := crypto.NewKeyStore(curveID, kvs.Keystore(backend))
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	identityDescriptor, err := p.Identity(context.Background(), nil)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	id := identityDescriptor.Identity
-	audit := identityDescriptor.AuditInfo
-
-	auditInfo, err := p.DeserializeAuditInfo(context.Background(), audit)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	err = auditInfo.Match(context.Background(), id)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	signer, err := p.DeserializeSigningIdentity(context.Background(), id)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	id, err = identity.WrapWithType(idemix2.IdentityType, id)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return id, auditInfo, signer, nil
-}
-
 func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
-	id, auditInfo, _, err := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
+	id, auditInfo, _, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -659,6 +601,68 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	}
 
 	return sender, tr, transferMetadata, tokens, nil
+}
+
+type ownerIdentity struct {
+	id        driver.Identity
+	auditInfo *crypto.AuditInfo
+	signer    driver.SigningIdentity
+}
+
+func loadOwnerIdentity(dir string) (*ownerIdentity, error) {
+	backend, err := kvs.NewInMemory()
+	if err != nil {
+		return nil, err
+	}
+	config, err := crypto.NewConfig(dir)
+	if err != nil {
+		return nil, err
+	}
+	curveID := math.BLS12_381_BBS_GURVY
+	keyStore, err := crypto.NewKeyStore(curveID, kvs.Keystore(backend))
+	if err != nil {
+		return nil, err
+	}
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
+	if err != nil {
+		return nil, err
+	}
+	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	if err != nil {
+		return nil, err
+	}
+
+	identityDescriptor, err := p.Identity(context.Background(), nil)
+	if err != nil {
+		return nil, err
+	}
+	id := identityDescriptor.Identity
+	audit := identityDescriptor.AuditInfo
+
+	auditInfo, err := p.DeserializeAuditInfo(context.Background(), audit)
+	if err != nil {
+		return nil, err
+	}
+	err = auditInfo.Match(context.Background(), id)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := p.DeserializeSigningIdentity(context.Background(), id)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err = identity.WrapWithType(idemix2.IdentityType, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ownerIdentity{
+		id:        id,
+		auditInfo: auditInfo,
+		signer:    signer,
+	}, nil
 }
 
 type Signer struct {

@@ -61,8 +61,9 @@ func TestParallelBenchmarkIdemixKMIdentity(t *testing.T) {
 		func() *KeyManager {
 			return keyManager
 		},
-		func(km *KeyManager) {
-			_, _ = keyManager.Identity(t.Context(), nil)
+		func(km *KeyManager) error {
+			_, err := keyManager.Identity(t.Context(), nil)
+			return err
 		},
 	)
 	r.Print()

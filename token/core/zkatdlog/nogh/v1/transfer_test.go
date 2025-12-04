@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package v1_test
 
 import (
-	"os"
 	"runtime"
 	"strconv"
 	"testing"
@@ -32,6 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace/noop"
 )
+
+var logger = logging.MustGetLogger()
 
 func TestTransferService_VerifyTransfer(t *testing.T) {
 	tests := []struct {
@@ -61,7 +62,7 @@ func TestTransferService_VerifyTransfer(t *testing.T) {
 	}
 }
 
-func BenchmarkTransfer(b *testing.B) {
+func BenchmarkTransferServiceTransfer(b *testing.B) {
 	bits, err := benchmark.Bits(32, 64)
 	require.NoError(b, err)
 	curves := benchmark.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
@@ -73,7 +74,7 @@ func BenchmarkTransfer(b *testing.B) {
 
 	for _, tc := range testCases {
 		b.Run(tc.Name, func(b *testing.B) {
-			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase)
+			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase, nil)
 			require.NoError(b, err)
 
 			// Optional: Reset timer if you had expensive setup code above
@@ -97,7 +98,7 @@ func BenchmarkTransfer(b *testing.B) {
 	}
 }
 
-func TestBenchmarkTransferParallel(t *testing.T) {
+func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 	bits, err := benchmark.Bits(32)
 	require.NoError(t, err)
 	curves := benchmark.Curves(math.BN254)
@@ -109,13 +110,16 @@ func TestBenchmarkTransferParallel(t *testing.T) {
 	require.NoError(t, err)
 	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, workers)
 
+	configurations, err := v1setup.NewConfigurations("./testdata", bits, curves)
+	require.NoError(t, err)
+
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			r := benchmark.RunBenchmark(
 				tc.BenchmarkCase.Workers,
 				benchmark.Duration(),
 				func() *benchmarkTransferEnv {
-					env, err := newBenchmarkTransferEnv(1, tc.BenchmarkCase)
+					env, err := newBenchmarkTransferEnv(1, tc.BenchmarkCase, configurations)
 					require.NoError(t, err)
 					return env
 				},
@@ -146,27 +150,8 @@ type transferEnv struct {
 	ids     []*token.ID
 }
 
-func newTransferEnv(benchmarkCase *benchmark.Case) (*transferEnv, error) {
-	logger := logging.MustGetLogger()
-
-	var ipk []byte
-	var err error
-	switch benchmarkCase.CurveID {
-	case math.BN254:
-		ipk, err = os.ReadFile("./validator/testdata/bn254/idemix/msp/IssuerPublicKey")
-		if err != nil {
-			return nil, err
-		}
-	case math.BLS12_381_BBS_GURVY:
-		fallthrough
-	case math2.BLS12_381_BBS_GURVY_FAST_RNG:
-		ipk, err = os.ReadFile("./validator/testdata/bls12_381_bbs/idemix/msp/IssuerPublicKey")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	pp, err := v1setup.Setup(benchmarkCase.Bits, ipk, benchmarkCase.CurveID)
+func newTransferEnv(benchmarkCase *benchmark.Case, configurations *v1setup.Configurations) (*transferEnv, error) {
+	pp, err := configurations.Get(benchmarkCase.Bits, benchmarkCase.CurveID)
 	if err != nil {
 		return nil, err
 	}
@@ -268,10 +253,10 @@ type benchmarkTransferEnv struct {
 	Envs []*transferEnv
 }
 
-func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark.Case) (*benchmarkTransferEnv, error) {
+func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark.Case, configurations *v1setup.Configurations) (*benchmarkTransferEnv, error) {
 	envs := make([]*transferEnv, n)
 	for i := 0; i < n; i++ {
-		env, err := newTransferEnv(benchmarkCase)
+		env, err := newTransferEnv(benchmarkCase, configurations)
 		if err != nil {
 			return nil, err
 		}

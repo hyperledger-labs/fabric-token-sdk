@@ -26,23 +26,31 @@ type Result struct {
 	OpsPerSecReal float64
 	OpsPerSecPure float64
 
+	// Latency Stats
 	AvgLatency    time.Duration
 	StdDevLatency time.Duration
 	Variance      float64
+	P50Latency    time.Duration
+	P75Latency    time.Duration
+	P95Latency    time.Duration
+	P99Latency    time.Duration
+	MinLatency    time.Duration
+	MaxLatency    time.Duration
+	IQR           time.Duration // Interquartile Range (measure of spread)
+	Jitter        time.Duration // Avg change between consecutive latencies
+	CoeffVar      float64
 
-	P50Latency time.Duration
-	P75Latency time.Duration
-	P95Latency time.Duration
-	P99Latency time.Duration
-	MinLatency time.Duration
-	MaxLatency time.Duration
+	// Memory & GC Stats
+	BytesPerOp    uint64
+	AllocsPerOp   uint64
+	AllocRateMBPS float64       // Allocations in MB per second
+	NumGC         uint32        // Number of GC cycles during the recorded phase
+	GCPauseTotal  time.Duration // Total time the world was stopped for GC
+	GCOverhead    float64       // Percentage of time spent in GC
 
-	IQR    time.Duration // Interquartile Range (measure of spread)
-	Jitter time.Duration // Avg change between consecutive latencies
-
-	CoeffVar    float64
-	BytesPerOp  uint64
-	AllocsPerOp uint64
+	// Reliability
+	ErrorCount uint64
+	ErrorRate  float64
 
 	Histogram []Bucket
 }
@@ -67,6 +75,12 @@ type chunk struct {
 	idx  int // number of valid entries in data
 }
 
+// workerStats aggregates results from a single worker
+type workerStats struct {
+	head   *chunk
+	errors uint64
+}
+
 // ANSI Color Codes for output.
 const (
 	ColorReset  = "\033[0m"
@@ -80,9 +94,8 @@ func (r Result) Print() {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
 	cvPct, tailRatio := r.printMainMetrics(w)
-
+	r.printSystemHealth(w)
 	r.printHeatmap(w)
-
 	r.printAnalysis(w, cvPct, tailRatio)
 
 	if err := w.Flush(); err != nil {
@@ -155,6 +168,7 @@ func (r Result) printMainMetrics(w *tabwriter.Writer) (cvPct float64, tailRatio 
 	if tailRatio > 10.0 {
 		maxStatus = ColorRed + fmt.Sprintf("(Extreme Outliers: Max is %.1fx P99)", tailRatio) + ColorReset
 	}
+
 	writef(w, " Max\t%v\t%s\n", r.MaxLatency, maxStatus)
 	writeLine(w, "")
 
@@ -171,14 +185,41 @@ func (r Result) printMainMetrics(w *tabwriter.Writer) (cvPct float64, tailRatio 
 	} else if cvPct > 10.0 {
 		cvStatus = ColorYellow + "Moderate Variance (10-20%)" + ColorReset
 	}
+
 	writef(w, " CV\t%.2f%%\t%s\n", cvPct, cvStatus)
 	writeLine(w, "")
 
-	writef(w, "Memory\t%d B/op\tAllocated bytes per operation\n", r.BytesPerOp)
-	writef(w, "Allocs\t%d allocs/op\tAllocations per operation\n", r.AllocsPerOp)
-	writeLine(w, "")
-
 	return cvPct, tailRatio
+}
+
+// printSystemHealth renders GC, Memory and Error statistics
+func (r Result) printSystemHealth(w *tabwriter.Writer) {
+	writeLine(w, "System Health & Reliability:")
+
+	// 1. Error Rate
+	errStatus := ColorGreen + "(100% Success)" + ColorReset
+	if r.ErrorRate > 0 {
+		errStatus = ColorRed + fmt.Sprintf("(%.2f%% Failures)", r.ErrorRate) + ColorReset
+	}
+	writef(w, " Error Rate\t%.4f%%\t%s (%d errors)\n", r.ErrorRate, errStatus, r.ErrorCount)
+
+	// 2. Memory Allocations
+	writef(w, " Memory\t%d B/op\tAllocated bytes per operation\n", r.BytesPerOp)
+	writef(w, " Allocs\t%d allocs/op\tAllocations per operation\n", r.AllocsPerOp)
+	writef(w, " Alloc Rate\t%.2f MB/s\tMemory pressure on system\n", r.AllocRateMBPS)
+
+	// 3. GC Analysis
+	gcStatus := ColorGreen + "(Healthy)" + ColorReset
+	if r.GCOverhead > 5.0 {
+		gcStatus = ColorRed + "(Severe GC Thrashing)" + ColorReset
+	} else if r.GCOverhead > 1.0 {
+		gcStatus = ColorYellow + "(High GC Pressure)" + ColorReset
+	}
+
+	writef(w, " GC Overhead\t%.2f%%\t%s\n", r.GCOverhead, gcStatus)
+	writef(w, " GC Pause\t%v\tTotal Stop-The-World time\n", r.GCPauseTotal)
+	writef(w, " GC Cycles\t%d\tFull garbage collection cycles\n", r.NumGC)
+	writeLine(w, "")
 }
 
 // printHeatmap renders the histogram heatmap section to the provided writer.
@@ -314,7 +355,12 @@ func (r Result) printAnalysis(w *tabwriter.Writer, cvPct float64, tailRatio floa
 		)
 	}
 
-	if cvPct < 10.0 && r.OpsTotal > 10000 && tailRatio < 10.0 {
+	// 6. Error Check
+	if r.ErrorRate > 1.0 {
+		writef(w, "%s[FAIL] High Error Rate (%.2f%%). System is failing under load.%s\n", ColorRed, r.ErrorRate, ColorReset)
+	}
+
+	if cvPct < 10.0 && r.OpsTotal > 10000 && tailRatio < 10.0 && r.ErrorRate == 0 {
 		writef(
 			w,
 			"%s[PASS] Benchmark looks healthy and statistically sound.%s\n",
@@ -322,7 +368,6 @@ func (r Result) printAnalysis(w *tabwriter.Writer, cvPct float64, tailRatio floa
 			ColorReset,
 		)
 	}
-
 	writeLine(w, "----------------------------------")
 }
 
@@ -341,11 +386,17 @@ func writeLine(w *tabwriter.Writer, s string) {
 	}
 }
 
+// RunBenchmark executes the benchmark.
+//
+// warmupDuration: How long to run workers before starting measurement (to fill pools/caches).
+// setup: Creates the data required for the work.
+// work: The function to benchmark. Should return error on failure.
 func RunBenchmark[T any](
 	workers int,
 	benchDuration time.Duration,
+	warmupDuration time.Duration,
 	setup func() T,
-	work func(T),
+	work func(T) error,
 ) Result {
 	// SANITY CHECK: Ensure we have at least one worker and a positive duration.
 	if workers <= 0 {
@@ -358,10 +409,8 @@ func RunBenchmark[T any](
 	// ---------------------------------------------------------
 	// PHASE 1: Memory Analysis (Serial & Isolated)
 	// ---------------------------------------------------------
-	//
 	// Measure memory in isolation to avoid contamination from benchmark
 	// infrastructure (channels, sync, etc.).
-
 	var totalAllocs, totalBytes uint64
 	const memSamples = 5
 
@@ -370,10 +419,7 @@ func RunBenchmark[T any](
 		// Call GC twice to ensure finalization of objects from previous iteration.
 		runtime.GC()
 		runtime.GC()
-
 		// Sleep briefly to allow GC to fully complete before measurement.
-		// Without this, overlapping GC from previous iteration can contaminate
-		// measurements.
 		time.Sleep(10 * time.Millisecond)
 
 		var memBefore, memAfter runtime.MemStats
@@ -382,7 +428,7 @@ func RunBenchmark[T any](
 		// Create data inside the measurement window to avoid counting setup
 		// allocations made before the baseline.
 		data := setup()
-		work(data)
+		_ = work(data) // Ignore error for memory profiling
 
 		runtime.ReadMemStats(&memAfter)
 
@@ -407,32 +453,35 @@ func RunBenchmark[T any](
 	time.Sleep(10 * time.Millisecond)
 
 	var (
-		running int32 // 1 = running, 0 = stopped
-
-		startWg sync.WaitGroup
-		endWg   sync.WaitGroup
+		running     int32 // 1 = running, 0 = stopped (controls worker loop)
+		recording   int32 // 1 = record stats, 0 = ignore (controls warmup/timing)
+		startWg     sync.WaitGroup
+		endWg       sync.WaitGroup
+		startGlobal time.Time // Start time of the recording phase
 	)
 
-	workerResults := make([]*chunk, workers)
+	workerResults := make([]workerStats, workers)
 
 	atomic.StoreInt32(&running, 1)
+	atomic.StoreInt32(&recording, 0) // Start in warmup mode (not recording)
+
 	startWg.Add(workers)
 	endWg.Add(workers)
 
 	for i := 0; i < workers; i++ {
 		workerID := i
-
 		go func() {
 			defer endWg.Done()
 
 			// Initialize first chunk for this worker.
 			currentChunk := &chunk{}
 			headChunk := currentChunk
+			var localErrors uint64
 
 			// Signal readiness and wait for all workers.
 			startWg.Done()
+
 			// SANITY CHECK: Barrier - all workers start simultaneously.
-			// This ensures fair timing and prevents early-bird bias.
 			startWg.Wait()
 
 			// SANITY CHECK: Loop continues until global stop signal.
@@ -443,71 +492,105 @@ func RunBenchmark[T any](
 
 				// 2. Work: Execute the operation we're benchmarking (timed).
 				t0 := time.Now()
-				work(d)
+				err := work(d)
 				dur := time.Since(t0)
 
-				// 3. Record latency.
-				//
-				// SANITY CHECK: Check chunk capacity BEFORE writing to avoid overflow.
-				if currentChunk.idx >= chunkSize {
-					newC := &chunk{}
-					currentChunk.next = newC
-					currentChunk = newC
-				}
+				// 3. Record Data (Only if we passed warmup)
+				if atomic.LoadInt32(&recording) == 1 {
+					if err != nil {
+						localErrors++
+					}
 
-				// SANITY CHECK: Store latency in pre-allocated array (no allocation
-				// overhead on the hot path).
-				currentChunk.data[currentChunk.idx] = dur
-				currentChunk.idx++
+					// SANITY CHECK: Check chunk capacity BEFORE writing to avoid overflow.
+					if currentChunk.idx >= chunkSize {
+						newC := &chunk{}
+						currentChunk.next = newC
+						currentChunk = newC
+					}
+
+					// SANITY CHECK: Store latency in pre-allocated array (no allocation
+					// overhead on the hot path).
+					currentChunk.data[currentChunk.idx] = dur
+					currentChunk.idx++
+				}
 			}
 
 			// Save head pointer for post-processing.
-			// Each worker maintains its own linked list of chunks.
-			workerResults[workerID] = headChunk
+			workerResults[workerID] = workerStats{
+				head:   headChunk,
+				errors: localErrors,
+			}
 		}()
 	}
 
 	// SANITY CHECK: Ensure all workers are created and waiting before starting
-	// the timer. This prevents skew from goroutine creation overhead.
 	startWg.Wait()
 
-	startGlobal := time.Now()
+	// --- WARMUP PHASE ---
+	if warmupDuration > 0 {
+		time.Sleep(warmupDuration)
+	}
 
-	// Sleep for the benchmark duration - workers run concurrently during this time.
+	// --- RECORDING PHASE ---
+
+	// Snapshot Memory/GC State BEFORE Recording
+	// We want to measure the system impact of the *recorded* workload.
+	var memBeforeRecord, memAfterRecord runtime.MemStats
+	runtime.ReadMemStats(&memBeforeRecord)
+
+	// Signal workers to start recording
+	startGlobal = time.Now()
+	atomic.StoreInt32(&recording, 1)
+
+	// Run for the benchmark duration
 	time.Sleep(benchDuration)
 
-	// SANITY CHECK: Signal all workers to stop and wait for cleanup.
-	// Using atomic store ensures all workers see the stop signal promptly.
+	// Signal all workers to stop
 	atomic.StoreInt32(&running, 0)
-	endWg.Wait()
+	endWg.Wait() // Wait for workers to finish current op and exit
 
 	globalDuration := time.Since(startGlobal)
 	if globalDuration <= 0 {
-		// Avoid division by zero; in practice, this should not happen with sane durations.
 		globalDuration = 1
 	}
+
+	// Snapshot Memory/GC State AFTER Recording
+	runtime.ReadMemStats(&memAfterRecord)
 
 	// ---------------------------------------------------------
 	// PHASE 3: Statistical Analysis
 	// ---------------------------------------------------------
 
-	// Count all operations INCLUDING partial chunks at the end.
+	// 1. GC and System Stats Calculation
+	numGC := memAfterRecord.NumGC - memBeforeRecord.NumGC
+	pauseTotalNs := memAfterRecord.PauseTotalNs - memBeforeRecord.PauseTotalNs
+	totalAllocBytes := memAfterRecord.TotalAlloc - memBeforeRecord.TotalAlloc
+
+	// GC Overhead % = (Total Pause Time) / (Wall Time)
+	// Note: Wall Time is technically (Duration * GOMAXPROCS) for CPU time, but
+	// for "impact on throughput", Wall Clock duration is the standard denominator.
+	gcOverhead := (float64(pauseTotalNs) / float64(globalDuration.Nanoseconds())) * 100
+
+	// Allocation Rate (MB/s)
+	allocRateMBPS := (float64(totalAllocBytes) / 1024 / 1024) / globalDuration.Seconds()
+
+	// 2. Latency & Error Aggregation
 	var totalOps uint64
+	var totalErrors uint64
 	var totalTimeNs int64
 
-	// First pass: count operations and sum latencies.
-	for _, head := range workerResults {
-		curr := head
+	// First pass: count operations, errors, and sum latencies.
+	for _, wStat := range workerResults {
+		totalErrors += wStat.errors
+		curr := wStat.head
 		for curr != nil {
 			// SANITY CHECK: Only process valid entries (idx tells us how many were written).
 			limit := curr.idx
 			totalOps += uint64(limit)
-
 			for k := 0; k < limit; k++ {
 				// Use int64 for nanosecond accumulation to prevent overflow.
 				totalTimeNs += int64(curr.data[k])
 			}
-
 			curr = curr.next
 		}
 	}
@@ -520,12 +603,10 @@ func RunBenchmark[T any](
 	var totalJitter float64
 	var totalJitterSamples uint64
 
-	for _, head := range workerResults {
-		curr := head
-
+	for _, wStat := range workerResults {
+		curr := wStat.head
 		var prevLat time.Duration
 		firstInWorker := true
-
 		for curr != nil {
 			limit := curr.idx
 			for k := 0; k < limit; k++ {
@@ -541,7 +622,6 @@ func RunBenchmark[T any](
 					totalJitter += diff
 					totalJitterSamples++
 				}
-
 				prevLat = val
 				firstInWorker = false
 			}
@@ -560,6 +640,7 @@ func RunBenchmark[T any](
 		jitter         time.Duration
 		coeffVar       float64
 		pureThroughput float64
+		errorRate      float64
 	)
 
 	if totalOps > 0 {
@@ -567,6 +648,9 @@ func RunBenchmark[T any](
 		if totalJitterSamples > 0 {
 			jitter = time.Duration(totalJitter / float64(totalJitterSamples))
 		}
+
+		// Error Rate
+		errorRate = (float64(totalErrors) / float64(totalOps)) * 100.0
 
 		// Basic stats: average latency.
 		avgLatency = time.Duration(totalTimeNs / int64(totalOps))
@@ -598,12 +682,10 @@ func RunBenchmark[T any](
 		// Use population variance (divide by n) as we're observing full data, not a sample.
 		meanNs := float64(avgLatency.Nanoseconds())
 		var sumSquaredDiff float64
-
 		for _, lat := range allLatencies {
 			diff := float64(lat.Nanoseconds()) - meanNs
 			sumSquaredDiff += diff * diff
 		}
-
 		if len(allLatencies) > 0 {
 			variance = sumSquaredDiff / float64(len(allLatencies))
 			stdDev = time.Duration(math.Sqrt(variance))
@@ -622,24 +704,27 @@ func RunBenchmark[T any](
 		Duration:      globalDuration,
 		OpsPerSecReal: float64(totalOps) / globalDuration.Seconds(),
 		OpsPerSecPure: pureThroughput,
-
 		AvgLatency:    avgLatency,
 		StdDevLatency: stdDev,
 		Variance:      variance,
-
-		P50Latency: p50,
-		P75Latency: p75,
-		P95Latency: p95,
-		P99Latency: p99,
-		MinLatency: minLat,
-		MaxLatency: maxLat,
-
-		IQR:         iqr,
-		Jitter:      jitter,
-		CoeffVar:    coeffVar,
-		BytesPerOp:  bytes,
-		AllocsPerOp: allocs,
-		Histogram:   hist,
+		P50Latency:    p50,
+		P75Latency:    p75,
+		P95Latency:    p95,
+		P99Latency:    p99,
+		MinLatency:    minLat,
+		MaxLatency:    maxLat,
+		IQR:           iqr,
+		Jitter:        jitter,
+		CoeffVar:      coeffVar,
+		BytesPerOp:    bytes,
+		AllocsPerOp:   allocs,
+		AllocRateMBPS: allocRateMBPS,
+		NumGC:         numGC,
+		GCPauseTotal:  time.Duration(pauseTotalNs),
+		GCOverhead:    gcOverhead,
+		ErrorCount:    totalErrors,
+		ErrorRate:     errorRate,
+		Histogram:     hist,
 	}
 }
 
@@ -713,7 +798,6 @@ func calcExponentialHistogramImproved(
 
 	// 2. Initialize Bucket Boundaries using int64 nanoseconds to avoid float drift.
 	currentLowerNs := min.Nanoseconds()
-
 	for i := 0; i < bucketCount; i++ {
 		var currentUpperNs int64
 		if i == bucketCount-1 {
@@ -726,10 +810,11 @@ func calcExponentialHistogramImproved(
 			} else {
 				currentUpperNs = int64(float64(currentLowerNs) * factor)
 			}
-			if currentUpperNs < currentLowerNs {
-				// Guard against rounding weirdness.
-				currentUpperNs = currentLowerNs
-			}
+		}
+
+		if currentUpperNs < currentLowerNs {
+			// Guard against rounding weirdness.
+			currentUpperNs = currentLowerNs
 		}
 
 		buckets[i] = Bucket{
@@ -737,7 +822,6 @@ func calcExponentialHistogramImproved(
 			HighBound: time.Duration(currentUpperNs),
 			Count:     0,
 		}
-
 		currentLowerNs = currentUpperNs
 	}
 
