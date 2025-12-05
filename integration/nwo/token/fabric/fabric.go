@@ -71,7 +71,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
 	gomega.Expect(cmGenerator).NotTo(gomega.BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
 
-	// - Setup
+	// - PublicParamsBy
 	root, err := cmGenerator.Setup(tms)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 

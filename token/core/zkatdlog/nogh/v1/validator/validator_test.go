@@ -16,11 +16,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -33,7 +33,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	ix509 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -55,7 +54,7 @@ var (
 
 func TestValidator(t *testing.T) {
 	t.Run("Validator is called correctly with a non-anonymous issue action", func(t *testing.T) {
-		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
 		require.NoError(t, err)
 		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
@@ -67,7 +66,7 @@ func TestValidator(t *testing.T) {
 		require.Len(t, actions, 1)
 	})
 	t.Run("validator is called correctly with a transfer action", func(t *testing.T) {
-		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
 		require.NoError(t, err)
 		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
@@ -77,7 +76,7 @@ func TestValidator(t *testing.T) {
 		require.Len(t, actions, 1)
 	})
 	t.Run("validator is called correctly with a redeem action", func(t *testing.T) {
-		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
 		require.NoError(t, err)
 		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
@@ -90,7 +89,7 @@ func TestValidator(t *testing.T) {
 		require.Len(t, actions, 1)
 	})
 	t.Run("engine is called correctly with atomic swap", func(t *testing.T) {
-		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
 		require.NoError(t, err)
 		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
@@ -103,7 +102,7 @@ func TestValidator(t *testing.T) {
 		require.Len(t, actions, 1)
 	})
 	t.Run("when the sender's signature is not valid: wrong txID", func(t *testing.T) {
-		configurations, err := v1.NewConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
 		require.NoError(t, err)
 		env, err := newEnv(testUseCase, configurations)
 		require.NoError(t, err)
@@ -137,7 +136,7 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 	require.NoError(t, err)
 	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, workers)
 
-	configurations, err := v1.NewConfigurations("./testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
 	require.NoError(t, err)
 
 	for _, tc := range testCases {
@@ -173,7 +172,7 @@ type env struct {
 	transferRaw       []byte
 }
 
-func newEnv(benchCase *benchmark2.Case, configurations *v1.Configurations) (*env, error) {
+func newEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*env, error) {
 	var (
 		engine *enginedlog.Validator
 		pp     *v1.PublicParams
@@ -191,7 +190,11 @@ func newEnv(benchCase *benchmark2.Case, configurations *v1.Configurations) (*env
 	)
 
 	// prepare public parameters
-	pp, err := configurations.Get(benchCase.Bits, benchCase.CurveID)
+	pp, err := configurations.GetPublicParams(benchCase.Bits, benchCase.CurveID)
+	if err != nil {
+		return nil, err
+	}
+	oID, err := configurations.GetOwnerIdentity(benchCase.Bits, benchCase.CurveID)
 	if err != nil {
 		return nil, err
 	}
@@ -231,20 +234,20 @@ func newEnv(benchCase *benchmark2.Case, configurations *v1.Configurations) (*env
 	)
 
 	// non-anonymous issue
-	_, ir, _, err = prepareNonAnonymousIssueRequest(pp, auditor)
+	_, ir, _, err = prepareNonAnonymousIssueRequest(pp, auditor, oID)
 	if err != nil {
 		return nil, err
 	}
 
 	// prepare redeem
-	_, rr, _, inputsForRedeem, err = prepareRedeemRequest(pp, auditor)
+	_, rr, _, inputsForRedeem, err = prepareRedeemRequest(pp, auditor, oID)
 	if err != nil {
 		return nil, err
 	}
 
 	// prepare transfer
 	var trmetadata *driver.TokenRequestMetadata
-	sender, tr, trmetadata, inputsForTransfer, err = prepareTransferRequest(pp, auditor)
+	sender, tr, trmetadata, inputsForTransfer, err = prepareTransferRequest(pp, auditor, oID)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +314,7 @@ func prepareECDSASigner() (*Signer, error) {
 	return signer, nil
 }
 
-func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*issue2.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata, error) {
+func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*issue2.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata, error) {
 	signer, err := NewECDSASigner()
 	if err != nil {
 		return nil, nil, nil, err
@@ -322,7 +325,7 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ir, metadata, err := prepareIssue(auditor, issuer, issuerIdentity)
+	ir, metadata, err := prepareIssue(auditor, issuer, issuerIdentity, oID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -330,13 +333,9 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 	return issuer, ir, metadata, nil
 }
 
-func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	oID, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
+func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	owners := make([][]byte, 2)
-	owners[0] = oID.id
+	owners[0] = oID.ID
 
 	issuerSigner, err := NewECDSASigner()
 	if err != nil {
@@ -349,19 +348,15 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfe
 		return nil, nil, nil, nil, err
 	}
 
-	return prepareTransfer(pp, oID.signer, auditor, oID.auditInfo, oID.id, owners, issuer, issuerIdentity)
+	return prepareTransfer(pp, oID.Signer, auditor, oID.AuditInfo, oID.ID, owners, issuer, issuerIdentity)
 }
 
-func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	oID, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
+func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	owners := make([][]byte, 2)
-	owners[0] = oID.id
-	owners[1] = oID.id
+	owners[0] = oID.ID
+	owners[1] = oID.ID
 
-	return prepareTransfer(pp, oID.signer, auditor, oID.auditInfo, oID.id, owners, nil, nil)
+	return prepareTransfer(pp, oID.Signer, auditor, oID.AuditInfo, oID.ID, owners, nil, nil)
 }
 
 func prepareTokens(values, bf []*math.Zr, tokenType string, pp []*math.G1, curve *math.Curve) []*math.G1 {
@@ -380,13 +375,9 @@ func prepareToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1
 	return token
 }
 
-func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
-	oID, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
-	if err != nil {
-		return nil, nil, err
-	}
+func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte, oID *benchmark.OwnerIdentity) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
 	owners := make([][]byte, 1)
-	owners[0] = oID.id
+	owners[0] = oID.ID
 	values := []uint64{40}
 
 	issue, inf, err := issuer.GenerateZKIssue(values, owners)
@@ -394,7 +385,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 		return nil, nil, err
 	}
 
-	auditInfoRaw, err := oID.auditInfo.Bytes()
+	auditInfoRaw, err := oID.AuditInfo.Bytes()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -602,68 +593,6 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	}
 
 	return sender, tr, transferMetadata, tokens, nil
-}
-
-type ownerIdentity struct {
-	id        driver.Identity
-	auditInfo *crypto.AuditInfo
-	signer    driver.SigningIdentity
-}
-
-func loadOwnerIdentity(dir string) (*ownerIdentity, error) {
-	backend, err := kvs.NewInMemory()
-	if err != nil {
-		return nil, err
-	}
-	config, err := crypto.NewConfig(dir)
-	if err != nil {
-		return nil, err
-	}
-	curveID := math.BLS12_381_BBS_GURVY
-	keyStore, err := crypto.NewKeyStore(curveID, kvs.Keystore(backend))
-	if err != nil {
-		return nil, err
-	}
-	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
-	if err != nil {
-		return nil, err
-	}
-	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
-	if err != nil {
-		return nil, err
-	}
-
-	identityDescriptor, err := p.Identity(context.Background(), nil)
-	if err != nil {
-		return nil, err
-	}
-	id := identityDescriptor.Identity
-	audit := identityDescriptor.AuditInfo
-
-	auditInfo, err := p.DeserializeAuditInfo(context.Background(), audit)
-	if err != nil {
-		return nil, err
-	}
-	err = auditInfo.Match(context.Background(), id)
-	if err != nil {
-		return nil, err
-	}
-
-	signer, err := p.DeserializeSigningIdentity(context.Background(), id)
-	if err != nil {
-		return nil, err
-	}
-
-	id, err = identity.WrapWithType(idemix2.IdentityType, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ownerIdentity{
-		id:        id,
-		auditInfo: auditInfo,
-		signer:    signer,
-	}, nil
 }
 
 type Signer struct {

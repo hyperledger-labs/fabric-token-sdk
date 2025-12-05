@@ -17,9 +17,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/mock"
-	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	v1token "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -111,7 +111,7 @@ func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 	require.NoError(t, err)
 	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, workers)
 
-	configurations, err := v1setup.NewConfigurations("./testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves)
 	require.NoError(t, err)
 
 	for _, tc := range testCases {
@@ -152,8 +152,8 @@ type transferEnv struct {
 	ids     []*token.ID
 }
 
-func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *v1setup.Configurations) (*transferEnv, error) {
-	pp, err := configurations.Get(benchmarkCase.Bits, benchmarkCase.CurveID)
+func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*transferEnv, error) {
+	pp, err := configurations.GetPublicParams(benchmarkCase.Bits, benchmarkCase.CurveID)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +255,7 @@ type benchmarkTransferEnv struct {
 	Envs []*transferEnv
 }
 
-func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case, configurations *v1setup.Configurations) (*benchmarkTransferEnv, error) {
+func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*benchmarkTransferEnv, error) {
 	envs := make([]*transferEnv, n)
 	for i := 0; i < n; i++ {
 		env, err := newTransferEnv(benchmarkCase, configurations)

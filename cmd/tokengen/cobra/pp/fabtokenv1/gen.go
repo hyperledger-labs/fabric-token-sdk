@@ -95,7 +95,7 @@ type GeneratorArgs struct {
 
 // Gen generates the public parameters for the FabToken driver
 func Gen(args *GeneratorArgs) ([]byte, error) {
-	// Setup
+	// PublicParamsBy
 	ver := setupv1.ProtocolV1
 	if Version != 0 {
 		ver = driver.TokenDriverVersion(Version)

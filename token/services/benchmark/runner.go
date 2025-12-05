@@ -145,7 +145,7 @@ func (r Result) printMainMetrics(w *tabwriter.Writer) (cvPct float64, tailRatio 
 
 	overheadStatus := "(Low Overhead)"
 	if overheadPct > 15.0 {
-		overheadStatus = ColorYellow + fmt.Sprintf("(High Setup Cost: %.1f%%)", overheadPct) + ColorReset
+		overheadStatus = ColorYellow + fmt.Sprintf("(High PublicParamsBy Cost: %.1f%%)", overheadPct) + ColorReset
 	}
 
 	writef(w, "Pure Throughput\t%.2f/s\tTheoretical Max %s\n", r.OpsPerSecPure, overheadStatus)
@@ -487,7 +487,7 @@ func RunBenchmark[T any](
 			// SANITY CHECK: Loop continues until global stop signal.
 			// Using atomic load ensures memory visibility across goroutines.
 			for atomic.LoadInt32(&running) == 1 {
-				// 1. Setup: Create test data (not timed).
+				// 1. PublicParamsBy: Create test data (not timed).
 				d := setup()
 
 				// 2. Work: Execute the operation we're benchmarking (timed).

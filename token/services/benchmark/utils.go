@@ -43,7 +43,7 @@ func GenerateCases(bits []uint64, curves []math.CurveID, inputs []int, outputs [
 			for _, c := range curves {
 				for _, ni := range inputs {
 					for _, no := range outputs {
-						name := fmt.Sprintf("Setup(bits %d, curve %s, #i %d, #o %d) with %d workers", b, math2.CurveIDToString(c), ni, no, w)
+						name := fmt.Sprintf("PublicParamsBy(bits %d, curve %s, #i %d, #o %d) with %d workers", b, math2.CurveIDToString(c), ni, no, w)
 						cases = append(cases, TestCase{
 							Name: name,
 							BenchmarkCase: &Case{

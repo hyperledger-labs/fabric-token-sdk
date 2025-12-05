@@ -14,7 +14,7 @@ import (
 )
 
 func TestMetadata_Validate(t *testing.T) {
-	// Setup valid metadata for reference
+	// PublicParamsBy valid metadata for reference
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()

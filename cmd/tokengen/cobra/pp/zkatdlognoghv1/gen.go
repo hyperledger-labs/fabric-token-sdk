@@ -123,7 +123,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to load issuer public key")
 	}
 
-	// Setup
+	// PublicParamsBy
 	// TODO: update the curve here
 	curveID := math3.BN254
 	if args.Aries {

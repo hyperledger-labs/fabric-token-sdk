@@ -15,7 +15,7 @@ import (
 )
 
 func TestRunBenchmark(t *testing.T) {
-	// 1. Define Setup (Heavy, excluded)
+	// 1. Define PublicParamsBy (Heavy, excluded)
 	setup := func() []byte {
 		// Simulate expensive database fetch or allocation
 		time.Sleep(2 * time.Millisecond)

@@ -15,7 +15,7 @@ import (
 )
 
 func TestSerializeAndDeserialize(t *testing.T) {
-	// Setup
+	// PublicParamsBy
 	p := &Proof{
 		Challenge: []byte("test-challenge"),
 		Tokens: []token.LedgerToken{{
@@ -51,7 +51,7 @@ func TestSerializeAndDeserialize(t *testing.T) {
 }
 
 func TestSHA256Digest(t *testing.T) {
-	// Setup
+	// PublicParamsBy
 	p := &Proof{
 		Challenge: []byte("test-challenge"),
 		Tokens: []token.LedgerToken{{
