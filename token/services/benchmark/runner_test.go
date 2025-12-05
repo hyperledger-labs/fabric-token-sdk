@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 )
 
 func TestRunBenchmark(t *testing.T) {

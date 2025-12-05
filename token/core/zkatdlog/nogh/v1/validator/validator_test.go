@@ -14,12 +14,12 @@ import (
 	"crypto/rand"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	enginedlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
@@ -44,7 +45,7 @@ import (
 )
 
 var (
-	testUseCase = &benchmark.Case{
+	testUseCase = &benchmark2.Case{
 		Bits:       32,
 		CurveID:    math.BLS12_381_BBS_GURVY,
 		NumInputs:  2,
@@ -125,34 +126,34 @@ func TestValidator(t *testing.T) {
 }
 
 func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
-	bits, err := benchmark.Bits(32)
+	bits, err := benchmark2.Bits(32)
 	require.NoError(t, err)
-	curves := benchmark.Curves(math.BN254)
-	inputs, err := benchmark.NumInputs(2)
+	curves := benchmark2.Curves(math.BN254)
+	inputs, err := benchmark2.NumInputs(2)
 	require.NoError(t, err)
-	outputs, err := benchmark.NumOutputs(2)
+	outputs, err := benchmark2.NumOutputs(2)
 	require.NoError(t, err)
-	workers, err := benchmark.Workers(runtime.NumCPU())
+	workers, err := benchmark2.Workers(runtime.NumCPU())
 	require.NoError(t, err)
-	testCases := benchmark.GenerateCases(bits, curves, inputs, outputs, workers)
+	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, workers)
 
 	configurations, err := v1.NewConfigurations("./testdata", bits, curves)
 	require.NoError(t, err)
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			r := benchmark.RunBenchmark(
+			r := benchmark2.RunBenchmark(
 				tc.BenchmarkCase.Workers,
-				benchmark.Duration(),
+				benchmark2.Duration(),
+				3*time.Second,
 				func() *env {
 					env, err := newEnv(tc.BenchmarkCase, configurations)
 					require.NoError(t, err)
 					return env
 				},
-				func(env *env) {
-					actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "1", env.transferRaw)
-					require.NoError(t, err)
-					require.Len(t, actions, 1)
+				func(env *env) error {
+					_, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "1", env.transferRaw)
+					return err
 				},
 			)
 			r.Print()
@@ -172,7 +173,7 @@ type env struct {
 	transferRaw       []byte
 }
 
-func newEnv(benchCase *benchmark.Case, configurations *v1.Configurations) (*env, error) {
+func newEnv(benchCase *benchmark2.Case, configurations *v1.Configurations) (*env, error) {
 	var (
 		engine *enginedlog.Validator
 		pp     *v1.PublicParams
@@ -330,12 +331,12 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 }
 
 func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	id, auditInfo, signer, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
+	oID, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 	owners := make([][]byte, 2)
-	owners[0] = id
+	owners[0] = oID.id
 
 	issuerSigner, err := NewECDSASigner()
 	if err != nil {
@@ -348,19 +349,19 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfe
 		return nil, nil, nil, nil, err
 	}
 
-	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners, issuer, issuerIdentity)
+	return prepareTransfer(pp, oID.signer, auditor, oID.auditInfo, oID.id, owners, issuer, issuerIdentity)
 }
 
 func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	id, auditInfo, signer, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
+	oID, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 	owners := make([][]byte, 2)
-	owners[0] = id
-	owners[1] = id
+	owners[0] = oID.id
+	owners[1] = oID.id
 
-	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners, nil, nil)
+	return prepareTransfer(pp, oID.signer, auditor, oID.auditInfo, oID.id, owners, nil, nil)
 }
 
 func prepareTokens(values, bf []*math.Zr, tokenType string, pp []*math.G1, curve *math.Curve) []*math.G1 {
@@ -380,12 +381,12 @@ func prepareToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1
 }
 
 func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
-	id, auditInfo, _, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
+	oID, err := loadOwnerIdentity("./testdata/bls12_381_bbs/idemix")
 	if err != nil {
 		return nil, nil, err
 	}
 	owners := make([][]byte, 1)
-	owners[0] = id
+	owners[0] = oID.id
 	values := []uint64{40}
 
 	issue, inf, err := issuer.GenerateZKIssue(values, owners)
@@ -393,7 +394,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 		return nil, nil, err
 	}
 
-	auditInfoRaw, err := auditInfo.Bytes()
+	auditInfoRaw, err := oID.auditInfo.Bytes()
 	if err != nil {
 		return nil, nil, err
 	}
