@@ -6,7 +6,8 @@ Packages with benchmark tests:
    - `BenchmarkSender`, `BenchmarkVerificationSenderProof`, `TestParallelBenchmarkSender`, and `TestParallelBenchmarkVerificationSenderProof` are used to benchmark the generation of a transfer action. This includes also the generation of ZK proof for a transfer operation.
    - `BenchmarkTransferProofGeneration`, `TestParallelBenchmarkTransferProofGeneration` are used to benchmark the generation of ZK proof alone. 
 - `token/core/zkatdlog/nogh/v1/issue`: `BenchmarkIssuer` and `BenchmarkProofVerificationIssuer`
-- `token/core/zkatdlog/nogh/v1`: `BenchmarkTransfer` 
+- `token/core/zkatdlog/nogh/v1/validator`: `TestParallelBenchmarkValidatorTransfer`.
+- `token/core/zkatdlog/nogh/v1`: `BenchmarkTransferServiceTransfer` and `TestParallelBenchmarkTransferServiceTransfer`.
 
 The steps necessary to run the benchmarks are very similar.
 We give two examples here:
@@ -116,7 +117,7 @@ Example results have been produced on an Apple M1 Max and can be consulted [here
 This is a test that runs multiple instances of the above benchmark in parallel.
 This allows the analyst to understand if shared data structures are actual bottlenecks.
 
-It uses a custom-made runner whose documentation can be found [here](../../../token/core/common/benchmark/runner.md).
+It uses a custom-made runner whose documentation can be found [here](../../../token/services/benchmark/runner.md).
 
 ```shell
 go test ./token/core/zkatdlog/nogh/v1/transfer -test.run=TestParallelBenchmarkSender -test.v -test.benchmem -test.timeout 0 -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2" -workers="1,10" -duration="10s" | tee bench.txt

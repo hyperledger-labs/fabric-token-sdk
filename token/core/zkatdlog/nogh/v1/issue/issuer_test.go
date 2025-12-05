@@ -11,12 +11,12 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue/mock"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,12 +45,12 @@ func TestIssuer(t *testing.T) {
 }
 
 func BenchmarkIssuer(b *testing.B) {
-	bits, err := benchmark.Bits(32, 64)
+	bits, err := benchmark2.Bits(32, 64)
 	require.NoError(b, err)
-	curves := benchmark.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
-	outputs, err := benchmark.NumOutputs(1, 2, 3)
+	curves := benchmark2.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
+	outputs, err := benchmark2.NumOutputs(1, 2, 3)
 	require.NoError(b, err)
-	testCases := benchmark.GenerateCases(bits, curves, nil, outputs, nil)
+	testCases := benchmark2.GenerateCases(bits, curves, nil, outputs, nil)
 
 	for _, tc := range testCases {
 		b.Run(tc.Name, func(b *testing.B) {
@@ -76,12 +76,12 @@ func BenchmarkIssuer(b *testing.B) {
 }
 
 func BenchmarkProofVerificationIssuer(b *testing.B) {
-	bits, err := benchmark.Bits(32, 64)
+	bits, err := benchmark2.Bits(32, 64)
 	require.NoError(b, err)
-	curves := benchmark.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
-	outputs, err := benchmark.NumOutputs(1, 2, 3)
+	curves := benchmark2.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
+	outputs, err := benchmark2.NumOutputs(1, 2, 3)
 	require.NoError(b, err)
-	testCases := benchmark.GenerateCases(bits, curves, nil, outputs, nil)
+	testCases := benchmark2.GenerateCases(bits, curves, nil, outputs, nil)
 
 	for _, tc := range testCases {
 		b.Run(tc.Name, func(b *testing.B) {
@@ -158,7 +158,7 @@ type benchmarkIssuerEnv struct {
 	IssuerEnvs []*issuerEnv
 }
 
-func newBenchmarkIssuerEnv(b *testing.B, n int, benchmarkCase *benchmark.Case) *benchmarkIssuerEnv {
+func newBenchmarkIssuerEnv(b *testing.B, n int, benchmarkCase *benchmark2.Case) *benchmarkIssuerEnv {
 	b.Helper()
 	envs := make([]*issuerEnv, n)
 	pp := setup(b, benchmarkCase.Bits, benchmarkCase.CurveID)
@@ -168,7 +168,7 @@ func newBenchmarkIssuerEnv(b *testing.B, n int, benchmarkCase *benchmark.Case) *
 	return &benchmarkIssuerEnv{IssuerEnvs: envs}
 }
 
-func newBenchmarkIssuerProofVerificationEnv(b *testing.B, n int, benchmarkCase *benchmark.Case) *benchmarkIssuerEnv {
+func newBenchmarkIssuerProofVerificationEnv(b *testing.B, n int, benchmarkCase *benchmark2.Case) *benchmarkIssuerEnv {
 	b.Helper()
 	envs := make([]*issuerEnv, n)
 	pp := setup(b, benchmarkCase.Bits, benchmarkCase.CurveID)

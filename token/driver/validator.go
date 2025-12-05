@@ -22,6 +22,8 @@ type ValidationAttributes = map[ValidationAttributeID][]byte
 type GetStateFnc = func(id token.ID) ([]byte, error)
 
 // Ledger models a read-only ledger
+//
+//go:generate counterfeiter -o mock/ledger.go -fake-name Ledger . Ledger
 type Ledger interface {
 	// GetState returns the value for the given key
 	GetState(id token.ID) ([]byte, error)
