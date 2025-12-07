@@ -1,4 +1,4 @@
-# ZKAT DLog No Graph Hiding Benchmark
+# ZKAT DLog No Graph Hiding Benchmarks
 
 Packages with benchmark tests:
 
