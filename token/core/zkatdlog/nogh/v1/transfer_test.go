@@ -136,7 +136,6 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 	if err != nil {
 		return nil, err
 	}
-	pp.AddIssuer([]byte("an_issuer"))
 	ppm, err := common.NewPublicParamsManagerFromParams(pp)
 	if err != nil {
 		return nil, err

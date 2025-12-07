@@ -181,6 +181,8 @@ func RunBenchmark[T any](
 				nextTick = time.Now()
 			}
 
+			// This acts as a "starting gun" (Barrier pattern).
+			// It ensures that all worker goroutines are spawned, initialized, and ready to go before any of them begin execution.
 			startWg.Done()
 			startWg.Wait()
 
@@ -239,9 +241,12 @@ func RunBenchmark[T any](
 
 	// Timeline Monitor
 	timeline := make([]TimePoint, 0, int(cfg.Duration.Seconds())+1)
-	timelineMu := &sync.Mutex{}
+
+	var monitorWg sync.WaitGroup
+	monitorWg.Add(1)
 
 	go func() {
+		defer monitorWg.Done()
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 		var prevOps uint64
@@ -258,9 +263,7 @@ func RunBenchmark[T any](
 				delta := currOps - prevOps
 				prevOps = currOps
 				pt := TimePoint{Timestamp: t.Sub(startTime), OpsSec: float64(delta)}
-				timelineMu.Lock()
 				timeline = append(timeline, pt)
-				timelineMu.Unlock()
 			}
 		}
 	}()
@@ -272,6 +275,8 @@ func RunBenchmark[T any](
 	cancel()
 
 	globalDuration := time.Since(startGlobal)
+	monitorWg.Wait() // BLOCK here until monitor goroutine returns
+
 	runtime.ReadMemStats(&memAfter)
 
 	return analyzeResults(cfg, workerResults, memBytes, memAllocs, memBefore, memAfter, globalDuration, timeline)
