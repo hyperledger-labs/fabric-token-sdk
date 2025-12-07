@@ -12,6 +12,7 @@ import (
 	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
@@ -91,7 +92,7 @@ func NewProvider(
 		deserializer:            deserializer,
 		storage:                 storage,
 		isMeCache:               cache2.NewNoCache[bool](),
-		signers:                 cache2.NewNoCache[*SignerEntry](),
+		signers:                 secondcache.NewTyped[*SignerEntry](5),
 	}
 }
 
