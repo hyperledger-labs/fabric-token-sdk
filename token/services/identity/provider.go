@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -90,7 +91,7 @@ func NewProvider(
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		deserializer:            deserializer,
 		storage:                 storage,
-		isMeCache:               secondcache.NewTyped[bool](50),
+		isMeCache:               cache2.NewNoCache[bool](),
 		signers:                 secondcache.NewTyped[*SignerEntry](50),
 	}
 }
