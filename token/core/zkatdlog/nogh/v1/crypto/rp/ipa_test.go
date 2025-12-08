@@ -11,12 +11,13 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestIPAProofVerify(t *testing.T) {
-	curve := math.Curves[0]
+	curve := math.Curves[math2.BLS12_381_BBS_GURVY_EXT]
 	nr := uint64(6)
 	l := uint64(1 << nr)
 	leftGens := make([]*math.G1, l)
