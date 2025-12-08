@@ -13,29 +13,49 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/IBM/mathlib/driver"
 	"github.com/IBM/mathlib/driver/gurvy"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math/gurvy/bls12381ext"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/rng"
 )
 
 var (
 	BLS12_381_BBS_GURVY_FAST_RNG math.CurveID
+	BLS12_381_BBS_GURVY_EXT      math.CurveID
 )
 
 func init() {
 	BLS12_381_BBS_GURVY_FAST_RNG = math.CurveID(len(math.Curves))
-	math.Curves = append(math.Curves, math.NewCurve(
-		NewCurveWithFastRNG(gurvy.NewBls12_381BBS()),
-		math.NewG1(gurvy.NewBls12_381BBS().GenG1(), BLS12_381_BBS_GURVY_FAST_RNG),
-		math.NewG2(gurvy.NewBls12_381BBS().GenG2(), BLS12_381_BBS_GURVY_FAST_RNG),
-		math.NewGt(gurvy.NewBls12_381BBS().GenGt(), BLS12_381_BBS_GURVY_FAST_RNG),
-		math.NewZr(gurvy.NewBls12_381().GroupOrder(), BLS12_381_BBS_GURVY_FAST_RNG),
-		gurvy.NewBls12_381BBS().CoordinateByteSize(),
-		gurvy.NewBls12_381BBS().G1ByteSize(),
-		gurvy.NewBls12_381BBS().CompressedG1ByteSize(),
-		gurvy.NewBls12_381BBS().G2ByteSize(),
-		gurvy.NewBls12_381BBS().CompressedG2ByteSize(),
-		gurvy.NewBls12_381BBS().ScalarByteSize(),
-		BLS12_381_BBS_GURVY_FAST_RNG,
-	))
+	BLS12_381_BBS_GURVY_EXT = BLS12_381_BBS_GURVY_FAST_RNG + 1
+	math.Curves = append(
+		math.Curves,
+		math.NewCurve(
+			NewCurveWithFastRNG(gurvy.NewBls12_381BBS()),
+			math.NewG1(gurvy.NewBls12_381BBS().GenG1(), BLS12_381_BBS_GURVY_FAST_RNG),
+			math.NewG2(gurvy.NewBls12_381BBS().GenG2(), BLS12_381_BBS_GURVY_FAST_RNG),
+			math.NewGt(gurvy.NewBls12_381BBS().GenGt(), BLS12_381_BBS_GURVY_FAST_RNG),
+			math.NewZr(gurvy.NewBls12_381().GroupOrder(), BLS12_381_BBS_GURVY_FAST_RNG),
+			gurvy.NewBls12_381BBS().CoordinateByteSize(),
+			gurvy.NewBls12_381BBS().G1ByteSize(),
+			gurvy.NewBls12_381BBS().CompressedG1ByteSize(),
+			gurvy.NewBls12_381BBS().G2ByteSize(),
+			gurvy.NewBls12_381BBS().CompressedG2ByteSize(),
+			gurvy.NewBls12_381BBS().ScalarByteSize(),
+			BLS12_381_BBS_GURVY_FAST_RNG,
+		),
+		math.NewCurve(
+			bls12381ext.NewBls12_381BBS(),
+			math.NewG1(bls12381ext.NewBls12_381BBS().GenG1(), BLS12_381_BBS_GURVY_EXT),
+			math.NewG2(bls12381ext.NewBls12_381BBS().GenG2(), BLS12_381_BBS_GURVY_EXT),
+			math.NewGt(bls12381ext.NewBls12_381BBS().GenGt(), BLS12_381_BBS_GURVY_EXT),
+			math.NewZr(gurvy.NewBls12_381().GroupOrder(), BLS12_381_BBS_GURVY_EXT),
+			bls12381ext.NewBls12_381BBS().CoordinateByteSize(),
+			bls12381ext.NewBls12_381BBS().G1ByteSize(),
+			bls12381ext.NewBls12_381BBS().CompressedG1ByteSize(),
+			bls12381ext.NewBls12_381BBS().G2ByteSize(),
+			bls12381ext.NewBls12_381BBS().CompressedG2ByteSize(),
+			bls12381ext.NewBls12_381BBS().ScalarByteSize(),
+			BLS12_381_BBS_GURVY_EXT,
+		),
+	)
 }
 
 type CurveWithFastRNG struct {
