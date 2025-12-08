@@ -7,10 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"bytes"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto"
 )
 
 // Separator is used to delimit to end an array of bytes.
@@ -27,10 +26,11 @@ func (a G1Array) Bytes() ([]byte, error) {
 		if e == nil {
 			return nil, errors.Errorf("failed to marshal array of G1")
 		}
-		raw[i] = e.Bytes()
+		st := hex.EncodeToString(e.Bytes())
+		raw[i] = []byte(st)
 	}
-	// join the serialization of the group elements with the predefined separator.
-	return bytes.Join(raw, []byte(Separator)), nil
+	clear(b)
+	return crypto.AppendFixed32(b, raw), nil
 }
 
 // GetG1Array takes a series of G1 elements and returns the corresponding array

@@ -219,11 +219,10 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 		xSquareInv.InvModP(p.Curve.GroupOrder)
 
 		// compute the commitment to left, right and their inner product
-		CPrime := LArray[i].Mul(xSquare)
+		CPrime := LArray[i].Mul2(xSquare, RArray[i], xSquareInv)
 		CPrime.Add(com)
-		CPrime.Add(RArray[i].Mul(xSquareInv))
 		// com = L^{x^2}*com*R^{1/x^2}
-		com = CPrime.Copy()
+		com = CPrime
 	}
 	return left[0], right[0], LArray, RArray, nil
 }
@@ -326,15 +325,14 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 		xSquareInv.InvModP(v.Curve.GroupOrder)
 		// compute a commitment to the reduced vectors and their inner product
 		CPrime := proof.L[i].Mul(xSquare)
-		CPrime.Add(C)
 		CPrime.Add(proof.R[i].Mul(xSquareInv))
-		C = CPrime.Copy()
+		CPrime.Add(C)
+		C = CPrime
 		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
 		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv)
 	}
 	// compute a commitment to left, right and their product
-	CPrime := leftGen[0].Mul(proof.Left)
-	CPrime.Add(rightGen[0].Mul(proof.Right))
+	CPrime := leftGen[0].Mul2(proof.Left, rightGen[0], proof.Right)
 	CPrime.Add(X.Mul(v.Curve.ModMul(proof.Left, proof.Right, v.Curve.GroupOrder)))
 	if !CPrime.Equals(C) {
 		return errors.New("invalid IPA")
@@ -366,12 +364,9 @@ func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*
 	rightGenPrime := make([]*mathlib.G1, len(rightGen)/2)
 	for i := 0; i < len(leftGenPrime); i++ {
 		// G_i = G_i^x*G_{i+len(left)/2}^{1/x}
-		leftGenPrime[i] = leftGen[i].Mul(xInv)
-		leftGenPrime[i].Add(leftGen[i+len(leftGenPrime)].Mul(x))
-
+		leftGenPrime[i] = leftGen[i].Mul2(xInv, leftGen[i+len(leftGenPrime)], x)
 		// H_i = H_i^{1/x}*H_{i+len(right)/2}^{x}
-		rightGenPrime[i] = rightGen[i].Mul(x)
-		rightGenPrime[i].Add(rightGen[i+len(rightGenPrime)].Mul(xInv))
+		rightGenPrime[i] = rightGen[i].Mul2(x, rightGen[i+len(rightGenPrime)], xInv)
 	}
 	return leftGenPrime, rightGenPrime
 }

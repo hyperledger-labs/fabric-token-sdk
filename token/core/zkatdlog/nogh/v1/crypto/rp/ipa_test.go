@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,7 +64,7 @@ func NewIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
 }
 
 func TestIPAProofVerify(t *testing.T) {
-	setup, err := NewIpaSetup(math2.BLS12_381_BBS_GURVY_EXT)
+	setup, err := NewIpaSetup(math.BLS12_381_BBS_GURVY)
 	require.NoError(t, err)
 
 	prover := rp.NewIPAProver(
@@ -99,7 +98,7 @@ func TestIPAProofVerify(t *testing.T) {
 func BenchmarkIPAProver(b *testing.B) {
 	envs := make([]*ipaSetup, 0, 128)
 	for i := 0; i < 128; i++ {
-		setup, err := NewIpaSetup(math2.BLS12_381_BBS_GURVY_EXT)
+		setup, err := NewIpaSetup(math.BLS12_381_BBS_GURVY)
 		require.NoError(b, err)
 		envs = append(envs, setup)
 	}
