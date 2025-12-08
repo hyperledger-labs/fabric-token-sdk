@@ -327,7 +327,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 		CPrime := proof.L[i].Mul(xSquare)
 		CPrime.Add(proof.R[i].Mul(xSquareInv))
 		CPrime.Add(C)
-		C = CPrime
+		C = CPrime.Copy()
 		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
 		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv)
 	}
