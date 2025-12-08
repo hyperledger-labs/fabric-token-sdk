@@ -110,14 +110,14 @@ You can then aggregate/parse the output (e.g., benchstat) to compute averages ac
 
 ### Results
 
-Example results have been produced on an Apple M1 Max and can be consulted [here](./transfer_BenchmarkSender_results.md). 
+Example results have been produced on an Apple M1 Max and can be consulted [here](transfer_BenchmarkSender_results.md). 
 
 ## Benchmark: `token/core/zkatdlog/nogh/v1/transfer#TestParallelBenchmarkSender`
 
 This is a test that runs multiple instances of the above benchmark in parallel.
 This allows the analyst to understand if shared data structures are actual bottlenecks.
 
-It uses a custom-made runner whose documentation can be found [here](../../../token/services/benchmark/runner.md).
+It uses a custom-made runner whose documentation can be found [here](../../../../token/services/benchmark/runner.md).
 
 ```shell
 go test ./token/core/zkatdlog/nogh/v1/transfer -test.run=TestParallelBenchmarkSender -test.v -test.timeout 0 -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2" -workers="NumCPU" -duration="10s" -setup_samples=128 | tee bench.txt
