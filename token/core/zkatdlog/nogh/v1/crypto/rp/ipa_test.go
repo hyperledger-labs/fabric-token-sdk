@@ -7,11 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package rp_test
 
 import (
+	"math/bits"
 	"math/rand"
 	"strconv"
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,8 +32,8 @@ type ipaSetup struct {
 
 func NewIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
 	curve := math.Curves[curveID]
-	nr := uint64(6)
-	l := uint64(1 << nr)
+	l := uint64(64)
+	nr := 63 - uint64(bits.LeadingZeros64(l))
 	leftGens := make([]*math.G1, l)
 	rightGens := make([]*math.G1, l)
 	left := make([]*math.Zr, l)
@@ -96,6 +98,10 @@ func TestIPAProofVerify(t *testing.T) {
 }
 
 func BenchmarkIPAProver(b *testing.B) {
+	pp, err := profile.New(profile.WithAll(), profile.WithPath("./profile"))
+	require.NoError(b, err)
+	require.NoError(b, pp.Start())
+	defer pp.Stop()
 	envs := make([]*ipaSetup, 0, 128)
 	for i := 0; i < 128; i++ {
 		setup, err := NewIpaSetup(math.BLS12_381_BBS_GURVY)
