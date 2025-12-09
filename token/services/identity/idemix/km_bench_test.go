@@ -163,7 +163,7 @@ func TestParallelBenchmarkIdemixDeserializeSigner(t *testing.T) {
 			return ids[rand.Intn(len(ids))]
 		},
 		func(s []byte) error {
-			_, err  := keyManager.DeserializeSigner(t.Context(), s)
+			_, err := keyManager.DeserializeSigner(t.Context(), s)
 			return err
 		},
 	)
