@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"hash"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto"
@@ -45,4 +47,13 @@ func GetG1Array(elements ...[]*math.G1) G1Array {
 		s = append(s, e...)
 	}
 	return s
+}
+
+func HashG1Array(h hash.Hash, elements ...*math.G1) []byte {
+	h.Reset()
+
+	for _, e := range elements {
+		h.Write(e.Bytes())
+	}
+	return h.Sum(nil)
 }
