@@ -298,10 +298,11 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 
 	X := v.Q.Mul(x)
 
-	var leftGen []*mathlib.G1
-	var rightGen []*mathlib.G1
-	leftGen = v.LeftGenerators
-	rightGen = v.RightGenerators
+	leftGen := make([]*mathlib.G1, len(v.LeftGenerators))
+	copy(leftGen, v.LeftGenerators)
+	rightGen := make([]*mathlib.G1, len(v.RightGenerators))
+	copy(rightGen, v.RightGenerators)
+
 	for i := range v.NumberOfRounds {
 		// check well-formedness
 		if proof.L[i] == nil || proof.R[i] == nil {
