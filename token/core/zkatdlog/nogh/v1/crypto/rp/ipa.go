@@ -154,6 +154,7 @@ func (p *ipaProver) Prove() (*IPA, error) {
 	}
 	// compute first challenge
 	x := p.Curve.HashToZr(raw)
+
 	// compute a commitment to inner product value and the vectors
 	C := p.Q.Mul(p.Curve.ModMul(x, p.InnerProduct, p.Curve.GroupOrder))
 	C.Add(p.Commitment)
@@ -172,14 +173,13 @@ func (p *ipaProver) Prove() (*IPA, error) {
 // of the left vector and right is a function of right vector.
 // Both vectors are committed in com which is passed as a parameter to reduce
 func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mathlib.G1, []*mathlib.G1, error) {
-	var leftGen, rightGen []*mathlib.G1
-	var left, right []*mathlib.Zr
+	leftGen := make([]*mathlib.G1, len(p.LeftGenerators))
+	copy(leftGen, p.LeftGenerators)
+	rightGen := make([]*mathlib.G1, len(p.RightGenerators))
+	copy(rightGen, p.RightGenerators)
 
-	leftGen = p.LeftGenerators
-	rightGen = p.RightGenerators
-
-	left = p.leftVector
-	right = p.rightVector
+	left := p.leftVector
+	right := p.rightVector
 
 	LArray := make([]*mathlib.G1, p.NumberOfRounds)
 	RArray := make([]*mathlib.G1, p.NumberOfRounds)
@@ -324,8 +324,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 		xSquareInv := xSquare.Copy()
 		xSquareInv.InvModP(v.Curve.GroupOrder)
 		// compute a commitment to the reduced vectors and their inner product
-		CPrime := proof.L[i].Mul(xSquare)
-		CPrime.Add(proof.R[i].Mul(xSquareInv))
+		CPrime := proof.L[i].Mul2(xSquare, proof.R[i], xSquareInv)
 		CPrime.Add(C)
 		C = CPrime.Copy()
 		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
@@ -360,15 +359,14 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 // reduceGenerators reduces the number of generators passed in the parameters by 1/2,
 // as a function of the old generators,  x and 1/x
 func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*mathlib.G1, []*mathlib.G1) {
-	leftGenPrime := make([]*mathlib.G1, len(leftGen)/2)
-	rightGenPrime := make([]*mathlib.G1, len(rightGen)/2)
-	for i := 0; i < len(leftGenPrime); i++ {
+	l := len(leftGen) / 2
+	for i := 0; i < l; i++ {
 		// G_i = G_i^x*G_{i+len(left)/2}^{1/x}
-		leftGenPrime[i] = leftGen[i].Mul2(xInv, leftGen[i+len(leftGenPrime)], x)
+		leftGen[i] = leftGen[i].Mul2(xInv, leftGen[i+l], x)
 		// H_i = H_i^{1/x}*H_{i+len(right)/2}^{x}
-		rightGenPrime[i] = rightGen[i].Mul2(x, rightGen[i+len(rightGenPrime)], xInv)
+		rightGen[i] = rightGen[i].Mul2(x, rightGen[i+l], xInv)
 	}
-	return leftGenPrime, rightGenPrime
+	return leftGen[:l], rightGen[:l]
 }
 
 func innerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {

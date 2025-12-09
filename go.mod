@@ -8,7 +8,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/IBM/idemix v0.0.2-0.20250313153527-832db18b9478
 	github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478
-	github.com/IBM/mathlib v0.0.3-0.20251208124832-1dd505f14350
+	github.com/IBM/mathlib v0.0.3-0.20251209063833-bdbf97a6c3d2
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6
