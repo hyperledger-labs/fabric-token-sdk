@@ -24,7 +24,7 @@ import (
 // TestProverVerifier exercises a full prover -> verifier round-trip for
 // a generated ZK-issue proof using the given curve and output count.
 func TestProverVerifier(t *testing.T) {
-	prover, verifier := prepareZKIssue(t, 32, math.BN254, 2)
+	prover, verifier := prepareZKIssue(t, 32, math.BLS12_381_BBS_GURVY, 2)
 	proof, err := prover.Prove()
 	assert.NoError(t, err)
 	assert.NotNil(t, proof)
@@ -35,7 +35,7 @@ func TestProverVerifier(t *testing.T) {
 // TestIssuer tests the high-level issuer API: generating a ZK issue
 // action and verifying the resulting proof.
 func TestIssuer(t *testing.T) {
-	pp := setup(t, 32, math.BN254)
+	pp := setup(t, 32, math.BLS12_381_BBS_GURVY)
 	issuer := issue2.NewIssuer("ABC", &mock.SigningIdentity{}, pp)
 	action, _, err := issuer.GenerateZKIssue([]uint64{10, 20}, [][]byte{[]byte("alice"), []byte("bob")})
 	require.NoError(t, err)

@@ -70,7 +70,7 @@ func TestIPAProofVerify(t *testing.T) {
 	require.NoError(t, err)
 
 	prover := rp.NewIPAProver(
-		innerProduct(setup.left, setup.right, setup.curve),
+		rp.InnerProduct(setup.left, setup.right, setup.curve),
 		setup.left,
 		setup.right,
 		setup.Q,
@@ -85,7 +85,7 @@ func TestIPAProofVerify(t *testing.T) {
 	assert.NotNil(t, proof)
 
 	verifier := rp.NewIPAVerifier(
-		innerProduct(setup.left, setup.right, setup.curve),
+		rp.InnerProduct(setup.left, setup.right, setup.curve),
 		setup.Q,
 		setup.leftGens,
 		setup.rightGens,
@@ -113,7 +113,7 @@ func BenchmarkIPAProver(b *testing.B) {
 		for b.Loop() {
 			setup := envs[rand.Intn(len(envs))]
 			prover := rp.NewIPAProver(
-				innerProduct(setup.left, setup.right, setup.curve),
+				rp.InnerProduct(setup.left, setup.right, setup.curve),
 				setup.left,
 				setup.right,
 				setup.Q,
@@ -128,12 +128,4 @@ func BenchmarkIPAProver(b *testing.B) {
 			assert.NotNil(b, proof)
 		}
 	})
-}
-
-func innerProduct(left []*math.Zr, right []*math.Zr, c *math.Curve) *math.Zr {
-	ip := c.NewZrFromInt(0)
-	for i, l := range left {
-		ip = c.ModAdd(ip, c.ModMul(l, right[i], c.GroupOrder), c.GroupOrder)
-	}
-	return ip
 }
