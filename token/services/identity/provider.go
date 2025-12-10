@@ -306,60 +306,6 @@ func (p *Provider) getSignerAndCache(ctx context.Context, identity driver.Identi
 	return signer, shouldCache, nil
 }
 
-// func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
-// 	// check again the cache
-// 	entry, ok := p.signers.Get(idHash)
-// 	if ok {
-// 		p.Logger.DebugfContext(ctx, "signer for [%s] found", idHash)
-// 		return entry.Signer, nil
-// 	}
-
-// 	p.Logger.DebugfContext(ctx, "signer for [%s] not found, try to deserialize", idHash)
-// 	// ask the deserializer
-// 	signer, err := p.deserializeSigner(ctx, identity)
-// 	if err != nil {
-// 		return nil, errors.Wrapf(err, "failed deserializing identity for signer [%s]", identity)
-// 	}
-
-// 	entry = &SignerEntry{Signer: signer}
-// 	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-// 		entry.DebugStack = debug.Stack()
-// 	}
-// 	p.signers.Add(idHash, entry)
-// 	if err := p.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
-// 		return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
-// 	}
-
-// 	return entry.Signer, nil
-// }
-
-// func (p *Provider) deserializeSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
-// 	if p.deserializer == nil {
-// 		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
-// 	}
-// 	var err error
-// 	signer, err := p.deserializer.DeserializeSigner(ctx, identity)
-// 	if err == nil {
-// 		return signer, nil
-// 	}
-
-// 	// give it a second chance
-
-// 	// is the identity wrapped in TypedIdentity?
-// 	ro, err2 := UnmarshalTypedIdentity(identity)
-// 	if err2 != nil {
-// 		// No
-// 		return nil, errors.Wrapf(err2, "failed to unmarshal raw owner for identity [%s] and failed deserialization [%s]", identity.String(), err)
-// 	}
-
-// 	// yes, check ro.Identity
-// 	signer, err = p.getSigner(ctx, ro.Identity, ro.Identity.UniqueID())
-// 	if err != nil {
-// 		return nil, errors.Wrapf(err, "failed getting signer for identity [%s]", ro.Identity)
-// 	}
-// 	return signer, nil
-// }
-
 func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias driver.Identity) {
 	id := descriptor.Identity.UniqueID()
 	setAlias := !alias.IsNone()
