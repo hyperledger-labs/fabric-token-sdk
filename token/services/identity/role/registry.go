@@ -242,10 +242,21 @@ func (r *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType,
 
 	r.Logger.DebugfContext(ctx, "is it in cache?")
 
-	// First, do a fast-path check of the cache without taking a long lock. Lookup
-	// itself takes short RLocks for map reads. We call Lookup without holding
+	// First, do a fast-path check of the cache without taking a long lock.
+	v, ok := id.(string)
+	if ok {
+		r.WalletMu.RLock()
+		w := r.Wallets[v]
+		r.WalletMu.RUnlock()
+		if w != nil {
+			return w, nil
+		}
+	}
+
+	// Not in cache: do the lookup to get identity info and wallet id (no locks held across external calls)
+	// Lookup itself takes short RLocks for map reads. We call Lookup without holding
 	// the global mutex to avoid blocking other operations while doing external lookups.
-	w, _, _, err := r.Lookup(ctx, id)
+	w, idInfo, wID, err := r.Lookup(ctx, id)
 	if err != nil {
 		r.Logger.DebugfContext(ctx, "failed")
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
@@ -256,22 +267,6 @@ func (r *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType,
 	}
 	r.Logger.DebugfContext(ctx, "no")
 
-	// Not in cache: do the lookup to get identity info and wallet id (no locks held across external calls)
-	w, idInfo, wID, err := r.Lookup(ctx, id)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
-	}
-	if w != nil {
-		return w, nil
-	}
-
-	// Create the wallet without holding the registry lock (avoid holding locks while calling external code).
-	r.Logger.DebugfContext(ctx, "create wallet")
-	newWallet, err := r.WalletFactory.NewWallet(ctx, wID, role, r, idInfo)
-	if err != nil {
-		return nil, err
-	}
-
 	// Register the newly created wallet but check if another goroutine already created it.
 	r.WalletMu.Lock()
 	defer r.WalletMu.Unlock()
@@ -279,7 +274,17 @@ func (r *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType,
 		// Another goroutine created and registered the wallet in the meantime; prefer it.
 		return existing, nil
 	}
-	r.Wallets[wID] = newWallet
+	// Create the wallet without holding the registry lock (avoid holding locks while calling external code).
+	r.Logger.DebugfContext(ctx, "create wallet")
+	newWallet, err := r.WalletFactory.NewWallet(ctx, wID, role, r, idInfo)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		r.Wallets[v] = newWallet
+	} else {
+		r.Wallets[wID] = newWallet
+	}
 	return newWallet, nil
 }
 
