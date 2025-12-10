@@ -120,9 +120,9 @@ func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.Re
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for owner [%s]", data.Identity)
 	}
-	if err := s.IdentityProvider.RegisterVerifier(ctx, data.Identity, v); err != nil {
-		return errors.Wrapf(err, "failed registering verifier for owner [%s]", data.Identity)
-	}
+	// if err := s.IdentityProvider.RegisterVerifier(ctx, data.Identity, v); err != nil {
+	// 	return errors.Wrapf(err, "failed registering verifier for owner [%s]", data.Identity)
+	// }
 	if err := s.IdentityProvider.RegisterRecipientData(ctx, data); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for owner [%s]", data.Identity)
 	}

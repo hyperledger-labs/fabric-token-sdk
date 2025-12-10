@@ -112,13 +112,6 @@ func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescr
 	return nil
 }
 
-func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error {
-	if v == nil {
-		return errors.New("invalid verifier, expected a valid instance")
-	}
-	return nil
-}
-
 func (p *Provider) RegisterAuditInfo(ctx context.Context, identity driver.Identity, info []byte) error {
 	return p.storage.StoreIdentityData(ctx, identity, info, nil, nil)
 }

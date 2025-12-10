@@ -29,7 +29,7 @@ type IdentityProvider interface {
 	GetSigner(ctx context.Context, identity Identity) (Signer, error)
 
 	// RegisterVerifier registers a Verifier for passed identity.
-	RegisterVerifier(ctx context.Context, identity Identity, v Verifier) error
+	// RegisterVerifier(ctx context.Context, identity Identity, v Verifier) error
 
 	// RegisterSigner registers a Signer and a Verifier for passed identity.
 	RegisterSigner(ctx context.Context, identity Identity, signer Signer, verifier Verifier, signerInfo []byte, ephemeral bool) error

@@ -351,9 +351,9 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(ctx context.Context, data *driv
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for owner [%s]", data.Identity)
 	}
-	if err := w.IdentityProvider.RegisterVerifier(ctx, data.Identity, v); err != nil {
-		return errors.Wrapf(err, "failed registering verifier for owner [%s]", data.Identity)
-	}
+	// if err := w.IdentityProvider.RegisterVerifier(ctx, data.Identity, v); err != nil {
+	// 	return errors.Wrapf(err, "failed registering verifier for owner [%s]", data.Identity)
+	// }
 	if err := w.IdentityProvider.RegisterRecipientData(ctx, data); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for owner [%s]", data.Identity)
 	}
