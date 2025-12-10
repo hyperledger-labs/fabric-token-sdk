@@ -15,6 +15,7 @@ type Keystore interface {
 	Get(id string, state interface{}) error
 }
 
+//go:generate counterfeiter -o mock/sp.go -fake-name StorageProvider . StorageProvider
 type StorageProvider interface {
 	WalletStore(tmsID token.TMSID) (WalletStoreService, error)
 	IdentityStore(tmsID token.TMSID) (IdentityStoreService, error)

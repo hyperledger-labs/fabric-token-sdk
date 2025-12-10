@@ -18,7 +18,7 @@ import (
 )
 
 type WalletServiceFactory struct {
-	*base
+	*Base
 
 	storageProvider identity.StorageProvider
 }
@@ -39,7 +39,7 @@ func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, 
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	return d.newWalletService(
+	return d.Base.NewWalletService(
 		tmsConfig,
 		&membership.NoBinder{},
 		d.storageProvider,
