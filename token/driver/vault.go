@@ -56,7 +56,6 @@ type CertificationStorage interface {
 }
 
 //go:generate counterfeiter -o mock/qe.go -fake-name QueryEngine . QueryEngine
-
 type QueryEngine interface {
 	// IsPending returns true if the transaction the passed id refers to is still pending, false otherwise
 	IsPending(ctx context.Context, id *token.ID) (bool, error)

@@ -32,7 +32,7 @@ import (
 )
 
 type Driver struct {
-	*base
+	*Base
 	metricsProvider  metrics.Provider
 	tracerProvider   trace.TracerProvider
 	configService    *config.Service
@@ -56,7 +56,7 @@ func NewDriver(
 	return core.NamedFactory[driver.Driver]{
 		Name: core.DriverIdentifier(v1setup.DLogNoGHDriverName, v1setup.ProtocolV1),
 		Driver: &Driver{
-			base:             &base{},
+			Base:             &Base{},
 			metricsProvider:  metricsProvider,
 			tracerProvider:   tracerProvider,
 			configService:    configService,
@@ -111,7 +111,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 
 	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	qe := vault.QueryEngine()
-	ws, err := d.newWalletService(
+	ws, err := d.NewWalletService(
 		tmsConfig,
 		d.endpointService,
 		d.storageProvider,
