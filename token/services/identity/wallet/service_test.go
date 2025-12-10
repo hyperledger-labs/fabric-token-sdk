@@ -201,7 +201,7 @@ func TestSpendIDsAndConvert(t *testing.T) {
 	require.Equal(t, []string{"[tx1:1]"}, res)
 
 	// Convert map
-	in := map[identity.RoleType]*wmock.Registry{identity.OwnerRole: &wmock.Registry{}}
+	in := map[identity.RoleType]*wmock.Registry{identity.OwnerRole: {}}
 	out := wallet.Convert[*wmock.Registry](in)
 	require.Len(t, out, 1)
 	_, ok := out[identity.OwnerRole]
