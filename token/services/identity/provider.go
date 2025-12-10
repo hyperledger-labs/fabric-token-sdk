@@ -92,7 +92,7 @@ func NewProvider(
 		deserializer:            deserializer,
 		storage:                 storage,
 		isMeCache:               cache2.NewNoCache[bool](),
-		signers:                 secondcache.NewTyped[*SignerEntry](5),
+		signers:                 secondcache.NewTyped[*SignerEntry](50),
 	}
 }
 
@@ -253,17 +253,22 @@ func (p *Provider) areMe(ctx context.Context, identities ...driver.Identity) []s
 }
 
 func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
+	signer, _, err := p.getSignerAndCache(ctx, identity, idHash, true)
+	return signer, err
+}
+
+func (p *Provider) getSignerAndCache(ctx context.Context, identity driver.Identity, idHash string, shouldCache bool) (driver.Signer, bool, error) {
 	// check cache
 	if entry, ok := p.signers.Get(idHash); ok {
 		p.Logger.DebugfContext(ctx, "signer for [%s] found", idHash)
-		return entry.Signer, nil
+		return entry.Signer, false, nil
 	}
 
 	p.Logger.DebugfContext(ctx, "signer for [%s] not found, attempting to deserialize", idHash)
 
 	// check that we have a deserializer
 	if p.deserializer == nil {
-		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
+		return nil, false, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
 	}
 
 	// try direct deserialization
@@ -273,33 +278,39 @@ func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHa
 		typed, err2 := UnmarshalTypedIdentity(identity)
 		if err2 != nil {
 			// neither deserializable nor a typed wrapper
-			return nil, errors.Wrapf(
+			return nil, false, errors.Wrapf(
 				err2,
 				"failed to unmarshal typed identity for [%s] and failed deserialization [%s]",
 				identity.String(), err,
 			)
 		}
 
+		if typed.Type == "x509" {
+			shouldCache = false
+		}
+
 		// recursively resolve the inner identity
-		signer, err = p.getSigner(ctx, typed.Identity, typed.Identity.UniqueID())
+		signer, shouldCache, err = p.getSignerAndCache(ctx, typed.Identity, typed.Identity.UniqueID(), shouldCache)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting signer for identity [%s]", typed.Identity)
+			return nil, false, errors.Wrapf(err, "failed getting signer for identity [%s]", typed.Identity)
 		}
 	}
 
 	// Cache the signer for the current idHash
-	entry := &SignerEntry{Signer: signer}
-	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
+	if shouldCache {
+		entry := &SignerEntry{Signer: signer}
+		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+			entry.DebugStack = debug.Stack()
+		}
+		p.signers.Add(idHash, entry)
 	}
-	p.signers.Add(idHash, entry)
 
 	// Persist signer info for the current identity
 	if err := p.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
-		return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
+		return nil, false, errors.Wrap(err, "failed to store entry in storage for the passed signer")
 	}
 
-	return entry.Signer, nil
+	return signer, shouldCache, nil
 }
 
 // func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
