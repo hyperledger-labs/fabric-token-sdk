@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package role
+package membership
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
+	role2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
@@ -29,8 +29,8 @@ type StorageProvider interface {
 	IdentityStore(tmsID token.TMSID) (driver.IdentityStoreService, error)
 }
 
-// Factory is the factory for creating wallets, idemix and x509
-type Factory struct {
+// RoleFactory is the factory for creating wallets, idemix and x509
+type RoleFactory struct {
 	Logger                 logging.Logger
 	TMSID                  token.TMSID
 	Config                 driver.Config
@@ -41,8 +41,8 @@ type Factory struct {
 	DeserializerManager    driver.SignerDeserializerManager
 }
 
-// NewFactory creates a new Factory
-func NewFactory(
+// NewRoleFactory creates a new RoleFactory
+func NewRoleFactory(
 	logger logging.Logger,
 	TMSID token.TMSID,
 	config driver.Config,
@@ -51,8 +51,8 @@ func NewFactory(
 	identityProvider driver.IdentityProvider,
 	storageProvider StorageProvider,
 	deserializerManager driver.SignerDeserializerManager,
-) *Factory {
-	return &Factory{
+) *RoleFactory {
+	return &RoleFactory{
 		Logger:                 logger,
 		TMSID:                  TMSID,
 		Config:                 config,
@@ -64,12 +64,12 @@ func NewFactory(
 	}
 }
 
-func (f *Factory) NewRole(role identity.RoleType, defaultAnon bool, targets []driver.Identity, kmps ...membership.KeyManagerProvider) (identity.Role, error) {
+func (f *RoleFactory) NewRole(role identity.RoleType, defaultAnon bool, targets []driver.Identity, kmps ...KeyManagerProvider) (identity.Role, error) {
 	identityDB, err := f.StorageProvider.IdentityStore(f.TMSID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
-	lm := membership.NewLocalMembership(
+	lm := NewLocalMembership(
 		f.Logger.Named(fmt.Sprintf("membership.role.%s", identity.RoleToString(role))),
 		f.Config,
 		f.NetworkDefaultIdentity,
@@ -87,5 +87,5 @@ func (f *Factory) NewRole(role identity.RoleType, defaultAnon bool, targets []dr
 	if err := lm.Load(context.Background(), identities, targets); err != nil {
 		return nil, errors.WithMessagef(err, "failed to load identities")
 	}
-	return NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm), nil
+	return role2.NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm), nil
 }

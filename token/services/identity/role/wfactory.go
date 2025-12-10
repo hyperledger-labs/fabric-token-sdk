@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package wallet
+package role
 
 import (
 	"context"
@@ -28,7 +28,17 @@ type WalletsConfiguration interface {
 	CacheSizeForOwnerID(id string) int
 }
 
-type Factory struct {
+type Registry interface {
+	WalletIDs(ctx context.Context) ([]string, error)
+	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
+	Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, string, error)
+	RegisterWallet(ctx context.Context, id string, wallet driver.Wallet) error
+	BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID string, meta any) error
+	ContainsIdentity(ctx context.Context, i driver.Identity, id string) bool
+	GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error
+}
+
+type DefaultFactory struct {
 	Logger               logging.Logger
 	IdentityProvider     driver.IdentityProvider
 	TokenVault           TokenVault
@@ -37,15 +47,15 @@ type Factory struct {
 	MetricsProvider      metrics.Provider
 }
 
-func NewFactory(
+func NewDefaultFactory(
 	logger logging.Logger,
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	walletsConfiguration WalletsConfiguration,
 	deserializer driver.Deserializer,
 	metricsProvider metrics.Provider,
-) *Factory {
-	return &Factory{
+) *DefaultFactory {
+	return &DefaultFactory{
 		Logger:               logger,
 		IdentityProvider:     identityProvider,
 		TokenVault:           tokenVault,
@@ -55,7 +65,7 @@ func NewFactory(
 	}
 }
 
-func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error) {
+func (w *DefaultFactory) NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error) {
 	switch role {
 	case identity.OwnerRole:
 		if info.Anonymous() {

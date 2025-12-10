@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package wallet
+package role
 
 import (
 	"fmt"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
@@ -29,14 +28,19 @@ func (m Roles) Register(usage identity.RoleType, role identity.Role) {
 	m[usage] = role
 }
 
-func (m Roles) ToWalletRegistries(logger logging.Logger, db driver.WalletStoreService) map[identity.RoleType]Registry {
-	res := make(map[identity.RoleType]Registry, len(m))
+func (m Roles) Registries(logger logging.Logger, storage driver.WalletStoreService, walletFactory walletFactory) map[identity.RoleType]*WalletRegistry {
+	res := make(map[identity.RoleType]*WalletRegistry, len(m))
 	for roleType, role := range m {
 		roleAsString, ok := identity.RoleTypeStrings[roleType]
 		if !ok {
 			roleAsString = strconv.Itoa(int(roleType))
 		}
-		res[roleType] = db2.NewWalletRegistry(logger.Named(fmt.Sprintf("identity.%s-wallet-registry", roleAsString)), role, db)
+		res[roleType] = NewWalletRegistry(
+			logger.Named(fmt.Sprintf("identity.%s-wallet-registry", roleAsString)),
+			role,
+			storage,
+			walletFactory,
+		)
 	}
 	return res
 }

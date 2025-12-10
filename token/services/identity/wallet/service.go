@@ -8,7 +8,6 @@ package wallet
 
 import (
 	"context"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -30,55 +29,36 @@ type Registry interface {
 	BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID string, meta any) error
 	ContainsIdentity(ctx context.Context, i driver.Identity, id string) bool
 	GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error
-}
-
-type walletFactory interface {
-	NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
-}
-
-type RegistryEntry struct {
-	Registry Registry
-	Mutex    *sync.RWMutex
+	WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error)
 }
 
 type Service struct {
 	Logger           logging.Logger
 	IdentityProvider driver.IdentityProvider
 	Deserializer     driver.Deserializer
-
-	WalletFactory walletFactory
-	Registries    map[identity.RoleType]*RegistryEntry
+	Registries       map[identity.RoleType]Registry
 }
 
 func NewService(
 	logger logging.Logger,
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
-	walletFactory walletFactory,
-	walletRegistries map[identity.RoleType]Registry,
+	registries map[identity.RoleType]Registry,
 ) *Service {
-	registries := map[identity.RoleType]*RegistryEntry{}
-	for roleType, registry := range walletRegistries {
-		registries[roleType] = &RegistryEntry{
-			Registry: registry,
-			Mutex:    &sync.RWMutex{},
-		}
-	}
 	return &Service{
 		Logger:           logger,
 		IdentityProvider: identityProvider,
 		Deserializer:     deserializer,
-		WalletFactory:    walletFactory,
 		Registries:       registries,
 	}
 }
 
 func (s *Service) RegisterOwnerIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
-	return s.Registries[identity.OwnerRole].Registry.RegisterIdentity(ctx, config)
+	return s.Registries[identity.OwnerRole].RegisterIdentity(ctx, config)
 }
 
 func (s *Service) RegisterIssuerIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
-	return s.Registries[identity.IssuerRole].Registry.RegisterIdentity(ctx, config)
+	return s.Registries[identity.IssuerRole].RegisterIdentity(ctx, config)
 }
 
 func (s *Service) GetAuditInfo(ctx context.Context, id driver.Identity) ([]byte, error) {
@@ -135,11 +115,11 @@ func (s *Service) Wallet(ctx context.Context, identity driver.Identity) driver.W
 }
 
 func (s *Service) OwnerWalletIDs(ctx context.Context) ([]string, error) {
-	return s.Registries[identity.OwnerRole].Registry.WalletIDs(ctx)
+	return s.Registries[identity.OwnerRole].WalletIDs(ctx)
 }
 
 func (s *Service) OwnerWallet(ctx context.Context, id driver.WalletLookupID) (driver.OwnerWallet, error) {
-	w, err := s.walletByID(ctx, identity.OwnerRole, id)
+	w, err := s.Registries[identity.OwnerRole].WalletByID(ctx, identity.OwnerRole, id)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +127,7 @@ func (s *Service) OwnerWallet(ctx context.Context, id driver.WalletLookupID) (dr
 }
 
 func (s *Service) IssuerWallet(ctx context.Context, id driver.WalletLookupID) (driver.IssuerWallet, error) {
-	w, err := s.walletByID(ctx, identity.IssuerRole, id)
+	w, err := s.Registries[identity.IssuerRole].WalletByID(ctx, identity.IssuerRole, id)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +135,7 @@ func (s *Service) IssuerWallet(ctx context.Context, id driver.WalletLookupID) (d
 }
 
 func (s *Service) AuditorWallet(ctx context.Context, id driver.WalletLookupID) (driver.AuditorWallet, error) {
-	w, err := s.walletByID(ctx, identity.AuditorRole, id)
+	w, err := s.Registries[identity.AuditorRole].WalletByID(ctx, identity.AuditorRole, id)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +143,7 @@ func (s *Service) AuditorWallet(ctx context.Context, id driver.WalletLookupID) (
 }
 
 func (s *Service) CertifierWallet(ctx context.Context, id driver.WalletLookupID) (driver.CertifierWallet, error) {
-	w, err := s.walletByID(ctx, identity.CertifierRole, id)
+	w, err := s.Registries[identity.CertifierRole].WalletByID(ctx, identity.CertifierRole, id)
 	if err != nil {
 		return nil, err
 	}
@@ -175,51 +155,10 @@ func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
 
-func (s *Service) walletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
-	logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T]", role, id)
-	defer logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T] done", role, id)
-
-	entry := s.Registries[role]
-	registry := entry.Registry
-	mutex := entry.Mutex
-
-	logger.DebugfContext(ctx, "is it in cache?")
-
-	mutex.RLock()
-	w, _, _, err := registry.Lookup(ctx, id)
-	if err != nil {
-		mutex.RUnlock()
-		logger.DebugfContext(ctx, "failed")
-		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
+func Convert[T Registry](s map[identity.RoleType]T) map[identity.RoleType]Registry {
+	res := make(map[identity.RoleType]Registry, len(s))
+	for role, v := range s {
+		s[role] = v
 	}
-	if w != nil {
-		mutex.RUnlock()
-		logger.DebugfContext(ctx, "yes")
-		return w, nil
-	}
-	mutex.RUnlock()
-	logger.DebugfContext(ctx, "no")
-
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	logger.DebugfContext(ctx, "is it in cache before creating")
-	w, idInfo, wID, err := registry.Lookup(ctx, id)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
-	}
-	if w != nil {
-		return w, nil
-	}
-
-	// create the wallet
-	logger.DebugfContext(ctx, "create wallet")
-	newWallet, err := s.WalletFactory.NewWallet(ctx, wID, role, registry, idInfo)
-	if err != nil {
-		return nil, err
-	}
-	if err := registry.RegisterWallet(ctx, wID, newWallet); err != nil {
-		return nil, err
-	}
-	return newWallet, nil
+	return res
 }
