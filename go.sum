@@ -643,8 +643,8 @@ github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478 h
 github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478/go.mod h1:k4Q5EYKRnYC6t80ipSCY3G8H4FdcxRa8jjlsJdGfNCY=
 github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478 h1:Uzmcb4pNb54/fbAjnrZTiJwWV74+twP60N4qBGm4PvU=
 github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478/go.mod h1:Pi1QIuIZ+1OXIbnYe27vNwJOnSq2WvkHRT/sfweTw8E=
-github.com/IBM/mathlib v0.0.3-0.20251209063833-bdbf97a6c3d2 h1:xxqXQL645JpGvuUqWdNUHCY/6EwxqsmuBuiEUsbswQU=
-github.com/IBM/mathlib v0.0.3-0.20251209063833-bdbf97a6c3d2/go.mod h1:rq67W1H6L1eorrE7DZ/HcSY/pfMDjbPWOx12SeUfQDk=
+github.com/IBM/mathlib v0.0.3-0.20251210060400-7e58831c9abe h1:EwFXJqfqz0lnsOtqSEswQ0kond3a8waLUfIXbaTgB4A=
+github.com/IBM/mathlib v0.0.3-0.20251210060400-7e58831c9abe/go.mod h1:rq67W1H6L1eorrE7DZ/HcSY/pfMDjbPWOx12SeUfQDk=
 github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c/go.mod h1:X0CRv0ky0k6m906ixxpzmDRLvX58TFUKS2eePweuyxk=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible h1:1G1pk05UrOh0NlF1oeaaix1x8XzrfjIDK47TY0Zehcw=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
