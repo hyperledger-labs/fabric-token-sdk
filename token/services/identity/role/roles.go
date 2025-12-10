@@ -28,7 +28,7 @@ func (m Roles) Register(usage identity.RoleType, role identity.Role) {
 	m[usage] = role
 }
 
-func (m Roles) Registries(logger logging.Logger, storage driver.WalletStoreService, walletFactory walletFactory) map[identity.RoleType]*WalletRegistry {
+func (m Roles) Registries(logger logging.Logger, storage driver.WalletStoreService, walletFactory WalletFactory) map[identity.RoleType]*WalletRegistry {
 	res := make(map[identity.RoleType]*WalletRegistry, len(m))
 	for roleType, role := range m {
 		roleAsString, ok := identity.RoleTypeStrings[roleType]

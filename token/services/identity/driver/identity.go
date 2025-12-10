@@ -30,6 +30,7 @@ type IdentityConfigurationIterator = iterators.Iterator[*IdentityConfiguration]
 
 type WalletID = string
 
+//go:generate counterfeiter -o mock/wss.go -fake-name WalletStoreService . WalletStoreService
 type WalletStoreService interface {
 	// GetWalletID fetches a walletID that is bound to the identity passed
 	GetWalletID(ctx context.Context, identity token.Identity, roleID int) (WalletID, error)

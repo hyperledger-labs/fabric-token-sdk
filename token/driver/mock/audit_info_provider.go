@@ -95,8 +95,6 @@ func (fake *AuditInfoProvider) GetAuditInfoReturnsOnCall(i int, result1 []byte, 
 func (fake *AuditInfoProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getAuditInfoMutex.RLock()
-	defer fake.getAuditInfoMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

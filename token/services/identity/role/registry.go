@@ -18,17 +18,26 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-type walletFactory interface {
+//go:generate counterfeiter -o mock/wf.go -fake-name WalletFactory . WalletFactory
+type WalletFactory interface {
 	NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
 }
 
 // WalletRegistry manages wallets whose long-term identities have a given role.
+//
+// Concurrency and invariants:
+//   - The Wallets map MUST only be accessed while holding WalletMu. Use
+//     WalletMu.RLock()/RUnlock() for short read-only access and WalletMu.Lock()/Unlock()
+//     for modifications. Methods in this file follow the pattern of taking short
+//     RLocks for map reads and never holding locks while calling out to external
+//     services (identity provider, storage, wallet factory) to avoid blocking and
+//     potential deadlocks.
 type WalletRegistry struct {
 	Logger  logging.Logger
 	Role    identity.Role
 	Storage idriver.WalletStoreService
 
-	WalletFactory walletFactory
+	WalletFactory WalletFactory
 	WalletMu      sync.RWMutex
 	Wallets       map[string]driver.Wallet
 }
@@ -36,7 +45,7 @@ type WalletRegistry struct {
 // NewWalletRegistry returns a new registry for the passed parameters.
 // A registry is bound to a given role, and it is persistent.
 // Long-term identities are provided by the passed identity provider
-func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletStoreService, walletFactory walletFactory) *WalletRegistry {
+func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletStoreService, walletFactory WalletFactory) *WalletRegistry {
 	return &WalletRegistry{
 		Logger:        logger,
 		Role:          role,
@@ -54,11 +63,18 @@ func (r *WalletRegistry) RegisterIdentity(ctx context.Context, config driver.Ide
 // Lookup searches the wallet corresponding to the passed id.
 // If a wallet is found, Lookup returns the wallet and its identifier.
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id, if anything is found
+//
+// The lookup strategy is multi-step:
+// 1. Ask the role provider to MapToIdentity (identity, walletID). If that errors, fall back to toViewIdentity/GetWalletID.
+// 2. Check the in-memory cache (r.Wallets) for wallet entries. Map reads are protected by WalletMu.RLock for a short duration.
+// 3. If cache misses, try to resolve identity -> wallet id using storage/role and finally call role.GetIdentityInfo for any discovered wallet identifiers.
+//
+// Note: Lookup only takes short RLocks for map reads and does not hold the lock while calling external services.
 func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, idriver.IdentityInfo, string, error) {
 	r.Logger.DebugfContext(ctx, "lookup wallet by [%T]", id)
 	var walletIdentifiers []string
 
-	identity, walletID, err := r.Role.MapToIdentity(ctx, id)
+	ident, walletID, err := r.Role.MapToIdentity(ctx, id)
 	if err != nil {
 		r.Logger.Errorf("failed to map wallet [%T] to identity [%s], use a fallback strategy", id, err)
 		fail := true
@@ -72,7 +88,7 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 				r.Logger.DebugfContext(ctx, "lookup failed, there is a wallet for identity [%s]: [%s]", passedIdentity, wID)
 				// we got a hit
 				walletID = wID
-				identity = passedIdentity
+				ident = passedIdentity
 				fail = false
 			}
 		}
@@ -80,9 +96,12 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 			return nil, nil, "", errors.WithMessagef(err, "failed to lookup wallet [%s]", id)
 		}
 	}
-	r.Logger.DebugfContext(ctx, "looked-up identifier [%s:%s]", identity, logging.Prefix(walletID))
+	r.Logger.DebugfContext(ctx, "looked-up identifier [%s:%s]", ident, logging.Prefix(walletID))
 	wID := walletID
+	// Short RLock while reading from the map cache. Do not hold while calling external services.
+	r.WalletMu.RLock()
 	walletEntry, ok := r.Wallets[wID]
+	r.WalletMu.RUnlock()
 	if ok {
 		return walletEntry, nil, wID, nil
 	}
@@ -97,7 +116,9 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 		if err == nil && len(passedWalletID) != 0 {
 			r.Logger.DebugfContext(ctx, "no wallet found, there is a wallet for identity [%s]: [%s]", passedIdentity, passedWalletID)
 			// we got a hit
+			r.WalletMu.RLock()
 			walletEntry, ok = r.Wallets[passedWalletID]
+			r.WalletMu.RUnlock()
 			if ok {
 				return walletEntry, nil, passedWalletID, nil
 			}
@@ -107,13 +128,15 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 	}
 
 	r.Logger.DebugfContext(ctx, "no wallet found for [%s] at [%s]", passedIdentity, logging.Prefix(wID))
-	if len(identity) != 0 {
-		identityWID, err := r.GetWalletID(ctx, identity)
-		r.Logger.DebugfContext(ctx, "wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
+	if len(ident) != 0 {
+		identityWID, err := r.GetWalletID(ctx, ident)
+		r.Logger.DebugfContext(ctx, "wallet for identity [%s] -> [%s:%s]", ident, identityWID, err)
 		if err == nil && len(identityWID) != 0 {
+			r.WalletMu.RLock()
 			w, ok := r.Wallets[identityWID]
+			r.WalletMu.RUnlock()
 			if ok {
-				r.Logger.DebugfContext(ctx, "found wallet [%s:%s:%s:%s]", identity, walletID, w.ID(), identityWID)
+				r.Logger.DebugfContext(ctx, "found wallet [%s:%s:%s:%s]", ident, walletID, w.ID(), identityWID)
 				return w, nil, identityWID, nil
 			}
 		}
@@ -143,6 +166,9 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 // RegisterWallet binds the passed wallet to the passed id
 func (r *WalletRegistry) RegisterWallet(ctx context.Context, id string, w driver.Wallet) error {
 	r.Logger.DebugfContext(ctx, "register wallet [%s]", id)
+	// Protect writes to the Wallets map
+	r.WalletMu.Lock()
+	defer r.WalletMu.Unlock()
 	r.Wallets[id] = w
 	return nil
 }
@@ -210,32 +236,28 @@ func (r *WalletRegistry) GetWalletID(ctx context.Context, identity driver.Identi
 	return wID, nil
 }
 
-func (s *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
-	s.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T]", role, id)
-	defer s.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T] done", role, id)
+func (r *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
+	r.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T]", role, id)
+	defer r.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T] done", role, id)
 
-	s.Logger.DebugfContext(ctx, "is it in cache?")
+	r.Logger.DebugfContext(ctx, "is it in cache?")
 
-	s.WalletMu.RLock()
-	w, _, _, err := s.Lookup(ctx, id)
+	// First, do a fast-path check of the cache without taking a long lock. Lookup
+	// itself takes short RLocks for map reads. We call Lookup without holding
+	// the global mutex to avoid blocking other operations while doing external lookups.
+	w, _, _, err := r.Lookup(ctx, id)
 	if err != nil {
-		s.WalletMu.RUnlock()
-		s.Logger.DebugfContext(ctx, "failed")
+		r.Logger.DebugfContext(ctx, "failed")
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
 	}
 	if w != nil {
-		s.WalletMu.RUnlock()
-		s.Logger.DebugfContext(ctx, "yes")
+		r.Logger.DebugfContext(ctx, "yes")
 		return w, nil
 	}
-	s.WalletMu.RUnlock()
-	s.Logger.DebugfContext(ctx, "no")
+	r.Logger.DebugfContext(ctx, "no")
 
-	s.WalletMu.Lock()
-	defer s.WalletMu.Unlock()
-
-	s.Logger.DebugfContext(ctx, "is it in cache before creating")
-	w, idInfo, wID, err := s.Lookup(ctx, id)
+	// Not in cache: do the lookup to get identity info and wallet id (no locks held across external calls)
+	w, idInfo, wID, err := r.Lookup(ctx, id)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
 	}
@@ -243,15 +265,21 @@ func (s *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType,
 		return w, nil
 	}
 
-	// create the wallet
-	s.Logger.DebugfContext(ctx, "create wallet")
-	newWallet, err := s.WalletFactory.NewWallet(ctx, wID, role, s, idInfo)
+	// Create the wallet without holding the registry lock (avoid holding locks while calling external code).
+	r.Logger.DebugfContext(ctx, "create wallet")
+	newWallet, err := r.WalletFactory.NewWallet(ctx, wID, role, r, idInfo)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.RegisterWallet(ctx, wID, newWallet); err != nil {
-		return nil, err
+
+	// Register the newly created wallet but check if another goroutine already created it.
+	r.WalletMu.Lock()
+	defer r.WalletMu.Unlock()
+	if existing, ok := r.Wallets[wID]; ok {
+		// Another goroutine created and registered the wallet in the meantime; prefer it.
+		return existing, nil
 	}
+	r.Wallets[wID] = newWallet
 	return newWallet, nil
 }
 

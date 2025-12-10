@@ -33,6 +33,8 @@ type ListTokensOptions struct {
 }
 
 // Wallet models a generic wallet
+//
+//go:generate counterfeiter -o mock/w.go -fake-name Wallet . Wallet
 type Wallet interface {
 	// ID returns the ID of this wallet
 	ID() string
