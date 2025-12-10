@@ -261,7 +261,7 @@ func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHa
 
 	p.Logger.DebugfContext(ctx, "signer for [%s] not found, attempting to deserialize", idHash)
 
-	// check taht we have a deserializer
+	// check that we have a deserializer
 	if p.deserializer == nil {
 		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
 	}
