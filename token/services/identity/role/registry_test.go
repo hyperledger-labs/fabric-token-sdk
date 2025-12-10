@@ -168,6 +168,42 @@ func TestWalletByID_CreatesWalletUsingFactory(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, wf.NewWalletCallCount())
 	require.Equal(t, "w4", w.ID())
+
+	w, err = reg.WalletByID(ctx, 0, "id4")
+	require.NoError(t, err)
+	require.Equal(t, 1, wf.NewWalletCallCount())
+	require.Equal(t, "w4", w.ID())
+
+	w, err = reg.WalletByID(ctx, 0, "w4")
+	require.NoError(t, err)
+	require.Equal(t, 1, wf.NewWalletCallCount())
+	require.Equal(t, "w4", w.ID())
+}
+
+func TestWalletByID_CreatesWalletUsingFactory2(t *testing.T) {
+	reg, _, role, wf := newRegistryWithFakes()
+	ctx := t.Context()
+	// make Lookup return an idInfo and wallet id
+	role.MapToIdentityReturns([]byte("id4"), "w4", nil)
+	role.GetIdentityInfoReturns(&fakeIdentityInfo{id: "id4"}, nil)
+	created := &mock2.Wallet{}
+	created.IDReturns("w4")
+	wf.NewWalletReturns(created, nil)
+
+	w, err := reg.WalletByID(ctx, 0, "w4")
+	require.NoError(t, err)
+	require.Equal(t, 1, wf.NewWalletCallCount())
+	require.Equal(t, "w4", w.ID())
+
+	w, err = reg.WalletByID(ctx, 0, "id4")
+	require.NoError(t, err)
+	require.Equal(t, 1, wf.NewWalletCallCount())
+	require.Equal(t, "w4", w.ID())
+
+	w, err = reg.WalletByID(ctx, 0, "w4")
+	require.NoError(t, err)
+	require.Equal(t, 1, wf.NewWalletCallCount())
+	require.Equal(t, "w4", w.ID())
 }
 
 func TestWalletByID_ConcurrentCreation(t *testing.T) {
