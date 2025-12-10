@@ -33,8 +33,12 @@ func (f *fakeIdentityInfo) Get(ctx context.Context) (driver.Identity, []byte, er
 }
 func (f *fakeIdentityInfo) Anonymous() bool { return false }
 
+// ensure tests compile even if some methods are not used
+var _ idriver.IdentityInfo = &fakeIdentityInfo{}
+
 func setup(t *testing.T) (context.Context, *role.Role, *mock.LocalMembership) {
-	ctx := context.Background()
+	t.Helper()
+	ctx := t.Context()
 	logger := logging.MustGetLogger("role_test")
 	m := &mock.LocalMembership{}
 	// default values for network identity and identifiers
