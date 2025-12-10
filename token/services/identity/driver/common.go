@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+//go:generate counterfeiter -o mock/nbs.go -fake-name NetworkBinderService . NetworkBinderService
 type NetworkBinderService interface {
 	Bind(ctx context.Context, longTerm driver.Identity, ephemeral ...driver.Identity) error
 }

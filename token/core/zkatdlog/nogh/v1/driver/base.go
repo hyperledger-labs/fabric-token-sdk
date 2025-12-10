@@ -27,9 +27,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-type base struct{}
+//go:generate counterfeiter -o mock/config.go -fake-name Config . Config
+type Config = core.Config
 
-func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
+type Base struct{}
+
+func (d *Base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
 	pp, err := v1.NewPublicParamsFromBytes(params, v1.DLogNoGHDriverName, v1.ProtocolV1)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
@@ -37,7 +40,7 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 	return pp, nil
 }
 
-func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	deserializer, err := NewDeserializer(pp.(*v1.PublicParams))
 	if err != nil {
 		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
@@ -53,7 +56,7 @@ func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 	), nil
 }
 
-func (d *base) newWalletService(
+func (d *Base) NewWalletService(
 	tmsConfig core.Config,
 	binder idriver.NetworkBinderService,
 	storageProvider identity.StorageProvider,
