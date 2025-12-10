@@ -173,10 +173,7 @@ func (p *ipaProver) Prove() (*IPA, error) {
 // of the left vector and right is a function of right vector.
 // Both vectors are committed in com which is passed as a parameter to reduce
 func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mathlib.G1, []*mathlib.G1, error) {
-	leftGen := make([]*mathlib.G1, len(p.LeftGenerators))
-	copy(leftGen, p.LeftGenerators)
-	rightGen := make([]*mathlib.G1, len(p.RightGenerators))
-	copy(rightGen, p.RightGenerators)
+	leftGen, rightGen := cloneGenerators(p.LeftGenerators, p.RightGenerators)
 
 	left := p.leftVector
 	right := p.rightVector
@@ -186,8 +183,8 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 	for i := range p.NumberOfRounds {
 		// in each round the size of the vector is reduced by 2
 		n := len(leftGen) / 2
-		leftIP := innerProduct(left[:n], right[n:], p.Curve)
-		rightIP := innerProduct(left[n:], right[:n], p.Curve)
+		leftIP := InnerProduct(left[:n], right[n:], p.Curve)
+		rightIP := InnerProduct(left[n:], right[:n], p.Curve)
 		// LArray[i] is a commitment to left[:n], right[n:] and their inner product
 		LArray[i] = commitVector(left[:n], right[n:], leftGen[n:], rightGen[:n], p.Curve)
 		LArray[i].Add(X.Mul(leftIP))
@@ -298,10 +295,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 
 	X := v.Q.Mul(x)
 
-	leftGen := make([]*mathlib.G1, len(v.LeftGenerators))
-	copy(leftGen, v.LeftGenerators)
-	rightGen := make([]*mathlib.G1, len(v.RightGenerators))
-	copy(rightGen, v.RightGenerators)
+	leftGen, rightGen := cloneGenerators(v.LeftGenerators, v.RightGenerators)
 
 	for i := range v.NumberOfRounds {
 		// check well-formedness
@@ -343,17 +337,17 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 // reduceVectors reduces the size of the vectors passed in the parameters by 1/2,
 // as a function of the old vectors, x and 1/x
 func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Curve) ([]*mathlib.Zr, []*mathlib.Zr) {
-	leftPrime := make([]*mathlib.Zr, len(left)/2)
-	rightPrime := make([]*mathlib.Zr, len(right)/2)
-	for i := 0; i < len(leftPrime); i++ {
+	l := len(left) / 2
+	leftPrime := make([]*mathlib.Zr, l)
+	rightPrime := make([]*mathlib.Zr, l)
+	for i := 0; i < l; i++ {
 		// a_i = a_ix + a_{i+len(left)/2}x^{-1}
-		leftPrime[i] = c.ModMul(left[i], x, c.GroupOrder)
-		leftPrime[i] = c.ModAdd(leftPrime[i], c.ModMul(left[i+len(leftPrime)], xInv, c.GroupOrder), c.GroupOrder)
+		leftPrime[i] = c.ModAddMul2(left[i], x, left[i+l], xInv, c.GroupOrder)
 
 		// b_i = b_ix^{-1} + b_{i+len(right)/2}x
-		rightPrime[i] = c.ModMul(right[i], xInv, c.GroupOrder)
-		rightPrime[i] = c.ModAdd(rightPrime[i], c.ModMul(right[i+len(rightPrime)], x, c.GroupOrder), c.GroupOrder)
+		rightPrime[i] = c.ModAddMul2(right[i], xInv, right[i+l], x, c.GroupOrder)
 	}
+
 	return leftPrime, rightPrime
 }
 
@@ -363,19 +357,20 @@ func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*
 	l := len(leftGen) / 2
 	for i := 0; i < l; i++ {
 		// G_i = G_i^x*G_{i+len(left)/2}^{1/x}
-		leftGen[i] = leftGen[i].Mul2(xInv, leftGen[i+l], x)
+		leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
 		// H_i = H_i^{1/x}*H_{i+len(right)/2}^{x}
-		rightGen[i] = rightGen[i].Mul2(x, rightGen[i+l], xInv)
+		rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
 	}
 	return leftGen[:l], rightGen[:l]
 }
 
-func innerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {
-	ip := c.NewZrFromInt(0)
-	for i, l := range left {
-		ip = c.ModAdd(ip, c.ModMul(l, right[i], c.GroupOrder), c.GroupOrder)
-	}
-	return ip
+func InnerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {
+	return c.ModAddMul(left, right, c.GroupOrder)
+	// ip := c.NewZrFromInt(0)
+	// for i, l := range left {
+	// 	ip = c.ModAdd(ip, c.ModMul(l, right[i], c.GroupOrder), c.GroupOrder)
+	// }
+	// return ip
 }
 
 func commitVector(left []*mathlib.Zr, right []*mathlib.Zr, leftgen []*mathlib.G1, rightgen []*mathlib.G1, c *mathlib.Curve) *mathlib.G1 {
@@ -384,4 +379,16 @@ func commitVector(left []*mathlib.Zr, right []*mathlib.Zr, leftgen []*mathlib.G1
 		com.Add(leftgen[i].Mul2(left[i], rightgen[i], right[i]))
 	}
 	return com
+}
+
+func cloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.G1, []*mathlib.G1) {
+	leftGen := make([]*mathlib.G1, len(LeftGenerators))
+	for i := 0; i < len(LeftGenerators); i++ {
+		leftGen[i] = LeftGenerators[i].Copy()
+	}
+	rightGen := make([]*mathlib.G1, len(RightGenerators))
+	for i := 0; i < len(RightGenerators); i++ {
+		rightGen[i] = RightGenerators[i].Copy()
+	}
+	return leftGen, rightGen
 }
