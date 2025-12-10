@@ -4,11 +4,12 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package db
+package role
 
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -17,24 +18,31 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
+type walletFactory interface {
+	NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
+}
+
 // WalletRegistry manages wallets whose long-term identities have a given role.
 type WalletRegistry struct {
 	Logger  logging.Logger
 	Role    identity.Role
 	Storage idriver.WalletStoreService
 
-	Wallets map[string]driver.Wallet
+	WalletFactory walletFactory
+	WalletMu      sync.RWMutex
+	Wallets       map[string]driver.Wallet
 }
 
 // NewWalletRegistry returns a new registry for the passed parameters.
 // A registry is bound to a given role, and it is persistent.
 // Long-term identities are provided by the passed identity provider
-func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletStoreService) *WalletRegistry {
+func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletStoreService, walletFactory walletFactory) *WalletRegistry {
 	return &WalletRegistry{
-		Logger:  logger,
-		Role:    role,
-		Storage: storage,
-		Wallets: map[string]driver.Wallet{},
+		Logger:        logger,
+		Role:          role,
+		Storage:       storage,
+		WalletFactory: walletFactory,
+		Wallets:       map[string]driver.Wallet{},
 	}
 }
 
@@ -200,6 +208,51 @@ func (r *WalletRegistry) GetWalletID(ctx context.Context, identity driver.Identi
 	}
 	r.Logger.DebugfContext(ctx, "wallet [%s] is bound to identity [%s]", wID, identity)
 	return wID, nil
+}
+
+func (s *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
+	s.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T]", role, id)
+	defer s.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T] done", role, id)
+
+	s.Logger.DebugfContext(ctx, "is it in cache?")
+
+	s.WalletMu.RLock()
+	w, _, _, err := s.Lookup(ctx, id)
+	if err != nil {
+		s.WalletMu.RUnlock()
+		s.Logger.DebugfContext(ctx, "failed")
+		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
+	}
+	if w != nil {
+		s.WalletMu.RUnlock()
+		s.Logger.DebugfContext(ctx, "yes")
+		return w, nil
+	}
+	s.WalletMu.RUnlock()
+	s.Logger.DebugfContext(ctx, "no")
+
+	s.WalletMu.Lock()
+	defer s.WalletMu.Unlock()
+
+	s.Logger.DebugfContext(ctx, "is it in cache before creating")
+	w, idInfo, wID, err := s.Lookup(ctx, id)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
+	}
+	if w != nil {
+		return w, nil
+	}
+
+	// create the wallet
+	s.Logger.DebugfContext(ctx, "create wallet")
+	newWallet, err := s.WalletFactory.NewWallet(ctx, wID, role, s, idInfo)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.RegisterWallet(ctx, wID, newWallet); err != nil {
+		return nil, err
+	}
+	return newWallet, nil
 }
 
 func toViewIdentity(id driver.WalletLookupID) (driver.Identity, bool) {
