@@ -241,7 +241,7 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	}
 	// compute the commitment to left and right
 	com := commitVector(left, right, p.LeftGenerators, rightGeneratorsPrime, p.Curve)
-	rp.Data.InnerProduct = innerProduct(left, right, p.Curve)
+	rp.Data.InnerProduct = InnerProduct(left, right, p.Curve)
 	// produce the IPA
 	ipp := NewIPAProver(
 		rp.Data.InnerProduct,
@@ -337,18 +337,18 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 
 	// compute \sum y^iV_i(L_i-z)
-	t1 := innerProduct(leftPrime, randRightPrime, p.Curve)
+	t1 := InnerProduct(leftPrime, randRightPrime, p.Curve)
 	// compute \sum y^i(V_i(L_i-z) + (R_i +z)U_i)
-	t1 = p.Curve.ModAdd(t1, innerProduct(rightPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
+	t1 = p.Curve.ModAdd(t1, InnerProduct(rightPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
 	// compute \sum y^i(V_i(L_i-z) + (R_i+z)U_i) + U_i2^iz^2
-	t1 = p.Curve.ModAdd(t1, innerProduct(zPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
+	t1 = p.Curve.ModAdd(t1, InnerProduct(zPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
 	// commit to t1
 	tau1 := p.Curve.NewRandomZr(rand)
 	T1 := p.CommitmentGenerators[0].Mul(t1)
 	T1.Add(p.CommitmentGenerators[1].Mul(tau1))
 
 	// compute = \sum y^iU_iV_i
-	t2 := innerProduct(randomLeft, randRightPrime, p.Curve)
+	t2 := InnerProduct(randomLeft, randRightPrime, p.Curve)
 	// commit to t2
 	tau2 := p.Curve.NewRandomZr(rand)
 	T2 := p.CommitmentGenerators[0].Mul(t2)
