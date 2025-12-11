@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -108,6 +109,10 @@ func TestBFProofVerify(t *testing.T) {
 }
 
 func BenchmarkBFProver(b *testing.B) {
+	pp, err := profile.New(profile.WithAll(), profile.WithPath("./profile"))
+	require.NoError(b, err)
+	require.NoError(b, pp.Start())
+	defer pp.Stop()
 	envs := make([]*bfSetup, 0, 128)
 	for i := 0; i < 128; i++ {
 		setup, err := NewBfSetup(math.BLS12_381_BBS_GURVY)
