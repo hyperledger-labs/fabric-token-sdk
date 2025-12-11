@@ -203,7 +203,7 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 
 		// compute 1/x
 		xInv := x.Copy()
-		xInv.InvModP(p.Curve.GroupOrder)
+		xInv.InvModOrder()
 
 		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
 		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv)
@@ -213,7 +213,7 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 
 		xSquare := p.Curve.ModMul(x, x, p.Curve.GroupOrder)
 		xSquareInv := xSquare.Copy()
-		xSquareInv.InvModP(p.Curve.GroupOrder)
+		xSquareInv.InvModOrder()
 
 		// compute the commitment to left, right and their inner product
 		CPrime := LArray[i].Mul2(xSquare, RArray[i], xSquareInv)
@@ -311,13 +311,13 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 		x = v.Curve.HashToZr(raw)
 		// 1/x
 		xInv := x.Copy()
-		xInv.InvModP(v.Curve.GroupOrder)
+		xInv.InvModOrder()
 
 		// x^2
 		xSquare := v.Curve.ModMul(x, x, v.Curve.GroupOrder)
 		// 1/x^2
 		xSquareInv := xSquare.Copy()
-		xSquareInv.InvModP(v.Curve.GroupOrder)
+		xSquareInv.InvModOrder()
 		// compute a commitment to the reduced vectors and their inner product
 		CPrime := proof.L[i].Mul2(xSquare, proof.R[i], xSquareInv)
 		CPrime.Add(C)
