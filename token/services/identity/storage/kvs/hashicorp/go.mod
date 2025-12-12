@@ -20,7 +20,7 @@ require (
 	github.com/IBM/idemix v0.0.2-0.20250313153527-832db18b9478 // indirect
 	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478 // indirect
 	github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478 // indirect
-	github.com/IBM/mathlib v0.0.3-0.20251210155508-86dd03c0dc42 // indirect
+	github.com/IBM/mathlib v0.0.3-0.20251211174534-08690b7c5cc8 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.20.0 // indirect
