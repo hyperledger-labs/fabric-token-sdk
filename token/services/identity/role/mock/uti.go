@@ -4,7 +4,7 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -131,4 +131,4 @@ func (fake *UnspentTokensIterator) recordInvocation(key string, args []interface
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ driver.UnspentTokensIterator = new(UnspentTokensIterator)
+var _ role.UnspentTokensIterator = new(UnspentTokensIterator)

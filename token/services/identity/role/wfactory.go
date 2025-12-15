@@ -28,6 +28,7 @@ type WalletsConfiguration interface {
 	CacheSizeForOwnerID(id string) int
 }
 
+//go:generate counterfeiter -o mock/registry.go -fake-name Registry . Registry
 type Registry interface {
 	WalletIDs(ctx context.Context) ([]string, error)
 	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
@@ -38,12 +39,15 @@ type Registry interface {
 	GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error
 }
 
+//go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
+type Deserializer = driver.Deserializer
+
 type DefaultFactory struct {
 	Logger               logging.Logger
 	IdentityProvider     driver.IdentityProvider
 	TokenVault           TokenVault
 	WalletsConfiguration WalletsConfiguration
-	Deserializer         driver.Deserializer
+	Deserializer         Deserializer
 	MetricsProvider      metrics.Provider
 }
 
@@ -52,7 +56,7 @@ func NewDefaultFactory(
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	walletsConfiguration WalletsConfiguration,
-	deserializer driver.Deserializer,
+	deserializer Deserializer,
 	metricsProvider metrics.Provider,
 ) *DefaultFactory {
 	return &DefaultFactory{
@@ -105,7 +109,12 @@ func (w *DefaultFactory) NewWallet(ctx context.Context, id string, role identity
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get issuer wallet identity for [%s]", id)
 		}
-		newWallet := NewIssuerWallet(w.Logger, w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
+		signer, err := w.IdentityProvider.GetSigner(ctx, idInfoIdentity)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get issuer signer [%s]", id)
+		}
+
+		newWallet := NewIssuerWallet(w.Logger, w.TokenVault, id, idInfoIdentity, signer)
 		if err := wr.BindIdentity(ctx, idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
@@ -117,7 +126,12 @@ func (w *DefaultFactory) NewWallet(ctx context.Context, id string, role identity
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s]", id)
 		}
-		newWallet := NewAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
+		signer, err := w.IdentityProvider.GetSigner(ctx, idInfoIdentity)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get auditor signer [%s]", id)
+		}
+
+		newWallet := NewAuditorWallet(id, idInfoIdentity, signer)
 		if err := wr.BindIdentity(ctx, idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
