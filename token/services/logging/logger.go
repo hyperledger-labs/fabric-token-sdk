@@ -29,7 +29,7 @@ func GetLogger(params ...string) (Logger, error) {
 }
 
 func DriverLogger(prefix string, networkID string, channel string, namespace string) Logger {
-	return logging.MustGetLogger(loggerName(prefix, networkID, channel, namespace))
+	return MustGetLogger(loggerName(prefix, networkID, channel, namespace))
 }
 
 func DeriveDriverLogger(logger Logger, prefix string, networkID string, channel string, namespace string) Logger {
@@ -37,7 +37,7 @@ func DeriveDriverLogger(logger Logger, prefix string, networkID string, channel 
 }
 
 func DriverLoggerFromPP(prefix string, id string) Logger {
-	return logging.MustGetLogger(loggerName(prefix, id))
+	return MustGetLogger(loggerName(prefix, id))
 }
 
 func isEmptyString(s string) bool { return len(s) == 0 }
