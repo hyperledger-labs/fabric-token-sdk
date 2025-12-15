@@ -245,10 +245,12 @@ func (r *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType,
 	// First, do a fast-path check of the cache without taking a long lock.
 	v, ok := id.(string)
 	if ok {
+		r.Logger.DebugfContext(ctx, "role [%d] lookup wallet by string [%s]", role, v)
 		r.WalletMu.RLock()
 		w := r.Wallets[v]
 		r.WalletMu.RUnlock()
 		if w != nil {
+			r.Logger.DebugfContext(ctx, "role [%d] lookup wallet by string [%s], found.", role, v)
 			return w, nil
 		}
 	}
@@ -258,11 +260,11 @@ func (r *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType,
 	// the global mutex to avoid blocking other operations while doing external lookups.
 	w, idInfo, wID, err := r.Lookup(ctx, id)
 	if err != nil {
-		r.Logger.DebugfContext(ctx, "failed")
+		r.Logger.DebugfContext(ctx, "failed with error [%+v]", err)
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
 	}
 	if w != nil {
-		r.Logger.DebugfContext(ctx, "yes")
+		r.Logger.DebugfContext(ctx, "yes [%s:%s]", w.ID(), wID)
 		return w, nil
 	}
 	r.Logger.DebugfContext(ctx, "no")
@@ -275,16 +277,13 @@ func (r *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType,
 		return existing, nil
 	}
 	// Create the wallet without holding the registry lock (avoid holding locks while calling external code).
-	r.Logger.DebugfContext(ctx, "create wallet")
+	r.Logger.DebugfContext(ctx, "create wallet [%s]", wID)
 	newWallet, err := r.WalletFactory.NewWallet(ctx, wID, role, r, idInfo)
 	if err != nil {
 		return nil, err
 	}
-	if ok {
-		r.Wallets[v] = newWallet
-	} else {
-		r.Wallets[wID] = newWallet
-	}
+	r.Logger.DebugfContext(ctx, "register wallet [%s:%s] with label [%s]", newWallet.ID(), wID, wID)
+	r.Wallets[wID] = newWallet
 	return newWallet, nil
 }
 
