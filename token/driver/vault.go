@@ -32,7 +32,6 @@ const (
 )
 
 //go:generate counterfeiter -o mock/uti.go -fake-name UnspentTokensIterator . UnspentTokensIterator
-
 type UnspentTokensIterator = iterators.Iterator[*token.UnspentToken]
 
 type SpendableTokensIterator = iterators.Iterator[*token.UnspentTokenInWallet]

@@ -15,9 +15,9 @@ import (
 // Identity represents a generic identity
 type Identity = view.Identity
 
-//go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
-
 // IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
+//
+//go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
 type IdentityProvider interface {
 	// RegisterRecipientData stores the passed recipient data
 	RegisterRecipientData(ctx context.Context, data *RecipientData) error
