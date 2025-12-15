@@ -20,22 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeIdentityInfo is a minimal implementation of idriver.IdentityInfo used in tests
-type fakeIdentityInfo struct {
-	id string
-}
-
-func (f *fakeIdentityInfo) ID() string           { return f.id }
-func (f *fakeIdentityInfo) EnrollmentID() string { return "" }
-func (f *fakeIdentityInfo) Remote() bool         { return false }
-func (f *fakeIdentityInfo) Get(ctx context.Context) (driver.Identity, []byte, error) {
-	return driver.Identity(f.id), nil, nil
-}
-func (f *fakeIdentityInfo) Anonymous() bool { return false }
-
-// ensure tests compile even if some methods are not used
-var _ idriver.IdentityInfo = &fakeIdentityInfo{}
-
 func setup(t *testing.T) (context.Context, *role.Role, *mock.LocalMembership) {
 	t.Helper()
 	ctx := t.Context()
@@ -56,7 +40,7 @@ func TestRole_ID_returns_roleID(t *testing.T) {
 
 func TestRole_GetIdentityInfo_success_and_error(t *testing.T) {
 	ctx, r, m := setup(t)
-	info := &fakeIdentityInfo{id: "info1"}
+	info := &mockIdentityInfo{id: "info1"}
 	m.GetIdentityInfoReturns(info, nil)
 
 	got, err := r.GetIdentityInfo(ctx, "label")
@@ -205,7 +189,7 @@ func TestRole_MapToIdentity_mapIdentityToID_branches(t *testing.T) {
 	m.GetIdentityInfoCalls(func(ctx context.Context, label string, auditInfo []byte) (idriver.IdentityInfo, error) {
 		switch label {
 		case "labelInfo":
-			return &fakeIdentityInfo{id: "infoID"}, nil
+			return &mockIdentityInfo{id: "infoID"}, nil
 		default:
 			return nil, errors.New("no")
 		}

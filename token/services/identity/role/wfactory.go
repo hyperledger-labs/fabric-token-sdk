@@ -17,13 +17,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+//go:generate counterfeiter -o mock/tv.go -fake-name TokenVault . TokenVault
 type TokenVault interface {
-	IsPending(ctx context.Context, id *token.ID) (bool, error)
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
 	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
 }
 
+//go:generate counterfeiter -o mock/wc.go -fake-name WalletsConfiguration . WalletsConfiguration
 type WalletsConfiguration interface {
 	CacheSizeForOwnerID(id string) int
 }
@@ -42,15 +43,17 @@ type Registry interface {
 //go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
 type Deserializer = driver.Deserializer
 
+// DefaultFactory creates wallets for the default role.
 type DefaultFactory struct {
 	Logger               logging.Logger
-	IdentityProvider     driver.IdentityProvider
+	IdentityProvider     IdentityProvider
 	TokenVault           TokenVault
 	WalletsConfiguration WalletsConfiguration
 	Deserializer         Deserializer
 	MetricsProvider      metrics.Provider
 }
 
+// NewDefaultFactory creates a new DefaultFactory.
 func NewDefaultFactory(
 	logger logging.Logger,
 	identityProvider driver.IdentityProvider,

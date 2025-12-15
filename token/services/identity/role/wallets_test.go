@@ -160,7 +160,7 @@ func TestLongTermOwnerWallet(t *testing.T) {
 		t.Helper()
 		ip := &mock.IdentityProvider{}
 		tv := &mock.OwnerTokenVault{}
-		info := &fakeIdentityInfo{id: "ownerIdentity"}
+		info := &mockIdentityInfo{id: "ownerIdentity"}
 
 		w, err := role.NewLongTermOwnerWallet(t.Context(), ip, tv, "w1", info)
 		require.NoError(t, err)
@@ -186,7 +186,7 @@ func TestLongTermOwnerWallet(t *testing.T) {
 		data, err := w.GetRecipientData(t.Context())
 		require.NoError(t, err)
 		assert.Equal(t, id, data.Identity)
-		assert.Nil(t, data.AuditInfo) // fakeIdentityInfo returns nil audit info
+		assert.Equal(t, []byte("audit-info"), data.AuditInfo) // mockIdentityInfo returns nil audit info
 	})
 
 	t.Run("ListTokens and Balance", func(t *testing.T) {
@@ -252,7 +252,7 @@ func TestAnonymousOwnerWallet(t *testing.T) {
 		t.Helper()
 		ip := &mock.IdentityProvider{}
 		tv := &mock.OwnerTokenVault{}
-		info := &fakeIdentityInfo{id: "ownerIdentity"}
+		info := &mockIdentityInfo{id: "ownerIdentity"}
 		reg := &mock.Registry{}
 		des := &mock.Deserializer{}
 		logger := logging.MustGetLogger("test")

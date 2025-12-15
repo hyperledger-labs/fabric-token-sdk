@@ -93,7 +93,7 @@ func TestLookup_ReturnsIdentityInfoWhenWalletMissing(t *testing.T) {
 	ctx := t.Context()
 
 	role.MapToIdentityReturns([]byte("id3"), "w3", nil)
-	role.GetIdentityInfoReturns(&fakeIdentityInfo{id: "id3"}, nil)
+	role.GetIdentityInfoReturns(&mockIdentityInfo{id: "id3"}, nil)
 
 	wallet, idInfo, wID, err := reg.Lookup(ctx, []byte("id3"))
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestWalletByID_CreatesWalletUsingFactory(t *testing.T) {
 	ctx := t.Context()
 	// make Lookup return an idInfo and wallet id
 	role.MapToIdentityReturns([]byte("id4"), "w4", nil)
-	role.GetIdentityInfoReturns(&fakeIdentityInfo{id: "id4"}, nil)
+	role.GetIdentityInfoReturns(&mockIdentityInfo{id: "id4"}, nil)
 	created := &mock2.Wallet{}
 	created.IDReturns("w4")
 	wf.NewWalletReturns(created, nil)
@@ -185,7 +185,7 @@ func TestWalletByID_CreatesWalletUsingFactory2(t *testing.T) {
 	ctx := t.Context()
 	// make Lookup return an idInfo and wallet id
 	role.MapToIdentityReturns([]byte("id4"), "w4", nil)
-	role.GetIdentityInfoReturns(&fakeIdentityInfo{id: "id4"}, nil)
+	role.GetIdentityInfoReturns(&mockIdentityInfo{id: "id4"}, nil)
 	created := &mock2.Wallet{}
 	created.IDReturns("w4")
 	wf.NewWalletReturns(created, nil)
@@ -210,7 +210,7 @@ func TestWalletByID_ConcurrentCreation(t *testing.T) {
 	reg, _, r, wf := newRegistryWithFakes()
 	ctx := t.Context()
 	r.MapToIdentityReturns([]byte("idc"), "wc", nil)
-	r.GetIdentityInfoReturns(&fakeIdentityInfo{id: "idc"}, nil)
+	r.GetIdentityInfoReturns(&mockIdentityInfo{id: "idc"}, nil)
 
 	// make NewWallet block until allowed to proceed to simulate concurrent callers
 	start := make(chan struct{})
