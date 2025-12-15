@@ -297,7 +297,6 @@ func TestAnonymousOwnerWallet(t *testing.T) {
 		// Case 1: Success
 		// Deserialize OwnerVerifier defaults to nil, error nil => success verification
 		des.MatchIdentityReturns(nil)
-		ip.RegisterVerifierReturns(nil)
 		ip.RegisterRecipientDataReturns(nil)
 		reg.BindIdentityReturns(nil)
 
@@ -311,11 +310,11 @@ func TestAnonymousOwnerWallet(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed to match identity")
 		des.MatchIdentityReturns(nil)
 
-		// Case 3: RegisterVerifier failure
-		ip.RegisterVerifierReturns(errors.New("reg verifier error"))
+		// Case 3: RegisterRecipientData failure
+		ip.RegisterRecipientDataReturns(errors.New("reg recipient data error"))
 		err = w.RegisterRecipient(t.Context(), data)
 		require.Error(t, err)
-		ip.RegisterVerifierReturns(nil)
+		ip.RegisterRecipientDataReturns(nil)
 
 		// Case 4: BindIdentity failure
 		reg.BindIdentityReturns(errors.New("bind error"))
