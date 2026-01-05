@@ -1,36 +1,54 @@
 # Driver API
 
+The **Driver API** is the interface that connects the generic Token API to a specific token implementation.
+It essentially defines the rules for how tokens are created, transferred, and managed within a particular system.
+
+Every driver must implement the `driver.Driver` interface. This interface serves two main purposes:
+1.  **Public Parameters:** It allows the retrieval of the driver's specific public parameters.
+2.  **Token Management Service (TMS):** It provides a method to instantiate a new TMS specialized for this driver.
+
+The `Token Management Service` interface provided by the driver is the engine under the hood. It must implement the following services:
+*   `Identity Service`: Manages identities and wallets.
+*   `Issue Service`: Handles the creation of new tokens.
+*   `Transfer Service`: Manages the transfer of token ownership.
+*   `Token Service`: Provides general token management utilities.
+*   `Auditor Service`: Enables auditing capabilities.
+*   `Validation Service`: Validates token transactions.
+*   `Vault`: Provides access to the secure storage of tokens.
+
+Currently, the Fabric Token SDK offers two reference driver implementations: `FabToken` and `ZKATDLog` (Zero-Knowledge Authenticated Token based on Discrete Logarithm).
+
 Below is a pictorial representation of the `Driver API`:
 
 ![driverapi.png](imgs/driverapi.png)
 
 ## Serialization
 
-The Driver API recommends to use the `protobuf` protocol to serialize public parameters, token requests.
+The Driver API recommends to use the `protobuf` protocol to serialize public parameters and token requests.
 The relative protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/blob/2118c1535ebaaed2ecc293b0c3f66aa71eeafe21/token/driver/protos/).
-This guarantees retro and forward compatibility.
+This guarantees backward and forward compatibility.
 
 The message for the public parameters carries:
 - A token driver identifier to be able to understand which driver generated these parameters.
-- The lower-lever representation of the public parameters. Each driver must decide how to encode these bytes.
+- The lower-level representation of the public parameters. Each driver must decide how to encode these bytes.
 
 The message for the token requests consists of:
 - Serialization of the issue actions.
 - Serialization of the transfer actions.
-- Signatures of the partis involved in the above actions.
+- Signatures of the parties involved in the above actions.
 - Auditor Signatures, if required by the driver.
 
 ## Drivers
 
-The Token-SDK comes equipped with two `Drivers` implementing the `Driver API`:
+The Token SDK comes equipped with two `Drivers` implementing the `Driver API`:
 
 ### `FabToken`
 
-Fabtoken is a straightforward implementation of the Driver API.
+FabToken is a straightforward implementation of the Driver API.
 It prioritizes simplicity over privacy, storing all token transaction details openly on the ledger for anyone with access to view ownership and activity.
 FabToken exclusively supports long-term identities based on a standard X.509 certificate scheme.
 These identities contain an X.509 certificate, which reveals the owner's enrollment ID in plain text.
-Tokens are directly represented on the ledger as JSON-formatted data based on the token.Token structure.
+Tokens are directly represented on the ledger as JSON-formatted data based on the `token.Token` structure.
 The `Owner` field of this structure stores the identity information.
 The `Identity Service` handles the encoding/decoding of this field.
 
@@ -38,23 +56,23 @@ The `Identity Service` handles the encoding/decoding of this field.
 
 The `Zero Knowledge Asset Transfer DLog` (zkat-dlog, for short) driver supports privacy using Zero Knowledge Proofs.
 We follow a simplified version of the blueprint described in the paper <!-- markdown-link-check-disable -->
-[`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')<!-- markdown-link-check-disable -->
+[`Privacy-preserving auditable token payments in a permissioned blockchain system`](https://eprint.iacr.org/2019/1058.pdf)<!-- markdown-link-check-disable -->
 by Elli Androulaki, Jan Camenisch, Angelo De Caro, Maria Dubovitskaya, Kaoutar Elkhiyaoui, and Björn Tackmann.
-In more details, the driver hides the token's owner, type, and quantity.
-But it reveals which token has been spent by a given transaction. We say that this driver does not support `graph hiding`.
+In more detail, the driver hides the token's owner, type, and quantity.
+But it reveals which token has been spent by a given transaction. We say that this driver does not support `Token Identity Hiding` (previously known as `Graph Hiding`).
 Owner anonymity is achieved by using Identity Mixer (Idemix, for short).
 The identities of the issuers and the auditors are not hidden.
 
 The above scheme is secure under `computational assumptions in bilinear groups` in the `random-oracle model`.
 
-Let us now describe in more details the implementation of the Driver API:
+Let us now describe in more detail the implementation of the Driver API:
 
 #### Public Parameters and Manager
 
 The public parameters are serialized using the `protobuf` protocol.
 The relevant messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/blob/db941977e4798b9ba47875e756ba638a7f9d2d7b/token/core/zkatdlog/nogh/protos).
 
-#### Issuer service
+#### Issuer Service
 
 The issuer service is responsible for the creation of an issue action.
 Given in input:
@@ -70,7 +88,7 @@ Given in input:
     - The output tokens;
     - The ZK proof;
     - The identity of the issuer that signs the token request;
-- The metadata associated to the action contain:
+- The metadata associated to the action contains:
     - The audit info of each involved identity;
     - The opening of each commitment;
 
@@ -83,19 +101,19 @@ Given input:
 - A list of tuples (value, owner) for the tokens to create,
   This service does the following:
 - For each token to spend, it loads its commitment representation and its opening from the `TokensDB`.
-  Recall that tokens appear in the `TokensDB` either because they were issued by an issuer or transfer from another owner.
+  Recall that tokens appear in the `TokensDB` either because they were issued by an issuer or transferred from another owner.
   The fields that are relevant here are `ledger` and `ledger_metadata`.
 - All the tokens that need to be spent must carry the same type.
 - For each tuple for which a token must be created, it generates a Pedersen commitment containing the expected value and type.
 - Then, it generates the ZK proof to prove that the commitments are valid Pedersen commitments under the given public params.
-  Input and output tokens must have the same type and the sum of values in input must be equal to the same of the values in outputs.
+  Input and output tokens must have the same type, and the sum of values in input must be equal to the sum of the values in outputs.
   The value stored in each commitment must be in the allowed range.
 - The action carries:
     - The input tokens spent;
     - The output tokens;
     - The ZK proof;
-    - The identity of the issuer that signs the token request, in case it is needed (e.g. a redeem)
-- The metadata associated to the action contain:
+    - The identity of the issuer that signs the token request, in case it is needed (e.g., a redeem).
+- The metadata associated to the action contains:
     - The audit info of each involved identity;
     - The opening of each commitment;
 
@@ -106,18 +124,18 @@ This happens later. The `ttx service` assists the developer to do so.
 
 #### Validator
 
-The validator takes in input:
-- the public parameters;
-- a reference to the ledger to retrieve states, if needed.
-- a serialized version of the Token Request to check against the public params and the ledger.
+The validator takes as input:
+- The public parameters;
+- A reference to the ledger to retrieve states, if needed.
+- A serialized version of the Token Request to check against the public params and the ledger.
 
 The `DLOG w/o Graph Hiding` validator is stateless, therefore it does not need access to the ledger.
 The token request is marshalled using the `protobuf` protocol. The relative protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/blob/24eccb38b60d1f8dabd1f4a3c6141272b2d2b6d2/token/driver/protos/request.proto).
-This guarantees retro and forward compatibility.
+This guarantees backward and forward compatibility.
 
 So, the validator unmarshals the serialized version of the token request.
 The validator gets access to the serialized version of the actions.
-The validator is equipped with an action deserializer to knows how to deserialize actions.
+The validator is equipped with an action deserializer to know how to deserialize actions.
 Actions are also serialized using the `protobuf` protocol. The relative protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/blob/db941977e4798b9ba47875e756ba638a7f9d2d7b/token/core/zkatdlog/nogh/protos).
 
 Recall that we have two types of actions: Issue and Transfer.
@@ -126,24 +144,24 @@ For an issue action, the validator does the following:
 - The action must be well-formed. All the expected fields must be there.
 - It validates the ZK proof against the token commitments and the public parameters.
   The tokens must be valid Pedersen commitments under the public parameters.
-  Moreover, all tokens must have the same type and the value must be in the specific range.
+  Moreover, all tokens must have the same type, and the value must be in the specific range.
 - It checks that one of the issuers listed in the public parameters has signed the token request.
-  Recall that an issuer identity is in the form of an X509 certificate containing an ECDSA key.
-  The message to verify is the asn1 encoding of the list of issues actions and the list of transfer actions concatenated with the anchor.
+  Recall that an issuer identity is in the form of an X.509 certificate containing an ECDSA key.
+  The message to verify is the ASN.1 encoding of the list of issue actions and the list of transfer actions concatenated with the anchor.
 - Finally, it checks the metadata entries carried by the action. Only `public` metadata entries whose key has prefix `pub.` are allowed.
 
 For a transfer action, the validator does the following:
 - The action must be well-formed. All the expected fields must be there.
-- The owner of each and every input must have signed the token request. Recall, this driver is not graph hiding, therefore the action carries the inputs being spent.
-- If one of the outputs has a `empty` owner, this token signals a redeem operation. Therefore, at least one issuer in the list of the public params' issuers must have signed the token request.
+- The owner of each input must have signed the token request. Recall, this driver is not `Token Identity Hiding` (Graph Hiding), therefore the action carries the inputs being spent.
+- If one of the outputs has an `empty` owner, this token signals a redeem operation. Therefore, at least one issuer in the list of the public params' issuers must have signed the token request.
 - It validates the ZK proof against the token commitments and the public parameters.
   The input and output tokens must be valid Pedersen commitments under the public parameters.
-  Moreover, all tokens must have the same type and the value must be in the specific range.
-  Finally, the same of the input values must be equal to the same of the output values.
+  Moreover, all tokens must have the same type, and the value must be in the specific range.
+  Finally, the sum of the input values must be equal to the sum of the output values.
 - Finally, it checks the metadata entries carried by the action. Only `public` metadata entries whose key has prefix `pub.` are allowed.
 
-Finally, the validator checks the at list one auditor in the list of public params' auditors have signed the token request.
-This signatures in carried in the `AuditorSignatures` field.
+Finally, the validator checks that at least one auditor in the list of public params' auditors has signed the token request.
+This signature is carried in the `AuditorSignatures` field.
 
 No secrets are involved during the validation process.
 The only keys used are public keys of the issuers and the auditors that are listed in the public parameters.
@@ -151,42 +169,42 @@ The only keys used are public keys of the issuers and the auditors that are list
 #### Key characteristics
 
 - A token is represented on the ledger as the pair `(pedersen commitment to type and value, owner)`.
-- A token metadata is a tuple containing: Token type, value, commitment blinding factor, and issuer's identity.
+- Token metadata is a tuple containing: Token type, value, commitment blinding factor, and issuer's identity.
 - The admissible values are in the range $[0..max-1]$, where $max$ is $2^{bitlength}$ and $bitlength$ is a public parameter. A typical value for $bitlength$ is $64$.
 - The owner of a token can be:
     - An `Idemix Identity` to achieve identity anonymity. The public key of the Idemix Identity Issuer can be rotated.
     - An `HTLC-like Script` for interoperability;
     - A `Multisig Identity` for shared ownership;
-- An issuer is identified by an X509 certificate. The identity of the issuer is always revealed.
-- Multiple issuers can be defined to issue a token type. Each such an issuer can issue tokens of said type; This allows also for rotation of these keys.
-- An auditor is identified by an X509 certificate. The identity of the auditor is always revealed.
-- Only one auditor is definable and it is public key cannot be rotated.
+- An issuer is identified by an X.509 certificate. The identity of the issuer is always revealed.
+- Multiple issuers can be defined to issue a token type. Each such issuer can issue tokens of said type; This allows also for rotation of these keys.
+- An auditor is identified by an X.509 certificate. The identity of the auditor is always revealed.
+- Only one auditor is definable and its public key cannot be rotated.
 - If an auditor is set, a request that doesn't carry its signature is considered invalid.
-- Supported actions are: `Issue` and `Transfer`. `Reedem` is obtained as a `Transfer` that creates an output whose's owner is `none`.
+- Supported actions are: `Issue` and `Transfer`. `Redeem` is obtained as a `Transfer` that creates an output whose owner is `none`.
 - An `Issue Action` proves that value is in the right range and one of the authorized issuers signed the request.
 - A `Transfer Action` proves the following:
     - The sum of the inputs is equal to the sum of the outputs and the value of each output is in the valid range;
     - Inputs and outputs have the same type;
     - The owners of each input signed the request;
 - The rightful owner of a token can redeem it;
-- All the information required to operate the driver are found in the public parameters.
-- Actions, public parameters, tokens, and tokens metadata are marshalled using `protobuf` messages.
+- All the information required to operate the driver is found in the public parameters.
+- Actions, public parameters, tokens, and token metadata are marshalled using `protobuf` messages.
 
 In the coming sections, we give more details about the above key characteristics.
 
 #### Tokens and their Metadata
 
 A token is presented on the ledger as a pair `(pedersen commitment to type and value, owner)`.
-The pedersen commitment is computed as $g_0^{H_{Z_r}(Type)}g_1^{Value} g_2^{BF}$,
+The Pedersen commitment is computed as $g_0^{H_{Z_r}(Type)}g_1^{Value} g_2^{BF}$,
 where $H_{Zr}$ is the `hash to Zr` function provided by the bilinear group,
-${g_i}$ are the bases of the pedersen commitment,   
+${g_i}$ are the bases of the Pedersen commitment,
 $Type$ is a string, and both $Value$ and $BF$ are in $Z_r$.
 
 The token metadata is then a tuple containing: Token type, value, blinding factor, and issuer's identity.
 
 #### Issue Action
 
-An `issue action` is responsible for creating new tokens.  
+An `issue action` is responsible for creating new tokens.
 This is a privileged operation, meaning only an `issuer` can authorize it.
 
 The action includes the following:
@@ -200,7 +218,7 @@ The action includes the following:
 A `transfer action` spends existing tokens to create new tokens for an equivalent amount of value.
 The ownership of the new tokens can be assigned to any admissible `owner identity`.
 
-The actions includes the following:
+The action includes the following:
 - The input tokens to be spent;
 - The output tokens to be created;
 - A zero-knowledge proof of validity of the action;
@@ -209,7 +227,7 @@ The actions includes the following:
 ## Security
 
 Security claims are related to the Token Drivers, implementations of the Driver API.
-As we have seen before, the Token-SDK comes equipped with two Drivers:
+As we have seen before, the Token SDK comes equipped with two Drivers:
 - `FabToken` does not guarantee the privacy of tokens and identities.
   The validator guarantees that:
   - Only the issuers listed in the public parameters can issue tokens;
@@ -224,45 +242,45 @@ As we have seen before, the Token-SDK comes equipped with two Drivers:
   - In a transfer, the sum of the inputs being spent is equal to the sum of the outputs being created.
     It does not guarantee:
   - Anonymity of the issuers and auditors;
-  - Token Graph
+  - Token Identity Hiding (Graph Hiding)
     Claims and security properties can be found in this paper [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')
 
 ### Secrets or Keys
 
-Secrets and Keys in the Token-SDK are associated to tokens and identities.
+Secrets and Keys in the Token SDK are associated with tokens and identities.
 Depending on the driver implementation, the nature of these secrets and keys may vary.
-Nevertheless, we can pinpoint where they are stored in the Token-SDK stores.
+Nevertheless, we can pinpoint where they are stored in the Token SDK stores.
 
 Also, here, for simplicity, we assume that:
 - The backend is Fabric,
 - The Token Driver is `DLOG w/o Graph Hiding`.
-- The Key Store is that provided by the Token-SDK.
+- The Key Store is that provided by the Token SDK.
 
 #### Tokens
 
-A privacy preserving token can be understood as a sealed envelope.
+A privacy-preserving token can be understood as a sealed envelope.
 The content of the envelope/token is therefore a secret.
 It is stored in the `Tokens` table (`ledger_metadata` field).
 This secret is generated at the time of creation of a token when the Token Request is assembled
 (see Section `Transfer Operation` for more details.).
 This secret is stored in metadata section of the token request.
-During the lifecycle of a token transaction, the token request is parsed and all its components are stored in the DB.
+During the lifecycle of a token transaction, the token request is parsed, and all its components are stored in the DB.
 Only the tokens whose token request in the `Requests` table has status `Valid` are actually stored in the `Tokens` table.
 Indeed, only when the backend signals that a given token request is valid, its tokens are stored in the DB.
 
 #### Identities
 
 An identity can be understood as the public part of a cryptographic key-pair.
-We have already seen that in the Token-SDK there are identities used for different purposes.
-Namely, to issue tokens, the own tokens, or to audit transactions.
+We have already seen that in the Token SDK there are identities used for different purposes.
+Namely, to issue tokens, to own tokens, or to audit transactions.
 
 To get to these identities, we need first a wallet.
-Recall that a wallet is bound to a long term cryptographic key-pair.
-The `IdentityConfigurations` contains the information about the identities that can be used to derive wallets.
+Recall that a wallet is bound to a long-term cryptographic key-pair.
+The `IdentityConfigurations` table contains the information about the identities that can be used to derive wallets.
 
 So, let us ask: How does this table get populated?
 There are two ways:
-- From the configuration file. Here is an example take from [`here`](./core-token.md):
+- From the configuration file. Here is an example taken from [`here`](./core-token.md):
 ```yaml
       # sections dedicated to the definition of the wallets
       wallets:
@@ -270,7 +288,7 @@ There are two ways:
         defaultCacheSize: 3
         # owner wallets
         owners:
-        - id: alice # the unique identifier of this wallet. Here is an example of use: `ttx.GetWallet(context, "alice")` 
+        - id: alice # the unique identifier of this wallet. Here is an example of use: `ttx.GetWallet(context, "alice")`
           default: true # is this the default owner wallet
           # path to the folder containing the cryptographic material associated to wallet.
           # The content of the folder is driver dependent
@@ -281,7 +299,7 @@ There are two ways:
           path: /path/to/alice.id1-wallet
         # issuer wallets
         issuers:
-          - id: issuer # the unique identifier of this wallet. Here is an example of use: `ttx.GetIssuerWallet(context, "issuer)`
+          - id: issuer # the unique identifier of this wallet. Here is an example of use: `ttx.GetIssuerWallet(context, "issuer")`
             default: true # is this the default issuer wallet
             # path to the folder containing the cryptographic material associated to wallet.
             # The content of the folder is driver dependent
@@ -305,8 +323,8 @@ There are two ways:
                   Security: 256
         # auditor wallets
         auditors:
-          - id: auditor # the unique identifier of this wallet. Here is an example of use: `ttx.GetAuditorWallet(context, "auditor)`
-            default: true # is this the default auditor wallet  
+          - id: auditor # the unique identifier of this wallet. Here is an example of use: `ttx.GetAuditorWallet(context, "auditor")`
+            default: true # is this the default auditor wallet
             # path to the folder containing the cryptographic material associated to wallet.
             # The content of the folder is driver dependent
             path: /path/to/auditor-wallet
@@ -334,26 +352,26 @@ The corresponding secret keys are either stored in the `KeyStore` table or in an
 After the first loading, the content of the file system can be removed.
 - Directly by loading the `IdentityConfigurations` table with the relevant information.
 
-We currently supports two type of keys: ECDSA and Idemix.
-When loading an ECDSA key inside the `IdentityConfigurations`, only the corresponding `X509` certificate is loaded inside the table.
+We currently supports two types of keys: ECDSA and Idemix.
+When loading an ECDSA key inside the `IdentityConfigurations`, only the corresponding `X.509` certificate is loaded inside the table.
 The secret key is stored in the key store.
 When loading Idemix credentials, only the public part of the credential is store in the `IdentityConfigurations` table.
 The secret key is stored in the key store and the secret key component of the credential is replaced with the secret key's SKI.
 
-Idemix identities are only used for the `owner` wallets. X509 identities are used for issuers and auditors.
+Idemix identities are only used for the `owner` wallets. X.509 identities are used for issuers and auditors.
 When an identity is derived from an owner wallet via a call to `GetRecipientIdentity`,
 then both the `IdentityInfo` and the `IdentitySigners` tables are filled with a row.
 The field `identity_audit_info` contains private information about the identity.
-For an X509 identity, the identity itself already reveals everything.
+For an X.509 identity, the identity itself already reveals everything.
 For an Idemix identity (or pseudonym), it contains the secrets to de-anonymise the pseudonym.
 The `info` field in the `IdentitySigners` table remains empty as well as `token_metadata` and `token_metadata_audit_info`.
 The `KeyStore` table contains a row whose `key` field gets the value of the SKI of the cryptographic key stored and value is the cryptographic key itself.
 
-#### 3.2.1.4 Identity and Access Management
+#### Identity and Access Management
 
-The Token-SDK uses identities to establish trust and control access within the system.
+The Token SDK uses identities to establish trust and control access within the system.
 These identities are like digital passports that verify who a party is and what actions they're authorized to perform.
-Therefore, the Token-SDK's identity service offers:
+Therefore, the Token SDK's identity service offers:
 1. A way to define these identities,
 2. A way to generate and verify digital signatures valid under these identities, and
 3. A way to marshal/unmarshal identities and signatures.
@@ -368,12 +386,12 @@ Here are some key roles:
 * **Owners:** Owners hold tokens, just like possessing a digital asset.
 * **Auditors:** These act as financial inspectors, overseeing token requests and ensuring proper use.
 * **Certifiers:** They verify the existence and legitimacy of specific tokens, similar to checking identification.
-  This role is used only by certain token drivers that support the so called `graph hiding`.
+  This role is used only by certain token drivers that support the so-called `Token Identity Hiding` (Graph Hiding).
 
 Recall that long-term identities are stored in the `IdentityConfigurations`.
 The corresponding secrets are stored either in the `KeyStore` table or an external key store, if configured.
 
-####  Identity Options: Passports and Beyond
+#### Identity Options: Passports and Beyond
 
 Identities come in different forms.
 
@@ -384,7 +402,7 @@ Another option is `anonymous credentials`, which allow users to prove they have 
 Imagine showing an ID that only displays relevant information, not your full details.
 This is particularly useful for protecting user privacy.
 
-####  Roles and Wallets: Managing Access
+#### Roles and Wallets: Managing Access
 
 Importantly, roles can contain different identity types.
 These roles then act as the foundation for creating wallets.
