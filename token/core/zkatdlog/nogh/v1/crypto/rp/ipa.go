@@ -366,11 +366,6 @@ func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*
 
 func InnerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {
 	return c.ModAddMul(left, right, c.GroupOrder)
-	// ip := c.NewZrFromInt(0)
-	// for i, l := range left {
-	// 	ip = c.ModAdd(ip, c.ModMul(l, right[i], c.GroupOrder), c.GroupOrder)
-	// }
-	// return ip
 }
 
 func commitVector(left []*mathlib.Zr, right []*mathlib.Zr, leftgen []*mathlib.G1, rightgen []*mathlib.G1, c *mathlib.Curve) *mathlib.G1 {
