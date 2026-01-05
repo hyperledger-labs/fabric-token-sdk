@@ -26,6 +26,7 @@ const (
 	IdentityType identity.Type       = "idemix"
 )
 
+// SKI implies Subject Key Identifier
 type (
 	SKI    = []byte
 	Schema = string
@@ -47,10 +48,12 @@ type SchemaManager interface {
 	RhNymAuditOpts(schema string, attrs [][]byte) (*bccsp.RhNymAuditOpts, error)
 }
 
+// SignerService defines the interface for registering a signer
 type SignerService interface {
 	RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
 }
 
+// KeyManager manages Idemix keys and deserializers
 type KeyManager struct {
 	*crypto.Deserializer
 	userKeySKI SKI
@@ -63,6 +66,7 @@ type KeyManager struct {
 	Schema        string
 }
 
+// NewKeyManager creates a new KeyManager
 func NewKeyManager(
 	conf *crypto.Config,
 	sigType bccsp.SignatureType,
@@ -71,6 +75,7 @@ func NewKeyManager(
 	return NewKeyManagerWithSchema(conf, sigType, csp, schema.NewDefaultManager(), schema.DefaultSchema)
 }
 
+// NewKeyManagerWithSchema creates a new KeyManager with the passed schema manager and schema name
 func NewKeyManagerWithSchema(
 	conf *crypto.Config,
 	sigType bccsp.SignatureType,
@@ -206,6 +211,7 @@ func NewKeyManagerWithSchema(
 	}, nil
 }
 
+// Identity returns the identity descriptor for the given audit information
 func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	logger.DebugfContext(ctx, "get user secret key")
 	// Load the user key
@@ -324,10 +330,12 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 	}, nil
 }
 
+// IsRemote returns true if the user key is not available locally
 func (p *KeyManager) IsRemote() bool {
 	return len(p.userKeySKI) == 0
 }
 
+// DeserializeVerifier deserializes a verifier from the given raw bytes
 func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (driver.Verifier, error) {
 	r, err := p.Deserialize(ctx, raw)
 	if err != nil {
@@ -337,10 +345,12 @@ func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (drive
 	return r.Identity, nil
 }
 
+// DeserializeSigner deserializes a signer from the given raw bytes
 func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
 	return p.DeserializeSigningIdentity(ctx, raw)
 }
 
+// Info returns information about the identity
 func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
 	eid := ""
 	if len(auditInfo) != 0 {
@@ -362,18 +372,22 @@ func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (st
 	return fmt.Sprintf("Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
 }
 
+// String returns a string representation of the KeyManager
 func (p *KeyManager) String() string {
 	return fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(p.Ipk).String())
 }
 
+// EnrollmentID returns the enrollment ID
 func (p *KeyManager) EnrollmentID() string {
 	return p.conf.Signer.EnrollmentId
 }
 
+// Anonymous returns true if the identity is anonymous
 func (p *KeyManager) Anonymous() bool {
 	return true
 }
 
+// DeserializeSigningIdentity deserializes a signing identity from the given raw bytes
 func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (driver.SigningIdentity, error) {
 	id, err := p.Deserialize(ctx, raw)
 	if err != nil {
@@ -401,6 +415,7 @@ func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte)
 	return si, nil
 }
 
+// IdentityType returns the type of the identity
 func (p *KeyManager) IdentityType() identity.Type {
 	return IdentityType
 }

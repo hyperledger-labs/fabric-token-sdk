@@ -23,8 +23,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// LoadedToken is a type alias for a loaded token containing the token content and its metadata.
 type LoadedToken = common.LoadedToken[[]byte, []byte]
 
+// PreparedTransferInput contains the details of a token input that has been prepared for a transfer.
 type PreparedTransferInput struct {
 	Token          *token.Token
 	Metadata       *token.Metadata
@@ -32,8 +34,10 @@ type PreparedTransferInput struct {
 	Owner          driver.Identity
 }
 
+// PreparedTransferInputs is a slice of PreparedTransferInput.
 type PreparedTransferInputs []PreparedTransferInput
 
+// Owners returns the identities of the owners of the tokens in the slice.
 func (p *PreparedTransferInputs) Owners() []driver.Identity {
 	owners := make([]driver.Identity, len(*p))
 	for i, input := range *p {
@@ -42,6 +46,7 @@ func (p *PreparedTransferInputs) Owners() []driver.Identity {
 	return owners
 }
 
+// Tokens returns the tokens in the slice.
 func (p *PreparedTransferInputs) Tokens() []*token.Token {
 	tokens := make([]*token.Token, len(*p))
 	for i, input := range *p {
@@ -50,6 +55,7 @@ func (p *PreparedTransferInputs) Tokens() []*token.Token {
 	return tokens
 }
 
+// Metadata returns the metadata of the tokens in the slice.
 func (p *PreparedTransferInputs) Metadata() []*token.Metadata {
 	metas := make([]*token.Metadata, len(*p))
 	for i, input := range *p {
@@ -58,15 +64,19 @@ func (p *PreparedTransferInputs) Metadata() []*token.Metadata {
 	return metas
 }
 
+// TokenLoader loads tokens by their IDs.
+//
 //go:generate counterfeiter -o mock/token_loader.go -fake-name TokenLoader . TokenLoader
 type TokenLoader interface {
 	LoadTokens(ctx context.Context, ids []*token2.ID) ([]LoadedToken, error)
 }
 
+// TokenDeserializer deserializes raw token data into a Token object and its associated metadata.
 type TokenDeserializer interface {
 	DeserializeToken(ctx context.Context, outputFormat token2.Format, outputRaw []byte, metadataRaw []byte) (*token.Token, *token.Metadata, *token.UpgradeWitness, error)
 }
 
+// TransferService is responsible for creating and verifying transfer actions.
 type TransferService struct {
 	Logger                  logging.Logger
 	PublicParametersManager PublicParametersManager
@@ -78,6 +88,7 @@ type TransferService struct {
 	tracer                  trace.Tracer
 }
 
+// NewTransferService creates a new instance of the TransferService.
 func NewTransferService(
 	logger logging.Logger,
 	publicParametersManager PublicParametersManager,
@@ -102,8 +113,8 @@ func NewTransferService(
 	}
 }
 
-// Transfer returns a TransferActionMetadata as a function of the passed arguments
-// It also returns the corresponding TransferMetadata
+// Transfer generates a new TransferAction based on the provided arguments.
+// It returns the TransferAction, the corresponding TransferMetadata, or an error if the operation fails.
 func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenRequestAnchor, wallet driver.OwnerWallet, ids []*token2.ID, outputs []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	s.Logger.DebugfContext(ctx, "Prepare Transfer Action [%s,%v]", anchor, ids)
 	if common.IsAnyNil(ids...) {
@@ -263,7 +274,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 	return transfer, transferMetadata, nil
 }
 
-// VerifyTransfer checks the outputs in the TransferActionMetadata against the passed metadata
+// VerifyTransfer verifies the validity of a TransferAction against the provided output metadata.
 func (s *TransferService) VerifyTransfer(ctx context.Context, transferAction driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
 	if transferAction == nil {
 		return errors.New("nil action")
@@ -308,8 +319,8 @@ func (s *TransferService) VerifyTransfer(ctx context.Context, transferAction dri
 	return transfer.NewVerifier(getTokenData(action.InputTokens()), com, pp).Verify(action.Proof)
 }
 
-// DeserializeTransferAction un-marshals a TransferActionMetadata from the passed array of bytes.
-// DeserializeTransferAction returns an error, if the un-marshalling fails.
+// DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.
+// It returns an error if the un-marshalling fails.
 func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
 	transferAction := &transfer.Action{}
 	err := transferAction.Deserialize(raw)
@@ -319,6 +330,7 @@ func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.Transfer
 	return transferAction, nil
 }
 
+// prepareInputs prepares the loaded tokens for transfer by deserializing them.
 func (s *TransferService) prepareInputs(ctx context.Context, loadedTokens []LoadedToken) (PreparedTransferInputs, error) {
 	preparedInputs := make([]PreparedTransferInput, len(loadedTokens))
 	for i, loadedToken := range loadedTokens {
@@ -336,6 +348,7 @@ func (s *TransferService) prepareInputs(ctx context.Context, loadedTokens []Load
 	return preparedInputs, nil
 }
 
+// getTokenData extracts the cryptographic data (commitments) from the provided tokens.
 func getTokenData(tokens []*token.Token) []*math.G1 {
 	tokenData := make([]*math.G1, len(tokens))
 	for i := range tokens {

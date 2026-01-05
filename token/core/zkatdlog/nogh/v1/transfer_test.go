@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package v1_test
 
 import (
+	"context"
 	"strconv"
 	"testing"
 
@@ -33,6 +34,7 @@ import (
 
 var logger = logging.MustGetLogger()
 
+// TestTransferService_VerifyTransfer tests the VerifyTransfer method of the TransferService.
 func TestTransferService_VerifyTransfer(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -61,6 +63,7 @@ func TestTransferService_VerifyTransfer(t *testing.T) {
 	}
 }
 
+// BenchmarkTransferServiceTransfer benchmarks the Transfer method of the TransferService.
 func BenchmarkTransferServiceTransfer(b *testing.B) {
 	bits, err := benchmark2.Bits(32, 64)
 	require.NoError(b, err)
@@ -97,8 +100,10 @@ func BenchmarkTransferServiceTransfer(b *testing.B) {
 	}
 }
 
+// TestParallelBenchmarkTransferServiceTransfer runs the transfer benchmark in parallel.
 func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
-	bits, curves, cases := benchmark2.GenerateCasesWithDefaults(t)
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
 	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves)
 	require.NoError(t, err)
 
@@ -107,9 +112,9 @@ func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 		func(c *benchmark2.Case) (*benchmarkTransferEnv, error) {
 			return newBenchmarkTransferEnv(1, c, configurations)
 		},
-		func(env *benchmarkTransferEnv) error {
+		func(ctx context.Context, env *benchmarkTransferEnv) error {
 			action, _, err := env.Envs[0].ts.Transfer(
-				t.Context(),
+				ctx,
 				"an_anchor",
 				nil,
 				env.Envs[0].ids,
@@ -125,12 +130,14 @@ func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 	)
 }
 
+// transferEnv holds the environment for testing transfers, including the service, outputs, and IDs.
 type transferEnv struct {
 	ts      *v1.TransferService
 	outputs []*token.Token
 	ids     []*token.ID
 }
 
+// newTransferEnv creates a new transfer environment for a given benchmark case and configuration.
 func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*transferEnv, error) {
 	pp, err := configurations.GetPublicParams(benchmarkCase.Bits, benchmarkCase.CurveID)
 	if err != nil {
@@ -229,10 +236,12 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 	}, nil
 }
 
+// benchmarkTransferEnv holds a collection of transfer environments for benchmarking.
 type benchmarkTransferEnv struct {
 	Envs []*transferEnv
 }
 
+// newBenchmarkTransferEnv creates a new benchmark transfer environment with 'n' transfer environments.
 func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*benchmarkTransferEnv, error) {
 	envs := make([]*transferEnv, n)
 	for i := 0; i < n; i++ {

@@ -21,6 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestProverVerifier exercises a full prover -> verifier round-trip for
+// a generated ZK-issue proof using the given curve and output count.
 func TestProverVerifier(t *testing.T) {
 	prover, verifier := prepareZKIssue(t, 32, math.BN254, 2)
 	proof, err := prover.Prove()
@@ -30,6 +32,8 @@ func TestProverVerifier(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// TestIssuer tests the high-level issuer API: generating a ZK issue
+// action and verifying the resulting proof.
 func TestIssuer(t *testing.T) {
 	pp := setup(t, 32, math.BN254)
 	issuer := issue2.NewIssuer("ABC", &mock.SigningIdentity{}, pp)
@@ -44,6 +48,8 @@ func TestIssuer(t *testing.T) {
 	require.NoError(t, issue2.NewVerifier(coms, pp).Verify(action.GetProof()))
 }
 
+// BenchmarkIssuer measures the cost of creating ZK-issue actions under
+// different parameter sets provided by the benchmark helper.
 func BenchmarkIssuer(b *testing.B) {
 	bits, err := benchmark2.Bits(32, 64)
 	require.NoError(b, err)
@@ -75,6 +81,8 @@ func BenchmarkIssuer(b *testing.B) {
 	}
 }
 
+// BenchmarkProofVerificationIssuer measures the cost of verifying a previously
+// serialized ZK-issue action under different benchmark parameter sets.
 func BenchmarkProofVerificationIssuer(b *testing.B) {
 	bits, err := benchmark2.Bits(32, 64)
 	require.NoError(b, err)
@@ -108,6 +116,8 @@ func BenchmarkProofVerificationIssuer(b *testing.B) {
 	}
 }
 
+// issuerEnv holds a prepared public parameters set together with a set of
+// output values and owners used by the issuer benchmarks and tests.
 type issuerEnv struct {
 	pp           *v1.PublicParams
 	outputValues []uint64
@@ -115,6 +125,8 @@ type issuerEnv struct {
 	actionRaw    []byte
 }
 
+// newIssuerEnv constructs an issuerEnv populated with deterministic values
+// for the given number of outputs and the provided public parameters.
 func newIssuerEnv(pp *v1.PublicParams, numOutputs int) *issuerEnv {
 	outputValues := make([]uint64, numOutputs)
 	outputOwners := make([][]byte, numOutputs)
@@ -130,6 +142,8 @@ func newIssuerEnv(pp *v1.PublicParams, numOutputs int) *issuerEnv {
 	}
 }
 
+// newIssuerProofVerificationEnv prepares an issuerEnv containing a serialized
+// action that can be used to measure verification cost.
 func newIssuerProofVerificationEnv(tb testing.TB, pp *v1.PublicParams, numOutputs int) *issuerEnv {
 	tb.Helper()
 	outputValues := make([]uint64, numOutputs)
@@ -154,10 +168,14 @@ func newIssuerProofVerificationEnv(tb testing.TB, pp *v1.PublicParams, numOutput
 	}
 }
 
+// benchmarkIssuerEnv groups a slice of prepared issuerEnv used by the
+// benchmark harness.
 type benchmarkIssuerEnv struct {
 	IssuerEnvs []*issuerEnv
 }
 
+// newBenchmarkIssuerEnv creates n prepared issuer environments using the
+// provided benchmark case parameters.
 func newBenchmarkIssuerEnv(b *testing.B, n int, benchmarkCase *benchmark2.Case) *benchmarkIssuerEnv {
 	b.Helper()
 	envs := make([]*issuerEnv, n)
@@ -168,6 +186,9 @@ func newBenchmarkIssuerEnv(b *testing.B, n int, benchmarkCase *benchmark2.Case) 
 	return &benchmarkIssuerEnv{IssuerEnvs: envs}
 }
 
+// newBenchmarkIssuerProofVerificationEnv creates n prepared issuer
+// environments where each entry contains a serialized action to be
+// verified in benchmarks.
 func newBenchmarkIssuerProofVerificationEnv(b *testing.B, n int, benchmarkCase *benchmark2.Case) *benchmarkIssuerEnv {
 	b.Helper()
 	envs := make([]*issuerEnv, n)
@@ -178,6 +199,8 @@ func newBenchmarkIssuerProofVerificationEnv(b *testing.B, n int, benchmarkCase *
 	return &benchmarkIssuerEnv{IssuerEnvs: envs}
 }
 
+// setup initializes public parameters for tests and benchmarks using the
+// provided bit-size and curve identifier.
 func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
 	tb.Helper()
 	pp, err := v1.Setup(bits, nil, curveID)
@@ -185,6 +208,8 @@ func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
 	return pp
 }
 
+// prepareZKIssue prepares a prover and verifier pair along with token inputs
+// for a ZK-issue proof using the provided bits, curve and number of outputs.
 func prepareZKIssue(t *testing.T, bits uint64, curveID math.CurveID, numOutputs int) (*issue2.Prover, *issue2.Verifier) {
 	t.Helper()
 	pp, err := v1.Setup(bits, nil, curveID)
@@ -196,6 +221,8 @@ func prepareZKIssue(t *testing.T, bits uint64, curveID math.CurveID, numOutputs 
 	return prover, verifier
 }
 
+// prepareInputsForZKIssue creates deterministic token metadata and token
+// commitments that serve as inputs to the prover/verifier in tests.
 func prepareInputsForZKIssue(pp *v1.PublicParams, numOutputs int) ([]*token.Metadata, []*math.G1) {
 	values := make([]uint64, numOutputs)
 	for i := range numOutputs {

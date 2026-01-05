@@ -100,7 +100,8 @@ func TestValidator(t *testing.T) {
 }
 
 func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
-	bits, curves, cases := benchmark2.GenerateCasesWithDefaults(t)
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
 	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
 	require.NoError(t, err)
 
@@ -109,8 +110,8 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 		func(c *benchmark2.Case) (*env, error) {
 			return newEnv(c, configurations)
 		},
-		func(env *env) error {
-			_, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "1", env.transferRaw)
+		func(ctx context.Context, env *env) error {
+			_, _, err := env.engine.VerifyTokenRequestFromRaw(ctx, nil, "1", env.transferRaw)
 			return err
 		},
 	)

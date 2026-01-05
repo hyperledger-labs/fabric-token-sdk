@@ -64,7 +64,8 @@ func TestSender(t *testing.T) {
 // BenchmarkSender benchmarks transfer action generation and serialization.
 // This includes the proof generation as well.
 func BenchmarkSender(b *testing.B) {
-	bits, curves, cases := benchmark2.GenerateCasesWithDefaults(b)
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
 	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
 	require.NoError(b, err)
 
@@ -73,9 +74,9 @@ func BenchmarkSender(b *testing.B) {
 		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
 			return newBenchmarkSenderEnv(1, c, configurations)
 		},
-		func(env *benchmarkSenderEnv) error {
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
 			transfer, _, err := env.SenderEnvs[0].sender.GenerateZKTransfer(
-				b.Context(),
+				ctx,
 				env.SenderEnvs[0].outvalues,
 				env.SenderEnvs[0].owners,
 			)
@@ -90,7 +91,8 @@ func BenchmarkSender(b *testing.B) {
 
 // BenchmarkParallelSender benchmarks parallel transfer action generation and serialization.
 func BenchmarkParallelSender(b *testing.B) {
-	bits, curves, cases := benchmark2.GenerateCasesWithDefaults(b)
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
 	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
 	require.NoError(b, err)
 
@@ -99,9 +101,9 @@ func BenchmarkParallelSender(b *testing.B) {
 		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
 			return newBenchmarkSenderEnv(1, c, configurations)
 		},
-		func(env *benchmarkSenderEnv) error {
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
 			transfer, _, err := env.SenderEnvs[0].sender.GenerateZKTransfer(
-				b.Context(),
+				ctx,
 				env.SenderEnvs[0].outvalues,
 				env.SenderEnvs[0].owners,
 			)
@@ -116,7 +118,8 @@ func BenchmarkParallelSender(b *testing.B) {
 
 // TestParallelBenchmarkSender benchmarks transfer action generation and serialization when multiple go routines are doing the same thing.
 func TestParallelBenchmarkSender(t *testing.T) {
-	bits, curves, cases := benchmark2.GenerateCasesWithDefaults(t)
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
 	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
 	require.NoError(t, err)
 
@@ -125,9 +128,9 @@ func TestParallelBenchmarkSender(t *testing.T) {
 		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
 			return newBenchmarkSenderEnv(1, c, configurations)
 		},
-		func(env *benchmarkSenderEnv) error {
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
 			transfer, _, err := env.SenderEnvs[0].sender.GenerateZKTransfer(
-				t.Context(),
+				ctx,
 				env.SenderEnvs[0].outvalues,
 				env.SenderEnvs[0].owners,
 			)
@@ -142,7 +145,8 @@ func TestParallelBenchmarkSender(t *testing.T) {
 
 // BenchmarkVerificationSenderProof benchmarks transfer action deserialization and proof verification.
 func BenchmarkVerificationSenderProof(b *testing.B) {
-	bits, curves, cases := benchmark2.GenerateCasesWithDefaults(b)
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
 	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
 	require.NoError(b, err)
 
@@ -151,7 +155,7 @@ func BenchmarkVerificationSenderProof(b *testing.B) {
 		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
 			return newBenchmarkSenderProofVerificationEnv(b.Context(), 1, c, configurations)
 		},
-		func(env *benchmarkSenderEnv) error {
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
 			// deserialize action
 			ta := &transfer.Action{}
 			if err := ta.Deserialize(env.SenderEnvs[0].transferRaw); err != nil {
@@ -174,7 +178,8 @@ func BenchmarkVerificationSenderProof(b *testing.B) {
 
 // BenchmarkVerificationSenderProof benchmarks transfer action deserialization and proof verification.
 func BenchmarkVerificationParallelSenderProof(b *testing.B) {
-	bits, curves, cases := benchmark2.GenerateCasesWithDefaults(b)
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
 	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
 	require.NoError(b, err)
 
@@ -183,7 +188,7 @@ func BenchmarkVerificationParallelSenderProof(b *testing.B) {
 		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
 			return newBenchmarkSenderProofVerificationEnv(b.Context(), 1, c, configurations)
 		},
-		func(env *benchmarkSenderEnv) error {
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
 			// deserialize action
 			ta := &transfer.Action{}
 			if err := ta.Deserialize(env.SenderEnvs[0].transferRaw); err != nil {
@@ -206,7 +211,8 @@ func BenchmarkVerificationParallelSenderProof(b *testing.B) {
 
 // TestParallelBenchmarkVerificationSenderProof benchmarks transfer action deserialization and proof verification when multiple go routines are doing the same thing.
 func TestParallelBenchmarkVerificationSenderProof(t *testing.T) {
-	bits, curves, cases := benchmark2.GenerateCasesWithDefaults(t)
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
 	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
 	require.NoError(t, err)
 
@@ -215,7 +221,7 @@ func TestParallelBenchmarkVerificationSenderProof(t *testing.T) {
 		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
 			return newBenchmarkSenderProofVerificationEnv(t.Context(), 1, c, configurations)
 		},
-		func(env *benchmarkSenderEnv) error {
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
 			// deserialize action
 			ta := &transfer.Action{}
 			if err := ta.Deserialize(env.SenderEnvs[0].transferRaw); err != nil {
@@ -340,7 +346,7 @@ type benchmarkSenderEnv struct {
 
 func newBenchmarkSenderEnv(n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*benchmarkSenderEnv, error) {
 	envs := make([]*senderEnv, n)
-	pp, err := setup(benchmarkCase.Bits, benchmarkCase.CurveID)
+	pp, err := configurations.GetPublicParams(benchmarkCase.Bits, benchmarkCase.CurveID)
 	if err != nil {
 		return nil, err
 	}

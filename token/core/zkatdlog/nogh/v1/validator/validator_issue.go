@@ -17,6 +17,7 @@ import (
 
 var logger = logging.MustGetLogger()
 
+// IssueValidate validates the issue action
 func IssueValidate(c context.Context, ctx *Context) error {
 	action := ctx.IssueAction
 

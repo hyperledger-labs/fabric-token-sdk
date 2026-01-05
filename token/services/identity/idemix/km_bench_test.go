@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// BenchmarkKmIdentity benchmarks the identity creation
 func BenchmarkKmIdentity(b *testing.B) {
 	b.Run("FP256BN_AMCL", func(b *testing.B) {
 		b.ReportAllocs()
@@ -51,6 +52,7 @@ func BenchmarkKmIdentity(b *testing.B) {
 	})
 }
 
+// TestParallelBenchmarkIdemixKMIdentity benchmarks the identity creation in parallel
 func TestParallelBenchmarkIdemixKMIdentity(t *testing.T) {
 	keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	defer cleanup()
@@ -73,6 +75,7 @@ func TestParallelBenchmarkIdemixKMIdentity(t *testing.T) {
 	r.Print()
 }
 
+// TestParallelBenchmarkIdemixSign benchmarks the signing process
 func TestParallelBenchmarkIdemixSign(t *testing.T) {
 	keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	defer cleanup()
@@ -99,6 +102,7 @@ func TestParallelBenchmarkIdemixSign(t *testing.T) {
 	r.Print()
 }
 
+// TestParallelBenchmarkIdemixVerify benchmarks the verification process
 func TestParallelBenchmarkIdemixVerify(t *testing.T) {
 	keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	defer cleanup()
@@ -135,6 +139,7 @@ func TestParallelBenchmarkIdemixVerify(t *testing.T) {
 	r.Print()
 }
 
+// TestParallelBenchmarkIdemixDeserializeSigner benchmarks the signer deserialization
 func TestParallelBenchmarkIdemixDeserializeSigner(t *testing.T) {
 	keyManager, cleanup := setupKeyManager(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	defer cleanup()

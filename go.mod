@@ -11,6 +11,7 @@ require (
 	github.com/IBM/mathlib v0.0.3-0.20251201181318-11a3ec7f764f
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/gin-gonic/gin v1.10.0
+	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hyperledger-labs/fabric-smart-client v0.7.0
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20250510200036-435a7f1a780a
@@ -122,7 +123,6 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
