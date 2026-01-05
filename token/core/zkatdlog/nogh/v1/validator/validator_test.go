@@ -45,41 +45,23 @@ var (
 	}
 )
 
+type actionType int
+
+const (
+	TransferAction actionType = iota
+	RedeemAction
+	IssueAction
+)
+
 func TestValidator(t *testing.T) {
 	t.Run("Validator is called correctly with a non-anonymous issue action", func(t *testing.T) {
-		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
-		require.NoError(t, err)
-		env, err := newEnv(testUseCase, configurations)
-		require.NoError(t, err)
-
-		raw, err := env.ir.Bytes()
-		require.NoError(t, err)
-		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "1", raw)
-		require.NoError(t, err)
-		require.Len(t, actions, 1)
+		testVerifyNoErrorOnAction(t, IssueAction)
 	})
 	t.Run("validator is called correctly with a transfer action", func(t *testing.T) {
-		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
-		require.NoError(t, err)
-		env, err := newEnv(testUseCase, configurations)
-		require.NoError(t, err)
-
-		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "1", env.transferRaw)
-		require.NoError(t, err)
-		require.Len(t, actions, 1)
+		testVerifyNoErrorOnAction(t, TransferAction)
 	})
 	t.Run("validator is called correctly with a redeem action", func(t *testing.T) {
-		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
-		require.NoError(t, err)
-		env, err := newEnv(testUseCase, configurations)
-		require.NoError(t, err)
-
-		raw, err := env.rr.Bytes()
-		require.NoError(t, err)
-
-		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "1", raw)
-		require.NoError(t, err)
-		require.Len(t, actions, 1)
+		testVerifyNoErrorOnAction(t, RedeemAction)
 	})
 	t.Run("engine is called correctly with atomic swap", func(t *testing.T) {
 		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
@@ -132,6 +114,28 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 			return err
 		},
 	)
+}
+
+func testVerifyNoErrorOnAction(t *testing.T, actionType actionType) {
+	t.Helper()
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+	require.NoError(t, err)
+	env, err := newEnv(testUseCase, configurations)
+	require.NoError(t, err)
+
+	var raw []byte
+	switch actionType {
+	case TransferAction:
+		raw, err = env.tr.Bytes()
+	case IssueAction:
+		raw, err = env.ir.Bytes()
+	case RedeemAction:
+		raw, err = env.rr.Bytes()
+	}
+	require.NoError(t, err)
+	actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "1", raw)
+	require.NoError(t, err)
+	require.Len(t, actions, 1)
 }
 
 type env struct {
