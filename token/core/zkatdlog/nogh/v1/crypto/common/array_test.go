@@ -17,6 +17,7 @@ import (
 )
 
 func randomG1(t *testing.T, c *math.Curve) *math.G1 {
+	t.Helper()
 	randReader, err := c.Rand()
 	require.NoError(t, err)
 
@@ -92,4 +93,3 @@ func TestHashG1Array(t *testing.T) {
 	exp := h2.Sum(nil)
 	require.Equal(t, exp, hRes)
 }
-
