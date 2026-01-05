@@ -30,7 +30,7 @@ type ipaSetup struct {
 	nr        uint64
 }
 
-func NewIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
+func newIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
 	curve := math.Curves[curveID]
 	l := uint64(64)
 	nr := 63 - uint64(bits.LeadingZeros64(l))
@@ -66,7 +66,7 @@ func NewIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
 }
 
 func TestIPAProofVerify(t *testing.T) {
-	setup, err := NewIpaSetup(math.BLS12_381_BBS_GURVY)
+	setup, err := newIpaSetup(math.BLS12_381_BBS_GURVY)
 	require.NoError(t, err)
 
 	prover := rp.NewIPAProver(
@@ -104,7 +104,7 @@ func BenchmarkIPAProver(b *testing.B) {
 	defer pp.Stop()
 	envs := make([]*ipaSetup, 0, 128)
 	for i := 0; i < 128; i++ {
-		setup, err := NewIpaSetup(math.BLS12_381_BBS_GURVY)
+		setup, err := newIpaSetup(math.BLS12_381_BBS_GURVY)
 		require.NoError(b, err)
 		envs = append(envs, setup)
 	}
