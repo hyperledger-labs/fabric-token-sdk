@@ -33,7 +33,7 @@ type bfSetup struct {
 	curve     *math.Curve
 }
 
-func NewBfSetup(curveID math.CurveID) (*bfSetup, error) {
+func newBfSetup(curveID math.CurveID) (*bfSetup, error) {
 	curve := math.Curves[curveID]
 	l := uint64(64)
 	nr := 63 - uint64(bits.LeadingZeros64(l))
@@ -73,7 +73,7 @@ func NewBfSetup(curveID math.CurveID) (*bfSetup, error) {
 }
 
 func TestBFProofVerify(t *testing.T) {
-	setup, err := NewBfSetup(math.BLS12_381_BBS_GURVY)
+	setup, err := newBfSetup(math.BLS12_381_BBS_GURVY)
 	require.NoError(t, err)
 
 	prover := rp.NewRangeProver(
@@ -115,7 +115,7 @@ func BenchmarkBFProver(b *testing.B) {
 	defer pp.Stop()
 	envs := make([]*bfSetup, 0, 128)
 	for i := 0; i < 128; i++ {
-		setup, err := NewBfSetup(math.BLS12_381_BBS_GURVY)
+		setup, err := newBfSetup(math.BLS12_381_BBS_GURVY)
 		require.NoError(b, err)
 		envs = append(envs, setup)
 	}
