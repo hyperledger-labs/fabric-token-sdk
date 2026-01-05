@@ -115,14 +115,6 @@ func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.Re
 		return errors.Wrapf(err, "failed to match identity to audit infor for [%s]:[%s]", data.Identity, utils.Hashable(data.AuditInfo))
 	}
 
-	// register verifier and audit info
-	v, err := s.Deserializer.GetOwnerVerifier(ctx, data.Identity)
-	if err != nil {
-		return errors.Wrapf(err, "failed getting verifier for owner [%s]", data.Identity)
-	}
-	if err := s.IdentityProvider.RegisterVerifier(ctx, data.Identity, v); err != nil {
-		return errors.Wrapf(err, "failed registering verifier for owner [%s]", data.Identity)
-	}
 	if err := s.IdentityProvider.RegisterRecipientData(ctx, data); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for owner [%s]", data.Identity)
 	}

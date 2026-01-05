@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -73,7 +74,6 @@ type Provider struct {
 
 	isMeCache cache[bool]
 	signers   cache[*SignerEntry]
-	verifiers cache[*VerifierEntry]
 }
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
@@ -91,9 +91,8 @@ func NewProvider(
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		deserializer:            deserializer,
 		storage:                 storage,
-		isMeCache:               secondcache.NewTyped[bool](5000),
-		signers:                 secondcache.NewTyped[*SignerEntry](5000),
-		verifiers:               secondcache.NewTyped[*VerifierEntry](5000),
+		isMeCache:               cache2.NewNoCache[bool](),
+		signers:                 secondcache.NewTyped[*SignerEntry](50),
 	}
 }
 
@@ -110,20 +109,6 @@ func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescr
 	p.updateCaches(identityDescriptor, alias)
 	p.Logger.DebugfContext(ctx, "update identity provider caches...done")
 
-	return nil
-}
-
-func (p *Provider) RegisterVerifier(ctx context.Context, identity driver.Identity, v driver.Verifier) error {
-	if v == nil {
-		return errors.New("invalid verifier, expected a valid instance")
-	}
-	idHash := identity.UniqueID()
-	entry := &VerifierEntry{Verifier: v}
-	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
-	}
-	p.verifiers.Add(idHash, entry)
-	p.Logger.DebugfContext(ctx, "register verifier to [%s]:[%s]", idHash, logging.Identifier(v))
 	return nil
 }
 
@@ -261,55 +246,64 @@ func (p *Provider) areMe(ctx context.Context, identities ...driver.Identity) []s
 }
 
 func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
-	// check again the cache
-	entry, ok := p.signers.Get(idHash)
-	if ok {
-		p.Logger.DebugfContext(ctx, "signer for [%s] found", idHash)
-		return entry.Signer, nil
-	}
-
-	p.Logger.DebugfContext(ctx, "signer for [%s] not found, try to deserialize", idHash)
-	// ask the deserializer
-	signer, err := p.deserializeSigner(ctx, identity)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed deserializing identity for signer [%s]", identity)
-	}
-	entry = &SignerEntry{Signer: signer}
-	if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		entry.DebugStack = debug.Stack()
-	}
-	p.signers.Add(idHash, entry)
-	if err := p.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
-		return nil, errors.Wrap(err, "failed to store entry in storage for the passed signer")
-	}
-	return entry.Signer, nil
+	signer, _, err := p.getSignerAndCache(ctx, identity, idHash, true)
+	return signer, err
 }
 
-func (p *Provider) deserializeSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
+func (p *Provider) getSignerAndCache(ctx context.Context, identity driver.Identity, idHash string, shouldCache bool) (driver.Signer, bool, error) {
+	// check cache
+	if entry, ok := p.signers.Get(idHash); ok {
+		p.Logger.DebugfContext(ctx, "signer for [%s] found", idHash)
+		return entry.Signer, false, nil
+	}
+
+	p.Logger.DebugfContext(ctx, "signer for [%s] not found, attempting to deserialize", idHash)
+
+	// check that we have a deserializer
 	if p.deserializer == nil {
-		return nil, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
+		return nil, false, errors.Errorf("cannot find signer for [%s], no deserializer set", identity)
 	}
-	var err error
+
+	// try direct deserialization
 	signer, err := p.deserializer.DeserializeSigner(ctx, identity)
-	if err == nil {
-		return signer, nil
-	}
-
-	// give it a second chance
-
-	// is the identity wrapped in TypedIdentity?
-	ro, err2 := UnmarshalTypedIdentity(identity)
-	if err2 != nil {
-		// No
-		return nil, errors.Wrapf(err2, "failed to unmarshal raw owner for identity [%s] and failed deserialization [%s]", identity.String(), err)
-	}
-
-	// yes, check ro.Identity
-	signer, err = p.getSigner(ctx, ro.Identity, ro.Identity.UniqueID())
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting signer for identity [%s]", ro.Identity)
+		// second chance: try a TypedIdentity
+		typed, err2 := UnmarshalTypedIdentity(identity)
+		if err2 != nil {
+			// neither deserializable nor a typed wrapper
+			return nil, false, errors.Wrapf(
+				err2,
+				"failed to unmarshal typed identity for [%s] and failed deserialization [%s]",
+				identity.String(), err,
+			)
+		}
+
+		if typed.Type == "x509" {
+			shouldCache = false
+		}
+
+		// recursively resolve the inner identity
+		signer, shouldCache, err = p.getSignerAndCache(ctx, typed.Identity, typed.Identity.UniqueID(), shouldCache)
+		if err != nil {
+			return nil, false, errors.Wrapf(err, "failed getting signer for identity [%s]", typed.Identity)
+		}
 	}
-	return signer, nil
+
+	// Cache the signer for the current idHash
+	if shouldCache {
+		entry := &SignerEntry{Signer: signer}
+		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
+			entry.DebugStack = debug.Stack()
+		}
+		p.signers.Add(idHash, entry)
+	}
+
+	// Persist signer info for the current identity
+	if err := p.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
+		return nil, false, errors.Wrap(err, "failed to store entry in storage for the passed signer")
+	}
+
+	return signer, shouldCache, nil
 }
 
 func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias driver.Identity) {
@@ -329,17 +323,6 @@ func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias dr
 		p.signers.Add(id, entry)
 		if setAlias {
 			p.signers.Add(aliasID, entry)
-		}
-	}
-	// verifiers
-	if descriptor.Verifier != nil {
-		entry := &VerifierEntry{Verifier: descriptor.Verifier}
-		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			entry.DebugStack = debug.Stack()
-		}
-		p.verifiers.Add(id, entry)
-		if setAlias {
-			p.verifiers.Add(aliasID, entry)
 		}
 	}
 }
