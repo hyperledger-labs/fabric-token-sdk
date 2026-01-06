@@ -83,7 +83,7 @@ func (m *messageTxInfoMapper) MapTxData(_ context.Context, data []byte, blkMetad
 		return nil, errors.Errorf("block metadata lacks transaction filter")
 	}
 	statusCode := protoblocktx.Status(blkMetadata.Metadata[statusIdx][txNum])
-	return m.mapTx(tx, statusCode)
+	return m.mapTx(chdr.TxId, tx, statusCode)
 }
 
 func (m *messageTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]finality.TxInfo, error) {
@@ -104,23 +104,23 @@ func (m *messageTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([
 	return collections.Values(infos), nil
 }
 
-func (m *messageTxInfoMapper) mapTx(tx *protoblocktx.Tx, vc protoblocktx.Status) (map[driver3.Namespace]finality.TxInfo, error) {
-	key, err := m.keyTranslator.CreateTokenRequestKey(tx.GetId())
+func (m *messageTxInfoMapper) mapTx(txID string, tx *protoblocktx.Tx, vc protoblocktx.Status) (map[driver3.Namespace]finality.TxInfo, error) {
+	key, err := m.keyTranslator.CreateTokenRequestKey(txID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "can't create for token request [%s]", tx.GetId())
+		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)
 	}
 
 	txInfos := make(map[driver3.Namespace]finality.TxInfo, len(tx.GetNamespaces()))
-	logger.Debugf("TX [%s] has %d namespaces", tx.GetId(), len(tx.GetNamespaces()))
+	logger.Debugf("TX [%s] has %d namespaces", txID, len(tx.GetNamespaces()))
 	for _, ns := range tx.GetNamespaces() {
-		logger.Debugf("TX [%s:%s] has %d writes", tx.GetId(), ns.GetNsId(), len(ns.GetBlindWrites()))
+		logger.Debugf("TX [%s:%s] has %d writes", txID, ns.GetNsId(), len(ns.GetBlindWrites()))
 		for _, write := range ns.GetBlindWrites() {
 			if string(write.GetKey()) == key {
 				if err != nil {
-					return nil, errors.Wrapf(err, "ns [%v] in tx [%s] not found", ns.GetNsId(), tx.GetId())
+					return nil, errors.Wrapf(err, "ns [%v] in tx [%s] not found", ns.GetNsId(), txID)
 				}
 				txInfos[ns.GetNsId()] = finality.TxInfo{
-					TxId:        tx.GetId(),
+					TxId:        txID,
 					Namespace:   ns.GetNsId(),
 					Status:      convertValidationCode(vc),
 					Message:     vc.String(),
@@ -132,10 +132,10 @@ func (m *messageTxInfoMapper) mapTx(tx *protoblocktx.Tx, vc protoblocktx.Status)
 		for _, write := range ns.GetReadWrites() {
 			if string(write.GetKey()) == key {
 				if err != nil {
-					return nil, errors.Wrapf(err, "ns [%v] in tx [%s] not found", ns.GetNsId(), tx.GetId())
+					return nil, errors.Wrapf(err, "ns [%v] in tx [%s] not found", ns.GetNsId(), txID)
 				}
 				txInfos[ns.GetNsId()] = finality.TxInfo{
-					TxId:        tx.GetId(),
+					TxId:        txID,
 					Namespace:   ns.GetNsId(),
 					Status:      convertValidationCode(vc),
 					Message:     vc.String(),
@@ -145,9 +145,9 @@ func (m *messageTxInfoMapper) mapTx(tx *protoblocktx.Tx, vc protoblocktx.Status)
 			}
 		}
 		if _, ok := txInfos[ns.GetNsId()]; !ok {
-			logger.Debugf("TX [%s:%s] did not have key [%s]. Found:\n\nread-writes: %v\n\nblind writes: %v", tx.GetId(), ns.GetNsId(), key, ns.GetReadWrites(), ns.GetBlindWrites())
+			logger.Debugf("TX [%s:%s] did not have key [%s]. Found:\n\nread-writes: %v\n\nblind writes: %v", txID, ns.GetNsId(), key, ns.GetReadWrites(), ns.GetBlindWrites())
 		} else {
-			logger.Debugf("tx found key for [%s]", tx.GetId())
+			logger.Debugf("tx found key for [%s]", txID)
 		}
 	}
 
