@@ -99,6 +99,10 @@ type Envelope struct {
 	e driver.Envelope
 }
 
+func NewEnvelope(e driver.Envelope) *Envelope {
+	return &Envelope{e: e}
+}
+
 func (e *Envelope) Bytes() ([]byte, error) {
 	return e.e.Bytes()
 }
