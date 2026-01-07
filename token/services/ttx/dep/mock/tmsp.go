@@ -93,8 +93,6 @@ func (fake *TokenManagementServiceProvider) TokenManagementServiceReturnsOnCall(
 func (fake *TokenManagementServiceProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.tokenManagementServiceMutex.RLock()
-	defer fake.tokenManagementServiceMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

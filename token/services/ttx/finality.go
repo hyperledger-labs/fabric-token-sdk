@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.opentelemetry.io/otel/trace"
@@ -79,11 +79,11 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 		defer cancel()
 	}
 
-	transactionDB, err := ttxdb.GetByTMSId(ctx, tmsID)
+	transactionDB, err := dep.GetTransactionDB(ctx, tmsID)
 	if err != nil {
 		return nil, err
 	}
-	auditDB, err := auditdb.GetByTMSID(ctx, tmsID)
+	auditDB, err := dep.GetAuditDB(ctx, tmsID)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 		select {
 		case <-ctx.Done():
 			timeout.Stop()
-			return i, errors.Errorf("failed to listen to transaction [%s], timeout due to context done received [%s]", txID, ctx.Err())
+			return i, errors.Wrapf(ErrFinalityTimeout, "failed to listen to transaction [%s] for timeout", txID)
 		case event := <-dbChannel:
 
 			trace.SpanFromContext(ctx).AddLink(trace.LinkFromContext(event.Ctx))

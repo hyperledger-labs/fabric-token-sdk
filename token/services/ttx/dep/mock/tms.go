@@ -684,26 +684,6 @@ func (fake *TokenManagementService) WalletManagerReturnsOnCall(i int, result1 *t
 func (fake *TokenManagementService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.channelMutex.RLock()
-	defer fake.channelMutex.RUnlock()
-	fake.iDMutex.RLock()
-	defer fake.iDMutex.RUnlock()
-	fake.networkMutex.RLock()
-	defer fake.networkMutex.RUnlock()
-	fake.newFullRequestFromBytesMutex.RLock()
-	defer fake.newFullRequestFromBytesMutex.RUnlock()
-	fake.newRequestMutex.RLock()
-	defer fake.newRequestMutex.RUnlock()
-	fake.publicParametersManagerMutex.RLock()
-	defer fake.publicParametersManagerMutex.RUnlock()
-	fake.selectorManagerMutex.RLock()
-	defer fake.selectorManagerMutex.RUnlock()
-	fake.sigServiceMutex.RLock()
-	defer fake.sigServiceMutex.RUnlock()
-	fake.vaultMutex.RLock()
-	defer fake.vaultMutex.RUnlock()
-	fake.walletManagerMutex.RLock()
-	defer fake.walletManagerMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

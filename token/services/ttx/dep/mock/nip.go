@@ -4,7 +4,6 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 )
@@ -20,17 +19,17 @@ type NetworkIdentityProvider struct {
 	defaultIdentityReturnsOnCall map[int]struct {
 		result1 view.Identity
 	}
-	GetSignerStub        func(view.Identity) (driver.Signer, error)
+	GetSignerStub        func(view.Identity) (dep.NetworkIdentitySigner, error)
 	getSignerMutex       sync.RWMutex
 	getSignerArgsForCall []struct {
 		arg1 view.Identity
 	}
 	getSignerReturns struct {
-		result1 driver.Signer
+		result1 dep.NetworkIdentitySigner
 		result2 error
 	}
 	getSignerReturnsOnCall map[int]struct {
-		result1 driver.Signer
+		result1 dep.NetworkIdentitySigner
 		result2 error
 	}
 	invocations      map[string][][]interface{}
@@ -90,7 +89,7 @@ func (fake *NetworkIdentityProvider) DefaultIdentityReturnsOnCall(i int, result1
 	}{result1}
 }
 
-func (fake *NetworkIdentityProvider) GetSigner(arg1 view.Identity) (driver.Signer, error) {
+func (fake *NetworkIdentityProvider) GetSigner(arg1 view.Identity) (dep.NetworkIdentitySigner, error) {
 	fake.getSignerMutex.Lock()
 	ret, specificReturn := fake.getSignerReturnsOnCall[len(fake.getSignerArgsForCall)]
 	fake.getSignerArgsForCall = append(fake.getSignerArgsForCall, struct {
@@ -115,7 +114,7 @@ func (fake *NetworkIdentityProvider) GetSignerCallCount() int {
 	return len(fake.getSignerArgsForCall)
 }
 
-func (fake *NetworkIdentityProvider) GetSignerCalls(stub func(view.Identity) (driver.Signer, error)) {
+func (fake *NetworkIdentityProvider) GetSignerCalls(stub func(view.Identity) (dep.NetworkIdentitySigner, error)) {
 	fake.getSignerMutex.Lock()
 	defer fake.getSignerMutex.Unlock()
 	fake.GetSignerStub = stub
@@ -128,28 +127,28 @@ func (fake *NetworkIdentityProvider) GetSignerArgsForCall(i int) view.Identity {
 	return argsForCall.arg1
 }
 
-func (fake *NetworkIdentityProvider) GetSignerReturns(result1 driver.Signer, result2 error) {
+func (fake *NetworkIdentityProvider) GetSignerReturns(result1 dep.NetworkIdentitySigner, result2 error) {
 	fake.getSignerMutex.Lock()
 	defer fake.getSignerMutex.Unlock()
 	fake.GetSignerStub = nil
 	fake.getSignerReturns = struct {
-		result1 driver.Signer
+		result1 dep.NetworkIdentitySigner
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *NetworkIdentityProvider) GetSignerReturnsOnCall(i int, result1 driver.Signer, result2 error) {
+func (fake *NetworkIdentityProvider) GetSignerReturnsOnCall(i int, result1 dep.NetworkIdentitySigner, result2 error) {
 	fake.getSignerMutex.Lock()
 	defer fake.getSignerMutex.Unlock()
 	fake.GetSignerStub = nil
 	if fake.getSignerReturnsOnCall == nil {
 		fake.getSignerReturnsOnCall = make(map[int]struct {
-			result1 driver.Signer
+			result1 dep.NetworkIdentitySigner
 			result2 error
 		})
 	}
 	fake.getSignerReturnsOnCall[i] = struct {
-		result1 driver.Signer
+		result1 dep.NetworkIdentitySigner
 		result2 error
 	}{result1, result2}
 }
@@ -157,10 +156,6 @@ func (fake *NetworkIdentityProvider) GetSignerReturnsOnCall(i int, result1 drive
 func (fake *NetworkIdentityProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.defaultIdentityMutex.RLock()
-	defer fake.defaultIdentityMutex.RUnlock()
-	fake.getSignerMutex.RLock()
-	defer fake.getSignerMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

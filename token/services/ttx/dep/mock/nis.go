@@ -97,8 +97,6 @@ func (fake *NetworkIdentitySigner) SignReturnsOnCall(i int, result1 []byte, resu
 func (fake *NetworkIdentitySigner) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.signMutex.RLock()
-	defer fake.signMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
