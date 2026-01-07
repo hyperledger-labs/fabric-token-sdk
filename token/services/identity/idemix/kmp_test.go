@@ -23,7 +23,7 @@ import (
 type mockConfig struct {
 }
 
-func (m mockConfig) CacheSizeForOwnerID(id string) int {
+func (m mockConfig) CacheSizeForOwnerID(string) int {
 	return 0
 }
 
@@ -31,17 +31,17 @@ func (m mockConfig) TranslatePath(path string) string {
 	return path
 }
 
-func (m mockConfig) IdentitiesForRole(role driver.IdentityRoleType) ([]*driver.ConfiguredIdentity, error) {
+func (m mockConfig) IdentitiesForRole(driver.IdentityRoleType) ([]*driver.ConfiguredIdentity, error) {
 	return nil, nil
 }
 
 //go:norace
 func TestNewKeyManagerProvider(t *testing.T) {
-	testNewKeyManagerProvider(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testNewKeyManagerProvider(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
+	testNewKeyManagerProvider(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testNewKeyManagerProvider(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
-func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+func testNewKeyManagerProvider(t *testing.T, configPath string, curveID math.CurveID) {
 	t.Helper()
 	backend, err := kvs.NewInMemory()
 	assert.NoError(t, err)

@@ -1,6 +1,6 @@
 ## Benchmark Results: `token/core/zkatdlog/nogh/v1/transfer#BenchmarkSender`
 
-The output of `go test` can be found [here](./transfer_results.txt).
+The output of `go test` can be found [here](transfer_results.txt).
 
 Here is the summary produced by `benchstat`.
 

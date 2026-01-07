@@ -11,50 +11,75 @@ It orchestrates the execution of this work across multiple goroutines, captures 
 ## Key Features
 
 *   **Concurrent Execution**: Runs the benchmark across a user-defined number of workers (goroutines).
+*   **Open-Loop & Closed-Loop Modes**:
+    *   **Closed-Loop**: Workers run as fast as possible (standard benchmark).
+    *   **Open-Loop**: Workers are rate-limited to simulate real-world arrival rates (fixes "Coordinated Omission" biases).
+*   **Time Series Visualization**: Generates a "Sparkline" graph of throughput over time to detect performance degradation or cold starts.
 *   **Two-Phase Measurement**:
     *   **Phase 1 (Memory)**: Runs serially in isolation to accurately measure heap allocations per operation without concurrency noise.
     *   **Phase 2 (Throughput/Latency)**: Runs concurrently to measure real-world throughput and latency distribution.
 *   **Low-Overhead Recording**: Uses pre-allocated memory chunks to record latency data, ensuring the measuring process itself doesn't trigger Garbage Collection (GC) or skew results.
-*   **Statistical Rigor**: Calculates advanced metrics like Interquartile Range (IQR), Jitter, Coefficient of Variation (CV), and interpolated percentiles.
+*   **High-Precision Statistics**: Calculates **P99.9**, **P99.99**, IQR, Jitter, and Coefficient of Variation (CV) using exact data (no sampling approximations).
 *   **Visual Output**: Generates an ASCII-based latency heatmap and color-coded status indicators directly in the terminal.
 *   **Automated Analysis**: Provides "Analysis & Recommendations" at the end of the run, flagging issues like high variance, GC pressure, or unstable tail latencies.
 
 ## Usage
 
-The core entry point is the generic `RunBenchmark` function.
+The core entry point is the generic `RunBenchmark` function, which accepts a `Config` object to control execution parameters.
 
 ### Function Signature
 
-```go
+```
+// Config controls the benchmark execution.
+type Config struct {
+Workers        int           // Number of concurrent goroutines
+Duration       time.Duration // Time to record execution
+WarmupDuration time.Duration // Time to run before recording
+RateLimit      float64       // Total Ops/Sec limit (0 = Unlimited/Closed-Loop)
+}
+
+// RunBenchmark executes the benchmark.
+// T is the type of data created by setup() and passed to work().
 func RunBenchmark[T any](
-    workers int,                  // Number of concurrent goroutines
-    benchDuration time.Duration,  // How long to run the test
-    setup func() T,               // Function to prepare data for each op
-    work func(T),                 // The function to benchmark
+cfg Config,                   // Configuration object
+setup func() T,               // Function to prepare data for each op
+work func(T) error,           // The function to benchmark
 ) Result
 ```
 
 ### Example
 
-```go
+```
 package main
 
 import (
-    "time"
-    "your/package/benchmark" // Import the runner
+"fmt"
+"time"
+"your/package/benchmark" // Import the runner
 )
 
 func main() {
-    // Define the benchmark
+// Define the configuration
+cfg := benchmark.Config{
+Workers:        10,            // 10 concurrent workers
+Duration:       5*time.Second, // Run for 5 seconds
+WarmupDuration: 1*time.Second, // Warmup to stabilize pools/JIT
+RateLimit:      0,             // 0 = Full Speed (Closed-Loop)
+}
+
+    // Run the benchmark
     result := benchmark.RunBenchmark(
-        10,                 // 10 concurrent workers
-        5*time.Second,      // Run for 5 seconds
+        cfg,
         func() int {        // Setup: Prepare data (not timed)
+            // Example: Create a payload or connection
             return 42 
         },
-        func(input int) {   // Work: The operation to measure (timed)
+        func(input int) error {   // Work: The operation to measure (timed)
             // Simulate work
-            process(input)
+            if process(input) != nil {
+                return fmt.Errorf("failed")
+            }
+            return nil
         },
     )
 
@@ -77,6 +102,7 @@ Basic throughput and volume statistics.
 ### 2. Latency Distribution
 A detailed look at how long operations took.
 *   **P50, P95, P99**: Standard percentiles.
+*   **P99.9, P99.99**: Critical tail latency metrics for SLA verification.
 *   **Tail Latency Check**: Compares Max Latency to P99 to identify extreme outliers (e.g., "Max is 12x P99").
 
 ### 3. Stability Metrics
@@ -86,21 +112,29 @@ Measures how consistent the system is.
 *   **Jitter**: The average change in latency between consecutive operations on the same worker.
 *   **CV (Coefficient of Variation)**: `StdDev / Mean`. Used to grade stability (e.g., <5% is "Excellent").
 
-### 4. Memory
-*   **Allocated**: Bytes allocated per operation.
-*   **Allocs**: Number of heap allocations per operation.
+### 4. Memory & GC
+*   **Memory**: Bytes allocated per operation (Phase 1).
+*   **Allocs**: Number of heap allocations per operation (Phase 1).
+*   **Alloc Rate**: Total memory pressure on the system in MB/s.
+*   **GC Overhead**: Percentage of wall-clock time lost to Stop-The-World GC pauses.
 
 ### 5. Latency Heatmap
 An ASCII bar chart visualizing the distribution of latencies. It uses color coding (Green/Yellow/Red) to indicate frequency density.
 
-```text
+```
 Range           Freq    Distribution Graph
 100µs-200µs     500     ██████ (5.0%)
 200µs-400µs     8000    ██████████████████████ (80.0%)
 ...
 ```
 
-### 6. Analysis & Recommendations
+### 6. Throughput Timeline (Sparkline)
+A condensed graph showing performance over time (1-second buckets). Helps identify degradation or cold starts.
+```
+Timeline: [ ▅▇██▆▄ ] (Max: 5000 ops/s)
+```
+
+### 7. Analysis & Recommendations
 The runner automatically evaluates the results and prints warnings or pass/fail statuses:
 *   **[WARN] Low sample size**: If total operations < 5000.
 *   **[FAIL] High Variance**: If the Coefficient of Variation > 20%.
@@ -132,15 +166,3 @@ The visualization is hardcoded to 20 buckets using an exponential scale.
 ### 5. Stop-Time Latency
 The runner signals workers to stop using an atomic flag, but it waits for the current operation to finish.
 *   **Constraint**: If a single operation hangs or takes minutes, the benchmark cannot stop immediately when the duration expires. It must wait for stragglers to complete.
-
-## Implementation Details
-
-### Zero-Allocation Recording
-To prevent the benchmark from measuring itself, the runner uses a linked-list of fixed-size arrays (`chunk`).
-*   **Structure**: `type chunk struct { data [10000]time.Duration; ... }`
-*   **Benefit**: Recording a latency requires only a simple array index increment. No `append()` or slice growth occurs during the "hot path" of the benchmark.
-
-### Histogram Calculation
-It uses an **Exponential Histogram** (`calcExponentialHistogramImproved`) logic.
-*   Buckets grow exponentially, allowing the runner to capture both very small (nanosecond) and very large (second) latencies in the same graph with high fidelity.
-*   It handles boundary conditions precisely to avoid floating-point drift.

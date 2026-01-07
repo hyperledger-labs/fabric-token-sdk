@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,11 +46,11 @@ func TestLoadExtras(t *testing.T) {
 			t.Errorf("expected 2 entries, got %d", len(result))
 		}
 
-		if string(result["foo"]) != string(file1Content) {
+		if !bytes.Equal(result["foo"], file1Content) {
 			t.Errorf("expected %q for foo, got %q", string(file1Content), string(result["foo"]))
 		}
 
-		if string(result["bar"]) != string(file2Content) {
+		if !bytes.Equal(result["bar"], file2Content) {
 			t.Errorf("expected %q for bar, got %q", string(file2Content), string(result["bar"]))
 		}
 	})
@@ -144,7 +145,7 @@ func TestLoadExtras(t *testing.T) {
 			t.Fatalf("expected no error, got: %v", err)
 		}
 
-		if string(result["mykey"]) != string(fileContent) {
+		if !bytes.Equal(result["mykey"], fileContent) {
 			t.Errorf("expected %q, got %q", string(fileContent), string(result["mykey"]))
 		}
 	})

@@ -9,392 +9,350 @@ package validator_test
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/asn1"
-	"encoding/pem"
-	"fmt"
-	"math/big"
-	"os"
+	"testing"
 
-	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	tokn "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	enginedlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	ix509 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/hyperledger/fabric-lib-go/bccsp/utils"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-var fakeLedger *mock.Ledger
+var (
+	testUseCase = &benchmark2.Case{
+		Bits:       32,
+		CurveID:    math.BLS12_381_BBS_GURVY,
+		NumInputs:  2,
+		NumOutputs: 2,
+	}
+)
 
-var _ = Describe("validator", func() {
+type actionType int
+
+const (
+	TransferAction actionType = iota
+	RedeemAction
+	IssueAction
+)
+
+func TestValidator(t *testing.T) {
+	t.Run("Validator is called correctly with a non-anonymous issue action", func(t *testing.T) {
+		testVerifyNoErrorOnAction(t, IssueAction)
+	})
+	t.Run("validator is called correctly with a transfer action", func(t *testing.T) {
+		testVerifyNoErrorOnAction(t, TransferAction)
+	})
+	t.Run("validator is called correctly with a redeem action", func(t *testing.T) {
+		testVerifyNoErrorOnAction(t, RedeemAction)
+	})
+	t.Run("engine is called correctly with atomic swap", func(t *testing.T) {
+		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		require.NoError(t, err)
+		env, err := newEnv(testUseCase, configurations)
+		require.NoError(t, err)
+
+		raw, err := env.ar.Bytes()
+		require.NoError(t, err)
+
+		actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "2", raw)
+		require.NoError(t, err)
+		require.Len(t, actions, 1)
+	})
+	t.Run("when the sender's signature is not valid: wrong txID", func(t *testing.T) {
+		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		require.NoError(t, err)
+		env, err := newEnv(testUseCase, configurations)
+		require.NoError(t, err)
+
+		request := &driver.TokenRequest{Issues: env.ar.Issues, Transfers: env.ar.Transfers}
+		raw, err := request.MarshalToMessageToSign([]byte("3"))
+		require.NoError(t, err)
+
+		signatures, err := env.sender.SignTokenActions(raw)
+		require.NoError(t, err)
+		env.ar.Signatures[1] = signatures[0]
+
+		raw, err = env.ar.Bytes()
+		require.NoError(t, err)
+
+		_, _, err = env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "2", raw)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed signature verification")
+	})
+}
+
+func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*env](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*env, error) {
+			return newEnv(c, configurations)
+		},
+		func(ctx context.Context, env *env) error {
+			_, _, err := env.engine.VerifyTokenRequestFromRaw(ctx, nil, "1", env.transferRaw)
+			return err
+		},
+	)
+}
+
+func testVerifyNoErrorOnAction(t *testing.T, actionType actionType) {
+	t.Helper()
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+	require.NoError(t, err)
+	env, err := newEnv(testUseCase, configurations)
+	require.NoError(t, err)
+
+	var raw []byte
+	switch actionType {
+	case TransferAction:
+		raw, err = env.tr.Bytes()
+	case IssueAction:
+		raw, err = env.ir.Bytes()
+	case RedeemAction:
+		raw, err = env.rr.Bytes()
+	}
+	require.NoError(t, err)
+	actions, _, err := env.engine.VerifyTokenRequestFromRaw(t.Context(), nil, "1", raw)
+	require.NoError(t, err)
+	require.Len(t, actions, 1)
+}
+
+type env struct {
+	ir                *driver.TokenRequest
+	engine            *enginedlog.Validator
+	inputsForTransfer []*tokn.Token
+	tr                *driver.TokenRequest
+	inputsForRedeem   []*tokn.Token
+	rr                *driver.TokenRequest
+	ar                *driver.TokenRequest
+	sender            *transfer.Sender
+	transferRaw       []byte
+}
+
+func newEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*env, error) {
 	var (
 		engine *enginedlog.Validator
-		pp     *v1.PublicParams
 
 		inputsForRedeem   []*tokn.Token
 		inputsForTransfer []*tokn.Token
 
 		sender  *transfer.Sender
 		auditor *audit.Auditor
-		ipk     []byte
 
 		ir *driver.TokenRequest // regular issue request
 		rr *driver.TokenRequest // redeem request
 		tr *driver.TokenRequest // transfer request
 		ar *driver.TokenRequest // atomic action request
 	)
-	BeforeEach(func() {
-		fakeLedger = &mock.Ledger{}
-		var err error
-		// prepare public parameters
-		ipk, err = os.ReadFile("./testdata/bls12_381_bbs/idemix/msp/IssuerPublicKey")
-		Expect(err).NotTo(HaveOccurred())
-		pp, err = v1.Setup(32, ipk, math.BLS12_381_BBS_GURVY)
-		Expect(err).NotTo(HaveOccurred())
 
-		c := math.Curves[pp.Curve]
+	// prepare public parameters
+	setupConfiguration, err := configurations.GetSetupConfiguration(benchCase.Bits, benchCase.CurveID)
+	if err != nil {
+		return nil, err
+	}
+	pp := setupConfiguration.PP
+	oID := setupConfiguration.OwnerIdentity
 
-		asigner, _ := prepareECDSASigner()
-		idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.BLS12_381_BBS_GURVY)
-		Expect(err).NotTo(HaveOccurred())
-		des := deserializer.NewTypedVerifierDeserializerMultiplex()
-		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
-		des.AddTypedVerifierDeserializer(ix509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&Deserializer{}, &Deserializer{}))
-		auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, des, pp.PedersenGenerators, asigner, c)
-		araw, err := asigner.Serialize()
-		Expect(err).NotTo(HaveOccurred())
-		pp.SetAuditors([]driver.Identity{araw})
+	c := math.Curves[pp.Curve]
 
-		// initialize enginw with pp
-		deserializer, err := zkatdlog.NewDeserializer(pp)
-		Expect(err).NotTo(HaveOccurred())
-		engine = enginedlog.New(
-			logging.MustGetLogger(),
-			pp,
-			deserializer,
-			nil,
-			nil,
-			nil,
-		)
+	idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, benchCase.CurveID)
+	if err != nil {
+		return nil, err
+	}
+	multiplexer := deserializer.NewTypedVerifierDeserializerMultiplex()
+	multiplexer.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+	multiplexer.AddTypedVerifierDeserializer(ix509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&Deserializer{}, &Deserializer{}))
+	auditor = audit.NewAuditor(
+		logging.MustGetLogger(),
+		&noop.Tracer{},
+		multiplexer,
+		pp.PedersenGenerators,
+		setupConfiguration.AuditorSigner,
+		c,
+	)
 
-		// non-anonymous issue
-		_, ir, _ = prepareNonAnonymousIssueRequest(pp, auditor)
-		Expect(ir).NotTo(BeNil())
+	// initialize enginw with pp
+	des, err := zkatdlog.NewDeserializer(pp)
+	if err != nil {
+		return nil, err
+	}
+	engine = enginedlog.New(
+		logging.MustGetLogger(),
+		pp,
+		des,
+		nil,
+		nil,
+		nil,
+	)
 
-		// prepare redeem
-		sender, rr, _, inputsForRedeem = prepareRedeemRequest(pp, auditor)
-		Expect(sender).NotTo(BeNil())
+	// non-anonymous issue
+	_, ir, _, err = prepareNonAnonymousIssueRequest(pp, auditor, setupConfiguration)
+	if err != nil {
+		return nil, err
+	}
 
-		// prepare transfer
-		var trmetadata *driver.TokenRequestMetadata
-		sender, tr, trmetadata, inputsForTransfer = prepareTransferRequest(pp, auditor)
-		Expect(sender).NotTo(BeNil())
-		Expect(trmetadata).NotTo(BeNil())
+	// prepare redeem
+	_, rr, _, inputsForRedeem, err = prepareRedeemRequest(pp, auditor, setupConfiguration)
+	if err != nil {
+		return nil, err
+	}
 
-		// atomic action request
-		ar = &driver.TokenRequest{Transfers: tr.Transfers}
-		raw, err := ar.MarshalToMessageToSign([]byte("2"))
-		Expect(err).NotTo(HaveOccurred())
+	// prepare transfer
+	var trmetadata *driver.TokenRequestMetadata
+	sender, tr, trmetadata, inputsForTransfer, err = prepareTransferRequest(pp, auditor, oID)
+	if err != nil {
+		return nil, err
+	}
+	transferRaw, err := tr.Bytes()
+	if err != nil {
+		return nil, err
+	}
 
-		// sender signs request
-		signatures, err := sender.SignTokenActions(raw)
-		Expect(err).NotTo(HaveOccurred())
+	// atomic action request
+	ar = &driver.TokenRequest{Transfers: tr.Transfers}
+	raw, err := ar.MarshalToMessageToSign([]byte("2"))
+	if err != nil {
+		return nil, err
+	}
 
-		// auditor inspect token
-		metadata := &driver.TokenRequestMetadata{}
-		metadata.Transfers = []*driver.TransferMetadata{trmetadata.Transfers[0]}
+	// sender signs request
+	signatures, err := sender.SignTokenActions(raw)
+	if err != nil {
+		return nil, err
+	}
 
-		tokns := make([][]*tokn.Token, 1)
-		for i := range 2 {
-			tokns[0] = append(tokns[0], inputsForTransfer[i])
-		}
-		err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
-		Expect(err).NotTo(HaveOccurred())
-		sigma, err := auditor.Endorse(ar, "2")
-		Expect(err).NotTo(HaveOccurred())
-		ar.AuditorSignatures = append(ar.AuditorSignatures, &driver.AuditorSignature{
-			Identity:  araw,
-			Signature: sigma,
-		})
+	// auditor inspect token
+	metadata := &driver.TokenRequestMetadata{}
+	metadata.Transfers = []*driver.TransferMetadata{trmetadata.Transfers[0]}
 
-		ar.Signatures = append(ar.Signatures, signatures...)
+	tokns := make([][]*tokn.Token, 1)
+	for i := range 2 {
+		tokns[0] = append(tokns[0], inputsForTransfer[i])
+	}
+	err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
+	if err != nil {
+		return nil, err
+	}
+	sigma, err := auditor.Endorse(ar, "2")
+	if err != nil {
+		return nil, err
+	}
+	ar.AuditorSignatures = append(ar.AuditorSignatures, &driver.AuditorSignature{
+		Identity:  pp.Auditors()[0],
+		Signature: sigma,
 	})
-	Describe("Verify Token Requests", func() {
-		Context("Validator is called correctly with a non-anonymous issue action", func() {
-			var (
-				err error
-				raw []byte
-			)
-			BeforeEach(func() {
-				raw, err = ir.Bytes()
-				Expect(err).NotTo(HaveOccurred())
-			})
-			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), fakeLedger.GetStateStub, "1", raw)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(actions).To(HaveLen(1))
-			})
-		})
 
-		Context("validator is called correctly with a transfer action", func() {
-			var (
-				err error
-				raw []byte
-			)
-			BeforeEach(func() {
-				raw, err = inputsForTransfer[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(0, raw, nil)
+	ar.Signatures = append(ar.Signatures, signatures...)
 
-				raw, err = inputsForTransfer[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-				raw, err = inputsForTransfer[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(2, raw, nil)
-
-				raw, err = inputsForTransfer[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-				fakeLedger.GetStateReturnsOnCall(4, nil, nil)
-				fakeLedger.GetStateReturnsOnCall(5, nil, nil)
-
-				raw, err = tr.Bytes()
-				Expect(err).NotTo(HaveOccurred())
-			})
-			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(actions).To(HaveLen(1))
-			})
-		})
-		Context("validator is called correctly with a redeem action", func() {
-			var (
-				err error
-				raw []byte
-			)
-			BeforeEach(func() {
-
-				raw, err = inputsForRedeem[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(0, raw, nil)
-
-				raw, err = inputsForRedeem[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-				raw, err = inputsForRedeem[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(2, raw, nil)
-
-				raw, err = inputsForRedeem[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-				fakeLedger.GetStateReturnsOnCall(4, nil, nil)
-
-				raw, err = rr.Bytes()
-				Expect(err).NotTo(HaveOccurred())
-
-			})
-			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "1", raw)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(actions).To(HaveLen(1))
-			})
-		})
-		Context("enginve is called correctly with atomic swap", func() {
-			var (
-				err error
-				raw []byte
-			)
-			BeforeEach(func() {
-				raw, err = inputsForTransfer[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(0, raw, nil)
-
-				raw, err = inputsForTransfer[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(1, raw, nil)
-
-				fakeLedger.GetStateReturnsOnCall(2, nil, nil)
-
-				raw, err = inputsForTransfer[0].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(3, raw, nil)
-
-				raw, err = inputsForTransfer[1].Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				fakeLedger.GetStateReturnsOnCall(4, raw, nil)
-
-				fakeLedger.GetStateReturnsOnCall(5, nil, nil)
-				fakeLedger.GetStateReturnsOnCall(6, nil, nil)
-
-				raw, err = ar.Bytes()
-				Expect(err).NotTo(HaveOccurred())
-
-			})
-			It("succeeds", func() {
-				actions, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(actions).To(HaveLen(1))
-			})
-
-			Context("when the sender's signature is not valid: wrong txID", func() {
-				BeforeEach(func() {
-					request := &driver.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
-					raw, err = request.MarshalToMessageToSign([]byte("3"))
-					Expect(err).NotTo(HaveOccurred())
-
-					signatures, err := sender.SignTokenActions(raw)
-					Expect(err).NotTo(HaveOccurred())
-					ar.Signatures[1] = signatures[0]
-
-					raw, err = ar.Bytes()
-					Expect(err).NotTo(HaveOccurred())
-
-				})
-				It("fails", func() {
-					_, _, err := engine.VerifyTokenRequestFromRaw(context.TODO(), getState, "2", raw)
-					Expect(err.Error()).To(ContainSubstring("failed signature verification"))
-
-				})
-			})
-		})
-	})
-})
-
-func prepareECDSASigner() (*Signer, *Verifier) {
-	signer, err := NewECDSASigner()
-	Expect(err).NotTo(HaveOccurred())
-	return signer, signer.Verifier
+	return &env{
+		ir:                ir,
+		tr:                tr,
+		engine:            engine,
+		inputsForTransfer: inputsForTransfer,
+		inputsForRedeem:   inputsForRedeem,
+		rr:                rr,
+		ar:                ar,
+		sender:            sender,
+		transferRaw:       transferRaw,
+	}, nil
 }
 
-func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*issue2.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
-	signer, err := NewECDSASigner()
-	Expect(err).NotTo(HaveOccurred())
+func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor, setupConfiguration *benchmark.SetupConfiguration) (*issue2.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata, error) {
+	issuer := issue2.NewIssuer("ABC", setupConfiguration.IssuerSigner, pp)
+	issuerIdentity, err := setupConfiguration.IssuerSigner.Serialize()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	ir, metadata, err := prepareIssue(auditor, issuer, issuerIdentity, setupConfiguration.OwnerIdentity)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	issuer := issue2.NewIssuer("ABC", signer, pp)
-	issuerIdentity, err := signer.Serialize()
-	Expect(err).NotTo(HaveOccurred())
-	ir, metadata := prepareIssue(auditor, issuer, issuerIdentity)
-
-	return issuer, ir, metadata
+	return issuer, ir, metadata, nil
 }
 
-func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
-	id, auditInfo, signer := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
+func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor, setupConfig *benchmark.SetupConfiguration) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	owners := make([][]byte, 2)
-	owners[0] = id
+	owners[0] = setupConfig.OwnerIdentity.ID
 
-	issuerSigner, err := NewECDSASigner()
-	Expect(err).NotTo(HaveOccurred())
+	issuer := issue2.NewIssuer("ABC", setupConfig.IssuerSigner, pp)
+	issuerIdentity, err := setupConfig.IssuerSigner.Serialize()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 
-	issuer := issue2.NewIssuer("ABC", issuerSigner, pp)
-	issuerIdentity, err := issuerSigner.Serialize()
-	Expect(err).NotTo(HaveOccurred())
-
-	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners, issuer, issuerIdentity)
+	return prepareTransfer(
+		pp,
+		setupConfig.OwnerIdentity.Signer,
+		auditor,
+		setupConfig.OwnerIdentity.AuditInfo,
+		setupConfig.OwnerIdentity.ID,
+		owners,
+		issuer,
+		issuerIdentity,
+	)
 }
 
-func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
-	id, auditInfo, signer := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
+func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	owners := make([][]byte, 2)
-	owners[0] = id
-	owners[1] = id
+	owners[0] = oID.ID
+	owners[1] = oID.ID
 
-	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners, nil, nil)
+	return prepareTransfer(pp, oID.Signer, auditor, oID.AuditInfo, oID.ID, owners, nil, nil)
 }
 
-func prepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
+func prepareTokens(values, bf []*math.Zr, tokenType string, pp []*math.G1, curve *math.Curve) []*math.G1 {
 	tokens := make([]*math.G1, len(values))
 	for i := range values {
-		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
+		tokens[i] = prepareToken(values[i], bf[i], tokenType, pp, curve)
 	}
 	return tokens
 }
 
-func prepareToken(value *math.Zr, rand *math.Zr, ttype string, pp []*math.G1, curve *math.Curve) *math.G1 {
+func prepareToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1, curve *math.Curve) *math.G1 {
 	token := curve.NewG1()
-	token.Add(pp[0].Mul(curve.HashToZr([]byte(ttype))))
+	token.Add(pp[0].Mul(curve.HashToZr([]byte(tokenType))))
 	token.Add(pp[1].Mul(value))
 	token.Add(pp[2].Mul(rand))
 	return token
 }
 
-func getIdemixInfo(dir string) (driver.Identity, *crypto.AuditInfo, driver.SigningIdentity) {
-	backend, err := kvs.NewInMemory()
-	Expect(err).NotTo(HaveOccurred())
-	config, err := crypto.NewConfig(dir)
-	Expect(err).NotTo(HaveOccurred())
-	curveID := math.BLS12_381_BBS_GURVY
-	keyStore, err := crypto.NewKeyStore(curveID, kvs.Keystore(backend))
-	Expect(err).NotTo(HaveOccurred())
-	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
-	Expect(err).NotTo(HaveOccurred())
-	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(p).NotTo(BeNil())
-
-	identityDescriptor, err := p.Identity(context.Background(), nil)
-	Expect(err).NotTo(HaveOccurred())
-	id := identityDescriptor.Identity
-	audit := identityDescriptor.AuditInfo
-	Expect(id).NotTo(BeNil())
-	Expect(audit).NotTo(BeNil())
-
-	auditInfo, err := p.DeserializeAuditInfo(context.Background(), audit)
-	Expect(err).NotTo(HaveOccurred())
-	err = auditInfo.Match(context.Background(), id)
-	Expect(err).NotTo(HaveOccurred())
-
-	signer, err := p.DeserializeSigningIdentity(context.Background(), id)
-	Expect(err).NotTo(HaveOccurred())
-
-	id, err = identity.WrapWithType(idemix2.IdentityType, id)
-	Expect(err).NotTo(HaveOccurred())
-
-	return id, auditInfo, signer
-}
-
-func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
-	id, auditInfo, _ := getIdemixInfo("./testdata/bls12_381_bbs/idemix")
+func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte, oID *benchmark.OwnerIdentity) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
 	owners := make([][]byte, 1)
-	owners[0] = id
+	owners[0] = oID.ID
 	values := []uint64{40}
 
 	issue, inf, err := issuer.GenerateZKIssue(values, owners)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, err
+	}
 
-	auditInfoRaw, err := auditInfo.Bytes()
-	Expect(err).NotTo(HaveOccurred())
+	auditInfoRaw, err := oID.AuditInfo.Bytes()
+	if err != nil {
+		return nil, nil, err
+	}
 	metadata := &driver.IssueMetadata{
 		Issuer: driver.AuditableIdentity{
 			Identity:  issuerIdentity,
@@ -403,7 +361,9 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	}
 	for i := range len(issue.Outputs) {
 		marshalledinf, err := inf[i].Serialize()
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return nil, nil, err
+		}
 		metadata.Outputs = append(metadata.Outputs, &driver.IssueOutputMetadata{
 			OutputMetadata: marshalledinf,
 			Receivers: []*driver.AuditableIdentity{
@@ -417,33 +377,45 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 
 	// serialize token action
 	raw, err := issue.Serialize()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// sign token request
 	ir := &driver.TokenRequest{Issues: [][]byte{raw}}
 	raw, err = ir.MarshalToMessageToSign([]byte("1"))
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, err
+	}
 
 	sig, err := issuer.SignTokenActions(raw)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, err
+	}
 	ir.Signatures = append(ir.Signatures, sig)
 
 	issueMetadata := &driver.TokenRequestMetadata{Issues: []*driver.IssueMetadata{metadata}}
 	err = auditor.Check(context.Background(), ir, issueMetadata, nil, "1")
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, err
+	}
 	sigma, err := auditor.Endorse(ir, "1")
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, err
+	}
 	araw, err := auditor.Signer.Serialize()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, err
+	}
 	ir.AuditorSignatures = append(ir.AuditorSignatures, &driver.AuditorSignature{
 		Identity:  araw,
 		Signature: sigma,
 	})
 
-	return ir, issueMetadata
+	return ir, issueMetadata, nil
 }
 
-func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	signers := make([]driver.Signer, 2)
 	signers[0] = signer
 	signers[1] = signer
@@ -455,7 +427,9 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 
 	inBF := make([]*math.Zr, 2)
 	rand, err := c.Rand()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 	for i := range 2 {
 		inBF[i] = c.NewRandomZr(rand)
 	}
@@ -476,29 +450,41 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	inputInf[0] = &tokn.Metadata{Type: "ABC", Value: invalues[0], BlindingFactor: inBF[0]}
 	inputInf[1] = &tokn.Metadata{Type: "ABC", Value: invalues[1], BlindingFactor: inBF[1]}
 	sender, err := transfer.NewSender(signers, tokens, ids, inputInf, pp)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 
-	transfer2, metas, err := sender.GenerateZKTransfer(context.TODO(), outvalues, owners)
-	Expect(err).NotTo(HaveOccurred())
+	transfer2, metas, err := sender.GenerateZKTransfer(context.Background(), outvalues, owners)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 
 	if issuerIdentity != nil {
-		transfer2.Issuer = driver.Identity(issuerIdentity)
+		transfer2.Issuer = issuerIdentity
 	}
 
 	transferRaw, err := transfer2.Serialize()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 
 	tr := &driver.TokenRequest{Transfers: [][]byte{transferRaw}}
 	raw, err := tr.MarshalToMessageToSign([]byte("1"))
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 
 	marshalledInfo := make([][]byte, len(metas))
 	for i := range metas {
 		marshalledInfo[i], err = metas[i].Serialize()
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
 	}
 	auditInfoRaw, err := auditInfo.Bytes()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 	metadata := &driver.TransferMetadata{}
 	for range len(transfer2.Inputs) {
 		metadata.Inputs = append(metadata.Inputs, &driver.TransferInputMetadata{
@@ -510,12 +496,13 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 				},
 			},
 		})
-		Expect(err).NotTo(HaveOccurred())
 	}
 
 	for i := range len(transfer2.Outputs) {
 		marshalledinf, err := metas[i].Serialize()
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{
 			OutputMetadata:  marshalledinf,
 			OutputAuditInfo: auditInfoRaw,
@@ -537,192 +524,46 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 
 	transferMetadata := &driver.TokenRequestMetadata{Transfers: []*driver.TransferMetadata{metadata}}
 	err = auditor.Check(context.Background(), tr, transferMetadata, tokns, "1")
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 
 	sigma, err := auditor.Endorse(tr, "1")
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 	araw, err := auditor.Signer.Serialize()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 	tr.AuditorSignatures = append(tr.AuditorSignatures, &driver.AuditorSignature{
 		Identity:  araw,
 		Signature: sigma,
 	})
 
 	signatures, err := sender.SignTokenActions(raw)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 	tr.Signatures = append(tr.Signatures, signatures...)
 
 	// Add issuer signature for redeem case
 	if issuer != nil {
 		issuerSignature, err := issuer.Signer.Sign(raw)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
 		tr.Signatures = append(tr.Signatures, issuerSignature)
 	}
 
-	return sender, tr, transferMetadata, tokens
-}
-
-func getState(id token2.ID) ([]byte, error) {
-	return fakeLedger.GetState(id)
-}
-
-var (
-	// curveHalfOrders contains the precomputed curve group orders halved.
-	// It is used to ensure that signature' S value is lower or equal to the
-	// curve group order halved. We accept only low-S signatures.
-	// They are precomputed for efficiency reasons.
-	curveHalfOrders = map[elliptic.Curve]*big.Int{
-		elliptic.P224(): new(big.Int).Rsh(elliptic.P224().Params().N, 1),
-		elliptic.P256(): new(big.Int).Rsh(elliptic.P256().Params().N, 1),
-		elliptic.P384(): new(big.Int).Rsh(elliptic.P384().Params().N, 1),
-		elliptic.P521(): new(big.Int).Rsh(elliptic.P521().Params().N, 1),
-	}
-)
-
-type Signature struct {
-	R, S *big.Int
-}
-
-type Signer struct {
-	*Verifier
-	SK *ecdsa.PrivateKey
-}
-
-func (d *Signer) Sign(message []byte) ([]byte, error) {
-	dgst := sha256.Sum256(message)
-
-	r, s, err := ecdsa.Sign(rand.Reader, d.SK, dgst[:])
-	if err != nil {
-		return nil, err
-	}
-
-	s, _, err = ToLowS(&d.SK.PublicKey, s)
-	if err != nil {
-		return nil, err
-	}
-
-	return utils.MarshalECDSASignature(r, s)
-}
-
-func (d *Signer) Serialize() ([]byte, error) {
-	return d.Verifier.Serialize()
-}
-
-type Verifier struct {
-	PK *ecdsa.PublicKey
-}
-
-func NewECDSASigner() (*Signer, error) {
-	// Create ephemeral key and store it in the context
-	sk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	return &Signer{SK: sk, Verifier: &Verifier{PK: &sk.PublicKey}}, nil
-}
-
-func (v *Verifier) Verify(message, sigma []byte) error {
-	signature := &Signature{}
-	_, err := asn1.Unmarshal(sigma, signature)
-	if err != nil {
-		return err
-	}
-
-	hash := sha256.New()
-	n, err := hash.Write(message)
-	if n != len(message) {
-		return errors.Errorf("hash failure")
-	}
-	if err != nil {
-		return err
-	}
-	digest := hash.Sum(nil)
-
-	lowS, err := IsLowS(v.PK, signature.S)
-	if err != nil {
-		return err
-	}
-	if !lowS {
-		return errors.New("signature is not in lowS")
-	}
-
-	valid := ecdsa.Verify(v.PK, digest, signature.R, signature.S)
-	if !valid {
-		return errors.Errorf("signature not valid")
-	}
-
-	return nil
-}
-
-func (v *Verifier) Serialize() ([]byte, error) {
-	pkRaw, err := PemEncodeKey(v.PK)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed marshalling public key")
-	}
-
-	wrap, err := identity.WrapWithType(ix509.IdentityType, pkRaw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed wrapping identity")
-	}
-
-	return wrap, nil
-}
-
-// PemEncodeKey takes a Go key and converts it to bytes
-func PemEncodeKey(key interface{}) ([]byte, error) {
-	var encoded []byte
-	var err error
-	var keyType string
-
-	switch key.(type) {
-	case *ecdsa.PrivateKey, *rsa.PrivateKey:
-		keyType = "PRIVATE"
-		encoded, err = x509.MarshalPKCS8PrivateKey(key)
-	case *ecdsa.PublicKey, *rsa.PublicKey:
-		keyType = "PUBLIC"
-		encoded, err = x509.MarshalPKIXPublicKey(key)
-	default:
-		err = errors.Errorf("Programming error, unexpected key type %T", key)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return pem.EncodeToMemory(&pem.Block{Type: keyType + " KEY", Bytes: encoded}), nil
-}
-
-// IsLowS checks that s is a low-S
-func IsLowS(k *ecdsa.PublicKey, s *big.Int) (bool, error) {
-	halfOrder, ok := curveHalfOrders[k.Curve]
-	if !ok {
-		return false, fmt.Errorf("curve not recognized [%s]", k.Curve)
-	}
-
-	return s.Cmp(halfOrder) != 1, nil
-}
-
-func ToLowS(k *ecdsa.PublicKey, s *big.Int) (*big.Int, bool, error) {
-	lowS, err := IsLowS(k, s)
-	if err != nil {
-		return nil, false, err
-	}
-
-	if !lowS {
-		// Set s to N - s that will be then in the lower part of signature space
-		// less or equal to half order
-		s.Sub(k.Params().N, s)
-
-		return s, true, nil
-	}
-
-	return s, false, nil
+	return sender, tr, transferMetadata, tokens, nil
 }
 
 type Deserializer struct {
 	auditInfo []byte
 }
 
-func (d *Deserializer) Match(ctx context.Context, id []byte) error {
+func (d *Deserializer) Match(_ context.Context, id []byte) error {
 	identity, err := identity.WrapWithType(ix509.IdentityType, id)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
@@ -733,10 +574,10 @@ func (d *Deserializer) Match(ctx context.Context, id []byte) error {
 	return nil
 }
 
-func (d *Deserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (d *Deserializer) GetAuditInfoMatcher(_ context.Context, _ driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	return &Deserializer{auditInfo: auditInfo}, nil
 }
 
-func (d *Deserializer) DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+func (d *Deserializer) DeserializeVerifier(_ context.Context, _ driver.Identity) (driver.Verifier, error) {
 	panic("implement me")
 }

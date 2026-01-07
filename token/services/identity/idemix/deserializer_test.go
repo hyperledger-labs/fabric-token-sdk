@@ -20,11 +20,11 @@ import (
 )
 
 func TestNewDeserializer(t *testing.T) {
-	testNewDeserializer(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testNewDeserializer(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
+	testNewDeserializer(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testNewDeserializer(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
-func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID) {
 	t.Helper()
 	// init
 	backend, err := kvs2.NewInMemory()

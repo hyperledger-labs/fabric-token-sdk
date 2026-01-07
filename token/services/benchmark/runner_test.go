@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 )
 
 func TestRunBenchmark(t *testing.T) {
@@ -23,13 +23,14 @@ func TestRunBenchmark(t *testing.T) {
 	}
 
 	// 2. Define Work (The target of measurement)
-	work := func(data []byte) {
+	work := func(data []byte) error {
 		// Simulate processing
 		time.Sleep(500 * time.Microsecond)
 		_ = len(data)
+		return nil
 	}
 
-	fmt.Println("Running Benchmark...")
-	res := benchmark.RunBenchmark(8, 2*time.Second, setup, work) // 8 workers, 2 seconds
+	fmt.Println("Running RunBenchmark...")
+	res := benchmark.RunBenchmark(benchmark.NewConfig(8, 2*time.Second, 5*time.Second), setup, work) // 8 workers, 2 seconds
 	res.Print()
 }

@@ -16,18 +16,24 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
+// ValidateTransferFunc is a function that validates a transfer action
 type ValidateTransferFunc = common.ValidateTransferFunc[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer]
 
+// ValidateIssueFunc is a function that validates an issue action
 type ValidateIssueFunc = common.ValidateIssueFunc[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer]
 
+// ValidateAuditingFunc is a function that validates an auditing action
 type ValidateAuditingFunc = common.ValidateAuditingFunc[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer]
 
+// Context is the context used by the validator
 type Context = common.Context[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer]
 
+// ActionDeserializer is a deserializer for actions
 type ActionDeserializer struct {
 	PublicParams *v1.PublicParams
 }
 
+// DeserializeActions deserializes the actions from the token request
 func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*issue.Action, []*transfer.Action, error) {
 	issueActions := make([]*issue.Action, len(tr.Issues))
 	for i := range len(tr.Issues) {
@@ -50,8 +56,10 @@ func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*iss
 	return issueActions, transferActions, nil
 }
 
+// Validator is the validator for the nogh token driver
 type Validator = common.Validator[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer]
 
+// New creates a new validator
 func New(
 	logger logging.Logger,
 	pp *v1.PublicParams,

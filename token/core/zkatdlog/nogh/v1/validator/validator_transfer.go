@@ -27,6 +27,7 @@ func TransferActionValidate(c context.Context, ctx *Context) error {
 	return ctx.TransferAction.Validate()
 }
 
+// TransferSignatureValidate validates the signatures of the transfer action
 func TransferSignatureValidate(c context.Context, ctx *Context) error {
 	// recall that TransferActionValidate has been called before this function
 	var signatures [][]byte
@@ -88,6 +89,7 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 	return nil
 }
 
+// TransferUpgradeWitnessValidate validates that inputs that want to be upgraded, have a valid witness
 func TransferUpgradeWitnessValidate(c context.Context, ctx *Context) error {
 	// recall that TransferActionValidate has been called before this function
 
@@ -120,6 +122,7 @@ func TransferUpgradeWitnessValidate(c context.Context, ctx *Context) error {
 	return nil
 }
 
+// TransferZKProofValidate validates the ZK proof of the transfer action
 func TransferZKProofValidate(c context.Context, ctx *Context) error {
 	in := make([]*math.G1, len(ctx.InputTokens))
 	for i, tok := range ctx.InputTokens {
@@ -136,6 +139,7 @@ func TransferZKProofValidate(c context.Context, ctx *Context) error {
 	return nil
 }
 
+// TransferHTLCValidate validates the HTLC scripts in the transfer action
 func TransferHTLCValidate(c context.Context, ctx *Context) error {
 	now := time.Now()
 

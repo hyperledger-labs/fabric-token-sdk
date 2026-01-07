@@ -123,11 +123,11 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 }
 
 func TestIdentityWithEidRhNymPolicy(t *testing.T) {
-	testIdentityWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testIdentityWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
+	testIdentityWithEidRhNymPolicy(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testIdentityWithEidRhNymPolicy(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
-func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.CurveID) {
 	t.Helper()
 	// prepare
 	registry := view.NewServiceProvider()
@@ -227,11 +227,11 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 }
 
 func TestIdentityStandard(t *testing.T) {
-	testIdentityStandard(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL, false)
-	testIdentityStandard(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY, true)
+	testIdentityStandard(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testIdentityStandard(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
-func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID, aries bool) {
+func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID) {
 	t.Helper()
 	registry := view.NewServiceProvider()
 

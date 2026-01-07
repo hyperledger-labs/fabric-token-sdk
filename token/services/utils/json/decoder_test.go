@@ -51,7 +51,7 @@ func TestUnmarshalWithDisallowUnknownFields(t *testing.T) {
 	}
 }
 
-// Benchmark comparing UnmarshalWithDisallowUnknownFields to json.Unmarshal
+// RunBenchmark comparing UnmarshalWithDisallowUnknownFields to json.Unmarshal
 func BenchmarkUnmarshal(b *testing.B) {
 	type TestStruct struct {
 		Name string `json:"name"`

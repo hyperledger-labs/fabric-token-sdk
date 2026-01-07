@@ -135,6 +135,14 @@ clean-fabric-peer-images:
 tokengen:
 	@go install ./cmd/tokengen
 
+.PHONY: traceinspector
+traceinspector:
+	@go install ./token/services/benchmark/cmd/traceinspector
+
+.PHONY: memcheck
+memcheck:
+	@go install ./token/services/benchmark/cmd/memcheck
+
 .PHONY: idemixgen
 txgen:
 	@go install github.com/IBM/idemix/tools/idemixgen
