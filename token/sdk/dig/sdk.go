@@ -178,9 +178,9 @@ func (p *SDK) Install() error {
 		p.Container().Provide(wrapper2.NewAuditServiceProvider, dig.As(new(auditor2.ServiceProvider))),
 		p.Container().Provide(wrapper2.NewNetworkProvider, dig.As(new(dep.NetworkProvider))),
 		p.Container().Provide(wrapper2.NewNetworkIdentityProvider),
+		p.Container().Provide(digutils.Identity[*wrapper2.NetworkIdentityProvider](), dig.As(new(dep.NetworkIdentityProvider))),
 		p.Container().Provide(wrapper2.NewTransactionDBProvider, dig.As(new(dep.TransactionDBProvider))),
 		p.Container().Provide(wrapper2.NewAuditDBProvider, dig.As(new(dep.AuditDBProvider))),
-		p.Container().Provide(digutils.Identity[*wrapper2.NetworkIdentityProvider](), dig.As(new(dep.NetworkIdentityProvider))),
 		p.Container().Provide(wrapper2.NewStorageProvider),
 		p.Container().Provide(digutils.Identity[*tokens.ServiceManager](), dig.As(new(ttx.TokensServiceManager))),
 		p.Container().Provide(digutils.Identity[*db.OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
@@ -229,6 +229,8 @@ func (p *SDK) Install() error {
 		digutils.Register[dep.NetworkProvider](p.Container()),
 		digutils.Register[*wrapper2.StorageProvider](p.Container()),
 		digutils.Register[*wrapper2.NetworkIdentityProvider](p.Container()),
+		digutils.Register[dep.TransactionDBProvider](p.Container()),
+		digutils.Register[dep.AuditDBProvider](p.Container()),
 		digutils.Register[auditor2.ServiceProvider](p.Container()),
 	)
 	if err != nil {
