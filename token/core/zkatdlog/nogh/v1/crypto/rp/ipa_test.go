@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package rp_test
 
 import (
+	"context"
 	"math/bits"
 	"math/rand"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -128,4 +130,31 @@ func BenchmarkIPAProver(b *testing.B) {
 			assert.NotNil(b, proof)
 		}
 	})
+}
+
+func TestParallelIPAProver(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*ipaSetup](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*ipaSetup, error) {
+			return newIpaSetup(c.CurveID)
+		},
+		func(ctx context.Context, setup *ipaSetup) error {
+			prover := rp.NewIPAProver(
+				rp.InnerProduct(setup.left, setup.right, setup.curve),
+				setup.left,
+				setup.right,
+				setup.Q,
+				setup.leftGens,
+				setup.rightGens,
+				setup.com,
+				setup.nr,
+				setup.curve,
+			)
+			_, err := prover.Prove()
+			return err
+		},
+	)
 }

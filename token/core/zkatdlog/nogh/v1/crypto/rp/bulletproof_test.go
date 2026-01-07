@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package rp_test
 
 import (
+	"context"
 	"math/bits"
 	"math/rand"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -141,4 +143,33 @@ func BenchmarkBFProver(b *testing.B) {
 			assert.NotNil(b, proof)
 		}
 	})
+}
+
+func TestParallelBFProver(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*bfSetup](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*bfSetup, error) {
+			return newBfSetup(c.CurveID)
+		},
+		func(ctx context.Context, setup *bfSetup) error {
+			prover := rp.NewRangeProver(
+				setup.com,
+				115,
+				[]*math.G1{setup.G, setup.H},
+				setup.bf,
+				setup.leftGens,
+				setup.rightGens,
+				setup.P,
+				setup.Q,
+				setup.nr,
+				setup.l,
+				setup.curve,
+			)
+			_, err := prover.Prove()
+			return err
+		},
+	)
 }
