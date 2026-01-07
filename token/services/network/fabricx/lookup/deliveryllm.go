@@ -86,13 +86,13 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, data []byte, block
 		return nil, errors.Wrapf(err, "failed to unmarshal tx payload [%d:%d]", blockNum, txNum)
 	}
 
-	return m.mapTx(tx)
+	return m.mapTx(chdr.TxId, tx)
 }
 
-func (m *endorserTxInfoMapper) mapTx(tx *protoblocktx.Tx) (map[driver.Namespace]lookup.KeyInfo, error) {
+func (m *endorserTxInfoMapper) mapTx(txID string, tx *protoblocktx.Tx) (map[driver.Namespace]lookup.KeyInfo, error) {
 	key, err := m.keyTranslator.CreateSetupKey()
 	if err != nil {
-		return nil, errors.Wrapf(err, "can't create for token request [%s]", tx.GetId())
+		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)
 	}
 
 	txInfos := make(map[driver.Namespace]lookup.KeyInfo, len(tx.GetNamespaces()))
@@ -100,7 +100,7 @@ func (m *endorserTxInfoMapper) mapTx(tx *protoblocktx.Tx) (map[driver.Namespace]
 		for _, write := range ns.GetBlindWrites() {
 			if string(write.GetKey()) == key {
 				if err != nil {
-					return nil, errors.Wrapf(err, "ns [%v] in tx [%s] not found", ns.GetNsId(), tx.GetId())
+					return nil, errors.Wrapf(err, "ns [%v] in tx [%s] not found", ns.GetNsId(), txID)
 				}
 				txInfos[ns.GetNsId()] = lookup.KeyInfo{
 					Key:       string(write.GetKey()),
@@ -113,9 +113,9 @@ func (m *endorserTxInfoMapper) mapTx(tx *protoblocktx.Tx) (map[driver.Namespace]
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			if _, ok := txInfos[ns.GetNsId()]; !ok {
-				logger.Debugf("TX [%s:%s] did not have key [%s]. Found:\n\nread-writes: %v\n\nblind writes: %v\n\nreads: %v", tx.GetId(), ns.GetNsId(), key, ns.GetReadWrites(), ns.GetBlindWrites(), ns.GetReadsOnly())
+				logger.Debugf("TX [%s:%s] did not have key [%s]. Found:\n\nread-writes: %v\n\nblind writes: %v\n\nreads: %v", txID, ns.GetNsId(), key, ns.GetReadWrites(), ns.GetBlindWrites(), ns.GetReadsOnly())
 			} else {
-				logger.Debugf("TX [%s:%s] had key [%s]. Found:\n\nread-writes: %v\n\nblind writes: %v\n\nreads: %v", tx.GetId(), ns.GetNsId(), key, ns.GetReadWrites(), ns.GetBlindWrites(), ns.GetReadsOnly())
+				logger.Debugf("TX [%s:%s] had key [%s]. Found:\n\nread-writes: %v\n\nblind writes: %v\n\nreads: %v", txID, ns.GetNsId(), key, ns.GetReadWrites(), ns.GetBlindWrites(), ns.GetReadsOnly())
 			}
 		}
 	}

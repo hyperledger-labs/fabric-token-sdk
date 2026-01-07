@@ -69,13 +69,13 @@ func (s *submitter) Submit(network, channel string, tx *protoblocktx.Tx) error {
 		return errors.Wrapf(err, "failed getting random nonce")
 	}
 
-	tx.Id = s.txIDCalculator(nonce, serializedCreator)
+	txID := s.txIDCalculator(nonce, serializedCreator)
 
 	tx.Signatures = make([][]byte, len(tx.GetNamespaces()))
-	for idx := range tx.GetNamespaces() {
+	for idx, ns := range tx.GetNamespaces() {
 		// Note that a default msp signer hash the msg before signing.
 		// For that reason we use the TxNamespace message as ASN1 encoded msg
-		digest, err := signature.ASN1MarshalTxNamespace(tx, idx)
+		digest, err := signature.ASN1MarshalTxNamespace(txID, ns)
 		if err != nil {
 			return errors.Wrap(err, "failed asn1 marshal tx")
 		}
@@ -94,12 +94,12 @@ func (s *submitter) Submit(network, channel string, tx *protoblocktx.Tx) error {
 
 	signatureHeader := &cb.SignatureHeader{Creator: serializedCreator, Nonce: nonce}
 	channelHeader := protoutil.MakeChannelHeader(cb.HeaderType_MESSAGE, 0, channel, 0)
-	channelHeader.TxId = tx.Id
+	channelHeader.TxId = txID
 	payloadHeader := protoutil.MakePayloadHeader(channelHeader, signatureHeader)
 	env, err := fabricutils.CreateEnvelope(signer, payloadHeader, txRaw)
 	if err != nil {
 		return errors.Wrapf(err, "failed creating envelope")
 	}
 
-	return s.envelopeBroadcaster.Broadcast(network, channel, tx.Id, env)
+	return s.envelopeBroadcaster.Broadcast(network, channel, txID, env)
 }
