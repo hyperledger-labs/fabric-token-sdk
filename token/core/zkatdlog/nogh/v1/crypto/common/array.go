@@ -25,9 +25,9 @@ type G1Array []*math.G1
 
 // Bytes returns the serialization of the G1Array as a byte slice.
 // It returns an error if any element cannot be marshaled.
-func (a *G1Array) Bytes() ([]byte, error) {
-	raw := make([][]byte, len([]*math.G1(*a)))
-	for i, e := range []*math.G1(*a) {
+func (a G1Array) Bytes() ([]byte, error) {
+	raw := make([][]byte, len([]*math.G1(a)))
+	for i, e := range []*math.G1(a) {
 		if e == nil {
 			return nil, errors.Errorf("failed to marshal array of G1")
 		}
@@ -39,14 +39,13 @@ func (a *G1Array) Bytes() ([]byte, error) {
 // BytesTo writes the serialization of the G1Array into the provided buffer b
 // and returns the extended slice. The provided buffer b is cleared before use.
 // It returns an error if any element cannot be marshaled.
-func (a *G1Array) BytesTo(b []byte) ([]byte, error) {
-	raw := make([][]byte, len([]*math.G1(*a)))
-	for i, e := range []*math.G1(*a) {
+func (a G1Array) BytesTo(b []byte) ([]byte, error) {
+	raw := make([][]byte, len([]*math.G1(a)))
+	for i, e := range []*math.G1(a) {
 		if e == nil {
 			return nil, errors.Errorf("failed to marshal array of G1")
 		}
-		st := hex.EncodeToString(e.Bytes())
-		raw[i] = []byte(st)
+		raw[i] = e.Bytes()
 	}
 	// clear the provided buffer and reuse its capacity
 	if len(b) != 0 {
