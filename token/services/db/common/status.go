@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
+// StatusEvent models an event related to the status of a transaction
 type StatusEvent struct {
 	Ctx               context.Context
 	TxID              string

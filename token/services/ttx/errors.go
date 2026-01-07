@@ -29,4 +29,10 @@ var (
 	ErrSignerIdentityMismatch = errors.New("signer identity mismatch")
 	// ErrProvider signals a failure with a provider
 	ErrProvider = errors.New("provider failure")
+	// ErrFinalityInvalidTransaction signals that the transaction is invalid
+	ErrFinalityInvalidTransaction = errors.New("invalid transaction")
+	// ErrFinalityTimeout signals that a timeout occurred
+	ErrFinalityTimeout = errors.New("finality timeout")
+	// ErrTransactionUnknown signals that the transaction is unknown
+	ErrTransactionUnknown = errors.New("transaction unknown")
 )
