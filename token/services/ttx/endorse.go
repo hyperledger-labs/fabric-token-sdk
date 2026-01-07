@@ -72,7 +72,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	// cache the token request into the tokens db, should we use the received token request?
 	sp, err := GetStorageProvider(context)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to storage provider")
+		return nil, errors.Wrapf(errors.Join(err, ErrDepNotAvailableInContext), "storage provider")
 	}
 	if err := sp.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
 		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
@@ -182,7 +182,7 @@ func (s *EndorseView) ack(context view.Context, msg []byte) error {
 	// Send back an acknowledgement
 	idProvider, err := dep.GetNetworkIdentityProvider(context)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting identity provider")
+		return errors.Wrapf(errors.Join(err, ErrDepNotAvailableInContext), "network identity provider")
 	}
 	defaultIdentity := idProvider.DefaultIdentity()
 	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", utils.Hashable(msg), defaultIdentity)
