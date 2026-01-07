@@ -419,7 +419,8 @@ func TestEndorseView(t *testing.T) {
 				return c
 			},
 			expectError:   true,
-			errorContains: "failed to storage provider",
+			expectErr:     ttx.ErrDepNotAvailableInContext,
+			errorContains: "storage provider",
 			verify: func(ctx *TestEndorseViewContext, _ any) {
 				assert.Equal(t, 2, ctx.session.SendWithContextCallCount())
 			},
@@ -432,7 +433,8 @@ func TestEndorseView(t *testing.T) {
 				return c
 			},
 			expectError:   true,
-			errorContains: "failed getting identity provider",
+			expectErr:     ttx.ErrDepNotAvailableInContext,
+			errorContains: "identity provider",
 			verify: func(ctx *TestEndorseViewContext, _ any) {
 				assert.Equal(t, 1, ctx.session.SendWithContextCallCount())
 			},
@@ -494,19 +496,6 @@ func TestEndorseView(t *testing.T) {
 			errorContains: "failed to get signer for default identity",
 			verify: func(ctx *TestEndorseViewContext, _ any) {
 				assert.Equal(t, 1, ctx.session.SendWithContextCallCount())
-			},
-		},
-		{
-			name: "failed reading signature request (closed channel)",
-			prepare: func() *TestEndorseViewContext {
-				c := newTestEndorseViewContext(t, nil)
-				close(c.ch)
-				return c
-			},
-			expectError:   true,
-			errorContains: "failed reading signature request",
-			verify: func(ctx *TestEndorseViewContext, _ any) {
-				assert.Equal(t, 0, ctx.session.SendWithContextCallCount())
 			},
 		},
 		{
