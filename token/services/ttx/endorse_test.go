@@ -7,6 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package ttx_test
 
 import (
+	"context"
+	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -28,12 +31,78 @@ type TestEndorseViewContextInput struct {
 }
 
 type TestEndorseViewContext struct {
-	ctx             *mock2.Context
-	tx              *ttx.Transaction
-	options         []ttx.TxOption
-	storageProvider *mock2.StorageProvider
-	storage         *mock2.Storage
-	session         *mock2.Session
+	ctx                     *mock2.Context
+	tx                      *ttx.Transaction
+	options                 []ttx.TxOption
+	storageProvider         *mock2.StorageProvider
+	storage                 *mock2.Storage
+	session                 *mock2.Session
+	tokenSigner             *mock.Signer
+	networkIdentitySigner   *mock2.NetworkIdentitySigner
+	ch                      chan *view.Message
+	tokenIP                 *mock.IdentityProvider
+	networkIdentityProvider *mock2.NetworkIdentityProvider
+}
+
+func newTransaction(t *testing.T) *ttx.Transaction {
+	t.Helper()
+
+	session := &mock2.Session{}
+	ch := make(chan *view.Message, 2)
+	session.ReceiveReturns(ch)
+
+	seed := strconv.Itoa(rand.Int())
+
+	tms := &mock2.TokenManagementServiceWithExtensions{}
+	tms.NetworkReturns("a_network" + seed)
+	tms.ChannelReturns("a_channel" + seed)
+	tmsID := token.TMSID{
+		Network:   "a_network" + seed,
+		Channel:   "a_channel" + seed,
+		Namespace: "a_namespace" + seed,
+	}
+	tms.IDReturns(tmsID)
+	tokenDes := &mock.Deserializer{}
+	tokenIP := &mock.IdentityProvider{}
+	tokenIP.IsMeReturns(true)
+	tokenSigner := &mock.Signer{}
+	tokenSigner.SignReturns([]byte("a_token_sigma"+seed), nil)
+	tokenIP.GetSignerReturns(tokenSigner, nil)
+	tms.SigServiceReturns(token.NewSignatureService(tokenDes, tokenIP))
+	tokenAPITMS := tokenapi.NewMockedManagementService(t, tmsID)
+	tms.SetTokenManagementServiceStub = func(arg1 *token.Request) error {
+		arg1.SetTokenService(tokenAPITMS)
+		return nil
+	}
+	tmsp := &mock2.TokenManagementServiceProvider{}
+	tmsp.TokenManagementServiceReturns(tms, nil)
+	network := &mock2.Network{}
+	network.ComputeTxIDReturns("an_anchor" + seed)
+	np := &mock2.NetworkProvider{}
+	np.GetNetworkReturns(network, nil)
+
+	req := token.NewRequest(nil, token.RequestAnchor("an_anchor"+seed))
+	req.Metadata.Issues = []*driver.IssueMetadata{
+		{
+			Issuer: driver.AuditableIdentity{
+				Identity: []byte("an_issuer" + seed),
+			},
+		},
+	}
+	tms.NewRequestReturns(req, nil)
+
+	ctx := &mock2.Context{}
+	ctx.SessionReturns(session)
+	ctx.ContextReturns(t.Context())
+	ctx.GetServiceReturnsOnCall(0, tmsp, nil)
+	ctx.GetServiceReturnsOnCall(1, np, nil)
+	ctx.GetServiceReturnsOnCall(2, &endpoint.Service{}, nil)
+	ctx.GetServiceReturnsOnCall(3, np, nil)
+	ctx.GetServiceReturnsOnCall(4, tmsp, nil)
+	tx, err := ttx.NewTransaction(ctx, []byte("a_signer"))
+	require.NoError(t, err)
+
+	return tx
 }
 
 func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput) *TestEndorseViewContext {
@@ -131,8 +200,17 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 		Payload: signatureRequestRaw,
 	}
 	// then the transaction
-	ch <- &view.Message{
-		Payload: txRaw,
+	if input.AnotherReceivedTx {
+		tx2 := newTransaction(t)
+		txRaw2, err := tx2.Bytes()
+		require.NoError(t, err)
+		ch <- &view.Message{
+			Payload: txRaw2,
+		}
+	} else {
+		ch <- &view.Message{
+			Payload: txRaw,
+		}
 	}
 
 	ctx.RunViewStub = func(v view.View, option ...view.RunViewOption) (interface{}, error) {
@@ -140,11 +218,16 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 	}
 
 	c := &TestEndorseViewContext{
-		ctx:             ctx,
-		tx:              tx,
-		storage:         storage,
-		storageProvider: storageProvider,
-		session:         session,
+		ctx:                     ctx,
+		tx:                      tx,
+		storage:                 storage,
+		storageProvider:         storageProvider,
+		session:                 session,
+		tokenSigner:             tokenSigner,
+		networkIdentitySigner:   nis,
+		ch:                      ch,
+		tokenIP:                 tokenIP,
+		networkIdentityProvider: networkIdentityProvider,
 	}
 
 	return c
@@ -233,9 +316,230 @@ func TestEndorseView(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "signature request's signer does not match the expected signer",
-			expectErr:     ttx.ErrSignerIdentityMismatch,
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 1, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed unmarshalling signature request",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				for len(c.ch) > 0 {
+					<-c.ch
+				}
+				c.ch <- &view.Message{Payload: []byte("garbage")}
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed unmarshalling signature request",
 			verify: func(ctx *TestEndorseViewContext, _ any) {
 				assert.Equal(t, 0, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed signing request",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.tokenSigner.SignReturns(nil, errors.New("sign error"))
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed signing request",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 0, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed sending signature back",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.session.SendWithContextReturns(errors.New("send error"))
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed sending signature back",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 1, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed receiving transaction",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				sigReq := <-c.ch
+				<-c.ch
+				c.ch <- sigReq
+				c.ch <- &view.Message{Payload: []byte("garbage transaction")}
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed receiving transaction",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 1, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed acknowledging transaction (signing)",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.networkIdentitySigner.SignReturns(nil, errors.New("ack sign error"))
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed to sign ack response",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 1, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed acknowledging transaction (sending)",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				count := 0
+				c.session.SendWithContextStub = func(ctx context.Context, payload []byte) error {
+					count++
+					if count == 2 {
+						return errors.New("ack send error")
+					}
+					return nil
+				}
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed sending ack",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 2, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed getting storage provider",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.ctx.GetServiceReturnsOnCall(4, nil, errors.New("storage provider error"))
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed to storage provider",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 2, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed getting identity provider",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.ctx.GetServiceReturnsOnCall(3, nil, errors.New("identity provider error"))
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed getting identity provider",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 1, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed getting signer",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.tokenIP.GetSignerReturns(nil, errors.New("signer error"))
+				return c
+			},
+			expectError:   true,
+			errorContains: "cannot find signer for",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 0, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "success with FromSignatureRequest",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.tx.FromSignatureRequest = &ttx.SignatureRequest{
+					Signer: []byte("an_issuer"),
+				}
+				// Clear channel and put only transaction
+				for len(c.ch) > 0 {
+					<-c.ch
+				}
+				txRaw, _ := c.tx.Bytes()
+				c.ch <- &view.Message{Payload: txRaw}
+				return c
+			},
+			expectError: false,
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 2, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed cache request",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.storageProvider.CacheRequestReturns(errors.New("cache error"))
+				return c
+			},
+			expectError: false,
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 2, ctx.session.SendWithContextCallCount())
+				assert.Equal(t, 1, ctx.storageProvider.CacheRequestCallCount())
+			},
+		},
+		{
+			name: "failed getting signer for ack",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.networkIdentityProvider.GetSignerReturns(nil, errors.New("ack signer error"))
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed to get signer for default identity",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 1, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "failed reading signature request (closed channel)",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				close(c.ch)
+				return c
+			},
+			expectError:   true,
+			errorContains: "failed reading signature request",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 0, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "multiple signers",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				c.tx.TokenRequest.Metadata.Issues = append(c.tx.TokenRequest.Metadata.Issues, &driver.IssueMetadata{
+					Issuer: driver.AuditableIdentity{
+						Identity: []byte("another_issuer"),
+					},
+				})
+
+				req1 := <-c.ch
+				tx := <-c.ch
+
+				c.ch = make(chan *view.Message, 3)
+				c.session.ReceiveReturns(c.ch)
+
+				c.ch <- req1
+
+				sigReq := &ttx.SignatureRequest{
+					Signer: []byte("another_issuer"),
+				}
+				sigReqRaw, _ := sigReq.Bytes()
+				c.ch <- &view.Message{Payload: sigReqRaw}
+
+				c.ch <- tx
+
+				return c
+			},
+			expectError: false,
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 3, ctx.session.SendWithContextCallCount())
 			},
 		},
 	}
