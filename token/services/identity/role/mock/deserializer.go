@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 )
 
 type Deserializer struct {
@@ -597,4 +598,4 @@ func (fake *Deserializer) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ driver.Deserializer = new(Deserializer)
+var _ role.Deserializer = new(Deserializer)

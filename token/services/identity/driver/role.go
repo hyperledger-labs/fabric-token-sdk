@@ -63,6 +63,8 @@ type (
 
 // Role is a container of long-term identities.
 // A long-term identity is then used to construct a wallet.
+//
+//go:generate counterfeiter -o mock/role.go -fake-name Role . Role
 type Role interface {
 	// ID returns the identifier of this role
 	ID() IdentityRoleType

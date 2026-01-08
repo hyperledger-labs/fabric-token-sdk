@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package wallet
+package role
 
 import (
 	"context"
@@ -17,35 +17,52 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+//go:generate counterfeiter -o mock/tv.go -fake-name TokenVault . TokenVault
 type TokenVault interface {
-	IsPending(ctx context.Context, id *token.ID) (bool, error)
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
 	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
 }
 
+//go:generate counterfeiter -o mock/wc.go -fake-name WalletsConfiguration . WalletsConfiguration
 type WalletsConfiguration interface {
 	CacheSizeForOwnerID(id string) int
 }
 
-type Factory struct {
+//go:generate counterfeiter -o mock/registry.go -fake-name Registry . Registry
+type Registry interface {
+	WalletIDs(ctx context.Context) ([]string, error)
+	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
+	Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, string, error)
+	RegisterWallet(ctx context.Context, id string, wallet driver.Wallet) error
+	BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID string, meta any) error
+	ContainsIdentity(ctx context.Context, i driver.Identity, id string) bool
+	GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error
+}
+
+//go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
+type Deserializer = driver.Deserializer
+
+// DefaultFactory creates wallets for the default role.
+type DefaultFactory struct {
 	Logger               logging.Logger
-	IdentityProvider     driver.IdentityProvider
+	IdentityProvider     IdentityProvider
 	TokenVault           TokenVault
 	WalletsConfiguration WalletsConfiguration
-	Deserializer         driver.Deserializer
+	Deserializer         Deserializer
 	MetricsProvider      metrics.Provider
 }
 
-func NewFactory(
+// NewDefaultFactory creates a new DefaultFactory.
+func NewDefaultFactory(
 	logger logging.Logger,
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	walletsConfiguration WalletsConfiguration,
-	deserializer driver.Deserializer,
+	deserializer Deserializer,
 	metricsProvider metrics.Provider,
-) *Factory {
-	return &Factory{
+) *DefaultFactory {
+	return &DefaultFactory{
 		Logger:               logger,
 		IdentityProvider:     identityProvider,
 		TokenVault:           tokenVault,
@@ -55,7 +72,7 @@ func NewFactory(
 	}
 }
 
-func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error) {
+func (w *DefaultFactory) NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error) {
 	switch role {
 	case identity.OwnerRole:
 		if info.Anonymous() {
@@ -95,7 +112,12 @@ func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleTy
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get issuer wallet identity for [%s]", id)
 		}
-		newWallet := NewIssuerWallet(w.Logger, w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
+		signer, err := w.IdentityProvider.GetSigner(ctx, idInfoIdentity)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get issuer signer [%s]", id)
+		}
+
+		newWallet := NewIssuerWallet(w.Logger, w.TokenVault, id, idInfoIdentity, signer)
 		if err := wr.BindIdentity(ctx, idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
@@ -107,7 +129,12 @@ func (w *Factory) NewWallet(ctx context.Context, id string, role identity.RoleTy
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s]", id)
 		}
-		newWallet := NewAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
+		signer, err := w.IdentityProvider.GetSigner(ctx, idInfoIdentity)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get auditor signer [%s]", id)
+		}
+
+		newWallet := NewAuditorWallet(id, idInfoIdentity, signer)
 		if err := wr.BindIdentity(ctx, idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}

@@ -33,6 +33,8 @@ type ListTokensOptions struct {
 }
 
 // Wallet models a generic wallet
+//
+//go:generate counterfeiter -o mock/w.go -fake-name Wallet . Wallet
 type Wallet interface {
 	// ID returns the ID of this wallet
 	ID() string
@@ -48,6 +50,8 @@ type Wallet interface {
 }
 
 // OwnerWallet models the wallet of a token recipient.
+//
+//go:generate counterfeiter -o mock/ow.go -fake-name OwnerWallet . OwnerWallet
 type OwnerWallet interface {
 	Wallet
 
@@ -91,6 +95,8 @@ type OwnerWallet interface {
 }
 
 // IssuerWallet models the wallet of an issuer
+//
+//go:generate counterfeiter -o mock/iw.go -fake-name IssuerWallet . IssuerWallet
 type IssuerWallet interface {
 	Wallet
 
@@ -103,6 +109,8 @@ type IssuerWallet interface {
 }
 
 // AuditorWallet models the wallet of an auditor
+//
+//go:generate counterfeiter -o mock/aw.go -fake-name AuditorWallet . AuditorWallet
 type AuditorWallet interface {
 	Wallet
 
@@ -112,6 +120,8 @@ type AuditorWallet interface {
 }
 
 // CertifierWallet models the wallet of a certifier
+//
+//go:generate counterfeiter -o mock/cw.go -fake-name CertifierWallet . CertifierWallet
 type CertifierWallet interface {
 	Wallet
 
