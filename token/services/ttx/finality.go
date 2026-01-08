@@ -13,8 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -22,8 +22,8 @@ import (
 const finalityTimeout = 10 * time.Minute
 
 type finalityDB interface {
-	AddStatusListener(txID string, ch chan common.StatusEvent)
-	DeleteStatusListener(txID string, ch chan common.StatusEvent)
+	AddStatusListener(txID string, ch chan db.TransactionStatusEvent)
+	DeleteStatusListener(txID string, ch chan db.TransactionStatusEvent)
 	GetStatus(ctx context.Context, txID string) (TxStatus, string, error)
 }
 
@@ -50,7 +50,7 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 	// Compile options
 	options, err := CompileOpts(f.opts...)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compile options")
+		return nil, errors.Wrapf(errors.Join(ErrInvalidInput, err), "failed to compile options")
 	}
 	txID := options.TxID
 	tmsID := options.TMSID
@@ -65,6 +65,7 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 	// Zero out any non-needed references to allow the garbage collector to reclaim them
 	f.opts = nil
 	options.Transaction = nil
+
 	return f.call(ctx, txID, tmsID, timeout)
 }
 
@@ -78,11 +79,11 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 		defer cancel()
 	}
 
-	transactionDB, err := ttxdb.GetByTMSId(ctx, tmsID)
+	transactionDB, err := dep.GetTransactionDB(ctx, tmsID)
 	if err != nil {
 		return nil, err
 	}
-	auditDB, err := auditdb.GetByTMSID(ctx, tmsID)
+	auditDB, err := dep.GetAuditDB(ctx, tmsID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +99,7 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 		counter++
 	}
 	if counter == 0 {
-		return nil, errors.Errorf("transaction [%s] is unknown for [%s]", txID, tmsID)
+		return nil, errors.Wrapf(ErrTransactionUnknown, "transaction [%s] is unknown for [%s]", txID, tmsID)
 	}
 
 	logger.DebugfContext(ctx.Context(), "Listen for DB finality")
@@ -127,7 +128,7 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB finalityDB, startCounter, iterations int) (int, error) {
 	// notice that adding the listener can happen after the event we are looking for has already happened
 	// therefore we need to check more often before the timeout happens
-	dbChannel := make(chan common.StatusEvent, 1)
+	dbChannel := make(chan db.TransactionStatusEvent, 1)
 
 	logger.DebugfContext(ctx, "Add status listener")
 	finalityDB.AddStatusListener(txID, dbChannel)
@@ -146,7 +147,7 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 		}
 		if status == ttxdb.Deleted {
 			logger.ErrorfContext(ctx, "Deleted tx")
-			return startCounter, errors.Errorf("transaction [%s] is not valid", txID)
+			return startCounter, errors.Wrapf(ErrFinalityInvalidTransaction, "transaction [%s] is not valid", txID)
 		}
 	}
 
@@ -158,7 +159,7 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 		select {
 		case <-ctx.Done():
 			timeout.Stop()
-			return i, errors.Errorf("failed to listen to transaction [%s], timeout due to context done received [%s]", txID, ctx.Err())
+			return i, errors.Wrapf(ErrFinalityTimeout, "failed to listen to transaction [%s] for timeout", txID)
 		case event := <-dbChannel:
 
 			trace.SpanFromContext(ctx).AddLink(trace.LinkFromContext(event.Ctx))
@@ -168,7 +169,7 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 				return i, nil
 			}
 			logger.ErrorfContext(ctx, "transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
-			return i, errors.Errorf("transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
+			return i, errors.Wrapf(ErrFinalityInvalidTransaction, "transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 		case <-timeout.C:
 			timeout.Stop()
 			logger.DebugfContext(ctx, "Got a timeout for finality of [%s], check the status", txID)
@@ -184,11 +185,11 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 				return i, nil
 			case ttxdb.Deleted:
 				logger.ErrorfContext(ctx, "Listen to finality of [%s]. NOT VALID", txID)
-				return i, errors.Errorf("transaction [%s] is not valid", txID)
+				return i, errors.Wrapf(ErrFinalityInvalidTransaction, "transaction [%s] is not valid", txID)
 			}
 		}
 	}
 
 	logger.ErrorfContext(ctx, "Is [%s] final? Failed to listen to transaction for timeout", txID)
-	return iterations, errors.Errorf("failed to listen to transaction [%s] for timeout", txID)
+	return iterations, errors.Wrapf(ErrFinalityTimeout, "failed to listen to transaction [%s] for timeout", txID)
 }

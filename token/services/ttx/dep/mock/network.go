@@ -359,16 +359,6 @@ func (fake *Network) NewEnvelopeReturnsOnCall(i int, result1 *network.Envelope) 
 func (fake *Network) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.addFinalityListenerMutex.RLock()
-	defer fake.addFinalityListenerMutex.RUnlock()
-	fake.anonymousIdentityMutex.RLock()
-	defer fake.anonymousIdentityMutex.RUnlock()
-	fake.computeTxIDMutex.RLock()
-	defer fake.computeTxIDMutex.RUnlock()
-	fake.localMembershipMutex.RLock()
-	defer fake.localMembershipMutex.RUnlock()
-	fake.newEnvelopeMutex.RLock()
-	defer fake.newEnvelopeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

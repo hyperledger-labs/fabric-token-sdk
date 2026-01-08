@@ -8,6 +8,7 @@ package db
 
 import (
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
@@ -27,3 +28,6 @@ type TransactionRecord = dbdriver.TransactionRecord
 
 // PageTransactionsIterator is an iterator of *TransactionRecord with support for pagination
 type PageTransactionsIterator = cdriver.PageIterator[*TransactionRecord]
+
+// TransactionStatusEvent models an event related to the status of a transaction
+type TransactionStatusEvent = common.StatusEvent

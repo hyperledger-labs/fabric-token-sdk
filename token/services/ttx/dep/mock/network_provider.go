@@ -94,8 +94,6 @@ func (fake *NetworkProvider) GetNetworkReturnsOnCall(i int, result1 dep.Network,
 func (fake *NetworkProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getNetworkMutex.RLock()
-	defer fake.getNetworkMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

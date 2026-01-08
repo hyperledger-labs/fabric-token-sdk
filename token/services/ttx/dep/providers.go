@@ -14,17 +14,20 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 )
 
 var (
 	networkProviderType         = reflect.TypeOf((*NetworkProvider)(nil))
 	tmsProviderType             = reflect.TypeOf((*TokenManagementServiceProvider)(nil))
 	networkIdentityProviderType = reflect.TypeOf((*NetworkIdentityProvider)(nil))
+	transactionDBProviderType   = reflect.TypeOf((*TransactionDBProvider)(nil))
+	auditDBProviderType         = reflect.TypeOf((*AuditDBProvider)(nil))
 )
 
-//go:generate counterfeiter -o mock/network.go -fake-name Network . Network
-
 // Network defines the subset of function of the network service needed by the ttx service.
+//
+//go:generate counterfeiter -o mock/network.go -fake-name Network . Network
 type Network interface {
 	AddFinalityListener(namespace string, txID string, listener network.FinalityListener) error
 	NewEnvelope() *network.Envelope
@@ -33,9 +36,9 @@ type Network interface {
 	ComputeTxID(n *network.TxID) string
 }
 
-//go:generate counterfeiter -o mock/network_provider.go -fake-name NetworkProvider . NetworkProvider
-
 // NetworkProvider given access to instances of the Network interface.
+//
+//go:generate counterfeiter -o mock/network_provider.go -fake-name NetworkProvider . NetworkProvider
 type NetworkProvider interface {
 	// GetNetwork returns the Network instance for the given network and channel identifiers.
 	GetNetwork(network string, channel string) (Network, error)
@@ -56,9 +59,9 @@ type SignatureService interface {
 	IsMe(ctx context.Context, party token.Identity) bool
 }
 
-//go:generate counterfeiter -o mock/tms.go -fake-name TokenManagementService . TokenManagementService
-
 // TokenManagementService defines the interface of a token management service needed by ttx service.
+//
+//go:generate counterfeiter -o mock/tms.go -fake-name TokenManagementService . TokenManagementService
 type TokenManagementService interface {
 	ID() token.TMSID
 	Network() string
@@ -72,17 +75,17 @@ type TokenManagementService interface {
 	Vault() *token.Vault
 }
 
-//go:generate counterfeiter -o mock/tmse.go -fake-name TokenManagementServiceWithExtensions . TokenManagementServiceWithExtensions
-
 // TokenManagementServiceWithExtensions extends TokenManagementService with additional functions needed by ttx service.
+//
+//go:generate counterfeiter -o mock/tmse.go -fake-name TokenManagementServiceWithExtensions . TokenManagementServiceWithExtensions
 type TokenManagementServiceWithExtensions interface {
 	TokenManagementService
 	SetTokenManagementService(req *token.Request) error
 }
 
-//go:generate counterfeiter -o mock/tmsp.go -fake-name TokenManagementServiceProvider . TokenManagementServiceProvider
-
 // TokenManagementServiceProvider provides instances of TokenManagementServiceWithExtensions.
+//
+//go:generate counterfeiter -o mock/tmsp.go -fake-name TokenManagementServiceProvider . TokenManagementServiceProvider
 type TokenManagementServiceProvider interface {
 	// TokenManagementService returns the TokenManagementServiceWithExtensions instance for the given options.
 	TokenManagementService(opts ...token.ServiceOption) (TokenManagementServiceWithExtensions, error)
@@ -101,14 +104,14 @@ func GetManagementService(sp token.ServiceProvider, opts ...token.ServiceOption)
 	return tmsProvider.TokenManagementService(opts...)
 }
 
-//go:generate counterfeiter -o mock/nis.go -fake-name NetworkIdentitySigner . NetworkIdentitySigner
-
 // NetworkIdentitySigner is an alias for the FSC's Signer interface
+//
+//go:generate counterfeiter -o mock/nis.go -fake-name NetworkIdentitySigner . NetworkIdentitySigner
 type NetworkIdentitySigner = cdriver.Signer
 
-//go:generate counterfeiter -o mock/nip.go -fake-name NetworkIdentityProvider . NetworkIdentityProvider
-
 // NetworkIdentityProvider defines the subset of function of the network identity provider needed by the ttx service.
+//
+//go:generate counterfeiter -o mock/nip.go -fake-name NetworkIdentityProvider . NetworkIdentityProvider
 type NetworkIdentityProvider interface {
 	DefaultIdentity() view.Identity
 	GetSigner(identity view.Identity) (NetworkIdentitySigner, error)
@@ -125,4 +128,64 @@ func GetNetworkIdentityProvider(sp token.ServiceProvider) (NetworkIdentityProvid
 		panic("implementation error, type must be NetworkIdentityProvider")
 	}
 	return nip, nil
+}
+
+// TransactionDB defines the subset of function of the transaction db needed by the ttx service.
+//
+//go:generate counterfeiter -o mock/transaction_db.go -fake-name TransactionDB . TransactionDB
+type TransactionDB interface {
+	GetStatus(ctx context.Context, txID string) (token.TxStatus, string, error)
+	AddStatusListener(txID string, ch chan db.TransactionStatusEvent)
+	DeleteStatusListener(txID string, ch chan db.TransactionStatusEvent)
+}
+
+// TransactionDBProvider is used to retrieves instances of TransactionDB
+//
+//go:generate counterfeiter -o mock/transaction_db_provider.go -fake-name TransactionDBProvider . TransactionDBProvider
+type TransactionDBProvider interface {
+	// TransactionDB returns the TransactionDB for the given tms id
+	TransactionDB(tmsID token.TMSID) (TransactionDB, error)
+}
+
+// GetTransactionDB returns the TransactionDB for the given tms ID
+func GetTransactionDB(sp token.ServiceProvider, tmsID token.TMSID) (TransactionDB, error) {
+	s, err := sp.GetService(transactionDBProviderType)
+	if err != nil {
+		return nil, err
+	}
+	provider, ok := s.(TransactionDBProvider)
+	if !ok {
+		panic("implementation error, type must be TransactionDBProvider")
+	}
+	return provider.TransactionDB(tmsID)
+}
+
+// AuditDB defines the subset of function of the audit db needed by the ttx service.
+//
+//go:generate counterfeiter -o mock/audit_db.go -fake-name AuditDB . AuditDB
+type AuditDB interface {
+	GetStatus(ctx context.Context, txID string) (token.TxStatus, string, error)
+	AddStatusListener(txID string, ch chan db.TransactionStatusEvent)
+	DeleteStatusListener(txID string, ch chan db.TransactionStatusEvent)
+}
+
+// AuditDBProvider is used to retrieves instances of AuditDB
+//
+//go:generate counterfeiter -o mock/audit_db_provider.go -fake-name AuditDBProvider . AuditDBProvider
+type AuditDBProvider interface {
+	// AuditDB returns the AuditDB for the given tms id
+	AuditDB(tmsID token.TMSID) (AuditDB, error)
+}
+
+// GetAuditDB returns the AuditDB for the given tms ID
+func GetAuditDB(sp token.ServiceProvider, tmsID token.TMSID) (AuditDB, error) {
+	s, err := sp.GetService(auditDBProviderType)
+	if err != nil {
+		return nil, err
+	}
+	provider, ok := s.(AuditDBProvider)
+	if !ok {
+		panic("implementation error, type must be AuditDBProvider")
+	}
+	return provider.AuditDB(tmsID)
 }
