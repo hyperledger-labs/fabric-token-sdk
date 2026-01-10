@@ -12,7 +12,7 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 )
@@ -43,7 +43,7 @@ func (a *TxOwner) Append(ctx context.Context, tx *Transaction) error {
 }
 
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (a *TxOwner) Transactions(ctx context.Context, params db.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error) {
+func (a *TxOwner) Transactions(ctx context.Context, params db.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*storage.TransactionRecord], error) {
 	return a.owner.ttxStoreService.Transactions(ctx, params, pagination)
 }
 
@@ -53,7 +53,7 @@ func (a *TxOwner) TransactionInfo(ctx context.Context, txID string) (*Transactio
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *TxOwner) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+func (a *TxOwner) SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error {
 	return a.owner.SetStatus(ctx, txID, status, message)
 }
 

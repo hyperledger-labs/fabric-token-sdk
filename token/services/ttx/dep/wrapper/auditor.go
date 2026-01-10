@@ -9,8 +9,8 @@ package wrapper
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/auditor"
 )
 

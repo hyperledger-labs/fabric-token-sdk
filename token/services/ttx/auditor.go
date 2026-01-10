@@ -15,9 +15,9 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	dauditor "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
@@ -83,7 +83,7 @@ func (a *Auditor) NewHoldingsFilter() *auditdb.HoldingsFilter {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *Auditor) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+func (a *Auditor) SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error {
 	return a.StoreService.SetStatus(ctx, txID, status, message)
 }
 
