@@ -8,7 +8,7 @@ package sdk
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	"go.uber.org/dig"
 )
 

@@ -13,7 +13,7 @@ import (
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokenlockdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokenlockdb"
 )
 
 type ConfigProvider interface {

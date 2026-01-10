@@ -12,11 +12,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
@@ -139,7 +139,7 @@ func (a *Service) Release(ctx context.Context, tx Transaction) {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *Service) SetStatus(ctx context.Context, txID string, status db.TxStatus, message string) error {
+func (a *Service) SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error {
 	return a.auditDB.SetStatus(ctx, txID, status, message)
 }
 

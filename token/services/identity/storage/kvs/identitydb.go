@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 )
 
 const (
@@ -45,7 +45,7 @@ func NewIdentityStore(kvs KVS, tmsID token.TMSID) *IdentityStore {
 	return &IdentityStore{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *IdentityStore) AddConfiguration(ctx context.Context, wp driver.IdentityConfiguration) error {
+func (s *IdentityStore) AddConfiguration(ctx context.Context, wp storage.IdentityConfiguration) error {
 	k, err := kvs.CreateCompositeKey(
 		IdentityDBPrefix,
 		[]string{
@@ -235,11 +235,11 @@ type IdentityConfigurationsIterator struct {
 	kvs.Iterator
 }
 
-func (w *IdentityConfigurationsIterator) Next() (*driver.IdentityConfiguration, error) {
+func (w *IdentityConfigurationsIterator) Next() (*storage.IdentityConfiguration, error) {
 	if !w.HasNext() {
 		return nil, nil
 	}
-	idConfig := &driver.IdentityConfiguration{}
+	idConfig := &storage.IdentityConfiguration{}
 	_, err := w.Iterator.Next(idConfig)
 	if err != nil {
 		return nil, err

@@ -13,12 +13,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -74,7 +74,7 @@ func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *Service) SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error {
+func (a *Service) SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error {
 	return a.ttxStoreService.SetStatus(ctx, txID, status, message)
 }
 

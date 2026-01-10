@@ -14,8 +14,8 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/sqlite"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/multiplexed"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
 	"github.com/stretchr/testify/assert"
 )

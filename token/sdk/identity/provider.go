@@ -9,9 +9,9 @@ package identity
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/walletdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/walletdb"
 )
 
 type DBStorageProvider struct {
