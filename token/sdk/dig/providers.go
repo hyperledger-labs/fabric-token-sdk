@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/multiplexed"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 	"go.uber.org/dig"
 )
 

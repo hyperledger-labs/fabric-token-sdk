@@ -64,7 +64,6 @@ type TransactionStore interface {
 	GetStatus(ctx context.Context, txID string) (TxStatus, string, error)
 
 	// QueryTransactions returns a list of transactions that match the given criteria
-
 	QueryTransactions(ctx context.Context, params QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*TransactionRecord], error)
 
 	// QueryMovements returns a list of movement records

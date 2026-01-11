@@ -12,13 +12,13 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
 )
 
 type VersionKeeperProvider lazy.Provider[token.TMSID, *VersionKeeper]
 
 func NewVersionKeeperProvider() VersionKeeperProvider {
-	return lazy.NewProviderWithKeyMapper(db.Key, func(token.TMSID) (*VersionKeeper, error) {
+	return lazy.NewProviderWithKeyMapper(services.Key, func(token.TMSID) (*VersionKeeper, error) {
 		return &VersionKeeper{}, nil
 	})
 }

@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
@@ -24,9 +24,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type StoreServiceManager db.StoreServiceManager[*ttxdb.StoreService]
+type StoreServiceManager = ttxdb.StoreServiceManager
 
-type TokensServiceManager db.ServiceManager[*tokens.Service]
+type TokensServiceManager services.ServiceManager[*tokens.Service]
 
 type CheckServiceProvider interface {
 	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Service) (CheckService, error)
@@ -50,7 +50,7 @@ func NewServiceManager(
 	checkServiceProvider CheckServiceProvider,
 ) *ServiceManager {
 	return &ServiceManager{
-		p: lazy.NewProviderWithKeyMapper(db.Key, func(tmsID token.TMSID) (*Service, error) {
+		p: lazy.NewProviderWithKeyMapper(services.Key, func(tmsID token.TMSID) (*Service, error) {
 			ttxStoreService, err := ttxStoreServiceManager.StoreServiceByTMSId(tmsID)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
@@ -308,7 +307,7 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 
 	// get all except last year's
 	t1 := time.Now().Add(time.Second * 3)
-	it, err := db.QueryTransactions(ctx, driver3.QueryTransactionsParams{From: &t0, To: &t1}, pagination.None())
+	it, err := db.QueryTransactions(ctx, driver3.QueryTransactionsParams{From: &t0, To: &t1}, nil)
 	assert.NoError(t, err)
 	for _, exp := range txs {
 		act, err := it.Items.Next()
@@ -319,7 +318,7 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 
 	// get all tx from before the first
 	yesterday := t0.AddDate(0, 0, -1).Local().UTC().Truncate(time.Second)
-	it, err = db.QueryTransactions(ctx, driver3.QueryTransactionsParams{To: &yesterday}, pagination.None())
+	it, err = db.QueryTransactions(ctx, driver3.QueryTransactionsParams{To: &yesterday}, nil)
 	assert.NoError(t, err)
 	defer it.Items.Close()
 
@@ -714,7 +713,6 @@ func TTransactionQueries(t *testing.T, db driver3.TokenTransactionStore) {
 		name        string
 		params      driver3.QueryTransactionsParams
 		expectedLen int
-		expectedSql string
 	}{
 		{
 			name:        "No params",
@@ -821,7 +819,7 @@ func TTransactionQueries(t *testing.T, db driver3.TokenTransactionStore) {
 
 func getTransactions(t *testing.T, db driver3.TokenTransactionStore, params driver3.QueryTransactionsParams) []*driver3.TransactionRecord {
 	t.Helper()
-	records, err := db.QueryTransactions(t.Context(), params, pagination.None())
+	records, err := db.QueryTransactions(t.Context(), params, nil)
 	assert.NoError(t, err)
 	txs, err := iterators.ReadAllPointers(records.Items)
 	assert.NoError(t, err)

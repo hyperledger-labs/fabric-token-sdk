@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
@@ -31,10 +30,10 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			tokenDB, ok := db.(*common.TokenStore)
+			tokenDB, ok := db.(TestTokenDB)
 			assert.True(xt, ok)
 			defer utils.IgnoreError(tokenDB.Close)
-			c.Fn(t, db.(*common.TokenStore))
+			c.Fn(t, db.(TestTokenDB))
 		})
 	}
 	// for _, c := range TokenNotifierCases {

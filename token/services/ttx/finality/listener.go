@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -36,7 +35,7 @@ type Listener struct {
 	ttxDB       transactionDB
 	tokens      *tokens.Service
 	tracer      trace.Tracer
-	retryRunner common.RetryRunner
+	retryRunner utils.RetryRunner
 }
 
 func NewListener(logger logging.Logger, tmsProvider dep.TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Service, tracer trace.Tracer) *Listener {
@@ -47,7 +46,7 @@ func NewListener(logger logging.Logger, tmsProvider dep.TokenManagementServicePr
 		ttxDB:       ttxDB,
 		tokens:      tokens,
 		tracer:      tracer,
-		retryRunner: common.NewRetryRunner(common.Infinitely, time.Second, true),
+		retryRunner: utils.NewRetryRunner(logger, utils.Infinitely, time.Second, true),
 	}
 }
 

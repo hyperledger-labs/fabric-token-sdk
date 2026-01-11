@@ -9,7 +9,7 @@ package keystoredb
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/multiplexed"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 )
 
 type StoreServiceManager db.StoreServiceManager[*StoreService]

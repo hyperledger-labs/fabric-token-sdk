@@ -13,15 +13,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 )
 
 var managerType = reflect.TypeOf((*ServiceManager)(nil))
 
-type StoreServiceManager db.StoreServiceManager[*tokendb.StoreService]
+type StoreServiceManager = tokendb.StoreServiceManager
 
 type TMSProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
@@ -44,7 +44,7 @@ func NewServiceManager(
 	notifier events.Publisher,
 ) *ServiceManager {
 	return &ServiceManager{
-		p: lazy.NewProviderWithKeyMapper(db.Key, func(tmsID token.TMSID) (*Service, error) {
+		p: lazy.NewProviderWithKeyMapper(services.Key, func(tmsID token.TMSID) (*Service, error) {
 			db, err := storeServiceManager.StoreServiceByTMSId(tmsID)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get tokendb for [%s]", tmsID)

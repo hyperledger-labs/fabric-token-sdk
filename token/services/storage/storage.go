@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package storage
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
 
@@ -33,4 +34,5 @@ type (
 	WalletStore           = dbdriver.WalletStore
 	IdentityStore         = dbdriver.IdentityStore
 	KeyStore              = dbdriver.KeyStore
+	StatusEvent           = common.StatusEvent
 )

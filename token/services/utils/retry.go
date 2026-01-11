@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package utils
 
 import (
 	"errors"
@@ -22,7 +22,7 @@ var ErrMaxRetriesExceeded = errors.New("maximum number of retries exceeded")
 
 const Infinitely = -1
 
-func NewRetryRunner(maxTimes int, delay time.Duration, expBackoff bool) *retryRunner {
+func NewRetryRunner(logger logging2.Logger, maxTimes int, delay time.Duration, expBackoff bool) *retryRunner {
 	return &retryRunner{
 		initialDelay: delay,
 		expBackoff:   expBackoff,

@@ -21,7 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/multiplexed"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
 

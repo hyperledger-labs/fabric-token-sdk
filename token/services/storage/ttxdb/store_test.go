@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/multiplexed"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
