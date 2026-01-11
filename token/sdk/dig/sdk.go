@@ -32,7 +32,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	ftsconfig "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -151,16 +150,12 @@ func (p *SDK) Install() error {
 		p.Container().Provide(ttxdb.NewStoreServiceManager),
 		p.Container().Provide(tokendb.NewStoreServiceManager),
 		p.Container().Provide(tokendb.NewNotifierManager),
-		p.Container().Provide(digutils.Identity[tokendb.StoreServiceManager](), dig.As(new(tokens.StoreServiceManager))),
 		p.Container().Provide(auditdb.NewStoreServiceManager),
-		p.Container().Provide(digutils.Identity[auditdb.StoreServiceManager](), dig.As(new(auditor.StoreServiceManager))),
 		p.Container().Provide(identitydb.NewStoreServiceManager),
 		p.Container().Provide(keystoredb.NewStoreServiceManager),
 		p.Container().Provide(walletdb.NewStoreServiceManager),
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
 		p.Container().Provide(identity.NewDBStorageProvider),
-		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
-		p.Container().Provide(digutils.Identity[*db.AuditorCheckServiceProvider](), dig.As(new(auditor.CheckServiceProvider))),
 		p.Container().Provide(auditor.NewServiceManager),
 		p.Container().Provide(tokens.NewServiceManager),
 		p.Container().Provide(digutils.Identity[*tokens.ServiceManager](), dig.As(new(auditor.TokensServiceManager))),
@@ -171,6 +166,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(memory.NewNamedDriver, dig.Group("token-db-drivers")),
 		p.Container().Provide(newMultiplexedDriver),
 		p.Container().Provide(NewAuditorCheckServiceProvider),
+		p.Container().Provide(digutils.Identity[*db.AuditorCheckServiceProvider](), dig.As(new(auditor.CheckServiceProvider))),
 		p.Container().Provide(NewOwnerCheckServiceProvider),
 
 		// ttx service
@@ -186,7 +182,6 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*db.OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
 		p.Container().Provide(ttx.NewServiceManager),
 		p.Container().Provide(ttx.NewMetrics),
-		p.Container().Provide(digutils.Identity[ttxdb.StoreServiceManager](), dig.As(new(ttx.StoreServiceManager))),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")

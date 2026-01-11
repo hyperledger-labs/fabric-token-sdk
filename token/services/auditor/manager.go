@@ -30,7 +30,7 @@ type TokenManagementServiceProvider interface {
 
 type StoreServiceManager = auditdb.StoreServiceManager
 
-type TokensServiceManager services.ServiceManager[*tokens.Service]
+type TokensServiceManager = services.ServiceManager[*tokens.Service]
 
 type CheckServiceProvider interface {
 	CheckService(id token.TMSID, adb *auditdb.StoreService, tdb *tokens.Service) (CheckService, error)

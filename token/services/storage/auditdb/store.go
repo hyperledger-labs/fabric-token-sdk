@@ -25,6 +25,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
 
+var (
+	managerType = reflect.TypeOf((*StoreServiceManager)(nil))
+	logger      = logging.MustGetLogger()
+)
+
 type tokenRequest interface {
 	ID() token.RequestAnchor
 	AuditRecord(ctx context.Context) (*token.AuditRecord, error)
@@ -35,11 +40,6 @@ type tokenRequest interface {
 }
 
 type StoreServiceManager db.StoreServiceManager[*StoreService]
-
-var (
-	managerType = reflect.TypeOf((*StoreServiceManager)(nil))
-	logger      = logging.MustGetLogger()
-)
 
 func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
 	return db.NewStoreServiceManager(cp, "auditdb.persistence", drivers.NewAuditTransaction, newStoreService)
@@ -109,7 +109,7 @@ type QueryTokenRequestsParams = driver2.QueryTokenRequestsParams
 // Pagination defines the pagination for querying movements
 type Pagination = cdriver.Pagination
 
-// Pagination iterator defines the pagination iterator for movements query results
+// PageTransactionsIterator iterator defines the pagination iterator for movements query results
 type PageTransactionsIterator = cdriver.PageIterator[*TransactionRecord]
 
 // Wallet models a wallet
