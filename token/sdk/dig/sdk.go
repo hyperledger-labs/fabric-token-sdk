@@ -32,6 +32,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	ftsconfig "github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -156,6 +157,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(walletdb.NewStoreServiceManager),
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
 		p.Container().Provide(identity.NewDBStorageProvider),
+		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(auditor.NewServiceManager),
 		p.Container().Provide(tokens.NewServiceManager),
 		p.Container().Provide(digutils.Identity[*tokens.ServiceManager](), dig.As(new(auditor.TokensServiceManager))),
