@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
 // GetIdentityFunc is a function that returns an Identity and its associated audit info for the given options
@@ -56,7 +56,7 @@ func (i *IdentityInfo) EnrollmentID() string {
 	return i.localIdentity.EnrollmentID
 }
 
-func (i *IdentityInfo) Get(ctx context.Context) (driver2.Identity, []byte, error) {
+func (i *IdentityInfo) Get(ctx context.Context) (idriver.Identity, []byte, error) {
 	return i.getIdentity(ctx)
 }
 

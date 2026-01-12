@@ -17,7 +17,7 @@ type IdentityRoleType int
 
 const (
 	// IssuerRole is the role of an issuer
-	IssuerRole = iota
+	IssuerRole IdentityRoleType = iota
 	// AuditorRole is the role of an auditor
 	AuditorRole
 	// OwnerRole is the role of an owner

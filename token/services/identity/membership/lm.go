@@ -45,6 +45,7 @@ type Config interface {
 	// TranslatePath converts a configured path (may contain ~ or env vars)
 	// into an absolute path usable by the runtime.
 	TranslatePath(path string) string
+	IdentitiesForRole(role idriver.IdentityRoleType) ([]idriver.ConfiguredIdentity, error)
 }
 
 // SignerDeserializerManager models the part of idriver.SignerDeserializerManager
@@ -56,6 +57,9 @@ type Config interface {
 type SignerDeserializerManager interface {
 	AddTypedSignerDeserializer(typ idriver.IdentityType, d idriver.TypedSignerDeserializer)
 }
+
+//go:generate counterfeiter -o mock/ici.go -fake-name IdentityConfigurationIterator . IdentityConfigurationIterator
+type IdentityConfigurationIterator = idriver.IdentityConfigurationIterator
 
 // IdentityStoreService models the part of idriver.IdentityStoreService that
 // LocalMembership needs. It provides a persistent place to record which
@@ -71,7 +75,7 @@ type IdentityStoreService interface {
 	ConfigurationExists(ctx context.Context, id, typ, url string) (bool, error)
 	// IteratorConfigurations returns an iterator over all configurations of
 	// a given type stored in the persistent store.
-	IteratorConfigurations(ctx context.Context, configurationType string) (idriver.IdentityConfigurationIterator, error)
+	IteratorConfigurations(ctx context.Context, configurationType string) (IdentityConfigurationIterator, error)
 }
 
 // IdentityProvider is an alias for the driver-level identity provider used to
@@ -285,7 +289,7 @@ func (l *LocalMembership) IDs() ([]string, error) {
 // identities (to give higher priority to the matching ones). It also loads any identities found
 // in the persistent identity store. The function will log errors for identities that fail to
 // register but will try to continue loading the remaining entries.
-func (l *LocalMembership) Load(ctx context.Context, identities []*idriver.ConfiguredIdentity, targets []view.Identity) error {
+func (l *LocalMembership) Load(ctx context.Context, identities []idriver.ConfiguredIdentity, targets []view.Identity) error {
 	l.localIdentitiesMutex.Lock()
 	defer l.localIdentitiesMutex.Unlock()
 
@@ -391,14 +395,16 @@ func (l *LocalMembership) firstDefaultIdentifier() *LocalIdentity {
 	return nil
 }
 
-func (l *LocalMembership) toIdentityConfiguration(identities []*idriver.ConfiguredIdentity) ([]IdentityConfiguration, []bool, error) {
+func (l *LocalMembership) toIdentityConfiguration(identities []idriver.ConfiguredIdentity) ([]IdentityConfiguration, []bool, error) {
 	ics := make([]IdentityConfiguration, len(identities))
 	defaults := make([]bool, len(identities))
+
 	for i, ci := range identities {
-		optsRaw, err := yaml.Marshal(ci.Opts)
+		optsRaw, err := marshalOpts(ci.Opts)
 		if err != nil {
 			return nil, nil, errors.WithMessagef(err, "failed to marshal identity options")
 		}
+
 		ics[i] = IdentityConfiguration{
 			ID:     ci.ID,
 			URL:    ci.Path,
@@ -660,4 +666,14 @@ type TypedSignerDeserializer struct {
 
 func (t *TypedSignerDeserializer) DeserializeSigner(ctx context.Context, _ identity.Type, raw []byte) (tdriver.Signer, error) {
 	return t.KeyManager.DeserializeSigner(ctx, raw)
+}
+
+func marshalOpts(opts interface{}) (optsRaw []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.Errorf("panic caught while marshalling identity options: %v", r)
+		}
+	}()
+	optsRaw, err = yaml.Marshal(opts)
+	return
 }

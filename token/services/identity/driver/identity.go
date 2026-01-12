@@ -46,6 +46,7 @@ type WalletStoreService interface {
 	Close() error
 }
 
+//go:generate counterfeiter -o mock/iss.go -fake-name IdentityStoreService . IdentityStoreService
 type IdentityStoreService interface {
 	// AddConfiguration stores an identity and the path to the credentials relevant to this identity
 	AddConfiguration(ctx context.Context, wp IdentityConfiguration) error

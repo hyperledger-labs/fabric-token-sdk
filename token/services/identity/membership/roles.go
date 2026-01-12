@@ -25,6 +25,7 @@ var toString = map[identity.RoleType]string{
 	identity.CertifierRole: "Certifier",
 }
 
+//go:generate counterfeiter -o mock/sp.go -fake-name StorageProvider . StorageProvider
 type StorageProvider interface {
 	IdentityStore(tmsID token.TMSID) (driver.IdentityStoreService, error)
 }
@@ -33,24 +34,24 @@ type StorageProvider interface {
 type RoleFactory struct {
 	Logger                 logging.Logger
 	TMSID                  token.TMSID
-	Config                 driver.Config
+	Config                 Config
 	FSCIdentity            driver.Identity
 	NetworkDefaultIdentity driver.Identity
-	IdentityProvider       driver.IdentityProvider
+	IdentityProvider       IdentityProvider
 	StorageProvider        StorageProvider
-	DeserializerManager    driver.SignerDeserializerManager
+	DeserializerManager    SignerDeserializerManager
 }
 
 // NewRoleFactory creates a new RoleFactory
 func NewRoleFactory(
 	logger logging.Logger,
 	TMSID token.TMSID,
-	config driver.Config,
+	config Config,
 	fscIdentity driver.Identity,
 	networkDefaultIdentity driver.Identity,
 	identityProvider driver.IdentityProvider,
 	storageProvider StorageProvider,
-	deserializerManager driver.SignerDeserializerManager,
+	deserializerManager SignerDeserializerManager,
 ) *RoleFactory {
 	return &RoleFactory{
 		Logger:                 logger,

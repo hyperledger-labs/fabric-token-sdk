@@ -18,11 +18,11 @@ type Config interface {
 }
 
 type Wallets struct {
-	DefaultCacheSize int                          `yaml:"defaultCacheSize,omitempty"`
-	Certifiers       []*driver.ConfiguredIdentity `yaml:"certifiers,omitempty"`
-	Owners           []*driver.ConfiguredIdentity `yaml:"owners,omitempty"`
-	Issuers          []*driver.ConfiguredIdentity `yaml:"issuers,omitempty"`
-	Auditors         []*driver.ConfiguredIdentity `yaml:"auditors,omitempty"`
+	DefaultCacheSize int                         `yaml:"defaultCacheSize,omitempty"`
+	Certifiers       []driver.ConfiguredIdentity `yaml:"certifiers,omitempty"`
+	Owners           []driver.ConfiguredIdentity `yaml:"owners,omitempty"`
+	Issuers          []driver.ConfiguredIdentity `yaml:"issuers,omitempty"`
+	Auditors         []driver.ConfiguredIdentity `yaml:"auditors,omitempty"`
 }
 
 type IdentityConfig struct {
@@ -58,7 +58,7 @@ func (i *IdentityConfig) TranslatePath(path string) string {
 	return i.Config.TranslatePath(path)
 }
 
-func (i *IdentityConfig) IdentitiesForRole(role identity.RoleType) ([]*driver.ConfiguredIdentity, error) {
+func (i *IdentityConfig) IdentitiesForRole(role identity.RoleType) ([]driver.ConfiguredIdentity, error) {
 	switch role {
 	case driver.IssuerRole:
 		return i.Wallets.Issuers, nil
