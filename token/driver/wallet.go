@@ -87,7 +87,8 @@ type OwnerWallet interface {
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string
 
-	// RegisterRecipient register the given recipient data
+	// RegisterRecipient register the passed recipient data.
+	// The data is passed as pointer to allow the underlying token driver to modify them if needed.
 	RegisterRecipient(ctx context.Context, data *RecipientData) error
 
 	// Remote returns true if this wallet is verify only, meaning that the corresponding secret key is external to this wallet
