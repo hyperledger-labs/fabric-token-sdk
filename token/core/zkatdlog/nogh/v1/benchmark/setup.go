@@ -25,9 +25,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	ix509 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
 )
 
 // SetupConfiguration holds the prepared public parameters and related

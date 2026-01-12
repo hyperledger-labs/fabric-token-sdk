@@ -35,6 +35,7 @@ type AuditInfo interface {
 	RevocationHandle() string
 }
 
+//go:generate counterfeiter -o mock/aides.go -fake-name AuditInfoDeserializer . AuditInfoDeserializer
 type AuditInfoDeserializer interface {
 	DeserializeAuditInfo(ctx context.Context, raw []byte) (AuditInfo, error)
 }

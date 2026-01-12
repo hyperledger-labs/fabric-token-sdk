@@ -97,7 +97,7 @@ integration-tests-dvp-dlog:
 tidy:
 	@go mod tidy
 	cd tools; go mod tidy
-	cd token/services/identity/storage/kvs/hashicorp; go mod tidy
+	cd token/services/storage/db/kvs/hashicorp; go mod tidy
 
 .PHONY: clean
 clean:

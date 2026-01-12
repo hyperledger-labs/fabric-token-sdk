@@ -88,7 +88,7 @@ It uses the `identitydb` service for the `IdentityDB` and the `WalletDB`, and th
 
 The HashiCorp Vault Secrets Engine is a modular component of Vault designed to securely manage, store, or generate sensitive data such as API keys, passwords, certificates, and encryption keys.
 The identity service provides an implementation for both the `IdentityDB` and `Keystore` based on the `HashiCorp Vault Secrets Engine`.
-This implementation can be found under [`hashicorp`](./../../token/services/identity/storage/kvs/hashicorp).
+This implementation can be found under [`hashicorp`](../../token/services/storage/db/kvs/hashicorp).
 This implementation requires to configure the `HashiCorp Vault Secrets Engine` to run in non-versioned mode (i.e., stores the most recently written value for a key). 
 For more information about non-versioned secrets engine mode, refer to the (https://developer.hashicorp.com/vault/docs/secrets/kv/kv-v1).
 
