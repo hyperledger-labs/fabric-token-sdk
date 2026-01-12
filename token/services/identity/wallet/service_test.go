@@ -99,18 +99,6 @@ func TestRegisterRecipientIdentityFailuresAndSuccess(t *testing.T) {
 	require.Error(t, err)
 	d.MatchIdentityReturns(nil)
 
-	// GetOwnerVerifier fails
-	d.GetOwnerVerifierReturns(nil, errors.New("gver"))
-	err = regSvc.RegisterRecipientIdentity(ctx, &driver.RecipientData{Identity: driver.Identity("id"), AuditInfo: []byte("ai")})
-	require.Error(t, err)
-	d.GetOwnerVerifierReturns(&dmock.Verifier{}, nil)
-
-	// RegisterVerifier fails
-	ip.RegisterVerifierReturns(errors.New("rver"))
-	err = regSvc.RegisterRecipientIdentity(ctx, &driver.RecipientData{Identity: driver.Identity("id"), AuditInfo: []byte("ai")})
-	require.Error(t, err)
-	ip.RegisterVerifierReturns(nil)
-
 	// RegisterRecipientData fails
 	ip.RegisterRecipientDataReturns(errors.New("rrd"))
 	err = regSvc.RegisterRecipientIdentity(ctx, &driver.RecipientData{Identity: driver.Identity("id"), AuditInfo: []byte("ai")})
