@@ -16,8 +16,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
 )
 
 const DefaultDriverVersion = setup.ProtocolV1

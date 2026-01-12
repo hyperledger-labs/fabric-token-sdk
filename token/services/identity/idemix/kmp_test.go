@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
 	"github.com/stretchr/testify/assert"
 )
 
