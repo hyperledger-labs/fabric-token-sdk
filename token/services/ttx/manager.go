@@ -15,18 +15,18 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"go.opentelemetry.io/otel/trace"
 )
 
-type StoreServiceManager db.StoreServiceManager[*ttxdb.StoreService]
+type StoreServiceManager = ttxdb.StoreServiceManager
 
-type TokensServiceManager db.ServiceManager[*tokens.Service]
+type TokensServiceManager services.ServiceManager[*tokens.Service]
 
 type CheckServiceProvider interface {
 	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Service) (CheckService, error)
@@ -50,7 +50,7 @@ func NewServiceManager(
 	checkServiceProvider CheckServiceProvider,
 ) *ServiceManager {
 	return &ServiceManager{
-		p: lazy.NewProviderWithKeyMapper(db.Key, func(tmsID token.TMSID) (*Service, error) {
+		p: lazy.NewProviderWithKeyMapper(services.Key, func(tmsID token.TMSID) (*Service, error) {
 			ttxStoreService, err := ttxStoreServiceManager.StoreServiceByTMSId(tmsID)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
@@ -102,11 +102,11 @@ func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) erro
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	it, err := db.ttxStoreService.TokenRequests(ctx, ttxdb.QueryTokenRequestsParams{Statuses: []TxStatus{driver.Pending}})
+	it, err := db.ttxStoreService.TokenRequests(ctx, ttxdb.QueryTokenRequestsParams{Statuses: []TxStatus{storage.Pending}})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
-	return iterators.ForEach(it, func(record *driver.TokenRequestRecord) error {
+	return iterators.ForEach(it, func(record *storage.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
 		return net.AddFinalityListener(
 			tmsID.Namespace,

@@ -27,7 +27,7 @@ This system leverages several stores, each with a specific purpose:
   For applications requiring enhanced auditability, the `auditdb` provides an additional layer of transparency.
   It meticulously stores audit records for transactions that have undergone the auditing process.
   This functionality is particularly valuable for scenarios where regulatory compliance or tamper-proof records are essential.
-  The `auditdb.StoreService` is located under [`token/services/auditdb`](./../../token/services/auditdb). It is accessible via the `auditor.Service`.
+  The `auditdb.StoreService` is located under [`token/services/auditdb`](../../token/services/storage/auditdb). It is accessible via the `auditor.Service`.
 
 * **Identity Store (`identitydb`) and Wallet Store (`walletdb`)**:
   The `identitydb` plays a crucial role in managing user identities and wallets within the network.

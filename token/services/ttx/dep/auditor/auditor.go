@@ -12,8 +12,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 )
 

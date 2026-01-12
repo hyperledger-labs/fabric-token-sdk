@@ -14,10 +14,9 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -26,7 +25,7 @@ import (
 
 type transactionDB interface {
 	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
-	SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error
+	SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error
 }
 
 type Listener struct {
@@ -36,7 +35,7 @@ type Listener struct {
 	ttxDB       transactionDB
 	tokens      *tokens.Service
 	tracer      trace.Tracer
-	retryRunner common.RetryRunner
+	retryRunner utils.RetryRunner
 }
 
 func NewListener(logger logging.Logger, tmsProvider dep.TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Service, tracer trace.Tracer) *Listener {
@@ -47,7 +46,7 @@ func NewListener(logger logging.Logger, tmsProvider dep.TokenManagementServicePr
 		ttxDB:       ttxDB,
 		tokens:      tokens,
 		tracer:      tracer,
-		retryRunner: common.NewRetryRunner(common.Infinitely, time.Second, true),
+		retryRunner: utils.NewRetryRunner(logger, utils.Infinitely, time.Second, true),
 	}
 }
 
@@ -61,10 +60,10 @@ func (t *Listener) OnStatus(ctx context.Context, txID string, status int, messag
 
 func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) error {
 	t.logger.DebugfContext(ctx, "tx status changed for tx [%s]: [%s]", txID, status)
-	var txStatus driver.TxStatus
+	var txStatus storage.TxStatus
 	switch status {
 	case network.Valid:
-		txStatus = driver.Confirmed
+		txStatus = storage.Confirmed
 		t.logger.DebugfContext(ctx, "get token request for [%s]", txID)
 
 		tr, msgToSign := t.tokens.GetCachedTokenRequest(txID)
@@ -92,7 +91,7 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 		t.logger.DebugfContext(ctx, "Check token request")
 		if err := t.checkTokenRequest(txID, msgToSign, tokenRequestHash); err != nil {
 			t.logger.ErrorfContext(ctx, "tx [%s], %s", txID, err)
-			txStatus = driver.Deleted
+			txStatus = storage.Deleted
 			message = err.Error()
 		} else {
 			t.logger.DebugfContext(ctx, "append token request for [%s]", txID)
@@ -104,7 +103,7 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 			t.logger.DebugfContext(ctx, "append token request for [%s], done", txID)
 		}
 	case network.Invalid:
-		txStatus = driver.Deleted
+		txStatus = storage.Deleted
 	}
 	if err := t.ttxDB.SetStatus(ctx, txID, txStatus, message); err != nil {
 		t.logger.ErrorfContext(ctx, "<message> [%s]: [%s]", txID, err)

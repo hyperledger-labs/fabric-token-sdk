@@ -8,9 +8,8 @@ package db
 
 import (
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/common"
-	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
 
 // QueryTransactionsParams defines the parameters for querying movements
@@ -24,10 +23,10 @@ type Pagination = cdriver.Pagination
 // a transaction record is created for each unique enrollment ID found in the outputs.
 // The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
 // in that action.
-type TransactionRecord = dbdriver.TransactionRecord
+type TransactionRecord = storage.TransactionRecord
 
 // PageTransactionsIterator is an iterator of *TransactionRecord with support for pagination
 type PageTransactionsIterator = cdriver.PageIterator[*TransactionRecord]
 
 // TransactionStatusEvent models an event related to the status of a transaction
-type TransactionStatusEvent = common.StatusEvent
+type TransactionStatusEvent = storage.StatusEvent

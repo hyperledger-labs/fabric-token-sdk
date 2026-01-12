@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 )
 
 type WalletStore struct {
@@ -27,7 +27,7 @@ func NewWalletStore(kvs KVS, tmsID token.TMSID) *WalletStore {
 	return &WalletStore{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *WalletStore) StoreIdentity(ctx context.Context, identity driver2.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
+func (s *WalletStore) StoreIdentity(ctx context.Context, identity driver2.Identity, eID string, wID storage.WalletID, roleID int, meta []byte) error {
 	idHash := identity.UniqueID()
 	if meta != nil {
 		k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID, "meta"})
@@ -56,7 +56,7 @@ func (s *WalletStore) StoreIdentity(ctx context.Context, identity driver2.Identi
 	return nil
 }
 
-func (s *WalletStore) IdentityExists(ctx context.Context, identity driver2.Identity, wID driver.WalletID, roleID int) bool {
+func (s *WalletStore) IdentityExists(ctx context.Context, identity driver2.Identity, wID storage.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
 	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID})
 	if err != nil {
@@ -65,20 +65,20 @@ func (s *WalletStore) IdentityExists(ctx context.Context, identity driver2.Ident
 	return s.kvs.Exists(ctx, k)
 }
 
-func (s *WalletStore) GetWalletID(ctx context.Context, identity driver2.Identity, roleID int) (driver.WalletID, error) {
+func (s *WalletStore) GetWalletID(ctx context.Context, identity driver2.Identity, roleID int) (storage.WalletID, error) {
 	idHash := identity.UniqueID()
 	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash})
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to create key")
 	}
-	var wID driver.WalletID
+	var wID storage.WalletID
 	if err := s.kvs.Get(ctx, k, &wID); err != nil {
 		return "", err
 	}
 	return wID, nil
 }
 
-func (s *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.WalletID, error) {
+func (s *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]storage.WalletID, error) {
 	it, err := s.kvs.GetByPartialCompositeID(ctx, "walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID)})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
@@ -96,7 +96,7 @@ func (s *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.Wa
 	return walletIDs.ToSlice(), nil
 }
 
-func (s *WalletStore) LoadMeta(ctx context.Context, identity driver2.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
+func (s *WalletStore) LoadMeta(ctx context.Context, identity driver2.Identity, wID storage.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
 	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID, "meta"})
 	if err != nil {

@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package keystoredb
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/multiplexed"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 )
 
 type StoreServiceManager db.StoreServiceManager[*StoreService]

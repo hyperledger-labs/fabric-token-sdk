@@ -15,9 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
@@ -28,9 +28,9 @@ type TokenManagementServiceProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
 
-type StoreServiceManager db.StoreServiceManager[*auditdb.StoreService]
+type StoreServiceManager = auditdb.StoreServiceManager
 
-type TokensServiceManager db.ServiceManager[*tokens.Service]
+type TokensServiceManager = services.ServiceManager[*tokens.Service]
 
 type CheckServiceProvider interface {
 	CheckService(id token.TMSID, adb *auditdb.StoreService, tdb *tokens.Service) (CheckService, error)
@@ -55,7 +55,7 @@ func NewServiceManager(
 	checkServiceProvider CheckServiceProvider,
 ) *ServiceManager {
 	return &ServiceManager{
-		p: lazy.NewProviderWithKeyMapper(db.Key, func(tmsID token.TMSID) (*Service, error) {
+		p: lazy.NewProviderWithKeyMapper(services.Key, func(tmsID token.TMSID) (*Service, error) {
 			auditDB, err := auditStoreServiceManager.StoreServiceByTMSId(tmsID)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
@@ -118,7 +118,7 @@ func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 	}
 	defer logger.Infof("restore audit dbs for entry [%s]...done", tmsID)
 
-	return iterators.ForEach(it, func(record *driver2.TokenRequestRecord) error {
+	return iterators.ForEach(it, func(record *storage.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
 		return net.AddFinalityListener(tmsID.Namespace, record.TxID, finality.NewListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB, auditor.finalityTracer))
 	})
