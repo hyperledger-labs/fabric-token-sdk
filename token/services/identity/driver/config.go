@@ -24,5 +24,5 @@ type Config interface {
 	// If not defined, the function returns -1
 	CacheSizeForOwnerID(id string) int
 	TranslatePath(path string) string
-	IdentitiesForRole(role IdentityRoleType) ([]*ConfiguredIdentity, error)
+	IdentitiesForRole(role IdentityRoleType) ([]ConfiguredIdentity, error)
 }

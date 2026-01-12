@@ -31,7 +31,7 @@ func (m mockConfig) TranslatePath(path string) string {
 	return path
 }
 
-func (m mockConfig) IdentitiesForRole(driver.IdentityRoleType) ([]*driver.ConfiguredIdentity, error) {
+func (m mockConfig) IdentitiesForRole(driver.IdentityRoleType) ([]driver.ConfiguredIdentity, error) {
 	return nil, nil
 }
 
