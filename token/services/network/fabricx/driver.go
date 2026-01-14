@@ -12,8 +12,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/vault/queryservice"
-	fabricx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx"
+	finalityx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/finality"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/queryservice"
+	fabricxdig "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
@@ -37,7 +39,7 @@ import (
 )
 
 func NewDriver(
-	fnsProvider *fabric2.NetworkServiceProvider,
+	fnsProvider *fabricx.NetworkServiceProvider,
 	tokensManager *tokens.ServiceManager,
 	configs *config.Service,
 	viewManager *view.Manager,
@@ -49,7 +51,9 @@ func NewDriver(
 	configService driver2.ConfigService,
 	qsProvider queryservice.Provider,
 	storeServiceManager ttxdb.StoreServiceManager,
-) driver.Driver {
+	fxFinalityProvider *finalityx.Provider,
+	queryServiceProvider finality2.QueryServiceProvider,
+) (driver.Driver, error) {
 	vkp := pp2.NewVersionKeeperProvider()
 	kt := &keys.Translator{}
 
@@ -57,8 +61,13 @@ func NewDriver(
 
 	listenerManagerConfig := config3.NewListenerManagerConfig(configService)
 
+	flmProvider, err := finality2.NewFLMProvider(fnsProvider, tracerProvider, listenerManagerConfig, fxFinalityProvider)
+	if err != nil {
+		return nil, err
+	}
+
 	d := &Driver{
-		fnsProvider:                fnsProvider,
+		fnsProvider:                fnsProvider.FabricNetworkServiceProvider(),
 		tokensManager:              tokensManager,
 		configService:              configs,
 		viewManager:                viewManager,
@@ -69,9 +78,9 @@ func NewDriver(
 		defaultPublicParamsFetcher: ppFetcher,
 		queryExecutorProvider:      queryExecutorProvider,
 		keyTranslator:              kt,
-		flmProvider:                finality2.NewFLMProvider(fnsProvider, tracerProvider, listenerManagerConfig),
+		flmProvider:                flmProvider,
 		llmProvider: lookup2.NewListenerManagerProvider(
-			fnsProvider,
+			fnsProvider.FabricNetworkServiceProvider(),
 			tracerProvider,
 			kt,
 			config3.NewListenerManagerConfig(configService),
@@ -85,17 +94,18 @@ func NewDriver(
 			vkp,
 			tmsProvider,
 			endorsement2.NewStorageProvider(storeServiceManager),
-			fnsProvider,
+			fnsProvider.FabricNetworkServiceProvider(),
 		),
 		setupListenerProvider: lookup2.NewSetupListenerProvider(
 			tmsProvider,
 			tokensManager,
 			vkp,
 		),
-		supportedDrivers: []string{fabricx.FabricxDriverName},
+		supportedDrivers:   []string{fabricxdig.FabricxDriverName},
+		fxFinalityProvider: fxFinalityProvider,
 	}
 
-	return d
+	return d, nil
 }
 
 type Driver struct {
@@ -115,6 +125,7 @@ type Driver struct {
 	EndorsementServiceProvider fabric.EndorsementServiceProvider
 	setupListenerProvider      fabric.SetupListenerProvider
 	queryExecutorProvider      *qe.ExecutorProvider
+	fxFinalityProvider         *finalityx.Provider
 }
 
 func (d *Driver) New(network, channel string) (driver.Network, error) {
