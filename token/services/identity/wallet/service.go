@@ -18,6 +18,11 @@ import (
 )
 
 var (
+	// This makes sure that Service implements driver.WalletService
+	_ driver.WalletService = &Service{}
+)
+
+var (
 	// ErrNilRecipientData is returned when a nil RecipientData is passed to RegisterRecipientIdentity
 	ErrNilRecipientData = errors.New("nil recipient data")
 )
@@ -32,6 +37,7 @@ type Registry interface {
 	WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error)
 }
 
+// Service implements the driver.WalletService interface.
 // Service exposes wallet-related helper operations used by the token management layer.
 // It delegates identity operations to the configured IdentityProvider and uses
 // registries for role-specific wallet lookups and registrations.
