@@ -32,7 +32,7 @@ func NewFLMProvider(
 	// case fconfig.Delivery:
 	// 	return NewDeliveryBasedFLMProvider(fnsProvider.FabricNetworkServiceProvider(), tracerProvider, config), nil
 	// case NotificationService:
-		return NewNotificationServiceBased(fnsProvider, fxFinalityProvider)
+	return NewNotificationServiceBased(fnsProvider, fxFinalityProvider)
 	// }
 	// panic("unknown flm type " + config.Type())
 }
