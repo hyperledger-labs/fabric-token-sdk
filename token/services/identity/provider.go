@@ -21,10 +21,21 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+var (
+	// This makes sure that Provider implements driver.IdentityProvider
+	_ driver.IdentityProvider = &Provider{}
+)
+
+// StorageProvider returns storage services scoped to a specific token
+// management system (TMS) identified by token.TMSID.
+// Callers request the concrete store service for the given TMS and use the returned service to
+// access persisted wallet, identity, or keystore data.
 type StorageProvider = idriver.StorageProvider
 
-// enrollmentIDUnmarshaler decodes an enrollment ID form an audit info
-type enrollmentIDUnmarshaler interface {
+// EnrollmentIDUnmarshaler decodes an enrollment ID form an audit info
+//
+//go:generate counterfeiter -o mock/eidu.go -fake-name EnrollmentIDUnmarshaler . EnrollmentIDUnmarshaler
+type EnrollmentIDUnmarshaler interface {
 	// GetEnrollmentID returns the enrollment ID from the audit info
 	GetEnrollmentID(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error)
 	// GetRevocationHandler returns the revocation handle from the audit info
@@ -33,7 +44,8 @@ type enrollmentIDUnmarshaler interface {
 	GetEIDAndRH(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, string, error)
 }
 
-type storage interface {
+//go:generate counterfeiter -o mock/storage.go -fake-name Storage . Storage
+type Storage interface {
 	GetAuditInfo(ctx context.Context, id []byte) ([]byte, error)
 	StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 	StoreSignerInfo(ctx context.Context, id driver.Identity, info []byte) error
@@ -49,13 +61,14 @@ type cache[T any] interface {
 	Delete(key string)
 }
 
-type deserializer interface {
+//go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
+type Deserializer interface {
 	DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error)
 }
 
-type VerifierEntry struct {
-	Verifier   driver.Verifier
-	DebugStack []byte
+//go:generate counterfeiter -o mock/nbs.go -fake-name NetworkBinderService . NetworkBinderService
+type NetworkBinderService interface {
+	Bind(ctx context.Context, longTerm driver.Identity, ephemeral ...driver.Identity) error
 }
 
 type SignerEntry struct {
@@ -64,26 +77,25 @@ type SignerEntry struct {
 }
 
 // Provider implements the driver.IdentityProvider interface.
-// Provider handles the long-term identities on top of which wallets are defined.
+// Provider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
 type Provider struct {
 	Logger                  logging.Logger
-	Binder                  idriver.NetworkBinderService
-	enrollmentIDUnmarshaler enrollmentIDUnmarshaler
-	storage                 storage
-	deserializer            deserializer
+	Binder                  NetworkBinderService
+	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
+	storage                 Storage
+	deserializer            Deserializer
 
 	isMeCache cache[bool]
 	signers   cache[*SignerEntry]
 }
 
-// NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
-// The Provider handles the long-term identities on top of which wallets are defined.
+// NewProvider returns a new instance of Provider
 func NewProvider(
 	logger logging.Logger,
-	storage storage,
-	deserializer deserializer,
-	binder idriver.NetworkBinderService,
-	enrollmentIDUnmarshaler enrollmentIDUnmarshaler,
+	storage Storage,
+	deserializer Deserializer,
+	binder NetworkBinderService,
+	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler,
 ) *Provider {
 	return &Provider{
 		Logger:                  logger,
@@ -96,34 +108,14 @@ func NewProvider(
 	}
 }
 
-func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *idriver.IdentityDescriptor, alias driver.Identity) error {
-	// register in the storage
-	if !identityDescriptor.Ephemeral {
-		if err := p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
-			return errors.Wrapf(err, "failed to register identity descriptor")
-		}
-	}
-
-	// update caches
-	p.Logger.DebugfContext(ctx, "update identity provider caches...")
-	p.updateCaches(identityDescriptor, alias)
-	p.Logger.DebugfContext(ctx, "update identity provider caches...done")
-
-	return nil
-}
-
-func (p *Provider) RegisterAuditInfo(ctx context.Context, identity driver.Identity, info []byte) error {
-	return p.storage.StoreIdentityData(ctx, identity, info, nil, nil)
-}
-
-func (p *Provider) GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error) {
-	return p.storage.GetAuditInfo(ctx, identity)
-}
-
+// RegisterRecipientData stores the passed recipient data in the configured storage.
 func (p *Provider) RegisterRecipientData(ctx context.Context, data *driver.RecipientData) error {
 	return p.storage.StoreIdentityData(ctx, data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
 }
 
+// RegisterSigner registers a Signer and a Verifier for passed identity.
+// This is implemented via an invocation of  RegisterIdentityDescriptor using an IdentityDescriptor with empty AuditInfo.
+// The audit info might or might not be already stored.
 func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte, ephemeral bool) error {
 	identityDescriptor := &idriver.IdentityDescriptor{
 		Identity:   identity,
@@ -136,6 +128,8 @@ func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity,
 	return p.RegisterIdentityDescriptor(ctx, identityDescriptor, nil)
 }
 
+// AreMe returns the hashes of the passed identities that have a signer registered before.
+// First a local cache is checked, if not found the configured storag is queried.
 func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []string {
 	p.Logger.DebugfContext(ctx, "identity [%s] is me?", identities)
 
@@ -162,16 +156,22 @@ func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []s
 	return append(result, found...)
 }
 
+// IsMe returns true if a signer was ever registered for the passed identity
 func (p *Provider) IsMe(ctx context.Context, identity driver.Identity) bool {
 	return len(p.AreMe(ctx, identity)) > 0
 }
 
-func (p *Provider) RegisterRecipientIdentity(ctx context.Context, id driver.Identity) error {
-	p.Logger.DebugfContext(ctx, "Registering identity [%s]", id)
-	p.isMeCache.Add(id.UniqueID(), false)
-	return nil
+// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise.
+// The audit info is retrieved from the configured storage.
+func (p *Provider) GetAuditInfo(ctx context.Context, identity driver.Identity) ([]byte, error) {
+	return p.storage.GetAuditInfo(ctx, identity)
 }
 
+// GetSigner returns a Signer for passed identity.
+// If a signer cannot be retrieved an error is returned.
+// Signers that can be reused are cached.
+// If a signer is not found in cache,
+// this provider tries to construct an instance of driver.Signer that produces valid signatures under that identity.
 func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
 	found := false
 	idHash := identity.UniqueID()
@@ -186,18 +186,22 @@ func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (dri
 	return signer, nil
 }
 
+// GetEIDAndRH returns both enrollment ID and revocation handle
 func (p *Provider) GetEIDAndRH(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, string, error) {
 	return p.enrollmentIDUnmarshaler.GetEIDAndRH(ctx, identity, auditInfo)
 }
 
+// GetEnrollmentID extracts the enrollment ID from the passed audit info
 func (p *Provider) GetEnrollmentID(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
 	return p.enrollmentIDUnmarshaler.GetEnrollmentID(ctx, identity, auditInfo)
 }
 
+// GetRevocationHandler extracts the revocation handler from the passed audit info
 func (p *Provider) GetRevocationHandler(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
 	return p.enrollmentIDUnmarshaler.GetRevocationHandler(ctx, identity, auditInfo)
 }
 
+// Bind binds longTerm to the passed ephemeral identities.
 func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeralIdentities ...driver.Identity) error {
 	for _, identity := range ephemeralIdentities {
 		if identity.Equal(longTerm) {
@@ -208,6 +212,31 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 			return err
 		}
 	}
+	return nil
+}
+
+// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
+func (p *Provider) RegisterRecipientIdentity(ctx context.Context, id driver.Identity) error {
+	p.Logger.DebugfContext(ctx, "Registering identity [%s]", id)
+	p.isMeCache.Add(id.UniqueID(), false)
+	return nil
+}
+
+// RegisterIdentityDescriptor stores the given identity descriptor in the configured storage.
+// If alias is not nil, the alias can be used as an alternative to `idriver.IdentityDescriptor#Identity`.
+func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *idriver.IdentityDescriptor, alias driver.Identity) error {
+	// register in the Storage
+	if !identityDescriptor.Ephemeral {
+		if err := p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
+			return errors.Wrapf(err, "failed to register identity descriptor")
+		}
+	}
+
+	// update caches
+	p.Logger.DebugfContext(ctx, "update identity provider caches...")
+	p.updateCaches(identityDescriptor, alias)
+	p.Logger.DebugfContext(ctx, "update identity provider caches...done")
+
 	return nil
 }
 
@@ -235,7 +264,7 @@ func (p *Provider) areMe(ctx context.Context, identities ...driver.Identity) []s
 		return result.ToSlice()
 	}
 
-	// check storage
+	// check Storage
 	found, err := p.storage.GetExistingSignerInfo(ctx, notFound...)
 	if err != nil {
 		p.Logger.Errorf("failed checking if a signer exists [%s]", err)
@@ -300,7 +329,7 @@ func (p *Provider) getSignerAndCache(ctx context.Context, identity driver.Identi
 
 	// Persist signer info for the current identity
 	if err := p.storage.StoreSignerInfo(ctx, identity, nil); err != nil {
-		return nil, false, errors.Wrap(err, "failed to store entry in storage for the passed signer")
+		return nil, false, errors.Wrap(err, "failed to store entry in Storage for the passed signer")
 	}
 
 	return signer, shouldCache, nil

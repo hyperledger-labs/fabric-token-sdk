@@ -309,8 +309,8 @@ func (o *OwnerWallet) EnrollmentID() string {
 	return o.w.EnrollmentID()
 }
 
-// RegisterRecipient register the passed recipient data. The data is passed as pointer to allow the underlying token driver
-// to modify them if needed.
+// RegisterRecipient register the passed recipient data.
+// The data is passed as pointer to allow the underlying token driver to modify them if needed.
 func (o *OwnerWallet) RegisterRecipient(ctx context.Context, data *RecipientData) error {
 	return o.w.RegisterRecipient(ctx, data)
 }

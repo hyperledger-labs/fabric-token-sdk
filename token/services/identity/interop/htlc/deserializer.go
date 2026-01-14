@@ -17,24 +17,43 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
+// ScriptType is the identity type used for HTLC scripts. It mirrors the
+// ScriptType defined in the interop/htlc package and is used to check the
+// identity type encoded in a TypedIdentity.
 const ScriptType = htlc.ScriptType
 
-type deserializer interface {
+// Deserializer defines the minimal interface required by the HTLC
+// typed-identity deserializer. It delegates deserialization of the inner
+// identities (sender/recipient) and matching audit information to an
+// implementation that understands the underlying identity formats.
+//
+//go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
+type Deserializer interface {
+	// DeserializeVerifier deserializes a verifier from the given raw identity bytes.
 	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
+	// MatchIdentity checks whether the provided identity matches the given audit info bytes.
+	// Returns nil when they match, an error otherwise.
 	MatchIdentity(ctx context.Context, id driver.Identity, ai []byte) error
 }
 
+// TypedIdentityDeserializer handles TypedIdentity objects whose payload is an HTLC script.
+// It relies on a lower-level Deserializer to convert the script's sender/recipient identities into Verifier instances.
 type TypedIdentityDeserializer struct {
-	deserializer deserializer
+	deserializer Deserializer
 }
 
-func NewTypedIdentityDeserializer(deserializer deserializer) *TypedIdentityDeserializer {
+// NewTypedIdentityDeserializer constructs a new TypedIdentityDeserializer that
+// delegates identity-specific operations to the provided Deserializer.
+func NewTypedIdentityDeserializer(deserializer Deserializer) *TypedIdentityDeserializer {
 	return &TypedIdentityDeserializer{deserializer: deserializer}
 }
 
+// DeserializeVerifier deserializes a driver.Verifier for a TypedIdentity with type 'ScriptType'.
+// The raw bytes are expected to contain a marshaled interop/htlc.Script.
+// The method builds an interop htlc.Verifier by delegating sender/recipient deserialization to the embedded Deserializer.
 func (t *TypedIdentityDeserializer) DeserializeVerifier(ctx context.Context, typ identity.Type, raw []byte) (driver.Verifier, error) {
-	if typ != htlc.ScriptType {
-		return nil, errors.Errorf("cannot deserializer type [%s], expected [%s]", typ, htlc.ScriptType)
+	if typ != ScriptType {
+		return nil, errors.Errorf("cannot deserializer type [%s], expected [%s]", typ, ScriptType)
 	}
 
 	script := &htlc.Script{}
@@ -58,8 +77,11 @@ func (t *TypedIdentityDeserializer) DeserializeVerifier(ctx context.Context, typ
 	return v, nil
 }
 
+// Recipients extracts the recipient identity from a TypedIdentity whose type
+// is ScriptType and returns it as a single-element slice.
+// It returns an error for unknown types or when the raw bytes cannot be unmarshaled as an HTLC script.
 func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error) {
-	if typ != htlc.ScriptType {
+	if typ != ScriptType {
 		return nil, errors.New("unknown identity type")
 	}
 
@@ -71,9 +93,13 @@ func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.
 	return []driver.Identity{script.Recipient}, nil
 }
 
+// GetAuditInfo returns the audit information for an HTLC typed-identity.
+// It calls the provided AuditInfoProvider for both the sender and recipient
+// identities and bundles the returned audit information into a ScriptInfo
+// structure which is then marshaled and returned.
 func (t *TypedIdentityDeserializer) GetAuditInfo(ctx context.Context, id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {
-	if typ != htlc.ScriptType {
-		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, htlc.ScriptType)
+	if typ != ScriptType {
+		return nil, errors.Errorf("invalid type, got [%s], expected [%s]", typ, ScriptType)
 	}
 	script := &htlc.Script{}
 	var err error
@@ -99,21 +125,34 @@ func (t *TypedIdentityDeserializer) GetAuditInfo(ctx context.Context, id driver.
 	return auditInfoRaw, nil
 }
 
+// GetAuditInfoMatcher returns a Matcher configured with the supplied audit
+// information and the underlying Deserializer used to match identities.
 func (t *TypedIdentityDeserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	return &AuditInfoMatcher{
-		auditInfo:    auditInfo,
-		deserializer: t.deserializer,
+		AuditInfo:    auditInfo,
+		Deserializer: t.deserializer,
 	}, nil
 }
 
+// AuditDeserializer adapts a driver-level AuditInfoDeserializer to the
+// identity/interop HTLC ScriptInfo representation.
+// It extracts the recipient audit info from the ScriptInfo and delegates deserialization to the
+// embedded AuditInfoDeserializer.
 type AuditDeserializer struct {
 	AuditInfoDeserializer idriver.AuditInfoDeserializer
 }
 
+// NewAuditDeserializer constructs a new AuditDeserializer wrapping the
+// provided AuditInfoDeserializer.
 func NewAuditDeserializer(auditInfoDeserializer idriver.AuditInfoDeserializer) *AuditDeserializer {
 	return &AuditDeserializer{AuditInfoDeserializer: auditInfoDeserializer}
 }
 
+// DeserializeAuditInfo extracts the recipient audit info from the provided
+// raw script info and then uses the embedded AuditInfoDeserializer to
+// produce a driver.AuditInfo.
+// The method performs basic validation on the
+// ScriptInfo payload and returns descriptive errors for common failure scenarios.
 func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (idriver.AuditInfo, error) {
 	si := &ScriptInfo{}
 	err := json.Unmarshal(raw, si)
@@ -130,32 +169,40 @@ func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte
 	return ai, nil
 }
 
+// AuditInfoMatcher is a driver.Matcher implementation that matches an
+// identity against the audit information stored in a ScriptInfo payload.
+// It relies on the provided Deserializer to perform per-identity matching.
 type AuditInfoMatcher struct {
-	auditInfo    []byte
-	deserializer deserializer
+	AuditInfo    []byte
+	Deserializer Deserializer
 }
 
+// Match attempts to match the provided serialized script identity against
+// the stored audit info.
+// It unmarshals both the audit info and the script
+// and then delegates to the underlying Deserializer for sender and recipient matching.
 func (a *AuditInfoMatcher) Match(ctx context.Context, id []byte) error {
 	scriptInf := &ScriptInfo{}
-	if err := json.Unmarshal(a.auditInfo, scriptInf); err != nil {
+	if err := json.Unmarshal(a.AuditInfo, scriptInf); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal script info")
 	}
 	scriptSender, scriptRecipient, err := GetScriptSenderAndRecipient(id)
 	if err != nil {
 		return errors.Wrap(err, "failed getting script sender and recipient")
 	}
-	err = a.deserializer.MatchIdentity(ctx, scriptSender, scriptInf.Sender)
+	err = a.Deserializer.MatchIdentity(ctx, scriptSender, scriptInf.Sender)
 	if err != nil {
 		return errors.Wrapf(err, "failed matching sender identity [%s]", scriptSender.String())
 	}
-	err = a.deserializer.MatchIdentity(ctx, scriptRecipient, scriptInf.Recipient)
+	err = a.Deserializer.MatchIdentity(ctx, scriptRecipient, scriptInf.Recipient)
 	if err != nil {
 		return errors.Wrapf(err, "failed matching recipient identity [%s]", scriptRecipient.String())
 	}
 	return nil
 }
 
-// GetScriptSenderAndRecipient returns the script's sender and recipient according to the type of the given owner
+// GetScriptSenderAndRecipient returns the script's sender and recipient
+// identities extracted by unmarshaling the supplied script bytes as an interop/htlc.Script.
 func GetScriptSenderAndRecipient(id []byte) (sender, recipient driver.Identity, err error) {
 	script := &htlc.Script{}
 	err = json.Unmarshal(id, script)

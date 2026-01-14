@@ -9,7 +9,7 @@ package driver
 import (
 	"context"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 // IdentityRoleType is the role of an identity
@@ -17,7 +17,7 @@ type IdentityRoleType int
 
 const (
 	// IssuerRole is the role of an issuer
-	IssuerRole = iota
+	IssuerRole IdentityRoleType = iota
 	// AuditorRole is the role of an auditor
 	AuditorRole
 	// OwnerRole is the role of an owner
@@ -55,14 +55,18 @@ type IdentityInfo interface {
 type (
 	// WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.
 	// It can be a string, as the name of the wallet, or an identity contained in that wallet.
-	// Ultimately, it is the token driver to decide which types are allowed.
-	WalletLookupID        = driver.WalletLookupID
-	Identity              = driver.Identity
-	IdentityConfiguration = driver.IdentityConfiguration
+	// Ultimately, it is the token tdriver to decide which types are allowed.
+	WalletLookupID = tdriver.WalletLookupID
+	// Identity represents a generic identity
+	Identity = tdriver.Identity
+	// IdentityConfiguration contains configuration-related information of an identity
+	IdentityConfiguration = tdriver.IdentityConfiguration
 )
 
 // Role is a container of long-term identities.
 // A long-term identity is then used to construct a wallet.
+//
+//go:generate counterfeiter -o mock/role.go -fake-name Role . Role
 type Role interface {
 	// ID returns the identifier of this role
 	ID() IdentityRoleType

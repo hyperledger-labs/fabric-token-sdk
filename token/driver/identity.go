@@ -15,9 +15,9 @@ import (
 // Identity represents a generic identity
 type Identity = view.Identity
 
-//go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
-
 // IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
+//
+//go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
 type IdentityProvider interface {
 	// RegisterRecipientData stores the passed recipient data
 	RegisterRecipientData(ctx context.Context, data *RecipientData) error
@@ -46,8 +46,7 @@ type IdentityProvider interface {
 	// GetEIDAndRH returns both enrollment ID and revocation handle
 	GetEIDAndRH(ctx context.Context, identity Identity, auditInfo []byte) (string, string, error)
 
-	// Bind binds longTerm to the passed ephemeral identity. The same signer, verifier, and audit of the long term
-	// identity is associated to id, if copyAll is true.
+	// Bind binds longTerm to the passed ephemeral identities.
 	Bind(ctx context.Context, longTerm Identity, ephemeralIdentities ...Identity) error
 
 	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.

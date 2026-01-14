@@ -1021,6 +1021,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	}
 
 	if len(owners) == 0 {
+		logger.Debugf("no additional owner reference apart [%s]", tr.OwnerWalletID)
 		return nil
 	}
 
