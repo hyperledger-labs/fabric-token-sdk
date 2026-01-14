@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	drivera "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 )
 
 type NetworkBinderService struct {
@@ -112,4 +112,4 @@ func (fake *NetworkBinderService) recordInvocation(key string, args []interface{
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ driver.NetworkBinderService = new(NetworkBinderService)
+var _ identity.NetworkBinderService = new(NetworkBinderService)

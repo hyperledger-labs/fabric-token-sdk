@@ -26,6 +26,10 @@ var (
 	_ driver.IdentityProvider = &Provider{}
 )
 
+// StorageProvider returns storage services scoped to a specific token
+// management system (TMS) identified by token.TMSID.
+// Callers request the concrete store service for the given TMS and use the returned service to
+// access persisted wallet, identity, or keystore data.
 type StorageProvider = idriver.StorageProvider
 
 // EnrollmentIDUnmarshaler decodes an enrollment ID form an audit info
@@ -63,7 +67,9 @@ type Deserializer interface {
 }
 
 //go:generate counterfeiter -o mock/nbs.go -fake-name NetworkBinderService . NetworkBinderService
-type NetworkBinderService = idriver.NetworkBinderService
+type NetworkBinderService interface {
+	Bind(ctx context.Context, longTerm driver.Identity, ephemeral ...driver.Identity) error
+}
 
 type SignerEntry struct {
 	Signer     driver.Signer
@@ -74,7 +80,7 @@ type SignerEntry struct {
 // Provider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
 type Provider struct {
 	Logger                  logging.Logger
-	Binder                  idriver.NetworkBinderService
+	Binder                  NetworkBinderService
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	storage                 Storage
 	deserializer            Deserializer

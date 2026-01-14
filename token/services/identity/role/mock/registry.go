@@ -7,17 +7,18 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	drivera "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 )
 
 type Registry struct {
-	BindIdentityStub        func(context.Context, driver.Identity, string, string, any) error
+	BindIdentityStub        func(context.Context, driver.Identity, string, drivera.WalletID, any) error
 	bindIdentityMutex       sync.RWMutex
 	bindIdentityArgsForCall []struct {
 		arg1 context.Context
 		arg2 driver.Identity
 		arg3 string
-		arg4 string
+		arg4 drivera.WalletID
 		arg5 any
 	}
 	bindIdentityReturns struct {
@@ -53,7 +54,7 @@ type Registry struct {
 	getIdentityMetadataReturnsOnCall map[int]struct {
 		result1 error
 	}
-	LookupStub        func(context.Context, driver.WalletLookupID) (driver.Wallet, identity.Info, string, error)
+	LookupStub        func(context.Context, driver.WalletLookupID) (driver.Wallet, identity.Info, drivera.WalletID, error)
 	lookupMutex       sync.RWMutex
 	lookupArgsForCall []struct {
 		arg1 context.Context
@@ -62,13 +63,13 @@ type Registry struct {
 	lookupReturns struct {
 		result1 driver.Wallet
 		result2 identity.Info
-		result3 string
+		result3 drivera.WalletID
 		result4 error
 	}
 	lookupReturnsOnCall map[int]struct {
 		result1 driver.Wallet
 		result2 identity.Info
-		result3 string
+		result3 drivera.WalletID
 		result4 error
 	}
 	RegisterIdentityStub        func(context.Context, driver.IdentityConfiguration) error
@@ -113,14 +114,14 @@ type Registry struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Registry) BindIdentity(arg1 context.Context, arg2 driver.Identity, arg3 string, arg4 string, arg5 any) error {
+func (fake *Registry) BindIdentity(arg1 context.Context, arg2 driver.Identity, arg3 string, arg4 drivera.WalletID, arg5 any) error {
 	fake.bindIdentityMutex.Lock()
 	ret, specificReturn := fake.bindIdentityReturnsOnCall[len(fake.bindIdentityArgsForCall)]
 	fake.bindIdentityArgsForCall = append(fake.bindIdentityArgsForCall, struct {
 		arg1 context.Context
 		arg2 driver.Identity
 		arg3 string
-		arg4 string
+		arg4 drivera.WalletID
 		arg5 any
 	}{arg1, arg2, arg3, arg4, arg5})
 	stub := fake.BindIdentityStub
@@ -142,13 +143,13 @@ func (fake *Registry) BindIdentityCallCount() int {
 	return len(fake.bindIdentityArgsForCall)
 }
 
-func (fake *Registry) BindIdentityCalls(stub func(context.Context, driver.Identity, string, string, any) error) {
+func (fake *Registry) BindIdentityCalls(stub func(context.Context, driver.Identity, string, drivera.WalletID, any) error) {
 	fake.bindIdentityMutex.Lock()
 	defer fake.bindIdentityMutex.Unlock()
 	fake.BindIdentityStub = stub
 }
 
-func (fake *Registry) BindIdentityArgsForCall(i int) (context.Context, driver.Identity, string, string, any) {
+func (fake *Registry) BindIdentityArgsForCall(i int) (context.Context, driver.Identity, string, drivera.WalletID, any) {
 	fake.bindIdentityMutex.RLock()
 	defer fake.bindIdentityMutex.RUnlock()
 	argsForCall := fake.bindIdentityArgsForCall[i]
@@ -305,7 +306,7 @@ func (fake *Registry) GetIdentityMetadataReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *Registry) Lookup(arg1 context.Context, arg2 driver.WalletLookupID) (driver.Wallet, identity.Info, string, error) {
+func (fake *Registry) Lookup(arg1 context.Context, arg2 driver.WalletLookupID) (driver.Wallet, identity.Info, drivera.WalletID, error) {
 	fake.lookupMutex.Lock()
 	ret, specificReturn := fake.lookupReturnsOnCall[len(fake.lookupArgsForCall)]
 	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
@@ -331,7 +332,7 @@ func (fake *Registry) LookupCallCount() int {
 	return len(fake.lookupArgsForCall)
 }
 
-func (fake *Registry) LookupCalls(stub func(context.Context, driver.WalletLookupID) (driver.Wallet, identity.Info, string, error)) {
+func (fake *Registry) LookupCalls(stub func(context.Context, driver.WalletLookupID) (driver.Wallet, identity.Info, drivera.WalletID, error)) {
 	fake.lookupMutex.Lock()
 	defer fake.lookupMutex.Unlock()
 	fake.LookupStub = stub
@@ -344,19 +345,19 @@ func (fake *Registry) LookupArgsForCall(i int) (context.Context, driver.WalletLo
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *Registry) LookupReturns(result1 driver.Wallet, result2 identity.Info, result3 string, result4 error) {
+func (fake *Registry) LookupReturns(result1 driver.Wallet, result2 identity.Info, result3 drivera.WalletID, result4 error) {
 	fake.lookupMutex.Lock()
 	defer fake.lookupMutex.Unlock()
 	fake.LookupStub = nil
 	fake.lookupReturns = struct {
 		result1 driver.Wallet
 		result2 identity.Info
-		result3 string
+		result3 drivera.WalletID
 		result4 error
 	}{result1, result2, result3, result4}
 }
 
-func (fake *Registry) LookupReturnsOnCall(i int, result1 driver.Wallet, result2 identity.Info, result3 string, result4 error) {
+func (fake *Registry) LookupReturnsOnCall(i int, result1 driver.Wallet, result2 identity.Info, result3 drivera.WalletID, result4 error) {
 	fake.lookupMutex.Lock()
 	defer fake.lookupMutex.Unlock()
 	fake.LookupStub = nil
@@ -364,14 +365,14 @@ func (fake *Registry) LookupReturnsOnCall(i int, result1 driver.Wallet, result2 
 		fake.lookupReturnsOnCall = make(map[int]struct {
 			result1 driver.Wallet
 			result2 identity.Info
-			result3 string
+			result3 drivera.WalletID
 			result4 error
 		})
 	}
 	fake.lookupReturnsOnCall[i] = struct {
 		result1 driver.Wallet
 		result2 identity.Info
-		result3 string
+		result3 drivera.WalletID
 		result4 error
 	}{result1, result2, result3, result4}
 }

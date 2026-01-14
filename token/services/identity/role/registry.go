@@ -20,7 +20,7 @@ import (
 
 //go:generate counterfeiter -o mock/wf.go -fake-name WalletFactory . WalletFactory
 type WalletFactory interface {
-	NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
+	NewWallet(ctx context.Context, id idriver.WalletID, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
 }
 
 // WalletRegistry manages wallets whose long-term identities have a given role.
@@ -70,7 +70,7 @@ func (r *WalletRegistry) RegisterIdentity(ctx context.Context, config driver.Ide
 // 3. If cache misses, try to resolve identity -> wallet id using storage/role and finally call role.GetIdentityInfo for any discovered wallet identifiers.
 //
 // Note: Lookup only takes short RLocks for map reads and does not hold the lock while calling external services.
-func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, idriver.IdentityInfo, string, error) {
+func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, idriver.WalletID, error) {
 	r.Logger.DebugfContext(ctx, "lookup wallet by [%T]", id)
 	var walletIdentifiers []string
 
@@ -175,7 +175,7 @@ func (r *WalletRegistry) RegisterWallet(ctx context.Context, id string, w driver
 
 // BindIdentity binds the passed identity to the passed wallet identifier.
 // Additional metadata can be bound to the identity.
-func (r *WalletRegistry) BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID string, meta any) error {
+func (r *WalletRegistry) BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID idriver.WalletID, meta any) error {
 	r.Logger.DebugfContext(ctx, "put recipient identity [%s]->[%s]", identity, wID)
 	metaEncoded, err := json.Marshal(meta)
 	if err != nil {

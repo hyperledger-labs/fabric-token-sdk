@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -33,9 +34,9 @@ type WalletsConfiguration interface {
 type Registry interface {
 	WalletIDs(ctx context.Context) ([]string, error)
 	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
-	Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, string, error)
+	Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, idriver.WalletID, error)
 	RegisterWallet(ctx context.Context, id string, wallet driver.Wallet) error
-	BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID string, meta any) error
+	BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID idriver.WalletID, meta any) error
 	ContainsIdentity(ctx context.Context, i driver.Identity, id string) bool
 	GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error
 }
@@ -72,7 +73,7 @@ func NewDefaultFactory(
 	}
 }
 
-func (w *DefaultFactory) NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error) {
+func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error) {
 	switch role {
 	case identity.OwnerRole:
 		if info.Anonymous() {

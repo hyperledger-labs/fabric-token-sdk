@@ -131,6 +131,7 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (Identity, error)
 }
 
+// IdentityConfiguration contains configuration-related information of an identity
 type IdentityConfiguration struct {
 	ID     string
 	Type   string

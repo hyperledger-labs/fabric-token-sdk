@@ -83,7 +83,13 @@ type IdentityStoreService interface {
 // identity belongs to this node (IsMe).
 //
 //go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
-type IdentityProvider = idriver.IdentityProvider
+type IdentityProvider interface {
+	IsMe(context.Context, idriver.Identity) bool
+	// Bind an ephemeral identity to another identity
+	Bind(ctx context.Context, longTerm idriver.Identity, ephemeralIdentities ...idriver.Identity) error
+	// RegisterIdentityDescriptor register the passed identity descriptor with an alias
+	RegisterIdentityDescriptor(ctx context.Context, identityDescriptor *idriver.IdentityDescriptor, alias idriver.Identity) error
+}
 
 // KeyManagerProvider is responsible for producing a KeyManager for a given
 // IdentityConfiguration. Multiple providers can be registered; the first one
@@ -621,7 +627,7 @@ type TypedIdentityInfo struct {
 
 	EnrollmentID     string
 	RootIdentity     token.Identity
-	IdentityProvider idriver.IdentityProvider
+	IdentityProvider IdentityProvider
 }
 
 func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (token.Identity, []byte, error) {
