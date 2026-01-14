@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -267,7 +268,7 @@ func (w *CertifierWallet) GetSigner(ctx context.Context, identity Identity) (Sig
 type LongTermOwnerWallet struct {
 	IdentityProvider  IdentityProvider
 	TokenVault        OwnerTokenVault
-	WalletID          string
+	WalletID          idriver.WalletID
 	OwnerIdentityInfo identity.Info
 	OwnerIdentity     Identity
 	OwnerAuditInfo    []byte
@@ -275,7 +276,13 @@ type LongTermOwnerWallet struct {
 
 // NewLongTermOwnerWallet constructs a LongTermOwnerWallet by resolving the
 // provided identity.Info into an actual Identity and its audit info.
-func NewLongTermOwnerWallet(ctx context.Context, IdentityProvider IdentityProvider, TokenVault OwnerTokenVault, id string, identityInfo identity.Info) (*LongTermOwnerWallet, error) {
+func NewLongTermOwnerWallet(
+	ctx context.Context,
+	IdentityProvider IdentityProvider,
+	TokenVault OwnerTokenVault,
+	id idriver.WalletID,
+	identityInfo identity.Info,
+) (*LongTermOwnerWallet, error) {
 	identity, auditInfo, err := identityInfo.Get(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get identity info")
@@ -425,7 +432,7 @@ func NewAnonymousOwnerWallet(
 	TokenVault OwnerTokenVault,
 	Deserializer Deserializer,
 	walletRegistry Registry,
-	id string,
+	id idriver.WalletID,
 	identityInfo identity.Info,
 	cacheSize int,
 	metricsProvider metrics.Provider,

@@ -49,7 +49,7 @@ func NewRoleFactory(
 	config Config,
 	fscIdentity driver.Identity,
 	networkDefaultIdentity driver.Identity,
-	identityProvider driver.IdentityProvider,
+	identityProvider IdentityProvider,
 	storageProvider StorageProvider,
 	deserializerManager SignerDeserializerManager,
 ) *RoleFactory {

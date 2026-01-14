@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
@@ -58,7 +57,7 @@ func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 
 func (d *Base) NewWalletService(
 	tmsConfig core.Config,
-	binder idriver.NetworkBinderService,
+	binder identity.NetworkBinderService,
 	storageProvider identity.StorageProvider,
 	qe driver.QueryEngine,
 	logger logging.Logger,

@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
@@ -43,7 +42,7 @@ func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 
 func (d *base) newWalletService(
 	tmsConfig core.Config,
-	binder driver2.NetworkBinderService,
+	binder identity.NetworkBinderService,
 	storageProvider identity.StorageProvider,
 	qe driver.QueryEngine,
 	logger logging.Logger,
