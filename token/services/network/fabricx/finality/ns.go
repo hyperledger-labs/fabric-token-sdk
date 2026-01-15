@@ -31,10 +31,6 @@ type QueryService interface {
 	GetTxStatus(txID string) (fabricx.ValidationCode, error)
 }
 
-type QueryServiceProvider interface {
-	Get(network, channel string) (QueryService, error)
-}
-
 type ListenerEvent struct {
 	QueryService  QueryService
 	KeyTranslator translator.KeyTranslator

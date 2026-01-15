@@ -12,13 +12,11 @@ import (
 	common "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/queryservice"
 	fabricxsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/tms"
 	"go.uber.org/dig"
@@ -55,7 +53,6 @@ func (p *SDK) Install() error {
 		p.Container().Provide(tms.NewTMSDeployerService, dig.As(new(tms.DeployerService))),
 		p.Container().Provide(pp.NewPublicParametersService),
 		p.Container().Provide(digutils.Identity[*pp.PublicParametersService](), dig.As(new(pp.Loader))),
-		p.Container().Provide(digutils.Identity[queryservice.Provider](), dig.As(new(finality.QueryServiceProvider))),
 	)
 	if err != nil {
 		return err
