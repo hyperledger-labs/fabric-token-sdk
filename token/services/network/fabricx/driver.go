@@ -52,7 +52,6 @@ func NewDriver(
 	qsProvider queryservice.Provider,
 	storeServiceManager ttxdb.StoreServiceManager,
 	fxFinalityProvider *finalityx.Provider,
-	queryServiceProvider finality2.QueryServiceProvider,
 ) (driver.Driver, error) {
 	vkp := pp2.NewVersionKeeperProvider()
 	kt := &keys.Translator{}
