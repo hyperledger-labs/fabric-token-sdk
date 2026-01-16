@@ -8,6 +8,7 @@ package finality
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
@@ -65,6 +66,10 @@ func (l *ListenerEvent) Process(ctx context.Context) error {
 	return nil
 }
 
+func (l *ListenerEvent) String() string {
+	return fmt.Sprintf("ListenerEvent[%s]", l.TxID)
+}
+
 type TxCheck struct {
 	QueryService  QueryService
 	KeyTranslator translator.KeyTranslator
@@ -99,6 +104,10 @@ func (t *TxCheck) Process(ctx context.Context) error {
 	}
 	t.Listener.OnStatus(ctx, t.TxID, status, "", tokenRequestHash)
 	return nil
+}
+
+func (l *TxCheck) String() string {
+	return fmt.Sprintf("TxCheck[%s]", l.TxID)
 }
 
 type Queue interface {
