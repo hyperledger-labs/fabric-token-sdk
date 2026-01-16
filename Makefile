@@ -7,7 +7,9 @@ FABRIC_X_COMMITTER_VERSION ?= 0.1.7
 
 # need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
 FABRIC_BINARY_BASE=$(PWD)/../fabric
+FABRICX_BINARY_BASE=$(PWD)/../fabricx
 FAB_BINS ?= $(FABRIC_BINARY_BASE)/bin
+FABX_BINS ?= $(FABRICX_BINARY_BASE)/bin
 
 # integration test options
 GINKGO_TEST_OPTS ?=
