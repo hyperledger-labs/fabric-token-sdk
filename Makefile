@@ -57,7 +57,7 @@ install-softhsm:
 	./ci/scripts/install_softhsm.sh
 
 .PHONY: docker-images
-docker-images: fabric-docker-images monitoring-docker-images testing-docker-images
+docker-images: fabric-docker-images fabricx-docker-images monitoring-docker-images testing-docker-images
 
 .PHONY: testing-docker-images
 testing-docker-images:

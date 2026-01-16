@@ -13,7 +13,11 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
+
+var logger = logging.MustGetLogger()
 
 var (
 	ErrQueueClosed     = errors.New("queue is closed")
@@ -90,7 +94,7 @@ func (eq *EventQueue) worker(id int) {
 	defer eq.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Worker %d recovered from panic: %v", id, r)
+			logger.Infof("Worker %d recovered from panic: %v", id, r)
 			// Restart the worker to maintain pool size
 			eq.wg.Add(1)
 			go eq.worker(id)
@@ -102,18 +106,18 @@ func (eq *EventQueue) worker(id int) {
 		case event, ok := <-eq.events:
 			if !ok {
 				// Channel closed, worker exits
-				log.Printf("Worker %d shutting down", id)
+				logger.Infof("Worker %d shutting down", id)
 				return
 			}
 
 			// Process the event with context
 			if err := event.Process(eq.ctx); err != nil {
-				log.Printf("Worker %d: error processing event: %v", id, err)
+				logger.Infof("Worker %d: error processing event: %v", id, err)
 			}
 
 		case <-eq.ctx.Done():
 			// Context cancelled, drain remaining events before exit
-			log.Printf("Worker %d received shutdown signal", id)
+			logger.Infof("Worker %d received shutdown signal", id)
 			return
 		}
 	}
@@ -144,6 +148,8 @@ func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) (err err
 	if eq.isClosed() {
 		return ErrQueueClosed
 	}
+
+	logger.Infof("EnqueueBlocking event: %v", event)
 
 	defer func() {
 		if r := recover(); r != nil {
