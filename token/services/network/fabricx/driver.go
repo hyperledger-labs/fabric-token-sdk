@@ -13,13 +13,10 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx"
-	finalityx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/finality"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/queryservice"
 	fabricxdig "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -43,37 +40,27 @@ func NewDriver(
 	tokensManager *tokens.ServiceManager,
 	configs *config.Service,
 	viewManager *view.Manager,
-	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 	identityProvider view.IdentityProvider,
 	ppFetcher *pp2.PublicParametersService,
 	configService driver2.ConfigService,
-	qsProvider queryservice.Provider,
 	storeServiceManager ttxdb.StoreServiceManager,
-	fxFinalityProvider *finalityx.Provider,
 ) (driver.Driver, error) {
 	vkp := pp2.NewVersionKeeperProvider()
 	kt := &keys.Translator{}
 
-	queryExecutorProvider := qe.NewExecutorProvider(qsProvider)
+	queryExecutorProvider := qe.NewExecutorProvider(fnsProvider)
 
-	listenerManagerConfig := config3.NewListenerManagerConfig(configService)
-
-	flmProvider, err := finality2.NewFLMProvider(fnsProvider, tracerProvider, listenerManagerConfig, fxFinalityProvider)
+	flmProvider, err := finality2.NewFLMProvider(fnsProvider)
 	if err != nil {
 		return nil, err
 	}
 
 	d := &Driver{
 		fnsProvider:                fnsProvider.FabricNetworkServiceProvider(),
-		tokensManager:              tokensManager,
 		configService:              configs,
-		viewManager:                viewManager,
-		filterProvider:             filterProvider,
-		tmsProvider:                tmsProvider,
 		tracerProvider:             tracerProvider,
-		identityProvider:           identityProvider,
 		defaultPublicParamsFetcher: ppFetcher,
 		queryExecutorProvider:      queryExecutorProvider,
 		keyTranslator:              kt,
@@ -100,8 +87,7 @@ func NewDriver(
 			tokensManager,
 			vkp,
 		),
-		supportedDrivers:   []string{fabricxdig.FabricxDriverName},
-		fxFinalityProvider: fxFinalityProvider,
+		supportedDrivers: []string{fabricxdig.FabricxDriverName},
 	}
 
 	return d, nil
@@ -109,13 +95,8 @@ func NewDriver(
 
 type Driver struct {
 	fnsProvider                *fabric2.NetworkServiceProvider
-	tokensManager              *tokens.ServiceManager
 	configService              *config.Service
-	viewManager                *view.Manager
-	filterProvider             *common.AcceptTxInDBFilterProvider
-	tmsProvider                *token.ManagementServiceProvider
 	tracerProvider             trace.TracerProvider
-	identityProvider           view.IdentityProvider
 	defaultPublicParamsFetcher fabric.NetworkPublicParamsFetcher
 	supportedDrivers           []string
 	keyTranslator              translator.KeyTranslator
@@ -124,7 +105,6 @@ type Driver struct {
 	EndorsementServiceProvider fabric.EndorsementServiceProvider
 	setupListenerProvider      fabric.SetupListenerProvider
 	queryExecutorProvider      *qe.ExecutorProvider
-	fxFinalityProvider         *finalityx.Provider
 }
 
 func (d *Driver) New(network, channel string) (driver.Network, error) {
@@ -167,10 +147,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		fns,
 		ch,
 		d.configService,
-		d.filterProvider,
-		d.tokensManager,
-		d.viewManager,
-		d.tmsProvider,
 		d.EndorsementServiceProvider,
 		tokenQueryExecutor,
 		d.tracerProvider,

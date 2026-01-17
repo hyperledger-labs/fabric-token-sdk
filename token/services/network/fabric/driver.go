@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -37,12 +36,8 @@ type NetworkPublicParamsFetcher interface {
 
 type Driver struct {
 	fnsProvider                     *fabric.NetworkServiceProvider
-	tokensManager                   *tokens.ServiceManager
 	configService                   *config.Service
-	viewManager                     *view.Manager
-	filterProvider                  *common.AcceptTxInDBFilterProvider
 	tmsProvider                     *token.ManagementServiceProvider
-	identityProvider                view.IdentityProvider
 	tracerProvider                  trace.TracerProvider
 	defaultPublicParamsFetcher      NetworkPublicParamsFetcher
 	tokenQueryExecutorProvider      driver.TokenQueryExecutorProvider
@@ -51,7 +46,7 @@ type Driver struct {
 	keyTranslator                   translator.KeyTranslator
 	flmProvider                     finality.ListenerManagerProvider
 	llmProvider                     lookup.ListenerManagerProvider
-	EndorsementServiceProvider      EndorsementServiceProvider
+	endorsementServiceProvider      EndorsementServiceProvider
 	setupListenerProvider           SetupListenerProvider
 }
 
@@ -61,7 +56,6 @@ func NewGenericDriver(
 	configProvider *config.Service,
 	viewManager *view.Manager,
 	viewRegistry *view.Registry,
-	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 	identityProvider view.IdentityProvider,
@@ -71,13 +65,9 @@ func NewGenericDriver(
 	keyTranslator := &keys.Translator{}
 	return NewDriver(
 		fnsProvider,
-		tokensManager,
 		configProvider,
-		viewManager,
-		filterProvider,
 		tmsProvider,
 		tracerProvider,
-		identityProvider,
 		NewChaincodePublicParamsFetcher(viewManager),
 		NewTokenExecutorProvider(fnsProvider),
 		NewSpentTokenExecutorProvider(fnsProvider, keyTranslator),
@@ -101,13 +91,9 @@ func NewGenericDriver(
 
 func NewDriver(
 	fnsProvider *fabric.NetworkServiceProvider,
-	tokensManager *tokens.ServiceManager,
 	configService *config.Service,
-	viewManager *view.Manager,
-	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
-	identityProvider view.IdentityProvider,
 	defaultPublicParamsFetcher NetworkPublicParamsFetcher,
 	tokenQueryExecutorProvider driver.TokenQueryExecutorProvider,
 	spentTokenQueryExecutorProvider driver.SpentTokenQueryExecutorProvider,
@@ -120,12 +106,8 @@ func NewDriver(
 ) *Driver {
 	return &Driver{
 		fnsProvider:                     fnsProvider,
-		tokensManager:                   tokensManager,
 		configService:                   configService,
-		viewManager:                     viewManager,
-		filterProvider:                  filterProvider,
 		tmsProvider:                     tmsProvider,
-		identityProvider:                identityProvider,
 		tracerProvider:                  tracerProvider,
 		defaultPublicParamsFetcher:      defaultPublicParamsFetcher,
 		tokenQueryExecutorProvider:      tokenQueryExecutorProvider,
@@ -134,7 +116,7 @@ func NewDriver(
 		keyTranslator:                   keyTranslator,
 		flmProvider:                     flmProvider,
 		llmProvider:                     llmProvider,
-		EndorsementServiceProvider:      endorsementServiceProvider,
+		endorsementServiceProvider:      endorsementServiceProvider,
 		setupListenerProvider:           setupListenerProvider,
 	}
 }
@@ -169,5 +151,18 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		return nil, errors.Wrapf(err, "failed to create a new llm")
 	}
 
-	return NewNetwork(fns, ch, d.configService, d.filterProvider, d.tokensManager, d.viewManager, d.tmsProvider, d.EndorsementServiceProvider, tokenQueryExecutor, d.tracerProvider, d.defaultPublicParamsFetcher, spentTokenQueryExecutor, d.keyTranslator, flm, llm, d.setupListenerProvider), nil
+	return NewNetwork(
+		fns,
+		ch,
+		d.configService,
+		d.endorsementServiceProvider,
+		tokenQueryExecutor,
+		d.tracerProvider,
+		d.defaultPublicParamsFetcher,
+		spentTokenQueryExecutor,
+		d.keyTranslator,
+		flm,
+		llm,
+		d.setupListenerProvider,
+	), nil
 }

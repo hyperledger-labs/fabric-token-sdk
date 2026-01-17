@@ -190,12 +190,13 @@ func (n *NSListenerManager) RemoveFinalityListener(id string, listener ndriver.F
 }
 
 type NSListenerManagerProvider struct {
-	FNSProvider      *fabricx.NetworkServiceProvider
-	FinalityProvider *finalityx.Provider
-	queue            Queue
+	FNSProvider *fabricx.NetworkServiceProvider
+	queue       Queue
 }
 
-func NewNotificationServiceBased(fnsPRovider *fabricx.NetworkServiceProvider, finalityProvider *finalityx.Provider) (finality.ListenerManagerProvider, error) {
+func NewNotificationServiceBased(
+	fnsProvider *fabricx.NetworkServiceProvider,
+) (finality.ListenerManagerProvider, error) {
 	q, err := queue.NewEventQueue(queue.Config{
 		Workers:   10,
 		QueueSize: 1000,
@@ -205,21 +206,19 @@ func NewNotificationServiceBased(fnsPRovider *fabricx.NetworkServiceProvider, fi
 	}
 
 	return &NSListenerManagerProvider{
-		FNSProvider:      fnsPRovider,
-		FinalityProvider: finalityProvider,
-		queue:            q,
+		FNSProvider: fnsProvider,
+		queue:       q,
 	}, nil
 }
 
 func (n *NSListenerManagerProvider) NewManager(network, channel string) (finality.ListenerManager, error) {
-	lm, err := n.FinalityProvider.NewManager(network, channel)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting finality manager for [%s:%s]", network, channel)
-	}
 	fn, err := n.FNSProvider.FabricNetworkService(network)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting fabric network service for [%s:%s]", network, channel)
 	}
-
-	return NewNSListenerManager(lm, n.queue, fn.QueryService(), &keys.Translator{}), nil
+	finality, err := fn.FinalityService(channel)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting finality for [%s:%s]", network, channel)
+	}
+	return NewNSListenerManager(finality, n.queue, fn.QueryService(), &keys.Translator{}), nil
 }
