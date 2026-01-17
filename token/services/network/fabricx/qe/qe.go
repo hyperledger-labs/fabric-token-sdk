@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/queryservice"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -38,7 +38,7 @@ type ExecutorProvider struct {
 	p lazy.Provider[in, *Executor]
 }
 
-func NewExecutorProvider(qsProvider queryservice.Provider) *ExecutorProvider {
+func NewExecutorProvider(qsProvider *fabricx.NetworkServiceProvider) *ExecutorProvider {
 	p := lazy.NewProviderWithKeyMapper[in, string, *Executor](
 		func(i in) string { return i.channel },
 		func(i in) (*Executor, error) {
@@ -62,13 +62,13 @@ func (p *ExecutorProvider) GetStateExecutor(network, channel string) (QueryState
 }
 
 type Executor struct {
-	qsProvider    queryservice.Provider
+	qsProvider    *fabricx.NetworkServiceProvider
 	keyTranslator translator.KeyTranslator
 	network       string
 	channel       string
 }
 
-func NewExecutor(network string, channel string, qsProvider queryservice.Provider) *Executor {
+func NewExecutor(network string, channel string, qsProvider *fabricx.NetworkServiceProvider) *Executor {
 	return &Executor{
 		network:       network,
 		channel:       channel,
@@ -97,10 +97,11 @@ func (e *Executor) QueryTokens(_ context.Context, namespace driver.Namespace, id
 		return nil, nil
 	}
 
-	qs, err := e.qsProvider.Get(e.network, e.channel)
+	fns, err := e.qsProvider.FabricNetworkService(e.network)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting qs [%s:%s]", e.network, e.channel)
+		return nil, errors.Wrapf(err, "failed getting fns [%s:%s]", e.network, e.channel)
 	}
+	qs := fns.QueryService()
 	res, err := qs.GetStates(map[driver.Namespace][]driver.PKey{
 		namespace: keys,
 	})
@@ -148,10 +149,11 @@ func (e *Executor) QuerySpentTokens(_ context.Context, namespace driver.Namespac
 		return nil, nil
 	}
 
-	qs, err := e.qsProvider.Get(e.network, e.channel)
+	fns, err := e.qsProvider.FabricNetworkService(e.network)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting qs [%s:%s]", e.network, e.channel)
+		return nil, errors.Wrapf(err, "failed getting fns [%s:%s]", e.network, e.channel)
 	}
+	qs := fns.QueryService()
 	res, err := qs.GetStates(map[driver.Namespace][]driver.PKey{
 		namespace: keys,
 	})
@@ -174,10 +176,11 @@ func (e *Executor) QueryStates(_ context.Context, namespace driver.Namespace, ke
 		return nil, nil
 	}
 
-	qs, err := e.qsProvider.Get(e.network, e.channel)
+	fns, err := e.qsProvider.FabricNetworkService(e.network)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting qs [%s:%s]", e.network, e.channel)
+		return nil, errors.Wrapf(err, "failed getting fns [%s:%s]", e.network, e.channel)
 	}
+	qs := fns.QueryService()
 	res, err := qs.GetStates(map[driver.Namespace][]driver.PKey{
 		namespace: keys,
 	})
