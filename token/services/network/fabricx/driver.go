@@ -12,12 +12,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/vault/queryservice"
-	fabricx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx"
+	fabricxdig "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -37,41 +36,37 @@ import (
 )
 
 func NewDriver(
-	fnsProvider *fabric2.NetworkServiceProvider,
+	fnsProvider *fabricx.NetworkServiceProvider,
 	tokensManager *tokens.ServiceManager,
 	configs *config.Service,
 	viewManager *view.Manager,
-	filterProvider *common.AcceptTxInDBFilterProvider,
 	tmsProvider *token.ManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
 	identityProvider view.IdentityProvider,
 	ppFetcher *pp2.PublicParametersService,
 	configService driver2.ConfigService,
-	qsProvider queryservice.Provider,
 	storeServiceManager ttxdb.StoreServiceManager,
-) driver.Driver {
+) (driver.Driver, error) {
 	vkp := pp2.NewVersionKeeperProvider()
 	kt := &keys.Translator{}
 
-	queryExecutorProvider := qe.NewExecutorProvider(qsProvider)
+	queryExecutorProvider := qe.NewExecutorProvider(fnsProvider)
 
-	listenerManagerConfig := config3.NewListenerManagerConfig(configService)
+	flmProvider, err := finality2.NewFLMProvider(fnsProvider)
+	if err != nil {
+		return nil, err
+	}
 
 	d := &Driver{
-		fnsProvider:                fnsProvider,
-		tokensManager:              tokensManager,
+		fnsProvider:                fnsProvider.FabricNetworkServiceProvider(),
 		configService:              configs,
-		viewManager:                viewManager,
-		filterProvider:             filterProvider,
-		tmsProvider:                tmsProvider,
 		tracerProvider:             tracerProvider,
-		identityProvider:           identityProvider,
 		defaultPublicParamsFetcher: ppFetcher,
 		queryExecutorProvider:      queryExecutorProvider,
 		keyTranslator:              kt,
-		flmProvider:                finality2.NewFLMProvider(fnsProvider, tracerProvider, listenerManagerConfig),
+		flmProvider:                flmProvider,
 		llmProvider: lookup2.NewListenerManagerProvider(
-			fnsProvider,
+			fnsProvider.FabricNetworkServiceProvider(),
 			tracerProvider,
 			kt,
 			config3.NewListenerManagerConfig(configService),
@@ -85,28 +80,23 @@ func NewDriver(
 			vkp,
 			tmsProvider,
 			endorsement2.NewStorageProvider(storeServiceManager),
-			fnsProvider,
+			fnsProvider.FabricNetworkServiceProvider(),
 		),
 		setupListenerProvider: lookup2.NewSetupListenerProvider(
 			tmsProvider,
 			tokensManager,
 			vkp,
 		),
-		supportedDrivers: []string{fabricx.FabricxDriverName},
+		supportedDrivers: []string{fabricxdig.FabricxDriverName},
 	}
 
-	return d
+	return d, nil
 }
 
 type Driver struct {
 	fnsProvider                *fabric2.NetworkServiceProvider
-	tokensManager              *tokens.ServiceManager
 	configService              *config.Service
-	viewManager                *view.Manager
-	filterProvider             *common.AcceptTxInDBFilterProvider
-	tmsProvider                *token.ManagementServiceProvider
 	tracerProvider             trace.TracerProvider
-	identityProvider           view.IdentityProvider
 	defaultPublicParamsFetcher fabric.NetworkPublicParamsFetcher
 	supportedDrivers           []string
 	keyTranslator              translator.KeyTranslator
@@ -157,10 +147,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		fns,
 		ch,
 		d.configService,
-		d.filterProvider,
-		d.tokensManager,
-		d.viewManager,
-		d.tmsProvider,
 		d.EndorsementServiceProvider,
 		tokenQueryExecutor,
 		d.tracerProvider,

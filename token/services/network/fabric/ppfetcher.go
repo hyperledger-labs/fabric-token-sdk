@@ -11,14 +11,13 @@ import (
 
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 )
 
 type chaincodePublicParamsFetcher struct {
 	viewManager ViewManager
 }
 
-func NewChaincodePublicParamsFetcher(viewManager *view.Manager) *chaincodePublicParamsFetcher {
+func NewChaincodePublicParamsFetcher(viewManager ViewManager) *chaincodePublicParamsFetcher {
 	return &chaincodePublicParamsFetcher{viewManager: viewManager}
 }
 

@@ -125,12 +125,8 @@ type SetupListenerProvider interface {
 type Network struct {
 	n              *fabric.NetworkService
 	ch             *fabric.Channel
-	tmsProvider    *token2.ManagementServiceProvider
-	viewManager    ViewManager
 	ledger         *ledger
 	configuration  common2.Configuration
-	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
-	tokensProvider *tokens.ServiceManager
 	finalityTracer trace.Tracer
 
 	setupListenerProvider      SetupListenerProvider
@@ -149,10 +145,6 @@ func NewNetwork(
 	n *fabric.NetworkService,
 	ch *fabric.Channel,
 	configuration common2.Configuration,
-	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
-	tokensProvider *tokens.ServiceManager,
-	viewManager ViewManager,
-	tmsProvider *token2.ManagementServiceProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
 	tokenQueryExecutor driver.TokenQueryExecutor,
 	tracerProvider trace.TracerProvider,
@@ -166,12 +158,8 @@ func NewNetwork(
 	network := &Network{
 		n:                          n,
 		ch:                         ch,
-		tmsProvider:                tmsProvider,
-		viewManager:                viewManager,
 		ledger:                     newLedger(ch, keyTranslator),
 		configuration:              configuration,
-		filterProvider:             filterProvider,
-		tokensProvider:             tokensProvider,
 		flm:                        flm,
 		llm:                        llm,
 		defaultPublicParamsFetcher: defaultPublicParamsFetcher,

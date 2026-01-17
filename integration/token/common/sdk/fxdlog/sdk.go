@@ -47,7 +47,7 @@ func (p *SDK) Install() error {
 		// token driver
 		p.Container().Provide(dlog.NewDriver, dig.Group("token-drivers")),
 
-		// fabricx
+		// fabricx network driver
 		p.Container().Provide(fabricx.NewDriver, dig.Group("network-drivers")),
 		p.Container().Provide(tms.NewSubmitterFromFNS, dig.As(new(tms.Submitter))),
 		p.Container().Provide(tms.NewTMSDeployerService, dig.As(new(tms.DeployerService))),
