@@ -73,10 +73,12 @@ func BenchmarkTransferServiceTransfer(b *testing.B) {
 	outputs, err := benchmark2.NumOutputs(1, 2, 3)
 	require.NoError(b, err)
 	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, []int{1})
+	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves)
+	require.NoError(b, err)
 
 	for _, tc := range testCases {
 		b.Run(tc.Name, func(b *testing.B) {
-			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase, nil)
+			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase, configurations)
 			require.NoError(b, err)
 
 			// Optional: Reset timer if you had expensive setup code above
@@ -84,12 +86,13 @@ func BenchmarkTransferServiceTransfer(b *testing.B) {
 
 			i := 0
 			for b.Loop() {
-				action, _, err := env.Envs[i].ts.Transfer(
+				e := env.Envs[i%len(env.Envs)]
+				action, _, err := e.ts.Transfer(
 					b.Context(),
 					"an_anchor",
 					nil,
-					env.Envs[i].ids,
-					env.Envs[i].outputs,
+					e.ids,
+					e.outputs,
 					nil,
 				)
 				require.NoError(b, err)
