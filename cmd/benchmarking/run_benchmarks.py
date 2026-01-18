@@ -115,14 +115,14 @@ def run_and_parse_non_parallel_metrics(benchName, params, folder=transfer_benchm
         f"{name} allocs": allocs,
     }
 
-def run_and_parse_parallel_metrics(test, params, folder=transfer_benchmarks_folder) -> dict:
+def run_and_parse_parallel_metrics(benchName, params, folder=transfer_benchmarks_folder) -> dict:
     if folder == "":
         folder = transfer_benchmarks_folder
 
     global I
     global output_folder_path
 
-    cmd = f"go test {folder} -test.run={test} -test.v -test.timeout 0 -bits='32' -num_inputs='2' -num_outputs='2' -workers='NumCPU' -duration='10s' -setup_samples=128 {params}"
+    cmd = f"go test {folder} -test.run={benchName} -test.v -test.timeout 0 -bits='32' -num_inputs='2' -num_outputs='2' -workers='NumCPU' -duration='10s' -setup_samples=128 {params}"
     print(f"{I} Running: {cmd}")
     I = I+1
 
@@ -135,7 +135,7 @@ def run_and_parse_parallel_metrics(test, params, folder=transfer_benchmarks_fold
         check=True
     )
 
-    log_file_path = os.path.join(output_folder_path, test+".log")
+    log_file_path = os.path.join(output_folder_path, benchName+".log")
     if not os.path.exists(log_file_path):
         with open(log_file_path, "w", encoding="utf-8") as f:
             f.write(result.stdout)
@@ -150,8 +150,6 @@ def run_and_parse_parallel_metrics(test, params, folder=transfer_benchmarks_fold
     name_match = name_re.search(output)
     if not name_match:
         raise ValueError("Could not extract test name")
-
-    name = name_match.group(1)
 
     # --- Unit conversion ---
     time_mult = {
@@ -181,6 +179,7 @@ def run_and_parse_parallel_metrics(test, params, folder=transfer_benchmarks_fold
     avg_val, avg_unit = avg_lat_re.search(output).groups()
     max_val, max_unit = max_lat_re.search(output).groups()
 
+    name = benchName
     return {
         f"{name} real throughput": real_tp,
         f"{name} pure throughput": pure_tp,
@@ -243,4 +242,3 @@ src = os.path.join(".", "benchmark_results.csv")
 dst = os.path.join(output_folder_path, "benchmark_results.csv")
 if os.path.exists(src) and not os.path.exists(dst):
     shutil.copy(src, dst)
-
