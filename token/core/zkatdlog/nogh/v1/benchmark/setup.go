@@ -128,7 +128,8 @@ func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs [
 // bit size and curveID. If no configuration exists for the provided key an
 // error is returned.
 func (c *SetupConfigurations) GetPublicParams(bits uint64, curveID math.CurveID) (*setup.PublicParams, error) {
-	configuration, ok := c.Configurations[key(bits, curveID)]
+	k := key(bits, curveID)
+	configuration, ok := c.Configurations[k]
 	if !ok {
 		return nil, fmt.Errorf("configuration not found")
 	}
