@@ -4,24 +4,52 @@ import sys
 import shutil
 import subprocess
 import re
+import argparse
 from datetime import datetime
 
-I=1
-TOKENSDK_ROOT = "../../"
+parser = argparse.ArgumentParser(description="run_benchmark.py script")
+parser.add_argument(
+    "--count",       # use --count from the command line
+    type=int,        # expect an integer
+    default=10,      # default if not provided
+    help="Number of repetitions (default: 10)"
+)
+parser.add_argument(
+    "--timeout",    # use --timeout from the command line
+    type=str,       # expect an integer
+    default="0",      # default if not provided
+    help="timeout for the run (default: 0, i.e. not timeout)"
+)
+parser.add_argument(
+    "--benchName",  # use --benchName from the command line
+    type=str,       # expect a string
+    default="",     # default if not provided
+    help="benchmark name to run (default is to run all benchmarks)"
+)
+
+args = parser.parse_args()
+count = args.count
+timeout = args.timeout
+benchName = args.benchName
+
+TOKENSDK_ROOT = os.environ.get("TOKENSDK_ROOT", "../../")
 output_folder_path = ""
 v1_benchmarks_folder = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1")
 transfer_benchmarks_folder = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1/transfer")
 issuer_benchmarks_folder = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1/issue")
 validator_benchmarks_folder = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1/validator")
 
+I=1
+
 def run_and_parse_non_parallel_metrics(benchName, params, folder=transfer_benchmarks_folder) -> dict:
     global I
     global output_folder_path
+    global count, timeout
 
     if folder == "":
         folder = transfer_benchmarks_folder
 
-    cmd = f"go test {folder} -run='^$' -bench={benchName} -v -benchmem -count=10 -cpu=1 -timeout 0 {params} | tee bench.txt; benchstat bench.txt" 
+    cmd = f"go test {folder} -run='^$' -bench={benchName} -v -benchmem -count={count} -cpu=1 -timeout {timeout} {params} | tee bench.txt; benchstat bench.txt" 
     print(f"{I} Running: {cmd}")
     I = I+1
     result = subprocess.run(
@@ -120,9 +148,10 @@ def run_and_parse_parallel_metrics(benchName, params, folder=transfer_benchmarks
         folder = transfer_benchmarks_folder
 
     global I
+    global timeout
     global output_folder_path
 
-    cmd = f"go test {folder} -test.run={benchName} -test.v -test.timeout 0 -bits='32' -num_inputs='2' -num_outputs='2' -workers='NumCPU' -duration='10s' -setup_samples=128 {params}"
+    cmd = f"go test {folder} -test.run={benchName} -test.v -test.timeout {timeout} -bits='32' -num_inputs='2' -num_outputs='2' -workers='NumCPU' -duration='10s' -setup_samples=128 {params}"
     print(f"{I} Running: {cmd}")
     I = I+1
 
@@ -228,17 +257,21 @@ results = {}
 print("\n*******************************************************")
 print("Running non-parallel tests")
 
-for test, params, benchType in non_parallel_tests:
-    results.update(run_and_parse_non_parallel_metrics(test, params, benchType)) 
+for testName, params, benchType in non_parallel_tests:
+    if (benchName == "") or (benchName == testName):
+        results.update(run_and_parse_non_parallel_metrics(testName, params, benchType)) 
 
 print("\n*******************************************************")
 print("Running parallel tests")
-for test, params, folder in parallel_tests:
-    results.update(run_and_parse_parallel_metrics(test, params, folder))
+for testName, params, folder in parallel_tests:
+    if (benchName == "") or (benchName == testName):
+       results.update(run_and_parse_parallel_metrics(testName, params, folder))
 
 # add new row to benchmark_results.csv and copy it to the output folder
-append_dict_as_row("benchmark_results.csv", results)
-src = os.path.join(".", "benchmark_results.csv")
-dst = os.path.join(output_folder_path, "benchmark_results.csv")
-if os.path.exists(src) and not os.path.exists(dst):
-    shutil.copy(src, dst)
+# but not if we just run a single bench as a test
+if benchName == "": # we ran all the benchmarks
+    append_dict_as_row("benchmark_results.csv", results)
+    src = os.path.join(".", "benchmark_results.csv")
+    dst = os.path.join(output_folder_path, "benchmark_results.csv")
+    if os.path.exists(src) and not os.path.exists(dst):
+        shutil.copy(src, dst)
