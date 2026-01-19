@@ -242,7 +242,6 @@ non_parallel_tests = [
     ('BenchmarkTransferProofGeneration', "", ""), 
     ('BenchmarkIssuer', "", issuer_benchmarks_folder), 
     ('BenchmarkProofVerificationIssuer', "", issuer_benchmarks_folder), 
-    ('BenchmarkVerificationSenderProof', "", ""), 
     ('BenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
 ]
 parallel_tests = [

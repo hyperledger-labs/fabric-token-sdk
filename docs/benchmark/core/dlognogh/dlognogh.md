@@ -216,3 +216,35 @@ Timeline: [▇▇▇█▇▇▇▇▆▇] (Max: 131 ops/s)
 PASS
 ok      github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer       14.566s
 ```
+
+### Running selected benchmarks with run_benchmarks.py
+The run_benchmarks.py script runs selected benchmarks and summarizes their results in a csv file, so it could be followed as more optimizations are added. 
+To run this script goto the ../fabric-token-sdk/cmd/benchmarking folder and run
+```shell
+python run_benchmarks.py
+```
+
+This creates a subfolder that collects the logs of all the benchmarks and the csv file (**benchmark_results.csv**) that has a separate row for every invocation of the script with the selected metrics collected for all the benchmarks. 
+The folder is named **benchmark_logs_<date>** for example **benchmark_logs_2026-01-19_06-56-41**, where the date indicates the time when the script was run.
+
+The script supports the following flags:
+
+`--count`
+: the number of times to run the benchmark
+
+`--timeout`
+: the maximum time (in seconds) to for the benchmark. Thje default is 0, implying no limit.
+
+`--benchName`
+: The single benchmark that should be run by the script. The default is to run the whole selection of benchmarks.
+
+**Example runs:**
+
+- Running all the selected benchmarks:
+```shell
+python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
+```
+- Running just one selected benchmark 5 times for no more than 4 seconds:
+```shell
+python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
+```
