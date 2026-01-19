@@ -90,8 +90,6 @@ func (fake *Storage) AppendReturnsOnCall(i int, result1 error) {
 func (fake *Storage) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.appendMutex.RLock()
-	defer fake.appendMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
