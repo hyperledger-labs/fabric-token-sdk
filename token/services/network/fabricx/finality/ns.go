@@ -9,6 +9,7 @@ package finality
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
@@ -172,16 +173,18 @@ func NewNSListenerManager(
 }
 
 func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, listener ndriver.FinalityListener) error {
+	l := &onlyOnceListener{listener: listener}
+
 	if err := n.queue.Enqueue(&TxCheck{
 		QueryService:  n.queryService,
 		KeyTranslator: n.keyTranslator,
-		Listener:      listener,
+		Listener:      l,
 		TxID:          txID,
 		Namespace:     namespace,
 	}); err != nil {
 		return err
 	}
-	return n.lm.AddFinalityListener(txID, NewNSFinalityListener(namespace, listener, n.queue, n.queryService, n.keyTranslator))
+	return n.lm.AddFinalityListener(txID, NewNSFinalityListener(namespace, l, n.queue, n.queryService, n.keyTranslator))
 }
 
 func (n *NSListenerManager) RemoveFinalityListener(id string, listener ndriver.FinalityListener) error {
@@ -216,9 +219,20 @@ func (n *NSListenerManagerProvider) NewManager(network, channel string) (finalit
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting fabric network service for [%s:%s]", network, channel)
 	}
-	finality, err := fn.FinalityService(channel)
+	finality, err := fn.FinalityService()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting finality for [%s:%s]", network, channel)
 	}
 	return NewNSListenerManager(finality, n.queue, fn.QueryService(), &keys.Translator{}), nil
+}
+
+type onlyOnceListener struct {
+	listener ndriver.FinalityListener
+	once     sync.Once
+}
+
+func (o *onlyOnceListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
+	o.once.Do(func() {
+		o.listener.OnStatus(ctx, txID, status, message, tokenRequestHash)
+	})
 }

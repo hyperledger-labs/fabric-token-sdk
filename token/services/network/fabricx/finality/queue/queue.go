@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -94,7 +95,7 @@ func (eq *EventQueue) worker(id int) {
 	defer eq.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Infof("Worker %d recovered from panic: %v", id, r)
+			logger.Infof("Worker %d recovered from panic: %v, stack [%s]", id, r, string(debug.Stack()))
 			// Restart the worker to maintain pool size
 			eq.wg.Add(1)
 			go eq.worker(id)
