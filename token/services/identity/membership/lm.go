@@ -430,18 +430,35 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 	l.logger.DebugfContext(ctx, "try to load identity with [%d] key managers [%v]", len(l.KeyManagerProviders), l.KeyManagerProviders)
 	for i, p := range l.KeyManagerProviders {
 		var err error
-		keyManager, err = p.Get(ctx, identityConfig)
-		if err == nil && keyManager != nil && len(keyManager.EnrollmentID()) != 0 {
-			priority = i
-			break
+		var km KeyManager
+		km, err = p.Get(ctx, identityConfig)
+		if err != nil {
+			errs = append(errs, err)
+			continue
 		}
-		keyManager = nil
-		errs = append(errs, err)
+
+		if len(km.EnrollmentID()) == 0 {
+			errs = append(errs, errors.Errorf("no enrollment id found for identity [%s]", identityConfig.ID))
+			continue
+		}
+
+		// only assign keyManager if the provider returned a valid enrollment id
+		keyManager = km
+		priority = i
+		break
 	}
 	if keyManager == nil {
-		return errors.Wrapf(
-			errors.Join(errs...),
-			"failed to get a key manager for the passed identity config for [%s:%s]",
+		logger.Errorf("no key manager found for identity [%s], err [%+v]", identityConfig.ID, errs)
+		err := errors.Join(errs...)
+		if err != nil {
+			return errors.Wrapf(err,
+				"failed to get a key manager for the passed identity config for [%s:%s]",
+				identityConfig.ID,
+				identityConfig.URL,
+			)
+		}
+		return errors.Errorf(
+			"no key manager found for [%s:%s]",
 			identityConfig.ID,
 			identityConfig.URL,
 		)
@@ -467,21 +484,29 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 func (l *LocalMembership) registerIdentityConfiguration(ctx context.Context, identity *IdentityConfiguration, defaultIdentity bool) error {
 	// Try to register the local identity
 	identity.URL = l.config.TranslatePath(identity.URL)
-	if err := l.registerLocalIdentity(ctx, identity, defaultIdentity); err != nil {
-		l.logger.Warnf("failed to load local identity at [%s]:[%s]", identity.URL, err)
+	err1 := l.registerLocalIdentity(ctx, identity, defaultIdentity)
+	if err1 == nil {
+		// nothing else needs to be done
+		return nil
+	}
+
+	// second chance, load the path as folder
+	{
+		l.logger.Warnf("failed to load local identity at [%s]:[%s]", identity.URL, err1)
 		// Does path correspond to a folder containing multiple identities?
-		if err := l.registerLocalIdentities(ctx, identity); err != nil {
-			return errors.WithMessagef(err, "failed to register local identity")
+		err2 := l.registerLocalIdentities(ctx, identity)
+		if err2 != nil {
+			return errors.Wrap(errors.Join(err1, err2), "failed to register local identity")
 		}
 	}
+
 	return nil
 }
 
 func (l *LocalMembership) registerLocalIdentities(ctx context.Context, configuration *IdentityConfiguration) error {
 	entries, err := os.ReadDir(configuration.URL)
 	if err != nil {
-		l.logger.Warnf("failed reading from [%s]: [%s]", configuration.URL, err)
-		return nil
+		return errors.Wrapf(err, "no valid identities found in [%s]", configuration.URL)
 	}
 	found := 0
 	var errs []error
@@ -502,7 +527,7 @@ func (l *LocalMembership) registerLocalIdentities(ctx context.Context, configura
 		found++
 	}
 	if found == 0 {
-		return errors.Errorf("no valid identities found in [%s], errs [%v]", configuration.URL, errs)
+		return errors.Wrapf(errors.Join(errs...), "no valid identities found in [%s]", configuration.URL)
 	}
 	return nil
 }

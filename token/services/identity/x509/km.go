@@ -67,15 +67,19 @@ func NewKeyManagerFromConf(
 		var err error
 		conf, err = crypto.LoadConfig(configPath, keyStoreDirName)
 		if err != nil {
+			logger.Errorf("failed loading x509 configuration [%+v]", err)
 			return nil, nil, errors.WithMessagef(err, "could not get config from dir [%s]", configPath)
 		}
 	}
+	logger.Debugf("load x509 config, check version...")
 	// enforce version
 	if conf.Version != crypto.ProtobufProtocolVersionV1 {
 		return nil, nil, errors.Errorf("unsupported protocol version: %d", conf.Version)
 	}
+	logger.Debugf("load x509 config, new signing key manager...")
 	p, err := newSigningKeyManager(conf, bccspConfig, keyStore)
 	if err == nil {
+		logger.Debugf("load x509 config, new signing key manager...done [%v]", p)
 		return p, conf, nil
 	}
 	// load as verify only
@@ -83,7 +87,7 @@ func NewKeyManagerFromConf(
 	if err != nil {
 		return nil, nil, err
 	}
-	return p, conf, err
+	return p, conf, nil
 }
 
 func newSigningKeyManager(conf *crypto.Config, bccspConfig *crypto.BCCSP, keyStore crypto.KeyStore) (*KeyManager, error) {

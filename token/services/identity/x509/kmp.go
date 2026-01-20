@@ -102,6 +102,8 @@ func (k *KeyManagerProvider) registerProvider(ctx context.Context, conf *crypto.
 		}
 	}
 
+	logger.DebugfContext(ctx, "prepare opts and conf for [%s][%s]", translatedPath, keyStorePath)
+
 	optsRaw, err := yaml.Marshal(identityConfig.Opts)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal config [%v]", identityConfig)
@@ -112,6 +114,8 @@ func (k *KeyManagerProvider) registerProvider(ctx context.Context, conf *crypto.
 	}
 	idConfig.Config = optsRaw
 	idConfig.Raw = confRaw
+
+	logger.DebugfContext(ctx, "provider ready for [%s][%s][%s]", translatedPath, keyStorePath, provider)
 
 	return provider, nil
 }

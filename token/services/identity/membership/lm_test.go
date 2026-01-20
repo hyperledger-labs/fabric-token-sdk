@@ -251,11 +251,63 @@ func TestRegisterIdentity_KeyManagerProviderFails(t *testing.T) {
 		kmp,
 	)
 
-	// RegisterIdentity swallows register errors and tries to read the path; it returns nil
+	// Now RegisterIdentity returns an error when no key manager provider succeeds
 	err := lm.RegisterIdentity(ctx, membership.IdentityConfiguration{ID: "X", URL: "/tmp/x"})
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	// nothing persisted
 	assert.Equal(t, 0, iss.AddConfigurationCallCount())
+}
+
+func TestRegisterIdentity_EmptyEnrollmentID(t *testing.T) {
+	ctx := t.Context()
+
+	ip := &mock.IdentityProvider{}
+	// no binds expected
+
+	des := &mock.SignerDeserializerManager{}
+
+	iss := &mock.IdentityStoreService{}
+	iss.ConfigurationExistsReturns(false, nil)
+	iss.AddConfigurationReturns(nil)
+
+	km := &mock.KeyManager{}
+	km.EnrollmentIDReturns("")
+	km.AnonymousReturns(false)
+	km.IsRemoteReturns(false)
+	km.IdentityTypeReturns("typ")
+
+	kmp := &mock.KeyManagerProvider{}
+	kmp.GetReturns(km, nil)
+
+	lm := membership.NewLocalMembership(
+		logging.MustGetLogger("test"),
+		&mock.Config{},
+		[]byte("netid"),
+		des,
+		iss,
+		"testType",
+		false,
+		ip,
+		kmp,
+	)
+
+	// Use a non-existent path so registerLocalIdentities will attempt to read it and return nil
+	nonExistent := filepath.Join(t.TempDir(), "does_not_exist")
+	// Now RegisterIdentity returns an error when the selected KeyManager has an empty EnrollmentID
+	err := lm.RegisterIdentity(ctx, membership.IdentityConfiguration{ID: "z", URL: nonExistent})
+	assert.Error(t, err)
+
+	// Because enrollment ID was empty, no configuration should be persisted
+	assert.Equal(t, 0, iss.AddConfigurationCallCount())
+
+	// Deserializer manager should not be called because no valid key manager was found
+	assert.Equal(t, 0, des.AddTypedSignerDeserializerCallCount())
+
+	// Identity provider should not be bound
+	assert.Equal(t, 0, ip.BindCallCount())
+
+	// KeyManagerProvider should have been called at least once
+	assert.GreaterOrEqual(t, kmp.GetCallCount(), 1)
 }
 
 func TestRegisterIdentity_BindFails(t *testing.T) {
@@ -292,9 +344,9 @@ func TestRegisterIdentity_BindFails(t *testing.T) {
 		kmp,
 	)
 
-	// RegisterIdentity swallows register errors (logs them) and returns nil
+	// Now RegisterIdentity returns an error when the bind fails during addLocalIdentity
 	err := lm.RegisterIdentity(ctx, membership.IdentityConfiguration{ID: "Y", URL: "/tmp/y"})
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	// bind failed so nothing persisted
 	assert.Equal(t, 0, iss.AddConfigurationCallCount())
 }

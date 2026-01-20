@@ -25,8 +25,11 @@ const (
 func LoadConfig(dir string, keyStoreDirName string) (*Config, error) {
 	signcertDir := filepath.Join(dir, SignCertsDirName)
 	signcert, err := getPemMaterialFromDir(signcertDir)
-	if err != nil || len(signcert) == 0 {
+	if err != nil {
 		return nil, errors.Wrapf(err, "could not load a valid signer certificate from directory %s", signcertDir)
+	}
+	if len(signcert) == 0 {
+		return nil, errors.Errorf("no signer certificate found in directory %s", signcertDir)
 	}
 	// load secret key, if available. If not available, the public's key SKI will be used to load the secret key from the key store
 	if len(keyStoreDirName) == 0 {
