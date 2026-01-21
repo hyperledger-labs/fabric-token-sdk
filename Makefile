@@ -7,7 +7,9 @@ FABRIC_X_COMMITTER_VERSION ?= 0.1.7
 
 # need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
 FABRIC_BINARY_BASE=$(PWD)/../fabric
+FABRICX_BINARY_BASE=$(PWD)/../fabricx
 FAB_BINS ?= $(FABRIC_BINARY_BASE)/bin
+FABX_BINS ?= $(FABRICX_BINARY_BASE)/bin
 
 # integration test options
 GINKGO_TEST_OPTS ?=
@@ -53,7 +55,7 @@ install-softhsm:
 	./ci/scripts/install_softhsm.sh
 
 .PHONY: docker-images
-docker-images: fabric-docker-images monitoring-docker-images testing-docker-images
+docker-images: fabric-docker-images fabricx-docker-images monitoring-docker-images testing-docker-images
 
 .PHONY: testing-docker-images
 testing-docker-images:

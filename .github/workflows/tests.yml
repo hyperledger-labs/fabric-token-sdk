@@ -146,7 +146,7 @@ jobs:
       - name: Fabric-x setup
         if: startsWith(matrix.tests, 'fabricx')
         run: |
-          make fxconfig configtxgen fabricx-docker-images
+          make install-fabricx-tools fabricx-docker-images
 
       - name: Run ${{ matrix.tests }}
         run: make integration-tests-${{ matrix.tests }}
