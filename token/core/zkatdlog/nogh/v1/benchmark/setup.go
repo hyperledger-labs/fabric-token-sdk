@@ -11,9 +11,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
@@ -30,6 +33,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
 )
 
+type SetupConfigurationSer struct {
+	PP      string `json:"pp"` // Encoded in base64
+	Bits    uint64 `json:"bits"`
+	CurveID int    `json:"curveID"`
+}
+
 // SetupConfiguration holds the prepared public parameters and related
 // identities/signers used by a single benchmark configuration.
 //
@@ -42,6 +51,8 @@ type SetupConfiguration struct {
 	OwnerIdentity *OwnerIdentity
 	AuditorSigner *Signer
 	IssuerSigner  *Signer
+	Bits          uint64
+	CurveID       math.CurveID
 }
 
 // SetupConfigurations contains a set of named benchmark configurations.
@@ -112,6 +123,8 @@ func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs [
 			}
 			pp.AddAuditor(auditorID)
 			configurations[key(bit, curveID)] = &SetupConfiguration{
+				Bits:          bit,
+				CurveID:       curveID,
 				PP:            pp,
 				OwnerIdentity: oID,
 				AuditorSigner: auditorSigner,
@@ -146,7 +159,71 @@ func (c *SetupConfigurations) GetSetupConfiguration(bits uint64, curveID math.Cu
 }
 
 func key(bits uint64, curveID math.CurveID) string {
-	return fmt.Sprintf("%d-%d", bits, curveID)
+	return fmt.Sprintf("%d-%s", bits, math2.CurveIDToString(curveID))
+}
+
+// SaveTo writes each configuration to disk under the provided directory.
+// For each entry in the Configurations map a folder with the map key is
+// created. Inside that folder a file named `pp.json` is written. The file
+// contains a JSON document with the base64-encoded serialized public
+// parameters and the metadata bits and curve_id.
+func (c *SetupConfigurations) SaveTo(dir string) error {
+	if c == nil {
+		return errors.Errorf("nil SetupConfigurations")
+	}
+	// Ensure target base directory exists
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return errors.Wrapf(err, "failed creating base dir [%s]")
+	}
+
+	for k, cfg := range c.Configurations {
+		if strings.ContainsAny(k, "/\\") {
+			return errors.Errorf("invalid configuration key: %s", k)
+		}
+		if cfg == nil {
+			return errors.Errorf("nil configuration for key: %s", k)
+		}
+		if cfg.PP == nil {
+			return errors.Errorf("nil public parameters for key: %s", k)
+		}
+
+		// serialize public params
+		ppBytes, err := cfg.PP.Serialize()
+		if err != nil {
+			return errors.WithMessagef(err, "failed serializing public params for key: %s", k)
+		}
+
+		// prepare JSON payload
+		payload := &SetupConfigurationSer{
+			PP:      base64.StdEncoding.EncodeToString(ppBytes),
+			Bits:    cfg.Bits,
+			CurveID: int(cfg.CurveID),
+		}
+		data, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			return errors.Wrap(err, "failed marshalling json payload")
+		}
+
+		// create target directory and write
+		targetDir := filepath.Join(dir, filepath.Base(k))
+		if err := os.MkdirAll(targetDir, 0o755); err != nil {
+			return errors.WithMessagef(err, "failed creating dir for key: %s", k)
+		}
+
+		// Write params.txt containing base64(ppBytes)
+		paramsEncoded := payload.PP
+		finalParamsPath := filepath.Join(targetDir, "params.txt")
+		if err := os.WriteFile(finalParamsPath, []byte(paramsEncoded), 0o644); err != nil {
+			return errors.WithMessagef(err, "failed writing params file for key: %s", k)
+		}
+
+		// Write pp.json file
+		finalPath := filepath.Join(targetDir, "pp.json")
+		if err := os.WriteFile(finalPath, data, 0o644); err != nil {
+			return errors.WithMessagef(err, "failed writing pp.json for key: %s", k)
+		}
+	}
+	return nil
 }
 
 // OwnerIdentity represents the owner identity used by benchmarks. It
