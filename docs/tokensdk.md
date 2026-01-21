@@ -24,23 +24,23 @@
 
 ## Introduction
 
-The Fabric Token SDK (FTS) is a set of APIs and services for building token-based applications on Hyperledger Fabric, and potentially other platforms.
+The Fabric Token SDK (FTS) provides a suite of APIs and services designed for the development of token-based decentralized applications on Hyperledger Fabric and other distributed ledger platforms.
 
-The key features are:
-* Uses the Unspent Transaction Output (UTXO) model for tracking token movements.
-* Manages cryptographic keys through Wallets, keeping track of owned unspent outputs.
-* Supports various privacy levels, from fully transparent to Zero-Knowledge Proofs for obfuscating transaction details.
-* Allows developers to create custom services on top of the core API for specific application needs.
+Key features include:
+*   **UTXO Model**: Utilizes the Unspent Transaction Output model for accurate and secure token tracking.
+*   **Wallet Management**: Manages cryptographic material and tracks ownership of unspent outputs.
+*   **Privacy Flexibility**: Supports a spectrum of privacy requirements, ranging from full transparency to Zero-Knowledge Proofs (ZKP) for transaction obfuscation.
+*   **Extensible Architecture**: Enables the creation of custom services atop the core API to address specific business logic.
 
-The Fabric Token SDK stack consists of several layers:
-* Services: Pre-built functionalities like assembling transactions and selecting unspent tokens.
-* Token API: Provides a common abstraction for interacting with tokens across different backends (DLTs, DBs, and so on).
-* Driver API: Translates generic token operations into backend-specific calls (e.g., Fabric).
-* Drivers: Define token representation, operations, and validation rules for specific implementations.
+The Fabric Token SDK stack comprises the following architectural layers:
+*   **Services**: High-level functionalities, such as transaction assembly and token selection.
+*   **Token API**: An abstraction layer that facilitates token interaction across diverse backend systems.
+*   **Driver API**: An interface that translates generic token operations into backend-specific implementations.
+*   **Drivers**: Implementations that define token representations, operations, and validation rules for specific ledgers.
 
-The SDK leverages the Fabric Smart Client stack for complex workflows, secure storage, and event listening.
+The SDK leverages the **Fabric Smart Client** stack for secure workflow orchestration, storage, and event management.
 
-It empowers developers with the following capabilities across various platforms:
+Developers are empowered with the following capabilities:
 
 * **Tokenization Made Easy:** Create tokens representing any type of asset, be it physical or digital.
 * **Privacy by Design:** Select the appropriate privacy level for your specific use case, without modifying your application logic.
@@ -103,11 +103,11 @@ Other prerequisites are inherited directly from the Fabric Smart Client.
 
 ## Architecture, Interfaces, and Impact
 
-The FTS stack is summarized by the following diagram:
+The FTS stack is illustrated in the following diagram:
 
 ![image](imgs/stack.png)
 
-It consists of the following layers:
+The architecture consists of the following layers:
 
 * [`Token API`](./tokenapi.md): Provides a common abstraction for interacting with tokens across different backends.
 * [`Driver API`](./driverapi.md): The underlying API upon which the `Token API` is built. The Driver API is instantiated in a `Driver`.

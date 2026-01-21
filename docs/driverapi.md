@@ -1,24 +1,23 @@
 # Driver API
 
-The **Driver API** is the interface that connects the generic Token API to a specific token implementation.
-It essentially defines the rules for how tokens are created, transferred, and managed within a particular system.
+The **Driver API** serves as the interface bridging the generic Token API with specific token implementations. It defines the protocols for token creation, transfer, and management within a given system.
 
-Every driver must implement the `driver.Driver` interface. This interface serves two main purposes:
-1.  **Public Parameters:** It allows the retrieval of the driver's specific public parameters.
-2.  **Token Management Service (TMS):** It provides a method to instantiate a new TMS specialized for this driver.
+Each driver must implement the `driver.Driver` interface, fulfilling two primary objectives:
+1.  **Public Parameters**: Facilitates the retrieval of driver-specific public parameters.
+2.  **Token Management Service (TMS)**: Provides a mechanism to instantiate a new TMS tailored to the driver.
 
-The `Token Management Service` interface provided by the driver is the engine under the hood. It must implement the following services:
+The `Token Management Service` interface, implemented by the driver, functions as the core execution engine. It is required to implement the following services:
 *   `Identity Service`: Manages identities and wallets.
-*   `Issue Service`: Handles the creation of new tokens.
+*   `Issue Service`: Orchestrates the issuance of new tokens.
 *   `Transfer Service`: Manages the transfer of token ownership.
 *   `Token Service`: Provides general token management utilities.
 *   `Auditor Service`: Enables auditing capabilities.
 *   `Validation Service`: Validates token transactions.
-*   `Vault`: Provides access to the secure storage of tokens.
+*   `Vault`: Provides secure access to token storage.
 
 Currently, the Fabric Token SDK offers two reference driver implementations: `FabToken` and `ZKATDLog` (Zero-Knowledge Authenticated Token based on Discrete Logarithm).
 
-Below is a pictorial representation of the `Driver API`:
+The `Driver API` architecture is illustrated below:
 
 ![driverapi.png](imgs/driverapi.png)
 
@@ -225,24 +224,30 @@ The action includes the following:
 - 
 ## Security
 
-Security claims are related to the Token Drivers, implementations of the Driver API.
-As we have seen before, the Token SDK comes equipped with two Drivers:
-- `FabToken` does not guarantee the privacy of tokens and identities.
-  The validator guarantees that:
-  - Only the issuers listed in the public parameters can issue tokens;
-  - Only the auditors listed in the public parameters can audit transactions;
-  - Only legitimate owners can spend their tokens
-  - In a transfer, the sum of the inputs being spent is equal to the sum of the outputs being created.
-- `DLOG w/o Graph Hiding` does guarantee the privacy of the tokens, anonymity and unlinkability of the owner identities.
-  The validator guarantees that:
-  - Only the issuers listed in the public parameters can issue tokens;
-  - Only the auditors listed in the public parameters can audit transactions;
-  - Only legitimate owners can spend their tokens
-  - In a transfer, the sum of the inputs being spent is equal to the sum of the outputs being created.
-    It does not guarantee:
-  - Anonymity of the issuers and auditors;
-  - Token Identity Hiding (Graph Hiding)
-    Claims and security properties can be found in this paper [`Privacy-preserving auditable token payments in a permissioned blockchain system`](https://eprint.iacr.org/2019/1058)
+Security claims are intrinsic to the Token Drivers, which are specific implementations of the Driver API.
+As previously noted, the Token SDK includes two reference Drivers:
+
+### FabToken
+`FabToken` does not provide privacy for tokens or identities.
+The validator guarantees the following:
+*   **Issuer Authorization**: Only issuers listed in the public parameters can issue tokens.
+*   **Auditor Authorization**: Only auditors listed in the public parameters can audit transactions.
+*   **Owner Authorization**: Only legitimate owners can spend their tokens.
+*   **Value Preservation**: In a transfer, the sum of inputs matches the sum of outputs.
+
+### DLOG w/o Graph Hiding
+`DLOG w/o Graph Hiding` ensures token privacy, as well as anonymity and unlinkability of owner identities.
+The validator guarantees the following:
+*   **Issuer Authorization**: Only issuers listed in the public parameters can issue tokens.
+*   **Auditor Authorization**: Only auditors listed in the public parameters can audit transactions.
+*   **Owner Authorization**: Only legitimate owners can spend their tokens.
+*   **Value Preservation**: In a transfer, the sum of inputs matches the sum of outputs.
+
+**Limitations**:
+*   It does not guarantee the anonymity of issuers and auditors.
+*   It does **not** support Token Identity Hiding (Graph Hiding).
+
+Detailed claims and security properties are discussed in the paper: [*Privacy-preserving auditable token payments in a permissioned blockchain system*](https://eprint.iacr.org/2019/1058).
 
 ### Secrets or Keys
 

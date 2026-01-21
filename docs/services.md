@@ -1,51 +1,37 @@
 # Services
 
-The services are pre-built functionalities to simplify the use of the Token API.
-Some of the services are also used to back the `Drivers`, like the `Identity Service`.
+Services provide pre-built functionalities designed to streamline the utilization of the Token API. Certain services, such as the `Identity Service`, also serve as foundational components for `Drivers`.
 
-Below is a pictorial representation of the `Services` and their interactions:
+The interaction between `Services` is illustrated below:
 
 ![services.png](imgs/services.png)
 
-We have:
-- `services/config`: Holds the configuration of the Token SDK.
-- `services/identity`: This is the identity service.
-  It is responsible for the management of wallets, long-term identities (X.509 and Idemix), and relative stores.
-  It is used to back part of the Token and Driver API.
-- `services/ttx`: This is the `token transaction service`.
-  It helps developers assemble token requests and ultimately transactions for the backend.
-  This package is backend agnostic and relies on the `network service` for backend-specific operations.
-- `services/network`: This is the `network service`.
-  It offers a unified way to handle different types of networks or backends (e.g., Fabric).
-  It abstracts away the complexity of the specific underlying network.
-  It is used solely by other services. The drivers should not refer in any way to details of the backend to remain agnostic.
-- `services/storage`: This is the `storage service`.
-  It contains the storage mechanisms needed by the Token SDK.
-  It is used to back part of the Token and Driver API.
-- `services/selector`: This is the `token selector service`.
-  It is used to select tokens in such a way that the risk of accidental double-spending is minimized.
-  Different implementations provide different trade-offs.
-  It is used to back part of the Token and Driver API.
+Key components include:
+*   `services/config`: Manages the Token SDK configuration.
+*   `services/identity`: Handles identity management, including wallets, long-term identities (X.509 and Idemix), and associated stores. It supports portions of the Token and Driver APIs.
+*   `services/ttx`: The **Token Transaction Service**. Facilitates the assembly of token requests and transactions for the backend. It is backend-agnostic, relying on the `network service` for backend-specific operations.
+*   `services/network`: The **Network Service**. Provides a unified interface for interacting with diverse networks or backends (e.g., Fabric), abstracting implementation details from other services.
+*   `services/storage`: The **Storage Service**. Encapsulates storage mechanisms required by the Token SDK, supporting the Token and Driver APIs.
+*   `services/selector`: The **Token Selector Service**. mitigating the risk of double-spending by implementing strategic token selection algorithms.
 
 ## The `services/network` Service
 
-The `network` service is responsible for providing other services with a uniform and predictable interface to the backend (e.g., Fabric).
-Internally, the network service is structured similarly to the Token API.
-There is a provider of network instances (`Provider`) and network instances (`Network`).
+The `network` service provides other services with a consistent and predictable interface to the backend (e.g., Fabric).
+Internally, the network service mirrors the structure of the Token API, consisting of a `Provider` of network instances and the `Network` instances themselves.
 
-Here is a pictorial representation of the network service:
+The network service architecture is depicted below:
 
 ![network_service.png](imgs/network_service.png)
 
-The Fabric-based network relies on the Fabric Smart Client for its configuration and operations, such as querying chaincodes and broadcasting transactions.
+The Fabric-based network implementation utilizes the Fabric Smart Client for configuration and operations, including chaincode queries and transaction broadcasting.
 
-At bootstrap time, the Token SDK goes through the TMS defined in the configuration.
-For each TMS, the network provider is asked to return the network instance identified by the `network` and `channel` value of the TMS ID.
-If the network provider fails, then the bootstrap of the Token SDK stack fails.
-Otherwise, the `Connect` function on the network instance `Network` is called with the desired namespace (taken also from the TMS ID).
-The implementation of this function is responsible for establishing a `connection` to the backend to serve the goals of the Token SDK.
-In general, the Token SDK needs to know when the public parameters change and when a transaction gets finalized (either as valid or invalid).
-The Fabric network implementation, upon calling `Connect`, opens two `Fabric Delivery` streams to receive the committed blocks from the Fabric committer.
+During bootstrap, the Token SDK processes the TMS defined in the configuration.
+For each TMS, the network provider retrieves the network instance corresponding to the `network` and `channel` specified in the TMS ID.
+Failure to retrieve the network instance results in a bootstrap failure.
+Upon success, the `Connect` function on the `Network` instance is invoked with the target namespace.
+This function establishes a connection to the backend, enabling the Token SDK to receive updates on public parameters and transaction finality.
+
+When `Connect` is called, the Fabric network implementation establishes two `Fabric Delivery` streams to receive committed blocks:
 - One stream is used to analyze transactions that update the public parameters.
   More specifically, for each transaction in a block, the parser checks if the RW set contains a write whose key is the `setup key`.
   The setup key is set as `\x00seU+0000`. If such a key is found in a valid transaction, then the listener added upon calling `Connect` does the following:
