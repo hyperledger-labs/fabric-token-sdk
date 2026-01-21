@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package main
 
 import (
@@ -8,14 +14,14 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testdata"
-	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
+	sbenchmark "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 )
 
 //go:generate go run . -bits=32,64 -curves=BN254,BLS12_381_BBS_GURVY
 func main() {
 	flag.Parse()
 	// generate setup
-	bits, curves, _, err := benchmark2.GenerateCasesWithDefaults()
+	bits, curves, _, err := sbenchmark.GenerateCasesWithDefaults()
 	if err != nil {
 		panic(err)
 	}
@@ -36,7 +42,7 @@ func main() {
 		}
 
 		for i := range 64 {
-			env, err := testdata.NewEnv(&benchmark2.Case{
+			env, err := testdata.NewEnv(&sbenchmark.Case{
 				Bits:       configuration.Bits,
 				CurveID:    configuration.CurveID,
 				NumInputs:  2,

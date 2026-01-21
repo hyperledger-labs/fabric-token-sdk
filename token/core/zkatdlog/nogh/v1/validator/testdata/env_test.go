@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package testdata
 
 import (
@@ -23,7 +29,7 @@ func TestSaveTransferToFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	var payload struct {
-		TxID  string `json:"txid"`
+		TxID   string `json:"txid"`
 		ReqRaw string `json:"req_raw"`
 	}
 	err = json.Unmarshal(b, &payload)
