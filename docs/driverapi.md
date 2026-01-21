@@ -56,7 +56,7 @@ The `Identity Service` handles the encoding/decoding of this field.
 
 The `Zero Knowledge Asset Transfer DLog` (zkat-dlog, for short) driver supports privacy using Zero Knowledge Proofs.
 We follow a simplified version of the blueprint described in the paper <!-- markdown-link-check-disable -->
-[`Privacy-preserving auditable token payments in a permissioned blockchain system`](https://eprint.iacr.org/2019/1058.pdf)<!-- markdown-link-check-disable -->
+[`Privacy-preserving auditable token payments in a permissioned blockchain system`](https://eprint.iacr.org/2019/1058)
 by Elli Androulaki, Jan Camenisch, Angelo De Caro, Maria Dubovitskaya, Kaoutar Elkhiyaoui, and Björn Tackmann.
 In more detail, the driver hides the token's owner, type, and quantity.
 But it reveals which token has been spent by a given transaction. We say that this driver does not support `Token Identity Hiding` (previously known as `Graph Hiding`).
@@ -242,7 +242,7 @@ As we have seen before, the Token SDK comes equipped with two Drivers:
     It does not guarantee:
   - Anonymity of the issuers and auditors;
   - Token Identity Hiding (Graph Hiding)
-    Claims and security properties can be found in this paper [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')<!-- markdown-link-check-disable -->
+    Claims and security properties can be found in this paper [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058')
 
 ### Secrets or Keys
 
