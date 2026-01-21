@@ -25,7 +25,7 @@ Below is a pictorial representation of the `Driver API`:
 ## Serialization
 
 The Driver API recommends to use the `protobuf` protocol to serialize public parameters and token requests.
-The relative protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/blob/2118c1535ebaaed2ecc293b0c3f66aa71eeafe21/token/driver/protos/).
+The relative protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/driver/protos).
 This guarantees backward and forward compatibility.
 
 The message for the public parameters carries:
@@ -46,8 +46,8 @@ The Token SDK comes equipped with two `Drivers` implementing the `Driver API`:
 
 FabToken is a straightforward implementation of the Driver API.
 It prioritizes simplicity over privacy, storing all token transaction details openly on the ledger for anyone with access to view ownership and activity.
-FabToken exclusively supports long-term identities based on a standard X.509 certificate scheme.
-These identities contain an X.509 certificate, which reveals the owner's enrollment ID in plain text.
+FabToken exclusively supports long-term identities based on a standard X.509 certificate scheme,
+which reveals the owner's enrollment ID in plain text.
 Tokens are directly represented on the ledger as JSON-formatted data based on the `token.Token` structure.
 The `Owner` field of this structure stores the identity information.
 The `Identity Service` handles the encoding/decoding of this field.
@@ -69,8 +69,7 @@ Let us now describe in more detail the implementation of the Driver API:
 
 #### Public Parameters and Manager
 
-The public parameters are serialized using the `protobuf` protocol.
-The relevant messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/blob/db941977e4798b9ba47875e756ba638a7f9d2d7b/token/core/zkatdlog/nogh/protos).
+The relevant messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/core/zkatdlog/nogh/protos).
 
 #### Issuer Service
 
@@ -130,13 +129,13 @@ The validator takes as input:
 - A serialized version of the Token Request to check against the public params and the ledger.
 
 The `DLOG w/o Graph Hiding` validator is stateless, therefore it does not need access to the ledger.
-The token request is marshalled using the `protobuf` protocol. The relative protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/blob/24eccb38b60d1f8dabd1f4a3c6141272b2d2b6d2/token/driver/protos/request.proto).
+The token request is marshalled using the `protobuf` protocol. The relative protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/driver/protos/request.proto).
 This guarantees backward and forward compatibility.
 
 So, the validator unmarshals the serialized version of the token request.
 The validator gets access to the serialized version of the actions.
 The validator is equipped with an action deserializer to know how to deserialize actions.
-Actions are also serialized using the `protobuf` protocol. The relative protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/blob/db941977e4798b9ba47875e756ba638a7f9d2d7b/token/core/zkatdlog/nogh/protos).
+Actions are also serialized using the `protobuf` protocol. The relative protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/core/zkatdlog/nogh/protos).
 
 Recall that we have two types of actions: Issue and Transfer.
 
@@ -211,7 +210,7 @@ The action includes the following:
 - The identity of the issuer;
 - The output tokens to be created;
 - A zero-knowledge proof of validity of the action;
-- Additional public metadata.
+- Additional application specific metadata that will be available on the ledger.
 
 #### Transfer Action
 
@@ -222,8 +221,8 @@ The action includes the following:
 - The input tokens to be spent;
 - The output tokens to be created;
 - A zero-knowledge proof of validity of the action;
-- Additional public metadata.
-
+- Additional application specific metadata that will be available on the ledger.
+- 
 ## Security
 
 Security claims are related to the Token Drivers, implementations of the Driver API.
@@ -243,7 +242,7 @@ As we have seen before, the Token SDK comes equipped with two Drivers:
     It does not guarantee:
   - Anonymity of the issuers and auditors;
   - Token Identity Hiding (Graph Hiding)
-    Claims and security properties can be found in this paper [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')
+    Claims and security properties can be found in this paper [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')<!-- markdown-link-check-disable -->
 
 ### Secrets or Keys
 
@@ -361,7 +360,7 @@ The secret key is stored in the key store and the secret key component of the cr
 Idemix identities are only used for the `owner` wallets. X.509 identities are used for issuers and auditors.
 When an identity is derived from an owner wallet via a call to `GetRecipientIdentity`,
 then both the `IdentityInfo` and the `IdentitySigners` tables are filled with a row.
-The field `identity_audit_info` contains private information about the identity.
+The field `identity_audit_info` contains private information about the identity, such as the `enrollment id`, the `rovocation id`, used to revoke that identity, and so on.
 For an X.509 identity, the identity itself already reveals everything.
 For an Idemix identity (or pseudonym), it contains the secrets to de-anonymise the pseudonym.
 The `info` field in the `IdentitySigners` table remains empty as well as `token_metadata` and `token_metadata_audit_info`.

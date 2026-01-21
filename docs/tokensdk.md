@@ -34,14 +34,13 @@ The key features are:
 
 The Fabric Token SDK stack consists of several layers:
 * Services: Pre-built functionalities like assembling transactions and selecting unspent tokens.
-* Token API: Provides a common abstraction for interacting with tokens across different backends.
+* Token API: Provides a common abstraction for interacting with tokens across different backends (DLTs, DBs, and so on).
 * Driver API: Translates generic token operations into backend-specific calls (e.g., Fabric).
 * Drivers: Define token representation, operations, and validation rules for specific implementations.
 
 The SDK leverages the Fabric Smart Client stack for complex workflows, secure storage, and event listening.
 
-The Fabric Token SDK has evolved beyond its initial focus on Hyperledger Fabric.
-It now empowers developers with the following capabilities across various platforms, including permissioned blockchains like Fabric:
+It empowers developers with the following capabilities across various platforms:
 
 * **Tokenization Made Easy:** Create tokens representing any type of asset, be it physical or digital.
 * **Privacy by Design:** Select the appropriate privacy level for your specific use case, without modifying your application logic.
@@ -70,7 +69,7 @@ The SDK leverages the following related projects:
 - [`Idemix`](https://github.com/IBM/idemix): For anonymous credentials.
 - [`Mathlib`](https://github.com/IBM/mathlib): For elliptic curve math operations.
 
-The system administrator is responsible for preparing:
+A system administrator in charge of a Token-SDK-based application is responsible for preparing:
 
 - **Configuration**: FTS needs to be configured according to the specific use case.
   FTS uses the FSC's config service to access its configuration.
@@ -96,10 +95,10 @@ The FTS stack is summarized by the following diagram:
 
 It consists of the following layers:
 
-* [`Services`](./services.md): Pre-built functionalities, such as assembling transactions and selecting unspent tokens.
 * [`Token API`](./tokenapi.md): Provides a common abstraction for interacting with tokens across different backends.
 * [`Driver API`](./driverapi.md): The underlying API upon which the `Token API` is built. The Driver API is instantiated in a `Driver`.
 * [`Drivers`](./driverapi.md): A `Driver` implements the `Driver API` and defines token representation, operations, and validation rules.
+* [`Services`](./services.md): Pre-built functionalities, such as assembling transactions and selecting unspent tokens, built on top of `Token API`
 
 ## Developer Experience
 

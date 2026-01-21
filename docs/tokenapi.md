@@ -10,7 +10,8 @@ Below is a pictorial representation of the `Token API`:
 This API handles tokens defined by a three-part structure:
 
 * **Owner:** This identifies the token's rightful owner. Driver implementations can interpret this field based on their specific needs. It could represent a public key, a script, or anything the underlying driver supports.
-* **Type:** Think of this as the token's denomination, a string value specific to your application. Examples include digital currency denominations or unique identifiers.
+* **Type:** Think of this as the token's denomination, a string value specific to your application. 
+  Examples include digital currency denominations or unique identifiers. Types are case-sensitive, if not specified otherwise.
 * **Quantity:** This represents the amount stored by the token. It's always a non-negative number encoded as a string in base 16, prefixed with "0x".
 
 Tokens of the same type are considered **fungible**.
@@ -27,12 +28,11 @@ Script-based tokens require an input that satisfies the script's conditions.
 The Token API empowers developers with essential operations:
 
 * **Issue:** Creates new tokens. The designated issuers, determined by driver-specific issuing policies, control this operation.
-* **Transfer:** Shifts ownership of a token. Transfers can only occur between tokens of the same type.
+* **Transfer:** Shifts ownership of a token. Transfers can only involve tokens of the same type. Only rightful owner can transfer tokens.
 * **Redeem:** Deletes tokens. Depending on the driver, either the owner or designated redeemers can perform this action.
 
 **Token Requests** bundle these operations, ensuring they are executed atomically; meaning all operations succeed or fail together.
 
-![token_request.png](imgs/token_request.png)
 
 ## Token Management Service and Provider
 
@@ -45,6 +45,9 @@ A TMS is uniquely identified by a four-part address:
 2. **Channel (Optional):** Specifies the channel within the network. If not applicable, it remains empty.
 3. **Namespace:** Defines the specific namespace within the channel where tokens are stored.
 4. **Public Parameters:** Holds all the crucial information needed to operate the particular token infrastructure.
+
+In the case of Fabric, `Network` is any label decided by developer to identify the Fabric network in the FSC stack.
+`Channel` is an existing Fabric channel name and `Namespace` is an existing namespace in that channel.
 
 Every Token Management Service (TMS) is linked to a set of public parameters.
 This information holds the key to operating the token infrastructure effectively.
@@ -92,21 +95,32 @@ The `Wallet Manager` serves as the central hub for managing all these wallets.
 
 ## Building a Token Transaction
 
-Imagine a `Token Request` as a blueprint for a secure financial transaction.
+A `Token Request` can be understood as a blueprint for a secure financial transaction.
 It groups together different actions like issuing new tokens, transferring ownership, or redeeming existing ones.
 These actions must happen all at once, ensuring everything goes smoothly.
 
 The `Token Request` offers a toolbox for developers to easily add or review the actions included in this blueprint.
 
+Here is a pictorial representation of a token request
+![token_request.png](imgs/token_request.png)
+
 Here is a breakdown of its key components:
 
 * **Anchor:** This acts like a reference point, tying the actions to a specific transaction within the system. In Hyperledger Fabric, the anchor corresponds to the transaction ID.
 * **Actions:** This is the heart of the blueprint, containing a set of specific token operations:
-    * **Issue:** Creates brand new tokens.
+    * **Issue:** Creates new tokens.
     * **Transfer:** Manages existing tokens, allowing ownership changes or redemption.
 
-These actions within the request are independent. One action cannot utilize tokens created by another action within the same request. Additionally, each action comes with witnesses, which are essentially verifications. These witnesses confirm the "right to spend" or "right to issue" a particular token. In simpler scenarios, witnesses might be signatures from token owners or issuers.
-* **Metadata:** This serves as a secure communication channel between involved parties. It holds secret information that allows them to verify the details of the token actions. This is especially important when using privacy-focused drivers based on Zero-Knowledge proofs. Importantly, the ledger itself doesn't store this metadata.
+  In not otherwise specified, for simplicity, these actions within the request are independent. 
+  Meaning that, one action cannot utilize tokens created by another action within the same request. 
+
+  Additionally, each action comes with witnesses, which are essentially verifications. 
+  These witnesses confirm the "right to spend" or "right to issue" a particular token. 
+  In simpler scenarios, witnesses might be signatures from token owners or issuers.
+* **Metadata:** This serves as a secure communication channel between involved parties. 
+  It holds secret information that allows them to verify the details of the token actions. 
+  This is especially important when using privacy-focused drivers based on Zero-Knowledge proofs. 
+  Importantly, the ledger itself doesn't store this metadata.
 
 Behind the scenes, when parties collaborate to create a token transaction, they are essentially building a `Token Request`.
 This request is then translated into a format that the specific ledger system (like Hyperledger Fabric) understands.
@@ -158,7 +172,7 @@ With Token Vault, you can:
 * **Gain instant insights:** See all your tokens in one place, check their status, and get detailed information about each one.
 * **Track transactions:** Easily query if a transaction is pending or confirm ownership of a specific token.
 * **Explore unspent tokens:** Utilize iterators to discover tokens you haven't used yet.
-* **List all tokens:** Get a complete overview of all your tokens or those issued on the network.
+* **List all tokens:** Get a complete overview of all your available tokens or those issued on the network.
 * **Dive deeper:** Retrieve specific details about tokens and their outputs. (For certain systems) You can even find out who deleted a token, if applicable.
 
 The `Token Vault` is built on top of the `Transactions DB`, `Audit Transactions DB`, and `Tokens DB`.
@@ -169,11 +183,6 @@ The Token SDK empowers developers to select specific tokens from the vault for t
 This selector acts like a refined filter, allowing you to specify conditions like token type, amount, and even ownership.
 To safeguard against double-spending, any chosen token is automatically locked until the transaction's fate is sealed – be it commitment, rejection, timeout, or manual unlock.
 This ensures developers leverage the appropriate tokens while eliminating double-spending woes.
-
-## Signature Service
-
-The `token.SignatureService` acts as your gateway to secure transactions.
-It provides access to both signature verifiers and signers, all seamlessly linked to identities retrieved from the Wallet Manager.
 
 ## Config Manager
 

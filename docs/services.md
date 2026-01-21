@@ -78,7 +78,7 @@ This system leverages several stores, each with a specific purpose.
 
 A single backend system is shared by all databases, offering a more streamlined approach for deployments with simpler requirements.
 The specific SQL Driver used by the application will ultimately determine the available deployment options.
-For the list of options to configure SQL datasources, refer to the [Fabric Smart Client documentation](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/core-fabric.md).
+For the list of options to configure SQL datasources, refer to the [Fabric Smart Client](https://github.com/hyperledger-labs/fabric-smart-client/) documentation.
 Currently, only `SQLite` and `Postgres` are supported.
 
 ### Transaction Store (`ttxdb`)

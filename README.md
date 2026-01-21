@@ -15,7 +15,6 @@ The project will be subject to rapid changes to complete the open-sourcing proce
 
 - [`Documentation`](docs/tokensdk.md): The design principles of the Fabric Token SDK.
 - [`Development`](docs/development/development.md): All about the development guidelines.
-- [`Education Sessions`](./docs/education/README.md): Detailed education sessions with code walkthrough of the Fabric Token SDK.
 - [`Fabric Samples`](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk) Token SDK sample application is the
   quickest way to get a full network running with a REST API to issue, transfer and redeem tokens right away.
 - [`Benchmarks`](./docs/benchmark/benchmark.md): Benchmark guidelines and reports.
