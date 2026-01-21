@@ -1,0 +1,38 @@
+@startuml
+skinparam componentStyle rectangle
+
+title Token SDK Platform Architecture
+
+package "Driver API" {
+
+    [TokenManagerServiceProvider] --> [TokenManagerService] : Create instances of
+    [TokenManagerService] --> [IssueService] : Issue Actions
+    [TokenManagerService] --> [TransferService] : Transfer Actions
+    [TokenManagerService] --> [TokensService] : Tokens
+    [TokenManagerService] --> [TokensUpgradeService] : Token Upgrade
+    [TokenManagerService] --> [AuditorService] : Auditing
+    [TokenManagerService] --> [Deserializer] : Obtain Signature Verifiers
+    [TokenManagerService] --> [IdentityProvider] : Identity Support
+    [TokenManagerService] --> [Validator] : Token Request Validation
+    [TokenManagerService] --> [PublicParamsManager]
+    [TokenManagerService] --> [Configuration]
+    [TokenManagerService] --> [WalletService]
+    [TokenManagerService] --> [Authorization]
+
+    [WalletService] --> [OwnerWallet]
+    [WalletService] --> [IssuerWallet]
+    [WalletService] --> [AuditorWallet]
+    [WalletService] --> [IdentityConfiguration]
+
+    [IdentityProvider] --> [Signer]
+
+    [Deserializer] --> [Verifier]
+
+    [Vault] --> [Query Engine] : Query
+
+    [TokenRequest]
+    [TokenRequestMetadata]
+
+}
+
+@enduml

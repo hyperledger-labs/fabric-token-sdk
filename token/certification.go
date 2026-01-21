@@ -14,7 +14,7 @@ import (
 )
 
 // CertificationManager manages token certifications as described by the paper
-// [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')
+// [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019')
 type CertificationManager struct {
 	c driver.CertificationService
 }

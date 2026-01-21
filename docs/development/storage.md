@@ -14,14 +14,14 @@ This system leverages several stores, each with a specific purpose:
 * **Transaction Store (`ttxdb`)**:
   This critical store serves as the central repository for all transaction records.
   It captures every token issuance, transfer, or redemption, providing a complete historical record of token activity within the network.
-  The `ttxdb.StoreService` store is located under [`token/services/ttxdb`](./../../token/services/ttxdb). It is accessible via the `ttx.Service`.
+  The `ttxdb.StoreService` store is located under [`token/services/ttxdb`](./../../token/services/storage/ttxdb). It is accessible via the `ttx.Service`.
 
 * **Token Store (`tokendb`)**:
   The `tokendb` acts as the registry for all tokens within the system.
   It stores detailed information about each token, including its unique identifier, denomination type (think currency or unique identifier), current ownership, and total quantity in circulation.
   By referencing the `tokendb`, developers and network participants can obtain a clear picture of the token landscape.
   The `tokendb.StoreService` is used by the `Token Selector`, to select the tokens to use in each transaction, and by the `Token Vault Service` to provide its services.
-  The `tokendb.StoreService` service is located under [`token/services/tokendb`](./../../token/services/tokendb). It is accessible via the `tokens.Service`.
+  The `tokendb.StoreService` service is located under [`token/services/tokendb`](./../../token/services/storage/tokendb). It is accessible via the `tokens.Service`.
 
 * **Audit Store (`auditdb`)** (if applicable):
   For applications requiring enhanced auditability, the `auditdb` provides an additional layer of transparency.
@@ -32,7 +32,7 @@ This system leverages several stores, each with a specific purpose:
 * **Identity Store (`identitydb`) and Wallet Store (`walletdb`)**:
   The `identitydb` plays a crucial role in managing user identities and wallets within the network.
   It securely stores wallet configurations, identity-related audit information, and so on, enabling secure interactions with the token system.
-  The `identitydb.StoreService` is located under [`token/services/identitydb`](./../../token/services/identitydb).
+  The `identitydb.StoreService` is located under [`token/services/identitydb`](./../../token/services/storage/identitydb).
 
 ## Configuration
 
@@ -65,4 +65,4 @@ token:
 The specific driver used by the application will ultimately determine the available deployment options.
 Don't forget to import the driver that you are ultimately using with a blank import in your executable.
 
-For the list of options to configure sql datasources, refer to the [Fabric Smart Client documentation](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/core-fabric.md).
+For the list of options to configure sql datasources, refer to the [Fabric Smart Client](https://github.com/hyperledger-labs/fabric-smart-client/) documentation.

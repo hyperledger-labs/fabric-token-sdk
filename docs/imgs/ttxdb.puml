@@ -1,0 +1,58 @@
+@startuml
+!theme plain
+
+entity "Requests" as requests {
+    * tx_id : TEXT <<PK>>
+    --
+    request : BYTEA
+    status : INT
+    status_message : TEXT
+    application_metadata : JSONB
+    public_metadata : JSONB
+    pp_hash : BYTEA
+}
+
+entity "Transactions" as txs {
+    * id : CHAR(36) <<PK>>
+    --
+    tx_id : TEXT <<FK>>
+    action_type : INT
+    sender_eid : TEXT
+    recipient_eid : TEXT
+    token_type : TEXT
+    amount : BIGINT
+    stored_at : TIMESTAMP
+}
+
+entity "Movements" as movements {
+    * id : CHAR(36) <<PK>>
+    --
+    tx_id : TEXT <<FK>>
+    enrollment_id : TEXT
+    token_type : TEXT
+    amount : BIGINT
+    stored_at : TIMESTAMP
+}
+
+entity "Validations" as req_vals {
+    * tx_id : TEXT <<PK, FK>>
+    --
+    metadata : BYTEA
+    stored_at : TIMESTAMP
+}
+
+entity "Endorsmenets" as tx_ends {
+    * id : CHAR(36) <<PK>>
+    --
+    tx_id : TEXT
+    endorser : BYTEA
+    sigma : BYTEA
+    stored_at : TIMESTAMP
+}
+
+' Relationships
+txs }o--|| requests : "tx_id → tx_id"
+movements }o--|| requests : "tx_id → tx_id"
+req_vals ||--|| requests : "tx_id → tx_id"
+tx_ends }o..|| requests : "tx_id (no FK constraint)"
+@enduml

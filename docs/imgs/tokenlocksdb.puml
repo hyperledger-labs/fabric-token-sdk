@@ -1,0 +1,12 @@
+@startuml
+!theme plain
+
+entity "TokenLocks" as tkn_locks {
+    * tx_id : TEXT <<PK>>
+    * idx : INT <<PK>>
+    --
+    consumer_tx_id : TEXT
+    created_at : TIMESTAMP
+}
+
+@enduml
