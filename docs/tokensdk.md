@@ -84,8 +84,22 @@ Other prerequisites are inherited directly from the Fabric Smart Client.
 ## Terminology and Glossary
 
 - For an introduction to the concepts of Database, Persistence, Driver, and Store, read [this documentation](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/platform/view/db-driver.md).
-- **FTS**: Fabric Token SDK.
 - **FSC**: Fabric Smart Client.
+- **FTS**: Fabric Token SDK.
+- **Issuer**: A role authorized to create (issue) new tokens.
+- **Auditor**: A role responsible for overseeing token requests and ensuring proper use and compliance.
+- **Certifier**: A role that verifies the existence and legitimacy of specific tokens, used in drivers supporting Token Identity Hiding.
+- **Owner**: A role that holds tokens and can transfer or redeem them.
+- **FabToken**: A simplified driver implementation that stores token transaction details openly on the ledger without privacy.
+- **ZKATDLog**: A privacy-focused driver implementation (Zero-Knowledge Authenticated Token DLog) using Zero-Knowledge Proofs.
+- **Public Parameters**: Global configuration settings for the token infrastructure, such as driver version, precision, and max token value.
+- **Selector**: A service used to select tokens for transactions, aiming to minimize the risk of accidental double-spending.
+- **Token Management Service (TMS)**: The central hub of the Token SDK, providing access to services like Identity, Issue, Transfer, and more.
+- **Token Request**: A collection of token operations (issue, transfer, redeem) to be executed atomically.
+- **Token Transaction**: A transaction that wraps a Token Request for submission to the backend ledger.
+- **Validator**: A component that validates token requests against public parameters and limits.
+- **Wallet**: A digital vault that stores a long-term identity and derived credentials, used for signing and verifying operations.
+- **Key Store (`keystore`)**: Stores cryptographic keys used by the system.
 
 ## Architecture, Interfaces, and Impact
 
@@ -144,7 +158,7 @@ The Token SDK is typically embedded as a dependency in a third-party application
 ## Platform Support
 
 The Token SDK is written in Go. Therefore, any platform supporting Go can run it.
-We require at least **Go 1.24.2**.
+We require at least **Go 1.24**.
 
 Certain components might require CGO (e.g., HSM support).
 

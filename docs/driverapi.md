@@ -242,7 +242,7 @@ As we have seen before, the Token SDK comes equipped with two Drivers:
     It does not guarantee:
   - Anonymity of the issuers and auditors;
   - Token Identity Hiding (Graph Hiding)
-    Claims and security properties can be found in this paper [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058')
+    Claims and security properties can be found in this paper [`Privacy-preserving auditable token payments in a permissioned blockchain system`](https://eprint.iacr.org/2019/1058)
 
 ### Secrets or Keys
 
