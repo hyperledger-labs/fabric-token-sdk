@@ -17,11 +17,11 @@ import (
 	sbenchmark "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 )
 
-//go:generate go run . -bits=32,64 -curves=BN254,BLS12_381_BBS_GURVY
+//go:generate go run . -bits=32,64 -curves=BN254,BLS12_381_BBS_GURVY -num_inputs=1,2 -num_outputs=1,2
 func main() {
 	flag.Parse()
 	// generate setup
-	bits, curves, _, err := sbenchmark.GenerateCasesWithDefaults()
+	bits, curves, testCases, err := sbenchmark.GenerateCasesWithDefaults()
 	if err != nil {
 		panic(err)
 	}
@@ -36,25 +36,32 @@ func main() {
 
 	for k, configuration := range configurations.Configurations {
 		// generate the validator env for transfer
-		outputDir := filepath.Join(rootDir, k, "transfers")
-		if err := os.MkdirAll(outputDir, 0o755); err != nil {
-			panic(err)
-		}
+		for _, testCase := range testCases {
+			outputDir := filepath.Join(
+				rootDir,
+				k,
+				fmt.Sprintf("transfers_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs),
+			)
 
-		for i := range 64 {
-			env, err := testdata.NewEnv(&sbenchmark.Case{
-				Bits:       configuration.Bits,
-				CurveID:    configuration.CurveID,
-				NumInputs:  2,
-				NumOutputs: 2,
-			}, configurations)
-			if err != nil {
+			if err := os.MkdirAll(outputDir, 0o755); err != nil {
 				panic(err)
 			}
-			if err := env.SaveTransferToFile(
-				filepath.Join(outputDir, fmt.Sprintf("output.%d.json", i)),
-			); err != nil {
-				panic(err)
+
+			for i := range 64 {
+				env, err := testdata.NewEnv(&sbenchmark.Case{
+					Bits:       configuration.Bits,
+					CurveID:    configuration.CurveID,
+					NumInputs:  testCase.BenchmarkCase.NumInputs,
+					NumOutputs: testCase.BenchmarkCase.NumOutputs,
+				}, configurations)
+				if err != nil {
+					panic(err)
+				}
+				if err := env.SaveTransferToFile(
+					filepath.Join(outputDir, fmt.Sprintf("output.%d.json", i)),
+				); err != nil {
+					panic(err)
+				}
 			}
 		}
 	}

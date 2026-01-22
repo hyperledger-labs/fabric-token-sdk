@@ -127,14 +127,30 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 //   - The test expects 64 transfer vectors (output.0..output.63). Update the loop
 //     range in `testRegression` if you add or remove vectors.
 func TestRegression(t *testing.T) {
-	testRegression(t, "testdata/32-BLS12_381_BBS_GURVY")
-	testRegression(t, "testdata/64-BLS12_381_BBS_GURVY")
-	testRegression(t, "testdata/32-BN254")
-	testRegression(t, "testdata/64-BN254")
+	testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", "transfers_i1_o1")
+	testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", "transfers_i1_o2")
+	testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", "transfers_i2_o1")
+	testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", "transfers_i2_o2")
+
+	testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", "transfers_i1_o1")
+	testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", "transfers_i1_o2")
+	testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", "transfers_i2_o1")
+	testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", "transfers_i2_o2")
+
+	testRegression(t, "testdata/32-BN254", "transfers_i1_o1")
+	testRegression(t, "testdata/32-BN254", "transfers_i1_o2")
+	testRegression(t, "testdata/32-BN254", "transfers_i2_o1")
+	testRegression(t, "testdata/32-BN254", "transfers_i2_o2")
+
+	testRegression(t, "testdata/64-BN254", "transfers_i1_o1")
+	testRegression(t, "testdata/64-BN254", "transfers_i1_o2")
+	testRegression(t, "testdata/64-BN254", "transfers_i2_o1")
+	testRegression(t, "testdata/64-BN254", "transfers_i2_o2")
 }
 
-func testRegression(t *testing.T, rootDir string) {
+func testRegression(t *testing.T, rootDir, subFolder string) {
 	t.Helper()
+	t.Logf("regression test for [%s:%s]", rootDir, subFolder)
 	paramsData, err := testDataFS.ReadFile(filepath.Join(rootDir, "params.txt"))
 	require.NoError(t, err)
 
@@ -149,7 +165,13 @@ func testRegression(t *testing.T, rootDir string) {
 		TXID   string `json:"txid"`
 	}
 	for i := range 64 {
-		jsonData, err := testDataFS.ReadFile(filepath.Join(rootDir, "transfers", fmt.Sprintf("output.%d.json", i)))
+		jsonData, err := testDataFS.ReadFile(
+			filepath.Join(
+				rootDir,
+				subFolder,
+				fmt.Sprintf("output.%d.json", i),
+			),
+		)
 		require.NoError(t, err)
 		err = json.Unmarshal(jsonData, &tokenData)
 		require.NoError(t, err)

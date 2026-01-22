@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"os"
+	"strconv"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -158,14 +159,14 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	}
 
 	// prepare redeem
-	_, rr, _, inputsForRedeem, err = prepareRedeemRequest(pp, auditor, setupConfiguration)
+	_, rr, _, inputsForRedeem, err = prepareRedeemRequest(benchCase, pp, auditor, setupConfiguration)
 	if err != nil {
 		return nil, err
 	}
 
 	// prepare transfer
 	var trmetadata *driver.TokenRequestMetadata
-	sender, tr, trmetadata, inputsForTransfer, err = prepareTransferRequest(pp, auditor, oID)
+	sender, tr, trmetadata, inputsForTransfer, err = prepareTransferRequest(benchCase, pp, auditor, oID)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +193,7 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	metadata.Transfers = []*driver.TransferMetadata{trmetadata.Transfers[0]}
 
 	tokns := make([][]*tokn.Token, 1)
-	for i := range 2 {
+	for i := range benchCase.NumInputs {
 		tokns[0] = append(tokns[0], inputsForTransfer[i])
 	}
 	err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
@@ -238,9 +239,18 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 	return issuer, ir, metadata, nil
 }
 
-func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor, setupConfig *benchmark.SetupConfiguration) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+func prepareRedeemRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, setupConfig *benchmark.SetupConfiguration) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+	benchCaseRedeem := &benchmark2.Case{
+		Workers:    benchCase.Workers,
+		Bits:       benchCase.Bits,
+		CurveID:    benchCase.CurveID,
+		NumInputs:  benchCase.NumInputs,
+		NumOutputs: 2,
+	}
 	owners := make([][]byte, 2)
-	owners[0] = setupConfig.OwnerIdentity.ID
+	for i := range benchCase.NumInputs {
+		owners[i] = setupConfig.OwnerIdentity.ID
+	}
 
 	issuer := issue2.NewIssuer("ABC", setupConfig.IssuerSigner, pp)
 	issuerIdentity, err := setupConfig.IssuerSigner.Serialize()
@@ -249,6 +259,7 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor, setupConf
 	}
 
 	return prepareTransfer(
+		benchCaseRedeem,
 		pp,
 		setupConfig.OwnerIdentity.Signer,
 		auditor,
@@ -260,12 +271,23 @@ func prepareRedeemRequest(pp *v1.PublicParams, auditor *audit.Auditor, setupConf
 	)
 }
 
-func prepareTransferRequest(pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	owners := make([][]byte, 2)
-	owners[0] = oID.ID
-	owners[1] = oID.ID
+func prepareTransferRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+	owners := make([][]byte, benchCase.NumOutputs)
+	for i := range benchCase.NumOutputs {
+		owners[i] = oID.ID
+	}
 
-	return prepareTransfer(pp, oID.Signer, auditor, oID.AuditInfo, oID.ID, owners, nil, nil)
+	return prepareTransfer(
+		benchCase,
+		pp,
+		oID.Signer,
+		auditor,
+		oID.AuditInfo,
+		oID.ID,
+		owners,
+		nil,
+		nil,
+	)
 }
 
 func prepareTokens(values, bf []*math.Zr, tokenType string, pp []*math.G1, curve *math.Curve) []*math.G1 {
@@ -360,46 +382,63 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	return ir, issueMetadata, nil
 }
 
-func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	signers := make([]driver.Signer, 2)
-	signers[0] = signer
-	signers[1] = signer
+func prepareTransfer(benchCase *benchmark2.Case, pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+	signers := make([]driver.Signer, benchCase.NumInputs)
+	for i := range benchCase.NumInputs {
+		signers[i] = signer
+	}
 	c := math.Curves[pp.Curve]
 
-	invalues := make([]*math.Zr, 2)
-	invalues[0] = c.NewZrFromInt(70)
-	invalues[1] = c.NewZrFromInt(30)
+	// prepare inputs
+	inValues := make([]*math.Zr, benchCase.NumInputs)
+	sumInputs := uint64(0)
+	for i := range benchCase.NumInputs {
+		v := uint64(i*10 + 500)
+		sumInputs += v
+		inValues[i] = c.NewZrFromUint64(v)
+	}
 
-	inBF := make([]*math.Zr, 2)
+	outputValue := sumInputs / uint64(benchCase.NumOutputs)
+	sumOutputs := uint64(0)
+	outValues := make([]uint64, benchCase.NumOutputs)
+	for i := range benchCase.NumOutputs {
+		outValues[i] = outputValue
+		sumOutputs += outputValue
+	}
+	// add any adjustment to the last output
+	delta := sumInputs - sumOutputs
+	if delta > 0 {
+		outValues[0] += delta
+	}
+
+	inBF := make([]*math.Zr, benchCase.NumInputs)
 	rand, err := c.Rand()
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	for i := range 2 {
+	for i := range benchCase.NumInputs {
 		inBF[i] = c.NewRandomZr(rand)
 	}
-	outvalues := make([]uint64, 2)
-	outvalues[0] = 65
-	outvalues[1] = 35
 
-	ids := make([]*token2.ID, 2)
-	ids[0] = &token2.ID{TxId: "0"}
-	ids[1] = &token2.ID{TxId: "1"}
+	ids := make([]*token2.ID, benchCase.NumInputs)
+	for i := range benchCase.NumInputs {
+		ids[i] = &token2.ID{TxId: strconv.Itoa(i)}
+	}
+	inputs := prepareTokens(inValues, inBF, "ABC", pp.PedersenGenerators, c)
 
-	inputs := prepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
-	tokens := make([]*tokn.Token, 2)
-	tokens[0] = &tokn.Token{Data: inputs[0], Owner: id}
-	tokens[1] = &tokn.Token{Data: inputs[1], Owner: id}
+	tokens := make([]*tokn.Token, benchCase.NumInputs)
+	inputInf := make([]*tokn.Metadata, benchCase.NumInputs)
+	for i := range benchCase.NumInputs {
+		tokens[i] = &tokn.Token{Data: inputs[i], Owner: id}
+		inputInf[i] = &tokn.Metadata{Type: "ABC", Value: inValues[i], BlindingFactor: inBF[i]}
+	}
 
-	inputInf := make([]*tokn.Metadata, 2)
-	inputInf[0] = &tokn.Metadata{Type: "ABC", Value: invalues[0], BlindingFactor: inBF[0]}
-	inputInf[1] = &tokn.Metadata{Type: "ABC", Value: invalues[1], BlindingFactor: inBF[1]}
 	sender, err := transfer.NewSender(signers, tokens, ids, inputInf, pp)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
-	transfer2, metas, err := sender.GenerateZKTransfer(context.Background(), outvalues, owners)
+	transfer2, metas, err := sender.GenerateZKTransfer(context.Background(), outValues, owners)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -464,7 +503,7 @@ func prepareTransfer(pp *v1.PublicParams, signer driver.SigningIdentity, auditor
 	tokns[0] = append(tokns[0], tokens...)
 
 	if issuerIdentity != nil {
-		metadata.Issuer = driver.Identity(issuerIdentity)
+		metadata.Issuer = issuerIdentity
 	}
 
 	transferMetadata := &driver.TokenRequestMetadata{Transfers: []*driver.TransferMetadata{metadata}}
