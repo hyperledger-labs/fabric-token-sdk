@@ -1,4 +1,4 @@
-## The `services/storage` Service
+## The Storage Service
 
 FTS utilizes the following layers of abstraction on top of the database layer:
 * `Store`: Executes the SQL queries. A `Store` is only used from within a `StoreService` of the same kind.
@@ -13,6 +13,8 @@ A single backend system is shared by all databases, offering a more streamlined 
 The specific SQL Driver used by the application will ultimately determine the available deployment options.
 For the list of options to configure SQL datasource, refer to the [Fabric Smart Client](https://github.com/hyperledger-labs/fabric-smart-client/) documentation.
 Currently, only `SQLite` and `Postgres` are supported.
+
+The storage service is located under `token/services/storage`.
 
 ### Transaction Store (`ttxdb`)
 

@@ -1,6 +1,6 @@
-## The `services/network` Service
+## The Network Service
 
-The `network` service provides other services with a consistent and predictable interface to the backend (e.g., Fabric).
+The `network` service, located under `token/services/network`, provides other services with a consistent and predictable interface to the backend (e.g., Fabric).
 Internally, the network service mirrors the structure of the Token API, consisting of a `Provider` of network instances and the `Network` instances themselves.
 
 The network service architecture is depicted below:

@@ -1,7 +1,6 @@
-## The `services/ttx` Package
+## The TTX Service
 
-Let us start with the `services/ttx` package. This is the `token transaction service`.
-It helps developers assemble token requests and ultimately transactions for the backend.
+The `token transaction service`, or simply `ttx service`, helps developers assemble token requests and ultimately transactions for the backend.
 This package is backend agnostic and relies on the `network service` for backend-specific operations.
 This service leverages the FSC's view framework. Therefore, the package consists of a series of `Views` and support `structs`.
 
