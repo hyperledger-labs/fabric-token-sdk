@@ -39,14 +39,18 @@ download-fabric:
 
 .PHONY: unit-tests
 unit-tests:
-	@go test -cover $(shell go list ./... | grep -v '/integration/')
+	@go test -cover $(shell go list ./... | grep -v '/integration/' | grep -v 'regression')
 	cd integration/nwo/; go test -cover ./...
 	cd token/services/storage/db/kvs/hashicorp/; go test -cover ./...
 
 .PHONY: unit-tests-race
 unit-tests-race:
-	@export GORACE=history_size=7; go test -race -cover $(shell go list ./... | grep -v '/integration/')
+	@export GORACE=history_size=7; go test -race -cover $(shell go list ./... | grep -v '/integration/'  | grep -v 'regression')
 	cd integration/nwo/; go test -cover ./...
+
+.PHONY: unit-tests-regression
+unit-tests-regression:
+	@go test -race -timeout 0 -cover $(shell go list ./... | grep -v '/integration/' | grep 'regression')
 
 .PHONY: install-softhsm
 install-softhsm:
