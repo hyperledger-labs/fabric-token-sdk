@@ -56,18 +56,24 @@ const (
 )
 
 type Env struct {
-	Engine            *validator.Validator
-	inputsForTransfer []*tokn.Token
-	inputsForRedeem   []*tokn.Token
-	Sender            *transfer.Sender
+	Engine *validator.Validator
 
 	TRWithTransferTxID string
 	TRWithTransfer     *driver.TokenRequest
 	TRWithTransferRaw  []byte
 
-	TRWithRedeem *driver.TokenRequest
-	TRWithIssue  *driver.TokenRequest
-	TRWithSwap   *driver.TokenRequest
+	TRWithRedeem     *driver.TokenRequest
+	TRWithRedeemTxID string
+	TRWithRedeemRaw  []byte
+
+	TRWithIssue     *driver.TokenRequest
+	TRWithIssueTxID string
+	TRWithIssueRaw  []byte
+
+	Sender         *transfer.Sender
+	TRWithSwap     *driver.TokenRequest
+	TRWithSwapTxID string
+	TRWithSwapRaw  []byte
 }
 
 // SaveTransferToFile writes TRWithTransferTxID and TRWithTransferRaw (base64-encoded)
@@ -99,9 +105,6 @@ func (e *Env) SaveTransferToFile(path string) error {
 func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*Env, error) {
 	var (
 		engine *validator.Validator
-
-		inputsForRedeem   []*tokn.Token
-		inputsForTransfer []*tokn.Token
 
 		sender  *transfer.Sender
 		auditor *audit.Auditor
@@ -157,16 +160,23 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	if err != nil {
 		return nil, err
 	}
+	irRaw, err := ir.Bytes()
+	if err != nil {
+		return nil, err
+	}
 
 	// prepare redeem
-	_, rr, _, inputsForRedeem, err = prepareRedeemRequest(benchCase, pp, auditor, setupConfiguration)
+	_, rr, _, _, err = prepareRedeemRequest(benchCase, pp, auditor, setupConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	rrRaw, err := rr.Bytes()
 	if err != nil {
 		return nil, err
 	}
 
 	// prepare transfer
-	var trmetadata *driver.TokenRequestMetadata
-	sender, tr, trmetadata, inputsForTransfer, err = prepareTransferRequest(benchCase, pp, auditor, oID)
+	_, tr, _, _, err = prepareTransferRequest(benchCase, pp, auditor, oID)
 	if err != nil {
 		return nil, err
 	}
@@ -176,52 +186,31 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	}
 
 	// atomic action request
-	ar = &driver.TokenRequest{Transfers: tr.Transfers}
-	raw, err := ar.MarshalToMessageToSign([]byte("2"))
+	sender, ar, _, _, err = prepareSwapRequest(benchCase, pp, auditor, oID)
 	if err != nil {
 		return nil, err
 	}
-
-	// Sender signs request
-	signatures, err := sender.SignTokenActions(raw)
+	arRaw, err := ar.Bytes()
 	if err != nil {
 		return nil, err
 	}
-
-	// auditor inspect token
-	metadata := &driver.TokenRequestMetadata{}
-	metadata.Transfers = []*driver.TransferMetadata{trmetadata.Transfers[0]}
-
-	tokns := make([][]*tokn.Token, 1)
-	for i := range benchCase.NumInputs {
-		tokns[0] = append(tokns[0], inputsForTransfer[i])
-	}
-	err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
-	if err != nil {
-		return nil, err
-	}
-	sigma, err := auditor.Endorse(ar, "2")
-	if err != nil {
-		return nil, err
-	}
-	ar.AuditorSignatures = append(ar.AuditorSignatures, &driver.AuditorSignature{
-		Identity:  pp.Auditors()[0],
-		Signature: sigma,
-	})
-
-	ar.Signatures = append(ar.Signatures, signatures...)
 
 	return &Env{
-		TRWithIssue:        ir,
-		TRWithTransfer:     tr,
-		Engine:             engine,
-		inputsForTransfer:  inputsForTransfer,
-		inputsForRedeem:    inputsForRedeem,
-		TRWithRedeem:       rr,
-		TRWithSwap:         ar,
-		Sender:             sender,
-		TRWithTransferRaw:  transferRaw,
+		Engine: engine,
+		Sender: sender,
+
 		TRWithTransferTxID: "1",
+		TRWithTransfer:     tr,
+		TRWithTransferRaw:  transferRaw,
+		TRWithRedeem:       rr,
+		TRWithRedeemTxID:   "1",
+		TRWithRedeemRaw:    rrRaw,
+		TRWithIssue:        ir,
+		TRWithIssueTxID:    "1",
+		TRWithIssueRaw:     irRaw,
+		TRWithSwap:         ar,
+		TRWithSwapTxID:     "2",
+		TRWithSwapRaw:      arRaw,
 	}, nil
 }
 
@@ -288,6 +277,65 @@ func prepareTransferRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, aud
 		nil,
 		nil,
 	)
+}
+
+func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+	sender1, tr1, trmetadata1, inputsForTransfer1, err := prepareTransferRequest(benchCase, pp, auditor, oID)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	sender2, tr2, trmetadata2, inputsForTransfer2, err := prepareTransferRequest(benchCase, pp, auditor, oID)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	//
+	ar := &driver.TokenRequest{Transfers: append(tr1.Transfers, tr2.Transfers...)}
+	raw, err := ar.MarshalToMessageToSign([]byte("2"))
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	// Sender signs request
+	sender1Signatures, err := sender1.SignTokenActions(raw)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	sender2Signatures, err := sender2.SignTokenActions(raw)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	// auditor inspect token
+	metadata := &driver.TokenRequestMetadata{}
+	metadata.Transfers = []*driver.TransferMetadata{
+		trmetadata1.Transfers[0],
+		trmetadata2.Transfers[0],
+	}
+
+	tokns := make([][]*tokn.Token, 2)
+	for i := range benchCase.NumInputs {
+		tokns[0] = append(tokns[0], inputsForTransfer1[i])
+	}
+	for i := range benchCase.NumInputs {
+		tokns[1] = append(tokns[1], inputsForTransfer2[i])
+	}
+	err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	sigma, err := auditor.Endorse(ar, "2")
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	ar.AuditorSignatures = append(ar.AuditorSignatures, &driver.AuditorSignature{
+		Identity:  pp.Auditors()[0],
+		Signature: sigma,
+	})
+
+	ar.Signatures = append(ar.Signatures, sender1Signatures...)
+	ar.Signatures = append(ar.Signatures, sender2Signatures...)
+
+	return sender1, ar, metadata, nil, nil
 }
 
 func prepareTokens(values, bf []*math.Zr, tokenType string, pp []*math.G1, curve *math.Curve) []*math.G1 {

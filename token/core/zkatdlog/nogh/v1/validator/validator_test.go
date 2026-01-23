@@ -70,7 +70,7 @@ func TestValidator(t *testing.T) {
 
 		actions, _, err := env.Engine.VerifyTokenRequestFromRaw(t.Context(), nil, "2", raw)
 		require.NoError(t, err)
-		require.Len(t, actions, 1)
+		require.Len(t, actions, 2)
 	})
 	t.Run("when the sender's signature is not valid: wrong txID", func(t *testing.T) {
 		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
