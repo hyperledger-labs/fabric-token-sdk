@@ -24,7 +24,7 @@ import (
 func TestNewServiceFields(t *testing.T) {
 	ip := &dmock.IdentityProvider{}
 	d := &dmock.Deserializer{}
-	r := map[identity.RoleType]wallet.RoleRegistry{}
+	r := wallet.RoleRegistries{}
 	logger := &logging.MockLogger{}
 	s := wallet.NewService(logger, ip, d, r)
 	require.NotNil(t, s)

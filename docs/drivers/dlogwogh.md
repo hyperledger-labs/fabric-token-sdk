@@ -220,7 +220,7 @@ The `IdentityConfigurations` table contains the information about the identities
 
 So, let us ask: How does this table get populated?
 There are two ways:
-- From the configuration file. Here is an example taken from [`here`](./core-token.md):
+- From the configuration file. Here is an example taken from [`here`](../core-token.md):
 ```yaml
       # sections dedicated to the definition of the wallets
       wallets:
