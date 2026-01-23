@@ -9,8 +9,50 @@ package driver
 import (
 	"context"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+// Identity represents a generic identity
+type Identity = view.Identity
+
+// IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
+//
+//go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
+type IdentityProvider interface {
+	// RegisterRecipientData stores the passed recipient data
+	RegisterRecipientData(ctx context.Context, data *RecipientData) error
+
+	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
+	GetAuditInfo(ctx context.Context, identity Identity) ([]byte, error)
+
+	// GetSigner returns a Signer for passed identity.
+	GetSigner(ctx context.Context, identity Identity) (Signer, error)
+
+	// RegisterSigner registers a Signer and a Verifier for passed identity.
+	RegisterSigner(ctx context.Context, identity Identity, signer Signer, verifier Verifier, signerInfo []byte, ephemeral bool) error
+
+	// AreMe returns the hashes of the passed identities that have a signer registered before
+	AreMe(ctx context.Context, identities ...Identity) []string
+
+	// IsMe returns true if a signer was ever registered for the passed identity
+	IsMe(ctx context.Context, party Identity) bool
+
+	// GetEnrollmentID extracts the enrollment ID from the passed audit info
+	GetEnrollmentID(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
+
+	// GetRevocationHandler extracts the revocation handler from the passed audit info
+	GetRevocationHandler(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
+
+	// GetEIDAndRH returns both enrollment ID and revocation handle
+	GetEIDAndRH(ctx context.Context, identity Identity, auditInfo []byte) (string, string, error)
+
+	// Bind binds longTerm to the passed ephemeral identities.
+	Bind(ctx context.Context, longTerm Identity, ephemeralIdentities ...Identity) error
+
+	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
+	RegisterRecipientIdentity(ctx context.Context, id Identity) error
+}
 
 // RecipientData contains information about the identity of a token owner
 type RecipientData struct {
@@ -33,6 +75,8 @@ type ListTokensOptions struct {
 }
 
 // Wallet models a generic wallet
+//
+//go:generate counterfeiter -o mock/w.go -fake-name Wallet . Wallet
 type Wallet interface {
 	// ID returns the ID of this wallet
 	ID() string
@@ -48,6 +92,8 @@ type Wallet interface {
 }
 
 // OwnerWallet models the wallet of a token recipient.
+//
+//go:generate counterfeiter -o mock/ow.go -fake-name OwnerWallet . OwnerWallet
 type OwnerWallet interface {
 	Wallet
 
@@ -83,7 +129,8 @@ type OwnerWallet interface {
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string
 
-	// RegisterRecipient register the given recipient data
+	// RegisterRecipient register the passed recipient data.
+	// The data is passed as pointer to allow the underlying token driver to modify them if needed.
 	RegisterRecipient(ctx context.Context, data *RecipientData) error
 
 	// Remote returns true if this wallet is verify only, meaning that the corresponding secret key is external to this wallet
@@ -91,6 +138,8 @@ type OwnerWallet interface {
 }
 
 // IssuerWallet models the wallet of an issuer
+//
+//go:generate counterfeiter -o mock/iw.go -fake-name IssuerWallet . IssuerWallet
 type IssuerWallet interface {
 	Wallet
 
@@ -103,6 +152,8 @@ type IssuerWallet interface {
 }
 
 // AuditorWallet models the wallet of an auditor
+//
+//go:generate counterfeiter -o mock/aw.go -fake-name AuditorWallet . AuditorWallet
 type AuditorWallet interface {
 	Wallet
 
@@ -112,6 +163,8 @@ type AuditorWallet interface {
 }
 
 // CertifierWallet models the wallet of a certifier
+//
+//go:generate counterfeiter -o mock/cw.go -fake-name CertifierWallet . CertifierWallet
 type CertifierWallet interface {
 	Wallet
 
@@ -120,6 +173,7 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (Identity, error)
 }
 
+// IdentityConfiguration contains configuration-related information of an identity
 type IdentityConfiguration struct {
 	ID     string
 	Type   string

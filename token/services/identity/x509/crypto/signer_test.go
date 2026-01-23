@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/csp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/mocks"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
 	"github.com/hyperledger/fabric-lib-go/bccsp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

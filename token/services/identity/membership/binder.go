@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-// NoBinder implements a no-nop binder
+// NoBinder implements a no-op binder
 type NoBinder struct{}
 
 func (n *NoBinder) Bind(ctx context.Context, longTerm token.Identity, ephemeral ...token.Identity) error {

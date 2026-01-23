@@ -16,6 +16,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
+// OperationType represents the HTLC operation being performed:
+// Claim or Reclaim (or None when undetermined).
 type OperationType int
 
 const (
@@ -24,18 +26,27 @@ const (
 	Reclaim
 )
 
+// Action abstracts an action that potentially carries metadata used by the HTLC validators.
+// Tests can provide a fake implementation with the desired
+// metadata map to drive validation scenarios.
+//
+//go:generate counterfeiter -o mock/action.go -fake-name Action . Action
 type Action interface {
 	GetMetadata() map[string][]byte
 }
 
-// VerifyOwner validates the owners of the transfer in the htlc script
+// VerifyOwner validates that the provided output owner corresponds to the
+// expected owner according to the HTLC script encoded in senderRawOwner.
+// It returns the parsed script and the inferred operation type (Claim or Reclaim).
+// The provided 'now' timestamp is used to determine whether the
+// HTLC is still claimable (now before deadline) or reclaimable (now after or equal to deadline).
 func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htlc.Script, OperationType, error) {
 	sender, err := identity.UnmarshalTypedIdentity(senderRawOwner)
 	if err != nil {
 		return nil, None, err
 	}
-	if sender.Type != htlc.ScriptType {
-		return nil, None, errors.Errorf("invalid identity type, expected [%s], got [%s]", htlc.ScriptType, sender.Type)
+	if sender.Type != ScriptType {
+		return nil, None, errors.Errorf("invalid identity type, expected [%s], got [%s]", ScriptType, sender.Type)
 	}
 	script := &htlc.Script{}
 	err = json.Unmarshal(sender.Identity, script)
@@ -58,7 +69,10 @@ func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htl
 	}
 }
 
-// MetadataClaimKeyCheck checks that the claim key is in place
+// MetadataClaimKeyCheck validates that the Claim metadata is present and consistent.
+// For Claim operations it expects the action metadata to contain
+// a key derived from the hash image and the value equal to the preimage.
+// For Reclaim operations it returns no error and an empty key.
 func MetadataClaimKeyCheck(action Action, script *htlc.Script, op OperationType, sig []byte) (string, error) {
 	if op == Reclaim {
 		// No metadata in this case
@@ -96,7 +110,9 @@ func MetadataClaimKeyCheck(action Action, script *htlc.Script, op OperationType,
 	return key, nil
 }
 
-// MetadataLockKeyCheck checks that the lock key is in place
+// MetadataLockKeyCheck validates that the lock metadata entry is present and correct.
+// It checks that the metadata contains the lock key derived from
+// the script hash and that the associated value matches the expected lock value.
 func MetadataLockKeyCheck(action Action, script *htlc.Script) (string, error) {
 	metadata := action.GetMetadata()
 	if len(metadata) == 0 {

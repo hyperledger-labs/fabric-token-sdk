@@ -578,20 +578,6 @@ func (fake *Deserializer) RecipientsReturnsOnCall(i int, result1 []driver.Identi
 func (fake *Deserializer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getAuditInfoMutex.RLock()
-	defer fake.getAuditInfoMutex.RUnlock()
-	fake.getAuditInfoMatcherMutex.RLock()
-	defer fake.getAuditInfoMatcherMutex.RUnlock()
-	fake.getAuditorVerifierMutex.RLock()
-	defer fake.getAuditorVerifierMutex.RUnlock()
-	fake.getIssuerVerifierMutex.RLock()
-	defer fake.getIssuerVerifierMutex.RUnlock()
-	fake.getOwnerVerifierMutex.RLock()
-	defer fake.getOwnerVerifierMutex.RUnlock()
-	fake.matchIdentityMutex.RLock()
-	defer fake.matchIdentityMutex.RUnlock()
-	fake.recipientsMutex.RLock()
-	defer fake.recipientsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

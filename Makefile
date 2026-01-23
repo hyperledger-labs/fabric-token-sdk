@@ -41,7 +41,7 @@ download-fabric:
 unit-tests:
 	@go test -cover $(shell go list ./... | grep -v '/integration/')
 	cd integration/nwo/; go test -cover ./...
-	cd token/services/identity/storage/kvs/hashicorp/; go test -cover ./...
+	cd token/services/storage/db/kvs/hashicorp/; go test -cover ./...
 
 .PHONY: unit-tests-race
 unit-tests-race:
@@ -97,7 +97,7 @@ integration-tests-dvp-dlog:
 tidy:
 	@go mod tidy
 	cd tools; go mod tidy
-	cd token/services/identity/storage/kvs/hashicorp; go mod tidy
+	cd token/services/storage/db/kvs/hashicorp; go mod tidy
 
 .PHONY: clean
 clean:

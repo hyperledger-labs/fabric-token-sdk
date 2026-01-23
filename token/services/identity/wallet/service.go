@@ -8,7 +8,6 @@ package wallet
 
 import (
 	"context"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -19,84 +18,90 @@ import (
 )
 
 var (
+	// This makes sure that Service implements driver.WalletService
+	_ driver.WalletService = &Service{}
+)
+
+var (
+	// ErrNilRecipientData is returned when a nil RecipientData is passed to RegisterRecipientIdentity
 	ErrNilRecipientData = errors.New("nil recipient data")
 )
 
-type Registry interface {
+type RoleRegistries map[identity.RoleType]RoleRegistry
+
+// RoleRegistry models an external registry that holds wallets for a given role.
+// It is used by the wallet service to lookup and register identities and wallets.
+//
+//go:generate counterfeiter -o mock/registry.go -fake-name Registry . Registry
+type RoleRegistry interface {
 	WalletIDs(ctx context.Context) ([]string, error)
 	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
-	Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, string, error)
-	RegisterWallet(ctx context.Context, id string, wallet driver.Wallet) error
-	BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID string, meta any) error
-	ContainsIdentity(ctx context.Context, i driver.Identity, id string) bool
-	GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error
+	WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error)
 }
 
-type walletFactory interface {
-	NewWallet(ctx context.Context, id string, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
-}
-
-type RegistryEntry struct {
-	Registry Registry
-	Mutex    *sync.RWMutex
-}
-
+// Service implements the driver.WalletService interface.
+// Service exposes wallet-related helper operations used by the token management layer.
+// It delegates identity operations to the configured IdentityProvider and uses
+// registries for role-specific wallet lookups and registrations.
 type Service struct {
 	Logger           logging.Logger
 	IdentityProvider driver.IdentityProvider
 	Deserializer     driver.Deserializer
-
-	WalletFactory walletFactory
-	Registries    map[identity.RoleType]*RegistryEntry
+	RoleRegistries   RoleRegistries
 }
 
+// NewService creates a new wallet Service.
 func NewService(
 	logger logging.Logger,
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
-	walletFactory walletFactory,
-	walletRegistries map[identity.RoleType]Registry,
+	roleRegistries RoleRegistries,
 ) *Service {
-	registries := map[identity.RoleType]*RegistryEntry{}
-	for roleType, registry := range walletRegistries {
-		registries[roleType] = &RegistryEntry{
-			Registry: registry,
-			Mutex:    &sync.RWMutex{},
-		}
-	}
 	return &Service{
 		Logger:           logger,
 		IdentityProvider: identityProvider,
 		Deserializer:     deserializer,
-		WalletFactory:    walletFactory,
-		Registries:       registries,
+		RoleRegistries:   roleRegistries,
 	}
 }
 
+// RegisterOwnerIdentity registers a long-term owner identity using the owner registry.
 func (s *Service) RegisterOwnerIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
-	return s.Registries[identity.OwnerRole].Registry.RegisterIdentity(ctx, config)
+	return s.RoleRegistries[identity.OwnerRole].RegisterIdentity(ctx, config)
 }
 
+// RegisterIssuerIdentity registers a long-term issuer identity using the issuer registry.
 func (s *Service) RegisterIssuerIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
-	return s.Registries[identity.IssuerRole].Registry.RegisterIdentity(ctx, config)
+	return s.RoleRegistries[identity.IssuerRole].RegisterIdentity(ctx, config)
 }
 
+// GetAuditInfo retrieves audit information for the given identity using the configured IdentityProvider.
 func (s *Service) GetAuditInfo(ctx context.Context, id driver.Identity) ([]byte, error) {
 	return s.IdentityProvider.GetAuditInfo(ctx, id)
 }
 
+// GetEnrollmentID extracts the enrollment id from the passed audit information using the IdentityProvider.
 func (s *Service) GetEnrollmentID(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
 	return s.IdentityProvider.GetEnrollmentID(ctx, identity, auditInfo)
 }
 
+// GetRevocationHandle extracts the revocation handle from the passed audit information using the IdentityProvider.
 func (s *Service) GetRevocationHandle(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
 	return s.IdentityProvider.GetRevocationHandler(ctx, identity, auditInfo)
 }
 
+// GetEIDAndRH returns both enrollment ID and revocation handle from audit info via the IdentityProvider.
 func (s *Service) GetEIDAndRH(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, string, error) {
 	return s.IdentityProvider.GetEIDAndRH(ctx, identity, auditInfo)
 }
 
+// RegisterRecipientIdentity registers the passed identity as a third-party recipient identity.
+// The function performs these steps:
+//   - validate the input
+//   - ask the IdentityProvider to register the recipient identity
+//   - match the identity against the provided audit info using the Deserializer
+//   - obtain the owner verifier and register it with the IdentityProvider
+//   - store the recipient data via the IdentityProvider
 func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.RecipientData) error {
 	if data == nil {
 		return errors.Wrapf(ErrNilRecipientData, "invalid recipient data")
@@ -122,6 +127,8 @@ func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *driver.Re
 	return nil
 }
 
+// Wallet returns a wallet bound to the passed identity. It tries to resolve an owner wallet first
+// and then an issuer wallet. It returns nil if no wallet is found.
 func (s *Service) Wallet(ctx context.Context, identity driver.Identity) driver.Wallet {
 	w, _ := s.OwnerWallet(ctx, identity)
 	if w != nil {
@@ -134,92 +141,69 @@ func (s *Service) Wallet(ctx context.Context, identity driver.Identity) driver.W
 	return nil
 }
 
+// OwnerWalletIDs returns the list of owner wallet identifiers from the owner registry.
 func (s *Service) OwnerWalletIDs(ctx context.Context) ([]string, error) {
-	return s.Registries[identity.OwnerRole].Registry.WalletIDs(ctx)
+	return s.RoleRegistries[identity.OwnerRole].WalletIDs(ctx)
 }
 
+// OwnerWallet returns the OwnerWallet instance bound to the passed lookup id.
 func (s *Service) OwnerWallet(ctx context.Context, id driver.WalletLookupID) (driver.OwnerWallet, error) {
-	w, err := s.walletByID(ctx, identity.OwnerRole, id)
+	w, err := s.RoleRegistries[identity.OwnerRole].WalletByID(ctx, identity.OwnerRole, id)
 	if err != nil {
 		return nil, err
 	}
 	return w.(driver.OwnerWallet), nil
 }
 
+// IssuerWallet returns the IssuerWallet instance bound to the passed lookup id.
 func (s *Service) IssuerWallet(ctx context.Context, id driver.WalletLookupID) (driver.IssuerWallet, error) {
-	w, err := s.walletByID(ctx, identity.IssuerRole, id)
+	w, err := s.RoleRegistries[identity.IssuerRole].WalletByID(ctx, identity.IssuerRole, id)
 	if err != nil {
 		return nil, err
 	}
 	return w.(driver.IssuerWallet), nil
 }
 
+// AuditorWallet returns the AuditorWallet instance bound to the passed lookup id.
 func (s *Service) AuditorWallet(ctx context.Context, id driver.WalletLookupID) (driver.AuditorWallet, error) {
-	w, err := s.walletByID(ctx, identity.AuditorRole, id)
+	w, err := s.RoleRegistries[identity.AuditorRole].WalletByID(ctx, identity.AuditorRole, id)
 	if err != nil {
 		return nil, err
 	}
 	return w.(driver.AuditorWallet), nil
 }
 
+// CertifierWallet returns the CertifierWallet instance bound to the passed lookup id.
 func (s *Service) CertifierWallet(ctx context.Context, id driver.WalletLookupID) (driver.CertifierWallet, error) {
-	w, err := s.walletByID(ctx, identity.CertifierRole, id)
+	w, err := s.RoleRegistries[identity.CertifierRole].WalletByID(ctx, identity.CertifierRole, id)
 	if err != nil {
 		return nil, err
 	}
 	return w.(driver.CertifierWallet), nil
 }
 
-// SpendIDs returns the spend ids for the passed token ids
+// SpendIDs returns the spend ids for the passed token ids.
+// The current implementation converts token.ID into its string representation.
 func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
-	return nil, nil
+	if len(ids) == 0 {
+		return []string{}, nil
+	}
+	res := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id == nil {
+			// skip nil ids
+			continue
+		}
+		res = append(res, id.String())
+	}
+	return res, nil
 }
 
-func (s *Service) walletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
-	logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T]", role, id)
-	defer logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T] done", role, id)
-
-	entry := s.Registries[role]
-	registry := entry.Registry
-	mutex := entry.Mutex
-
-	logger.DebugfContext(ctx, "is it in cache?")
-
-	mutex.RLock()
-	w, _, _, err := registry.Lookup(ctx, id)
-	if err != nil {
-		mutex.RUnlock()
-		logger.DebugfContext(ctx, "failed")
-		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
+// Convert converts a map of concrete registries into a map of the RoleRegistry interface type.
+func Convert[T RoleRegistry](s map[identity.RoleType]T) RoleRegistries {
+	res := make(RoleRegistries, len(s))
+	for role, v := range s {
+		res[role] = v
 	}
-	if w != nil {
-		mutex.RUnlock()
-		logger.DebugfContext(ctx, "yes")
-		return w, nil
-	}
-	mutex.RUnlock()
-	logger.DebugfContext(ctx, "no")
-
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	logger.DebugfContext(ctx, "is it in cache before creating")
-	w, idInfo, wID, err := registry.Lookup(ctx, id)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
-	}
-	if w != nil {
-		return w, nil
-	}
-
-	// create the wallet
-	logger.DebugfContext(ctx, "create wallet")
-	newWallet, err := s.WalletFactory.NewWallet(ctx, wID, role, registry, idInfo)
-	if err != nil {
-		return nil, err
-	}
-	if err := registry.RegisterWallet(ctx, wID, newWallet); err != nil {
-		return nil, err
-	}
-	return newWallet, nil
+	return res
 }

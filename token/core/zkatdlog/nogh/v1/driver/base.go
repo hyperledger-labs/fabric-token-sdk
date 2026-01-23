@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
@@ -27,9 +26,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-type base struct{}
+//go:generate counterfeiter -o mock/config.go -fake-name Config . Config
+type Config = core.Config
 
-func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
+type Base struct{}
+
+func (d *Base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
 	pp, err := v1.NewPublicParamsFromBytes(params, v1.DLogNoGHDriverName, v1.ProtocolV1)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
@@ -37,7 +39,7 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 	return pp, nil
 }
 
-func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	deserializer, err := NewDeserializer(pp.(*v1.PublicParams))
 	if err != nil {
 		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
@@ -53,9 +55,9 @@ func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 	), nil
 }
 
-func (d *base) newWalletService(
+func (d *Base) NewWalletService(
 	tmsConfig core.Config,
-	binder idriver.NetworkBinderService,
+	binder identity.NetworkBinderService,
 	storageProvider identity.StorageProvider,
 	qe driver.QueryEngine,
 	logger logging.Logger,
@@ -66,7 +68,7 @@ func (d *base) newWalletService(
 	metricsProvider metrics.Provider,
 ) (*wallet.Service, error) {
 	pp := publicParams.(*v1.PublicParams)
-	roles := wallet.NewRoles()
+	roles := role.NewRoles()
 	deserializerManager := deserializer.NewTypedSignerDeserializerMultiplex()
 	tmsID := tmsConfig.ID()
 	identityDB, err := storageProvider.IdentityStore(tmsID)
@@ -84,7 +86,7 @@ func (d *base) newWalletService(
 	}
 
 	// Prepare roles
-	roleFactory := role.NewFactory(
+	roleFactory := membership.NewRoleFactory(
 		logger,
 		tmsID,
 		identityConfig,
@@ -108,26 +110,26 @@ func (d *base) newWalletService(
 	keyStore := x509.NewKeyStore(baseKeyStore)
 	kmps = append(kmps, x509.NewKeyManagerProvider(identityConfig, keyStore, ignoreRemote))
 
-	role, err := roleFactory.NewRole(identity.OwnerRole, true, nil, kmps...)
+	newRole, err := roleFactory.NewRole(identity.OwnerRole, true, nil, kmps...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create owner role")
 	}
-	roles.Register(identity.OwnerRole, role)
-	role, err = roleFactory.NewRole(identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, keyStore, ignoreRemote))
+	roles.Register(identity.OwnerRole, newRole)
+	newRole, err = roleFactory.NewRole(identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(identityConfig, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create issuer role")
 	}
-	roles.Register(identity.IssuerRole, role)
-	role, err = roleFactory.NewRole(identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, keyStore, ignoreRemote))
+	roles.Register(identity.IssuerRole, newRole)
+	newRole, err = roleFactory.NewRole(identity.AuditorRole, false, pp.Auditors(), x509.NewKeyManagerProvider(identityConfig, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create auditor role")
 	}
-	roles.Register(identity.AuditorRole, role)
-	role, err = roleFactory.NewRole(identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, keyStore, ignoreRemote))
+	roles.Register(identity.AuditorRole, newRole)
+	newRole, err = roleFactory.NewRole(identity.CertifierRole, false, nil, x509.NewKeyManagerProvider(identityConfig, keyStore, ignoreRemote))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create certifier role")
 	}
-	roles.Register(identity.CertifierRole, role)
+	roles.Register(identity.CertifierRole, newRole)
 
 	// wallet service
 	walletDB, err := storageProvider.WalletStore(tmsID)
@@ -142,7 +144,6 @@ func (d *base) newWalletService(
 		logger,
 		identityProvider,
 		deserializer,
-		wallet.NewFactory(logger, identityProvider, qe, identityConfig, deserializer, metricsProvider),
-		roles.ToWalletRegistries(logger, walletDB),
+		wallet.Convert(roles.Registries(logger, walletDB, role.NewDefaultFactory(logger, identityProvider, qe, identityConfig, deserializer, metricsProvider))),
 	), nil
 }
