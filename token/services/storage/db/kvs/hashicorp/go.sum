@@ -11,8 +11,8 @@ github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478 h
 github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478/go.mod h1:k4Q5EYKRnYC6t80ipSCY3G8H4FdcxRa8jjlsJdGfNCY=
 github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478 h1:Uzmcb4pNb54/fbAjnrZTiJwWV74+twP60N4qBGm4PvU=
 github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478/go.mod h1:Pi1QIuIZ+1OXIbnYe27vNwJOnSq2WvkHRT/sfweTw8E=
-github.com/IBM/mathlib v0.0.3-0.20260123141248-f52c9be3cb35 h1:q1C/kctKZs+uMzw39gy0ZwygUqL/uY3p6/E/TObIhDQ=
-github.com/IBM/mathlib v0.0.3-0.20260123141248-f52c9be3cb35/go.mod h1:yJTkNqKzf4qxM3O17dd4VZMnantrTATrvY1ta0MV+J8=
+github.com/IBM/mathlib v0.0.3-0.20260123144934-21c357e3e46f h1:J6Fsh8JEYN+wh3QHjbDqc4PyJEztjRo3Gv+IJaI7xfU=
+github.com/IBM/mathlib v0.0.3-0.20260123144934-21c357e3e46f/go.mod h1:yJTkNqKzf4qxM3O17dd4VZMnantrTATrvY1ta0MV+J8=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
