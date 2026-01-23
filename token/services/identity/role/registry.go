@@ -20,10 +20,10 @@ import (
 
 //go:generate counterfeiter -o mock/wf.go -fake-name WalletFactory . WalletFactory
 type WalletFactory interface {
-	NewWallet(ctx context.Context, id idriver.WalletID, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error)
+	NewWallet(ctx context.Context, id idriver.WalletID, role identity.RoleType, is IdentitySupport, info identity.Info) (driver.Wallet, error)
 }
 
-// WalletRegistry manages wallets whose long-term identities have a given role.
+// Registry manages wallets whose long-term identities have a given role.
 //
 // Concurrency and invariants:
 //   - The Wallets map MUST only be accessed while holding WalletMu. Use
@@ -32,7 +32,7 @@ type WalletFactory interface {
 //     RLocks for map reads and never holding locks while calling out to external
 //     services (identity provider, storage, wallet factory) to avoid blocking and
 //     potential deadlocks.
-type WalletRegistry struct {
+type Registry struct {
 	Logger  logging.Logger
 	Role    identity.Role
 	Storage idriver.WalletStoreService
@@ -42,11 +42,10 @@ type WalletRegistry struct {
 	Wallets       map[string]driver.Wallet
 }
 
-// NewWalletRegistry returns a new registry for the passed parameters.
+// NewRegistry returns a new registry for the passed parameters.
 // A registry is bound to a given role, and it is persistent.
-// Long-term identities are provided by the passed identity provider
-func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletStoreService, walletFactory WalletFactory) *WalletRegistry {
-	return &WalletRegistry{
+func NewRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletStoreService, walletFactory WalletFactory) *Registry {
+	return &Registry{
 		Logger:        logger,
 		Role:          role,
 		Storage:       storage,
@@ -55,7 +54,7 @@ func NewWalletRegistry(logger logging.Logger, role identity.Role, storage idrive
 	}
 }
 
-func (r *WalletRegistry) RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
+func (r *Registry) RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
 	r.Logger.DebugfContext(ctx, "register identity [%s:%s]", config.ID, config.URL)
 	return r.Role.RegisterIdentity(ctx, config)
 }
@@ -70,7 +69,7 @@ func (r *WalletRegistry) RegisterIdentity(ctx context.Context, config driver.Ide
 // 3. If cache misses, try to resolve identity -> wallet id using storage/role and finally call role.GetIdentityInfo for any discovered wallet identifiers.
 //
 // Note: Lookup only takes short RLocks for map reads and does not hold the lock while calling external services.
-func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, idriver.WalletID, error) {
+func (r *Registry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, idriver.WalletID, error) {
 	r.Logger.DebugfContext(ctx, "lookup wallet by [%T]", id)
 	var walletIdentifiers []string
 
@@ -164,7 +163,7 @@ func (r *WalletRegistry) Lookup(ctx context.Context, id driver.WalletLookupID) (
 }
 
 // RegisterWallet binds the passed wallet to the passed id
-func (r *WalletRegistry) RegisterWallet(ctx context.Context, id string, w driver.Wallet) error {
+func (r *Registry) RegisterWallet(ctx context.Context, id string, w driver.Wallet) error {
 	r.Logger.DebugfContext(ctx, "register wallet [%s]", id)
 	// Protect writes to the Wallets map
 	r.WalletMu.Lock()
@@ -175,7 +174,7 @@ func (r *WalletRegistry) RegisterWallet(ctx context.Context, id string, w driver
 
 // BindIdentity binds the passed identity to the passed wallet identifier.
 // Additional metadata can be bound to the identity.
-func (r *WalletRegistry) BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID idriver.WalletID, meta any) error {
+func (r *Registry) BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID idriver.WalletID, meta any) error {
 	r.Logger.DebugfContext(ctx, "put recipient identity [%s]->[%s]", identity, wID)
 	metaEncoded, err := json.Marshal(meta)
 	if err != nil {
@@ -186,12 +185,12 @@ func (r *WalletRegistry) BindIdentity(ctx context.Context, identity driver.Ident
 
 // ContainsIdentity returns true if the passed identity belongs to the passed wallet,
 // false otherwise
-func (r *WalletRegistry) ContainsIdentity(ctx context.Context, identity driver.Identity, wID string) bool {
+func (r *Registry) ContainsIdentity(ctx context.Context, identity driver.Identity, wID string) bool {
 	return r.Storage.IdentityExists(ctx, identity, wID, int(r.Role.ID()))
 }
 
 // WalletIDs returns the list of wallet identifiers
-func (r *WalletRegistry) WalletIDs(ctx context.Context) ([]string, error) {
+func (r *Registry) WalletIDs(ctx context.Context) ([]string, error) {
 	walletIDs, err := r.Role.IdentityIDs()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet identifiers from identity provider")
@@ -216,7 +215,7 @@ func (r *WalletRegistry) WalletIDs(ctx context.Context) ([]string, error) {
 }
 
 // GetIdentityMetadata loads metadata bound to the passed identity into the passed meta argument
-func (r *WalletRegistry) GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error {
+func (r *Registry) GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error {
 	r.Logger.DebugfContext(ctx, "get recipient identity metadata [%s]->[%s]", identity, wID)
 	raw, err := r.Storage.LoadMeta(ctx, identity, wID, int(r.Role.ID()))
 	if err != nil {
@@ -226,7 +225,7 @@ func (r *WalletRegistry) GetIdentityMetadata(ctx context.Context, identity drive
 }
 
 // GetWalletID returns the wallet identifier bound to the passed identity
-func (r *WalletRegistry) GetWalletID(ctx context.Context, identity driver.Identity) (string, error) {
+func (r *Registry) GetWalletID(ctx context.Context, identity driver.Identity) (string, error) {
 	wID, err := r.Storage.GetWalletID(ctx, identity, int(r.Role.ID()))
 	if err != nil {
 		//nolint:nilerr
@@ -236,7 +235,7 @@ func (r *WalletRegistry) GetWalletID(ctx context.Context, identity driver.Identi
 	return wID, nil
 }
 
-func (r *WalletRegistry) WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
+func (r *Registry) WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
 	r.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T]", role, id)
 	defer r.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T] done", role, id)
 

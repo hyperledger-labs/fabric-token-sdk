@@ -30,15 +30,10 @@ type WalletsConfiguration interface {
 	CacheSizeForOwnerID(id string) int
 }
 
-//go:generate counterfeiter -o mock/registry.go -fake-name Registry . Registry
-type Registry interface {
-	WalletIDs(ctx context.Context) ([]string, error)
-	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
-	Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, idriver.WalletID, error)
-	RegisterWallet(ctx context.Context, id string, wallet driver.Wallet) error
+//go:generate counterfeiter -o mock/is.go -fake-name IdentitySupport . IdentitySupport
+type IdentitySupport interface {
 	BindIdentity(ctx context.Context, identity driver.Identity, eID string, wID idriver.WalletID, meta any) error
 	ContainsIdentity(ctx context.Context, i driver.Identity, id string) bool
-	GetIdentityMetadata(ctx context.Context, identity driver.Identity, wID string, meta any) error
 }
 
 //go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
@@ -73,7 +68,7 @@ func NewDefaultFactory(
 	}
 }
 
-func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, role identity.RoleType, wr Registry, info identity.Info) (driver.Wallet, error) {
+func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, role identity.RoleType, wr IdentitySupport, info identity.Info) (driver.Wallet, error) {
 	switch role {
 	case identity.OwnerRole:
 		if info.Anonymous() {

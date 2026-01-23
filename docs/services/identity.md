@@ -1,6 +1,7 @@
 # Identity Service
 
-The **Identity Service** (`token/services/identity`) provides a unified interface for managing identities, signatures, and verification within the Fabric Token SDK. It abstracts the underlying cryptographic details, allowing the SDK to support multiple identity types (e.g., X.509, Idemix) and different storage backends seamlessly.
+The **Identity Service** (`token/services/identity`) provides a unified interface for managing identities, signatures, and verification within the Fabric Token SDK. 
+It abstracts the underlying cryptographic details, allowing the SDK to support multiple identity types (e.g., X.509, Idemix) and different storage backends seamlessly.
 
 This service is a fundamental component used by token drivers and other services (like the Token Transaction (TTX) service) to handle:
 *   **Signatures**: Generating and verifying signatures for transactions.
@@ -10,87 +11,177 @@ This service is a fundamental component used by token drivers and other services
 
 ## Architecture
 
-The core of the service is the `Provider` struct, which implements the `driver.IdentityProvider` interface. It orchestrates interactions between:
+The Identity Service is designed to implement the **Driver API** interfaces defined in `token/driver/wallet.go`. 
+This ensures that the token management system can interact with any identity implementation through a standard set of methods.
 
-1.  **Storage**: Persists identity data, including audit information, secrets (via keystore), and bindings between wallets and identities.
-2.  **Deserializers**: Parses raw identity bytes into typed identity structures (e.g., converting an Idemix byte array into a usable object).
-3.  **Signers and Verifiers**: Interfaces for cryptographic operations.
-4.  **Binder**: Handles binding long-term identities to ephemeral ones.
+### Conceptual Metaphor
 
-### Key Components
+To better understand the components, imagine a **Corporate Security Department**:
 
-*   **`Provider`** (`token/services/identity/provider.go`): The main entry point. It manages caches for signers and "is-me" checks to optimize performance.
-*   **`Storage`** (`token/services/identity/driver/storage.go`): Interface for the underlying storage. It handles storing and retrieving audit info, token metadata, and signer info.
-*   **`Role`** (`token/services/identity/driver/role.go`): Defines abstract roles (Issuer, Auditor, etc.) and how they map to long-term identities.
+*   **Identity Service (The Department)**: The entire division responsible for security and access.
+*   **Wallet Service (The Keymaster)**: Maintains a registry of all employees (Wallets) and the badges (Keys) they possess. It knows who has access to what.
+*   **Identity Provider (The Passport Office)**: Verifies identities. It checks if a badge is authentic and extracts information from it (Project ID, Department ID).
+*   **Roles (Job Titles)**: Groups of employees with similar access rights (e.g., "Auditors" have special keys to view records, "Issuers" have keys to create assets).
+*   **Key Managers (The Badge Makers)**: The specific machines or protocols used to create the badges (e.g., one machine makes standard plastic cards (X.509), another makes high-tech smart cards (Idemix)).
+
+### Component Mapping
+
+Here is how the service components map to the Driver API:
+
+| Component              | Implements Driver Interface | Description                                           |
+|:-----------------------|:----------------------------|:------------------------------------------------------|
+| `identity.Provider`    | `driver.IdentityProvider`   | Core identity management & verification.              |
+| `wallet.Service`       | `driver.WalletService`      | Registry for all wallets (Owner, Issuer, etc.).       |
+| `role.LongTermOwnerWallet`     | `driver.OwnerWallet`        | Long Term Identity-based  Onwer wallet functionality. |
+| `role.AnonymousOwnerWallet`     | `driver.OwnerWallet`        | Anonymous Identity-based  Onwer wallet functionality. |
+| `role.IssuerWallet`    | `driver.IssuerWallet`       | Issuer wallet functionality.                          |
+| `role.AuditorWallet`   | `driver.AuditorWallet`      | Auditor wallet functionality.                         |
+| `role.CertifierWallet` | `driver.CertifierWallet`    | Certifier wallet functionality.                       |
+
+### Component Interaction Diagram
+
+```mermaid
+classDiagram
+    direction TB
+    %% Driver Interfaces
+    class IdentityProvider {
+        <<interface>>
+        +GetSigner()
+        +GetAuditInfo()
+        +IsMe()
+    }
+    class WalletService {
+        <<interface>>
+        +OwnerWallet()
+        +IssuerWallet()
+        +RegisterRecipientIdentity()
+    }
+    
+    %% Concrete Implementations
+    class identity.Provider {
+        -Storage
+        -Deserializers
+        -SignerCache
+    }
+    class wallet.Service {
+        -RoleRegistry
+        -IdentityProvider
+        -OwnerWallet
+        -IssuerWallet
+        -AuditorWallet
+        -CertifierWallet
+    }
+    class role.Role {
+        -LocalMembership 
+        +GetIdentityInfo()
+    }
+    class membership.KeyManagerProvider {
+        <<interface>>
+        +Get() KeyManager
+    }
+
+    identity.Provider ..|> IdentityProvider : Implements
+    wallet.Service ..|> WalletService : Implements
+    wallet.Service --> identity.Provider : Uses
+    wallet.Service --> role.Role : Uses (via RoleRegistry)
+    role.Role --> membership.KeyManagerProvider : Uses (via LocalMembership)
+
+    note for identity.Provider "Handles low-level crypto\nand identity verification"
+    note for wallet.Service "High-level management\nof wallets and roles"
+```
+
+### LocalMembership
+
+The `LocalMembership` component (`token/services/identity/membership`) plays a pivotal role in managing local identities for a specific role (e.g., Owner, Issuer).
+
+*   **Binding**: Each instance is bound to a list of **Key Managers**.
+*   **Identity Wrapping**: When a Key Manager generates an identity (based on the configuration), `LocalMembership` automatically wraps it using `WrapWithType`. 
+    This ensures that the generated identity carries the correct type information required by the system (as defined in `token/services/identity/typed.go`).
+*   **Role Implementation**: `LocalMembership` serves as the foundational implementation for `role.Role`. 
+    When you interact with a Role to resolve an identity or sign a transaction, you are effectively delegating to the underlying `LocalMembership`.
+
+### Example: Wiring Services
+
+The following example demonstrates how these services are instantiated and wired together, as seen in the ZKATDLog driver:
+
+```go
+func (d *Base) NewWalletService(...) (*wallet.Service, error) {
+    // 1. Create Identity Provider
+    identityProvider := identity.NewProvider(...)
+
+    // 2. Initialize Membership Role Factory
+    roleFactory := membership.NewRoleFactory(...)
+
+    // 3. Configure Key Managers (e.g. Idemix and X.509 for Owner role)
+    // we have one key manager to handle fabtoken tokens and one for each idemix issuer public key in the public parameters
+    kmps := make([]membership.KeyManagerProvider, 0)
+    // ... add Idemix Key Manager Providers ...
+    kmps = append(kmps, x509.NewKeyManagerProvider(...))
+
+    // 4. Create and Register Roles
+    roles := role.NewRoles()
+    
+    // Owner Role (with anonymous identities)
+    ownerRole, err := roleFactory.NewRole(identity.OwnerRole, true, nil, kmps...)
+    roles.Register(identity.OwnerRole, ownerRole)
+    
+    // Issuer Role (no anonymous identities)
+    issuerRole, err := roleFactory.NewRole(identity.IssuerRole, false, pp.Issuers(), x509.NewKeyManagerProvider(...))
+    roles.Register(identity.IssuerRole, issuerRole)
+    
+    // ... Register Auditor and Certifier roles ...
+
+    // 5. Create Wallet Service with the registered roles
+    return wallet.NewService(
+        logger,
+        identityProvider,
+        deserializer,
+        // Convert the roles registry into the format expected by the wallet service
+        wallet.Convert(roles.Registries(...)),
+    ), nil
+}
+```
 
 ## Identity Types
 
-The service supports multiple identity types, extensible via drivers. The two primary built-in types are:
+The Identity Service leverages a wrapper called **TypedIdentity** to support various identity schemes uniformly. 
+This allows the SDK to be extensible and capable of handling different cryptographic requirements.
 
-### 1. X.509
+### TypedIdentity
+
+`TypedIdentity` (defined in `token/services/identity/typed.go`) acts as a generic container. 
+It wraps the raw identity bytes with a type label, enabling the system to verify deserializers and process signatures correctly without hardcoding implementation details.
+*   **Structure**: Contains a `Type` (string) and the `Identity` (raw bytes).
+
+### Default Key Managers
+
+The identity service includes two primary implementations for concrete identities:
+
+#### 1. X.509
 Standard PKIX identities.
-*   **Transparency**: Identity is known.
-*   **Usage**: Typically used for component identification (e.g., orderingers, peers) or when anonymity is not required.
-*   **Implementation**: Located in `token/services/identity/x509`.
+*   **Transparency**: Verification reveals the identity of the signer.
+*   **Usage**: Ideal for infrastructure components (nodes, services) or scenarios where anonymity is not required.
+*   **Implementation**: `token/services/identity/x509`.
 
-### 2. Idemix (Identity Mixer)
-Zero-Knowledge Proof (ZKP) based identities.
-*   **Anonymity**: Allows users to prove possession of a credential without revealing the credential itself.
-*   **Unlinkability**: Transactions cannot be linked to the same user.
-*   **Auditability**: Special "audit info" allows authorized auditors to reveal the identity if needed.
-*   **Implementation**: Located in `token/services/identity/idemix`.
+#### 2. Idemix (Identity Mixer)
+Advanced identity encryption based on Zero-Knowledge Proofs (ZKP).
+*   **Anonymity**: Users can prove they hold a valid credential without revealing their actual identity.
+*   **Unlinkability**: Different transactions from the same user appear uncorrelated.
+*   **Auditability**: Includes "audit info" facilitating regulatory compliance by allowing authorized auditors to reveal the identity.
+*   **Implementation**: `token/services/identity/idemix`.
 
-## Usage
+### Other Identity Types
 
-### Retrieving the Identity Provider
-The Identity Provider is usually accessed via the `Token Management Service` (TMS) API or injected into other services.
+The architecture supports specialized identity types for complex use cases:
 
-### Getting a Signer
-To sign a message with a specific identity:
+#### Multisig
+Located in `token/services/identity/multisig`.
+*   **Concept**: An identity that wraps multiple sub-identities.
+*   **Usage**: Useful for requiring multiple signatures or representing a group of parties.
+*   **Auditability**: Aggregates audit information for all underlying identities.
 
-```go
-// identity is of type driver.Identity (byte array)
-signer, err := identityProvider.GetSigner(ctx, identity)
-if err != nil {
-    return err
-}
-
-signature, err := signer.Sign(message)
-```
-
-### Verifying a Signature
-Unless you have the `Verifier` directly, verification often happens implicitly during transaction processing or via the `Deserializer` if you need to manually verify:
-
-```go
-verifier, err := deserializer.DeserializeVerifier(ctx, identity)
-if err != nil {
-    return err
-}
-
-err = verifier.Verify(message, signature)
-```
-
-### Checking "Is Me"
-To check if a given identity belongs to the local node (i.e., we have the private key for it):
-
-```go
-if identityProvider.IsMe(ctx, identity) {
-    // This identity is managed by this node
-}
-```
-
-### Audit Information
-For anonymous identities (Idemix), "Audit Information" is a crucial concept. It contains the data needed to de-anonymize the identity (e.g., to checking against a revocation list or for regulatory auditing).
-
-```go
-// Retrieve the Enrollment ID from audit info
-eid, err := identityProvider.GetEnrollmentID(ctx, identity, auditInfo)
-```
-
-## Storage & Caching
-The service aggressively caches:
-*   **Signers**: Once deserialized/created, signers are cached to avoid expensive re-initialization.
-*   **"Is Me" Checks**: Results of ownership checks are cached to speed up transaction filtering.
-
-## Integration with Drivers
-Token drivers (like the UTXO driver) heavily rely on this service. They delegate identity management tasks to it, ensuring that the driver code remains agnostic to the specific identity technology (X.509 vs Idemix) being used.
+#### HTLC (Hashed Time Lock Contract)
+Located in `token/services/identity/interop/htlc`.
+*   **Concept**: A script-based identity used primarily for interoperability mechanisms like atomic swaps.
+*   **Structure**: Encapsulates a **Sender** identity, a **Recipient** identity, hash lock information, and a timeout.
+*   **Behavior**: Validation involves satisfying the script conditions (e.g., providing the hash preimage).

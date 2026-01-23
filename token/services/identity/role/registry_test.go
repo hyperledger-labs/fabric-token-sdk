@@ -25,11 +25,11 @@ import (
 )
 
 // helper to create a registry with fakes
-func newRegistryWithFakes() (*role.WalletRegistry, *imock.WalletStoreService, *imock.Role, *mock.WalletFactory) {
+func newRegistryWithFakes() (*role.Registry, *imock.WalletStoreService, *imock.Role, *mock.WalletFactory) {
 	storage := &imock.WalletStoreService{}
 	r := &imock.Role{}
 	wf := &mock.WalletFactory{}
-	reg := role.NewWalletRegistry(logging.MustGetLogger("role_test"), r, storage, wf)
+	reg := role.NewRegistry(logging.MustGetLogger("role_test"), r, storage, wf)
 	// ensure a non-nil logger to avoid panics in methods that log
 	return reg, storage, r, wf
 }
@@ -216,7 +216,7 @@ func TestWalletByID_ConcurrentCreation(t *testing.T) {
 	start := make(chan struct{})
 	created := &mock2.Wallet{}
 	created.IDReturns("wc")
-	wf.NewWalletStub = func(ctx context.Context, id string, role identity.RoleType, wr role.Registry, info identity.Info) (driver.Wallet, error) {
+	wf.NewWalletStub = func(ctx context.Context, id string, role identity.RoleType, wr role.IdentitySupport, info identity.Info) (driver.Wallet, error) {
 		<-start
 		return created, nil
 	}

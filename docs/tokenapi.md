@@ -33,7 +33,6 @@ The Token API empowers developers with essential operations:
 
 **Token Requests** bundle these operations, ensuring they are executed atomically; meaning all operations succeed or fail together.
 
-
 ## Token Management Service and Provider
 
 The Token Management Service (TMS) acts as the central hub for the Token SDK.

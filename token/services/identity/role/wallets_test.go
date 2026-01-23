@@ -248,19 +248,19 @@ func TestLongTermOwnerWallet(t *testing.T) {
 }
 
 func TestAnonymousOwnerWallet(t *testing.T) {
-	setup := func(t *testing.T) (*role.AnonymousOwnerWallet, *mock.IdentityProvider, *mock.OwnerTokenVault, *mock.Registry, *mock.Deserializer) {
+	setup := func(t *testing.T) (*role.AnonymousOwnerWallet, *mock.IdentityProvider, *mock.OwnerTokenVault, *mock.IdentitySupport, *mock.Deserializer) {
 		t.Helper()
 		ip := &mock.IdentityProvider{}
 		tv := &mock.OwnerTokenVault{}
 		info := &mockIdentityInfo{id: "ownerIdentity"}
-		reg := &mock.Registry{}
+		is := &mock.IdentitySupport{}
 		des := &mock.Deserializer{}
 		logger := logging.MustGetLogger("test")
 
 		// Create wallet
-		w, err := role.NewAnonymousOwnerWallet(logger, ip, tv, des, reg, "w1", info, 10, &disabled.Provider{})
+		w, err := role.NewAnonymousOwnerWallet(logger, ip, tv, des, is, "w1", info, 10, &disabled.Provider{})
 		require.NoError(t, err)
-		return w, ip, tv, reg, des
+		return w, ip, tv, is, des
 	}
 
 	t.Run("Creation and Basics", func(t *testing.T) {

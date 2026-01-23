@@ -416,10 +416,10 @@ func (w *LongTermOwnerWallet) Remote() bool {
 // manage anonymous recipient identities.
 type AnonymousOwnerWallet struct {
 	*LongTermOwnerWallet
-	Logger         logging.Logger
-	Deserializer   Deserializer
-	WalletRegistry Registry
-	IdentityCache  *RecipientDataCache
+	Logger          logging.Logger
+	Deserializer    Deserializer
+	IdentitySupport IdentitySupport
+	IdentityCache   *RecipientDataCache
 }
 
 // NewAnonymousOwnerWallet creates an AnonymousOwnerWallet. It initializes
@@ -431,7 +431,7 @@ func NewAnonymousOwnerWallet(
 	IdentityProvider IdentityProvider,
 	TokenVault OwnerTokenVault,
 	Deserializer Deserializer,
-	walletRegistry Registry,
+	identitySupport IdentitySupport,
 	id idriver.WalletID,
 	identityInfo identity.Info,
 	cacheSize int,
@@ -444,9 +444,9 @@ func NewAnonymousOwnerWallet(
 			WalletID:          id,
 			OwnerIdentityInfo: identityInfo,
 		},
-		Logger:         logger,
-		WalletRegistry: walletRegistry,
-		Deserializer:   Deserializer,
+		Logger:          logger,
+		IdentitySupport: identitySupport,
+		Deserializer:    Deserializer,
 	}
 	w.IdentityCache = NewRecipientDataCache(logger, w.getRecipientIdentity, cacheSize, NewMetrics(metricsProvider))
 	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
@@ -456,7 +456,7 @@ func NewAnonymousOwnerWallet(
 // Contains reports whether the provided identity is bound to this anonymous
 // owner wallet according to the wallet registry.
 func (w *AnonymousOwnerWallet) Contains(ctx context.Context, identity Identity) bool {
-	return w.WalletRegistry.ContainsIdentity(ctx, identity, w.WalletID)
+	return w.IdentitySupport.ContainsIdentity(ctx, identity, w.WalletID)
 }
 
 // ContainsToken returns true if the token is owned by an identity bound to
@@ -500,7 +500,7 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(ctx context.Context, data *driv
 		return errors.Wrapf(err, "failed registering audit info for owner [%s]", data.Identity)
 	}
 	// bind to enrollment id and wallet id
-	if err := w.WalletRegistry.BindIdentity(ctx, data.Identity, w.EnrollmentID(), w.WalletID, nil); err != nil {
+	if err := w.IdentitySupport.BindIdentity(ctx, data.Identity, w.EnrollmentID(), w.WalletID, nil); err != nil {
 		return errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.WalletID)
 	}
 	return nil
@@ -516,7 +516,7 @@ func (w *AnonymousOwnerWallet) getRecipientIdentity(ctx context.Context) (*drive
 	}
 
 	// Register the pseudonym
-	if err := w.WalletRegistry.BindIdentity(ctx, pseudonym, w.OwnerIdentityInfo.EnrollmentID(), w.WalletID, nil); err != nil {
+	if err := w.IdentitySupport.BindIdentity(ctx, pseudonym, w.OwnerIdentityInfo.EnrollmentID(), w.WalletID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.ID())
 	}
 	return &driver.RecipientData{

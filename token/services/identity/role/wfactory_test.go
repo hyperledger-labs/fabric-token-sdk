@@ -22,29 +22,29 @@ import (
 )
 
 func TestDefaultFactory(t *testing.T) {
-	setup := func(t *testing.T) (*role.DefaultFactory, *mock.IdentityProvider, *mock.TokenVault, *mock.WalletsConfiguration, *mock.Deserializer, *mock.Registry) {
+	setup := func(t *testing.T) (*role.DefaultFactory, *mock.IdentityProvider, *mock.TokenVault, *mock.WalletsConfiguration, *mock.Deserializer, *mock.IdentitySupport) {
 		t.Helper()
 		ip := &mock.IdentityProvider{}
 		tv := &mock.TokenVault{}
 		wc := &mock.WalletsConfiguration{}
 		des := &mock.Deserializer{}
-		reg := &mock.Registry{}
+		is := &mock.IdentitySupport{}
 		logger := logging.MustGetLogger("test")
 
 		f := role.NewDefaultFactory(logger, ip, tv, wc, des, &disabled.Provider{})
 		require.NotNil(t, f)
-		return f, ip, tv, wc, des, reg
+		return f, ip, tv, wc, des, is
 	}
 
 	t.Run("Owner Wallet - Anonymous", func(t *testing.T) {
-		f, _, _, wc, _, reg := setup(t)
+		f, _, _, wc, _, is := setup(t)
 		id := "owner-wallet-anon"
 		info := &mockIdentityInfo{id: id, anonymous: true}
 
 		wc.CacheSizeForOwnerIDReturns(5)
-		reg.ContainsIdentityReturns(true) // For NewAnonymousOwnerWallet check
+		is.ContainsIdentityReturns(true) // For NewAnonymousOwnerWallet check
 
-		w, err := f.NewWallet(t.Context(), id, identity.OwnerRole, reg, info)
+		w, err := f.NewWallet(t.Context(), id, identity.OwnerRole, is, info)
 		require.NoError(t, err)
 		require.NotNil(t, w)
 		assert.Equal(t, id, w.ID())

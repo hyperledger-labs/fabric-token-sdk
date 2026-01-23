@@ -24,13 +24,13 @@ import (
 func TestNewServiceFields(t *testing.T) {
 	ip := &dmock.IdentityProvider{}
 	d := &dmock.Deserializer{}
-	r := map[identity.RoleType]wallet.Registry{}
+	r := map[identity.RoleType]wallet.RoleRegistry{}
 	logger := &logging.MockLogger{}
 	s := wallet.NewService(logger, ip, d, r)
 	require.NotNil(t, s)
 	require.Equal(t, ip, s.IdentityProvider)
 	require.Equal(t, d, s.Deserializer)
-	require.Equal(t, r, s.Registries)
+	require.Equal(t, r, s.RoleRegistries)
 }
 
 func TestRegisterIdentityDelegation(t *testing.T) {
@@ -41,14 +41,14 @@ func TestRegisterIdentityDelegation(t *testing.T) {
 		called = true
 		return nil
 	})
-	s := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[identity.RoleType]wallet.Registry{identity.OwnerRole: reg, identity.IssuerRole: reg})
+	s := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[identity.RoleType]wallet.RoleRegistry{identity.OwnerRole: reg, identity.IssuerRole: reg})
 	require.NoError(t, s.RegisterOwnerIdentity(ctx, driver.IdentityConfiguration{}))
 	require.True(t, called)
 
 	// test error propagation
 	errReg := &wmock.Registry{}
 	errReg.RegisterIdentityReturns(errors.New("boom"))
-	s2 := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[identity.RoleType]wallet.Registry{identity.OwnerRole: errReg})
+	s2 := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[identity.RoleType]wallet.RoleRegistry{identity.OwnerRole: errReg})
 	reqErr := s2.RegisterOwnerIdentity(ctx, driver.IdentityConfiguration{})
 	require.Error(t, reqErr)
 }
@@ -126,7 +126,7 @@ func TestWalletAndLookupFunctions(t *testing.T) {
 		&logging.MockLogger{},
 		&dmock.IdentityProvider{},
 		&dmock.Deserializer{},
-		map[identity.RoleType]wallet.Registry{
+		map[identity.RoleType]wallet.RoleRegistry{
 			identity.OwnerRole:     ownerReg,
 			identity.IssuerRole:    issuerReg,
 			identity.AuditorRole:   auditorReg,

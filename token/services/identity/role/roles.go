@@ -28,14 +28,14 @@ func (m Roles) Register(usage identity.RoleType, role identity.Role) {
 	m[usage] = role
 }
 
-func (m Roles) Registries(logger logging.Logger, storage driver.WalletStoreService, walletFactory WalletFactory) map[identity.RoleType]*WalletRegistry {
-	res := make(map[identity.RoleType]*WalletRegistry, len(m))
+func (m Roles) Registries(logger logging.Logger, storage driver.WalletStoreService, walletFactory WalletFactory) map[identity.RoleType]*Registry {
+	res := make(map[identity.RoleType]*Registry, len(m))
 	for roleType, role := range m {
 		roleAsString, ok := identity.RoleTypeStrings[roleType]
 		if !ok {
 			roleAsString = strconv.Itoa(int(roleType))
 		}
-		res[roleType] = NewWalletRegistry(
+		res[roleType] = NewRegistry(
 			logger.Named(fmt.Sprintf("identity.%s-wallet-registry", roleAsString)),
 			role,
 			storage,

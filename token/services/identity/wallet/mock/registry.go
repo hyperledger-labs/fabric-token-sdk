@@ -269,4 +269,4 @@ func (fake *Registry) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ wallet.Registry = new(Registry)
+var _ wallet.RoleRegistry = new(Registry)
