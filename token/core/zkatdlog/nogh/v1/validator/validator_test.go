@@ -127,25 +127,27 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 //   - The test expects 64 transfer vectors (output.0..output.63). Update the loop
 //     range in `testRegression` if you add or remove vectors.
 func TestRegression(t *testing.T) {
-	testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", "transfers_i1_o1")
-	testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", "transfers_i1_o2")
-	testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", "transfers_i2_o1")
-	testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", "transfers_i2_o2")
+	for _, action := range []string{"transfers", "issues", "redeems", "swaps"} {
+		testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i1_o1", action))
+		testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i1_o2", action))
+		testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i2_o1", action))
+		testRegression(t, "testdata/32-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i2_o2", action))
 
-	testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", "transfers_i1_o1")
-	testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", "transfers_i1_o2")
-	testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", "transfers_i2_o1")
-	testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", "transfers_i2_o2")
+		testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i1_o1", action))
+		testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i1_o2", action))
+		testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i2_o1", action))
+		testRegression(t, "testdata/64-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i2_o2", action))
 
-	testRegression(t, "testdata/32-BN254", "transfers_i1_o1")
-	testRegression(t, "testdata/32-BN254", "transfers_i1_o2")
-	testRegression(t, "testdata/32-BN254", "transfers_i2_o1")
-	testRegression(t, "testdata/32-BN254", "transfers_i2_o2")
+		testRegression(t, "testdata/32-BN254", fmt.Sprintf("%s_i1_o1", action))
+		testRegression(t, "testdata/32-BN254", fmt.Sprintf("%s_i1_o2", action))
+		testRegression(t, "testdata/32-BN254", fmt.Sprintf("%s_i2_o1", action))
+		testRegression(t, "testdata/32-BN254", fmt.Sprintf("%s_i2_o2", action))
 
-	testRegression(t, "testdata/64-BN254", "transfers_i1_o1")
-	testRegression(t, "testdata/64-BN254", "transfers_i1_o2")
-	testRegression(t, "testdata/64-BN254", "transfers_i2_o1")
-	testRegression(t, "testdata/64-BN254", "transfers_i2_o2")
+		testRegression(t, "testdata/64-BN254", fmt.Sprintf("%s_i1_o1", action))
+		testRegression(t, "testdata/64-BN254", fmt.Sprintf("%s_i1_o2", action))
+		testRegression(t, "testdata/64-BN254", fmt.Sprintf("%s_i2_o1", action))
+		testRegression(t, "testdata/64-BN254", fmt.Sprintf("%s_i2_o2", action))
+	}
 }
 
 func testRegression(t *testing.T, rootDir, subFolder string) {

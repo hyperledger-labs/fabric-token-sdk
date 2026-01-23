@@ -79,6 +79,28 @@ type Env struct {
 // SaveTransferToFile writes TRWithTransferTxID and TRWithTransferRaw (base64-encoded)
 // into the provided path as JSON.
 func (e *Env) SaveTransferToFile(path string) error {
+	return e.saveToFile(path, e.TRWithTransferTxID, e.TRWithTransferRaw)
+}
+
+// SaveIssueToFile writes TRWithIssueTxID and TRWithIssueRaw (base64-encoded)
+// into the provided path as JSON.
+func (e *Env) SaveIssueToFile(path string) error {
+	return e.saveToFile(path, e.TRWithIssueTxID, e.TRWithIssueRaw)
+}
+
+// SaveRedeemToFile writes TRWithRedeemTxID and TRWithRedeemRaw (base64-encoded)
+// into the provided path as JSON.
+func (e *Env) SaveRedeemToFile(path string) error {
+	return e.saveToFile(path, e.TRWithRedeemTxID, e.TRWithRedeemRaw)
+}
+
+// SaveSwapToFile writes TRWithSwapTxID and TRWithSwapRaw (base64-encoded)
+// into the provided path as JSON.
+func (e *Env) SaveSwapToFile(path string) error {
+	return e.saveToFile(path, e.TRWithSwapTxID, e.TRWithSwapRaw)
+}
+
+func (e *Env) saveToFile(path string, txID string, raw []byte) error {
 	if e == nil {
 		return errors.Errorf("nil Env")
 	}
@@ -87,8 +109,8 @@ func (e *Env) SaveTransferToFile(path string) error {
 		TxID   string `json:"txid"`
 		ReqRaw string `json:"req_raw"`
 	}{
-		TxID:   e.TRWithTransferTxID,
-		ReqRaw: base64.StdEncoding.EncodeToString(e.TRWithTransferRaw),
+		TxID:   txID,
+		ReqRaw: base64.StdEncoding.EncodeToString(raw),
 	}
 
 	b, err := json.MarshalIndent(payload, "", "  ")

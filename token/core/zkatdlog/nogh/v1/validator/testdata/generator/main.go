@@ -9,6 +9,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -37,17 +38,22 @@ func main() {
 	for k, configuration := range configurations.Configurations {
 		// generate the validator env for transfer
 		for _, testCase := range testCases {
-			outputDir := filepath.Join(
-				rootDir,
-				k,
-				fmt.Sprintf("transfers_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs),
-			)
+			transferOutputDir := filepath.Join(rootDir, k, fmt.Sprintf("transfers_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs))
+			issueOutputDir := filepath.Join(rootDir, k, fmt.Sprintf("issues_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs))
+			redeemOutputDir := filepath.Join(rootDir, k, fmt.Sprintf("redeems_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs))
+			swapOutputDir := filepath.Join(rootDir, k, fmt.Sprintf("swaps_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs))
 
-			if err := os.MkdirAll(outputDir, 0o755); err != nil {
-				panic(err)
+			for _, path := range []string{transferOutputDir, redeemOutputDir, swapOutputDir, issueOutputDir} {
+				if err := os.MkdirAll(path, 0o755); err != nil {
+					panic(err)
+				}
 			}
 
 			for i := range 64 {
+				log.Printf("generate [%d]-th env for [bits=%d,curveID=%d,inputs=%d,outputs=%d]...\n",
+					i,
+					configuration.Bits, configuration.CurveID, testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs,
+				)
 				env, err := testdata.NewEnv(&sbenchmark.Case{
 					Bits:       configuration.Bits,
 					CurveID:    configuration.CurveID,
@@ -57,9 +63,18 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				if err := env.SaveTransferToFile(
-					filepath.Join(outputDir, fmt.Sprintf("output.%d.json", i)),
-				); err != nil {
+
+				log.Println("store to disk...")
+				if err := env.SaveTransferToFile(filepath.Join(transferOutputDir, fmt.Sprintf("output.%d.json", i))); err != nil {
+					panic(err)
+				}
+				if err := env.SaveIssueToFile(filepath.Join(issueOutputDir, fmt.Sprintf("output.%d.json", i))); err != nil {
+					panic(err)
+				}
+				if err := env.SaveRedeemToFile(filepath.Join(redeemOutputDir, fmt.Sprintf("output.%d.json", i))); err != nil {
+					panic(err)
+				}
+				if err := env.SaveSwapToFile(filepath.Join(swapOutputDir, fmt.Sprintf("output.%d.json", i))); err != nil {
 					panic(err)
 				}
 			}
