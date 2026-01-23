@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testdata"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testing"
 	sbenchmark "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 )
 
@@ -54,7 +54,7 @@ func main() {
 					i,
 					configuration.Bits, configuration.CurveID, testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs,
 				)
-				env, err := testdata.NewEnv(&sbenchmark.Case{
+				env, err := testing.NewEnv(&sbenchmark.Case{
 					Bits:       configuration.Bits,
 					CurveID:    configuration.CurveID,
 					NumInputs:  testCase.BenchmarkCase.NumInputs,

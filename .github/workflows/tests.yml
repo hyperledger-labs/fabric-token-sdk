@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tests: [unit-tests, unit-tests-race]
+        tests: [unit-tests, unit-tests-race, unit-tests-regression]
 
     steps:
       - name: Checkout code

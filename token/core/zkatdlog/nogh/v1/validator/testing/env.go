@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package testdata
+package testing
 
 import (
 	"bytes"
@@ -36,23 +36,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace/noop"
-)
-
-var (
-	testUseCase = &benchmark2.Case{
-		Bits:       32,
-		CurveID:    math.BLS12_381_BBS_GURVY,
-		NumInputs:  2,
-		NumOutputs: 2,
-	}
-)
-
-type actionType int
-
-const (
-	TransferAction actionType = iota
-	RedeemAction
-	IssueAction
 )
 
 type Env struct {
