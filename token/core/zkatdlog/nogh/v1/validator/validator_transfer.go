@@ -43,19 +43,17 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 		inputToken = append(inputToken, tok)
 
 		// check sender signature
-		if i == 0 {
-			ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
-			verifier, err := ctx.Deserializer.GetOwnerVerifier(c, tok.Owner)
-			if err != nil {
-				return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
-			}
-			ctx.Logger.Debugf("signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
-			sigma, err := ctx.SignatureProvider.HasBeenSignedBy(c, tok.Owner, verifier)
-			if err != nil {
-				return errors.Wrapf(err, "failed signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
-			}
-			signatures = append(signatures, sigma)
+		ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
+		verifier, err := ctx.Deserializer.GetOwnerVerifier(c, tok.Owner)
+		if err != nil {
+			return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
 		}
+		ctx.Logger.Debugf("signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
+		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(c, tok.Owner, verifier)
+		if err != nil {
+			return errors.Wrapf(err, "failed signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
+		}
+		signatures = append(signatures, sigma)
 	}
 
 	ctx.InputTokens = inputToken
