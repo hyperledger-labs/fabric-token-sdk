@@ -241,7 +241,7 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	}
 	// compute the commitment to left and right
 	com := commitVector(left, right, p.LeftGenerators, rightGeneratorsPrime, p.Curve)
-	rp.Data.InnerProduct = innerProduct(left, right, p.Curve)
+	rp.Data.InnerProduct = InnerProduct(left, right, p.Curve)
 	// produce the IPA
 	ipp := NewIPAProver(
 		rp.Data.InnerProduct,
@@ -275,6 +275,8 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 	rho := p.Curve.NewRandomZr(rand)
 	eta := p.Curve.NewRandomZr(rand)
+	one := p.Curve.NewZrFromInt(1)
+	two := p.Curve.NewZrFromInt(2)
 	for i := range p.BitLength {
 		b := 1 << i & p.value
 		if b > 0 {
@@ -283,7 +285,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 		// this is an array of the bits b_i of p.value
 		left[i] = p.Curve.NewZrFromUint64(b)
 		// this is an array of b_i - 1
-		right[i] = p.Curve.ModSub(left[i], p.Curve.NewZrFromInt(1), p.Curve.GroupOrder)
+		right[i] = p.Curve.ModSub(left[i], one, p.Curve.GroupOrder)
 		// these are randomly generated arrays
 		randomLeft[i] = p.Curve.NewRandomZr(rand)
 		randomRight[i] = p.Curve.NewRandomZr(rand)
@@ -315,7 +317,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 
 	zPrime := make([]*math.Zr, len(left))
 	// z^2
-	zSquare := z.PowMod(p.Curve.NewZrFromInt(2))
+	zSquare := z.PowMod(two)
 	var y2i *math.Zr
 	for i := range left {
 		// compute L_i - z
@@ -324,7 +326,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 		rightPrime[i] = p.Curve.ModAdd(right[i], z, p.Curve.GroupOrder)
 		// compute y^i
 		if i == 0 {
-			y2i = p.Curve.NewZrFromInt(1)
+			y2i = one
 		} else {
 			y2i = p.Curve.ModMul(y, y2i, p.Curve.GroupOrder)
 		}
@@ -333,26 +335,24 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 		// compute V_iy^i
 		randRightPrime[i] = p.Curve.ModMul(randomRight[i], y2i, p.Curve.GroupOrder)
 		// compute 2^iz^2
-		zPrime[i] = p.Curve.ModMul(zSquare, p.Curve.NewZrFromInt(2).PowMod(p.Curve.NewZrFromInt(int64(i))), p.Curve.GroupOrder)
+		zPrime[i] = p.Curve.ModMul(zSquare, two.PowMod(p.Curve.NewZrFromInt(int64(i))), p.Curve.GroupOrder)
 	}
 
 	// compute \sum y^iV_i(L_i-z)
-	t1 := innerProduct(leftPrime, randRightPrime, p.Curve)
+	t1 := InnerProduct(leftPrime, randRightPrime, p.Curve)
 	// compute \sum y^i(V_i(L_i-z) + (R_i +z)U_i)
-	t1 = p.Curve.ModAdd(t1, innerProduct(rightPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
+	t1 = p.Curve.ModAdd(t1, InnerProduct(rightPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
 	// compute \sum y^i(V_i(L_i-z) + (R_i+z)U_i) + U_i2^iz^2
-	t1 = p.Curve.ModAdd(t1, innerProduct(zPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
+	t1 = p.Curve.ModAdd(t1, InnerProduct(zPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
 	// commit to t1
 	tau1 := p.Curve.NewRandomZr(rand)
-	T1 := p.CommitmentGenerators[0].Mul(t1)
-	T1.Add(p.CommitmentGenerators[1].Mul(tau1))
+	T1 := p.CommitmentGenerators[0].Mul2(t1, p.CommitmentGenerators[1], tau1)
 
 	// compute = \sum y^iU_iV_i
-	t2 := innerProduct(randomLeft, randRightPrime, p.Curve)
+	t2 := InnerProduct(randomLeft, randRightPrime, p.Curve)
 	// commit to t2
 	tau2 := p.Curve.NewRandomZr(rand)
-	T2 := p.CommitmentGenerators[0].Mul(t2)
-	T2.Add(p.CommitmentGenerators[1].Mul(tau2))
+	T2 := p.CommitmentGenerators[0].Mul2(t2, p.CommitmentGenerators[1], tau2)
 
 	// compute challenge x
 	array = common.GetG1Array([]*math.G1{T1, T2})
@@ -368,14 +368,14 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	// f(z, y) = \sum (z-z^2)*y^i - z^3*2^i
 	for i := 0; i < len(left); i++ {
 		// compute (L_i-z) + xU_i
-		left[i] = p.Curve.ModAdd(leftPrime[i], p.Curve.ModMul(x, randomLeft[i], p.Curve.GroupOrder), p.Curve.GroupOrder)
+		left[i] = p.Curve.ModAddMul2(leftPrime[i], one, x, randomLeft[i], p.Curve.GroupOrder)
 		// compute y^i((R_i+z)+xV_i)+2^iz^2
 		right[i] = p.Curve.ModAdd(rightPrime[i], p.Curve.ModMul(x, randRightPrime[i], p.Curve.GroupOrder), p.Curve.GroupOrder)
 		right[i] = p.Curve.ModAdd(right[i], zPrime[i], p.Curve.GroupOrder)
 	}
 	// tau = t1x + t2x^2 + z^2p.blindingFactor
 	tau := p.Curve.ModMul(x, tau1, p.Curve.GroupOrder)
-	tau = p.Curve.ModAdd(tau, p.Curve.ModMul(tau2, x.PowMod(p.Curve.NewZrFromInt(2)), p.Curve.GroupOrder), p.Curve.GroupOrder)
+	tau = p.Curve.ModAdd(tau, p.Curve.ModMul(tau2, x.PowMod(two), p.Curve.GroupOrder), p.Curve.GroupOrder)
 	tau = p.Curve.ModAdd(tau, p.Curve.ModMul(zSquare, p.blindingFactor, p.Curve.GroupOrder), p.Curve.GroupOrder)
 
 	// delta = rho + eta*x

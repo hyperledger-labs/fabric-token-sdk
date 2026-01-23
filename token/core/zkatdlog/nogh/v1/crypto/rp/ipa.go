@@ -154,6 +154,7 @@ func (p *ipaProver) Prove() (*IPA, error) {
 	}
 	// compute first challenge
 	x := p.Curve.HashToZr(raw)
+
 	// compute a commitment to inner product value and the vectors
 	C := p.Q.Mul(p.Curve.ModMul(x, p.InnerProduct, p.Curve.GroupOrder))
 	C.Add(p.Commitment)
@@ -172,22 +173,18 @@ func (p *ipaProver) Prove() (*IPA, error) {
 // of the left vector and right is a function of right vector.
 // Both vectors are committed in com which is passed as a parameter to reduce
 func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mathlib.G1, []*mathlib.G1, error) {
-	var leftGen, rightGen []*mathlib.G1
-	var left, right []*mathlib.Zr
+	leftGen, rightGen := cloneGenerators(p.LeftGenerators, p.RightGenerators)
 
-	leftGen = p.LeftGenerators
-	rightGen = p.RightGenerators
-
-	left = p.leftVector
-	right = p.rightVector
+	left := p.leftVector
+	right := p.rightVector
 
 	LArray := make([]*mathlib.G1, p.NumberOfRounds)
 	RArray := make([]*mathlib.G1, p.NumberOfRounds)
 	for i := range p.NumberOfRounds {
 		// in each round the size of the vector is reduced by 2
 		n := len(leftGen) / 2
-		leftIP := innerProduct(left[:n], right[n:], p.Curve)
-		rightIP := innerProduct(left[n:], right[:n], p.Curve)
+		leftIP := InnerProduct(left[:n], right[n:], p.Curve)
+		rightIP := InnerProduct(left[n:], right[:n], p.Curve)
 		// LArray[i] is a commitment to left[:n], right[n:] and their inner product
 		LArray[i] = commitVector(left[:n], right[n:], leftGen[n:], rightGen[:n], p.Curve)
 		LArray[i].Add(X.Mul(leftIP))
@@ -206,7 +203,7 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 
 		// compute 1/x
 		xInv := x.Copy()
-		xInv.InvModP(p.Curve.GroupOrder)
+		xInv.InvModOrder()
 
 		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
 		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv)
@@ -216,14 +213,13 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 
 		xSquare := p.Curve.ModMul(x, x, p.Curve.GroupOrder)
 		xSquareInv := xSquare.Copy()
-		xSquareInv.InvModP(p.Curve.GroupOrder)
+		xSquareInv.InvModOrder()
 
 		// compute the commitment to left, right and their inner product
-		CPrime := LArray[i].Mul(xSquare)
+		CPrime := LArray[i].Mul2(xSquare, RArray[i], xSquareInv)
 		CPrime.Add(com)
-		CPrime.Add(RArray[i].Mul(xSquareInv))
 		// com = L^{x^2}*com*R^{1/x^2}
-		com = CPrime.Copy()
+		com = CPrime
 	}
 	return left[0], right[0], LArray, RArray, nil
 }
@@ -299,10 +295,8 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 
 	X := v.Q.Mul(x)
 
-	var leftGen []*mathlib.G1
-	var rightGen []*mathlib.G1
-	leftGen = v.LeftGenerators
-	rightGen = v.RightGenerators
+	leftGen, rightGen := cloneGenerators(v.LeftGenerators, v.RightGenerators)
+
 	for i := range v.NumberOfRounds {
 		// check well-formedness
 		if proof.L[i] == nil || proof.R[i] == nil {
@@ -317,24 +311,22 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 		x = v.Curve.HashToZr(raw)
 		// 1/x
 		xInv := x.Copy()
-		xInv.InvModP(v.Curve.GroupOrder)
+		xInv.InvModOrder()
 
 		// x^2
 		xSquare := v.Curve.ModMul(x, x, v.Curve.GroupOrder)
 		// 1/x^2
 		xSquareInv := xSquare.Copy()
-		xSquareInv.InvModP(v.Curve.GroupOrder)
+		xSquareInv.InvModOrder()
 		// compute a commitment to the reduced vectors and their inner product
-		CPrime := proof.L[i].Mul(xSquare)
+		CPrime := proof.L[i].Mul2(xSquare, proof.R[i], xSquareInv)
 		CPrime.Add(C)
-		CPrime.Add(proof.R[i].Mul(xSquareInv))
 		C = CPrime.Copy()
 		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
 		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv)
 	}
 	// compute a commitment to left, right and their product
-	CPrime := leftGen[0].Mul(proof.Left)
-	CPrime.Add(rightGen[0].Mul(proof.Right))
+	CPrime := leftGen[0].Mul2(proof.Left, rightGen[0], proof.Right)
 	CPrime.Add(X.Mul(v.Curve.ModMul(proof.Left, proof.Right, v.Curve.GroupOrder)))
 	if !CPrime.Equals(C) {
 		return errors.New("invalid IPA")
@@ -345,50 +337,53 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 // reduceVectors reduces the size of the vectors passed in the parameters by 1/2,
 // as a function of the old vectors, x and 1/x
 func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Curve) ([]*mathlib.Zr, []*mathlib.Zr) {
-	leftPrime := make([]*mathlib.Zr, len(left)/2)
-	rightPrime := make([]*mathlib.Zr, len(right)/2)
-	for i := 0; i < len(leftPrime); i++ {
+	l := len(left) / 2
+	leftPrime := make([]*mathlib.Zr, l)
+	rightPrime := make([]*mathlib.Zr, l)
+	for i := 0; i < l; i++ {
 		// a_i = a_ix + a_{i+len(left)/2}x^{-1}
-		leftPrime[i] = c.ModMul(left[i], x, c.GroupOrder)
-		leftPrime[i] = c.ModAdd(leftPrime[i], c.ModMul(left[i+len(leftPrime)], xInv, c.GroupOrder), c.GroupOrder)
+		leftPrime[i] = c.ModAddMul2(left[i], x, left[i+l], xInv, c.GroupOrder)
 
 		// b_i = b_ix^{-1} + b_{i+len(right)/2}x
-		rightPrime[i] = c.ModMul(right[i], xInv, c.GroupOrder)
-		rightPrime[i] = c.ModAdd(rightPrime[i], c.ModMul(right[i+len(rightPrime)], x, c.GroupOrder), c.GroupOrder)
+		rightPrime[i] = c.ModAddMul2(right[i], xInv, right[i+l], x, c.GroupOrder)
 	}
+
 	return leftPrime, rightPrime
 }
 
 // reduceGenerators reduces the number of generators passed in the parameters by 1/2,
 // as a function of the old generators,  x and 1/x
 func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*mathlib.G1, []*mathlib.G1) {
-	leftGenPrime := make([]*mathlib.G1, len(leftGen)/2)
-	rightGenPrime := make([]*mathlib.G1, len(rightGen)/2)
-	for i := 0; i < len(leftGenPrime); i++ {
+	l := len(leftGen) / 2
+	for i := 0; i < l; i++ {
 		// G_i = G_i^x*G_{i+len(left)/2}^{1/x}
-		leftGenPrime[i] = leftGen[i].Mul(xInv)
-		leftGenPrime[i].Add(leftGen[i+len(leftGenPrime)].Mul(x))
-
+		leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
 		// H_i = H_i^{1/x}*H_{i+len(right)/2}^{x}
-		rightGenPrime[i] = rightGen[i].Mul(x)
-		rightGenPrime[i].Add(rightGen[i+len(rightGenPrime)].Mul(xInv))
+		rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
 	}
-	return leftGenPrime, rightGenPrime
+	return leftGen[:l], rightGen[:l]
 }
 
-func innerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {
-	ip := c.NewZrFromInt(0)
-	for i, l := range left {
-		ip = c.ModAdd(ip, c.ModMul(l, right[i], c.GroupOrder), c.GroupOrder)
-	}
-	return ip
+func InnerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {
+	return c.ModAddMul(left, right, c.GroupOrder)
 }
 
 func commitVector(left []*mathlib.Zr, right []*mathlib.Zr, leftgen []*mathlib.G1, rightgen []*mathlib.G1, c *mathlib.Curve) *mathlib.G1 {
 	com := c.NewG1()
 	for i := range left {
-		com.Add(leftgen[i].Mul(left[i]))
-		com.Add(rightgen[i].Mul(right[i]))
+		com.Add(leftgen[i].Mul2(left[i], rightgen[i], right[i]))
 	}
 	return com
+}
+
+func cloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.G1, []*mathlib.G1) {
+	leftGen := make([]*mathlib.G1, len(LeftGenerators))
+	for i := 0; i < len(LeftGenerators); i++ {
+		leftGen[i] = LeftGenerators[i].Copy()
+	}
+	rightGen := make([]*mathlib.G1, len(RightGenerators))
+	for i := 0; i < len(RightGenerators); i++ {
+		rightGen[i] = RightGenerators[i].Copy()
+	}
+	return leftGen, rightGen
 }
