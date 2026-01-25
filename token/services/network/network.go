@@ -167,7 +167,8 @@ func (l *Ledger) TransferMetadataKey(k string) (string, error) {
 
 // Network provides access to the remote network
 type Network struct {
-	n driver.Network
+	n               driver.Network
+	localMembership *LocalMembership
 }
 
 // Name returns the name of the network
@@ -241,7 +242,7 @@ func (n *Network) AreTokensSpent(ctx context.Context, namespace string, tokenIDs
 
 // LocalMembership returns the local membership for this network
 func (n *Network) LocalMembership() *LocalMembership {
-	return &LocalMembership{lm: n.n.LocalMembership()}
+	return n.localMembership
 }
 
 // AddFinalityListener registers a listener for transaction status for the passed transaction id.
@@ -371,7 +372,10 @@ func (np *networkProvider) newNetwork(netId netId) (*Network, error) {
 			continue
 		}
 		logger.Debugf("new network [%s:%s]", network, channel)
-		return &Network{n: nw}, nil
+		return &Network{
+			n:               nw,
+			localMembership: &LocalMembership{lm: nw.LocalMembership()},
+		}, nil
 	}
 	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
 }
