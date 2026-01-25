@@ -110,7 +110,12 @@ func replicaName(name string, idx int) string {
 func NewTestSuite(startPort func() int, topologies []api.Topology) *TestSuite {
 	return &TestSuite{
 		generator: func() (*integration.Infrastructure, error) {
-			return integration.New(startPort(), "", topologies...)
+			i, err := integration.New(startPort(), "", topologies...)
+			if err != nil {
+				return nil, err
+			}
+			i.EnableRaceDetector()
+			return i, nil
 		},
 	}
 }
@@ -121,8 +126,12 @@ func NewLocalTestSuite(startPort func() int, topologies []api.Topology) *TestSui
 	return &TestSuite{
 		generator: func() (*integration.Infrastructure, error) {
 			i, err := integration.New(startPort(), "./testdata", topologies...)
+			if err != nil {
+				return nil, err
+			}
+			i.EnableRaceDetector()
 			i.DeleteOnStop = false
-			return i, err
+			return i, nil
 		},
 	}
 }
