@@ -153,17 +153,24 @@ type CertificationStorage struct {
 }
 
 func (c *CertificationStorage) Exists(ctx context.Context, id *token.ID) bool {
+	if c == nil || c.c == nil {
+		return false
+	}
 	return c.c.Exists(ctx, id)
 }
 
 func (c *CertificationStorage) Store(ctx context.Context, certifications map[*token.ID][]byte) error {
+	if c == nil || c.c == nil {
+		return errors.New("certification storage is not supported")
+	}
 	return c.c.Store(ctx, certifications)
 }
 
 // Vault models a token vault
 type Vault struct {
-	v      driver.Vault
-	logger logging.Logger
+	v                    driver.Vault
+	logger               logging.Logger
+	certificationStorage *CertificationStorage
 }
 
 // NewQueryEngine returns a new query engine
@@ -172,7 +179,7 @@ func (v *Vault) NewQueryEngine() *QueryEngine {
 }
 
 func (v *Vault) CertificationStorage() *CertificationStorage {
-	return &CertificationStorage{v.v.CertificationStorage()}
+	return v.certificationStorage
 }
 
 // UnspentTokensIterator models an iterator over all unspent tokens stored in the vault
