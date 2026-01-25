@@ -47,6 +47,7 @@ type ManagementService struct {
 	auth                    *Authorization
 	conf                    *Configuration
 	tokensService           *TokensService
+	certificationManager    *CertificationManager
 }
 
 // NewManagementService returns a new instance of ManagementService with the given arguments
@@ -156,11 +157,7 @@ func (t *ManagementService) WalletManager() *WalletManager {
 // CertificationManager returns the certification manager for this TMS.
 // It returns nil if certification is not supported.
 func (t *ManagementService) CertificationManager() *CertificationManager {
-	cs := t.tms.CertificationService()
-	if cs == nil {
-		return nil
-	}
-	return &CertificationManager{c: cs}
+	return t.certificationManager
 }
 
 // CertificationClient returns the certification client for this TMS
@@ -215,7 +212,16 @@ func (t *ManagementService) init() error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get vault for [%s]", t.id)
 	}
-	t.vault = &Vault{v: v, logger: t.logger}
+	// Initialize certification storage only if the driver supports it
+	var certStorage *CertificationStorage
+	if cs := v.CertificationStorage(); cs != nil {
+		certStorage = &CertificationStorage{cs}
+	}
+	t.vault = &Vault{
+		v:                    v,
+		logger:               t.logger,
+		certificationStorage: certStorage,
+	}
 	t.walletManager = &WalletManager{managementService: t, walletService: t.tms.WalletService()}
 	validator, err := t.tms.Validator()
 	if err != nil {
@@ -228,6 +234,11 @@ func (t *ManagementService) init() error {
 	t.publicParametersManager = &PublicParametersManager{
 		ppm: t.tms.PublicParamsManager(),
 		pp:  &PublicParameters{PublicParameters: t.tms.PublicParamsManager().PublicParameters()},
+	}
+	// Initialize certification manager if certification is supported
+	cs := t.tms.CertificationService()
+	if cs != nil {
+		t.certificationManager = &CertificationManager{c: cs}
 	}
 	return nil
 }
