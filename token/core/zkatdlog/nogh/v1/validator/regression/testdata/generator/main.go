@@ -26,7 +26,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	configurations, err := benchmark.NewSetupConfigurations("./../../../testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../../../../testdata", bits, curves)
 	if err != nil {
 		panic(err)
 	}
