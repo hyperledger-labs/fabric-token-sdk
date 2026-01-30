@@ -11,9 +11,8 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	"github.com/stretchr/testify/require"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto"
+	"github.com/stretchr/testify/require"
 )
 
 func randomG1(t *testing.T, c *math.Curve) *math.G1 {
