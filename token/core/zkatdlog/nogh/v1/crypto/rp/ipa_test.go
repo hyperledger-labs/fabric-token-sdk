@@ -7,26 +7,46 @@ SPDX-License-Identifier: Apache-2.0
 package rp_test
 
 import (
+	"context"
+	"math/bits"
+	"math/rand"
 	"strconv"
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestIPAProofVerify(t *testing.T) {
-	curve := math.Curves[0]
-	nr := uint64(6)
-	l := uint64(1 << nr)
+type ipaSetup struct {
+	left      []*math.Zr
+	right     []*math.Zr
+	Q         *math.G1
+	leftGens  []*math.G1
+	rightGens []*math.G1
+	curve     *math.Curve
+	com       *math.G1
+	nr        uint64
+}
+
+func newIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
+	curve := math.Curves[curveID]
+	l := uint64(64)
+	nr := 63 - uint64(bits.LeadingZeros64(l))
 	leftGens := make([]*math.G1, l)
 	rightGens := make([]*math.G1, l)
 	left := make([]*math.Zr, l)
 	right := make([]*math.Zr, l)
 	rand, err := curve.Rand()
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	com := curve.NewG1()
 	Q := curve.GenG1
+
 	for i := 0; i < len(left); i++ {
 		leftGens[i] = curve.HashToG1([]byte(strconv.Itoa(i)))
 		rightGens[i] = curve.HashToG1([]byte(strconv.Itoa(i + 1)))
@@ -35,20 +55,106 @@ func TestIPAProofVerify(t *testing.T) {
 		com.Add(leftGens[i].Mul(left[i]))
 		com.Add(rightGens[i].Mul(right[i]))
 	}
-
-	prover := rp.NewIPAProver(innerProduct(left, right, curve), left, right, Q, leftGens, rightGens, com, nr, curve)
-	proof, err := prover.Prove()
-	assert.NoError(t, err)
-	assert.NotNil(t, proof)
-	verifier := rp.NewIPAVerifier(innerProduct(left, right, curve), Q, leftGens, rightGens, com, nr, curve)
-	err = verifier.Verify(proof)
-	assert.NoError(t, err)
+	return &ipaSetup{
+		left:      left,
+		right:     right,
+		Q:         Q,
+		leftGens:  leftGens,
+		rightGens: rightGens,
+		curve:     curve,
+		com:       com,
+		nr:        nr,
+	}, nil
 }
 
-func innerProduct(left []*math.Zr, right []*math.Zr, c *math.Curve) *math.Zr {
-	ip := c.NewZrFromInt(0)
-	for i, l := range left {
-		ip = c.ModAdd(ip, c.ModMul(l, right[i], c.GroupOrder), c.GroupOrder)
+func TestIPAProofVerify(t *testing.T) {
+	setup, err := newIpaSetup(math.BLS12_381_BBS_GURVY)
+	require.NoError(t, err)
+
+	prover := rp.NewIPAProver(
+		rp.InnerProduct(setup.left, setup.right, setup.curve),
+		setup.left,
+		setup.right,
+		setup.Q,
+		setup.leftGens,
+		setup.rightGens,
+		setup.com,
+		setup.nr,
+		setup.curve,
+	)
+	proof, err := prover.Prove()
+	require.NoError(t, err)
+	assert.NotNil(t, proof)
+
+	verifier := rp.NewIPAVerifier(
+		rp.InnerProduct(setup.left, setup.right, setup.curve),
+		setup.Q,
+		setup.leftGens,
+		setup.rightGens,
+		setup.com,
+		setup.nr,
+		setup.curve,
+	)
+	err = verifier.Verify(proof)
+	require.NoError(t, err)
+}
+
+func BenchmarkIPAProver(b *testing.B) {
+	pp, err := profile.New(profile.WithAll(), profile.WithPath("./profile"))
+	require.NoError(b, err)
+	require.NoError(b, pp.Start())
+	defer pp.Stop()
+	envs := make([]*ipaSetup, 0, 128)
+	for i := 0; i < 128; i++ {
+		setup, err := newIpaSetup(math.BLS12_381_BBS_GURVY)
+		require.NoError(b, err)
+		envs = append(envs, setup)
 	}
-	return ip
+
+	b.Run("bench", func(b *testing.B) {
+		for b.Loop() {
+			setup := envs[rand.Intn(len(envs))]
+			prover := rp.NewIPAProver(
+				rp.InnerProduct(setup.left, setup.right, setup.curve),
+				setup.left,
+				setup.right,
+				setup.Q,
+				setup.leftGens,
+				setup.rightGens,
+				setup.com,
+				setup.nr,
+				setup.curve,
+			)
+			proof, err := prover.Prove()
+			require.NoError(b, err)
+			assert.NotNil(b, proof)
+		}
+	})
+}
+
+func TestParallelIPAProver(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*ipaSetup](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*ipaSetup, error) {
+			return newIpaSetup(c.CurveID)
+		},
+		func(ctx context.Context, setup *ipaSetup) error {
+			prover := rp.NewIPAProver(
+				rp.InnerProduct(setup.left, setup.right, setup.curve),
+				setup.left,
+				setup.right,
+				setup.Q,
+				setup.leftGens,
+				setup.rightGens,
+				setup.com,
+				setup.nr,
+				setup.curve,
+			)
+			_, err := prover.Prove()
+			return err
+		},
+	)
 }

@@ -12,7 +12,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/IBM/mathlib/driver"
-	"github.com/IBM/mathlib/driver/gurvy"
+	"github.com/IBM/mathlib/driver/gurvy/bls12381"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/rng"
 )
 
@@ -22,20 +22,23 @@ var (
 
 func init() {
 	BLS12_381_BBS_GURVY_FAST_RNG = math.CurveID(len(math.Curves))
-	math.Curves = append(math.Curves, math.NewCurve(
-		NewCurveWithFastRNG(gurvy.NewBls12_381BBS()),
-		math.NewG1(gurvy.NewBls12_381BBS().GenG1(), BLS12_381_BBS_GURVY_FAST_RNG),
-		math.NewG2(gurvy.NewBls12_381BBS().GenG2(), BLS12_381_BBS_GURVY_FAST_RNG),
-		math.NewGt(gurvy.NewBls12_381BBS().GenGt(), BLS12_381_BBS_GURVY_FAST_RNG),
-		math.NewZr(gurvy.NewBls12_381().GroupOrder(), BLS12_381_BBS_GURVY_FAST_RNG),
-		gurvy.NewBls12_381BBS().CoordinateByteSize(),
-		gurvy.NewBls12_381BBS().G1ByteSize(),
-		gurvy.NewBls12_381BBS().CompressedG1ByteSize(),
-		gurvy.NewBls12_381BBS().G2ByteSize(),
-		gurvy.NewBls12_381BBS().CompressedG2ByteSize(),
-		gurvy.NewBls12_381BBS().ScalarByteSize(),
-		BLS12_381_BBS_GURVY_FAST_RNG,
-	))
+	math.Curves = append(
+		math.Curves,
+		math.NewCurve(
+			NewCurveWithFastRNG(bls12381.NewBBSCurve()),
+			math.NewG1(bls12381.NewBBSCurve().GenG1(), BLS12_381_BBS_GURVY_FAST_RNG),
+			math.NewG2(bls12381.NewBBSCurve().GenG2(), BLS12_381_BBS_GURVY_FAST_RNG),
+			math.NewGt(bls12381.NewBBSCurve().GenGt(), BLS12_381_BBS_GURVY_FAST_RNG),
+			math.NewZr(bls12381.NewCurve().GroupOrder(), BLS12_381_BBS_GURVY_FAST_RNG),
+			bls12381.NewBBSCurve().CoordinateByteSize(),
+			bls12381.NewBBSCurve().G1ByteSize(),
+			bls12381.NewBBSCurve().CompressedG1ByteSize(),
+			bls12381.NewBBSCurve().G2ByteSize(),
+			bls12381.NewBBSCurve().CompressedG2ByteSize(),
+			bls12381.NewBBSCurve().ScalarByteSize(),
+			BLS12_381_BBS_GURVY_FAST_RNG,
+		),
+	)
 }
 
 type CurveWithFastRNG struct {
