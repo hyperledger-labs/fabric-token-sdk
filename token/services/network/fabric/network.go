@@ -123,15 +123,16 @@ type SetupListenerProvider interface {
 }
 
 type Network struct {
-	n              *fabric.NetworkService
-	ch             *fabric.Channel
-	tmsProvider    *token2.ManagementServiceProvider
-	viewManager    ViewManager
-	ledger         *ledger
-	configuration  common2.Configuration
-	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
-	tokensProvider *tokens.ServiceManager
-	finalityTracer trace.Tracer
+	n               *fabric.NetworkService
+	ch              *fabric.Channel
+	tmsProvider     *token2.ManagementServiceProvider
+	viewManager     ViewManager
+	ledger          *ledger
+	configuration   common2.Configuration
+	filterProvider  common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
+	tokensProvider  *tokens.ServiceManager
+	finalityTracer  trace.Tracer
+	localMembership *lm
 
 	setupListenerProvider      SetupListenerProvider
 	flm                        finality.ListenerManager
@@ -183,6 +184,7 @@ func NewNetwork(
 		})),
 		keyTranslator:         keyTranslator,
 		setupListenerProvider: setupListenerProvider,
+		localMembership:       &lm{lm: n.LocalMembership()},
 	}
 	network.connectedNamespaces = lazy.NewProviderWithKeyMapper(func(s string) string {
 		return s
@@ -273,9 +275,7 @@ func (n *Network) AreTokensSpent(ctx context.Context, namespace string, tokenIDs
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {
-	return &lm{
-		lm: n.n.LocalMembership(),
-	}
+	return n.localMembership
 }
 
 func (n *Network) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
