@@ -137,6 +137,10 @@ def run_and_parse_non_parallel_metrics(benchName, params, folder=transfer_benchm
         raise ValueError("Failed to parse benchmark output")
 
     name = benchName
+    print(f"{benchName} results:")
+    print(f"time (ns)   : {time_ns}")
+    print(f"RAM  (bytes): {ram_bytes}")
+    print(f"allocs      : {allocs}")
     return {
         f"{name} time": time_ns,
         f"{name} RAM": ram_bytes,
@@ -209,6 +213,9 @@ def run_and_parse_parallel_metrics(benchName, params, folder=transfer_benchmarks
     max_val, max_unit = max_lat_re.search(output).groups()
 
     name = benchName
+    print(f"{benchName} results:")
+    print(f"throughput real/pure : {real_tp}/{pure_tp}")
+    print(f"latency mean,min,max : {to_ns(float(avg_val), avg_unit)}, {to_ns(float(min_val), min_unit)}, {to_ns(float(max_val), max_unit)}")
     return {
         f"{name} real throughput": real_tp,
         f"{name} pure throughput": pure_tp,
