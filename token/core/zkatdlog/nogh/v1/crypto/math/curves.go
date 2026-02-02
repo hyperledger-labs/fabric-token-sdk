@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	math "github.com/IBM/mathlib"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	"github.com/labstack/gommon/log"
 )
 
@@ -117,7 +118,13 @@ func PowerOfTwo(c *math.Curve, i uint64) *math.Zr {
 // known curve IDs. This precomputation aims to speed up frequent small
 // integer and power-of-two operations. The loops are bounded by NumBits.
 func init() {
-	curveIDs := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
+	curveIDs := []math.CurveID{
+		math.BN254,
+		math.BLS12_381_BBS_GURVY,
+		math.BLS12_381_BBS,
+		math.BLS12_381_GURVY,
+		math2.BLS12_381_BBS_GURVY_FAST_RNG,
+	}
 	for _, id := range curveIDs {
 		c := math.Curves[id]
 		values := make(map[uint64]*math.Zr, NumBits)
