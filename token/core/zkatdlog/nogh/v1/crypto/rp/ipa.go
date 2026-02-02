@@ -375,11 +375,6 @@ func commitVector(
 	rightgen []*mathlib.G1,
 	c *mathlib.Curve,
 ) *mathlib.G1 {
-	// com := c.NewG1()
-	// for i := range left {
-	// 	com.Add(leftgen[i].Mul2(left[i], rightgen[i], right[i]))
-	// }
-	// return com
 	points := make([]*mathlib.G1, len(leftgen)+len(rightgen))
 	copy(points, leftgen)
 	copy(points[len(leftgen):], rightgen)
@@ -400,11 +395,6 @@ func commitVectorPlusOne(
 	b *mathlib.G1,
 	c *mathlib.Curve,
 ) *mathlib.G1 {
-	// com := c.NewG1()
-	// for i := range left {
-	// 	com.Add(leftgen[i].Mul2(left[i], rightgen[i], right[i]))
-	// }
-	// return com
 	points := make([]*mathlib.G1, len(leftgen)+len(rightgen)+1)
 	copy(points, leftgen)
 	copy(points[len(leftgen):], rightgen)

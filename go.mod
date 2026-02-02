@@ -8,7 +8,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/IBM/idemix v0.0.2-0.20250313153527-832db18b9478
 	github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478
-	github.com/IBM/mathlib v0.0.3-0.20260202082721-53287e4578a7
+	github.com/IBM/mathlib v0.0.3-0.20260202113332-4e3d98dc4541
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6
@@ -20,6 +20,7 @@ require (
 	github.com/hyperledger/fabric-x-committer v0.1.7
 	github.com/hyperledger/fabric-x-common v0.0.0-20251023133631-047a3c32c228
 	github.com/jackc/pgx/v5 v5.7.6
+	github.com/labstack/gommon v0.4.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.27.3
 	github.com/onsi/gomega v1.38.2
@@ -166,6 +167,7 @@ require (
 	github.com/libp2p/go-reuseport v0.4.0 // indirect
 	github.com/libp2p/go-yamux/v5 v5.0.1 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/miekg/dns v1.1.68 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
@@ -245,6 +247,8 @@ require (
 	github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.2 // indirect
 	github.com/uptrace/opentelemetry-go-extra/otelutil v0.3.2 // indirect
 	github.com/uptrace/opentelemetry-go-extra/otelzap v0.3.2 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
