@@ -57,11 +57,20 @@ func (c *StatusSupport) DeleteStatusListener(txID string, ch chan StatusEvent) {
 	}
 	for i, l := range ls {
 		if l == ch {
-			// Zero out the reference before slicing
-			// to allow the garbage collector to reclaim the memory
-			ls[i] = nil
-			ls = append(ls[:i], ls[i+1:]...)
-			c.listeners[txID] = ls
+			// Remove element using copy instead of append for better performance
+			// copy shifts elements left in-place without allocations
+			copy(ls[i:], ls[i+1:])
+			// Zero out the last element to allow garbage collector to reclaim the memory
+			ls[len(ls)-1] = nil
+			// Shrink the slice
+			ls = ls[:len(ls)-1]
+			if len(ls) == 0 {
+				// Remove the map entry when no listeners remain
+				// to prevent memory leak from accumulating empty slices
+				delete(c.listeners, txID)
+			} else {
+				c.listeners[txID] = ls
+			}
 			return
 		}
 	}
