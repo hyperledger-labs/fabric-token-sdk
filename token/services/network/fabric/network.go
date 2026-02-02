@@ -125,8 +125,8 @@ type SetupListenerProvider interface {
 type Network struct {
 	n               *fabric.NetworkService
 	ch              *fabric.Channel
-	ledger         *ledger
-	configuration  common2.Configuration
+	ledger          *ledger
+	configuration   common2.Configuration
 	finalityTracer  trace.Tracer
 	localMembership *lm
 
