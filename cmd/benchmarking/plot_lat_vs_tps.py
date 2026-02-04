@@ -7,10 +7,10 @@ csv_path = "benchmark_results.csv"
 pdf_path = "benchmark_results.pdf"
 test_names = [
     "TestParallelBenchmarkSender",
-    # "TestParallelBenchmarkVerificationSenderProof",
-    # "TestParallelBenchmarkTransferProofGeneration",
-    # "TestParallelBenchmarkTransferServiceTransfer",
-    # "TestParallelBenchmarkValidatorTransfer",
+    "TestParallelBenchmarkVerificationSenderProof",
+    "TestParallelBenchmarkTransferProofGeneration",
+    "TestParallelBenchmarkTransferServiceTransfer",
+    "TestParallelBenchmarkValidatorTransfer",
 ]
 
 df = pd.read_csv(csv_path)

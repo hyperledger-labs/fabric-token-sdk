@@ -179,7 +179,7 @@ def run_and_parse_parallel_metrics(benchName, params, cpu=1, folder=transfer_ben
         check=True
     )
 
-    log_file_path = os.path.join(output_folder_path, benchName+".log")
+    log_file_path = os.path.join(output_folder_path, benchName+"-"+str(cpu)+".log")
     if not os.path.exists(log_file_path):
         with open(log_file_path, "w", encoding="utf-8") as f:
             f.write(result.stdout)
