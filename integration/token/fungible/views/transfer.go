@@ -478,7 +478,7 @@ func (t *BroadcastPreparedTransferView) Call(context view.Context) (interface{},
 	if t.Finality {
 		// wait for finality
 		_, err = context.RunView(ttx.NewFinalityView(tx))
-		assert.NoError(err, "failed asking ordering")
+		assert.NoError(err, "failed asking finality")
 	}
 
 	return tx.ID(), nil
