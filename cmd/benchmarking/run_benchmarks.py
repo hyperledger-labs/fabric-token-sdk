@@ -39,6 +39,25 @@ transfer_benchmarks_folder = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/no
 issuer_benchmarks_folder = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1/issue")
 validator_benchmarks_folder = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1/validator")
 
+# --- Unit conversion ---
+time_mult = {
+    "ns": 1,
+    "n": 1,
+    "µs": 1_000,
+    "µ": 1_000,
+    "us": 1_000,
+    "u": 1_000,
+    "ms": 1_000_000,
+    "m": 1_000_000,
+    "s": 1_000_000_000,
+}
+
+def to_ms(value: float, unit: str) -> int:
+    # First convert to nanoseconds, then scale down to milliseconds
+    return int(value * time_mult[unit] / 1_000_000)
+
+cpus = [1,2,4,8,16,32]
+
 I=1
 
 def run_and_parse_non_parallel_metrics(benchName, params, folder=transfer_benchmarks_folder) -> dict:
@@ -72,14 +91,6 @@ def run_and_parse_non_parallel_metrics(benchName, params, folder=transfer_benchm
     ram_bytes = None
     allocs = None
 
-    # --- Unit multipliers ---
-    time_mult = {
-        "n": 1,
-        "µ": 1_000,
-        "u": 1_000,
-        "m": 1_000_000,
-        "s": 1_000_000_000,
-    }
 
     ram_mult = {
         "B": 1,
@@ -137,13 +148,17 @@ def run_and_parse_non_parallel_metrics(benchName, params, folder=transfer_benchm
         raise ValueError("Failed to parse benchmark output")
 
     name = benchName
+    print(f"{benchName} results:")
+    print(f"time (ns)   : {time_ns}")
+    print(f"RAM  (bytes): {ram_bytes}")
+    print(f"allocs      : {allocs}")
     return {
         f"{name} time": time_ns,
         f"{name} RAM": ram_bytes,
         f"{name} allocs": allocs,
     }
 
-def run_and_parse_parallel_metrics(benchName, params, folder=transfer_benchmarks_folder) -> dict:
+def run_and_parse_parallel_metrics(benchName, params, cpu=1, folder=transfer_benchmarks_folder) -> dict:
     if folder == "":
         folder = transfer_benchmarks_folder
 
@@ -151,7 +166,7 @@ def run_and_parse_parallel_metrics(benchName, params, folder=transfer_benchmarks
     global timeout
     global output_folder_path
 
-    cmd = f"go test {folder} -test.run={benchName} -test.v -test.timeout {timeout} -bits='32' -num_inputs='2' -num_outputs='2' -workers='NumCPU' -duration='10s' -setup_samples=128 {params}"
+    cmd = f"go test {folder} -test.run={benchName} -test.v -test.timeout {timeout} -bits='32' -num_inputs='2' -num_outputs='2' -cpu={cpu} -workers='NumCPU' -duration='10s' -setup_samples=128 {params}"
     print(f"{I} Running: {cmd}")
     I = I+1
 
@@ -180,41 +195,30 @@ def run_and_parse_parallel_metrics(benchName, params, folder=transfer_benchmarks
     if not name_match:
         raise ValueError("Could not extract test name")
 
-    # --- Unit conversion ---
-    time_mult = {
-        "ns": 1,
-        "µs": 1_000,
-        "us": 1_000,
-        "ms": 1_000_000,
-        "s": 1_000_000_000,
-    }
-
-    def to_ns(value: float, unit: str) -> int:
-        return int(value * time_mult[unit])
 
     # --- Regexes ---
-    real_tp_re = re.compile(r"Real Throughput\s+([\d.]+)/s")
-    pure_tp_re = re.compile(r"Pure Throughput\s+([\d.]+)/s")
+    tps_re = re.compile(r"Real Throughput\s+([\d.]+)/s")
 
-    min_lat_re = re.compile(r"Min\s+([\d.]+)(ns|µs|us|ms|s)")
-    avg_lat_re = re.compile(r"Average\s+([\d.]+)(ns|µs|us|ms|s)")
-    max_lat_re = re.compile(r"Max\s+([\d.]+)(ns|µs|us|ms|s)")
+    lat_p95_re = re.compile(r"P95\s+([\d.]+)(ns|µs|us|ms|s)")
+    lat_avg_re = re.compile(r"Average\s+([\d.]+)(ns|µs|us|ms|s)")
+    lat_std_re = re.compile(r"Std Dev\s+([\d.]+)(ns|µs|us|ms|s)")
 
     # --- Parse values ---
-    real_tp = float(real_tp_re.search(output).group(1))
-    pure_tp = float(pure_tp_re.search(output).group(1))
+    tps = float(tps_re.search(output).group(1))
 
-    min_val, min_unit = min_lat_re.search(output).groups()
-    avg_val, avg_unit = avg_lat_re.search(output).groups()
-    max_val, max_unit = max_lat_re.search(output).groups()
+    lat_p95, lat_p95_unit = lat_p95_re.search(output).groups()
+    lat_avg, lat_avg_unit = lat_avg_re.search(output).groups()
+    lat_std, lat_std_unit = lat_std_re.search(output).groups()
 
     name = benchName
+    print(f"{benchName} results:")
+    print(f"tps : {tps}")
+    print(f"latency p95,mean,std : {to_ms(float(lat_p95), lat_p95_unit)}, {to_ms(float(lat_avg), lat_avg_unit)}, {to_ms(float(lat_std), lat_std_unit)}")
     return {
-        f"{name} real throughput": real_tp,
-        f"{name} pure throughput": pure_tp,
-        f"{name} min latency": to_ns(float(min_val), min_unit),
-        f"{name} average latency": to_ns(float(avg_val), avg_unit),
-        f"{name} max latency": to_ns(float(max_val), max_unit),
+        f"{name}/{cpu} tps": tps,
+        f"{name}/{cpu} lat-p95": to_ms(float(lat_p95), lat_p95_unit),
+        f"{name}/{cpu} lat-avg": to_ms(float(lat_avg), lat_avg_unit),
+        f"{name}/{cpu} lat-std": to_ms(float(lat_std), lat_std_unit)
     }
 
 def append_dict_as_row(filename: str, data: dict):
@@ -237,19 +241,19 @@ output_folder_path = os.path.join(".", output_folder_name)
 os.makedirs(output_folder_path, exist_ok=True)
 
 non_parallel_tests = [
-    ('BenchmarkSender', "", ""),
-    ('BenchmarkVerificationSenderProof', "", ""),
-    ('BenchmarkTransferProofGeneration', "", ""), 
-    ('BenchmarkIssuer', "", issuer_benchmarks_folder), 
-    ('BenchmarkProofVerificationIssuer', "", issuer_benchmarks_folder), 
-    ('BenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
+    # ('BenchmarkSender', "", ""),
+    # ('BenchmarkVerificationSenderProof', "", ""),
+    # ('BenchmarkTransferProofGeneration', "", ""), 
+    # ('BenchmarkIssuer', "", issuer_benchmarks_folder), 
+    # ('BenchmarkProofVerificationIssuer', "", issuer_benchmarks_folder), 
+    # ('BenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
 ]
 parallel_tests = [
     ('TestParallelBenchmarkSender', "", ""), 
-    ('TestParallelBenchmarkVerificationSenderProof', "", ""),
-    ('TestParallelBenchmarkTransferProofGeneration', "", ""),
-    ('TestParallelBenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
-    ('TestParallelBenchmarkValidatorTransfer', "", validator_benchmarks_folder), 
+    # ('TestParallelBenchmarkVerificationSenderProof', "", ""),
+    # ('TestParallelBenchmarkTransferProofGeneration', "", ""),
+    # ('TestParallelBenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
+    # ('TestParallelBenchmarkValidatorTransfer', "", validator_benchmarks_folder), 
 ]
 
 results = {}
@@ -264,7 +268,8 @@ print("\n*******************************************************")
 print("Running parallel tests")
 for testName, params, folder in parallel_tests:
     if (benchName == "") or (benchName == testName):
-       results.update(run_and_parse_parallel_metrics(testName, params, folder))
+        for cpu in cpus:
+            results.update(run_and_parse_parallel_metrics(testName, params, cpu, folder))
 
 # add new row to benchmark_results.csv and copy it to the output folder
 # but not if we just run a single bench as a test
