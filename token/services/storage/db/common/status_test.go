@@ -34,8 +34,8 @@ func TestAddAndDeleteStatusListener(t *testing.T) {
 	listeners, ok = ss.listeners[txID]
 	ss.mutex.RUnlock()
 
-	if !ok || len(listeners) != 0 {
-		t.Fatalf("Listener was not deleted correctly")
+	if ok {
+		t.Fatalf("Map entry should be deleted when no listeners remain, but found %d listeners", len(listeners))
 	}
 }
 
@@ -77,9 +77,9 @@ func TestMemoryReleaseAfterDelete(t *testing.T) {
 
 	ss.mutex.RLock()
 	defer ss.mutex.RUnlock()
-	listeners, ok := ss.listeners[txID]
-	if ok && len(listeners) != 0 {
-		t.Fatalf("Listeners should be empty after delete to free memory")
+	_, ok := ss.listeners[txID]
+	if ok {
+		t.Fatalf("Map entry should be deleted after removing last listener to free memory")
 	}
 }
 
@@ -109,13 +109,13 @@ func TestAddAndDeleteMultipleStatusListeners(t *testing.T) {
 		ss.DeleteStatusListener(txID, ch)
 	}
 
-	// After deletion, the list should be empty
+	// After deletion, the map entry should be removed
 	ss.mutex.RLock()
-	listeners, ok = ss.listeners[txID]
+	_, ok = ss.listeners[txID]
 	ss.mutex.RUnlock()
 
-	if !ok || len(listeners) != 0 {
-		t.Fatalf("Listeners not properly deleted, expected 0 got %d", len(listeners))
+	if ok {
+		t.Fatalf("Map entry should be deleted after removing all listeners")
 	}
 }
 
@@ -156,4 +156,97 @@ func TestNotifyMultipleListeners(t *testing.T) {
 	for _, ch := range channels {
 		ss.DeleteStatusListener(txID, ch)
 	}
+}
+
+func TestMapCleanupAfterManyTransactions(t *testing.T) {
+	// Verify that map entries are properly cleaned up after many add/delete cycles
+	ss := NewStatusSupport()
+
+	// Simulate many transactions adding and removing listeners
+	numTransactions := 1000
+
+	for i := 0; i < numTransactions; i++ {
+		txID := "tx" + string(rune(i))
+		ch := make(chan StatusEvent, 1)
+
+		ss.AddStatusListener(txID, ch)
+		ss.DeleteStatusListener(txID, ch)
+	}
+
+	// Map should be empty after all listeners are removed
+	ss.mutex.RLock()
+	mapSize := len(ss.listeners)
+	ss.mutex.RUnlock()
+
+	if mapSize != 0 {
+		t.Fatalf("Map not properly cleaned up: has %d entries after cleanup, expected 0", mapSize)
+	}
+
+	t.Logf("Map properly cleaned up: %d entries (expected 0)", mapSize)
+}
+
+func TestMapGrowthWithMultipleListenersPerTx(t *testing.T) {
+	// Test that map entries are only deleted when ALL listeners are removed
+	ss := NewStatusSupport()
+	txID := "txShared"
+
+	ch1 := make(chan StatusEvent, 1)
+	ch2 := make(chan StatusEvent, 1)
+	ch3 := make(chan StatusEvent, 1)
+
+	// Add 3 listeners for same transaction
+	ss.AddStatusListener(txID, ch1)
+	ss.AddStatusListener(txID, ch2)
+	ss.AddStatusListener(txID, ch3)
+
+	ss.mutex.RLock()
+	listeners := ss.listeners[txID]
+	ss.mutex.RUnlock()
+
+	if len(listeners) != 3 {
+		t.Fatalf("Expected 3 listeners, got %d", len(listeners))
+	}
+
+	// Remove first listener - map entry should still exist
+	ss.DeleteStatusListener(txID, ch1)
+
+	ss.mutex.RLock()
+	_, ok := ss.listeners[txID]
+	listenerCount := len(ss.listeners[txID])
+	ss.mutex.RUnlock()
+
+	if !ok {
+		t.Fatalf("Map entry should exist after removing 1 of 3 listeners")
+	}
+	if listenerCount != 2 {
+		t.Fatalf("Expected 2 listeners remaining, got %d", listenerCount)
+	}
+
+	// Remove second listener - map entry should still exist
+	ss.DeleteStatusListener(txID, ch2)
+
+	ss.mutex.RLock()
+	_, ok = ss.listeners[txID]
+	listenerCount = len(ss.listeners[txID])
+	ss.mutex.RUnlock()
+
+	if !ok {
+		t.Fatalf("Map entry should exist after removing 2 of 3 listeners")
+	}
+	if listenerCount != 1 {
+		t.Fatalf("Expected 1 listener remaining, got %d", listenerCount)
+	}
+
+	// Remove last listener - NOW map entry should be deleted
+	ss.DeleteStatusListener(txID, ch3)
+
+	ss.mutex.RLock()
+	_, ok = ss.listeners[txID]
+	ss.mutex.RUnlock()
+
+	if ok {
+		t.Fatalf("Map entry should be deleted after removing last listener")
+	}
+
+	t.Logf("Map entry correctly maintained until last listener removed")
 }
