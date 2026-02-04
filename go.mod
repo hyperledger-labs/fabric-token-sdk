@@ -13,12 +13,12 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.8.0
-	github.com/hyperledger/fabric v1.4.0-rc1.0.20250510200036-435a7f1a780a
+	github.com/hyperledger-labs/fabric-smart-client v0.8.1
 	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.0
 	github.com/hyperledger/fabric-lib-go v1.1.3-0.20240523144151-25edd1eaf5f5
 	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.7
 	github.com/hyperledger/fabric-x-committer v0.1.7
+	github.com/hyperledger/fabric-x-common v0.0.0-20251023133631-047a3c32c228
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.27.3
@@ -131,7 +131,6 @@ require (
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/hyperledger/aries-bbs-go v0.0.0-20240528084656-761671ea73bc // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
-	github.com/hyperledger/fabric-x-common v0.0.0-20251023133631-047a3c32c228 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/boxo v0.35.2 // indirect
 	github.com/ipfs/go-cid v0.6.0 // indirect
