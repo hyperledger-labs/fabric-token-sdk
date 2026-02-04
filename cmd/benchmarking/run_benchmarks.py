@@ -241,19 +241,19 @@ output_folder_path = os.path.join(".", output_folder_name)
 os.makedirs(output_folder_path, exist_ok=True)
 
 non_parallel_tests = [
-    # ('BenchmarkSender', "", ""),
-    # ('BenchmarkVerificationSenderProof', "", ""),
-    # ('BenchmarkTransferProofGeneration', "", ""), 
-    # ('BenchmarkIssuer', "", issuer_benchmarks_folder), 
-    # ('BenchmarkProofVerificationIssuer', "", issuer_benchmarks_folder), 
-    # ('BenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
+    ('BenchmarkSender', "", ""),
+    ('BenchmarkVerificationSenderProof', "", ""),
+    ('BenchmarkTransferProofGeneration', "", ""), 
+    ('BenchmarkIssuer', "", issuer_benchmarks_folder), 
+    ('BenchmarkProofVerificationIssuer', "", issuer_benchmarks_folder), 
+    ('BenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
 ]
 parallel_tests = [
     ('TestParallelBenchmarkSender', "", ""), 
-    # ('TestParallelBenchmarkVerificationSenderProof', "", ""),
-    # ('TestParallelBenchmarkTransferProofGeneration', "", ""),
-    # ('TestParallelBenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
-    # ('TestParallelBenchmarkValidatorTransfer', "", validator_benchmarks_folder), 
+    ('TestParallelBenchmarkVerificationSenderProof', "", ""),
+    ('TestParallelBenchmarkTransferProofGeneration', "", ""),
+    ('TestParallelBenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
+    ('TestParallelBenchmarkValidatorTransfer', "", validator_benchmarks_folder), 
 ]
 
 results = {}
