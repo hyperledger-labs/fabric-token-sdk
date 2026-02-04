@@ -15,6 +15,13 @@ FABX_BINS ?= $(FABRICX_BINARY_BASE)/bin
 GINKGO_TEST_OPTS ?=
 GINKGO_TEST_OPTS += --keep-going
 
+# If the GPRC_DEBUG variable is defined (any value), export the environment variables
+ifdef GPRC_DEBUG
+    export GRPC_GO_LOG_SEVERITY_LEVEL = info
+    export GRPC_GO_LOG_VERBOSITY_LEVEL = 99
+    export GODEBUG = http2debug=2
+endif
+
 TOP = .
 
 # include the checks target
