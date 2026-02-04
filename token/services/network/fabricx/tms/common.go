@@ -13,10 +13,10 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/msp"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	cb "github.com/hyperledger/fabric-protos-go-apiv2/common"
-	"github.com/hyperledger/fabric-x-common/msp"
 )
 
 type Signer interface {
@@ -56,7 +56,9 @@ func (p *fnsSigningIdentityProvider) DefaultSigningIdentity(network, channel str
 		return nil, errors.Wrapf(err, "fns for [%s] not found", network)
 	}
 
-	return &signerWrapper{fns.LocalMembership().DefaultSigningIdentity().(signerWithPublicVersion)}, nil
+	return &signerWrapper{
+		signerWithPublicVersion: fns.LocalMembership().DefaultSigningIdentity().(signerWithPublicVersion),
+	}, nil
 }
 
 func (p *fnsSigningIdentityProvider) DefaultIdentity(network, channel string) (view.Identity, error) {
