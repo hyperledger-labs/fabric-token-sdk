@@ -22,14 +22,16 @@ import (
 )
 
 const (
-	freshnessInterval = 1 * time.Second
-	maxQueries        = maxImmediateRetries
+	freshnessInterval     = 1 * time.Second
+	maxQueries            = maxImmediateRetries
+	noWalletTTLExpiration = 0 // Wallets never expire from cache when TTL is 0
 )
 
 type tokenFetcher interface {
 	UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error)
 }
 
+//go:generate counterfeiter -o mock/tokendb.go -fake-name TokenDB . TokenDB
 type TokenDB interface {
 	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.SpendableTokensIterator, error)
 }
@@ -49,6 +51,7 @@ const (
 	Lazy     = "lazy"
 	Eager    = "eager"
 	Mixed    = "mixed"
+	Adaptive = "adaptive"
 	Listener = "listener"
 	Cached   = "cached"
 )
@@ -69,6 +72,9 @@ type fetcherProvider struct {
 var fetchers = map[FetcherStrategy]fetchFunc{
 	Mixed: func(db *tokendb.StoreService, notifier *tokendb.Notifier, m *Metrics) tokenFetcher {
 		return newMixedFetcher(db, m)
+	},
+	Adaptive: func(db *tokendb.StoreService, notifier *tokendb.Notifier, m *Metrics) tokenFetcher {
+		return newAdaptiveFetcher(db, freshnessInterval, maxQueries, m)
 	},
 }
 
@@ -232,5 +238,224 @@ func (f *cachedFetcher) isCacheOverused() bool {
 }
 
 func (f *cachedFetcher) isCacheStale() bool {
+	return time.Since(f.lastFetched) > f.freshnessInterval
+}
+
+// walletInfo tracks metadata about a known wallet
+type walletInfo struct {
+	lastAccess time.Time // Last time this wallet was accessed
+}
+
+// adaptiveFetcher implements lazy discovery + eager refresh for known wallets only.
+// It combines the benefits of both strategies: fast discovery and efficient refresh.
+//
+// Key Features:
+// - Lazy Discovery: New wallets are loaded on-demand from the database
+// - Eager Refresh: Known wallets are refreshed periodically to keep cache fresh
+// - Wallet TTL: Inactive wallets can be automatically removed from cache to save memory
+// - Thread-Safe: All operations are protected by sync.RWMutex
+//
+// Cache Refresh Triggers:
+// 1. Time-based: When freshnessInterval has elapsed since last refresh
+// 2. Usage-based: After maxQueriesBeforeRefresh queries have been served
+//
+// Wallet Expiration:
+// - Wallets are tracked with their last access time
+// - If walletTTL > 0, wallets not accessed within TTL are removed during refresh
+// - If walletTTL = 0 (noWalletTTLExpiration), wallets never expire
+type adaptiveFetcher struct {
+	tokenDB TokenDB
+	cache   map[string]permutatableIterator[*token2.UnspentTokenInWallet]
+	// knownWallets tracks which wallets have been requested at least once and their last access time
+	knownWallets map[string]*walletInfo
+
+	// freshnessInterval is the time between periodical updates
+	freshnessInterval time.Duration
+	// maxQueriesBeforeRefresh is the number of times the fetcher will respond with the cached result before refreshing
+	maxQueriesBeforeRefresh uint32
+	// walletTTL is the maximum time a wallet can stay in cache without being accessed.
+	// If 0 (noWalletTTLExpiration), wallets never expire from cache.
+	// If > 0, wallets not accessed within this duration are removed during cache refresh.
+	walletTTL time.Duration
+
+	lastFetched      time.Time
+	queriesResponded uint32
+	mu               sync.RWMutex
+	m                *Metrics
+}
+
+// newAdaptiveFetcher creates an adaptive fetcher with default settings.
+// Wallets never expire from cache (walletTTL = noWalletTTLExpiration).
+func newAdaptiveFetcher(tokenDB TokenDB, freshnessInterval time.Duration, maxQueriesBeforeRefresh int, m *Metrics) *adaptiveFetcher {
+	return newAdaptiveFetcherWithTTL(tokenDB, freshnessInterval, maxQueriesBeforeRefresh, noWalletTTLExpiration, m)
+}
+
+// newAdaptiveFetcherWithTTL creates an adaptive fetcher with custom wallet TTL.
+//
+// Parameters:
+//   - tokenDB: Database interface for fetching tokens
+//   - freshnessInterval: Time between cache refreshes
+//   - maxQueriesBeforeRefresh: Number of queries before triggering background refresh
+//   - walletTTL: Time-to-live for inactive wallets
+//   - 0 (noWalletTTLExpiration): Wallets never expire (default)
+//   - > 0: Wallets not accessed within this duration are removed during refresh
+//   - m: Metrics for tracking cache performance
+//
+// Example:
+//
+//	// No expiration (default)
+//	fetcher := newAdaptiveFetcher(db, 1*time.Second, 100, metrics)
+//
+//	// 10-minute TTL
+//	fetcher := newAdaptiveFetcherWithTTL(db, 1*time.Second, 100, 10*time.Minute, metrics)
+func newAdaptiveFetcherWithTTL(tokenDB TokenDB, freshnessInterval time.Duration, maxQueriesBeforeRefresh int, walletTTL time.Duration, m *Metrics) *adaptiveFetcher {
+	return &adaptiveFetcher{
+		tokenDB:                 tokenDB,
+		cache:                   make(map[string]permutatableIterator[*token2.UnspentTokenInWallet]),
+		knownWallets:            make(map[string]*walletInfo),
+		freshnessInterval:       freshnessInterval,
+		maxQueriesBeforeRefresh: uint32(maxQueriesBeforeRefresh),
+		walletTTL:               walletTTL,
+		m:                       m,
+	}
+}
+
+func (f *adaptiveFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+	defer atomic.AddUint32(&f.queriesResponded, 1)
+
+	// Update last access time for this wallet
+	f.mu.Lock()
+	if info, exists := f.knownWallets[walletID]; exists {
+		info.lastAccess = time.Now()
+	} else {
+		f.knownWallets[walletID] = &walletInfo{lastAccess: time.Now()}
+	}
+	f.mu.Unlock()
+
+	// Trigger soft refresh if cache is overused
+	if f.isCacheOverused() {
+		logger.DebugfContext(ctx, "Overused data. Soft refresh (in the background)...")
+		go f.update(context.Background())
+	}
+
+	key := tokenKey(walletID, currency)
+
+	// Check cache first
+	f.mu.RLock()
+	needsHardRefresh := f.isCacheStale()
+	it, exists := f.cache[key]
+	f.mu.RUnlock()
+
+	// Hard refresh if cache is stale
+	if needsHardRefresh {
+		logger.DebugfContext(ctx, "Stale data. Hard refresh (now)...")
+		f.update(ctx)
+		f.mu.RLock()
+		it, exists = f.cache[key]
+		f.mu.RUnlock()
+	}
+
+	// Cache hit - return cached result
+	if exists {
+		logger.DebugfContext(ctx, "Cache hit for [%s]", key)
+		return it.NewPermutation(), nil
+	}
+
+	// Cache miss - lazy load this specific wallet/currency
+	logger.DebugfContext(ctx, "Cache miss for [%s]. Lazy loading from database...", key)
+	freshIt, err := f.tokenDB.SpendableTokensIteratorBy(ctx, walletID, currency)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to slice and create permutable iterator
+	tokens := []*token2.UnspentTokenInWallet{}
+	for t, err := freshIt.Next(); err == nil && t != nil; t, err = freshIt.Next() {
+		tokens = append(tokens, t)
+	}
+	freshIt.Close()
+
+	// Add to cache and mark wallet as known (already updated in the beginning of the function)
+	f.mu.Lock()
+	f.cache[key] = iterators.Slice(tokens)
+	logger.DebugfContext(ctx, "Added wallet [%s] to known wallets. Total known: %d", walletID, len(f.knownWallets))
+	f.mu.Unlock()
+
+	return iterators.Slice(tokens).NewPermutation(), nil
+}
+
+// update refreshes the cache for all known wallets.
+// This method implements the wallet TTL expiration logic.
+//
+// Expiration Logic:
+// - If walletTTL = 0 (noWalletTTLExpiration): All wallets are refreshed, none expire
+// - If walletTTL > 0: Wallets not accessed within TTL are removed from cache
+//
+// The check "f.walletTTL > 0" ensures that when TTL is 0, the expiration
+// condition is never evaluated, effectively disabling wallet expiration.
+func (f *adaptiveFetcher) update(ctx context.Context) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if !f.isCacheStale() && !f.isCacheOverused() {
+		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process")
+		return
+	}
+
+	logger.DebugfContext(ctx, "Refreshing cache for %d known wallets", len(f.knownWallets))
+
+	// Build new cache by refreshing only known wallets
+	newCache := make(map[string]permutatableIterator[*token2.UnspentTokenInWallet])
+	now := time.Now()
+	expiredWallets := []string{}
+
+	for walletID, info := range f.knownWallets {
+		// Check if wallet has expired based on TTL
+		// Note: When walletTTL = 0 (noWalletTTLExpiration), the condition "f.walletTTL > 0" is false,
+		// so the expiration check is skipped and wallets never expire.
+		if f.walletTTL > 0 && now.Sub(info.lastAccess) > f.walletTTL {
+			logger.DebugfContext(ctx, "Wallet [%s] expired (last access: %v, TTL: %v). Removing from cache.", walletID, info.lastAccess, f.walletTTL)
+			expiredWallets = append(expiredWallets, walletID)
+			continue
+		}
+
+		// Query ALL token types for this wallet
+		it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, walletID, "")
+		if err != nil {
+			logger.Warnf("Failed to refresh wallet %s: %v", walletID, err)
+			continue
+		}
+
+		// Group tokens by currency type for this wallet
+		walletTokens := make(map[string][]*token2.UnspentTokenInWallet)
+		for t, err := it.Next(); err == nil && t != nil; t, err = it.Next() {
+			key := tokenKey(t.WalletID, t.Type)
+			walletTokens[key] = append(walletTokens[key], t)
+			logger.DebugfContext(ctx, "Adding token with key [%s]", key)
+		}
+		it.Close()
+
+		// Add all currency types for this wallet to new cache
+		for key, tokens := range walletTokens {
+			newCache[key] = iterators.Slice(tokens)
+		}
+	}
+
+	// Remove expired wallets from known wallets
+	for _, walletID := range expiredWallets {
+		delete(f.knownWallets, walletID)
+	}
+
+	f.cache = newCache
+	f.lastFetched = time.Now()
+	atomic.StoreUint32(&f.queriesResponded, 0)
+	logger.DebugfContext(ctx, "Cache refreshed. Total cache entries: %d", len(f.cache))
+}
+
+func (f *adaptiveFetcher) isCacheOverused() bool {
+	return atomic.LoadUint32(&f.queriesResponded) >= f.maxQueriesBeforeRefresh
+}
+
+func (f *adaptiveFetcher) isCacheStale() bool {
 	return time.Since(f.lastFetched) > f.freshnessInterval
 }
