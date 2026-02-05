@@ -90,9 +90,6 @@ func (v *Verifier) Verify(proofRaw []byte) error {
 		return errors.Wrap(err, "invalid transfer proof")
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
 	// verify well-formedness of inputs and outputs
 	tspErr := v.TypeAndSum.Verify(proof.TypeAndSum)
 	if tspErr != nil {

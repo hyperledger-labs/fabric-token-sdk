@@ -230,12 +230,12 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	}
 	// compute 1/y
 	yInv := y.Copy()
-	yInv.InvModP(p.Curve.GroupOrder)
+	yInv.InvModOrder()
 
 	rightGeneratorsPrime := make([]*math.G1, len(p.RightGenerators))
 	for i := range len(p.RightGenerators) {
 		// compute 1/y^i
-		yInv2i := yInv.PowMod(p.Curve.NewZrFromInt(int64(i)))
+		yInv2i := yInv.PowMod(math2.NewCachedZrFromInt(p.Curve, uint64(i)))
 		// compute the new generators H'_i = H_i^{1/y^i}
 		rightGeneratorsPrime[i] = p.RightGenerators[i].Mul(yInv2i)
 	}
@@ -275,15 +275,15 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 	rho := p.Curve.NewRandomZr(rand)
 	eta := p.Curve.NewRandomZr(rand)
-	one := p.Curve.NewZrFromInt(1)
-	two := p.Curve.NewZrFromInt(2)
+	one := math2.One(p.Curve)
+	two := math2.Two(p.Curve)
 	for i := range p.BitLength {
 		b := 1 << i & p.value
 		if b > 0 {
 			b = 1
 		}
 		// this is an array of the bits b_i of p.value
-		left[i] = p.Curve.NewZrFromUint64(b)
+		left[i] = math2.NewCachedZrFromInt(p.Curve, b)
 		// this is an array of b_i - 1
 		right[i] = p.Curve.ModSub(left[i], one, p.Curve.GroupOrder)
 		// these are randomly generated arrays
@@ -292,14 +292,14 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 
 	// C commits to L = (b_0, ..., b_{p.BitLength}) and R = (b_0 - 1 , ..., b_{p.BitLength} - 1)
-	C := commitVector(left, right, p.LeftGenerators, p.RightGenerators, p.Curve)
+	C := commitVectorPlusOne(left, right, p.LeftGenerators, p.RightGenerators, rho, p.P, p.Curve)
 	// C is a hiding commitment thanks to rho
-	C.Add(p.P.Mul(rho))
+	// C.Add(p.P.Mul(rho))
 
 	// D commits two random vectors U and V
-	D := commitVector(randomLeft, randomRight, p.LeftGenerators, p.RightGenerators, p.Curve)
+	D := commitVectorPlusOne(randomLeft, randomRight, p.LeftGenerators, p.RightGenerators, eta, p.P, p.Curve)
 	// D is a hiding commitment thanks to eta
-	D.Add(p.P.Mul(eta))
+	// D.Add(p.P.Mul(eta))
 
 	array := common.GetG1Array([]*math.G1{C, D, p.Commitment})
 	// compute challenges y and z
@@ -335,15 +335,27 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 		// compute V_iy^i
 		randRightPrime[i] = p.Curve.ModMul(randomRight[i], y2i, p.Curve.GroupOrder)
 		// compute 2^iz^2
-		zPrime[i] = p.Curve.ModMul(zSquare, two.PowMod(p.Curve.NewZrFromInt(int64(i))), p.Curve.GroupOrder)
+		zPrime[i] = p.Curve.ModMul(zSquare, math2.PowerOfTwo(p.Curve, uint64(i)), p.Curve.GroupOrder)
 	}
 
 	// compute \sum y^iV_i(L_i-z)
-	t1 := InnerProduct(leftPrime, randRightPrime, p.Curve)
-	// compute \sum y^i(V_i(L_i-z) + (R_i +z)U_i)
-	t1 = p.Curve.ModAdd(t1, InnerProduct(rightPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
-	// compute \sum y^i(V_i(L_i-z) + (R_i+z)U_i) + U_i2^iz^2
-	t1 = p.Curve.ModAdd(t1, InnerProduct(zPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
+	leftScalars := make([]*math.Zr, len(leftPrime)+len(rightPrime)+len(zPrime))
+	copy(leftScalars, leftPrime)
+	copy(leftScalars[len(leftPrime):], rightPrime)
+	copy(leftScalars[len(leftPrime)+len(rightPrime):], zPrime)
+
+	rightScalars := make([]*math.Zr, len(randRightPrime)+len(randomLeft)+len(randomLeft))
+	copy(rightScalars, randRightPrime)
+	copy(rightScalars[len(randRightPrime):], randomLeft)
+	copy(rightScalars[len(randRightPrime)+len(randomLeft):], randomLeft)
+	t1 := InnerProduct(leftScalars, rightScalars, p.Curve)
+
+	// t1 := InnerProduct(leftPrime, randRightPrime, p.Curve)
+	// // compute \sum y^i(V_i(L_i-z) + (R_i +z)U_i)
+	// t1 = p.Curve.ModAdd(t1, InnerProduct(rightPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
+	// // compute \sum y^i(V_i(L_i-z) + (R_i+z)U_i) + U_i2^iz^2
+	// t1 = p.Curve.ModAdd(t1, InnerProduct(zPrime, randomLeft, p.Curve), p.Curve.GroupOrder)
+
 	// commit to t1
 	tau1 := p.Curve.NewRandomZr(rand)
 	T1 := p.CommitmentGenerators[0].Mul2(t1, p.CommitmentGenerators[1], tau1)
@@ -375,8 +387,13 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 	// tau = t1x + t2x^2 + z^2p.blindingFactor
 	tau := p.Curve.ModMul(x, tau1, p.Curve.GroupOrder)
-	tau = p.Curve.ModAdd(tau, p.Curve.ModMul(tau2, x.PowMod(two), p.Curve.GroupOrder), p.Curve.GroupOrder)
-	tau = p.Curve.ModAdd(tau, p.Curve.ModMul(zSquare, p.blindingFactor, p.Curve.GroupOrder), p.Curve.GroupOrder)
+	tau = p.Curve.ModAdd(tau, p.Curve.ModAddMul2(
+		tau2,
+		x.PowMod(two),
+		zSquare,
+		p.blindingFactor,
+		p.Curve.GroupOrder,
+	), p.Curve.GroupOrder)
 
 	// delta = rho + eta*x
 	delta := p.Curve.ModAdd(rho, p.Curve.ModMul(eta, x, p.Curve.GroupOrder), p.Curve.GroupOrder)
@@ -464,7 +481,7 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	}
 	// compute x and x^2
 	x := v.Curve.HashToZr(bytesToHash)
-	xSquare := x.PowMod(v.Curve.NewZrFromInt(2))
+	xSquare := x.PowMod(math2.Two(v.Curve))
 
 	// compute y and z
 	array = common.GetG1Array([]*math.G1{rp.Data.C, rp.Data.D, v.Commitment})
@@ -475,28 +492,24 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	y := v.Curve.HashToZr(bytesToHash)
 	z := v.Curve.HashToZr(y.Bytes())
 	// z^2 and z^3
-	zSquare := z.PowMod(v.Curve.NewZrFromInt(2))
+	zSquare := z.PowMod(math2.Two(v.Curve))
 	zCube := v.Curve.ModMul(zSquare, z, v.Curve.GroupOrder)
 
 	yPow := make([]*math.Zr, len(v.RightGenerators))
-	ipy := v.Curve.NewZrFromInt(0)
-	ip2 := v.Curve.NewZrFromInt(0)
+	ipy := math2.Zero(v.Curve)
+	ip2 := math2.SumOfPowersOfTwo(v.Curve, uint64(len(yPow)))
 	// 2^i
-	var power2 *math.Zr
 	for i := 0; i < len(yPow); i++ {
 		// y^i
 		if i == 0 {
-			yPow[0] = v.Curve.NewZrFromInt(1)
-			power2 = v.Curve.NewZrFromInt(1)
+			yPow[0] = math2.One(v.Curve)
 		} else {
 			yPow[i] = v.Curve.ModMul(y, yPow[i-1], v.Curve.GroupOrder)
-			power2 = v.Curve.ModMul(v.Curve.NewZrFromInt(2), power2, v.Curve.GroupOrder)
 		}
 		// ipy = \sum y^i
 		ipy = v.Curve.ModAdd(ipy, yPow[i], v.Curve.GroupOrder)
-		// ip2 = sum 2^i
-		ip2 = v.Curve.ModAdd(ip2, power2, v.Curve.GroupOrder)
 	}
+
 	// polEval = (z -z^)\sum y^i - z^3\sum 2^i
 	polEval := v.Curve.ModSub(z, zSquare, v.Curve.GroupOrder)
 	polEval = v.Curve.ModMul(polEval, ipy, v.Curve.GroupOrder)
@@ -510,8 +523,7 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	com.Sub(rp.Data.T1.Mul(x))
 	com.Sub(rp.Data.T2.Mul(xSquare))
 
-	comPrime := v.Commitment.Mul(zSquare)
-	comPrime.Add(v.CommitmentGenerators[0].Mul(polEval))
+	comPrime := v.Commitment.Mul2(zSquare, v.CommitmentGenerators[0], polEval)
 
 	if !com.Equals(comPrime) {
 		return errors.New("invalid range proof")
@@ -542,10 +554,15 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 		com.Sub(v.LeftGenerators[i].Mul(z))
 		// 1/y^i
 		yInv2i := yPow[i].Copy()
-		yInv2i.InvModP(v.Curve.GroupOrder)
+		yInv2i.InvModOrder()
 		// zy^i + z^2
-		zi := v.Curve.ModMul(z, yPow[i], v.Curve.GroupOrder)
-		zi = v.Curve.ModAdd(zi, v.Curve.ModMul(zSquare, v.Curve.NewZrFromInt(2).PowMod(v.Curve.NewZrFromInt(int64(i))), v.Curve.GroupOrder), v.Curve.GroupOrder)
+		zi := v.Curve.ModAddMul2(
+			z,
+			yPow[i],
+			zSquare,
+			math2.PowerOfTwo(v.Curve, uint64(i)),
+			v.Curve.GroupOrder,
+		)
 		// recompute the generators H'_i = H_i^{1/y_i}
 		rightGeneratorsPrime[i] = v.RightGenerators[i].Mul(yInv2i)
 		com.Add(rightGeneratorsPrime[i].Mul(zi))

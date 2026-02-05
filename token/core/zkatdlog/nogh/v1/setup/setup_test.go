@@ -332,7 +332,7 @@ func TestPublicParamsValidation(t *testing.T) {
 				pp.Curve = math3.CurveID(999) // Invalid curve ID
 				return pp
 			},
-			expectedError: "invalid public parameters: invalid curveID [999 > 7]",
+			expectedError: "invalid public parameters: invalid curveID [999 > 8]",
 		},
 	}
 

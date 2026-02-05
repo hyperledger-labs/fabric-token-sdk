@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -79,6 +80,28 @@ func TestValidator(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed signature verification")
 	})
+}
+
+func BenchmarkValidatorTransfer(b *testing.B) {
+	pp, err := profile.New(profile.WithAll(), profile.WithPath("./profile"))
+	require.NoError(b, err)
+	require.NoError(b, pp.Start())
+	defer pp.Stop()
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	require.NoError(b, err)
+
+	test := benchmark2.NewTest[*testing2.Env](cases)
+	test.GoBenchmark(b,
+		func(c *benchmark2.Case) (*testing2.Env, error) {
+			return testing2.NewEnv(c, configurations)
+		},
+		func(ctx context.Context, env *testing2.Env) error {
+			_, _, err := env.Engine.VerifyTokenRequestFromRaw(ctx, nil, "1", env.TRWithTransferRaw)
+			return err
+		},
+	)
 }
 
 func TestParallelBenchmarkValidatorTransfer(t *testing.T) {

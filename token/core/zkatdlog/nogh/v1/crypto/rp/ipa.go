@@ -186,12 +186,12 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 		leftIP := InnerProduct(left[:n], right[n:], p.Curve)
 		rightIP := InnerProduct(left[n:], right[:n], p.Curve)
 		// LArray[i] is a commitment to left[:n], right[n:] and their inner product
-		LArray[i] = commitVector(left[:n], right[n:], leftGen[n:], rightGen[:n], p.Curve)
-		LArray[i].Add(X.Mul(leftIP))
+		LArray[i] = commitVectorPlusOne(left[:n], right[n:], leftGen[n:], rightGen[:n], leftIP, X, p.Curve)
+		// LArray[i].Add(X.Mul(leftIP))
 
 		// RArray[i] is a commitment to left[n:], right[:n] and their inner product
-		RArray[i] = commitVector(left[n:], right[:n], leftGen[:n], rightGen[n:], p.Curve)
-		RArray[i].Add(X.Mul(rightIP))
+		RArray[i] = commitVectorPlusOne(left[n:], right[:n], leftGen[:n], rightGen[n:], rightIP, X, p.Curve)
+		// RArray[i].Add(X.Mul(rightIP))
 
 		// compute this round's challenge x
 		array := common.GetG1Array([]*mathlib.G1{LArray[i], RArray[i]})
@@ -368,12 +368,44 @@ func InnerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *ma
 	return c.ModAddMul(left, right, c.GroupOrder)
 }
 
-func commitVector(left []*mathlib.Zr, right []*mathlib.Zr, leftgen []*mathlib.G1, rightgen []*mathlib.G1, c *mathlib.Curve) *mathlib.G1 {
-	com := c.NewG1()
-	for i := range left {
-		com.Add(leftgen[i].Mul2(left[i], rightgen[i], right[i]))
-	}
-	return com
+func commitVector(
+	left []*mathlib.Zr,
+	right []*mathlib.Zr,
+	leftgen []*mathlib.G1,
+	rightgen []*mathlib.G1,
+	c *mathlib.Curve,
+) *mathlib.G1 {
+	points := make([]*mathlib.G1, len(leftgen)+len(rightgen))
+	copy(points, leftgen)
+	copy(points[len(leftgen):], rightgen)
+
+	scalars := make([]*mathlib.Zr, len(left)+len(right))
+	copy(scalars, left)
+	copy(scalars[len(left):], right)
+
+	return c.MultiScalarMul(points, scalars)
+}
+
+func commitVectorPlusOne(
+	left []*mathlib.Zr,
+	right []*mathlib.Zr,
+	leftgen []*mathlib.G1,
+	rightgen []*mathlib.G1,
+	a *mathlib.Zr,
+	b *mathlib.G1,
+	c *mathlib.Curve,
+) *mathlib.G1 {
+	points := make([]*mathlib.G1, len(leftgen)+len(rightgen)+1)
+	copy(points, leftgen)
+	copy(points[len(leftgen):], rightgen)
+	points[len(points)-1] = b
+
+	scalars := make([]*mathlib.Zr, len(left)+len(right)+1)
+	copy(scalars, left)
+	copy(scalars[len(left):], right)
+	scalars[len(scalars)-1] = a
+
+	return c.MultiScalarMul(points, scalars)
 }
 
 func cloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.G1, []*mathlib.G1) {

@@ -246,7 +246,7 @@ func (p *TypeAndSumProver) computeProof(randomness *TypeAndSumProofRandomness, c
 
 	stp.InputValues = make([]*math.Zr, len(p.Inputs))
 	stp.InputBlindingFactors = make([]*math.Zr, len(p.Inputs))
-	sumBF := p.Curve.NewZrFromInt(0)
+	sumBF := math2.Zero(p.Curve)
 	// generate zk proof for input values and corresponding blinding factors
 	for i := range len(p.Inputs) {
 		stp.InputValues[i] = p.Curve.ModMul(chal, p.witness.inValues[i], p.Curve.GroupOrder)
@@ -287,8 +287,7 @@ func (p *TypeAndSumProver) computeCommitments() (*TypeAndSumProofCommitments, *T
 	randomness.ttype = p.Curve.NewRandomZr(rand) // randomness to prove token type
 	randomness.typeBF = p.Curve.NewRandomZr(rand)
 
-	commitments.CommitmentToType = p.PedParams[0].Mul(randomness.ttype)
-	commitments.CommitmentToType.Add(p.PedParams[2].Mul(randomness.typeBF))
+	commitments.CommitmentToType = p.PedParams[0].Mul2(randomness.ttype, p.PedParams[2], randomness.typeBF)
 
 	// for inputs
 	randomness.inValues = make([]*math.Zr, len(p.Inputs))
@@ -301,8 +300,7 @@ func (p *TypeAndSumProver) computeCommitments() (*TypeAndSumProofCommitments, *T
 		// randomness to prove input blinding factors
 		randomness.inBF[i] = p.Curve.NewRandomZr(rand)
 		// compute corresponding commitments
-		commitments.Inputs[i] = p.PedParams[1].Mul(randomness.inValues[i])
-		commitments.Inputs[i].Add(p.PedParams[2].Mul(randomness.inBF[i]))
+		commitments.Inputs[i] = p.PedParams[1].Mul2(randomness.inValues[i], p.PedParams[2], randomness.inBF[i])
 	}
 
 	// for sum
@@ -351,8 +349,7 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 		inputs[i].Sub(stp.CommitmentToType)
 		sum.Add(inputs[i])
 
-		inComs[i] = v.PedParams[1].Mul(stp.InputValues[i])
-		inComs[i].Add(v.PedParams[2].Mul(stp.InputBlindingFactors[i]))
+		inComs[i] = v.PedParams[1].Mul2(stp.InputValues[i], v.PedParams[2], stp.InputBlindingFactors[i])
 		inComs[i].Sub(inputs[i].Mul(stp.Challenge))
 	}
 
@@ -365,8 +362,7 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 	sumCom := v.PedParams[2].Mul(stp.EqualityOfSum)
 	sumCom.Sub(sum.Mul(stp.Challenge))
 
-	typeCom := v.PedParams[0].Mul(stp.Type)
-	typeCom.Add(v.PedParams[2].Mul(stp.TypeBlindingFactor))
+	typeCom := v.PedParams[0].Mul2(stp.Type, v.PedParams[2], stp.TypeBlindingFactor)
 	typeCom.Sub(stp.CommitmentToType.Mul(stp.Challenge))
 
 	raw, err := crypto.GetG1Array(inComs, []*math.G1{typeCom, sumCom}, inputs, outputs, []*math.G1{stp.CommitmentToType, sum}).Bytes()
