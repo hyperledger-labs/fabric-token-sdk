@@ -11,8 +11,10 @@ import (
 
 	math "github.com/IBM/mathlib"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
-	"github.com/labstack/gommon/log"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
+
+var logger = logging.MustGetLogger()
 
 const (
 	// NumBits is the number of integer values and powers to pre-compute
@@ -66,12 +68,12 @@ func Two(c *math.Curve) *math.Zr {
 func NewCachedZrFromInt(c *math.Curve, i uint64) *math.Zr {
 	cc, ok := valueCache[c.ID()]
 	if !ok {
-		log.Warnf("no hit for [%d:%d]", c.ID(), i)
+		logger.Warnf("no hit for [%d:%d]", c.ID(), i)
 		return c.NewZrFromUint64(i)
 	}
 	v, ok := cc[i]
 	if !ok {
-		log.Warnf("no hit for [%d:%d]", c.ID(), i)
+		logger.Warnf("no hit for [%d:%d]", c.ID(), i)
 		return c.NewZrFromUint64(i)
 	}
 	return v
@@ -101,13 +103,13 @@ func SumOfPowersOfTwo(c *math.Curve, n uint64) *math.Zr {
 func PowerOfTwo(c *math.Curve, i uint64) *math.Zr {
 	cc, ok := powerCache[c.ID()]
 	if !ok {
-		log.Warnf("no hit for [%d:%d]", c.ID(), i)
+		logger.Warnf("no hit for [%d:%d]", c.ID(), i)
 		two := c.NewZrFromUint64(2)
 		return two.PowMod(c.NewZrFromUint64(i))
 	}
 	v, ok := cc[i]
 	if !ok {
-		log.Warnf("no hit for [%d:%d]", c.ID(), i)
+		logger.Warnf("no hit for [%d:%d]", c.ID(), i)
 		two := c.NewZrFromUint64(2)
 		return two.PowMod(c.NewZrFromUint64(i))
 	}
