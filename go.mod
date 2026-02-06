@@ -4,6 +4,8 @@ go 1.24.6
 
 toolchain go1.24.13
 
+replace github.com/hyperledger-labs/fabric-smart-client => /Users/adc/go/src/github.com/hyperledger-labs/fabric-smart-client
+
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/IBM/idemix v0.0.2-0.20250313153527-832db18b9478

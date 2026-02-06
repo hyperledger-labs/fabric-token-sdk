@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	finalityx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/finality"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/vault/queryservice"
 	fabricx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
@@ -49,13 +50,18 @@ func NewDriver(
 	configService driver2.ConfigService,
 	qsProvider queryservice.Provider,
 	storeServiceManager ttxdb.StoreServiceManager,
-) driver.Driver {
+	queryServiceProvider queryservice.Provider,
+	finalityProvider *finalityx.Provider,
+) (driver.Driver, error) {
 	vkp := pp2.NewVersionKeeperProvider()
 	kt := &keys.Translator{}
 
 	queryExecutorProvider := qe.NewExecutorProvider(qsProvider)
 
-	listenerManagerConfig := config3.NewListenerManagerConfig(configService)
+	flmProvider, err := finality2.NewFLMProvider(queryServiceProvider, finalityProvider)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed initializing finality provider")
+	}
 
 	d := &Driver{
 		fnsProvider:                fnsProvider,
@@ -69,7 +75,7 @@ func NewDriver(
 		defaultPublicParamsFetcher: ppFetcher,
 		queryExecutorProvider:      queryExecutorProvider,
 		keyTranslator:              kt,
-		flmProvider:                finality2.NewFLMProvider(fnsProvider, tracerProvider, listenerManagerConfig),
+		flmProvider:                flmProvider,
 		llmProvider: lookup2.NewListenerManagerProvider(
 			fnsProvider,
 			tracerProvider,
@@ -95,7 +101,7 @@ func NewDriver(
 		supportedDrivers: []string{fabricx.FabricxDriverName},
 	}
 
-	return d
+	return d, nil
 }
 
 type Driver struct {
