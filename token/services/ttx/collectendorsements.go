@@ -33,6 +33,8 @@ type distributionListEntry struct {
 	Auditor  bool
 }
 
+//go:generate counterfeiter -o dep/mock/external_wallet_signer.go -fake-name ExternalWalletSigner . ExternalWalletSigner
+
 type ExternalWalletSigner interface {
 	Sign(party view.Identity, message []byte) ([]byte, error)
 	Done() error
@@ -84,6 +86,10 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	metrics := GetMetrics(context)
 
 	externalWallets := make(map[string]ExternalWalletSigner)
+
+	// Ensure Done() is called on all external wallets regardless of errors
+	defer c.CleanupExternalWallets(context, externalWallets)
+
 	// 1. First collect signatures on the token request
 	issueSigmas, err := c.requestSignaturesOnIssues(context, externalWallets)
 	if err != nil {
@@ -93,15 +99,6 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	transferSigmas, err := c.requestSignaturesOnTransfers(context, externalWallets)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed requesting signatures on transfers")
-	}
-
-	// signal the external wallets that the process is completed
-	logger.DebugfContext(context.Context(), "Inform external wallets that endorsement is complete")
-	for id, signer := range externalWallets {
-		if err := signer.Done(); err != nil {
-			logger.ErrorfContext(context.Context(), "failed to signal done external wallet [%s]", id)
-			logger.Errorf("failed to signal done external wallet [%s]", id)
-		}
 	}
 
 	// Add the signatures to the token request
@@ -664,4 +661,14 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 		distributionList = append(distributionList, transfer.Receivers...)
 	}
 	return distributionList
+}
+
+// CleanupExternalWallets calls Done() on all external wallets to signal completion
+func (c *CollectEndorsementsView) CleanupExternalWallets(context view.Context, externalWallets map[string]ExternalWalletSigner) {
+	logger.DebugfContext(context.Context(), "Inform external wallets that endorsement is complete")
+	for id, signer := range externalWallets {
+		if err := signer.Done(); err != nil {
+			logger.ErrorfContext(context.Context(), "failed to signal done external wallet [%s], error: %+v", id, err)
+		}
+	}
 }
