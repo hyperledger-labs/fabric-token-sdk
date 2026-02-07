@@ -10,6 +10,7 @@ This page contains link to the development guidelines and more.
 - [Monitoring](./monitoring.md)
 - [Mock Files Generation](./mock.md)
 - [Tools: tokengen](./tokengen.md)
+- [Makefile Guide](./makefile.md)
 
 ## Useful resources
 
