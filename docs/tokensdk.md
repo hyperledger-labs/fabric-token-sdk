@@ -56,6 +56,11 @@ The Token SDK APIs are consumed by developers to perform various token-related o
 Developers must decide how to configure the Token SDK to achieve their intended goals.
 Additionally, they are responsible for defining the initial content of the datasource used by the Token SDK.
 
+## Getting Started
+
+To get started with the Fabric Token SDK, we recommend running the samples provided in the [Fabric Samples](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk) repository.
+This will allow you to see the SDK in action and understand how to build token-based applications.
+
 ## Requirements and Use Cases
 
 The SDK is designed for token-based applications that require:
