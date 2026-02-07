@@ -15,6 +15,7 @@ const (
 	fetcherTypeLabel tracing.LabelName = "fetcher_type"
 	lazy             string            = "lazy"
 	eager            string            = "eager"
+	adaptive         string            = "adaptive"
 )
 
 type Metrics struct {

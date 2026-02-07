@@ -13,5 +13,5 @@ Key components include:
 *   [`ttx service`](./services/ttx.md): The **Token Transaction Service**. Facilitates the assembly of token requests and transactions for the backend. It is backend-agnostic, relying on the `network service` for backend-specific operations.
 *   [`network service`](./services/network.md): The **Network Service**. Provides a unified interface for interacting with diverse networks or backends (e.g., Fabric), abstracting implementation details from other services.
 *   [`storage service`](./services/storage.md): The **Storage Service**. Encapsulates storage mechanisms required by the Token SDK, supporting the Token and Driver APIs.
-*   `selector service`: The **Token Selector Service**. mitigating the risk of double-spending by implementing strategic token selection algorithms.
+*   [`selector service`](./services/selector.md): The **Token Selector Service**. Mitigates the risk of double-spending by implementing strategic token selection algorithms with multiple caching strategies, including an adaptive cache optimized for production environments.
 
