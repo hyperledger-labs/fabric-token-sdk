@@ -12,9 +12,10 @@ The `Fabric Token SDK` provides a collection of APIs and services that streamlin
 The project will be subject to rapid changes to complete the open-sourcing process, and  the list of features.
 
 # Useful Links
-
-- [`Documentation`](docs/tokensdk.md): The design principles of the Fabric Token SDK.
+ 
+- [`Documentation`](docs/README.md): The entry point for the Fabric Token SDK documentation.
 - [`Development`](docs/development/development.md): All about the development guidelines.
+- [`Contributing`](CONTRIBUTING.md): How to contribute to the project.
 - [`Fabric Samples`](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk) Token SDK sample application is the
   quickest way to get a full network running with a REST API to issue, transfer and redeem tokens right away.
 - [`Benchmarks`](./docs/benchmark/benchmark.md): Benchmark guidelines and reports.
@@ -25,44 +26,6 @@ The project will be subject to rapid changes to complete the open-sourcing proce
   
 - [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client): The Token SDK leverages the 
   `Fabric Smart Client` for transaction orchestration, storing tokens and wallets, and more. Check it out.
-
-# Getting started
-
-Clone the code and make sure it is on your `$GOPATH`.
-(Important: we assume in this documentation and default configuration that your `$GOPATH` has a single root-directory!).
-Sometimes, we use `$FTS_PATH` to refer to the Fabric Token SDK repository in your filesystem.
-
-```bash
-export FTS_PATH=$GOPATH/src/github.com/hyperledger-labs/fabric-token-sdk
-git clone https://github.com/hyperledger-labs/fabric-token-sdk.git $FTS_PATH
-```
-
-## Further information
-
-Fabric Token SDK uses a system called `NWO` from Fabric Smart Client for its integration tests and samples to programmatically create a fabric network along with the fabric-smart-client nodes. The current version of fabric that is tested can be found in the project [Makefile](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/Makefile) set in the `FABRIC_VERSION` variable.
-
-In order for a fabric network to be able to be created you need to ensure you have downloaded the appropriate version of the hyperledger fabric binaries from [Fabric Releases](https://github.com/hyperledger/fabric/releases) and unpack the compressed file onto your file system. This will create a directory structure of /bin and /config. You will then need to set the environment variable `FAB_BINS` to the `bin` directory. For example if you unpacked the compressed file into `/home/name/fabric` then you would
-
-```bash
-export FAB_BINS=/home/name/fabric/bin
-```
-
-Do not store the fabric binaries within your fabric-token-sdk cloned repo as this will cause problems running the samples and integration tests as they will not be able to install chaincode.
-
-Almost all the samples and integration tests require the fabric binaries to be downloaded and the environment variable `FAB_BINS` set to point to the directory where these binaries are stored. One way to ensure this is to execute the following in the root of the fabric-token-sdk project
-
-```shell
-make download-fabric
-export FAB_BINS=$PWD/../fabric/bin
-```
-
-You can also use this to download a different version of the fabric binaries for example
-
-```shell
-FABRIC_VERSION=2.5 make download-fabric
-```
-
-If you want to provide your own versions of the fabric binaries then just set `FAB_BINS` to the directory where all the fabric binaries are stored.
 
 # Additional Resources
 
@@ -102,13 +65,9 @@ The Fabric Token SDK has evolved beyond its initial focus on Hyperledger Fabric.
 
 With a robust Fabric Token SDK, developing secure and efficient enterprise-grade tokenized applications becomes a reality, offering flexibility for developers to choose the platform that best suits their needs.
 
-# Development
-
-For additional information about the development of the Token SDK, visit this [`section`](./docs/development/development.md).
-
 # License
 
 This project is licensed under the Apache 2 License - see the [`LICENSE`](LICENSE) file for details
 
 [`fabric-token-sdk` Issues]: https://github.com/hyperledger-labs/fabric-token-sdk/issues
-[GitHub discussions]: https://github.com/hyperledger-labs/fabric-token-sdk/discussions
+[#fabric-token-sdk in Discord]: https://discord.gg/hyperledger

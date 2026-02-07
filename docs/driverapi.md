@@ -43,6 +43,6 @@ The Token SDK comes equipped with two `Drivers` implementing the `Driver API`:
 
 - [`FabToken`](./drivers/fabtoken.md): FabToken is a straightforward implementation of the Driver API.
   It prioritizes simplicity over privacy, storing all token transaction details openly on the ledger for anyone with access to view ownership and activity.
-- [`DLOG w/o Graph Hiding`](./drivers/): The `Zero Knowledge Asset Transfer DLog` (zkat-dlog, for short) driver supports privacy using Zero Knowledge Proofs.
+- [`DLOG w/o Graph Hiding`](./drivers/dlogwogh.md): The `Zero Knowledge Asset Transfer DLog` (zkat-dlog, for short) driver supports privacy using Zero Knowledge Proofs.
   We follow a simplified version of the blueprint described in the paper
   [`Privacy-preserving auditable token payments in a permissioned blockchain system`](https://eprint.iacr.org/2019/1058)
