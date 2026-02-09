@@ -27,8 +27,6 @@ var mainCmd = &cobra.Command{Use: "tokengen"}
 
 func main() {
 	// For environment variables.
-	var unusedVar int
-
 	viper.SetEnvPrefix(CmdRoot)
 	viper.AutomaticEnv()
 	replacer := strings.NewReplacer(".", "_")
