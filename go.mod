@@ -2,7 +2,7 @@ module github.com/hyperledger-labs/fabric-token-sdk
 
 go 1.24.6
 
-toolchain go1.24.11
+toolchain go1.24.13
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
