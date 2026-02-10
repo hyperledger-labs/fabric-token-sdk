@@ -43,21 +43,33 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {
 		logger.Debugf("public parameters not yet available, start a background task...")
+
+		// Use the view's context for cancellation.
+		// Keep trying until parameters are ready or the context is cancelled.
+		ctx := context.Context()
+
 		go func() {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			defer ticker.Stop()
+
 			for {
-				pp := tms.PublicParametersManager().PublicParameters()
-				if pp == nil {
+				select {
+				case <-ctx.Done():
+					logger.Debugf("context cancelled (reason: %v), stopping certification service setup", ctx.Err())
+
+					return
+				case <-ticker.C:
+					pp := tms.PublicParametersManager().PublicParameters()
+					if pp != nil {
+						logger.Debugf("public parameters available, set certification service...")
+						if err := r.startCertificationService(context, tms, pp); err != nil {
+							logger.Errorf("failed to start certification service [%s]", err)
+						}
+
+						return
+					}
 					logger.Debugf("public parameters not yet available, wait...")
-					time.Sleep(500 * time.Millisecond)
-
-					continue
 				}
-				logger.Debugf("public parameters available, set certification service...")
-				if err := r.startCertificationService(context, tms, pp); err != nil {
-					logger.Errorf("failed to start certification service [%s]", err)
-				}
-
-				break
 			}
 		}()
 	} else {
