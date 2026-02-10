@@ -61,7 +61,7 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 		}
 		// If transfer action is a redeem, verify the signature of the issuer
 		if isRedeem {
-			ctx.Logger.Infof("action is a redeem, verify the signature of the issuer")
+			ctx.Logger.Debugf("action is a redeem, verify the signature of the issuer")
 			issuer := ctx.TransferAction.GetIssuer()
 			if issuer == nil {
 				return errors.Errorf("On Redeem action, must have at least one issuer")
