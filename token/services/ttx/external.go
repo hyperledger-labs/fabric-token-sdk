@@ -67,7 +67,7 @@ func NewStreamExternalWalletSignerServer(stream view2.Stream) *StreamExternalWal
 }
 
 func (s *StreamExternalWalletSignerServer) Sign(party view.Identity, message []byte) ([]byte, error) {
-	logger.Info("send sign request for party [%s]", party)
+	logger.Debug("send sign request for party [%s]", party)
 	msg, err := NewStreamExternalWalletMsg(SigRequest, &StreamExternalWalletSignRequest{
 		Party:   party,
 		Message: message,
@@ -78,7 +78,7 @@ func (s *StreamExternalWalletSignerServer) Sign(party view.Identity, message []b
 	if err := s.stream.Send(msg); err != nil {
 		return nil, err
 	}
-	logger.Info("receive response, party [%s]", party)
+	logger.Debug("receive response, party [%s]", party)
 
 	msg = &StreamExternalWalletMsg{}
 	if err := s.stream.Recv(msg); err != nil {
@@ -95,7 +95,7 @@ func (s *StreamExternalWalletSignerServer) Sign(party view.Identity, message []b
 }
 
 func (s *StreamExternalWalletSignerServer) Done() error {
-	logger.Info("send done...")
+	logger.Debug("send done...")
 	msg, err := NewStreamExternalWalletMsg(Done, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal sign request message")
@@ -138,7 +138,7 @@ func NewStreamExternalWalletSignerClientWithTimeout(sp SignerProvider, stream vi
 func (s *StreamExternalWalletSignerClient) init() {
 	i := 0
 	for {
-		logger.Infof("process signature request [%d]", i)
+		logger.Debugf("process signature request [%d]", i)
 
 		msg := &StreamExternalWalletMsg{}
 		if err := s.stream.Recv(msg); err != nil {
@@ -177,7 +177,7 @@ func (s *StreamExternalWalletSignerClient) Respond() error {
 			if err := s.stream.Send(msg); err != nil {
 				return errors.Wrapf(err, "failed to send back signature, party [%s]", req.Party)
 			}
-			logger.Infof("process signature request done")
+			logger.Debugf("process signature request done")
 		case <-time.After(s.timeout):
 			return errors.Errorf("Timeout waiting for stream input exceeded: %v", s.timeout)
 		}
