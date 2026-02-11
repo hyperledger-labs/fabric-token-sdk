@@ -150,7 +150,7 @@ func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) (err err
 		return ErrQueueClosed
 	}
 
-	logger.Infof("EnqueueBlocking event: %v", event)
+	logger.Infof("EnqueueBlocking event: [%v], from [%s]", event, string(debug.Stack()))
 
 	defer func() {
 		if r := recover(); r != nil {

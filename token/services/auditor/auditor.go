@@ -120,6 +120,8 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 	logger.DebugfContext(ctx, "register tx status listener for tx [%s] at network [%s]", tx.ID(), tx.Network())
 	var r driver.FinalityListener = finality.NewListener(
 		logger,
+		net,
+		tx.Namespace(),
 		a.tmsProvider,
 		a.tmsID,
 		a.auditDB,
