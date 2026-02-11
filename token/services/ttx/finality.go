@@ -136,7 +136,8 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 	defer func() {
 		logger.DebugfContext(ctx, "Remove status listener")
 		finalityDB.DeleteStatusListener(txID, dbChannel)
-		logger.DebugfContext(ctx, "Removed status listener")
+		close(dbChannel)
+		logger.DebugfContext(ctx, "Removed status listener and closed channel")
 	}()
 
 	logger.DebugfContext(ctx, "Get status")
