@@ -122,7 +122,20 @@ func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 	return iterators.ForEach(it, func(record *storage.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
 
-		return net.AddFinalityListener(tmsID.Namespace, record.TxID, finality.NewListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB, auditor.finalityTracer))
+		return net.AddFinalityListener(
+			tmsID.Namespace,
+			record.TxID,
+			finality.NewListener(
+				logger,
+				net,
+				tmsID.Namespace,
+				cm.tmsProvider,
+				tmsID,
+				auditor.auditDB,
+				tokenDB,
+				auditor.finalityTracer,
+			),
+		)
 	})
 }
 

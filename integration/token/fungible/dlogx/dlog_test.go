@@ -86,7 +86,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			Monitoring:          false,
 			ReplicationOpts:     opts,
 			FSCBasedEndorsement: mask&WithEndorsers > 0,
-			FSCLogSpec:          "grpc=error:info",
+			FSCLogSpec:          "fts.integration.token.fungible.views=debug:fsc.platform.view.services.view.grpc.client=debug:fts.services.ttx=debug:grpc=error:info",
 			TokenSelector:       tokenSelector,
 		})...)
 		i.RegisterPlatformFactory(fabricx.NewPlatformFactory())

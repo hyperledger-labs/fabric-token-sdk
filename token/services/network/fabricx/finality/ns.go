@@ -9,8 +9,8 @@ package finality
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
@@ -47,9 +47,21 @@ type ListenerEvent struct {
 }
 
 func (l *ListenerEvent) Process(ctx context.Context) error {
-	// TODO: what do we do when in these cases??
+	logger.Infof("[ListenerEvent] get notification for [%s], status [%d]", l.TxID, l.Status)
+
 	if l.Status == fdriver.Unknown || l.Status == fdriver.Busy {
-		return nil
+		// perform a query
+		txCheck := TxCheck{
+			QueryService:  l.QueryService,
+			KeyTranslator: l.KeyTranslator,
+			Listener:      l.Listener,
+			TxID:          l.TxID,
+			Namespace:     l.Namespace,
+		}
+		if err := txCheck.Process(ctx); err == nil {
+			// this means that the query has notified the event
+			return nil
+		}
 	}
 
 	var tokenRequestHash []byte
@@ -83,6 +95,8 @@ type TxCheck struct {
 }
 
 func (t *TxCheck) Process(ctx context.Context) error {
+	logger.Infof("[TxCheck] check for transaction [%s]", t.TxID)
+
 	var err error
 	s, err := t.QueryService.GetTransactionStatus(t.TxID)
 	if err != nil {
@@ -92,8 +106,7 @@ func (t *TxCheck) Process(ctx context.Context) error {
 
 	logger.Infof("check for transaction [%s], status [%d]", t.TxID, status)
 	if status == fdriver.Unknown || status == fdriver.Busy {
-		time.Sleep(100 * time.Millisecond)
-		return nil
+		return errors.Errorf("transaction [%s] is not in a valid state", t.TxID)
 	}
 
 	var tokenRequestHash []byte
@@ -181,6 +194,7 @@ func NewNSListenerManager(
 }
 
 func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, listener ndriver.FinalityListener) error {
+	logger.Infof("AddFinalityListener [%s], from [%s]", txID, string(debug.Stack()))
 	l := &onlyOnceListener{listener: listener}
 
 	if err := n.queue.Enqueue(&TxCheck{
