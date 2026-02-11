@@ -94,7 +94,7 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 		return err
 	}
 
-	db.Logger.Infof("Found following entries ready for deletion: [%v]", lockEntries)
+	db.Logger.Debugf("Found following entries ready for deletion: [%v]", lockEntries)
 	return nil
 }
 
