@@ -27,6 +27,7 @@ include $(TOP)/fungible.mk
 all: install-tools install-softhsm checks unit-tests #integration-tests
 
 .PHONY: install-tools
+# install tools required for development and testing
 install-tools:
 # Thanks for great inspiration https://marcofranssen.nl/manage-go-tools-via-go-modules
 	@echo Installing tools from tools/tools.go
@@ -34,38 +35,46 @@ install-tools:
 	@$(MAKE) install-linter-tool
 
 .PHONY: download-fabric
+# download fabric binaries
 download-fabric:
 	./ci/scripts/download_fabric.sh $(FABRIC_BINARY_BASE) $(FABRIC_VERSION) $(FABRIC_CA_VERSION)
 
 .PHONY: unit-tests
+# run standard unit tests
 unit-tests:
 	@go test -cover $(shell go list ./... | grep -v '/integration/' | grep -v 'regression')
 	cd integration/nwo/; go test -cover ./...
 	cd token/services/storage/db/kvs/hashicorp/; go test -cover ./...
 
 .PHONY: unit-tests-race
+# run unit tests with race detection
 unit-tests-race:
 	@export GORACE=history_size=7; go test -race -cover $(shell go list ./... | grep -v '/integration/'  | grep -v 'regression')
 	cd integration/nwo/; go test -cover ./...
 
 .PHONY: unit-tests-regression
+# run regression unit tests
 unit-tests-regression:
 	@go test -race -timeout 0 -cover $(shell go list ./... | grep -v '/integration/' | grep 'regression')
 
 .PHONY: install-softhsm
+# install softhsm for testing
 install-softhsm:
 	./ci/scripts/install_softhsm.sh
 
 .PHONY: docker-images
+# build/pull docker images needed for testing
 docker-images: fabric-docker-images monitoring-docker-images testing-docker-images
 
 .PHONY: testing-docker-images
+# pull docker images for testing (postgres, vault)
 testing-docker-images:
 	docker pull postgres:16.2-alpine
 	docker tag postgres:16.2-alpine fsc.itests/postgres:latest
 	docker pull hashicorp/vault
 
 .PHONY: fabric-docker-images
+# pull fabric docker images
 fabric-docker-images:
 	docker pull hyperledger/fabric-baseos:$(FABRIC_TWO_DIGIT_VERSION)
 	docker image tag hyperledger/fabric-baseos:$(FABRIC_TWO_DIGIT_VERSION) hyperledger/fabric-baseos:latest
@@ -73,6 +82,7 @@ fabric-docker-images:
 	docker image tag hyperledger/fabric-ccenv:$(FABRIC_TWO_DIGIT_VERSION) hyperledger/fabric-ccenv:latest
 
 .PHONY: monitoring-docker-images
+# pull monitoring docker images (explorer, prometheus, grafana, jaeger)
 monitoring-docker-images:
 	docker pull ghcr.io/hyperledger-labs/explorer-db:latest
 	docker pull ghcr.io/hyperledger-labs/explorer:latest
@@ -81,29 +91,35 @@ monitoring-docker-images:
 	docker pull cr.jaegertracing.io/jaegertracing/jaeger:2.12.0
 
 .PHONY: integration-tests-nft-dlog
+# run nft integration tests with idemix
 integration-tests-nft-dlog:
 	cd ./integration/token/nft/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-fabtoken
+# run nft integration tests with fabtoken
 integration-tests-nft-fabtoken:
 	cd ./integration/token/nft/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dvp-fabtoken
+# run dvp integration tests with fabtoken
 integration-tests-dvp-fabtoken:
 	cd ./integration/token/dvp/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dvp-dlog
+# run dvp integration tests with idemix
 integration-tests-dvp-dlog:
 	cd ./integration/token/dvp/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 
 .PHONY: tidy
+# tidy up go modules
 tidy:
 	@go mod tidy
 	cd tools; go mod tidy
 	cd token/services/storage/db/kvs/hashicorp; go mod tidy
 
 .PHONY: clean
+# clean up docker artifacts and generated files
 clean:
 	docker network prune -f
 	docker container prune -f
@@ -132,41 +148,50 @@ clean:
 	rm -rf ./integration/token/fungible/update/testdata/
 
 .PHONY: clean-fabric-peer-images
+# clean up fabric peer images
 clean-fabric-peer-images:
 	docker images -a | grep "_peer.org" | awk '{print $3}' | xargs docker rmi
 	docker images -a | grep "_peer_" | awk '{print $3}' | xargs docker rmi
 
 .PHONY: tokengen
+# install tokengen tool
 tokengen:
 	@go install ./cmd/tokengen
 
 .PHONY: traceinspector
+# install traceinspector tool
 traceinspector:
 	@go install ./token/services/benchmark/cmd/traceinspector
 
 .PHONY: memcheck
+# install memcheck tool
 memcheck:
 	@go install ./token/services/benchmark/cmd/memcheck
 
 .PHONY: idemixgen
+# install idemixgen/txgen tool
 txgen:
 	@go install github.com/IBM/idemix/tools/idemixgen
 
 .PHONY: clean-all-containers
+# clean up all docker containers
 clean-all-containers:
 	@if [ -n "$$(docker ps -aq)" ]; then docker rm -f $$(docker ps -aq); else echo "No containers to remove"; fi
 
 .PHONY: lint
+# run various linters
 lint:
 	@echo "Running Go Linters..."
 	golangci-lint run --color=always --timeout=4m
 
 .PHONY: lint-auto-fix
+# run linters with auto-fix
 lint-auto-fix:
 	@echo "Running Go Linters with auto-fix..."
 	golangci-lint run --color=always --timeout=4m --fix
 
 .PHONY: install-linter-tool
+# install golangci-lint
 install-linter-tool:
 	@echo "Installing golangci Linter"
 	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.8.0
