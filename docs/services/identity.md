@@ -9,10 +9,56 @@ This service is a fundamental component used by token drivers and other services
 *   **Auditability**: Managing audit information to reveal the enrollment ID behind an anonymous identity (if allowed).
 *   **Role Management**: Handling identities for different roles (Issuer, Auditor, Owner, Certifier).
 
+## How the Identity Service is Used
+
+The Identity Service is consumed by other components of the Fabric Token SDK,
+such as the Token Transaction (TTX) service and token drivers, to perform
+identity-related operations including signing, verification, and identity
+resolution.
+
+Rather than interacting with cryptographic primitives directly, services rely
+on the Identity Service interfaces, allowing different identity implementations
+to be plugged in transparently.
+
+## Extending the Identity Service
+
+The Identity Service is designed to be extensible through the driver interfaces
+defined in the token SDK. Custom identity implementations can be provided by
+implementing the required identity and wallet interfaces.
+
+Typical extension scenarios include:
+- Supporting a new identity type
+- Customizing signature generation or verification
+- Integrating alternative storage backends
+
+A custom identity provider is expected to implement the interfaces exposed by
+the token driver layer, allowing it to be seamlessly injected into the SDK.
+
+### Example: Custom Identity Provider
+
+Below is a simplified example illustrating how a custom identity provider could
+be structured. The exact implementation details may vary depending on the
+identity type and storage backend.
+
+```go
+type CustomIdentityProvider struct {
+    // custom fields
+}
+
+func (c *CustomIdentityProvider) Sign(ctx context.Context, msg []byte) ([]byte, error) {
+    // custom signing logic
+    return nil, nil
+}
+
+func (c *CustomIdentityProvider) Verify(ctx context.Context, msg, signature []byte) error {
+    // custom verification logic
+    return nil
+}
+
 ## Architecture
 
 The Identity Service is designed to implement the **Driver API** interfaces defined in `token/driver/wallet.go`. 
-This ensures that the token management system can interact with any identity implementation through a standard set of methods.
+This ensures that the token management system can interact with any identity implementation through a standard set of methods.  
 
 ### Conceptual Metaphor
 
