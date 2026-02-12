@@ -254,15 +254,8 @@ func (n *Network) LocalMembership() *LocalMembership {
 // AddFinalityListener registers a listener for transaction status for the passed transaction id.
 // If the status is already valid or invalid, the listener is called immediately.
 // When the listener is invoked, then it is also removed.
-// If the transaction id is empty, the listener will be called on status changes of any transaction.
-// In this case, the listener is not removed
 func (n *Network) AddFinalityListener(namespace string, txID string, listener FinalityListener) error {
 	return n.n.AddFinalityListener(namespace, txID, listener)
-}
-
-// RemoveFinalityListener unregisters the passed listener.
-func (n *Network) RemoveFinalityListener(id string, listener FinalityListener) error {
-	return n.n.RemoveFinalityListener(id, listener)
 }
 
 // LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.

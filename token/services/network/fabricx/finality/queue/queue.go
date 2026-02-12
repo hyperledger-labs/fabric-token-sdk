@@ -21,9 +21,9 @@ import (
 var logger = logging.MustGetLogger()
 
 var (
-	ErrQueueClosed      = errors.New("queue is closed")
-	ErrQueueFull        = errors.New("queue is full")
-	ErrShutdownTimeout  = errors.New("shutdown timeout exceeded")
+	ErrQueueClosed     = errors.New("queue is closed")
+	ErrQueueFull       = errors.New("queue is full")
+	ErrShutdownTimeout = errors.New("shutdown timeout exceeded")
 )
 
 // Event represents a unit of work to be processed

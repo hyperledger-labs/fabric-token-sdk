@@ -287,10 +287,6 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener dr
 	return n.flm.AddFinalityListener(namespace, txID, listener)
 }
 
-func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
-	return n.flm.RemoveFinalityListener(txID, listener)
-}
-
 func (n *Network) LookupTransferMetadataKey(namespace string, key string, timeout time.Duration) ([]byte, error) {
 	transferMetadataKey, err := n.keyTranslator.CreateTransferActionMetadataKey(key)
 	if err != nil {

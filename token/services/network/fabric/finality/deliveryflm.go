@@ -137,10 +137,6 @@ func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, li
 	return m.lm.AddEventListener(txID, &listenerEntry{namespace, listener})
 }
 
-func (m *deliveryBasedFLM) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
-	return m.lm.RemoveEventListener(txID, &listenerEntry{"", listener})
-}
-
 type endorserTxInfoMapper struct {
 	network       string
 	keyTranslator translator.KeyTranslator
