@@ -11,17 +11,25 @@ import (
 )
 
 const (
-	Workers          = "token.finality.notification.workers"
-	QueueSize        = "token.finality.notification.queueSize"
-	DefaultWorkers   = 10
+	// Workers is the configuration key for the number of worker goroutines
+	Workers = "token.finality.notification.workers"
+	// QueueSize is the configuration key for the size of the event buffer
+	QueueSize = "token.finality.notification.queueSize"
+	// DefaultWorkers is the default number of worker goroutines
+	DefaultWorkers = 10
+	// DefaultQueueSize is the default size of the event buffer
 	DefaultQueueSize = 1000
 )
 
+// ConfigGetter models the configuration getter for the event queue
 type ConfigGetter interface {
+	// Workers returns the number of worker goroutines
 	Workers() int
+	// QueueSize returns the size of the event buffer
 	QueueSize() int
 }
 
+// NewConfig creates a new ConfigGetter
 func NewConfig(configService driver.ConfigService) *serviceConfig {
 	return &serviceConfig{c: configService}
 }

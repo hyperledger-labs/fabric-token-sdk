@@ -31,6 +31,7 @@ var logger = logging.MustGetLogger()
 //
 //go:generate counterfeiter -o mock/cs.go -fake-name ConfigService . ConfigService
 type ConfigService interface {
+	// UnmarshalKey unmarshals the configuration value for the given key into rawVal
 	UnmarshalKey(key string, rawVal interface{}) error
 }
 
@@ -38,8 +39,11 @@ type ConfigService interface {
 //
 //go:generate counterfeiter -o mock/qs.go -fake-name QueryService . QueryService
 type QueryService interface {
+	// GetState returns the value for the given namespace and key
 	GetState(ns cdriver.Namespace, key cdriver.PKey) (*cdriver.VaultValue, error)
+	// GetStates returns the values for the given namespaces and keys
 	GetStates(map[cdriver.Namespace][]cdriver.PKey) (map[cdriver.Namespace]map[cdriver.PKey]cdriver.VaultValue, error)
+	// GetTransactionStatus returns the status of the given transaction
 	GetTransactionStatus(txID string) (int32, error)
 }
 
@@ -52,7 +56,9 @@ type Listener = ndriver.FinalityListener
 //
 //go:generate counterfeiter -o mock/queue.go -fake-name Queue . Queue
 type Queue interface {
+	// EnqueueBlocking adds an event to the queue and blocks until it is accepted or the context is canceled
 	EnqueueBlocking(ctx context.Context, event queue.Event) error
+	// Enqueue adds an event to the queue and returns immediately
 	Enqueue(event queue.Event) (err error)
 }
 
@@ -78,15 +84,23 @@ type ListenerManagerProvider interface {
 	NewManager(network, channel string) (ListenerManager, error)
 }
 
+// ListenerEvent represents a finality event notification
 type ListenerEvent struct {
-	QueryService  QueryService
+	// QueryService is the service used to query the state of the network
+	QueryService QueryService
+	// KeyTranslator is the service used to translate keys
 	KeyTranslator KeyTranslator
 
-	Listener      Listener
-	TxID          string
-	Status        fdriver.ValidationCode
+	// Listener is the listener to be notified
+	Listener Listener
+	// TxID is the transaction ID
+	TxID string
+	// Status is the status of the transaction
+	Status fdriver.ValidationCode
+	// StatusMessage is the status message
 	StatusMessage string
-	Namespace     string
+	// Namespace is the namespace of the transaction
+	Namespace string
 }
 
 func (l *ListenerEvent) Process(ctx context.Context) error {
@@ -128,15 +142,22 @@ func (l *ListenerEvent) String() string {
 	return fmt.Sprintf("ListenerEvent[%s]", l.TxID)
 }
 
+// TxCheck represents a transaction check event
 type TxCheck struct {
-	QueryService  QueryService
+	// QueryService is the service used to query the state of the network
+	QueryService QueryService
+	// KeyTranslator is the service used to translate keys
 	KeyTranslator KeyTranslator
 
-	Listener  Listener
-	TxID      string
+	// Listener is the listener to be notified
+	Listener Listener
+	// TxID is the transaction ID
+	TxID string
+	// Namespace is the namespace of the transaction
 	Namespace string
 }
 
+// Process processes the transaction check event
 func (t *TxCheck) Process(ctx context.Context) error {
 	logger.Debugf("[TxCheck] check for transaction [%s]", t.TxID)
 
@@ -175,6 +196,7 @@ func (t *TxCheck) String() string {
 	return fmt.Sprintf("TxCheck[%s]", t.TxID)
 }
 
+// NSFinalityListener is a finality listener that uses a queue to process events
 type NSFinalityListener struct {
 	namespace     string
 	listener      Listener
@@ -183,6 +205,7 @@ type NSFinalityListener struct {
 	keyTranslator KeyTranslator
 }
 
+// NewNSFinalityListener creates a new NSFinalityListener
 func NewNSFinalityListener(
 	namespace string,
 	listener Listener,
@@ -215,6 +238,7 @@ func (l *NSFinalityListener) OnStatus(ctx context.Context, txID cdriver.TxID, st
 	}
 }
 
+// NSListenerManager is a finality listener manager that uses a notification service
 type NSListenerManager struct {
 	lm            finalityx.ListenerManager
 	queue         Queue
@@ -222,6 +246,7 @@ type NSListenerManager struct {
 	keyTranslator KeyTranslator
 }
 
+// NewNSListenerManager creates a new NSListenerManager
 func NewNSListenerManager(
 	lm finalityx.ListenerManager,
 	queue Queue,
@@ -247,12 +272,14 @@ func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, l
 	return n.lm.AddFinalityListener(txID, NewNSFinalityListener(namespace, l, n.queue, n.queryService, n.keyTranslator))
 }
 
+// NSListenerManagerProvider is a provider for NSListenerManager
 type NSListenerManagerProvider struct {
 	QueryServiceProvider    QueryServiceProvider
 	ListenerManagerProvider ListenerManagerProvider
 	queue                   Queue
 }
 
+// NewNotificationServiceBased creates a new NSListenerManagerProvider
 func NewNotificationServiceBased(
 	queryServiceProvider QueryServiceProvider,
 	listenerManagerProvider ListenerManagerProvider,
@@ -279,6 +306,7 @@ func (n *NSListenerManagerProvider) NewManager(network, channel string) (finalit
 	return NewNSListenerManager(finalityManager, n.queue, qs, &keys.Translator{}), nil
 }
 
+// OnlyOnceListener ensures that the listener is notified only once
 type OnlyOnceListener struct {
 	listener Listener
 	once     sync.Once

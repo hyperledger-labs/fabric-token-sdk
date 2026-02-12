@@ -21,8 +21,11 @@ import (
 var logger = logging.MustGetLogger()
 
 var (
-	ErrQueueClosed     = errors.New("queue is closed")
-	ErrQueueFull       = errors.New("queue is full")
+	// ErrQueueClosed is returned when an event is added to a closed queue
+	ErrQueueClosed = errors.New("queue is closed")
+	// ErrQueueFull is returned when a non-blocking enqueue fails because the queue is full
+	ErrQueueFull = errors.New("queue is full")
+	// ErrShutdownTimeout is returned when the shutdown timeout is exceeded
 	ErrShutdownTimeout = errors.New("shutdown timeout exceeded")
 )
 
@@ -31,11 +34,16 @@ type Event interface {
 	Process(ctx context.Context) error
 }
 
+// Stats represents statistics about the event queue
 type Stats struct {
-	Workers   int
+	// Workers is the number of worker goroutines
+	Workers int
+	// QueueSize is the size of the event buffer
 	QueueSize int
-	Pending   int
-	IsClosed  bool
+	// Pending is the number of pending events in the queue
+	Pending int
+	// IsClosed is true if the queue is closed
+	IsClosed bool
 }
 
 // Config holds configuration for the EventQueue
