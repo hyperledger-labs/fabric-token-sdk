@@ -27,8 +27,10 @@ import (
 	endorsement2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/endorsement"
 	finality2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality/queue"
 	lookup2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/lookup"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/qe"
@@ -58,7 +60,23 @@ func NewDriver(
 
 	queryExecutorProvider := qe.NewExecutorProvider(qsProvider)
 
-	flmProvider, err := finality2.NewNotificationServiceBased(queryServiceProvider, finalityProvider)
+	// In FabricX, we only support 'notification' finality type
+	lmCfg := config2.NewListenerManagerConfig(configService)
+	if lmCfg.Type() != config3.Notification {
+		return nil, errors.Errorf("invalid finality type [%s], expected [%s]", lmCfg.Type(), config3.Notification)
+	}
+
+	// Load event queue configuration from token.finality.notification
+	qCfg := queue.NewConfig(configService)
+	q, err := queue.NewEventQueue(queue.Config{
+		Workers:   qCfg.Workers(),
+		QueueSize: qCfg.QueueSize(),
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed creating event queue")
+	}
+
+	flmProvider, err := finality2.NewNotificationServiceBased(queryServiceProvider, finalityProvider, q)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed initializing finality provider")
 	}
