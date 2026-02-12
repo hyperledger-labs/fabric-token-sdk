@@ -19,6 +19,6 @@ func NewFLMProvider(
 	queryServiceProvider queryservice.Provider,
 	finalityProvider *finalityx.Provider,
 ) (finality.ListenerManagerProvider, error) {
-	logger.Infof("Creating flm provider")
+	logger.Debugf("Creating flm provider")
 	return NewNotificationServiceBased(queryServiceProvider, finalityProvider)
 }
