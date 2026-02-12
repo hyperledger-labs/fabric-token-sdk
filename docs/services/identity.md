@@ -20,21 +20,7 @@ Rather than interacting with cryptographic primitives directly, services rely
 on the Identity Service interfaces, allowing different identity implementations
 to be plugged in transparently.
 
-## Extending the Identity Service
-
-The Identity Service is designed to be extensible through the driver interfaces
-defined in the token SDK. Custom identity implementations can be provided by
-implementing the required identity and wallet interfaces.
-
-Typical extension scenarios include:
-- Supporting a new identity type
-- Customizing signature generation or verification
-- Integrating alternative storage backends
-
-A custom identity provider is expected to implement the interfaces exposed by
-the token driver layer, allowing it to be seamlessly injected into the SDK.
-
-### Example: Custom Identity Provider
+### Example: Custom KeyManager Implementation
 
 Below is a simplified example illustrating how a custom identity provider could
 be structured. The exact implementation details may vary depending on the
@@ -231,3 +217,71 @@ Located in `token/services/identity/interop/htlc`.
 *   **Concept**: A script-based identity used primarily for interoperability mechanisms like atomic swaps.
 *   **Structure**: Encapsulates a **Sender** identity, a **Recipient** identity, hash lock information, and a timeout.
 *   **Behavior**: Validation involves satisfying the script conditions (e.g., providing the hash preimage).
+
+## Extending the Identity Service
+
+The Identity Service is designed to be extensible through the driver interfaces
+defined in the token SDK. Custom identity implementations can be provided by
+implementing the required identity and wallet interfaces.
+
+Typical extension scenarios include:
+- Supporting a new identity type by implementing a custom `KeyManager`
+- Customizing signature generation or verification logic within a `KeyManager`
+- Providing a custom `KeyManagerProvider` to plug new identity mechanisms into `LocalMembership`
+
+### Example: Custom KeyManager Implementation
+
+Extending the Identity Service is typically done by implementing a custom
+`KeyManager` and registering it via a `KeyManagerProvider` under
+`identity/membership`.
+
+`LocalMembership` delegates identity and signing operations to these
+interfaces. By providing a custom implementation, developers can plug in
+alternative key management logic (for example, integrating an HSM,
+external vault, or custom cryptographic provider).
+
+Default implementations include:
+- X.509-based `KeyManager`
+- Idemix-based `KeyManager`
+
+The simplified example below illustrates how a custom `KeyManager`
+and `KeyManagerProvider` could be structured.
+```go
+package identity
+
+import (
+	"fmt"
+)
+
+// CustomKeyManager implements the KeyManager interface.
+type CustomKeyManager struct {
+	ProviderID string
+}
+
+// GetKey retrieves a key by its identifier.
+func (km *CustomKeyManager) GetKey(id string) ([]byte, error) {
+	return []byte("custom-key-data"), nil
+}
+
+// Sign signs data using custom logic.
+func (km *CustomKeyManager) Sign(data []byte) ([]byte, error) {
+	fmt.Println("Signing data with CustomKeyManager...")
+	return append(data, []byte("-signed")...), nil
+}
+
+// CustomKeyManagerProvider implements the KeyManagerProvider interface.
+type CustomKeyManagerProvider struct{}
+
+// NewKeyManager creates a new KeyManager instance.
+func (p *CustomKeyManagerProvider) NewKeyManager(config map[string]interface{}) (KeyManager, error) {
+	return &CustomKeyManager{
+		ProviderID: "custom-provider-01",
+	}, nil
+}
+
+// In a real setup, the provider would be registered with the membership registry.
+func init() {
+	// Example:
+	// RegisterProvider("custom", &CustomKeyManagerProvider{})
+}
+```
