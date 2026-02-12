@@ -477,12 +477,12 @@ func (t *BroadcastPreparedTransferView) Call(context view.Context) (interface{},
 	assert.NoError(err, "failed unmarshalling transaction")
 
 	// broadcast the transaction to the ordering service
-	logger.Infof("broadcasting transaction [%s]", tx.ID())
+	logger.Debugf("broadcasting transaction [%s]", tx.ID())
 	_, err = context.RunView(ttx.NewOrderingView(tx))
 	assert.NoError(err, "failed asking ordering")
 
 	if t.Finality {
-		logger.Infof("transaction [%s], wait for finality", tx.ID())
+		logger.Debugf("transaction [%s], wait for finality", tx.ID())
 		// wait for finality
 		_, err = context.RunView(ttx.NewFinalityView(tx))
 		assert.NoError(err, "failed asking ordering")

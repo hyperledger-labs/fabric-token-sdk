@@ -9,7 +9,6 @@ package finality
 import (
 	"context"
 	"fmt"
-	"runtime/debug"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -47,7 +46,7 @@ type ListenerEvent struct {
 }
 
 func (l *ListenerEvent) Process(ctx context.Context) error {
-	logger.Infof("[ListenerEvent] get notification for [%s], status [%d]", l.TxID, l.Status)
+	logger.Debugf("[ListenerEvent] get notification for [%s], status [%d]", l.TxID, l.Status)
 
 	if l.Status == fdriver.Unknown || l.Status == fdriver.Busy {
 		// perform a query
@@ -95,16 +94,16 @@ type TxCheck struct {
 }
 
 func (t *TxCheck) Process(ctx context.Context) error {
-	logger.Infof("[TxCheck] check for transaction [%s]", t.TxID)
+	logger.Debugf("[TxCheck] check for transaction [%s]", t.TxID)
 
 	var err error
 	s, err := t.QueryService.GetTransactionStatus(t.TxID)
 	if err != nil {
 		return errors.Wrapf(err, "can't get status for tx [%s]", t.TxID)
 	}
-	status := GetTxStatus(s)
+	status := fabricXFSCStatus(s)
 
-	logger.Infof("check for transaction [%s], status [%d]", t.TxID, status)
+	logger.Debugf("check for transaction [%s], status [%d]", t.TxID, status)
 	if status == fdriver.Unknown || status == fdriver.Busy {
 		return errors.Errorf("transaction [%s] is not in a valid state", t.TxID)
 	}
@@ -122,7 +121,7 @@ func (t *TxCheck) Process(ctx context.Context) error {
 		}
 		tokenRequestHash = v.Raw
 	}
-	logger.Infof("check for transaction [%s], notify validity", t.TxID)
+	logger.Debugf("check for transaction [%s], notify validity", t.TxID)
 
 	t.Listener.OnStatus(ctx, t.TxID, status, "", tokenRequestHash)
 	return nil
@@ -194,7 +193,7 @@ func NewNSListenerManager(
 }
 
 func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, listener ndriver.FinalityListener) error {
-	logger.Infof("AddFinalityListener [%s], from [%s]", txID, string(debug.Stack()))
+	logger.Debugf("AddFinalityListener [%s]", txID)
 	l := &onlyOnceListener{listener: listener}
 
 	if err := n.queue.Enqueue(&TxCheck{
@@ -229,7 +228,7 @@ func NewNotificationServiceBased(
 		QueueSize: 1000,
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed creating event queue")
 	}
 
 	return &NSListenerManagerProvider{
@@ -242,12 +241,12 @@ func NewNotificationServiceBased(
 func (n *NSListenerManagerProvider) NewManager(network, channel string) (finality.ListenerManager, error) {
 	finalityManager, err := n.FinalityProvider.NewManager(network, channel)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed creating finality manager")
 	}
 
 	qs, err := n.QueryServiceProvider.Get(network, channel)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed getting query service")
 	}
 
 	return NewNSListenerManager(finalityManager, n.queue, qs, &keys.Translator{}), nil
@@ -264,7 +263,7 @@ func (o *onlyOnceListener) OnStatus(ctx context.Context, txID string, status int
 	})
 }
 
-func GetTxStatus(c int32) fdriver.ValidationCode {
+func fabricXFSCStatus(c int32) fdriver.ValidationCode {
 	switch protoblocktx.Status(c) {
 	case protoblocktx.Status_NOT_VALIDATED:
 		return fdriver.Unknown
