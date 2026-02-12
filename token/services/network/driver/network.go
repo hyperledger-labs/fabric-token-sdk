@@ -78,9 +78,6 @@ type Network interface {
 	// In this case, the listener is not removed
 	AddFinalityListener(namespace string, txID string, listener FinalityListener) error
 
-	// RemoveFinalityListener unregisters the passed listener.
-	RemoveFinalityListener(id string, listener FinalityListener) error
-
 	// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
 	// The operation gets canceled if the passed timeout elapses or, if stopOnLastTx is true, when the last transaction in the vault is reached.
 	LookupTransferMetadataKey(namespace string, key string, timeout time.Duration) ([]byte, error)
@@ -96,7 +93,4 @@ type FinalityListenerManager interface {
 	// If the transaction id is empty, the listener will be called on status changes of any transaction.
 	// In this case, the listener is not removed
 	AddFinalityListener(namespace string, txID string, listener FinalityListener) error
-
-	// RemoveFinalityListener unregisters the passed listener.
-	RemoveFinalityListener(id string, listener FinalityListener) error
 }

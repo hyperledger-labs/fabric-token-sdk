@@ -58,7 +58,7 @@ func NewDriver(
 
 	queryExecutorProvider := qe.NewExecutorProvider(qsProvider)
 
-	flmProvider, err := finality2.NewFLMProvider(queryServiceProvider, finalityProvider)
+	flmProvider, err := finality2.NewNotificationServiceBased(queryServiceProvider, finalityProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed initializing finality provider")
 	}

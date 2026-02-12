@@ -16,6 +16,7 @@ import (
 	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	finalityx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/finality"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/vault/queryservice"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	ndriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -24,21 +25,64 @@ import (
 	"github.com/hyperledger/fabric-x-committer/api/protoblocktx"
 )
 
+var logger = logging.MustGetLogger()
+
+// ConfigService models the configuration service needed by the NSListenerManager
+//
+//go:generate counterfeiter -o mock/cs.go -fake-name ConfigService . ConfigService
 type ConfigService interface {
 	UnmarshalKey(key string, rawVal interface{}) error
 }
 
+// QueryService models the FabricX query service needed by the NSListenerManager
+//
+//go:generate counterfeiter -o mock/qs.go -fake-name QueryService . QueryService
 type QueryService interface {
 	GetState(ns cdriver.Namespace, key cdriver.PKey) (*cdriver.VaultValue, error)
 	GetStates(map[cdriver.Namespace][]cdriver.PKey) (map[cdriver.Namespace]map[cdriver.PKey]cdriver.VaultValue, error)
 	GetTransactionStatus(txID string) (int32, error)
 }
 
+// Listener is an alias for ndriver.FinalityListener
+//
+//go:generate counterfeiter -o mock/fl.go -fake-name Listener . Listener
+type Listener = ndriver.FinalityListener
+
+// Queue models an event processor
+//
+//go:generate counterfeiter -o mock/queue.go -fake-name Queue . Queue
+type Queue interface {
+	EnqueueBlocking(ctx context.Context, event queue.Event) error
+	Enqueue(event queue.Event) (err error)
+}
+
+// KeyTranslator is an alias for translator.KeyTranslator
+//
+//go:generate counterfeiter -o mock/kt.go -fake-name KeyTranslator . KeyTranslator
+type KeyTranslator = translator.KeyTranslator
+
+// QueryServiceProvider is an alias for queryservice.Provider
+//
+//go:generate counterfeiter -o mock/qps.go -fake-name QueryServiceProvider . QueryServiceProvider
+type QueryServiceProvider = queryservice.Provider
+
+// ListenerManager is an alias for finalityx.ListenerManager
+//
+//go:generate counterfeiter -o mock/lm.go -fake-name ListenerManager . ListenerManager
+type ListenerManager = finalityx.ListenerManager
+
+// ListenerManagerProvider gives access to instances of ListenerManager
+//
+//go:generate counterfeiter -o mock/fp.go -fake-name ListenerManagerProvider . ListenerManagerProvider
+type ListenerManagerProvider interface {
+	NewManager(network, channel string) (ListenerManager, error)
+}
+
 type ListenerEvent struct {
 	QueryService  QueryService
-	KeyTranslator translator.KeyTranslator
+	KeyTranslator KeyTranslator
 
-	Listener      ndriver.FinalityListener
+	Listener      Listener
 	TxID          string
 	Status        fdriver.ValidationCode
 	StatusMessage string
@@ -86,9 +130,9 @@ func (l *ListenerEvent) String() string {
 
 type TxCheck struct {
 	QueryService  QueryService
-	KeyTranslator translator.KeyTranslator
+	KeyTranslator KeyTranslator
 
-	Listener  ndriver.FinalityListener
+	Listener  Listener
 	TxID      string
 	Namespace string
 }
@@ -127,29 +171,24 @@ func (t *TxCheck) Process(ctx context.Context) error {
 	return nil
 }
 
-func (l *TxCheck) String() string {
-	return fmt.Sprintf("TxCheck[%s]", l.TxID)
-}
-
-type Queue interface {
-	EnqueueBlocking(ctx context.Context, event queue.Event) error
-	Enqueue(event queue.Event) (err error)
+func (t *TxCheck) String() string {
+	return fmt.Sprintf("TxCheck[%s]", t.TxID)
 }
 
 type NSFinalityListener struct {
 	namespace     string
-	listener      ndriver.FinalityListener
+	listener      Listener
 	queue         Queue
 	queryService  QueryService
-	keyTranslator translator.KeyTranslator
+	keyTranslator KeyTranslator
 }
 
 func NewNSFinalityListener(
 	namespace string,
-	listener ndriver.FinalityListener,
+	listener Listener,
 	queue Queue,
 	qs QueryService,
-	kt translator.KeyTranslator,
+	kt KeyTranslator,
 ) *NSFinalityListener {
 	return &NSFinalityListener{
 		namespace:     namespace,
@@ -180,19 +219,19 @@ type NSListenerManager struct {
 	lm            finalityx.ListenerManager
 	queue         Queue
 	queryService  QueryService
-	keyTranslator translator.KeyTranslator
+	keyTranslator KeyTranslator
 }
 
 func NewNSListenerManager(
 	lm finalityx.ListenerManager,
 	queue Queue,
 	qs QueryService,
-	keyTranslator translator.KeyTranslator,
+	keyTranslator KeyTranslator,
 ) *NSListenerManager {
 	return &NSListenerManager{lm: lm, queue: queue, queryService: qs, keyTranslator: keyTranslator}
 }
 
-func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, listener ndriver.FinalityListener) error {
+func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, listener Listener) error {
 	logger.Debugf("AddFinalityListener [%s]", txID)
 	l := &onlyOnceListener{listener: listener}
 
@@ -208,20 +247,15 @@ func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, l
 	return n.lm.AddFinalityListener(txID, NewNSFinalityListener(namespace, l, n.queue, n.queryService, n.keyTranslator))
 }
 
-func (n *NSListenerManager) RemoveFinalityListener(id string, listener ndriver.FinalityListener) error {
-	// TODO
-	return errors.Errorf("not supported")
-}
-
 type NSListenerManagerProvider struct {
-	QueryServiceProvider queryservice.Provider
-	FinalityProvider     *finalityx.Provider
-	queue                Queue
+	QueryServiceProvider    QueryServiceProvider
+	ListenerManagerProvider ListenerManagerProvider
+	queue                   Queue
 }
 
 func NewNotificationServiceBased(
-	queryServiceProvider queryservice.Provider,
-	finalityProvider *finalityx.Provider,
+	queryServiceProvider QueryServiceProvider,
+	listenerManagerProvider ListenerManagerProvider,
 ) (finality.ListenerManagerProvider, error) {
 	q, err := queue.NewEventQueue(queue.Config{
 		Workers:   10,
@@ -232,14 +266,14 @@ func NewNotificationServiceBased(
 	}
 
 	return &NSListenerManagerProvider{
-		QueryServiceProvider: queryServiceProvider,
-		FinalityProvider:     finalityProvider,
-		queue:                q,
+		QueryServiceProvider:    queryServiceProvider,
+		ListenerManagerProvider: listenerManagerProvider,
+		queue:                   q,
 	}, nil
 }
 
 func (n *NSListenerManagerProvider) NewManager(network, channel string) (finality.ListenerManager, error) {
-	finalityManager, err := n.FinalityProvider.NewManager(network, channel)
+	finalityManager, err := n.ListenerManagerProvider.NewManager(network, channel)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed creating finality manager")
 	}
@@ -253,7 +287,7 @@ func (n *NSListenerManagerProvider) NewManager(network, channel string) (finalit
 }
 
 type onlyOnceListener struct {
-	listener ndriver.FinalityListener
+	listener Listener
 	once     sync.Once
 }
 
