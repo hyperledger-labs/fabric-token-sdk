@@ -49,7 +49,24 @@ func NewNetwork(
 	setupListenerProvider fabric.SetupListenerProvider,
 ) *Network {
 	// first create a fabric network
-	tn := fabric.NewNetwork(n, ch, configuration, filterProvider, tokensProvider, viewManager, tmsProvider, endorsementServiceProvider, tokenQueryExecutor, tracerProvider, defaultPublicParamsFetcher, spentTokenQueryExecutor, keyTranslator, flm, llm, setupListenerProvider)
+	tn := fabric.NewNetwork(
+		n,
+		ch,
+		configuration,
+		filterProvider,
+		tokensProvider,
+		viewManager,
+		tmsProvider,
+		endorsementServiceProvider,
+		tokenQueryExecutor,
+		tracerProvider,
+		defaultPublicParamsFetcher,
+		spentTokenQueryExecutor,
+		keyTranslator,
+		flm,
+		llm,
+		setupListenerProvider,
+	)
 
 	// we override the ledger created by fabric.NewNetwork with our fabricx specific impl
 	l := NewLedger(ch, keyTranslator, queryStateExecutor)
