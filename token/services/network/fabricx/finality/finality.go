@@ -233,7 +233,7 @@ func NewNSListenerManager(
 
 func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, listener Listener) error {
 	logger.Debugf("AddFinalityListener [%s]", txID)
-	l := &onlyOnceListener{listener: listener}
+	l := &OnlyOnceListener{listener: listener}
 
 	if err := n.queue.Enqueue(&TxCheck{
 		QueryService:  n.queryService,
@@ -256,19 +256,12 @@ type NSListenerManagerProvider struct {
 func NewNotificationServiceBased(
 	queryServiceProvider QueryServiceProvider,
 	listenerManagerProvider ListenerManagerProvider,
+	queue Queue,
 ) (finality.ListenerManagerProvider, error) {
-	q, err := queue.NewEventQueue(queue.Config{
-		Workers:   10,
-		QueueSize: 1000,
-	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed creating event queue")
-	}
-
 	return &NSListenerManagerProvider{
 		QueryServiceProvider:    queryServiceProvider,
 		ListenerManagerProvider: listenerManagerProvider,
-		queue:                   q,
+		queue:                   queue,
 	}, nil
 }
 
@@ -286,12 +279,12 @@ func (n *NSListenerManagerProvider) NewManager(network, channel string) (finalit
 	return NewNSListenerManager(finalityManager, n.queue, qs, &keys.Translator{}), nil
 }
 
-type onlyOnceListener struct {
+type OnlyOnceListener struct {
 	listener Listener
 	once     sync.Once
 }
 
-func (o *onlyOnceListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
+func (o *OnlyOnceListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
 	o.once.Do(func() {
 		o.listener.OnStatus(ctx, txID, status, message, tokenRequestHash)
 	})

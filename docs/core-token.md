@@ -42,20 +42,10 @@ token:
     #   b) The transaction will reach finality shortly, so we append a listener and wait for a timeout. If the listener reaches timeout, we proceed to step c.
     #   c) The transaction reached finality long ago, so we query the whole ledger for this specific transaction. If the query returns no result, we proceed to step d.
     #   d) The transaction will reach finality at some point beyond the timeout or never, so we return Unknown. Then it is up to the client to either append another listener or accept that the transaction will never reach finality.  
-    # committer: The manager subscribes to the commit pipeline and receives all finalized transactions.
-    #   If we subscribe for a transaction that hasn't been finalized yet, we will get notified once it reaches the commit pipeline.
-    #   For listeners that haven't been invoked yet, either the transaction hasn't been finalized or it was finalized before we subscribed.
-    #   For this reason, there is a periodic polling period (1s) that queries all txIDs for which there is a pending listener and invokes the listeners for the ones found.
-    #   Once we get notified about finality, we try (repeatedly) to fetch the additional tx information needed from the vault (e.g., transactionRequest).
-    #   If we work without replicas, there is no need to try more than once to fetch the additional tx information, because the finality notification and vault update happen in sync.
-    #   It is only needed in case we have replicas, where another replica may have updated the vault shortly before.
+    # notification: The manager is notified about finality events via a notification service (e.g. for FabricX).
+    #   When a new notification arrives, an event is added to a queue for asynchronous processing.
+    #   When a client subscribes to the manager for a specific transaction, we perform an immediate query to check its status.
     type: delivery
-    # Only applicable when type = 'committer'
-    committer:
-      # maxRetries is the number of times we try to fetch the additional tx information from the vault.
-      maxRetries: 3
-      # retryWaitDuration is the duration to wait before retrying.
-      retryWaitDuration: 5s
     # Only applicable when type = 'delivery'
     delivery:
       # mapperParallelism is the number of goroutines that process incoming transactions in parallel. Defaults to 1.
@@ -76,6 +66,12 @@ token:
       # If the timeout is not set, then the listener will never be evicted and we will never proceed to step c.
       # We will wait forever for the transaction to return (as is done for the 'committer' type).
       listenerTimeout: 10s
+    # Only applicable when type = 'notification'
+    notification:
+      # workers is the number of goroutines that process events in parallel. Defaults to 10.
+      workers: 10
+      # queueSize is the size of the event buffer. Defaults to 1000.
+      queueSize: 1000
   tms:
     mytms: # unique name of this token management system
       network: default # the name of the network this TMS refers to (Fabric, etc.)

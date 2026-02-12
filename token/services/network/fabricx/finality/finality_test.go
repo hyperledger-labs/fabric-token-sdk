@@ -520,7 +520,8 @@ func TestNSListenerManagerProvider_NewManager(t *testing.T) {
 	mockLMP.NewManagerReturns(mockLM, nil)
 	mockQSP.GetReturns(mockQS, nil)
 
-	provider, err := finality.NewNotificationServiceBased(mockQSP, mockLMP)
+	mockQueue := &mock.Queue{}
+	provider, err := finality.NewNotificationServiceBased(mockQSP, mockLMP, mockQueue)
 	require.NoError(t, err)
 	require.NotNil(t, provider)
 
@@ -548,7 +549,8 @@ func TestNSListenerManagerProvider_NewManager_ListenerManagerError(t *testing.T)
 
 	mockLMP.NewManagerReturns(nil, errors.New("listener manager creation failed"))
 
-	provider, err := finality.NewNotificationServiceBased(mockQSP, mockLMP)
+	mockQueue := &mock.Queue{}
+	provider, err := finality.NewNotificationServiceBased(mockQSP, mockLMP, mockQueue)
 	require.NoError(t, err)
 
 	manager, err := provider.NewManager(network, channel)
@@ -569,7 +571,8 @@ func TestNSListenerManagerProvider_NewManager_QueryServiceError(t *testing.T) {
 	mockLMP.NewManagerReturns(mockLM, nil)
 	mockQSP.GetReturns(nil, errors.New("query service retrieval failed"))
 
-	provider, err := finality.NewNotificationServiceBased(mockQSP, mockLMP)
+	mockQueue := &mock.Queue{}
+	provider, err := finality.NewNotificationServiceBased(mockQSP, mockLMP, mockQueue)
 	require.NoError(t, err)
 
 	manager, err := provider.NewManager(network, channel)
@@ -585,7 +588,7 @@ func TestOnlyOnceListener_SingleCall(t *testing.T) {
 
 	mockListener := &mock.Listener{}
 
-	// Create onlyOnceListener through NSListenerManager to test the wrapper
+	// Create OnlyOnceListener through NSListenerManager to test the wrapper
 	mockLM := &mock.ListenerManager{}
 	mockQueue := &mock.Queue{}
 	mockQS := &mock.QueryService{}
@@ -613,7 +616,7 @@ func TestOnlyOnceListener_SingleCall(t *testing.T) {
 	wrappedListener.OnStatus(ctx, txID, fdriver.Valid, "")
 
 	// The underlying listener should only be called once
-	// Note: We can't directly test this because the onlyOnceListener is created internally
+	// Note: We can't directly test this because the OnlyOnceListener is created internally
 	// and the mock queue will process events asynchronously
 	// This test verifies the integration works without panicking
 }

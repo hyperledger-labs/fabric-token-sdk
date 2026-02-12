@@ -21,9 +21,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type QueryStatesExecutor interface {
-}
-
 type Network struct {
 	*fabric.Network
 	ledger driver.Ledger
