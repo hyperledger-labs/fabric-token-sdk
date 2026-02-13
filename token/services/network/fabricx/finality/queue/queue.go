@@ -12,7 +12,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -60,7 +59,8 @@ type EventQueue struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	shutdownOnce sync.Once
-	closed       int32
+	closed       bool
+	mu           sync.RWMutex
 }
 
 // NewEventQueue creates and starts a new event queue with fixed workers
@@ -79,7 +79,7 @@ func NewEventQueue(cfg Config) (*EventQueue, error) {
 		events:  make(chan Event, cfg.QueueSize),
 		ctx:     ctx,
 		cancel:  cancel,
-		closed:  0,
+		closed:  false,
 	}
 
 	// Start worker pool
@@ -130,7 +130,10 @@ func (eq *EventQueue) worker(id int) {
 
 // Enqueue adds an event to the queue (non-blocking)
 func (eq *EventQueue) Enqueue(event Event) error {
-	if eq.isClosed() {
+	eq.mu.RLock()
+	defer eq.mu.RUnlock()
+
+	if eq.closed {
 		return ErrQueueClosed
 	}
 
@@ -144,7 +147,10 @@ func (eq *EventQueue) Enqueue(event Event) error {
 
 // EnqueueBlocking adds an event to the queue (blocks until space available or timeout)
 func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) error {
-	if eq.isClosed() {
+	eq.mu.RLock()
+	defer eq.mu.RUnlock()
+
+	if eq.closed {
 		return ErrQueueClosed
 	}
 
@@ -163,12 +169,20 @@ func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) error {
 func (eq *EventQueue) Shutdown(timeout time.Duration) error {
 	var shutdownErr error
 	eq.shutdownOnce.Do(func() {
-		// Close channel first to prevent new enqueues
-		close(eq.events)
-		// Set closed flag
-		atomic.StoreInt32(&eq.closed, 1)
-		// Cancel context to signal workers
+		// Set closed flag first to prevent new enqueues
+		eq.mu.Lock()
+		eq.closed = true
+		eq.mu.Unlock()
+
+		// Cancel context to signal EnqueueBlocking calls to stop waiting
 		eq.cancel()
+
+		// Wait for all active senders to finish their select
+		eq.mu.Lock()
+		defer eq.mu.Unlock()
+
+		// Close channel now that we're sure no one is in the select or will enter it
+		close(eq.events)
 
 		// Wait for workers to finish with timeout
 		done := make(chan struct{})
@@ -204,5 +218,7 @@ func (eq *EventQueue) Stats() Stats {
 }
 
 func (eq *EventQueue) isClosed() bool {
-	return atomic.LoadInt32(&eq.closed) == 1
+	eq.mu.RLock()
+	defer eq.mu.RUnlock()
+	return eq.closed
 }
