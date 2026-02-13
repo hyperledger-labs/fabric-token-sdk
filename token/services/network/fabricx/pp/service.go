@@ -18,18 +18,22 @@ import (
 
 var logger = logging.MustGetLogger()
 
+// PublicParametersService models a service for fetching and loading public parameters.
 type PublicParametersService struct {
 	tmsProvider *token.ManagementServiceProvider
 }
 
+// NewPublicParametersService returns a new PublicParametersService instance.
 func NewPublicParametersService(tmsProvider *token.ManagementServiceProvider) *PublicParametersService {
 	return &PublicParametersService{tmsProvider: tmsProvider}
 }
 
+// LoadPublicParams loads the public parameters for the given TMS ID.
 func (f *PublicParametersService) LoadPublicParams(tmsID token.TMSID, ppRaw []byte) error {
 	return f.tmsProvider.Update(tmsID, ppRaw)
 }
 
+// Fetch returns the public parameters for the given network, channel, and namespace.
 func (f *PublicParametersService) Fetch(network driver.Network, channel driver.Channel, namespace driver.Namespace) ([]byte, error) {
 	tmsID := token.TMSID{
 		Network:   network,
@@ -45,7 +49,9 @@ func (f *PublicParametersService) Fetch(network driver.Network, channel driver.C
 	return tms.PublicParametersManager().PublicParameters().Serialize()
 }
 
+// Loader models a loader for public parameters.
 type Loader interface {
+	// LoadPublicParams loads the public parameters for the given TMS ID.
 	LoadPublicParams(TMSID token.TMSID, ppRaw []byte) error
 }
 

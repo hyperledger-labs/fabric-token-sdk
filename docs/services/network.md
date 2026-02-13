@@ -1,4 +1,4 @@
-## The Network Service
+# The Network Service
 
 The `network` service, located under `token/services/network`, provides other services with a consistent and predictable interface to the backend (e.g., Fabric).
 Internally, the network service mirrors the structure of the Token API, consisting of a `Provider` of network instances and the `Network` instances themselves.
@@ -6,6 +6,8 @@ Internally, the network service mirrors the structure of the Token API, consisti
 The network service architecture is depicted below:
 
 ![network_service.png](../imgs/network_service.png)
+
+## Fabric 
 
 The Fabric-based network implementation utilizes the Fabric Smart Client for configuration and operations, including chaincode queries and transaction broadcasting.
 

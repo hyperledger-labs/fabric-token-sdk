@@ -21,6 +21,7 @@ type rwSet interface {
 	AddReadAt(ns driver.Namespace, key driver.PKey, version driver.RawVersion) error
 }
 
+// RWSetWrapper wraps a rwset and a namespace.
 type RWSetWrapper struct {
 	RWSet     rwSet
 	Namespace translator.Namespace
@@ -28,6 +29,7 @@ type RWSetWrapper struct {
 	ppVersion uint64
 }
 
+// NewRWSetWrapper returns a new RWSetWrapper instance.
 func NewRWSetWrapper(RWSet rwSet, namespace translator.Namespace, txID translator.TxID, ppVersion uint64) *RWSetWrapper {
 	return &RWSetWrapper{RWSet: RWSet, Namespace: namespace, TxID: txID, ppVersion: ppVersion}
 }

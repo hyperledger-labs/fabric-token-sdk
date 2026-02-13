@@ -21,14 +21,13 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type QueryStatesExecutor interface {
-}
-
+// Network models a FabricX network.
 type Network struct {
 	*fabric.Network
 	ledger driver.Ledger
 }
 
+// NewNetwork returns a new Network instance.
 func NewNetwork(
 	n *ffabric.NetworkService,
 	ch *ffabric.Channel,
@@ -49,7 +48,24 @@ func NewNetwork(
 	setupListenerProvider fabric.SetupListenerProvider,
 ) *Network {
 	// first create a fabric network
-	tn := fabric.NewNetwork(n, ch, configuration, filterProvider, tokensProvider, viewManager, tmsProvider, endorsementServiceProvider, tokenQueryExecutor, tracerProvider, defaultPublicParamsFetcher, spentTokenQueryExecutor, keyTranslator, flm, llm, setupListenerProvider)
+	tn := fabric.NewNetwork(
+		n,
+		ch,
+		configuration,
+		filterProvider,
+		tokensProvider,
+		viewManager,
+		tmsProvider,
+		endorsementServiceProvider,
+		tokenQueryExecutor,
+		tracerProvider,
+		defaultPublicParamsFetcher,
+		spentTokenQueryExecutor,
+		keyTranslator,
+		flm,
+		llm,
+		setupListenerProvider,
+	)
 
 	// we override the ledger created by fabric.NewNetwork with our fabricx specific impl
 	l := NewLedger(ch, keyTranslator, queryStateExecutor)
@@ -57,6 +73,7 @@ func NewNetwork(
 	return &Network{Network: tn, ledger: l}
 }
 
+// Ledger returns the ledger associated with this network.
 func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
 }

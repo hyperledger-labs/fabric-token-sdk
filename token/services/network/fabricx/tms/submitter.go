@@ -20,7 +20,9 @@ import (
 	"github.com/hyperledger/fabric-x-common/protoutil"
 )
 
+// Submitter models a transaction submitter.
 type Submitter interface {
+	// Submit submits the given transaction for the given network and channel.
 	Submit(network, channel string, tx *protoblocktx.Tx) error
 }
 
@@ -29,10 +31,12 @@ const (
 	finalityRetryDuration = 2 * time.Second
 )
 
+// NewSubmitterFromFNS returns a new submitter instance from the given network service provider.
 func NewSubmitterFromFNS(fnsp *fabric.NetworkServiceProvider) *submitter {
 	return NewSubmitter(&fnsSigningIdentityProvider{fnsProvider: fnsp}, &fnsBroadcaster{fnsProvider: fnsp})
 }
 
+// NewSubmitter returns a new submitter instance.
 func NewSubmitter(signingIdentityProvider SigningIdentityProvider, envelopeBroadcaster EnvelopeBroadcaster) *submitter {
 	return NewSubmitterCustomTxID(signingIdentityProvider, envelopeBroadcaster, protoutil.ComputeTxID)
 }

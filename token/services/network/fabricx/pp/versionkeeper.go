@@ -17,21 +17,25 @@ import (
 
 type VersionKeeperProvider lazy.Provider[token.TMSID, *VersionKeeper]
 
+// NewVersionKeeperProvider returns a new VersionKeeperProvider instance.
 func NewVersionKeeperProvider() VersionKeeperProvider {
 	return lazy.NewProviderWithKeyMapper(services.Key, func(token.TMSID) (*VersionKeeper, error) {
 		return &VersionKeeper{}, nil
 	})
 }
 
+// VersionKeeper models a version keeper.
 type VersionKeeper struct {
 	version atomic.Uint64
 	once    sync.Once
 }
 
+// GetVersion returns the current version.
 func (k *VersionKeeper) GetVersion() uint64 {
 	return k.version.Load()
 }
 
+// UpdateVersion updates the version.
 func (k *VersionKeeper) UpdateVersion() {
 	var init bool
 	k.once.Do(func() {

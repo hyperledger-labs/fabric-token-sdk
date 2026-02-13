@@ -19,17 +19,25 @@ import (
 	cb "github.com/hyperledger/fabric-protos-go-apiv2/common"
 )
 
+// Signer models a message signer.
 type Signer interface {
+	// Sign signs the given message.
 	Sign(msg []byte) ([]byte, error)
+	// Serialize returns the serialized version of the signer.
 	Serialize() ([]byte, error)
 }
 
+// SigningIdentityProvider models an identity provider for signing identities.
 type SigningIdentityProvider interface {
+	// DefaultSigningIdentity returns the default signing identity for the given network and channel.
 	DefaultSigningIdentity(network, channel string) (Signer, error)
+	// DefaultIdentity returns the default identity for the given network and channel.
 	DefaultIdentity(network, channel string) (view.Identity, error)
 }
 
+// EnvelopeBroadcaster models an envelope broadcaster.
 type EnvelopeBroadcaster interface {
+	// Broadcast broadcasts the given envelope for the given network, channel, and transaction ID.
 	Broadcast(network, channel string, txID driver.TxID, env *cb.Envelope) error
 }
 
