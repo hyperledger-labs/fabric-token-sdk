@@ -125,6 +125,14 @@ jobs:
         ]
 
     steps:
+      - run: docker version
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          version: 28.5.2 # we pin the docker version temporary until the release of fabric v3.1.4
+          set-host: true
+      - run: docker version
+        
       - name: Checkout code
         uses: actions/checkout@v4
 
