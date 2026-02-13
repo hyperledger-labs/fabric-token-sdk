@@ -39,11 +39,11 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// cache the token request into the tokens db
-	storageProvider, err := GetStorageProvider(context)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get storage provider")
-	}
 	if !options.NoCachingRequest {
+		storageProvider, err := GetStorageProvider(context)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get storage provider")
+		}
 		if err := storageProvider.CacheRequest(context.Context(), options.Transaction.TMSID(), options.Transaction.TokenRequest); err != nil {
 			logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", options.Transaction.TokenRequest.Anchor, err)
 		}
