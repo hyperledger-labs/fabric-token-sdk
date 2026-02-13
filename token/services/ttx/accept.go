@@ -8,10 +8,8 @@ package ttx
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
@@ -67,18 +65,14 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 // with the identity of the FSC node running this stack.
 func (s *AcceptView) ack(context view.Context) error {
 	txRaw := s.tx.FromRaw
-	idProvider, err := id.GetProvider(context)
+	idProvider, err := dep.GetNetworkIdentityProvider(context)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get identity provider")
+		return errors.Wrapf(errors.Join(err, ErrDepNotAvailableInContext), "failed to get identity provider")
 	}
 	defaultIdentity := idProvider.DefaultIdentity()
 
 	logger.DebugfContext(context.Context(), "signing ack response [%s] with identity [%s]", utils.Hashable(txRaw), defaultIdentity)
-	sigService, err := sig.GetService(context)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get sig service")
-	}
-	signer, err := sigService.GetSigner(defaultIdentity)
+	signer, err := idProvider.GetSigner(defaultIdentity)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get signer for default identity")
 	}
@@ -101,12 +95,12 @@ func (s *AcceptView) ack(context view.Context) error {
 
 func (s *AcceptView) cacheRequest(context view.Context) error {
 	// cache the token request into the tokens db
-	t, err := tokens.GetService(context, s.tx.TMSID())
+	sp, err := GetStorageProvider(context)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
+		return errors.Wrapf(errors.Join(err, ErrDepNotAvailableInContext), "failed to get storage provider")
 	}
 
-	if err := t.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
+	if err := sp.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
 		logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
 	}
 
