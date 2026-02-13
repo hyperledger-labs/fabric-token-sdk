@@ -138,6 +138,7 @@ func (l *ListenerEvent) Process(ctx context.Context) error {
 	return nil
 }
 
+// String returns a string representation of the event.
 func (l *ListenerEvent) String() string {
 	return fmt.Sprintf("ListenerEvent[%s]", l.TxID)
 }
@@ -192,6 +193,7 @@ func (t *TxCheck) Process(ctx context.Context) error {
 	return nil
 }
 
+// String returns a string representation of the event.
 func (t *TxCheck) String() string {
 	return fmt.Sprintf("TxCheck[%s]", t.TxID)
 }
@@ -222,6 +224,7 @@ func NewNSFinalityListener(
 	}
 }
 
+// OnStatus notifies the listener of a status change.
 func (l *NSFinalityListener) OnStatus(ctx context.Context, txID cdriver.TxID, status fdriver.ValidationCode, statusMessage string) {
 	// processing the event must be fast
 	// we enqueue an event to be processed asynchronously
@@ -256,6 +259,7 @@ func NewNSListenerManager(
 	return &NSListenerManager{lm: lm, queue: queue, queryService: qs, keyTranslator: keyTranslator}
 }
 
+// AddFinalityListener adds a finality listener for the given transaction ID.
 func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, listener Listener) error {
 	logger.Debugf("AddFinalityListener [%s]", txID)
 	l := &OnlyOnceListener{listener: listener}
@@ -312,6 +316,7 @@ type OnlyOnceListener struct {
 	once     sync.Once
 }
 
+// OnStatus notifies the listener of a status change.
 func (o *OnlyOnceListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
 	o.once.Do(func() {
 		o.listener.OnStatus(ctx, txID, status, message, tokenRequestHash)

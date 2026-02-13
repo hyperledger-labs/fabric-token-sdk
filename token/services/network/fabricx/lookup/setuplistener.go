@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 )
 
+// NewSetupListenerProvider returns a new setupListenerProvider instance.
 func NewSetupListenerProvider(
 	tmsProvider *token.ManagementServiceProvider,
 	tokensProvider *tokens.ServiceManager,
@@ -29,11 +30,13 @@ func NewSetupListenerProvider(
 	}
 }
 
+// setupListenerProvider models a provider for setup listeners.
 type setupListenerProvider struct {
 	lp  fabric.SetupListenerProvider
 	vkp pp.VersionKeeperProvider
 }
 
+// GetListener returns a new listener for the given TMS ID.
 func (p *setupListenerProvider) GetListener(tmsID token.TMSID) lookup.Listener {
 	return &setupListener{
 		Listener: p.lp.GetListener(tmsID),
@@ -46,6 +49,7 @@ type setupListener struct {
 	vk *pp.VersionKeeper
 }
 
+// OnStatus notifies the listener of a status change.
 func (l *setupListener) OnStatus(ctx context.Context, key driver.PKey, value []byte) {
 	l.Listener.OnStatus(ctx, key, value)
 	l.vk.UpdateVersion()

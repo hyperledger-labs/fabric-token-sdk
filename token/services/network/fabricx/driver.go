@@ -39,6 +39,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// NewDriver returns a new Driver instance.
 func NewDriver(
 	fnsProvider *fabric2.NetworkServiceProvider,
 	tokensManager *tokens.ServiceManager,
@@ -122,6 +123,7 @@ func NewDriver(
 	return d, nil
 }
 
+// Driver models the FabricX network driver.
 type Driver struct {
 	fnsProvider                *fabric2.NetworkServiceProvider
 	tokensManager              *tokens.ServiceManager
@@ -141,6 +143,7 @@ type Driver struct {
 	queryExecutorProvider      *qe.ExecutorProvider
 }
 
+// New returns a new Network instance for the given network and channel.
 func (d *Driver) New(network, channel string) (driver.Network, error) {
 	fns, err := d.fnsProvider.FabricNetworkService(network)
 	if err != nil {
