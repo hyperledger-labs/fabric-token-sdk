@@ -21,11 +21,13 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Network models a FabricX network.
 type Network struct {
 	*fabric.Network
 	ledger driver.Ledger
 }
 
+// NewNetwork returns a new Network instance.
 func NewNetwork(
 	n *ffabric.NetworkService,
 	ch *ffabric.Channel,
@@ -71,6 +73,7 @@ func NewNetwork(
 	return &Network{Network: tn, ledger: l}
 }
 
+// Ledger returns the ledger associated with this network.
 func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
 }

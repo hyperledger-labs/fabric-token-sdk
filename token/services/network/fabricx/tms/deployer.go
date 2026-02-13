@@ -24,12 +24,17 @@ import (
 
 var logger = logging.MustGetLogger()
 
+// DeployerService models a service for deploying TMSs.
 type DeployerService interface {
+	// DeployTMSs deploys all TMSs defined in the configuration.
 	DeployTMSs() error
+	// DeployTMS deploys the TMS with the given ID.
 	DeployTMS(tmsID token.TMSID) error
+	// DeployTMSWithPP deploys the TMS with the given ID and public parameters.
 	DeployTMSWithPP(tmsID token.TMSID, ppRaw []byte) error
 }
 
+// NewTMSDeployerService returns a new DeployerService instance.
 func NewTMSDeployerService(
 	ppFetcher *pp.PublicParametersService,
 	configService *config.Service,

@@ -45,6 +45,7 @@ token:
     # notification: The manager is notified about finality events via a notification service (e.g. for FabricX).
     #   When a new notification arrives, an event is added to a queue for asynchronous processing.
     #   When a client subscribes to the manager for a specific transaction, we perform an immediate query to check its status.
+    # The field can also be left empty. In that case, the default option will be used depending on the network type each TMS refers to.
     type: delivery
     # Only applicable when type = 'delivery'
     delivery:

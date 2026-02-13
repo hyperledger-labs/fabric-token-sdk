@@ -29,19 +29,16 @@ var _ events.EventInfoMapper[lookup.KeyInfo] = &endorserTxInfoMapper{}
 
 var logger = logging.MustGetLogger()
 
+// NewListenerManagerProvider returns a new lookup.ListenerManagerProvider instance.
 func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, lmConfig config.ListenerManagerConfig) lookup.ListenerManagerProvider {
 	logger.Debugf("Create Lookup Listener Manager provider with config: %s", lmConfig)
-	switch lmConfig.Type() {
-	case config.Delivery:
-		return newEndorserDeliveryBasedLLMProvider(fnsp, tracerProvider, keyTranslator, events.DeliveryListenerManagerConfig{
-			MapperParallelism:       lmConfig.DeliveryMapperParallelism(),
-			BlockProcessParallelism: lmConfig.DeliveryBlockProcessParallelism(),
-			ListenerTimeout:         lmConfig.DeliveryListenerTimeout(),
-			LRUSize:                 lmConfig.DeliveryLRUSize(),
-			LRUBuffer:               lmConfig.DeliveryLRUBuffer(),
-		})
-	}
-	panic("unknown config type: " + lmConfig.Type())
+	return newEndorserDeliveryBasedLLMProvider(fnsp, tracerProvider, keyTranslator, events.DeliveryListenerManagerConfig{
+		MapperParallelism:       lmConfig.DeliveryMapperParallelism(),
+		BlockProcessParallelism: lmConfig.DeliveryBlockProcessParallelism(),
+		ListenerTimeout:         lmConfig.DeliveryListenerTimeout(),
+		LRUSize:                 lmConfig.DeliveryLRUSize(),
+		LRUBuffer:               lmConfig.DeliveryLRUBuffer(),
+	})
 }
 
 func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config events.DeliveryListenerManagerConfig) lookup.ListenerManagerProvider {
@@ -63,6 +60,7 @@ func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tr
 	})
 }
 
+// endorserTxInfoMapper models a transaction info mapper for the endorser.
 type endorserTxInfoMapper struct {
 	keyTranslator translator.KeyTranslator
 
@@ -70,6 +68,7 @@ type endorserTxInfoMapper struct {
 	prefixes []string
 }
 
+// MapTxData unmarshals the given transaction data and returns a map of namespace to lookup.KeyInfo.
 func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, data []byte, block *common.BlockMetadata, blockNum driver.BlockNum, txNum driver.TxNum) (map[driver.Namespace]lookup.KeyInfo, error) {
 	_, payload, chdr, err := fabricutils.UnmarshalTx(data)
 	if err != nil {
@@ -103,9 +102,6 @@ func (m *endorserTxInfoMapper) mapTx(txID string, tx *protoblocktx.Tx) (map[driv
 	for _, ns := range tx.GetNamespaces() {
 		for _, write := range ns.GetBlindWrites() {
 			if string(write.GetKey()) == key {
-				if err != nil {
-					return nil, errors.Wrapf(err, "ns [%v] in tx [%s] not found", ns.GetNsId(), txID)
-				}
 				txInfos[ns.GetNsId()] = lookup.KeyInfo{
 					Key:       string(write.GetKey()),
 					Namespace: ns.GetNsId(),
@@ -128,6 +124,7 @@ func (m *endorserTxInfoMapper) mapTx(txID string, tx *protoblocktx.Tx) (map[driv
 	return txInfos, nil
 }
 
+// MapProcessedTx is not implemented.
 func (m *endorserTxInfoMapper) MapProcessedTx(*fabric.ProcessedTransaction) ([]lookup.KeyInfo, error) {
 	panic("unimplemented")
 }

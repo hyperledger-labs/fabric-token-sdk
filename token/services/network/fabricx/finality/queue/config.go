@@ -38,6 +38,7 @@ type serviceConfig struct {
 	c driver.ConfigService
 }
 
+// Workers returns the number of worker goroutines.
 func (c *serviceConfig) Workers() int {
 	if v := c.c.GetInt(Workers); v > 0 {
 		return v
@@ -45,6 +46,7 @@ func (c *serviceConfig) Workers() int {
 	return DefaultWorkers
 }
 
+// QueueSize returns the size of the event buffer.
 func (c *serviceConfig) QueueSize() int {
 	if v := c.c.GetInt(QueueSize); v > 0 {
 		return v
