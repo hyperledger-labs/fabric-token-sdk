@@ -227,6 +227,7 @@ python run_benchmarks.py
 This creates a subfolder that collects the logs of all the benchmarks and the csv file (**benchmark_results.csv**) that has a separate row for every invocation of the script with the selected metrics collected for all the benchmarks. 
 The folder is named **benchmark_logs_<date>** for example **benchmark_logs_2026-01-19_06-56-41**, where the date indicates the time when the script was run.
 
+The benchmarks are ran only for the BLS12_381_BBS_GURVY curve and repeated for 1, 2, 4, 8, 16, and 32 cpus.
 The script supports the following flags:
 
 `--count`
@@ -238,6 +239,12 @@ The script supports the following flags:
 `--benchName`
 : The single benchmark that should be run by the script. The default is to run the whole selection of benchmarks.
 
+**Plotting the benchmark results of the script:**
+
+As mentioned above, the run_benchmark.py script produces the results in the file benchmark_results.csv.
+A separate script **plot_lat_vs_tps.py** can be then be used to produce a corresponding file **benchmark_results.csv** that includes figures that summarize the benchmark results.
+For every benchmark there will be a plot of the throughput vs the number of cpus, and another plot of the latency results vs. the throughput for the different number of cpus tested. 
+
 **Example runs:**
 
 - Running all the selected benchmarks:
@@ -247,4 +254,9 @@ python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
 - Running just one selected benchmark 5 times for no more than 4 seconds:
 ```shell
 python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
+```
+
+- Plotting the results into benchmark_results.pdf:
+```shell
+python plot_lat_vs_tps.py
 ```
