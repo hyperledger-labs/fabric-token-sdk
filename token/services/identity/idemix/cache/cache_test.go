@@ -173,10 +173,10 @@ func TestProvisionIdentitiesError(t *testing.T) {
 
 // TestFetchIdentityFromCacheNilEntry verifies backend fallback for nil cache entries.
 func TestFetchIdentityFromCacheNilEntry(t *testing.T) {
-	var backendCalledCount atomic.Int32
+	var backendCallCount atomic.Int32
 
 	c := NewIdentityCache(func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
-		backendCalledCount.Add(1)
+		backendCallCount.Add(1)
 
 		return &idriver.IdentityDescriptor{
 			Identity:  []byte("backend fallback"),
@@ -194,7 +194,7 @@ func TestFetchIdentityFromCacheNilEntry(t *testing.T) {
 	identityDescriptor, err := c.Identity(context.Background(), nil)
 	require.NoError(t, err)
 	assert.Eventually(t, func() bool {
-		return backendCalledCount.Load() > 0
+		return backendCallCount.Load() > 0
 	}, time.Second, 10*time.Millisecond)
 	assert.Equal(t, driver.Identity([]byte("backend fallback")), identityDescriptor.Identity)
 }
