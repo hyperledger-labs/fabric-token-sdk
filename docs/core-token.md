@@ -28,10 +28,21 @@ token:
     # leaseCleanupTickPeriod defines how often the eviction algorithm must be executed.
     # If leaseCleanupTickPeriod is zero, the eviction algorithm is never executed.
     leaseCleanupTickPeriod: 90s
-
+    # Token fetcher cache configuration (sherdlock driver only)
+    # The fetcher uses a Ristretto cache to store tokens for efficient retrieval.
+    # fetcherCacheSize is the maximum number of tokens to cache. Each token consumes 1 unit of cache cost.
+    # If not specified or set to 0, defaults to 100 million (1e8) tokens.
+    fetcherCacheSize: 100000000
+    # fetcherCacheRefresh is the time interval after which the cache is considered stale and will be refreshed.
+    # A hard refresh (blocking) occurs when the cache becomes stale. If not specified or set to 0, defaults to 1 second.
+    fetcherCacheRefresh: 1s
+    # fetcherCacheMaxQueries is the number of queries after which a soft refresh (non-blocking background update) is triggered.
+    # This helps keep the cache fresh without blocking queries. If not specified or set to 0, defaults to 5 queries.
+    fetcherCacheMaxQueries: 5
   # When we are interested in knowing when a transaction reaches finality, we subscribe to the Finality Listener Manager for the finality event of that transaction.
   # This configuration specifies the way the manager is instantiated (i.e., how it gets notified about the finality events, how often it checks).
-  finality:
+ 
+ finality:
     # driver is the implementation of the finality manager. The finality manager keeps track of all subscribers that are interested in a transaction.
     # These are the possible values:
     # delivery: The manager subscribes to the delivery service and receives all final transactions.

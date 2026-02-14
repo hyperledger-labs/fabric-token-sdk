@@ -14,6 +14,11 @@ import (
 const (
 	// ZeroCost with this ristretto uses the Cost function defined in its configuration
 	ZeroCost = 0
+
+	// Default Ristretto configuration values
+	DefaultNumCounters = 1e6 // 1 million
+	DefaultMaxCost     = 1e8 // 100 million
+	DefaultBufferItems = 64
 )
 
 // Config is a shortcut for the ristretto Configuration.
@@ -37,10 +42,14 @@ func NewRistrettoCache[T any](config *ristretto.Config[string, T]) (*ristrettoCa
 }
 
 func NewDefaultRistrettoCache[T any]() (*ristrettoCache[T], error) {
+	return NewRistrettoCacheWithSize[T](DefaultMaxCost)
+}
+
+func NewRistrettoCacheWithSize[T any](maxCost int64) (*ristrettoCache[T], error) {
 	return NewRistrettoCache[T](&ristretto.Config[string, T]{
-		NumCounters: 1e6, // 1 million
-		MaxCost:     1e8, // 100 million
-		BufferItems: 64,
+		NumCounters: DefaultNumCounters,
+		MaxCost:     maxCost,
+		BufferItems: DefaultBufferItems,
 		Cost: func(value T) int64 {
 			return 1
 		},
@@ -58,6 +67,11 @@ func (c *ristrettoCache[T]) Add(key string, value T) {
 
 func (c *ristrettoCache[T]) Delete(key string) {
 	c.cache.Del(key)
+	c.cache.Wait()
+}
+
+func (c *ristrettoCache[T]) Clear() {
+	c.cache.Clear()
 	c.cache.Wait()
 }
 
