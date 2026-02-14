@@ -9,10 +9,42 @@ This service is a fundamental component used by token drivers and other services
 *   **Auditability**: Managing audit information to reveal the enrollment ID behind an anonymous identity (if allowed).
 *   **Role Management**: Handling identities for different roles (Issuer, Auditor, Owner, Certifier).
 
+## How the Identity Service is Used
+
+The Identity Service is consumed by other components of the Fabric Token SDK,
+such as the Token Transaction (TTX) service and token drivers, to perform
+identity-related operations including signing, verification, and identity
+resolution.
+
+Rather than interacting with cryptographic primitives directly, services rely
+on the Identity Service interfaces, allowing different identity implementations
+to be plugged in transparently.
+
+### Example: Custom KeyManager Implementation
+
+Below is a simplified example illustrating how a custom identity provider could
+be structured. The exact implementation details may vary depending on the
+identity type and storage backend.
+
+```go
+type CustomIdentityProvider struct {
+    // custom fields
+}
+
+func (c *CustomIdentityProvider) Sign(ctx context.Context, msg []byte) ([]byte, error) {
+    // custom signing logic
+    return nil, nil
+}
+
+func (c *CustomIdentityProvider) Verify(ctx context.Context, msg, signature []byte) error {
+    // custom verification logic
+    return nil
+}
+
 ## Architecture
 
 The Identity Service is designed to implement the **Driver API** interfaces defined in `token/driver/wallet.go`. 
-This ensures that the token management system can interact with any identity implementation through a standard set of methods.
+This ensures that the token management system can interact with any identity implementation through a standard set of methods.  
 
 ### Conceptual Metaphor
 
@@ -185,3 +217,71 @@ Located in `token/services/identity/interop/htlc`.
 *   **Concept**: A script-based identity used primarily for interoperability mechanisms like atomic swaps.
 *   **Structure**: Encapsulates a **Sender** identity, a **Recipient** identity, hash lock information, and a timeout.
 *   **Behavior**: Validation involves satisfying the script conditions (e.g., providing the hash preimage).
+
+## Extending the Identity Service
+
+The Identity Service is designed to be extensible through the driver interfaces
+defined in the token SDK. Custom identity implementations can be provided by
+implementing the required identity and wallet interfaces.
+
+Typical extension scenarios include:
+- Supporting a new identity type by implementing a custom `KeyManager`
+- Customizing signature generation or verification logic within a `KeyManager`
+- Providing a custom `KeyManagerProvider` to plug new identity mechanisms into `LocalMembership`
+
+### Example: Custom KeyManager Implementation
+
+Extending the Identity Service is typically done by implementing a custom
+`KeyManager` and registering it via a `KeyManagerProvider` under
+`identity/membership`.
+
+`LocalMembership` delegates identity and signing operations to these
+interfaces. By providing a custom implementation, developers can plug in
+alternative key management logic (for example, integrating an HSM,
+external vault, or custom cryptographic provider).
+
+Default implementations include:
+- X.509-based `KeyManager`
+- Idemix-based `KeyManager`
+
+The simplified example below illustrates how a custom `KeyManager`
+and `KeyManagerProvider` could be structured.
+```go
+package identity
+
+import (
+	"fmt"
+)
+
+// CustomKeyManager implements the KeyManager interface.
+type CustomKeyManager struct {
+	ProviderID string
+}
+
+// GetKey retrieves a key by its identifier.
+func (km *CustomKeyManager) GetKey(id string) ([]byte, error) {
+	return []byte("custom-key-data"), nil
+}
+
+// Sign signs data using custom logic.
+func (km *CustomKeyManager) Sign(data []byte) ([]byte, error) {
+	fmt.Println("Signing data with CustomKeyManager...")
+	return append(data, []byte("-signed")...), nil
+}
+
+// CustomKeyManagerProvider implements the KeyManagerProvider interface.
+type CustomKeyManagerProvider struct{}
+
+// NewKeyManager creates a new KeyManager instance.
+func (p *CustomKeyManagerProvider) NewKeyManager(config map[string]interface{}) (KeyManager, error) {
+	return &CustomKeyManager{
+		ProviderID: "custom-provider-01",
+	}, nil
+}
+
+// In a real setup, the provider would be registered with the membership registry.
+func init() {
+	// Example:
+	// RegisterProvider("custom", &CustomKeyManagerProvider{})
+}
+```
