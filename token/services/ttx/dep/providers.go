@@ -34,6 +34,7 @@ type Network interface {
 	AnonymousIdentity() (view.Identity, error)
 	LocalMembership() *network.LocalMembership
 	ComputeTxID(n *network.TxID) string
+	Broadcast(ctx context.Context, blob interface{}) error
 }
 
 // NetworkProvider given access to instances of the Network interface.
