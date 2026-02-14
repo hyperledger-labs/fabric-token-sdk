@@ -19,8 +19,12 @@ const (
 	defaultLeaseCleanupTickPeriod = 1 * time.Minute
 	defaultNumRetries             = 3
 	defaultRetryInterval          = 5 * time.Second
+	defaultFetcherCacheSize       = 0 // 0 means use fetcher default
+	defaultFetcherCacheRefresh    = 0 // 0 means use fetcher default
+	defaultFetcherCacheMaxQueries = 0 // 0 means use fetcher default
 )
 
+//go:generate counterfeiter -o mock/config_service.go -fake-name ConfigService . configService
 type configService interface {
 	UnmarshalKey(key string, rawVal interface{}) error
 }
@@ -31,6 +35,9 @@ type Config struct {
 	NumRetries             int           `yaml:"numRetries,omitempty"`
 	LeaseExpiry            time.Duration `yaml:"leaseExpiry,omitempty"`
 	LeaseCleanupTickPeriod time.Duration `yaml:"leaseCleanupTickPeriod,omitempty"`
+	FetcherCacheSize       int64         `yaml:"fetcherCacheSize,omitempty"`
+	FetcherCacheRefresh    time.Duration `yaml:"fetcherCacheRefresh,omitempty"`
+	FetcherCacheMaxQueries int           `yaml:"fetcherCacheMaxQueries,omitempty"`
 }
 
 // New returns a SelectorConfig with the values from the token.selector key
@@ -76,4 +83,19 @@ func (c *Config) GetLeaseCleanupTickPeriod() time.Duration {
 		return c.LeaseCleanupTickPeriod
 	}
 	return defaultLeaseCleanupTickPeriod
+}
+
+func (c *Config) GetFetcherCacheSize() int64 {
+	// Return 0 if not set, which will trigger use of fetcher default
+	return c.FetcherCacheSize
+}
+
+func (c *Config) GetFetcherCacheRefresh() time.Duration {
+	// Return 0 if not set, which will trigger use of fetcher default
+	return c.FetcherCacheRefresh
+}
+
+func (c *Config) GetFetcherCacheMaxQueries() int {
+	// Return 0 if not set, which will trigger use of fetcher default
+	return c.FetcherCacheMaxQueries
 }

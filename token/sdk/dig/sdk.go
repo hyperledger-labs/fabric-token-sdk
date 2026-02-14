@@ -37,6 +37,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/config"
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
@@ -143,8 +144,20 @@ func (p *SDK) Install() error {
 		),
 
 		// selector service
-		p.Container().Provide(func(tokenStoreServiceManager tokendb.StoreServiceManager, notifierManager tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
-			return sherdlock.NewFetcherProvider(tokenStoreServiceManager, notifierManager, metricsProvider, sherdlock.Mixed)
+		p.Container().Provide(func(tokenStoreServiceManager tokendb.StoreServiceManager, notifierManager tokendb.NotifierManager, metricsProvider metrics.Provider, cp sherdlock.ConfigProvider) sherdlock.FetcherProvider {
+			cfg, err := config.New(cp)
+			if err != nil {
+				logger.Errorf("error getting selector config for fetcher, using defaults. %s", err.Error())
+			}
+			return sherdlock.NewFetcherProvider(
+				tokenStoreServiceManager,
+				notifierManager,
+				metricsProvider,
+				sherdlock.Mixed,
+				cfg.GetFetcherCacheSize(),
+				cfg.GetFetcherCacheRefresh(),
+				cfg.GetFetcherCacheMaxQueries(),
+			)
 		}),
 
 		// storage

@@ -40,6 +40,7 @@ type manager struct {
 	leaseCleanupTickPeriod time.Duration
 }
 
+//go:generate counterfeiter -o mock/iterator.go  -fake-name Iterator . iterator
 type iterator[k any] interface {
 	Next() (k, error)
 	Close()
