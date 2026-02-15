@@ -54,7 +54,7 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 
 	rand, err := c.Rand()
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot get issue prover")
+		return nil, errors.Join(ErrGetIssueProverFailed, err)
 	}
 	typeBF := c.NewRandomZr(rand)
 	commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
@@ -64,12 +64,12 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 	blindingFactors := make([]*math.Zr, len(tw))
 	for i := range tw {
 		if tw[i] == nil || tw[i].BlindingFactor == nil {
-			return nil, errors.New("invalid token witness")
+			return nil, ErrInvalidTokenWitness
 		}
 		// tw[i] = tw[i].Clone()
 		values[i], err = tw[i].Value.Uint()
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid token witness values")
+			return nil, errors.Join(ErrInvalidTokenWitnessValues, err)
 		}
 		blindingFactors[i] = c.ModSub(tw[i].BlindingFactor, p.SameType.blindingFactor, c.GroupOrder)
 	}
@@ -101,13 +101,13 @@ func (p *Prover) Prove() ([]byte, error) {
 	// Generate same-type proof.
 	st, err := p.SameType.Prove()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to generate issue proof")
+		return nil, errors.Join(ErrGenerateIssueProofFailed, err)
 	}
 
 	// Generate range correctness proof.
 	rc, err := p.RangeCorrectness.Prove()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to generate range proof for issue")
+		return nil, errors.Join(ErrGenerateRangeProofFailed, err)
 	}
 
 	proof := &Proof{

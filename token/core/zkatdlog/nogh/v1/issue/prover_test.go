@@ -24,11 +24,11 @@ func TestNewProverErrors(t *testing.T) {
 	// tw[i] is nil
 	validMeta := &token.Metadata{Type: "ABC", BlindingFactor: curve.NewRandomZr(randReader), Value: curve.NewZrFromInt(100)}
 	_, err = NewProver([]*token.Metadata{validMeta, nil}, []*math.G1{curve.GenG1, curve.GenG1}, pp)
-	assert.EqualError(t, err, "invalid token witness")
+	assert.EqualError(t, err, ErrInvalidTokenWitness.Error())
 
 	// tw[i].BlindingFactor is nil
 	_, err = NewProver([]*token.Metadata{validMeta, {Type: "ABC"}}, []*math.G1{curve.GenG1, curve.GenG1}, pp)
-	assert.EqualError(t, err, "invalid token witness")
+	assert.EqualError(t, err, ErrInvalidTokenWitness.Error())
 
 	// tw[i].Value is nil or invalid for Uint()
 	tw := &token.Metadata{
@@ -43,5 +43,5 @@ func TestNewProverErrors(t *testing.T) {
 
 	_, err = NewProver([]*token.Metadata{validMeta, tw}, []*math.G1{curve.GenG1, curve.GenG1}, pp)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid token witness values")
+	assert.Contains(t, err.Error(), ErrInvalidTokenWitnessValues.Error())
 }

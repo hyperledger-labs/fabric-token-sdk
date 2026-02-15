@@ -8,7 +8,6 @@ package issue
 
 import (
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
@@ -44,10 +43,10 @@ func NewIssuer(tokenType token2.Type, signer common.SigningIdentity, pp *v1.Publ
 // It returns the issue action, metadata for each issued token, or an error if the process fails.
 func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*token.Metadata, error) {
 	if i.PublicParams == nil {
-		return nil, nil, errors.New("failed to generate ZK Issue: nil public parameters")
+		return nil, nil, ErrNilPublicParameters
 	}
 	if len(math.Curves) < int(i.PublicParams.Curve)+1 {
-		return nil, nil, errors.New("failed to generate ZK Issue: please initialize public parameters with an admissible curve")
+		return nil, nil, ErrInvalidPublicParameters
 	}
 	// Generate tokens with their corresponding witnesses (value and blinding factor).
 	tokens, tw, err := token.GetTokensWithWitness(values, i.Type, i.PublicParams.PedersenGenerators, math.Curves[i.PublicParams.Curve])
@@ -62,11 +61,11 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*
 	}
 	proof, err := prover.Prove()
 	if err != nil {
-		return nil, nil, errors.Errorf("failed to generate zero knwoledge proof for issue")
+		return nil, nil, ErrGenerateZKProof
 	}
 
 	if i.Signer == nil {
-		return nil, nil, errors.New("failed to generate ZK Issue: please initialize signer")
+		return nil, nil, ErrNilSigner
 	}
 	signerRaw, err := i.Signer.Serialize()
 	if err != nil {
@@ -96,7 +95,7 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*
 // SignTokenActions signs the serialized token actions using the issuer's signer.
 func (i *Issuer) SignTokenActions(raw []byte) ([]byte, error) {
 	if i.Signer == nil {
-		return nil, errors.New("failed to sign Token Actions: please initialize signer")
+		return nil, ErrSignTokenActionsNilSigner
 	}
 
 	return i.Signer.Sign(raw)

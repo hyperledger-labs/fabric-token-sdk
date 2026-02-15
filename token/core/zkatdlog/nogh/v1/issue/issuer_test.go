@@ -266,9 +266,10 @@ func TestIssuerSignTokenActions(t *testing.T) {
 	// Signer nil
 	issuer.Signer = nil
 	_, err = issuer.SignTokenActions(raw)
-	assert.EqualError(t, err, "failed to sign Token Actions: please initialize signer")
+	assert.EqualError(t, err, issue2.ErrSignTokenActionsNilSigner.Error())
 }
 
+// TestIssuerGenerateZKIssueErrors tests error conditions for GenerateZKIssue.
 func TestIssuerGenerateZKIssueErrors(t *testing.T) {
 	pp := setup(t, 32, math.BLS12_381_BBS_GURVY)
 	issuer := issue2.NewIssuer("ABC", &mock.SigningIdentity{}, pp)
@@ -276,18 +277,18 @@ func TestIssuerGenerateZKIssueErrors(t *testing.T) {
 	// PublicParams nil
 	issuer.PublicParams = nil
 	_, _, err := issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
-	assert.EqualError(t, err, "failed to generate ZK Issue: nil public parameters")
+	assert.EqualError(t, err, issue2.ErrNilPublicParameters.Error())
 	issuer.PublicParams = pp
 
 	// Inadmissible curve
 	oldCurve := issuer.PublicParams.Curve
 	issuer.PublicParams.Curve = math.CurveID(len(math.Curves) + 1)
 	_, _, err = issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
-	assert.EqualError(t, err, "failed to generate ZK Issue: please initialize public parameters with an admissible curve")
+	assert.EqualError(t, err, issue2.ErrInvalidPublicParameters.Error())
 	issuer.PublicParams.Curve = oldCurve
 
 	// Signer nil
 	issuer.Signer = nil
 	_, _, err = issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
-	assert.EqualError(t, err, "failed to generate ZK Issue: please initialize signer")
+	assert.EqualError(t, err, issue2.ErrNilSigner.Error())
 }

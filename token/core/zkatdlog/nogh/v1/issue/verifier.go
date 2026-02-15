@@ -42,7 +42,7 @@ func (v *Verifier) Verify(proof []byte) error {
 	// Verify the same-type proof.
 	err = v.SameType.Verify(tp.SameType)
 	if err != nil {
-		return errors.Wrapf(err, "invalid issue proof")
+		return errors.Join(ErrInvalidIssueProof, err)
 	}
 	// Verify the range correctness proof.
 	// The range proof is performed on tokens[i] / commitmentToType to show they commit to a positive value.
@@ -55,7 +55,7 @@ func (v *Verifier) Verify(proof []byte) error {
 	v.RangeCorrectness.Commitments = coms
 	err = v.RangeCorrectness.Verify(tp.RangeCorrectness)
 	if err != nil {
-		return errors.Wrapf(err, "invalid issue proof")
+		return errors.Join(ErrInvalidIssueProof, err)
 	}
 
 	return nil

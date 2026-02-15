@@ -172,9 +172,9 @@ func TestFields(t *testing.T) {
 	oldOutputs := action.Outputs
 	action.Outputs = []*token.Token{nil}
 	_, err = action.GetSerializedOutputs()
-	assert.EqualError(t, err, "invalid issue: there is a nil output")
+	assert.EqualError(t, err, ErrNilOutput.Error())
 	_, err = action.GetCommitments()
-	assert.EqualError(t, err, "invalid issue: there is a nil output")
+	assert.EqualError(t, err, ErrNilOutput.Error())
 	action.Outputs = oldOutputs
 }
 
@@ -189,40 +189,40 @@ func TestValidate(t *testing.T) {
 	oldIssuer := action.Issuer
 	action.Issuer = nil
 	err := action.Validate()
-	assert.EqualError(t, err, "issuer is not set")
+	assert.EqualError(t, err, ErrIssuerNotSet.Error())
 	action.Issuer = oldIssuer
 
 	// Nil input
 	oldInput := action.Inputs[0]
 	action.Inputs[0] = nil
 	err = action.Validate()
-	assert.EqualError(t, err, "nil input in issue action")
+	assert.EqualError(t, err, ErrNilInput.Error())
 	action.Inputs[0] = oldInput
 
 	// Nil input token
 	oldToken := action.Inputs[0].Token
 	action.Inputs[0].Token = nil
 	err = action.Validate()
-	assert.EqualError(t, err, "nil input token in issue action")
+	assert.EqualError(t, err, ErrNilInputToken.Error())
 	action.Inputs[0].Token = oldToken
 
 	// Nil input id
 	oldTxId := action.Inputs[0].ID.TxId
 	action.Inputs[0].ID.TxId = ""
 	err = action.Validate()
-	assert.EqualError(t, err, "nil input id in issue action")
+	assert.EqualError(t, err, ErrNilInputID.Error())
 	action.Inputs[0].ID.TxId = oldTxId
 
 	// No outputs
 	oldOutputs := action.Outputs
 	action.Outputs = nil
 	err = action.Validate()
-	assert.EqualError(t, err, "no outputs in issue action")
+	assert.EqualError(t, err, ErrNoOutputs.Error())
 	action.Outputs = oldOutputs
 
 	// Nil output
 	action.Outputs = []*token.Token{nil}
 	err = action.Validate()
-	assert.EqualError(t, err, "nil output in issue action")
+	assert.EqualError(t, err, ErrNilOutput.Error())
 	action.Outputs = oldOutputs
 }

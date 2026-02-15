@@ -70,7 +70,7 @@ type Action struct {
 // NewAction instantiates an Action given the issuer's identity, token commitments, owners, and a proof.
 func NewAction(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
 	if len(owners) != len(coms) {
-		return nil, errors.New("number of owners does not match number of tokens")
+		return nil, ErrOwnerTokenMismatch
 	}
 
 	outputs := make([]*token.Token, len(coms))
@@ -155,7 +155,7 @@ func (i *Action) GetSerializedOutputs() ([][]byte, error) {
 	res := make([][]byte, len(i.Outputs))
 	for i, tok := range i.Outputs {
 		if tok == nil {
-			return nil, errors.New("invalid issue: there is a nil output")
+			return nil, ErrNilOutput
 		}
 		var err error
 		res[i], err = tok.Serialize()
@@ -180,25 +180,25 @@ func (i *Action) IsGraphHiding() bool {
 // Validate ensures the Action is well-formed.
 func (i *Action) Validate() error {
 	if i.Issuer.IsNone() {
-		return errors.Errorf("issuer is not set")
+		return ErrIssuerNotSet
 	}
 	for _, input := range i.Inputs {
 		if input == nil {
-			return errors.Errorf("nil input in issue action")
+			return ErrNilInput
 		}
 		if len(input.Token) == 0 {
-			return errors.Errorf("nil input token in issue action")
+			return ErrNilInputToken
 		}
 		if len(input.ID.TxId) == 0 {
-			return errors.Errorf("nil input id in issue action")
+			return ErrNilInputID
 		}
 	}
 	if len(i.Outputs) == 0 {
-		return errors.Errorf("no outputs in issue action")
+		return ErrNoOutputs
 	}
 	for _, output := range i.Outputs {
 		if output == nil {
-			return errors.Errorf("nil output in issue action")
+			return ErrNilOutput
 		}
 	}
 
@@ -215,14 +215,14 @@ func (i *Action) Serialize() ([]byte, error) {
 	// inputs
 	inputs, err := protos.ToProtosSlice[actions.IssueActionInput, *ActionInput](i.Inputs)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize inputs")
+		return nil, errors.Join(ErrSerializeInputsFailed, err)
 	}
 
 	// outputs
 	outputs, err := protos.ToProtosSliceFunc(i.Outputs, func(output *token.Token) (*actions.IssueActionOutput, error) {
 		data, err := utils.ToProtoG1(output.Data)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to serialize output")
+			return nil, errors.Join(ErrSerializeOutputFailed, err)
 		}
 
 		return &actions.IssueActionOutput{
@@ -233,7 +233,7 @@ func (i *Action) Serialize() ([]byte, error) {
 		}, nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize outputs")
+		return nil, errors.Join(ErrSerializeOutputsFailed, err)
 	}
 
 	issueAction := &actions.IssueAction{
@@ -257,7 +257,7 @@ func (i *Action) Deserialize(raw []byte) error {
 	issueAction := &actions.IssueAction{}
 	err := proto.Unmarshal(raw, issueAction)
 	if err != nil {
-		return errors.Wrap(err, "failed to deserialize issue action")
+		return errors.Join(ErrDeserializeIssueActionFailed, err)
 	}
 
 	// assert version
@@ -269,7 +269,7 @@ func (i *Action) Deserialize(raw []byte) error {
 	i.Inputs = make([]*ActionInput, len(issueAction.Inputs))
 	i.Inputs = slices.GenericSliceOfPointers[ActionInput](len(issueAction.Inputs))
 	if err := protos.FromProtosSlice(issueAction.Inputs, i.Inputs); err != nil {
-		return errors.Wrap(err, "failed unmarshalling receivers metadata")
+		return errors.Join(ErrUnmarshalReceiversMetadataFailed, err)
 	}
 
 	// outputs
@@ -280,7 +280,7 @@ func (i *Action) Deserialize(raw []byte) error {
 		}
 		data, err := utils.FromG1Proto(output.Token.Data)
 		if err != nil {
-			return errors.Wrapf(err, "failed to deserialize output")
+			return errors.Join(ErrDeserializeOutputFailed, err)
 		}
 		i.Outputs[j] = &token.Token{
 			Owner: output.Token.Owner,
@@ -304,7 +304,7 @@ func (i *Action) GetCommitments() ([]*math.G1, error) {
 	com := make([]*math.G1, len(i.Outputs))
 	for j := 0; j < len(com); j++ {
 		if i.Outputs[j] == nil {
-			return nil, errors.New("invalid issue: there is a nil output")
+			return nil, ErrNilOutput
 		}
 		com[j] = i.Outputs[j].Data
 	}

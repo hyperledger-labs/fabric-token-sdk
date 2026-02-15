@@ -41,23 +41,23 @@ func (stp *SameType) Serialize() ([]byte, error) {
 func (stp *SameType) Deserialize(bytes []byte) error {
 	unmarshaller, err := asn1.NewUnmarshaller(bytes)
 	if err != nil {
-		return errors.Wrapf(err, "failed to initialize unmarshaller")
+		return errors.Join(ErrUnmarshalSameTypeFailed, err)
 	}
 	stp.Type, err = unmarshaller.NextZr()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize type")
+		return errors.Join(ErrDeserializeTypeFailed, err)
 	}
 	stp.BlindingFactor, err = unmarshaller.NextZr()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize blinding factor")
+		return errors.Join(ErrDeserializeBlindingFactorFailed, err)
 	}
 	stp.Challenge, err = unmarshaller.NextZr()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize challenge")
+		return errors.Join(ErrDeserializeChallengeFailed, err)
 	}
 	stp.CommitmentToType, err = unmarshaller.NextG1()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize commitment to type")
+		return errors.Join(ErrDeserializeCommitmentToTypeFailed, err)
 	}
 
 	return nil
@@ -105,13 +105,13 @@ func (p *SameTypeProver) Prove() (*SameType, error) {
 	// Compute commitment to the randomness.
 	err := p.computeCommitment()
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't prove type during the issue")
+		return nil, errors.Join(ErrProveTypeFailed, err)
 	}
 	array := common.GetG1Array([]*math.G1{p.CommitmentToType, p.commitment})
 	var toHash []byte
 	toHash, err = array.Bytes()
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't prove type during the issue")
+		return nil, errors.Join(ErrProveTypeFailed, err)
 	}
 	// Compute the challenge using Fiat-Shamir.
 	chal := p.Curve.HashToZr(toHash)
@@ -133,7 +133,7 @@ func (p *SameTypeProver) Prove() (*SameType, error) {
 func (p *SameTypeProver) computeCommitment() error {
 	rand, err := p.Curve.Rand()
 	if err != nil {
-		return errors.Errorf("failed to get RNG")
+		return ErrGetRNGFailed
 	}
 	p.randomness = &SameTypeRandomness{}
 	p.randomness.tokenType = p.Curve.NewRandomZr(rand)
@@ -174,11 +174,11 @@ func (v *SameTypeVerifier) Verify(proof *SameType) error {
 	// Recompute the challenge and check it matches the one in the proof.
 	raw, err := common.GetG1Array([]*math.G1{proof.CommitmentToType, com}).Bytes()
 	if err != nil {
-		return errors.Wrapf(err, "failed to verify same type proof")
+		return errors.Join(ErrVerifySameTypeProofFailed, err)
 	}
 
 	if !v.Curve.HashToZr(raw).Equals(proof.Challenge) {
-		return errors.Errorf("invalid same type proof")
+		return ErrInvalidSameTypeProof
 	}
 
 	return nil

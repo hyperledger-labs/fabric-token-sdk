@@ -95,14 +95,14 @@ func TestSameTypeVerifyError(t *testing.T) {
 	originalChallenge := proof.Challenge
 	proof.Challenge = curve.NewRandomZr(randReader)
 	err = verifier.Verify(proof)
-	assert.EqualError(t, err, "invalid same type proof")
+	assert.EqualError(t, err, issue.ErrInvalidSameTypeProof.Error())
 	proof.Challenge = originalChallenge
 
 	// Wrong commitment to type
 	originalCommitment := proof.CommitmentToType
 	proof.CommitmentToType = curve.GenG1.Mul(curve.NewRandomZr(randReader))
 	err = verifier.Verify(proof)
-	assert.EqualError(t, err, "invalid same type proof")
+	assert.EqualError(t, err, issue.ErrInvalidSameTypeProof.Error())
 	proof.CommitmentToType = originalCommitment
 }
 
