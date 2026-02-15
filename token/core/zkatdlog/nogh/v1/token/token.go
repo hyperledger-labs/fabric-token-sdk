@@ -19,19 +19,21 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// Token encodes Type, Value, Owner
+// Token represents a ZKAT-DLOG token without graph hiding.
+// It encodes the token owner and the Pedersen commitment to its type, value, and blinding factor.
 type Token comm.Token
 
+// GetOwner returns the owner of the token.
 func (t *Token) GetOwner() []byte {
 	return t.Owner
 }
 
-// IsRedeem returns true if the token has an empty owner field
+// IsRedeem returns true if the token is a redemption (i.e., has no owner).
 func (t *Token) IsRedeem() bool {
 	return len(t.Owner) == 0
 }
 
-// Serialize marshals Token
+// Serialize marshals the Token into bytes, including its type information for proper unwrapping.
 func (t *Token) Serialize() ([]byte, error) {
 	data, err := utils.ToProtoG1(t.Data)
 	if err != nil {
@@ -48,7 +50,7 @@ func (t *Token) Serialize() ([]byte, error) {
 	return comm.WrapTokenWithType(raw)
 }
 
-// Deserialize unmarshals Token
+// Deserialize unmarshals the Token from bytes and validates its type.
 func (t *Token) Deserialize(bytes []byte) error {
 	typed, err := comm.UnmarshalTypedToken(bytes)
 	if err != nil {
@@ -67,7 +69,8 @@ func (t *Token) Deserialize(bytes []byte) error {
 	return err
 }
 
-// ToClear returns Token in the clear
+// ToClear verifies the token commitment against the provided metadata and public parameters.
+// If valid, it returns the token in cleartext (type, quantity, and owner).
 func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, error) {
 	com, err := commit([]*math.Zr{
 		math.Curves[pp.Curve].HashToZr([]byte(meta.Type)),
@@ -89,6 +92,7 @@ func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, 
 	}, nil
 }
 
+// Validate checks if the token structure is well-formed.
 func (t *Token) Validate(checkOwner bool) error {
 	if checkOwner && len(t.Owner) == 0 {
 		return ErrEmptyOwner
@@ -100,6 +104,7 @@ func (t *Token) Validate(checkOwner bool) error {
 	return nil
 }
 
+// computeTokens generates Pedersen commitments for a list of token metadata.
 func computeTokens(tw []*Metadata, pp []*math.G1, c *math.Curve) ([]*math.G1, error) {
 	tokens := make([]*math.G1, len(tw))
 	var err error
@@ -114,6 +119,8 @@ func computeTokens(tw []*Metadata, pp []*math.G1, c *math.Curve) ([]*math.G1, er
 	return tokens, nil
 }
 
+// GetTokensWithWitness generates commitments and metadata for a given set of values and token type.
+// It uses a cryptographically secure random number generator for blinding factors.
 func GetTokensWithWitness(values []uint64, tokenType token.Type, pp []*math.G1, c *math.Curve) ([]*math.G1, []*Metadata, error) {
 	if c == nil {
 		return nil, nil, errors.New("cannot get tokens with witness: please initialize curve")
@@ -138,10 +145,10 @@ func GetTokensWithWitness(values []uint64, tokenType token.Type, pp []*math.G1, 
 	return tokens, tw, nil
 }
 
-// Metadata contains the metadata of a token
+// Metadata contains the opening information (type, value, blinding factor) for a token commitment.
 type Metadata comm.Metadata
 
-// NewMetadata returns an array of Metadata that corresponds to the passed arguments
+// NewMetadata creates a slice of Metadata objects from the provided values and blinding factors.
 func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs []*math.Zr) []*Metadata {
 	witness := make([]*Metadata, len(values))
 	for i, v := range values {
@@ -152,7 +159,7 @@ func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs 
 	return witness
 }
 
-// Deserialize un-marshals Metadata
+// Deserialize unmarshals Metadata from bytes and validates its structure.
 func (m *Metadata) Deserialize(b []byte) error {
 	typed, err := comm.UnmarshalTypedToken(b)
 	if err != nil {
@@ -178,15 +185,15 @@ func (m *Metadata) Deserialize(b []byte) error {
 	return nil
 }
 
-// Serialize un-marshals Metadata
+// Serialize marshals Metadata into bytes, including its type information for proper unwrapping.
 func (m *Metadata) Serialize() ([]byte, error) {
 	value, err := utils.ToProtoZr(m.Value)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize metadata")
+		return nil, errors.Wrapf(err, "failed to serialize metadata")
 	}
 	blindingFactor, err := utils.ToProtoZr(m.BlindingFactor)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize metadata")
+		return nil, errors.Wrapf(err, "failed to serialize metadata")
 	}
 	raw, err := proto.Marshal(&actions.TokenMetadata{
 		Type:           string(m.Type),
@@ -201,6 +208,7 @@ func (m *Metadata) Serialize() ([]byte, error) {
 	return comm.WrapMetadataWithType(raw)
 }
 
+// Clone creates a deep copy of the Metadata.
 func (m *Metadata) Clone() *Metadata {
 	return &Metadata{
 		Type:           m.Type,
@@ -210,9 +218,7 @@ func (m *Metadata) Clone() *Metadata {
 	}
 }
 
-// Validate checks that Metadata is well-formed.
-// If checkIssuer is true, it checks that the Issuer field is set.
-// If checkIssuer is false, it checks that the Issuer field is not set.
+// Validate ensures the Metadata is well-formed and checks the presence of the issuer if required.
 func (m *Metadata) Validate(checkIssuer bool) error {
 	if len(m.Type) == 0 {
 		return ErrEmptyType
@@ -233,6 +239,7 @@ func (m *Metadata) Validate(checkIssuer bool) error {
 	return nil
 }
 
+// commit computes a Pedersen commitment to a vector of field elements using the provided generators.
 func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, error) {
 	com := c.NewG1()
 	for i := range vector {
@@ -245,12 +252,15 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, 
 	return com, nil
 }
 
+// UpgradeWitness contains the original Fabtoken output and the blinding factor
+// used to create the upgraded ZKAT-DLOG commitment.
 type UpgradeWitness struct {
 	FabToken *fabtokenv1.Output
 	// BlindingFactor is the blinding factor used to commit type and value
 	BlindingFactor *math.Zr
 }
 
+// Validate ensures the UpgradeWitness is well-formed.
 func (u *UpgradeWitness) Validate() error {
 	if u.FabToken == nil {
 		return ErrMissingFabToken
