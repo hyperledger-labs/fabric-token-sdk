@@ -13,10 +13,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
-		"github.com/stretchr/testify/require"
-	)
-	
-	type TypeAndSumEnv struct {
+	"github.com/stretchr/testify/require"
+)
+
+type TypeAndSumEnv struct {
 	prover   *transfer.TypeAndSumProver
 	verifier *transfer.TypeAndSumVerifier
 	c        *math.Curve
@@ -103,13 +103,13 @@ func TestTypeAndSumProof_Validate(t *testing.T) {
 func TestTypeAndSumProof_Serialization(t *testing.T) {
 	c := math.Curves[TestCurve]
 	proof := &transfer.TypeAndSumProof{
-		CommitmentToType: c.GenG1.Copy(),
+		CommitmentToType:     c.GenG1.Copy(),
 		InputBlindingFactors: []*math.Zr{c.NewZrFromInt(1), c.NewZrFromInt(2)},
-		InputValues: []*math.Zr{c.NewZrFromInt(3), c.NewZrFromInt(4)},
-		Type: c.NewZrFromInt(5),
-		TypeBlindingFactor: c.NewZrFromInt(6),
-		EqualityOfSum: c.NewZrFromInt(7),
-		Challenge: c.NewZrFromInt(8),
+		InputValues:          []*math.Zr{c.NewZrFromInt(3), c.NewZrFromInt(4)},
+		Type:                 c.NewZrFromInt(5),
+		TypeBlindingFactor:   c.NewZrFromInt(6),
+		EqualityOfSum:        c.NewZrFromInt(7),
+		Challenge:            c.NewZrFromInt(8),
 	}
 
 	raw, err := proof.Serialize()
