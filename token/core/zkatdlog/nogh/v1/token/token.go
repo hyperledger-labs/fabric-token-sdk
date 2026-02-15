@@ -129,10 +129,26 @@ func GetTokensWithWitness(values []uint64, tokenType token.Type, pp []*math.G1, 
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot get tokens with witness")
 	}
+	bfs := make([]*math.Zr, len(values))
+	for i := range values {
+		bfs[i] = c.NewRandomZr(rand)
+	}
+	return GetTokensWithWitnessAndBF(values, bfs, tokenType, pp, c)
+}
+
+// GetTokensWithWitnessAndBF returns token commitments and metadata for the passed values, blinding factors, and type.
+// This is useful for recomputing commitments during validation or testing.
+func GetTokensWithWitnessAndBF(values []uint64, bfs []*math.Zr, tokenType token.Type, pp []*math.G1, c *math.Curve) ([]*math.G1, []*Metadata, error) {
+	if c == nil {
+		return nil, nil, errors.New("cannot get tokens with witness: please initialize curve")
+	}
+	if len(values) != len(bfs) {
+		return nil, nil, errors.New("cannot get tokens with witness: values and bfs must have the same length")
+	}
 	tw := make([]*Metadata, len(values))
 	for i, v := range values {
 		tw[i] = &Metadata{
-			BlindingFactor: c.NewRandomZr(rand),
+			BlindingFactor: bfs[i],
 			Value:          c.NewZrFromUint64(v),
 			Type:           tokenType,
 		}

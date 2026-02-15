@@ -41,6 +41,9 @@ type Action interface {
 // The provided 'now' timestamp is used to determine whether the
 // HTLC is still claimable (now before deadline) or reclaimable (now after or equal to deadline).
 func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htlc.Script, OperationType, error) {
+	if len(outRawOwner) == 0 {
+		return nil, None, errors.Errorf("the output owner must be set")
+	}
 	sender, err := identity.UnmarshalTypedIdentity(senderRawOwner)
 	if err != nil {
 		return nil, None, err
