@@ -14,21 +14,20 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// SameType shows that issued tokens contains Pedersen commitments to (type, value)
-// SameType also shows that all the issued tokens contain the same type
+// SameType is a zero-knowledge proof that all issued tokens have the same type
+// and that the type is properly committed in each token's Pedersen commitment.
 type SameType struct {
-	// Proof of type
+	// Type is the proof response for the token type.
 	Type *math.Zr
-	// Proof of randomness used to compute the commitment to type and value in the issued tokens
-	// i^th proof is for the randomness  used to compute the i^th token
+	// BlindingFactor is the proof response for the blinding factor used in the type commitment.
 	BlindingFactor *math.Zr
-	// Challenge computed using the Fiat-Shamir Heuristic
+	// Challenge is the Fiat-Shamir challenge for the proof.
 	Challenge *math.Zr
-	// CommitmentToType is a commitment to the type being issued
+	// CommitmentToType is the commitment to the type being issued.
 	CommitmentToType *math.G1
 }
 
-// Serialize marshals SameType proof
+// Serialize marshals the SameType proof into its byte representation.
 func (stp *SameType) Serialize() ([]byte, error) {
 	return asn1.MarshalMath(
 		stp.Type,
@@ -38,7 +37,7 @@ func (stp *SameType) Serialize() ([]byte, error) {
 	)
 }
 
-// Deserialize un-marshals SameType proof
+// Deserialize unmarshals the SameType proof from its byte representation.
 func (stp *SameType) Deserialize(bytes []byte) error {
 	unmarshaller, err := asn1.NewUnmarshaller(bytes)
 	if err != nil {
@@ -64,31 +63,31 @@ func (stp *SameType) Deserialize(bytes []byte) error {
 	return nil
 }
 
-// SameTypeRandomness is the randomness used to generate
-// the well-formedness proof
+// SameTypeRandomness holds the secret randomness used during the proof generation.
 type SameTypeRandomness struct {
 	blindingFactor *math.Zr
 	tokenType      *math.Zr
 }
 
-// SameTypeProver contains information that allows an Issuer to prove that
-// issued tokens are have the same type
+// SameTypeProver generates a proof that all issued tokens have the same type.
 type SameTypeProver struct {
+	// PedParams are the generators for Pedersen commitments.
 	PedParams []*math.G1
+	// Curve is the elliptic curve used for the proof.
 	Curve     *math.Curve
-	// tokenType is the type of the tokens to be issued
+	// tokenType is the type of the tokens being issued.
 	tokenType token2.Type
-	// blindingFactor is the blinding factor in the CommitmentToType
+	// blindingFactor is the blinding factor in the CommitmentToType.
 	blindingFactor *math.Zr
-	// CommitmentToType is a commitment to tokenType using blindingFactor
+	// CommitmentToType is the commitment to the token type.
 	CommitmentToType *math.G1
-	// randomness is the randomness during the proof generation
+	// randomness is the secret randomness used for proof generation.
 	randomness *SameTypeRandomness
-	// commitment is the commitment to the randomness used to generate the proof
+	// commitment is the commitment to the randomness.
 	commitment *math.G1
 }
 
-// NewSameTypeProver returns a SameTypeProver for the passed parameters
+// NewSameTypeProver returns a new SameTypeProver instance.
 func NewSameTypeProver(ttype token2.Type, bf *math.Zr, com *math.G1, pp []*math.G1, c *math.Curve) *SameTypeProver {
 	return &SameTypeProver{
 		tokenType:        ttype,
@@ -99,11 +98,11 @@ func NewSameTypeProver(ttype token2.Type, bf *math.Zr, com *math.G1, pp []*math.
 	}
 }
 
-// Prove returns a SameType proof
+// Prove generates the SameType proof.
 func (p *SameTypeProver) Prove() (*SameType, error) {
 	tokenType := p.Curve.HashToZr([]byte(p.tokenType))
 
-	// compute commitments used in the Schnorr proof
+	// Compute commitment to the randomness.
 	err := p.computeCommitment()
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't prove type during the issue")
@@ -114,11 +113,13 @@ func (p *SameTypeProver) Prove() (*SameType, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't prove type during the issue")
 	}
+	// Compute the challenge using Fiat-Shamir.
 	chal := p.Curve.HashToZr(toHash)
 	proof := &SameType{
 		CommitmentToType: p.CommitmentToType,
 		Challenge:        chal,
 	}
+	// Compute the proof responses.
 	proof.Type = p.Curve.ModMul(chal, tokenType, p.Curve.GroupOrder)
 	proof.Type = p.Curve.ModAdd(proof.Type, p.randomness.tokenType, p.Curve.GroupOrder)
 
@@ -128,33 +129,33 @@ func (p *SameTypeProver) Prove() (*SameType, error) {
 	return proof, nil
 }
 
-// computeCommitment compute the commitments to the randomness used in the same type proof
+// computeCommitment generates randomness and computes the commitment to it.
 func (p *SameTypeProver) computeCommitment() error {
-	// get random number generator
 	rand, err := p.Curve.Rand()
 	if err != nil {
 		return errors.Errorf("failed to get RNG")
 	}
-	// randomness for proof
 	p.randomness = &SameTypeRandomness{}
 	p.randomness.tokenType = p.Curve.NewRandomZr(rand)
 	p.randomness.blindingFactor = p.Curve.NewRandomZr(rand)
 
-	// compute commitment
 	p.commitment = p.PedParams[0].Mul(p.randomness.tokenType)
 	p.commitment.Add(p.PedParams[2].Mul(p.randomness.blindingFactor))
 
 	return nil
 }
 
-// SameTypeVerifier checks the validity of SameType proof
+// SameTypeVerifier verifies a SameType proof.
 type SameTypeVerifier struct {
+	// PedParams are the generators for Pedersen commitments.
 	PedParams []*math.G1
+	// Curve is the elliptic curve used for verification.
 	Curve     *math.Curve
+	// Tokens are the commitments to the issued tokens.
 	Tokens    []*math.G1
 }
 
-// NewSameTypeVerifier returns a SameTypeVerifier corresponding to the passed parameters
+// NewSameTypeVerifier returns a new SameTypeVerifier instance.
 func NewSameTypeVerifier(tokens []*math.G1, pp []*math.G1, c *math.Curve) *SameTypeVerifier {
 	return &SameTypeVerifier{
 		Tokens:    tokens,
@@ -163,14 +164,14 @@ func NewSameTypeVerifier(tokens []*math.G1, pp []*math.G1, c *math.Curve) *SameT
 	}
 }
 
-// Verify returns an error if the serialized proof is an invalid SameType proof
+// Verify checks the validity of the SameType proof.
 func (v *SameTypeVerifier) Verify(proof *SameType) error {
-	// recompute commitments used in ZK proofs
+	// Recompute the commitment to randomness from the proof responses.
 	com := v.PedParams[0].Mul(proof.Type)
 	com.Add(v.PedParams[2].Mul(proof.BlindingFactor))
 	com.Sub(proof.CommitmentToType.Mul(proof.Challenge))
 
-	// recompute challenge and check proof validity
+	// Recompute the challenge and check it matches the one in the proof.
 	raw, err := common.GetG1Array([]*math.G1{proof.CommitmentToType, com}).Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed to verify same type proof")

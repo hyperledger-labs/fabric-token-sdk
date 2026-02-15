@@ -62,6 +62,50 @@ func GetSameTypeProverAndVerifier(t *testing.T) (*issue.SameTypeProver, *issue.S
 	return issue.NewSameTypeProver("ABC", blindingFactor, com, pp, math.Curves[1]), issue.NewSameTypeVerifier(tokens, pp, math.Curves[1])
 }
 
+func TestSameTypeDeserializeError(t *testing.T) {
+	st := &issue.SameType{}
+	err := st.Deserialize([]byte("invalid"))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to initialize unmarshaller")
+
+	// Partial data
+	curve := math.Curves[1]
+	rand, _ := curve.Rand()
+	raw, err := issue.NewSameTypeProver("ABC", curve.NewRandomZr(rand), curve.GenG1.Mul(curve.NewRandomZr(rand)), preparePedersenParameters(t), curve).Prove()
+	assert.NoError(t, err)
+	serialized, err := raw.Serialize()
+	assert.NoError(t, err)
+
+	for i := 0; i < len(serialized)-1; i++ {
+		err = st.Deserialize(serialized[:i])
+		assert.Error(t, err)
+	}
+}
+
+func TestSameTypeVerifyError(t *testing.T) {
+	prover, verifier := GetSameTypeProverAndVerifier(t)
+	proof, err := prover.Prove()
+	assert.NoError(t, err)
+
+	// Wrong challenge
+	curve := math.Curves[1]
+	randReader, err := curve.Rand()
+	assert.NoError(t, err)
+
+	originalChallenge := proof.Challenge
+	proof.Challenge = curve.NewRandomZr(randReader)
+	err = verifier.Verify(proof)
+	assert.EqualError(t, err, "invalid same type proof")
+	proof.Challenge = originalChallenge
+
+	// Wrong commitment to type
+	originalCommitment := proof.CommitmentToType
+	proof.CommitmentToType = curve.GenG1.Mul(curve.NewRandomZr(randReader))
+	err = verifier.Verify(proof)
+	assert.EqualError(t, err, "invalid same type proof")
+	proof.CommitmentToType = originalCommitment
+}
+
 func preparePedersenParameters(t *testing.T) []*math.G1 {
 	t.Helper()
 	curve := math.Curves[1]
