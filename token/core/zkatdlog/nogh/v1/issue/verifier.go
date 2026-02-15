@@ -37,7 +37,7 @@ func (v *Verifier) Verify(proof []byte) error {
 	// Unmarshal the proof.
 	err := tp.Deserialize(proof)
 	if err != nil {
-		return err
+		return errors.Join(ErrDeserializeProofFailed, err)
 	}
 	// Verify the same-type proof.
 	err = v.SameType.Verify(tp.SameType)

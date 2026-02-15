@@ -160,7 +160,7 @@ func (i *Action) GetSerializedOutputs() ([][]byte, error) {
 		var err error
 		res[i], err = tok.Serialize()
 		if err != nil {
-			return nil, err
+			return nil, errors.Join(ErrSerializeOutputFailed, err)
 		}
 	}
 
@@ -262,7 +262,7 @@ func (i *Action) Deserialize(raw []byte) error {
 
 	// assert version
 	if issueAction.Version != ProtocolV1 {
-		return errors.Errorf("invalid issue version, expected [%d], got [%d]", ProtocolV1, issueAction.Version)
+		return errors.Join(ErrInvalidProtocolVersion, errors.Errorf("expected [%d], got [%d]", ProtocolV1, issueAction.Version))
 	}
 
 	// inputs

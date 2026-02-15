@@ -8,6 +8,7 @@ package issue
 
 import (
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
@@ -51,13 +52,13 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*
 	// Generate tokens with their corresponding witnesses (value and blinding factor).
 	tokens, tw, err := token.GetTokensWithWitness(values, i.Type, i.PublicParams.PedersenGenerators, math.Curves[i.PublicParams.Curve])
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Join(ErrGetTokensFailed, err)
 	}
 
 	// Create a prover and generate the zero-knowledge proof of validity.
 	prover, err := NewProver(tw, tokens, i.PublicParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Join(ErrGetIssueProverFailed, err)
 	}
 	proof, err := prover.Prove()
 	if err != nil {
@@ -69,13 +70,13 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*
 	}
 	signerRaw, err := i.Signer.Serialize()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Join(ErrSerializeSignerFailed, err)
 	}
 
 	// Create the issue action.
 	issue, err := NewAction(signerRaw, tokens, owners, proof)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Join(ErrCreateActionFailed, err)
 	}
 
 	// Prepare metadata for each issued token.

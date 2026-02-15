@@ -34,7 +34,10 @@ func (p *Proof) Deserialize(bytes []byte) error {
 	p.SameType = &SameType{}
 	p.RangeCorrectness = &rp.RangeCorrectness{}
 
-	return asn1.Unmarshal[asn1.Serializer](bytes, p.SameType, p.RangeCorrectness)
+	if err := asn1.Unmarshal[asn1.Serializer](bytes, p.SameType, p.RangeCorrectness); err != nil {
+		return errors.Join(ErrDeserializeProofFailed, err)
+	}
+	return nil
 }
 
 // Prover produces a proof of validity for an IssueAction.

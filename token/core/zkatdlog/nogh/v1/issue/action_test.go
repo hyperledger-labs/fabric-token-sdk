@@ -49,7 +49,7 @@ func TestDeserializeError(t *testing.T) {
 	raw, err := proto.Marshal(&actions.IssueAction{Version: ProtocolV1 + 1})
 	assert.NoError(t, err)
 	err = action.Deserialize(raw)
-	assert.EqualError(t, err, "invalid issue version, expected [1], got [2]")
+	require.ErrorIs(t, err, ErrInvalidProtocolVersion)
 }
 
 func BenchmarkActionMarshalling(b *testing.B) {

@@ -13,6 +13,8 @@ var (
 	ErrOwnerTokenMismatch = errors.New("number of owners does not match number of tokens")
 	// ErrNilOutput is returned when there is a nil output in an issue action
 	ErrNilOutput = errors.New("nil output in issue action")
+	// ErrInvalidProtocolVersion is returned when the protocol version is invalid
+	ErrInvalidProtocolVersion = errors.New("invalid protocol version")
 	// ErrIssuerNotSet is returned when the issuer is not set
 	ErrIssuerNotSet = errors.New("issuer is not set")
 	// ErrNilInput is returned when there is a nil input in an issue action
@@ -67,6 +69,14 @@ var (
 	ErrDeserializeOutputFailed = errors.New("failed to deserialize output")
 	// ErrUnmarshalSameTypeFailed is returned when same type proof unmarshalling fails
 	ErrUnmarshalSameTypeFailed = errors.New("failed to initialize unmarshaller")
+	// ErrDeserializeProofFailed is returned when proof deserialization fails
+	ErrDeserializeProofFailed = errors.New("failed to deserialize proof")
+	// ErrGetTokensFailed is returned when token generation fails
+	ErrGetTokensFailed = errors.New("failed to generate tokens")
+	// ErrSerializeSignerFailed is returned when signer serialization fails
+	ErrSerializeSignerFailed = errors.New("failed to serialize signer")
+	// ErrCreateActionFailed is returned when action creation fails
+	ErrCreateActionFailed = errors.New("failed to create issue action")
 	// ErrDeserializeTypeFailed is returned when type deserialization fails
 	ErrDeserializeTypeFailed = errors.New("failed to deserialize type")
 	// ErrDeserializeBlindingFactorFailed is returned when blinding factor deserialization fails
