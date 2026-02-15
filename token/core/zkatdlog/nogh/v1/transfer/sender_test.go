@@ -27,6 +27,29 @@ import (
 )
 
 func TestSender(t *testing.T) {
+	t.Run("mismatch", func(t *testing.T) {
+		_, err := transfer.NewSender([]driver.Signer{nil}, nil, nil, nil, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "number of tokens to be spent does not match number of openings")
+	})
+
+	t.Run("GenerateZKTransfer values != owners mismatch", func(t *testing.T) {
+		env, err := newSenderEnv(nil, 1, 1)
+		require.NoError(t, err)
+		_, _, err = env.sender.GenerateZKTransfer(t.Context(), []uint64{10, 20}, [][]byte{[]byte("owner1")})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "number of values [2] does not match number of recipients [1]")
+	})
+
+	t.Run("GenerateZKTransfer mismatched input types", func(t *testing.T) {
+		env, err := newSenderEnv(nil, 2, 1)
+		require.NoError(t, err)
+		env.sender.InputInformation[1].Type = "XYZ"
+		_, _, err = env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "please choose inputs of the same token type")
+	})
+
 	t.Run("success", func(t *testing.T) {
 		env, err := newSenderEnv(nil, 3, 2)
 		require.NoError(t, err)

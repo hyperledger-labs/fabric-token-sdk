@@ -129,8 +129,8 @@ type Action struct {
 	Issuer driver.Identity
 }
 
-// NewTransfer returns the Action that matches the passed arguments
-func NewTransfer(tokenIDs []*token2.ID, inputToken []*token.Token, commitments []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
+// NewAction returns the Action that matches the passed arguments
+func NewAction(tokenIDs []*token2.ID, inputToken []*token.Token, commitments []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
 	if len(commitments) != len(owners) {
 		return nil, errors.Errorf("number of recipients [%d] does not match number of outputs [%d]", len(commitments), len(owners))
 	}
@@ -158,6 +158,16 @@ func NewTransfer(tokenIDs []*token2.ID, inputToken []*token.Token, commitments [
 		Metadata: map[string][]byte{},
 		Issuer:   nil,
 	}, nil
+}
+
+// NewActionFromProtos creates a new action from protos
+func NewActionFromProtos(raw []byte) (*Action, error) {
+	action := &Action{}
+	err := action.Deserialize(raw)
+	if err != nil {
+		return nil, err
+	}
+	return action, nil
 }
 
 func (t *Action) NumInputs() int {
@@ -310,7 +320,7 @@ func (t *Action) Validate() error {
 		}
 	}
 	if t.IsRedeem() && (t.Issuer == nil) {
-		return errors.Errorf("Expected Issuer for a Redeem action")
+		return errors.Errorf("expected issuer for a redeem action")
 	}
 
 	return nil
@@ -372,19 +382,19 @@ func (t *Action) Deserialize(raw []byte) error {
 	action := &actions.TransferAction{}
 	err := proto.Unmarshal(raw, action)
 	if err != nil {
-		return errors.Wrap(err, "failed to deserialize issue action")
+		return errors.Wrap(err, "failed to deserialize transfer action")
 	}
 
 	// assert version
 	if action.Version != ProtocolV1 {
-		return errors.Errorf("invalid issue version, expected [%d], got [%d]", ProtocolV1, action.Version)
+		return errors.Errorf("invalid transfer version, expected [%d], got [%d]", ProtocolV1, action.Version)
 	}
 
 	// inputs
 	t.Inputs = make([]*ActionInput, len(action.Inputs))
 	t.Inputs = slices.GenericSliceOfPointers[ActionInput](len(action.Inputs))
 	if err := protos.FromProtosSlice(action.Inputs, t.Inputs); err != nil {
-		return errors.Wrap(err, "failed unmarshalling receivers metadata")
+		return errors.Wrap(err, "failed unmarshalling inputs")
 	}
 
 	// outputs

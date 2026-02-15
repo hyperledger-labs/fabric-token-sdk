@@ -12,10 +12,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/stretchr/testify/require"
-)
-
-type TypeAndSumEnv struct {
+	"github.com/stretchr/testify/assert"
+		"github.com/stretchr/testify/require"
+	)
+	
+	type TypeAndSumEnv struct {
 	prover   *transfer.TypeAndSumProver
 	verifier *transfer.TypeAndSumVerifier
 	c        *math.Curve
@@ -55,6 +56,85 @@ func NewTypeAndSumEnv(t *testing.T) *TypeAndSumEnv {
 	}
 }
 
+func TestTypeAndSumProof_Validate(t *testing.T) {
+	c := math.Curves[TestCurve]
+	proof := &transfer.TypeAndSumProof{}
+	err := proof.Validate(TestCurve)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CommitmentToType is invalid")
+
+	proof.CommitmentToType = c.GenG1.Copy()
+	proof.InputBlindingFactors = []*math.Zr{nil}
+	err = proof.Validate(TestCurve)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "InputBlindingFactors are invalid")
+
+	proof.InputBlindingFactors = []*math.Zr{c.NewZrFromInt(1)}
+	proof.InputValues = []*math.Zr{nil}
+	err = proof.Validate(TestCurve)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "InputValues are invalid")
+
+	proof.InputValues = []*math.Zr{c.NewZrFromInt(1)}
+	err = proof.Validate(TestCurve)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Type is invalid")
+
+	proof.Type = c.NewZrFromInt(1)
+	err = proof.Validate(TestCurve)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "TypeBlindingFactor is invalid")
+
+	proof.TypeBlindingFactor = c.NewZrFromInt(1)
+	err = proof.Validate(TestCurve)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "EqualityOfSum is invalid")
+
+	proof.EqualityOfSum = c.NewZrFromInt(1)
+	err = proof.Validate(TestCurve)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Challenge is invalid")
+
+	proof.Challenge = c.NewZrFromInt(1)
+	err = proof.Validate(TestCurve)
+	assert.NoError(t, err)
+}
+
+func TestTypeAndSumProof_Serialization(t *testing.T) {
+	c := math.Curves[TestCurve]
+	proof := &transfer.TypeAndSumProof{
+		CommitmentToType: c.GenG1.Copy(),
+		InputBlindingFactors: []*math.Zr{c.NewZrFromInt(1), c.NewZrFromInt(2)},
+		InputValues: []*math.Zr{c.NewZrFromInt(3), c.NewZrFromInt(4)},
+		Type: c.NewZrFromInt(5),
+		TypeBlindingFactor: c.NewZrFromInt(6),
+		EqualityOfSum: c.NewZrFromInt(7),
+		Challenge: c.NewZrFromInt(8),
+	}
+
+	raw, err := proof.Serialize()
+	assert.NoError(t, err)
+	assert.NotNil(t, raw)
+
+	proof2 := &transfer.TypeAndSumProof{}
+	err = proof2.Deserialize(raw)
+	assert.NoError(t, err)
+
+	assert.True(t, proof.CommitmentToType.Equals(proof2.CommitmentToType))
+	assert.Equal(t, len(proof.InputBlindingFactors), len(proof2.InputBlindingFactors))
+	for i := range proof.InputBlindingFactors {
+		assert.True(t, proof.InputBlindingFactors[i].Equals(proof2.InputBlindingFactors[i]))
+	}
+	assert.Equal(t, len(proof.InputValues), len(proof2.InputValues))
+	for i := range proof.InputValues {
+		assert.True(t, proof.InputValues[i].Equals(proof2.InputValues[i]))
+	}
+	assert.True(t, proof.Type.Equals(proof2.Type))
+	assert.True(t, proof.TypeBlindingFactor.Equals(proof2.TypeBlindingFactor))
+	assert.True(t, proof.EqualityOfSum.Equals(proof2.EqualityOfSum))
+	assert.True(t, proof.Challenge.Equals(proof2.Challenge))
+}
+
 func TestTypeAndSum(t *testing.T) {
 	t.Run("parameters and witness are initialized correctly", func(t *testing.T) {
 		env := NewTypeAndSumEnv(t)
@@ -87,7 +167,7 @@ func TestTypeAndSum(t *testing.T) {
 		// verification fails
 		err = env.verifier.Verify(proof)
 		require.Error(t, err)
-		require.EqualError(t, err, "invalid sum and type proof")
+		require.EqualError(t, err, "invalid sum and type proof: challenge mismatch")
 	})
 	t.Run("The proof is not generated correctly: wrong Values", func(t *testing.T) {
 		env := NewTypeAndSumEnv(t)
@@ -100,7 +180,7 @@ func TestTypeAndSum(t *testing.T) {
 		// verification fails
 		err = env.verifier.Verify(proof)
 		require.Error(t, err)
-		require.EqualError(t, err, "invalid sum and type proof")
+		require.EqualError(t, err, "invalid sum and type proof: challenge mismatch")
 	})
 	t.Run("The proof is not generated correctly: input sum != output sums", func(t *testing.T) {
 		env := NewTypeAndSumEnv(t)
@@ -113,7 +193,7 @@ func TestTypeAndSum(t *testing.T) {
 		// verification should fail
 		err = env.verifier.Verify(proof)
 		require.Error(t, err)
-		require.EqualError(t, err, "invalid sum and type proof")
+		require.EqualError(t, err, "invalid sum and type proof: challenge mismatch")
 	})
 	t.Run("The proof is not generated correctly: wrong blindingFactors", func(t *testing.T) {
 		env := NewTypeAndSumEnv(t)
@@ -128,7 +208,7 @@ func TestTypeAndSum(t *testing.T) {
 		// verification fails
 		err = env.verifier.Verify(proof)
 		require.Error(t, err)
-		require.EqualError(t, err, "invalid sum and type proof")
+		require.EqualError(t, err, "invalid sum and type proof: challenge mismatch")
 	})
 }
 

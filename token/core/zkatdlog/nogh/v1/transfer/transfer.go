@@ -42,7 +42,7 @@ func (p *Proof) Deserialize(bytes []byte) error {
 
 func (p *Proof) Validate(curve math.CurveID) error {
 	if p.TypeAndSum == nil {
-		return errors.New("invalid transfer proof")
+		return errors.New("invalid transfer proof: missing type-and-sum proof")
 	}
 	if err := p.TypeAndSum.Validate(curve); err != nil {
 		return errors.Wrapf(err, "invalid transfer proof")
@@ -101,7 +101,7 @@ func (v *Verifier) Verify(proofRaw []byte) error {
 	// verify range proof
 	if v.RangeCorrectness != nil {
 		if proof.RangeCorrectness == nil {
-			return errors.New("invalid transfer proof")
+			return errors.New("invalid transfer proof: missing range proof")
 		} else {
 			commitmentToType := proof.TypeAndSum.CommitmentToType.Copy()
 			coms := make([]*math.G1, len(v.TypeAndSum.Outputs))

@@ -16,8 +16,10 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,6 +27,40 @@ var (
 	TestBits  = uint64(32)
 	TestCurve = math2.BLS12_381_BBS_GURVY_FAST_RNG
 )
+
+func TestProof_Validate(t *testing.T) {
+	proof := &transfer.Proof{}
+	err := proof.Validate(math.BN254)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid transfer proof")
+
+	c := math.Curves[TestCurve]
+	proof.TypeAndSum = &transfer.TypeAndSumProof{}
+	err = proof.Validate(TestCurve)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid transfer proof")
+
+	// valid type and sum, nil range correctness
+	proof.TypeAndSum = &transfer.TypeAndSumProof{
+		CommitmentToType:     c.GenG1.Copy(),
+		InputBlindingFactors: []*math.Zr{c.NewZrFromInt(1)},
+		InputValues:          []*math.Zr{c.NewZrFromInt(1)},
+		Type:                 c.NewZrFromInt(1),
+		TypeBlindingFactor:   c.NewZrFromInt(1),
+		EqualityOfSum:        c.NewZrFromInt(1),
+		Challenge:            c.NewZrFromInt(1),
+	}
+	err = proof.Validate(TestCurve)
+	require.NoError(t, err)
+
+	// invalid range correctness
+	proof.RangeCorrectness = &rp.RangeCorrectness{
+		Proofs: []*rp.RangeProof{nil},
+	}
+	err = proof.Validate(TestCurve)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid transfer proof")
+}
 
 func TestTransfer(t *testing.T) {
 	t.Run("parameters and witness are initialized correctly", func(t *testing.T) {

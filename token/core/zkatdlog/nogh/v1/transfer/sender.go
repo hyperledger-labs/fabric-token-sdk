@@ -20,9 +20,9 @@ import (
 
 var logger = logging.MustGetLogger()
 
-//go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
-
 // SigningIdentity signs TokenRequest
+//
+//go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 type SigningIdentity interface {
 	driver.SigningIdentity
 }
@@ -46,7 +46,7 @@ type Sender struct {
 // NewSender returns a Sender
 func NewSender(signers []driver.Signer, tokens []*token.Token, ids []*token2.ID, inf []*token.Metadata, pp *v1.PublicParams) (*Sender, error) {
 	if (signers != nil && len(signers) != len(tokens)) || len(tokens) != len(inf) || len(ids) != len(inf) {
-		return nil, errors.Errorf("number of tokens to be spent does not match number of opening")
+		return nil, errors.Errorf("number of tokens to be spent does not match number of openings")
 	}
 
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil
@@ -79,7 +79,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 	logger.DebugfContext(ctx, "Create new prover")
 	prover, err := NewProver(intw, outtw, in, out, s.PublicParams)
 	if err != nil {
-		return nil, nil, errors.New("cannot generate transfer")
+		return nil, nil, errors.Wrap(err, "cannot generate transfer")
 	}
 	logger.DebugfContext(ctx, "Prove")
 	proof, err := prover.Prove()
@@ -88,7 +88,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 	}
 
 	logger.DebugfContext(ctx, "Create new transfer")
-	transfer, err := NewTransfer(s.InputIDs, s.Inputs, out, owners, proof)
+	transfer, err := NewAction(s.InputIDs, s.Inputs, out, owners, proof)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to produce transfer action")
 	}
