@@ -136,7 +136,7 @@ func TransferZKProofValidate(c context.Context, ctx *Context) error {
 		in,
 		ctx.TransferAction.GetOutputCommitments(),
 		ctx.PP).Verify(ctx.TransferAction.GetProof()); err != nil {
-		return err
+		return errors.Join(err, ErrInvalidZKP)
 	}
 
 	return nil
@@ -181,15 +181,11 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 		}
 	}
 
-	for _, o := range ctx.TransferAction.GetOutputs() {
-		out, ok := o.(*token.Token)
-		if !ok {
-			return ErrInvalidOutput
-		}
-		if out.IsRedeem() {
+	for _, o := range ctx.TransferAction.Outputs {
+		if o.IsRedeem() {
 			continue
 		}
-		owner, err := identity.UnmarshalTypedIdentity(out.Owner)
+		owner, err := identity.UnmarshalTypedIdentity(o.Owner)
 		if err != nil {
 			return err
 		}

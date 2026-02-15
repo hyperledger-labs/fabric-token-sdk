@@ -23,10 +23,10 @@ var (
 	ErrInvalidHTLCAction = errors.New("invalid transfer action: an htlc script only transfers the ownership of a token")
 	// ErrHTLCOutputNotFound is returned when the HTLC output is not found
 	ErrHTLCOutputNotFound = errors.New("invalid transfer action: an htlc script only transfers the ownership of a token, output not found")
-	// ErrInvalidOutput is returned when an output is invalid
-	ErrInvalidOutput = errors.New("invalid output")
 	// ErrIssueVerificationFailed is returned when issue verification fails
 	ErrIssueVerificationFailed = errors.New("failed to verify issue")
 	// ErrIssuerNotAuthorized is returned when the issuer is not authorized
 	ErrIssuerNotAuthorized = errors.New("issuer is not authorized")
+	// ErrInvalidZKP  is returned when the zk proof is not valid
+	ErrInvalidZKP = errors.New("invalid zero-knowledge proof")
 )

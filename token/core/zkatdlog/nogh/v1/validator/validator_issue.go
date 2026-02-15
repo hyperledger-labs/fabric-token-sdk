@@ -34,7 +34,7 @@ func IssueValidate(c context.Context, ctx *Context) error {
 	if err := issue.NewVerifier(
 		commitments,
 		ctx.PP).Verify(action.GetProof()); err != nil {
-		return err
+		return errors.Join(err, ErrInvalidZKP)
 	}
 
 	// Check the issuer is among those known
