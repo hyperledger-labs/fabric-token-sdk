@@ -27,23 +27,23 @@ type SigningIdentity interface {
 	driver.SigningIdentity
 }
 
-// Sender produces a signed TokenRequest
+// Sender produces a signed TokenRequest for a transfer operation.
 type Sender struct {
-	// Signers is an array of Signer that matches the owners of the inputs
-	// to be spent in the transfer action
+	// Signers is an array of Signers that matches the owners of the inputs
+	// to be spent in the transfer action.
 	Signers []driver.Signer
-	// Inputs to be spent in the transfer
+	// Inputs are the tokens to be spent in the transfer.
 	Inputs []*token.Token
-	// InputIDs is the identifiers of the Inputs to be spent
+	// InputIDs are the identifiers of the Inputs to be spent.
 	InputIDs []*token2.ID
-	// contains the opening of the inputs to be spent
+	// InputInformation contains the openings (metadata) of the inputs to be spent.
 	InputInformation []*token.Metadata
 	// PublicParams refers to the public cryptographic parameters to be used
-	// to produce the TokenRequest
+	// to produce the TokenRequest.
 	PublicParams *v1.PublicParams
 }
 
-// NewSender returns a Sender
+// NewSender returns a new Sender instance.
 func NewSender(signers []driver.Signer, tokens []*token.Token, ids []*token2.ID, inf []*token.Metadata, pp *v1.PublicParams) (*Sender, error) {
 	if (signers != nil && len(signers) != len(tokens)) || len(tokens) != len(inf) || len(ids) != len(inf) {
 		return nil, errors.Errorf("number of tokens to be spent does not match number of openings")
@@ -52,8 +52,8 @@ func NewSender(signers []driver.Signer, tokens []*token.Token, ids []*token2.ID,
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil
 }
 
-// GenerateZKTransfer produces a Action and an array of ValidationRecords
-// that corresponds to the openings of the newly created outputs
+// GenerateZKTransfer produces a Transfer Action and the corresponding metadata
+// (openings) for the newly created outputs.
 func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners [][]byte) (*Action, []*token.Metadata, error) {
 	if len(values) != len(owners) {
 		return nil, nil, errors.Errorf("cannot generate transfer: number of values [%d] does not match number of recipients [%d]", len(values), len(owners))
@@ -104,7 +104,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 	return transfer, inf, nil
 }
 
-// SignTokenActions produces a signature for each input spent by the Sender
+// SignTokenActions produces a signature for each input spent by the Sender.
 func (s *Sender) SignTokenActions(raw []byte) ([][]byte, error) {
 	signatures := make([][]byte, len(s.Signers))
 	var err error
@@ -118,6 +118,7 @@ func (s *Sender) SignTokenActions(raw []byte) ([][]byte, error) {
 	return signatures, nil
 }
 
+// getTokenData extracts the cryptographic data (commitments) from the provided tokens.
 func getTokenData(tokens []*token.Token) []*math.G1 {
 	tokenData := make([]*math.G1, len(tokens))
 	for i := range tokens {

@@ -24,12 +24,15 @@ import (
 
 const ProtocolV1 = 1
 
+// ActionInput represents a single input to a transfer action.
+// It includes the token identifier, the token itself, and an optional upgrade witness.
 type ActionInput struct {
 	ID             *token2.ID
 	Token          *token.Token
 	UpgradeWitness *token.UpgradeWitness
 }
 
+// ToProtos converts the ActionInput to its protobuf representation.
 func (a *ActionInput) ToProtos() (*actions.TransferActionInput, error) {
 	var id *actions.TokenID
 	if a.ID != nil {
@@ -76,6 +79,7 @@ func (a *ActionInput) ToProtos() (*actions.TransferActionInput, error) {
 	}, nil
 }
 
+// FromProtos populates the ActionInput from its protobuf representation.
 func (a *ActionInput) FromProtos(input *actions.TransferActionInput) error {
 	if input.TokenId != nil {
 		a.ID = &token2.ID{
@@ -117,7 +121,7 @@ func (a *ActionInput) FromProtos(input *actions.TransferActionInput) error {
 
 // Action specifies a transfer of one or more tokens
 type Action struct {
-	// Inputs specify the identifiers in of the tokens to be spent
+	// Inputs specify the tokens to be spent
 	Inputs []*ActionInput
 	// Outputs are the new tokens resulting from the transfer
 	Outputs []*token.Token
@@ -170,11 +174,12 @@ func NewActionFromProtos(raw []byte) (*Action, error) {
 	return action, nil
 }
 
+// NumInputs returns the number of inputs in the Action
 func (t *Action) NumInputs() int {
 	return len(t.Inputs)
 }
 
-// GetInputs returns the inputs in the Action
+// GetInputs returns the identifiers of the tokens spent in the Action
 func (t *Action) GetInputs() []*token2.ID {
 	res := make([]*token2.ID, len(t.Inputs))
 	for i, input := range t.Inputs {
@@ -184,6 +189,7 @@ func (t *Action) GetInputs() []*token2.ID {
 	return res
 }
 
+// GetSerializedInputs returns the serialized tokens spent in the Action
 func (t *Action) GetSerializedInputs() ([][]byte, error) {
 	var res [][]byte
 	for _, input := range t.Inputs {
@@ -211,6 +217,7 @@ func (t *Action) GetSerializedInputs() ([][]byte, error) {
 	return res, nil
 }
 
+// GetSerialNumbers returns nil as zkatdlog doesn't use serial numbers for graph hiding
 func (t *Action) GetSerialNumbers() []string {
 	return nil
 }
@@ -235,7 +242,7 @@ func (t *Action) IsRedeemAt(index int) bool {
 	return t.Outputs[index].IsRedeem()
 }
 
-// IsRedeem checks if this action is a Redeem Transfer
+// IsRedeem checks if this action contains any redeemed outputs
 func (t *Action) IsRedeem() bool {
 	for _, output := range t.Outputs {
 		if output.IsRedeem() {
@@ -265,22 +272,22 @@ func (t *Action) GetSerializedOutputs() ([][]byte, error) {
 	return res, nil
 }
 
-// IsGraphHiding returns false
-// zkatdlog is not graph hiding
+// IsGraphHiding returns false as zkatdlog is not graph hiding
 func (t *Action) IsGraphHiding() bool {
 	return false
 }
 
-// GetMetadata returns metadata of the Action
+// GetMetadata returns the metadata of the Action
 func (t *Action) GetMetadata() map[string][]byte {
 	return t.Metadata
 }
 
-// GetIssuer returns the issuer to sign the transaction
+// GetIssuer returns the identity of the issuer who must sign the transaction
 func (t *Action) GetIssuer() driver.Identity {
 	return t.Issuer
 }
 
+// Validate ensures the Action is well-formed
 func (t *Action) Validate() error {
 	if len(t.Inputs) == 0 {
 		return errors.Errorf("invalid number of token inputs, expected at least 1")
@@ -326,11 +333,12 @@ func (t *Action) Validate() error {
 	return nil
 }
 
+// ExtraSigners returns nil as zkatdlog doesn't require extra signers
 func (t *Action) ExtraSigners() []driver.Identity {
 	return nil
 }
 
-// Serialize marshal TransferAction
+// Serialize marshals the TransferAction to bytes
 func (t *Action) Serialize() ([]byte, error) {
 	// inputs
 	inputs, err := protos.ToProtosSlice[actions.TransferActionInput, *ActionInput](t.Inputs)
@@ -377,7 +385,7 @@ func (t *Action) Serialize() ([]byte, error) {
 	return proto.Marshal(action)
 }
 
-// Deserialize un-marshals TransferAction
+// Deserialize un-marshals a TransferAction from bytes
 func (t *Action) Deserialize(raw []byte) error {
 	action := &actions.TransferAction{}
 	err := proto.Unmarshal(raw, action)
@@ -427,12 +435,12 @@ func (t *Action) Deserialize(raw []byte) error {
 	return nil
 }
 
-// GetProof returns the proof in the Action
+// GetProof returns the zero-knowledge proof in the Action
 func (t *Action) GetProof() []byte {
 	return t.Proof
 }
 
-// GetOutputCommitments returns the Pedersen commitments in the Action
+// GetOutputCommitments returns the cryptographic commitments of the outputs
 func (t *Action) GetOutputCommitments() []*math.G1 {
 	com := make([]*math.G1, len(t.Outputs))
 	for i := 0; i < len(com); i++ {
@@ -442,6 +450,7 @@ func (t *Action) GetOutputCommitments() []*math.G1 {
 	return com
 }
 
+// InputTokens returns the tokens spent in the Action
 func (t *Action) InputTokens() []*token.Token {
 	tokens := make([]*token.Token, len(t.Inputs))
 	for i, in := range t.Inputs {
