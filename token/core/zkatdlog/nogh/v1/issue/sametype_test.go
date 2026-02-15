@@ -65,8 +65,7 @@ func GetSameTypeProverAndVerifier(t *testing.T) (*issue.SameTypeProver, *issue.S
 func TestSameTypeDeserializeError(t *testing.T) {
 	st := &issue.SameType{}
 	err := st.Deserialize([]byte("invalid"))
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to initialize unmarshaller")
+	require.ErrorIs(t, err, issue.ErrUnmarshalSameTypeFailed)
 
 	// Partial data
 	curve := math.Curves[1]
@@ -95,14 +94,14 @@ func TestSameTypeVerifyError(t *testing.T) {
 	originalChallenge := proof.Challenge
 	proof.Challenge = curve.NewRandomZr(randReader)
 	err = verifier.Verify(proof)
-	assert.EqualError(t, err, issue.ErrInvalidSameTypeProof.Error())
+	require.ErrorIs(t, err, issue.ErrInvalidSameTypeProof)
 	proof.Challenge = originalChallenge
 
 	// Wrong commitment to type
 	originalCommitment := proof.CommitmentToType
 	proof.CommitmentToType = curve.GenG1.Mul(curve.NewRandomZr(randReader))
 	err = verifier.Verify(proof)
-	assert.EqualError(t, err, issue.ErrInvalidSameTypeProof.Error())
+	require.ErrorIs(t, err, issue.ErrInvalidSameTypeProof)
 	proof.CommitmentToType = originalCommitment
 }
 

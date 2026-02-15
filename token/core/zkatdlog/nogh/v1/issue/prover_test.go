@@ -13,6 +13,7 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewProverErrors(t *testing.T) {
@@ -24,11 +25,11 @@ func TestNewProverErrors(t *testing.T) {
 	// tw[i] is nil
 	validMeta := &token.Metadata{Type: "ABC", BlindingFactor: curve.NewRandomZr(randReader), Value: curve.NewZrFromInt(100)}
 	_, err = NewProver([]*token.Metadata{validMeta, nil}, []*math.G1{curve.GenG1, curve.GenG1}, pp)
-	assert.EqualError(t, err, ErrInvalidTokenWitness.Error())
+	require.ErrorIs(t, err, ErrInvalidTokenWitness)
 
 	// tw[i].BlindingFactor is nil
 	_, err = NewProver([]*token.Metadata{validMeta, {Type: "ABC"}}, []*math.G1{curve.GenG1, curve.GenG1}, pp)
-	assert.EqualError(t, err, ErrInvalidTokenWitness.Error())
+	require.ErrorIs(t, err, ErrInvalidTokenWitness)
 
 	// tw[i].Value is nil or invalid for Uint()
 	tw := &token.Metadata{
@@ -42,6 +43,5 @@ func TestNewProverErrors(t *testing.T) {
 	// But the previous run showed it already fails with NewRandomZr.
 
 	_, err = NewProver([]*token.Metadata{validMeta, tw}, []*math.G1{curve.GenG1, curve.GenG1}, pp)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), ErrInvalidTokenWitnessValues.Error())
+	require.ErrorIs(t, err, ErrInvalidTokenWitnessValues)
 }

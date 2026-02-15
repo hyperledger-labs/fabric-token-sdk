@@ -266,7 +266,7 @@ func TestIssuerSignTokenActions(t *testing.T) {
 	// Signer nil
 	issuer.Signer = nil
 	_, err = issuer.SignTokenActions(raw)
-	assert.EqualError(t, err, issue2.ErrSignTokenActionsNilSigner.Error())
+	require.ErrorIs(t, err, issue2.ErrSignTokenActionsNilSigner)
 }
 
 // TestIssuerGenerateZKIssueErrors tests error conditions for GenerateZKIssue.
@@ -277,18 +277,18 @@ func TestIssuerGenerateZKIssueErrors(t *testing.T) {
 	// PublicParams nil
 	issuer.PublicParams = nil
 	_, _, err := issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
-	assert.EqualError(t, err, issue2.ErrNilPublicParameters.Error())
+	require.ErrorIs(t, err, issue2.ErrNilPublicParameters)
 	issuer.PublicParams = pp
 
 	// Inadmissible curve
 	oldCurve := issuer.PublicParams.Curve
 	issuer.PublicParams.Curve = math.CurveID(len(math.Curves) + 1)
 	_, _, err = issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
-	assert.EqualError(t, err, issue2.ErrInvalidPublicParameters.Error())
+	require.ErrorIs(t, err, issue2.ErrInvalidPublicParameters)
 	issuer.PublicParams.Curve = oldCurve
 
 	// Signer nil
 	issuer.Signer = nil
 	_, _, err = issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
-	assert.EqualError(t, err, issue2.ErrNilSigner.Error())
+	require.ErrorIs(t, err, issue2.ErrNilSigner)
 }

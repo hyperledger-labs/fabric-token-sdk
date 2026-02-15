@@ -43,8 +43,7 @@ func TestSerialization(t *testing.T) {
 func TestDeserializeError(t *testing.T) {
 	action := &Action{}
 	err := action.Deserialize([]byte("invalid"))
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to deserialize issue action")
+	require.ErrorIs(t, err, ErrDeserializeIssueActionFailed)
 
 	// Invalid version
 	raw, err := proto.Marshal(&actions.IssueAction{Version: ProtocolV1 + 1})
@@ -172,9 +171,9 @@ func TestFields(t *testing.T) {
 	oldOutputs := action.Outputs
 	action.Outputs = []*token.Token{nil}
 	_, err = action.GetSerializedOutputs()
-	assert.EqualError(t, err, ErrNilOutput.Error())
+	require.ErrorIs(t, err, ErrNilOutput)
 	_, err = action.GetCommitments()
-	assert.EqualError(t, err, ErrNilOutput.Error())
+	require.ErrorIs(t, err, ErrNilOutput)
 	action.Outputs = oldOutputs
 }
 
@@ -189,40 +188,40 @@ func TestValidate(t *testing.T) {
 	oldIssuer := action.Issuer
 	action.Issuer = nil
 	err := action.Validate()
-	assert.EqualError(t, err, ErrIssuerNotSet.Error())
+	require.ErrorIs(t, err, ErrIssuerNotSet)
 	action.Issuer = oldIssuer
 
 	// Nil input
 	oldInput := action.Inputs[0]
 	action.Inputs[0] = nil
 	err = action.Validate()
-	assert.EqualError(t, err, ErrNilInput.Error())
+	require.ErrorIs(t, err, ErrNilInput)
 	action.Inputs[0] = oldInput
 
 	// Nil input token
 	oldToken := action.Inputs[0].Token
 	action.Inputs[0].Token = nil
 	err = action.Validate()
-	assert.EqualError(t, err, ErrNilInputToken.Error())
+	require.ErrorIs(t, err, ErrNilInputToken)
 	action.Inputs[0].Token = oldToken
 
 	// Nil input id
 	oldTxId := action.Inputs[0].ID.TxId
 	action.Inputs[0].ID.TxId = ""
 	err = action.Validate()
-	assert.EqualError(t, err, ErrNilInputID.Error())
+	require.ErrorIs(t, err, ErrNilInputID)
 	action.Inputs[0].ID.TxId = oldTxId
 
 	// No outputs
 	oldOutputs := action.Outputs
 	action.Outputs = nil
 	err = action.Validate()
-	assert.EqualError(t, err, ErrNoOutputs.Error())
+	require.ErrorIs(t, err, ErrNoOutputs)
 	action.Outputs = oldOutputs
 
 	// Nil output
 	action.Outputs = []*token.Token{nil}
 	err = action.Validate()
-	assert.EqualError(t, err, ErrNilOutput.Error())
+	require.ErrorIs(t, err, ErrNilOutput)
 	action.Outputs = oldOutputs
 }
