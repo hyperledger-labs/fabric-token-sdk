@@ -25,7 +25,7 @@ const ProtocolV1 = 1
 // ActionInput represents a token that is being redeemed by an issue action.
 type ActionInput struct {
 	// ID is the unique identifier of the token.
-	ID    token2.ID
+	ID token2.ID
 	// Token is the serialized representation of the token.
 	Token []byte
 }

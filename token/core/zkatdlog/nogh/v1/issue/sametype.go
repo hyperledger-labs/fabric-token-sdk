@@ -74,7 +74,7 @@ type SameTypeProver struct {
 	// PedParams are the generators for Pedersen commitments.
 	PedParams []*math.G1
 	// Curve is the elliptic curve used for the proof.
-	Curve     *math.Curve
+	Curve *math.Curve
 	// tokenType is the type of the tokens being issued.
 	tokenType token2.Type
 	// blindingFactor is the blinding factor in the CommitmentToType.
@@ -150,9 +150,9 @@ type SameTypeVerifier struct {
 	// PedParams are the generators for Pedersen commitments.
 	PedParams []*math.G1
 	// Curve is the elliptic curve used for verification.
-	Curve     *math.Curve
+	Curve *math.Curve
 	// Tokens are the commitments to the issued tokens.
-	Tokens    []*math.G1
+	Tokens []*math.G1
 }
 
 // NewSameTypeVerifier returns a new SameTypeVerifier instance.

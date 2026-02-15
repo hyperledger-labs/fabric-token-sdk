@@ -24,11 +24,11 @@ type SigningIdentity interface {
 // Issuer is the entity responsible for creating and signing issue actions.
 type Issuer struct {
 	// Signer is the identity used to sign the issue action.
-	Signer       SigningIdentity
+	Signer SigningIdentity
 	// PublicParams contains the public parameters for the ZK proofs.
 	PublicParams *v1.PublicParams
 	// Type is the type of token being issued.
-	Type         token2.Type
+	Type token2.Type
 }
 
 // NewIssuer returns a new Issuer instance with the specified token type, signer, and public parameters.
