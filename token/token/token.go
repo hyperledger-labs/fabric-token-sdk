@@ -15,9 +15,9 @@ import (
 // that created it and its index in that transaction
 type ID struct {
 	// TxId is the transaction ID of the transaction that created the token
-	TxId string `protobuf:"bytes,1,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
+	TxId string `json:"tx_id,omitempty" protobuf:"bytes,1,opt,name=tx_id,json=txId,proto3"`
 	// Index is the index of the token in the transaction that created it
-	Index uint64 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
+	Index uint64 `json:"index,omitempty" protobuf:"varint,2,opt,name=index,proto3"`
 }
 
 func (id ID) Equal(right ID) bool {
@@ -41,31 +41,31 @@ type (
 // Token is the result of issue and transfer transactions
 type Token struct {
 	// Owner is the token owner
-	Owner []byte `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	Owner []byte `json:"owner,omitempty" protobuf:"bytes,1,opt,name=owner,proto3"`
 	// Type is the type of the token
-	Type Type `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Type Type `json:"type,omitempty" protobuf:"bytes,2,opt,name=type,proto3"`
 	// Quantity is the number of units of Type carried in the token.
 	// It is encoded as a string containing a number in base 16. The string has prefix ``0x''.
-	Quantity string `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Quantity string `json:"quantity,omitempty" protobuf:"bytes,3,opt,name=quantity,proto3"`
 }
 
 type IssuedToken struct {
 	// Id is used to uniquely identify the token in the ledger
-	Id ID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id ID `json:"id,omitempty" protobuf:"bytes,1,opt,name=id,proto3"`
 	// Owner is the token owner
-	Owner []byte `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	Owner []byte `json:"owner,omitempty" protobuf:"bytes,1,opt,name=owner,proto3"`
 	// Type is the type of the token
-	Type Type `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Type Type `json:"type,omitempty" protobuf:"bytes,2,opt,name=type,proto3"`
 	// Quantity represents the number of units of Type that this unspent token holds.
 	// It is formatted in decimal representation
-	Quantity string `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Quantity string `json:"quantity,omitempty" protobuf:"bytes,3,opt,name=quantity,proto3"`
 	// Issuer is the issuer of this token
 	Issuer []byte
 }
 
 type IssuedTokens struct {
 	// Tokens is an array of UnspentToken
-	Tokens []*IssuedToken `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
+	Tokens []*IssuedToken `json:"tokens,omitempty" protobuf:"bytes,1,rep,name=tokens,proto3"`
 }
 
 func (it *IssuedTokens) Sum(precision uint64) Quantity {
@@ -142,7 +142,7 @@ func (ut UnspentToken) String() string {
 // UnspentTokens is used to hold the output of ListRequest
 type UnspentTokens struct {
 	// Tokens is an array of UnspentToken
-	Tokens []*UnspentToken `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
+	Tokens []*UnspentToken `json:"tokens,omitempty" protobuf:"bytes,1,rep,name=tokens,proto3"`
 }
 
 func (it *UnspentTokens) Count() int {

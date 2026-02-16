@@ -66,7 +66,7 @@ type PKCS11 struct {
 	SoftwareVerify bool           `yaml:"SoftwareVerify,omitempty"`
 	Immutable      bool           `yaml:"Immutable,omitempty"`
 	AltID          string         `yaml:"AltId,omitempty"`
-	KeyIDs         []KeyIDMapping `yaml:"KeyIds,omitempty" mapstructure:"KeyIds"`
+	KeyIDs         []KeyIDMapping `mapstructure:"KeyIds"           yaml:"KeyIds,omitempty"`
 }
 
 type KeyIDMapping struct {

@@ -53,7 +53,7 @@ func (s *RestRunner) Start(ctx context.Context) error {
 		s.logger.Infof("Received new suite request.")
 
 		var request struct {
-			Suites []model.SuiteConfig `yaml:"suites" json:"suites"`
+			Suites []model.SuiteConfig `json:"suites" yaml:"suites"`
 		}
 		if body, err := io.ReadAll(c.Request.Body); err != nil {
 			s.logger.Errorf("Error reading body: %s", err)

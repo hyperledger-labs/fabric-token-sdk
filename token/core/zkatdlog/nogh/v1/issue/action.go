@@ -54,7 +54,7 @@ type Action struct {
 	// Inputs are the tokens to be redeemed by this issue action
 	Inputs []*ActionInput
 	// Outputs are the newly issued tokens
-	Outputs []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
+	Outputs []*token.Token `json:"outputs,omitempty" protobuf:"bytes,1,rep,name=outputs,proto3"`
 	// Proof carries the ZKP of IssueAction validity
 	Proof []byte
 	// Metadata of the issue action

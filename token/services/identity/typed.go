@@ -22,9 +22,9 @@ type (
 // TypedIdentity encodes an identity with a type.
 type TypedIdentity struct {
 	// Type encodes the type of the identity
-	Type Type `protobuf:"bytes,1,opt,name=type,json=type,proto3" json:"type,omitempty"`
+	Type Type `json:"type,omitempty" protobuf:"bytes,1,opt,name=type,json=type,proto3"`
 	// Identity encodes the identity itself
-	Identity Identity `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity Identity `json:"identity,omitempty" protobuf:"bytes,2,opt,name=identity,proto3"`
 }
 
 func (i TypedIdentity) Bytes() ([]byte, error) {

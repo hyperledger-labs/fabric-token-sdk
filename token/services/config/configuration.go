@@ -110,5 +110,5 @@ type TMSConfig struct {
 
 // TokenConfig is used to serialize a TMS configuration
 type TokenConfig struct {
-	TMS map[string]map[string]any `yaml:"tms" mapstructure:"tms"`
+	TMS map[string]map[string]any `mapstructure:"tms" yaml:"tms"`
 }

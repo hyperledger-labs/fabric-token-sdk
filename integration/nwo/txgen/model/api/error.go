@@ -22,8 +22,8 @@ type Error interface {
 
 // AppError Implements Error
 type AppError struct {
-	Code     int    `json:"code" example:"400"`
-	Message  string `json:"message" example:"Error message"`
+	Code     int    `example:"400"           json:"code"`
+	Message  string `example:"Error message" json:"message"`
 	Cause    error  `json:"-"`
 	Location string `json:"-"`
 }
