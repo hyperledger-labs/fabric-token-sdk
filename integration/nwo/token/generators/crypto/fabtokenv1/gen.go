@@ -146,9 +146,9 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 	logger.Infof("generate [%s] identities [%v]", wallet, names)
 
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), n.ID(), wallet)
-	orgName := fmt.Sprintf("Org%s", n.ID())
-	mspID := fmt.Sprintf("%sMSP", orgName)
-	domain := fmt.Sprintf("%s.example.com", orgName)
+	orgName := "Org" + n.ID()
+	mspID := orgName + "MSP"
+	domain := orgName + ".example.com"
 
 	var userSpecs []ftopology.UserSpec
 	for _, name := range names {

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"fmt"
 	"testing"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -62,7 +61,7 @@ func TestGetTableNames(t *testing.T) {
 	}
 
 	for _, inv := range invalid {
-		t.Run(fmt.Sprintf("Prefix: %s", inv), func(t *testing.T) {
+		t.Run("Prefix: "+inv, func(t *testing.T) {
 			names, err := GetTableNames(inv)
 			assert.Error(t, err)
 			assert.Equal(t, TableNames{}, names)

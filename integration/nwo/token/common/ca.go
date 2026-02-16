@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"text/template"
@@ -204,7 +205,7 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 	// register
 	registerCommand := &CAClientRegister{
 		MSPDir:         filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "admin", "msp"),
-		CAServerURL:    fmt.Sprintf("http://localhost:%s", i.CAPort),
+		CAServerURL:    "http://localhost:" + i.CAPort,
 		CAName:         caName,
 		IDName:         owner,
 		IDSecret:       "password",
@@ -266,7 +267,7 @@ func (i *IdemixCASupport) GenerateConfiguration() error {
 			return i.TMS.ID() + ".example.com"
 		},
 		"Port": func() string {
-			i.CAPort = fmt.Sprintf("%d", i.TokenPlatform.GetContext().ReservePort())
+			i.CAPort = strconv.FormatUint(uint64(i.TokenPlatform.GetContext().ReservePort()), 10)
 
 			return i.CAPort
 		},

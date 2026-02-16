@@ -641,7 +641,7 @@ func TransferCashMultiActions(network *integration.Infrastructure, sender *token
 		TokenIDs:     []*token.ID{tokenID},
 	}
 
-	uniqueKey := fmt.Sprintf("%d", time.Now().UnixNano())
+	uniqueKey := strconv.FormatInt(time.Now().UnixNano(), 10)
 	for i := 1; i < len(amounts); i++ {
 		transfer.TransferAction = append(transfer.TransferAction, views.TransferAction{
 			Amount:         amounts[i],

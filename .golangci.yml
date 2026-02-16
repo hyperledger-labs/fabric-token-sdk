@@ -25,7 +25,7 @@ linters:
 #    - iface # Detect the incorrect use of interfaces, helping developers avoid interface pollution. [auto-fix]
     - intrange # Intrange is a linter to find places where for loops could make use of an integer range. [auto-fix]
     - nlreturn # Checks for a new line before return and branch statements to increase code clarity. [fast, auto-fix]
-#    - perfsprint # Checks that fmt.Sprintf can be replaced with a faster alternative. [auto-fix]
+    - perfsprint # Checks that fmt.Sprintf can be replaced with a faster alternative. [auto-fix]
 #    - protogetter # Reports direct reads from proto message fields when getters should be used. [auto-fix]
 #    - revive # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint. [auto-fix]
 #    - tagalign # Check that struct tags are well aligned. [fast, auto-fix]

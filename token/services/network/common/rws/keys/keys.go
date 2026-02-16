@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -100,12 +101,14 @@ func createCompositeKey(objectType string, attributes []string) (translator.Key,
 		return "", err
 	}
 	ck := compositeKeyNamespace + objectType + string(rune(minUnicodeRuneValue))
+	var ckSb103 strings.Builder
 	for _, att := range attributes {
 		if err := validateCompositeKeyAttribute(att); err != nil {
 			return "", err
 		}
-		ck += att + string(rune(minUnicodeRuneValue))
+		ckSb103.WriteString(att + string(rune(minUnicodeRuneValue)))
 	}
+	ck += ckSb103.String()
 
 	return ck, nil
 }

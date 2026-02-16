@@ -86,7 +86,7 @@ var cobraCommand = &cobra.Command{
 	Long:  `Generates ZKAT DLog public parameters.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true

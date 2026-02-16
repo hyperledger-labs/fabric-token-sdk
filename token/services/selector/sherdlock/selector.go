@@ -200,7 +200,7 @@ func (l *locker) UnlockAll(ctx context.Context) error {
 }
 
 func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int) tokenSelectorUnlocker {
-	logger := logger.Named(fmt.Sprintf("selector-%s", txID))
+	logger := logger.Named("selector-" + txID)
 	locker := &locker{txID: txID, Locker: lockDB}
 	if backoff < 0 {
 		return NewSelector(logger, fetcher, locker, precision)

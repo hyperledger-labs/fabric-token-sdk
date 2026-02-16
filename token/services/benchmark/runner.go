@@ -13,6 +13,7 @@ import (
 	"os"
 	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"text/tabwriter"
@@ -616,9 +617,11 @@ func (r Result) printHeatmap(w *tabwriter.Writer) {
 		}
 
 		bar := ""
+		var barSb619 strings.Builder
 		for range barLen {
-			bar += "█"
+			barSb619.WriteString("█")
 		}
+		bar += barSb619.String()
 
 		// 2. Format Label
 		label := fmt.Sprintf("%v-%v", b.LowBound, b.HighBound)

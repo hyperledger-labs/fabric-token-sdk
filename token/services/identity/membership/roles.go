@@ -8,7 +8,6 @@ package membership
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -71,7 +70,7 @@ func (f *RoleFactory) NewRole(role identity.RoleType, defaultAnon bool, targets 
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
 	lm := NewLocalMembership(
-		f.Logger.Named(fmt.Sprintf("membership.role.%s", identity.RoleToString(role))),
+		f.Logger.Named("membership.role."+identity.RoleToString(role)),
 		f.Config,
 		f.NetworkDefaultIdentity,
 		f.DeserializerManager,

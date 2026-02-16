@@ -117,7 +117,7 @@ func GetCertificatesFromDir(dir string) ([][]byte, error) {
 			continue
 		}
 		if f.IsDir() {
-			errs = append(errs, fmt.Sprintf("is a directory: %s", fullName))
+			errs = append(errs, "is a directory: "+fullName)
 
 			continue
 		}

@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"runtime/debug"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +51,7 @@ var cobraCommand = &cobra.Command{
 	Long:  `Print current version of tokengen.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true

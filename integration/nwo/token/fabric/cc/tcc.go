@@ -74,12 +74,14 @@ func (p *GenericBackend) PrepareNamespace(tms *topology3.TMS) {
 
 	// Standard Chaincode
 	policy := "AND ("
+	var policySb77 strings.Builder
 	for i, org := range orgs {
 		if i > 0 {
-			policy += ","
+			policySb77.WriteString(",")
 		}
-		policy += "'" + org + "MSP.member'"
+		policySb77.WriteString("'" + org + "MSP.member'")
 	}
+	policy += policySb77.String()
 	policy += ")"
 
 	var peers []string

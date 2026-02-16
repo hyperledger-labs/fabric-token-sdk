@@ -272,7 +272,7 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 		ApplicationMetadata: map[string][]byte{},
 		Timestamp:           lastYear,
 	}
-	assert.NoError(t, w.AddTokenRequest(ctx, tr1.TxID, []byte(fmt.Sprintf("token request for %s", tr1.TxID)), map[string][]byte{}, nil, driver2.PPHash("tr")))
+	assert.NoError(t, w.AddTokenRequest(ctx, tr1.TxID, []byte("token request for "+tr1.TxID), map[string][]byte{}, nil, driver2.PPHash("tr")))
 	assert.NoError(t, w.AddTransaction(ctx, tr1))
 
 	pm := map[string][]byte{"key": []byte("val")}
@@ -294,7 +294,7 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 			},
 			PublicMetadata: pm,
 		}
-		assert.NoError(t, w.AddTokenRequest(ctx, tr.TxID, []byte(fmt.Sprintf("token request for %s", tr.TxID)), tr.ApplicationMetadata, pm, driver2.PPHash("tr")))
+		assert.NoError(t, w.AddTokenRequest(ctx, tr.TxID, []byte("token request for "+tr.TxID), tr.ApplicationMetadata, pm, driver2.PPHash("tr")))
 		assert.NoError(t, w.AddTransaction(ctx, tr))
 		txs = append(txs, tr)
 	}

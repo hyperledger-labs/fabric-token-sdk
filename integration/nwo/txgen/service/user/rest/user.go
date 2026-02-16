@@ -137,7 +137,7 @@ func (u *restUser) Transfer(value txgen.Amount, recipient model.Username, nonce 
 		return err
 	}
 
-	urlStr := fmt.Sprintf("%s/zkat/payments/transfer", u.endpoint)
+	urlStr := u.endpoint + "/zkat/payments/transfer"
 	form := newTransferForm(value, nonce, recipient)
 	request, _ := http.NewRequest(http.MethodPost, urlStr, strings.NewReader(form.Encode()))
 	request.Header.Add(c.HeaderContentType, c.ApplicationUrlEncoded)
@@ -153,7 +153,7 @@ func (u *restUser) InitiateTransfer(value txgen.Amount, nonce txgen.UUID) txgen.
 		return err
 	}
 
-	urlStr := fmt.Sprintf("%s/zkat/payments/initiation", u.endpoint)
+	urlStr := u.endpoint + "/zkat/payments/initiation"
 	form := newTransferForm(value, nonce, u.username)
 
 	request, _ := http.NewRequest(http.MethodPost, urlStr, strings.NewReader(form.Encode()))
@@ -165,7 +165,7 @@ func (u *restUser) InitiateTransfer(value txgen.Amount, nonce txgen.UUID) txgen.
 }
 
 func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType) ([]byte, txgen.Error) {
-	request.Header.Set(c.HeaderAuthorization, fmt.Sprintf("Bearer %s", u.accessToken))
+	request.Header.Set(c.HeaderAuthorization, "Bearer "+u.accessToken)
 
 	operationType := operationTypeMap[requestType]
 
@@ -219,7 +219,7 @@ func newTransferForm(value txgen.Amount, nonce txgen.UUID, username model.Userna
 
 func (u *restUser) authenticateUser() (string, txgen.Error) {
 	u.logger.Infof("Authenticate user %s", u.username)
-	url := fmt.Sprintf("%s/login", u.endpoint)
+	url := u.endpoint + "/login"
 
 	request := LoginRequest{
 		Username: u.username,
