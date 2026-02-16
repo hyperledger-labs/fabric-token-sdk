@@ -47,6 +47,7 @@ func GetX509Identity(entry string) (driver.Identity, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to wrap x509 identity for [%s]", entry)
 	}
+
 	return wrap, nil
 }
 
@@ -68,6 +69,7 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 		}
 		pp.AddIssuer(id)
 	}
+
 	return nil
 }
 
@@ -111,15 +113,18 @@ func GetCertificatesFromDir(dir string) ([][]byte, error) {
 		f, err := os.Stat(fullName)
 		if err != nil {
 			errs = append(errs, fmt.Sprintf("error reading %s: %s", fullName, err.Error()))
+
 			continue
 		}
 		if f.IsDir() {
-			errs = append(errs, fmt.Sprintf("is a directory: %s", fullName))
+			errs = append(errs, "is a directory: "+fullName)
+
 			continue
 		}
 		item, err := ReadSingleCertificateFromFile(fullName)
 		if err != nil {
 			errs = append(errs, err.Error())
+
 			continue
 		}
 		content = append(content, item)

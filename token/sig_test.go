@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestSignatureService_AuditorVerifier(t *testing.T) {
@@ -28,7 +29,7 @@ func TestSignatureService_AuditorVerifier(t *testing.T) {
 	id := []byte("auditor_identity")
 	verifier, err := service.AuditorVerifier(t.Context(), id)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedVerifier, verifier)
 }
 
@@ -47,7 +48,7 @@ func TestSignatureService_IssuerVerifier(t *testing.T) {
 	id := []byte("issuer_identity")
 	verifier, err := service.IssuerVerifier(t.Context(), id)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedVerifier, verifier)
 }
 
@@ -66,7 +67,7 @@ func TestSignatureService_OwnerVerifier(t *testing.T) {
 	id := []byte("owner_identity")
 	verifier, err := service.OwnerVerifier(t.Context(), id)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedVerifier, verifier)
 }
 
@@ -85,7 +86,7 @@ func TestSignatureService_GetSigner(t *testing.T) {
 	id := []byte("identity")
 	signer, err := service.GetSigner(t.Context(), id)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedSigner, signer)
 }
 
@@ -106,7 +107,7 @@ func TestSignatureService_RegisterSigner(t *testing.T) {
 
 	err := service.RegisterSigner(t.Context(), id, signer, verifier)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestSignatureService_IsMe(t *testing.T) {

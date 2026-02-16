@@ -15,5 +15,6 @@ import (
 func UnmarshalWithDisallowUnknownFields(data []byte, v interface{}) error {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
+
 	return decoder.Decode(v)
 }

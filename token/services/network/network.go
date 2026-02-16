@@ -69,6 +69,7 @@ func (m TransientMap) IsEmpty() bool {
 
 func (m TransientMap) Exists(key string) bool {
 	_, ok := m[key]
+
 	return ok
 }
 
@@ -115,6 +116,7 @@ func (e *Envelope) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return json.Marshal(raw)
 }
 
@@ -124,6 +126,7 @@ func (e *Envelope) UnmarshalJSON(raw []byte) error {
 	if err != nil {
 		return err
 	}
+
 	return e.e.FromBytes(r)
 }
 
@@ -152,6 +155,7 @@ func (l *Ledger) Status(id string) (ValidationCode, string, error) {
 	if err != nil {
 		return 0, "", err
 	}
+
 	return vc, "", nil
 }
 
@@ -210,6 +214,7 @@ func (n *Network) RequestApproval(context view.Context, tms *token.ManagementSer
 	if err != nil {
 		return nil, err
 	}
+
 	return &Envelope{e: env}, nil
 }
 
@@ -222,6 +227,7 @@ func (n *Network) ComputeTxID(id *TxID) string {
 	txID := n.n.ComputeTxID(temp)
 	id.Nonce = temp.Nonce
 	id.Creator = temp.Creator
+
 	return txID
 }
 
@@ -270,6 +276,7 @@ func (n *Network) Ledger() (*Ledger, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Ledger{l: l}, nil
 }
 
@@ -314,6 +321,7 @@ func (p *Provider) RegisterDriver(driver driver.Driver) {
 // GetNetwork returns a network instance for the given network and channel
 func (p *Provider) GetNetwork(network string, channel string) (*Network, error) {
 	logger.Debugf("GetNetwork: [%s:%s]", network, channel)
+
 	return p.networks.Get(netId{network: network, channel: channel})
 }
 
@@ -326,6 +334,7 @@ func (p *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, 
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network [%s:%s]", opt.Network, opt.Channel)
 	}
+
 	return n.Normalize(opt)
 }
 
@@ -349,6 +358,7 @@ func (p *Provider) Connect() error {
 			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
 		}
 	}
+
 	return nil
 }
 
@@ -369,14 +379,17 @@ func (np *networkProvider) newNetwork(netId netId) (*Network, error) {
 		nw, err := d.New(network, channel)
 		if err != nil {
 			errs = append(errs, errors.WithMessagef(err, "failed to create network [%s:%s]", network, channel))
+
 			continue
 		}
 		logger.Debugf("new network [%s:%s]", network, channel)
+
 		return &Network{
 			n:               nw,
 			localMembership: &LocalMembership{lm: nw.LocalMembership()},
 		}, nil
 	}
+
 	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
 }
 
@@ -385,8 +398,10 @@ func GetInstance(sp token.ServiceProvider, network, channel string) *Network {
 	n, err := GetProvider(sp).GetNetwork(network, channel)
 	if err != nil {
 		logger.Errorf("Failed to get network [%s:%s]: %s", network, channel, err)
+
 		return nil
 	}
+
 	return n
 }
 
@@ -395,5 +410,6 @@ func GetProvider(sp token.ServiceProvider) *Provider {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to get service: %s", err))
 	}
+
 	return s.(*Provider)
 }

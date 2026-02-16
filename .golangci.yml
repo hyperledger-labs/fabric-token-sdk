@@ -1,6 +1,36 @@
 version: "2"
 linters:
   enable:
+    - canonicalheader # Canonicalheader checks whether net/http.Header uses canonical header. [auto-fix]
+    - dupword # Checks for duplicate words in the source code. [fast, auto-fix]
+    - errorlint # Find code that can cause problems with the error wrapping scheme introduced in Go 1.13. [auto-fix]
+    - exptostd # Detects functions from golang.org/x/exp/ that can be replaced by std functions. [auto-fix]
+    - ginkgolinter # Enforces standards of using ginkgo and gomega. [auto-fix]
+    - goheader # Check if file header matches to pattern. [fast, auto-fix]
+    - govet # Vet examines Go source code and reports suspicious constructs. It is roughly the same as 'go vet' and uses its passes. [auto-fix]
+    - importas # Enforces consistent import aliases. [auto-fix]
+    - mirror # Reports wrong mirror patterns of bytes/strings usage. [auto-fix]
+    - misspell # Finds commonly misspelled English words. [fast, auto-fix]
+    - nakedret # Checks that functions with naked returns are not longer than a maximum size (can be zero). [fast, auto-fix]
+    - nolintlint # Reports ill-formed or insufficient nolint directives. [fast, auto-fix]
+    - sloglint # Ensure consistent code style when using log/slog. [auto-fix]
+    - staticcheck # It's the set of rules from staticcheck. [auto-fix]
+    - usestdlibvars # A linter that detect the possibility to use variables/constants from the Go standard library. [fast, auto-fix]
+    - usetesting # Reports uses of functions with replacement inside the testing package. [auto-fix]
+    - whitespace # Whitespace is a linter that checks for unnecessary newlines at the start and end of functions, if, for, etc. [fast, auto-fix]
+    - copyloopvar # A linter detects places where loop variables are copied. [fast, auto-fix]
+#    - err113 # Check errors handling expressions. [auto-fix]
+#    - fatcontext # Detects nested contexts in loops and function literals. [auto-fix]
+#    - gocritic # Provides diagnostics that check for bugs, performance and style issues. [auto-fix]
+#    - iface # Detect the incorrect use of interfaces, helping developers avoid interface pollution. [auto-fix]
+    - intrange # Intrange is a linter to find places where for loops could make use of an integer range. [auto-fix]
+    - nlreturn # Checks for a new line before return and branch statements to increase code clarity. [fast, auto-fix]
+    - perfsprint # Checks that fmt.Sprintf can be replaced with a faster alternative. [auto-fix]
+#    - protogetter # Reports direct reads from proto message fields when getters should be used. [auto-fix]
+#    - revive # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint. [auto-fix]
+    - tagalign # Check that struct tags are well aligned. [fast, auto-fix]
+    - testifylint # Checks usage of github.com/stretchr/testify. [auto-fix]
+#    - wsl_v5 # Add or remove empty lines. [auto-fix]
 #    - containedctx
 #    - contextcheck
     - depguard

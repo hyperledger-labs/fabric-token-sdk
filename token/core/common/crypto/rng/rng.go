@@ -61,6 +61,7 @@ func NewSecureRNGWith(interval time.Duration, volume uint64) *SecureRNG {
 				if err != nil {
 					return nil
 				}
+
 				return c
 			},
 		},
@@ -124,5 +125,6 @@ func (r *SecureRNG) Read(p []byte) (int, error) {
 	w.bytesRead.Add(uint64(len(p)))
 
 	r.Pool.Put(w)
+
 	return len(p), nil
 }

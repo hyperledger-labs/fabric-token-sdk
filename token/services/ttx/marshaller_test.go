@@ -86,6 +86,7 @@ func TestTransactionMarshalUnmarshalRoundtrip(t *testing.T) {
 	// call unmarshal with a getNetwork func that should not be invoked
 	badGetNetwork := func(network string, channel string) (dep.Network, error) {
 		t.Fatalf("getNetwork should not be called")
+
 		return nil, nil
 	}
 
@@ -118,6 +119,7 @@ func TestUnmarshal_ErrorCases(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed preparing test data: %v", err)
 		}
+
 		return b
 	}
 

@@ -54,5 +54,6 @@ func (p *SDK) Install() error {
 	}); err != nil {
 		return errors.WithMessagef(err, "failed to install auditor's views")
 	}
+
 	return nil
 }

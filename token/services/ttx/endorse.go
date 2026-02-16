@@ -155,6 +155,7 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 			return errors.Wrapf(err, "failed sending signature back")
 		}
 	}
+
 	return nil
 }
 
@@ -180,6 +181,7 @@ func (s *EndorseView) receiveTransaction(context view.Context) ([]byte, error) {
 	if !bytes.Equal(m1, m2) {
 		return nil, errors.Errorf("token request's signer does not match the expected signer")
 	}
+
 	return tx.FromRaw, nil
 }
 
@@ -205,6 +207,7 @@ func (s *EndorseView) ack(context view.Context, msg []byte) error {
 	if err := inSession.SendWithContext(context.Context(), sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending ack")
 	}
+
 	return nil
 }
 
@@ -217,6 +220,7 @@ func extractRequiredSigners(ctx context.Context, sigService dep.SignatureService
 		multiSigners, _, _ := multisig.Unwrap(signer)
 		if len(multiSigners) != 0 {
 			res = append(res, multiSigners...)
+
 			continue
 		}
 		res = append(res, signer)
@@ -225,6 +229,7 @@ func extractRequiredSigners(ctx context.Context, sigService dep.SignatureService
 		multiSigners, _, _ := multisig.Unwrap(signer)
 		if len(multiSigners) != 0 {
 			res = append(res, multiSigners...)
+
 			continue
 		}
 		res = append(res, signer)
@@ -235,5 +240,6 @@ func extractRequiredSigners(ctx context.Context, sigService dep.SignatureService
 			subset = append(subset, res)
 		}
 	}
+
 	return subset, nil
 }

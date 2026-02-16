@@ -36,5 +36,6 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 		SDKs:            []nodepkg.SDK{&fall.SDK{}},
 		ReplicationOpts: opts,
 	}))
+
 	return ts, selector
 }

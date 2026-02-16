@@ -46,6 +46,7 @@ func (s *ScanView) Call(context view.Context) (interface{}, error) {
 		s.Timeout,
 		opts...)
 	assert.NoError(err, "failed to scan for pre-image")
+
 	return preImage, nil
 }
 

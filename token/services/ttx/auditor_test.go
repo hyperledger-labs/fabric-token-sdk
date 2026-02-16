@@ -30,7 +30,7 @@ func TestNewAuditorFromTMSID(t *testing.T) {
 	ctx.GetServiceReturns(nil, errors.New("service provider error"))
 	_, err := ttx.NewAuditorFromTMSID(ctx, tmsID)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ttx.ErrProvider)
+	require.ErrorIs(t, err, ttx.ErrProvider)
 	assert.Contains(t, err.Error(), "service provider error")
 
 	// register provider
@@ -39,7 +39,7 @@ func TestNewAuditorFromTMSID(t *testing.T) {
 	ctx.GetServiceReturns(auditServiceProvider, nil)
 	_, err = ttx.NewAuditorFromTMSID(ctx, tmsID)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ttx.ErrProvider)
+	require.ErrorIs(t, err, ttx.ErrProvider)
 	assert.Contains(t, err.Error(), "auditor service error")
 
 	auditService := &mock2.AuditService{}

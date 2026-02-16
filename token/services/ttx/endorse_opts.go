@@ -24,6 +24,7 @@ func (o *EndorsementsOpts) ExternalWalletSigner(id string) ExternalWalletSigner 
 	if o.ExternalWalletSigners == nil {
 		return nil
 	}
+
 	return o.ExternalWalletSigners[id]
 }
 
@@ -38,6 +39,7 @@ func CompileCollectEndorsementsOpts(opts ...EndorsementsOpt) (*EndorsementsOpts,
 			return nil, err
 		}
 	}
+
 	return txOptions, nil
 }
 
@@ -45,6 +47,7 @@ func CompileCollectEndorsementsOpts(opts ...EndorsementsOpt) (*EndorsementsOpts,
 func WithSkipAuditing() EndorsementsOpt {
 	return func(o *EndorsementsOpts) error {
 		o.SkipAuditing = true
+
 		return nil
 	}
 }
@@ -53,6 +56,7 @@ func WithSkipAuditing() EndorsementsOpt {
 func WithSkipAuditorSignatureVerification() EndorsementsOpt {
 	return func(o *EndorsementsOpts) error {
 		o.SkipAuditorSignatureVerification = true
+
 		return nil
 	}
 }
@@ -61,6 +65,7 @@ func WithSkipAuditorSignatureVerification() EndorsementsOpt {
 func WithSkipApproval() EndorsementsOpt {
 	return func(o *EndorsementsOpts) error {
 		o.SkipApproval = true
+
 		return nil
 	}
 }
@@ -69,6 +74,7 @@ func WithSkipApproval() EndorsementsOpt {
 func WithSkipDistributeEnv() EndorsementsOpt {
 	return func(o *EndorsementsOpts) error {
 		o.SkipDistributeEnv = true
+
 		return nil
 	}
 }
@@ -79,6 +85,7 @@ func WithExternalWalletSigner(walletID string, ews ExternalWalletSigner) Endorse
 			o.ExternalWalletSigners = map[string]ExternalWalletSigner{}
 		}
 		o.ExternalWalletSigners[walletID] = ews
+
 		return nil
 	}
 }

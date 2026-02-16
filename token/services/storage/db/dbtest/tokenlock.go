@@ -14,7 +14,7 @@ import (
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/test-go/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
@@ -48,10 +48,10 @@ var tokenLockDBCases = []struct {
 func TestFully(t *testing.T, tokenLockDB driver3.TokenLockStore, tokenTransactionDB driver3.TokenTransactionStore) {
 	ctx := t.Context()
 	tx, err := tokenTransactionDB.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.AddTokenRequest(ctx, "apple", []byte("apple_tx_content"), nil, nil, driver2.PPHash("tr")))
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, err)
+	require.NoError(t, tx.AddTokenRequest(ctx, "apple", []byte("apple_tx_content"), nil, nil, driver2.PPHash("tr")))
+	require.NoError(t, tx.Commit())
 
-	assert.NoError(t, tokenLockDB.Lock(ctx, &token.ID{TxId: "apple", Index: 0}, "pineapple"))
-	assert.NoError(t, tokenLockDB.Cleanup(ctx, 1*time.Second))
+	require.NoError(t, tokenLockDB.Lock(ctx, &token.ID{TxId: "apple", Index: 0}, "pineapple"))
+	require.NoError(t, tokenLockDB.Cleanup(ctx, 1*time.Second))
 }

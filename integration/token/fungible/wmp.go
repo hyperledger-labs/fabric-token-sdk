@@ -55,6 +55,7 @@ func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token
 	tokenIdentityMetadata, err := ownerWallet.GetTokenMetadataAuditInfo(recipientIdentity)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	logger.Debugf("new recipient data [%s:%s:%s:%s]", recipientIdentity, auditInfo, tokenMetadata, tokenIdentityMetadata)
+
 	return &token.RecipientData{
 		Identity:               recipientIdentity,
 		AuditInfo:              auditInfo,
@@ -68,6 +69,7 @@ func (p *WalletManagerProvider) GetSinger(user string, wallet string, party view
 	wm := p.load(user)
 	ownerWallet := wm.OwnerWallet(context.Background(), wallet)
 	gomega.Expect(ownerWallet).ToNot(gomega.BeNil())
+
 	return ownerWallet.GetSigner(context.Background(), party)
 }
 
@@ -85,6 +87,7 @@ func (p *WalletManagerProvider) load(user string) *token.WalletManager {
 	wm := p.Loader.Load(user)
 
 	p.managers[user] = wm
+
 	return wm
 }
 
@@ -121,6 +124,7 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	walletService, err := s.NewWalletService(tmsConfig, ppRaw)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
 	return token.NewWalletManager(walletService)
 }
 

@@ -71,5 +71,6 @@ func (s TransferHouseViewFactory) NewView(in []byte) (view.View, error) {
 	f := &TransferHouseView{Transfer: &Transfer{}}
 	err := json.Unmarshal(in, f)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

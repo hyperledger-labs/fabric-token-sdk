@@ -11,38 +11,39 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestSetup(t *testing.T) {
 	t.Run("valid precision", func(t *testing.T) {
 		pp, err := Setup(32)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, uint64(32), pp.QuantityPrecision)
 		assert.Equal(t, uint64(1<<32)-1, pp.MaxToken)
 	})
 
 	t.Run("precision too large", func(t *testing.T) {
 		pp, err := Setup(65)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, pp)
 		assert.Equal(t, "invalid precision [65], must be smaller or equal than 64", err.Error())
 	})
 
 	t.Run("precision zero", func(t *testing.T) {
 		pp, err := Setup(0)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, pp)
 		assert.Equal(t, "invalid precision, should be greater than 0", err.Error())
 	})
 
 	t.Run("extras is initialized", func(t *testing.T) {
 		pp, err := Setup(32)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, pp.Extras())
 		ser, err := pp.Serialize()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		pp2, err := NewPublicParamsFromBytes(ser, FabTokenDriverName, ProtocolV1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, pp2.Extras())
 	})
 }
@@ -50,7 +51,7 @@ func TestSetup(t *testing.T) {
 func TestSetupWithVersion(t *testing.T) {
 	t.Run("valid setup", func(t *testing.T) {
 		pp, err := WithVersion(32, driver.TokenDriverVersion(2))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, uint64(32), pp.QuantityPrecision)
 		assert.Equal(t, uint64(1<<32)-1, pp.MaxToken)
 		assert.Equal(t, driver.TokenDriverVersion(2), pp.DriverVersion)
@@ -58,7 +59,7 @@ func TestSetupWithVersion(t *testing.T) {
 
 	t.Run("invalid precision", func(t *testing.T) {
 		pp, err := WithVersion(65, driver.TokenDriverVersion(2))
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, pp)
 	})
 }
@@ -66,11 +67,11 @@ func TestSetupWithVersion(t *testing.T) {
 func TestNewPublicParamsFromBytes(t *testing.T) {
 	t.Run("valid params", func(t *testing.T) {
 		pp, err := Setup(32)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		raw, err := pp.Serialize()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		pp2, err := NewPublicParamsFromBytes(raw, FabTokenDriverName, ProtocolV1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, FabTokenDriverName, pp2.DriverName)
 		assert.Equal(t, ProtocolV1, pp2.DriverVersion)
 		assert.Equal(t, uint64(32), pp2.QuantityPrecision)
@@ -82,14 +83,14 @@ func TestNewPublicParamsFromBytes(t *testing.T) {
 
 	t.Run("invalid bytes", func(t *testing.T) {
 		pp2, err := NewPublicParamsFromBytes([]byte("invalid"), FabTokenDriverName, ProtocolV1)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, pp2)
 	})
 }
 
 func TestPublicParams_Methods(t *testing.T) {
 	pp, err := Setup(32)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Run("driver info", func(t *testing.T) {
 		assert.Equal(t, FabTokenDriverName, pp.TokenDriverName())
@@ -148,7 +149,7 @@ func TestPublicParams_Validation(t *testing.T) {
 			MaxToken:          1<<32 - 1,
 		}
 		err := pp.Validate()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("precision too large", func(t *testing.T) {
@@ -158,7 +159,7 @@ func TestPublicParams_Validation(t *testing.T) {
 			MaxToken:          1<<64 - 1,
 		}
 		err := pp.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, "invalid precision [65], must be less than 64", err.Error())
 	})
 
@@ -169,7 +170,7 @@ func TestPublicParams_Validation(t *testing.T) {
 			MaxToken:          1,
 		}
 		err := pp.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, "invalid precision, must be greater than 0", err.Error())
 	})
 
@@ -180,7 +181,7 @@ func TestPublicParams_Validation(t *testing.T) {
 			MaxToken:          1 << 32,
 		}
 		err := pp.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, "max token value is invalid [4294967296]>[4294967295]", err.Error())
 	})
 }
@@ -188,7 +189,7 @@ func TestPublicParams_Validation(t *testing.T) {
 func TestPublicParams_Serialization(t *testing.T) {
 	t.Run("valid serialization and deserialization", func(t *testing.T) {
 		original, err := Setup(32)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Add some data
 		original.AddAuditor([]byte("auditor1"))
@@ -197,7 +198,7 @@ func TestPublicParams_Serialization(t *testing.T) {
 
 		// Serialize
 		serialized, err := original.Serialize()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Deserialize
 		deserialized := &PublicParams{
@@ -205,7 +206,7 @@ func TestPublicParams_Serialization(t *testing.T) {
 			DriverVersion: ProtocolV1,
 		}
 		err = deserialized.Deserialize(serialized)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify all fields match
 		assert.Equal(t, original.QuantityPrecision, deserialized.QuantityPrecision)
@@ -221,21 +222,21 @@ func TestPublicParams_Serialization(t *testing.T) {
 			DriverVersion: ProtocolV1,
 		}
 		err := pp.Deserialize([]byte("invalid"))
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("mismatched driver identifier", func(t *testing.T) {
 		original, err := Setup(32)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		serialized, err := original.Serialize()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		wrongDriver := &PublicParams{
 			DriverName:    "wrong",
 			DriverVersion: ProtocolV1,
 		}
 		err = wrongDriver.Deserialize(serialized)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid identifier")
 	})
 }
@@ -251,13 +252,13 @@ func TestPublicParams_BytesAndFromBytes(t *testing.T) {
 			ExtraData:         nil,
 		}
 		bytes, err := pp.Bytes()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, bytes)
 
 		// Test FromBytes with the serialized data
 		newPP := &PublicParams{}
 		err = newPP.FromBytes(bytes)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, pp.QuantityPrecision, newPP.QuantityPrecision)
 		assert.Equal(t, pp.MaxToken, newPP.MaxToken)
 	})
@@ -270,23 +271,23 @@ func TestPublicParams_BytesAndFromBytes(t *testing.T) {
 			IssuerIDs:         []driver.Identity{nil}, // Invalid identity
 		}
 		bytes, err := pp.Bytes()
-		assert.NoError(t, err) // Should handle nil identity
+		require.NoError(t, err) // Should handle nil identity
 
 		newPP := &PublicParams{}
 		err = newPP.FromBytes(bytes)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("invalid protobuf data", func(t *testing.T) {
 		pp := &PublicParams{}
 		err := pp.FromBytes([]byte{0xFF, 0xFF, 0xFF}) // Invalid protobuf data
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
 func TestPublicParams_String(t *testing.T) {
 	pp, err := Setup(32)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pp.AddAuditor([]byte("auditor1"))
 	pp.AddIssuer([]byte("issuer1"))
 	pp.ExtraData = map[string][]byte{"key1": []byte("value1")}

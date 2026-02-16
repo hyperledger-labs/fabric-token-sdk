@@ -304,6 +304,7 @@ func suggestFix(s *FuncStat, inUseRatio, allocRatio float64) string {
 	if inUseRatio > 0.30 {
 		return "CRITICAL: Holds >30% RAM."
 	}
+
 	return "Inspect retention logic."
 }
 
@@ -333,6 +334,7 @@ func printHotStackWithBlame(w *tabwriter.Writer, targetFunc string, stacks []Sta
 
 	if maxSig == "" {
 		writeLine(w, " (No trace found)")
+
 		return
 	}
 
@@ -352,6 +354,7 @@ func printHotStackWithBlame(w *tabwriter.Writer, targetFunc string, stacks []Sta
 		writef(w, " %s-> %s%s\n", indent, shortenName(fn), marker)
 		if i >= 15 {
 			writef(w, " %s ...\n", indent)
+
 			break
 		}
 	}
@@ -369,6 +372,7 @@ func isStdLib(funcName string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -394,6 +398,7 @@ func getTopCallers(callers map[string]int64, total int64) string {
 		pct := float64(list[i].Bytes) / float64(total) * 100
 		parts = append(parts, fmt.Sprintf("%s (%.0f%%)", shortenName(list[i].Name), pct))
 	}
+
 	return strings.Join(parts, ", ")
 }
 
@@ -407,11 +412,13 @@ func formatBytes(b int64) string {
 		div *= unit
 		exp++
 	}
+
 	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
 func shortenName(n string) string {
 	parts := strings.Split(n, "/")
+
 	return parts[len(parts)-1]
 }
 
@@ -420,6 +427,7 @@ func shortenPath(p string) string {
 	if len(parts) > 2 {
 		return strings.Join(parts[len(parts)-2:], "/")
 	}
+
 	return p
 }
 

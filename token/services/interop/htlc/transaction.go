@@ -36,6 +36,7 @@ func WithHash(hash []byte) token.TransferOption {
 			o.Attributes = map[interface{}]interface{}{}
 		}
 		o.Attributes["htlc.hash"] = hash
+
 		return nil
 	}
 }
@@ -47,6 +48,7 @@ func WithHashFunc(hashFunc crypto.Hash) token.TransferOption {
 			o.Attributes = map[interface{}]interface{}{}
 		}
 		o.Attributes["htlc.hashFunc"] = hashFunc
+
 		return nil
 	}
 }
@@ -58,6 +60,7 @@ func WithHashEncoding(encoding encoding.Encoding) token.TransferOption {
 			o.Attributes = map[interface{}]interface{}{}
 		}
 		o.Attributes["htlc.hashEncoding"] = encoding
+
 		return nil
 	}
 }
@@ -69,6 +72,7 @@ func compileTransferOptions(opts ...token.TransferOption) (*token.TransferOption
 			return nil, err
 		}
 	}
+
 	return txOptions, nil
 }
 
@@ -88,6 +92,7 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption)
 	if err != nil {
 		return nil, err
 	}
+
 	return &Transaction{
 		Transaction: tx,
 		Binder:      endpoint.GetService(sp),
@@ -100,6 +105,7 @@ func NewAnonymousTransaction(sp view.Context, opts ...ttx.TxOption) (*Transactio
 	if err != nil {
 		return nil, err
 	}
+
 	return &Transaction{
 		Transaction: tx,
 		Binder:      endpoint.GetService(sp),
@@ -112,6 +118,7 @@ func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []by
 	if err != nil {
 		return nil, err
 	}
+
 	return &Transaction{
 		Transaction: tx,
 		Binder:      endpoint.GetService(ctx),
@@ -124,6 +131,7 @@ func (t *Transaction) Outputs() (*OutputStream, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return NewOutputStream(outs), nil
 }
 
@@ -370,12 +378,14 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
 	return raw, preImage, script, nil
 }
 
 // CreateNonce generates a nonce using the common/crypto package
 func CreateNonce() ([]byte, error) {
 	nonce, err := getRandomNonce()
+
 	return nonce, errors.WithMessagef(err, "error generating random nonce")
 }
 
@@ -385,5 +395,6 @@ func getRandomNonce() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting random bytes")
 	}
+
 	return key, nil
 }

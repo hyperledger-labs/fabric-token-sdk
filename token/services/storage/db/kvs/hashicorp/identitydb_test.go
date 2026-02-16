@@ -14,18 +14,18 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
-	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestIdentityDBWithHashicorpVault(t *testing.T) {
 	terminate, vaultURL, token := hashicorp.StartHashicorpVaultContainer(t, 11200)
 	defer terminate()
 	client, err := hashicorp.NewVaultClient(vaultURL, token)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	for i, c := range dbtest.IdentityCases {
 		backend, err := hashicorp.NewWithClient(client, fmt.Sprintf("kv1/data/token-sdk/%d/", i))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		db := kvs.NewIdentityStore(backend, token2.TMSID{
 			Network:   "apple",
 			Channel:   "pears",

@@ -42,6 +42,7 @@ func NewQueryExecutor(sp token.ServiceProvider, wallet string, precision uint64,
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
 	qe := tms.Vault().NewQueryEngine()
+
 	return &QueryExecutor{
 		selector: NewFilter(
 			wallet,
@@ -63,6 +64,7 @@ func (s *QueryExecutor) QueryByKey(ctx context.Context, state interface{}, key s
 		if errors.Is(errors.Cause(err), ErrNoResults) {
 			return ErrNoResults
 		}
+
 		return errors.Wrap(err, "failed to filter")
 	}
 	tokens, err := s.GetTokens(ctx, ids...)
@@ -85,6 +87,7 @@ func (s *QueryExecutor) QueryByKey(ctx context.Context, state interface{}, key s
 			}
 		}
 	}
+
 	return ErrNoResults
 }
 
@@ -97,6 +100,7 @@ func (j *jsonFilter) ContainsToken(token *token2.UnspentToken) bool {
 	decoded, err := base64.StdEncoding.DecodeString(string(token.Type))
 	if err != nil {
 		logger.Debugf("failed to decode token type [%s]", token.Type)
+
 		return false
 	}
 	logger.Debugf("decoded token type [%s]", string(decoded))
@@ -106,5 +110,6 @@ func (j *jsonFilter) ContainsToken(token *token2.UnspentToken) bool {
 		return v == j.value
 	}
 	logger.Debugf("res [%s] for [%s,%s]", res, j.key, j.value)
+
 	return false
 }

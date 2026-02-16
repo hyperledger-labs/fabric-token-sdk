@@ -33,23 +33,23 @@ const (
 // SignerConfig contains the crypto material to set up an idemix signing identity
 type SignerConfig struct {
 	// Cred represents the serialized idemix credential of the default signer
-	Cred []byte `protobuf:"bytes,1,opt,name=Cred,proto3" json:"Cred,omitempty"`
+	Cred []byte `json:"Cred,omitempty" protobuf:"bytes,1,opt,name=Cred,proto3"`
 	// Sk is the secret key of the default signer, corresponding to credential Cred
-	Sk []byte `protobuf:"bytes,2,opt,name=Sk,proto3" json:"Sk,omitempty"`
+	Sk []byte `json:"Sk,omitempty" protobuf:"bytes,2,opt,name=Sk,proto3"`
 	// OrganizationalUnitIdentifier defines the organizational unit the default signer is in
-	OrganizationalUnitIdentifier string `protobuf:"bytes,3,opt,name=organizational_unit_identifier,json=organizationalUnitIdentifier" json:"organizational_unit_identifier,omitempty"`
+	OrganizationalUnitIdentifier string `json:"organizational_unit_identifier,omitempty" protobuf:"bytes,3,opt,name=organizational_unit_identifier,json=organizationalUnitIdentifier"`
 	// Role defines whether the default signer is admin, member, peer, or client
-	Role int32 `protobuf:"varint,4,opt,name=role,json=role" json:"role,omitempty"`
+	Role int32 `json:"role,omitempty" protobuf:"varint,4,opt,name=role,json=role"`
 	// EnrollmentID contains the enrollment id of this signer
-	EnrollmentID string `protobuf:"bytes,5,opt,name=enrollment_id,json=enrollmentId" json:"enrollment_id,omitempty"`
+	EnrollmentID string `json:"enrollment_id,omitempty" protobuf:"bytes,5,opt,name=enrollment_id,json=enrollmentId"`
 	// CRI contains a serialized CredentialRevocationInformation
-	CredentialRevocationInformation []byte `protobuf:"bytes,6,opt,name=credential_revocation_information,json=credentialRevocationInformation,proto3" json:"credential_revocation_information,omitempty"`
+	CredentialRevocationInformation []byte `json:"credential_revocation_information,omitempty" protobuf:"bytes,6,opt,name=credential_revocation_information,json=credentialRevocationInformation,proto3"`
 	// RevocationHandle is the handle used to single out this credential and determine its revocation status
-	RevocationHandle string `protobuf:"bytes,7,opt,name=revocation_handle,json=revocationHandle,proto3" json:"revocation_handle,omitempty"`
+	RevocationHandle string `json:"revocation_handle,omitempty" protobuf:"bytes,7,opt,name=revocation_handle,json=revocationHandle,proto3"`
 	// CurveID specifies the name of the Idemix curve to use, defaults to 'amcl.Fp256bn'
-	CurveID string `protobuf:"bytes,8,opt,name=curve_id,json=curveID" json:"curveID,omitempty"`
+	CurveID string `json:"curveID,omitempty" protobuf:"bytes,8,opt,name=curve_id,json=curveID"`
 	// Schema contains the version of the schema used by this credential
-	Schema string `protobuf:"bytes,9,opt,name=schema,json=schema" json:"schema,omitempty"`
+	Schema string `json:"schema,omitempty" protobuf:"bytes,9,opt,name=schema,json=schema"`
 }
 
 const (
@@ -71,6 +71,7 @@ func NewConfig(dir string) (*Config, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read issuer public key file")
 	}
+
 	return NewConfigWithIPK(ipkBytes, dir, true)
 }
 
@@ -84,6 +85,7 @@ func NewConfigWithIPK(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet
 			return nil, errors.Wrapf(err, "failed reading idemix configuration from [%s] and with extra path element", dir)
 		}
 	}
+
 	return conf, nil
 }
 
@@ -97,6 +99,7 @@ func newConfigWithIPK(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet
 		}
 		config = config2
 	}
+
 	return config, nil
 }
 
@@ -181,5 +184,6 @@ func assembleConfig(issuerPublicKey []byte, signer *config.IdemixSignerConfig) (
 		Ipk:     issuerPublicKey,
 		Signer:  signer,
 	}
+
 	return idemixConfig, nil
 }

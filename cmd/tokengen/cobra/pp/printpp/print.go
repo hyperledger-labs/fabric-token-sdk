@@ -42,7 +42,7 @@ var cobraCommand = &cobra.Command{
 	Long:  `Inspect public parameters.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
@@ -52,6 +52,7 @@ var cobraCommand = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to generate public parameters")
 		}
+
 		return nil
 	},
 }

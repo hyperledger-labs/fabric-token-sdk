@@ -66,6 +66,7 @@ func skiMapper(p11Opts PKCS11) func([]byte) []byte {
 		if p11Opts.AltID != "" {
 			return []byte(p11Opts.AltID)
 		}
+
 		return ski
 	}
 }
@@ -79,5 +80,6 @@ func GetDefaultBCCSP(keyStore bccsp.KeyStore) (bccsp.BCCSP, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return cryptoProvider, nil
 }

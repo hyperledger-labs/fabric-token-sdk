@@ -251,5 +251,6 @@ func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, e
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize issue action")
 	}
+
 	return issue, nil
 }

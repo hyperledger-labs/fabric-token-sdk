@@ -60,5 +60,6 @@ func (s *SKIBasedSigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerO
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to retrieve key for SKI [%s]", s.SKI)
 	}
+
 	return s.csp.Sign(key, digest, opts)
 }

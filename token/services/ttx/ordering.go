@@ -53,6 +53,7 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 			logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", options.Transaction.TokenRequest.Anchor, err)
 		}
 	}
+
 	return nil, nil
 }
 
@@ -67,6 +68,7 @@ func (o *orderingView) broadcast(context view.Context, transaction *Transaction)
 	if err := nw.Broadcast(context.Context(), transaction.Envelope); err != nil {
 		return errors.WithMessagef(err, "failed to broadcast token transaction [%s]", transaction.ID())
 	}
+
 	return nil
 }
 
@@ -101,5 +103,6 @@ func (o *orderingAndFinalityView) Call(ctx view.Context) (interface{}, error) {
 	if _, err := ctx.RunView(NewOrderingView(o.tx)); err != nil {
 		return nil, err
 	}
+
 	return ctx.RunView(NewFinalityView(o.tx, WithTimeout(o.timeout)))
 }

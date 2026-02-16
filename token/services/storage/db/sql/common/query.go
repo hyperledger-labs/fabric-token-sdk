@@ -45,16 +45,19 @@ func NewSelectDistinct(columns ...string) *Select {
 
 func (s *Select) From(tables ...string) *Select {
 	s.from = tables
+
 	return s
 }
 
 func (s *Select) Where(where string) *Select {
 	s.where = where
+
 	return s
 }
 
 func (s *Select) OrderBy(orderBy string) *Select {
 	s.orderBy = orderBy
+
 	return s
 }
 
@@ -88,6 +91,7 @@ func (s *Select) Compile() (string, error) {
 		}
 		sb.WriteString(s.orderBy)
 	}
+
 	return sb.String(), nil
 }
 
@@ -106,6 +110,7 @@ func NewInsertInto(table string) *Insert {
 
 func (i *Insert) Rows(rows string) *Insert {
 	i.rows = rows
+
 	return i
 }
 
@@ -137,6 +142,7 @@ func (i *Insert) Compile() (string, error) {
 		}
 	}
 	sb.WriteString(")")
+
 	return sb.String(), nil
 }
 
@@ -156,11 +162,13 @@ func NewUpdate(table string) *Update {
 
 func (u *Update) Set(rows string) *Update {
 	u.rows = rows
+
 	return u
 }
 
 func (u *Update) Where(where string) *Update {
 	u.where = where
+
 	return u
 }
 
@@ -205,6 +213,7 @@ func (u *Update) Compile() (string, error) {
 			sb.WriteString(u.where)
 		}
 	}
+
 	return sb.String(), nil
 }
 
@@ -223,6 +232,7 @@ func NewDeleteFrom(table string) *Delete {
 
 func (s *Delete) Where(where string) *Delete {
 	s.where = where
+
 	return s
 }
 
@@ -240,5 +250,6 @@ func (s *Delete) Compile() (string, error) {
 		}
 		sb.WriteString(s.where)
 	}
+
 	return sb.String(), nil
 }

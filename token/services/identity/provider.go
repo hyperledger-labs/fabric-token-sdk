@@ -125,6 +125,7 @@ func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity,
 		Verifier:   verifier,
 		Ephemeral:  ephemeral,
 	}
+
 	return p.RegisterIdentityDescriptor(ctx, identityDescriptor, nil)
 }
 
@@ -153,6 +154,7 @@ func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []s
 		uniqueID := id.UniqueID()
 		p.isMeCache.Add(uniqueID, slices.Contains(found, uniqueID))
 	}
+
 	return append(result, found...)
 }
 
@@ -183,6 +185,7 @@ func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (dri
 		return nil, errors.Wrapf(err, "failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 	}
 	found = true
+
 	return signer, nil
 }
 
@@ -212,6 +215,7 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -219,6 +223,7 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 func (p *Provider) RegisterRecipientIdentity(ctx context.Context, id driver.Identity) error {
 	p.Logger.DebugfContext(ctx, "Registering identity [%s]", id)
 	p.isMeCache.Add(id.UniqueID(), false)
+
 	return nil
 }
 
@@ -268,14 +273,17 @@ func (p *Provider) areMe(ctx context.Context, identities ...driver.Identity) []s
 	found, err := p.storage.GetExistingSignerInfo(ctx, notFound...)
 	if err != nil {
 		p.Logger.Errorf("failed checking if a signer exists [%s]", err)
+
 		return result.ToSlice()
 	}
 	result.Add(found...)
+
 	return result.ToSlice()
 }
 
 func (p *Provider) getSigner(ctx context.Context, identity driver.Identity, idHash string) (driver.Signer, error) {
 	signer, _, err := p.getSignerAndCache(ctx, identity, idHash, true)
+
 	return signer, err
 }
 
@@ -283,6 +291,7 @@ func (p *Provider) getSignerAndCache(ctx context.Context, identity driver.Identi
 	// check cache
 	if entry, ok := p.signers.Get(idHash); ok {
 		p.Logger.DebugfContext(ctx, "signer for [%s] found", idHash)
+
 		return entry.Signer, false, nil
 	}
 

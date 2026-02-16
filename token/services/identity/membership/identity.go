@@ -35,6 +35,7 @@ func (i *LocalIdentity) String() string {
 	if err != nil {
 		return err.Error()
 	}
+
 	return fmt.Sprintf("{%s@%s-%v-%v-%v}[%s]", i.Name, i.EnrollmentID, i.Default, i.Anonymous, i.Remote, id)
 }
 

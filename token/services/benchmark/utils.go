@@ -59,5 +59,6 @@ func GenerateCases(bits []uint64, curves []math.CurveID, inputs []int, outputs [
 			}
 		}
 	}
+
 	return cases
 }

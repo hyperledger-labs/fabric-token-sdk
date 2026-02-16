@@ -31,6 +31,7 @@ func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.Name
 func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, params driver.PublicParameters) (driver.WalletService, error) {
 	tmsID := tmsConfig.ID()
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+
 	return d.newWalletService(
 		tmsConfig,
 		&membership.NoBinder{},

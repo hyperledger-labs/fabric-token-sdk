@@ -44,6 +44,7 @@ func (t *Token) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed serializing token")
 	}
+
 	return comm.WrapTokenWithType(raw)
 }
 
@@ -62,6 +63,7 @@ func (t *Token) Deserialize(bytes []byte) error {
 	}
 	t.Owner = token.Owner
 	t.Data, err = utils.FromG1Proto(token.Data)
+
 	return err
 }
 
@@ -79,6 +81,7 @@ func (t *Token) ToClear(meta *Metadata, pp *noghv1.PublicParams) (*token.Token, 
 	if !com.Equals(t.Data) {
 		return nil, ErrTokenMismatch
 	}
+
 	return &token.Token{
 		Type:     meta.Type,
 		Quantity: "0x" + meta.Value.String(),
@@ -93,6 +96,7 @@ func (t *Token) Validate(checkOwner bool) error {
 	if t.Data == nil {
 		return ErrEmptyTokenData
 	}
+
 	return nil
 }
 
@@ -130,6 +134,7 @@ func GetTokensWithWitness(values []uint64, tokenType token.Type, pp []*math.G1, 
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot get tokens with witness")
 	}
+
 	return tokens, tw, nil
 }
 
@@ -143,6 +148,7 @@ func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs 
 		witness[i] = &Metadata{Value: math.Curves[curve].NewZrFromUint64(v), BlindingFactor: bfs[i]}
 		witness[i].Type = tokenType
 	}
+
 	return witness
 }
 
@@ -168,6 +174,7 @@ func (m *Metadata) Deserialize(b []byte) error {
 	if metadata.Issuer != nil {
 		m.Issuer = metadata.Issuer.Raw
 	}
+
 	return nil
 }
 
@@ -190,6 +197,7 @@ func (m *Metadata) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed serializing token")
 	}
+
 	return comm.WrapMetadataWithType(raw)
 }
 
@@ -221,6 +229,7 @@ func (m *Metadata) Validate(checkIssuer bool) error {
 	if !checkIssuer && len(m.Issuer) != 0 {
 		return ErrUnexpectedIssuer
 	}
+
 	return nil
 }
 
@@ -232,6 +241,7 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, 
 		}
 		com.Add(generators[i].Mul(vector[i]))
 	}
+
 	return com, nil
 }
 
@@ -257,5 +267,6 @@ func (u *UpgradeWitness) Validate() error {
 	if u.BlindingFactor == nil {
 		return ErrMissingUpgradeBlindingFactor
 	}
+
 	return nil
 }

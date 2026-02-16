@@ -21,6 +21,7 @@ func (r *RangeCorrectness) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal proofs")
 	}
+
 	return asn1.Marshal(proofs)
 }
 
@@ -36,6 +37,7 @@ func (r *RangeCorrectness) Deserialize(raw []byte) error {
 		return errors.Wrap(err, "failed to unmarshal proofs")
 	}
 	r.Proofs = proofs.Values
+
 	return nil
 }
 
@@ -49,6 +51,7 @@ func (r *RangeCorrectness) Validate(curve math.CurveID) error {
 			return errors.Wrapf(err, "invalid range proof at index %d", i)
 		}
 	}
+
 	return nil
 }
 
@@ -113,6 +116,7 @@ func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 		}
 		rc.Proofs[i] = proof
 	}
+
 	return rc, nil
 }
 
@@ -170,5 +174,6 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 			return errors.Wrapf(err, "invalid range proof at index %d", i)
 		}
 	}
+
 	return nil
 }

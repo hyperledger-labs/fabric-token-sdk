@@ -37,5 +37,6 @@ func (p *RegisterCertifierViewFactory) NewView(in []byte) (view.View, error) {
 		err := json.Unmarshal(in, f.RegisterCertifier)
 		assert.NoError(err, "failed unmarshalling input")
 	}
+
 	return f, nil
 }

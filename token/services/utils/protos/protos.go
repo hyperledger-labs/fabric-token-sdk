@@ -25,6 +25,7 @@ func ToProtosSlice[T any, S ProtoSource[T]](s []S) ([]*T, error) {
 	for i, x := range s {
 		if utils.IsNil(x) {
 			res[i] = nil
+
 			continue
 		}
 
@@ -33,6 +34,7 @@ func ToProtosSlice[T any, S ProtoSource[T]](s []S) ([]*T, error) {
 			return nil, err
 		}
 	}
+
 	return res, nil
 }
 
@@ -45,6 +47,7 @@ func ToProtosSliceFunc[T any, S any](s []S, convert func(S) (*T, error)) ([]*T, 
 	for i, x := range s {
 		if utils.IsNil(x) {
 			res[i] = nil
+
 			continue
 		}
 
@@ -53,6 +56,7 @@ func ToProtosSliceFunc[T any, S any](s []S, convert func(S) (*T, error)) ([]*T, 
 			return nil, err
 		}
 	}
+
 	return res, nil
 }
 
@@ -62,6 +66,7 @@ func FromProtosSlice[T any, S ProtoDestination[T]](t []*T, s []S) error {
 		if t[i] == nil {
 			var a S
 			s[i] = a
+
 			continue
 		}
 		err = x.FromProtos(t[i])
@@ -69,6 +74,7 @@ func FromProtosSlice[T any, S ProtoDestination[T]](t []*T, s []S) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -81,6 +87,7 @@ func FromProtosSliceFunc[T any, S any](s []S, convert func(S) (*T, error)) ([]*T
 			return nil, err
 		}
 	}
+
 	return res, nil
 }
 
@@ -96,5 +103,6 @@ func FromProtosSliceFunc2[T any, S any](s []S, convert func(S) (T, error)) ([]T,
 			return nil, err
 		}
 	}
+
 	return res, nil
 }

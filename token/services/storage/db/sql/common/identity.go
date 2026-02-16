@@ -146,6 +146,7 @@ func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.Identit
 	logging.Debug(logger, query, args)
 
 	_, err := db.writeDB.ExecContext(ctx, query, args...)
+
 	return err
 }
 
@@ -160,8 +161,10 @@ func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurati
 	if err != nil {
 		return nil, err
 	}
+
 	return common.NewIterator(rows, func(c *driver.IdentityConfiguration) error {
 		c.Type = configurationType
+
 		return rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
 	}), nil
 }
@@ -177,6 +180,7 @@ func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url s
 		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s:%s]", id, typ, url)
 	}
 	logger.DebugfContext(ctx, "found configuration for [%s:%s:%s]", id, typ, url)
+
 	return len(result) != 0, nil
 }
 
@@ -195,8 +199,10 @@ func (db *IdentityStore) GetAuditInfo(ctx context.Context, id []byte) ([]byte, e
 			From(q.Table(db.table.IdentityInfo)).
 			Where(cond.Eq("identity_hash", h)).
 			Format(db.ci)
+
 		return common.QueryUnique[[]byte](db.readDB, query, args...)
 	})
+
 	return value, err
 }
 
@@ -219,13 +225,16 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil, nil
 		}
+
 		return nil, nil, errors.Wrapf(err, "error querying db")
 	}
+
 	return tokenMetadata, tokenMetadataAuditInfo, nil
 }
 
 func (db *IdentityStore) StoreSignerInfo(ctx context.Context, id tdriver.Identity, info []byte) error {
 	_, err := db.storeSignerInfo(ctx, db.writeDB, id.UniqueID(), id, info, true)
+
 	return err
 }
 
@@ -284,6 +293,7 @@ func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriv
 	for _, idHash := range idHashes {
 		db.signerInfoCache.Add(idHash, found.Contains(idHash))
 	}
+
 	return append(result, found.ToSlice()...), nil
 }
 
@@ -292,6 +302,7 @@ func (db *IdentityStore) SignerInfoExists(ctx context.Context, id []byte) (bool,
 	if err != nil {
 		return false, err
 	}
+
 	return len(existing) > 0, nil
 }
 
@@ -301,6 +312,7 @@ func (db *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]
 		From(q.Table(db.table.Signers)).
 		Where(cond.Eq("identity_hash", token.Identity(identity).UniqueID())).
 		Format(db.ci)
+
 	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
@@ -309,6 +321,7 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 	logger.DebugfContext(ctx, "register identity descriptor...")
 	if err := db.registerIdentityDescriptor(ctx, descriptor, alias); err != nil {
 		logger.ErrorfContext(ctx, "register identity descriptor...failed: %v", err)
+
 		return err
 	}
 	logger.DebugfContext(ctx, "register identity descriptor...done")
@@ -328,6 +341,7 @@ func (db *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descrip
 		}
 	}
 	logger.DebugfContext(ctx, "register identity descriptor...update caches...done")
+
 	return nil
 }
 
@@ -388,6 +402,7 @@ func (db *IdentityStore) registerIdentityDescriptor(
 
 	// no rollback to be performed
 	tx = nil
+
 	return nil
 }
 
@@ -459,6 +474,7 @@ func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx dbTransaction, 
 		db.signerInfoCache.Add(h, true)
 	}
 	logger.DebugfContext(ctx, "store signer info done")
+
 	return exists, nil
 }
 
@@ -484,5 +500,6 @@ func (db *IdentityStore) storeIdentityData(ctx context.Context, tx dbTransaction
 		logger.DebugfContext(ctx, "audit info cache update done")
 	}
 	logger.DebugfContext(ctx, "store identity data for [%s] done", h)
+
 	return nil
 }

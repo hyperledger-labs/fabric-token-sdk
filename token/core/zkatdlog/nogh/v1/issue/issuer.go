@@ -89,5 +89,6 @@ func (i *Issuer) SignTokenActions(raw []byte) ([]byte, error) {
 	if i.Signer == nil {
 		return nil, errors.New("failed to sign Token Actions: please initialize signer")
 	}
+
 	return i.Signer.Sign(raw)
 }

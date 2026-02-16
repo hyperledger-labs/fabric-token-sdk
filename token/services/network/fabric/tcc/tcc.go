@@ -122,6 +122,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res *pb.Resp
 			if !ok {
 				return shim.Error("failed getting token request, entry not found")
 			}
+
 			return cc.ProcessRequest(tokenRequest, stub)
 		case QueryPublicParamsFunction:
 			return cc.QueryPublicParams(stub)
@@ -129,16 +130,19 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res *pb.Resp
 			if len(args) != 2 {
 				return shim.Error("request to retrieve tokens is empty")
 			}
+
 			return cc.QueryTokens(args[1], stub)
 		case AreTokensSpent:
 			if len(args) != 2 {
 				return shim.Error("request to check if tokens are spent is empty")
 			}
+
 			return cc.AreTokensSpent(args[1], stub)
 		case QueryStates:
 			if len(args) != 2 {
 				return shim.Error("request to query states is empty")
 			}
+
 			return cc.QueryStates(args[1], stub)
 		default:
 			return shim.Error(fmt.Sprintf("function [%s] not recognized", f))
@@ -175,6 +179,7 @@ func (cc *TokenChaincode) GetValidator(builtInParams string) (Validator, error) 
 	if firstInitError != nil {
 		return nil, firstInitError
 	}
+
 	return cc.Validator, nil
 }
 
@@ -202,6 +207,7 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 	publicParamsPath := os.Getenv(PublicParamsPathVarEnv)
 	if publicParamsPath == "" {
 		logger.Errorf("no PUBLIC_PARAMS_FILE_PATH provided")
+
 		return ""
 	}
 
@@ -211,6 +217,7 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 		logger.Errorf(
 			"unable to read file %s (%s). continue looking pub params from init args or cc\n", publicParamsPath, err.Error(),
 		)
+
 		return ""
 	}
 
@@ -274,6 +281,7 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 	var ids []*token2.ID
 	if err := json.Unmarshal(idsRaw, &ids); err != nil {
 		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
+
 		return shim.Error(err.Error())
 	}
 
@@ -287,13 +295,16 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 	res, err := w.QueryTokens(context.Background(), ids)
 	if err != nil {
 		logger.Errorf("failed query tokens [%v]: [%s]", ids, err)
+
 		return shim.Error(fmt.Sprintf("failed query tokens [%v]: [%s]", ids, err))
 	}
 	raw, err := json.Marshal(res)
 	if err != nil {
 		logger.Errorf("failed marshalling tokens: [%s]", err)
+
 		return shim.Error(fmt.Sprintf("failed marshalling tokens: [%s]", err))
 	}
+
 	return shim.Success(raw)
 }
 
@@ -306,6 +317,7 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 	var ids []string
 	if err := json.Unmarshal(idsRaw, &ids); err != nil {
 		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
+
 		return shim.Error(err.Error())
 	}
 
@@ -315,13 +327,16 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 	res, err := w.AreTokensSpent(context.Background(), ids, cc.PublicParameters.GraphHiding())
 	if err != nil {
 		logger.Errorf("failed to check if tokens are spent [%v]: [%s]", ids, err)
+
 		return shim.Error(fmt.Sprintf("failed to check if tokens are spent [%v]: [%s]", ids, err))
 	}
 	raw, err := json.Marshal(res)
 	if err != nil {
 		logger.Errorf("failed marshalling spent flags: [%s]", err)
+
 		return shim.Error(fmt.Sprintf("failed marshalling spent flags: [%s]", err))
 	}
+
 	return shim.Success(raw)
 }
 
@@ -329,6 +344,7 @@ func (cc *TokenChaincode) QueryStates(idsRaw []byte, stub shim.ChaincodeStubInte
 	var keys []string
 	if err := json.Unmarshal(idsRaw, &keys); err != nil {
 		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
+
 		return shim.Error(err.Error())
 	}
 
@@ -344,8 +360,10 @@ func (cc *TokenChaincode) QueryStates(idsRaw []byte, stub shim.ChaincodeStubInte
 	raw, err := json.Marshal(values)
 	if err != nil {
 		logger.Errorf("failed marshalling values: [%s]", err)
+
 		return shim.Error(fmt.Sprintf("failed marshalling values: [%s]", err))
 	}
+
 	return shim.Success(raw)
 }
 
@@ -359,5 +377,6 @@ func (l *ledger) GetState(id token2.ID) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting token key for [%v]", id)
 	}
+
 	return l.stub.GetState(key)
 }

@@ -71,6 +71,7 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			return tracing.NewProviderWithBackingProvider(tp, mp), nil
 		}),
 	)

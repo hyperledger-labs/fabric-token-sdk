@@ -54,6 +54,7 @@ func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, err
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}
+
 	return c, nil
 }
 
@@ -177,15 +178,18 @@ func (d *StoreService) Append(ctx context.Context, req tokenRequest) error {
 		req.PublicParamsHash(),
 	); err != nil {
 		w.Rollback()
+
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	if err := w.AddMovement(ctx, mov...); err != nil {
 		w.Rollback()
+
 		return errors.WithMessagef(err, "append sent movements for txid [%s] failed", record.Anchor)
 	}
 
 	if err := w.AddTransaction(ctx, txs...); err != nil {
 		w.Rollback()
+
 		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 	}
 	if err := w.Commit(); err != nil {
@@ -193,6 +197,7 @@ func (d *StoreService) Append(ctx context.Context, req tokenRequest) error {
 	}
 
 	logger.DebugfContext(ctx, "appending new records completed without errors")
+
 	return nil
 }
 
@@ -234,6 +239,7 @@ func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver
 		ValidationCode: status,
 	})
 	logger.DebugfContext(ctx, "set status [%s][%s]...done without errors", txID, driver2.TxStatusMessage[status])
+
 	return nil
 }
 
@@ -246,6 +252,7 @@ func (d *StoreService) GetStatus(ctx context.Context, txID string) (TxStatus, st
 		return Unknown, "", errors.Wrapf(err, "failed getting status [%s]", txID)
 	}
 	logger.DebugfContext(ctx, "Got status [%s][%s]", txID, status)
+
 	return status, message, nil
 }
 
@@ -274,6 +281,7 @@ func (d *StoreService) AcquireLocks(ctx context.Context, anchor string, eIDs ...
 		logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment id done", anchor, id)
 	}
 	logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
+
 	return nil
 }
 
@@ -282,6 +290,7 @@ func (d *StoreService) ReleaseLocks(ctx context.Context, anchor string) {
 	dedupBoxed, ok := d.eIDsLocks.LoadAndDelete(anchor)
 	if !ok {
 		logger.DebugfContext(ctx, "nothing to release for [%s] ", anchor)
+
 		return
 	}
 	dedup := dedupBoxed.([]string)
@@ -290,6 +299,7 @@ func (d *StoreService) ReleaseLocks(ctx context.Context, anchor string) {
 		lock, ok := d.eIDsLocks.Load(id)
 		if !ok {
 			logger.Warnf("unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
+
 			continue
 		}
 		logger.DebugfContext(ctx, "unlock lock for [%s:%v] enrollment id done", anchor, id)
@@ -302,5 +312,6 @@ func (d *StoreService) ReleaseLocks(ctx context.Context, anchor string) {
 func deduplicateAndSort(source []string) []string {
 	slide := collections.NewSet(source...).ToSlice()
 	slices.Sort(slide)
+
 	return slide
 }

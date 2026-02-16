@@ -68,6 +68,7 @@ func NewTokenService[T driver.PublicParameters](
 		authorization:           authorization,
 		validator:               validator,
 	}
+
 	return s, nil
 }
 

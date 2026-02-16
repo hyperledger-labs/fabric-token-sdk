@@ -68,6 +68,7 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 	tokenAPITMS := tokenapi.NewMockedManagementService(t, tmsID)
 	tms.SetTokenManagementServiceStub = func(arg1 *token.Request) error {
 		arg1.SetTokenService(tokenAPITMS)
+
 		return nil
 	}
 	tmsp := &mock2.TokenManagementServiceProvider{}
@@ -145,6 +146,7 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 		storageProvider: storageProvider,
 		session:         session,
 	}
+
 	return c
 }
 
@@ -163,6 +165,7 @@ func TestEndorseView(t *testing.T) {
 				c := newTestEndorseViewContext(t, nil)
 				c.tx = nil
 				c.options = nil
+
 				return c
 			},
 			expectError:   true,
@@ -176,6 +179,7 @@ func TestEndorseView(t *testing.T) {
 			name: "success",
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
+
 				return c
 			},
 			expectError: false,
@@ -192,6 +196,7 @@ func TestEndorseView(t *testing.T) {
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
 				c.storage.AppendReturns(errors.Errorf("pineapple"))
+
 				return c
 			},
 			expectError:   true,
@@ -207,6 +212,7 @@ func TestEndorseView(t *testing.T) {
 				c := newTestEndorseViewContext(t, &TestEndorseViewContextInput{
 					IssuerIdentity: []byte("another_issuer"),
 				})
+
 				return c
 			},
 			expectError:   true,
@@ -222,6 +228,7 @@ func TestEndorseView(t *testing.T) {
 				c := newTestEndorseViewContext(t, &TestEndorseViewContextInput{
 					IssuerIdentity: []byte("another_issuer"),
 				})
+
 				return c
 			},
 			expectError:   true,

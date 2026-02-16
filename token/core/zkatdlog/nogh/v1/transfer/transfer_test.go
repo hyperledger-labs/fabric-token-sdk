@@ -120,6 +120,7 @@ func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
 				func() *benchmarkTransferEnv {
 					env, err := newBenchmarkTransferEnv(1, tc.BenchmarkCase)
 					require.NoError(t, err)
+
 					return env
 				},
 				func(env *benchmarkTransferEnv) error {
@@ -134,6 +135,7 @@ func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
 						return err
 					}
 					_, err = prover.Prove()
+
 					return err
 				},
 			)
@@ -147,6 +149,7 @@ func setup(bits uint64, curveID math.CurveID) (*v1.PublicParams, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return pp, nil
 }
 
@@ -206,6 +209,7 @@ func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier, 
 		return nil, nil, err
 	}
 	verifier := transfer.NewVerifier(in, out, pp)
+
 	return prover, verifier, nil
 }
 
@@ -310,6 +314,7 @@ func newTransferEnv(tb testing.TB) (*transferEnv, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &transferEnv{
 		prover:   prover,
 		verifier: verifier,
@@ -321,6 +326,7 @@ func newTransferEnvWithWrongSum() (*transferEnv, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &transferEnv{
 		prover:   prover,
 		verifier: verifier,
@@ -332,6 +338,7 @@ func newTransferEnvWithInvalidRange() (*transferEnv, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &transferEnv{
 		prover:   prover,
 		verifier: verifier,
@@ -357,7 +364,7 @@ func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkT
 	}
 
 	entries := make([]singleProverEnv, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
 		if err != nil {
 			return nil, err
@@ -369,5 +376,6 @@ func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkT
 			d: out,
 		}
 	}
+
 	return &benchmarkTransferEnv{ProverEnvs: entries, pp: pp}, nil
 }

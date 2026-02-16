@@ -61,6 +61,7 @@ func compileIssueOptions(opts ...IssueOption) (*IssueOptions, error) {
 			return nil, err
 		}
 	}
+
 	return txOptions, nil
 }
 
@@ -74,6 +75,7 @@ func WithIssueAttribute(attr, value interface{}) IssueOption {
 			o.Attributes = map[interface{}]interface{}{}
 		}
 		o.Attributes[attr] = value
+
 		return nil
 	}
 }
@@ -102,6 +104,7 @@ func CompileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
 			return nil, err
 		}
 	}
+
 	return txOptions, nil
 }
 
@@ -112,6 +115,7 @@ type TransferOption func(*TransferOptions) error
 func WithTokenSelector(selector Selector) TransferOption {
 	return func(o *TransferOptions) error {
 		o.Selector = selector
+
 		return nil
 	}
 }
@@ -139,6 +143,7 @@ func WithPublicIssueMetadata(key string, value []byte) IssueOption {
 func WithTokenIDs(ids ...*token.ID) TransferOption {
 	return func(o *TransferOptions) error {
 		o.TokenIDs = ids
+
 		return nil
 	}
 }
@@ -150,6 +155,7 @@ func WithTransferAttribute(attr, value interface{}) TransferOption {
 			o.Attributes = make(map[interface{}]interface{})
 		}
 		o.Attributes[attr] = value
+
 		return nil
 	}
 }
@@ -158,6 +164,7 @@ func WithTransferAttribute(attr, value interface{}) TransferOption {
 func WithRestRecipientIdentity(recipientData *RecipientData) TransferOption {
 	return func(o *TransferOptions) error {
 		o.RestRecipientIdentity = recipientData
+
 		return nil
 	}
 }
@@ -240,6 +247,7 @@ func NewRequestFromBytes(tokenService *ManagementService, anchor RequestAnchor, 
 			return nil, errors.Wrapf(err, "failed unmarshalling token request metadata [%d]", len(trmRaw))
 		}
 	}
+
 	return &Request{
 		Anchor:       anchor,
 		Actions:      tr,
@@ -254,6 +262,7 @@ func NewFullRequestFromBytes(tokenService *ManagementService, tr []byte) (*Reque
 	if err := request.FromBytes(tr); err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal request")
 	}
+
 	return request, nil
 }
 
@@ -552,6 +561,7 @@ func (r *Request) outputs(ctx context.Context, failOnMissing bool) (*OutputStrea
 		outputs = append(outputs, extractedOutputs...)
 		counter = newCounter
 	}
+
 	return NewOutputStream(outputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
 }
 
@@ -598,6 +608,7 @@ func (r *Request) extractIssueOutputs(ctx context.Context, i int, counter uint64
 			// 	}
 			// }
 			counter++
+
 			continue
 		}
 
@@ -662,6 +673,7 @@ func (r *Request) extractIssueOutputs(ctx context.Context, i int, counter uint64
 		}
 		counter++
 	}
+
 	return outputs, counter, nil
 }
 
@@ -702,6 +714,7 @@ func (r *Request) extractTransferOutputs(ctx context.Context, i int, counter uin
 			// 	}
 			// }
 			counter++
+
 			continue
 		}
 		// is the j-th meta present? Yes
@@ -785,6 +798,7 @@ func (r *Request) extractTransferOutputs(ctx context.Context, i int, counter uin
 		}
 		counter++
 	}
+
 	return outputs, counter, nil
 }
 
@@ -832,6 +846,7 @@ func (r *Request) inputs(ctx context.Context, failOnMissing bool) (*InputStream,
 		}
 		inputs = append(inputs, extractedInputs...)
 	}
+
 	return NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
 }
 
@@ -843,6 +858,7 @@ func (r *Request) extractIssueInputs(actionIndex int, metadata *IssueMetadata) (
 			Id:          input.TokenID,
 		})
 	}
+
 	return inputs, nil
 }
 
@@ -857,6 +873,7 @@ func (r *Request) extractTransferInputs(ctx context.Context, actionIndex int, me
 			if failOnMissing {
 				return nil, errors.Errorf("missing receiver for transfer [%d,%d]", actionIndex, j)
 			}
+
 			continue
 		}
 
@@ -876,6 +893,7 @@ func (r *Request) extractTransferInputs(ctx context.Context, actionIndex int, me
 			})
 		}
 	}
+
 	return inputs, nil
 }
 
@@ -885,6 +903,7 @@ func (r *Request) InputsAndOutputs(ctx context.Context) (*InputStream, *OutputSt
 
 func (r *Request) InputsAndOutputsNoRecipients(ctx context.Context) (*InputStream, *OutputStream, error) {
 	is, os, _, err := r.inputsAndOutputs(ctx, false, false, true)
+
 	return is, os, err
 }
 
@@ -988,6 +1007,7 @@ func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyAct
 	precision := tms.PublicParamsManager().PublicParameters().Precision()
 	inputStream := NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, precision)
 	os := NewOutputStream(outputs, precision)
+
 	return inputStream, os, attributes, nil
 }
 
@@ -1018,6 +1038,7 @@ func (r *Request) MarshalToAudit() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for audit", r.Anchor)
 	}
+
 	return r.Actions.MarshalToMessageToSign([]byte(r.Anchor))
 }
 
@@ -1026,6 +1047,7 @@ func (r *Request) MarshalToSign() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for signing", r.Anchor)
 	}
+
 	return r.Actions.MarshalToMessageToSign([]byte(r.Anchor))
 }
 
@@ -1034,6 +1056,7 @@ func (r *Request) RequestToBytes() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s]", r.Anchor)
 	}
+
 	return r.Actions.Bytes()
 }
 
@@ -1054,6 +1077,7 @@ func (r *Request) Bytes() ([]byte, error) {
 		Request:  requestProto,
 		Metadata: metadataProto,
 	}
+
 	return proto.Marshal(requestWithMetadata)
 }
 
@@ -1079,6 +1103,7 @@ func (r *Request) FromBytes(raw []byte) error {
 			return errors.Wrapf(err, "failed unmarshalling metadata")
 		}
 	}
+
 	return nil
 }
 
@@ -1104,6 +1129,7 @@ func (r *Request) SetSignatures(sigmas map[string][]byte) bool {
 		}
 	}
 	r.Actions.Signatures = signatures
+
 	return all
 }
 
@@ -1116,6 +1142,7 @@ func (r *Request) TransferSigners() []Identity {
 		}
 		signers = append(signers, transfer.ExtraSigners...)
 	}
+
 	return signers
 }
 
@@ -1125,6 +1152,7 @@ func (r *Request) IssueSigners() []Identity {
 		signers = append(signers, issue.Issuer)
 		signers = append(signers, issue.ExtraSigners...)
 	}
+
 	return signers
 }
 
@@ -1179,6 +1207,7 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -1192,6 +1221,7 @@ func (r *Request) Issues() []*Issue {
 			ExtraSigners: issue.ExtraSigners,
 		})
 	}
+
 	return issues
 }
 
@@ -1206,6 +1236,7 @@ func (r *Request) Transfers() []*Transfer {
 			Issuer:       transfer.Issuer,
 		})
 	}
+
 	return transfers
 }
 
@@ -1216,6 +1247,7 @@ func (r *Request) AuditCheck(ctx context.Context) error {
 	if err := r.IsValid(ctx); err != nil {
 		return err
 	}
+
 	return r.TokenService.tms.AuditorService().AuditorCheck(
 		ctx,
 		r.Actions,
@@ -1281,6 +1313,7 @@ func (r *Request) ApplicationMetadata(k string) []byte {
 	if len(r.Metadata.Application) == 0 {
 		return nil
 	}
+
 	return r.Metadata.Application[k]
 }
 
@@ -1308,6 +1341,7 @@ func (r *Request) FilterMetadataBy(ctx context.Context, eIDs ...string) (*Reques
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed filtering metadata by [%s]", eIDs[0])
 	}
+
 	return &Request{
 		Anchor:       r.Anchor,
 		Actions:      r.Actions,
@@ -1492,6 +1526,7 @@ func (r *Request) genOutputs(values []uint64, owners []Identity, tokenType token
 			Quantity: q.Hex(),
 		})
 	}
+
 	return outputTokens, outputSum, nil
 }
 
@@ -1502,5 +1537,6 @@ func (r *Request) cleanupInputIDs(ds []*token.ID) []*token.ID {
 			newSlice = append(newSlice, item)
 		}
 	}
+
 	return newSlice
 }

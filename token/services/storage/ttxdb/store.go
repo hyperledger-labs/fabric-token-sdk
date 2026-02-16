@@ -43,6 +43,7 @@ func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, err
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}
+
 	return c, nil
 }
 
@@ -116,6 +117,7 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 	if next == nil {
 		return nil, nil
 	}
+
 	return next, nil
 }
 
@@ -139,6 +141,7 @@ func (t *ValidationRecordsIterator) Next() (*ValidationRecord, error) {
 	if next == nil {
 		return nil, nil
 	}
+
 	return next, nil
 }
 
@@ -200,6 +203,7 @@ func (d *StoreService) ValidationRecords(ctx context.Context, params QueryValida
 	if err != nil {
 		return nil, errors.Errorf("failed to query validation records: %s", err)
 	}
+
 	return &ValidationRecordsIterator{it: it}, nil
 }
 
@@ -242,11 +246,13 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 		req.PublicParamsHash(),
 	); err != nil {
 		w.Rollback()
+
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	for _, tx := range txs {
 		if err := w.AddTransaction(ctx, tx); err != nil {
 			w.Rollback()
+
 			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 		}
 	}
@@ -255,6 +261,7 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 	}
 
 	logger.DebugfContext(ctx, "appending transaction record new completed without errors")
+
 	return nil
 }
 
@@ -272,6 +279,7 @@ func (d *StoreService) SetStatus(ctx context.Context, txID string, status dbdriv
 		ValidationCode: status,
 	})
 	logger.DebugfContext(ctx, "set status [%s][%s] done", txID, dbdriver.TxStatusMessage[status])
+
 	return nil
 }
 
@@ -284,6 +292,7 @@ func (d *StoreService) GetStatus(ctx context.Context, txID string) (TxStatus, st
 		return Unknown, "", errors.Wrapf(err, "failed getting status [%s]", txID)
 	}
 	logger.DebugfContext(ctx, "got status [%s][%s]", txID, status)
+
 	return status, message, nil
 }
 
@@ -313,16 +322,19 @@ func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, 
 	// we store the token request, but don't have or care about the application metadata
 	if err := w.AddTokenRequest(ctx, txID, tokenRequest, nil, nil, ppHash); err != nil {
 		w.Rollback()
+
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", txID)
 	}
 	if err := w.AddValidationRecord(ctx, txID, meta); err != nil {
 		w.Rollback()
+
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}
 	if err := w.Commit(); err != nil {
 		return errors.WithMessagef(err, "append validation record commit for txid [%s] failed", txID)
 	}
 	logger.DebugfContext(ctx, "appending validation record completed without errors")
+
 	return nil
 }
 
@@ -342,6 +354,7 @@ func TransactionRecords(ctx context.Context, record *token.AuditRecord, timestam
 		})
 		if ins.Count() == 0 && ous.Count() == 0 {
 			logger.DebugfContext(ctx, "no actions left for tx [%s][%d]", record.Anchor, actionIndex)
+
 			break
 		}
 
@@ -437,6 +450,7 @@ func joinIOEIDs(record *token.AuditRecord) []string {
 	oEIDs := record.Outputs.EnrollmentIDs()
 	eIDs := append(iEIDs, oEIDs...)
 	eIDs = deduplicate(eIDs)
+
 	return eIDs
 }
 
@@ -450,5 +464,6 @@ func deduplicate(source []string) []string {
 			res = append(res, item)
 		}
 	}
+
 	return res
 }

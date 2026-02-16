@@ -18,21 +18,22 @@ import (
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestTokensService_NewUpgradeChallenge(t *testing.T) {
 	ts, err := upgrade.NewService(nil, 16, nil, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	challenge, err := ts.NewUpgradeChallenge()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, challenge, upgrade.ChallengeSize)
 }
 
 func TestTokensService_GenUpgradeProof(t *testing.T) {
 	ts, err := upgrade.NewService(nil, 16, nil, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ch, err := ts.NewUpgradeChallenge()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	invalidTokens := []token.LedgerToken{{
 		ID:            token.ID{TxId: "tx1", Index: 1},
@@ -46,9 +47,9 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 		Quantity: "10",
 	}
 	fabtokenOutputRaw, err := fabtokenOutput.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	formatFabtoken16, err := v1.SupportedTokenFormat(16)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	validTokens := []token.LedgerToken{{
 		ID:            token.ID{TxId: "tx1", Index: 1},
 		Token:         fabtokenOutputRaw,
@@ -109,6 +110,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 			getIdentityProvider: func() upgrade.IdentityProvider {
 				mip := &mock.IdentityProvider{}
 				mip.GetSignerReturns(nil, errors.New("get signer error"))
+
 				return mip
 			},
 		},
@@ -124,7 +126,8 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 					Signatures: []upgrade.Signature{[]byte("a signature")},
 				}
 				raw, err := proof.Serialize()
-				assert.NoError(t, err)
+				require.NoError(t, err)
+
 				return raw
 			},
 			getIdentityProvider: func() upgrade.IdentityProvider {
@@ -132,6 +135,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 				signer.SignReturns([]byte("a signature"), nil)
 				mip := &mock.IdentityProvider{}
 				mip.GetSignerReturns(signer, nil)
+
 				return mip
 			},
 		},
@@ -140,13 +144,13 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts, err := upgrade.NewService(nil, 16, nil, tt.getIdentityProvider())
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			res, err := ts.GenUpgradeProof(t.Context(), tt.ch, tt.ledgerTokens, tt.witness)
 			if tt.wantErr {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.errMsg)
+				require.Error(t, err)
+				require.EqualError(t, err, tt.errMsg)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tt.expected(), res)
 			}
 		})
@@ -155,9 +159,9 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 
 func TestTokensService_CheckUpgradeProof(t *testing.T) {
 	ts, err := upgrade.NewService(nil, 16, nil, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ch, err := ts.NewUpgradeChallenge()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	nilDeserializer := func() upgrade.Deserializer {
 		return nil
@@ -177,9 +181,9 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 		Quantity: "10",
 	}
 	fabtokenOutputRaw, err := fabtokenOutput.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	formatFabtoken16, err := v1.SupportedTokenFormat(16)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	validTokens := []token.LedgerToken{{
 		ID:            token.ID{TxId: "tx1", Index: 1},
 		Token:         fabtokenOutputRaw,
@@ -242,7 +246,8 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 			proof: func() driver.TokensUpgradeProof {
 				proof := &upgrade.Proof{}
 				raw, err := proof.Serialize()
-				assert.NoError(t, err)
+				require.NoError(t, err)
+
 				return raw
 			},
 			wantErr:         true,
@@ -260,7 +265,8 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 					Signatures: nil,
 				}
 				raw, err := proof.Serialize()
-				assert.NoError(t, err)
+				require.NoError(t, err)
+
 				return raw
 			},
 			wantErr:         true,
@@ -278,7 +284,8 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 					Signatures: nil,
 				}
 				raw, err := proof.Serialize()
-				assert.NoError(t, err)
+				require.NoError(t, err)
+
 				return raw
 			},
 			wantErr:         true,
@@ -296,7 +303,8 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 					Signatures: []upgrade.Signature{[]byte("a signature")},
 				}
 				raw, err := proof.Serialize()
-				assert.NoError(t, err)
+				require.NoError(t, err)
+
 				return raw
 			},
 			wantErr:         true,
@@ -314,7 +322,8 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 					Signatures: []upgrade.Signature{[]byte("a signature")},
 				}
 				raw, err := proof.Serialize()
-				assert.NoError(t, err)
+				require.NoError(t, err)
+
 				return raw
 			},
 			wantErr: true,
@@ -322,6 +331,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 			getDeserializer: func() upgrade.Deserializer {
 				d := &mock.Deserializer{}
 				d.GetOwnerVerifierReturns(nil, errors.New("invalid verifier"))
+
 				return d
 			},
 		},
@@ -336,7 +346,8 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 					Signatures: []upgrade.Signature{[]byte("a signature")},
 				}
 				raw, err := proof.Serialize()
-				assert.NoError(t, err)
+				require.NoError(t, err)
+
 				return raw
 			},
 			wantErr: true,
@@ -346,6 +357,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				v.VerifyReturns(errors.New("invalid signature"))
 				d := &mock.Deserializer{}
 				d.GetOwnerVerifierReturns(v, nil)
+
 				return d
 			},
 		},
@@ -360,7 +372,8 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 					Signatures: []upgrade.Signature{[]byte("a signature")},
 				}
 				raw, err := proof.Serialize()
-				assert.NoError(t, err)
+				require.NoError(t, err)
+
 				return raw
 			},
 			wantErr: false,
@@ -369,6 +382,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				v.VerifyReturns(nil)
 				d := &mock.Deserializer{}
 				d.GetOwnerVerifierReturns(v, nil)
+
 				return d
 			},
 			expected:       true,
@@ -380,14 +394,14 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts, err := upgrade.NewService(nil, 16, tt.getDeserializer(), nil)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			proof := tt.proof()
 			res, err := ts.CheckUpgradeProof(t.Context(), tt.ch, proof, tt.ledgerTokens)
 			if tt.wantErr {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.errMsg)
+				require.Error(t, err)
+				require.EqualError(t, err, tt.errMsg)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tt.expected, res)
 			}
 
@@ -397,15 +411,15 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				Proof:     proof,
 			})
 			if tt.wantErrProcess {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if len(tt.processErrMsg) != 0 {
-					assert.EqualError(t, err, tt.processErrMsg)
+					require.EqualError(t, err, tt.processErrMsg)
 				}
 			} else {
 				if tt.wantErr {
-					assert.Error(t, err)
+					require.Error(t, err)
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 				}
 			}
 		})

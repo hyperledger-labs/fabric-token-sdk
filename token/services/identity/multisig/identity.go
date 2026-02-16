@@ -31,6 +31,7 @@ func (m *MultiIdentity) Serialize() ([]byte, error) {
 
 func (m *MultiIdentity) Deserialize(raw []byte) error {
 	_, err := asn1.Unmarshal(raw, m)
+
 	return err
 }
 
@@ -52,6 +53,7 @@ func WrapIdentities(ids ...token.Identity) (token.Identity, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return typedIdentity, nil
 }
 
@@ -70,6 +72,7 @@ func Unwrap(raw []byte) ([]token.Identity, bool, error) {
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed unmarshalling multi identity")
 	}
+
 	return mi.Identities, true, nil
 }
 
@@ -94,6 +97,7 @@ func (e *InfoMatcher) Match(ctx context.Context, raw []byte) error {
 			return errors.Wrapf(err, "identity at index %d does not match the audit info", k)
 		}
 	}
+
 	return nil
 }
 
@@ -122,6 +126,7 @@ func WrapAuditInfo(recipients [][]byte) ([]byte, error) {
 			AuditInfo: recipient,
 		}
 	}
+
 	return mi.Bytes()
 }
 
@@ -137,6 +142,7 @@ func UnwrapAuditInfo(info []byte) (bool, [][]byte, error) {
 	for k, identity := range mi.IdentityAuditInfos {
 		recipients[k] = identity.AuditInfo
 	}
+
 	return true, recipients, nil
 }
 

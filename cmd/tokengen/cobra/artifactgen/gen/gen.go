@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package gen
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -53,10 +52,11 @@ var cobraCommand = &cobra.Command{
 	Long:  `Read topology from file and generates artifacts.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
+
 		return gen(args)
 	},
 }

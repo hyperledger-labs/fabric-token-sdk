@@ -134,6 +134,7 @@ var PriorityComparison = func(a, b LocalIdentityWithPriority) int {
 	} else if a.Priority > b.Priority {
 		return 1
 	}
+
 	return 0
 }
 
@@ -234,10 +235,13 @@ func (l *LocalMembership) GetIdentifier(ctx context.Context, id token.Identity) 
 				logging.Keys(l.localIdentitiesByName),
 				logging.Printable(label),
 			)
+
 			continue
 		}
+
 		return r.Name, nil
 	}
+
 	return "", errors.Errorf("identifier not found for id [%s]", id)
 }
 
@@ -264,6 +268,7 @@ func (l *LocalMembership) GetIdentityInfo(ctx context.Context, label string, aud
 	if localIdentity == nil {
 		return nil, errors.Errorf("local identity not found for label [%s][%v]", utils.Hashable(label), l.localIdentitiesByName)
 	}
+
 	return NewIdentityInfo(localIdentity, func(ctx context.Context) (token.Identity, []byte, error) {
 		return localIdentity.GetIdentity(ctx, auditInfo)
 	}), nil
@@ -288,6 +293,7 @@ func (l *LocalMembership) IDs() ([]string, error) {
 	for _, li := range l.localIdentities {
 		set.Add(li.Name)
 	}
+
 	return set.ToSlice(), nil
 }
 
@@ -386,6 +392,7 @@ func (l *LocalMembership) getDefaultIdentifier() string {
 			return li.Name
 		}
 	}
+
 	return ""
 }
 
@@ -396,8 +403,10 @@ func (l *LocalMembership) firstDefaultIdentifier() *LocalIdentity {
 		if l.anonymous && !li.Anonymous {
 			continue
 		}
+
 		return li
 	}
+
 	return nil
 }
 
@@ -420,6 +429,7 @@ func (l *LocalMembership) toIdentityConfiguration(identities []idriver.Configure
 		}
 		defaults[i] = ci.Default
 	}
+
 	return ics, defaults, nil
 }
 
@@ -434,17 +444,20 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 		km, err = p.Get(ctx, identityConfig)
 		if err != nil {
 			errs = append(errs, err)
+
 			continue
 		}
 
 		if len(km.EnrollmentID()) == 0 {
 			errs = append(errs, errors.Errorf("no enrollment id found for identity [%s]", identityConfig.ID))
+
 			continue
 		}
 
 		// only assign keyManager if the provider returned a valid enrollment id
 		keyManager = km
 		priority = i
+
 		break
 	}
 	if keyManager == nil {
@@ -457,6 +470,7 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 				identityConfig.URL,
 			)
 		}
+
 		return errors.Errorf(
 			"no key manager found for [%s:%s]",
 			identityConfig.ID,
@@ -478,6 +492,7 @@ func (l *LocalMembership) registerLocalIdentity(ctx context.Context, identityCon
 		}
 	}
 	l.logger.DebugfContext(ctx, "added local identity for id [%s], remote [%v]", identityConfig.ID+"@"+keyManager.EnrollmentID(), keyManager.IsRemote())
+
 	return nil
 }
 
@@ -522,6 +537,7 @@ func (l *LocalMembership) registerLocalIdentities(ctx context.Context, configura
 		}, false); err != nil {
 			errs = append(errs, err)
 			l.logger.Errorf("failed registering local identity [%s]: [%s]", id, err)
+
 			continue
 		}
 		found++
@@ -529,6 +545,7 @@ func (l *LocalMembership) registerLocalIdentities(ctx context.Context, configura
 	if found == 0 {
 		return errors.Wrapf(errors.Join(errs...), "no valid identities found in [%s]", configuration.URL)
 	}
+
 	return nil
 }
 
@@ -611,6 +628,7 @@ func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *Identity
 	}
 
 	l.localIdentities = append(l.localIdentities, localIdentity)
+
 	return nil
 }
 
@@ -619,6 +637,7 @@ func (l *LocalMembership) getLocalIdentity(ctx context.Context, label string) *L
 	identities, ok := l.localIdentitiesByName[label]
 	if ok {
 		l.logger.DebugfContext(ctx, "get local identity by name found with label [%s]", utils.Hashable(label))
+
 		return identities[0].Identity
 	}
 	mapped, ok := l.localIdentitiesByIdentity[label]
@@ -627,6 +646,7 @@ func (l *LocalMembership) getLocalIdentity(ctx context.Context, label string) *L
 	}
 
 	l.logger.DebugfContext(ctx, "local identity not found for label [%s][%v]", utils.Hashable(label), l.localIdentitiesByName)
+
 	return nil
 }
 
@@ -635,6 +655,7 @@ func (l *LocalMembership) storedIdentityConfigurations(ctx context.Context) ([]i
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get registered identities from kvs")
 	}
+
 	return collections.ReadAll[idriver.IdentityConfiguration](it)
 }
 
@@ -685,6 +706,7 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (token.Id
 	if err := i.IdentityProvider.Bind(ctx, i.RootIdentity, id, typedIdentity); err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to bind identity [%s] to [%s]", id, i.RootIdentity)
 	}
+
 	return typedIdentity, ai, nil
 }
 
@@ -706,5 +728,6 @@ func marshalOpts(opts interface{}) (optsRaw []byte, err error) {
 		}
 	}()
 	optsRaw, err = yaml.Marshal(opts)
+
 	return
 }

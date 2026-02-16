@@ -44,6 +44,7 @@ func newUserProvider(nw *integration.Infrastructure, metrics *metrics.Metrics, t
 		}
 		users[username] = replicas
 	}
+
 	return runner2.NewViewUserProvider(users), nil
 }
 
@@ -53,5 +54,6 @@ func getFscTopology(topologies []api2.Topology) (*fsc.Topology, error) {
 			return fscTopology, nil
 		}
 	}
+
 	return nil, errors.New("fsc topology not found")
 }

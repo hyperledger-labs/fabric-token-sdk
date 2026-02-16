@@ -25,6 +25,7 @@ func (id Hashable) Raw() []byte {
 	if err != nil {
 		panic(err)
 	}
+
 	return hash.Sum(nil)
 }
 

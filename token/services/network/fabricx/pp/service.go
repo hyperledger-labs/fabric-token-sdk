@@ -54,5 +54,6 @@ func GetPublicParametersService(sp services.Provider) (Loader, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return s.(Loader), nil
 }

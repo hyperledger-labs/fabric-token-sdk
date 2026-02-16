@@ -49,6 +49,7 @@ func (t *Terms) Validate() error {
 	if t.Amount1 <= 0 || t.Amount2 <= 0 {
 		return errors.New("amounts should be larger than zero")
 	}
+
 	return nil
 }
 
@@ -79,6 +80,7 @@ func (v *DistributeTermsView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return nil, nil
 }
 
@@ -90,6 +92,7 @@ func ReceiveTerms(context view.Context) (*Terms, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return terms.(*Terms), nil
 }
 
@@ -98,5 +101,6 @@ func (v *termsReceiverView) Call(context view.Context) (interface{}, error) {
 	if err := session.JSON(context).Receive(terms); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling terms")
 	}
+
 	return terms, nil
 }

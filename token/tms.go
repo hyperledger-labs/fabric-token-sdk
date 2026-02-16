@@ -74,6 +74,7 @@ func NewManagementService(
 	if err := ms.init(); err != nil {
 		return nil, err
 	}
+
 	return ms, nil
 }
 
@@ -86,6 +87,7 @@ func GetManagementService(sp ServiceProvider, opts ...ServiceOption) (*Managemen
 	if err != nil {
 		return nil, errors.Join(err, ErrFailedToGetTMS)
 	}
+
 	return ms, nil
 }
 
@@ -131,6 +133,7 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 	if err := tokenRequestMetadata.FromBytes(raw); err != nil {
 		return nil, err
 	}
+
 	return &Metadata{
 		TokenService:         t.tms.TokensService(),
 		WalletService:        t.tms.WalletService(),
@@ -166,6 +169,7 @@ func (t *ManagementService) CertificationClient(ctx context.Context) (*Certifica
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create ceritifacation client")
 	}
+
 	return &CertificationClient{cc: certificationClient}, nil
 }
 
@@ -240,6 +244,7 @@ func (t *ManagementService) init() error {
 	if cs != nil {
 		t.certificationManager = &CertificationManager{c: cs}
 	}
+
 	return nil
 }
 

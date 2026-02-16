@@ -22,5 +22,6 @@ func TransferApplicationDataValidate[P driver.PublicParameters, T driver.Input, 
 			ctx.CountMetadataKey(key)
 		}
 	}
+
 	return nil
 }

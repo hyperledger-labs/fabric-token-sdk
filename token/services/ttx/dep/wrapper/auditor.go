@@ -46,5 +46,6 @@ func (t *AuditServiceProvider) AuditorService(tmsID token.TMSID) (auditor.Servic
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to get auditor DB for TMSID: %s", tmsID)
 	}
+
 	return service, storeService, nil
 }

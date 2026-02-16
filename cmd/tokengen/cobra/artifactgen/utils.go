@@ -27,5 +27,6 @@ func WriteTopologies(fileName string, topologies []api.Topology, perm fs.FileMod
 	if err := os.WriteFile(fileName, raw, perm); err != nil {
 		return errors.Wrapf(err, "failed to write to [%s]", fileName)
 	}
+
 	return nil
 }

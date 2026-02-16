@@ -194,5 +194,6 @@ func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.Transfer
 	if err := t.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing transfer action")
 	}
+
 	return t, nil
 }

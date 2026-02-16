@@ -66,6 +66,7 @@ func (w *OwnerWallet) GetExpiredByHash(ctx context.Context, hash []byte, opts ..
 	if len(tokens.Tokens) != 1 {
 		return nil, errors.Errorf("expected to find only one token for the hash [%v], found [%d]", hash, len(tokens.Tokens))
 	}
+
 	return tokens.Tokens[0], nil
 }
 
@@ -144,6 +145,7 @@ func (w *OwnerWallet) GetExpiredReceivedTokenByHash(ctx context.Context, hash []
 	if len(tokens.Tokens) != 1 {
 		return nil, errors.Errorf("expected to find only one token for the hash [%v], found [%d]", hash, len(tokens.Tokens))
 	}
+
 	return tokens.Tokens[0], nil
 }
 
@@ -185,6 +187,7 @@ func (w *OwnerWallet) DeleteClaimedSentTokens(context view.Context, opts ...toke
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get an iterator of expired received tokens")
 	}
+
 	return iterators.ForEach(iterators.Batch(it, w.bufferSize), func(buffer *[]*token2.UnspentToken) error {
 		return w.deleteTokens(context, *buffer)
 	})
@@ -241,6 +244,7 @@ func (w *OwnerWallet) filter(ctx context.Context, tokenType token2.Type, sender 
 	if err != nil {
 		return nil, err
 	}
+
 	return &token2.UnspentTokens{Tokens: tokens}, nil
 }
 
@@ -275,6 +279,7 @@ func Wallet(context view.Context, wallet *token.OwnerWallet) *OwnerWallet {
 	if err != nil {
 		return nil
 	}
+
 	return &OwnerWallet{
 		wallet:      wallet,
 		vault:       tokens,

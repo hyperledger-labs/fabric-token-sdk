@@ -160,6 +160,7 @@ func createTransfer(pp *v1.PublicParams) (*transfer.Action, *driver.TransferMeta
 
 	tokns := make([][]*token.Token, 1)
 	tokns[0] = append(tokns[0], inputs...)
+
 	return transfer, metadata, tokns
 }
 
@@ -286,5 +287,6 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) *math.G1 {
 	for i := range vector {
 		com.Add(generators[i].Mul(vector[i]))
 	}
+
 	return com
 }

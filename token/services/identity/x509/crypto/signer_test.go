@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger/fabric-lib-go/bccsp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/test-go/testify/require"
 )
 
 func TestNewSKIBasedSigner(t *testing.T) {
@@ -55,9 +56,9 @@ func TestNewSKIBasedSigner(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewSKIBasedSigner(tt.csp, tt.ski, tt.pk)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -66,7 +67,7 @@ func TestNewSKIBasedSigner(t *testing.T) {
 func TestSKIBasedSigner_Public(t *testing.T) {
 	pk := &testPublicKey{}
 	signer, err := NewSKIBasedSigner(&mocks.BCCSP{}, []byte("test"), pk)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	actualPk := signer.Public()
 	assert.Equal(t, pk, actualPk)
@@ -86,9 +87,10 @@ func TestSKIBasedSigner_Sign(t *testing.T) {
 			setup: func() (crypto.Signer, *mocks.BCCSP) {
 				mockCsp := &mocks.BCCSP{}
 				signer, err := NewSKIBasedSigner(mockCsp, []byte("test"), &testPublicKey{})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				mockCsp.On("GetKey", mock.Anything).Return(&mocks.Key{}, nil)
 				mockCsp.On("Sign", mock.Anything, mock.Anything, mock.Anything).Return([]byte("signature"), nil)
+
 				return signer, mockCsp
 			},
 			digest:  []byte("digest"),
@@ -100,8 +102,9 @@ func TestSKIBasedSigner_Sign(t *testing.T) {
 			setup: func() (crypto.Signer, *mocks.BCCSP) {
 				mockCsp := &mocks.BCCSP{}
 				signer, err := NewSKIBasedSigner(mockCsp, []byte("test"), &testPublicKey{})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				mockCsp.On("GetKey", mock.Anything).Return(nil, errors.New("get key failed"))
+
 				return signer, mockCsp
 			},
 			digest:  []byte("digest"),
@@ -113,9 +116,10 @@ func TestSKIBasedSigner_Sign(t *testing.T) {
 			setup: func() (crypto.Signer, *mocks.BCCSP) {
 				mockCsp := &mocks.BCCSP{}
 				signer, err := NewSKIBasedSigner(mockCsp, []byte("test"), &testPublicKey{})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				mockCsp.On("GetKey", mock.Anything).Return(&mocks.Key{}, nil)
 				mockCsp.On("Sign", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("sign failed"))
+
 				return signer, mockCsp
 			},
 			digest:  []byte("digest"),
@@ -130,9 +134,9 @@ func TestSKIBasedSigner_Sign(t *testing.T) {
 			_, err := signer.Sign(nil, tt.digest, tt.opts)
 			mockCsp.AssertExpectations(t)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -140,24 +144,24 @@ func TestSKIBasedSigner_Sign(t *testing.T) {
 
 func TestSKIBasedSigner_SignFull(t *testing.T) {
 	csp, err := GetDefaultBCCSP(csp.NewKVSStore(kvs.NewTrackedMemory()))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	key, err := csp.KeyGen(&bccsp.ECDSAKeyGenOpts{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	signer, err := NewSKIBasedSigner(csp, key.SKI(), &ecdsa.PublicKey{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	message := []byte("message")
 	sigma, err := signer.Sign(nil, message, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, sigma)
 
 	pk, err := key.PublicKey()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	valid, err := csp.Verify(pk, sigma, message, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, valid)
 }
 

@@ -104,6 +104,7 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		Outputs:      outputsMetadata,
 		ExtraSigners: nil,
 	}
+
 	return action, meta, nil
 }
 
@@ -120,5 +121,6 @@ func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, e
 	if err := issue.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing issue action")
 	}
+
 	return issue, nil
 }

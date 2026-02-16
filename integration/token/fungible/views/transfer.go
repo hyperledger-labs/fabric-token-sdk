@@ -221,6 +221,7 @@ func (p *TransferViewFactory) NewView(in []byte) (view.View, error) {
 	f := &TransferView{Transfer: &Transfer{}}
 	err := json.Unmarshal(in, f.Transfer)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -280,8 +281,10 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 			// If an error occurs and retry has been asked, then wait first a bit
 			if err != nil && t.Retry {
 				time.Sleep(10 * time.Second)
+
 				continue
 			}
+
 			break
 		}
 		if err != nil {
@@ -378,6 +381,7 @@ func (p *TransferWithSelectorViewFactory) NewView(in []byte) (view.View, error) 
 	f := &TransferWithSelectorView{Transfer: &Transfer{}}
 	err := json.Unmarshal(in, f.Transfer)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -454,6 +458,7 @@ func (p *PrepareTransferViewFactory) NewView(in []byte) (view.View, error) {
 	f := &PrepareTransferView{Transfer: &Transfer{}}
 	err := json.Unmarshal(in, f.Transfer)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -490,6 +495,7 @@ func (p *BroadcastPreparedTransferViewFactory) NewView(in []byte) (view.View, er
 	f := &BroadcastPreparedTransferView{BroadcastPreparedTransfer: &BroadcastPreparedTransfer{}}
 	err := json.Unmarshal(in, f.BroadcastPreparedTransfer)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -518,6 +524,7 @@ func (p *TokenSelectorUnlockViewFactory) NewView(in []byte) (view.View, error) {
 	f := &TokenSelectorUnlockView{TokenSelectorUnlock: &TokenSelectorUnlock{}}
 	err := json.Unmarshal(in, f.TokenSelectorUnlock)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -552,6 +559,7 @@ func (i *FinalityWithTimeoutViewFactory) NewView(in []byte) (view.View, error) {
 	f := &FinalityWithTimeoutView{FinalityWithTimeout: &FinalityWithTimeout{}}
 	err := json.Unmarshal(in, f.FinalityWithTimeout)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -682,5 +690,6 @@ func (p *MaliciousTransferViewFactory) NewView(in []byte) (view.View, error) {
 	f := &MaliciousTransferView{Transfer: &Transfer{}}
 	err := json.Unmarshal(in, f.Transfer)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

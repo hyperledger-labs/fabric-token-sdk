@@ -59,6 +59,7 @@ func (ks *KVSStore) GetKey(ski []byte) (bccsp.Key, error) {
 		if err != nil {
 			return nil, errors.WithMessagef(err, "could not unmarshall ECDSA private key")
 		}
+
 		return privateKey, nil
 	case "ecdsaPublicKey":
 		publicKey := &ecdsaPublicKey{}
@@ -66,6 +67,7 @@ func (ks *KVSStore) GetKey(ski []byte) (bccsp.Key, error) {
 		if err != nil {
 			return nil, errors.WithMessagef(err, "could not unmarshall ECDSA public key")
 		}
+
 		return publicKey, nil
 	default:
 		return nil, errors.Errorf("key not found for [%s]", id)
@@ -102,5 +104,6 @@ func (ks *KVSStore) StoreKey(k bccsp.Key) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not marshall stored key [%s]", id)
 	}
+
 	return ks.Put(id, value)
 }

@@ -36,6 +36,7 @@ func (p *Proof) Serialize() ([]byte, error) {
 func (p *Proof) Deserialize(bytes []byte) error {
 	p.TypeAndSum = &TypeAndSumProof{}
 	p.RangeCorrectness = &rp.RangeCorrectness{}
+
 	return asn1.Unmarshal[asn1.Serializer](bytes, p.TypeAndSum, p.RangeCorrectness)
 }
 
@@ -53,6 +54,7 @@ func (p *Proof) Validate(curve math.CurveID) error {
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer proof")
 	}
+
 	return nil
 }
 
@@ -108,6 +110,7 @@ func (v *Verifier) Verify(proofRaw []byte) error {
 				coms[i].Sub(commitmentToType)
 			}
 			v.RangeCorrectness.Commitments = coms
+
 			return v.RangeCorrectness.Verify(proof.RangeCorrectness)
 		}
 	}
@@ -180,6 +183,7 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 			math.Curves[pp.Curve],
 		)
 	}
+
 	return p, nil
 }
 
@@ -207,5 +211,6 @@ func (p *Prover) Prove() ([]byte, error) {
 		TypeAndSum:       tsProof,
 		RangeCorrectness: rangeProof,
 	}
+
 	return proof.Serialize()
 }

@@ -84,6 +84,7 @@ func BenchmarkSender(b *testing.B) {
 				return err
 			}
 			_, err = transfer.Serialize()
+
 			return err
 		},
 	)
@@ -111,6 +112,7 @@ func BenchmarkParallelSender(b *testing.B) {
 				return err
 			}
 			_, err = transfer.Serialize()
+
 			return err
 		},
 	)
@@ -138,6 +140,7 @@ func TestParallelBenchmarkSender(t *testing.T) {
 				return err
 			}
 			_, err = transfer.Serialize()
+
 			return err
 		},
 	)
@@ -247,6 +250,7 @@ func prepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *ma
 	for i := range values {
 		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
 	}
+
 	return tokens
 }
 
@@ -356,6 +360,7 @@ func newBenchmarkSenderEnv(n int, benchmarkCase *benchmark2.Case, configurations
 			return nil, err
 		}
 	}
+
 	return &benchmarkSenderEnv{SenderEnvs: envs}, nil
 }
 
@@ -387,5 +392,6 @@ func newBenchmarkSenderProofVerificationEnv(ctx context.Context, n int, benchmar
 		env.transferRaw = raw
 		envs[i] = env
 	}
+
 	return &benchmarkSenderEnv{SenderEnvs: envs}, nil
 }

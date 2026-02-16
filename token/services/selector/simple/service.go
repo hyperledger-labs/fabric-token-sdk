@@ -45,6 +45,7 @@ func NewService(lockerProvider LockerProvider, c ConfigProvider) *SelectorServic
 		retryInterval:        cfg.GetRetryInterval(),
 		requestCertification: true,
 	}
+
 	return &SelectorService{
 		managerLazyCache: lazy.NewProviderWithKeyMapper(key, loader.load),
 	}
@@ -54,6 +55,7 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 	if tms == nil {
 		return nil, errors.Errorf("invalid tms, nil reference")
 	}
+
 	return s.managerLazyCache.Get(tms)
 }
 

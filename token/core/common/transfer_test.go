@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSelectIssuerForRedeem(t *testing.T) {
@@ -86,10 +87,10 @@ func TestSelectIssuerForRedeem(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			id, err := SelectIssuerForRedeem(tc.issuers, &driver.TransferOptions{Attributes: tc.attributes})
 			if tc.expectError {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, id)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.expectIdentity, id)
 			}
 		})

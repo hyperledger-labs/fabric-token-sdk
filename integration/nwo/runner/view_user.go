@@ -106,6 +106,7 @@ func (u *viewUser) Transfer(value api3.Amount, recipient model.Username, _ api3.
 	if err != nil {
 		return api3.NewInternalServerError(err, err.Error())
 	}
+
 	return nil
 }
 
@@ -122,6 +123,7 @@ func (u *viewUser) Withdraw(value api3.Amount) api3.Error {
 	if err != nil {
 		return api3.NewInternalServerError(err, err.Error())
 	}
+
 	return nil
 }
 
@@ -145,6 +147,7 @@ func (u *viewUser) GetBalance() (api3.Amount, api3.Error) {
 	if err != nil {
 		return 0, api3.NewInternalServerError(err, err.Error())
 	}
+
 	return q.ToBigInt().Uint64(), nil
 }
 

@@ -104,6 +104,7 @@ func (e *Env) saveToFile(path string, txID string, raw []byte) error {
 	if err := os.WriteFile(path, b, 0o600); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -348,6 +349,7 @@ func prepareTokens(values, bf []*math.Zr, tokenType string, pp []*math.G1, curve
 	for i := range values {
 		tokens[i] = prepareToken(values[i], bf[i], tokenType, pp, curve)
 	}
+
 	return tokens
 }
 
@@ -356,6 +358,7 @@ func prepareToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1
 	token.Add(pp[0].Mul(curve.HashToZr([]byte(tokenType))))
 	token.Add(pp[1].Mul(value))
 	token.Add(pp[2].Mul(rand))
+
 	return token
 }
 
@@ -608,6 +611,7 @@ func (d *Deserializer) Match(_ context.Context, id []byte) error {
 	if !bytes.Equal(d.auditInfo, identity) {
 		return errors.Errorf("identity mismatch [%s][%s]", utils2.Hashable(identity), utils2.Hashable(d.auditInfo))
 	}
+
 	return nil
 }
 

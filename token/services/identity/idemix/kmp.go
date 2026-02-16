@@ -124,6 +124,7 @@ func (l *KeyManagerProvider) cacheSizeForID(id string) (int, error) {
 		logger.Debugf("cache size for %s not configured, using default (%d)", id, l.cacheSize)
 		cacheSize = l.cacheSize
 	}
+
 	return cacheSize, nil
 }
 

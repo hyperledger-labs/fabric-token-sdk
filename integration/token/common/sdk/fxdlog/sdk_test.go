@@ -15,11 +15,11 @@ import (
 	sdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
-	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestFabricWiring(t *testing.T) {
-	assert.NoError(t, sdk.DryRunWiring(
+	require.NoError(t, sdk.DryRunWiring(
 		func(sdk dig2.SDK) *SDK {
 			return NewFrom(fabricx.NewFrom(&fdlog.SDK{SDK: &tokensdk.SDK{SDK: &fabricsdk.SDK{SDK: sdk}}}))
 		},

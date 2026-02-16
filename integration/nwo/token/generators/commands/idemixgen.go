@@ -26,6 +26,7 @@ func (c CAKeyGen) Args() []string {
 	if c.Aries {
 		args = append(args, "--aries")
 	}
+
 	return args
 }
 
@@ -59,5 +60,6 @@ func (c SignerConfig) Args() []string {
 	if c.Aries {
 		args = append(args, "--aries")
 	}
+
 	return args
 }

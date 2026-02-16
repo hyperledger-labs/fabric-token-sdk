@@ -120,6 +120,7 @@ func (p *RedeemViewFactory) NewView(in []byte) (view.View, error) {
 	f := &RedeemView{Redeem: &Redeem{}}
 	err := json.Unmarshal(in, f.Redeem)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 

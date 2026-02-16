@@ -132,6 +132,7 @@ func (p *SwapInitiatorViewFactory) NewView(in []byte) (view.View, error) {
 	f := &SwapInitiatorView{Swap: &Swap{}}
 	err := json.Unmarshal(in, f.Swap)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 

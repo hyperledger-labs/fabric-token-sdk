@@ -28,6 +28,7 @@ func mockTokenLockStore(db *sql.DB) *common3.TokenLockStore {
 		TokenLocks: "TOKEN_LOCKS",
 		Requests:   "REQUESTS",
 	})
+
 	return store.TokenLockStore
 }
 

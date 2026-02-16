@@ -61,6 +61,7 @@ func (p *SDK) Install() error {
 	if err := p.SDK.Install(); err != nil {
 		return err
 	}
+
 	return errors.Join(
 		digutils.Register[state.VaultService](p.Container()),
 		digutils.Register[tms.DeployerService](p.Container()),

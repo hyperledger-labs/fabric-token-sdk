@@ -23,11 +23,12 @@ func randomG1(t *testing.T, c *math.Curve) *math.G1 {
 	zr := c.NewRandomZr(randReader)
 	g := c.NewG1()
 	g.Add(c.GenG1.Mul(zr))
+
 	return g
 }
 
 func TestGetG1ArrayAndBytes(t *testing.T) {
-	require.Greater(t, len(math.Curves), 0)
+	require.NotEmpty(t, math.Curves)
 	curve := math.Curves[0]
 
 	g1 := randomG1(t, curve)
@@ -43,7 +44,7 @@ func TestGetG1ArrayAndBytes(t *testing.T) {
 }
 
 func TestBytesToAndReuseBuffer(t *testing.T) {
-	require.Greater(t, len(math.Curves), 0)
+	require.NotEmpty(t, math.Curves)
 	curve := math.Curves[0]
 
 	g1 := randomG1(t, curve)
@@ -62,7 +63,7 @@ func TestBytesToAndReuseBuffer(t *testing.T) {
 }
 
 func TestBytesWithNilElementErrors(t *testing.T) {
-	require.Greater(t, len(math.Curves), 0)
+	require.NotEmpty(t, math.Curves)
 	curve := math.Curves[0]
 
 	g1 := randomG1(t, curve)
@@ -75,7 +76,7 @@ func TestBytesWithNilElementErrors(t *testing.T) {
 }
 
 func TestHashG1Array(t *testing.T) {
-	require.Greater(t, len(math.Curves), 0)
+	require.NotEmpty(t, math.Curves)
 	curve := math.Curves[0]
 
 	g1 := randomG1(t, curve)

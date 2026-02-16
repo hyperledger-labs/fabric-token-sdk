@@ -64,6 +64,7 @@ func newUUID() txgen.UUID {
 	if err != nil {
 		panic(err)
 	}
+
 	return uuid
 }
 
@@ -78,5 +79,6 @@ func (ic *IntermediaryClient) Withdraw(customer model.UserAlias, amount txgen.Am
 
 func (ic *IntermediaryClient) GetBalance(customer model.UserAlias) (txgen.Amount, txgen.Error) {
 	ic.logger.Infof("User [%s] fetches balance", customer)
+
 	return ic.userProvider.Get(customer).GetBalance()
 }

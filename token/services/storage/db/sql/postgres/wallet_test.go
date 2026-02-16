@@ -17,6 +17,7 @@ func mockWalletStore(db *sql.DB) *WalletStore {
 	store, _ := common2.NewWalletStore(db, db, common2.TableNames{
 		Wallets: "WALLETS",
 	}, postgres.NewConditionInterpreter())
+
 	return store
 }
 

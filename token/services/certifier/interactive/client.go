@@ -92,6 +92,7 @@ func NewCertificationClient(
 		}
 	}
 	cc.eventOperationMap = eventOperationMap
+
 	return cc
 }
 
@@ -118,8 +119,10 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 		if err != nil {
 			logger.Errorf("failed to request certification [%s], try again [%d] after [%s]...", err, i, cc.waitTime)
 			time.Sleep(cc.waitTime)
+
 			continue
 		}
+
 		break
 	}
 	if err != nil {
@@ -132,6 +135,7 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 	if err := cc.certificationStorage.Store(ctx, certifications); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -187,6 +191,7 @@ func (cc *CertificationClient) OnReceive(event events.Event) {
 	if len(cc.tokens) >= cap(cc.tokens) {
 		// skip this
 		logger.Warnf("certification pipeline filled up, skipping id [%s:%d]", t.TxID, t.Index)
+
 		return
 	}
 	cc.tokens <- &token.ID{
@@ -229,6 +234,7 @@ func (cc *CertificationClient) requestCertification(ctx context.Context, tokens 
 		if err := cc.Scan(); err != nil {
 			logger.Errorf("failed to scan the vault for token to be certified [%s]", err)
 		}
+
 		return
 	}
 	logger.Debugf("request certification of [%v]", tokens)
@@ -238,6 +244,7 @@ func (cc *CertificationClient) requestCertification(ctx context.Context, tokens 
 		for _, id := range tokens {
 			cc.tokens <- id
 		}
+
 		return
 	}
 	logger.Debugf("request certification of [%v] satisfied with no error", tokens)

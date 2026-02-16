@@ -45,6 +45,7 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		if err != nil {
 			return nil, err
 		}
+
 		return tx, nil
 	case <-time.After(240 * time.Second):
 		return nil, errors.New("timeout reached")

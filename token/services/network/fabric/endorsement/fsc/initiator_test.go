@@ -81,6 +81,7 @@ func mockNewRequestApprovalView(t *testing.T, overrideTMSID *token.TMSID) *MockN
 		nil,
 		es,
 	)
+
 	return &MockNewRequestApprovalView{
 		view:         view,
 		ctx:          ctx,
@@ -109,6 +110,7 @@ func TestRequestApprovalView(t *testing.T) {
 			name: "Success",
 			setup: func() *MockNewRequestApprovalView {
 				mock := mockNewRequestApprovalView(t, nil)
+
 				return mock
 			},
 			verify: func(m *MockNewRequestApprovalView, res any) {
@@ -131,6 +133,7 @@ func TestRequestApprovalView(t *testing.T) {
 			setup: func() *MockNewRequestApprovalView {
 				mock := mockNewRequestApprovalView(t, nil)
 				mock.es.NewTransactionReturns(nil, errors.New("failed NewTransaction"))
+
 				return mock
 			},
 			expectError:      true,
@@ -141,6 +144,7 @@ func TestRequestApprovalView(t *testing.T) {
 			setup: func() *MockNewRequestApprovalView {
 				mock := mockNewRequestApprovalView(t, nil)
 				mock.fabricTx.EndorseProposalReturns(errors.New("failed EndorseProposal"))
+
 				return mock
 			},
 			expectError:      true,
@@ -151,6 +155,7 @@ func TestRequestApprovalView(t *testing.T) {
 			setup: func() *MockNewRequestApprovalView {
 				mock := mockNewRequestApprovalView(t, nil)
 				mock.es.CollectEndorsementsReturns(errors.New("failed CollectEndorsements"))
+
 				return mock
 			},
 			expectError:      true,
@@ -165,7 +170,7 @@ func TestRequestApprovalView(t *testing.T) {
 			if tc.expectError {
 				require.Error(t, err)
 				if tc.expectErrorType != nil {
-					assert.ErrorIs(t, err, tc.expectErrorType)
+					require.ErrorIs(t, err, tc.expectErrorType)
 				}
 				assert.Contains(t, err.Error(), tc.expectErrContain)
 			} else {

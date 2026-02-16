@@ -29,6 +29,7 @@ func (id Token) UniqueID() string {
 	if len(id) == 0 {
 		return "<empty>"
 	}
+
 	return utils.Hashable(id).String()
 }
 
@@ -37,6 +38,7 @@ func (id Token) Hash() string {
 	if len(id) == 0 {
 		return "<empty>"
 	}
+
 	return utils.Hashable(id).RawString()
 }
 
@@ -68,6 +70,7 @@ func (id Metadata) UniqueID() string {
 	if len(id) == 0 {
 		return "<empty>"
 	}
+
 	return utils.Hashable(id).String()
 }
 
@@ -76,6 +79,7 @@ func (id Metadata) Hash() string {
 	if len(id) == 0 {
 		return "<empty>"
 	}
+
 	return utils.Hashable(id).RawString()
 }
 

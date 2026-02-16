@@ -45,12 +45,14 @@ func NewSuiteExecutor(userProviderConfig model.UserProviderConfig, intermediaryC
 		c.Provide(runner.NewTestCaseRunner),
 		c.Provide(func(p fmetrics.Provider) (*metrics.Metrics, metrics.Reporter) {
 			c := metrics.NewMetrics(p)
+
 			return c, metrics.NewReporter(c)
 		}),
 	)
 	if err != nil {
 		return nil, api.NewInternalServerError(err, err.Error())
 	}
+
 	return &SuiteExecutor{C: c}, nil
 }
 
@@ -60,6 +62,7 @@ func (r *SuiteExecutor) Execute(suites []model.SuiteConfig) error {
 			return err
 		}
 		s.PushSuites(suites...)
+
 		return s.ShutDown()
 	})
 }

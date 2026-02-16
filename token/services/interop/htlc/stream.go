@@ -39,6 +39,7 @@ func (o *OutputStream) ByScript() *OutputStream {
 		case ScriptType:
 			return true
 		}
+
 		return false
 	})
 }
@@ -49,19 +50,23 @@ func (o *OutputStream) ScriptAt(i int) *Script {
 	owner, err := identity.UnmarshalTypedIdentity(tok.Token.Owner)
 	if err != nil {
 		logger.Debugf("failed unmarshalling raw owner [%s]: [%s]", tok, err)
+
 		return nil
 	}
 	if owner.Type != ScriptType {
 		logger.Debugf("owner type is [%s] instead of [%s]", owner.Type, ScriptType)
+
 		return nil
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
 		logger.Debugf("failed unmarshalling  htlc script [%s]: [%s]", tok, err)
+
 		return nil
 	}
 	if script.Sender.IsNone() || script.Recipient.IsNone() {
 		return nil
 	}
+
 	return script
 }

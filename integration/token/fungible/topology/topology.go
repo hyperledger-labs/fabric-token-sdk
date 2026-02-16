@@ -237,6 +237,7 @@ func Topology(opts common.Opts) []api.Topology {
 		monitoringTopology := monitoring.NewTopology()
 		// monitoringTopology.EnableHyperledgerExplorer()
 		monitoringTopology.EnablePrometheusGrafana()
+
 		return []api.Topology{
 			backendTopology, tokenTopology, fscTopology,
 			monitoringTopology,

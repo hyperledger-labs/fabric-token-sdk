@@ -312,6 +312,7 @@ type AnyUUID struct{}
 
 func (a AnyUUID) Match(v driver2.Value) bool {
 	_, ok := v.(string)
+
 	return ok
 }
 

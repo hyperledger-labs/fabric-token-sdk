@@ -35,6 +35,7 @@ func NewIdentityConfig(config Config) (*IdentityConfig, error) {
 	if err := config.UnmarshalKey("wallets", wallets); err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling wallets")
 	}
+
 	return &IdentityConfig{Config: config, Wallets: wallets}, nil
 }
 
@@ -44,9 +45,11 @@ func (i *IdentityConfig) CacheSizeForOwnerID(id string) int {
 			if owner.CacheSize <= 0 {
 				return i.Wallets.DefaultCacheSize
 			}
+
 			return owner.CacheSize
 		}
 	}
+
 	return i.Wallets.DefaultCacheSize
 }
 

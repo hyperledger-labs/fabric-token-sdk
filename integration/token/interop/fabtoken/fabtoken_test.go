@@ -56,6 +56,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 		// FSCLogSpec:      "debug",
 	}))
+
 	return ts, selector
 }
 
@@ -68,6 +69,7 @@ func newTestSuiteTwoFabric(commType fsc.P2PCommunicationType, factor int, names 
 		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 		// FSCLogSpec:      "debug",
 	}))
+
 	return ts, selector
 }
 
@@ -80,5 +82,6 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 		// FSCLogSpec:      "debug",
 	}))
+
 	return ts, selector
 }

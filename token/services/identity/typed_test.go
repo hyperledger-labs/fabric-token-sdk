@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestTypedIdentity_Bytes(t *testing.T) {
@@ -21,7 +22,7 @@ func TestTypedIdentity_Bytes(t *testing.T) {
 	}
 
 	bytes, err := ti.Bytes()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, bytes)
 }
 
@@ -32,7 +33,7 @@ func TestTypedIdentity_Bytes_Error(t *testing.T) {
 	}
 
 	_, err := ti.Bytes()
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestUnmarshalTypedIdentity(t *testing.T) {
@@ -42,10 +43,10 @@ func TestUnmarshalTypedIdentity(t *testing.T) {
 	}
 
 	bytes, err := ti.Bytes()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	unmarshaledTI, err := identity.UnmarshalTypedIdentity(bytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, ti, *unmarshaledTI)
 }
 
@@ -53,7 +54,7 @@ func TestUnmarshalTypedIdentity_Error(t *testing.T) {
 	invalidBytes := []byte{0xff, 0xfe, 0xfd}
 
 	_, err := identity.UnmarshalTypedIdentity(invalidBytes)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestWrapWithType(t *testing.T) {
@@ -61,11 +62,11 @@ func TestWrapWithType(t *testing.T) {
 	id := driver.Identity("testIdentity")
 
 	wrappedID, err := identity.WrapWithType(idType, id)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, wrappedID)
 
 	unmarshaledTI, err := identity.UnmarshalTypedIdentity(wrappedID)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, idType, unmarshaledTI.Type)
 	assert.Equal(t, id, unmarshaledTI.Identity)
 }
@@ -75,5 +76,5 @@ func TestWrapWithType_Error(t *testing.T) {
 	id := driver.Identity("testIdentity")
 
 	_, err := identity.WrapWithType(idType, id)
-	assert.Error(t, err)
+	require.Error(t, err)
 }

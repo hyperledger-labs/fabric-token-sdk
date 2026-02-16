@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTokenRequestSerialization(t *testing.T) {
@@ -29,11 +30,11 @@ func TestTokenRequestSerialization(t *testing.T) {
 		},
 	}
 	raw, err := req.Bytes()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	req2 := &TokenRequest{}
 	err = req2.FromBytes(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, req, req2)
 }
 
@@ -136,16 +137,16 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 	}
 
 	raw, err := reqMeta.Bytes()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	reqMeta2 := &TokenRequestMetadata{}
 	err = reqMeta2.FromBytes(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	raw2, err := reqMeta2.Bytes()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	reqMeta3 := &TokenRequestMetadata{}
 	err = reqMeta3.FromBytes(raw2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, reqMeta, reqMeta2)
 	assert.Equal(t, reqMeta2, reqMeta3)

@@ -94,6 +94,6 @@ func StringToCurveID(s string) math.CurveID {
 	case "BLS12_381_BBS_GURVY_FAST_RNG":
 		return BLS12_381_BBS_GURVY_FAST_RNG
 	default:
-		panic(fmt.Sprintf("unknown curve %s", s))
+		panic("unknown curve " + s)
 	}
 }

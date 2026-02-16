@@ -125,6 +125,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 	if err != nil {
 		return nil, err
 	}
+
 	return &deliveryBasedFLM{flm}, nil
 }
 
@@ -152,6 +153,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 	}
 	if common.HeaderType(chdr.Type) != common.HeaderType_ENDORSER_TRANSACTION {
 		logger.DebugfContext(ctx, "Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
+
 		return nil, nil
 	}
 	rwSet, err := rwset.NewEndorserTransactionReader(m.network).Read(payl, chdr)
@@ -181,6 +183,7 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 	if err != nil {
 		return nil, err
 	}
+
 	return collections.Values(infos), nil
 }
 
@@ -207,5 +210,6 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string,
 		}
 	}
 	logger.Debugf("TX [%s] has [%d] infos", txID, len(txInfos))
+
 	return txInfos, nil
 }

@@ -42,8 +42,9 @@ func NewReplicationOptions(factor int, names ...string) (*ReplicationOptions, *R
 	sqlConfigs := make(map[string]*postgres2.ContainerConfig, len(names))
 	for _, name := range names {
 		replicationFactors[name] = factor
-		sqlConfigs[name] = postgres2.DefaultConfig(postgres2.WithDBName(fmt.Sprintf("%s-db", name)))
+		sqlConfigs[name] = postgres2.DefaultConfig(postgres2.WithDBName(name + "-db"))
 	}
+
 	return &ReplicationOptions{ReplicationOptions: &integration.ReplicationOptions{
 		ReplicationFactors: replicationFactors,
 		SQLConfigs:         sqlConfigs,
@@ -65,6 +66,7 @@ func (r *NodeReference) ReplicaName() string {
 		return r.name
 	}
 	r.replicaIdx = (r.replicaIdx + 1) % r.totalReplicas
+
 	return replicaName(r.name, r.replicaIdx)
 }
 
@@ -76,6 +78,7 @@ func (r *NodeReference) AllNames() []string {
 	for idx := range r.totalReplicas {
 		replicaNames = append(replicaNames, replicaName(r.name, idx))
 	}
+
 	return replicaNames
 }
 
@@ -92,6 +95,7 @@ func (s *ReplicaSelector) All(names ...string) []string {
 	for _, name := range names {
 		replicaNames = append(replicaNames, s.Get(name).AllNames()...)
 	}
+
 	return replicaNames
 }
 
@@ -100,6 +104,7 @@ func AllNames(refs ...*NodeReference) []string {
 	for _, ref := range refs {
 		replicaNames = append(replicaNames, ref.AllNames()...)
 	}
+
 	return replicaNames
 }
 
@@ -122,6 +127,7 @@ func NewLocalTestSuite(startPort func() int, topologies []api.Topology) *TestSui
 		generator: func() (*integration.Infrastructure, error) {
 			i, err := integration.New(startPort(), "./testdata", topologies...)
 			i.DeleteOnStop = false
+
 			return i, err
 		},
 	}

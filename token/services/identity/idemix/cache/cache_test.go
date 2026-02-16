@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestIdentityCache(t *testing.T) {
@@ -25,12 +26,12 @@ func TestIdentityCache(t *testing.T) {
 		}, nil
 	}, 100, nil, NewMetrics(&disabled.Provider{}))
 	identityDescriptor, err := c.Identity(t.Context(), nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, driver.Identity([]byte("hello world")), identityDescriptor.Identity)
 	assert.Equal(t, []byte("audit"), identityDescriptor.AuditInfo)
 
 	identityDescriptor, err = c.Identity(t.Context(), nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, driver.Identity([]byte("hello world")), identityDescriptor.Identity)
 	assert.Equal(t, []byte("audit"), identityDescriptor.AuditInfo)
 }
@@ -46,13 +47,13 @@ func TestIdentityCacheForRace(t *testing.T) {
 	numRoutines := 4
 	wg := sync.WaitGroup{}
 	wg.Add(numRoutines)
-	for i := 0; i < numRoutines; i++ {
+	for range numRoutines {
 		go func() {
 			defer wg.Done()
 
-			for i := 0; i < 100; i++ {
+			for range 100 {
 				id, err := c.Identity(t.Context(), nil)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, driver.Identity("hello world"), id.Identity)
 				assert.Equal(t, []byte("audit"), id.AuditInfo)
 			}

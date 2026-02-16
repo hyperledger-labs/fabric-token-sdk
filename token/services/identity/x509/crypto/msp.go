@@ -29,6 +29,7 @@ func (f *verifyingIdentity) Serialize() ([]byte, error) {
 	if pemBytes == nil {
 		return nil, errors.New("encoding of identity failed")
 	}
+
 	return pemBytes, nil
 }
 
@@ -80,6 +81,7 @@ func (f *fullIdentity) Serialize() ([]byte, error) {
 	if pemBytes == nil {
 		return nil, errors.New("encoding of identity failed")
 	}
+
 	return pemBytes, nil
 }
 
@@ -228,6 +230,7 @@ func (f *IdentityFactory) getIdentityFromConf(idBytes []byte) (*x509.Certificate
 	if !ok {
 		return nil, nil, nil, errors.Errorf("certificate public key is not a cryptographic public key")
 	}
+
 	return cert, certPubK, cryptoPK, nil
 }
 
@@ -259,5 +262,6 @@ func getHashOpt(hashFamily string) (bccsp.HashOpts, error) {
 	case bccsp.SHA3:
 		return bccsp.GetHashOpt(bccsp.SHA3_256)
 	}
+
 	return nil, errors.Errorf("hash family not recognized [%s]", hashFamily)
 }

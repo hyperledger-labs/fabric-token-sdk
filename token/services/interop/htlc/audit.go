@@ -24,6 +24,7 @@ func ToInput(i *token.Input) (*Input, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
+
 	return &Input{
 		Input:  i,
 		isHTLC: owner.Type == ScriptType,
@@ -51,6 +52,7 @@ func (i *Input) Script() (*Script, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmrshal HTLC script")
 	}
+
 	return script, nil
 }
 
@@ -64,6 +66,7 @@ func ToOutput(i *token.Output) (*Output, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
+
 	return &Output{
 		Output: i,
 		isHTLC: owner.Type == ScriptType,
@@ -91,5 +94,6 @@ func (o *Output) Script() (*Script, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmrshal HTLC script")
 	}
+
 	return script, nil
 }

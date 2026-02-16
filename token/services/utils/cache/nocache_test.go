@@ -28,7 +28,7 @@ func TestNoCache_Get_String(t *testing.T) {
 	val, found := cache.Get("pineapple")
 
 	require.False(t, found)
-	require.Equal(t, "", val)
+	require.Empty(t, val)
 }
 
 func TestNoCache_GetOrLoad_Success(t *testing.T) {
@@ -58,7 +58,7 @@ func TestNoCache_GetOrLoad_Error(t *testing.T) {
 
 	require.ErrorIs(t, err, expectedErr)
 	require.False(t, found)
-	require.Equal(t, 0.0, val)
+	require.InDeltaf(t, 0.0, val, 0.01, "expected no delta from loader")
 }
 
 func TestNoCache_Add_DoesNothing(t *testing.T) {
@@ -68,7 +68,7 @@ func TestNoCache_Add_DoesNothing(t *testing.T) {
 
 	val, found := cache.Get("key")
 	require.False(t, found)
-	require.Equal(t, false, val)
+	require.False(t, val)
 }
 
 func TestNoCache_Delete_DoesNothing(t *testing.T) {
@@ -78,5 +78,5 @@ func TestNoCache_Delete_DoesNothing(t *testing.T) {
 
 	val, found := cache.Get("key")
 	require.False(t, found)
-	require.Equal(t, "", val)
+	require.Empty(t, val)
 }

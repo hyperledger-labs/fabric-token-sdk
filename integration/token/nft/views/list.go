@@ -37,5 +37,6 @@ func (i *GetHouseViewFactory) NewView(in []byte) (view.View, error) {
 	f := &GetHouseView{GetHouse: &GetHouse{}}
 	err := json.Unmarshal(in, f.GetHouse)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

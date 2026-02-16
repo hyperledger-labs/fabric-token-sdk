@@ -43,6 +43,7 @@ func NewStreamExternalWalletMsg(Type StreamExternalWalletMsgType, v interface{})
 			return nil, errors.Wrapf(err, "failed to marshal [%v]", v)
 		}
 	}
+
 	return &StreamExternalWalletMsg{Type: Type, Raw: raw}, nil
 }
 
@@ -91,6 +92,7 @@ func (s *StreamExternalWalletSignerServer) Sign(party view.Identity, message []b
 	if err := json.Unmarshal(msg.Raw, response); err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal sign response")
 	}
+
 	return response.Sigma, nil
 }
 
@@ -103,6 +105,7 @@ func (s *StreamExternalWalletSignerServer) Done() error {
 	if err := s.stream.Send(msg); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -132,6 +135,7 @@ func NewStreamExternalWalletSignerClientWithTimeout(sp SignerProvider, stream vi
 		err:     make(chan error),
 	}
 	go c.init()
+
 	return c
 }
 
@@ -143,6 +147,7 @@ func (s *StreamExternalWalletSignerClient) init() {
 		msg := &StreamExternalWalletMsg{}
 		if err := s.stream.Recv(msg); err != nil {
 			s.err <- errors.Wrapf(err, "failed to receive signature request [%d]", i)
+
 			return
 		}
 		switch msg.Type {
@@ -150,6 +155,7 @@ func (s *StreamExternalWalletSignerClient) init() {
 			req := &StreamExternalWalletSignRequest{}
 			if err := json.Unmarshal(msg.Raw, req); err != nil {
 				s.err <- errors.Wrapf(err, "failed to get unmarshal msg type SigRequest")
+
 				return
 			} else {
 				s.input <- req
@@ -157,6 +163,7 @@ func (s *StreamExternalWalletSignerClient) init() {
 		case Done:
 			logger.Infof("no more signatures required")
 			close(s.input)
+
 			return
 		}
 		i++

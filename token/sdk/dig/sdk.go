@@ -88,6 +88,7 @@ func NewFrom(sdk dig2.SDK) *SDK {
 func (p *SDK) Install() error {
 	if !p.TokenEnabled() {
 		logger.Infof("Token platform not enabled, skipping")
+
 		return p.SDK.Install()
 	}
 
@@ -242,6 +243,7 @@ func (p *SDK) Install() error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed post-inititialization")
 	}
+
 	return nil
 }
 
@@ -251,6 +253,7 @@ func (p *SDK) Start(ctx context.Context) error {
 	}
 	if !p.TokenEnabled() {
 		logger.Infof("Token platform not enabled, skipping start")
+
 		return nil
 	}
 	logger.Infof("Token platform enabled, starting...")
@@ -260,9 +263,11 @@ func (p *SDK) Start(ctx context.Context) error {
 		p.Container().Invoke(connectNetworks),
 	); err != nil {
 		logger.Errorf("Token platform enabled, starting...failed with error [%s]", err)
+
 		return err
 	}
 	logger.Infof("Token platform enabled, starting...done")
+
 	return nil
 }
 

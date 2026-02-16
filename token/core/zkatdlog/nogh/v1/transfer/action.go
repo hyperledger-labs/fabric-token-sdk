@@ -111,6 +111,7 @@ func (a *ActionInput) FromProtos(input *actions.TransferActionInput) error {
 			BlindingFactor: blindingFactor,
 		}
 	}
+
 	return nil
 }
 
@@ -149,6 +150,7 @@ func NewTransfer(tokenIDs []*token2.ID, inputToken []*token.Token, commitments [
 	for i, o := range commitments {
 		tokens[i] = &token.Token{Data: o, Owner: owners[i]}
 	}
+
 	return &Action{
 		Inputs:   inputs,
 		Outputs:  tokens,
@@ -168,6 +170,7 @@ func (t *Action) GetInputs() []*token2.ID {
 	for i, input := range t.Inputs {
 		res[i] = input.ID
 	}
+
 	return res
 }
 
@@ -176,6 +179,7 @@ func (t *Action) GetSerializedInputs() ([][]byte, error) {
 	for _, input := range t.Inputs {
 		if input == nil {
 			res = append(res, nil)
+
 			continue
 		}
 		if w := input.UpgradeWitness; w != nil {
@@ -184,6 +188,7 @@ func (t *Action) GetSerializedInputs() ([][]byte, error) {
 				return nil, err
 			}
 			res = append(res, ser)
+
 			continue
 		}
 		r, err := input.Token.Serialize()
@@ -192,6 +197,7 @@ func (t *Action) GetSerializedInputs() ([][]byte, error) {
 		}
 		res = append(res, r)
 	}
+
 	return res, nil
 }
 
@@ -210,6 +216,7 @@ func (t *Action) GetOutputs() []driver.Output {
 	for i, outputToken := range t.Outputs {
 		res[i] = outputToken
 	}
+
 	return res
 }
 
@@ -225,6 +232,7 @@ func (t *Action) IsRedeem() bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -243,6 +251,7 @@ func (t *Action) GetSerializedOutputs() ([][]byte, error) {
 			return nil, err
 		}
 	}
+
 	return res, nil
 }
 
@@ -303,6 +312,7 @@ func (t *Action) Validate() error {
 	if t.IsRedeem() && (t.Issuer == nil) {
 		return errors.Errorf("Expected Issuer for a Redeem action")
 	}
+
 	return nil
 }
 
@@ -324,6 +334,7 @@ func (t *Action) Serialize() ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to serialize output")
 		}
+
 		return &actions.TransferActionOutput{
 			Token: &actions.Token{
 				Owner: output.Owner,
@@ -352,6 +363,7 @@ func (t *Action) Serialize() ([]byte, error) {
 		Metadata: t.Metadata,
 		Issuer:   issuer,
 	}
+
 	return proto.Marshal(action)
 }
 
@@ -416,6 +428,7 @@ func (t *Action) GetOutputCommitments() []*math.G1 {
 	for i := 0; i < len(com); i++ {
 		com[i] = t.Outputs[i].Data
 	}
+
 	return com
 }
 
@@ -424,5 +437,6 @@ func (t *Action) InputTokens() []*token.Token {
 	for i, in := range t.Inputs {
 		tokens[i] = in.Token
 	}
+
 	return tokens
 }

@@ -55,6 +55,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 			return nil, errors.Join(err, ErrTimeout)
 		}
 		logger.ErrorfContext(context.Context(), err.Error())
+
 		return nil, err
 	}
 	logger.DebugfContext(context.Context(), "ReceiveTransactionView: received transaction, len [%d][%s]", len(msg), utils.Hashable(msg))
@@ -62,6 +63,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	if len(msg) == 0 {
 		info := context.Session().Info()
 		logger.ErrorfContext(context.Context(), "received empty message, session closed [%s:%v]: [%s]", info.ID, info.Closed, string(debug.Stack()))
+
 		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
 	}
 	tx, err := NewTransactionFromBytes(context, msg)
@@ -74,6 +76,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 			return nil, errors.Wrap(errors.Join(err, err2), "failed to receive transaction")
 		}
 	}
+
 	return tx, nil
 }
 
@@ -90,5 +93,6 @@ func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Contex
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
 	}
+
 	return tx, nil
 }
