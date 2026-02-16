@@ -258,7 +258,7 @@ func TestIssuerSignTokenActions(t *testing.T) {
 	signer.SignReturns([]byte("signature"), nil)
 
 	sig, err := issuer.SignTokenActions(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte("signature"), sig)
 	assert.Equal(t, 1, signer.SignCallCount())
 	assert.Equal(t, raw, signer.SignArgsForCall(0))

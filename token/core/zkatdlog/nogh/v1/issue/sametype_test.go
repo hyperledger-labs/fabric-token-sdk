@@ -71,11 +71,11 @@ func TestSameTypeDeserializeError(t *testing.T) {
 	curve := math.Curves[1]
 	rand, _ := curve.Rand()
 	raw, err := issue.NewSameTypeProver("ABC", curve.NewRandomZr(rand), curve.GenG1.Mul(curve.NewRandomZr(rand)), preparePedersenParameters(t), curve).Prove()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	serialized, err := raw.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	for i := 0; i < len(serialized)-1; i++ {
+	for i := range len(serialized) - 1 {
 		err = st.Deserialize(serialized[:i])
 		assert.Error(t, err)
 	}
@@ -84,12 +84,12 @@ func TestSameTypeDeserializeError(t *testing.T) {
 func TestSameTypeVerifyError(t *testing.T) {
 	prover, verifier := GetSameTypeProverAndVerifier(t)
 	proof, err := prover.Prove()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Wrong challenge
 	curve := math.Curves[1]
 	randReader, err := curve.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	originalChallenge := proof.Challenge
 	proof.Challenge = curve.NewRandomZr(randReader)

@@ -37,6 +37,7 @@ func (p *Proof) Deserialize(bytes []byte) error {
 	if err := asn1.Unmarshal[asn1.Serializer](bytes, p.SameType, p.RangeCorrectness); err != nil {
 		return errors.Join(ErrDeserializeProofFailed, err)
 	}
+
 	return nil
 }
 

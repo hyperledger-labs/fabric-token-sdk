@@ -12,14 +12,13 @@ import (
 	math "github.com/IBM/mathlib"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewProverErrors(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	pp, err := v1.Setup(32, nil, math.BN254)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	randReader, _ := curve.Rand()
 
 	// tw[i] is nil

@@ -47,7 +47,7 @@ func TestDeserializeError(t *testing.T) {
 
 	// Invalid version
 	raw, err := proto.Marshal(&actions.IssueAction{Version: ProtocolV1 + 1})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = action.Deserialize(raw)
 	require.ErrorIs(t, err, ErrInvalidProtocolVersion)
 }
@@ -132,7 +132,7 @@ func TestFields(t *testing.T) {
 	assert.Equal(t, uint64(1), action.GetInputs()[1].Index)
 
 	serializedInputs, err := action.GetSerializedInputs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, serializedInputs, 2)
 	assert.Equal(t, action.Inputs[0].Token, serializedInputs[0])
 	assert.Equal(t, action.Inputs[1].Token, serializedInputs[1])
@@ -144,16 +144,16 @@ func TestFields(t *testing.T) {
 	assert.Len(t, action.GetOutputs(), 2)
 
 	serializedOutputs, err := action.GetSerializedOutputs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, serializedOutputs, 2)
 
 	assert.Equal(t, []byte(action.Issuer), action.GetIssuer())
 	assert.False(t, action.IsGraphHiding())
-	assert.NoError(t, action.Validate())
+	require.NoError(t, action.Validate())
 	assert.Nil(t, action.ExtraSigners())
 
 	commitments, err := action.GetCommitments()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, commitments, 2)
 	assert.True(t, action.Outputs[0].Data.Equals(commitments[0]))
 	assert.True(t, action.Outputs[1].Data.Equals(commitments[1]))
@@ -164,7 +164,7 @@ func TestFields(t *testing.T) {
 	action.Inputs[0] = nil
 	assert.Nil(t, action.GetInputs()[0])
 	serializedInputs, err = action.GetSerializedInputs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, serializedInputs[0])
 
 	// Test nil output in GetSerializedOutputs and GetCommitments
@@ -182,7 +182,7 @@ func TestValidate(t *testing.T) {
 	action := randomAction(curve, rand.Reader, t)
 
 	// Valid action
-	assert.NoError(t, action.Validate())
+	require.NoError(t, action.Validate())
 
 	// Issuer not set
 	oldIssuer := action.Issuer
