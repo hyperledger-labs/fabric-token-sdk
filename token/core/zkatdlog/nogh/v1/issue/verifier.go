@@ -13,14 +13,15 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 )
 
-// Verifier checks if Proof is valid
+// Verifier coordinates the verification of zero-knowledge proofs for an issue action.
 type Verifier struct {
-	// SameType encodes the SameType Verifier
+	// SameType is the verifier for the same-type property.
 	SameType *SameTypeVerifier
-	// RangeCorrectness encodes the range proof verifier
+	// RangeCorrectness is the verifier for the range correctness property.
 	RangeCorrectness *rp.RangeCorrectnessVerifier
 }
 
+// NewVerifier instantiates a Verifier for the given token commitments and public parameters.
 func NewVerifier(tokens []*math.G1, pp *v1.PublicParams) *Verifier {
 	v := &Verifier{}
 	v.SameType = NewSameTypeVerifier(tokens, pp.PedersenGenerators, math.Curves[pp.Curve])
@@ -29,20 +30,22 @@ func NewVerifier(tokens []*math.G1, pp *v1.PublicParams) *Verifier {
 	return v
 }
 
-// Verify returns an error if Proof of an IssueAction is invalid
+// Verify checks the validity of the zero-knowledge proof for an issue action.
+// It verifies both the same-type property and the range correctness of the issued tokens.
 func (v *Verifier) Verify(proof []byte) error {
 	tp := &Proof{}
-	// unmarshal proof
+	// Unmarshal the proof.
 	err := tp.Deserialize(proof)
 	if err != nil {
-		return err
+		return errors.Join(ErrDeserializeProofFailed, err)
 	}
-	// verify TypeAndSum proof
+	// Verify the same-type proof.
 	err = v.SameType.Verify(tp.SameType)
 	if err != nil {
-		return errors.Wrapf(err, "invalid issue proof")
+		return errors.Join(ErrInvalidIssueProof, err)
 	}
-	// verify RangeCorrectness proof
+	// Verify the range correctness proof.
+	// The range proof is performed on tokens[i] / commitmentToType to show they commit to a positive value.
 	commitmentToType := tp.SameType.CommitmentToType.Copy()
 	coms := make([]*math.G1, len(v.SameType.Tokens))
 	for i := range len(v.SameType.Tokens) {
@@ -52,7 +55,7 @@ func (v *Verifier) Verify(proof []byte) error {
 	v.RangeCorrectness.Commitments = coms
 	err = v.RangeCorrectness.Verify(tp.RangeCorrectness)
 	if err != nil {
-		return errors.Wrapf(err, "invalid issue proof")
+		return errors.Join(ErrInvalidIssueProof, err)
 	}
 
 	return nil

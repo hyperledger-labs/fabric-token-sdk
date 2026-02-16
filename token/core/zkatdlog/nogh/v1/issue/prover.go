@@ -15,35 +15,41 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 )
 
-// Proof proves that an IssueAction is valid
+// Proof proves that an IssueAction is valid by demonstrating that all issued tokens
+// have the same type and that their values are within the authorized range.
 type Proof struct {
-	// SameType is the proof that a bridge commitment is of type G_0^typeH^r
+	// SameType is the proof that all issued tokens have the same type.
 	SameType *SameType
-	// RangeCorrectness is the proof that issued tokens have value in the authorized range
+	// RangeCorrectness is the proof that issued tokens have values in the authorized range.
 	RangeCorrectness *rp.RangeCorrectness
 }
 
-// Serialize marshals Proof
+// Serialize marshals the Proof into its byte representation.
 func (p *Proof) Serialize() ([]byte, error) {
 	return asn1.Marshal[asn1.Serializer](p.SameType, p.RangeCorrectness)
 }
 
-// Deserialize un-marshals Proof
+// Deserialize unmarshals the Proof from its byte representation.
 func (p *Proof) Deserialize(bytes []byte) error {
 	p.SameType = &SameType{}
 	p.RangeCorrectness = &rp.RangeCorrectness{}
 
-	return asn1.Unmarshal[asn1.Serializer](bytes, p.SameType, p.RangeCorrectness)
+	if err := asn1.Unmarshal[asn1.Serializer](bytes, p.SameType, p.RangeCorrectness); err != nil {
+		return errors.Join(ErrDeserializeProofFailed, err)
+	}
+
+	return nil
 }
 
-// Prover produces a proof of validity of an IssueAction
+// Prover produces a proof of validity for an IssueAction.
 type Prover struct {
-	// SameType encodes the SameType Prover
+	// SameType is the prover for the same-type property.
 	SameType *SameTypeProver
-	// RangeCorrectness encodes the range proof Prover
+	// RangeCorrectness is the prover for the range correctness property.
 	RangeCorrectness *rp.RangeCorrectnessProver
 }
 
+// NewProver instantiates a Prover for an issue action using the provided witnesses, tokens, and public parameters.
 func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*Prover, error) {
 	c := math.Curves[pp.Curve]
 	p := &Prover{}
@@ -52,7 +58,7 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 
 	rand, err := c.Rand()
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot get issue prover")
+		return nil, errors.Join(ErrGetIssueProverFailed, err)
 	}
 	typeBF := c.NewRandomZr(rand)
 	commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
@@ -62,12 +68,12 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 	blindingFactors := make([]*math.Zr, len(tw))
 	for i := range tw {
 		if tw[i] == nil || tw[i].BlindingFactor == nil {
-			return nil, errors.New("invalid token witness")
+			return nil, ErrInvalidTokenWitness
 		}
 		// tw[i] = tw[i].Clone()
 		values[i], err = tw[i].Value.Uint()
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid token witness values")
+			return nil, errors.Join(ErrInvalidTokenWitnessValues, err)
 		}
 		blindingFactors[i] = c.ModSub(tw[i].BlindingFactor, p.SameType.blindingFactor, c.GroupOrder)
 	}
@@ -76,7 +82,7 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 		coms[i] = tokens[i].Copy()
 		coms[i].Sub(commitmentToType)
 	}
-	// range prover takes commitments tokens[i]/commitmentToType
+	// The range prover takes commitments to values (tokens[i] / commitmentToType).
 	p.RangeCorrectness = rp.NewRangeCorrectnessProver(
 		coms,
 		values,
@@ -94,18 +100,18 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 	return p, nil
 }
 
-// Prove produces a Proof for an IssueAction
+// Prove generates the zero-knowledge proof of validity.
 func (p *Prover) Prove() ([]byte, error) {
-	// TypeAndSum proof
+	// Generate same-type proof.
 	st, err := p.SameType.Prove()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to generate issue proof")
+		return nil, errors.Join(ErrGenerateIssueProofFailed, err)
 	}
 
-	// RangeCorrectness proof
+	// Generate range correctness proof.
 	rc, err := p.RangeCorrectness.Prove()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to generate range proof for issue")
+		return nil, errors.Join(ErrGenerateRangeProofFailed, err)
 	}
 
 	proof := &Proof{

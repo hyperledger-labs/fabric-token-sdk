@@ -248,3 +248,47 @@ func prepareInputsForZKIssue(pp *v1.PublicParams, numOutputs int) ([]*token.Meta
 
 	return token.NewMetadata(pp.Curve, "ABC", values, bf), tokens
 }
+
+func TestIssuerSignTokenActions(t *testing.T) {
+	pp := setup(t, 32, math.BLS12_381_BBS_GURVY)
+	signer := &mock.SigningIdentity{}
+	issuer := issue2.NewIssuer("ABC", signer, pp)
+
+	raw := []byte("hello")
+	signer.SignReturns([]byte("signature"), nil)
+
+	sig, err := issuer.SignTokenActions(raw)
+	require.NoError(t, err)
+	assert.Equal(t, []byte("signature"), sig)
+	assert.Equal(t, 1, signer.SignCallCount())
+	assert.Equal(t, raw, signer.SignArgsForCall(0))
+
+	// Signer nil
+	issuer.Signer = nil
+	_, err = issuer.SignTokenActions(raw)
+	require.ErrorIs(t, err, issue2.ErrSignTokenActionsNilSigner)
+}
+
+// TestIssuerGenerateZKIssueErrors tests error conditions for GenerateZKIssue.
+func TestIssuerGenerateZKIssueErrors(t *testing.T) {
+	pp := setup(t, 32, math.BLS12_381_BBS_GURVY)
+	issuer := issue2.NewIssuer("ABC", &mock.SigningIdentity{}, pp)
+
+	// PublicParams nil
+	issuer.PublicParams = nil
+	_, _, err := issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
+	require.ErrorIs(t, err, issue2.ErrNilPublicParameters)
+	issuer.PublicParams = pp
+
+	// Inadmissible curve
+	oldCurve := issuer.PublicParams.Curve
+	issuer.PublicParams.Curve = math.CurveID(len(math.Curves) + 1)
+	_, _, err = issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
+	require.ErrorIs(t, err, issue2.ErrInvalidPublicParameters)
+	issuer.PublicParams.Curve = oldCurve
+
+	// Signer nil
+	issuer.Signer = nil
+	_, _, err = issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
+	require.ErrorIs(t, err, issue2.ErrNilSigner)
+}
