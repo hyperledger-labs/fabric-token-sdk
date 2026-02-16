@@ -153,7 +153,7 @@ func init() {
 		for i := 0; i < NumBits; i++ {
 			// ip2 = ip2 + 2^i
 			ip2 = c.ModAdd(ip2, powers[uint64(i)], c.GroupOrder) // #nosec G115
-			ip2s[uint64(i+1)] = ip2 // #nosec G115
+			ip2s[uint64(i+1)] = ip2                              // #nosec G115
 		}
 		sumOfPowerCache[id] = ip2s
 	}

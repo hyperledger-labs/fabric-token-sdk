@@ -71,7 +71,7 @@ func (d *Distribution) generateUniformAmounts(total api.Amount) ([]api.Amount, a
 	if maximum < minimum {
 		return nil, api.NewBadRequestError(nil, "maximum amount is too low")
 	}
-	diff := maximum-minimum
+	diff := maximum - minimum
 	amounts := make([]api.Amount, 0, 1)
 	for total > 0 {
 		r := uint64(rand.Int63n(int64(diff))) + minimum //nolint:gosec
