@@ -85,7 +85,7 @@ func (u *restUser) Withdraw(value txgen.Amount) txgen.Error {
 
 	urlStr := fmt.Sprintf("%s/zkat/withdraw?user=%s", u.endpoint, u.username)
 	form := url.Values{}
-	form.Add("value", strconv.Itoa(int(value)))
+	form.Add("value", strconv.FormatUint(value, 10))
 
 	u.logger.Debugf("Withdraw %s for %s\n", form.Encode(), u.username)
 
@@ -119,14 +119,13 @@ func (u *restUser) GetBalance() (txgen.Amount, txgen.Error) {
 
 	u.logger.Debugf("User %s has balance %v", u.username, balanceResponse)
 
-	amount, err := strconv.Atoi(balanceResponse.Balance.Quantity)
-
+	amount, err := strconv.ParseUint(balanceResponse.Balance.Quantity, 10, 64)
 	if err != nil {
 		u.logger.Errorf("Can't convert balance api.Amount to int: %s, balance: %s", err.Error(), balanceResponse.Balance.Quantity)
 		return 0, txgen.NewInternalServerError(err, "Can't convert balance api.Amount to int")
 	}
 
-	return txgen.Amount(amount), nil
+	return amount, nil
 }
 
 func (u *restUser) Transfer(value txgen.Amount, recipient model.Username, nonce txgen.UUID) txgen.Error {
@@ -204,7 +203,7 @@ func (u *restUser) Username() model.Username {
 
 func newTransferForm(value txgen.Amount, nonce txgen.UUID, username model.Username) url.Values {
 	form := url.Values{}
-	form.Add("value", strconv.Itoa(int(value)))
+	form.Add("value", strconv.FormatUint(value, 10))
 	form.Add("recipient", username)
 	form.Add("nonce", nonce.String())
 	return form

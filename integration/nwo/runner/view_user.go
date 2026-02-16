@@ -98,7 +98,7 @@ func (u *viewUser) Transfer(value api3.Amount, recipient model.Username, _ api3.
 	_, err := u.callView("transfer", &views.Transfer{
 		Auditor:      u.auditor,
 		Type:         currency,
-		Amount:       uint64(value),
+		Amount:       value,
 		Recipient:    u.idResolver.Identity(recipient),
 		RecipientEID: recipient,
 		NotAnonymous: !u.anonymous,
@@ -115,7 +115,7 @@ func (u *viewUser) Withdraw(value api3.Amount) api3.Error {
 	_, err := u.callView("withdrawal", &views.Withdrawal{
 		Wallet:       u.username,
 		TokenType:    currency,
-		Amount:       uint64(value),
+		Amount:       value,
 		Issuer:       "issuer",
 		NotAnonymous: !u.anonymous,
 	})
@@ -145,7 +145,7 @@ func (u *viewUser) GetBalance() (api3.Amount, api3.Error) {
 	if err != nil {
 		return 0, api3.NewInternalServerError(err, err.Error())
 	}
-	return q.ToBigInt().Int64(), nil
+	return q.ToBigInt().Uint64(), nil
 }
 
 func (u *viewUser) callView(fid string, input interface{}) (interface{}, error) {

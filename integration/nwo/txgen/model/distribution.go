@@ -68,11 +68,13 @@ func (d *Distribution) generateUniformAmounts(total api.Amount) ([]api.Amount, a
 
 	minimum := inputAsInt[0]
 	maximum := inputAsInt[1]
-
+	if maximum < minimum {
+		return nil, api.NewBadRequestError(nil, "maximum amount is too low")
+	}
+	diff := maximum - minimum
 	amounts := make([]api.Amount, 0, 1)
-
 	for total > 0 {
-		r := rand.Int63n(maximum-minimum) + minimum
+		r := uint64(rand.Int63n(int64(diff))) + minimum //nolint:gosec
 		if r >= total {
 			amounts = append(amounts, total)
 			break
@@ -89,13 +91,13 @@ func (d *Distribution) convertToIntegers(input []string) ([]api.Amount, api.Erro
 	ints := make([]api.Amount, len(input))
 
 	for i, v := range input {
-		num, err := strconv.Atoi(v)
+		num, err := strconv.ParseUint(v, 10, 64)
 		if err != nil {
 			msg := fmt.Sprintf("Can't convert %s to intereger", v)
 			// logging.Logger.Errorf(msg)
 			return nil, api.NewBadRequestError(nil, msg)
 		}
-		ints[i] = api.Amount(num)
+		ints[i] = num
 	}
 
 	return ints, nil

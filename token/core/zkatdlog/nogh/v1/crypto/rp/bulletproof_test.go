@@ -38,7 +38,7 @@ type bfSetup struct {
 func newBfSetup(curveID math.CurveID) (*bfSetup, error) {
 	curve := math.Curves[curveID]
 	l := uint64(64)
-	nr := 63 - uint64(bits.LeadingZeros64(l))
+	nr := 63 - uint64(bits.LeadingZeros64(l)) // #nosec G115
 	leftGens := make([]*math.G1, l)
 	rightGens := make([]*math.G1, l)
 

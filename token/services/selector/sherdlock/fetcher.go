@@ -164,12 +164,12 @@ type cachedFetcher struct {
 	mu               sync.RWMutex
 }
 
-func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
+func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration, maxQueriesBeforeRefresh uint32) *cachedFetcher {
 	return &cachedFetcher{
 		tokenDB:                 tokenDB,
 		cache:                   make(map[string]permutatableIterator[*token2.UnspentTokenInWallet]),
 		freshnessInterval:       freshnessInterval,
-		maxQueriesBeforeRefresh: uint32(maxQueriesBeforeRefresh),
+		maxQueriesBeforeRefresh: maxQueriesBeforeRefresh,
 	}
 }
 

@@ -37,6 +37,8 @@ import (
 )
 
 const (
+	// DefaultTokenGenPath is the default path to the tokengen tool.
+	// #nosec G101 no passwords here
 	DefaultTokenGenPath = "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen"
 )
 

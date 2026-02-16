@@ -14,7 +14,7 @@ linters:
 #    - goconst
 #    - gocritic
 #    - godot
-#    - gosec
+    - gosec
 #    - intrange
 #    - ireturn
 #    - lll
@@ -214,18 +214,3 @@ linters:
       # Default: []
       presets:
         - common-false-positives
-#formatters:
-#  enable:
-#    - gofumpt
-#    - goimports
-#  settings:
-#    gofumpt:
-#      extra-rules: true
-#    goimports:
-#      # A comma-separated list of prefixes, which, if set, checks import paths
-#      # with the given prefixes are grouped after 3rd-party packages.
-#      # Default: ""
-#      local-prefixes:
-#        - github.ibm.com/decentralized-trust-research/idap
-#  exclusions:
-#    generated: lax

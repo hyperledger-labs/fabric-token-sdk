@@ -85,7 +85,7 @@ func NewCryptoMaterialGeneratorWithCurveIdentifier(tokenPlatform generators.Toke
 
 func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), "idemix")
-	if err := os.MkdirAll(output, 0766); err != nil {
+	if err := os.MkdirAll(output, 0750); err != nil {
 		return "", err
 	}
 
@@ -133,7 +133,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 
 		logger.Debugf("Generating owner identity [%s] for [%s]", owner, tmsID)
 		userOutput := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tmsID, "idemix", pathPrefix, owner)
-		if err := os.MkdirAll(userOutput, 0766); err != nil {
+		if err := os.MkdirAll(userOutput, 0750); err != nil {
 			return nil
 		}
 		// notice that if aries is enabled, curve is ignored
@@ -168,7 +168,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			err = os.WriteFile(
 				filepath.Join(userOutput, idemix.IdemixConfigDirUser, msp2.SignerConfigFull),
 				signerBytes,
-				0766,
+				0600,
 			)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -179,7 +179,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			err = os.WriteFile(
 				filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner),
 				raw,
-				0766,
+				0600,
 			)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}

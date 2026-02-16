@@ -39,7 +39,7 @@ type SignerConfig struct {
 	// OrganizationalUnitIdentifier defines the organizational unit the default signer is in
 	OrganizationalUnitIdentifier string `protobuf:"bytes,3,opt,name=organizational_unit_identifier,json=organizationalUnitIdentifier" json:"organizational_unit_identifier,omitempty"`
 	// Role defines whether the default signer is admin, member, peer, or client
-	Role int `protobuf:"varint,4,opt,name=role,json=role" json:"role,omitempty"`
+	Role int32 `protobuf:"varint,4,opt,name=role,json=role" json:"role,omitempty"`
 	// EnrollmentID contains the enrollment id of this signer
 	EnrollmentID string `protobuf:"bytes,5,opt,name=enrollment_id,json=enrollmentId" json:"enrollment_id,omitempty"`
 	// CRI contains a serialized CredentialRevocationInformation
@@ -143,7 +143,7 @@ func NewFabricCAIdemixConfig(issuerPublicKey []byte, dir string) (*Config, error
 			Cred:                            si.Cred,
 			Sk:                              si.Sk,
 			OrganizationalUnitIdentifier:    si.OrganizationalUnitIdentifier,
-			Role:                            int32(si.Role),
+			Role:                            si.Role,
 			EnrollmentId:                    si.EnrollmentID,
 			CredentialRevocationInformation: si.CredentialRevocationInformation,
 			RevocationHandle:                si.RevocationHandle,

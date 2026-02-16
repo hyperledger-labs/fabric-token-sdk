@@ -8,6 +8,7 @@ package setup
 
 import (
 	"crypto/sha256"
+	math3 "math"
 	"math/bits"
 	"strconv"
 
@@ -136,10 +137,13 @@ type IdemixIssuerPublicKey struct {
 }
 
 func (i *IdemixIssuerPublicKey) ToProtos() (*pp.IdemixIssuerPublicKey, error) {
+	if i.Curve < 0 {
+		return nil, errors.New("invalid curve id")
+	}
 	return &pp.IdemixIssuerPublicKey{
 		PublicKey: i.PublicKey,
 		CurverId: &math2.CurveID{
-			Id: uint64(i.Curve),
+			Id: uint64(i.Curve), // #nosec G115
 		},
 	}, nil
 }
@@ -152,7 +156,10 @@ func (i *IdemixIssuerPublicKey) FromProtos(s *pp.IdemixIssuerPublicKey) error {
 	if s.CurverId == nil {
 		return errors.New("invalid idemix issuer public key")
 	}
-	i.Curve = mathlib.CurveID(s.CurverId.Id)
+	if s.CurverId.Id > math3.MaxInt {
+		return errors.New("curve id out of range")
+	}
+	i.Curve = mathlib.CurveID(s.CurverId.Id) // #nosec G115
 	return nil
 }
 
@@ -313,9 +320,9 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 
 	publicParams := &pp.PublicParameters{
 		TokenDriverName:    string(p.DriverName),
-		TokenDriverVersion: uint64(p.DriverVersion),
+		TokenDriverVersion: uint64(p.DriverVersion), // #nosec G115 driver.TokenDriverVersion is a uint64
 		CurveId: &math2.CurveID{
-			Id: uint64(p.Curve),
+			Id: uint64(p.Curve), // #nosec G115
 		},
 		PedersenGenerators:     pg,
 		RangeProofParams:       rpp,
@@ -360,7 +367,10 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if publicParams.CurveId == nil {
 		return errors.Errorf("invalid curve id, expecting curve id, got nil")
 	}
-	p.Curve = mathlib.CurveID(publicParams.CurveId.Id)
+	if publicParams.CurveId.Id > math3.MaxInt {
+		return errors.New("curve id out of range")
+	}
+	p.Curve = mathlib.CurveID(publicParams.CurveId.Id) // #nosec G115
 	p.MaxToken = publicParams.MaxToken
 	p.QuantityPrecision = publicParams.QuantityPrecision
 	pg, err := utils2.FromG1ProtoSlice(publicParams.PedersenGenerators)
@@ -539,5 +549,6 @@ func (p *PublicParams) Extras() driver.Extras {
 }
 
 func log2(x uint64) uint64 {
-	return 63 - uint64(bits.LeadingZeros64(x))
+	result := 63 - bits.LeadingZeros64(x)
+	return uint64(result) //nolint:gosec
 }

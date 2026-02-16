@@ -101,7 +101,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 	// - Store pp
-	gomega.Expect(os.MkdirAll(p.TokenPlatform.PublicParametersDir(), 0766)).ToNot(gomega.HaveOccurred())
+	gomega.Expect(os.MkdirAll(p.TokenPlatform.PublicParametersDir(), 0750)).ToNot(gomega.HaveOccurred())
 	gomega.Expect(os.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(gomega.HaveOccurred())
 
 	// Prepare namespace

@@ -58,6 +58,7 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 	if v.Cmp(big.NewInt(0)) < 0 {
 		return nil, errors.New("quantity must be larger than 0")
 	}
+	// #nosec G115
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
 	}
@@ -92,6 +93,8 @@ func UInt64ToQuantity(u uint64, precision uint64) (Quantity, error) {
 	if v.Cmp(big.NewInt(0)) < 0 {
 		return nil, errors.New("quantity must be larger than 0")
 	}
+
+	// #nosec G115
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%d has precision %d > %d", u, v.BitLen(), precision)
 	}
@@ -140,6 +143,7 @@ func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
 	if v.Cmp(big.NewInt(0)) < 0 {
 		return nil, errors.New("quantity must be larger than 0")
 	}
+	// #nosec G115
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
 	}
@@ -157,6 +161,7 @@ func (q *BigQuantity) Add(b Quantity) Quantity {
 	sum := big.NewInt(0)
 	sum = sum.Add(q.Int, bq.Int)
 
+	// #nosec G115
 	if sum.BitLen() > int(q.Precision) {
 		panic(fmt.Sprintf("%s < %s", q.Text(10), b.Decimal()))
 	}

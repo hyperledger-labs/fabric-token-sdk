@@ -314,12 +314,12 @@ func newSenderEnv(pp *v1.PublicParams, numInputs int, numOutputs int) (*senderEn
 		inputInf[i] = &token.Metadata{Type: "ABC", Value: invalues[i], BlindingFactor: inBF[i]}
 	}
 
-	outputValue := uint64(sumInputs / int64(numOutputs))
+	outputValue := uint64(sumInputs / int64(numOutputs)) // #nosec G115
 	sumOutputs := int64(0)
 	for i := range numOutputs {
 		owners[i] = []byte("bob")
 		outvalues[i] = outputValue
-		sumOutputs += int64(outputValue)
+		sumOutputs += int64(outputValue) // #nosec G115
 	}
 	// add any adjustment to the last output
 	delta := sumInputs - sumOutputs

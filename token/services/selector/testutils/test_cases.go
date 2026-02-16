@@ -261,7 +261,7 @@ func createTokens(txs map[transaction.ID][]token.Quantity) []token.UnspentToken 
 	for txID, quantities := range txs {
 		for i, quantity := range quantities {
 			unspentTokens = append(unspentTokens, token.UnspentToken{
-				Id:       token.ID{TxId: txID, Index: uint64(i)},
+				Id:       token.ID{TxId: txID, Index: uint64(i)}, // #nosec G115
 				Owner:    defaultWalletOwner,
 				Type:     defaultCurrency,
 				Quantity: quantity.Hex(),
@@ -272,5 +272,5 @@ func createTokens(txs map[transaction.ID][]token.Quantity) []token.UnspentToken 
 }
 
 func newToken(quantity int) token.Quantity {
-	return token.NewQuantityFromUInt64(uint64(quantity))
+	return token.NewQuantityFromUInt64(uint64(quantity)) // #nosec G115
 }

@@ -446,7 +446,7 @@ func prepareTransfer(benchCase *benchmark2.Case, pp *v1.PublicParams, signer dri
 	inValues := make([]*math.Zr, benchCase.NumInputs)
 	sumInputs := uint64(0)
 	for i := range benchCase.NumInputs {
-		v := uint64(i*10 + 500)
+		v := uint64(i*10 + 500) //nolint:gosec
 		sumInputs += v
 		inValues[i] = c.NewZrFromUint64(v)
 	}

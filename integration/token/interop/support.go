@@ -110,7 +110,7 @@ func CheckBalanceReturnError(network *integration.Infrastructure, id *token3.Nod
 	return nil
 }
 
-func CheckHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected int64, opts ...token.ServiceOption) {
+func CheckHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, opts ...token.ServiceOption) {
 	opt, err := token.CompileServiceOptions(opts...)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to compile options [%v]", opts)
 	tmsId := opt.TMSID()
@@ -126,9 +126,9 @@ func CheckHolding(network *integration.Infrastructure, id *token3.NodeReference,
 		TMSID:        tmsId,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
+	holding, err := strconv.ParseUint(common.JSONUnmarshalString(holdingBoxed), 10, 64)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	gomega.Expect(holding).To(gomega.Equal(int(expected)))
+	gomega.Expect(holding).To(gomega.Equal(expected))
 }
 
 func CheckBalanceWithLocked(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, expectedLocked uint64, expectedExpired uint64, opts ...token.ServiceOption) {
@@ -144,29 +144,30 @@ func CheckBalanceWithLocked(network *integration.Infrastructure, id *token3.Node
 	common.JSONUnmarshal(resBoxed.([]byte), result)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	balance, err := strconv.Atoi(result.Quantity)
+	balance, err := strconv.ParseUint(result.Quantity, 10, 64)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), 10, 64)
+	locked, err := strconv.ParseUint(result.Locked, 10, 64)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	locked, err := strconv.Atoi(result.Locked)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	expired, err := strconv.Atoi(result.Expired)
+	expired, err := strconv.ParseUint(result.Expired, 10, 64)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	gomega.Expect(balance).To(gomega.Equal(int(expected)), "expected [%d], got [%d]", expected, balance)
-	gomega.Expect(locked).To(gomega.Equal(int(expectedLocked)), "expected locked [%d], got [%d]", expectedLocked, locked)
-	gomega.Expect(expired).To(gomega.Equal(int(expectedExpired)), "expected expired [%d], got [%d]", expectedExpired, expired)
+	gomega.Expect(balance).To(gomega.Equal(expected), "expected [%d], got [%d]", expected, balance)                       // #nosec G115
+	gomega.Expect(locked).To(gomega.Equal(expectedLocked), "expected locked [%d], got [%d]", expectedLocked, locked)      // #nosec G115
+	gomega.Expect(expired).To(gomega.Equal(expectedExpired), "expected expired [%d], got [%d]", expectedExpired, expired) // #nosec G115
 }
 
 func CheckBalanceAndHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, opts ...token.ServiceOption) {
 	CheckBalance(network, id, wallet, typ, expected, opts...)
-	CheckHolding(network, id, wallet, typ, int64(expected), opts...)
+	CheckHolding(network, id, wallet, typ, expected, opts...)
 }
 
+// #nosec G115
 func CheckBalanceWithLockedAndHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expectedBalance uint64, expectedLocked uint64, expectedExpired uint64, expectedHolding int64, opts ...token.ServiceOption) {
 	CheckBalanceWithLocked(network, id, wallet, typ, expectedBalance, expectedLocked, expectedExpired, opts...)
 	if expectedHolding == -1 {
 		expectedHolding = int64(expectedBalance + expectedLocked + expectedExpired)
 	}
-	CheckHolding(network, id, wallet, typ, expectedHolding, opts...)
+	CheckHolding(network, id, wallet, typ, uint64(expectedHolding), opts...)
 }
 
 func CheckPublicParams(network *integration.Infrastructure, tmsID token.TMSID, ids ...*token3.NodeReference) {

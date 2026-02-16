@@ -167,7 +167,7 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 	for i := 0; i < benchmarkCase.NumOutputs; i++ {
 		outputs[i] = &token.Token{
 			Owner:    ownerID,
-			Quantity: token.NewQuantityFromUInt64(uint64(i*10 + 10)).Hex(),
+			Quantity: token.NewQuantityFromUInt64(uint64(i*10 + 10)).Hex(), //nolint:gosec
 			Type:     "ABC",
 		}
 	}
@@ -177,7 +177,7 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 	ids := make([]*token.ID, numInputs)
 	values := make([]uint64, numInputs)
 	for i := 0; i < numInputs; i++ {
-		values[i] = uint64(i*10 + 10)
+		values[i] = uint64(i*10 + 10) //nolint:gosec
 	}
 	baseTokens, metadata, err := v1token.GetTokensWithWitness(values, "ABC", pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
