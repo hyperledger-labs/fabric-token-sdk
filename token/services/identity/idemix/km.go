@@ -276,10 +276,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 
 	// Set up default signer
 	logger.DebugfContext(ctx, "setup default signer")
-	id, err := crypto.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create identity")
-	}
+	id := crypto.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
 	sID := &crypto.SigningIdentity{
 		CSP:          p.Csp,
 		Identity:     id,

@@ -10,6 +10,7 @@ import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
@@ -29,12 +30,12 @@ type Identity struct {
 	VerificationType bccsp.VerificationType
 
 	// Schema related fields
-	SchemaManager SchemaManager
+	SchemaManager schema.Manager
 	Schema        Schema
 }
 
-func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType, schemaManager SchemaManager, schema Schema) (*Identity, error) {
-	id := &Identity{
+func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType, schemaManager schema.Manager, schema Schema) *Identity {
+	return &Identity{
 		Idemix:           idemix,
 		NymPublicKey:     nymPublicKey,
 		AssociationProof: proof,
@@ -42,8 +43,6 @@ func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, ver
 		SchemaManager:    schemaManager,
 		Schema:           schema,
 	}
-
-	return id, nil
 }
 
 func (id *Identity) Validate() error {
@@ -72,6 +71,7 @@ func (id *Identity) Serialize() ([]byte, error) {
 	}
 	serialized.NymPublicKey = raw
 	serialized.Proof = id.AssociationProof
+	serialized.Schema = string(id.Schema)
 
 	idemixIDBytes, err := proto.Marshal(serialized)
 	if err != nil {
@@ -157,7 +157,7 @@ type NymSignatureVerifier struct {
 	CSP           bccsp.BCCSP
 	IPK           bccsp.Key
 	NymPK         bccsp.Key
-	SchemaManager SchemaManager
+	SchemaManager schema.Manager
 	Schema        Schema
 }
 

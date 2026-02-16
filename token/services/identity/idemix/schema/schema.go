@@ -13,6 +13,21 @@ import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 )
 
+//go:generate counterfeiter -o ../mock/bccsp.go -fake-name BCCSP github.com/IBM/idemix/bccsp/types.BCCSP
+//go:generate counterfeiter -o ../mock/key.go -fake-name Key github.com/IBM/idemix/bccsp/types.Key
+
+// Manager handles the various credential schemas. A credential schema
+// contains information about the number of attributes, which attributes
+// must be disclosed when creating proofs, the format of the attributes etc.
+//
+//go:generate counterfeiter -o ../mock/schema_manager.go -fake-name SchemaManager . Manager
+type Manager interface {
+	// EidNymAuditOpts returns the options that must be used to audit an EIDNym
+	EidNymAuditOpts(schema string, attrs [][]byte) (*bccsp.EidNymAuditOpts, error)
+	// RhNymAuditOpts returns the options that must be used to audit an RhNym
+	RhNymAuditOpts(schema string, attrs [][]byte) (*bccsp.RhNymAuditOpts, error)
+}
+
 const (
 	eidIdx = 2
 	rhIdx  = 3

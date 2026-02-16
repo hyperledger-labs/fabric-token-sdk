@@ -12,6 +12,7 @@ import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 )
 
 type DeserializedIdentity struct {
@@ -29,7 +30,7 @@ type Deserializer struct {
 	VerType         bccsp.VerificationType
 	NymEID          []byte
 	RhNym           []byte
-	SchemaManager   SchemaManager
+	SchemaManager   schema.Manager
 	Schema          string
 }
 
@@ -79,10 +80,7 @@ func (d *Deserializer) DeserializeAgainstNymEID(identity []byte, nymEID []byte) 
 		}
 	}
 
-	id, err := NewIdentity(idemix, NymPublicKey, serialized.Proof, d.VerType, d.SchemaManager, d.Schema)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot deserialize")
-	}
+	id := NewIdentity(idemix, NymPublicKey, serialized.Proof, d.VerType, d.SchemaManager, d.Schema)
 	if err := id.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cannot deserialize, invalid identity")
 	}
