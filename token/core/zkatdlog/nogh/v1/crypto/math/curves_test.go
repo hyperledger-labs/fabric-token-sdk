@@ -69,7 +69,7 @@ func TestPowerOfTwoAndSum(t *testing.T) {
 	// compute sum iteratively
 	n := uint64(10)
 	iter := c.NewZrFromUint64(0)
-	for i := uint64(0); i < n; i++ {
+	for i := range n {
 		p := c.NewZrFromUint64(2).PowMod(c.NewZrFromUint64(i))
 		iter = c.ModAdd(iter, p, c.GroupOrder)
 	}

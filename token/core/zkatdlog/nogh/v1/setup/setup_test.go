@@ -496,7 +496,7 @@ func TestGeneratePedersenParameters(t *testing.T) {
 	assert.Len(t, pp.PedersenGenerators, 3)
 
 	// Test all generators are different
-	for i := 0; i < len(pp.PedersenGenerators); i++ {
+	for i := range len(pp.PedersenGenerators) {
 		for j := i + 1; j < len(pp.PedersenGenerators); j++ {
 			assert.False(t, pp.PedersenGenerators[i].Equals(pp.PedersenGenerators[j]))
 		}

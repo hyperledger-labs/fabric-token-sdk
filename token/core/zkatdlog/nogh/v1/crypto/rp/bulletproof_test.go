@@ -116,7 +116,7 @@ func BenchmarkBFProver(b *testing.B) {
 	require.NoError(b, pp.Start())
 	defer pp.Stop()
 	envs := make([]*bfSetup, 0, 128)
-	for i := 0; i < 128; i++ {
+	for range 128 {
 		setup, err := newBfSetup(math.BLS12_381_BBS_GURVY)
 		require.NoError(b, err)
 		envs = append(envs, setup)

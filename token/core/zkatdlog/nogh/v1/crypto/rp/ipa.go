@@ -340,7 +340,7 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 	l := len(left) / 2
 	leftPrime := make([]*mathlib.Zr, l)
 	rightPrime := make([]*mathlib.Zr, l)
-	for i := 0; i < l; i++ {
+	for i := range l {
 		// a_i = a_ix + a_{i+len(left)/2}x^{-1}
 		leftPrime[i] = c.ModAddMul2(left[i], x, left[i+l], xInv, c.GroupOrder)
 
@@ -355,7 +355,7 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 // as a function of the old generators,  x and 1/x
 func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*mathlib.G1, []*mathlib.G1) {
 	l := len(leftGen) / 2
-	for i := 0; i < l; i++ {
+	for i := range l {
 		// G_i = G_i^x*G_{i+len(left)/2}^{1/x}
 		leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
 		// H_i = H_i^{1/x}*H_{i+len(right)/2}^{x}
@@ -410,11 +410,11 @@ func commitVectorPlusOne(
 
 func cloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.G1, []*mathlib.G1) {
 	leftGen := make([]*mathlib.G1, len(LeftGenerators))
-	for i := 0; i < len(LeftGenerators); i++ {
+	for i := range LeftGenerators {
 		leftGen[i] = LeftGenerators[i].Copy()
 	}
 	rightGen := make([]*mathlib.G1, len(RightGenerators))
-	for i := 0; i < len(RightGenerators); i++ {
+	for i := range RightGenerators {
 		rightGen[i] = RightGenerators[i].Copy()
 	}
 	return leftGen, rightGen

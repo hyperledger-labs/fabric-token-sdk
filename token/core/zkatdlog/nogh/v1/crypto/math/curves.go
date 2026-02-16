@@ -130,13 +130,13 @@ func init() {
 	for _, id := range curveIDs {
 		c := math.Curves[id]
 		values := make(map[uint64]*math.Zr, NumBits)
-		for i := 0; i < NumBits; i++ {
+		for i := range NumBits {
 			values[uint64(i)] = c.NewZrFromUint64(uint64(i)) // #nosec G115
 		}
 		valueCache[id] = values
 
 		powers := make(map[uint64]*math.Zr, NumBits)
-		for i := 0; i < NumBits; i++ {
+		for i := range NumBits {
 			// powers[i] = 2^i
 			if i == 0 {
 				powers[0] = values[1]
@@ -150,7 +150,7 @@ func init() {
 		ip2 := ipy
 		// ip2s[n] stores sum_{i=0..n-1} 2^i and keys start at 1
 		ip2s := make(map[uint64]*math.Zr, NumBits)
-		for i := 0; i < NumBits; i++ {
+		for i := range NumBits {
 			// ip2 = ip2 + 2^i
 			ip2 = c.ModAdd(ip2, powers[uint64(i)], c.GroupOrder) // #nosec G115
 			ip2s[uint64(i+1)] = ip2                              // #nosec G115

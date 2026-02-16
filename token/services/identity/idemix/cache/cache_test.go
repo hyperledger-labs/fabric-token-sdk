@@ -46,11 +46,11 @@ func TestIdentityCacheForRace(t *testing.T) {
 	numRoutines := 4
 	wg := sync.WaitGroup{}
 	wg.Add(numRoutines)
-	for i := 0; i < numRoutines; i++ {
+	for range numRoutines {
 		go func() {
 			defer wg.Done()
 
-			for i := 0; i < 100; i++ {
+			for range 100 {
 				id, err := c.Identity(t.Context(), nil)
 				assert.NoError(t, err)
 				assert.Equal(t, driver.Identity("hello world"), id.Identity)

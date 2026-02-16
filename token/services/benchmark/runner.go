@@ -167,7 +167,7 @@ func RunBenchmark[T any](
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for i := 0; i < cfg.Workers; i++ {
+	for i := range cfg.Workers {
 		workerID := i
 		go func() {
 			defer endWg.Done()
@@ -287,7 +287,7 @@ func measureMemory[T any](setup func() T, work func(T) error) (bytes, allocs uin
 	const samples = 5
 	data := setup()
 
-	for i := 0; i < samples; i++ {
+	for range samples {
 		runtime.GC()
 		time.Sleep(10 * time.Millisecond)
 		var m1, m2 runtime.MemStats
@@ -327,7 +327,7 @@ func analyzeResults(
 		for curr != nil {
 			limit := curr.idx
 			totalOps += uint64(limit) // #nosec G115
-			for k := 0; k < limit; k++ {
+			for k := range limit {
 				lat := curr.data[k]
 				if lat == 0 {
 					continue
@@ -614,7 +614,7 @@ func (r Result) printHeatmap(w *tabwriter.Writer) {
 		}
 
 		bar := ""
-		for i := 0; i < barLen; i++ {
+		for range barLen {
 			bar += "█"
 		}
 
@@ -738,7 +738,7 @@ func calcHistogramImproved(latencies []time.Duration, min, max time.Duration, bu
 	}
 
 	currLower := float64(min)
-	for i := 0; i < buckets; i++ {
+	for i := range buckets {
 		currUpper := currLower * factor
 		if i == buckets-1 {
 			currUpper = float64(max)

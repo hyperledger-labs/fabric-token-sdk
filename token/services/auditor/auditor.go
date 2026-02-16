@@ -204,7 +204,7 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 		return errors.WithMessagef(err, "failed listing tokens for [%s]", filter.IDs())
 	}
 	precision := r.tms.PublicParametersManager().PublicParameters().Precision()
-	for i := 0; i < filter.Count(); i++ {
+	for i := range filter.Count() {
 		item := filter.At(i)
 		item.EnrollmentID = targetEID
 		item.Owner = tokens[i].Owner

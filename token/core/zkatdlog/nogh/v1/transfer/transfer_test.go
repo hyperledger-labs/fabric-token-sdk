@@ -357,7 +357,7 @@ func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkT
 	}
 
 	entries := make([]singleProverEnv, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
 		if err != nil {
 			return nil, err

@@ -351,7 +351,7 @@ func (t *Translator) commitTransferAction(ctx context.Context, transferAction Tr
 	graphNonHiding := !transferAction.IsGraphHiding()
 
 	// store outputs
-	for i := 0; i < transferAction.NumOutputs(); i++ {
+	for i := range transferAction.NumOutputs() {
 		if !transferAction.IsRedeemAt(i) {
 			// store output
 			output, err := transferAction.SerializeOutputAt(i)

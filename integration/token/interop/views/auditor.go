@@ -65,7 +65,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 		}
 	}
 
-	for i := 0; i < inputs.Count(); i++ {
+	for i := range inputs.Count() {
 		input, err := htlc.ToInput(inputs.At(i))
 		assert.NoError(err, "cannot get htlc input wrapper")
 		if !input.IsHTLC() {
@@ -78,7 +78,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	}
 
 	now := time.Now()
-	for i := 0; i < outputs.Count(); i++ {
+	for i := range outputs.Count() {
 		output, err := htlc.ToOutput(outputs.At(i))
 		assert.NoError(err, "cannot get htlc output wrapper")
 		if !output.IsHTLC() {

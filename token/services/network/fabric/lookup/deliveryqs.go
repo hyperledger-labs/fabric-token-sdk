@@ -126,6 +126,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 					continue
 				}
 
+				//nolint:intrange
 				for i := 0; i < rws.NumWrites(namespace); i++ {
 					k, v, err := rws.GetWriteAt(namespace, i)
 					if err != nil {

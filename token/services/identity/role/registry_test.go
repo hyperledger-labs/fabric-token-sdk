@@ -224,7 +224,7 @@ func TestWalletByID_ConcurrentCreation(t *testing.T) {
 	var wg sync.WaitGroup
 	res := make([]driver.Wallet, 5)
 	errs := make([]error, 5)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -239,7 +239,7 @@ func TestWalletByID_ConcurrentCreation(t *testing.T) {
 	close(start)
 	wg.Wait()
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		require.NoError(t, errs[i])
 		require.Equal(t, "wc", res[i].ID())
 	}

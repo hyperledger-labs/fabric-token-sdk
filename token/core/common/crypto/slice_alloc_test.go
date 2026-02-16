@@ -16,7 +16,7 @@ import (
 // helper to create test slices
 func makeSlices(num, size int) [][]byte {
 	s := make([][]byte, num)
-	for i := 0; i < num; i++ {
+	for i := range num {
 		b := make([]byte, size)
 		for j := range b {
 			b[j] = byte((i + j) % 256)
@@ -32,7 +32,7 @@ func avgAllocBytes(fn func(), runs int) uint64 {
 	runtime.GC()
 	var before runtime.MemStats
 	runtime.ReadMemStats(&before)
-	for i := 0; i < runs; i++ {
+	for range runs {
 		fn()
 	}
 	runtime.GC()

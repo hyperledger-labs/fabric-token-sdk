@@ -164,7 +164,7 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 		return nil, err
 	}
 	outputs := make([]*token.Token, benchmarkCase.NumOutputs)
-	for i := 0; i < benchmarkCase.NumOutputs; i++ {
+	for i := range benchmarkCase.NumOutputs {
 		outputs[i] = &token.Token{
 			Owner:    ownerID,
 			Quantity: token.NewQuantityFromUInt64(uint64(i*10 + 10)).Hex(), //nolint:gosec
@@ -176,7 +176,7 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 	numInputs := benchmarkCase.NumInputs
 	ids := make([]*token.ID, numInputs)
 	values := make([]uint64, numInputs)
-	for i := 0; i < numInputs; i++ {
+	for i := range numInputs {
 		values[i] = uint64(i*10 + 10) //nolint:gosec
 	}
 	baseTokens, metadata, err := v1token.GetTokensWithWitness(values, "ABC", pp.PedersenGenerators, math.Curves[pp.Curve])
@@ -247,7 +247,7 @@ type benchmarkTransferEnv struct {
 // newBenchmarkTransferEnv creates a new benchmark transfer environment with 'n' transfer environments.
 func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*benchmarkTransferEnv, error) {
 	envs := make([]*transferEnv, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		env, err := newTransferEnv(benchmarkCase, configurations)
 		if err != nil {
 			return nil, err
