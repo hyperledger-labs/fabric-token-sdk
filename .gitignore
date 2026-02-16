@@ -8,3 +8,5 @@ go.work.sum
 fabric-samples/
 fabric-smart-client/
 /.bob/
+cmd/token_validation_service/example-*.txt
+cmd/token_validation_service/out/
