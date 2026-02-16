@@ -61,38 +61,45 @@ func TestTypeAndSumProof_Validate(t *testing.T) {
 	proof := &transfer.TypeAndSumProof{}
 	err := proof.Validate(TestCurve)
 	assert.Error(t, err)
+	assert.ErrorIs(t, err, transfer.ErrInvalidCommitmentToType)
 	assert.Contains(t, err.Error(), "CommitmentToType is invalid")
 
 	proof.CommitmentToType = c.GenG1.Copy()
 	proof.InputBlindingFactors = []*math.Zr{nil}
 	err = proof.Validate(TestCurve)
 	assert.Error(t, err)
+	assert.ErrorIs(t, err, transfer.ErrInvalidInputBlindingFactors)
 	assert.Contains(t, err.Error(), "InputBlindingFactors are invalid")
 
 	proof.InputBlindingFactors = []*math.Zr{c.NewZrFromInt(1)}
 	proof.InputValues = []*math.Zr{nil}
 	err = proof.Validate(TestCurve)
 	assert.Error(t, err)
+	assert.ErrorIs(t, err, transfer.ErrInvalidInputValues)
 	assert.Contains(t, err.Error(), "InputValues are invalid")
 
 	proof.InputValues = []*math.Zr{c.NewZrFromInt(1)}
 	err = proof.Validate(TestCurve)
 	assert.Error(t, err)
+	assert.ErrorIs(t, err, transfer.ErrInvalidProofType)
 	assert.Contains(t, err.Error(), "Type is invalid")
 
 	proof.Type = c.NewZrFromInt(1)
 	err = proof.Validate(TestCurve)
 	assert.Error(t, err)
+	assert.ErrorIs(t, err, transfer.ErrInvalidTypeBlindingFactor)
 	assert.Contains(t, err.Error(), "TypeBlindingFactor is invalid")
 
 	proof.TypeBlindingFactor = c.NewZrFromInt(1)
 	err = proof.Validate(TestCurve)
 	assert.Error(t, err)
+	assert.ErrorIs(t, err, transfer.ErrInvalidEqualityOfSum)
 	assert.Contains(t, err.Error(), "EqualityOfSum is invalid")
 
 	proof.EqualityOfSum = c.NewZrFromInt(1)
 	err = proof.Validate(TestCurve)
 	assert.Error(t, err)
+	assert.ErrorIs(t, err, transfer.ErrInvalidChallenge)
 	assert.Contains(t, err.Error(), "Challenge is invalid")
 
 	proof.Challenge = c.NewZrFromInt(1)

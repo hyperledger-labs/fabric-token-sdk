@@ -54,10 +54,19 @@ func TestSender(t *testing.T) {
 		env, err := newSenderEnv(nil, 3, 2)
 		require.NoError(t, err)
 
-		transfer, _, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
+		tr, inf, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
 		require.NoError(t, err)
-		assert.NotNil(t, transfer)
-		raw, err := transfer.Serialize()
+		assert.NotNil(t, tr)
+		assert.Len(t, inf, 2)
+		assert.Equal(t, 3, tr.NumInputs())
+		assert.Equal(t, 2, tr.NumOutputs())
+		for i := range inf {
+			assert.Equal(t, token2.Type("ABC"), inf[i].Type)
+			val, err := inf[i].Value.Uint()
+			assert.NoError(t, err)
+			assert.Equal(t, env.outvalues[i], val)
+		}
+		raw, err := tr.Serialize()
 		require.NoError(t, err)
 
 		sig, err := env.sender.SignTokenActions(raw)

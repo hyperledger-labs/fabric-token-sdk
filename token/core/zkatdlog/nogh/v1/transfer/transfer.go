@@ -45,17 +45,17 @@ func (p *Proof) Deserialize(bytes []byte) error {
 // Validate ensures the proof components are present and well-formed.
 func (p *Proof) Validate(curve math.CurveID) error {
 	if p.TypeAndSum == nil {
-		return ErrMissingTypeAndSumProof
+		return errors.Join(ErrMissingTypeAndSumProof, ErrInvalidTransferProof)
 	}
 	if err := p.TypeAndSum.Validate(curve); err != nil {
-		return errors.Wrapf(err, "invalid transfer proof")
+		return errors.Join(err, ErrInvalidSumAndTypeProof, ErrInvalidTransferProof)
 	}
 	if p.RangeCorrectness == nil {
 		return nil
 	}
 	err := p.RangeCorrectness.Validate(curve)
 	if err != nil {
-		return errors.Wrapf(err, "invalid transfer proof")
+		return errors.Join(err, ErrInvalidRangeProof, ErrInvalidTransferProof)
 	}
 
 	return nil

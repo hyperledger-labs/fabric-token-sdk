@@ -30,12 +30,14 @@ func TestAction_Validate(t *testing.T) {
 		name          string
 		action        *transfer.Action
 		wantErr       bool
+		expectedErr   error
 		expectedError string
 	}{
 		{
 			name:          "",
 			action:        &transfer.Action{},
 			wantErr:       true,
+			expectedErr:   transfer.ErrInvalidInputs,
 			expectedError: "invalid number of token inputs, expected at least 1",
 		},
 		{
@@ -44,6 +46,7 @@ func TestAction_Validate(t *testing.T) {
 				Inputs: []*transfer.ActionInput{},
 			},
 			wantErr:       true,
+			expectedErr:   transfer.ErrInvalidInputs,
 			expectedError: "invalid number of token inputs, expected at least 1",
 		},
 		{
@@ -54,6 +57,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   transfer.ErrEmptyInput,
 			expectedError: "invalid input at index [0], empty input: invalid input, empty input",
 		},
 		{
@@ -68,6 +72,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   transfer.ErrEmptyInputID,
 			expectedError: "invalid input's ID at index [0], it is empty: invalid input's ID, it is empty",
 		},
 		{
@@ -82,6 +87,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   transfer.ErrEmptyInputTxID,
 			expectedError: "invalid input's ID at index [0], tx id is empty: invalid input's ID, tx id is empty",
 		},
 		{
@@ -96,6 +102,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   transfer.ErrEmptyInputToken,
 			expectedError: "invalid input's token at index [0], empty token: invalid input's token, empty token",
 		},
 		{
@@ -113,6 +120,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   token2.ErrEmptyOwner,
 			expectedError: "invalid input token at index [0]: token owner cannot be empty",
 		},
 		{
@@ -130,6 +138,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   token2.ErrEmptyTokenData,
 			expectedError: "invalid input token at index [0]: token data cannot be empty",
 		},
 		{
@@ -147,6 +156,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   transfer.ErrInvalidOutputs,
 			expectedError: "invalid number of token outputs, expected at least 1",
 		},
 		{
@@ -164,6 +174,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   token2.ErrMissingFabToken,
 			expectedError: "invalid input's upgrade witness at index [0]: missing FabToken",
 		},
 		{
@@ -183,6 +194,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   token2.ErrMissingFabTokenOwner,
 			expectedError: "invalid input's upgrade witness at index [0]: missing FabToken.Owner",
 		},
 		{
@@ -204,6 +216,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   token2.ErrMissingFabTokenType,
 			expectedError: "invalid input's upgrade witness at index [0]: missing FabToken.Type",
 		},
 		{
@@ -226,6 +239,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   token2.ErrMissingFabTokenQuantity,
 			expectedError: "invalid input's upgrade witness at index [0]: missing FabToken.Quantity",
 		},
 		{
@@ -249,6 +263,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   token2.ErrMissingUpgradeBlindingFactor,
 			expectedError: "invalid input's upgrade witness at index [0]: missing BlindingFactor",
 		},
 		{
@@ -273,6 +288,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   transfer.ErrInvalidOutputs,
 			expectedError: "invalid number of token outputs, expected at least 1",
 		},
 		{
@@ -300,6 +316,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   transfer.ErrEmptyOutputToken,
 			expectedError: "invalid output token at index [0]: invalid output token, empty token",
 		},
 		{
@@ -327,6 +344,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   token2.ErrEmptyTokenData,
 			expectedError: "invalid output at index [0]: token data cannot be empty",
 		},
 		{
@@ -356,6 +374,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
+			expectedErr:   token2.ErrEmptyTokenData,
 			expectedError: "invalid output at index [0]: token data cannot be empty",
 		},
 		{
@@ -387,6 +406,7 @@ func TestAction_Validate(t *testing.T) {
 				Issuer: []byte(nil),
 			},
 			wantErr:       true,
+			expectedErr:   transfer.ErrMissingIssuer,
 			expectedError: "expected issuer for a redeem action",
 		},
 		{
@@ -426,6 +446,7 @@ func TestAction_Validate(t *testing.T) {
 			err := tt.action.Validate()
 			if tt.wantErr {
 				require.Error(t, err)
+				require.ErrorIs(t, err, tt.expectedErr)
 				require.EqualError(t, err, tt.expectedError)
 			} else {
 				require.NoError(t, err)
@@ -438,16 +459,20 @@ func TestSerialization(t *testing.T) {
 	action := randomAction(math.Curves[TestCurve], rand.Reader, t)
 	raw, err := action.Serialize()
 	require.NoError(t, err, "failed to serialize a new transfer action")
+	assert.NotNil(t, raw)
 
 	action2, err := transfer.NewActionFromProtos(raw)
 	require.NoError(t, err, "failed to deserialize a new transfer action")
+	assert.NotNil(t, action2)
 	assert.Equal(t, action, action2, "deserialized action is not equal to the original one")
 
 	raw2, err := action2.Serialize()
 	require.NoError(t, err, "failed to serialize a new transfer action")
+	assert.NotNil(t, raw2)
 
 	action3, err := transfer.NewActionFromProtos(raw2)
 	require.NoError(t, err, "failed to deserialize a new transfer action")
+	assert.NotNil(t, action3)
 	assert.Equal(t, action2, action3, "deserialized action is not equal to the original one")
 }
 
@@ -484,6 +509,7 @@ func TestNewActionFromProtos(t *testing.T) {
 	// serialize it
 	raw, err := action.Serialize()
 	assert.NoError(t, err)
+	assert.NotNil(t, raw)
 
 	// deserialize it
 	action2 := &transfer.Action{}
@@ -635,6 +661,7 @@ func randomAction(curve *math.Curve, rand io.Reader, b require.TestingT) *transf
 	proof := getRandomBytes(b, 32)
 	action, err := transfer.NewAction(tokenIDs, inputToken, commitments, owners, proof)
 	require.NoError(b, err, "failed to create a new transfer action")
+	assert.NotNil(b, action)
 	action.Metadata = map[string][]byte{
 		"key1": getRandomBytes(b, 32),
 		"key2": getRandomBytes(b, 32),
@@ -730,22 +757,61 @@ func TestAction_SerializeOutputAt(t *testing.T) {
 	raw, err := action.SerializeOutputAt(0)
 	assert.NoError(t, err)
 	assert.NotNil(t, raw)
+	// let's make sure the output is as expected
+	raw2, err := action.Outputs[0].Serialize()
+	require.NoError(t, err)
+	assert.Equal(t, raw, raw2)
 }
 
 func TestAction_GetSerializedInputs(t *testing.T) {
 	c := math.Curves[TestCurve]
+
+	// case 1: multiple inputs including nil and upgrade witness
 	action := &transfer.Action{
 		Inputs: []*transfer.ActionInput{
 			{
-				ID: &token.ID{TxId: "txid", Index: 0},
+				ID: &token.ID{TxId: "txid1", Index: 0},
 				Token: &token2.Token{
-					Owner: []byte("owner"),
+					Owner: []byte("owner1"),
 					Data:  c.GenG1.Copy(),
+				},
+			},
+			nil,
+			{
+				ID: &token.ID{TxId: "txid2", Index: 1},
+				UpgradeWitness: &token2.UpgradeWitness{
+					FabToken: &fabtokenv1.Output{
+						Owner:    []byte("owner2"),
+						Type:     "type2",
+						Quantity: "100",
+					},
+					BlindingFactor: c.NewZrFromInt(1),
 				},
 			},
 		},
 	}
 	res, err := action.GetSerializedInputs()
 	assert.NoError(t, err)
-	assert.Len(t, res, 1)
+	assert.NotNil(t, res)
+	assert.Len(t, res, 3)
+	assert.NotNil(t, res[0])
+	assert.Nil(t, res[1])
+	assert.NotNil(t, res[2])
+
+	// case 2: Token is nil (panic path if not handled)
+	actionErr := &transfer.Action{
+		Inputs: []*transfer.ActionInput{
+			{
+				ID:    &token.ID{TxId: "txid1", Index: 0},
+				Token: nil,
+			},
+		},
+	}
+	// Action.GetSerializedInputs will panic if Token is nil because it calls Token.Serialize()
+	assert.Panics(t, func() {
+		_, _ = actionErr.GetSerializedInputs()
+	})
+	err = actionErr.Validate()
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrEmptyInputToken)
 }

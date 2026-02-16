@@ -38,14 +38,14 @@ type TypeAndSumProof struct {
 func (p *TypeAndSumProof) Serialize() ([]byte, error) {
 	ibf, err := asn1.NewElementArray(p.InputBlindingFactors)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize input blinding-factors")
+		return nil, errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 	iv, err := asn1.NewElementArray(p.InputValues)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize input values")
+		return nil, errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 
-	return asn1.MarshalMath(
+	raw, err := asn1.MarshalMath(
 		p.CommitmentToType,
 		ibf,
 		iv,
@@ -54,42 +54,46 @@ func (p *TypeAndSumProof) Serialize() ([]byte, error) {
 		p.EqualityOfSum,
 		p.Challenge,
 	)
+	if err != nil {
+		return nil, errors.Join(err, ErrInvalidSumAndTypeProof)
+	}
+	return raw, nil
 }
 
 // Deserialize un-marshals the TypeAndSumProof from bytes.
 func (p *TypeAndSumProof) Deserialize(bytes []byte) error {
 	unmarshaller, err := asn1.NewUnmarshaller(bytes)
 	if err != nil {
-		return errors.Wrapf(err, "failed to prepare unmarshaller")
+		return errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 
 	p.CommitmentToType, err = unmarshaller.NextG1()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize commitment type")
+		return errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 	p.InputBlindingFactors, err = unmarshaller.NextZrArray()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize input blinding-factors")
+		return errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 	p.InputValues, err = unmarshaller.NextZrArray()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize input values")
+		return errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 	p.Type, err = unmarshaller.NextZr()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize type")
+		return errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 	p.TypeBlindingFactor, err = unmarshaller.NextZr()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize type blinding factor")
+		return errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 	p.EqualityOfSum, err = unmarshaller.NextZr()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize equality of sum")
+		return errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 	p.Challenge, err = unmarshaller.NextZr()
 	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize challenge")
+		return errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
 
 	return nil
@@ -98,25 +102,25 @@ func (p *TypeAndSumProof) Deserialize(bytes []byte) error {
 // Validate ensures the proof elements are valid for the given curve.
 func (p *TypeAndSumProof) Validate(curveID math.CurveID) error {
 	if err := math2.CheckElement(p.CommitmentToType, curveID); err != nil {
-		return errors.Wrapf(err, "CommitmentToType is invalid")
+		return errors.Join(err, ErrInvalidCommitmentToType, ErrInvalidSumAndTypeProof)
 	}
 	if err := math2.CheckZrElements(p.InputBlindingFactors, curveID, uint64(len(p.InputBlindingFactors))); err != nil {
-		return errors.Wrapf(err, "InputBlindingFactors are invalid")
+		return errors.Join(err, ErrInvalidInputBlindingFactors, ErrInvalidSumAndTypeProof)
 	}
 	if err := math2.CheckZrElements(p.InputValues, curveID, uint64(len(p.InputValues))); err != nil {
-		return errors.Wrapf(err, "InputValues are invalid")
+		return errors.Join(err, ErrInvalidInputValues, ErrInvalidSumAndTypeProof)
 	}
 	if err := math2.CheckBaseElement(p.Type, curveID); err != nil {
-		return errors.Wrapf(err, "Type is invalid")
+		return errors.Join(err, ErrInvalidProofType, ErrInvalidSumAndTypeProof)
 	}
 	if err := math2.CheckBaseElement(p.TypeBlindingFactor, curveID); err != nil {
-		return errors.Wrapf(err, "TypeBlindingFactor is invalid")
+		return errors.Join(err, ErrInvalidTypeBlindingFactor, ErrInvalidSumAndTypeProof)
 	}
 	if err := math2.CheckBaseElement(p.EqualityOfSum, curveID); err != nil {
-		return errors.Wrapf(err, "EqualityOfSum is invalid")
+		return errors.Join(err, ErrInvalidEqualityOfSum, ErrInvalidSumAndTypeProof)
 	}
 	if err := math2.CheckBaseElement(p.Challenge, curveID); err != nil {
-		return errors.Wrapf(err, "Challenge is invalid")
+		return errors.Join(err, ErrInvalidChallenge, ErrInvalidSumAndTypeProof)
 	}
 
 	return nil

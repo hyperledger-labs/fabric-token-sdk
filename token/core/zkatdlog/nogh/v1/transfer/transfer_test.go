@@ -28,17 +28,19 @@ var (
 	TestCurve = math2.BLS12_381_BBS_GURVY_FAST_RNG
 )
 
-func TestProof_Validate(t *testing.T) {
+func TestProof_Validate_ErrConditions(t *testing.T) {
 	proof := &transfer.Proof{}
 	err := proof.Validate(math.BN254)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid transfer proof")
+	assert.ErrorIs(t, err, transfer.ErrMissingTypeAndSumProof)
+	assert.Contains(t, err.Error(), "invalid transfer proof: missing type-and-sum proof")
 
 	c := math.Curves[TestCurve]
 	proof.TypeAndSum = &transfer.TypeAndSumProof{}
 	err = proof.Validate(TestCurve)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid transfer proof")
+	assert.ErrorIs(t, err, transfer.ErrInvalidCommitmentToType)
+	assert.ErrorIs(t, err, transfer.ErrInvalidTransferProof)
 
 	// valid type and sum, nil range correctness
 	proof.TypeAndSum = &transfer.TypeAndSumProof{
@@ -59,17 +61,24 @@ func TestProof_Validate(t *testing.T) {
 	}
 	err = proof.Validate(TestCurve)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid transfer proof")
+	assert.ErrorIs(t, err, transfer.ErrInvalidTransferProof)
 }
 
 func TestTransfer(t *testing.T) {
 	t.Run("parameters and witness are initialized correctly", func(t *testing.T) {
 		env, err := newTransferEnv(t)
 		require.NoError(t, err)
-		proof, err := env.prover.Prove()
+		proofRaw, err := env.prover.Prove()
 		require.NoError(t, err)
-		require.NotNil(t, proof)
-		err = env.verifier.Verify(proof)
+		require.NotNil(t, proofRaw)
+
+		proof := &transfer.Proof{}
+		err = proof.Deserialize(proofRaw)
+		require.NoError(t, err)
+		assert.NotNil(t, proof.TypeAndSum)
+		assert.NotNil(t, proof.RangeCorrectness)
+
+		err = env.verifier.Verify(proofRaw)
 		require.NoError(t, err)
 	})
 	t.Run("Output Values > Input Values", func(t *testing.T) {

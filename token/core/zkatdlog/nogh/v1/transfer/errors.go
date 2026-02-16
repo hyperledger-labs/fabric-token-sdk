@@ -49,10 +49,26 @@ var (
 	ErrInvalidTokenWitnessValue = errors.New("invalid token witness value")
 	// ErrInvalidSumAndTypeProof is returned when a sum and type proof is invalid
 	ErrInvalidSumAndTypeProof = errors.New("invalid sum and type proof")
+	// ErrInvalidRangeProof is returned when the range proof is invalid
+	ErrInvalidRangeProof = errors.New("invalid range proof")
 	// ErrMissingSumAndTypeComponents is returned when components are missing from a sum and type proof
 	ErrMissingSumAndTypeComponents = errors.New("invalid sum and type proof: missing components")
 	// ErrMissingSumAndTypeInputValue is returned when an input value is missing from a sum and type proof
 	ErrMissingSumAndTypeInputValue = errors.New("invalid sum and type proof: missing input value")
 	// ErrSumAndTypeChallengeMismatch is returned when there is a challenge mismatch in a sum and type proof
 	ErrSumAndTypeChallengeMismatch = errors.New("invalid sum and type proof: challenge mismatch")
+	// ErrInvalidCommitmentToType is returned when a commitment to type is invalid
+	ErrInvalidCommitmentToType = errors.New("CommitmentToType is invalid")
+	// ErrInvalidInputBlindingFactors is returned when input blinding factors are invalid
+	ErrInvalidInputBlindingFactors = errors.New("InputBlindingFactors are invalid")
+	// ErrInvalidInputValues is returned when input values are invalid
+	ErrInvalidInputValues = errors.New("InputValues are invalid")
+	// ErrInvalidProofType is returned when a proof type is invalid
+	ErrInvalidProofType = errors.New("Type is invalid")
+	// ErrInvalidTypeBlindingFactor is returned when a type blinding factor is invalid
+	ErrInvalidTypeBlindingFactor = errors.New("TypeBlindingFactor is invalid")
+	// ErrInvalidEqualityOfSum is returned when equality of sum is invalid
+	ErrInvalidEqualityOfSum = errors.New("EqualityOfSum is invalid")
+	// ErrInvalidChallenge is returned when a challenge is invalid
+	ErrInvalidChallenge = errors.New("Challenge is invalid")
 )
