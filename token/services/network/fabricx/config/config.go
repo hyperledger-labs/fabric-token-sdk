@@ -46,5 +46,6 @@ func (c *serviceListenerManagerConfig) Type() ManagerType {
 	if v := ManagerType(c.c.GetString(Type)); len(v) > 0 {
 		return v
 	}
+
 	return Notification
 }

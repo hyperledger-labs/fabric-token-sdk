@@ -84,12 +84,13 @@ func NewEventQueue(cfg Config) (*EventQueue, error) {
 
 	// Start worker pool
 	eq.start()
+
 	return eq, nil
 }
 
 // start initializes all worker goroutines
 func (eq *EventQueue) start() {
-	for i := 0; i < eq.workers; i++ {
+	for i := range eq.workers {
 		eq.wg.Add(1)
 		go eq.worker(i)
 	}
@@ -112,6 +113,7 @@ func (eq *EventQueue) worker(id int) {
 			if !ok {
 				// Channel closed, worker exits
 				logger.Debugf("Worker %d shutting down", id)
+
 				return
 			}
 
@@ -123,6 +125,7 @@ func (eq *EventQueue) worker(id int) {
 		case <-eq.ctx.Done():
 			// Context canceled, exit gracefully
 			logger.Debugf("Worker %d received shutdown signal", id)
+
 			return
 		}
 	}
@@ -157,6 +160,7 @@ func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) error {
 	select {
 	case eq.events <- event:
 		logger.Debugf("EnqueueBlocking event: [%v]", event)
+
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
@@ -204,6 +208,7 @@ func (eq *EventQueue) Shutdown(timeout time.Duration) error {
 			logger.Info("All workers shut down gracefully")
 		}
 	})
+
 	return shutdownErr
 }
 
@@ -220,5 +225,6 @@ func (eq *EventQueue) Stats() Stats {
 func (eq *EventQueue) isClosed() bool {
 	eq.mu.RLock()
 	defer eq.mu.RUnlock()
+
 	return eq.closed
 }

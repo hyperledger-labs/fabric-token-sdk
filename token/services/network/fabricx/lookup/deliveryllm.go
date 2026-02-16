@@ -32,6 +32,7 @@ var logger = logging.MustGetLogger()
 // NewListenerManagerProvider returns a new lookup.ListenerManagerProvider instance.
 func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, lmConfig config.ListenerManagerConfig) lookup.ListenerManagerProvider {
 	logger.Debugf("Create Lookup Listener Manager provider with config: %s", lmConfig)
+
 	return newEndorserDeliveryBasedLLMProvider(fnsp, tracerProvider, keyTranslator, events.DeliveryListenerManagerConfig{
 		MapperParallelism:       lmConfig.DeliveryMapperParallelism(),
 		BlockProcessParallelism: lmConfig.DeliveryBlockProcessParallelism(),

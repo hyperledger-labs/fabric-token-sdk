@@ -30,6 +30,7 @@ func (m *mockEvent) Process(ctx context.Context) error {
 	if m.processFunc != nil {
 		return m.processFunc(ctx)
 	}
+
 	return nil
 }
 
@@ -55,7 +56,7 @@ func TestNewEventQueue_ValidConfig(t *testing.T) {
 	assert.False(t, stats.IsClosed)
 
 	err = eq.Shutdown(time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestNewEventQueue_InvalidConfig tests queue creation with invalid configurations
@@ -90,7 +91,7 @@ func TestNewEventQueue_InvalidConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eq, err := queue.NewEventQueue(tt.config)
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.Nil(t, eq)
 			assert.Contains(t, err.Error(), tt.expectErr)
 		})
@@ -106,7 +107,7 @@ func TestEnqueue_Success(t *testing.T) {
 
 	event := &mockEvent{}
 	err = eq.Enqueue(event)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Wait for processing
 	time.Sleep(100 * time.Millisecond)
@@ -125,19 +126,20 @@ func TestEnqueue_QueueFull(t *testing.T) {
 	blockingEvent := &mockEvent{
 		processFunc: func(ctx context.Context) error {
 			<-blockChan
+
 			return nil
 		},
 	}
 
 	// Fill the queue
 	err = eq.Enqueue(blockingEvent)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = eq.Enqueue(blockingEvent)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Next enqueue should fail with queue full
 	err = eq.Enqueue(blockingEvent)
-	assert.ErrorIs(t, err, queue.ErrQueueFull)
+	require.ErrorIs(t, err, queue.ErrQueueFull)
 
 	close(blockChan)
 }
@@ -149,7 +151,7 @@ func TestEnqueue_AfterShutdown(t *testing.T) {
 	require.NoError(t, err)
 
 	err = eq.Shutdown(time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	event := &mockEvent{}
 	err = eq.Enqueue(event)
@@ -166,7 +168,7 @@ func TestEnqueueBlocking_Success(t *testing.T) {
 	ctx := t.Context()
 	event := &mockEvent{}
 	err = eq.EnqueueBlocking(ctx, event)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Wait for processing
 	time.Sleep(100 * time.Millisecond)
@@ -185,6 +187,7 @@ func TestEnqueueBlocking_ContextCancelled(t *testing.T) {
 	blockingEvent := &mockEvent{
 		processFunc: func(ctx context.Context) error {
 			<-blockChan
+
 			return nil
 		},
 	}
@@ -197,7 +200,7 @@ func TestEnqueueBlocking_ContextCancelled(t *testing.T) {
 
 	event := &mockEvent{}
 	err = eq.EnqueueBlocking(ctx, event)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, context.Canceled, err)
 
 	close(blockChan)
@@ -217,6 +220,7 @@ func TestEnqueueBlocking_QueueClosed(t *testing.T) {
 	blockingEvent1 := &mockEvent{
 		processFunc: func(ctx context.Context) error {
 			<-blockChan
+
 			return nil
 		},
 	}
@@ -230,6 +234,7 @@ func TestEnqueueBlocking_QueueClosed(t *testing.T) {
 	blockingEvent2 := &mockEvent{
 		processFunc: func(ctx context.Context) error {
 			<-blockChan
+
 			return nil
 		},
 	}
@@ -272,7 +277,7 @@ func TestEnqueueBlocking_AfterShutdown(t *testing.T) {
 	require.NoError(t, err)
 
 	err = eq.Shutdown(time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := t.Context()
 	event := &mockEvent{}
@@ -289,7 +294,7 @@ func TestEventProcessing_Success(t *testing.T) {
 
 	const numEvents = 20
 	events := make([]*mockEvent, numEvents)
-	for i := 0; i < numEvents; i++ {
+	for i := range numEvents {
 		events[i] = &mockEvent{}
 		err = eq.Enqueue(events[i])
 		require.NoError(t, err)
@@ -318,7 +323,7 @@ func TestEventProcessing_WithError(t *testing.T) {
 	}
 
 	err = eq.Enqueue(event)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Wait for processing
 	time.Sleep(100 * time.Millisecond)
@@ -339,7 +344,7 @@ func TestEventProcessing_WithPanic(t *testing.T) {
 	}
 
 	err = eq.Enqueue(panicEvent)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Wait for panic recovery
 	time.Sleep(200 * time.Millisecond)
@@ -347,7 +352,7 @@ func TestEventProcessing_WithPanic(t *testing.T) {
 	// Enqueue another event to verify worker was restarted
 	normalEvent := &mockEvent{}
 	err = eq.Enqueue(normalEvent)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	time.Sleep(100 * time.Millisecond)
 	assert.True(t, normalEvent.wasProcessed())
@@ -360,14 +365,14 @@ func TestShutdown_Graceful(t *testing.T) {
 	require.NoError(t, err)
 
 	// Enqueue some events
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		event := &mockEvent{}
 		err = eq.Enqueue(event)
 		require.NoError(t, err)
 	}
 
 	err = eq.Shutdown(2 * time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stats := eq.Stats()
 	assert.True(t, stats.IsClosed)
@@ -383,6 +388,7 @@ func TestShutdown_WithTimeout(t *testing.T) {
 	longEvent := &mockEvent{
 		processFunc: func(ctx context.Context) error {
 			time.Sleep(500 * time.Millisecond)
+
 			return nil
 		},
 	}
@@ -404,14 +410,14 @@ func TestShutdown_ZeroTimeout(t *testing.T) {
 	require.NoError(t, err)
 
 	// Enqueue some quick events
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		event := &mockEvent{}
 		err = eq.Enqueue(event)
 		require.NoError(t, err)
 	}
 
 	err = eq.Shutdown(0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestShutdown_Multiple tests multiple shutdown calls
@@ -421,11 +427,11 @@ func TestShutdown_Multiple(t *testing.T) {
 	require.NoError(t, err)
 
 	err = eq.Shutdown(time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Second shutdown should not cause issues
 	err = eq.Shutdown(time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestStats tests queue statistics
@@ -443,10 +449,11 @@ func TestStats(t *testing.T) {
 
 	// Add blocking events to check pending count
 	blockChan := make(chan struct{})
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		event := &mockEvent{
 			processFunc: func(ctx context.Context) error {
 				<-blockChan
+
 				return nil
 			},
 		}
@@ -476,11 +483,11 @@ func TestConcurrentEnqueue(t *testing.T) {
 	var wg sync.WaitGroup
 	events := make([]*mockEvent, numGoroutines*eventsPerGoroutine)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(start int) {
 			defer wg.Done()
-			for j := 0; j < eventsPerGoroutine; j++ {
+			for j := range eventsPerGoroutine {
 				idx := start + j
 				events[idx] = &mockEvent{}
 				err := eq.Enqueue(events[idx])
@@ -516,12 +523,12 @@ func TestConcurrentEnqueueBlocking(t *testing.T) {
 	var wg sync.WaitGroup
 	events := make([]*mockEvent, numGoroutines*eventsPerGoroutine)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(start int) {
 			defer wg.Done()
 			ctx := t.Context()
-			for j := 0; j < eventsPerGoroutine; j++ {
+			for j := range eventsPerGoroutine {
 				idx := start + j
 				events[idx] = &mockEvent{}
 				err := eq.EnqueueBlocking(ctx, events[idx])
@@ -552,7 +559,7 @@ func TestWorkerContextCancellation(t *testing.T) {
 
 	// Enqueue events that check context
 	var processedAfterCancel int32
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		event := &mockEvent{
 			processFunc: func(ctx context.Context) error {
 				select {
@@ -560,6 +567,7 @@ func TestWorkerContextCancellation(t *testing.T) {
 					return ctx.Err()
 				case <-time.After(100 * time.Millisecond):
 					atomic.AddInt32(&processedAfterCancel, 1)
+
 					return nil
 				}
 			},
@@ -587,11 +595,12 @@ func TestQueueDraining(t *testing.T) {
 	const numEvents = 5
 	var processedCount int32
 	events := make([]*mockEvent, numEvents)
-	for i := 0; i < numEvents; i++ {
+	for i := range numEvents {
 		events[i] = &mockEvent{
 			processFunc: func(ctx context.Context) error {
 				atomic.AddInt32(&processedCount, 1)
 				time.Sleep(10 * time.Millisecond)
+
 				return nil
 			},
 		}
@@ -604,7 +613,7 @@ func TestQueueDraining(t *testing.T) {
 
 	// Shutdown with enough timeout for all events
 	err = eq.Shutdown(2 * time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Check that all events were processed
 	count := atomic.LoadInt32(&processedCount)

@@ -135,6 +135,7 @@ func (l *ListenerEvent) Process(ctx context.Context) error {
 		tokenRequestHash = v.Raw
 	}
 	l.Listener.OnStatus(ctx, l.TxID, l.Status, l.StatusMessage, tokenRequestHash)
+
 	return nil
 }
 
@@ -190,6 +191,7 @@ func (t *TxCheck) Process(ctx context.Context) error {
 	logger.Debugf("check for transaction [%s], notify validity", t.TxID)
 
 	t.Listener.OnStatus(ctx, t.TxID, status, "", tokenRequestHash)
+
 	return nil
 }
 
@@ -273,6 +275,7 @@ func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, l
 	}); err != nil {
 		return err
 	}
+
 	return n.lm.AddFinalityListener(txID, NewNSFinalityListener(namespace, l, n.queue, n.queryService, n.keyTranslator))
 }
 

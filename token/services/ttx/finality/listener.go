@@ -61,6 +61,7 @@ func (t *Listener) OnStatus(ctx context.Context, txID string, status int, messag
 		if err != nil {
 			t.logger.Errorf("finality listener on [%s] failed with error: [%+v], retrying...", txID, err)
 		}
+
 		return err
 	}); err != nil {
 		t.logger.Errorf("finality listener on [%s] failed with error: [%+v], stop.", txID, err)
@@ -122,6 +123,7 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 		if err := t.net.AddFinalityListener(t.namespace, txID, t); err != nil {
 			return errors.Wrap(err, "failed to add finality listener")
 		}
+
 		return nil
 	}
 
@@ -132,6 +134,7 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 		return errors.Errorf("<message> [%s]: [%w]", txID, err)
 	}
 	t.logger.InfofContext(ctx, "tx status changed for tx [%s]: [%s] done", txID, status)
+
 	return nil
 }
 

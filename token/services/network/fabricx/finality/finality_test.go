@@ -62,7 +62,7 @@ func TestListenerEvent_Process_Valid(t *testing.T) {
 	assert.Equal(t, ctx, callCtx)
 	assert.Equal(t, txID, callTxID)
 	assert.Equal(t, fdriver.Valid, callStatus)
-	assert.Equal(t, "", callMsg)
+	assert.Empty(t, callMsg)
 	assert.Equal(t, tokenRequestHash, callHash)
 }
 
@@ -306,7 +306,7 @@ func TestTxCheck_Process_Valid(t *testing.T) {
 	assert.Equal(t, ctx, callCtx)
 	assert.Equal(t, txID, callTxID)
 	assert.Equal(t, fdriver.Valid, callStatus)
-	assert.Equal(t, "", callMsg)
+	assert.Empty(t, callMsg)
 	assert.Equal(t, tokenRequestHash, callHash)
 }
 
@@ -413,6 +413,7 @@ func TestNSFinalityListener_OnStatus(t *testing.T) {
 	var enqueuedEvent queue.Event
 	mockQueue.EnqueueBlockingCalls(func(ctx context.Context, event queue.Event) error {
 		enqueuedEvent = event
+
 		return nil
 	})
 
@@ -464,6 +465,7 @@ func TestNSListenerManager_AddFinalityListener(t *testing.T) {
 	var enqueuedEvent queue.Event
 	mockQueue.EnqueueCalls(func(event queue.Event) error {
 		enqueuedEvent = event
+
 		return nil
 	})
 
@@ -657,7 +659,7 @@ func TestOnlyOnceListener_Concurrent(t *testing.T) {
 
 	// Call OnStatus concurrently
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

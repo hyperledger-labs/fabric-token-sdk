@@ -43,6 +43,7 @@ func (c *serviceConfig) Workers() int {
 	if v := c.c.GetInt(Workers); v > 0 {
 		return v
 	}
+
 	return DefaultWorkers
 }
 
@@ -51,5 +52,6 @@ func (c *serviceConfig) QueueSize() int {
 	if v := c.c.GetInt(QueueSize); v > 0 {
 		return v
 	}
+
 	return DefaultQueueSize
 }
