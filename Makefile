@@ -42,7 +42,7 @@ download-fabric:
 .PHONY: unit-tests
 # run standard unit tests
 unit-tests:
-	@go test -cover $(shell go list ./... | grep -v '/integration/' | grep -v 'regression')
+	@go test -coverprofile=profile.cov $(shell go list ./... | grep -v '/integration/' | grep -v 'regression')
 	cd integration/nwo/; go test -cover ./...
 	cd token/services/storage/db/kvs/hashicorp/; go test -cover ./...
 

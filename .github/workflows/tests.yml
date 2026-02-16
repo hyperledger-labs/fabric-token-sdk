@@ -72,6 +72,11 @@ jobs:
       - name: Run ${{ matrix.tests }}
         run: make ${{ matrix.tests }}
 
+      - name: Send coverage to Coveralls
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: profile.cov
+
   itest:
     needs: checks
     runs-on: ubuntu-latest
