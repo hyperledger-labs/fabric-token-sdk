@@ -490,14 +490,14 @@ func TestNewTransfer(t *testing.T) {
 	assert.NotNil(t, action.InputTokens())
 
 	serializedInputs, err := action.GetSerializedInputs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, serializedInputs, 2)
 
 	outputs := action.GetOutputs()
 	assert.Len(t, outputs, 2)
 
 	serializedOutputs, err := action.GetSerializedOutputs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, serializedOutputs, 2)
 }
 
@@ -508,20 +508,20 @@ func TestNewActionFromProtos(t *testing.T) {
 
 	// serialize it
 	raw, err := action.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, raw)
 
 	// deserialize it
 	action2 := &transfer.Action{}
 	err = action2.Deserialize(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// check that the deserialized action is equal to the original one
 	assert.Equal(t, action, action2)
 
 	// create a new action from protos
 	action3, err := transfer.NewActionFromProtos(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, action3)
 	assert.Equal(t, action2, action3)
 }
@@ -589,12 +589,12 @@ func TestAction_ToProtos(t *testing.T) {
 		},
 	}
 	p, err := ai.ToProtos()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, p)
 
 	ai2 := &transfer.ActionInput{}
 	err = ai2.FromProtos(p)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, ai.ID, ai2.ID)
 	assert.Equal(t, ai.Token.Owner, ai2.Token.Owner)
 	assert.True(t, ai.Token.Data.Equals(ai2.Token.Data))
@@ -609,11 +609,11 @@ func TestAction_ToProtos(t *testing.T) {
 		BlindingFactor: c.NewZrFromInt(1),
 	}
 	p, err = ai.ToProtos()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, p)
 
 	err = ai2.FromProtos(p)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, ai.UpgradeWitness.FabToken.Owner, ai2.UpgradeWitness.FabToken.Owner)
 	assert.Equal(t, ai.UpgradeWitness.FabToken.Type, ai2.UpgradeWitness.FabToken.Type)
 	assert.Equal(t, ai.UpgradeWitness.FabToken.Quantity, ai2.UpgradeWitness.FabToken.Quantity)
@@ -675,7 +675,7 @@ func TestAction_Deserialize_ErrorPaths(t *testing.T) {
 	// 1. Invalid proto bytes
 	action := &transfer.Action{}
 	err := action.Deserialize([]byte("invalid"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to deserialize transfer action")
 
 	// 2. Invalid version
@@ -683,9 +683,9 @@ func TestAction_Deserialize_ErrorPaths(t *testing.T) {
 		Version: 100, // Invalid version
 	}
 	raw, err := proto.Marshal(protoAction)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = action.Deserialize(raw)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "expected [1], got [100]: invalid transfer version")
 
 	// 3. Invalid inputs (FromProtos failure)
@@ -700,9 +700,9 @@ func TestAction_Deserialize_ErrorPaths(t *testing.T) {
 		},
 	}
 	raw, err = proto.Marshal(protoAction)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = action.Deserialize(raw)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed unmarshalling inputs")
 
 	// 4. Invalid outputs (FromG1Proto failure)
@@ -717,9 +717,9 @@ func TestAction_Deserialize_ErrorPaths(t *testing.T) {
 		},
 	}
 	raw, err = proto.Marshal(protoAction)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = action.Deserialize(raw)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to deserialize output")
 }
 
@@ -735,10 +735,10 @@ func TestAction_Deserialize_ExtraBranches(t *testing.T) {
 		},
 	}
 	raw, err := proto.Marshal(protoAction)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	action := &transfer.Action{}
 	err = action.Deserialize(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, action.Outputs, 2)
 	assert.Nil(t, action.Outputs[0])
 	assert.Nil(t, action.Outputs[1])
@@ -755,7 +755,7 @@ func TestAction_SerializeOutputAt(t *testing.T) {
 		},
 	}
 	raw, err := action.SerializeOutputAt(0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, raw)
 	// let's make sure the output is as expected
 	raw2, err := action.Outputs[0].Serialize()
@@ -791,7 +791,7 @@ func TestAction_GetSerializedInputs(t *testing.T) {
 		},
 	}
 	res, err := action.GetSerializedInputs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Len(t, res, 3)
 	assert.NotNil(t, res[0])

@@ -60,51 +60,51 @@ func TestTypeAndSumProof_Validate(t *testing.T) {
 	c := math.Curves[TestCurve]
 	proof := &transfer.TypeAndSumProof{}
 	err := proof.Validate(TestCurve)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrInvalidCommitmentToType)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrInvalidCommitmentToType)
 	assert.Contains(t, err.Error(), "CommitmentToType is invalid")
 
 	proof.CommitmentToType = c.GenG1.Copy()
 	proof.InputBlindingFactors = []*math.Zr{nil}
 	err = proof.Validate(TestCurve)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrInvalidInputBlindingFactors)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrInvalidInputBlindingFactors)
 	assert.Contains(t, err.Error(), "InputBlindingFactors are invalid")
 
 	proof.InputBlindingFactors = []*math.Zr{c.NewZrFromInt(1)}
 	proof.InputValues = []*math.Zr{nil}
 	err = proof.Validate(TestCurve)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrInvalidInputValues)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrInvalidInputValues)
 	assert.Contains(t, err.Error(), "InputValues are invalid")
 
 	proof.InputValues = []*math.Zr{c.NewZrFromInt(1)}
 	err = proof.Validate(TestCurve)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrInvalidProofType)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrInvalidProofType)
 	assert.Contains(t, err.Error(), "Type is invalid")
 
 	proof.Type = c.NewZrFromInt(1)
 	err = proof.Validate(TestCurve)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrInvalidTypeBlindingFactor)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrInvalidTypeBlindingFactor)
 	assert.Contains(t, err.Error(), "TypeBlindingFactor is invalid")
 
 	proof.TypeBlindingFactor = c.NewZrFromInt(1)
 	err = proof.Validate(TestCurve)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrInvalidEqualityOfSum)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrInvalidEqualityOfSum)
 	assert.Contains(t, err.Error(), "EqualityOfSum is invalid")
 
 	proof.EqualityOfSum = c.NewZrFromInt(1)
 	err = proof.Validate(TestCurve)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrInvalidChallenge)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrInvalidChallenge)
 	assert.Contains(t, err.Error(), "Challenge is invalid")
 
 	proof.Challenge = c.NewZrFromInt(1)
 	err = proof.Validate(TestCurve)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestTypeAndSumProof_Serialization(t *testing.T) {
@@ -120,19 +120,19 @@ func TestTypeAndSumProof_Serialization(t *testing.T) {
 	}
 
 	raw, err := proof.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, raw)
 
 	proof2 := &transfer.TypeAndSumProof{}
 	err = proof2.Deserialize(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.True(t, proof.CommitmentToType.Equals(proof2.CommitmentToType))
-	assert.Equal(t, len(proof.InputBlindingFactors), len(proof2.InputBlindingFactors))
+	assert.Len(t, proof2.InputBlindingFactors, len(proof.InputBlindingFactors))
 	for i := range proof.InputBlindingFactors {
 		assert.True(t, proof.InputBlindingFactors[i].Equals(proof2.InputBlindingFactors[i]))
 	}
-	assert.Equal(t, len(proof.InputValues), len(proof2.InputValues))
+	assert.Len(t, proof2.InputValues, len(proof.InputValues))
 	for i := range proof.InputValues {
 		assert.True(t, proof.InputValues[i].Equals(proof2.InputValues[i]))
 	}

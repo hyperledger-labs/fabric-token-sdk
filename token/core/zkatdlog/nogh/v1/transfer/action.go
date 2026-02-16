@@ -171,6 +171,7 @@ func NewActionFromProtos(raw []byte) (*Action, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return action, nil
 }
 

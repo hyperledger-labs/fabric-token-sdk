@@ -63,7 +63,7 @@ func TestSender(t *testing.T) {
 		for i := range inf {
 			assert.Equal(t, token2.Type("ABC"), inf[i].Type)
 			val, err := inf[i].Value.Uint()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, env.outvalues[i], val)
 		}
 		raw, err := tr.Serialize()

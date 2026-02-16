@@ -32,15 +32,15 @@ func TestProof_Validate_ErrConditions(t *testing.T) {
 	proof := &transfer.Proof{}
 	err := proof.Validate(math.BN254)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrMissingTypeAndSumProof)
+	require.ErrorIs(t, err, transfer.ErrMissingTypeAndSumProof)
 	assert.Contains(t, err.Error(), "invalid transfer proof: missing type-and-sum proof")
 
 	c := math.Curves[TestCurve]
 	proof.TypeAndSum = &transfer.TypeAndSumProof{}
 	err = proof.Validate(TestCurve)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrInvalidCommitmentToType)
-	assert.ErrorIs(t, err, transfer.ErrInvalidTransferProof)
+	require.ErrorIs(t, err, transfer.ErrInvalidCommitmentToType)
+	require.ErrorIs(t, err, transfer.ErrInvalidTransferProof)
 
 	// valid type and sum, nil range correctness
 	proof.TypeAndSum = &transfer.TypeAndSumProof{
@@ -61,7 +61,7 @@ func TestProof_Validate_ErrConditions(t *testing.T) {
 	}
 	err = proof.Validate(TestCurve)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, transfer.ErrInvalidTransferProof)
+	require.ErrorIs(t, err, transfer.ErrInvalidTransferProof)
 }
 
 func TestTransfer(t *testing.T) {

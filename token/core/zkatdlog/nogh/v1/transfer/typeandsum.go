@@ -57,6 +57,7 @@ func (p *TypeAndSumProof) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Join(err, ErrInvalidSumAndTypeProof)
 	}
+
 	return raw, nil
 }
 
