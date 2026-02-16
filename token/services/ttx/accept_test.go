@@ -77,6 +77,7 @@ func newTestAcceptViewContext(t *testing.T) *TestAcceptViewContext {
 	tokenAPITMS := tokenapi.NewMockedManagementService(t, tmsID)
 	tms.SetTokenManagementServiceStub = func(arg1 *token.Request) error {
 		arg1.SetTokenService(tokenAPITMS)
+
 		return nil
 	}
 	tmsp := &mock2.TokenManagementServiceProvider{}
@@ -239,7 +240,7 @@ func TestAcceptView(t *testing.T) {
 					assert.Contains(t, err.Error(), tc.errorContains)
 				}
 				if tc.expectErr != nil {
-					assert.ErrorIs(t, err, tc.expectErr)
+					require.ErrorIs(t, err, tc.expectErr)
 				}
 			} else {
 				require.NoError(t, err)
