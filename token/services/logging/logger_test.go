@@ -28,9 +28,9 @@ func TestLoggerDebugAllocs(t *testing.T) {
 	allocs := testing.AllocsPerRun(runs, func() {
 		logDebug()
 	})
-	assert.True(t, allocs >= 2)
+	assert.GreaterOrEqual(t, allocs, 2)
 	allocs = testing.AllocsPerRun(runs, func() {
 		logDebugf()
 	})
-	assert.Equal(t, float64(1), allocs)
+	assert.InDeltaf(t, float64(1), allocs, 0.01, "expected no delta from allocs")
 }

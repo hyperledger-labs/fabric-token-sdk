@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestValidator_UnmarshalActions(t *testing.T) {
@@ -27,7 +28,7 @@ func TestValidator_UnmarshalActions(t *testing.T) {
 
 	actions, err := validator.UnmarshalActions(raw)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedActions, actions)
 }
 
@@ -45,7 +46,7 @@ func TestValidator_UnmarshallAndVerify(t *testing.T) {
 
 	actions, err := validator.UnmarshallAndVerify(t.Context(), mockLedger, RequestAnchor(anchor), raw)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedActions, actions)
 }
 
@@ -63,7 +64,7 @@ func TestValidator_UnmarshallAndVerifyWithMetadata(t *testing.T) {
 	mockValidator.VerifyTokenRequestFromRawReturns(expectedActions, expectedMetadata, nil)
 	actions, metadata, err := validator.UnmarshallAndVerifyWithMetadata(t.Context(), mockLedger, RequestAnchor(anchor), raw)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedActions, actions)
 	assert.Equal(t, expectedMetadata, metadata)
 }
@@ -80,7 +81,7 @@ func TestValidator_UnmarshalActions_Error(t *testing.T) {
 
 	actions, err := validator.UnmarshalActions(raw)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, actions)
 }
 
@@ -96,7 +97,7 @@ func TestValidator_UnmarshallAndVerify_Error(t *testing.T) {
 	mockValidator.VerifyTokenRequestFromRawReturns(nil, nil, errors.New("mocked error"))
 	actions, err := validator.UnmarshallAndVerify(t.Context(), mockLedger, RequestAnchor(anchor), raw)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, actions)
 }
 
@@ -111,7 +112,7 @@ func TestValidator_UnmarshallAndVerifyWithMetadata_Error(t *testing.T) {
 	mockValidator := validator.backend.(*mock.Validator)
 	mockValidator.VerifyTokenRequestFromRawReturns(nil, nil, errors.New("mocked error"))
 	actions, metadata, err := validator.UnmarshallAndVerifyWithMetadata(t.Context(), mockLedger, RequestAnchor(anchor), raw)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, actions)
 	assert.Nil(t, metadata)
 }

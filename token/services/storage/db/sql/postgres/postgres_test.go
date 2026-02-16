@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
 	dbtest2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/test-go/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestTokens(t *testing.T) {
@@ -71,7 +71,7 @@ func startContainer(t *testing.T) (func(), string) {
 	t.Helper()
 	cfg := postgres.DefaultConfig(postgres.WithDBName("test-db"))
 	terminate, _, err := postgres.StartPostgres(t.Context(), cfg, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return terminate, cfg.DataSource()
 }

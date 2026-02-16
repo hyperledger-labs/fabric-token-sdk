@@ -26,10 +26,10 @@ import (
 func TestProverVerifier(t *testing.T) {
 	prover, verifier := prepareZKIssue(t, 32, math.BLS12_381_BBS_GURVY, 2)
 	proof, err := prover.Prove()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, proof)
 	err = verifier.Verify(proof)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestIssuer tests the high-level issuer API: generating a ZK issue
@@ -218,10 +218,10 @@ func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
 func prepareZKIssue(t *testing.T, bits uint64, curveID math.CurveID, numOutputs int) (*issue2.Prover, *issue2.Verifier) {
 	t.Helper()
 	pp, err := v1.Setup(bits, nil, curveID)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tw, tokens := prepareInputsForZKIssue(pp, numOutputs)
 	prover, err := issue2.NewProver(tw, tokens, pp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	verifier := issue2.NewVerifier(tokens, pp)
 
 	return prover, verifier

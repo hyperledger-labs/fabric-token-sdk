@@ -56,9 +56,9 @@ func TestTransferService_VerifyTransfer(t *testing.T) {
 			service, action, meta := tt.TestCase()
 			err := service.VerifyTransfer(t.Context(), action, meta)
 			if tt.wantErr == "" {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
-				assert.EqualError(t, err, tt.wantErr)
+				require.EqualError(t, err, tt.wantErr)
 			}
 		})
 	}

@@ -289,7 +289,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			res, err := m.view.Call(m.ctx)
 			if tc.expectError {
 				require.Error(t, err)
-				assert.ErrorIs(t, err, tc.expectErrorType)
+				require.ErrorIs(t, err, tc.expectErrorType)
 				assert.Contains(t, err.Error(), tc.expectErrContain)
 			} else {
 				require.NoError(t, err)

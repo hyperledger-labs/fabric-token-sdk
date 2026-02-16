@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/test-go/testify/require"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ func TestIssueAction_Serialize(t *testing.T) {
 	mockIssueAction.SerializeReturns([]byte{1, 2, 3}, nil)
 	issueAction := &IssueAction{a: mockIssueAction}
 	serialized, err := issueAction.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{1, 2, 3}, serialized)
 }
 
@@ -38,7 +39,7 @@ func TestIssueAction_GetSerializedOutputs(t *testing.T) {
 	mockIssueAction.GetSerializedOutputsReturns(mockSerializedOutputs, nil)
 	issueAction := &IssueAction{a: mockIssueAction}
 	serializedOutputs, err := issueAction.GetSerializedOutputs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, mockSerializedOutputs, serializedOutputs)
 }
 
@@ -73,7 +74,7 @@ func TestTransferAction_Serialize(t *testing.T) {
 	mockTransferAction.SerializeReturns([]byte{1, 2, 3}, nil)
 	transferAction := &TransferAction{mockTransferAction}
 	serialized, err := transferAction.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{1, 2, 3}, serialized)
 }
 
@@ -91,7 +92,7 @@ func TestTransferAction_GetSerializedOutputs(t *testing.T) {
 	mockTransferAction.GetSerializedOutputsReturns(mockSerializedOutputs, nil)
 	transferAction := &TransferAction{mockTransferAction}
 	serializedOutputs, err := transferAction.GetSerializedOutputs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, mockSerializedOutputs, serializedOutputs)
 }
 
@@ -109,7 +110,7 @@ func TestTransferAction_SerializeOutputAt(t *testing.T) {
 	mockTransferAction.SerializeOutputAtReturns(mockSerializedOutput, nil)
 	transferAction := &TransferAction{mockTransferAction}
 	serializedOutput, err := transferAction.SerializeOutputAt(0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, mockSerializedOutput, serializedOutput)
 }
 

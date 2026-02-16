@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/test-go/testify/require"
 )
 
 const (
@@ -65,7 +66,7 @@ func TestInputStream_IsAnyMine(t *testing.T) {
 
 	t.Run("NoInputs", func(t *testing.T) {
 		anyMine, err := is.IsAnyMine(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, anyMine)
 	})
 
@@ -78,7 +79,7 @@ func TestInputStream_IsAnyMine(t *testing.T) {
 		qs.On("IsMine", input2.Id).Return(false, nil).Once()
 
 		anyMine, err := is.IsAnyMine(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, anyMine)
 
 		qs.AssertExpectations(t)
@@ -93,7 +94,7 @@ func TestInputStream_IsAnyMine(t *testing.T) {
 		qs.On("IsMine", input2.Id).Return(true, nil).Once()
 
 		anyMine, err := is.IsAnyMine(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, anyMine)
 
 		qs.AssertExpectations(t)
@@ -106,7 +107,7 @@ func TestInputStream_IsAnyMine(t *testing.T) {
 		qs.On("IsMine", input.Id).Return(false, errors.New("some error")).Once()
 
 		anyMine, err := is.IsAnyMine(ctx)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.False(t, anyMine)
 
 		qs.AssertExpectations(t)
@@ -187,9 +188,9 @@ func TestOutputStream_At(t *testing.T) {
 
 func TestOutputStream_Sum(t *testing.T) {
 	q1, err := token.NewUBigQuantity("100", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	q2, err := token.NewUBigQuantity("200", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	outputs := []*Output{{Quantity: q1}, {Quantity: q2}}
 	stream := NewOutputStream(outputs, 0)
 
@@ -318,9 +319,9 @@ func TestInputStream_IDs(t *testing.T) {
 
 func TestInputStream_Sum(t *testing.T) {
 	q1, err := token.NewUBigQuantity("100", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	q2, err := token.NewUBigQuantity("200", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	inputs := []*Input{{Quantity: q1}, {Quantity: q2}}
 	stream := NewInputStream(nil, inputs, 0)
 

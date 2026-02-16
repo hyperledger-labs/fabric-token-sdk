@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 type qsMock struct{}
@@ -79,7 +80,7 @@ func TestParse(t *testing.T) {
 	os := token.NewOutputStream([]*token.Output{output1}, 64)
 
 	spend, store, err := tokens.parse(ctx, &authMock{}, "tx1", md, is, os, false, 64, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Len(t, spend, 1)
 	assert.Equal(t, "in", spend[0].TxId)
@@ -99,7 +100,7 @@ func TestParse(t *testing.T) {
 	output1.Token.Owner = []byte{}
 	os = token.NewOutputStream([]*token.Output{output1}, 64)
 	spend, store, err = tokens.parse(ctx, &authMock{}, "tx1", md, is, os, false, 64, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, spend, 1)
 	assert.Len(t, store, 0)
 
@@ -152,7 +153,7 @@ func TestParse(t *testing.T) {
 	os = token.NewOutputStream([]*token.Output{output1, output2}, 64)
 
 	spend, store, err = tokens.parse(ctx, &authMock{}, "tx2", md, is, os, false, 64, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, spend, 2)
 	assert.Equal(t, "in1", spend[0].TxId)
 	assert.Equal(t, uint64(1), spend[0].Index)

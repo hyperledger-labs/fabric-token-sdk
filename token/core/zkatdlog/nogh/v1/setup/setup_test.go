@@ -31,12 +31,12 @@ func TestSerialization(t *testing.T) {
 	t.Run("extras is not empty", func(t *testing.T) {
 		issuerPK := testingHelper(t)
 		pp, err := Setup(32, issuerPK, math3.BN254)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, pp.Extras())
 		ser, err := pp.Serialize()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, pp2.Extras())
 	})
 
@@ -44,30 +44,30 @@ func TestSerialization(t *testing.T) {
 		// Use test helper instead of direct file read
 		issuerPK := testingHelper(t)
 		pp, err := Setup(32, issuerPK, math3.BN254)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, pp.Extras())
 		pp.ExtraData = map[string][]byte{
 			"key1": []byte("value1"),
 			"key2": []byte("value2"),
 		}
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		ser, err := pp.Serialize()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, pp, pp2)
 		assert.NotNil(t, pp2.Extras())
 
 		_, err = pp2.Serialize()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// no issuers
-		assert.NoError(t, pp.Validate())
+		require.NoError(t, pp.Validate())
 
 		// with issuers
 		pp.IssuerIDs = []driver.Identity{[]byte("issuer")}
-		assert.NoError(t, pp.Validate())
+		require.NoError(t, pp.Validate())
 	})
 }
 
@@ -175,7 +175,7 @@ func TestRangeProofParamsValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.params.Validate(curve)
 			if tt.expectedError == "" {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
 				assert.Contains(t, err.Error(), tt.expectedError)
 			}
@@ -349,9 +349,9 @@ func TestPublicParamsValidation(t *testing.T) {
 			pp := tt.setupParams()
 			err := pp.Validate()
 			if tt.expectedError == "" {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			}
 		})
@@ -392,16 +392,16 @@ func TestSerializationEdgeCases(t *testing.T) {
 	raw, err := pp.Serialize()
 	require.NoError(t, err)
 	_, err = NewPublicParamsFromBytes(raw, DLogNoGHDriverName, ProtocolV1)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid identifier")
 
 	// Test corrupted data
 	_, err = NewPublicParamsFromBytes([]byte("corrupted"), DLogNoGHDriverName, ProtocolV1)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Test deserialize with invalid proto
 	_, err = NewPublicParamsFromBytes([]byte{0, 1, 2, 3}, DLogNoGHDriverName, ProtocolV1)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestPublicParamsString(t *testing.T) {
@@ -440,7 +440,7 @@ func TestRangeProofParamsGenerators(t *testing.T) {
 		Q:              curveInst.GenG1,
 	}
 	err := params.Validate(curve)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid range proof parameters")
 
 	// Test validation with nil P
@@ -452,7 +452,7 @@ func TestRangeProofParamsGenerators(t *testing.T) {
 		RightGenerators: make([]*math3.G1, 16),
 	}
 	err = params.Validate(curve)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid range proof parameters")
 
 	// Test validation with nil Q
@@ -464,7 +464,7 @@ func TestRangeProofParamsGenerators(t *testing.T) {
 		RightGenerators: make([]*math3.G1, 16),
 	}
 	err = params.Validate(curve)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid range proof parameters")
 }
 
@@ -490,8 +490,8 @@ func TestRangeProofParamsConversion(t *testing.T) {
 
 	assert.Equal(t, original.BitLength, recovered.BitLength)
 	assert.Equal(t, original.NumberOfRounds, recovered.NumberOfRounds)
-	assert.Equal(t, len(original.LeftGenerators), len(recovered.LeftGenerators))
-	assert.Equal(t, len(original.RightGenerators), len(recovered.RightGenerators))
+	assert.Len(t, recovered.LeftGenerators, len(original.LeftGenerators))
+	assert.Len(t, recovered.RightGenerators, len(original.RightGenerators))
 }
 
 func TestGeneratePedersenParameters(t *testing.T) {
@@ -545,7 +545,7 @@ func TestFailedSerialization(t *testing.T) {
 	}
 
 	_, err := pp.Serialize()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to serialize public parameters")
 }
 
@@ -585,7 +585,7 @@ func TestRangeProofParamsValidationWithMismatchedBitLength(t *testing.T) {
 		RightGenerators: make([]*math3.G1, 32),
 	}
 	err := params.Validate(curve)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid range proof parameters: bit length should be")
 }
 
@@ -657,7 +657,7 @@ func TestRangeProofParamsInvalidPoints(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.params.Validate(curve)
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.expectedError)
 		})
 	}

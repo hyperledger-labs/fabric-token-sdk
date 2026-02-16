@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type (
@@ -213,10 +214,10 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 			ctx, check := tt.context()
 			err := AuditingSignaturesValidate(t.Context(), ctx)
 			if tt.err {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.errMsg)
+				require.Error(t, err)
+				require.EqualError(t, err, tt.errMsg)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			if check != nil {
 				assert.True(t, check())

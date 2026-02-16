@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 //go:generate counterfeiter -o mock/token_platform.go -fake-name TokenPlatform . tokenPlatform
@@ -39,6 +40,6 @@ func TestDLogFabricCryptoMaterialGenerator_Setup(t *testing.T) {
 	gen := NewCryptoMaterialGenerator(tp, math.BN254, buildServer.Client())
 	assert.NotNil(t, gen)
 	path, err := gen.Setup(tms)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotEmpty(t, path)
 }

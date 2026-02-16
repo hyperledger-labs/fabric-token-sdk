@@ -21,6 +21,7 @@ import (
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/test-go/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
@@ -77,19 +78,19 @@ func TFailsIfRequestDoesNotExist(t *testing.T, db driver3.TokenTransactionStore)
 	}
 	w, _ := db.BeginAtomicWrite()
 	err := w.AddTransaction(ctx, tx)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.True(t, errors.Is(err, driver3.ErrTokenRequestDoesNotExist))
 	w.Rollback()
 
 	w, _ = db.BeginAtomicWrite()
 	err = w.AddValidationRecord(ctx, "tx1", nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.True(t, errors.Is(err, driver3.ErrTokenRequestDoesNotExist))
 	w.Rollback()
 
 	w, _ = db.BeginAtomicWrite()
 	err = w.AddMovement(ctx, mv)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.True(t, errors.Is(err, driver3.ErrTokenRequestDoesNotExist))
 	w.Rollback()
 }
@@ -116,15 +117,15 @@ func TStatus(t *testing.T, db driver3.TokenTransactionStore) {
 	}
 
 	w, err := db.BeginAtomicWrite()
-	assert.NoError(t, err, "begin")
-	assert.NoError(t, w.AddTokenRequest(ctx, "tx1", []byte("request"), map[string][]byte{}, nil, driver2.PPHash("tr")), "add token request")
-	assert.NoError(t, w.AddTransaction(ctx, tx))
-	assert.NoError(t, w.AddValidationRecord(ctx, "tx1", nil), "add validation record")
-	assert.NoError(t, w.AddMovement(ctx, mv))
-	assert.NoError(t, w.Commit())
+	require.NoError(t, err, "begin")
+	require.NoError(t, w.AddTokenRequest(ctx, "tx1", []byte("request"), map[string][]byte{}, nil, driver2.PPHash("tr")), "add token request")
+	require.NoError(t, w.AddTransaction(ctx, tx))
+	require.NoError(t, w.AddValidationRecord(ctx, "tx1", nil), "add validation record")
+	require.NoError(t, w.AddMovement(ctx, mv))
+	require.NoError(t, w.Commit())
 
 	s, mess, err := db.GetStatus(ctx, "tx1")
-	assert.NoError(t, err, "get status error")
+	require.NoError(t, err, "get status error")
 	assert.Equal(t, driver3.Pending, s, "status should be pending after first creation")
 	assert.Equal(t, "", mess)
 
@@ -133,13 +134,13 @@ func TStatus(t *testing.T, db driver3.TokenTransactionStore) {
 	val := getValidationRecords(t, db, driver3.QueryValidationRecordsParams{})[0]
 	assert.Equal(t, driver3.Pending, val.Status, "validation status should be pending")
 	mvs, err := db.QueryMovements(ctx, driver3.QueryMovementsParams{})
-	assert.NoError(t, err, "error getting movements")
+	require.NoError(t, err, "error getting movements")
 	assert.Len(t, mvs, 1)
 	assert.Equal(t, driver3.Pending, mvs[0].Status, "movement status should be pending")
 
-	assert.NoError(t, db.SetStatus(t.Context(), "tx1", driver3.Confirmed, "message"))
+	require.NoError(t, db.SetStatus(t.Context(), "tx1", driver3.Confirmed, "message"))
 	s, mess, err = db.GetStatus(ctx, "tx1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, driver3.Confirmed, s, "status should be changed to confirmed")
 	assert.Equal(t, "message", mess)
 
@@ -148,7 +149,7 @@ func TStatus(t *testing.T, db driver3.TokenTransactionStore) {
 	val = getValidationRecords(t, db, driver3.QueryValidationRecordsParams{})[0]
 	assert.Equal(t, driver3.Confirmed, val.Status, "validation status should be confirmed")
 	mvs, err = db.QueryMovements(ctx, driver3.QueryMovementsParams{})
-	assert.NoError(t, err, "error getting movements")
+	require.NoError(t, err, "error getting movements")
 	assert.Len(t, mvs, 1)
 	assert.Equal(t, driver3.Confirmed, mvs[0].Status, "movement status should be confirmed")
 }
@@ -157,9 +158,9 @@ func TStoresTimestamp(t *testing.T, db driver3.TokenTransactionStore) {
 	t.Helper()
 	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, w.AddTokenRequest(ctx, "tx1", []byte(""), map[string][]byte{}, nil, driver2.PPHash("tr")))
-	assert.NoError(t, w.AddTransaction(ctx, driver3.TransactionRecord{
+	require.NoError(t, err)
+	require.NoError(t, w.AddTokenRequest(ctx, "tx1", []byte(""), map[string][]byte{}, nil, driver2.PPHash("tr")))
+	require.NoError(t, w.AddTransaction(ctx, driver3.TransactionRecord{
 		TxID:         "tx1",
 		ActionType:   driver3.Transfer,
 		SenderEID:    "bob",
@@ -169,8 +170,8 @@ func TStoresTimestamp(t *testing.T, db driver3.TokenTransactionStore) {
 		Timestamp:    time.Now(),
 		Status:       driver3.Pending,
 	}))
-	assert.NoError(t, w.AddValidationRecord(ctx, "tx1", nil))
-	assert.NoError(t, w.Commit())
+	require.NoError(t, w.AddValidationRecord(ctx, "tx1", nil))
+	require.NoError(t, w.Commit())
 
 	now := time.Now()
 
@@ -189,29 +190,29 @@ func TMovements(t *testing.T, db driver3.TokenTransactionStore) {
 	t.Helper()
 	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, w.AddTokenRequest(ctx, "0", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
-	assert.NoError(t, w.AddTokenRequest(ctx, "1", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
-	assert.NoError(t, w.AddTokenRequest(ctx, "2", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
-	assert.NoError(t, w.AddMovement(ctx, driver3.MovementRecord{
+	require.NoError(t, err)
+	require.NoError(t, w.AddTokenRequest(ctx, "0", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
+	require.NoError(t, w.AddTokenRequest(ctx, "1", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
+	require.NoError(t, w.AddTokenRequest(ctx, "2", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
+	require.NoError(t, w.AddMovement(ctx, driver3.MovementRecord{
 		TxID:         "0",
 		EnrollmentID: "alice",
 		TokenType:    "magic",
 		Amount:       big.NewInt(10),
 	}))
-	assert.NoError(t, w.AddMovement(ctx, driver3.MovementRecord{
+	require.NoError(t, w.AddMovement(ctx, driver3.MovementRecord{
 		TxID:         "1",
 		EnrollmentID: "alice",
 		TokenType:    "magic",
 		Amount:       big.NewInt(20),
 	}))
-	assert.NoError(t, w.AddMovement(ctx, driver3.MovementRecord{
+	require.NoError(t, w.AddMovement(ctx, driver3.MovementRecord{
 		TxID:         "2",
 		EnrollmentID: "alice",
 		TokenType:    "magic",
 		Amount:       big.NewInt(-30),
 	}))
-	assert.NoError(t, w.Commit())
+	require.NoError(t, w.Commit())
 
 	// All pending
 	records, err := db.QueryMovements(ctx, driver3.QueryMovementsParams{
@@ -219,7 +220,7 @@ func TMovements(t *testing.T, db driver3.TokenTransactionStore) {
 		SearchDirection:   driver3.FromLast,
 		TxStatuses:        []driver3.TxStatus{driver3.Pending},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, records, 3)
 
 	// Received
@@ -228,7 +229,7 @@ func TMovements(t *testing.T, db driver3.TokenTransactionStore) {
 		MovementDirection: driver3.Received,
 		NumRecords:        2,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, records, 2)
 
 	// NumRecords
@@ -236,19 +237,19 @@ func TMovements(t *testing.T, db driver3.TokenTransactionStore) {
 		TxStatuses: []driver3.TxStatus{driver3.Pending},
 		NumRecords: 1,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, records, 1)
 
-	assert.NoError(t, db.SetStatus(t.Context(), "2", driver3.Confirmed, "message"))
+	require.NoError(t, db.SetStatus(t.Context(), "2", driver3.Confirmed, "message"))
 	records, err = db.QueryMovements(ctx, driver3.QueryMovementsParams{TxStatuses: []driver3.TxStatus{driver3.Pending}, SearchDirection: driver3.FromLast, MovementDirection: driver3.Received, NumRecords: 3})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, records, 2)
 
 	// setting same status twice should not change the results
-	assert.NoError(t, db.SetStatus(t.Context(), "2", driver3.Confirmed, ""))
+	require.NoError(t, db.SetStatus(t.Context(), "2", driver3.Confirmed, ""))
 
 	records, err = db.QueryMovements(ctx, driver3.QueryMovementsParams{TxStatuses: []driver3.TxStatus{driver3.Confirmed}})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, records, 1)
 }
 
@@ -261,7 +262,7 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 	lastYear := t0.AddDate(-1, 0, 0)
 
 	w, err := db.BeginAtomicWrite()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tr1 := driver3.TransactionRecord{
 		TxID:                fmt.Sprintf("tx%d", 99),
 		ActionType:          driver3.Transfer,
@@ -272,8 +273,8 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 		ApplicationMetadata: map[string][]byte{},
 		Timestamp:           lastYear,
 	}
-	assert.NoError(t, w.AddTokenRequest(ctx, tr1.TxID, []byte("token request for "+tr1.TxID), map[string][]byte{}, nil, driver2.PPHash("tr")))
-	assert.NoError(t, w.AddTransaction(ctx, tr1))
+	require.NoError(t, w.AddTokenRequest(ctx, tr1.TxID, []byte("token request for "+tr1.TxID), map[string][]byte{}, nil, driver2.PPHash("tr")))
+	require.NoError(t, w.AddTransaction(ctx, tr1))
 
 	pm := map[string][]byte{"key": []byte("val")}
 
@@ -294,11 +295,11 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 			},
 			PublicMetadata: pm,
 		}
-		assert.NoError(t, w.AddTokenRequest(ctx, tr.TxID, []byte("token request for "+tr.TxID), tr.ApplicationMetadata, pm, driver2.PPHash("tr")))
-		assert.NoError(t, w.AddTransaction(ctx, tr))
+		require.NoError(t, w.AddTokenRequest(ctx, tr.TxID, []byte("token request for "+tr.TxID), tr.ApplicationMetadata, pm, driver2.PPHash("tr")))
+		require.NoError(t, w.AddTransaction(ctx, tr))
 		txs = append(txs, tr)
 	}
-	assert.NoError(t, w.Commit())
+	require.NoError(t, w.Commit())
 
 	// get one
 	one := getTransactions(t, db, driver3.QueryTransactionsParams{IDs: []string{"tx10"}})
@@ -308,10 +309,10 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 	// get all except last year's
 	t1 := time.Now().Add(time.Second * 3)
 	it, err := db.QueryTransactions(ctx, driver3.QueryTransactionsParams{From: &t0, To: &t1}, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, exp := range txs {
 		act, err := it.Items.Next()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assertTxEqual(t, &exp, act)
 	}
 	it.Items.Close()
@@ -319,25 +320,25 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 	// get all tx from before the first
 	yesterday := t0.AddDate(0, 0, -1).Local().UTC().Truncate(time.Second)
 	it, err = db.QueryTransactions(ctx, driver3.QueryTransactionsParams{To: &yesterday}, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer it.Items.Close()
 
 	// find 1 transaction from last year
 	tr, err := it.Items.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assertTxEqual(t, &tr1, tr)
 
 	// find no other transactions
 	tr, err = it.Items.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Empty(t, tr)
 
 	// update status
-	assert.NoError(t, db.SetStatus(t.Context(), "tx2", driver3.Confirmed, "pineapple"))
-	assert.NoError(t, db.SetStatus(t.Context(), "tx3", driver3.Confirmed, ""))
+	require.NoError(t, db.SetStatus(t.Context(), "tx2", driver3.Confirmed, "pineapple"))
+	require.NoError(t, db.SetStatus(t.Context(), "tx3", driver3.Confirmed, ""))
 
 	status, message, err := db.GetStatus(t.Context(), "tx2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, driver3.Confirmed, status)
 	assert.Equal(t, "pineapple", message)
 
@@ -348,12 +349,12 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 	assert.Len(t, records, 2, "expect 2 confirmed")
 
 	status, _, err = db.GetStatus(ctx, "nonexistenttx")
-	assert.NoError(t, err, "a non existent transaction should return Unknown status but no error")
+	require.NoError(t, err, "a non existent transaction should return Unknown status but no error")
 	assert.Equal(t, driver3.Unknown, status)
 
 	// exclude to self
 	w, err = db.BeginAtomicWrite()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tr1 = driver3.TransactionRecord{
 		TxID:                "1234",
 		ActionType:          driver3.Transfer,
@@ -364,9 +365,9 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 		ApplicationMetadata: map[string][]byte{},
 		Timestamp:           lastYear,
 	}
-	assert.NoError(t, w.AddTokenRequest(ctx, tr1.TxID, fmt.Appendf(nil, "token request for %s", tr1.TxID), map[string][]byte{}, nil, driver2.PPHash("tr")))
-	assert.NoError(t, w.AddTransaction(ctx, tr1))
-	assert.NoError(t, w.Commit())
+	require.NoError(t, w.AddTokenRequest(ctx, tr1.TxID, fmt.Appendf(nil, "token request for %s", tr1.TxID), map[string][]byte{}, nil, driver2.PPHash("tr")))
+	require.NoError(t, w.AddTransaction(ctx, tr1))
+	require.NoError(t, w.Commit())
 	noChange := getTransactions(t, db, driver3.QueryTransactionsParams{ExcludeToSelf: true})
 	assert.Len(t, noChange, 21)
 	for _, tr := range noChange {
@@ -407,30 +408,30 @@ func TTokenRequest(t *testing.T, db driver3.TokenTransactionStore) {
 	t.Helper()
 	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tr1 := []byte("arbitrary bytes")
 	err = w.AddTokenRequest(ctx, "id1", tr1, map[string][]byte{}, nil, []byte("tr"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tr2 := []byte("arbitrary bytes 2")
 	err = w.AddTokenRequest(ctx, "id2", tr2, map[string][]byte{}, nil, []byte("tr"))
-	assert.NoError(t, err)
-	assert.NoError(t, w.Commit())
-	assert.NoError(t, db.SetStatus(t.Context(), "id2", driver3.Confirmed, ""))
+	require.NoError(t, err)
+	require.NoError(t, w.Commit())
+	require.NoError(t, db.SetStatus(t.Context(), "id2", driver3.Confirmed, ""))
 
 	trq, err := db.GetTokenRequest(ctx, "id1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tr1, trq)
 	trq, err = db.GetTokenRequest(ctx, "id2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tr2, trq)
 
 	// iterate over all
 	it, err := db.QueryTokenRequests(ctx, driver3.QueryTokenRequestsParams{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	counter := 0
 	for {
 		record, err := it.Next()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if record == nil {
 			break
 		}
@@ -454,11 +455,11 @@ func TTokenRequest(t *testing.T, db driver3.TokenTransactionStore) {
 
 	// iterate over pending and confirmed
 	it, err = db.QueryTokenRequests(ctx, driver3.QueryTokenRequestsParams{Statuses: []driver3.TxStatus{driver3.Confirmed, driver3.Pending}})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	counter = 0
 	for {
 		record, err := it.Next()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if record == nil {
 			break
 		}
@@ -482,33 +483,33 @@ func TTokenRequest(t *testing.T, db driver3.TokenTransactionStore) {
 
 	// iterator over confirmed
 	it, err = db.QueryTokenRequests(ctx, driver3.QueryTokenRequestsParams{Statuses: []driver3.TxStatus{driver3.Confirmed}})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	record, err := it.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tr2, record.TokenRequest)
 	assert.Equal(t, driver3.Confirmed, record.Status)
 	record, err = it.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, record)
 	it.Close()
 
 	// iterator over pending
 	it, err = db.QueryTokenRequests(ctx, driver3.QueryTokenRequestsParams{Statuses: []driver3.TxStatus{driver3.Pending}})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	record, err = it.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tr1, record.TokenRequest)
 	assert.Equal(t, driver3.Pending, record.Status)
 	record, err = it.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, record)
 	it.Close()
 
 	// iterator over deleted
 	it, err = db.QueryTokenRequests(ctx, driver3.QueryTokenRequestsParams{Statuses: []driver3.TxStatus{driver3.Deleted}})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	record, err = it.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, record)
 	it.Close()
 }
@@ -540,11 +541,11 @@ func TAllowsSameTxID(t *testing.T, db driver3.TokenTransactionStore) {
 		Timestamp:           time.Now(),
 	}
 	w, err := db.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, w.AddTokenRequest(ctx, tr1.TxID, []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
-	assert.NoError(t, w.AddTransaction(ctx, tr1))
-	assert.NoError(t, w.AddTransaction(ctx, tr2))
-	assert.NoError(t, w.Commit())
+	require.NoError(t, err)
+	require.NoError(t, w.AddTokenRequest(ctx, tr1.TxID, []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
+	require.NoError(t, w.AddTransaction(ctx, tr1))
+	require.NoError(t, w.AddTransaction(ctx, tr2))
+	require.NoError(t, w.Commit())
 
 	txs := getTransactions(t, db, driver3.QueryTransactionsParams{})
 	assert.Len(t, txs, 2)
@@ -556,8 +557,8 @@ func TRollback(t *testing.T, db driver3.TokenTransactionStore) {
 	t.Helper()
 	ctx := t.Context()
 	w, err := db.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, w.AddTokenRequest(ctx, "1", []byte("arbitrary bytes"), map[string][]byte{}, nil, driver2.PPHash("tr")))
+	require.NoError(t, err)
+	require.NoError(t, w.AddTokenRequest(ctx, "1", []byte("arbitrary bytes"), map[string][]byte{}, nil, driver2.PPHash("tr")))
 
 	mr1 := driver3.MovementRecord{
 		TxID:         "1",
@@ -576,12 +577,12 @@ func TRollback(t *testing.T, db driver3.TokenTransactionStore) {
 		Timestamp:    time.Now().Local().UTC(),
 		Status:       driver3.Pending,
 	}
-	assert.NoError(t, w.AddTransaction(ctx, tr1))
-	assert.NoError(t, w.AddMovement(ctx, mr1))
+	require.NoError(t, w.AddTransaction(ctx, tr1))
+	require.NoError(t, w.AddMovement(ctx, mr1))
 	w.Rollback()
 	assert.Len(t, getTransactions(t, db, driver3.QueryTransactionsParams{}), 0)
 	mvm, err := db.QueryMovements(ctx, driver3.QueryMovementsParams{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, mvm, 0)
 }
 
@@ -799,19 +800,19 @@ func TTransactionQueries(t *testing.T, db driver3.TokenTransactionStore) {
 	}
 
 	w, err := db.BeginAtomicWrite()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var previous string
 	for _, r := range tr {
 		if r.TxID != previous {
-			assert.NoError(t, w.AddTokenRequest(ctx, r.TxID, []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
+			require.NoError(t, w.AddTokenRequest(ctx, r.TxID, []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
 		}
-		assert.NoError(t, w.AddTransaction(ctx, r))
+		require.NoError(t, w.AddTransaction(ctx, r))
 		previous = r.TxID
 	}
-	assert.NoError(t, w.Commit())
+	require.NoError(t, w.Commit())
 	for _, r := range tr {
 		if r.Status != driver3.Pending {
-			assert.NoError(t, db.SetStatus(t.Context(), r.TxID, r.Status, ""))
+			require.NoError(t, db.SetStatus(t.Context(), r.TxID, r.Status, ""))
 		}
 	}
 
@@ -826,9 +827,9 @@ func TTransactionQueries(t *testing.T, db driver3.TokenTransactionStore) {
 func getTransactions(t *testing.T, db driver3.TokenTransactionStore, params driver3.QueryTransactionsParams) []*driver3.TransactionRecord {
 	t.Helper()
 	records, err := db.QueryTransactions(t.Context(), params, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txs, err := iterators.ReadAllPointers(records.Items)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return txs
 }
@@ -870,15 +871,15 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 		},
 	}
 	w, err := db.BeginAtomicWrite()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, e := range exp {
-		assert.NoError(t, w.AddTokenRequest(ctx, e.TxID, e.TokenRequest, map[string][]byte{}, nil, driver2.PPHash("tr")))
-		assert.NoError(t, w.AddValidationRecord(ctx, e.TxID, e.Metadata), "AddValidationRecord "+e.TxID)
+		require.NoError(t, w.AddTokenRequest(ctx, e.TxID, e.TokenRequest, map[string][]byte{}, nil, driver2.PPHash("tr")))
+		require.NoError(t, w.AddValidationRecord(ctx, e.TxID, e.Metadata), "AddValidationRecord "+e.TxID)
 	}
-	assert.NoError(t, w.Commit(), "Commit")
+	require.NoError(t, w.Commit(), "Commit")
 	for _, e := range exp {
 		if e.Status != driver3.Pending {
-			assert.NoError(t, db.SetStatus(t.Context(), e.TxID, e.Status, ""))
+			require.NoError(t, db.SetStatus(t.Context(), e.TxID, e.Status, ""))
 		}
 	}
 	all := getValidationRecords(t, db, driver3.QueryValidationRecordsParams{})
@@ -921,9 +922,9 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 func getValidationRecords(t *testing.T, db driver3.TokenTransactionStore, params driver3.QueryValidationRecordsParams) []*driver3.ValidationRecord {
 	t.Helper()
 	records, err := db.QueryValidations(t.Context(), params)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txs, err := iterators.ReadAllPointers(records)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return txs
 }
@@ -937,9 +938,9 @@ func TEndorserAcks(t *testing.T, db driver3.TokenTransactionStore) {
 	wg.Add(n)
 	for i := range n {
 		go func(i int) {
-			assert.NoError(t, db.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			require.NoError(t, db.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
 			acks, err := db.GetTransactionEndorsementAcks(ctx, "1")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.True(t, len(acks) != 0)
 			wg.Done()
 		}(i)
@@ -947,7 +948,7 @@ func TEndorserAcks(t *testing.T, db driver3.TokenTransactionStore) {
 	wg.Wait()
 
 	acks, err := db.GetTransactionEndorsementAcks(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := range n {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])

@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestToQuantity(t *testing.T) {
@@ -35,19 +36,19 @@ func TestToQuantity(t *testing.T) {
 	assert.Equal(t, "0xabc has precision 12 > 2", err.Error())
 
 	_, err = token.ToQuantity("10231", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = token.ToQuantity("0xABC", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = token.ToQuantity("0XABC", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = token.ToQuantity("0XAbC", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = token.ToQuantity("0xAbC", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = token.ToQuantity(IntToHex(-100), 128)
 	assert.Equal(t, "invalid input [0x-64,128]", err.Error())
@@ -65,38 +66,38 @@ func TestToQuantity(t *testing.T) {
 	assert.Equal(t, "0xabc has precision 12 > 2", err.Error())
 
 	_, err = token.ToQuantity("10231", 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = token.ToQuantity("0xABC", 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = token.ToQuantity("0XABC", 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = token.ToQuantity("0XAbC", 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = token.ToQuantity("0xAbC", 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestDecimal(t *testing.T) {
 	q, err := token.ToQuantity("10231", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "10231", q.Decimal())
 
 	q, err = token.ToQuantity("10231", 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "10231", q.Decimal())
 }
 
 func TestHex(t *testing.T) {
 	q, err := token.ToQuantity("0xabc", 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "0xabc", q.Hex())
 
 	q, err = token.ToQuantity("0xabc", 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "0xabc", q.Hex())
 }
 
@@ -105,9 +106,9 @@ func TestOverflow(t *testing.T) {
 	assert.Equal(t, uint64(math.MaxUint64), half+half+1)
 
 	a, err := token.ToQuantity(ToHex(1), 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	b, err := token.ToQuantity(ToHex(uint64(math.MaxUint64)), 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Panics(t, func() {
 		a.Add(b)
@@ -117,9 +118,9 @@ func TestOverflow(t *testing.T) {
 	})
 
 	a, err = token.NewUBigQuantity(ToHex(1), 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	b, err = token.NewUBigQuantity(ToHex(uint64(math.MaxUint64)), 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Panics(t, func() {
 		a.Add(b)
@@ -256,7 +257,7 @@ func TestUInt64Quantity_Sub_Panic(t *testing.T) {
 func TestNewUBigQuantity_ValidInput(t *testing.T) {
 	q, err := token.NewUBigQuantity("123456789", 64)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, q)
 	assert.Equal(t, "123456789", q.Decimal())
 }
@@ -264,31 +265,31 @@ func TestNewUBigQuantity_ValidInput(t *testing.T) {
 func TestNewUBigQuantity_InvalidInput(t *testing.T) {
 	_, err := token.NewUBigQuantity("invalid", 64)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestNewUBigQuantity_ZeroPrecision(t *testing.T) {
 	_, err := token.NewUBigQuantity("123456789", 0)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestNewUBigQuantity_NegativeQuantity(t *testing.T) {
 	_, err := token.NewUBigQuantity("-123", 64)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestNewUBigQuantity_Overflow(t *testing.T) {
 	_, err := token.NewUBigQuantity("18446744073709551616", 64) // Max uint64 + 1
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestUInt64ToQuantity_ValidInput(t *testing.T) {
 	q, err := token.UInt64ToQuantity(123456789, 64)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, q)
 	assert.Equal(t, "123456789", q.Decimal())
 }
@@ -296,19 +297,19 @@ func TestUInt64ToQuantity_ValidInput(t *testing.T) {
 func TestUInt64ToQuantity_ZeroPrecision(t *testing.T) {
 	_, err := token.UInt64ToQuantity(123456789, 0)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestUInt64ToQuantity_NegativeQuantity(t *testing.T) {
 	_, err := token.UInt64ToQuantity(18446744073709551615, 64) // Max uint64
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestUInt64ToQuantity_Precision_InsufficientError(t *testing.T) {
 	_, err := token.UInt64ToQuantity(18446744073709551615, 10) // Max uint64
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func ToHex(q uint64) string {

@@ -92,7 +92,7 @@ func TestBFProofVerify(t *testing.T) {
 		setup.curve,
 	)
 	proof, err := prover.Prove()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, proof)
 
 	verifier := rp.NewRangeVerifier(
@@ -107,7 +107,7 @@ func TestBFProofVerify(t *testing.T) {
 		setup.curve,
 	)
 	err = verifier.Verify(proof)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func BenchmarkBFProver(b *testing.B) {
@@ -139,7 +139,7 @@ func BenchmarkBFProver(b *testing.B) {
 				setup.curve,
 			)
 			proof, err := prover.Prove()
-			assert.NoError(b, err)
+			require.NoError(b, err)
 			assert.NotNil(b, proof)
 		}
 	})

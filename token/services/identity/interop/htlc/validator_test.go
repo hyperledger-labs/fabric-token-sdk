@@ -120,7 +120,7 @@ func TestMetadataClaimKeyCheck(t *testing.T) {
 	// reclaim path should return empty key
 	k, err := ihtlc.MetadataClaimKeyCheck(act, script, ihtlc.Reclaim, nil)
 	require.NoError(t, err)
-	require.Equal(t, "", k)
+	require.Empty(t, k)
 }
 
 func TestMetadataClaimKeyCheck_ImageErrorAndMismatch(t *testing.T) {

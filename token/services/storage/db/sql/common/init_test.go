@@ -11,12 +11,13 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/test-go/testify/assert"
+	"github.com/test-go/testify/require"
 	_ "modernc.org/sqlite"
 )
 
 func TestGetTableNames(t *testing.T) {
 	names, err := GetTableNames("")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TableNames{
 		Movements:              "fsc_movements",
 		Transactions:           "fsc_txs",
@@ -36,15 +37,15 @@ func TestGetTableNames(t *testing.T) {
 	}, names)
 
 	names, err = GetTableNames("valid_prefix")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "valid_prefix_txs", names.Transactions)
 
 	names, err = GetTableNames("Valid_Prefix")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "valid_prefix_txs", names.Transactions)
 
 	names, err = GetTableNames("valid")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "valid_txs", names.Transactions)
 
 	invalid := []string{
@@ -63,7 +64,7 @@ func TestGetTableNames(t *testing.T) {
 	for _, inv := range invalid {
 		t.Run("Prefix: "+inv, func(t *testing.T) {
 			names, err := GetTableNames(inv)
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.Equal(t, TableNames{}, names)
 		})
 	}

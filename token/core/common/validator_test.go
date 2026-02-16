@@ -13,7 +13,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,19 +60,19 @@ func TestAnchorInContext(t *testing.T) {
 	require.NoError(t, err)
 	err = v.VerifyIssue(ctx, anotherAnchor, nil, &mock.IssueAction{}, nil, nil, nil)
 	require.Error(t, err)
-	assert.EqualError(t, err, "issue, anchor does not match, expected hello world, got another anchor")
+	require.EqualError(t, err, "issue, anchor does not match, expected hello world, got another anchor")
 
 	// check anchor in the context for a transfer action
 	err = v.VerifyTransfer(ctx, anchor, nil, &mock.TransferAction{}, nil, nil, nil)
 	require.NoError(t, err)
 	err = v.VerifyTransfer(ctx, anotherAnchor, nil, &mock.TransferAction{}, nil, nil, nil)
 	require.Error(t, err)
-	assert.EqualError(t, err, "transfer, anchor does not match, expected hello world, got another anchor")
+	require.EqualError(t, err, "transfer, anchor does not match, expected hello world, got another anchor")
 
 	// check anchor in the context for a transfer action
 	err = v.VerifyAuditing(ctx, anchor, nil, nil, nil, nil)
 	require.NoError(t, err)
 	err = v.VerifyAuditing(ctx, anotherAnchor, nil, nil, nil, nil)
 	require.Error(t, err)
-	assert.EqualError(t, err, "audit, anchor does not match, expected hello world, got another anchor")
+	require.EqualError(t, err, "audit, anchor does not match, expected hello world, got another anchor")
 }

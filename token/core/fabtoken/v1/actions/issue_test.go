@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestIssueAction_Serialization(t *testing.T) {
@@ -27,19 +28,19 @@ func TestIssueAction_Serialization(t *testing.T) {
 		},
 	}
 	raw, err := action.Serialize()
-	assert.NoError(t, err, "failed to serialize a new transfer action")
+	require.NoError(t, err, "failed to serialize a new transfer action")
 
 	action2 := &IssueAction{}
 	err = action2.Deserialize(raw)
-	assert.NoError(t, err, "failed to deserialize a new transfer action")
+	require.NoError(t, err, "failed to deserialize a new transfer action")
 	assert.Equal(t, action, action2, "deserialized action is not equal to the original one")
 
 	raw2, err := action2.Serialize()
-	assert.NoError(t, err, "failed to serialize a new transfer action")
+	require.NoError(t, err, "failed to serialize a new transfer action")
 
 	action3 := &IssueAction{}
 	err = action3.Deserialize(raw2)
-	assert.NoError(t, err, "failed to deserialize a new transfer action")
+	require.NoError(t, err, "failed to deserialize a new transfer action")
 	assert.Equal(t, action2, action3, "deserialized action is not equal to the original one")
 }
 
@@ -119,10 +120,10 @@ func TestIssueAction_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.action.Validate()
 			if tt.wantErr {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.expectedError)
+				require.Error(t, err)
+				require.EqualError(t, err, tt.expectedError)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

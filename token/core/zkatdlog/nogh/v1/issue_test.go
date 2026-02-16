@@ -167,7 +167,7 @@ func TestIssueService_VerifyIssue(t *testing.T) {
 			service, action, meta := tt.TestCase()
 			err := service.VerifyIssue(t.Context(), action, meta)
 			if tt.wantErr == "" {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
 				assert.ErrorContains(t, err, tt.wantErr)
 			}
@@ -183,7 +183,7 @@ type testSetup struct {
 func setupTest(t *testing.T) *testSetup {
 	t.Helper()
 	pp, err := setup.Setup(32, nil, math.BN254)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ppm := &mock.PublicParametersManager{}
 	ppm.PublicParamsReturns(pp)
 	service := &v1.IssueService{
@@ -201,9 +201,9 @@ func (ts *testSetup) createValidAction(t *testing.T, issuer []byte) (driver.Issu
 	t.Helper()
 	meta, tokens := prepareInputsForZKIssue(ts.pp)
 	prover, err := issue.NewProver(meta, tokens, ts.pp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	proof, err := prover.Prove()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	action := &issue.Action{
 		Issuer: issuer,

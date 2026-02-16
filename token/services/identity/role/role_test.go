@@ -36,7 +36,7 @@ func setup(t *testing.T) (context.Context, *role.Role, *mock.LocalMembership) {
 
 func TestRole_ID_returns_roleID(t *testing.T) {
 	_, r, _ := setup(t)
-	require.EqualValues(t, identity.IssuerRole, r.ID())
+	require.Equal(t, identity.IssuerRole, r.ID())
 }
 
 func TestRole_GetIdentityInfo_success_and_error(t *testing.T) {
@@ -157,7 +157,7 @@ func TestRole_MapToIdentity_mapStringToID_branches(t *testing.T) {
 	id, ident, err = r.MapToIdentity(ctx, "member2")
 	require.NoError(t, err)
 	require.Equal(t, driver.Identity("member2"), id)
-	require.Equal(t, "", ident)
+	require.Empty(t, ident)
 
 	// fallback: return label as identifier
 	// make IsMe return false for unknown
@@ -239,7 +239,7 @@ func TestRole_MapToIdentity_mapIdentityToID_branches(t *testing.T) {
 	id, ident, err = r.MapToIdentity(ctx, idVal2)
 	require.NoError(t, err)
 	require.Equal(t, idVal2, id)
-	require.Equal(t, "", ident)
+	require.Empty(t, ident)
 
 	// lookup identity as label via GetIdentityInfo succeeds
 	id, ident, err = r.MapToIdentity(ctx, driver.Identity("labelInfo"))

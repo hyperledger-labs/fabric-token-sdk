@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransferApplicationDataValidate(t *testing.T) {
@@ -89,10 +90,10 @@ func TestTransferApplicationDataValidate(t *testing.T) {
 			ctx, check := tt.context()
 			err := TransferApplicationDataValidate(t.Context(), ctx)
 			if tt.err {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.errMsg)
+				require.Error(t, err)
+				require.EqualError(t, err, tt.errMsg)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			if check != nil {
 				assert.True(t, check())

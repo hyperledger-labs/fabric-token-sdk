@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestSufficientTokensOneReplica(t *testing.T) {
@@ -73,7 +73,7 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 
 	for i := range number {
 		replica, err := createManager(pgConnStr, backoff, maxRetries)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		replicas[i] = replica
 	}
 
@@ -105,7 +105,7 @@ func startContainer(t *testing.T) (func(), string) {
 	t.Helper()
 	cfg := postgres2.DefaultConfig(postgres2.WithDBName(t.Name()))
 	terminate, _, err := postgres2.StartPostgres(t.Context(), cfg, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return terminate, cfg.DataSource()
 }

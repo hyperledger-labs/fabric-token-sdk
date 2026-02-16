@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -122,8 +123,8 @@ func TestGetOrLoadConcurrency(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			val, _, loadErr := c.GetOrLoad(key, loader)
-			require.NoError(t, loadErr)
-			require.Equal(t, expectedValue, val)
+			assert.NoError(t, loadErr)
+			assert.Equal(t, expectedValue, val)
 		}()
 	}
 

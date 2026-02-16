@@ -90,7 +90,8 @@ func TestSecureRNG_Concurrency(t *testing.T) {
 	wg.Add(concurrency)
 
 	for range concurrency {
-		go func() {
+		go func(t *testing.T) {
+			t.Helper()
 			defer wg.Done()
 			<-start
 
@@ -100,7 +101,7 @@ func TestSecureRNG_Concurrency(t *testing.T) {
 
 			// Basic check that we didn't get all zeros
 			assert.NotEqual(t, make([]byte, 128), buf)
-		}()
+		}(t)
 	}
 
 	close(start)

@@ -25,22 +25,23 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 	_ "modernc.org/sqlite"
 )
 
 func TestDB(t *testing.T) {
 	// create a new config service by loading the config file
 	cp, err := config.NewProvider("./testdata/sqlite")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	manager := ttxdb.NewStoreServiceManager(
 		tms.NewConfigServiceWrapper(config2.NewService(cp)),
 		multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp, sqlite2.NewDbProvider())),
 	)
 	db1, err := manager.StoreServiceByTMSId(token.TMSID{Network: "pineapple", Namespace: "ns"})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	db2, err := manager.StoreServiceByTMSId(token.TMSID{Network: "grapes", Namespace: "ns"})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	TEndorserAcks(t, db1, db2)
 }
@@ -53,13 +54,13 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
 	wg.Add(n)
 	for i := range n {
 		go func(i int) {
-			assert.NoError(t, db1.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			require.NoError(t, db1.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
 			acks, err := db1.GetTransactionEndorsementAcks(ctx, "1")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotEmpty(t, acks)
-			assert.NoError(t, db2.AddTransactionEndorsementAck(ctx, "2", []byte(fmt.Sprintf("bob_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			require.NoError(t, db2.AddTransactionEndorsementAck(ctx, "2", []byte(fmt.Sprintf("bob_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
 			acks, err = db2.GetTransactionEndorsementAcks(ctx, "2")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotEmpty(t, acks)
 
 			wg.Done()
@@ -68,14 +69,14 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
 	wg.Wait()
 
 	acks, err := db1.GetTransactionEndorsementAcks(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := range n {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
 	}
 
 	acks, err = db2.GetTransactionEndorsementAcks(ctx, "2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := range n {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("bob_%d", i)).String()])
@@ -95,7 +96,7 @@ func TestTransactionRecords(t *testing.T) {
 	// Transfer
 	input := simpleTransfer()
 	recs, err := ttxdb.TransactionRecords(ctx, &input, now)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
 			TxID:         string(input.Anchor),
@@ -115,7 +116,7 @@ func TestTransactionRecords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
 			TxID:         string(input.Anchor),
@@ -143,7 +144,7 @@ func TestTransactionRecords(t *testing.T) {
 	input = simpleTransfer()
 	input.Inputs = token.NewInputStream(qsMock{}, []*token.Input{}, 64)
 	recs, err = ttxdb.TransactionRecords(ctx, &input, now)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
 			TxID:         string(input.Anchor),
@@ -160,7 +161,7 @@ func TestTransactionRecords(t *testing.T) {
 	// Redeem
 	input = redeem()
 	recs, err = ttxdb.TransactionRecords(ctx, &input, now)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []driver.TransactionRecord{
 		{
 			TxID:         string(input.Anchor),
@@ -182,7 +183,7 @@ func TestMovementRecords(t *testing.T) {
 	// Transfer
 	input := simpleTransfer()
 	recs, err := ttxdb.Movements(ctx, &input, now)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
 			TxID:         string(input.Anchor),
@@ -204,7 +205,7 @@ func TestMovementRecords(t *testing.T) {
 
 	input = transferWithChange()
 	recs, err = ttxdb.Movements(ctx, &input, now)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
 			TxID:         string(input.Anchor),
@@ -228,7 +229,7 @@ func TestMovementRecords(t *testing.T) {
 	input = simpleTransfer()
 	input.Inputs = token.NewInputStream(qsMock{}, []*token.Input{}, 64)
 	recs, err = ttxdb.Movements(ctx, &input, now)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
 			TxID:         string(input.Anchor),
@@ -243,7 +244,7 @@ func TestMovementRecords(t *testing.T) {
 	// Redeem
 	input = redeem()
 	recs, err = ttxdb.Movements(ctx, &input, now)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []driver.MovementRecord{
 		{
 			TxID:         string(input.Anchor),
