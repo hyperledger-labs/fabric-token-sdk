@@ -18,3 +18,6 @@
 ### Services
 
 - [Identity Service - Idemix](services/identity/idemix.md)
+
+### Node Level Benchmarks
+- [Token Validation Service Benchmark](token_validation_service_benchmark.md)

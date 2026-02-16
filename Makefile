@@ -122,6 +122,7 @@ tidy:
 	cd token/services/storage/db/kvs/hashicorp; go mod tidy
 	cd cmd/artifactgen; go mod tidy
 	cd cmd/tokengen; go mod tidy
+	cd cmd/token_validation_service; go mod tidy
 
 .PHONY: clean
 # clean up docker artifacts and generated files
