@@ -45,6 +45,7 @@ func GetStorageProvider(sp token.ServiceProvider) (StorageProvider, error) {
 	if !ok {
 		panic("implementation error, type must be StorageProvider")
 	}
+
 	return provider, nil
 }
 

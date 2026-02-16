@@ -72,6 +72,7 @@ func newTransaction(t *testing.T) *ttx.Transaction {
 	tokenAPITMS := tokenapi.NewMockedManagementService(t, tmsID)
 	tms.SetTokenManagementServiceStub = func(arg1 *token.Request) error {
 		arg1.SetTokenService(tokenAPITMS)
+
 		return nil
 	}
 	tmsp := &mock2.TokenManagementServiceProvider{}
@@ -328,6 +329,7 @@ func TestEndorseView(t *testing.T) {
 					<-c.ch
 				}
 				c.ch <- &view.Message{Payload: []byte("garbage")}
+
 				return c
 			},
 			expectError:   true,
@@ -341,6 +343,7 @@ func TestEndorseView(t *testing.T) {
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
 				c.tokenSigner.SignReturns(nil, errors.New("sign error"))
+
 				return c
 			},
 			expectError:   true,
@@ -354,6 +357,7 @@ func TestEndorseView(t *testing.T) {
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
 				c.session.SendWithContextReturns(errors.New("send error"))
+
 				return c
 			},
 			expectError:   true,
@@ -370,6 +374,7 @@ func TestEndorseView(t *testing.T) {
 				<-c.ch
 				c.ch <- sigReq
 				c.ch <- &view.Message{Payload: []byte("garbage transaction")}
+
 				return c
 			},
 			expectError:   true,
@@ -383,6 +388,7 @@ func TestEndorseView(t *testing.T) {
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
 				c.networkIdentitySigner.SignReturns(nil, errors.New("ack sign error"))
+
 				return c
 			},
 			expectError:   true,
@@ -401,8 +407,10 @@ func TestEndorseView(t *testing.T) {
 					if count == 2 {
 						return errors.New("ack send error")
 					}
+
 					return nil
 				}
+
 				return c
 			},
 			expectError:   true,
@@ -416,6 +424,7 @@ func TestEndorseView(t *testing.T) {
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
 				c.ctx.GetServiceReturnsOnCall(4, nil, errors.New("storage provider error"))
+
 				return c
 			},
 			expectError:   true,
@@ -430,6 +439,7 @@ func TestEndorseView(t *testing.T) {
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
 				c.ctx.GetServiceReturnsOnCall(3, nil, errors.New("identity provider error"))
+
 				return c
 			},
 			expectError:   true,
@@ -444,6 +454,7 @@ func TestEndorseView(t *testing.T) {
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
 				c.tokenIP.GetSignerReturns(nil, errors.New("signer error"))
+
 				return c
 			},
 			expectError:   true,
@@ -465,6 +476,7 @@ func TestEndorseView(t *testing.T) {
 				}
 				txRaw, _ := c.tx.Bytes()
 				c.ch <- &view.Message{Payload: txRaw}
+
 				return c
 			},
 			expectError: false,
@@ -477,6 +489,7 @@ func TestEndorseView(t *testing.T) {
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
 				c.storageProvider.CacheRequestReturns(errors.New("cache error"))
+
 				return c
 			},
 			expectError: false,
@@ -490,6 +503,7 @@ func TestEndorseView(t *testing.T) {
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, nil)
 				c.networkIdentityProvider.GetSignerReturns(nil, errors.New("ack signer error"))
+
 				return c
 			},
 			expectError:   true,
