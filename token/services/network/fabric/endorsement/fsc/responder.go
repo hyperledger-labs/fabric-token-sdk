@@ -78,6 +78,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (any, error) {
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create token key for id [%s]", id)
 		}
+
 		return request.Rws.GetDirectState(request.TMSID.Namespace, key)
 	})
 	if err != nil {
@@ -89,6 +90,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (any, error) {
 	if err != nil {
 		return nil, errors.Join(ErrEndorseProposal, err)
 	}
+
 	return res, nil
 }
 
@@ -198,6 +200,7 @@ func (r *RequestApprovalResponderView) translate(ctx context.Context, request *R
 	if err != nil {
 		return errors.Wrapf(err, "failed to write token request")
 	}
+
 	return nil
 }
 
@@ -236,6 +239,7 @@ func (r *RequestApprovalResponderView) validate(context view.Context, request *R
 	}
 	request.Actions = actions
 	request.Meta = meta
+
 	return nil
 }
 
@@ -260,5 +264,6 @@ func (r *RequestApprovalResponderView) endorse(ctx view.Context, request *Reques
 		logger.Errorf("failed to respond to endorsement [%s]", err)
 	}
 	logger.DebugfContext(ctx.Context(), "Finished endorsement on TX [%s]", request.Anchor)
+
 	return endorsementResult, err
 }

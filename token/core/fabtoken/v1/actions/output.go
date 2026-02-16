@@ -22,6 +22,7 @@ func (m *OutputMetadata) Deserialize(b []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing metadata")
 	}
+
 	return json.Unmarshal(typed.Token, m)
 }
 
@@ -31,6 +32,7 @@ func (m *OutputMetadata) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed serializing token")
 	}
+
 	return fabtoken.WrapMetadataWithType(raw)
 }
 
@@ -43,6 +45,7 @@ func (t *Output) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed serializing token")
 	}
+
 	return fabtoken.WrapTokenWithType(raw)
 }
 
@@ -52,6 +55,7 @@ func (t *Output) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed deserializing token")
 	}
+
 	return json.Unmarshal(typed.Token, t)
 }
 
@@ -75,5 +79,6 @@ func (t *Output) Validate(checkOwner bool) error {
 	if len(t.Type) == 0 {
 		return errors.Errorf("token type cannot be empty")
 	}
+
 	return nil
 }

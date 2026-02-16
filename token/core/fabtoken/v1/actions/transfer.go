@@ -63,6 +63,7 @@ func (a *TransferActionInput) FromProtos(input *actions.TransferActionInput) err
 			Quantity: input.Input.Quantity,
 		}
 	}
+
 	return nil
 }
 
@@ -99,6 +100,7 @@ func (t *TransferAction) GetSerializedOutputs() ([][]byte, error) {
 		}
 		res = append(res, ser)
 	}
+
 	return res, nil
 }
 
@@ -108,6 +110,7 @@ func (t *TransferAction) GetOutputs() []driver.Output {
 	for _, output := range t.Outputs {
 		res = append(res, output)
 	}
+
 	return res
 }
 
@@ -124,6 +127,7 @@ func (t *TransferAction) IsRedeem() bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -140,6 +144,7 @@ func (t *TransferAction) SerializeOutputAt(index int) ([]byte, error) {
 	if t.Outputs[index] == nil {
 		return nil, errors.Errorf("failed to serialize output in transfer action: nil output at index [%d]", index)
 	}
+
 	return t.Outputs[index].Serialize()
 }
 
@@ -149,6 +154,7 @@ func (t *TransferAction) GetInputs() []*token.ID {
 	for i, input := range t.Inputs {
 		res[i] = input.ID
 	}
+
 	return res
 }
 
@@ -157,6 +163,7 @@ func (t *TransferAction) GetSerializedInputs() ([][]byte, error) {
 	for _, input := range t.Inputs {
 		if input == nil {
 			res = append(res, nil)
+
 			continue
 		}
 		r, err := input.Input.Serialize()
@@ -165,6 +172,7 @@ func (t *TransferAction) GetSerializedInputs() ([][]byte, error) {
 		}
 		res = append(res, r)
 	}
+
 	return res, nil
 }
 
@@ -217,6 +225,7 @@ func (t *TransferAction) Validate() error {
 	if t.IsRedeem() && (t.Issuer == nil) {
 		return errors.Errorf("Expected Issuer for a Redeem action (to validate)")
 	}
+
 	return nil
 }
 
@@ -260,6 +269,7 @@ func (t *TransferAction) Serialize() ([]byte, error) {
 		Metadata: t.Metadata,
 		Issuer:   issuer,
 	}
+
 	return proto.Marshal(action)
 }
 

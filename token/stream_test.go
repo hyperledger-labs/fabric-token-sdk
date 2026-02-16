@@ -29,6 +29,7 @@ type MockQueryService struct {
 
 func (m *MockQueryService) IsMine(ctx context.Context, id *token.ID) (bool, error) {
 	args := m.Called(id)
+
 	return args.Bool(0), args.Error(1)
 }
 

@@ -71,6 +71,7 @@ func NewConfig(dir string) (*Config, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read issuer public key file")
 	}
+
 	return NewConfigWithIPK(ipkBytes, dir, true)
 }
 
@@ -84,6 +85,7 @@ func NewConfigWithIPK(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet
 			return nil, errors.Wrapf(err, "failed reading idemix configuration from [%s] and with extra path element", dir)
 		}
 	}
+
 	return conf, nil
 }
 
@@ -97,6 +99,7 @@ func newConfigWithIPK(issuerPublicKey []byte, dir string, ignoreVerifyOnlyWallet
 		}
 		config = config2
 	}
+
 	return config, nil
 }
 
@@ -181,5 +184,6 @@ func assembleConfig(issuerPublicKey []byte, signer *config.IdemixSignerConfig) (
 		Ipk:     issuerPublicKey,
 		Signer:  signer,
 	}
+
 	return idemixConfig, nil
 }

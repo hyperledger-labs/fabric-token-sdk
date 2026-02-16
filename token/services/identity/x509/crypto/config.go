@@ -26,6 +26,7 @@ func UnmarshalConfig(data []byte) (*Config, error) {
 	if err := proto.Unmarshal(data, config); err != nil {
 		return nil, errors.Wrapf(err, "failed to unamrshal config")
 	}
+
 	return config, nil
 }
 
@@ -34,6 +35,7 @@ func MarshalConfig(config *Config) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal config")
 	}
+
 	return data, nil
 }
 
@@ -86,6 +88,7 @@ func ToBCCSPOpts(boxed interface{}) (*BCCSP, error) {
 	}
 
 	err = decoder.Decode(boxed)
+
 	return opts.BCCSP, err
 }
 
@@ -106,6 +109,7 @@ func ToPKCS11OptsOpts(o *PKCS11) *pkcs11.PKCS11Opts {
 			ID:  d.ID,
 		})
 	}
+
 	return res
 }
 
@@ -132,5 +136,6 @@ func BCCSPOpts(defaultProvider string) (*BCCSP, error) {
 		bccsp.PKCS11.Label = label
 		bccsp.PKCS11.Library = lib
 	}
+
 	return bccsp, nil
 }

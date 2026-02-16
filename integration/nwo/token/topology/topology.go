@@ -72,21 +72,25 @@ type TMS struct {
 
 func (t *TMS) AddAuditor(auditor *node.Node) *TMS {
 	t.Auditors = append(t.Auditors, auditor.Name)
+
 	return t
 }
 
 func (t *TMS) AddCertifier(certifier *node.Node) *TMS {
 	t.Certifiers = append(t.Certifiers, certifier.Name)
+
 	return t
 }
 
 func (t *TMS) AddIssuer(issuer *node.Node) *TMS {
 	t.Issuers = append(t.Issuers, issuer.Name)
+
 	return t
 }
 
 func (t *TMS) AddIssuerByID(id string) *TMS {
 	t.Issuers = append(t.Issuers, id)
+
 	return t
 }
 
@@ -109,6 +113,7 @@ func (t *TMS) ID() string {
 		b.WriteRune('-')
 		b.WriteString(string(t.Alias))
 	}
+
 	return b.String()
 }
 
@@ -123,6 +128,7 @@ func (t *TMS) TmsID() string {
 		b.WriteRune('-')
 		b.WriteString(t.Namespace)
 	}
+
 	return b.String()
 }
 
@@ -141,6 +147,7 @@ func (t *TMS) SetNamespace(namespace string) *TMS {
 	}
 
 	t.Namespace = namespace
+
 	return t
 }
 

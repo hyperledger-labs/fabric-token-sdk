@@ -44,6 +44,7 @@ var cobraCommand = &cobra.Command{
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
+
 		return keyPairGen(args)
 	},
 }

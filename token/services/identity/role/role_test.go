@@ -30,6 +30,7 @@ func setup(t *testing.T) (context.Context, *role.Role, *mock.LocalMembership) {
 	m.GetDefaultIdentifierReturns("defaultID")
 
 	r := role.NewRole(logger, identity.IssuerRole, "net1", driver.Identity("nodeID"), m)
+
 	return ctx, r, m
 }
 
@@ -99,6 +100,7 @@ func TestRole_MapToIdentity_mapStringToID_branches(t *testing.T) {
 	})
 	m.IsMeCalls(func(ctx context.Context, id driver.Identity) bool {
 		s := string(id)
+
 		return s == "member" || s == "member2"
 	})
 
@@ -171,6 +173,7 @@ func TestRole_MapToIdentity_mapIdentityToID_branches(t *testing.T) {
 	// Use stubs for IsMe, GetIdentifier and GetIdentityInfo
 	m.IsMeCalls(func(ctx context.Context, id driver.Identity) bool {
 		s := string(id)
+
 		return s == "me" || s == "me2"
 	})
 	m.GetIdentifierCalls(func(ctx context.Context, id driver.Identity) (string, error) {

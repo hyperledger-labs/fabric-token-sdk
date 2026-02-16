@@ -36,6 +36,7 @@ func (f *fakeConfigService) Configurations() ([]driver.Configuration, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
+
 	return f.configs, nil
 }
 
@@ -52,6 +53,7 @@ func (f *fakeNormalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOpt
 	if f.retOpts != nil {
 		return f.retOpts, f.retErr
 	}
+
 	return opt, f.retErr
 }
 

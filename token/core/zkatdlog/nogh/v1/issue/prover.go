@@ -32,6 +32,7 @@ func (p *Proof) Serialize() ([]byte, error) {
 func (p *Proof) Deserialize(bytes []byte) error {
 	p.SameType = &SameType{}
 	p.RangeCorrectness = &rp.RangeCorrectness{}
+
 	return asn1.Unmarshal[asn1.Serializer](bytes, p.SameType, p.RangeCorrectness)
 }
 
@@ -111,5 +112,6 @@ func (p *Prover) Prove() ([]byte, error) {
 		SameType:         st,
 		RangeCorrectness: rc,
 	}
+
 	return proof.Serialize()
 }

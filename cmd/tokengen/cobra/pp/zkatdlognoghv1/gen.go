@@ -102,6 +102,7 @@ var cobraCommand = &cobra.Command{
 		})
 		if err != nil {
 			fmt.Printf("failed to generate public parameters [%s]\n", err)
+
 			return errors.Wrap(err, "failed to generate public parameters")
 		}
 		// generate the chaincode package
@@ -111,6 +112,7 @@ var cobraCommand = &cobra.Command{
 				return err
 			}
 		}
+
 		return nil
 	},
 }

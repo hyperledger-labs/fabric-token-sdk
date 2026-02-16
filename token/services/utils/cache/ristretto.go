@@ -31,6 +31,7 @@ func NewRistrettoCache[T any](config *ristretto.Config[string, T]) (*ristrettoCa
 	if err != nil {
 		return nil, err
 	}
+
 	return &ristrettoCache[T]{
 		cache: rCache,
 	}, nil
@@ -75,10 +76,12 @@ func (c *ristrettoCache[T]) GetOrLoad(key string, loader func() (T, error)) (T, 
 			return nil, loadErr
 		}
 		c.Add(key, newValue)
+
 		return newValue, nil
 	})
 	if err != nil {
 		return zero, false, err
 	}
+
 	return res.(T), false, nil
 }

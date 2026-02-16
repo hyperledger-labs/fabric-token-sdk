@@ -71,5 +71,6 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 		},
 	))
+
 	return ts, selector
 }

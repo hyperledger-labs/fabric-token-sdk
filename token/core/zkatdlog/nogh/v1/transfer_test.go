@@ -45,6 +45,7 @@ func TestTransferService_VerifyTransfer(t *testing.T) {
 			name: "nil action",
 			TestCase: func() (*v1.TransferService, driver.TransferAction, []*driver.TransferOutputMetadata) {
 				service := &v1.TransferService{}
+
 				return service, nil, nil
 			},
 			wantErr: "nil action",
@@ -128,6 +129,7 @@ func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 				return err
 			}
 			_, err = action.Serialize()
+
 			return err
 		},
 	)
@@ -232,6 +234,7 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 		noop.NewTracerProvider(),
 		tokensService,
 	)
+
 	return &transferEnv{
 		ts:      ts,
 		outputs: outputs,
@@ -254,5 +257,6 @@ func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case, configuratio
 		}
 		envs[i] = env
 	}
+
 	return &benchmarkTransferEnv{Envs: envs}, nil
 }

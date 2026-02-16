@@ -69,6 +69,7 @@ func (r Recipients) Identities() []view.Identity {
 	for i, recipient := range r {
 		ids[i] = recipient.Identity
 	}
+
 	return ids
 }
 
@@ -102,6 +103,7 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 	if err != nil {
 		return nil, err
 	}
+
 	return pseudonymBoxed.(view.Identity), nil
 }
 
@@ -130,6 +132,7 @@ func RequestMultisigIdentity(context view.Context, ids []view.Identity, opts ...
 	if err != nil {
 		return nil, err
 	}
+
 	return pseudonymBoxed.(view.Identity), nil
 }
 
@@ -152,11 +155,13 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 				return nil, errors.Wrapf(err, "failed to get recipient identity")
 			}
 			local[i] = false
+
 			continue
 		}
 
 		if isRemoteRecipient := recipient.RecipientData != nil; isRemoteRecipient {
 			results[i] = recipient.RecipientData.Identity
+
 			continue
 		}
 		if w == nil {
@@ -176,6 +181,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to aggregate recipient identities")
 	}
+
 	return multisigIdentity, nil
 }
 
@@ -224,8 +230,10 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 
 	if err := endpoint.GetService(context).Bind(context.Context(), recipient.Identity, recipientData.Identity); err != nil {
 		logger.ErrorfContext(context.Context(), "failed binding [%s] to [%s]: %s", recipientData.Identity, recipient.Identity, err)
+
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", recipientData.Identity, recipient.Identity)
 	}
+
 	return recipientData.Identity, nil
 }
 
@@ -275,6 +283,7 @@ func (f *RequestRecipientIdentityView) aggregateAndDistribute(context view.Conte
 			return nil, errors.Wrapf(err, "failed to send recipient request")
 		}
 	}
+
 	return multisigIdentity, nil
 }
 
@@ -300,6 +309,7 @@ func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet str
 	if err != nil {
 		return nil, err
 	}
+
 	return id.(view.Identity), nil
 }
 
@@ -377,6 +387,7 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 ) error {
 	if !recipientRequest.MultiSig {
 		logger.DebugfContext(context.Context(), "Skip multisig")
+
 		return nil
 	}
 
@@ -451,6 +462,7 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 			return errors.Wrapf(err, "failed to bind me to recipient identity")
 		}
 	}
+
 	return nil
 }
 
@@ -625,5 +637,6 @@ func getRecipientData(opts *token.ServiceOptions) *RecipientData {
 	if !ok {
 		return nil
 	}
+
 	return rdBoxed.(*RecipientData)
 }

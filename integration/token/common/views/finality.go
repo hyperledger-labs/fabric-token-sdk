@@ -56,6 +56,7 @@ func (r *TxFinalityView) Call(context view.Context) (interface{}, error) {
 	if err := <-errs; err != nil {
 		return nil, err
 	}
+
 	return nil, <-errs
 }
 
@@ -79,6 +80,7 @@ func newFinalityListener(timeout time.Duration, errs chan error) *finalityListen
 	if timeout > 0 {
 		time.AfterFunc(timeout, func() { once.Do(func() { errs <- errors.New("timeout exceeded") }) })
 	}
+
 	return &finalityListener{
 		success: func() { once.Do(func() { errs <- nil }) },
 	}

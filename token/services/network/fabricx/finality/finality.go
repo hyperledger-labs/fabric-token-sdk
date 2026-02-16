@@ -67,15 +67,18 @@ func (m *messageTxInfoMapper) MapTxData(_ context.Context, data []byte, blkMetad
 	_, payload, chdr, err := fabricutils.UnmarshalTx(data)
 	if err != nil {
 		logger.Debugf("failed to unmarshal tx [%d:%d]: %v", blockNum, txNum, err)
+
 		return nil, errors.Wrapf(err, "failed to unmarshal tx [%d:%d]", blockNum, txNum)
 	}
 	if chdr.Type != int32(cb.HeaderType_MESSAGE) {
 		logger.Warnf("Tx with type [%d] found in [%d:%d]. Skipping...", chdr.Type, blockNum, txNum)
+
 		return nil, nil
 	}
 	tx := &protoblocktx.Tx{}
 	if err := proto.Unmarshal(payload.Data, tx); err != nil {
 		logger.Debugf("failed to unmarshal tx [%d:%d]: %v", blockNum, txNum, err)
+
 		return nil, errors.Wrapf(err, "failed to unmarshal tx payload [%d:%d]", blockNum, txNum)
 	}
 
@@ -83,6 +86,7 @@ func (m *messageTxInfoMapper) MapTxData(_ context.Context, data []byte, blkMetad
 		return nil, errors.Errorf("block metadata lacks transaction filter")
 	}
 	statusCode := protoblocktx.Status(blkMetadata.Metadata[statusIdx][txNum])
+
 	return m.mapTx(chdr.TxId, tx, statusCode)
 }
 
@@ -101,6 +105,7 @@ func (m *messageTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([
 	if err != nil {
 		return nil, err
 	}
+
 	return collections.Values(infos), nil
 }
 
@@ -126,6 +131,7 @@ func (m *messageTxInfoMapper) mapTx(txID string, tx *protoblocktx.Tx, vc protobl
 					Message:     vc.String(),
 					RequestHash: write.GetValue(),
 				}
+
 				break
 			}
 		}
@@ -141,6 +147,7 @@ func (m *messageTxInfoMapper) mapTx(txID string, tx *protoblocktx.Tx, vc protobl
 					Message:     vc.String(),
 					RequestHash: write.GetValue(),
 				}
+
 				break
 			}
 		}
@@ -175,6 +182,7 @@ func (m *messageTxInfoMapper) mapRWSet(rwSet *vault.ReadWriteSet, txID string, c
 			logger.Debugf("TX [%s:%s] did not have key [%s]. Found: %v", txID, ns, key, write.Keys())
 		}
 	}
+
 	return txInfos, nil
 }
 

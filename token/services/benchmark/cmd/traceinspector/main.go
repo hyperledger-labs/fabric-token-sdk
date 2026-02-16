@@ -411,6 +411,7 @@ func formatStack(st trace.Stack) string {
 		}
 	}
 	f := frames[0]
+
 	return fmt.Sprintf("%s (%s:%d)", f.Func, f.File, f.Line)
 }
 

@@ -15,6 +15,7 @@ func WithIssuerIdentity(label string, hsm bool) fsc.Option {
 	if hsm {
 		return WithIssuerIdentityWithHSM(label)
 	}
+
 	return func(o *fsc.Options) error {
 		to := topology.ToOptions(o)
 		to.SetIssuers(append(to.Issuers(), label))
@@ -22,6 +23,7 @@ func WithIssuerIdentity(label string, hsm bool) fsc.Option {
 		if label != "_default_" {
 			o.AddAlias(label)
 		}
+
 		return nil
 	}
 }
@@ -35,6 +37,7 @@ func WithIssuerIdentityWithHSM(label string) fsc.Option {
 		if label != "_default_" {
 			o.AddAlias(label)
 		}
+
 		return nil
 	}
 }
@@ -43,6 +46,7 @@ func WithDefaultIssuerIdentity(hsm bool) fsc.Option {
 	if hsm {
 		return WithDefaultIssuerIdentityWithHSM()
 	}
+
 	return WithIssuerIdentity("_default_", false)
 }
 
@@ -62,6 +66,7 @@ func WithOwnerIdentity(label string) fsc.Option {
 		if label != "_default_" {
 			o.AddAlias(label)
 		}
+
 		return nil
 	}
 }
@@ -76,6 +81,7 @@ func WithRemoteOwnerIdentity(label string) fsc.Option {
 		if label != "_default_" {
 			o.AddAlias(label)
 		}
+
 		return nil
 	}
 }
@@ -92,6 +98,7 @@ func WithAuditorIdentity(hsm bool) fsc.Option {
 	if hsm {
 		return WithAuditorIdentityWithHSM()
 	}
+
 	return func(o *fsc.Options) error {
 		topology.ToOptions(o).SetAuditor(true)
 

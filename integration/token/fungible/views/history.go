@@ -53,6 +53,7 @@ func (i *ListIssuedTokensViewFactory) NewView(in []byte) (view.View, error) {
 	if err := json.Unmarshal(in, f.ListIssuedTokens); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling input")
 	}
+
 	return f, nil
 }
 
@@ -82,6 +83,7 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
+
 	return iterators.ReadAllPointers(it.Items)
 }
 
@@ -92,6 +94,7 @@ func (i *ListAuditedTransactionsViewFactory) NewView(in []byte) (view.View, erro
 	if err := json.Unmarshal(in, f.ListAuditedTransactions); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling input")
 	}
+
 	return f, nil
 }
 
@@ -139,6 +142,7 @@ func (l *ListAcceptedTransactionsViewFactory) NewView(in []byte) (view.View, err
 	if err := json.Unmarshal(in, v.ListAcceptedTransactions); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling input")
 	}
+
 	return v, nil
 }
 
@@ -171,5 +175,6 @@ func (p *TransactionInfoViewFactory) NewView(in []byte) (view.View, error) {
 	if err := json.Unmarshal(in, f.TransactionInfo); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling input")
 	}
+
 	return f, nil
 }

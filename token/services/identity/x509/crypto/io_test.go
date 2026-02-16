@@ -27,6 +27,7 @@ func writeTempFile(t *testing.T, content []byte) string {
 	path := filepath.Join(dir, "test.pem")
 	err := os.WriteFile(path, content, 0600)
 	assert.NoError(t, err)
+
 	return path
 }
 

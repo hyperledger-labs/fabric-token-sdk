@@ -49,12 +49,14 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 				if pp == nil {
 					logger.Debugf("public parameters not yet available, wait...")
 					time.Sleep(500 * time.Millisecond)
+
 					continue
 				}
 				logger.Debugf("public parameters available, set certification service...")
 				if err := r.startCertificationService(context, tms, pp); err != nil {
 					logger.Errorf("failed to start certification service [%s]", err)
 				}
+
 				break
 			}
 		}()
@@ -71,6 +73,7 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 func (r *RegisterView) startCertificationService(context view.Context, tms *token.ManagementService, pp *token.PublicParameters) error {
 	if !pp.GraphHiding() {
 		logger.Warnf("the token management system for [%s:%s] does not support graph hiding, skipping certifier registration", r.Channel, r.Namespace)
+
 		return nil
 	}
 
@@ -84,5 +87,6 @@ func (r *RegisterView) startCertificationService(context view.Context, tms *toke
 	if err := c.Start(); err != nil {
 		return errors.WithMessagef(err, "failed starting certifier [%s]", tms)
 	}
+
 	return nil
 }

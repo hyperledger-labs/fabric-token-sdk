@@ -28,6 +28,7 @@ func NewRandomMathContainer(curve *math.Curve) (*MathContainer, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &MathContainer{
 		Zr: curve.NewRandomZr(rand),
 		G1: curve.NewG1(),
@@ -52,6 +53,7 @@ func (a *MathContainer) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to serialize G1Array")
 	}
+
 	return MarshalMath(a.Zr, a.G1, a.G2, zrArray, g1Array)
 }
 
@@ -130,6 +132,7 @@ func (a *Rectangle) Serialize() ([]byte, error) {
 
 func (a *Rectangle) Deserialize(bytes []byte) error {
 	_, err := asn1.Unmarshal(bytes, a)
+
 	return err
 }
 
@@ -143,6 +146,7 @@ func (s *Square) Serialize() ([]byte, error) {
 
 func (s *Square) Deserialize(bytes []byte) error {
 	_, err := asn1.Unmarshal(bytes, s)
+
 	return err
 }
 

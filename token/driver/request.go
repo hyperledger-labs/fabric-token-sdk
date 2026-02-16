@@ -50,6 +50,7 @@ func (r *AuditorSignature) FromProtos(tr *request.AuditorSignature) error {
 	if tr.Signature != nil {
 		r.Signature = tr.Signature.Raw
 	}
+
 	return nil
 }
 
@@ -71,6 +72,7 @@ func (r *TokenRequest) Bytes() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return proto.Marshal(tr)
 }
 
@@ -80,6 +82,7 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling token request")
 	}
+
 	return r.FromProtos(tr)
 }
 
@@ -137,6 +140,7 @@ func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
 			return errors.Wrap(err, "failed converting auditor signatures")
 		}
 	}
+
 	return nil
 }
 
@@ -145,6 +149,7 @@ func (r *TokenRequest) MarshalToMessageToSign(anchor []byte) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", string(anchor))
 	}
+
 	return append(bytes, anchor...), nil
 }
 
@@ -165,6 +170,7 @@ func (a *AuditableIdentity) ToProtos() (*request.AuditableIdentity, error) {
 func (a *AuditableIdentity) FromProtos(auditableIdentity *request.AuditableIdentity) error {
 	a.Identity = ToIdentity(auditableIdentity.Identity)
 	a.AuditInfo = auditableIdentity.AuditInfo
+
 	return nil
 }
 
@@ -177,6 +183,7 @@ func (i *IssueInputMetadata) ToProtos() (*request.IssueInputMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal token ID [%s]", i.TokenID)
 	}
+
 	return &request.IssueInputMetadata{
 		TokenId: tokenID,
 	}, nil
@@ -184,6 +191,7 @@ func (i *IssueInputMetadata) ToProtos() (*request.IssueInputMetadata, error) {
 
 func (i *IssueInputMetadata) FromProtos(issueInputMetadata *request.IssueInputMetadata) error {
 	i.TokenID = ToTokenID(issueInputMetadata.TokenId)
+
 	return nil
 }
 
@@ -199,6 +207,7 @@ func (i *IssueOutputMetadata) ToProtos() (*request.OutputMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling receivers")
 	}
+
 	return &request.OutputMetadata{
 		Metadata:  i.OutputMetadata,
 		Receivers: receivers,
@@ -214,6 +223,7 @@ func (i *IssueOutputMetadata) FromProtos(outputsMetadata *request.OutputMetadata
 	if err := protos.FromProtosSlice(outputsMetadata.Receivers, i.Receivers); err != nil {
 		return errors.Wrap(err, "failed unmarshalling receivers metadata")
 	}
+
 	return nil
 }
 
@@ -221,6 +231,7 @@ func (i *IssueOutputMetadata) RecipientAt(index int) *AuditableIdentity {
 	if index < 0 || index >= len(i.Receivers) {
 		return nil
 	}
+
 	return i.Receivers[index]
 }
 
@@ -250,6 +261,7 @@ func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
+
 	return &request.IssueMetadata{
 		Issuer:       issuer,
 		Inputs:       inputs,
@@ -275,6 +287,7 @@ func (i *IssueMetadata) FromProtos(issueMetadata *request.IssueMetadata) error {
 		return errors.Wrap(err, "failed unmarshalling output metadata")
 	}
 	i.ExtraSigners = FromProtoIdentitySlice(issueMetadata.ExtraSigners)
+
 	return nil
 }
 
@@ -289,6 +302,7 @@ func (i *IssueMetadata) Receivers() []Identity {
 			}
 		}
 	}
+
 	return res
 }
 
@@ -306,6 +320,7 @@ func (t *TransferInputMetadata) ToProtos() (*request.TransferInputMetadata, erro
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling tokenID")
 	}
+
 	return &request.TransferInputMetadata{
 		TokenId: tokenID,
 		Senders: senders,
@@ -321,6 +336,7 @@ func (t *TransferInputMetadata) FromProtos(transferInputMetadata *request.Transf
 	if err := protos.FromProtosSlice(transferInputMetadata.Senders, t.Senders); err != nil {
 		return errors.Wrap(err, "failed unmarshalling token metadata")
 	}
+
 	return nil
 }
 
@@ -338,6 +354,7 @@ func (t *TransferOutputMetadata) ToProtos() (*request.OutputMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling receivers")
 	}
+
 	return &request.OutputMetadata{
 		Metadata:  t.OutputMetadata,
 		AuditInfo: t.OutputAuditInfo,
@@ -355,6 +372,7 @@ func (t *TransferOutputMetadata) FromProtos(transferOutputMetadata *request.Outp
 	if err := protos.FromProtosSlice(transferOutputMetadata.Receivers, t.Receivers); err != nil {
 		return errors.Wrap(err, "failed unmarshalling receivers metadata")
 	}
+
 	return nil
 }
 
@@ -362,6 +380,7 @@ func (t *TransferOutputMetadata) RecipientAt(index int) *AuditableIdentity {
 	if index < 0 || index >= len(t.Receivers) {
 		return nil
 	}
+
 	return t.Receivers[index]
 }
 
@@ -388,6 +407,7 @@ func (t *TransferMetadata) TokenIDAt(index int) *token.ID {
 	if index < 0 || index >= len(t.Inputs) {
 		return nil
 	}
+
 	return t.Inputs[index].TokenID
 }
 
@@ -407,6 +427,7 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 			Raw: t.Issuer.Bytes(),
 		}
 	}
+
 	return &request.TransferMetadata{
 		Inputs:       inputs,
 		Outputs:      outputs,
@@ -445,6 +466,7 @@ func (t *TransferMetadata) Receivers() []Identity {
 			}
 		}
 	}
+
 	return res
 }
 
@@ -459,6 +481,7 @@ func (t *TransferMetadata) Senders() []Identity {
 			}
 		}
 	}
+
 	return res
 }
 
@@ -470,6 +493,7 @@ func (t *TransferMetadata) TokenIDs() []*token.ID {
 		}
 		res = append(res, input.TokenID)
 	}
+
 	return res
 }
 
@@ -488,6 +512,7 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return proto.Marshal(trm)
 }
 
@@ -555,6 +580,7 @@ func (m *TokenRequestMetadata) FromProtos(trm *request.TokenRequestMetadata) err
 				return errors.Wrapf(err, "failed unmarshalling issue metadata")
 			}
 			m.Issues = append(m.Issues, issueMetadata)
+
 			continue
 		}
 		tm := meta.GetTransferMetadata()
@@ -564,9 +590,12 @@ func (m *TokenRequestMetadata) FromProtos(trm *request.TokenRequestMetadata) err
 				return errors.Wrapf(err, "failed unmarshalling transfer metadata")
 			}
 			m.Transfers = append(m.Transfers, transferMetadata)
+
 			continue
 		}
+
 		return errors.Errorf("failed unmarshalling metadata, type not recognized")
 	}
+
 	return nil
 }

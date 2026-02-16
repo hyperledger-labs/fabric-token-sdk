@@ -60,6 +60,7 @@ func NewPublicParamsManagerFromParams[T driver.PublicParameters](pp T) (*PublicP
 	if len(pp.Issuers()) == 0 {
 		logger.Warnf("no issuers definied in the public parameters")
 	}
+
 	return &PublicParamsManager[T]{
 		publicParameters: pp,
 	}, nil

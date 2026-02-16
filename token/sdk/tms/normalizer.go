@@ -91,5 +91,6 @@ func Filter[E any](in []E, keep func(E) bool) []E {
 			out = append(out, x)
 		}
 	}
+
 	return out
 }

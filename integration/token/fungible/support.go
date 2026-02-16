@@ -79,6 +79,7 @@ func RegisterAuditorForTMSID(network *integration.Infrastructure, auditor *token
 func getTmsId(network *integration.Infrastructure, namespace string) *token2.TMSID {
 	fabricTopology := getFabricTopology(network)
 	gomega.Expect(fabricTopology).NotTo(gomega.BeNil())
+
 	return &token2.TMSID{
 		Network:   fabricTopology.Name(),
 		Channel:   fabricTopology.Channels[0].Name,
@@ -92,6 +93,7 @@ func getFabricTopology(network *integration.Infrastructure) *topology2.Topology 
 			return t.(*topology2.Topology)
 		}
 	}
+
 	return nil
 }
 
@@ -150,6 +152,7 @@ func issueCashForTMSID(
 				common2.CheckEndorserFinality(network, n, txID, tmsId, false)
 			}
 		}
+
 		return common.JSONUnmarshalString(txIDBoxed)
 	}
 
@@ -157,6 +160,7 @@ func issueCashForTMSID(
 	for _, msg := range expectedErrorMsgs {
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
+
 	return ""
 }
 
@@ -167,6 +171,7 @@ func GetEndorsers(network *integration.Infrastructure, sel *token3.ReplicaSelect
 			endorsers = append(endorsers, sel.Get(p.Name))
 		}
 	}
+
 	return endorsers
 }
 
@@ -223,10 +228,12 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id *token3.N
 		if err != nil {
 			if txExpected.CheckNext {
 				gomega.Expect(matchTransactionRecord(tx, expected[i+1], i+1)).ToNot(gomega.HaveOccurred())
+
 				continue
 			}
 			if txExpected.CheckPrevious {
 				gomega.Expect(matchTransactionRecord(tx, expected[i-1], i-1)).ToNot(gomega.HaveOccurred())
+
 				continue
 			}
 			gomega.Expect(false).To(gomega.BeTrue(), err.Error())
@@ -373,6 +380,7 @@ func ListIssuerHistoryForTMSID(network *integration.Infrastructure, wallet strin
 
 	issuedTokens := &token.IssuedTokens{}
 	common.JSONUnmarshal(res.([]byte), issuedTokens)
+
 	return issuedTokens
 }
 
@@ -390,6 +398,7 @@ func ListUnspentTokensForTMSID(network *integration.Infrastructure, id *token3.N
 
 	unspentTokens := &token.UnspentTokens{}
 	common.JSONUnmarshal(res.([]byte), unspentTokens)
+
 	return unspentTokens
 }
 
@@ -424,6 +433,7 @@ func TransferCashForTMSID(network *integration.Infrastructure, sender *token3.No
 			gomega.Expect(sigma).ToNot(gomega.BeNil(), "endorsement ack sigma is nil for identity %s", identity)
 		}
 		gomega.Expect(len(txInfo.EndorsementAcks)).To(gomega.BeEquivalentTo(len(signers)))
+
 		return txID
 	}
 
@@ -432,6 +442,7 @@ func TransferCashForTMSID(network *integration.Infrastructure, sender *token3.No
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	time.Sleep(5 * time.Second)
+
 	return ""
 }
 
@@ -492,6 +503,7 @@ func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *Wa
 			gomega.Expect(sigma).ToNot(gomega.BeNil(), "endorsement ack sigma is nil for identity %s", identity)
 		}
 		gomega.Expect(len(txInfo.EndorsementAcks)).To(gomega.BeEquivalentTo(len(signers)))
+
 		return txID
 	}
 
@@ -500,6 +512,7 @@ func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *Wa
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	time.Sleep(5 * time.Second)
+
 	return ""
 }
 
@@ -538,6 +551,7 @@ func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *Wall
 			gomega.Expect(sigma).ToNot(gomega.BeNil(), "endorsement ack sigma is nil for identity %s", identity)
 		}
 		gomega.Expect(len(txInfo.EndorsementAcks)).To(gomega.BeEquivalentTo(len(signers)))
+
 		return txID
 	}
 
@@ -546,6 +560,7 @@ func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *Wall
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	time.Sleep(5 * time.Second)
+
 	return ""
 }
 
@@ -600,6 +615,7 @@ func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wm
 			gomega.Expect(sigma).ToNot(gomega.BeNil(), "endorsement ack sigma is nil for identity %s", identity)
 		}
 		gomega.Expect(len(txInfo.EndorsementAcks)).To(gomega.BeEquivalentTo(len(signers)))
+
 		return txID
 	}
 
@@ -608,6 +624,7 @@ func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wm
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	time.Sleep(5 * time.Second)
+
 	return ""
 }
 
@@ -677,6 +694,7 @@ func TransferCashMultiActions(network *integration.Infrastructure, sender *token
 	strErr := err.Error()
 	s := strings.LastIndex(strErr, "[<<<")
 	e := strings.LastIndex(strErr, ">>>]")
+
 	return strErr[s+4 : e]
 }
 
@@ -694,6 +712,7 @@ func MaliciousTransferCash(network *integration.Infrastructure, id *token3.NodeR
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		txID := common.JSONUnmarshalString(txidBoxed)
 		time.Sleep(5 * time.Second)
+
 		return txID
 	}
 
@@ -702,6 +721,7 @@ func MaliciousTransferCash(network *integration.Infrastructure, id *token3.NodeR
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	time.Sleep(5 * time.Second)
+
 	return ""
 }
 
@@ -729,6 +749,7 @@ func PrepareTransferCash(network *integration.Infrastructure, sender *token3.Nod
 	}
 	res := &views.PrepareTransferResult{}
 	common.JSONUnmarshal(txBoxed.([]byte), res)
+
 	return res.TxID, res.TXRaw
 }
 
@@ -764,6 +785,7 @@ func BroadcastPreparedTransferCash(network *integration.Infrastructure, id *toke
 	}))
 	if len(expectedErrorMsgs) == 0 {
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 		return
 	}
 
@@ -799,6 +821,7 @@ func GetTransactionInfoForTMSID(network *integration.Infrastructure, id *token3.
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	info := &ttx.TransactionInfo{}
 	common.JSONUnmarshal(boxed.([]byte), info)
+
 	return info
 }
 
@@ -818,6 +841,7 @@ func TransferCashByIDs(network *integration.Infrastructure, ref *token3.NodeRefe
 		txID := common.JSONUnmarshalString(txIDBoxed)
 		common2.CheckFinality(network, receiver, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
+
 		return txID
 	} else {
 		gomega.Expect(err).To(gomega.HaveOccurred())
@@ -825,6 +849,7 @@ func TransferCashByIDs(network *integration.Infrastructure, ref *token3.NodeRefe
 			gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 		}
 		time.Sleep(5 * time.Second)
+
 		return ""
 	}
 }
@@ -925,6 +950,7 @@ func GetTXStatus(network *integration.Infrastructure, id *token3.NodeReference, 
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to check public params at [%s]", id)
 	response := &views.TxStatusResponse{}
 	common.JSONUnmarshal(boxed.([]byte), response)
+
 	return response
 }
 
@@ -971,6 +997,7 @@ func CheckPublicParamsMatch(network *integration.Infrastructure, tmsId *token2.T
 			}
 		}
 	}
+
 	return true
 }
 
@@ -1026,6 +1053,7 @@ func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams
 func GetPublicParams(network *integration.Infrastructure, id *token3.NodeReference) []byte {
 	pp, err := network.Client(id.ReplicaName()).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 	return pp.([]byte)
 }
 
@@ -1046,6 +1074,7 @@ func DoesWalletExist(network *integration.Infrastructure, id *token3.NodeReferen
 	default:
 		panic(fmt.Sprintf("type not recognized [%T]", v))
 	}
+
 	return exists
 }
 
@@ -1103,6 +1132,7 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, id *token3.Node
 		tok := unspentTokens.At(i)
 		IDs = append(IDs, &tok.Id)
 	}
+
 	return IDs
 }
 
@@ -1124,6 +1154,7 @@ func WhoDeletedToken(network *integration.Infrastructure, id *token3.NodeReferen
 		gomega.Expect(result.Deleted[i]).To(gomega.BeTrue(), "expected token [%s] to be deleted", tokenIDs[i])
 		gomega.Expect(result.Who[i]).To(gomega.BeEquivalentTo(txID))
 	}
+
 	return result
 }
 
@@ -1146,10 +1177,12 @@ func getIdentity(identities []topology.Identity, id string) []byte {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			wrap, err := identity.WrapWithType(x509.IdentityType, identityDescriptor.Identity)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 			return wrap
 		}
 	}
 	gomega.Expect(false).To(gomega.BeTrue(), "identity not found in [%s]", id)
+
 	return nil
 }
 
@@ -1165,6 +1198,7 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 	default:
 		panic(fmt.Sprintf("type not recognized [%T]", v))
 	}
+
 	return s
 }
 
@@ -1263,6 +1297,7 @@ func CheckOwnerWalletIDs(network *integration.Infrastructure, owner *token3.Node
 		for _, expectedWID := range wIDs {
 			if expectedWID == wID {
 				found = true
+
 				break
 			}
 		}
@@ -1283,6 +1318,7 @@ func GetRevocationHandle(network *integration.Infrastructure, ref *token3.NodeRe
 	rh := &views.RevocationHandle{}
 	common.JSONUnmarshal(rhBoxed.([]byte), rh)
 	fmt.Printf("GetRevocationHandle [%s][%s]", rh.RH, logging.SHA256Base64([]byte(rh.RH)))
+
 	return rh.RH
 }
 
@@ -1322,6 +1358,7 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 		common2.CheckFinality(network, user, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 		common2.CheckFinality(network, issuer, txID, nil, false)
+
 		return txID
 	}
 
@@ -1329,6 +1366,7 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 	for _, msg := range expectedErrorMsgs {
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
+
 	return ""
 }
 
@@ -1394,6 +1432,7 @@ func TokensUpgrade(network *integration.Infrastructure, wpm *WalletManagerProvid
 		common2.CheckFinality(network, user, txID, nil, false)
 		common2.CheckFinality(network, auditor, txID, nil, false)
 		common2.CheckFinality(network, issuer, txID, nil, false)
+
 		return txID
 	}
 
@@ -1401,6 +1440,7 @@ func TokensUpgrade(network *integration.Infrastructure, wpm *WalletManagerProvid
 	for _, msg := range expectedErrorMsgs {
 		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
+
 	return ""
 }
 
@@ -1426,6 +1466,7 @@ func MultiSigLockCashForTMSID(network *integration.Infrastructure, sender *token
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	txID := common.JSONUnmarshalString(txidBoxed)
+
 	return txID
 }
 
@@ -1443,6 +1484,7 @@ func MultiSigSpendCashForTMSID(network *integration.Infrastructure, sender *toke
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	txID := common.JSONUnmarshalString(txidBoxed)
+
 	return txID
 }
 
@@ -1507,6 +1549,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	// Serialize
 	ppBytes, err = pp.Serialize()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 	return ppBytes
 }
 
@@ -1555,5 +1598,6 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 	// Serialize
 	ppBytes, err = pp.Serialize()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 	return ppBytes
 }

@@ -72,5 +72,6 @@ func startContainer(t *testing.T) (func(), string) {
 	cfg := postgres.DefaultConfig(postgres.WithDBName("test-db"))
 	terminate, _, err := postgres.StartPostgres(t.Context(), cfg, nil)
 	assert.NoError(t, err)
+
 	return terminate, cfg.DataSource()
 }

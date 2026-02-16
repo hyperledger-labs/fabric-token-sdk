@@ -185,6 +185,7 @@ func newBenchmarkIssuerEnv(b *testing.B, n int, benchmarkCase *benchmark2.Case) 
 	for i := range envs {
 		envs[i] = newIssuerEnv(pp, benchmarkCase.NumOutputs)
 	}
+
 	return &benchmarkIssuerEnv{IssuerEnvs: envs}
 }
 
@@ -198,6 +199,7 @@ func newBenchmarkIssuerProofVerificationEnv(b *testing.B, n int, benchmarkCase *
 	for i := range envs {
 		envs[i] = newIssuerProofVerificationEnv(b, pp, benchmarkCase.NumOutputs)
 	}
+
 	return &benchmarkIssuerEnv{IssuerEnvs: envs}
 }
 
@@ -207,6 +209,7 @@ func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
 	tb.Helper()
 	pp, err := v1.Setup(bits, nil, curveID)
 	require.NoError(tb, err)
+
 	return pp
 }
 
@@ -220,6 +223,7 @@ func prepareZKIssue(t *testing.T, bits uint64, curveID math.CurveID, numOutputs 
 	prover, err := issue2.NewProver(tw, tokens, pp)
 	assert.NoError(t, err)
 	verifier := issue2.NewVerifier(tokens, pp)
+
 	return prover, verifier
 }
 
@@ -241,5 +245,6 @@ func prepareInputsForZKIssue(pp *v1.PublicParams, numOutputs int) ([]*token.Meta
 	for i := range values {
 		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve) // #nosec G115
 	}
+
 	return token.NewMetadata(pp.Curve, "ABC", values, bf), tokens
 }

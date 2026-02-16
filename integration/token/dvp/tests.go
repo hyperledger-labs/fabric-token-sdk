@@ -74,6 +74,7 @@ func issueHouse(network *integration.Infrastructure, valuation uint64, issuer *t
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	time.Sleep(5 * time.Second)
+
 	return common.JSONUnmarshalString(houseIDBoxed)
 }
 

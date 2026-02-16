@@ -35,6 +35,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 			context: func() (*TestContext, TestCheck) {
 				pp := &mock.PublicParameters{}
 				pp.AuditorsReturns(nil)
+
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
@@ -54,6 +55,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 			context: func() (*TestContext, TestCheck) {
 				pp := &mock.PublicParameters{}
 				pp.AuditorsReturns(nil)
+
 				return &TestContext{
 					PP:           pp,
 					TokenRequest: &driver.TokenRequest{},
@@ -67,6 +69,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 			context: func() (*TestContext, TestCheck) {
 				pp := &mock.PublicParameters{}
 				pp.AuditorsReturns([]identity.Identity{driver.Identity("auditor1")})
+
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
@@ -90,6 +93,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 
 				des := &mock.Deserializer{}
 				des.GetAuditorVerifierReturns(nil, errors.Errorf("auditor deserialize fail"))
+
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
@@ -118,6 +122,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				des.GetAuditorVerifierReturns(ver, nil)
 				sp := &mock.SignatureProvider{}
 				sp.HasBeenSignedByReturns(nil, errors.New("signature is not valid"))
+
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
@@ -142,6 +147,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				des.GetAuditorVerifierReturns(ver, nil)
 				sp := &mock.SignatureProvider{}
 				sp.HasBeenSignedByReturns(nil, errors.New("signature is not valid"))
+
 				return &TestContext{
 						PP: pp,
 						TokenRequest: &driver.TokenRequest{
@@ -159,6 +165,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 						if ver2 != ver {
 							return false
 						}
+
 						return auditor.Equal(id)
 					}
 			},
@@ -176,6 +183,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				des.GetAuditorVerifierReturns(ver, nil)
 				sp := &mock.SignatureProvider{}
 				sp.HasBeenSignedByReturns(nil, nil)
+
 				return &TestContext{
 						PP: pp,
 						TokenRequest: &driver.TokenRequest{
@@ -193,6 +201,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 						if ver2 != ver {
 							return false
 						}
+
 						return auditor.Equal(id)
 					}
 			},

@@ -30,6 +30,7 @@ func (v *TypedSignerDeserializerMultiplex) AddTypedSignerDeserializer(typ driver
 	_, ok := v.deserializers[typ]
 	if !ok {
 		v.deserializers[typ] = []TypedSignerDeserializer{d}
+
 		return
 	}
 	v.deserializers[typ] = append(v.deserializers[typ], d)
@@ -50,9 +51,12 @@ func (v *TypedSignerDeserializerMultiplex) DeserializeSigner(ctx context.Context
 		signer, err := deserializer.DeserializeSigner(ctx, si.Type, si.Identity)
 		if err != nil {
 			errs = append(errs, err)
+
 			continue
 		}
+
 		return signer, nil
 	}
+
 	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%s]", si.Type)
 }

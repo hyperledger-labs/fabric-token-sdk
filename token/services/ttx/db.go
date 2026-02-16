@@ -70,6 +70,7 @@ func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.DebugfContext(ctx, "append done for request %s", tx.ID())
+
 	return nil
 }
 
@@ -85,6 +86,7 @@ func (a *Service) GetStatus(ctx context.Context, txID string) (TxStatus, string,
 	if err != nil {
 		return Unknown, "", err
 	}
+
 	return st, sm, nil
 }
 

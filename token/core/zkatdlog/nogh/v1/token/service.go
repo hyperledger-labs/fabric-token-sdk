@@ -93,6 +93,7 @@ func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get recipients")
 	}
+
 	return recipients, nil
 }
 
@@ -121,6 +122,7 @@ func (s *TokensService) deobfuscateAsCommType(ctx context.Context, output driver
 	if err != nil {
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
 	}
+
 	return tok, metadata.Issuer, recipients, s.OutputTokenFormat, nil
 }
 
@@ -166,6 +168,7 @@ func (s *TokensService) DeserializeToken(ctx context.Context, outputFormat token
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "failed to deserialize token with output token format")
 		}
+
 		return tok, meta, nil, nil
 	}
 
@@ -184,6 +187,7 @@ func (s *TokensService) DeserializeToken(ctx context.Context, outputFormat token
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to compute commitment")
 	}
+
 	return &Token{
 			Owner: fabToken.Owner,
 			Data:  tokens[0],
@@ -233,6 +237,7 @@ func (s *TokensService) deserializeCommToken(ctx context.Context, outputRaw []by
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to deserialize token")
 	}
+
 	return output, metadata, tok, nil
 }
 
@@ -247,6 +252,7 @@ func (s *TokensService) getOutput(ctx context.Context, outputRaw []byte, checkOw
 	if err := math.CheckElement(output.Data, s.PublicParametersManager.PublicParams().Curve); err != nil {
 		return nil, errors.Wrap(err, "data in invalid in output")
 	}
+
 	return output, nil
 }
 
@@ -260,5 +266,6 @@ func SupportedTokenFormat(pp *setup.PublicParams, precision uint64) (token.Forma
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
+
 	return token.Format(hasher.HexDigest()), nil
 }

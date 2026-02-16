@@ -31,6 +31,7 @@ func CheckElements[E Element](elements []E, curveID mathlib.CurveID, length uint
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -43,6 +44,7 @@ func CheckZrElements[E BaseElement](elements []E, curveID mathlib.CurveID, lengt
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -62,6 +64,7 @@ func CheckElement[E Element](element E, curveID mathlib.CurveID) (err error) {
 	if element.IsInfinity() {
 		return errors.New("element is infinity")
 	}
+
 	return nil
 }
 
@@ -78,6 +81,7 @@ func CheckBaseElement[E BaseElement](element E, curveID mathlib.CurveID) (err er
 	if element.CurveID() != curveID {
 		return errors.Errorf("element curve must equal curve ID")
 	}
+
 	return nil
 }
 
@@ -86,5 +90,6 @@ func isNilInterface(i interface{}) bool {
 		return true
 	}
 	rv := reflect.ValueOf(i)
+
 	return rv.Kind() == reflect.Ptr && rv.IsNil()
 }

@@ -142,6 +142,7 @@ func preparePedersenParameters(tb testing.TB, c *math.Curve) []*math.G1 {
 	for i := range 3 {
 		pp[i] = c.GenG1.Mul(c.NewRandomZr(rand))
 	}
+
 	return pp
 }
 
@@ -200,6 +201,7 @@ func prepareInputsOutputs(inValues, outValues []uint64, inBF, outBF []*math.Zr, 
 		outputs[i].Add(pp[1].Mul(c.NewZrFromInt(int64(outValues[i])))) // #nosec G115
 		outputs[i].Add(pp[2].Mul(outBF[i]))
 	}
+
 	return inputs, outputs
 }
 
@@ -207,5 +209,6 @@ func prepareToken(value *math.Zr, rand *math.Zr, ttype string, pp []*math.G1, c 
 	token := pp[0].Mul(c.HashToZr([]byte(ttype)))
 	token.Add(pp[1].Mul(value))
 	token.Add(pp[2].Mul(rand))
+
 	return token
 }

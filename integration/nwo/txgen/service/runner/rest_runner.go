@@ -41,6 +41,7 @@ func (s *RestRunner) Start(ctx context.Context) error {
 
 	if len(s.address) == 0 {
 		s.logger.Infof("No endpoint passed. No remote server starting.")
+
 		return nil
 	}
 	fmt.Println("starting server")

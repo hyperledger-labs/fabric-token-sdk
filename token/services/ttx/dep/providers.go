@@ -50,6 +50,7 @@ func GetNetworkProvider(sp token.ServiceProvider) (NetworkProvider, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return s.(NetworkProvider), nil
 }
 
@@ -101,6 +102,7 @@ func GetManagementService(sp token.ServiceProvider, opts ...token.ServiceOption)
 	if !ok {
 		panic("implementation error, type must be TokenManagementServiceProvider")
 	}
+
 	return tmsProvider.TokenManagementService(opts...)
 }
 
@@ -127,6 +129,7 @@ func GetNetworkIdentityProvider(sp token.ServiceProvider) (NetworkIdentityProvid
 	if !ok {
 		panic("implementation error, type must be NetworkIdentityProvider")
 	}
+
 	return nip, nil
 }
 
@@ -157,6 +160,7 @@ func GetTransactionDB(sp token.ServiceProvider, tmsID token.TMSID) (TransactionD
 	if !ok {
 		panic("implementation error, type must be TransactionDBProvider")
 	}
+
 	return provider.TransactionDB(tmsID)
 }
 
@@ -187,5 +191,6 @@ func GetAuditDB(sp token.ServiceProvider, tmsID token.TMSID) (AuditDB, error) {
 	if !ok {
 		panic("implementation error, type must be AuditDBProvider")
 	}
+
 	return provider.AuditDB(tmsID)
 }

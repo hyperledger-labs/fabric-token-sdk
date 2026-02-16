@@ -64,6 +64,7 @@ func (a *ChecksService) Check(ctx context.Context) ([]string, error) {
 		}
 		errorMessages = append(errorMessages, errs...)
 	}
+
 	return errorMessages, nil
 }
 
@@ -77,6 +78,7 @@ type DefaultCheckers struct {
 
 func NewDefaultCheckers(tmsProvider TokenManagementServiceProvider, networkProvider NetworkProvider, db TokenTransactionDB, tokenDB *tokens.Service, tmsID token.TMSID) []NamedChecker {
 	checkers := &DefaultCheckers{tmsProvider: tmsProvider, networkProvider: networkProvider, db: db, tokenDB: tokenDB, tmsID: tmsID}
+
 	return []NamedChecker{
 		{
 			Name:    "Transaction Check",
@@ -159,6 +161,7 @@ func (a *DefaultCheckers) CheckTransactions(ctx context.Context) ([]string, erro
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 		}
 	}
+
 	return errorMessages, nil
 }
 
@@ -208,11 +211,13 @@ func (a *DefaultCheckers) CheckUnspentTokens(ctx context.Context) ([]string, err
 
 			errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%s][%d], [%s]", id, index, utils.Hashable(tokenRaw)))
 			index++
+
 			return nil
 		}); err != nil {
 			return nil, errors.WithMessagef(err, "failed to match ledger token content with local")
 		}
 	}
+
 	return errorMessages, nil
 }
 
@@ -252,6 +257,7 @@ func (a *DefaultCheckers) CheckTokenSpendability(ctx context.Context) ([]string,
 		// is the token's format supported?
 		if !supportedTokenFormatsSet.Contains(tok.Format) {
 			errorMessages = append(errorMessages, fmt.Sprintf("token format not supported [%s][%s]", tok.ID, tok.Format))
+
 			continue
 		}
 
@@ -260,11 +266,13 @@ func (a *DefaultCheckers) CheckTokenSpendability(ctx context.Context) ([]string,
 		_, _, recipients, _, err := ts.Deobfuscate(ctx, tok.Token, tok.TokenMetadata)
 		if err != nil {
 			errorMessages = append(errorMessages, fmt.Sprintf("failed to deobfuscate token [%s][%s], [%s]", tok.ID, tok.Format, err))
+
 			continue
 		}
 		logger.DebugfContext(ctx, "deobfuscated token [%s][%s][%v]...", tok.ID, tok.Format, recipients)
 		if len(recipients) == 0 {
 			errorMessages = append(errorMessages, fmt.Sprintf("token recipient list is empty for [%s][%s]", tok.ID, tok.Format))
+
 			continue
 		}
 		for _, recipient := range recipients {

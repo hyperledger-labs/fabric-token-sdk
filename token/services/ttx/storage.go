@@ -40,6 +40,7 @@ func GetStorageProvider(sp token.ServiceProvider) (StorageProvider, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return s.(StorageProvider), nil
 }
 
@@ -57,5 +58,6 @@ func StoreTransactionRecords(ctx view.Context, tx *Transaction) error {
 	if err := s.Append(ctx.Context(), tx); err != nil {
 		return errors.Join(ErrStorage, err)
 	}
+
 	return nil
 }

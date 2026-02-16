@@ -19,6 +19,7 @@ func ToActionSlice(actionType request.ActionType, actions [][]byte) []*request.A
 			Raw:  action,
 		}
 	}
+
 	return res
 }
 
@@ -29,6 +30,7 @@ func ToSignatureSlice(signatures [][]byte) []*request.Signature {
 			Raw: signature,
 		}
 	}
+
 	return res
 }
 
@@ -36,6 +38,7 @@ func ToTokenID(id *token.ID) (*request.TokenID, error) {
 	if id == nil {
 		return nil, nil
 	}
+
 	return &request.TokenID{
 		TxId:  id.TxId,
 		Index: id.Index,

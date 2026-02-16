@@ -23,6 +23,7 @@ func makeSlices(num, size int) [][]byte {
 		}
 		s[i] = b
 	}
+
 	return s
 }
 
@@ -42,6 +43,7 @@ func avgAllocBytes(fn func(), runs int) uint64 {
 	if after.TotalAlloc < before.TotalAlloc {
 		return 0
 	}
+
 	return (after.TotalAlloc - before.TotalAlloc) / uint64(runs) // #nosec G115
 }
 

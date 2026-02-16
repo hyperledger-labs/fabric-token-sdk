@@ -46,6 +46,7 @@ func (d *Distribution) generateConstAmounts(total api.Amount) ([]api.Amount, api
 			if v >= total {
 				amounts = append(amounts, total)
 				total = 0
+
 				break
 			}
 
@@ -77,6 +78,7 @@ func (d *Distribution) generateUniformAmounts(total api.Amount) ([]api.Amount, a
 		r := uint64(rand.Int63n(int64(diff))) + minimum //nolint:gosec
 		if r >= total {
 			amounts = append(amounts, total)
+
 			break
 		}
 

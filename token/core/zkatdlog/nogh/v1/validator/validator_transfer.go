@@ -64,6 +64,7 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 		for _, output := range ctx.TransferAction.Outputs {
 			if output.Owner == nil {
 				isRedeem = true
+
 				break
 			}
 		}
@@ -119,6 +120,7 @@ func TransferUpgradeWitnessValidate(c context.Context, ctx *Context) error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -199,8 +201,10 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
 			ctx.CountMetadataKey(metadataKey)
+
 			continue
 		}
 	}
+
 	return nil
 }

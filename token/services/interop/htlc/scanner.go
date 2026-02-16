@@ -31,6 +31,7 @@ func WithStartingTransaction(txID string) token.ServiceOption {
 			o.Params = map[string]interface{}{}
 		}
 		o.Params[ScanForPreImageStartingTransaction] = txID
+
 		return nil
 	}
 }
@@ -43,6 +44,7 @@ func WithStopOnLastTransaction() token.ServiceOption {
 			o.Params = map[string]interface{}{}
 		}
 		o.Params[StopScanningOnLastTransaction] = True
+
 		return nil
 	}
 }
@@ -82,5 +84,6 @@ func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Has
 	if !bytes.Equal(image, recomputedImage) {
 		return nil, errors.WithMessagef(err, "pre-image on the ledger does not match the passed image [%x!=%x]", image, recomputedImage)
 	}
+
 	return preImage, nil
 }

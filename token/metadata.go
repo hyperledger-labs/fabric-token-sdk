@@ -38,6 +38,7 @@ func (m *Metadata) SpentTokenID() []*token.ID {
 			res = append(res, input.TokenID)
 		}
 	}
+
 	return res
 }
 
@@ -110,6 +111,7 @@ func (m *Metadata) filterIssues(ctx context.Context, issues []*driver.IssueMetad
 		m.Logger.Debugf("keeping issue with [%d] out of [%d] outputs", counter, len(issue.Outputs))
 		cloned = append(cloned, clone)
 	}
+
 	return cloned, nil
 }
 
@@ -152,6 +154,7 @@ func (m *Metadata) filterTransfers(ctx context.Context, issues []*driver.Transfe
 		m.Logger.Debugf("keeping transfer with [%d] out of [%d] outputs", counter, len(transfer.Outputs))
 		cloned = append(cloned, clone)
 	}
+
 	return cloned, nil
 }
 
@@ -164,11 +167,13 @@ func (m *Metadata) contains(ctx context.Context, receivers []*driver.AuditableId
 		}
 		if eIDSet.Contains(recipientEID) {
 			logger.Debugf("eid [%s] found in list [%v]", recipientEID, eIDSet)
+
 			return true, nil
 		} else {
 			logger.Debugf("eid [%s] not found in list [%v]", recipientEID, eIDSet)
 		}
 	}
+
 	return false, nil
 }
 
@@ -177,6 +182,7 @@ func (m *Metadata) Issue(i int) (*IssueMetadata, error) {
 	if i >= len(m.TokenRequestMetadata.Issues) {
 		return nil, errors.Errorf("index [%d] out of range [0:%d]", i, len(m.TokenRequestMetadata.Issues))
 	}
+
 	return &IssueMetadata{IssueMetadata: m.TokenRequestMetadata.Issues[i]}, nil
 }
 
@@ -185,6 +191,7 @@ func (m *Metadata) Transfer(i int) (*TransferMetadata, error) {
 	if i >= len(m.TokenRequestMetadata.Transfers) {
 		return nil, errors.Errorf("index [%d] out of range [0:%d]", i, len(m.TokenRequestMetadata.Transfers))
 	}
+
 	return &TransferMetadata{TransferMetadata: m.TokenRequestMetadata.Transfers[i]}, nil
 }
 
@@ -225,6 +232,7 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 			return errors.Errorf("expected extra signer [%s] but got [%s]", signer, m.ExtraSigners[i])
 		}
 	}
+
 	return nil
 }
 
@@ -233,6 +241,7 @@ func (m *IssueMetadata) IsOutputAbsent(j int) bool {
 	if j < 0 || j >= len(m.Outputs) {
 		return true
 	}
+
 	return m.Outputs[j] == nil
 }
 
@@ -286,6 +295,7 @@ func (m *TransferMetadata) IsOutputAbsent(j int) bool {
 	if j >= len(m.Outputs) {
 		return true
 	}
+
 	return m.Outputs[j] == nil
 }
 
@@ -294,5 +304,6 @@ func (m *TransferMetadata) IsInputAbsent(j int) bool {
 	if j >= len(m.Inputs) {
 		return true
 	}
+
 	return m.Inputs[j] == nil || len(m.Inputs[j].Senders) == 0
 }

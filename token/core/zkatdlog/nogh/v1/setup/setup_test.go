@@ -23,6 +23,7 @@ func testingHelper(t *testing.T) []byte {
 	issuerPK, err := os.ReadFile("testdata/idemix/msp/IssuerPublicKey")
 	require.NoError(t, err)
 	require.NotEmpty(t, issuerPK)
+
 	return issuerPK
 }
 
@@ -105,6 +106,7 @@ func TestRangeProofParamsValidation(t *testing.T) {
 		for i := range gen {
 			gen[i] = curveInst.GenG1
 		}
+
 		return gen
 	}
 
@@ -270,6 +272,7 @@ func TestPublicParamsValidation(t *testing.T) {
 				issuerPK := testingHelper(t)
 				pp, err := Setup(32, issuerPK, math3.BN254)
 				require.NoError(t, err)
+
 				return pp
 			},
 			expectedError: "",
@@ -281,6 +284,7 @@ func TestPublicParamsValidation(t *testing.T) {
 					Curve:                  math3.CurveID(999), // Invalid curve ID
 					IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{validIssuerPK},
 				}
+
 				return pp
 			},
 			expectedError: "invalid public parameters: invalid curveID",
@@ -292,6 +296,7 @@ func TestPublicParamsValidation(t *testing.T) {
 					Curve:                  math3.BN254,
 					IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{},
 				}
+
 				return pp
 			},
 			expectedError: "expected at least one idemix issuer public key",
@@ -303,6 +308,7 @@ func TestPublicParamsValidation(t *testing.T) {
 					Curve:                  math3.BN254,
 					IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{nil},
 				}
+
 				return pp
 			},
 			expectedError: "invalid idemix issuer public key, it is nil",
@@ -319,6 +325,7 @@ func TestPublicParamsValidation(t *testing.T) {
 						},
 					},
 				}
+
 				return pp
 			},
 			expectedError: "expected idemix issuer public key to be non-empty",
@@ -330,6 +337,7 @@ func TestPublicParamsValidation(t *testing.T) {
 				pp, err := Setup(32, issuerPK, math3.BN254)
 				require.NoError(t, err)
 				pp.Curve = math3.CurveID(999) // Invalid curve ID
+
 				return pp
 			},
 			expectedError: "invalid public parameters: invalid curveID [999 > 8]",

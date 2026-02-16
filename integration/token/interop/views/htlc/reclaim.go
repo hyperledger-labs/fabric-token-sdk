@@ -163,6 +163,7 @@ func (r *CheckExistenceReceivedExpiredByHashView) Call(context view.Context) (in
 		assert.Error(err)
 		assert.True(expired == nil)
 	}
+
 	return nil, nil
 }
 

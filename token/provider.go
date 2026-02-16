@@ -97,6 +97,7 @@ func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider
 	if err != nil {
 		panic(err)
 	}
+
 	return s.(*ManagementServiceProvider)
 }
 
@@ -129,6 +130,7 @@ func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
 	delete(p.services, key)
 
 	p.logger.Infof("update tms [%s] with public params [%s]...done", tmsID, Hashable(val))
+
 	return nil
 }
 
@@ -188,5 +190,6 @@ func (p *ManagementServiceProvider) managementService(opts ...ServiceOption) (*M
 		return nil, errors.WithMessagef(err, "failed to initialize token management service")
 	}
 	p.services[key] = ms
+
 	return ms, nil
 }

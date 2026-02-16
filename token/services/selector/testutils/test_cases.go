@@ -137,6 +137,7 @@ func (m *enhancedManager) TokenSum() (token.Quantity, error) {
 		return nil, err
 	}
 	sum := unspent.Sum(TokenQuantityPrecision)
+
 	return sum, nil
 }
 
@@ -149,6 +150,7 @@ func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.Unspen
 		for _, t := range deleted {
 			if err := tx.Delete(context.TODO(), *t, "me"); err != nil {
 				err2 := tx.Rollback()
+
 				return errors.Wrapf(err, "failed to delete - while rolling back: %v", err2)
 			}
 		}
@@ -172,10 +174,12 @@ func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.Unspen
 				Issuer:         false,
 			}, []string{"alice"}); err != nil {
 				err2 := tx.Rollback()
+
 				return errors.Wrapf(err, "failed to insert - while rolling back: %v", err2)
 			}
 		}
 	}
+
 	return tx.Commit()
 }
 
@@ -227,6 +231,7 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 	close(errCh)
 	errMu.Lock()
 	defer errMu.Unlock()
+
 	return errs
 }
 
@@ -267,6 +272,7 @@ func createTokens(txs map[transaction.ID][]token.Quantity) []token.UnspentToken 
 			})
 		}
 	}
+
 	return unspentTokens
 }
 

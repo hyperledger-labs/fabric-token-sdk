@@ -30,6 +30,7 @@ func (f *View) Call(ctx view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "deployer service not found")
 	}
+
 	return nil, deployerService.DeployTMSWithPP(
 		token.TMSID{
 			Network:   f.Network,
@@ -48,5 +49,6 @@ func (p *ViewFactory) NewView(in []byte) (view.View, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed unmarshalling input")
 	}
+
 	return f, nil
 }

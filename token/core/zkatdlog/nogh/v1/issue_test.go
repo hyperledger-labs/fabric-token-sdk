@@ -31,6 +31,7 @@ func TestIssueService_VerifyIssue(t *testing.T) {
 			name: "nil action",
 			TestCase: func() (*v1.IssueService, driver.IssueAction, []*driver.IssueOutputMetadata) {
 				service := &v1.IssueService{}
+
 				return service, nil, nil
 			},
 			wantErr: "nil action",
@@ -39,6 +40,7 @@ func TestIssueService_VerifyIssue(t *testing.T) {
 			name: "invalid action",
 			TestCase: func() (*v1.IssueService, driver.IssueAction, []*driver.IssueOutputMetadata) {
 				service := &v1.IssueService{}
+
 				return service, &issue.Action{}, nil
 			},
 			wantErr: "invalid action",
@@ -52,6 +54,7 @@ func TestIssueService_VerifyIssue(t *testing.T) {
 				// Return only one metadata entry for two outputs
 				metaRaw0, err := metadata[0].Serialize()
 				require.NoError(t, err)
+
 				return testSetup.service, action, []*driver.IssueOutputMetadata{
 					{
 						OutputMetadata: metaRaw0,
@@ -65,6 +68,7 @@ func TestIssueService_VerifyIssue(t *testing.T) {
 			TestCase: func() (*v1.IssueService, driver.IssueAction, []*driver.IssueOutputMetadata) {
 				testSetup := setupTest(t)
 				action, _ := testSetup.createValidAction(t, []byte("an_issuer"))
+
 				return testSetup.service, action, []*driver.IssueOutputMetadata{nil, nil}
 			},
 			wantErr: "missing output metadata for output index [0]",
@@ -96,6 +100,7 @@ func TestIssueService_VerifyIssue(t *testing.T) {
 				require.NoError(t, err)
 				metaRaw1, err := meta[1].Serialize()
 				require.NoError(t, err)
+
 				return testSetup.service, action, []*driver.IssueOutputMetadata{
 					{
 						OutputMetadata: metaRaw0,
@@ -119,6 +124,7 @@ func TestIssueService_VerifyIssue(t *testing.T) {
 				require.NoError(t, err)
 				metaRaw1, err := meta[1].Serialize()
 				require.NoError(t, err)
+
 				return testSetup.service, action, []*driver.IssueOutputMetadata{
 					{
 						OutputMetadata: metaRaw0,
@@ -184,6 +190,7 @@ func setupTest(t *testing.T) *testSetup {
 		Logger:                  logging.MustGetLogger(),
 		PublicParametersManager: ppm,
 	}
+
 	return &testSetup{
 		service: service,
 		pp:      pp,
@@ -235,6 +242,7 @@ func prepareInputsForZKIssue(pp *setup.PublicParams) ([]*token.Metadata, []*math
 	for i := range values {
 		tokens[i] = newToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve) // #nosec G115
 	}
+
 	return token.NewMetadata(pp.Curve, "ABC", values, bf), tokens
 }
 
@@ -243,5 +251,6 @@ func newToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1, cu
 	tok.Add(pp[0].Mul(curve.HashToZr([]byte(tokenType))))
 	tok.Add(pp[1].Mul(value))
 	tok.Add(pp[2].Mul(rand))
+
 	return tok
 }

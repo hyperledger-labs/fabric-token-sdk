@@ -59,6 +59,7 @@ func TestGetOrLoad(t *testing.T) {
 
 	loader := func() (string, error) {
 		loaderCalls++
+
 		return expectedValue, nil
 	}
 
@@ -109,6 +110,7 @@ func TestGetOrLoadConcurrency(t *testing.T) {
 		atomic.AddInt32(&loaderCalls, 1)
 		// Simulate a slow data source.
 		time.Sleep(100 * time.Millisecond)
+
 		return expectedValue, nil
 	}
 

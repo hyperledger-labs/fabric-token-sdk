@@ -117,6 +117,7 @@ func snapshotCaches() (map[mathlib.CurveID]map[uint64]*mathlib.Zr, map[mathlib.C
 		}
 		s[k] = m
 	}
+
 	return v, p, s
 }
 

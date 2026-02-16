@@ -43,9 +43,11 @@ func NewExecutorProvider(qsProvider queryservice.Provider) *ExecutorProvider {
 		func(i in) string { return i.channel },
 		func(i in) (*Executor, error) {
 			l := NewExecutor(i.network, i.channel, qsProvider)
+
 			return l, nil
 		},
 	)
+
 	return &ExecutorProvider{p: p}
 }
 
@@ -116,6 +118,7 @@ func (e *Executor) QueryTokens(_ context.Context, namespace driver.Namespace, id
 		value := ns[key]
 		if len(value.Raw) == 0 {
 			errs = append(errs, errors.Errorf("output for key [%s] does not exist", key))
+
 			continue
 		}
 		tokens = append(tokens, value.Raw)
@@ -123,6 +126,7 @@ func (e *Executor) QueryTokens(_ context.Context, namespace driver.Namespace, id
 	if len(errs) != 0 {
 		return nil, errors2.Join(errs...)
 	}
+
 	return tokens, nil
 }
 
@@ -166,6 +170,7 @@ func (e *Executor) QuerySpentTokens(_ context.Context, namespace driver.Namespac
 		value := ns[key]
 		spentFlags[i] = len(value.Raw) == 0
 	}
+
 	return spentFlags, nil
 }
 
@@ -193,6 +198,7 @@ func (e *Executor) QueryStates(_ context.Context, namespace driver.Namespace, ke
 		value := ns[key]
 		if len(value.Raw) == 0 {
 			errs = append(errs, errors.Errorf("output for key [%s] does not exist", key))
+
 			continue
 		}
 		tokens = append(tokens, value.Raw)
@@ -200,5 +206,6 @@ func (e *Executor) QueryStates(_ context.Context, namespace driver.Namespace, ke
 	if len(errs) != 0 {
 		return nil, errors2.Join(errs...)
 	}
+
 	return tokens, nil
 }

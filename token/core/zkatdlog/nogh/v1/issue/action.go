@@ -43,6 +43,7 @@ func (i *ActionInput) FromProtos(p *actions.IssueActionInput) error {
 		i.ID.Index = p.Id.Index
 	}
 	i.Token = p.Token
+
 	return nil
 }
 
@@ -87,10 +88,12 @@ func (i *Action) GetInputs() []*token2.ID {
 	for i, input := range i.Inputs {
 		if input == nil {
 			res[i] = nil
+
 			continue
 		}
 		res[i] = &input.ID
 	}
+
 	return res
 }
 
@@ -99,10 +102,12 @@ func (i *Action) GetSerializedInputs() ([][]byte, error) {
 	for i, input := range i.Inputs {
 		if input == nil {
 			res[i] = nil
+
 			continue
 		}
 		res[i] = input.Token
 	}
+
 	return res, nil
 }
 
@@ -131,6 +136,7 @@ func (i *Action) GetOutputs() []driver.Output {
 	for i, tok := range i.Outputs {
 		res[i] = tok
 	}
+
 	return res
 }
 
@@ -147,6 +153,7 @@ func (i *Action) GetSerializedOutputs() ([][]byte, error) {
 			return nil, err
 		}
 	}
+
 	return res, nil
 }
 
@@ -183,6 +190,7 @@ func (i *Action) Validate() error {
 			return errors.Errorf("nil output in issue action")
 		}
 	}
+
 	return nil
 }
 
@@ -204,6 +212,7 @@ func (i *Action) Serialize() ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to serialize output")
 		}
+
 		return &actions.IssueActionOutput{
 			Token: &actions.Token{
 				Owner: output.Owner,
@@ -227,6 +236,7 @@ func (i *Action) Serialize() ([]byte, error) {
 		},
 		Metadata: i.Metadata,
 	}
+
 	return proto.Marshal(issueAction)
 }
 
@@ -286,6 +296,7 @@ func (i *Action) GetCommitments() ([]*math.G1, error) {
 		}
 		com[j] = i.Outputs[j].Data
 	}
+
 	return com, nil
 }
 

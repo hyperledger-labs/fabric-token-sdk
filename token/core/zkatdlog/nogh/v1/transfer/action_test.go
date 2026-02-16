@@ -490,6 +490,7 @@ func getRandomBytes(b assert.TestingT, len int) []byte {
 	key := make([]byte, len)
 	_, err := rand.Read(key)
 	assert.NoError(b, err, "error getting random bytes")
+
 	return key
 }
 
@@ -531,5 +532,6 @@ func randomAction(curve *math.Curve, rand io.Reader, b assert.TestingT) *transfe
 		"key2": getRandomBytes(b, 32),
 	}
 	action.Issuer = getRandomBytes(b, 32)
+
 	return action
 }

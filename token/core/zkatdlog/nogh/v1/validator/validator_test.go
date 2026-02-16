@@ -99,6 +99,7 @@ func BenchmarkValidatorTransfer(b *testing.B) {
 		},
 		func(ctx context.Context, env *testing2.Env) error {
 			_, _, err := env.Engine.VerifyTokenRequestFromRaw(ctx, nil, "1", env.TRWithTransferRaw)
+
 			return err
 		},
 	)
@@ -117,6 +118,7 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 		},
 		func(ctx context.Context, env *testing2.Env) error {
 			_, _, err := env.Engine.VerifyTokenRequestFromRaw(ctx, nil, "1", env.TRWithTransferRaw)
+
 			return err
 		},
 	)

@@ -96,6 +96,7 @@ func PemDecodeCert(pemBytes []byte) (*x509.Certificate, error) {
 		if err != nil {
 			return nil, errors.WithMessagef(err, "pem bytes are not cert encoded ")
 		}
+
 		return cert, nil
 	default:
 		return nil, errors.Errorf("bad type %s, expected 'CERTIFICATE", block.Type)

@@ -52,6 +52,7 @@ func (m *Configuration) Validate() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -98,6 +99,7 @@ func (m *Configuration) Serialize(tmsID token.TMSID) ([]byte, error) {
 			},
 		},
 	}
+
 	return yaml.Marshal(c)
 }
 

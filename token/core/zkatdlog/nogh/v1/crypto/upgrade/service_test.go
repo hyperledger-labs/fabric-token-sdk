@@ -109,6 +109,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 			getIdentityProvider: func() upgrade.IdentityProvider {
 				mip := &mock.IdentityProvider{}
 				mip.GetSignerReturns(nil, errors.New("get signer error"))
+
 				return mip
 			},
 		},
@@ -125,6 +126,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 				}
 				raw, err := proof.Serialize()
 				assert.NoError(t, err)
+
 				return raw
 			},
 			getIdentityProvider: func() upgrade.IdentityProvider {
@@ -132,6 +134,7 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 				signer.SignReturns([]byte("a signature"), nil)
 				mip := &mock.IdentityProvider{}
 				mip.GetSignerReturns(signer, nil)
+
 				return mip
 			},
 		},
@@ -243,6 +246,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				proof := &upgrade.Proof{}
 				raw, err := proof.Serialize()
 				assert.NoError(t, err)
+
 				return raw
 			},
 			wantErr:         true,
@@ -261,6 +265,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				}
 				raw, err := proof.Serialize()
 				assert.NoError(t, err)
+
 				return raw
 			},
 			wantErr:         true,
@@ -279,6 +284,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				}
 				raw, err := proof.Serialize()
 				assert.NoError(t, err)
+
 				return raw
 			},
 			wantErr:         true,
@@ -297,6 +303,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				}
 				raw, err := proof.Serialize()
 				assert.NoError(t, err)
+
 				return raw
 			},
 			wantErr:         true,
@@ -315,6 +322,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				}
 				raw, err := proof.Serialize()
 				assert.NoError(t, err)
+
 				return raw
 			},
 			wantErr: true,
@@ -322,6 +330,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 			getDeserializer: func() upgrade.Deserializer {
 				d := &mock.Deserializer{}
 				d.GetOwnerVerifierReturns(nil, errors.New("invalid verifier"))
+
 				return d
 			},
 		},
@@ -337,6 +346,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				}
 				raw, err := proof.Serialize()
 				assert.NoError(t, err)
+
 				return raw
 			},
 			wantErr: true,
@@ -346,6 +356,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				v.VerifyReturns(errors.New("invalid signature"))
 				d := &mock.Deserializer{}
 				d.GetOwnerVerifierReturns(v, nil)
+
 				return d
 			},
 		},
@@ -361,6 +372,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				}
 				raw, err := proof.Serialize()
 				assert.NoError(t, err)
+
 				return raw
 			},
 			wantErr: false,
@@ -369,6 +381,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 				v.VerifyReturns(nil)
 				d := &mock.Deserializer{}
 				d.GetOwnerVerifierReturns(v, nil)
+
 				return d
 			},
 			expected:       true,

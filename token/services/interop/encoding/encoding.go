@@ -58,6 +58,7 @@ func (e Encoding) New() EncodingFunc {
 		}
 	}
 	logger.Errorf("requested Encoding function %s is unavailable", strconv.FormatUint(uint64(e), 10))
+
 	return nil
 }
 
@@ -74,6 +75,7 @@ func RegisterEncoding(e Encoding, f func() EncodingFunc) error {
 		return errors.New("RegisterEncoding of unknown Encoding function")
 	}
 	Encodings[e] = f
+
 	return nil
 }
 

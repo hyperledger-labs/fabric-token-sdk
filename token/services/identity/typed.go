@@ -37,6 +37,7 @@ func UnmarshalTypedIdentity(id driver.Identity) (*TypedIdentity, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
+
 	return si, nil
 }
 
@@ -45,5 +46,6 @@ func WrapWithType(idType Type, id driver.Identity) (driver.Identity, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return raw, nil
 }

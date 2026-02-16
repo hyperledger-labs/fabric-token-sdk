@@ -33,5 +33,6 @@ func (f *chaincodePublicParamsFetcher) Fetch(network driver2.Network, channel dr
 	if err != nil {
 		return nil, err
 	}
+
 	return ppBoxed.([]byte), nil
 }

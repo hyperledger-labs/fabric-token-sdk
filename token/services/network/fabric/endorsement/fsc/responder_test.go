@@ -84,6 +84,7 @@ func mockNewRequestApprovalResponderView(t *testing.T, overrideTMSID *token.TMSI
 		tmsp,
 		storageProvider,
 	)
+
 	return &MockNewRequestApprovalResponderView{
 		view:      view,
 		ctx:       ctx,
@@ -111,6 +112,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			setup: func() *MockNewRequestApprovalResponderView {
 				m := mockNewRequestApprovalResponderView(t, nil)
 				m.es.ReceiveTxReturns(nil, errors.New("pineapple"))
+
 				return m
 			},
 			expectError:      true,
@@ -127,6 +129,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 				m.fabricTx.TransientReturns(map[string][]byte{
 					"transient": []byte("transient"),
 				})
+
 				return m
 			},
 			expectError:      true,
@@ -144,6 +147,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 					"transient":  []byte("transient"),
 					"transient2": []byte("transient2"),
 				})
+
 				return m
 			},
 			expectError:      true,
@@ -157,6 +161,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			name: "tmsid network empty",
 			setup: func() *MockNewRequestApprovalResponderView {
 				m := mockNewRequestApprovalResponderView(t, &token.TMSID{})
+
 				return m
 			},
 			expectError:      true,
@@ -172,6 +177,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 				m := mockNewRequestApprovalResponderView(t, &token.TMSID{
 					Network: "a_network",
 				})
+
 				return m
 			},
 			expectError:      true,
@@ -188,6 +194,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 					Network: "a_network",
 					Channel: "a_channel",
 				})
+
 				return m
 			},
 			expectError:      true,
@@ -205,6 +212,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 					fsc.TransientTMSIDKey: m.tmsIDRaw,
 					"transient2":          []byte("transient2"),
 				})
+
 				return m
 			},
 			expectError:      true,
@@ -221,6 +229,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 				m.rws.NamespacesReturns([]driver.Namespace{
 					"a_namespace",
 				})
+
 				return m
 			},
 			expectError:      true,
@@ -235,6 +244,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			setup: func() *MockNewRequestApprovalResponderView {
 				m := mockNewRequestApprovalResponderView(t, nil)
 				m.fabricTx.FunctionReturns("strawberry")
+
 				return m
 			},
 			expectError:      true,
@@ -249,6 +259,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			setup: func() *MockNewRequestApprovalResponderView {
 				m := mockNewRequestApprovalResponderView(t, nil)
 				m.validator.VerifyTokenRequestFromRawReturns(nil, nil, errors.New("pineapple"))
+
 				return m
 			},
 			expectError:      true,
@@ -262,6 +273,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			name: "success",
 			setup: func() *MockNewRequestApprovalResponderView {
 				m := mockNewRequestApprovalResponderView(t, nil)
+
 				return m
 			},
 			expectError: false,

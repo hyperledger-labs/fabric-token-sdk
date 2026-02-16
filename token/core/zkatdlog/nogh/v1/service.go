@@ -56,5 +56,6 @@ func NewTokenService(
 	s := &Service{
 		Service: root,
 	}
+
 	return s, nil
 }

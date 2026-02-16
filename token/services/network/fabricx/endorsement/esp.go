@@ -58,6 +58,7 @@ func NewServiceProvider(
 		storeServiceManager:           storeServiceManager,
 		fabricProvider:                fabricProvider,
 	}
+
 	return &ServiceProvider{Provider: lazy.NewProviderWithKeyMapper(key, l.load)}
 }
 
@@ -82,6 +83,7 @@ func (l *loader) load(tmsID token2.TMSID) (endorsement.Service, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return fsc.NewEndorsementService(
 		&NamespaceTxProcessor{},
 		tmsID,

@@ -18,5 +18,6 @@ func (h *House) SetLinearID(id string) string {
 	if len(h.LinearID) == 0 {
 		h.LinearID = id
 	}
+
 	return h.LinearID
 }

@@ -71,6 +71,7 @@ func (c *StatusSupport) DeleteStatusListener(txID string, ch chan StatusEvent) {
 			} else {
 				c.listeners[txID] = ls
 			}
+
 			return
 		}
 	}
@@ -83,6 +84,7 @@ func (c *StatusSupport) Notify(event StatusEvent) {
 	listeners := c.listeners[event.TxID]
 	if len(listeners) == 0 {
 		c.mutex.RUnlock()
+
 		return
 	}
 	// clone listeners and release lock

@@ -138,6 +138,7 @@ func (s *Service) Wallet(ctx context.Context, identity driver.Identity) driver.W
 	if iw != nil {
 		return iw
 	}
+
 	return nil
 }
 
@@ -152,6 +153,7 @@ func (s *Service) OwnerWallet(ctx context.Context, id driver.WalletLookupID) (dr
 	if err != nil {
 		return nil, err
 	}
+
 	return w.(driver.OwnerWallet), nil
 }
 
@@ -161,6 +163,7 @@ func (s *Service) IssuerWallet(ctx context.Context, id driver.WalletLookupID) (d
 	if err != nil {
 		return nil, err
 	}
+
 	return w.(driver.IssuerWallet), nil
 }
 
@@ -170,6 +173,7 @@ func (s *Service) AuditorWallet(ctx context.Context, id driver.WalletLookupID) (
 	if err != nil {
 		return nil, err
 	}
+
 	return w.(driver.AuditorWallet), nil
 }
 
@@ -179,6 +183,7 @@ func (s *Service) CertifierWallet(ctx context.Context, id driver.WalletLookupID)
 	if err != nil {
 		return nil, err
 	}
+
 	return w.(driver.CertifierWallet), nil
 }
 
@@ -196,6 +201,7 @@ func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
 		}
 		res = append(res, id.String())
 	}
+
 	return res, nil
 }
 
@@ -205,5 +211,6 @@ func Convert[T RoleRegistry](s map[identity.RoleType]T) RoleRegistries {
 	for role, v := range s {
 		res[role] = v
 	}
+
 	return res
 }

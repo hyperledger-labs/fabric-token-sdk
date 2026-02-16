@@ -22,6 +22,7 @@ func mockTransactionsStore(db *sql.DB) *common2.TransactionStore {
 		Validations:           "VALIDATIONS",
 		TransactionEndorseAck: "TRANSACTION_ENDORSE_ACK",
 	}, postgres.NewConditionInterpreter(), postgres.NewPaginationInterpreter())
+
 	return store
 }
 

@@ -24,5 +24,6 @@ func GenericSliceOfPointers[T any](size int) []*T {
 		var zero T
 		slice[i] = &zero
 	}
+
 	return slice
 }

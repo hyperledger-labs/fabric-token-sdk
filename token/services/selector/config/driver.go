@@ -40,6 +40,7 @@ func New(config configService) (*Config, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid config for key [token.selector]: expected retryInterval (duration) and numRetries (integer))")
 	}
+
 	return c, nil
 }
 
@@ -47,6 +48,7 @@ func (c *Config) GetDriver() driver.Driver {
 	if c.Driver == "" {
 		return defaultDriver
 	}
+
 	return c.Driver
 }
 
@@ -54,6 +56,7 @@ func (c *Config) GetNumRetries() int {
 	if c.NumRetries > 0 {
 		return c.NumRetries
 	}
+
 	return defaultNumRetries
 }
 
@@ -61,6 +64,7 @@ func (c *Config) GetRetryInterval() time.Duration {
 	if c.RetryInterval != 0 {
 		return c.RetryInterval
 	}
+
 	return defaultRetryInterval
 }
 
@@ -68,6 +72,7 @@ func (c *Config) GetLeaseExpiry() time.Duration {
 	if c.LeaseExpiry != 0 {
 		return c.LeaseExpiry
 	}
+
 	return defaultLeaseExpiry
 }
 
@@ -75,5 +80,6 @@ func (c *Config) GetLeaseCleanupTickPeriod() time.Duration {
 	if c.LeaseCleanupTickPeriod != 0 {
 		return c.LeaseCleanupTickPeriod
 	}
+
 	return defaultLeaseCleanupTickPeriod
 }

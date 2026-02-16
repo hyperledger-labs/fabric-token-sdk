@@ -40,6 +40,7 @@ func (ipa *IPA) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize R")
 	}
+
 	return asn1.MarshalMath(ipa.Left, ipa.Right, lArray, rArray)
 }
 
@@ -64,6 +65,7 @@ func (ipa *IPA) Deserialize(raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize R")
 	}
+
 	return nil
 }
 
@@ -86,6 +88,7 @@ func (ipa *IPA) Validate(curve mathlib.CurveID) error {
 	if err := math.CheckZrElements(ipa.R, curve, uint64(len(ipa.R))); err != nil {
 		return errors.Wrapf(err, "invalid IPA proof: invalid R elements")
 	}
+
 	return nil
 }
 
@@ -166,6 +169,7 @@ func (p *ipaProver) Prove() (*IPA, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &IPA{Left: left, Right: right, R: RArray, L: LArray}, nil
 }
 
@@ -221,6 +225,7 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 		// com = L^{x^2}*com*R^{1/x^2}
 		com = CPrime
 	}
+
 	return left[0], right[0], LArray, RArray, nil
 }
 
@@ -331,6 +336,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	if !CPrime.Equals(C) {
 		return errors.New("invalid IPA")
 	}
+
 	return nil
 }
 
@@ -361,6 +367,7 @@ func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*
 		// H_i = H_i^{1/x}*H_{i+len(right)/2}^{x}
 		rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
 	}
+
 	return leftGen[:l], rightGen[:l]
 }
 
@@ -417,5 +424,6 @@ func cloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.
 	for i := range RightGenerators {
 		rightGen[i] = RightGenerators[i].Copy()
 	}
+
 	return leftGen, rightGen
 }

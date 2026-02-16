@@ -33,6 +33,7 @@ func TestTransferApplicationDataValidate(t *testing.T) {
 					PP:             pp,
 					TransferAction: action,
 				}
+
 				return ctx, func() bool {
 					return len(ctx.MetadataCounter) == 0
 				}
@@ -52,6 +53,7 @@ func TestTransferApplicationDataValidate(t *testing.T) {
 					PP:             pp,
 					TransferAction: action,
 				}
+
 				return ctx, func() bool {
 					return len(ctx.MetadataCounter) == 0
 				}
@@ -74,6 +76,7 @@ func TestTransferApplicationDataValidate(t *testing.T) {
 					TransferAction:  action,
 					MetadataCounter: map[MetadataCounterID]int{},
 				}
+
 				return ctx, func() bool {
 					return len(ctx.MetadataCounter) == 1 && ctx.MetadataCounter[k] == 1
 				}

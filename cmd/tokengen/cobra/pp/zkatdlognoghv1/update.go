@@ -69,6 +69,7 @@ var cmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to generate public parameters")
 		}
+
 		return nil
 	},
 }

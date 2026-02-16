@@ -32,8 +32,10 @@ var Commit, Time, Modified = func() (string, string, string) {
 				modified = setting.Value
 			}
 		}
+
 		return revision, time, modified
 	}
+
 	return "", "", ""
 }()
 
@@ -53,6 +55,7 @@ var cobraCommand = &cobra.Command{
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
 		fmt.Print(GetInfo())
+
 		return nil
 	},
 }

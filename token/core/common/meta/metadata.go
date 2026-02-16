@@ -45,5 +45,6 @@ func ActionMetadata(attrs map[interface{}]interface{}, prefix string) map[string
 			}
 		}
 	}
+
 	return metadata
 }

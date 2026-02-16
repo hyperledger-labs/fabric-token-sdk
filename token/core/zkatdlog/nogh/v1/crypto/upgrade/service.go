@@ -86,6 +86,7 @@ func (s *Service) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
 	if len(key) != ChallengeSize {
 		return nil, errors.Errorf("invalid key size, got only [%d], expected [%d]", len(key), ChallengeSize)
 	}
+
 	return key, nil
 }
 
@@ -136,11 +137,13 @@ func (s *Service) GenUpgradeProof(ctx context.Context, ch driver.TokensUpgradeCh
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize proof")
 	}
+
 	return raw, nil
 }
 
 func (s *Service) CheckUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token.LedgerToken) (bool, error) {
 	_, v, err := s.checkUpgradeProof(ctx, ch, proof, tokens)
+
 	return v, err
 }
 
@@ -187,6 +190,7 @@ func (s *Service) ProcessTokens(ledgerTokens []token.LedgerToken) ([]token.Token
 			Quantity: fabToken.Quantity,
 		}
 	}
+
 	return tokens, nil
 }
 

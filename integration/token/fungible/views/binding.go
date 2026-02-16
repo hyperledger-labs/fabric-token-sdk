@@ -28,6 +28,7 @@ func (s *SetBindingView) Call(context view.Context) (interface{}, error) {
 	if err := es.Bind(context.Context(), s.FSCNodeIdentity, s.Alias); err != nil {
 		return nil, errors.Wrap(err, `failed to bind fsc node identity`)
 	}
+
 	return nil, nil
 }
 

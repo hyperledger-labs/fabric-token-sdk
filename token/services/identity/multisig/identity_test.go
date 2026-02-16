@@ -146,6 +146,7 @@ func identities(t *testing.T, names ...string) []token.Identity {
 	for i, name := range names {
 		ids[i] = wrapIdentity(t, name)
 	}
+
 	return ids
 }
 
@@ -153,6 +154,7 @@ func wrapIdentity(t *testing.T, name string) token.Identity {
 	t.Helper()
 	id, err := identity.WrapWithType("name", []byte(name))
 	assert.NoError(t, err)
+
 	return id
 }
 
@@ -164,5 +166,6 @@ func (m *mockMatcher) Match(ctx context.Context, raw []byte) error {
 	if !bytes.Equal(raw, m.expected) {
 		return errors.New("mismatch")
 	}
+
 	return nil
 }

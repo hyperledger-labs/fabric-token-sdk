@@ -41,6 +41,7 @@ func prepareTokens(t *testing.T, pp []*math.G1) []*math.G1 {
 	for i := range values {
 		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp, curve) // #nosec G115
 	}
+
 	return tokens
 }
 
@@ -56,6 +57,7 @@ func GetSameTypeProverAndVerifier(t *testing.T) (*issue.SameTypeProver, *issue.S
 	com.Add(pp[2].Mul(blindingFactor))
 
 	tokens := prepareTokens(t, pp)
+
 	return issue.NewSameTypeProver("ABC", blindingFactor, com, pp, math.Curves[1]), issue.NewSameTypeVerifier(tokens, pp, math.Curves[1])
 }
 
@@ -70,6 +72,7 @@ func preparePedersenParameters(t *testing.T) []*math.G1 {
 	for i := range 3 {
 		pp[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
 	}
+
 	return pp
 }
 
@@ -78,5 +81,6 @@ func NewToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1, cu
 	token.Add(pp[0].Mul(curve.HashToZr([]byte(tokenType))))
 	token.Add(pp[1].Mul(value))
 	token.Add(pp[2].Mul(rand))
+
 	return token
 }

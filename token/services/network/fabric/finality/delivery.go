@@ -29,5 +29,6 @@ func (d *Delivery) ScanBlock(background context.Context, callback fabric.BlockCa
 			d.Logger.ErrorfContext(background, "failed to get ledger info: %s", err)
 		}
 	}
+
 	return d.ScanBlockFrom(background, startingBlock, callback)
 }

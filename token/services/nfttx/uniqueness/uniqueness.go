@@ -89,5 +89,6 @@ func GetService(sp token.ServiceProvider) *Service {
 	if err != nil {
 		panic(err)
 	}
+
 	return &Service{kvs: kvss.(*kvs.KVS)}
 }

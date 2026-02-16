@@ -38,6 +38,7 @@ func NewLocalBidirectionalChannel(ctx context.Context, caller string, contextID 
 		EndpointPKID: pkid,
 		Closed:       false,
 	}
+
 	return &LocalBidirectionalChannel{
 		left: &localSession{
 			ctx:          ctx,
@@ -117,6 +118,7 @@ func (s *localSession) send(ctx context.Context, payload []byte, status int32) e
 		Payload:      payload,
 		Ctx:          ctx,
 	}
+
 	return nil
 }
 
@@ -124,6 +126,7 @@ func (s *localSession) Receive() <-chan *view.Message {
 	if s.info.Closed {
 		return nil
 	}
+
 	return s.readChannel
 }
 

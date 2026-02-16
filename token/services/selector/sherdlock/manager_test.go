@@ -76,6 +76,7 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 		assert.NoError(t, err)
 		replicas[i] = replica
 	}
+
 	return replicas, terminate
 }
 
@@ -105,6 +106,7 @@ func startContainer(t *testing.T) (func(), string) {
 	cfg := postgres2.DefaultConfig(postgres2.WithDBName(t.Name()))
 	terminate, _, err := postgres2.StartPostgres(t.Context(), cfg, nil)
 	assert.NoError(t, err)
+
 	return terminate, cfg.DataSource()
 }
 

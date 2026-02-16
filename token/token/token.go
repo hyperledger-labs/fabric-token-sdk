@@ -77,6 +77,7 @@ func (it *IssuedTokens) Sum(precision uint64) Quantity {
 		}
 		sum = sum.Add(q)
 	}
+
 	return sum
 }
 
@@ -87,6 +88,7 @@ func (it *IssuedTokens) ByType(typ Type) *IssuedTokens {
 			res.Tokens = append(res.Tokens, token)
 		}
 	}
+
 	return res
 }
 
@@ -156,6 +158,7 @@ func (it *UnspentTokens) Sum(precision uint64) Quantity {
 		}
 		sum = sum.Add(q)
 	}
+
 	return sum
 }
 
@@ -166,6 +169,7 @@ func (it *UnspentTokens) ByType(typ Type) *UnspentTokens {
 			res.Tokens = append(res.Tokens, token)
 		}
 	}
+
 	return res
 }
 

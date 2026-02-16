@@ -120,6 +120,7 @@ func tokenServicesFactory(bytes []byte) (tcc.PublicParameters, tcc.Validator, er
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return ppm, token.NewValidator(v), nil
 }
 

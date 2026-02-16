@@ -169,6 +169,7 @@ func TestParallelBFProver(t *testing.T) {
 				setup.curve,
 			)
 			_, err := prover.Prove()
+
 			return err
 		},
 	)

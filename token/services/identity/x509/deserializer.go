@@ -30,6 +30,7 @@ func (a *AuditMatcherDeserializer) GetAuditInfoMatcher(ctx context.Context, owne
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal")
 	}
+
 	return &AuditInfoMatcher{EnrollmentID: ai.EID}, nil
 }
 
@@ -58,5 +59,6 @@ func (a *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []
 		return nil, errors.Wrapf(err, "failed to unmarshal")
 	}
 	logger.DebugfContext(ctx, "audit info [%s]", string(raw))
+
 	return ai, nil
 }

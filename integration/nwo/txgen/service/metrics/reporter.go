@@ -31,6 +31,7 @@ func NewReporter(c *Metrics) Reporter {
 	if c.supportsGetters {
 		return &reporter{Metrics: c}
 	}
+
 	return &emptyReporter{}
 }
 
@@ -46,6 +47,7 @@ func (c *reporter) GetTotalRequests() string {
 	currentTotalRequests := uint64(c.RequestsSent.(gettable).Get())
 	requestsSinceLastReport := currentTotalRequests - c.lastReportedTotalRequests
 	c.lastReportedTotalRequests = currentTotalRequests
+
 	return fmt.Sprintf("Total requests since last report: %d", requestsSinceLastReport)
 }
 

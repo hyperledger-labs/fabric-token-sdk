@@ -88,5 +88,6 @@ func (f *RoleFactory) NewRole(role identity.RoleType, defaultAnon bool, targets 
 	if err := lm.Load(context.Background(), identities, targets); err != nil {
 		return nil, errors.WithMessagef(err, "failed to load identities")
 	}
+
 	return role2.NewRole(f.Logger, role, f.TMSID.Network, f.FSCIdentity, lm), nil
 }

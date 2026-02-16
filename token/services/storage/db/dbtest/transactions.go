@@ -380,11 +380,13 @@ func assertTxEqual(t *testing.T, exp *driver3.TransactionRecord, act *driver3.Tr
 	t.Helper()
 	if act == nil {
 		t.Errorf("expected tx %q, got nil", exp.TxID)
+
 		return
 	}
 	expl := fmt.Sprintf(explanation, exp.TxID, act.TxID)
 	if exp.TxID != act.TxID {
 		t.Errorf("expected tx %q, got %q", exp.TxID, act.TxID)
+
 		return
 	}
 
@@ -436,12 +438,14 @@ func TTokenRequest(t *testing.T, db driver3.TokenTransactionStore) {
 			assert.Equal(t, tr1, record.TokenRequest)
 			assert.Equal(t, driver3.Pending, record.Status)
 			counter++
+
 			continue
 		}
 		if record.TxID == "id2" {
 			assert.Equal(t, tr2, record.TokenRequest)
 			assert.Equal(t, driver3.Confirmed, record.Status)
 			counter++
+
 			continue
 		}
 	}
@@ -462,12 +466,14 @@ func TTokenRequest(t *testing.T, db driver3.TokenTransactionStore) {
 			assert.Equal(t, tr1, record.TokenRequest)
 			assert.Equal(t, driver3.Pending, record.Status)
 			counter++
+
 			continue
 		}
 		if record.TxID == "id2" {
 			assert.Equal(t, tr2, record.TokenRequest)
 			assert.Equal(t, driver3.Confirmed, record.Status)
 			counter++
+
 			continue
 		}
 	}
@@ -823,6 +829,7 @@ func getTransactions(t *testing.T, db driver3.TokenTransactionStore, params driv
 	assert.NoError(t, err)
 	txs, err := iterators.ReadAllPointers(records.Items)
 	assert.NoError(t, err)
+
 	return txs
 }
 
@@ -917,6 +924,7 @@ func getValidationRecords(t *testing.T, db driver3.TokenTransactionStore, params
 	assert.NoError(t, err)
 	txs, err := iterators.ReadAllPointers(records)
 	assert.NoError(t, err)
+
 	return txs
 }
 

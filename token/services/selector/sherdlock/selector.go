@@ -69,6 +69,7 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 		time.Sleep(backoffDuration)
 		m.logger.DebugfContext(ctx, "Now it is our turn to retry...")
 	}
+
 	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
 
@@ -102,6 +103,7 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 	for {
 		if t, err := s.cache.Next(); err != nil {
 			err2 := s.locker.UnlockAll(ctx)
+
 			return nil, nil, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), tokenType, err2)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
@@ -131,6 +133,7 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 			s.logger.DebugfContext(ctx, "Fetch all non-deleted tokens from the DB and refresh the token cache.")
 			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
 				err2 := s.locker.UnlockAll(ctx)
+
 				return nil, nil, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), tokenType, err2)
 			}
 
@@ -162,6 +165,7 @@ func (s *selector) Close() error {
 	}
 	s.cache.Close()
 	s.cache = nil
+
 	return nil
 }
 
@@ -187,6 +191,7 @@ func (l *locker) TryLock(ctx context.Context, tokenID *token2.ID) bool {
 	if err != nil {
 		logger.DebugfContext(ctx, "failed to lock [%v] for [%s]: [%s]", tokenID, l.txID, err)
 	}
+
 	return err == nil
 }
 

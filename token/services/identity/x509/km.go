@@ -50,6 +50,7 @@ func NewKeyManager(
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return p, conf, nil
 }
 
@@ -68,6 +69,7 @@ func NewKeyManagerFromConf(
 		conf, err = crypto.LoadConfig(configPath, keyStoreDirName)
 		if err != nil {
 			logger.Errorf("failed loading x509 configuration [%+v]", err)
+
 			return nil, nil, errors.WithMessagef(err, "could not get config from dir [%s]", configPath)
 		}
 	}
@@ -80,6 +82,7 @@ func NewKeyManagerFromConf(
 	p, err := newSigningKeyManager(conf, bccspConfig, keyStore)
 	if err == nil {
 		logger.Debugf("load x509 config, new signing key manager...done [%v]", p)
+
 		return p, conf, nil
 	}
 	// load as verify only
@@ -87,6 +90,7 @@ func NewKeyManagerFromConf(
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return p, conf, nil
 }
 
@@ -99,6 +103,7 @@ func newSigningKeyManager(conf *crypto.Config, bccspConfig *crypto.BCCSP, keySto
 	if err != nil {
 		return nil, err
 	}
+
 	return newKeyManager(sID, idRaw, bccspConfig, keyStore)
 }
 
@@ -115,6 +120,7 @@ func newVerifyingKeyManager(conf *crypto.Config, bccspConfig *crypto.BCCSP) (*Ke
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return p, conf, nil
 }
 
@@ -140,6 +146,7 @@ func newKeyManager(sID driver.SigningIdentity, id []byte, bccspConfig *crypto.BC
 		AuditInfo: auditInfoRaw,
 		Signer:    sID,
 	}
+
 	return &KeyManager{
 		identityDescriptor: identityDescriptor,
 		sID:                sID,

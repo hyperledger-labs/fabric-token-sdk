@@ -103,6 +103,7 @@ func GetPlatform(ctx *context.Context, id string) PF {
 	if ok {
 		return fp
 	}
+
 	return nil
 }
 
@@ -184,6 +185,7 @@ func (p *Platform) GetBuilder() api2.Builder {
 
 func (p *Platform) TokenGen(command common.Command) (*gexec.Session, error) {
 	cmd := common.NewCommand(p.Builder.Build(p.TokenGenPath), command)
+
 	return p.StartSession(cmd, command.SessionName())
 }
 
@@ -208,6 +210,7 @@ func (p *Platform) PublicParametersFile(tms *topology2.TMS) string {
 	if len(tms.Alias) != 0 {
 		filename = fmt.Sprintf("%s_%s", filename, tms.Alias)
 	}
+
 	return filepath.Join(
 		p.Context.RootDir(),
 		"token",
@@ -220,6 +223,7 @@ func (p *Platform) PublicParametersFile(tms *topology2.TMS) string {
 func (p *Platform) PublicParameters(tms *topology2.TMS) []byte {
 	raw, err := os.ReadFile(p.PublicParametersFile(tms))
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
 	return raw
 }
 
@@ -233,6 +237,7 @@ func (p *Platform) GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, wa
 	gomega.Expect(targetTMS).ToNot(gomega.BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
 
 	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
+
 	return nh.GenIssuerCryptoMaterial(targetTMS, fscNode, walletID)
 }
 
@@ -246,6 +251,7 @@ func (p *Platform) GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, wal
 	gomega.Expect(targetTMS).ToNot(gomega.BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
 
 	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
+
 	return nh.GenOwnerCryptoMaterial(targetTMS, fscNode, walletID, useCAIfAvailable)
 }
 
@@ -290,6 +296,7 @@ func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, err
 	); err != nil {
 		return nil, err
 	}
+
 	return gexec.Start(
 		cmd,
 		gexec.NewPrefixedWriter(
@@ -338,5 +345,6 @@ func (p *Platform) nextColor() string {
 	}
 
 	p.ColorIndex++
+
 	return fmt.Sprintf("%dm", color)
 }

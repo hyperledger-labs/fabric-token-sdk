@@ -27,6 +27,7 @@ func NewCertificationService(tms *token.ManagementService, wallet string) (*Cert
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating certifier with driver [%s]", driver)
 	}
+
 	return &CertificationService{c: c}, nil
 }
 

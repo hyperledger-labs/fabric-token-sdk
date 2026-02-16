@@ -42,6 +42,7 @@ func NewStoreServiceManager[S any, T any](config ConfigService, prefix string, c
 			if err != nil {
 				return utils.Zero[T](), err
 			}
+
 			return mapper(s)
 		}),
 	}

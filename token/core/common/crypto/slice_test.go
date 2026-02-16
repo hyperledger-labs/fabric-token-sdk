@@ -86,6 +86,7 @@ func generateBenchmarkData(count, size int) [][]byte {
 	for i := range count {
 		data[i] = bytes.Repeat([]byte{'a'}, size)
 	}
+
 	return data
 }
 

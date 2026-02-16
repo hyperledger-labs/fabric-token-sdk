@@ -45,6 +45,7 @@ func IssueValidate(c context.Context, ctx *Context) error {
 		for _, issuer := range issuers {
 			if bytes.Equal(action.Issuer, issuer) {
 				found = true
+
 				break
 			}
 		}
@@ -62,5 +63,6 @@ func IssueValidate(c context.Context, ctx *Context) error {
 	if _, err := ctx.SignatureProvider.HasBeenSignedBy(c, action.Issuer, verifier); err != nil {
 		return errors.Wrapf(err, "failed verifying signature")
 	}
+
 	return nil
 }

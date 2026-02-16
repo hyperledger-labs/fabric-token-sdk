@@ -125,6 +125,7 @@ func Topology(opts Opts) []api.Topology {
 	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
+
 	return []api.Topology{
 		fabricTopology,
 		tokenTopology,

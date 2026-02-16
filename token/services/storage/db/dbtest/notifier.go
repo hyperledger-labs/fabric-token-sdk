@@ -59,6 +59,7 @@ func collectDBEvents(db driver.TokenNotifier) (*[]dbEvent, error) {
 			result = append(result, e)
 		}
 	}()
+
 	return &result, nil
 }
 

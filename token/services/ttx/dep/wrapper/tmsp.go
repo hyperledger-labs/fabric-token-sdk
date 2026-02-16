@@ -22,6 +22,7 @@ func (t *TokenManagementService) SetTokenManagementService(req *token.Request) e
 		return errors.Wrap(ttx.ErrInvalidInput, "request cannot be nil")
 	}
 	req.SetTokenService(t.ManagementService)
+
 	return nil
 }
 
@@ -38,5 +39,6 @@ func (t *TokenManagementServiceProvider) TokenManagementService(opts ...token.Se
 	if err != nil {
 		return nil, err
 	}
+
 	return &TokenManagementService{ManagementService: tms}, nil
 }

@@ -113,6 +113,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 	}
 
 	backend := NewBackend(v.Logger, getState, signed, signatures)
+
 	return v.VerifyTokenRequest(ctx, backend, backend, anchor, tr, attributes)
 }
 
@@ -147,6 +148,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequest(
 	for _, action := range ta {
 		actions = append(actions, action)
 	}
+
 	return actions, attributes, nil
 }
 
@@ -168,6 +170,7 @@ func (v *Validator[P, T, TA, IA, DS]) UnmarshalActions(raw []byte) ([]interface{
 	for _, action := range ta {
 		res = append(res, action)
 	}
+
 	return res, nil
 }
 
@@ -185,6 +188,7 @@ func (v *Validator[P, T, TA, IA, DS]) verifyIssues(
 			return errors.Wrapf(err, "failed to verify issue action at [%d]", i)
 		}
 	}
+
 	return nil
 }
 
@@ -246,6 +250,7 @@ func (v *Validator[P, T, TA, IA, DS]) verifyTransfers(
 			return errors.Wrapf(err, "failed to verify transfer action at [%d]", i)
 		}
 	}
+
 	return nil
 }
 
@@ -314,6 +319,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyAuditing(
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -323,5 +329,6 @@ func IsAnyNil[T any](args ...*T) bool {
 			return true
 		}
 	}
+
 	return false
 }

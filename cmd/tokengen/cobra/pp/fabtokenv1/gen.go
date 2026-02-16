@@ -78,6 +78,7 @@ var cobraCommand = &cobra.Command{
 				return err
 			}
 		}
+
 		return nil
 	},
 }

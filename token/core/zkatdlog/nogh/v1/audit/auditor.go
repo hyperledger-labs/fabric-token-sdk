@@ -125,6 +125,7 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 	if a.Signer == nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: signer is nil", txID)
 	}
+
 	return a.Signer.Sign(bytes)
 }
 
@@ -198,6 +199,7 @@ func (a *Auditor) CheckIssueRequests(ctx context.Context, outputsFromIssue [][]*
 			return errors.Wrapf(err, "audit of %d th issue in tx [%s] failed", k, txID)
 		}
 	}
+
 	return nil
 }
 
@@ -209,6 +211,7 @@ func (a *Auditor) InspectOutputs(ctx context.Context, tokens []*InspectableToken
 			return errors.Wrapf(err, "failed inspecting output [%d]", i)
 		}
 	}
+
 	return nil
 }
 
@@ -231,6 +234,7 @@ func (a *Auditor) InspectOutput(ctx context.Context, output *InspectableToken, i
 			return errors.Wrapf(err, "failed inspecting output at index [%d]", index)
 		}
 	}
+
 	return nil
 }
 
@@ -247,6 +251,7 @@ func (a *Auditor) InspectInputs(ctx context.Context, inputs []*InspectableToken)
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -267,6 +272,7 @@ func (a *Auditor) InspectIdentity(ctx context.Context, matcher InfoMatcher, iden
 	if err := matcher.MatchIdentity(ctx, identity.Identity, identity.AuditInfo); err != nil {
 		return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 	}
+
 	return nil
 }
 
@@ -325,6 +331,7 @@ func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver
 			AuditInfo:        md.Issuer.AuditInfo,
 		}
 	}
+
 	return outputs, identities, nil
 }
 
@@ -392,6 +399,7 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			}
 		}
 	}
+
 	return auditableInputs, outputs, nil
 }
 
@@ -400,5 +408,6 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) *math.G1 {
 	for i := range vector {
 		com.Add(generators[i].Mul(vector[i]))
 	}
+
 	return com
 }

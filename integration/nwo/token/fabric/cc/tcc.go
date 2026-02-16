@@ -114,6 +114,7 @@ func (p *GenericBackend) UpdatePublicParams(tms *topology3.TMS, ppRaw []byte) {
 	for _, chaincode := range p.Fabric(tms).Topology().Chaincodes {
 		if chaincode.Chaincode.Name == tms.Namespace {
 			cc = chaincode
+
 			break
 		}
 	}
@@ -145,12 +146,14 @@ func (p *GenericBackend) UpdatePublicParams(tms *topology3.TMS, ppRaw []byte) {
 		func(filePath string, fileName string) (string, []byte) {
 			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
 				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
+
 				return "", paramsFile.Bytes()
 			}
 
 			for _, skipPath := range p.SkipPaths {
 				if strings.Contains(filePath, skipPath) {
 					logger.Debugf("skipping [%s:%s]? Yes", filePath, fileName)
+
 					return "", []byte{0}
 				}
 			}
@@ -199,12 +202,14 @@ func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 			// Is the public params?
 			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
 				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
+
 				return "", paramsFile.Bytes()
 			}
 
 			for _, skipPath := range p.SkipPaths {
 				if strings.Contains(filePath, skipPath) {
 					logger.Debugf("skipping [%s:%s]? Yes", filePath, fileName)
+
 					return "", []byte{0}
 				}
 			}
@@ -226,8 +231,10 @@ func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 				if err != nil {
 					panic("failed to marshal chaincode package connection into JSON")
 				}
+
 				return "", raw
 			}
+
 			return "", nil
 		},
 	)
@@ -263,5 +270,6 @@ func PublicParamsTemplate(ppRaw []byte) *bytes.Buffer {
 	paramsFile := bytes.NewBuffer(nil)
 	err = t.Execute(io.MultiWriter(paramsFile), nil)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
 	return paramsFile
 }

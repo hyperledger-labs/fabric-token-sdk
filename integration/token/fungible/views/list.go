@@ -46,6 +46,7 @@ func (i *ListUnspentTokensViewFactory) NewView(in []byte) (view.View, error) {
 	f := &ListUnspentTokensView{ListUnspentTokens: &ListUnspentTokens{}}
 	err := json.Unmarshal(in, f.ListUnspentTokens)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -54,6 +55,7 @@ type ListOwnerWalletIDsView struct{}
 func (p *ListOwnerWalletIDsView) Call(context view.Context) (interface{}, error) {
 	tms, err := token.GetManagementService(context)
 	assert.NoError(err)
+
 	return tms.WalletManager().OwnerWalletIDs(context.Context())
 }
 
@@ -61,5 +63,6 @@ type ListOwnerWalletIDsViewFactory struct{}
 
 func (i *ListOwnerWalletIDsViewFactory) NewView(in []byte) (view.View, error) {
 	f := &ListOwnerWalletIDsView{}
+
 	return f, nil
 }

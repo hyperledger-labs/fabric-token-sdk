@@ -48,5 +48,6 @@ func (e *ChaincodeEndorsementService) Endorse(context view.Context, requestRaw [
 	if err != nil {
 		return nil, err
 	}
+
 	return env, nil
 }

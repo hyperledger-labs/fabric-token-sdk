@@ -21,6 +21,7 @@ func NewDriver(config driver4.Config, ds ...driver4.NamedDriver) Driver {
 	for _, d := range ds {
 		drivers[d.Name] = d.Driver
 	}
+
 	return Driver{
 		drivers: drivers,
 		config:  common.NewConfig(config),
@@ -37,6 +38,7 @@ func (d Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (dr
 	if err != nil {
 		return nil, err
 	}
+
 	return dr.NewTokenLock(name, params...)
 }
 
@@ -45,6 +47,7 @@ func (d Driver) NewWallet(name driver2.PersistenceName, params ...string) (drive
 	if err != nil {
 		return nil, err
 	}
+
 	return dr.NewWallet(name, params...)
 }
 
@@ -53,6 +56,7 @@ func (d Driver) NewIdentity(name driver2.PersistenceName, params ...string) (dri
 	if err != nil {
 		return nil, err
 	}
+
 	return dr.NewIdentity(name, params...)
 }
 
@@ -61,6 +65,7 @@ func (d Driver) NewKeyStore(name driver2.PersistenceName, params ...string) (dri
 	if err != nil {
 		return nil, err
 	}
+
 	return dr.NewKeyStore(name, params...)
 }
 
@@ -69,6 +74,7 @@ func (d Driver) NewToken(name driver2.PersistenceName, params ...string) (driver
 	if err != nil {
 		return nil, err
 	}
+
 	return dr.NewToken(name, params...)
 }
 
@@ -77,6 +83,7 @@ func (d Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string)
 	if err != nil {
 		return nil, err
 	}
+
 	return dr.NewTokenNotifier(name, params...)
 }
 
@@ -85,6 +92,7 @@ func (d Driver) NewAuditTransaction(name driver2.PersistenceName, params ...stri
 	if err != nil {
 		return nil, err
 	}
+
 	return dr.NewAuditTransaction(name, params...)
 }
 
@@ -93,6 +101,7 @@ func (d Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...stri
 	if err != nil {
 		return nil, err
 	}
+
 	return dr.NewOwnerTransaction(name, params...)
 }
 
@@ -104,5 +113,6 @@ func (d Driver) getDriver(name driver2.PersistenceName) (driver4.Driver, error) 
 	if dr, ok := d.drivers[t]; ok {
 		return dr, nil
 	}
+
 	return nil, errors.Errorf("driver %s not found [%s]", t, name)
 }

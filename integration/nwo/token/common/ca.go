@@ -236,6 +236,7 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 
 	res.ID = owner
 	res.URL = userOutput
+
 	return res, err
 }
 
@@ -266,6 +267,7 @@ func (i *IdemixCASupport) GenerateConfiguration() error {
 		},
 		"Port": func() string {
 			i.CAPort = fmt.Sprintf("%d", i.TokenPlatform.GetContext().ReservePort())
+
 			return i.CAPort
 		},
 	}).Parse(CACfgTemplate)
@@ -282,6 +284,7 @@ func (i *IdemixCASupport) GenerateConfiguration() error {
 	if err := os.WriteFile(filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "fabric-ca-server.yaml"), ext.Bytes(), 0644); err != nil {
 		return errors.Wrap(err, "failed to write fabric-ca-server configuration")
 	}
+
 	return nil
 }
 
@@ -297,6 +300,7 @@ func (i *IdemixCASupport) StartSession(cmd *exec.Cmd, name string) (*gexec.Sessi
 	); err != nil {
 		return nil, err
 	}
+
 	return gexec.Start(
 		cmd,
 		gexec.NewPrefixedWriter(
@@ -317,5 +321,6 @@ func (i *IdemixCASupport) nextColor() string {
 	}
 
 	i.ColorIndex++
+
 	return fmt.Sprintf("%dm", color)
 }

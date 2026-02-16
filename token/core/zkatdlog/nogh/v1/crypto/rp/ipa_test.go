@@ -55,6 +55,7 @@ func newIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
 		com.Add(leftGens[i].Mul(left[i]))
 		com.Add(rightGens[i].Mul(right[i]))
 	}
+
 	return &ipaSetup{
 		left:      left,
 		right:     right,
@@ -154,6 +155,7 @@ func TestParallelIPAProver(t *testing.T) {
 				setup.curve,
 			)
 			_, err := prover.Prove()
+
 			return err
 		},
 	)

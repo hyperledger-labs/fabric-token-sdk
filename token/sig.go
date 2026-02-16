@@ -84,5 +84,6 @@ func (s *SignatureService) GetAuditInfo(ctx context.Context, ids ...Identity) ([
 		}
 		result = append(result, auditInfo)
 	}
+
 	return result, nil
 }

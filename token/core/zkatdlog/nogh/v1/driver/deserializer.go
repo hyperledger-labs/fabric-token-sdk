@@ -53,6 +53,7 @@ func (d *TokenDeserializer) DeserializeMetadata(raw []byte) (*token.Metadata, er
 	if err := metadata.Deserialize(raw); err != nil {
 		return nil, err
 	}
+
 	return metadata, nil
 }
 
@@ -61,6 +62,7 @@ func (d *TokenDeserializer) DeserializeToken(raw []byte) (*token.Token, error) {
 	if err := token.Deserialize(raw); err != nil {
 		return nil, err
 	}
+
 	return token, nil
 }
 
@@ -80,5 +82,6 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix2.AuditInfoDeserializer{}))
 	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})
+
 	return d
 }

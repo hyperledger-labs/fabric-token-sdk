@@ -89,6 +89,7 @@ func TestSKIBasedSigner_Sign(t *testing.T) {
 				assert.NoError(t, err)
 				mockCsp.On("GetKey", mock.Anything).Return(&mocks.Key{}, nil)
 				mockCsp.On("Sign", mock.Anything, mock.Anything, mock.Anything).Return([]byte("signature"), nil)
+
 				return signer, mockCsp
 			},
 			digest:  []byte("digest"),
@@ -102,6 +103,7 @@ func TestSKIBasedSigner_Sign(t *testing.T) {
 				signer, err := NewSKIBasedSigner(mockCsp, []byte("test"), &testPublicKey{})
 				assert.NoError(t, err)
 				mockCsp.On("GetKey", mock.Anything).Return(nil, errors.New("get key failed"))
+
 				return signer, mockCsp
 			},
 			digest:  []byte("digest"),
@@ -116,6 +118,7 @@ func TestSKIBasedSigner_Sign(t *testing.T) {
 				assert.NoError(t, err)
 				mockCsp.On("GetKey", mock.Anything).Return(&mocks.Key{}, nil)
 				mockCsp.On("Sign", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("sign failed"))
+
 				return signer, mockCsp
 			},
 			digest:  []byte("digest"),

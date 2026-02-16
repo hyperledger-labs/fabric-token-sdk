@@ -269,6 +269,7 @@ func simpleTransfer() token.AuditRecord {
 		Type:         "TOK",
 		Quantity:     token2.NewQuantityFromUInt64(10),
 	}
+
 	return token.AuditRecord{
 		Anchor:  "test",
 		Inputs:  token.NewInputStream(qsMock{}, []*token.Input{input1}, 64),
@@ -295,6 +296,7 @@ func transferWithChange() token.AuditRecord {
 		Type:         "TOK",
 		Quantity:     token2.NewQuantityFromUInt64(90),
 	}
+
 	return token.AuditRecord{
 		Anchor:  "test",
 		Inputs:  token.NewInputStream(qsMock{}, []*token.Input{input1}, 64),
@@ -315,6 +317,7 @@ func redeem() token.AuditRecord {
 		Type:         "TOK",
 		Quantity:     token2.NewQuantityFromUInt64(10),
 	}
+
 	return token.AuditRecord{
 		Anchor:  "test",
 		Inputs:  token.NewInputStream(qsMock{}, []*token.Input{input1}, 64),

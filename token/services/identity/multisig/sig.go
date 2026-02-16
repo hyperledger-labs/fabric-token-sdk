@@ -28,6 +28,7 @@ func (m *MultiSignature) Bytes() ([]byte, error) {
 
 func (m *MultiSignature) FromBytes(raw []byte) error {
 	_, err := asn1.Unmarshal(raw, m)
+
 	return err
 }
 
@@ -46,6 +47,7 @@ func JoinSignatures(identities []token.Identity, sigmas map[string][]byte) ([]by
 	sig := &MultiSignature{
 		Signatures: signatures,
 	}
+
 	return sig.Bytes()
 }
 
@@ -70,5 +72,6 @@ func (v *Verifier) Verify(msg, raw []byte) error {
 			return errors.Errorf("invalid multisig: signature at index [%d] does not verify", k)
 		}
 	}
+
 	return nil
 }

@@ -218,6 +218,7 @@ func TestWalletByID_ConcurrentCreation(t *testing.T) {
 	created.IDReturns("wc")
 	wf.NewWalletStub = func(ctx context.Context, id string, role identity.RoleType, wr role.IdentitySupport, info identity.Info) (driver.Wallet, error) {
 		<-start
+
 		return created, nil
 	}
 

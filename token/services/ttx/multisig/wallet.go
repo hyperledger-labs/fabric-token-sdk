@@ -67,6 +67,7 @@ func (w *OwnerWallet) ListTokens(ctx context.Context, opts ...token.ListTokensOp
 	if err != nil {
 		return nil, err
 	}
+
 	return &token2.UnspentTokens{Tokens: tokens}, nil
 }
 
@@ -76,6 +77,7 @@ func (w *OwnerWallet) ListTokensIterator(ctx context.Context, opts ...token.List
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
+
 	return w.filterIterator(ctx, compiledOpts.TokenType)
 }
 
@@ -85,6 +87,7 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
 	}
+
 	return iterators.Filter(it, containsEscrow), nil
 }
 
@@ -104,6 +107,7 @@ func Wallet(context view.Context, wallet *token.OwnerWallet) *OwnerWallet {
 	if err != nil {
 		return nil
 	}
+
 	return &OwnerWallet{
 		wallet:      wallet,
 		vault:       tokens,
@@ -116,6 +120,7 @@ func containsEscrow(tok *token2.UnspentToken) bool {
 	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 	if err != nil {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+
 		return false
 	}
 	if owner.Type != multisig.Multisig {
@@ -124,9 +129,11 @@ func containsEscrow(tok *token2.UnspentToken) bool {
 
 	if err := (&multisig.MultiIdentity{}).Deserialize(owner.Identity); err != nil {
 		logger.Debugf("token [%s,%s,%s,%s] contains an escrow? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+
 		return false
 	}
 
 	logger.Debugf("token [%s,%s,%s,%s] contains an escrow? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+
 	return true
 }

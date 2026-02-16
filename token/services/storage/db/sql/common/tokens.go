@@ -78,11 +78,13 @@ func (db *TokenStore) StoreToken(ctx context.Context, tr driver.TokenRecord, own
 		if err1 := tx.Rollback(); err1 != nil {
 			logger.Errorf("error rolling back: %s", err1.Error())
 		}
+
 		return
 	}
 	if err = tx.Commit(); err != nil {
 		return
 	}
+
 	return nil
 }
 
@@ -103,6 +105,7 @@ func (db *TokenStore) DeleteTokens(ctx context.Context, deletedBy string, ids ..
 	if _, err := db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error setting tokens to deleted [%v]", ids)
 	}
+
 	return nil
 }
 
@@ -118,6 +121,7 @@ func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bo
 	id, err := common.QueryUnique[string](db.readDB, query, args...)
 
 	logger.DebugfContext(ctx, "token [%s:%d] is mine [%s]", txID, index, id)
+
 	return id == txID, err
 }
 
@@ -216,6 +220,7 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
+
 	return common.NewIterator(rows, func(tok *token.LedgerToken) error {
 		return rows.Scan(&tok.ID.TxId, &tok.ID.Index, &tok.Token, &tok.TokenMetadata, &tok.Format)
 	}), nil
@@ -243,6 +248,7 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 	if err != nil || sum == nil {
 		return 0, err
 	}
+
 	return *sum, nil
 }
 
@@ -257,6 +263,7 @@ func (db *TokenStore) ListUnspentTokensBy(ctx context.Context, walletID string, 
 	if err != nil {
 		return nil, err
 	}
+
 	return &token.UnspentTokens{Tokens: tokens}, nil
 }
 
@@ -271,6 +278,7 @@ func (db *TokenStore) ListUnspentTokens(ctx context.Context) (*token.UnspentToke
 	if err != nil {
 		return nil, err
 	}
+
 	return &token.UnspentTokens{Tokens: tokens}, nil
 }
 
@@ -337,6 +345,7 @@ func (db *TokenStore) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]
 		}
 		panic("programming error: should not reach this point")
 	}
+
 	return tokens, nil
 }
 
@@ -361,6 +370,7 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 	if err != nil {
 		return nil, err
 	}
+
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
 }
 
@@ -374,6 +384,7 @@ func (db *TokenStore) GetTokenOutputs(ctx context.Context, ids []*token.ID, call
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -389,6 +400,7 @@ func (db *TokenStore) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.I
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
 	return tokens, metas, types, nil
 }
 
@@ -398,6 +410,7 @@ func (db *TokenStore) GetAllTokenInfos(ctx context.Context, ids []*token.ID) ([]
 		return [][]byte{}, nil
 	}
 	_, metas, _, err := db.getLedgerTokenAndMeta(ctx, ids)
+
 	return metas, err
 }
 
@@ -444,6 +457,7 @@ func (db *TokenStore) getLedgerToken(ctx context.Context, ids []*token.ID) ([][]
 			tokens[i] = tok
 		}
 	}
+
 	return tokens, nil
 }
 
@@ -492,6 +506,7 @@ func (db *TokenStore) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID
 			types[i] = token.Format(info[2])
 		}
 	}
+
 	return tokens, metas, types, nil
 }
 
@@ -533,6 +548,7 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 				}
 				logger.DebugfContext(ctx, "set token at location [%s:%s]-[%d]", tok.Type, tok.Quantity, j)
 				found = true
+
 				break
 			}
 		}
@@ -540,6 +556,7 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 			return errors.Errorf("retrieved wrong token [%v]", tok.Id)
 		}
 		counter++
+
 		return nil
 	})
 	if err != nil {
@@ -561,6 +578,7 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 		}
 		panic("programming error: should not reach this point")
 	}
+
 	return tokens, nil
 }
 
@@ -592,6 +610,7 @@ func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.Query
 	it := common.NewIterator(rows, func(td *driver.TokenDetails) error {
 		return rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &td.Amount, &td.IsSpent, &td.SpentBy, &td.StoredAt)
 	})
+
 	return iterators.ReadAllValues(it)
 }
 
@@ -634,6 +653,7 @@ func (db *TokenStore) WhoDeletedTokens(ctx context.Context, inputs ...*token.ID)
 				isSpent[i] = isSp
 				spentBy[i] = spBy
 				found[i] = true
+
 				break // stop searching for this id but continue looping over rows
 			}
 		}
@@ -654,6 +674,7 @@ func (db *TokenStore) WhoDeletedTokens(ctx context.Context, inputs ...*token.ID)
 		}
 		panic("programming error: should not reach this point")
 	}
+
 	return spentBy, isSpent, nil
 }
 
@@ -685,6 +706,7 @@ func (db *TokenStore) StorePublicParams(ctx context.Context, raw []byte) error {
 		Format()
 	logger.DebugfContext(ctx, query, fmt.Sprintf("store public parameters (%d bytes), hash [%s]", len(raw), logging.Base64(rawHash)))
 	_, err := db.writeDB.ExecContext(ctx, query, args...)
+
 	return err
 }
 
@@ -729,6 +751,7 @@ func (db *TokenStore) StoreCertifications(ctx context.Context, certifications ma
 	if _, err := db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return tokenDBError(err)
 	}
+
 	return nil
 }
 
@@ -746,6 +769,7 @@ func (db *TokenStore) ExistsCertification(ctx context.Context, tokenID *token.ID
 	certification, err := common.QueryUnique[[]byte](db.readDB, query, args...)
 	if err != nil {
 		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
+
 		return false
 	}
 
@@ -753,6 +777,7 @@ func (db *TokenStore) ExistsCertification(ctx context.Context, tokenID *token.ID
 	if !result {
 		logger.Warnf("tried to check certification existence for token id %s, got an empty certification", tokenID)
 	}
+
 	return result
 }
 
@@ -797,6 +822,7 @@ func (db *TokenStore) GetCertifications(ctx context.Context, ids []*token.ID) ([
 			certifications[i] = cert
 		}
 	}
+
 	return certifications, nil
 }
 
@@ -875,6 +901,7 @@ func (db *TokenStore) NewTokenDBTransaction() (driver.TokenStoreTransaction, err
 	if err != nil {
 		return nil, errors.Errorf("failed starting a db transaction")
 	}
+
 	return &TokenTransaction{ci: db.ci, table: &db.table, tx: tx}, nil
 }
 
@@ -882,6 +909,7 @@ func (db *TokenStore) SetSupportedTokenFormats(formats []token.Format) error {
 	db.sttMutex.Lock()
 	db.supportedTokenFormats = formats
 	db.sttMutex.Unlock()
+
 	return nil
 }
 
@@ -889,6 +917,7 @@ func (db *TokenStore) getSupportedTokenFormats() []token.Format {
 	db.sttMutex.RLock()
 	supportedTokenTypes := db.supportedTokenFormats
 	db.sttMutex.RUnlock()
+
 	return supportedTokenTypes
 }
 
@@ -919,6 +948,7 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 
 	all := common.NewIterator(rows, func(f *token.Format) error { return rows.Scan(f) })
 	unsupported := iterators.Filter(all, func(f *token.Format) bool { return !supported.Contains(*f) })
+
 	return iterators.ReadAllValues(unsupported)
 }
 
@@ -980,6 +1010,7 @@ func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, inclu
 	if len(raw) == 0 {
 		return nil, owners, nil
 	}
+
 	return &token.Token{
 		Owner:    raw,
 		Type:     tokenType,
@@ -1017,11 +1048,13 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		logger.Errorf("error storing token [%s] in table [%s] [%s]: [%s][%s]", tr.TxID, t.table.Tokens, query, err, string(debug.Stack()))
+
 		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.table.Tokens)
 	}
 
 	if len(owners) == 0 {
 		logger.Debugf("no additional owner reference apart [%s]", tr.OwnerWalletID)
+
 		return nil
 	}
 
@@ -1038,6 +1071,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		logger.Errorf("error storing token ownerships [%s]: %s", query, err)
+
 		return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
 	}
 
@@ -1054,6 +1088,7 @@ func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, s
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error setting spendable flag to [%v] for [%s]", spendable, tokenID.TxId)
 	}
+
 	return nil
 }
 
@@ -1103,5 +1138,6 @@ func tokenDBError(err error) error {
 	if strings.Contains(e, "foreign key constraint") {
 		return driver.ErrTokenDoesNotExist
 	}
+
 	return err
 }

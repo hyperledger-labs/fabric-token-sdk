@@ -93,6 +93,7 @@ func (u *restUser) Withdraw(value txgen.Amount) txgen.Error {
 	request.Header.Add(c.HeaderContentType, c.ApplicationUrlEncoded)
 
 	_, err := u.doRequest(request, c.WithdrawRequest)
+
 	return err
 }
 
@@ -114,6 +115,7 @@ func (u *restUser) GetBalance() (txgen.Amount, txgen.Error) {
 
 	if err != nil {
 		u.logger.Errorf("Can't unmarshal body from get balance request: %s", err.Error())
+
 		return 0, txgen.NewInternalServerError(err, "Can't unmarshal body")
 	}
 
@@ -122,6 +124,7 @@ func (u *restUser) GetBalance() (txgen.Amount, txgen.Error) {
 	amount, err := strconv.ParseUint(balanceResponse.Balance.Quantity, 10, 64)
 	if err != nil {
 		u.logger.Errorf("Can't convert balance api.Amount to int: %s, balance: %s", err.Error(), balanceResponse.Balance.Quantity)
+
 		return 0, txgen.NewInternalServerError(err, "Can't convert balance api.Amount to int")
 	}
 
@@ -140,6 +143,7 @@ func (u *restUser) Transfer(value txgen.Amount, recipient model.Username, nonce 
 	request.Header.Add(c.HeaderContentType, c.ApplicationUrlEncoded)
 
 	_, err := u.doRequest(request, c.PaymentTransferRequest)
+
 	return err
 }
 
@@ -156,6 +160,7 @@ func (u *restUser) InitiateTransfer(value txgen.Amount, nonce txgen.UUID) txgen.
 	request.Header.Add(c.HeaderContentType, c.ApplicationUrlEncoded)
 
 	_, err := u.doRequest(request, c.PaymentInitiationRequest)
+
 	return err
 }
 
@@ -180,6 +185,7 @@ func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType
 
 	if err != nil {
 		u.logger.Errorf("Can't make request %s for %s. Path: %s\n", err, u.username, request.URL.RequestURI())
+
 		return nil, txgen.NewBadRequestError(err, "Can't make request")
 	}
 
@@ -188,6 +194,7 @@ func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType
 
 	if response.StatusCode >= http.StatusBadRequest {
 		u.logger.Errorf("Request failed: %s for %s. Path: %s\n", string(respBody), u.username, request.URL.RequestURI())
+
 		return nil, &txgen.AppError{
 			Code:    response.StatusCode,
 			Message: string(respBody),
@@ -206,6 +213,7 @@ func newTransferForm(value txgen.Amount, nonce txgen.UUID, username model.Userna
 	form.Add("value", strconv.FormatUint(value, 10))
 	form.Add("recipient", username)
 	form.Add("nonce", nonce.String())
+
 	return form
 }
 
@@ -224,6 +232,7 @@ func (u *restUser) authenticateUser() (string, txgen.Error) {
 
 	if err != nil {
 		u.logger.Errorf("Can't make authentication request %s", err.Error())
+
 		return "", txgen.NewBadRequestError(err, "Can't make authentication request")
 	}
 
@@ -232,6 +241,7 @@ func (u *restUser) authenticateUser() (string, txgen.Error) {
 
 	if response.StatusCode >= http.StatusBadRequest {
 		u.logger.Errorf("Failed authentication request: %s for %s\n", string(respBody), u.username)
+
 		return "", &txgen.AppError{
 			Code:    response.StatusCode,
 			Message: string(respBody),
@@ -243,6 +253,7 @@ func (u *restUser) authenticateUser() (string, txgen.Error) {
 
 	if err != nil {
 		u.logger.Errorf("Can't unmarshal body from authentication request: %s", err.Error())
+
 		return "", txgen.NewInternalServerError(err, "Can't unmarshal body")
 	}
 

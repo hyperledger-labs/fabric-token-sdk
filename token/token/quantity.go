@@ -78,6 +78,7 @@ func ToQuantitySum(precision uint64) iterators.Reducer[*UnspentToken, Quantity] 
 		if err != nil {
 			return nil, err
 		}
+
 		return sum.Add(q), nil
 	})
 }
@@ -167,6 +168,7 @@ func (q *BigQuantity) Add(b Quantity) Quantity {
 	}
 
 	q.Int = sum
+
 	return q
 }
 
@@ -184,6 +186,7 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 	diff.Sub(q.Int, b.(*BigQuantity).Int)
 
 	q.Int = diff
+
 	return q
 }
 
@@ -239,6 +242,7 @@ func (q *UInt64Quantity) Add(b Quantity) Quantity {
 	}
 
 	q.Value = sum
+
 	return q
 }
 
@@ -255,6 +259,7 @@ func (q *UInt64Quantity) Sub(b Quantity) Quantity {
 	diff := q.Value - bq.Value
 
 	q.Value = diff
+
 	return q
 }
 
@@ -269,6 +274,7 @@ func (q *UInt64Quantity) Cmp(b Quantity) int {
 	} else if q.Value > bq.Value {
 		return 1
 	}
+
 	return 0
 }
 

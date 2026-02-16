@@ -31,6 +31,7 @@ func TestAnchorInContext(t *testing.T) {
 				if anchor != ctx.Anchor {
 					return fmt.Errorf("transfer, anchor does not match, expected %s, got %s", anchor, ctx.Anchor)
 				}
+
 				return nil
 			},
 		},
@@ -39,6 +40,7 @@ func TestAnchorInContext(t *testing.T) {
 				if anchor != ctx.Anchor {
 					return fmt.Errorf("issue, anchor does not match, expected %s, got %s", anchor, ctx.Anchor)
 				}
+
 				return nil
 			},
 		},
@@ -47,6 +49,7 @@ func TestAnchorInContext(t *testing.T) {
 				if anchor != ctx.Anchor {
 					return fmt.Errorf("audit, anchor does not match, expected %s, got %s", anchor, ctx.Anchor)
 				}
+
 				return nil
 			},
 		},

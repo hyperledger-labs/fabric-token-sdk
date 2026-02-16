@@ -99,6 +99,7 @@ func (l *Layout) PeersInOrg(orgName string) []Peer {
 			peers = append(peers, o)
 		}
 	}
+
 	return peers
 }
 
@@ -235,6 +236,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 
 		identities = append(identities, id)
 	}
+
 	return identities
 }
 
@@ -262,6 +264,7 @@ func (d *CryptoMaterialGenerator) GenerateArtifacts(output string) {
 
 func (d *CryptoMaterialGenerator) Cryptogen(command common.Command) (*gexec.Session, error) {
 	cmd := common.NewCommand(d.Builder.FSCCLI(), command)
+
 	return d.StartSession(cmd, command.SessionName())
 }
 
@@ -277,6 +280,7 @@ func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gex
 	); err != nil {
 		return nil, err
 	}
+
 	return gexec.Start(
 		cmd,
 		gexec.NewPrefixedWriter(
@@ -297,5 +301,6 @@ func (d *CryptoMaterialGenerator) NextColor() string {
 	}
 
 	d.ColorIndex++
+
 	return fmt.Sprintf("%dm", color)
 }

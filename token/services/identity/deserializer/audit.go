@@ -28,5 +28,6 @@ func (t *TypedAuditInfoMatcher) Match(ctx context.Context, id []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to match identity [%s] to audit infor", id)
 	}
+
 	return nil
 }

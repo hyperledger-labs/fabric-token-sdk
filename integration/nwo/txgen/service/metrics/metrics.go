@@ -35,6 +35,7 @@ const (
 
 func NewMetrics(p metrics.Provider) *Metrics {
 	_, supportsGetters := p.(*Provider)
+
 	return &Metrics{
 		supportsGetters: supportsGetters,
 

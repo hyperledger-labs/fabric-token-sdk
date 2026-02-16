@@ -297,6 +297,7 @@ func measureMemory[T any](setup func() T, work func(T) error) (bytes, allocs uin
 		totalAllocs += m2.Mallocs - m1.Mallocs
 		totalBytes += m2.TotalAlloc - m1.TotalAlloc
 	}
+
 	return totalBytes / samples, totalAllocs / samples
 }
 
@@ -475,6 +476,7 @@ func (r Result) printMainMetrics(w *tabwriter.Writer) (cvPct float64, tailRatio 
 		if condition {
 			return ColorGreen + goodMsg + ColorReset
 		}
+
 		return ColorRed + badMsg + ColorReset
 	}
 
@@ -713,6 +715,7 @@ func percentile(sorted []time.Duration, p float64) time.Duration {
 	fraction := pos - float64(lower)
 	valLower := float64(sorted[lower])
 	valUpper := float64(sorted[upper])
+
 	return time.Duration(valLower + fraction*(valUpper-valLower))
 }
 
@@ -757,6 +760,7 @@ func calcHistogramImproved(latencies []time.Duration, min, max time.Duration, bu
 		val := float64(lat)
 		if val < float64(min) {
 			res[0].Count++
+
 			continue
 		}
 
@@ -769,6 +773,7 @@ func calcHistogramImproved(latencies []time.Duration, min, max time.Duration, bu
 		}
 		res[idx].Count++
 	}
+
 	return res
 }
 
@@ -789,6 +794,7 @@ func printSparkline(w *tabwriter.Writer, timeline []TimePoint) {
 	for _, p := range timeline {
 		if maxOps == 0 {
 			writef(w, " ")
+
 			continue
 		}
 		ratio := p.OpsSec / maxOps

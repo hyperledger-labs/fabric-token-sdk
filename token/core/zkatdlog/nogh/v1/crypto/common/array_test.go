@@ -23,6 +23,7 @@ func randomG1(t *testing.T, c *math.Curve) *math.G1 {
 	zr := c.NewRandomZr(randReader)
 	g := c.NewG1()
 	g.Add(c.GenG1.Mul(zr))
+
 	return g
 }
 

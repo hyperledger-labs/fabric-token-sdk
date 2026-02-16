@@ -78,6 +78,7 @@ func NewServiceManager(
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 			}
+
 			return wrapper, nil
 		}),
 		networkProvider:      networkProvider,
@@ -106,8 +107,10 @@ func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) erro
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
+
 	return iterators.ForEach(it, func(record *storage.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
+
 		return net.AddFinalityListener(
 			tmsID.Namespace,
 			record.TxID,
@@ -122,6 +125,7 @@ func (m *ServiceManager) CacheRequest(ctx context.Context, tmsID token.TMSID, re
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get service for [%s]", tmsID)
 	}
+
 	return service.CacheRequest(ctx, tmsID, request)
 }
 
@@ -133,17 +137,21 @@ var (
 func Get(sp token.ServiceProvider, tms dep.TokenManagementService) *Service {
 	if tms == nil {
 		logger.Debugf("no TMS provided")
+
 		return nil
 	}
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		logger.Errorf("failed to get manager service: [%s]", err)
+
 		return nil
 	}
 	auditor, err := s.(*ServiceManager).ServiceByTMSId(tms.ID())
 	if err != nil {
 		logger.Errorf("failed to get db for TMS [%s]: [%s]", tms.ID(), err)
+
 		return nil
 	}
+
 	return auditor
 }

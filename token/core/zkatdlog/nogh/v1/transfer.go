@@ -43,6 +43,7 @@ func (p *PreparedTransferInputs) Owners() []driver.Identity {
 	for i, input := range *p {
 		owners[i] = input.Owner
 	}
+
 	return owners
 }
 
@@ -52,6 +53,7 @@ func (p *PreparedTransferInputs) Tokens() []*token.Token {
 	for i, input := range *p {
 		tokens[i] = input.Token
 	}
+
 	return tokens
 }
 
@@ -61,6 +63,7 @@ func (p *PreparedTransferInputs) Metadata() []*token.Metadata {
 	for i, input := range *p {
 		metas[i] = input.Metadata
 	}
+
 	return metas
 }
 
@@ -327,6 +330,7 @@ func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.Transfer
 	if err != nil {
 		return nil, err
 	}
+
 	return transferAction, nil
 }
 
@@ -345,6 +349,7 @@ func (s *TransferService) prepareInputs(ctx context.Context, loadedTokens []Load
 			UpgradeWitness: upgradeWitness,
 		}
 	}
+
 	return preparedInputs, nil
 }
 
@@ -354,5 +359,6 @@ func getTokenData(tokens []*token.Token) []*math.G1 {
 	for i := range tokens {
 		tokenData[i] = tokens[i].Data
 	}
+
 	return tokenData
 }
