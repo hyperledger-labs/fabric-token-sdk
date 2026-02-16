@@ -326,7 +326,7 @@ func NewTypeAndSumVerifier(pp []*math.G1, inputs []*math.G1, outputs []*math.G1,
 // Verify checks the validity of a TypeAndSumProof.
 func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 	if stp.TypeBlindingFactor == nil || stp.Type == nil || stp.CommitmentToType == nil || stp.EqualityOfSum == nil {
-		return errors.New("invalid sum and type proof: missing components")
+		return ErrMissingSumAndTypeComponents
 	}
 
 	inputs := make([]*math.G1, len(v.Inputs))
@@ -337,7 +337,7 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 
 	for i := range len(v.Inputs) {
 		if stp.InputValues[i] == nil {
-			return errors.New("invalid sum and type proof: missing input value")
+			return ErrMissingSumAndTypeInputValue
 		}
 		inputs[i] = v.Inputs[i].Copy()
 		inputs[i].Sub(stp.CommitmentToType)
@@ -366,7 +366,7 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 	// compute challenge and verify mismatch
 	chal := v.Curve.HashToZr(raw)
 	if !chal.Equals(stp.Challenge) {
-		return errors.New("invalid sum and type proof: challenge mismatch")
+		return ErrSumAndTypeChallengeMismatch
 	}
 
 	return nil

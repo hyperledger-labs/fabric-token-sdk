@@ -45,7 +45,7 @@ func (p *Proof) Deserialize(bytes []byte) error {
 // Validate ensures the proof components are present and well-formed.
 func (p *Proof) Validate(curve math.CurveID) error {
 	if p.TypeAndSum == nil {
-		return errors.New("invalid transfer proof: missing type-and-sum proof")
+		return ErrMissingTypeAndSumProof
 	}
 	if err := p.TypeAndSum.Validate(curve); err != nil {
 		return errors.Wrapf(err, "invalid transfer proof")
@@ -104,7 +104,7 @@ func (v *Verifier) Verify(proofRaw []byte) error {
 	// verify range proof if necessary
 	if v.RangeCorrectness != nil {
 		if proof.RangeCorrectness == nil {
-			return errors.New("invalid transfer proof: missing range proof")
+			return ErrMissingRangeProof
 		} else {
 			commitmentToType := proof.TypeAndSum.CommitmentToType.Copy()
 			coms := make([]*math.G1, len(v.TypeAndSum.Outputs))
@@ -135,7 +135,7 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 	outW := make([]*token.Metadata, len(outputWitness))
 	for i := range inputWitness {
 		if inputWitness[i] == nil || inputWitness[i].BlindingFactor == nil {
-			return nil, errors.New("invalid token witness")
+			return nil, ErrInvalidTokenWitness
 		}
 		inW[i] = inputWitness[i].Clone()
 	}
@@ -151,12 +151,12 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 	typeBF := c.NewRandomZr(rand)
 	for i := range outputWitness {
 		if outputWitness[i] == nil || outputWitness[i].BlindingFactor == nil {
-			return nil, errors.New("invalid token witness")
+			return nil, ErrInvalidTokenWitness
 		}
 		outW[i] = outputWitness[i].Clone()
 		values[i], err = outW[i].Value.Uint()
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid token witness values")
+			return nil, errors.Wrapf(ErrInvalidTokenWitnessValue, "invalid token witness values [%s]", err)
 		}
 		blindingFactors[i] = c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder)
 	}

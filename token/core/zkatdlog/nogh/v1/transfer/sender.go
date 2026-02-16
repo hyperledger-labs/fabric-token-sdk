@@ -46,7 +46,7 @@ type Sender struct {
 // NewSender returns a new Sender instance.
 func NewSender(signers []driver.Signer, tokens []*token.Token, ids []*token2.ID, inf []*token.Metadata, pp *v1.PublicParams) (*Sender, error) {
 	if (signers != nil && len(signers) != len(tokens)) || len(tokens) != len(inf) || len(ids) != len(inf) {
-		return nil, errors.Errorf("number of tokens to be spent does not match number of openings")
+		return nil, ErrMismatchedTokensOpenings
 	}
 
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil
@@ -56,14 +56,14 @@ func NewSender(signers []driver.Signer, tokens []*token.Token, ids []*token2.ID,
 // (openings) for the newly created outputs.
 func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners [][]byte) (*Action, []*token.Metadata, error) {
 	if len(values) != len(owners) {
-		return nil, nil, errors.Errorf("cannot generate transfer: number of values [%d] does not match number of recipients [%d]", len(values), len(owners))
+		return nil, nil, errors.Wrapf(ErrMismatchedValuesRecipients, "cannot generate transfer: number of values [%d] does not match number of recipients [%d]", len(values), len(owners))
 	}
 	logger.DebugfContext(ctx, "Get token data for %d inputs", len(s.Inputs))
 	in := getTokenData(s.Inputs)
 	intw := make([]*token.Metadata, len(s.InputInformation))
 	for i := range len(s.InputInformation) {
 		if s.InputInformation[0].Type != s.InputInformation[i].Type {
-			return nil, nil, errors.New("cannot generate transfer: please choose inputs of the same token type")
+			return nil, nil, ErrMismatchedTokenTypes
 		}
 		intw[i] = &token.Metadata{
 			Value:          s.InputInformation[i].Value,

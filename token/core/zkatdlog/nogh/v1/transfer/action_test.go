@@ -54,7 +54,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
-			expectedError: "invalid input at index [0], empty input",
+			expectedError: "invalid input at index [0], empty input: invalid input, empty input",
 		},
 		{
 			name: "",
@@ -68,7 +68,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
-			expectedError: "invalid input's ID at index [0], it is empty",
+			expectedError: "invalid input's ID at index [0], it is empty: invalid input's ID, it is empty",
 		},
 		{
 			name: "",
@@ -82,7 +82,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
-			expectedError: "invalid input's ID at index [0], tx id is empty",
+			expectedError: "invalid input's ID at index [0], tx id is empty: invalid input's ID, tx id is empty",
 		},
 		{
 			name: "",
@@ -96,7 +96,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
-			expectedError: "invalid input's token at index [0], empty token",
+			expectedError: "invalid input's token at index [0], empty token: invalid input's token, empty token",
 		},
 		{
 			name: "",
@@ -300,7 +300,7 @@ func TestAction_Validate(t *testing.T) {
 				},
 			},
 			wantErr:       true,
-			expectedError: "invalid output token at index [0]",
+			expectedError: "invalid output token at index [0]: invalid output token, empty token",
 		},
 		{
 			name: "",
@@ -659,7 +659,7 @@ func TestAction_Deserialize_ErrorPaths(t *testing.T) {
 	assert.NoError(t, err)
 	err = action.Deserialize(raw)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid transfer version")
+	assert.Contains(t, err.Error(), "expected [1], got [100]: invalid transfer version")
 
 	// 3. Invalid inputs (FromProtos failure)
 	protoAction = &actions.TransferAction{

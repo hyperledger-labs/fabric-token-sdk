@@ -136,10 +136,10 @@ type Action struct {
 // NewAction returns the Action that matches the passed arguments
 func NewAction(tokenIDs []*token2.ID, inputToken []*token.Token, commitments []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
 	if len(commitments) != len(owners) {
-		return nil, errors.Errorf("number of recipients [%d] does not match number of outputs [%d]", len(commitments), len(owners))
+		return nil, errors.Wrapf(ErrMismatchedRecipientsOutputs, "number of recipients [%d] does not match number of outputs [%d]", len(commitments), len(owners))
 	}
 	if len(tokenIDs) != len(inputToken) {
-		return nil, errors.Errorf("number of inputs [%d] does not match number of input tokens [%d]", len(tokenIDs), len(inputToken))
+		return nil, errors.Wrapf(ErrMismatchedInputsTokens, "number of inputs [%d] does not match number of input tokens [%d]", len(tokenIDs), len(inputToken))
 	}
 
 	inputs := make([]*ActionInput, len(tokenIDs))
@@ -290,20 +290,20 @@ func (t *Action) GetIssuer() driver.Identity {
 // Validate ensures the Action is well-formed
 func (t *Action) Validate() error {
 	if len(t.Inputs) == 0 {
-		return errors.Errorf("invalid number of token inputs, expected at least 1")
+		return ErrInvalidInputs
 	}
 	for i, in := range t.Inputs {
 		if in == nil {
-			return errors.Errorf("invalid input at index [%d], empty input", i)
+			return errors.Wrapf(ErrEmptyInput, "invalid input at index [%d], empty input", i)
 		}
 		if in.ID == nil {
-			return errors.Errorf("invalid input's ID at index [%d], it is empty", i)
+			return errors.Wrapf(ErrEmptyInputID, "invalid input's ID at index [%d], it is empty", i)
 		}
 		if len(in.ID.TxId) == 0 {
-			return errors.Errorf("invalid input's ID at index [%d], tx id is empty", i)
+			return errors.Wrapf(ErrEmptyInputTxID, "invalid input's ID at index [%d], tx id is empty", i)
 		}
 		if in.Token == nil {
-			return errors.Errorf("invalid input's token at index [%d], empty token", i)
+			return errors.Wrapf(ErrEmptyInputToken, "invalid input's token at index [%d], empty token", i)
 		}
 		if err := in.Token.Validate(true); err != nil {
 			return errors.Wrapf(err, "invalid input token at index [%d]", i)
@@ -316,18 +316,18 @@ func (t *Action) Validate() error {
 		}
 	}
 	if len(t.Outputs) == 0 {
-		return errors.Errorf("invalid number of token outputs, expected at least 1")
+		return ErrInvalidOutputs
 	}
 	for i, out := range t.Outputs {
 		if out == nil {
-			return errors.Errorf("invalid output token at index [%d]", i)
+			return errors.Wrapf(ErrEmptyOutputToken, "invalid output token at index [%d]", i)
 		}
 		if err := out.Validate(false); err != nil {
 			return errors.Wrapf(err, "invalid output at index [%d]", i)
 		}
 	}
 	if t.IsRedeem() && (t.Issuer == nil) {
-		return errors.Errorf("expected issuer for a redeem action")
+		return ErrMissingIssuer
 	}
 
 	return nil
@@ -395,7 +395,7 @@ func (t *Action) Deserialize(raw []byte) error {
 
 	// assert version
 	if action.Version != ProtocolV1 {
-		return errors.Errorf("invalid transfer version, expected [%d], got [%d]", ProtocolV1, action.Version)
+		return errors.Wrapf(ErrInvalidVersion, "expected [%d], got [%d]", ProtocolV1, action.Version)
 	}
 
 	// inputs
