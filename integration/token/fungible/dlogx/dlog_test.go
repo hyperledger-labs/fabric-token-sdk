@@ -89,10 +89,14 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			FSCLogSpec:          "grpc=error:info",
 			TokenSelector:       tokenSelector,
 		})...)
+		if err != nil {
+			return nil, err
+		}
+		// i.EnableRaceDetector()
 		i.RegisterPlatformFactory(fabricx.NewPlatformFactory())
 		i.RegisterPlatformFactory(token.NewPlatformFactory(i))
 		i.Generate()
-		return i, err
+		return i, nil
 	})
 	return ts, selector
 }
