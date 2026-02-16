@@ -69,12 +69,12 @@ func (t *Listener) OnStatus(ctx context.Context, txID string, status int, messag
 }
 
 func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) error {
-	t.logger.InfofContext(ctx, "tx status changed for tx [%s]: [%s]", txID, status)
+	t.logger.DebugfContext(ctx, "tx status changed for tx [%s]: [%s]", txID, status)
 	var txStatus storage.TxStatus
 	switch status {
 	case network.Valid:
 		txStatus = storage.Confirmed
-		t.logger.InfofContext(ctx, "get token request for [%s]", txID)
+		t.logger.DebugfContext(ctx, "get token request for [%s]", txID)
 
 		tr, msgToSign := t.tokens.GetCachedTokenRequest(txID)
 		if tr == nil {
@@ -85,7 +85,7 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 
 				return errors.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
 			}
-			t.logger.InfofContext(ctx, "Read token request")
+			t.logger.DebugfContext(ctx, "Read token request")
 			tms, err := t.tmsProvider.TokenManagementService(token.WithTMSID(t.tmsID))
 			if err != nil {
 				return errors.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
@@ -99,20 +99,20 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 				return errors.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
 			}
 		}
-		t.logger.InfofContext(ctx, "Check token request")
+		t.logger.DebugfContext(ctx, "Check token request")
 		if err := t.checkTokenRequest(txID, msgToSign, tokenRequestHash); err != nil {
 			t.logger.ErrorfContext(ctx, "tx [%s], %s", txID, err)
 			txStatus = storage.Deleted
 			message = err.Error()
 		} else {
-			t.logger.InfofContext(ctx, "append token request for [%s]", txID)
+			t.logger.DebugfContext(ctx, "append token request for [%s]", txID)
 			if err := t.tokens.Append(ctx, t.tmsID, token.RequestAnchor(txID), tr); err != nil {
 				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
 				t.logger.ErrorfContext(ctx, "failed to append token request to token db [%s]: [%s]", txID, err)
 
 				return errors.Errorf("failed to append token request to token db [%s]: [%w]", txID, err)
 			}
-			t.logger.InfofContext(ctx, "append token request for [%s], done", txID)
+			t.logger.DebugfContext(ctx, "append token request for [%s], done", txID)
 		}
 	case network.Invalid:
 		txStatus = storage.Deleted
@@ -133,7 +133,7 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 
 		return errors.Errorf("<message> [%s]: [%w]", txID, err)
 	}
-	t.logger.InfofContext(ctx, "tx status changed for tx [%s]: [%s] done", txID, status)
+	t.logger.DebugfContext(ctx, "tx status changed for tx [%s]: [%s] done", txID, status)
 
 	return nil
 }

@@ -6,10 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 package queue
 
-import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-)
-
 const (
 	// Workers is the configuration key for the number of worker goroutines
 	Workers = "token.finality.notification.workers"
@@ -29,18 +25,23 @@ type ConfigGetter interface {
 	QueueSize() int
 }
 
+//go:generate counterfeiter -o mock/configuration.go -fake-name Configuration . Configuration
+type Configuration interface {
+	GetInt(workers string) int
+}
+
 // NewConfig creates a new ConfigGetter
-func NewConfig(configService driver.ConfigService) *serviceConfig {
-	return &serviceConfig{c: configService}
+func NewConfig(configuration Configuration) *serviceConfig {
+	return &serviceConfig{configuration: configuration}
 }
 
 type serviceConfig struct {
-	c driver.ConfigService
+	configuration Configuration
 }
 
 // Workers returns the number of worker goroutines.
 func (c *serviceConfig) Workers() int {
-	if v := c.c.GetInt(Workers); v > 0 {
+	if v := c.configuration.GetInt(Workers); v > 0 {
 		return v
 	}
 
@@ -49,7 +50,7 @@ func (c *serviceConfig) Workers() int {
 
 // QueueSize returns the size of the event buffer.
 func (c *serviceConfig) QueueSize() int {
-	if v := c.c.GetInt(QueueSize); v > 0 {
+	if v := c.configuration.GetInt(QueueSize); v > 0 {
 		return v
 	}
 
