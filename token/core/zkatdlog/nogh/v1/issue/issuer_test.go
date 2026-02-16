@@ -231,8 +231,8 @@ func prepareZKIssue(t *testing.T, bits uint64, curveID math.CurveID, numOutputs 
 // commitments that serve as inputs to the prover/verifier in tests.
 func prepareInputsForZKIssue(pp *v1.PublicParams, numOutputs int) ([]*token.Metadata, []*math.G1) {
 	values := make([]uint64, numOutputs)
-	for i := range numOutputs {
-		values[i] = uint64(i*10 + 10)
+	for i := range values {
+		values[i] = uint64(i)*10 + 10
 	}
 	curve := math.Curves[pp.Curve]
 	rand, _ := curve.Rand()

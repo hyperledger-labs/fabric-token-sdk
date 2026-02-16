@@ -19,19 +19,26 @@ import (
 
 var logger = logging.MustGetLogger()
 
+// IdentityCacheBackendFunc generates an identity descriptor for given audit info.
 type IdentityCacheBackendFunc func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error)
 
+// IdentityCache provides a pre-provisioned cache of Idemix identities.
 type IdentityCache struct {
-	once      sync.Once
-	backed    IdentityCacheBackendFunc
+	// Ensures provisioning starts once
+	once sync.Once
+	// Backend identity generator
+	backed IdentityCacheBackendFunc
+	// Audit info for cache provisioning
 	auditInfo []byte
-
-	cache        chan *idriver.IdentityDescriptor
+	// Buffered channel of identities
+	cache chan *idriver.IdentityDescriptor
+	// Max wait time for cached identity
 	cacheTimeout time.Duration
-
+	// Cache performance metrics
 	metrics *Metrics
 }
 
+// NewIdentityCache creates a new identity cache with specified size and backend.
 func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byte, metrics *Metrics) *IdentityCache {
 	logger.Debugf("new identity cache with size [%d]", size)
 	ci := &IdentityCache{
@@ -45,6 +52,7 @@ func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byt
 	return ci
 }
 
+// Identity retrieves an identity from cache or generates on-demand.
 func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	// Is the auditInfo equal to that used to fill the cache? If yes, use the cache
 	if !bytes.Equal(auditInfo, c.auditInfo) {
@@ -63,6 +71,7 @@ func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (*idrive
 	return c.fetchIdentityFromCache(ctx)
 }
 
+// fetchIdentityFromCache retrieves identity from cache with timeout.
 func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (*idriver.IdentityDescriptor, error) {
 	var identityDescriptor *idriver.IdentityDescriptor
 
@@ -105,6 +114,7 @@ func (c *IdentityCache) fetchIdentityFromCache(ctx context.Context) (*idriver.Id
 	return identityDescriptor, nil
 }
 
+// fetchIdentityFromBackend generates identity directly from backend, bypassing cache.
 func (c *IdentityCache) fetchIdentityFromBackend(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	logger.DebugfContext(ctx, "fetching identity from backend")
 	identityDescriptor, err := c.backed(ctx, auditInfo)
@@ -116,6 +126,7 @@ func (c *IdentityCache) fetchIdentityFromBackend(ctx context.Context, auditInfo 
 	return identityDescriptor, nil
 }
 
+// provisionIdentities continuously fills cache with pre-generated identities.
 func (c *IdentityCache) provisionIdentities() {
 	count := 0
 	ctx := context.Background()

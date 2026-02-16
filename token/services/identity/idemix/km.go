@@ -276,10 +276,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 
 	// Set up default signer
 	logger.DebugfContext(ctx, "setup default signer")
-	id, err := crypto.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create identity")
-	}
+	id := crypto.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
 	sID := &crypto.SigningIdentity{
 		CSP:          p.Csp,
 		Identity:     id,
@@ -350,7 +347,9 @@ func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.
 	return p.DeserializeSigningIdentity(ctx, raw)
 }
 
-// Info returns information about the identity
+// Returns a string that includes the given identity.
+// If AuditInfo is also provided then the id is cryptographically verified against it
+// and the Enrollment ID (EID) is extracted from the audit info and is printed as well.
 func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
 	eid := ""
 	if len(auditInfo) != 0 {
@@ -372,7 +371,7 @@ func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (st
 	return fmt.Sprintf("Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
 }
 
-// String returns a string representation of the KeyManager
+// String returns a string representation of the KeyManager including the issuer PK
 func (p *KeyManager) String() string {
 	return fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(p.Ipk).String())
 }

@@ -43,7 +43,7 @@ func NewDeserializer(
 		ipk, csp.ExpectEidNymRhNym, nil, cryptoProvider)
 }
 
-// NewDeserializerWithProvider returns a new serialized for the passed arguments
+// NewDeserializerWithProvider returns a new deserializer for the passed arguments
 func NewDeserializerWithProvider(
 	sm SchemaManager,
 	schema Schema,
@@ -55,6 +55,7 @@ func NewDeserializerWithProvider(
 	return NewDeserializerWithBCCSP(sm, schema, ipk, verType, nymEID, cryptoProvider)
 }
 
+// NewDeserializerWithBCCSP returns a new deserializer for the passed arguments given a crypto provider
 func NewDeserializerWithBCCSP(
 	sm SchemaManager,
 	schema Schema,
@@ -96,6 +97,7 @@ func NewDeserializerWithBCCSP(
 	}, nil
 }
 
+// Deserializes a given raw id into a new psudonym signature verifier with id's PK
 func (d *Deserializer) DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
 	identity, err := d.Deserialize(ctx, id)
 	if err != nil {
@@ -111,6 +113,7 @@ func (d *Deserializer) DeserializeVerifier(ctx context.Context, id driver.Identi
 	}, nil
 }
 
+// Deserializes a given raw id and create a new psudonym signature verifier with id's PK
 func (d *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byte) (driver.Verifier, error) {
 	identity, err := d.DeserializeAgainstNymEID(raw, nymEID)
 	if err != nil {
@@ -126,14 +129,18 @@ func (d *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byt
 	}, nil
 }
 
+// Deserializes a given raw AuditInfo into an AuditInfo
 func (i *Deserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
 	return i.Deserializer.DeserializeAuditInfo(ctx, raw)
 }
 
+// Deserializes a given raw AuditInfo into a Matcher
 func (i *Deserializer) GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	return i.Deserializer.DeserializeAuditInfo(ctx, auditInfo)
 }
 
+// Deserializes the provided audit information (ai) and verify it matches the given identity (id)
+// by verifying the related ZK proofs
 func (i *Deserializer) MatchIdentity(ctx context.Context, id driver.Identity, ai []byte) error {
 	matcher, err := i.Deserializer.DeserializeAuditInfo(ctx, ai)
 	if err != nil {
@@ -143,6 +150,9 @@ func (i *Deserializer) MatchIdentity(ctx context.Context, id driver.Identity, ai
 	return matcher.Match(ctx, id)
 }
 
+// Returns a string that includes the given identity.
+// If AuditInfo is also provided then the id is cryptographically verified against it
+// and the Enrollment ID (EID) is extracted from the audit info and is printed as well.
 func (i *Deserializer) Info(ctx context.Context, id []byte, auditInfoRaw []byte) (string, error) {
 	eid := ""
 	if len(auditInfoRaw) != 0 {
@@ -160,12 +170,14 @@ func (i *Deserializer) Info(ctx context.Context, id []byte, auditInfoRaw []byte)
 	return fmt.Sprintf("Idemix: [%s][%s]", eid, driver.Identity(id).UniqueID()), nil
 }
 
+// Returns the Issuer-PK as a string
 func (i *Deserializer) String() string {
 	return fmt.Sprintf("Idemix with IPK [%s]", utils.Hashable(i.Ipk).String())
 }
 
 type AuditInfoDeserializer struct{}
 
+// Deserializes a given raw AuditInfo into an AuditInfo
 func (c *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
 	ai, err := crypto2.DeserializeAuditInfo(raw)
 	if err != nil {

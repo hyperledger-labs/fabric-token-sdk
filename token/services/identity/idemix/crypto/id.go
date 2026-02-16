@@ -10,31 +10,40 @@ import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 const (
-	EIDIndex         = 2
-	RHIndex          = 3
+	// EIDIndex is the attribute index for the enrollment ID in Idemix credentials.
+	EIDIndex = 2
+	// RHIndex is the attribute index for the revocation handle in Idemix credentials.
+	RHIndex = 3
+	// SignerConfigFull is the filename for the full signer configuration (including secret key).
 	SignerConfigFull = "SignerConfigFull"
 )
 
 var logger = logging.MustGetLogger()
 
+// Identity represents an Idemix identity with pseudonym and cryptographic proof.
 type Identity struct {
+	// Pseudonym public key
 	NymPublicKey bccsp.Key
-	Idemix       *Deserializer
-	// AssociationProof contains cryptographic proof that this identity is valid.
+	// Deserializer with issuer info and crypto provider
+	Idemix *Deserializer
+	// Cryptographic proof of validity
 	AssociationProof []byte
+	// Verification type for signatures
 	VerificationType bccsp.VerificationType
-
-	// Schema related fields
-	SchemaManager SchemaManager
-	Schema        Schema
+	// Schema-specific operations manager
+	SchemaManager schema.Manager
+	// Credential schema version
+	Schema Schema
 }
 
-func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType, schemaManager SchemaManager, schema Schema) (*Identity, error) {
-	id := &Identity{
+// NewIdentity creates a new Idemix identity.
+func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, verificationType bccsp.VerificationType, schemaManager schema.Manager, schema Schema) *Identity {
+	return &Identity{
 		Idemix:           idemix,
 		NymPublicKey:     nymPublicKey,
 		AssociationProof: proof,
@@ -42,14 +51,14 @@ func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, ver
 		SchemaManager:    schemaManager,
 		Schema:           schema,
 	}
-
-	return id, nil
 }
 
+// Validate checks that the cryptographic proof is valid.
 func (id *Identity) Validate() error {
 	return id.verifyProof()
 }
 
+// Verify checks that a signature was created by this identity's pseudonym.
 func (id *Identity) Verify(msg []byte, sig []byte) error {
 	_, err := id.Idemix.Csp.Verify(
 		id.NymPublicKey,
@@ -63,6 +72,7 @@ func (id *Identity) Verify(msg []byte, sig []byte) error {
 	return err
 }
 
+// Serialize converts the identity to protobuf wire format.
 func (id *Identity) Serialize() ([]byte, error) {
 	serialized := &SerializedIdemixIdentity{}
 
@@ -72,6 +82,7 @@ func (id *Identity) Serialize() ([]byte, error) {
 	}
 	serialized.NymPublicKey = raw
 	serialized.Proof = id.AssociationProof
+	serialized.Schema = id.Schema
 
 	idemixIDBytes, err := proto.Marshal(serialized)
 	if err != nil {
@@ -81,6 +92,7 @@ func (id *Identity) Serialize() ([]byte, error) {
 	return idemixIDBytes, nil
 }
 
+// verifyProof validates the id's association proof against the issuer's public key.
 func (id *Identity) verifyProof() error {
 	// Verify signature
 	var metadata *bccsp.IdemixSignerMetadata
@@ -117,15 +129,21 @@ func (id *Identity) verifyProof() error {
 	return err
 }
 
+// SigningIdentity extends Identity with signing capabilities.
 type SigningIdentity struct {
+	// Embedded base identity
 	*Identity `json:"-"`
-	CSP       bccsp.BCCSP `json:"-"`
-
+	// Crypto provider with secret keys
+	CSP bccsp.BCCSP `json:"-"`
+	// Enrollment identifier
 	EnrollmentId string
-	NymKeySKI    []byte
-	UserKeySKI   []byte
+	// Pseudonym secret key identifier
+	NymKeySKI []byte
+	// User secret key identifier
+	UserKeySKI []byte
 }
 
+// Sign creates a signature using secret keys.
 func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 	nymKey, err := id.CSP.GetKey(id.NymKeySKI)
 	if err != nil {
@@ -153,14 +171,21 @@ func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 	return sig, nil
 }
 
+// NymSignatureVerifier verifies signatures created with Idemix pseudonym keys.
 type NymSignatureVerifier struct {
-	CSP           bccsp.BCCSP
-	IPK           bccsp.Key
-	NymPK         bccsp.Key
-	SchemaManager SchemaManager
-	Schema        Schema
+	// Crypto provider for verification
+	CSP bccsp.BCCSP
+	// Issuer public key
+	IPK bccsp.Key
+	// Pseudonym public key
+	NymPK bccsp.Key
+	// Schema operations manager
+	SchemaManager schema.Manager
+	// Credential schema version
+	Schema Schema
 }
 
+// Verify checks that a signature was created by the pseudonym key.
 func (v *NymSignatureVerifier) Verify(message, sigma []byte) error {
 	_, err := v.CSP.Verify(
 		v.NymPK,

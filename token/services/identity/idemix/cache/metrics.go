@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	// LevelOpts defines gauge options for tracking cache level.
 	LevelOpts = metrics.GaugeOpts{
 		Name:       "cache_level",
 		Help:       "Level of the idemix cache",
@@ -18,12 +19,13 @@ var (
 	}
 )
 
-// Metrics contains the metrics for this package
+// Metrics contains metrics for monitoring identity cache performance.
 type Metrics struct {
+	// Current number of cached identities
 	CacheLevelGauge metrics.Gauge
 }
 
-// NewMetrics instantiate the metrics for this package
+// NewMetrics creates a new Metrics instance.
 func NewMetrics(p metrics.Provider) *Metrics {
 	return &Metrics{
 		CacheLevelGauge: p.NewGauge(LevelOpts),

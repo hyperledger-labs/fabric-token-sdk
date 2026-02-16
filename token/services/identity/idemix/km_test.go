@@ -23,9 +23,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	kvs3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
+	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,14 +40,14 @@ func TestNewKeyManager(t *testing.T) {
 func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 	t.Helper()
 	// prepare
-	kvs, err := kvs3.NewInMemory()
+	kvs, err := kvs2.NewInMemory()
 	require.NoError(t, err)
-	config, err := crypto2.NewConfig(configPath)
+	config, err := crypto.NewConfig(configPath)
 	require.NoError(t, err)
-	tracker := kvs3.NewTrackedMemoryFrom(kvs)
-	keyStore, err := crypto2.NewKeyStore(curveID, tracker)
+	tracker := kvs2.NewTrackedMemoryFrom(kvs)
+	keyStore, err := crypto.NewKeyStore(curveID, tracker)
 	require.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 
 	// check that version is enforced
@@ -54,7 +55,7 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 	_, err = NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.Error(t, err)
 	require.EqualError(t, err, "unsupported protocol version [0]")
-	config.Version = crypto2.ProtobufProtocolVersionV1
+	config.Version = crypto.ProtobufProtocolVersionV1
 
 	// new key manager loaded from file
 	assert.Empty(t, config.Signer.Ski)
@@ -131,17 +132,17 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	t.Helper()
 	// prepare
 	registry := view.NewServiceProvider()
-	kvs, err := kvs3.NewInMemory()
+	kvs, err := kvs2.NewInMemory()
 	require.NoError(t, err)
 	require.NoError(t, registry.RegisterService(kvs))
-	storage := kvs3.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"})
+	storage := kvs2.NewIdentityStore(kvs, token.TMSID{Network: "pineapple"})
 	identityProvider := identity.NewProvider(logging.MustGetLogger(), storage, deserializer.NewTypedSignerDeserializerMultiplex(), nil, nil)
-	config, err := crypto2.NewConfig(configPath)
+	config, err := crypto.NewConfig(configPath)
 	require.NoError(t, err)
-	tracker := kvs3.NewTrackedMemoryFrom(kvs)
-	keyStore, err := crypto2.NewKeyStore(curveID, tracker)
+	tracker := kvs2.NewTrackedMemoryFrom(kvs)
+	keyStore, err := crypto.NewKeyStore(curveID, tracker)
 	require.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 
 	// init key manager
@@ -235,16 +236,16 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID)
 	t.Helper()
 	registry := view.NewServiceProvider()
 
-	kvs, err := kvs3.NewInMemory()
+	kvs, err := kvs2.NewInMemory()
 	require.NoError(t, err)
 	require.NoError(t, registry.RegisterService(kvs))
 
-	config, err := crypto2.NewConfig(configPath)
+	config, err := crypto.NewConfig(configPath)
 	require.NoError(t, err)
 
-	keyStore, err := crypto2.NewKeyStore(curveID, kvs3.Keystore(kvs))
+	keyStore, err := crypto.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 	p, err := NewKeyManager(config, types.Standard, cryptoProvider)
 	require.NoError(t, err)
@@ -266,9 +267,9 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID)
 	require.NoError(t, err)
 	require.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(curveID, kvs3.Keystore(kvs))
+	keyStore, err = crypto.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 	p, err = NewKeyManager(config, types.Standard, cryptoProvider)
 	require.NoError(t, err)
@@ -288,9 +289,9 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID)
 	require.NoError(t, err)
 	require.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(curveID, kvs3.Keystore(kvs))
+	keyStore, err = crypto.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 	p, err = NewKeyManager(config, Any, cryptoProvider)
 	require.NoError(t, err)
@@ -320,25 +321,25 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	t.Helper()
 	registry := view.NewServiceProvider()
 
-	kvs, err := kvs3.NewInMemory()
+	kvs, err := kvs2.NewInMemory()
 	require.NoError(t, err)
 	require.NoError(t, registry.RegisterService(kvs))
 
-	config, err := crypto2.NewConfig(configPath)
+	config, err := crypto.NewConfig(configPath)
 	require.NoError(t, err)
-	keyStore, err := crypto2.NewKeyStore(curveID, kvs3.Keystore(kvs))
+	keyStore, err := crypto.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 	p, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
-	config, err = crypto2.NewConfig(configPath + "2")
+	config, err = crypto.NewConfig(configPath + "2")
 	require.NoError(t, err)
-	keyStore, err = crypto2.NewKeyStore(curveID, kvs3.Keystore(kvs))
+	keyStore, err = crypto.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 	p2, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
@@ -378,23 +379,23 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	t.Helper()
 	// prepare
 	registry := view.NewServiceProvider()
-	kvs, err := kvs3.NewInMemory()
+	kvs, err := kvs2.NewInMemory()
 	require.NoError(t, err)
 	require.NoError(t, registry.RegisterService(kvs))
-	keyStore, err := crypto2.NewKeyStore(curveID, kvs3.Keystore(kvs))
+	keyStore, err := crypto.NewKeyStore(curveID, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 
 	// first key manager
-	config, err := crypto2.NewConfig(configPath)
+	config, err := crypto.NewConfig(configPath)
 	require.NoError(t, err)
 	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
 	// second key manager
-	config, err = crypto2.NewConfig(configPath + "2")
+	config, err = crypto.NewConfig(configPath + "2")
 	require.NoError(t, err)
 	keyManager2, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
@@ -439,17 +440,17 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 func TestIdentityFromFabricCA(t *testing.T) {
 	registry := view.NewServiceProvider()
 
-	kvs, err := kvs3.NewInMemory()
+	kvs, err := kvs2.NewInMemory()
 	require.NoError(t, err)
 	require.NoError(t, registry.RegisterService(kvs))
-	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := crypto.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	require.NoError(t, err)
-	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
+	config, err := crypto.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	require.NoError(t, err)
 
-	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs3.Keystore(kvs))
+	keyStore, err := crypto.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.BN254)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
 	p, err := NewKeyManager(config, types.Standard, cryptoProvider)
 	require.NoError(t, err)
@@ -471,9 +472,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(math.BN254, kvs3.Keystore(kvs))
+	keyStore, err = crypto.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
 	p, err = NewKeyManager(config, types.Standard, cryptoProvider)
 	require.NoError(t, err)
@@ -493,9 +494,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(math.BN254, kvs3.Keystore(kvs))
+	keyStore, err = crypto.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
 	p, err = NewKeyManager(config, Any, cryptoProvider)
 	require.NoError(t, err)
@@ -519,17 +520,17 @@ func TestIdentityFromFabricCA(t *testing.T) {
 func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	registry := view.NewServiceProvider()
 
-	kvs, err := kvs3.NewInMemory()
+	kvs, err := kvs2.NewInMemory()
 	require.NoError(t, err)
 	require.NoError(t, registry.RegisterService(kvs))
-	ipkBytes, err := crypto2.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := crypto.ReadFile(filepath.Join("./testdata/fp256bn_amcl/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	require.NoError(t, err)
-	config, err := crypto2.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
+	config, err := crypto.NewConfigWithIPK(ipkBytes, "./testdata/fp256bn_amcl/charlie.ExtraId2", true)
 	require.NoError(t, err)
 
-	keyStore, err := crypto2.NewKeyStore(math.BN254, kvs3.Keystore(kvs))
+	keyStore, err := crypto.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, math.BN254)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
 	p, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
@@ -560,9 +561,9 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	keyStore, err = crypto2.NewKeyStore(math.BN254, kvs3.Keystore(kvs))
+	keyStore, err = crypto.NewKeyStore(math.BN254, kvs2.Keystore(kvs))
 	require.NoError(t, err)
-	cryptoProvider, err = crypto2.NewBCCSP(keyStore, math.BN254)
+	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
 	p, err = NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
@@ -611,14 +612,14 @@ func TestKeyManagerForRace(t *testing.T) {
 }
 
 func setupKeyManager(t require.TestingT, configPath string, curveID math.CurveID) (*KeyManager, func()) {
-	kvs, err := kvs3.NewInMemory()
+	kvs, err := kvs2.NewInMemory()
 	require.NoError(t, err)
-	config, err := crypto2.NewConfig(configPath)
+	config, err := crypto.NewConfig(configPath)
 	require.NoError(t, err)
-	tracker := kvs3.NewTrackedMemoryFrom(kvs)
-	keyStore, err := crypto2.NewKeyStore(curveID, tracker)
+	tracker := kvs2.NewTrackedMemoryFrom(kvs)
+	keyStore, err := crypto.NewKeyStore(curveID, tracker)
 	require.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 
 	// check that version is enforced
@@ -626,7 +627,7 @@ func setupKeyManager(t require.TestingT, configPath string, curveID math.CurveID
 	_, err = NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.Error(t, err)
 	require.EqualError(t, err, "unsupported protocol version [0]")
-	config.Version = crypto2.ProtobufProtocolVersionV1
+	config.Version = crypto.ProtobufProtocolVersionV1
 
 	// new key manager loaded from file
 	assert.Empty(t, config.Signer.Ski)
@@ -664,4 +665,187 @@ func runIdentityConcurrently(t require.TestingT, ctx context.Context, keyManager
 		}(t)
 	}
 	wg.Wait()
+}
+
+// TestKeyManagerErrorPaths tests various error paths in km.go
+func TestKeyManagerErrorPaths(t *testing.T) {
+	testKeyManagerErrorPaths(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testKeyManagerErrorPaths(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
+}
+
+func testKeyManagerErrorPaths(t *testing.T, configPath string, curveID math.CurveID) {
+	t.Helper()
+	backend, err := kvs2.NewInMemory()
+	require.NoError(t, err)
+	config, err := crypto.NewConfig(configPath)
+	require.NoError(t, err)
+	keyStore, err := crypto.NewKeyStore(curveID, kvs2.Keystore(backend))
+	require.NoError(t, err)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
+	require.NoError(t, err)
+
+	// Test NewKeyManagerWithSchema with an invalid schema
+	_, err = NewKeyManagerWithSchema(
+		config,
+		types.EidNymRhNym,
+		cryptoProvider,
+		schema.NewDefaultManager(),
+		"invalid-schema",
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "could not obtain PublicKeyImportOpts")
+
+	// Create a valid key manager
+	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	require.NoError(t, err)
+
+	// Test Identity descriptor construction with invalid raw audit info
+	_, err = keyManager.Identity(context.Background(), []byte{0, 1, 2})
+	require.Error(t, err)
+
+	// Test Information printing about a given id with invalid audit info bytes
+	_, err = keyManager.Info(context.Background(), []byte("test-id"), []byte{0, 1, 2})
+	require.Error(t, err)
+
+	// Create another valid key manager with a different config
+	config2, err := crypto.NewConfig(configPath + "2")
+	require.NoError(t, err)
+	keyStore2, err := crypto.NewKeyStore(curveID, kvs2.Keystore(backend))
+	require.NoError(t, err)
+	cryptoProvider2, err := crypto.NewBCCSP(keyStore2, curveID)
+	require.NoError(t, err)
+	keyManager2, err := NewKeyManager(config2, types.EidNymRhNym, cryptoProvider2)
+	require.NoError(t, err)
+
+	// create a valid identity descriptor using keyManager2
+	// then fail when trying to deserialize it using keyManager
+	identityDescriptor2, err := keyManager2.Identity(context.Background(), nil)
+	require.NoError(t, err)
+
+	_, err = keyManager.DeserializeSigningIdentity(context.Background(), identityDescriptor2.Identity)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed verifying verification signature")
+}
+
+// TestKeyManagerInfoErrorCases tests error cases in Info method
+// that returns a string documenting the given identity and possibly the Enrollment ID (EID)
+func TestKeyManagerInfoErrorCases(t *testing.T) {
+	testKeyManagerInfoErrorCases(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testKeyManagerInfoErrorCases(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
+}
+
+func testKeyManagerInfoErrorCases(t *testing.T, configPath string, curveID math.CurveID) {
+	t.Helper()
+	backend, err := kvs2.NewInMemory()
+	require.NoError(t, err)
+	config, err := crypto.NewConfig(configPath)
+	require.NoError(t, err)
+	keyStore, err := crypto.NewKeyStore(curveID, kvs2.Keystore(backend))
+	require.NoError(t, err)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
+	require.NoError(t, err)
+
+	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	require.NoError(t, err)
+
+	// Get a valid identity
+	identityDescriptor, err := keyManager.Identity(context.Background(), nil)
+	require.NoError(t, err)
+
+	// Test Info with the valid identity but with an empty audit info
+	info, err := keyManager.Info(context.Background(), identityDescriptor.Identity, nil)
+	require.NoError(t, err)
+	assert.Contains(t, info, "Idemix:")
+
+	// Test Info with the valid identity and with valid audit info (should make the
+	// returned info string also include the Enrollment ID)
+	info, err = keyManager.Info(context.Background(), identityDescriptor.Identity, identityDescriptor.AuditInfo)
+	require.NoError(t, err)
+	assert.Contains(t, info, "alice")
+
+	// Test Info with mismatched identity and audit info (should fail on Match)
+	config2, err := crypto.NewConfig(configPath + "2")
+	require.NoError(t, err)
+	keyStore2, err := crypto.NewKeyStore(curveID, kvs2.Keystore(backend))
+	require.NoError(t, err)
+	cryptoProvider2, err := crypto.NewBCCSP(keyStore2, curveID)
+	require.NoError(t, err)
+	keyManager2, err := NewKeyManager(config2, types.EidNymRhNym, cryptoProvider2)
+	require.NoError(t, err)
+
+	identityDescriptor3, err := keyManager2.Identity(context.Background(), nil)
+	require.NoError(t, err)
+
+	// Try to get info for identity from keyManager2 using audit info from another keyManager
+	// (should fail on Match)
+	_, err = keyManager.Info(context.Background(), identityDescriptor3.Identity, identityDescriptor.AuditInfo)
+	require.Error(t, err)
+}
+
+// TestDeserializeSigningIdentityErrorPath tests error path in DeserializeSigningIdentity
+// which tries to deserialize an invalid raw signing identity
+func TestDeserializeSigningIdentityErrorPath(t *testing.T) {
+	backend, err := kvs2.NewInMemory()
+	require.NoError(t, err)
+	config, err := crypto.NewConfig("./testdata/fp256bn_amcl/idemix")
+	require.NoError(t, err)
+	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, kvs2.Keystore(backend))
+	require.NoError(t, err)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL)
+	require.NoError(t, err)
+
+	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	require.NoError(t, err)
+
+	// Test with invalid identity bytes
+	_, err = keyManager.DeserializeSigningIdentity(context.Background(), []byte{0, 1, 2})
+	require.Error(t, err)
+}
+
+// TestIdentityWithDifferentAuditInfo tests signing and verifying with
+// identities returned by the Identity method using different (but equal) audit infos
+func TestIdentityWithDifferentAuditInfo(t *testing.T) {
+	backend, err := kvs2.NewInMemory()
+	require.NoError(t, err)
+	config, err := crypto.NewConfig("./testdata/fp256bn_amcl/idemix")
+	require.NoError(t, err)
+	keyStore, err := crypto.NewKeyStore(math.FP256BN_AMCL, kvs2.Keystore(backend))
+	require.NoError(t, err)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL)
+	require.NoError(t, err)
+
+	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	require.NoError(t, err)
+
+	// Get first identity
+	id1, err := keyManager.Identity(context.Background(), nil)
+	require.NoError(t, err)
+
+	// Get second identity with the same audit info
+	id2, err := keyManager.Identity(context.Background(), id1.AuditInfo)
+	require.NoError(t, err)
+
+	// Verify that both ids have the same audit info
+	assert.Equal(t, id1.AuditInfo, id2.AuditInfo)
+
+	// Verify that both identities can be used to sign
+	signer1, err := keyManager.DeserializeSigner(context.Background(), id1.Identity)
+	require.NoError(t, err)
+	signer2, err := keyManager.DeserializeSigner(context.Background(), id2.Identity)
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig1, err := signer1.Sign(msg)
+	require.NoError(t, err)
+	sig2, err := signer2.Sign(msg)
+	require.NoError(t, err)
+
+	// Verify that both identities can be used to verify
+	verifier1, err := keyManager.DeserializeVerifier(context.Background(), id1.Identity)
+	require.NoError(t, err)
+	verifier2, err := keyManager.DeserializeVerifier(context.Background(), id2.Identity)
+	require.NoError(t, err)
+
+	require.NoError(t, verifier1.Verify(msg, sig1))
+	require.NoError(t, verifier2.Verify(msg, sig2))
 }
