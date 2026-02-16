@@ -7,13 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/stretchr/testify/assert"
@@ -30,11 +32,11 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID) 
 	// init
 	backend, err := kvs2.NewInMemory()
 	require.NoError(t, err)
-	config, err := crypto2.NewConfig(configPath)
+	config, err := crypto.NewConfig(configPath)
 	require.NoError(t, err)
-	keyStore, err := crypto2.NewKeyStore(curveID, kvs2.Keystore(backend))
+	keyStore, err := crypto.NewKeyStore(curveID, kvs2.Keystore(backend))
 	require.NoError(t, err)
-	cryptoProvider, err := crypto2.NewBCCSP(keyStore, curveID)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 
 	// key manager
@@ -123,4 +125,69 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID) 
 	info, err = d.Info(t.Context(), id, auditInfoRaw)
 	require.NoError(t, err)
 	assert.True(t, strings.HasPrefix(info, "Idemix: [alice]"))
+}
+
+// TestDeserializerErrorPaths tests various error paths in different deserializer construction paths
+func TestDeserializerErrorPaths(t *testing.T) {
+	testDeserializerErrorPaths(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testDeserializerErrorPaths(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
+}
+
+func testDeserializerErrorPaths(t *testing.T, configPath string, curveID math.CurveID) {
+	t.Helper()
+	backend, err := kvs2.NewInMemory()
+	require.NoError(t, err)
+	config, err := crypto.NewConfig(configPath)
+	require.NoError(t, err)
+	keyStore, err := crypto.NewKeyStore(curveID, kvs2.Keystore(backend))
+	require.NoError(t, err)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
+	require.NoError(t, err)
+
+	// Test NewDeserializerWithBCCSP with empty IPK
+	_, err = NewDeserializerWithBCCSP(
+		schema.NewDefaultManager(),
+		schema.DefaultSchema,
+		nil,
+		types.ExpectEidNymRhNym,
+		nil,
+		cryptoProvider,
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no issuer public key provided")
+
+	// Test NewDeserializerWithBCCSP with invalid schema
+	_, err = NewDeserializerWithBCCSP(
+		schema.NewDefaultManager(),
+		"invalid-schema",
+		config.Ipk,
+		types.ExpectEidNymRhNym,
+		nil,
+		cryptoProvider,
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "could not obtain PublicKeyImportOpts")
+
+	// Test DeserializeVerifierAgainstNymEID with invalid identity
+	d, err := NewDeserializer(config.Ipk, curveID)
+	require.NoError(t, err)
+	_, err = d.DeserializeVerifierAgainstNymEID([]byte{0, 1, 2}, nil)
+	require.Error(t, err)
+
+	// Test creating an Information string based on invalid raw audit info
+	_, err = d.Info(context.Background(), []byte("test-id"), []byte{0, 1, 2})
+	require.Error(t, err)
+}
+
+// TestAuditInfoDeserializerEdgeCases tests that the AuditInfoDeserializer fails when given no raw data
+func TestAuditInfoDeserializerEdgeCases(t *testing.T) {
+	deserializer := &AuditInfoDeserializer{}
+
+	// Test with empty bytes
+	_, err := deserializer.DeserializeAuditInfo(context.Background(), []byte{})
+	require.Error(t, err)
+
+	// Test with nil
+	_, err = deserializer.DeserializeAuditInfo(context.Background(), nil)
+	require.Error(t, err)
 }

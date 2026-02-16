@@ -454,7 +454,7 @@ func prepareTransfer(
 	// prepare inputs
 	inValues := make([]*math.Zr, benchCase.NumInputs)
 	sumInputs := uint64(0)
-	for i := range benchCase.NumInputs {
+	for i := range inValues {
 		v := uint64(i*10 + 500)
 		sumInputs += v
 		inValues[i] = c.NewZrFromUint64(v)

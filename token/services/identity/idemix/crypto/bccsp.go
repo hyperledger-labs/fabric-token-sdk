@@ -17,6 +17,7 @@ import (
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 )
 
+// NewKeyStore creates a new Idemix key store for the specified curve using the provided KVS backend.
 func NewKeyStore(curveID math.CurveID, backend keystore.KVS) (bccsp.KeyStore, error) {
 	curve, tr, _, err := GetCurveAndTranslator(curveID)
 	if err != nil {
@@ -51,7 +52,7 @@ func NewBCCSP(keyStore bccsp.KeyStore, curveID math.CurveID) (bccsp.BCCSP, error
 	return cryptoProvider, nil
 }
 
-// NewBCCSPWithDummyKeyStore returns an instance of the idemix BCCSP for the given curve
+// NewBCCSPWithDummyKeyStore creates an Idemix BCCSP with a dummy key store for testing.
 func NewBCCSPWithDummyKeyStore(curveID math.CurveID) (bccsp.BCCSP, error) {
 	curve, tr, aries, err := GetCurveAndTranslator(curveID)
 	if err != nil {
@@ -70,6 +71,7 @@ func NewBCCSPWithDummyKeyStore(curveID math.CurveID) (bccsp.BCCSP, error) {
 	return cryptoProvider, nil
 }
 
+// GetCurveAndTranslator returns the curve, translator, and Aries flag for the given curve ID.
 func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translator, bool, error) {
 	if curveID < 0 {
 		return nil, nil, false, errors.New("invalid curve")
@@ -79,27 +81,28 @@ func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translato
 		logger.Warnf("selected curve BLS12_381_BBS, switching to BLS12_381_BBS_GURVY")
 		curveID = math.BLS12_381_BBS_GURVY
 	}
-	curve := math.Curves[curveID]
+
+	// Validate curve ID before accessing the array to avoid panic
 	var tr idemix3.Translator
 	aries := false
 	switch curveID {
 	case math.BN254:
-		tr = &amcl.Gurvy{C: curve}
+		tr = &amcl.Gurvy{C: math.Curves[curveID]}
 	case math.BLS12_377_GURVY:
-		tr = &amcl.Gurvy{C: curve}
+		tr = &amcl.Gurvy{C: math.Curves[curveID]}
 	case math.FP256BN_AMCL:
-		tr = &amcl.Fp256bn{C: curve}
+		tr = &amcl.Fp256bn{C: math.Curves[curveID]}
 	case math.FP256BN_AMCL_MIRACL:
-		tr = &amcl.Fp256bnMiracl{C: curve}
+		tr = &amcl.Fp256bnMiracl{C: math.Curves[curveID]}
 	case math.BLS12_381_BBS_GURVY:
-		tr = &amcl.Gurvy{C: curve}
+		tr = &amcl.Gurvy{C: math.Curves[curveID]}
 		aries = true
 	case math2.BLS12_381_BBS_GURVY_FAST_RNG:
-		tr = &amcl.Gurvy{C: curve}
+		tr = &amcl.Gurvy{C: math.Curves[curveID]}
 		aries = true
 	default:
 		return nil, nil, false, errors.Errorf("unsupported curve ID: %d", curveID)
 	}
 
-	return curve, tr, aries, nil
+	return math.Curves[curveID], tr, aries, nil
 }
