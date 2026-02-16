@@ -94,6 +94,7 @@ func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, rol
 				info.EnrollmentID(),
 				info.Remote(),
 			)
+
 			return newWallet, nil
 		}
 
@@ -102,6 +103,7 @@ func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, rol
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create owner wallet [%s]", id)
 		}
+
 		return newWallet, nil
 	case identity.IssuerRole:
 		idInfoIdentity, _, err := info.Get(ctx)
@@ -118,6 +120,7 @@ func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, rol
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
 		w.Logger.DebugfContext(ctx, "created issuer wallet [%s]", id)
+
 		return newWallet, nil
 	case identity.AuditorRole:
 		w.Logger.DebugfContext(ctx, "no wallet found, create it [%s]", id)
@@ -135,6 +138,7 @@ func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, rol
 			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
 		}
 		w.Logger.DebugfContext(ctx, "created auditor wallet [%s]", id)
+
 		return newWallet, nil
 	case identity.CertifierRole:
 		return nil, errors.Errorf("certifiers are not supported by this driver")

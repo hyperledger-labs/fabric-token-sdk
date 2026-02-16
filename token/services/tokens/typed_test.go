@@ -11,14 +11,15 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/driver"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestSerialization(t *testing.T) {
 	raw := []byte("pineapple")
 	wrappedToken, err := WrapWithType(0, raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tok, err := UnmarshalTypedToken(wrappedToken)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, driver.Type(0), tok.Type)
 	assert.Equal(t, driver.Token(raw), tok.Token)
 }

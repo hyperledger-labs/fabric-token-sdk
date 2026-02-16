@@ -34,6 +34,7 @@ func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, lastBlock driver.
 	keys := collections.Keys(evicted)
 	ch := make(chan []TxInfo, len(keys))
 	go q.queryByID(ctx, keys, ch, lastBlock)
+
 	return ch, nil
 }
 
@@ -53,10 +54,12 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			infos, err := q.Mapper.MapProcessedTx(pt)
 			if err != nil {
 				logger.Errorf("failed to map tx [%s]: [%s]", txID, err)
+
 				return
 			}
 			keySet.Remove(txID)
 			ch <- infos
+
 			continue
 		}
 
@@ -68,11 +71,13 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			// transaction was not found
 			logger.Errorf("tx [%s] not found on the ledger [%s]", txID, err)
 			startDelivery = true
+
 			continue
 		}
 
 		// error not recoverable, fail
 		logger.DebugfContext(ctx, "scan for tx [%s] failed with err [%s]", txID, err)
+
 		return
 	}
 
@@ -96,16 +101,19 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			infos, err := q.Mapper.MapProcessedTx(tx)
 			if err != nil {
 				logger.Errorf("failed mapping tx [%s]: %v", tx.TxID(), err)
+
 				return true, err
 			}
 			ch <- infos
 			keySet.Remove(tx.TxID())
 			logger.DebugfContext(ctx, "removing [%s] from searching list, remaining keys [%d]", tx.TxID(), keySet.Length())
+
 			return keySet.Length() == 0, nil
 		},
 	)
 	if err != nil {
 		logger.Errorf("failed scanning blocks [%s], started from [%d]", err, startingBlock)
+
 		return
 	}
 	logger.DebugfContext(ctx, "finished scanning blocks starting from [%d]", startingBlock)

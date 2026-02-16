@@ -64,11 +64,13 @@ func Curves(curveIDs ...math.CurveID) []math.CurveID {
 		v, err := strconv.Atoi(s)
 		if err == nil {
 			values = append(values, math.CurveID(v))
+
 			continue
 		}
 
 		values = append(values, math2.StringToCurveID(s))
 	}
+
 	return values
 }
 
@@ -107,6 +109,7 @@ func Workers(defaults ...int) ([]int, error) {
 		}
 		values = append(values, v)
 	}
+
 	return values, nil
 }
 
@@ -129,6 +132,7 @@ func Integers[T constraints.Integer](str string, defaults ...T) ([]T, error) {
 		}
 		values = append(values, T(v))
 	}
+
 	return values, nil
 }
 

@@ -31,6 +31,7 @@ func CopyFile(src, dst string) error {
 	}
 	defer utils.IgnoreError(df.Close)
 	_, err = io.Copy(df, sf)
+
 	return err
 }
 
@@ -55,5 +56,6 @@ func CopyDir(srcDir, destDir string) error {
 			}
 		}
 	}
+
 	return nil
 }

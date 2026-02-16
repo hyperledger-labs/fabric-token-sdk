@@ -30,6 +30,7 @@ func NewTokensService(pp *setup.PublicParams, identityDeserializer driver.Deseri
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting supported token types")
 	}
+
 	return &TokensService{
 		IdentityDeserializer: identityDeserializer,
 		OutputTokenFormat:    supportedTokens,
@@ -45,6 +46,7 @@ func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get recipients")
 	}
+
 	return recipients, nil
 }
 
@@ -99,5 +101,6 @@ func SupportedTokenFormat(precision uint64) (token2.Format, error) {
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
+
 	return token2.Format(hasher.HexDigest()), nil
 }

@@ -46,6 +46,7 @@ func (o *OutputStream) StateAt(index int, state interface{}) error {
 	if err := marshaller.Unmarshal(decoded, state); err == nil {
 		return errors.Wrap(err, "failed to unmarshal state")
 	}
+
 	return nil
 }
 
@@ -57,5 +58,6 @@ func (o *OutputStream) Validate() error {
 			return errors.New("all outputs must have quantity set to 1")
 		}
 	}
+
 	return nil
 }

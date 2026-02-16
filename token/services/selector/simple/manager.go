@@ -56,6 +56,7 @@ func (m *Manager) NewSelector(id string) (token.Selector, error) {
 
 func (m *Manager) Unlock(ctx context.Context, txID string) error {
 	m.locker.UnlockByTxID(ctx, txID)
+
 	return nil
 }
 

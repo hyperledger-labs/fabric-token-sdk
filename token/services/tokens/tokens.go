@@ -64,10 +64,12 @@ type Service struct {
 func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.RequestAnchor, request *token.Request) (err error) {
 	if request == nil {
 		logger.DebugfContext(ctx, "transaction [%s], no request found, skip it", txID)
+
 		return nil
 	}
 	if request.Metadata == nil {
 		logger.DebugfContext(ctx, "transaction [%s], no metadata found, skip it", txID)
+
 		return nil
 	}
 
@@ -75,10 +77,12 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.Requ
 	exists, err := t.Storage.TransactionExists(ctx, string(txID))
 	if err != nil {
 		logger.ErrorfContext(ctx, "transaction [%s], failed to check existence in db [%s]", txID, err)
+
 		return errors.WithMessagef(err, "transaction [%s], failed to check existence in db", txID)
 	}
 	if exists {
 		logger.DebugfContext(ctx, "transaction [%s], exists in db, skipping", txID)
+
 		return nil
 	}
 
@@ -139,6 +143,7 @@ func (t *Service) AppendRaw(ctx context.Context, tmsID token.TMSID, txID token.R
 		return errors.WithMessagef(err, "failed unmarshal token request [%s]", txID)
 	}
 	logger.DebugfContext(ctx, "append token request for [%s]", txID)
+
 	return t.Append(ctx, tmsID, txID, tr)
 }
 
@@ -159,6 +164,7 @@ func (t *Service) CacheRequest(ctx context.Context, tmsID token.TMSID, request *
 		ToAppend:  toAppend,
 		MsgToSign: msgToSign,
 	})
+
 	return nil
 }
 
@@ -167,6 +173,7 @@ func (t *Service) GetCachedTokenRequest(txID string) (*token.Request, []byte) {
 	if !ok {
 		return nil, nil
 	}
+
 	return res.Request, res.MsgToSign
 }
 
@@ -211,8 +218,10 @@ func (t *Service) SetSpendableFlag(ctx context.Context, value bool, ids ...*toke
 		if err2 := tx.Rollback(); err2 != nil {
 			logger.Errorf("failed rolling back transaction that set spendable flag [%s]", err2)
 		}
+
 		return errors.Wrapf(err, "failed setting spendable flag")
 	}
+
 	return tx.Commit()
 }
 
@@ -225,11 +234,13 @@ func (t *Service) SetSpendableBySupportedTokenTypes(ctx context.Context, types [
 		if err2 := tx.Rollback(); err2 != nil {
 			logger.Errorf("error rolling back transaction: %v", err2)
 		}
+
 		return errors.WithMessagef(err, "error setting supported tokens")
 	}
 	if err := tx.Commit(); err != nil {
 		return errors.WithMessagef(err, "error committing transaction")
 	}
+
 	return nil
 }
 
@@ -338,6 +349,7 @@ func (t *Service) getActions(ctx context.Context, tmsID token.TMSID, anchor toke
 	entry, ok := t.RequestsCache.Get(string(anchor))
 	if ok && entry != nil {
 		logger.DebugfContext(ctx, "cache hit, return it")
+
 		return entry.ToSpend, entry.ToAppend, nil
 	}
 	// extract
@@ -362,6 +374,7 @@ func (t *Service) extractActions(ctx context.Context, tmsID token.TMSID, anchor 
 	md, err := request.GetMetadata()
 	if err != nil {
 		logger.DebugfContext(ctx, "transaction [%s], failed to get metadata [%s]", anchor, err)
+
 		return nil, nil, errors.WithMessagef(err, "transaction [%s], failed to get request metadata", anchor)
 	}
 
@@ -371,6 +384,7 @@ func (t *Service) extractActions(ctx context.Context, tmsID token.TMSID, anchor 
 	}
 	toSpend, toAppend, err := t.parse(ctx, auth, anchor, md, is, os, auditorFlag, precision, graphHiding)
 	logger.DebugfContext(ctx, "transaction [%s] parsed [%d] inputs and [%d] outputs", anchor, len(toSpend), len(toAppend))
+
 	return toSpend, toAppend, err
 }
 
@@ -398,6 +412,7 @@ func (t *Service) parse(
 	for _, input := range is.Inputs() {
 		if input.Id == nil {
 			logger.DebugfContext(ctx, "transaction [%s] found an input that is not mine, skip it", requestAnchor)
+
 			continue
 		}
 		logger.DebugfContext(ctx, "transaction [%s] delete input [%s]", requestAnchor, input.Id)
@@ -409,6 +424,7 @@ func (t *Service) parse(
 		// if this is a redeem, then skip
 		if len(output.Token.Owner) == 0 {
 			logger.DebugfContext(ctx, "output [%s:%d] is a redeem", requestAnchor, output.Index)
+
 			continue
 		}
 
@@ -428,6 +444,7 @@ func (t *Service) parse(
 		}
 		if !mine && !auditorFlag && !issuerFlag {
 			logger.DebugfContext(ctx, "transaction [%s], discarding token, not mine, not an auditor, not an issuer", requestAnchor)
+
 			continue
 		}
 
@@ -461,5 +478,6 @@ func (t *Service) parse(
 			logger.DebugfContext(ctx, "done parsing write key [%s]", output.ID(requestAnchor))
 		}
 	}
+
 	return toSpend, toAppend, err
 }

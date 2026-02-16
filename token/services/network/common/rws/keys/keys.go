@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -55,6 +56,7 @@ func (t *Translator) CreateOutputSNKey(id string, index uint64, output []byte) (
 	binary.LittleEndian.PutUint64(indexBytes, index)
 	hf.Write(indexBytes)
 	hf.Write(output)
+
 	return createCompositeKey(OutputSNKeyPrefix, []string{hex.EncodeToString(hf.Sum(nil))})
 }
 
@@ -73,6 +75,7 @@ func (t *Translator) GetTransferMetadataSubKey(k string) (translator.Key, error)
 	if prefix != TransferActionMetadataPrefix {
 		return "", errors.Errorf("key [%s] doesn not contain the token key prefix", k)
 	}
+
 	return components[0], nil
 }
 
@@ -98,12 +101,15 @@ func createCompositeKey(objectType string, attributes []string) (translator.Key,
 		return "", err
 	}
 	ck := compositeKeyNamespace + objectType + string(rune(minUnicodeRuneValue))
+	var ckSb103 strings.Builder
 	for _, att := range attributes {
 		if err := validateCompositeKeyAttribute(att); err != nil {
 			return "", err
 		}
-		ck += att + string(rune(minUnicodeRuneValue))
+		ckSb103.WriteString(att + string(rune(minUnicodeRuneValue)))
 	}
+	ck += ckSb103.String()
+
 	return ck, nil
 }
 
@@ -117,6 +123,7 @@ func validateCompositeKeyAttribute(str string) error {
 				runeValue, index, minUnicodeRuneValue, maxUnicodeRuneValue)
 		}
 	}
+
 	return nil
 }
 
@@ -133,5 +140,6 @@ func splitCompositeKey(compositeKey string) (translator.Key, []string, error) {
 	if len(components) < numComponentsInKey+1 {
 		return "", nil, errors.Errorf("invalid composite key - not enough components found in key '%s', [%d][%v]", compositeKey, len(components), components)
 	}
+
 	return components[0], components[1:], nil
 }

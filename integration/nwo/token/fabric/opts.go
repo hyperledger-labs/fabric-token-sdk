@@ -22,6 +22,7 @@ func IsFabricCA(tms *topology.TMS) bool {
 	if ok {
 		return boxed.(bool)
 	}
+
 	return false
 }
 
@@ -29,12 +30,14 @@ func IsFabricCA(tms *topology.TMS) bool {
 func WithFSCEndorsers(tms *topology.TMS, endorsers ...string) *topology.TMS {
 	tms.BackendParams["endorsements"] = true
 	tms.BackendParams["endorsers"] = endorsers
+
 	return tms
 }
 
 // IsFSCEndorsementEnabled returns true if the FSC-based endorsement for the given TMS is enabled, false otherwise
 func IsFSCEndorsementEnabled(tms *topology.TMS) bool {
 	v, ok := tms.BackendParams["endorsements"]
+
 	return ok && v.(bool)
 }
 
@@ -43,6 +46,7 @@ func WithEndorserRole() node.Option {
 	return func(o *node.Options) error {
 		to := topology.ToOptions(o)
 		to.SetEndorser(true)
+
 		return nil
 	}
 }
@@ -52,5 +56,6 @@ func Endorsers(tms *topology.TMS) []string {
 	if !ok {
 		return nil
 	}
+
 	return v.([]string)
 }

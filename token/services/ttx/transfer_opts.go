@@ -27,6 +27,7 @@ func WithFSCIssuerIdentity(issuerFSCIdentity view.Identity) token.TransferOption
 			options.Attributes = make(map[interface{}]interface{})
 		}
 		options.Attributes[IssuerFSCIdentityKey] = issuerFSCIdentity
+
 		return nil
 	}
 }
@@ -45,6 +46,7 @@ func GetFSCIssuerIdentityFromOpts(attributes map[interface{}]interface{}) (view.
 	if !ok {
 		return nil, errors.Errorf("expected identity, found [%s]", reflect.TypeOf(idBoxed))
 	}
+
 	return id, nil
 }
 
@@ -54,6 +56,7 @@ func WithIssuerPublicParamsPublicKey(issuerSigningKey view.Identity) token.Trans
 			options.Attributes = make(map[interface{}]interface{})
 		}
 		options.Attributes[IssuerPublicParamsPublicKey] = issuerSigningKey
+
 		return nil
 	}
 }
@@ -70,5 +73,6 @@ func GetIssuerPublicParamsPublicKeyFromOpts(attributes map[interface{}]interface
 	if !ok {
 		return nil, errors.Errorf("expected signing key, found [%s]", reflect.TypeOf(idBoxed))
 	}
+
 	return id, nil
 }

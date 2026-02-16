@@ -57,6 +57,7 @@ func NewServiceProvider(
 		storeServiceManager: storeServiceManager,
 		fabricProvider:      fnsp,
 	}
+
 	return &ServiceProvider{Provider: lazy.NewProviderWithKeyMapper(key, l.load)}
 }
 
@@ -84,10 +85,12 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 
 	if !configuration.IsSet(FSCEndorsementKey) {
 		logger.Debugf("chaincode endorsement enabled...")
+
 		return NewChaincodeEndorsementService(tmsID), nil
 	}
 
 	logger.Debugf("FSC endorsement enabled...")
+
 	return fsc.NewEndorsementService(
 		NewNamespaceTxProcessor(l.fnsp),
 		tmsID,
@@ -159,6 +162,7 @@ func (e *EndorserService) ReceiveTx(ctx view.Context) (*endorser.Transaction, er
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to received transaction for approval")
 	}
+
 	return tx, nil
 }
 
@@ -168,6 +172,7 @@ func (e *EndorserService) Endorse(ctx view.Context, tx *endorser.Transaction, id
 
 func (e *EndorserService) NewTransaction(context view.Context, opts ...fabric.TransactionOption) (*endorser.Transaction, error) {
 	_, tx, err := endorser.NewTransaction(context, opts...)
+
 	return tx, err
 }
 
@@ -176,6 +181,7 @@ func (e *EndorserService) CollectEndorsements(ctx view.Context, tx *endorser.Tra
 		tx,
 		endorsers...,
 	).WithTimeout(timeOut))
+
 	return err
 }
 
@@ -209,6 +215,7 @@ func (e *EndorserService) EndorserID(tmsID token2.TMSID) (view.Identity, error) 
 	if _, err := fns.SignerService().GetSigner(endorserID); err != nil {
 		return nil, errors.WithMessagef(err, "cannot find fabric signer for identity [%s:%s]", endorserIDLabel, endorserID)
 	}
+
 	return endorserID, nil
 }
 

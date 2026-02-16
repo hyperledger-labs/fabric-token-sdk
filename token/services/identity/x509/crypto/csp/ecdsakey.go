@@ -42,6 +42,7 @@ func (k *ecdsaPrivateKey) SKI() []byte {
 	// Hash it
 	hash := sha256.New()
 	hash.Write(raw)
+
 	return hash.Sum(nil)
 }
 
@@ -75,6 +76,7 @@ func (k *ecdsaPrivateKey) marshall() ([]byte, error) {
 		Type:  "EC PRIVATE KEY",
 		Bytes: derBytes,
 	}
+
 	return pem.EncodeToMemory(pemBlock), nil
 }
 
@@ -89,6 +91,7 @@ func (k *ecdsaPrivateKey) unmarshall(raw []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal private key")
 	}
+
 	return nil
 }
 
@@ -103,6 +106,7 @@ func (k *ecdsaPublicKey) Bytes() (raw []byte, err error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling key")
 	}
+
 	return
 }
 
@@ -122,6 +126,7 @@ func (k *ecdsaPublicKey) SKI() []byte {
 	// Hash it
 	hash := sha256.New()
 	hash.Write(raw)
+
 	return hash.Sum(nil)
 }
 
@@ -153,6 +158,7 @@ func (k *ecdsaPublicKey) marshall() ([]byte, error) {
 		Type:  "EC PUBLIC KEY",
 		Bytes: raw,
 	}
+
 	return pem.EncodeToMemory(pemBlock), nil
 }
 
@@ -174,5 +180,6 @@ func (k *ecdsaPublicKey) unmarshall(raw []byte) error {
 		return errors.Errorf("key is not of type *ecdsa.PublicKey")
 	}
 	k.pubKey = publicKey
+
 	return nil
 }

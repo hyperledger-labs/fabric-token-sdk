@@ -62,6 +62,7 @@ func (q *QueryEngine) IsPending(ctx context.Context, id *token.ID) (bool, error)
 	if err != nil {
 		return false, err
 	}
+
 	return vd == ttxdb.Pending, nil
 }
 
@@ -70,6 +71,7 @@ func (q *QueryEngine) GetStatus(ctx context.Context, txID string) (driver.TxStat
 	if err != nil || vd == ttxdb.Unknown {
 		vd, msg, err = q.auditDB.GetStatus(ctx, txID)
 	}
+
 	return vd, msg, err
 }
 
@@ -77,6 +79,7 @@ func (q *QueryEngine) IsMine(ctx context.Context, id *token.ID) (bool, error) {
 	if id == nil {
 		return false, nil
 	}
+
 	return q.StoreService.IsMine(ctx, id.TxId, id.Index)
 }
 

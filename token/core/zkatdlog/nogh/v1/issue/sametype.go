@@ -60,6 +60,7 @@ func (stp *SameType) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize commitment to type")
 	}
+
 	return nil
 }
 
@@ -123,6 +124,7 @@ func (p *SameTypeProver) Prove() (*SameType, error) {
 
 	proof.BlindingFactor = p.Curve.ModMul(chal, p.blindingFactor, p.Curve.GroupOrder)
 	proof.BlindingFactor = p.Curve.ModAdd(proof.BlindingFactor, p.randomness.blindingFactor, p.Curve.GroupOrder)
+
 	return proof, nil
 }
 
@@ -177,5 +179,6 @@ func (v *SameTypeVerifier) Verify(proof *SameType) error {
 	if !v.Curve.HashToZr(raw).Equals(proof.Challenge) {
 		return errors.Errorf("invalid same type proof")
 	}
+
 	return nil
 }

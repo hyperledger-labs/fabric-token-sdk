@@ -44,6 +44,7 @@ func (r *GetEnrollmentIDView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 	w := tms.WalletManager().OwnerWallet(context.Context(), r.Wallet)
 	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
+
 	return w.EnrollmentID(), nil
 }
 
@@ -120,6 +121,7 @@ func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(tms, "failed to get TMS [%s]", w.TMSID)
 	who, deleted, err := tms.Vault().NewQueryEngine().WhoDeletedTokens(context.Context(), w.TokenIDs...)
 	assert.NoError(err, "failed to lookup who deleted tokens")
+
 	return &WhoDeletedTokenResult{
 		Who:     who,
 		Deleted: deleted,
@@ -148,6 +150,7 @@ func (p *GetPublicParamsView) Call(context view.Context) (interface{}, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(p.TMSID))
 	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS")
+
 	return GetTMSPublicParams(tms), nil
 }
 
@@ -157,12 +160,14 @@ func (p *GetPublicParamsViewFactory) NewView(in []byte) (view.View, error) {
 	f := &GetPublicParamsView{GetPublicParams: &GetPublicParams{}}
 	err := json.Unmarshal(in, f)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
 func GetTMSPublicParams(tms *token.ManagementService) []byte {
 	ppBytes, err := tms.PublicParametersManager().PublicParameters().Serialize()
 	assert.NoError(err, "failed to marshal public params")
+
 	return ppBytes
 }
 
@@ -182,6 +187,7 @@ func (p *UpdatePublicParamsView) Call(context view.Context) (interface{}, error)
 	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
 	assert.NoError(err, "failed to fetch public parameters")
 	assert.NoError(token.GetManagementServiceProvider(context).Update(tms.ID(), fetchedPPRaw), "failed to update public parameters")
+
 	return nil, nil
 }
 
@@ -191,6 +197,7 @@ func (p *UpdatePublicParamsViewFactory) NewView(in []byte) (view.View, error) {
 	f := &UpdatePublicParamsView{UpdatePublicParams: &UpdatePublicParams{}}
 	err := json.Unmarshal(in, f)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -226,6 +233,7 @@ func (p *DoesWalletExistViewFactory) NewView(in []byte) (view.View, error) {
 	f := &DoesWalletExistView{DoesWalletExist: &DoesWalletExist{}}
 	err := json.Unmarshal(in, f)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -250,6 +258,7 @@ func (p *TxStatusView) Call(context view.Context) (interface{}, error) {
 	owner := ttx.NewOwner(context, tms)
 	vc, message, err := owner.GetStatus(context.Context(), p.TxID)
 	assert.NoError(err, "failed to retrieve status of [%s]", p.TxID)
+
 	return &TxStatusResponse{
 		ValidationCode:    vc,
 		ValidationMessage: message,
@@ -262,5 +271,6 @@ func (p *TxStatusViewFactory) NewView(in []byte) (view.View, error) {
 	f := &TxStatusView{TxStatus: &TxStatus{}}
 	err := json.Unmarshal(in, f)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

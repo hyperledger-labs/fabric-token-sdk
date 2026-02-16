@@ -10,5 +10,6 @@ import "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topol
 
 func SetOrgs(tms *topology.TMS, orgs ...string) *topology.TMS {
 	tms.BackendParams["fabric.orgs"] = orgs
+
 	return tms
 }

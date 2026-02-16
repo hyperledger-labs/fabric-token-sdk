@@ -42,6 +42,7 @@ func NewAuditorFromTMSID(sp token.ServiceProvider, tmsID token.TMSID) (*Auditor,
 	if err != nil {
 		return nil, errors.Join(ErrProvider, err)
 	}
+
 	return &Auditor{
 		Service:      auditService,
 		StoreService: auditStoreService,
@@ -105,6 +106,7 @@ func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *R
 	if err != nil {
 		return nil
 	}
+
 	return &RegisterAuditorView{
 		AuditView: auditView,
 		TMSID:     options.TMSID(),
@@ -116,6 +118,7 @@ func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	if err := view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
 		return nil, errors.Wrapf(err, "failed to register auditor view")
 	}
+
 	return nil, nil
 }
 
@@ -149,6 +152,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
 		logger.ErrorfContext(context.Context(), "failed to read audit event: %s", err)
+
 		return nil, errors.WithMessagef(err, "failed to read audit event")
 	}
 	logger.DebugfContext(context.Context(), "reply received from %s", a.tx.Opts.Auditor)
@@ -161,6 +165,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	a.tx.TokenRequest.AddAuditorSignature(auditorIdentity, signature)
 
 	logger.Debugf("auditor signature verified")
+
 	return session, nil
 }
 
@@ -247,6 +252,7 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(context.Context(), auditorID)
 		if err != nil {
 			logger.DebugfContext(context.Context(), "failed to get auditor verifier for [%s]", auditorID)
+
 			continue
 		}
 		logger.DebugfContext(context.Context(), "Verify auditor signature")
@@ -254,9 +260,11 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 			logger.ErrorfContext(context.Context(), "failed verifying auditor signature [%s][%s][%s]", auditorID, utils.Hashable(signed), a.tx.TokenRequest.Anchor)
 		} else {
 			logger.DebugfContext(context.Context(), "auditor signature verified [%s][%s][%s]", auditorID, base64.StdEncoding.EncodeToString(signature), utils.Hashable(signed))
+
 			return auditorID, nil
 		}
 	}
+
 	return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", utils.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 }
 
@@ -294,6 +302,7 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 		"namespace", a.tx.Namespace(),
 	}
 	GetMetrics(context).AuditApprovedTransactions.With(labels...).Add(1)
+
 	return nil, nil
 }
 

@@ -17,20 +17,20 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/walletdb"
-	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 	_ "modernc.org/sqlite"
 )
 
 func TestDB(t *testing.T) {
 	// create a new config service by loading the config file
 	cp, err := config.NewProvider("./testdata/sqlite")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	manager := walletdb.NewStoreServiceManager(
 		tms.NewConfigServiceWrapper(config2.NewService(cp)),
 		multiplexed.NewDriver(cp, sqlite.NewNamedDriver(cp, sqlite2.NewDbProvider())),
 	)
 	_, err = manager.StoreServiceByTMSId(token.TMSID{Network: "pineapple", Namespace: "ns"})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = manager.StoreServiceByTMSId(token.TMSID{Network: "grapes", Namespace: "ns"})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

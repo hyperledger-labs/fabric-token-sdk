@@ -26,6 +26,7 @@ func (o *OwnerWallet) QueryByKey(ctx context.Context, state interface{}, key str
 	if err != nil {
 		return errors.WithMessagef(err, "failed to create query executor")
 	}
+
 	return qe.QueryByKey(ctx, state, key, value)
 }
 
@@ -34,6 +35,7 @@ func (o *OwnerWallet) QueryByKey(ctx context.Context, state interface{}, key str
 func WithType(tokenType token2.Type) token.ListTokensOption {
 	return func(o *token.ListTokensOptions) error {
 		o.TokenType = tokenType
+
 		return nil
 	}
 }
@@ -48,6 +50,7 @@ func MyWallet(context view.Context, opts ...token.ServiceOption) *OwnerWallet {
 	if w == nil {
 		return nil
 	}
+
 	return &OwnerWallet{OwnerWallet: w, ServiceProvider: context, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
@@ -67,6 +70,7 @@ func MyWalletFromTx(context view.Context, tx *Transaction) *OwnerWallet {
 	if w == nil {
 		return nil
 	}
+
 	return &OwnerWallet{OwnerWallet: w, ServiceProvider: context, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
@@ -82,6 +86,7 @@ func GetWallet(context view.Context, id string, opts ...token.ServiceOption) *Ow
 	if w == nil {
 		return nil
 	}
+
 	return &OwnerWallet{OwnerWallet: w, ServiceProvider: context, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
@@ -97,6 +102,7 @@ func GetWalletForChannel(context view.Context, channel, id string, opts ...token
 	if w == nil {
 		return nil
 	}
+
 	return &OwnerWallet{OwnerWallet: w, ServiceProvider: context, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
@@ -110,6 +116,7 @@ func MyIssuerWallet(context view.Context, opts ...token.ServiceOption) *token.Is
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -125,6 +132,7 @@ func GetIssuerWallet(context view.Context, id string, opts ...token.ServiceOptio
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -140,6 +148,7 @@ func GetIssuerWalletForChannel(context view.Context, channel, id string, opts ..
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -153,5 +162,6 @@ func MyAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.A
 	if w == nil {
 		return nil
 	}
+
 	return w
 }

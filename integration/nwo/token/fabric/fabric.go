@@ -167,10 +167,12 @@ func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID stri
 	for _, node := range fscTopology.Nodes {
 		if node.ID() == nodeID {
 			ids := cmGenerator.GenerateIssuerIdentities(tms, node, walletID)
+
 			return ids[0].Path
 		}
 	}
 	gomega.Expect(false).To(gomega.BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
+
 	return ""
 }
 
@@ -184,6 +186,7 @@ func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID strin
 			logger.Infof("generate owner crypto material using ca")
 			ic, err := ca.Gen(walletID)
 			gomega.Expect(err).ToNot(gomega.HaveOccurred(), "failed to generate owner crypto material using ca [%s]", tms.ID())
+
 			return ic
 		}
 		// continue without the ca
@@ -199,11 +202,13 @@ func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID strin
 			res.ID = ids[0].ID
 			res.URL = ids[0].Path
 			res.Raw = ids[0].Raw
-			return
+
+			return res
 		}
 	}
 	gomega.Expect(false).To(gomega.BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
-	return
+
+	return res
 }
 
 func (p *NetworkHandler) SetCryptoMaterialGenerator(driver string, generator generators.CryptoMaterialGenerator) {
@@ -233,6 +238,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 				index = i
 				found = true
 				issuers[i] = node.ID()
+
 				break
 			}
 		}
@@ -258,6 +264,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 				index = i
 				found = true
 				owners[i] = node.ID()
+
 				break
 			}
 		}
@@ -301,5 +308,6 @@ func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
 		}
 		p.Entries[k] = entry
 	}
+
 	return entry
 }

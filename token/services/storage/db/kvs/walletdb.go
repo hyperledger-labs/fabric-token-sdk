@@ -53,6 +53,7 @@ func (s *WalletStore) StoreIdentity(ctx context.Context, identity driver2.Identi
 	if err := s.kvs.Put(ctx, k, wID); err != nil {
 		return errors.WithMessagef(err, "failed to store identity's wallet reference[%s]", identity)
 	}
+
 	return nil
 }
 
@@ -62,6 +63,7 @@ func (s *WalletStore) IdentityExists(ctx context.Context, identity driver2.Ident
 	if err != nil {
 		return false
 	}
+
 	return s.kvs.Exists(ctx, k)
 }
 
@@ -75,6 +77,7 @@ func (s *WalletStore) GetWalletID(ctx context.Context, identity driver2.Identity
 	if err := s.kvs.Get(ctx, k, &wID); err != nil {
 		return "", err
 	}
+
 	return wID, nil
 }
 
@@ -93,6 +96,7 @@ func (s *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]storage.W
 			walletIDs.Add(wID)
 		}
 	}
+
 	return walletIDs.ToSlice(), nil
 }
 
@@ -106,6 +110,7 @@ func (s *WalletStore) LoadMeta(ctx context.Context, identity driver2.Identity, w
 	if err := s.kvs.Get(ctx, k, &meta); err != nil {
 		return nil, err
 	}
+
 	return meta, nil
 }
 

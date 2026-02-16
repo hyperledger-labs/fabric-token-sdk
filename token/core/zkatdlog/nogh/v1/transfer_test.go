@@ -45,6 +45,7 @@ func TestTransferService_VerifyTransfer(t *testing.T) {
 			name: "nil action",
 			TestCase: func() (*v1.TransferService, driver.TransferAction, []*driver.TransferOutputMetadata) {
 				service := &v1.TransferService{}
+
 				return service, nil, nil
 			},
 			wantErr: "nil action",
@@ -55,9 +56,9 @@ func TestTransferService_VerifyTransfer(t *testing.T) {
 			service, action, meta := tt.TestCase()
 			err := service.VerifyTransfer(t.Context(), action, meta)
 			if tt.wantErr == "" {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
-				assert.EqualError(t, err, tt.wantErr)
+				require.EqualError(t, err, tt.wantErr)
 			}
 		})
 	}
@@ -128,6 +129,7 @@ func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 				return err
 			}
 			_, err = action.Serialize()
+
 			return err
 		},
 	)
@@ -164,7 +166,7 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 		return nil, err
 	}
 	outputs := make([]*token.Token, benchmarkCase.NumOutputs)
-	for i := 0; i < benchmarkCase.NumOutputs; i++ {
+	for i := range benchmarkCase.NumOutputs {
 		outputs[i] = &token.Token{
 			Owner:    ownerID,
 			Quantity: token.NewQuantityFromUInt64(uint64(i*10 + 10)).Hex(), //nolint:gosec
@@ -176,7 +178,7 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 	numInputs := benchmarkCase.NumInputs
 	ids := make([]*token.ID, numInputs)
 	values := make([]uint64, numInputs)
-	for i := 0; i < numInputs; i++ {
+	for i := range numInputs {
 		values[i] = uint64(i*10 + 10) //nolint:gosec
 	}
 	baseTokens, metadata, err := v1token.GetTokensWithWitness(values, "ABC", pp.PedersenGenerators, math.Curves[pp.Curve])
@@ -232,6 +234,7 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 		noop.NewTracerProvider(),
 		tokensService,
 	)
+
 	return &transferEnv{
 		ts:      ts,
 		outputs: outputs,
@@ -247,12 +250,13 @@ type benchmarkTransferEnv struct {
 // newBenchmarkTransferEnv creates a new benchmark transfer environment with 'n' transfer environments.
 func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*benchmarkTransferEnv, error) {
 	envs := make([]*transferEnv, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		env, err := newTransferEnv(benchmarkCase, configurations)
 		if err != nil {
 			return nil, err
 		}
 		envs[i] = env
 	}
+
 	return &benchmarkTransferEnv{Envs: envs}, nil
 }

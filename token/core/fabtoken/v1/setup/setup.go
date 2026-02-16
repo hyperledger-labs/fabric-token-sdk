@@ -63,6 +63,7 @@ func NewPublicParamsFromBytes(raw []byte, driverName driver.TokenDriverName, dri
 	if err := params.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
+
 	return params, nil
 }
 
@@ -74,6 +75,7 @@ func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriver
 	if precision == 0 {
 		return nil, errors.New("invalid precision, should be greater than 0")
 	}
+
 	return &PublicParams{
 		DriverName:        driverName,
 		DriverVersion:     driverVersion,
@@ -137,6 +139,7 @@ func (p *PublicParams) Bytes() ([]byte, error) {
 		QuantityPrecision: p.QuantityPrecision,
 		ExtraData:         p.ExtraData,
 	}
+
 	return proto.Marshal(params)
 }
 
@@ -152,6 +155,7 @@ func (p *PublicParams) FromBytes(data []byte) error {
 		if id == nil {
 			return nil, nil
 		}
+
 		return id.Raw, nil
 	})
 	if err != nil {
@@ -165,6 +169,7 @@ func (p *PublicParams) FromBytes(data []byte) error {
 	if p.ExtraData == nil {
 		p.ExtraData = driver.Extras{}
 	}
+
 	return nil
 }
 
@@ -174,6 +179,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to serialize public parameters")
 	}
+
 	return encoding.Marshal(&pp.PublicParameters{
 		Identifier: string(core.DriverIdentifier(p.DriverName, p.DriverVersion)),
 		Raw:        raw,
@@ -194,6 +200,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 			container.Identifier,
 		)
 	}
+
 	return p.FromBytes(container.Raw)
 }
 
@@ -228,6 +235,7 @@ func (p *PublicParams) Auditors() []driver.Identity {
 	if len(p.Auditor) == 0 {
 		return []driver.Identity{}
 	}
+
 	return []driver.Identity{p.Auditor}
 }
 
@@ -254,6 +262,7 @@ func (p *PublicParams) Validate() error {
 	if p.MaxToken > maxTokenValue {
 		return errors.Errorf("max token value is invalid [%d]>[%d]", p.MaxToken, maxTokenValue)
 	}
+
 	return nil
 }
 
@@ -262,6 +271,7 @@ func (p *PublicParams) String() string {
 	if err != nil {
 		return err.Error()
 	}
+
 	return string(res)
 }
 

@@ -101,6 +101,7 @@ func (d *Driver) NewCertificationClient(ctx context.Context, tms *token.Manageme
 		d.CertificationClients[k] = certificationClient
 		cm = certificationClient
 	}
+
 	return cm, nil
 }
 
@@ -134,5 +135,6 @@ func (c *ChaincodeBackend) Load(context view.Context, cr *CertificationRequest) 
 	if !ok {
 		return nil, errors.Errorf("expected [][]byte, got [%T]", tokens)
 	}
+
 	return tokens, nil
 }

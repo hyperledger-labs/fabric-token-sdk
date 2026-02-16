@@ -48,6 +48,7 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ token2.Ty
 	txID := common.JSONUnmarshalString(txid)
 	common2.CheckFinality(network, receiver, txID, nil, false)
 	common2.CheckFinality(network, auditor, txID, nil, false)
+
 	return common.JSONUnmarshalString(txid)
 }
 
@@ -63,6 +64,7 @@ func IssueCashWithTMS(network *integration.Infrastructure, tmsID token.TMSID, is
 	txID := common.JSONUnmarshalString(txid)
 	common2.CheckFinality(network, receiver, txID, &tmsID, false)
 	common2.CheckFinality(network, auditor, txID, &tmsID, false)
+
 	return txID
 }
 
@@ -75,6 +77,7 @@ func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ t
 
 	issuedTokens := &token2.IssuedTokens{}
 	common.JSONUnmarshal(res.([]byte), issuedTokens)
+
 	return issuedTokens
 }
 
@@ -107,6 +110,7 @@ func CheckBalanceReturnError(network *integration.Infrastructure, id *token3.Nod
 		}
 	}()
 	CheckBalance(network, id, wallet, typ, expected, opts...)
+
 	return nil
 }
 
@@ -197,6 +201,7 @@ func CheckOwnerStore(network *integration.Infrastructure, tmsID token.TMSID, exp
 				for _, message := range errorMessages {
 					if message == expectedError {
 						found = true
+
 						break
 					}
 				}
@@ -247,6 +252,7 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, tmsID token.TMS
 		tok := unspentTokens.At(i)
 		IDs = append(IDs, &tok.Id)
 	}
+
 	return IDs
 }
 
@@ -292,6 +298,7 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 		if len(hash) != 0 {
 			gomega.Expect(lockResult.Hash).To(gomega.BeEquivalentTo(hash))
 		}
+
 		return lockResult.TxID, lockResult.PreImage, lockResult.Hash
 	} else {
 		gomega.Expect(err).To(gomega.HaveOccurred())
@@ -308,6 +315,7 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 			txID = errMsg[index+4 : index+strings.Index(err.Error()[index:], "]>>>")]
 		}
 		fmt.Printf("Got error message, extracted tx id [%s]\n", txID)
+
 		return txID, nil, nil
 	}
 }
@@ -374,6 +382,7 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id *token
 		txID := common.JSONUnmarshalString(txIDBoxed)
 		common2.CheckFinality(network, id, txID, &tmsID, false)
 		common2.CheckFinality(network, auditor, txID, &tmsID, false)
+
 		return txID
 	} else {
 		gomega.Expect(err).To(gomega.HaveOccurred())
@@ -390,6 +399,7 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id *token
 			txID = errMsg[index+4 : index+strings.Index(err.Error()[index:], "]>>>")]
 		}
 		fmt.Printf("Got error message, extracted tx id [%s]\n", txID)
+
 		return txID
 	}
 }

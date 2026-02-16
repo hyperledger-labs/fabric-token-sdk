@@ -701,6 +701,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 			}))
 			if err != nil {
 				transfer <- err
+
 				return
 			}
 			transfer <- nil
@@ -740,6 +741,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 			if err != nil {
 				// The transaction failed, we return the error to the caller.
 				transferError <- err
+
 				return
 			}
 			// The transaction didn't fail, let's wait for it to be confirmed, and return no error
@@ -1261,6 +1263,7 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 		if !strings.Contains(errMsgs[0], "token format not supported [") {
 			return errors.Errorf("expected error format not supported [%v]", errMsgs)
 		}
+
 		return nil
 	}, alice)
 	CheckOwnerStore(network, nil, issuer, bob, charlie, manager)

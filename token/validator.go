@@ -39,6 +39,7 @@ func (c *Validator) UnmarshallAndVerify(ctx context.Context, ledger Ledger, anch
 
 	res := make([]interface{}, len(actions))
 	copy(res, actions)
+
 	return res, nil
 }
 
@@ -52,6 +53,7 @@ func (c *Validator) UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger 
 
 	res := make([]interface{}, len(actions))
 	copy(res, actions)
+
 	return res, meta, nil
 }
 

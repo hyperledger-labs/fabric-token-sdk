@@ -38,6 +38,7 @@ func mkScript(t *testing.T, sender, recipient []byte) []byte {
 	}
 	raw, err := json.Marshal(s)
 	require.NoError(t, err)
+
 	return raw
 }
 

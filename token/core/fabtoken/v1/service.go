@@ -63,5 +63,6 @@ func NewService(
 	s := &Service{
 		Service: root,
 	}
+
 	return s, nil
 }

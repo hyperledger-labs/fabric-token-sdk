@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestSerialization(t *testing.T) {
@@ -18,8 +19,8 @@ func TestSerialization(t *testing.T) {
 
 	// check failures
 	_, err := Marshal(nil)
-	assert.Error(t, err)
-	assert.EqualError(t, err, "nil public parameters")
+	require.Error(t, err)
+	require.EqualError(t, err, "nil public parameters")
 
 	// success
 	pp := &pp.PublicParameters{
@@ -27,22 +28,22 @@ func TestSerialization(t *testing.T) {
 		Raw:        []byte{1, 2, 3},
 	}
 	res, err := Marshal(pp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Unmarshall
 
 	// success
 	pp2, err := Unmarshal(res)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, pp, pp2)
 
 	// failure
 	_, err = Unmarshal([]byte{})
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = Unmarshal(nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = Unmarshal([]byte{1, 2, 3})
-	assert.Error(t, err)
+	require.Error(t, err)
 }

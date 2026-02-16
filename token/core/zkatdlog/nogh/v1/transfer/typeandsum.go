@@ -44,6 +44,7 @@ func (p *TypeAndSumProof) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to serialize input values")
 	}
+
 	return asn1.MarshalMath(
 		p.CommitmentToType,
 		ibf,
@@ -90,6 +91,7 @@ func (p *TypeAndSumProof) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize challenge")
 	}
+
 	return nil
 }
 
@@ -115,6 +117,7 @@ func (p *TypeAndSumProof) Validate(curveID math.CurveID) error {
 	if err := math2.CheckBaseElement(p.Challenge, curveID); err != nil {
 		return errors.Wrapf(err, "Challenge is invalid")
 	}
+
 	return nil
 }
 
@@ -150,6 +153,7 @@ func NewTypeAndSumWitness(bf *math.Zr, in, out []*token.Metadata, c *math.Curve)
 		outValues[i] = out[i].Value
 		outBF[i] = out[i].BlindingFactor
 	}
+
 	return &TypeAndSumWitness{inValues: inValues, outValues: outValues, Type: c.HashToZr([]byte(in[0].Type)), inBlindingFactors: inBF, outBlindingFactors: outBF, typeBlindingFactor: bf}
 }
 
@@ -374,5 +378,6 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 	if !chal.Equals(stp.Challenge) {
 		return errors.New("invalid sum and type proof")
 	}
+
 	return nil
 }

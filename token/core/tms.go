@@ -59,6 +59,7 @@ func NewTMSProvider(
 		services:                map[string]driver.TokenManagerService{},
 		tokenDriverService:      tokenDriverService,
 	}
+
 	return ms
 }
 
@@ -79,6 +80,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	service, ok := m.services[key]
 	if ok {
 		m.lock.RUnlock()
+
 		return service, nil
 	}
 	m.lock.RUnlock()
@@ -91,6 +93,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	service, ok = m.services[key]
 	if ok {
 		logger.Debugf("token manager service for [%s] with key [%s] exists, return it", opts, key)
+
 		return service, nil
 	}
 
@@ -100,6 +103,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 		return nil, err
 	}
 	m.services[key] = service
+
 	return service, nil
 }
 
@@ -116,6 +120,7 @@ func (m *TMSProvider) NewTokenManagerService(opts driver.ServiceOptions) (driver
 	if err != nil {
 		return nil, err
 	}
+
 	return service, nil
 }
 
@@ -143,6 +148,7 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 		digest := sha256.Sum256(opts.PublicParams)
 		if bytes.Equal(service.PublicParamsManager().PublicParamsHash(), digest[:]) {
 			logger.Debugf("service found, no need to update token management system for [%s:%s:%s] for key [%s], public params are the same", opts.Network, opts.Channel, opts.Namespace, key)
+
 			return nil
 		}
 
@@ -161,6 +167,7 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 		// register the new service
 		m.services[key] = newService
 	}
+
 	return err
 }
 
@@ -181,6 +188,7 @@ func (m *TMSProvider) getTokenManagerService(opts driver.ServiceOptions) (servic
 			logger.Fatalf("failed to initialize tms for [%s]: [%s]", opts, err)
 		}
 	}
+
 	return service, nil
 }
 
@@ -214,6 +222,7 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, err
 		}
 	}
 	logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, string(debug.Stack()))
+
 	return nil, errors.Errorf("cannot retrieve public params for [%s]", opts)
 }
 
@@ -221,6 +230,7 @@ func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {
 	if len(opts.PublicParams) != 0 {
 		return opts.PublicParams, nil
 	}
+
 	return nil, errors.Errorf("public parameter not found in options")
 }
 
@@ -232,6 +242,7 @@ func (m *TMSProvider) ppFromStorage(opts *driver.ServiceOptions) ([]byte, error)
 	if len(ppRaw) == 0 {
 		return nil, errors.Errorf("no public parames found in publicParametersStorage")
 	}
+
 	return ppRaw, nil
 }
 
@@ -250,8 +261,10 @@ func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) 
 		if err != nil {
 			return nil, errors.Errorf("failed to load public parameters from [%s]: [%s]", cPP.Path, err)
 		}
+
 		return ppRaw, nil
 	}
+
 	return nil, errors.Errorf("no public params found in configuration")
 }
 
@@ -265,8 +278,10 @@ func (m *TMSProvider) ppFromFetcher(opts *driver.ServiceOptions) ([]byte, error)
 			return nil, errors.Errorf("no public parames found in publicParametersStorage")
 		}
 		opts.PublicParams = ppRaw
+
 		return ppRaw, nil
 	}
+
 	return nil, errors.Errorf("no public params fetched available")
 }
 

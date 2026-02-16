@@ -23,6 +23,7 @@ func DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
 	if !ok {
 		return nil, errors.New("expected *ecdsa.PublicKey")
 	}
+
 	return NewECDSAVerifier(publicKey), nil
 }
 
@@ -31,5 +32,6 @@ func Info(raw []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return fmt.Sprintf("X509: [%s][%s]", driver.Identity(raw).UniqueID(), cert.Subject.CommonName), nil
 }

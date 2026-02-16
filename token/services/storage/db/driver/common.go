@@ -149,6 +149,7 @@ func (t TransactionRecord) String() string {
 	s.WriteString(" ")
 	s.WriteString(TxStatusMessage[t.Status])
 	s.WriteString("}")
+
 	return s.String()
 }
 

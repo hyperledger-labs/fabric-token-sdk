@@ -26,6 +26,7 @@ func GetEnrollmentID(id []byte) (string, error) {
 	if index != -1 {
 		cn = cn[:index]
 	}
+
 	return cn, nil
 }
 
@@ -39,5 +40,6 @@ func GetRevocationHandle(id []byte) ([]byte, error) {
 		return nil, errors.WithMessagef(err, "Failed to marshal PKI public key")
 	}
 	h := sha256.Sum256(encoded)
+
 	return []byte(base64.StdEncoding.EncodeToString(h[:])), nil
 }

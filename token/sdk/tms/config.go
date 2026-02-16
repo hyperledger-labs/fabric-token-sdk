@@ -28,6 +28,7 @@ func (c *ConfigServiceWrapper) Configurations() ([]driver.Configuration, error) 
 	for i, config := range configs {
 		result[i] = config
 	}
+
 	return result, nil
 }
 

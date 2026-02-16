@@ -60,5 +60,6 @@ func GetServiceProvider(sp token.ServiceProvider) (ServiceProvider, error) {
 	if !ok {
 		panic("implementation error, type must be ServiceProvider")
 	}
+
 	return nip, nil
 }

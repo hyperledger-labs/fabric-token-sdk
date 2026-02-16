@@ -43,6 +43,7 @@ func LoadConfig(dir string, keyStoreDirName string) (*Config, error) {
 			return nil, errors.Wrapf(err, "could not load private key from file %s", secretKeyFile)
 		}
 	}
+
 	return LoadConfigWithIdentityInfo(&SigningIdentityInfo{
 		PublicSigner: signcert[0],
 		PrivateSigner: &KeyInfo{
@@ -60,10 +61,12 @@ func LoadConfigWithIdentityInfo(signingIdentityInfo *SigningIdentityInfo) (*Conf
 			SignatureHashFamily: bccsp.SHA2,
 		},
 	}
+
 	return config, nil
 }
 
 func RemovePrivateSigner(c *Config) (*Config, error) {
 	c.SigningIdentity.PrivateSigner = nil
+
 	return c, nil
 }

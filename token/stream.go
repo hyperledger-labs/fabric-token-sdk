@@ -72,6 +72,7 @@ func (o *OutputStream) Filter(f func(t *Output) bool) *OutputStream {
 			filtered = append(filtered, output)
 		}
 	}
+
 	return &OutputStream{outputs: filtered, Precision: o.Precision}
 }
 
@@ -105,6 +106,7 @@ func (o *OutputStream) Sum() *big.Int {
 	for _, input := range o.outputs {
 		sum = sum.Add(sum, input.Quantity.ToBigInt())
 	}
+
 	return sum
 }
 
@@ -133,6 +135,7 @@ func (o *OutputStream) EnrollmentIDs() []string {
 			duplicates[output.EnrollmentID] = true
 		}
 	}
+
 	return eIDs
 }
 
@@ -146,6 +149,7 @@ func (o *OutputStream) TokenTypes() []token.Type {
 			duplicates[output.Type] = true
 		}
 	}
+
 	return types
 }
 
@@ -165,6 +169,7 @@ func (o *OutputStream) RevocationHandles() []string {
 			duplicates[rh] = true
 		}
 	}
+
 	return rIDs
 }
 
@@ -205,6 +210,7 @@ func (is *InputStream) Filter(f func(t *Input) bool) *InputStream {
 			filtered = append(filtered, item)
 		}
 	}
+
 	return &InputStream{inputs: filtered, precision: is.precision}
 }
 
@@ -240,6 +246,7 @@ func (is *InputStream) IsAnyMine(ctx context.Context) (bool, error) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 
@@ -259,6 +266,7 @@ func (is *InputStream) IDs() []*token.ID {
 	for _, input := range is.inputs {
 		res = append(res, input.Id)
 	}
+
 	return res
 }
 
@@ -278,6 +286,7 @@ func (is *InputStream) EnrollmentIDs() []string {
 			duplicates[input.EnrollmentID] = true
 		}
 	}
+
 	return eIDs
 }
 
@@ -297,6 +306,7 @@ func (is *InputStream) RevocationHandles() []string {
 			duplicates[rh] = true
 		}
 	}
+
 	return rIDs
 }
 
@@ -311,6 +321,7 @@ func (is *InputStream) TokenTypes() []token.Type {
 			duplicates[input.Type] = true
 		}
 	}
+
 	return types
 }
 
@@ -334,6 +345,7 @@ func (is *InputStream) Sum() *big.Int {
 	for _, input := range is.inputs {
 		sum = sum.Add(sum, input.Quantity.ToBigInt())
 	}
+
 	return sum
 }
 

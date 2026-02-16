@@ -21,6 +21,7 @@ func SerializeIdentity(conf *Config) ([]byte, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signing identity")
 	}
+
 	return signingIdentity.Serialize()
 }
 
@@ -35,6 +36,7 @@ func GetSigningIdentity(conf *Config, bccspConfig *BCCSP, keyStore bccsp.KeyStor
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signing identity")
 	}
+
 	return signingIdentity, nil
 }
 
@@ -51,6 +53,7 @@ func DeserializeIdentity(raw []byte, bccspConfig *BCCSP, keyStore bccsp.KeyStore
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signing identity")
 	}
+
 	return signingIdentity, nil
 }
 
@@ -60,5 +63,6 @@ func getIdentityFactory(conf *Config, bccspConfig *BCCSP, keyStore bccsp.KeyStor
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get bccsp from config [%v]", bccspConfig)
 	}
+
 	return NewIdentityFactory(csp, conf.CryptoConfig.SignatureHashFamily), nil
 }

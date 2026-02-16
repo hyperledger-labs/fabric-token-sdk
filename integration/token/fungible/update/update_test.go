@@ -81,5 +81,6 @@ func newTestSuite(commType fsc.P2PCommunicationType, fabtokenPrecision int, extr
 		ExtraTMSs:       extraTMSs,
 		// FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 	}))
+
 	return ts, selector
 }

@@ -25,6 +25,7 @@ func NewVerifier(tokens []*math.G1, pp *v1.PublicParams) *Verifier {
 	v := &Verifier{}
 	v.SameType = NewSameTypeVerifier(tokens, pp.PedersenGenerators, math.Curves[pp.Curve])
 	v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+
 	return v
 }
 
@@ -53,5 +54,6 @@ func (v *Verifier) Verify(proof []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "invalid issue proof")
 	}
+
 	return nil
 }

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestMetadata_Validate(t *testing.T) {
@@ -18,7 +18,7 @@ func TestMetadata_Validate(t *testing.T) {
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	validMetadata := &Metadata{
 		Type:           "COIN",
@@ -100,9 +100,9 @@ func TestMetadata_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.meta.Validate(tt.checkIssuer)
 			if tt.wantErr == "" {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
-				assert.EqualError(t, err, tt.wantErr)
+				require.EqualError(t, err, tt.wantErr)
 			}
 		})
 	}

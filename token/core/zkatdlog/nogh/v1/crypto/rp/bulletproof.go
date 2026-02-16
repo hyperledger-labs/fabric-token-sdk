@@ -80,6 +80,7 @@ func (p *RangeProofData) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshall InnerProduct")
 	}
+
 	return nil
 }
 
@@ -126,6 +127,7 @@ func (p *RangeProofData) Validate(curve math.CurveID) error {
 	if err := math2.CheckBaseElement(p.InnerProduct, curve); err != nil {
 		return errors.Wrapf(err, "invalid range proof data: invalid InnerProduct")
 	}
+
 	return nil
 }
 
@@ -144,6 +146,7 @@ func (p *RangeProof) Serialize() ([]byte, error) {
 func (p *RangeProof) Deserialize(bytes []byte) error {
 	p.Data = &RangeProofData{}
 	p.IPA = &IPA{}
+
 	return asn1.Unmarshal[asn1.Serializer](bytes, p.Data, p.IPA)
 }
 
@@ -160,6 +163,7 @@ func (p *RangeProof) Validate(curve math.CurveID) error {
 	if err := p.IPA.Validate(curve); err != nil {
 		return errors.Wrapf(err, "invalid range proof: invalid IPA")
 	}
+
 	return nil
 }
 
@@ -583,5 +587,6 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

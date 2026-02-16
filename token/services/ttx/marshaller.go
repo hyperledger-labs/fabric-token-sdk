@@ -48,6 +48,7 @@ func MarshalMeta(v map[string][]byte) ([]byte, error) {
 		metaSer.Vals[i] = v[key]
 		i++
 	}
+
 	return asn1.Marshal(metaSer)
 }
 
@@ -61,6 +62,7 @@ func UnmarshalMeta(raw []byte) (map[string][]byte, error) {
 	for i, k := range metaSer.Keys {
 		v[k] = metaSer.Vals[i]
 	}
+
 	return v, nil
 }
 
@@ -145,6 +147,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal transaction")
 	}
+
 	return res, nil
 }
 
@@ -195,5 +198,6 @@ func unmarshal(getNetwork GetNetworkFunc, p *Payload, raw []byte) error {
 			return errors.Wrapf(err, "failed unmarshalling envelope [%d]", len(ser.Envelope))
 		}
 	}
+
 	return nil
 }

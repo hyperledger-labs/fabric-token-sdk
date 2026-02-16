@@ -177,6 +177,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("AuditView: Approve... [%s]", tx.ID())
 	res, err := context.RunView(ttx.NewAuditApproveView(w, tx))
 	logger.Debugf("AuditView: Approve...done [%s]", tx.ID())
+
 	return res, err
 }
 
@@ -203,6 +204,7 @@ func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
 		err := json.Unmarshal(in, f.RegisterAuditor)
 		assert.NoError(err, "failed unmarshalling input")
 	}
+
 	return f, nil
 }
 

@@ -31,6 +31,7 @@ func (u *RevokeUserView) Call(context view.Context) (interface{}, error) {
 	k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
 	assert.False(kvsInstance.Exists(context.Context(), k), "Identity already in revoked state")
 	assert.NoError(kvsInstance.Put(context.Context(), k, rh), "failed to put revocation handle")
+
 	return nil, nil
 }
 
@@ -40,6 +41,7 @@ func (u *RevokeUserViewFactory) NewView(in []byte) (view.View, error) {
 	f := &RevokeUserView{RevokeUser: &RevokeUser{}}
 	err := json.Unmarshal(in, f.RevokeUser)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 
@@ -66,6 +68,7 @@ func (r *GetRevocationHandle) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "error getting recipient id")
 	rh, err := tms.WalletManager().GetRevocationHandle(context.Context(), id)
 	logger.Infof("RH for [%s] is [%s]", r.Wallet, utils.Hashable(rh).String())
+
 	return &RevocationHandle{RH: rh}, err
 }
 
@@ -75,5 +78,6 @@ func (p *GetRevocationHandleViewFactory) NewView(in []byte) (view.View, error) {
 	f := &GetRevocationHandleView{GetRevocationHandle: &GetRevocationHandle{}}
 	err := json.Unmarshal(in, f.GetRevocationHandle)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func writeTempFile(t *testing.T, content []byte) string {
@@ -26,14 +26,15 @@ func writeTempFile(t *testing.T, content []byte) string {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.pem")
 	err := os.WriteFile(path, content, 0600)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+
 	return path
 }
 
 func TestReadPemFile_ValidCert(t *testing.T) {
 	// Generate a private key
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	assert.NoError(t, err, "failed to generate RSA key")
+	require.NoError(t, err, "failed to generate RSA key")
 
 	// Create a simple certificate template
 	template := x509.Certificate{
@@ -48,7 +49,7 @@ func TestReadPemFile_ValidCert(t *testing.T) {
 
 	// Self-sign the certificate
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	assert.NoError(t, err, "failed to create certificate")
+	require.NoError(t, err, "failed to create certificate")
 
 	// Encode certificate to PEM
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
@@ -56,7 +57,7 @@ func TestReadPemFile_ValidCert(t *testing.T) {
 	file := writeTempFile(t, certPEM)
 
 	_, err = readPemFile(file)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestReadPemFile_InvalidType(t *testing.T) {
@@ -66,12 +67,12 @@ abcd
 	file := writeTempFile(t, []byte(pemData))
 
 	_, err := readPemFile(file)
-	assert.Error(t, err, "expected error for unknown PEM type")
+	require.Error(t, err, "expected error for unknown PEM type")
 }
 
 func TestReadPemFile_NoPemContent(t *testing.T) {
 	file := writeTempFile(t, []byte("not a pem file"))
 
 	_, err := readPemFile(file)
-	assert.Error(t, err, "expected error for non-PEM type")
+	require.Error(t, err, "expected error for non-PEM type")
 }

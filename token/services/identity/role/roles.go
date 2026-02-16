@@ -42,5 +42,6 @@ func (m Roles) Registries(logger logging.Logger, storage driver.WalletStoreServi
 			walletFactory,
 		)
 	}
+
 	return res
 }

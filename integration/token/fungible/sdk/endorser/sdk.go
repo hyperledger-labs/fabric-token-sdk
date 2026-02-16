@@ -41,5 +41,6 @@ func (p *SDK) Install() error {
 	}); err != nil {
 		return errors.WithMessagef(err, "failed to install endorser's views")
 	}
+
 	return nil
 }

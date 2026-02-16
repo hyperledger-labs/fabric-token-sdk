@@ -47,12 +47,12 @@ func TestConfigurations(t *testing.T) {
 func checkConfigurations(t *testing.T, service *Service, expectedTMSs int) {
 	t.Helper()
 	tmss, err := service.Configurations()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, tmss, expectedTMSs)
 	for _, tms := range tmss {
 		tmsID := tms.ID()
 		tms2, err := service.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, tms, tms2)
 	}
 }

@@ -131,5 +131,6 @@ func (e *EndorsementService) Endorse(context view.Context, requestRaw []byte, si
 	if !ok {
 		return nil, errors.Errorf("expected driver.Envelope, got [%T]", envBoxed)
 	}
+
 	return env, nil
 }

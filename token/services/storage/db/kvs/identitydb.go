@@ -58,6 +58,7 @@ func (s *IdentityStore) AddConfiguration(ctx context.Context, wp storage.Identit
 	if err != nil {
 		return errors.Wrapf(err, "failed to create key")
 	}
+
 	return s.kvs.Put(ctx, k, &wp)
 }
 
@@ -74,6 +75,7 @@ func (s *IdentityStore) IteratorConfigurations(ctx context.Context, configuratio
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get registered identities from kvs")
 	}
+
 	return &IdentityConfigurationsIterator{Iterator: it}, nil
 }
 
@@ -90,6 +92,7 @@ func (s *IdentityStore) ConfigurationExists(ctx context.Context, id, configurati
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to create key")
 	}
+
 	return s.kvs.Exists(ctx, k), nil
 }
 
@@ -108,6 +111,7 @@ func (s *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identi
 	}); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -126,6 +130,7 @@ func (s *IdentityStore) GetAuditInfo(ctx context.Context, identity []byte) ([]by
 	if err := s.kvs.Get(ctx, k, &res); err != nil {
 		return nil, err
 	}
+
 	return res.AuditInfo, nil
 }
 
@@ -144,6 +149,7 @@ func (s *IdentityStore) GetTokenInfo(ctx context.Context, identity []byte) ([]by
 	if err := s.kvs.Get(ctx, k, &res); err != nil {
 		return nil, nil, err
 	}
+
 	return res.TokenMetadata, res.TokenMetadataAuditInfo, nil
 }
 
@@ -163,6 +169,7 @@ func (s *IdentityStore) StoreSignerInfo(ctx context.Context, id tdriver.Identity
 	if err != nil {
 		return errors.Wrap(err, "failed to store entry in kvs for the passed signer")
 	}
+
 	return nil
 }
 
@@ -181,6 +188,7 @@ func (s *IdentityStore) GetExistingSignerInfo(ctx context.Context, identities ..
 		}
 		keys[i] = k
 	}
+
 	return s.kvs.GetExisting(ctx, keys...), nil
 }
 
@@ -189,6 +197,7 @@ func (s *IdentityStore) SignerInfoExists(ctx context.Context, id []byte) (bool, 
 	if err != nil {
 		return false, err
 	}
+
 	return len(existing) > 0, nil
 }
 
@@ -208,6 +217,7 @@ func (s *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]b
 	if err := s.kvs.Get(ctx, k, &res); err != nil {
 		return nil, err
 	}
+
 	return res, nil
 }
 
@@ -224,6 +234,7 @@ func (s *IdentityStore) RegisterIdentityDescriptor(ctx context.Context, descript
 	if err := s.StoreIdentityData(ctx, alias, descriptor.AuditInfo, nil, nil); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -244,6 +255,7 @@ func (w *IdentityConfigurationsIterator) Next() (*storage.IdentityConfiguration,
 	if err != nil {
 		return nil, err
 	}
+
 	return idConfig, nil
 }
 

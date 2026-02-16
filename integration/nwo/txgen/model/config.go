@@ -40,18 +40,18 @@ type Username = string
 type UserAlias = string
 
 type UserConfig struct {
-	Name     UserAlias `yaml:"name" json:"name"`
-	Username Username  `yaml:"username" json:"username"`
-	Password string    `yaml:"password" json:"password"`
-	Endpoint string    `yaml:"endpoint" json:"endpoint"`
+	Name     UserAlias `json:"name"     yaml:"name"`
+	Username Username  `json:"username" yaml:"username"`
+	Password string    `json:"password" yaml:"password"`
+	Endpoint string    `json:"endpoint" yaml:"endpoint"`
 }
 
 type SuiteConfig struct {
-	Name             string        `yaml:"name" json:"name"`
-	PoolSize         int           `yaml:"poolSize" json:"poolSize"`
-	Iterations       int           `yaml:"iterations" json:"iterations"`
-	Delay            time.Duration `yaml:"delay" json:"delay"`
-	Cases            []TestCase    `yaml:"cases" json:"cases"`
+	Name             string        `json:"name"             yaml:"name"`
+	PoolSize         int           `json:"poolSize"         yaml:"poolSize"`
+	Iterations       int           `json:"iterations"       yaml:"iterations"`
+	Delay            time.Duration `json:"delay"            yaml:"delay"`
+	Cases            []TestCase    `json:"cases"            yaml:"cases"`
 	UseExistingFunds bool          `yaml:"useExistingFunds"`
 }
 
@@ -75,11 +75,11 @@ type TransferConfig struct {
 }
 
 type TestCase struct {
-	Name     string         `yaml:"name" json:"name"`
-	Payer    UserAlias      `yaml:"payer" json:"payer"`
-	Payees   []UserAlias    `yaml:"payees" json:"payees"`
-	Issue    IssueConfig    `yaml:"issue" json:"issue"`
-	Transfer TransferConfig `yaml:"transfer" json:"transfer"`
+	Name     string         `json:"name"     yaml:"name"`
+	Payer    UserAlias      `json:"payer"    yaml:"payer"`
+	Payees   []UserAlias    `json:"payees"   yaml:"payees"`
+	Issue    IssueConfig    `json:"issue"    yaml:"issue"`
+	Transfer TransferConfig `json:"transfer" yaml:"transfer"`
 }
 
 // LogLevel String defining a log level.

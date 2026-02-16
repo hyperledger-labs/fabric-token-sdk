@@ -25,6 +25,7 @@ func AuditingSignaturesValidate[P driver.PublicParameters, T driver.Input, TA dr
 		if len(ctx.TokenRequest.AuditorSignatures) != 0 {
 			return ErrAuditorSignaturesPresent
 		}
+
 		return nil
 	}
 
@@ -49,5 +50,6 @@ func AuditingSignaturesValidate[P driver.PublicParameters, T driver.Input, TA dr
 			return errors.Wrap(err, "failed to verify auditor's signature")
 		}
 	}
+
 	return nil
 }

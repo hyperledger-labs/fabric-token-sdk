@@ -66,6 +66,7 @@ func (i *IssueAction) Serialize() ([]byte, error) {
 		Outputs:  outputs,
 		Metadata: i.Metadata,
 	}
+
 	return proto.Marshal(issueAction)
 }
 
@@ -121,6 +122,7 @@ func (i *IssueAction) GetSerializedOutputs() ([][]byte, error) {
 		}
 		res = append(res, ser)
 	}
+
 	return res, nil
 }
 
@@ -130,6 +132,7 @@ func (i *IssueAction) GetOutputs() []driver.Output {
 	for _, output := range i.Outputs {
 		res = append(res, output)
 	}
+
 	return res
 }
 
@@ -172,6 +175,7 @@ func (i *IssueAction) Validate() error {
 			return errors.Errorf("invalid output's quantity at index [%d], output quantity is empty", i)
 		}
 	}
+
 	return nil
 }
 

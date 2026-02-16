@@ -63,6 +63,7 @@ func (m *BCCSP) GetKey(ski []byte) (bccsp.Key, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return args.Get(0).(bccsp.Key), args.Error(1)
 }
 
@@ -72,5 +73,6 @@ func (m *BCCSP) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) ([]byte,
 	if err != nil {
 		return nil, err
 	}
+
 	return args.Get(0).([]byte), args.Error(1)
 }

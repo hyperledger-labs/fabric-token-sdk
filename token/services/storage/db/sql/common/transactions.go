@@ -90,6 +90,7 @@ func orderBy(f common3.FieldName, direction driver4.SearchDirection) _select.Ord
 	if direction == driver4.FromBeginning {
 		return q.Asc(f)
 	}
+
 	return q.Desc(f)
 }
 
@@ -121,8 +122,10 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver4.Q
 		}
 		r.Amount = big.NewInt(amount)
 		logger.DebugfContext(ctx, "movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
+
 		return nil
 	})
+
 	return iterators.ReadAllPointers(it)
 }
 
@@ -157,6 +160,7 @@ func (db *TransactionStore) QueryTransactions(ctx context.Context, params driver
 			return err
 		}
 		r.Amount = big.NewInt(amount)
+
 		return errors2.Join(
 			unmarshal(appMeta, &r.ApplicationMetadata),
 			unmarshal(pubMeta, &r.PublicMetadata),
@@ -183,10 +187,13 @@ func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (driver4
 	if err := row.Scan(&status, &statusMessage); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.DebugfContext(ctx, "tried to get status for non-existent tx [%s], returning unknown", txID)
+
 			return driver4.Unknown, "", nil
 		}
+
 		return driver4.Unknown, "", errors.Wrapf(err, "error querying db")
 	}
+
 	return status, statusMessage, nil
 }
 
@@ -214,11 +221,13 @@ func (db *TransactionStore) QueryValidations(ctx context.Context, params driver4
 		if err := rows.Scan(&r.TxID, &r.TokenRequest, &meta, &r.Status, &r.Timestamp); err != nil {
 			return err
 		}
+
 		return unmarshal(meta, &r.Metadata)
 	})
 	if params.Filter == nil {
 		return it, nil
 	}
+
 	return iterators.Filter(it, params.Filter), nil
 }
 
@@ -256,6 +265,7 @@ func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, tx
 	if _, err = db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return ttxDBError(err)
 	}
+
 	return
 }
 
@@ -280,8 +290,10 @@ func (db *TransactionStore) GetTransactionEndorsementAcks(ctx context.Context, t
 			if errors.Is(err, sql.ErrNoRows) {
 				// not an error for compatibility with badger.
 				logger.DebugfContext(ctx, "tried to get status for non-existent tx [%s], returning unknown", txID)
+
 				continue
 			}
+
 			return nil, errors.Wrapf(err, "error querying db")
 		}
 		acks[token.Identity(endorser).String()] = sigma
@@ -289,6 +301,7 @@ func (db *TransactionStore) GetTransactionEndorsementAcks(ctx context.Context, t
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
+
 	return acks, nil
 }
 
@@ -319,6 +332,7 @@ func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status d
 	if err != nil {
 		return errors.Wrapf(err, "error updating tx [%s]", txID)
 	}
+
 	return nil
 }
 
@@ -396,6 +410,7 @@ func unmarshal(in []byte, out *map[string][]byte) error {
 	if len(in) == 0 {
 		return nil
 	}
+
 	return json.Unmarshal(in, out)
 }
 
@@ -421,12 +436,14 @@ func (w *AtomicWrite) Commit() error {
 		return fmt.Errorf("could not commit transaction: %w", err)
 	}
 	w.txn = nil
+
 	return nil
 }
 
 func (w *AtomicWrite) Rollback() {
 	if w.txn == nil {
 		logging.Debug(logger, "nothing to roll back")
+
 		return
 	}
 	if err := w.txn.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
@@ -540,6 +557,7 @@ func (w *AtomicWrite) AddValidationRecord(ctx context.Context, txID string, meta
 	logging.Debug(logger, query, txID, len(md), now)
 
 	_, err = w.txn.ExecContext(ctx, query, args...)
+
 	return ttxDBError(err)
 }
 
@@ -552,5 +570,6 @@ func ttxDBError(err error) error {
 	if strings.Contains(e, "foreign key constraint") {
 		return driver4.ErrTokenRequestDoesNotExist
 	}
+
 	return err
 }

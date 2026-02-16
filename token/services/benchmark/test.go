@@ -41,6 +41,7 @@ func GenerateCasesWithDefaults() ([]uint64, []math.CurveID, []TestCase, error) {
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
 	return bits, curves, GenerateCases(bits, curves, inputs, outputs, workers), nil
 }
 
@@ -167,6 +168,7 @@ func (test *Test[T]) RunBenchmark(t *testing.T, newEnv func(*Case) (T, error), w
 					}
 					e, err := newEnv(tc.BenchmarkCase)
 					require.NoError(t, err)
+
 					return e
 				},
 				func(env T) error {

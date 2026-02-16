@@ -25,6 +25,7 @@ type TxOption ttx.TxOption
 func WithAuditor(auditor view.Identity) TxOption {
 	return func(o *ttx.TxOptions) error {
 		o.Auditor = auditor
+
 		return nil
 	}
 }
@@ -105,6 +106,7 @@ func (t *Transaction) Outputs() (*OutputStream, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &OutputStream{OutputStream: os}, nil
 }
 
@@ -127,5 +129,6 @@ func (t *Transaction) setStateID(s interface{}) (string, error) {
 	default:
 		return "", nil
 	}
+
 	return key, nil
 }

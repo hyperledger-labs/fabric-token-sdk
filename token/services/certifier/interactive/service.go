@@ -50,6 +50,7 @@ func (c *CertificationService) Start() (err error) {
 		err = c.ResponderRegistry.RegisterResponder(c, &CertificationRequestView{})
 	})
 	logger.Debugf("starting certifier service...done")
+
 	return nil
 }
 
@@ -91,6 +92,7 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 	walletID, ok := c.wallets[walletKey]
 	if !ok {
 		logger.Errorf("failed getting certifier wallet, namespace not registered [%s]: [%s]", cr, err)
+
 		return nil, errors.WithMessagef(err, "failed getting certifier wallet, namespace not registered [%s]", cr)
 	}
 	logger.Debugf("certify with wallet [%s]", walletID)
@@ -194,6 +196,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	processedCertifications, err := cm.VerifyCertifications(i.ids, certifications)
 	if err != nil {
 		logger.Errorf("failed verifying certifications of [%v] from [%s] with err [%s]", i.ids, i.certifier, err)
+
 		return nil, errors.WithMessagef(err, "failed verifying certifications of [%v] from [%s]", i.ids, i.certifier)
 	}
 
@@ -204,5 +207,6 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	for index, id := range i.ids {
 		result[id] = processedCertifications[index]
 	}
+
 	return result, nil
 }

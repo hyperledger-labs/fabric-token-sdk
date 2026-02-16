@@ -37,6 +37,7 @@ func (e *EIDRHDeserializer) GetEnrollmentID(ctx context.Context, identity driver
 	if err != nil {
 		return "", err
 	}
+
 	return ai.EnrollmentID(), nil
 }
 
@@ -46,6 +47,7 @@ func (e *EIDRHDeserializer) GetRevocationHandler(ctx context.Context, identity d
 	if err != nil {
 		return "", err
 	}
+
 	return ai.RevocationHandle(), nil
 }
 
@@ -54,6 +56,7 @@ func (e *EIDRHDeserializer) GetEIDAndRH(ctx context.Context, identity driver.Ide
 	if err != nil {
 		return "", "", err
 	}
+
 	return ai.EnrollmentID(), ai.RevocationHandle(), nil
 }
 
@@ -74,5 +77,6 @@ func (e *EIDRHDeserializer) getAuditInfo(ctx context.Context, id driver.Identity
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to deserialize audit info for identity type [%s]", si.Type)
 	}
+
 	return res, nil
 }

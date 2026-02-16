@@ -50,5 +50,6 @@ func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
 			Monitoring:      true,
 		},
 	))
+
 	return ts, selector
 }

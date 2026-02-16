@@ -42,6 +42,7 @@ func NewService(
 		leaseExpiry:                  cfg.GetLeaseExpiry(),
 		leaseCleanupTickPeriod:       cfg.GetLeaseCleanupTickPeriod(),
 	}
+
 	return &SelectorService{
 		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
 	}
@@ -77,6 +78,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	if err != nil {
 		return nil, errors.Errorf("failed to create token fetcher: %v", err)
 	}
+
 	return NewManager(
 		fetcher,
 		tokenLockStoreService,

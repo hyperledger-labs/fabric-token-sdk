@@ -24,16 +24,19 @@ type PaymentsFilter struct {
 // ByEnrollmentId add an enrollment id to the filter.
 func (f *PaymentsFilter) ByEnrollmentId(id string) *PaymentsFilter {
 	f.params.EnrollmentIDs = append(f.params.EnrollmentIDs, id)
+
 	return f
 }
 
 func (f *PaymentsFilter) ByType(tokenType token.Type) *PaymentsFilter {
 	f.params.TokenTypes = append(f.params.TokenTypes, tokenType)
+
 	return f
 }
 
 func (f *PaymentsFilter) Last(num int) *PaymentsFilter {
 	f.params.NumRecords = num
+
 	return f
 }
 
@@ -46,6 +49,7 @@ func (f *PaymentsFilter) Execute(ctx context.Context) (*PaymentsFilter, error) {
 		return nil, err
 	}
 	f.records = records
+
 	return f, nil
 }
 
@@ -55,6 +59,7 @@ func (f *PaymentsFilter) Sum() *big.Int {
 		sum = sum.Add(sum, record.Amount)
 	}
 	sum.Neg(sum)
+
 	return sum
 }
 
@@ -66,11 +71,13 @@ type HoldingsFilter struct {
 
 func (f *HoldingsFilter) ByEnrollmentId(id string) *HoldingsFilter {
 	f.params.EnrollmentIDs = append(f.params.EnrollmentIDs, id)
+
 	return f
 }
 
 func (f *HoldingsFilter) ByType(tokenType token.Type) *HoldingsFilter {
 	f.params.TokenTypes = append(f.params.TokenTypes, tokenType)
+
 	return f
 }
 
@@ -83,6 +90,7 @@ func (f *HoldingsFilter) Execute(ctx context.Context) (*HoldingsFilter, error) {
 		return nil, err
 	}
 	f.records = records
+
 	return f, nil
 }
 
@@ -93,5 +101,6 @@ func (f *HoldingsFilter) Sum() *big.Int {
 		sum = sum.Add(sum, record.Amount)
 	}
 	logger.Debugf("HoldingsFilter [%v], sum of [%d] records = [%d]", f.params, len(f.records), sum.String())
+
 	return sum
 }

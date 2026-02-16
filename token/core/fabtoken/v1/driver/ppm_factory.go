@@ -29,5 +29,6 @@ func (d *PPMFactory) NewPublicParametersManager(params driver.PublicParameters) 
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
+
 	return common.NewPublicParamsManagerFromParams[*v1.PublicParams](pp)
 }

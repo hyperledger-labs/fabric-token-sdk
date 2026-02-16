@@ -39,6 +39,7 @@ func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ st
 	_, ok := v.deserializers[typ]
 	if !ok {
 		v.deserializers[typ] = []TypedVerifierDeserializer{d}
+
 		return
 	}
 	v.deserializers[typ] = append(v.deserializers[typ], d)
@@ -59,10 +60,13 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(ctx context.Con
 		verifier, err := deserializer.DeserializeVerifier(ctx, si.Type, si.Identity)
 		if err != nil {
 			errs = append(errs, err)
+
 			continue
 		}
+
 		return verifier, nil
 	}
+
 	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%s]", si.Type)
 }
 
@@ -84,10 +88,13 @@ func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]d
 		ids, err := deserializer.Recipients(id, si.Type, si.Identity)
 		if err != nil {
 			errs = append(errs, err)
+
 			continue
 		}
+
 		return ids, nil
 	}
+
 	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserializer recipients for [%s]", si.Type)
 }
 
@@ -103,6 +110,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfoMatcher(ctx context.Con
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting matcher for [%s]", si.Type)
 	}
+
 	return &TypedAuditInfoMatcher{matcher: matcher}, nil
 }
 
@@ -117,8 +125,10 @@ func (v *TypedVerifierDeserializerMultiplex) getMatcher(ctx context.Context, idT
 		matcher, err := deserializer.GetAuditInfoMatcher(ctx, id, auditInfo)
 		if err != nil {
 			errs = append(errs, err)
+
 			continue
 		}
+
 		return matcher, nil
 	}
 
@@ -139,6 +149,7 @@ func (v *TypedVerifierDeserializerMultiplex) MatchIdentity(ctx context.Context, 
 	if err != nil {
 		return errors.Wrapf(err, "failed to match identity to audit infor for [%s]:[%s]", id, utils.Hashable(ai))
 	}
+
 	return nil
 }
 
@@ -156,10 +167,13 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfo(ctx context.Context, i
 		info, err := deserializer.GetAuditInfo(ctx, id, si.Type, si.Identity, p)
 		if err != nil {
 			errs = append(errs, err)
+
 			continue
 		}
+
 		return info, nil
 	}
+
 	return nil, errors.Wrapf(errors2.Join(errs...), "failed to find a valid deserializer for audit info for [%s]", si.Type)
 }
 
@@ -185,6 +199,7 @@ func (t *TypedIdentityVerifierDeserializer) GetAuditInfo(ctx context.Context, id
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", id)
 	}
+
 	return auditInfo, nil
 }
 

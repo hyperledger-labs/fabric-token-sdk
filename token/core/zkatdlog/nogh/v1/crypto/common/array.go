@@ -33,6 +33,7 @@ func (a G1Array) Bytes() ([]byte, error) {
 		}
 		raw[i] = e.Bytes()
 	}
+
 	return crypto.AppendFixed32([]byte{}, raw), nil
 }
 
@@ -51,6 +52,7 @@ func (a G1Array) BytesTo(b []byte) ([]byte, error) {
 	if len(b) != 0 {
 		b = b[:0]
 	}
+
 	return crypto.AppendFixed32(b, raw), nil
 }
 
@@ -65,6 +67,7 @@ func GetG1Array(elements ...[]*math.G1) G1Array {
 	for _, e := range elements {
 		s = append(s, e...)
 	}
+
 	return s
 }
 
@@ -76,5 +79,6 @@ func HashG1Array(h hash.Hash, elements ...*math.G1) []byte {
 	for _, e := range elements {
 		h.Write(e.Bytes())
 	}
+
 	return h.Sum(nil)
 }

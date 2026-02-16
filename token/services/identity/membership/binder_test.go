@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNoBinder(t *testing.T) {
@@ -19,5 +19,5 @@ func TestNoBinder(t *testing.T) {
 	ephemeral := token.Identity("ephemeral")
 
 	err := binder.Bind(t.Context(), longTerm, ephemeral)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

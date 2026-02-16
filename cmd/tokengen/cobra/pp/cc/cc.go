@@ -41,6 +41,7 @@ func GeneratePackage(raw []byte, outputDir string) error {
 			if strings.HasSuffix(s, "github.com/hyperledger-labs/fabric-token-sdk/token/tcc/params.go") {
 				return "", paramsFile.Bytes()
 			}
+
 			return "", nil
 		},
 	)

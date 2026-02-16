@@ -51,6 +51,7 @@ func Marshal[S Serializer](values ...S) ([]byte, error) {
 		}
 		v.Values[i] = b
 	}
+
 	return asn1.Marshal(v)
 }
 
@@ -72,6 +73,7 @@ func Unmarshal[S Serializer](data []byte, values ...S) error {
 			return errors.Wrapf(err, "failed to deserialize value [%d of %d]", i, len(values))
 		}
 	}
+
 	return nil
 }
 
@@ -89,6 +91,7 @@ func UnmarshalTo[S Serializer](data []byte, newFunction func() S) ([]S, error) {
 			return nil, errors.Wrap(err, "failed to deserialize value")
 		}
 	}
+
 	return res, nil
 }
 
@@ -108,6 +111,7 @@ func MarshalMath(values ...element) ([]byte, error) {
 		}
 		v.Values = append(v.Values, raw)
 	}
+
 	return asn1.Marshal(v)
 }
 
@@ -122,6 +126,7 @@ func NewUnmarshaller(raw []byte) (*unmarshaller, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal values")
 	}
+
 	return &unmarshaller{v: v, index: 0}, nil
 }
 
@@ -134,6 +139,7 @@ func (u *unmarshaller) NextZr() (*math.Zr, error) {
 		return nil, nil
 	}
 	zr := math.Curves[e.CurveID].NewZrFromBytes(e.Raw)
+
 	return zr, nil
 }
 
@@ -145,6 +151,7 @@ func (u *unmarshaller) NextG1() (*math.G1, error) {
 	if e == nil {
 		return nil, nil
 	}
+
 	return math.Curves[e.CurveID].NewG1FromBytes(e.Raw)
 }
 
@@ -156,6 +163,7 @@ func (u *unmarshaller) NextG2() (*math.G2, error) {
 	if e == nil {
 		return nil, nil
 	}
+
 	return math.Curves[e.CurveID].NewG2FromBytes(e.Raw)
 }
 
@@ -173,6 +181,7 @@ func (u *unmarshaller) Next() (*Element, error) {
 		return nil, errors.Errorf("values should not have trailing bytes")
 	}
 	u.index++
+
 	return e, nil
 }
 
@@ -198,6 +207,7 @@ func (u *unmarshaller) NextZrArray() ([]*math.Zr, error) {
 	for i, value := range v.Values {
 		result[i] = math.Curves[e.CurveID].NewZrFromBytes(value)
 	}
+
 	return result, nil
 }
 
@@ -226,6 +236,7 @@ func (u *unmarshaller) NextG1Array() ([]*math.G1, error) {
 			return nil, errors.Wrapf(err, `failed to deserialize element`)
 		}
 	}
+
 	return result, nil
 }
 
@@ -248,6 +259,7 @@ func newElementArray[E element](elements ...E) (*elementArray, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, `failed to marshal element`)
 	}
+
 	return &elementArray{
 		elements[0].CurveID(),
 		raw,
@@ -278,6 +290,7 @@ func (a *array[S]) Serialize() ([]byte, error) {
 func (a *array[S]) Deserialize(bytes []byte) error {
 	var err error
 	a.Values, err = UnmarshalTo[S](bytes, a.newFunction)
+
 	return err
 }
 

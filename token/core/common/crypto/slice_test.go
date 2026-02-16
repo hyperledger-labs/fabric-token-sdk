@@ -83,9 +83,10 @@ func TestAppendFixed32_ReuseBuffer(t *testing.T) {
 // Setup helper for benchmarks
 func generateBenchmarkData(count, size int) [][]byte {
 	data := make([][]byte, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		data[i] = bytes.Repeat([]byte{'a'}, size)
 	}
+
 	return data
 }
 
@@ -97,7 +98,7 @@ func BenchmarkAppendFixed32(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		// Use nil to strictly measure allocation of the result
 		_ = AppendFixed32(nil, data)
 	}
@@ -110,7 +111,7 @@ func BenchmarkAppendFixed32_Naive(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		var dst []byte
 		for _, v := range data {
 			dst = binary.LittleEndian.AppendUint32(dst, uint32(len(v))) // #nosec G115

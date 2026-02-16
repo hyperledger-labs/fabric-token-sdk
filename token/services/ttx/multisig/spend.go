@@ -35,6 +35,7 @@ func ReceiveSpendRequest(context view.Context, opts ...ttx.TxOption) (*SpendRequ
 	if !ok {
 		return nil, errors.Errorf("received spendRequest of wrong type [%T]", request)
 	}
+
 	return request, nil
 }
 
@@ -46,6 +47,7 @@ func (r *SpendRequest) String() string {
 	if r.Token == nil {
 		return ""
 	}
+
 	return r.Token.String()
 }
 
@@ -139,6 +141,7 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 		if slices.Contains(areMe, party.UniqueID()) {
 			// it is me, skip
 			logger.DebugfContext(context.Context(), "notify party [%s] about request, it is me, skipping...", party)
+
 			continue
 		}
 		go c.collectSpendRequestAnswers(context, party, requestRaw, answerChannel)
@@ -157,11 +160,13 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 			return nil, errors.Wrapf(a.response.Err, "got failure [%s] from [%s]", a.party.String(), a.response.Err)
 		}
 	}
+
 	return nil, nil
 }
 
 func (c *RequestSpendView) WithTimeout(timeout time.Duration) *RequestSpendView {
 	c.timeout = timeout
+
 	return c
 }
 
@@ -178,6 +183,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 			err:   errors.Wrapf(err, "failed to create session with [%s]", party),
 			party: party,
 		}
+
 		return
 	}
 	s := session.NewFromSession(context, backendSession)
@@ -190,6 +196,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 			err:   errors.Wrapf(err, "failed to send request to [%s]", party),
 			party: party,
 		}
+
 		return
 	}
 	response := &SpendResponse{}
@@ -198,6 +205,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 			err:   errors.Wrapf(err, "failed to receive response from [%s]", party),
 			party: party,
 		}
+
 		return
 	}
 	logger.DebugfContext(context.Context(), "received response from [%v]: [%v]", party, response.Err)
@@ -223,6 +231,7 @@ func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, er
 	if !ok {
 		return nil, errors.Errorf("received result of wrong type [%T]", result)
 	}
+
 	return &Transaction{Transaction: result}, nil
 }
 

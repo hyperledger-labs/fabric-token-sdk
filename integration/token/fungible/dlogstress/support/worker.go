@@ -70,14 +70,17 @@ func NewPool(label string, numWorkers int) *Pool {
 				case <-pool.ctx.Done():
 					fmt.Printf("Context done for [%s], shutdown after # %d workers\n", pool.label, numWorkers)
 					pool.stop.Store(true)
+
 					return
 				case task := <-pool.taskQueue:
 					if pool.stop.Load() {
 						fmt.Printf("No more tasks for [%s] to run...\n", pool.label)
+
 						return
 					}
 					if task == nil {
 						fmt.Printf("Got nil task for [%s], shutdown...\n", pool.label)
+
 						return
 					}
 					fmt.Printf("Schedule new task for [%s]: [%d]\n", pool.label, counter.Add(1))
@@ -92,6 +95,7 @@ func NewPool(label string, numWorkers int) *Pool {
 			}
 		}()
 	}
+
 	return pool
 }
 
@@ -102,10 +106,12 @@ func (p *Pool) ScheduleTask(task Task) {
 			case <-p.ctx.Done():
 				fmt.Printf("Context done for [%s], shutdown scheduler\n", p.label)
 				p.stop.Store(true)
+
 				return
 			default:
 				if p.stop.Load() {
 					fmt.Printf("Stop for [%s], shutdown scheduler\n", p.label)
+
 					return
 				}
 				p.taskQueue <- task

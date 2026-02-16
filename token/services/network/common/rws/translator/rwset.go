@@ -108,6 +108,7 @@ func (w *RWSetWrapper) StateMustNotExist(key Key) error {
 	if len(tr) != 0 {
 		return errors.Errorf("state [%s:%s] already exists for [%s]", w.Namespace, key, w.TxID)
 	}
+
 	return nil
 }
 
@@ -122,6 +123,7 @@ func (w *RWSetWrapper) StateMustExist(key Key, version KeyVersion) error {
 	if len(h) == 0 {
 		return errors.Errorf("state [%s:%s] does not exist for [%s]", w.Namespace, key, w.TxID)
 	}
+
 	return nil
 }
 
@@ -134,6 +136,7 @@ func (h *HashedKeyTranslator) CreateTokenRequestKey(id string) (Key, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return h.hash(0, k)
 }
 
@@ -142,6 +145,7 @@ func (h *HashedKeyTranslator) CreateSetupKey() (Key, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return h.hash(1, k)
 }
 
@@ -150,6 +154,7 @@ func (h *HashedKeyTranslator) CreateSetupHashKey() (Key, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return h.hash(2, k)
 }
 
@@ -158,6 +163,7 @@ func (h *HashedKeyTranslator) CreateOutputSNKey(id string, index uint64, output 
 	if err != nil {
 		return "", err
 	}
+
 	return h.hash(3, k)
 }
 
@@ -166,6 +172,7 @@ func (h *HashedKeyTranslator) CreateOutputKey(id string, index uint64) (Key, err
 	if err != nil {
 		return "", err
 	}
+
 	return h.hash(4, k)
 }
 
@@ -174,6 +181,7 @@ func (h *HashedKeyTranslator) GetTransferMetadataSubKey(k string) (Key, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return h.hash(5, key)
 }
 
@@ -182,6 +190,7 @@ func (h *HashedKeyTranslator) CreateInputSNKey(id string) (Key, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return h.hash(6, k)
 }
 
@@ -190,6 +199,7 @@ func (h *HashedKeyTranslator) CreateIssueActionMetadataKey(key Key) (Key, error)
 	if err != nil {
 		return "", err
 	}
+
 	return h.hash(7, k)
 }
 
@@ -198,6 +208,7 @@ func (h *HashedKeyTranslator) CreateTransferActionMetadataKey(key Key) (Key, err
 	if err != nil {
 		return "", err
 	}
+
 	return h.hash(8, k)
 }
 
@@ -210,5 +221,6 @@ func (h *HashedKeyTranslator) hash(code byte, k string) (Key, error) {
 	hf := sha256.New()
 	hf.Write([]byte{code})
 	hf.Write([]byte(k))
+
 	return hex.EncodeToString(hf.Sum(nil)), nil
 }

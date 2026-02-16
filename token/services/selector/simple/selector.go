@@ -47,6 +47,7 @@ func (s *selector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q 
 	if ownerFilter == nil || len(ownerFilter.ID()) == 0 {
 		return nil, nil, errors.Errorf("no owner filter specified")
 	}
+
 	return s.selectByID(ctx, ownerFilter, q, tokenType)
 }
 
@@ -54,6 +55,7 @@ func (s *selector) Close() error { return nil }
 
 func (s *selector) concurrencyCheck(ctx context.Context, ids []*token2.ID) error {
 	_, err := s.queryService.GetTokens(ctx, ids...)
+
 	return err
 }
 
@@ -107,6 +109,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			if err != nil {
 				s.locker.UnlockIDs(ctx, toBeSpent...)
 				s.locker.UnlockIDs(ctx, toBeCertified...)
+
 				return nil, nil, errors.Wrap(err, "failed to convert quantity")
 			}
 
@@ -115,6 +118,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
 				logger.DebugfContext(ctx, "token [%s,%v] cannot be locked [%s]", q, tokenType, err)
+
 				continue
 			}
 
@@ -153,6 +157,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			// it is time to fail but how?
 			if concurrencyIssue {
 				logger.DebugfContext(ctx, "concurrency issue, some of the tokens might not exist anymore")
+
 				return nil, nil, errors.WithMessagef(
 					token.SelectorSufficientFundsButConcurrencyIssue,
 					"token selection failed: sufficient funds but concurrency issue, potential [%s] tokens of type [%s] were available", potentialSumWithLocked, tokenType,
@@ -162,6 +167,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			if target.Cmp(potentialSumWithLocked) <= 0 && potentialSumWithLocked.Cmp(sum) != 0 {
 				// funds are potentially enough but they are locked
 				logger.DebugfContext(ctx, "token selection: it is time to fail but how, sufficient funds but locked")
+
 				return nil, nil, errors.WithMessagef(
 					token.SelectorSufficientButLockedFunds,
 					"token selection failed: sufficient but partially locked funds, potential [%s] tokens of type [%s] are available", potentialSumWithLocked.Decimal(), tokenType,
@@ -170,6 +176,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 
 			// funds are insufficient
 			logger.DebugfContext(ctx, "token selection: it is time to fail but how, insufficient funds")
+
 			return nil, nil, errors.WithMessagef(
 				token.SelectorInsufficientFunds,
 				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum.Decimal(), tokenType,

@@ -48,6 +48,7 @@ func NewSender(signers []driver.Signer, tokens []*token.Token, ids []*token2.ID,
 	if (signers != nil && len(signers) != len(tokens)) || len(tokens) != len(inf) || len(ids) != len(inf) {
 		return nil, errors.Errorf("number of tokens to be spent does not match number of opening")
 	}
+
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil
 }
 
@@ -99,6 +100,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 			BlindingFactor: outtw[i].BlindingFactor,
 		}
 	}
+
 	return transfer, inf, nil
 }
 
@@ -112,6 +114,7 @@ func (s *Sender) SignTokenActions(raw []byte) ([][]byte, error) {
 			return nil, errors.Wrap(err, "failed to sign token requests")
 		}
 	}
+
 	return signatures, nil
 }
 
@@ -120,5 +123,6 @@ func getTokenData(tokens []*token.Token) []*math.G1 {
 	for i := range tokens {
 		tokenData[i] = tokens[i].Data
 	}
+
 	return tokenData
 }

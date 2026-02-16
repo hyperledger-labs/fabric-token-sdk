@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestPublicParameters_Precision(t *testing.T) {
@@ -89,7 +90,7 @@ func TestPublicParameters_Serialize(t *testing.T) {
 
 	serializedData, err := pp.Serialize()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte("serialized_data"), serializedData)
 }
 

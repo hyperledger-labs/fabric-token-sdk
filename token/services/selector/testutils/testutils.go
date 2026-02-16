@@ -56,6 +56,7 @@ func (m *MockIterator) Next() (*token2.UnspentToken, error) {
 	k := m.keys[m.pos]
 	t := m.qs.kvs[k]
 	m.pos++
+
 	return t, nil
 }
 
@@ -107,6 +108,7 @@ func (q *MockQueryService) GetUnspentToken(_ context.Context, tokenID *token2.ID
 	if !ok {
 		return nil
 	}
+
 	return t
 }
 
@@ -119,6 +121,7 @@ func (q *MockQueryService) GetUnspentTokens(_ context.Context, inputs ...*token2
 		}
 		ts[i] = t
 	}
+
 	return ts, nil
 }
 
@@ -131,6 +134,7 @@ func (q *MockQueryService) SpendableTokensIteratorBy(ctx context.Context, wallet
 	if err != nil {
 		return nil, err
 	}
+
 	return collections.Map[*token2.UnspentToken, *token2.UnspentTokenInWallet](it, func(ut *token2.UnspentToken) (*token2.UnspentTokenInWallet, error) {
 		return &token2.UnspentTokenInWallet{
 			Id:       ut.Id,

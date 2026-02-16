@@ -36,6 +36,7 @@ func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, startingBlock dri
 	keys := collections.Keys(evicted) // These are the state keys we are looking for
 	ch := make(chan []KeyInfo, len(keys))
 	go q.queryByID(ctx, keys, ch, startingBlock, evicted)
+
 	return ch, nil
 }
 
@@ -61,6 +62,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 		arg, err := json.Marshal(keys)
 		if err != nil {
 			logger.Error("failed marshalling args for query by ids [%v]: [%s]", keys, err)
+
 			return
 		}
 
@@ -69,12 +71,14 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 		res, err := chaincode.Query(QueryStates, arg).Query()
 		if err != nil {
 			logger.Errorf("failed querying by ids [%v]: [%s]", keys, err)
+
 			return
 		}
 		values := make([][]byte, 0, len(keys))
 		err = json.Unmarshal(res, &values)
 		if err != nil {
 			logger.Errorf("failed unmarshalling results for query by ids [%v]: [%s]", keys, err)
+
 			return
 		}
 		found := make([]KeyInfo, 0, len(values))
@@ -83,6 +87,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 			if len(value) == 0 {
 				startDelivery = true
 				notFound = append(notFound, keys[i])
+
 				continue
 			}
 			found = append(found, KeyInfo{
@@ -123,13 +128,16 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 			for namespace, keys := range keysByNS {
 				if !slices.Contains(rws.Namespaces(), namespace) {
 					logger.DebugfContext(ctx, "scanning [%s] does not contain namespace [%s]", tx.TxID(), namespace)
+
 					continue
 				}
 
+				//nolint:intrange
 				for i := 0; i < rws.NumWrites(namespace); i++ {
 					k, v, err := rws.GetWriteAt(namespace, i)
 					if err != nil {
 						logger.DebugfContext(ctx, "scanning [%s]: failed to get key [%s]", tx.TxID(), err)
+
 						return false, err
 					}
 					if slices.Contains(keys, k) {
@@ -153,6 +161,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 	)
 	if err != nil {
 		logger.Errorf("failed scanning blocks [%s], started from [%d]", err, startingBlock)
+
 		return
 	}
 	logger.DebugfContext(ctx, "finished scanning blocks starting from [%d]", startingBlock)

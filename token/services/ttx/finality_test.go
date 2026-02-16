@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package ttx_test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -160,7 +160,7 @@ func TestFinalityView(t *testing.T) {
 			name: "failed to compile options",
 			opts: []ttx.TxOption{
 				func(o *ttx.TxOptions) error {
-					return fmt.Errorf("boom")
+					return errors.New("boom")
 				},
 			},
 			expectError:   true,
@@ -169,7 +169,7 @@ func TestFinalityView(t *testing.T) {
 		{
 			name: "failed to get transaction db",
 			prepare: func(c *testFinalityViewContext) {
-				c.transactionDBProvider.TransactionDBReturns(nil, fmt.Errorf("db error"))
+				c.transactionDBProvider.TransactionDBReturns(nil, errors.New("db error"))
 			},
 			expectError:   true,
 			errorContains: "db error",
@@ -177,7 +177,7 @@ func TestFinalityView(t *testing.T) {
 		{
 			name: "failed to get audit db",
 			prepare: func(c *testFinalityViewContext) {
-				c.auditDBProvider.AuditDBReturns(nil, fmt.Errorf("db error"))
+				c.auditDBProvider.AuditDBReturns(nil, errors.New("db error"))
 			},
 			expectError:   true,
 			errorContains: "db error",
@@ -211,7 +211,7 @@ func TestFinalityView(t *testing.T) {
 			prepare: func(c *testFinalityViewContext) {
 				c.transactionDB.GetStatusReturnsOnCall(0, ttxdb.Pending, "", nil)                           // call check
 				c.transactionDB.GetStatusReturnsOnCall(1, ttxdb.Pending, "", nil)                           // dbFinality initial check
-				c.transactionDB.GetStatusReturnsOnCall(2, ttxdb.Unknown, "", fmt.Errorf("transient error")) // dbFinality timeout check 1
+				c.transactionDB.GetStatusReturnsOnCall(2, ttxdb.Unknown, "", errors.New("transient error")) // dbFinality timeout check 1
 				c.transactionDB.GetStatusReturnsOnCall(3, ttxdb.Confirmed, "", nil)                         // dbFinality timeout check 2
 				c.auditDB.GetStatusReturns(ttxdb.Unknown, "", nil)
 			},
@@ -222,7 +222,7 @@ func TestFinalityView(t *testing.T) {
 			name: "initial get status error then confirmed",
 			prepare: func(c *testFinalityViewContext) {
 				c.transactionDB.GetStatusReturnsOnCall(0, ttxdb.Pending, "", nil)                         // call check
-				c.transactionDB.GetStatusReturnsOnCall(1, ttxdb.Unknown, "", fmt.Errorf("initial error")) // dbFinality initial check
+				c.transactionDB.GetStatusReturnsOnCall(1, ttxdb.Unknown, "", errors.New("initial error")) // dbFinality initial check
 				c.transactionDB.GetStatusReturnsOnCall(2, ttxdb.Confirmed, "", nil)                       // dbFinality timeout check
 				c.auditDB.GetStatusReturns(ttxdb.Unknown, "", nil)
 			},

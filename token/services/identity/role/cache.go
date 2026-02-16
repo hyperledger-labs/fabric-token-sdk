@@ -43,6 +43,7 @@ func NewRecipientDataCache(Logger logging.Logger, backed RecipientDataBackendFun
 		cacheTimeout: time.Millisecond * 5,
 		metrics:      metrics,
 	}
+
 	return ci
 }
 
