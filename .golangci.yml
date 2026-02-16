@@ -2,7 +2,7 @@ version: "2"
 linters:
   enable:
     - canonicalheader # Canonicalheader checks whether net/http.Header uses canonical header. [auto-fix]
-#    - dupword # Checks for duplicate words in the source code. [fast, auto-fix]
+    - dupword # Checks for duplicate words in the source code. [fast, auto-fix]
 #    - errorlint # Find code that can cause problems with the error wrapping scheme introduced in Go 1.13. [auto-fix]
 #    - exptostd # Detects functions from golang.org/x/exp/ that can be replaced by std functions. [auto-fix]
 #    - ginkgolinter # Enforces standards of using ginkgo and gomega. [auto-fix]
