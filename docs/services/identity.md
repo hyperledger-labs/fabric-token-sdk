@@ -20,27 +20,6 @@ Rather than interacting with cryptographic primitives directly, services rely
 on the Identity Service interfaces, allowing different identity implementations
 to be plugged in transparently.
 
-### Example: Custom KeyManager Implementation
-
-Below is a simplified example illustrating how a custom identity provider could
-be structured. The exact implementation details may vary depending on the
-identity type and storage backend.
-
-```go
-type CustomIdentityProvider struct {
-    // custom fields
-}
-
-func (c *CustomIdentityProvider) Sign(ctx context.Context, msg []byte) ([]byte, error) {
-    // custom signing logic
-    return nil, nil
-}
-
-func (c *CustomIdentityProvider) Verify(ctx context.Context, msg, signature []byte) error {
-    // custom verification logic
-    return nil
-}
-
 ## Architecture
 
 The Identity Service is designed to implement the **Driver API** interfaces defined in `token/driver/wallet.go`. 
