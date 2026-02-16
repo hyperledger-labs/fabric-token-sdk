@@ -89,20 +89,20 @@ func (c *serviceListenerManagerConfig) DeliveryMapperParallelism() int {
 	return DefaultDeliveryMapperParallelism
 }
 
-func (c *serviceListenerManagerConfig) DeliveryLRUSize() int {
-	if v := c.c.GetInt(DeliveryLRUSize); v >= 0 {
-		return v
-	}
-
-	return DefaultDeliveryLRUSize
-}
-
 func (c *serviceListenerManagerConfig) DeliveryBlockProcessParallelism() int {
 	if v := c.c.GetInt(DeliveryBlockProcessParallelism); v > 0 {
 		return v
 	}
 
 	return DefaultDeliveryBlockProcessParallelism
+}
+
+func (c *serviceListenerManagerConfig) DeliveryLRUSize() int {
+	if v := c.c.GetInt(DeliveryLRUSize); v >= 0 {
+		return v
+	}
+
+	return DefaultDeliveryLRUSize
 }
 
 func (c *serviceListenerManagerConfig) DeliveryLRUBuffer() int {
