@@ -233,7 +233,7 @@ func prepareInputsForZKIssue(pp *setup.PublicParams) ([]*token.Metadata, []*math
 
 	tokens := make([]*math.G1, len(values))
 	for i := range values {
-		tokens[i] = newToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
+		tokens[i] = newToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve) // #nosec G115
 	}
 	return token.NewMetadata(pp.Curve, "ABC", values, bf), tokens
 }

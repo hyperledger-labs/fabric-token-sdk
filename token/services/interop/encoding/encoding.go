@@ -44,7 +44,7 @@ func (e Encoding) String() string {
 	case Hex:
 		return "Hex"
 	default:
-		return "unknown Encoding value " + strconv.Itoa(int(e))
+		return "unknown Encoding value " + strconv.FormatUint(uint64(e), 10)
 	}
 }
 
@@ -57,7 +57,7 @@ func (e Encoding) New() EncodingFunc {
 			return f()
 		}
 	}
-	logger.Errorf("requested Encoding function %s is unavailable", strconv.Itoa(int(e)))
+	logger.Errorf("requested Encoding function %s is unavailable", strconv.FormatUint(uint64(e), 10))
 	return nil
 }
 

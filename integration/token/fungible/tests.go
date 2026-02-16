@@ -36,7 +36,11 @@ import (
 )
 
 const (
-	DLogNamespace     = "dlog_token_chaincode"
+	// DLogNamespace is the default name for the namespace where the token chaincode is deployed when using the dlog driver
+	// #nosec G101 no passwords here
+	DLogNamespace = "dlog_token_chaincode"
+	// FabTokenNamespace is the default name for the namespace where the token chaincode is deployed when using the fabtoken driver
+	// #nosec G101  no passwords here
 	FabTokenNamespace = "fabtoken_token_chaincode"
 )
 

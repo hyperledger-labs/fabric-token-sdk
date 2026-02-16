@@ -39,7 +39,7 @@ func prepareTokens(t *testing.T, pp []*math.G1) []*math.G1 {
 
 	tokens := make([]*math.G1, len(values))
 	for i := range values {
-		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp, curve)
+		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp, curve) // #nosec G115
 	}
 	return tokens
 }

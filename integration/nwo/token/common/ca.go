@@ -194,7 +194,7 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 	tmsID := i.TMS.ID()
 	logger.Debugf("Generating owner identity [%s] for [%s]", owner, tmsID)
 	userOutput := filepath.Join(i.TokenPlatform.TokenDir(), "crypto", tmsID, "idemix", owner)
-	if err := os.MkdirAll(userOutput, 0766); err != nil {
+	if err := os.MkdirAll(userOutput, 0750); err != nil {
 		return res, err
 	}
 
@@ -241,10 +241,10 @@ func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, er
 
 func (i *IdemixCASupport) GenerateConfiguration() error {
 	fabricCARoot := filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server")
-	if err := os.MkdirAll(fabricCARoot, 0766); err != nil {
+	if err := os.MkdirAll(fabricCARoot, 0750); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(fabricCARoot, "msp", "keystore"), 0766); err != nil {
+	if err := os.MkdirAll(filepath.Join(fabricCARoot, "msp", "keystore"), 0750); err != nil {
 		return err
 	}
 	if err := CopyFile(filepath.Join(i.IssuerCryptoMaterialPath, "ca", "IssuerPublicKey"), filepath.Join(fabricCARoot, "IssuerPublicKey")); err != nil {
@@ -276,10 +276,10 @@ func (i *IdemixCASupport) GenerateConfiguration() error {
 	if err := t.Execute(io.MultiWriter(ext), i); err != nil {
 		return errors.Wrap(err, "failed to generate fabric-ca-server configuration")
 	}
-	if err := os.MkdirAll(filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server"), 0766); err != nil {
+	if err := os.MkdirAll(filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server"), 0750); err != nil {
 		return errors.Wrap(err, "failed to create fabric-ca-server configuration folder")
 	}
-	if err := os.WriteFile(filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "fabric-ca-server.yaml"), ext.Bytes(), 0766); err != nil {
+	if err := os.WriteFile(filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "fabric-ca-server.yaml"), ext.Bytes(), 0644); err != nil {
 		return errors.Wrap(err, "failed to write fabric-ca-server configuration")
 	}
 	return nil

@@ -131,7 +131,7 @@ func init() {
 		c := math.Curves[id]
 		values := make(map[uint64]*math.Zr, NumBits)
 		for i := 0; i < NumBits; i++ {
-			values[uint64(i)] = c.NewZrFromUint64(uint64(i))
+			values[uint64(i)] = c.NewZrFromUint64(uint64(i)) // #nosec G115
 		}
 		valueCache[id] = values
 
@@ -141,7 +141,7 @@ func init() {
 			if i == 0 {
 				powers[0] = values[1]
 			} else {
-				powers[uint64(i)] = c.ModMul(values[2], powers[uint64(i-1)], c.GroupOrder)
+				powers[uint64(i)] = c.ModMul(values[2], powers[uint64(i-1)], c.GroupOrder) // #nosec G115
 			}
 		}
 		powerCache[id] = powers
@@ -152,8 +152,8 @@ func init() {
 		ip2s := make(map[uint64]*math.Zr, NumBits)
 		for i := 0; i < NumBits; i++ {
 			// ip2 = ip2 + 2^i
-			ip2 = c.ModAdd(ip2, powers[uint64(i)], c.GroupOrder)
-			ip2s[uint64(i+1)] = ip2
+			ip2 = c.ModAdd(ip2, powers[uint64(i)], c.GroupOrder) // #nosec G115
+			ip2s[uint64(i+1)] = ip2                              // #nosec G115
 		}
 		sumOfPowerCache[id] = ip2s
 	}

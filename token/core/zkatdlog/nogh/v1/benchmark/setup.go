@@ -172,7 +172,7 @@ func (c *SetupConfigurations) SaveTo(dir string) error {
 		return errors.Errorf("nil SetupConfigurations")
 	}
 	// Ensure target base directory exists
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return errors.Wrapf(err, "failed creating base dir [%s]")
 	}
 
@@ -206,7 +206,7 @@ func (c *SetupConfigurations) SaveTo(dir string) error {
 
 		// create target directory and write
 		targetDir := filepath.Join(dir, filepath.Base(k))
-		if err := os.MkdirAll(targetDir, 0o755); err != nil {
+		if err := os.MkdirAll(targetDir, 0750); err != nil {
 			return errors.WithMessagef(err, "failed creating dir for key: %s", k)
 		}
 

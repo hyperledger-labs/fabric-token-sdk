@@ -403,7 +403,7 @@ func TestRegisterLocalIdentities_SuccessAndNoValidFound(t *testing.T) {
 	}()
 
 	sub := filepath.Join(base, "alice")
-	err := os.Mkdir(sub, 0o755)
+	err := os.Mkdir(sub, 0o750)
 	assert.NoError(t, err)
 
 	ip := &mock.IdentityProvider{}

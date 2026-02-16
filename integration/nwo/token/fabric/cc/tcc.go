@@ -27,6 +27,8 @@ import (
 )
 
 const (
+	// DefaultTokenChaincode is the default path to the token chaincode.
+	// #nosec G101 no passwords here
 	DefaultTokenChaincode                    = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main"
 	DefaultTokenChaincodeParamsReplaceSuffix = "/token/services/network/fabric/tcc/params.go"
 )
@@ -131,7 +133,7 @@ func (p *GenericBackend) UpdatePublicParams(tms *topology3.TMS, ppRaw []byte) {
 		packageDir,
 		cc.Chaincode.Name+newChaincodeVersion+".tar.gz",
 	)
-	gomega.Expect(os.MkdirAll(packageDir, 0766)).ToNot(gomega.HaveOccurred())
+	gomega.Expect(os.MkdirAll(packageDir, 0750)).ToNot(gomega.HaveOccurred())
 
 	paramsFile := PublicParamsTemplate(ppRaw)
 
@@ -183,7 +185,7 @@ func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 		packageDir,
 		cc.Chaincode.Name+".tar.gz",
 	)
-	gomega.Expect(os.MkdirAll(packageDir, 0766)).ToNot(gomega.HaveOccurred())
+	gomega.Expect(os.MkdirAll(packageDir, 0750)).ToNot(gomega.HaveOccurred())
 	paramsFile := PublicParamsTemplate(ppRaw)
 	port := p.TokenPlatform.GetContext().ReservePort()
 
