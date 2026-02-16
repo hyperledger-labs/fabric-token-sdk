@@ -326,7 +326,7 @@ func analyzeResults(
 
 		for curr != nil {
 			limit := curr.idx
-			totalOps += uint64(limit)
+			totalOps += uint64(limit) // #nosec G115
 			for k := 0; k < limit; k++ {
 				lat := curr.data[k]
 				if lat == 0 {
@@ -356,7 +356,7 @@ func analyzeResults(
 	}
 
 	opsPerSecReal := float64(totalOps) / duration.Seconds()
-	avgLatency := time.Duration(totalTimeNs / int64(totalOps))
+	avgLatency := time.Duration(totalTimeNs / int64(totalOps)) // #nosec G115
 	opsPerSecPure := 0.0
 	if avgLatency > 0 {
 		opsPerSecPure = float64(cfg.Workers) / avgLatency.Seconds()
@@ -429,7 +429,7 @@ func analyzeResults(
 		AllocsPerOp:   memAllocs,
 		AllocRateMBPS: allocRate,
 		NumGC:         numGC,
-		GCPauseTotal:  time.Duration(pauseNs),
+		GCPauseTotal:  time.Duration(pauseNs), // #nosec G115
 		GCOverhead:    gcOverhead,
 		ErrorCount:    totalErrors,
 		ErrorRate:     (float64(totalErrors) / float64(totalOps)) * 100,

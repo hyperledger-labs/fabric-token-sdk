@@ -133,7 +133,7 @@ func newIssuerEnv(pp *v1.PublicParams, numOutputs int) *issuerEnv {
 	outputValues := make([]uint64, numOutputs)
 	outputOwners := make([][]byte, numOutputs)
 	for i := range outputValues {
-		outputValues[i] = uint64(i*10 + 10)
+		outputValues[i] = uint64(i*10 + 10) // #nosec G115
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
@@ -151,7 +151,7 @@ func newIssuerProofVerificationEnv(tb testing.TB, pp *v1.PublicParams, numOutput
 	outputValues := make([]uint64, numOutputs)
 	outputOwners := make([][]byte, numOutputs)
 	for i := range outputValues {
-		outputValues[i] = uint64(i*10 + 10)
+		outputValues[i] = uint64(i*10 + 10) // #nosec G115
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
@@ -228,7 +228,7 @@ func prepareZKIssue(t *testing.T, bits uint64, curveID math.CurveID, numOutputs 
 func prepareInputsForZKIssue(pp *v1.PublicParams, numOutputs int) ([]*token.Metadata, []*math.G1) {
 	values := make([]uint64, numOutputs)
 	for i := range numOutputs {
-		values[i] = uint64(i*10 + 10)
+		values[i] = uint64(i*10 + 10) //nolint:gosec
 	}
 	curve := math.Curves[pp.Curve]
 	rand, _ := curve.Rand()
@@ -239,7 +239,7 @@ func prepareInputsForZKIssue(pp *v1.PublicParams, numOutputs int) ([]*token.Meta
 
 	tokens := make([]*math.G1, len(values))
 	for i := range values {
-		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
+		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve) // #nosec G115
 	}
 	return token.NewMetadata(pp.Curve, "ABC", values, bf), tokens
 }

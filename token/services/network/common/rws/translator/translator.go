@@ -299,7 +299,7 @@ func (t *Translator) commitIssueAction(ctx context.Context, issueAction IssueAct
 	}
 	for i, output := range outputs {
 		// store output
-		outputID, err := t.KeyTranslator.CreateOutputKey(t.TxID, base+uint64(i))
+		outputID, err := t.KeyTranslator.CreateOutputKey(t.TxID, base+uint64(i)) // #nosec G115
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
@@ -309,7 +309,7 @@ func (t *Translator) commitIssueAction(ctx context.Context, issueAction IssueAct
 		if graphNonHiding {
 			// store also the serial number of this output.
 			// the serial number is used to check that the token exists at time of spending
-			sn, err := t.KeyTranslator.CreateOutputSNKey(t.TxID, base+uint64(i), output)
+			sn, err := t.KeyTranslator.CreateOutputSNKey(t.TxID, base+uint64(i), output) // #nosec G115
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
@@ -358,7 +358,7 @@ func (t *Translator) commitTransferAction(ctx context.Context, transferAction Tr
 			if err != nil {
 				return errors.Wrapf(err, "error serializing transfer output at index [%d]", i)
 			}
-			outputID, err := t.KeyTranslator.CreateOutputKey(t.TxID, base+uint64(i))
+			outputID, err := t.KeyTranslator.CreateOutputKey(t.TxID, base+uint64(i)) // #nosec G115
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
@@ -369,7 +369,7 @@ func (t *Translator) commitTransferAction(ctx context.Context, transferAction Tr
 			if graphNonHiding {
 				// store also the serial number of this output.
 				// the serial number is used to check that the token exists at time of spending
-				sn, err := t.KeyTranslator.CreateOutputSNKey(t.TxID, base+uint64(i), output)
+				sn, err := t.KeyTranslator.CreateOutputSNKey(t.TxID, base+uint64(i), output) // #nosec G115
 				if err != nil {
 					return errors.Errorf("error creating output ID: %s", err)
 				}
@@ -401,7 +401,7 @@ func (t *Translator) commitTransferAction(ctx context.Context, transferAction Tr
 		}
 	}
 
-	t.counter = t.counter + uint64(transferAction.NumOutputs())
+	t.counter = t.counter + uint64(transferAction.NumOutputs()) // #nosec G115
 	return nil
 }
 

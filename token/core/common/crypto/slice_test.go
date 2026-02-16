@@ -113,7 +113,7 @@ func BenchmarkAppendFixed32_Naive(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var dst []byte
 		for _, v := range data {
-			dst = binary.LittleEndian.AppendUint32(dst, uint32(len(v)))
+			dst = binary.LittleEndian.AppendUint32(dst, uint32(len(v))) // #nosec G115
 			dst = append(dst, v...)
 		}
 	}

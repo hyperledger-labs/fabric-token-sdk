@@ -76,7 +76,7 @@ func keyPairGen(args []string) error {
 	}
 
 	// 3. store key-pair under output
-	if err := os.MkdirAll(output, 0766); err != nil {
+	if err := os.MkdirAll(output, 0750); err != nil {
 		return errors.Wrap(err, "failed making output dir")
 	}
 	skPath := filepath.Join(output, "certifier.sk")

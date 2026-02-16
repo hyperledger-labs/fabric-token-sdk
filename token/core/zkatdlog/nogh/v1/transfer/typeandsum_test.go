@@ -191,13 +191,13 @@ func prepareInputsOutputs(inValues, outValues []uint64, inBF, outBF []*math.Zr, 
 
 	for i := 0; i < len(inputs); i++ {
 		inputs[i] = pp[0].Mul(c.HashToZr([]byte(ttype)))
-		inputs[i].Add(pp[1].Mul(c.NewZrFromInt(int64(inValues[i]))))
+		inputs[i].Add(pp[1].Mul(c.NewZrFromInt(int64(inValues[i])))) // #nosec G115
 		inputs[i].Add(pp[2].Mul(inBF[i]))
 	}
 
 	for i := 0; i < len(outputs); i++ {
 		outputs[i] = pp[0].Mul(c.HashToZr([]byte(ttype)))
-		outputs[i].Add(pp[1].Mul(c.NewZrFromInt(int64(outValues[i]))))
+		outputs[i].Add(pp[1].Mul(c.NewZrFromInt(int64(outValues[i])))) // #nosec G115
 		outputs[i].Add(pp[2].Mul(outBF[i]))
 	}
 	return inputs, outputs

@@ -76,7 +76,7 @@ func (test *Test[T]) GoBenchmark(b *testing.B, newEnv func(*Case) (T, error), wo
 			n := SetupSamples()
 			envs := make([]T, 0, n)
 			if n == 0 {
-				n = uint(b.N)
+				n = uint(b.N) // #nosec G115
 			}
 			if n > 0 {
 				for range n {
@@ -87,7 +87,7 @@ func (test *Test[T]) GoBenchmark(b *testing.B, newEnv func(*Case) (T, error), wo
 			}
 
 			for b.Loop() {
-				require.NoError(b, work(b.Context(), envs[rand.Intn(int(n))]))
+				require.NoError(b, work(b.Context(), envs[rand.Intn(int(n))])) // #nosec G115
 			}
 		})
 	}
@@ -112,7 +112,7 @@ func (test *Test[T]) GoBenchmarkParallel(b *testing.B, newEnv func(*Case) (T, er
 		n := SetupSamples()
 		envs := make([]T, 0, n)
 		if n == 0 {
-			n = uint(b.N)
+			n = uint(b.N) // #nosec G115
 		}
 		if n > 0 {
 			for range n {
@@ -124,7 +124,7 @@ func (test *Test[T]) GoBenchmarkParallel(b *testing.B, newEnv func(*Case) (T, er
 
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				require.NoError(b, work(b.Context(), envs[rand.Intn(int(n))]))
+				require.NoError(b, work(b.Context(), envs[rand.Intn(int(n))])) // #nosec G115
 			}
 		})
 	}
@@ -163,7 +163,7 @@ func (test *Test[T]) RunBenchmark(t *testing.T, newEnv func(*Case) (T, error), w
 					3*time.Second),
 				func() T {
 					if n > 0 {
-						return envs[rand.Intn(int(n))]
+						return envs[rand.Intn(int(n))] // #nosec G115
 					}
 					e, err := newEnv(tc.BenchmarkCase)
 					require.NoError(t, err)

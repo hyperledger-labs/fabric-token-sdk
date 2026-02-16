@@ -231,7 +231,7 @@ func prepareInputsForZKTransfer(pp *v1.PublicParams, numInputs int, numOutputs i
 	// prepare inputs
 	sumInputs := uint64(0)
 	for i := range numInputs {
-		v := uint64(i*10 + 500)
+		v := uint64(i*10 + 500) //nolint:gosec
 		sumInputs += v
 		inValues[i] = v
 	}

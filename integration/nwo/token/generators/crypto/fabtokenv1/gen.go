@@ -202,7 +202,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 			in, err := os.Open(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			gomega.Expect(os.MkdirAll(filepath.Join(idOutput, x509.KeystoreFullFolder), 0766)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(os.MkdirAll(filepath.Join(idOutput, x509.KeystoreFullFolder), 0750)).NotTo(gomega.HaveOccurred())
 			out, err := os.Create(filepath.Join(idOutput, x509.KeystoreFullFolder, x509.PrivateKeyFileName))
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			_, err = io.Copy(out, in)
@@ -239,7 +239,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 }
 
 func (d *CryptoMaterialGenerator) GenerateCryptoConfig(output string, layout *Layout) {
-	gomega.Expect(os.MkdirAll(output, 0770)).NotTo(gomega.HaveOccurred())
+	gomega.Expect(os.MkdirAll(output, 0750)).NotTo(gomega.HaveOccurred())
 	crypto, err := os.Create(filepath.Join(output, "crypto-config.yaml"))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	defer utils.IgnoreError(crypto.Close)

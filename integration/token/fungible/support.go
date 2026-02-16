@@ -262,12 +262,12 @@ func matchTransactionRecord(tx *ttxdb.TransactionRecord, txExpected TransactionR
 
 func CheckBalanceAndHolding(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, auditor *token3.NodeReference) {
 	CheckBalance(network, ref, wallet, typ, expected)
-	CheckHolding(network, ref, wallet, typ, int64(expected), auditor)
+	CheckHolding(network, ref, wallet, typ, int64(expected), auditor) //nolint:gosec
 }
 
 func CheckBalanceAndHoldingForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, auditor *token3.NodeReference, tmsID *token2.TMSID) {
 	CheckBalanceForTMSID(network, ref, wallet, typ, expected, tmsID)
-	CheckHoldingForTMSID(network, ref, wallet, typ, int64(expected), auditor, tmsID)
+	CheckHoldingForTMSID(network, ref, wallet, typ, int64(expected), auditor, tmsID) //nolint:gosec
 }
 
 func CheckBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
