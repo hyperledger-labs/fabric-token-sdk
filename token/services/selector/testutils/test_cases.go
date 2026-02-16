@@ -201,7 +201,6 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 	wg.Add(len(quantities) * len(replicas))
 	for _, replica := range replicas {
 		for _, quantity := range quantities {
-			quantity, replica := quantity, replica
 			txID := newTxID()
 			sel, err := replica.NewSelector(txID)
 			assert.NoError(t, err)
