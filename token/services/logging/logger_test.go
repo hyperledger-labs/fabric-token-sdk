@@ -28,7 +28,7 @@ func TestLoggerDebugAllocs(t *testing.T) {
 	allocs := testing.AllocsPerRun(runs, func() {
 		logDebug()
 	})
-	assert.GreaterOrEqual(t, allocs, 2)
+	assert.GreaterOrEqual(t, allocs, float64(2))
 	allocs = testing.AllocsPerRun(runs, func() {
 		logDebugf()
 	})
