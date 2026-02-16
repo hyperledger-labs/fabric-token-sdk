@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tests: [unit-tests, unit-tests-race, unit-tests-regression]
+        tests: [unit-tests-race, unit-tests-regression]
 
     steps:
       - name: Checkout code
@@ -69,13 +69,16 @@ jobs:
       - name: Install Testing Docker Images
         run: make testing-docker-images
 
-      - name: Run ${{ matrix.tests }}
-        run: make ${{ matrix.tests }}
+      - name: Unit Tests with Coverage
+        run: make unit-tests
 
       - name: Send coverage to Coveralls
         uses: shogo82148/actions-goveralls@v1
         with:
           path-to-profile: profile.cov
+
+      - name: Run ${{ matrix.tests }}
+        run: make ${{ matrix.tests }}
 
   itest:
     needs: checks
