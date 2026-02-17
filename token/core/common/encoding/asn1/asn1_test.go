@@ -240,7 +240,7 @@ func TestArray(t *testing.T) {
 func TestASN1Errors(t *testing.T) {
 	// UnmarshalTo error - invalid asn1
 	_, err := UnmarshalTo[Serializer]([]byte{0, 1, 2}, func() Serializer { return &Rectangle{} })
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal values")
 
 	// UnmarshalTo error - deserialize failure
@@ -248,17 +248,17 @@ func TestASN1Errors(t *testing.T) {
 	raw, err := asn1.Marshal(v)
 	require.NoError(t, err)
 	_, err = UnmarshalTo[Serializer](raw, func() Serializer { return &Failure{} })
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to deserialize value")
 
 	// MarshalMath error - empty
 	_, err = MarshalMath()
-	assert.Error(t, err)
-	assert.EqualError(t, err, "cannot marshal empty values")
+	require.Error(t, err)
+	require.EqualError(t, err, "cannot marshal empty values")
 
 	// NewUnmarshaller error
 	_, err = NewUnmarshaller([]byte{0, 1, 2})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal values")
 
 	// Next error - invalid element
@@ -269,31 +269,31 @@ func TestASN1Errors(t *testing.T) {
 	u, err := NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextZr()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal element")
 
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextG1()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal element")
 
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextG2()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal element")
 
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextZrArray()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal element")
 
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextG1Array()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal element")
 
 	// Next error - trailing bytes
@@ -308,7 +308,7 @@ func TestASN1Errors(t *testing.T) {
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.Next()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "values should not have trailing bytes")
 
 	// NextZrArray error - invalid Raw (not Values)
@@ -321,7 +321,7 @@ func TestASN1Errors(t *testing.T) {
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextZrArray()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to serialize element")
 
 	// NextZrArray error - trailing bytes in Raw
@@ -338,7 +338,7 @@ func TestASN1Errors(t *testing.T) {
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextZrArray()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "values should not have trailing bytes")
 
 	// NextG1Array error - invalid Raw (not Values)
@@ -351,7 +351,7 @@ func TestASN1Errors(t *testing.T) {
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextG1Array()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to deserialize element")
 
 	// NextG1Array error - trailing bytes in Raw
@@ -368,7 +368,7 @@ func TestASN1Errors(t *testing.T) {
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextG1Array()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "values should not have trailing bytes")
 
 	// NextG1Array error - NewG1FromBytes failure
@@ -384,11 +384,11 @@ func TestASN1Errors(t *testing.T) {
 	u, err = NewUnmarshaller(raw)
 	require.NoError(t, err)
 	_, err = u.NextG1Array()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to deserialize element")
 
 	// NewElementArray error - empty
 	_, err = NewElementArray([]*math.Zr{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.EqualError(t, err, "elements cannot be empty")
 }
