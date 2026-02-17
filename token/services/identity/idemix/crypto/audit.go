@@ -16,35 +16,49 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 )
 
+// Schema represents the version identifier for the credential schema.
 type Schema = string
 
+// AuditInfo contains cryptographic audit data for an Idemix identity.
 type AuditInfo struct {
+	// Enrollment ID pseudonym audit data
 	EidNymAuditData *csp.AttrNymAuditData
-	RhNymAuditData  *csp.AttrNymAuditData
-	Attributes      [][]byte
+	// Revocation handle pseudonym audit data
+	RhNymAuditData *csp.AttrNymAuditData
+	// Credential attributes (OU, Role, EnrollmentID, RevocationHandle)
+	Attributes [][]byte
 
-	Csp             csp.BCCSP      `json:"-"`
-	IssuerPublicKey csp.Key        `json:"-"`
-	SchemaManager   schema.Manager `json:"-"`
-	Schema          string
+	// Cryptographic service provider
+	Csp csp.BCCSP `json:"-"`
+	// Credential issuer's public key
+	IssuerPublicKey csp.Key `json:"-"`
+	// Schema-specific operations manager
+	SchemaManager schema.Manager `json:"-"`
+	// Credential schema version
+	Schema string
 }
 
+// Bytes serializes the AuditInfo to JSON format.
 func (a *AuditInfo) Bytes() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// FromBytes deserializes the AuditInfo from JSON format.
 func (a *AuditInfo) FromBytes(raw []byte) error {
 	return json.Unmarshal(raw, a)
 }
 
+// EnrollmentID returns the enrollment ID from Attributes[2].
 func (a *AuditInfo) EnrollmentID() string {
 	return string(a.Attributes[2])
 }
 
+// RevocationHandle returns the revocation handle from Attributes[3].
 func (a *AuditInfo) RevocationHandle() string {
 	return string(a.Attributes[3])
 }
 
+// Match verifies the identity matches this audit info by checking EID and RH pseudonyms.
 func (a *AuditInfo) Match(_ context.Context, id []byte) error {
 	serialized := new(SerializedIdemixIdentity)
 	err := proto.Unmarshal(id, serialized)
@@ -95,6 +109,7 @@ func (a *AuditInfo) Match(_ context.Context, id []byte) error {
 	return nil
 }
 
+// DeserializeAuditInfo deserializes and validates audit information from JSON.
 func DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 	auditInfo := &AuditInfo{}
 	err := auditInfo.FromBytes(raw)

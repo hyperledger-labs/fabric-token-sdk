@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockKVS is a simple mock implementation of keystore.KVS for testing
+// mockKVS is an in-memory mock implementation of keystore.KVS for testing.
 type mockKVS struct {
 	data map[string][]byte
 }
@@ -49,6 +49,7 @@ func (m *mockKVS) Delete(key string) error {
 	return nil
 }
 
+// TestGetCurveAndTranslator verifies curve and translator retrieval for all supported curve IDs.
 func TestGetCurveAndTranslator(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -128,6 +129,7 @@ func TestGetCurveAndTranslator(t *testing.T) {
 	}
 }
 
+// TestNewKeyStore verifies key store creation for supported curves.
 func TestNewKeyStore(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -167,6 +169,7 @@ func TestNewKeyStore(t *testing.T) {
 	}
 }
 
+// TestNewBCCSP verifies BCCSP creation for standard and Aries curves.
 func TestNewBCCSP(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -206,9 +209,9 @@ func TestNewBCCSP(t *testing.T) {
 	}
 }
 
-// TestNewBCCSP_WithNilKeyStore tests error handling when keyStore is nil
+// TestNewBCCSP_WithNilKeyStore verifies error handling with nil key store.
 func TestNewBCCSP_WithNilKeyStore(t *testing.T) {
-	// This should trigger an error from idemix.New() or idemix.NewAries()
+	// Should trigger error from idemix.New() or idemix.NewAries()
 	// when they try to use a nil keyStore
 	csp, err := NewBCCSP(nil, math.BN254)
 

@@ -18,6 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// TestAuditInfo_Serialization verifies AuditInfo serialization and deserialization.
 func TestAuditInfo_Serialization(t *testing.T) {
 	auditInfo := &AuditInfo{
 		Attributes: [][]byte{
@@ -51,6 +52,7 @@ func TestAuditInfo_Serialization(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// TestAuditInfo_Accessors verifies EnrollmentID and RevocationHandle accessors.
 func TestAuditInfo_Accessors(t *testing.T) {
 	auditInfo := &AuditInfo{
 		Attributes: [][]byte{
@@ -65,7 +67,7 @@ func TestAuditInfo_Accessors(t *testing.T) {
 	assert.Equal(t, "test-revocation-handle", auditInfo.RevocationHandle())
 }
 
-// Test in/valid de/serialization cases for AuditInfo
+// TestDeserializeAuditInfo verifies audit info deserialization and error handling.
 func TestDeserializeAuditInfo(t *testing.T) {
 	t.Run("Valid audit info", func(t *testing.T) {
 		original := &AuditInfo{
@@ -99,8 +101,9 @@ func TestDeserializeAuditInfo(t *testing.T) {
 	})
 }
 
+// TestAuditInfo_Match verifies identity proof matching against audit info.
 func TestAuditInfo_Match(t *testing.T) {
-	// Helper to create valid identity bytes
+	// Helper to create identity bytes
 	createIdentity := func() []byte {
 		serialized := &SerializedIdemixIdentity{
 			NymPublicKey: []byte("fake-nym-key"),
@@ -133,10 +136,10 @@ func TestAuditInfo_Match(t *testing.T) {
 
 	t.Run("SchemaManager errors", func(t *testing.T) {
 		tests := []struct {
-			name          string
-			setupMock     func(*mock.SchemaManager, *mock.BCCSP)
+			name           string
+			setupMock      func(*mock.SchemaManager, *mock.BCCSP)
 			setupAuditInfo func(*AuditInfo)
-			expectedError string
+			expectedError  string
 		}{
 			{
 				name: "EidNymAuditOpts error",

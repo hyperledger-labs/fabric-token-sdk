@@ -21,8 +21,9 @@ import (
 	"github.com/test-go/testify/require"
 )
 
+// TestIdentityCache verifies basic cache functionality and identity retrieval.
 func TestIdentityCache(t *testing.T) {
-	// Use MockLogger to enable debug logging and cover debug code paths
+	// Use MockLogger to cover debug code paths
 	originalLogger := logger
 	defer func() { logger = originalLogger }()
 	logger = &logging.MockLogger{}
@@ -44,6 +45,7 @@ func TestIdentityCache(t *testing.T) {
 	assert.Equal(t, []byte("audit"), identityDescriptor.AuditInfo)
 }
 
+// TestIdentityCacheForRace tests concurrent cache access for thread-safety.
 func TestIdentityCacheForRace(t *testing.T) {
 	c := NewIdentityCache(func(context.Context, []byte) (*idriver.IdentityDescriptor, error) {
 		return &idriver.IdentityDescriptor{
@@ -70,7 +72,7 @@ func TestIdentityCacheForRace(t *testing.T) {
 	wg.Wait()
 }
 
-// TestFetchIdentityFromBackend tests the fetchIdentityFromBackend function
+// TestFetchIdentityFromBackend verifies backend fetch when audit info doesn't match.
 func TestFetchIdentityFromBackend(t *testing.T) {
 	expectedIdentity := &idriver.IdentityDescriptor{
 		Identity:  []byte("backend identity"),
@@ -81,14 +83,14 @@ func TestFetchIdentityFromBackend(t *testing.T) {
 		return expectedIdentity, nil
 	}, 10, []byte("cache audit"), NewMetrics(&disabled.Provider{}))
 
-	// Call with different audit info to trigger fetchIdentityFromBackend in c.Identity
+	// Call with different audit info to trigger backend fetch
 	identityDescriptor, err := c.Identity(context.Background(), []byte("different audit"))
 	assert.NoError(t, err)
 	assert.Equal(t, expectedIdentity.Identity, identityDescriptor.Identity)
 	assert.Equal(t, expectedIdentity.AuditInfo, identityDescriptor.AuditInfo)
 }
 
-// TestFetchIdentityFromBackendError tests error handling in fetchIdentityFromBackend
+// TestFetchIdentityFromBackendError verifies error propagation from backend failures.
 func TestFetchIdentityFromBackendError(t *testing.T) {
 	expectedErr := errors.New("backend error")
 
@@ -96,16 +98,15 @@ func TestFetchIdentityFromBackendError(t *testing.T) {
 		return nil, expectedErr
 	}, 10, []byte("cache audit"), NewMetrics(&disabled.Provider{}))
 
-	// Call with different audit info to trigger fetchIdentityFromBackend in c.Identity,
-	// which is supposed to return the error
+	// Call with different audit info to trigger backend fetch
 	_, err := c.Identity(context.Background(), []byte("different audit"))
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)
 }
 
-// TestFetchIdentityFromCacheTimeout tests the timeout scenario
+// TestFetchIdentityFromCacheTimeout verifies on-demand generation after cache timeout.
 func TestFetchIdentityFromCacheTimeout(t *testing.T) {
-	// Use MockLogger to enable debug logging and cover debug code paths
+	// Use MockLogger to cover debug code paths
 	originalLogger := logger
 	defer func() { logger = originalLogger }()
 	logger = &logging.MockLogger{}
@@ -121,7 +122,7 @@ func TestFetchIdentityFromCacheTimeout(t *testing.T) {
 		}, nil
 	}, 0, nil, NewMetrics(&disabled.Provider{})) // cache size 0 to force timeout
 
-	// Set a very short timeout to trigger timeout path in c.Identity, calling the above backend
+	// Set short timeout to trigger timeout path
 	c.cacheTimeout = 1 * time.Millisecond
 
 	identityDescriptor, err := c.Identity(context.Background(), nil)
@@ -131,7 +132,7 @@ func TestFetchIdentityFromCacheTimeout(t *testing.T) {
 	assert.Equal(t, 1, callCount)
 }
 
-// TestFetchIdentityFromCacheTimeoutError tests error handling in timeout scenario
+// TestFetchIdentityFromCacheTimeoutError verifies error handling after cache timeout.
 func TestFetchIdentityFromCacheTimeoutError(t *testing.T) {
 	expectedErr := errors.New("timeout backend error")
 
@@ -139,8 +140,7 @@ func TestFetchIdentityFromCacheTimeoutError(t *testing.T) {
 		return nil, expectedErr
 	}, 0, nil, NewMetrics(&disabled.Provider{}))
 
-	// Set a very short timeout to trigger timeout path in c.Identity, calling the above backend
-	// that is supposed to returning the err
+	// Set short timeout to trigger timeout path
 	c.cacheTimeout = 1 * time.Millisecond
 
 	_, err := c.Identity(context.Background(), nil)
@@ -148,13 +148,13 @@ func TestFetchIdentityFromCacheTimeoutError(t *testing.T) {
 	assert.Equal(t, expectedErr, err)
 }
 
-// TestProvisionIdentitiesError tests error handling in provisionIdentities
+// TestProvisionIdentitiesError verifies provisioning retries after errors.
 func TestProvisionIdentitiesError(t *testing.T) {
 	callCount := 0
 	maxCalls := 3
 
 	c := NewIdentityCache(func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
-		// provisionIdentities's loop will fail here 3 times until it finally succeeds
+		// Fail 3 times then succeed
 		callCount++
 		if callCount <= maxCalls {
 			return nil, errors.New("provision error")
@@ -165,7 +165,7 @@ func TestProvisionIdentitiesError(t *testing.T) {
 		}, nil
 	}, 10, nil, NewMetrics(&disabled.Provider{}))
 
-	// Trigger provisioning by provisionIdentities
+	// Trigger provisioning
 	_, err := c.Identity(context.Background(), nil)
 	assert.NoError(t, err)
 
@@ -176,7 +176,7 @@ func TestProvisionIdentitiesError(t *testing.T) {
 	assert.Greater(t, callCount, maxCalls)
 }
 
-// TestFetchIdentityFromCacheNilEntry tests handling of nil entry from cache
+// TestFetchIdentityFromCacheNilEntry verifies backend fallback for nil cache entries.
 func TestFetchIdentityFromCacheNilEntry(t *testing.T) {
 	backendCalled := false
 	c := NewIdentityCache(func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
@@ -187,7 +187,7 @@ func TestFetchIdentityFromCacheNilEntry(t *testing.T) {
 		}, nil
 	}, 10, nil, NewMetrics(&disabled.Provider{}))
 
-	// Manually send nil to cache to test nil handling (i.e. calling the above backend)
+	// Send nil to cache to test nil handling
 	c.cache <- nil
 
 	identityDescriptor, err := c.Identity(context.Background(), nil)
