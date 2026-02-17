@@ -127,17 +127,18 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 		return nil, nil, errors.New("failed to prepare transfer action: nil output token")
 	}
 
-	// load tokens with the passed token identifiers
+	// 1. Load tokens with the passed token identifiers from the vault.
 	loadedTokens, err := s.TokenLoader.LoadTokens(ctx, ids)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
+	// 2. Deserialize the loaded tokens into a format usable for generating the ZK proof.
 	prepareInputs, err := s.prepareInputs(ctx, loadedTokens)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to prepare inputs")
 	}
 
-	// get sender
+	// 3. Initialize the Sender which will coordinate the ZK proof generation.
 	pp := s.PublicParametersManager.PublicParams()
 	sender, err := transfer.NewSender(nil, prepareInputs.Tokens(), ids, prepareInputs.Metadata(), pp)
 	if err != nil {
@@ -146,7 +147,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 	values := make([]uint64, 0, len(outputs))
 	owners := make([][]byte, 0, len(outputs))
 	var isRedeem bool
-	// get values and owners of outputs
+	// 4. Extract target values and owners from the requested outputs.
 	s.Logger.DebugfContext(ctx, "Prepare %d output tokens", len(outputs))
 	for i, output := range outputs {
 		q, err := token2.ToQuantity(output.Quantity, pp.Precision())
@@ -160,8 +161,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 			isRedeem = true
 		}
 	}
-	// produce zkatdlog transfer action
-	// return for each output its information in the clear
+	// 5. Generate the ZK-SNARK transfer action and the metadata for the new outputs.
 	start := time.Now()
 	s.Logger.DebugfContext(ctx, "Generate zk transfer")
 	transfer, outputsMetadata, err := sender.GenerateZKTransfer(ctx, values, owners)
@@ -172,17 +172,16 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 	}
 	s.Metrics.zkTransferDuration.Observe(duration.Seconds())
 
-	// add transfer action's transferMetadata
+	// 6. Enrich the transfer action with additional metadata and upgrade witnesses if present.
 	if opts != nil {
 		transfer.Metadata = meta.TransferActionMetadata(opts.Attributes)
 	}
 
-	// add upgrade witness
 	for i, input := range transfer.Inputs {
 		input.UpgradeWitness = prepareInputs[i].UpgradeWitness
 	}
 
-	// prepare transferMetadata
+	// 7. Prepare the TransferMetadata which contains audit information for auditors.
 	ws := s.AuditInfoProvider
 
 	var transferInputsMetadata []*driver.TransferInputMetadata
@@ -265,6 +264,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 		ExtraSigners: nil,
 	}
 
+	// 8. If this is a redeem, select an issuer who can authorize it.
 	if isRedeem {
 		issuer, err := common.SelectIssuerForRedeem(pp.Issuers(), opts)
 		if err != nil {

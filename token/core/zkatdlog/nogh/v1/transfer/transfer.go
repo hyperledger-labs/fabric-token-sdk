@@ -17,22 +17,24 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 )
 
-// Proof is a zero-knowledge proof that shows that a Action is valid
+// Proof is a zero-knowledge proof that shows that a Transfer Action is valid.
+// It ensures that:
+// 1. Inputs and outputs have the same total value.
+// 2. Inputs and outputs have the same token type.
+// 3. Output values are within the authorized range (to prevent overflows).
 type Proof struct {
-	// proof that inputs and outputs in a Transfer Action are well-formed
-	// inputs and outputs have the same total value
-	// inputs and outputs have the same type
+	// TypeAndSum is a proof that inputs and outputs have the same total value and token type.
 	TypeAndSum *TypeAndSumProof
-	// Proof that the outputs have value in the authorized range
+	// RangeCorrectness is a proof that the outputs have values in the authorized range.
 	RangeCorrectness *rp.RangeCorrectness
 }
 
-// Serialize marshals Proof
+// Serialize marshals the Proof to bytes.
 func (p *Proof) Serialize() ([]byte, error) {
 	return asn1.Marshal[asn1.Serializer](p.TypeAndSum, p.RangeCorrectness)
 }
 
-// Deserialize unmarshals Proof
+// Deserialize unmarshals the Proof from bytes.
 func (p *Proof) Deserialize(bytes []byte) error {
 	p.TypeAndSum = &TypeAndSumProof{}
 	p.RangeCorrectness = &rp.RangeCorrectness{}
@@ -40,35 +42,36 @@ func (p *Proof) Deserialize(bytes []byte) error {
 	return asn1.Unmarshal[asn1.Serializer](bytes, p.TypeAndSum, p.RangeCorrectness)
 }
 
+// Validate ensures the proof components are present and well-formed.
 func (p *Proof) Validate(curve math.CurveID) error {
 	if p.TypeAndSum == nil {
-		return errors.New("invalid transfer proof")
+		return errors.Join(ErrMissingTypeAndSumProof, ErrInvalidTransferProof)
 	}
 	if err := p.TypeAndSum.Validate(curve); err != nil {
-		return errors.Wrapf(err, "invalid transfer proof")
+		return errors.Join(err, ErrInvalidSumAndTypeProof, ErrInvalidTransferProof)
 	}
 	if p.RangeCorrectness == nil {
 		return nil
 	}
 	err := p.RangeCorrectness.Validate(curve)
 	if err != nil {
-		return errors.Wrapf(err, "invalid transfer proof")
+		return errors.Join(err, ErrInvalidRangeProof, ErrInvalidTransferProof)
 	}
 
 	return nil
 }
 
-// Verifier verifies if a Action is valid
+// Verifier verifies if a Transfer Action is valid.
 type Verifier struct {
 	PP               *v1.PublicParams
 	TypeAndSum       *TypeAndSumVerifier
 	RangeCorrectness *rp.RangeCorrectnessVerifier
 }
 
-// NewVerifier returns a Action Verifier as a function of the passed parameters
+// NewVerifier returns a new Verifier instance.
 func NewVerifier(inputs, outputs []*math.G1, pp *v1.PublicParams) *Verifier {
-	// check if this is an ownership transfer
-	// if so, skip range proof, well-formedness proof is enough
+	// check if this is an ownership transfer (1 input, 1 output)
+	// if so, skip range proof as well-formedness proof is sufficient.
 	var rangeCorrectness *rp.RangeCorrectnessVerifier
 	if len(inputs) != 1 || len(outputs) != 1 {
 		rangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
@@ -81,7 +84,7 @@ func NewVerifier(inputs, outputs []*math.G1, pp *v1.PublicParams) *Verifier {
 	}
 }
 
-// Verify checks validity of serialized Proof
+// Verify checks the validity of a serialized Proof.
 func (v *Verifier) Verify(proofRaw []byte) error {
 	proof := Proof{}
 	err := proof.Deserialize(proofRaw)
@@ -92,16 +95,16 @@ func (v *Verifier) Verify(proofRaw []byte) error {
 		return errors.Wrap(err, "invalid transfer proof")
 	}
 
-	// verify well-formedness of inputs and outputs
+	// verify well-formedness of inputs and outputs (type and sum)
 	tspErr := v.TypeAndSum.Verify(proof.TypeAndSum)
 	if tspErr != nil {
 		return errors.Wrap(tspErr, "invalid transfer proof")
 	}
 
-	// verify range proof
+	// verify range proof if necessary
 	if v.RangeCorrectness != nil {
 		if proof.RangeCorrectness == nil {
-			return errors.New("invalid transfer proof")
+			return ErrMissingRangeProof
 		} else {
 			commitmentToType := proof.TypeAndSum.CommitmentToType.Copy()
 			coms := make([]*math.G1, len(v.TypeAndSum.Outputs))
@@ -118,13 +121,13 @@ func (v *Verifier) Verify(proofRaw []byte) error {
 	return nil
 }
 
-// Prover produces a proof that a Action is valid
+// Prover produces a zero-knowledge proof that a Transfer Action is valid.
 type Prover struct {
 	TypeAndSum       *TypeAndSumProver
 	RangeCorrectness *rp.RangeCorrectnessProver
 }
 
-// NewProver returns a Action Prover that corresponds to the passed arguments
+// NewProver returns a new Prover instance.
 func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []*math.G1, pp *v1.PublicParams) (*Prover, error) {
 	c := math.Curves[pp.Curve]
 	p := &Prover{}
@@ -132,7 +135,7 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 	outW := make([]*token.Metadata, len(outputWitness))
 	for i := range inputWitness {
 		if inputWitness[i] == nil || inputWitness[i].BlindingFactor == nil {
-			return nil, errors.New("invalid token witness")
+			return nil, ErrInvalidTokenWitness
 		}
 		inW[i] = inputWitness[i].Clone()
 	}
@@ -148,12 +151,12 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 	typeBF := c.NewRandomZr(rand)
 	for i := range outputWitness {
 		if outputWitness[i] == nil || outputWitness[i].BlindingFactor == nil {
-			return nil, errors.New("invalid token witness")
+			return nil, ErrInvalidTokenWitness
 		}
 		outW[i] = outputWitness[i].Clone()
 		values[i], err = outW[i].Value.Uint()
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid token witness values")
+			return nil, errors.Wrapf(ErrInvalidTokenWitnessValue, "invalid token witness values [%s]", err)
 		}
 		blindingFactors[i] = c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder)
 	}
@@ -187,7 +190,7 @@ func NewProver(inputWitness, outputWitness []*token.Metadata, inputs, outputs []
 	return p, nil
 }
 
-// Prove produces a serialized Proof
+// Prove produces a serialized zero-knowledge Proof.
 func (p *Prover) Prove() ([]byte, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
