@@ -8,10 +8,12 @@ package rp_test
 
 import (
 	"context"
+	"fmt"
 	"math/bits"
 	"math/rand"
 	"strconv"
 	"testing"
+	"time"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
@@ -91,7 +93,9 @@ func TestBFProofVerify(t *testing.T) {
 		setup.l,
 		setup.curve,
 	)
+	start := time.Now()
 	proof, err := prover.Prove()
+	fmt.Printf("Prove took %v msec", time.Since(start).Milliseconds())
 	assert.NoError(t, err)
 	assert.NotNil(t, proof)
 
@@ -106,7 +110,9 @@ func TestBFProofVerify(t *testing.T) {
 		setup.l,
 		setup.curve,
 	)
+	start = time.Now()
 	err = verifier.Verify(proof)
+	fmt.Printf("Verify took %v msec", time.Since(start).Milliseconds())
 	assert.NoError(t, err)
 }
 
