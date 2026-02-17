@@ -25,7 +25,9 @@ type (
 	Data      = []byte
 )
 
+// QueryStatesExecutor models an executor for querying states.
 type QueryStatesExecutor interface {
+	// QueryStates returns the values of the given keys in the given namespace.
 	QueryStates(_ context.Context, namespace driver.Namespace, keys []string) ([]Data, error)
 }
 
@@ -34,10 +36,12 @@ type in struct {
 }
 
 // ExecutorProvider looks up tokens by parsing the whole ledger instead of using the chaincode.
+// ExecutorProvider models a provider for executors.
 type ExecutorProvider struct {
 	p lazy.Provider[in, *Executor]
 }
 
+// NewExecutorProvider returns a new ExecutorProvider instance.
 func NewExecutorProvider(qsProvider queryservice.Provider) *ExecutorProvider {
 	p := lazy.NewProviderWithKeyMapper[in, string, *Executor](
 		func(i in) string { return i.channel },
@@ -63,6 +67,7 @@ func (p *ExecutorProvider) GetStateExecutor(network, channel string) (QueryState
 	return p.p.Get(in{network: network, channel: channel})
 }
 
+// Executor models an executor for querying tokens and states.
 type Executor struct {
 	qsProvider    queryservice.Provider
 	keyTranslator translator.KeyTranslator
@@ -70,6 +75,7 @@ type Executor struct {
 	channel       string
 }
 
+// NewExecutor returns a new Executor instance.
 func NewExecutor(network string, channel string, qsProvider queryservice.Provider) *Executor {
 	return &Executor{
 		network:       network,

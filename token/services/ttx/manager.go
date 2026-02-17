@@ -114,7 +114,16 @@ func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) erro
 		return net.AddFinalityListener(
 			tmsID.Namespace,
 			record.TxID,
-			finality.NewListener(logger, db.tmsProvider, db.tmsID, db.ttxStoreService, db.tokensService, db.finalityTracer),
+			finality.NewListener(
+				logger,
+				net,
+				tmsID.Namespace,
+				db.tmsProvider,
+				db.tmsID,
+				db.ttxStoreService,
+				db.tokensService,
+				db.finalityTracer,
+			),
 		)
 	})
 }

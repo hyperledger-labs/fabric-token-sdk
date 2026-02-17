@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	finalityx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/finality"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/vault/queryservice"
 	fabricx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
@@ -26,8 +27,10 @@ import (
 	endorsement2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/endorsement"
 	finality2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality/queue"
 	lookup2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/lookup"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/qe"
@@ -36,6 +39,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// NewDriver returns a new Driver instance.
 func NewDriver(
 	fnsProvider *fabric2.NetworkServiceProvider,
 	tokensManager *tokens.ServiceManager,
@@ -49,13 +53,34 @@ func NewDriver(
 	configService driver2.ConfigService,
 	qsProvider queryservice.Provider,
 	storeServiceManager ttxdb.StoreServiceManager,
-) driver.Driver {
+	queryServiceProvider queryservice.Provider,
+	finalityProvider *finalityx.Provider,
+) (driver.Driver, error) {
 	vkp := pp2.NewVersionKeeperProvider()
 	kt := &keys.Translator{}
 
 	queryExecutorProvider := qe.NewExecutorProvider(qsProvider)
 
-	listenerManagerConfig := config3.NewListenerManagerConfig(configService)
+	// In FabricX, we only support 'notification' finality type
+	lmCfg := config2.NewListenerManagerConfig(configService)
+	if lmCfg.Type() != config3.Notification {
+		return nil, errors.Errorf("invalid finality type [%s], expected [%s]", lmCfg.Type(), config3.Notification)
+	}
+
+	// Load event queue configuration from token.finality.notification
+	qCfg := queue.NewConfig(configService)
+	q, err := queue.NewEventQueue(queue.Config{
+		Workers:   qCfg.Workers(),
+		QueueSize: qCfg.QueueSize(),
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed creating event queue")
+	}
+
+	flmProvider, err := finality2.NewNotificationServiceBased(queryServiceProvider, finalityProvider, q)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed initializing finality provider")
+	}
 
 	d := &Driver{
 		fnsProvider:                fnsProvider,
@@ -69,7 +94,7 @@ func NewDriver(
 		defaultPublicParamsFetcher: ppFetcher,
 		queryExecutorProvider:      queryExecutorProvider,
 		keyTranslator:              kt,
-		flmProvider:                finality2.NewFLMProvider(fnsProvider, tracerProvider, listenerManagerConfig),
+		flmProvider:                flmProvider,
 		llmProvider: lookup2.NewListenerManagerProvider(
 			fnsProvider,
 			tracerProvider,
@@ -95,9 +120,10 @@ func NewDriver(
 		supportedDrivers: []string{fabricx.FabricxDriverName},
 	}
 
-	return d
+	return d, nil
 }
 
+// Driver models the FabricX network driver.
 type Driver struct {
 	fnsProvider                *fabric2.NetworkServiceProvider
 	tokensManager              *tokens.ServiceManager
@@ -117,6 +143,7 @@ type Driver struct {
 	queryExecutorProvider      *qe.ExecutorProvider
 }
 
+// New returns a new Network instance for the given network and channel.
 func (d *Driver) New(network, channel string) (driver.Network, error) {
 	fns, err := d.fnsProvider.FabricNetworkService(network)
 	if err != nil {
