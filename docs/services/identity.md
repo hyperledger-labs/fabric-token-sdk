@@ -9,10 +9,21 @@ This service is a fundamental component used by token drivers and other services
 *   **Auditability**: Managing audit information to reveal the enrollment ID behind an anonymous identity (if allowed).
 *   **Role Management**: Handling identities for different roles (Issuer, Auditor, Owner, Certifier).
 
+## How the Identity Service is Used
+
+The Identity Service is consumed by other components of the Fabric Token SDK,
+such as the Token Transaction (TTX) service and token drivers, to perform
+identity-related operations including signing, verification, and identity
+resolution.
+
+Rather than interacting with cryptographic primitives directly, services rely
+on the Identity Service interfaces, allowing different identity implementations
+to be plugged in transparently.
+
 ## Architecture
 
 The Identity Service is designed to implement the **Driver API** interfaces defined in `token/driver/wallet.go`. 
-This ensures that the token management system can interact with any identity implementation through a standard set of methods.
+This ensures that the token management system can interact with any identity implementation through a standard set of methods.  
 
 ### Conceptual Metaphor
 
@@ -185,3 +196,14 @@ Located in `token/services/identity/interop/htlc`.
 *   **Concept**: A script-based identity used primarily for interoperability mechanisms like atomic swaps.
 *   **Structure**: Encapsulates a **Sender** identity, a **Recipient** identity, hash lock information, and a timeout.
 *   **Behavior**: Validation involves satisfying the script conditions (e.g., providing the hash preimage).
+
+## Extending the Identity Service
+
+The Identity Service is designed to be extensible through the driver interfaces
+defined in the token SDK. Custom identity implementations can be provided by
+implementing the required identity and wallet interfaces.
+
+Typical extension scenarios include:
+- Supporting a new identity type by implementing a custom `KeyManager`
+- Customizing signature generation or verification logic within a `KeyManager`
+- Providing a custom `KeyManagerProvider` to plug new identity mechanisms into `LocalMembership`
