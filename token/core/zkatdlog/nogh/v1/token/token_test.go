@@ -643,3 +643,281 @@ func TestParseFabtokenToken(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create quantity")
 }
+
+func TestToken_ToClear_Extra(t *testing.T) {
+	curve := math.BN254
+	c := math.Curves[curve]
+	rand, err := c.Rand()
+	require.NoError(t, err)
+	pp := &noghv1.PublicParams{
+		Curve: curve,
+		PedersenGenerators: []*math.G1{
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+		},
+	}
+
+	tok := &Token{
+		Owner: []byte("owner"),
+		Data:  c.GenG1,
+	}
+
+	// Nil Value
+	meta := &Metadata{
+		Type:           "COIN",
+		Value:          nil,
+		BlindingFactor: c.NewRandomZr(rand),
+	}
+	_, err = tok.ToClear(meta, pp)
+	require.Error(t, err)
+	assert.True(t, errors.HasCause(err, ErrNilCommitElement))
+	assert.Contains(t, err.Error(), "cannot retrieve token in the clear: failed to check token data")
+
+	// Nil BlindingFactor
+	meta = &Metadata{
+		Type:           "COIN",
+		Value:          c.NewRandomZr(rand),
+		BlindingFactor: nil,
+	}
+	_, err = tok.ToClear(meta, pp)
+	require.Error(t, err)
+	assert.True(t, errors.HasCause(err, ErrNilCommitElement))
+}
+
+func TestTokensService_New_Extra(t *testing.T) {
+	logger := logging.MustGetLogger("test")
+	deserializer := &mock.Deserializer{}
+
+	// Case 1: SupportedTokenFormat failure due to nil generators
+	pp := &noghv1.PublicParams{
+		Curve: math.BN254,
+		RangeProofParams: &noghv1.RangeProofParams{
+			BitLength: 64,
+		},
+		PedersenGenerators: []*math.G1{nil, nil, nil},
+	}
+	ppm := &mockPPM{pp: pp}
+	assert.Panics(t, func() {
+		_, _ = NewTokensService(logger, ppm, deserializer)
+	})
+}
+
+func TestTokensService_getOutput_Extra(t *testing.T) {
+	curve := math.BN254
+	c := math.Curves[curve]
+	rand, err := c.Rand()
+	require.NoError(t, err)
+	pp := &noghv1.PublicParams{
+		Curve: curve,
+		PedersenGenerators: []*math.G1{
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+		},
+		RangeProofParams: &noghv1.RangeProofParams{
+			BitLength: 64,
+		},
+	}
+	ppm := &mockPPM{pp: pp}
+	deserializer := &mock.Deserializer{}
+	logger := logging.MustGetLogger("test")
+	s, err := NewTokensService(logger, ppm, deserializer)
+	require.NoError(t, err)
+
+	// failed to deserialize token
+	_, err = s.getOutput(context.Background(), []byte("invalid"), false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to deserialize token")
+
+	// token owner not found
+	tok := &Token{Owner: nil, Data: c.GenG1}
+	raw, _ := tok.Serialize()
+	_, err = s.getOutput(context.Background(), raw, true)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "token owner not found in output")
+
+	// data is invalid (nil)
+	tok = &Token{Owner: []byte("owner"), Data: nil}
+	raw, _ = tok.Serialize()
+	_, err = s.getOutput(context.Background(), raw, false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "data is invalid in output")
+	assert.Contains(t, err.Error(), "elememt is nil")
+
+	// data is invalid (wrong curve)
+	tok = &Token{Owner: []byte("owner"), Data: math.Curves[math.BLS12_381_GURVY].GenG1}
+	raw, _ = tok.Serialize()
+	_, err = s.getOutput(context.Background(), raw, false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "data is invalid in output")
+	assert.Contains(t, err.Error(), "element curve must equal curve ID")
+
+	// data is infinity
+	tok = &Token{Owner: []byte("owner"), Data: c.NewG1()}
+	raw, _ = tok.Serialize()
+	_, err = s.getOutput(context.Background(), raw, false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "data is invalid in output")
+	assert.Contains(t, err.Error(), "element is infinity")
+}
+
+func TestTokensService_Deobfuscate_Extra(t *testing.T) {
+	curve := math.BN254
+	c := math.Curves[curve]
+	rand, err := c.Rand()
+	require.NoError(t, err)
+	pp := &noghv1.PublicParams{
+		Curve: curve,
+		PedersenGenerators: []*math.G1{
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+		},
+		RangeProofParams: &noghv1.RangeProofParams{
+			BitLength: 64,
+		},
+	}
+	ppm := &mockPPM{pp: pp}
+	deserializer := &mock.Deserializer{}
+	logger := logging.MustGetLogger("test")
+	s, err := NewTokensService(logger, ppm, deserializer)
+	require.NoError(t, err)
+
+	tok := &Token{Owner: []byte("owner"), Data: c.GenG1}
+	rawTok, _ := tok.Serialize()
+	meta := &Metadata{Type: "COIN", Value: c.NewZrFromUint64(10), BlindingFactor: c.NewRandomZr(rand)}
+	rawMeta, _ := meta.Serialize()
+
+	// deobfuscateAsCommType fails at ToClear (mismatch)
+	_, _, _, _, err = s.Deobfuscate(context.Background(), rawTok, rawMeta)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to deobfuscate token")
+
+	// deobfuscateAsFabtokenType fails at Deserialize output
+	_, _, _, _, err = s.deobfuscateAsFabtokenType([]byte("invalid"), rawMeta)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed unmarshalling token")
+
+	// deobfuscateAsFabtokenType fails at Deserialize metadata
+	fabTok := &actions.Output{Owner: []byte("owner"), Type: "COIN", Quantity: "0x10"}
+	rawFabTok, _ := fabTok.Serialize()
+	_, _, _, _, err = s.deobfuscateAsFabtokenType(rawFabTok, []byte("invalid"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed unmarshalling token information")
+
+	// deobfuscateAsFabtokenType fails at Recipients
+	deserializer.RecipientsReturns(nil, errors.New("recipients error"))
+	rawFabMeta, _ := (&actions.OutputMetadata{}).Serialize()
+	_, _, _, _, err = s.deobfuscateAsFabtokenType(rawFabTok, rawFabMeta)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get recipients")
+}
+
+func TestTokensService_DeserializeToken_Extra(t *testing.T) {
+	curve := math.BN254
+	c := math.Curves[curve]
+	rand, err := c.Rand()
+	require.NoError(t, err)
+	pp := &noghv1.PublicParams{
+		Curve: curve,
+		PedersenGenerators: []*math.G1{
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+		},
+		RangeProofParams: &noghv1.RangeProofParams{
+			BitLength: 64,
+		},
+	}
+	ppm := &mockPPM{pp: pp}
+	deserializer := &mock.Deserializer{}
+	logger := logging.MustGetLogger("test")
+	s, err := NewTokensService(logger, ppm, deserializer)
+	require.NoError(t, err)
+
+	// deserializeTokenWithOutputTokenFormat fails at getOutput
+	_, _, err = s.deserializeTokenWithOutputTokenFormat(context.Background(), []byte("invalid"), nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed getting token output")
+
+	// deserializeTokenWithOutputTokenFormat fails at metadata.Deserialize
+	tok := &Token{Owner: []byte("owner"), Data: c.GenG1}
+	rawTok, _ := tok.Serialize()
+	_, _, err = s.deserializeTokenWithOutputTokenFormat(context.Background(), rawTok, []byte("invalid"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to deserialize token metadata")
+
+	// Upgrade fails at ParseFabtokenToken
+	fabFormat, _ := v1.SupportedTokenFormat(64)
+	s.SupportedTokenFormatList = append(s.SupportedTokenFormatList, fabFormat)
+	Precisions[fabFormat] = 64
+	_, _, _, err = s.DeserializeToken(context.Background(), fabFormat, []byte("invalid"), nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unmarshal fabtoken token")
+
+	// Upgrade fails at GetTokensWithWitness (curve nil) - this is hard to trigger without modifying s.PublicParametersManager
+}
+
+func TestNewTokensService_Precision32(t *testing.T) {
+	curve := math.BN254
+	c := math.Curves[curve]
+	rand, err := c.Rand()
+	require.NoError(t, err)
+	pp := &noghv1.PublicParams{
+		Curve: curve,
+		PedersenGenerators: []*math.G1{
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+			c.GenG1.Mul(c.NewRandomZr(rand)),
+		},
+		RangeProofParams: &noghv1.RangeProofParams{
+			BitLength: 32,
+		},
+	}
+	ppm := &mockPPM{pp: pp}
+	deserializer := &mock.Deserializer{}
+	logger := logging.MustGetLogger("test")
+
+	s, err := NewTokensService(logger, ppm, deserializer)
+	require.NoError(t, err)
+	assert.NotNil(t, s)
+
+	// verify that 64-bit precision is NOT supported
+	found := false
+	for _, f := range s.SupportedTokenFormatList {
+		// we don't know the exact format string easily, but we know what shouldn't be there
+		// Actually, we can check by precision
+		p, ok := Precisions[f]
+		if ok && p == 64 {
+			found = true
+
+			break
+		}
+	}
+	assert.False(t, found)
+	// Note: Precisions map also contains fabtoken formats.
+	// Let's check SupportedTokenFormat for 64
+	format64, _ := SupportedTokenFormat(pp, 64)
+	assert.NotContains(t, s.SupportedTokenFormatList, format64)
+
+	fabFormat64, _ := v1.SupportedTokenFormat(64)
+	assert.NotContains(t, s.SupportedTokenFormatList, fabFormat64)
+}
+
+func TestTokensService_Recipients_DeserializeError(t *testing.T) {
+	logger := logging.MustGetLogger("test")
+	pp := &noghv1.PublicParams{
+		Curve: math.BN254,
+		RangeProofParams: &noghv1.RangeProofParams{
+			BitLength: 64,
+		},
+	}
+	ppm := &mockPPM{pp: pp}
+	deserializer := &mock.Deserializer{}
+	s, _ := NewTokensService(logger, ppm, deserializer)
+
+	_, err := s.Recipients([]byte("invalid"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to deserialize token")
+}
