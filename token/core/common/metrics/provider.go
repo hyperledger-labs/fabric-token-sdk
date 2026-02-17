@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package metrics
 
 import (
-	"strings"
-
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -69,11 +67,4 @@ func recoverFromDuplicate(recovered any) {
 		return
 	}
 	panic(recovered)
-}
-
-func AllLabelNames(extraLabels ...MetricLabel) []MetricLabel {
-	return append([]string{NetworkLabel, ChannelLabel, NamespaceLabel}, extraLabels...)
-}
-func StatsdFormat(extraLabels ...MetricLabel) string {
-	return "%{#fqname}.%{" + strings.Join(AllLabelNames(extraLabels...), "}.%{") + "}"
 }
