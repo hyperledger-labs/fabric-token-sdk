@@ -629,9 +629,9 @@ func TestParseFabtokenToken(t *testing.T) {
 	assert.Equal(t, uint64(16), q)
 
 	// Error cases
-	_, _, err = ParseFabtokenToken(raw, 128, 64)
+	_, _, err = ParseFabtokenToken(raw, 64, 128)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported precision [128], max [64]")
+	assert.Contains(t, err.Error(), "unsupported precision [64], max [128]")
 
 	_, _, err = ParseFabtokenToken([]byte("invalid"), 64, 64)
 	require.Error(t, err)

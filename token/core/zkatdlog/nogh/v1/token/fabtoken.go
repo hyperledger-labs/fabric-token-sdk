@@ -15,7 +15,7 @@ import (
 // ParseFabtokenToken unmarshals a raw fabtoken output and converts its quantity to a uint64 value.
 // It validates that the requested precision does not exceed the maximum precision allowed by the system.
 func ParseFabtokenToken(tok []byte, precision uint64, maxPrecision uint64) (*actions.Output, uint64, error) {
-	if precision > maxPrecision {
+	if precision < maxPrecision {
 		return nil, 0, errors.Errorf("unsupported precision [%d], max [%d]", precision, maxPrecision)
 	}
 
