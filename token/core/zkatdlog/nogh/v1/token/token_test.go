@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/require"
 )
 
@@ -31,7 +32,7 @@ func TestToken(t *testing.T) {
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	owner := []byte("owner1")
 	data := c.GenG1.Mul(c.NewRandomZr(rand))
@@ -50,24 +51,24 @@ func TestToken(t *testing.T) {
 	tok.Owner = owner
 	// Test Serialize/Deserialize
 	raw, err := tok.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tok2 := &Token{}
 	err = tok2.Deserialize(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tok.Owner, tok2.Owner)
 	assert.True(t, tok.Data.Equals(tok2.Data))
 
 	// Test Validate
-	assert.NoError(t, tok.Validate(true))
-	assert.NoError(t, tok.Validate(false))
+	require.NoError(t, tok.Validate(true))
+	require.NoError(t, tok.Validate(false))
 
 	tok.Owner = nil
-	assert.Error(t, tok.Validate(true))
+	require.Error(t, tok.Validate(true))
 	assert.Equal(t, ErrEmptyOwner, tok.Validate(true))
 
 	tok.Data = nil
-	assert.Error(t, tok.Validate(false))
+	require.Error(t, tok.Validate(false))
 	assert.Equal(t, ErrEmptyTokenData, tok.Validate(false))
 }
 
@@ -75,7 +76,7 @@ func TestToken_ToClear(t *testing.T) {
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pp := &noghv1.PublicParams{
 		Curve: curve,
 		PedersenGenerators: []*math.G1{
@@ -97,7 +98,7 @@ func TestToken_ToClear(t *testing.T) {
 		meta.Value,
 		meta.BlindingFactor,
 	}, pp.PedersenGenerators, c)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tok := &Token{
 		Owner: []byte("owner"),
@@ -105,7 +106,7 @@ func TestToken_ToClear(t *testing.T) {
 	}
 
 	clearToken, err := tok.ToClear(meta, pp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, meta.Type, clearToken.Type)
 	assert.Equal(t, "0x"+meta.Value.String(), clearToken.Quantity)
 	assert.Equal(t, tok.Owner, clearToken.Owner)
@@ -114,7 +115,7 @@ func TestToken_ToClear(t *testing.T) {
 	meta2 := meta.Clone()
 	meta2.Value = c.NewZrFromUint64(200)
 	_, err = tok.ToClear(meta2, pp)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, ErrTokenMismatch, err)
 }
 
@@ -122,7 +123,7 @@ func TestMetadata(t *testing.T) {
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	values := []uint64{10, 20}
 	bfs := []*math.Zr{c.NewRandomZr(rand), c.NewRandomZr(rand)}
@@ -135,11 +136,11 @@ func TestMetadata(t *testing.T) {
 	meta := metas[0]
 	meta.Issuer = []byte("issuer")
 	raw, err := meta.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	meta2 := &Metadata{}
 	err = meta2.Deserialize(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, meta.Type, meta2.Type)
 	assert.True(t, meta.Value.Equals(meta2.Value))
 	assert.True(t, meta.BlindingFactor.Equals(meta2.BlindingFactor))
@@ -251,7 +252,7 @@ func TestGetTokensWithWitness(t *testing.T) {
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pp := []*math.G1{
 		c.GenG1.Mul(c.NewRandomZr(rand)),
 		c.GenG1.Mul(c.NewRandomZr(rand)),
@@ -259,7 +260,7 @@ func TestGetTokensWithWitness(t *testing.T) {
 	}
 
 	tokens, metas, err := GetTokensWithWitness([]uint64{10, 20}, "COIN", pp, c)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, tokens, 2)
 	assert.Len(t, metas, 2)
 
@@ -270,13 +271,13 @@ func TestGetTokensWithWitness(t *testing.T) {
 			metas[i].Value,
 			metas[i].BlindingFactor,
 		}, pp, c)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, expected.Equals(tokens[i]))
 	}
 
 	// Error cases
 	_, _, err = GetTokensWithWitness([]uint64{10}, "COIN", pp, nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "please initialize curve")
 }
 
@@ -289,7 +290,7 @@ func TestUpgradeWitness_Validate(t *testing.T) {
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bf := c.NewRandomZr(rand)
 
 	tests := []struct {
@@ -363,7 +364,7 @@ func TestUpgradeWitness_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.uw.Validate()
 			if tt.wantErr == "" {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
 				assert.EqualError(t, err, tt.wantErr)
 			}
@@ -375,7 +376,7 @@ func TestInternal(t *testing.T) {
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	gens := []*math.G1{
 		c.GenG1.Mul(c.NewRandomZr(rand)),
 		c.GenG1.Mul(c.NewRandomZr(rand)),
@@ -383,12 +384,12 @@ func TestInternal(t *testing.T) {
 
 	// Test commit error
 	_, err = commit([]*math.Zr{nil}, gens, c)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, ErrNilCommitElement, err)
 
 	// Test computeTokens error
 	_, err = computeTokens([]*Metadata{{Type: "COIN", Value: nil}}, gens, c)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to compute token")
 }
 
@@ -397,13 +398,13 @@ func TestToken_DeserializeExtra(t *testing.T) {
 
 	// failed to unmarshal typed token
 	err := tok.Deserialize([]byte("invalid"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed deserializing token")
 
 	// invalid token type
 	raw, _ := tokens.WrapWithType(3, []byte("data"))
 	err = tok.Deserialize(raw)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid token type [3]")
 
 	// failed to unmarshal token
@@ -413,7 +414,7 @@ func TestToken_DeserializeExtra(t *testing.T) {
 	}
 	raw, _ = typed.Bytes()
 	err = tok.Deserialize(raw)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed unmarshalling token")
 }
 
@@ -422,7 +423,7 @@ func TestMetadata_DeserializeExtra(t *testing.T) {
 
 	// failed to unmarshal typed token
 	err := m.Deserialize([]byte("invalid"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed deserializing metadata")
 
 	// failed to unmarshal metadata
@@ -432,14 +433,14 @@ func TestMetadata_DeserializeExtra(t *testing.T) {
 	}
 	raw, _ := typed.Bytes()
 	err = m.Deserialize(raw)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed unmarshalling metadata")
 
 	// failed to deserialize value
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	valueRaw, _ := utils.ToProtoZr(c.NewRandomZr(rand))
 	bfRaw, _ := utils.ToProtoZr(c.NewRandomZr(rand))
 
@@ -453,7 +454,7 @@ func TestMetadata_DeserializeExtra(t *testing.T) {
 	rawProto, _ := proto.Marshal(metaProto)
 	rawTyped, _ := comm.WrapMetadataWithType(rawProto)
 	err = m.Deserialize(rawTyped)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to deserialize metadata")
 
 	// Corrupt BlindingFactor
@@ -462,7 +463,7 @@ func TestMetadata_DeserializeExtra(t *testing.T) {
 	rawProto, _ = proto.Marshal(metaProto)
 	rawTyped, _ = comm.WrapMetadataWithType(rawProto)
 	err = m.Deserialize(rawTyped)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to deserialize metadata")
 }
 
@@ -479,7 +480,7 @@ func TestTokensService(t *testing.T) {
 	curve := math.BN254
 	c := math.Curves[curve]
 	rand, err := c.Rand()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pp := &noghv1.PublicParams{
 		Curve: curve,
 		PedersenGenerators: []*math.G1{
@@ -496,7 +497,7 @@ func TestTokensService(t *testing.T) {
 	logger := logging.MustGetLogger("test")
 
 	s, err := NewTokensService(logger, ppm, deserializer)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, s)
 
 	// Test Recipients
@@ -512,7 +513,7 @@ func TestTokensService(t *testing.T) {
 		meta.Value,
 		meta.BlindingFactor,
 	}, pp.PedersenGenerators, c)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tok := &Token{
 		Owner: owner,
@@ -522,14 +523,14 @@ func TestTokensService(t *testing.T) {
 
 	deserializer.RecipientsReturns([]driver.Identity{driver.Identity("id1")}, nil)
 	recipients, err := s.Recipients(rawTok)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []driver.Identity{driver.Identity("id1")}, recipients)
 
 	// Test Deobfuscate
 	rawMeta, _ := meta.Serialize()
 
 	deobTok, issuer, deobRecipients, format, err := s.Deobfuscate(context.Background(), rawTok, rawMeta)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "COIN", string(deobTok.Type))
 	assert.Equal(t, "0x"+meta.Value.String(), deobTok.Quantity)
 	assert.Equal(t, driver.Identity("issuer"), issuer)
@@ -550,7 +551,7 @@ func TestTokensService(t *testing.T) {
 
 	deserializer.RecipientsReturns([]driver.Identity{driver.Identity("id2")}, nil)
 	deobTok2, issuer2, deobRecipients2, _, err := s.Deobfuscate(context.Background(), rawFabTok, rawFabMeta)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "COIN", string(deobTok2.Type))
 	assert.Equal(t, "0x10", deobTok2.Quantity)
 	assert.Equal(t, driver.Identity("issuer2"), issuer2)
@@ -559,12 +560,12 @@ func TestTokensService(t *testing.T) {
 	// Error cases for Recipients
 	deserializer.RecipientsReturns(nil, errors.New("error"))
 	_, err = s.Recipients(rawTok)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get recipients")
 
 	// Error cases for Deobfuscate
 	_, _, _, _, err = s.Deobfuscate(context.Background(), []byte("invalid"), rawMeta)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to deobfuscate token")
 
 	// Test SupportedTokenFormats
@@ -573,18 +574,18 @@ func TestTokensService(t *testing.T) {
 
 	// Test DeserializeToken
 	desTok, desMeta, desWitness, err := s.DeserializeToken(context.Background(), s.OutputTokenFormat, rawTok, rawMeta)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tok.Owner, desTok.Owner)
 	assert.Equal(t, meta.Type, desMeta.Type)
 	assert.Nil(t, desWitness)
 
 	// Test DeserializeToken with error
 	_, _, _, err = s.DeserializeToken(context.Background(), "invalid", rawTok, rawMeta)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid token format [invalid]")
 
 	_, _, _, err = s.DeserializeToken(context.Background(), s.OutputTokenFormat, []byte("invalid"), rawMeta)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to deserialize token with output token format")
 
 	// Test DeserializeToken with Upgrade
@@ -601,7 +602,7 @@ func TestTokensService(t *testing.T) {
 	Precisions[fabFormat] = 64
 
 	desTok2, desMeta2, desWitness2, err := s.DeserializeToken(context.Background(), fabFormat, rawFabToken, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, fabToken.Owner, desTok2.Owner)
 	assert.Equal(t, fabToken.Type, desMeta2.Type)
 	assert.NotNil(t, desWitness2)
@@ -610,7 +611,7 @@ func TestTokensService(t *testing.T) {
 	invalidFabFormat := token.Format("invalid-fab")
 	s.SupportedTokenFormatList = append(s.SupportedTokenFormatList, invalidFabFormat)
 	_, _, _, err = s.DeserializeToken(context.Background(), invalidFabFormat, rawFabToken, nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported token format [invalid-fab]")
 }
 
@@ -623,22 +624,22 @@ func TestParseFabtokenToken(t *testing.T) {
 	raw, _ := output.Serialize()
 
 	parsed, q, err := ParseFabtokenToken(raw, 64, 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, output.Owner, parsed.Owner)
 	assert.Equal(t, uint64(16), q)
 
 	// Error cases
 	_, _, err = ParseFabtokenToken(raw, 128, 64)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported precision [128], max [64]")
 
 	_, _, err = ParseFabtokenToken([]byte("invalid"), 64, 64)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal fabtoken")
 
 	output.Quantity = "invalid"
 	raw, _ = output.Serialize()
 	_, _, err = ParseFabtokenToken(raw, 64, 64)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create quantity")
 }

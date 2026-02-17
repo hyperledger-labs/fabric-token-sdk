@@ -119,6 +119,7 @@ func (s *TokensService) Deobfuscate(ctx context.Context, output driver.TokenOutp
 	if err != nil {
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to deobfuscate token")
 	}
+
 	return tok, issuer, recipients, format, nil
 }
 
