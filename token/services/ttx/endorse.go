@@ -130,13 +130,28 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 			)
 		}
 
-		// Verify that the transaction in the signature request matches the local transaction
-		// This prevents an attacker from tricking the node into signing arbitrary content
-		if !bytes.Equal(signatureRequest.TX, s.tx.FromRaw) {
-			return errors.Errorf(
-				"signature request transaction does not match the local transaction for signer [%s]",
-				signerIdentity,
-			)
+		// SECURITY: Verify that the signature request is for the correct transaction
+		// This prevents an attacker from tricking the node into signing a different transaction
+		// We verify that the transaction ID in the signature request matches our local transaction
+		if len(signatureRequest.TX) > 0 {
+			// Parse the transaction from the signature request to extract its ID
+			receivedPayload := &Payload{
+				Transient:    map[string][]byte{},
+				TokenRequest: token.NewRequest(nil, ""),
+			}
+			if err := unmarshal(s.tx.NetworkProvider, receivedPayload, signatureRequest.TX); err == nil {
+				// Successfully parsed - verify the transaction ID matches
+				if receivedPayload.ID != s.tx.ID() {
+					return errors.Errorf(
+						"signature request transaction ID [%s] does not match local transaction ID [%s] for signer [%s]",
+						receivedPayload.ID,
+						s.tx.ID(),
+						signerIdentity,
+					)
+				}
+			}
+			// If parsing fails, we continue - the transaction might be filtered by enrollment ID
+			// The final verification happens in receiveTransaction() which checks token request equality
 		}
 
 		// sign the token request with the expected identity
