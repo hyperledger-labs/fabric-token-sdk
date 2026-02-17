@@ -238,6 +238,42 @@ func TestEndorseView(t *testing.T) {
 				assert.Equal(t, 0, ctx.session.SendWithContextCallCount())
 			},
 		},
+		{
+			name: "signature request transaction mismatch - security vulnerability test",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+				// Inject a malicious signature request with different transaction content
+				session := c.session
+				ch := make(chan *view.Message, 2)
+				session.ReceiveReturns(ch)
+
+				// Create a signature request with a different transaction
+				maliciousSignatureRequest := &ttx.SignatureRequest{
+					Signer: []byte("an_issuer"),
+					TX:     []byte("malicious_transaction_content"), // Different from the actual transaction
+				}
+				signatureRequestRaw, err := maliciousSignatureRequest.Bytes()
+				require.NoError(t, err)
+				ch <- &view.Message{
+					Payload: signatureRequestRaw,
+				}
+
+				// Send the real transaction for the second phase
+				txRaw, err := c.tx.Bytes()
+				require.NoError(t, err)
+				ch <- &view.Message{
+					Payload: txRaw,
+				}
+
+				return c
+			},
+			expectError:   true,
+			errorContains: "signature request transaction does not match the local transaction",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				// Should not send any signature back
+				assert.Equal(t, 0, ctx.session.SendWithContextCallCount())
+			},
+		},
 	}
 
 	for _, tc := range testCases {
