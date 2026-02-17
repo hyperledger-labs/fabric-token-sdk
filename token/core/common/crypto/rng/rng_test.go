@@ -110,11 +110,53 @@ func TestSecureRNG_Concurrency(t *testing.T) {
 
 func TestSecureRNG_LargeRead(t *testing.T) {
 	// Test reading a buffer larger than standard checks
-	rng := rng.NewSecureRNG()
+	rngInst := rng.NewSecureRNG()
 	buf := make([]byte, 1024*1024) // 1MB
-	n, err := rng.Read(buf)
+	n, err := rngInst.Read(buf)
 	require.NoError(t, err)
 	assert.Equal(t, 1024*1024, n)
+}
+
+func TestSecureRNG_Read_Error(t *testing.T) {
+	// 1. Test failure in initial seeding (NewSecureRNG)
+	oldReader := rand.Reader
+	defer func() { rand.Reader = oldReader }()
+
+	rand.Reader = &errorReader{}
+	rngInst := rng.NewSecureRNG()
+	buf := make([]byte, 32)
+	_, err := rngInst.Read(buf)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "RNG seed failed")
+
+	// 2. Test failure in reseed (Time based)
+	rand.Reader = oldReader
+	rngInst = rng.NewSecureRNGWith(10*time.Millisecond, 1024*1024)
+	_, err = rngInst.Read(buf)
+	require.NoError(t, err)
+
+	time.Sleep(20 * time.Millisecond)
+	rand.Reader = &errorReader{}
+	_, err = rngInst.Read(buf)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "RNG seed failed")
+
+	// 3. Test failure in reseed (Volume based)
+	rand.Reader = oldReader
+	rngInst = rng.NewSecureRNGWith(1*time.Hour, 10)
+	_, err = rngInst.Read(make([]byte, 16)) // volume = 16 > 10
+	require.NoError(t, err)
+
+	rand.Reader = &errorReader{}
+	_, err = rngInst.Read(buf)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "RNG seed failed")
+}
+
+type errorReader struct{}
+
+func (e *errorReader) Read(p []byte) (n int, err error) {
+	return 0, assert.AnError
 }
 
 // standard sizes for benchmarking
