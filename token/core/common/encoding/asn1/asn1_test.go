@@ -236,3 +236,159 @@ func TestArray(t *testing.T) {
 	require.NoError(t, a2.Deserialize(raw))
 	assert.Equal(t, a1.Values, a2.Values)
 }
+
+func TestASN1Errors(t *testing.T) {
+	// UnmarshalTo error - invalid asn1
+	_, err := UnmarshalTo[Serializer]([]byte{0, 1, 2}, func() Serializer { return &Rectangle{} })
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unmarshal values")
+
+	// UnmarshalTo error - deserialize failure
+	v := Values{Values: [][]byte{{0, 1, 2}}}
+	raw, err := asn1.Marshal(v)
+	require.NoError(t, err)
+	_, err = UnmarshalTo[Serializer](raw, func() Serializer { return &Failure{} })
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to deserialize value")
+
+	// MarshalMath error - empty
+	_, err = MarshalMath()
+	assert.Error(t, err)
+	assert.EqualError(t, err, "cannot marshal empty values")
+
+	// NewUnmarshaller error
+	_, err = NewUnmarshaller([]byte{0, 1, 2})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unmarshal values")
+
+	// Next error - invalid element
+	v = Values{Values: [][]byte{{0, 1, 2}}}
+	raw, err = asn1.Marshal(v)
+	require.NoError(t, err)
+
+	u, err := NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextZr()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unmarshal element")
+
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextG1()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unmarshal element")
+
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextG2()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unmarshal element")
+
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextZrArray()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unmarshal element")
+
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextG1Array()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to unmarshal element")
+
+	// Next error - trailing bytes
+	// Create a valid Element then append some bytes
+	e := Element{CurveID: 1, Raw: []byte{1, 2, 3}}
+	eRaw, err := asn1.Marshal(e)
+	require.NoError(t, err)
+	eRaw = append(eRaw, 0, 0)
+	v = Values{Values: [][]byte{eRaw}}
+	raw, err = asn1.Marshal(v)
+	require.NoError(t, err)
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.Next()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "values should not have trailing bytes")
+
+	// NextZrArray error - invalid Raw (not Values)
+	e = Element{CurveID: 1, Raw: []byte{0, 1, 2}}
+	eRaw, err = asn1.Marshal(e)
+	require.NoError(t, err)
+	v = Values{Values: [][]byte{eRaw}}
+	raw, err = asn1.Marshal(v)
+	require.NoError(t, err)
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextZrArray()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to serialize element")
+
+	// NextZrArray error - trailing bytes in Raw
+	vArray := Values{Values: [][]byte{{1, 2, 3}}}
+	vArrayRaw, err := asn1.Marshal(vArray)
+	require.NoError(t, err)
+	vArrayRaw = append(vArrayRaw, 0, 0)
+	e = Element{CurveID: 1, Raw: vArrayRaw}
+	eRaw, err = asn1.Marshal(e)
+	require.NoError(t, err)
+	v = Values{Values: [][]byte{eRaw}}
+	raw, err = asn1.Marshal(v)
+	require.NoError(t, err)
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextZrArray()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "values should not have trailing bytes")
+
+	// NextG1Array error - invalid Raw (not Values)
+	e = Element{CurveID: int(math.BN254), Raw: []byte{0, 1, 2}}
+	eRaw, err = asn1.Marshal(e)
+	require.NoError(t, err)
+	v = Values{Values: [][]byte{eRaw}}
+	raw, err = asn1.Marshal(v)
+	require.NoError(t, err)
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextG1Array()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to deserialize element")
+
+	// NextG1Array error - trailing bytes in Raw
+	vArray = Values{Values: [][]byte{{1, 2, 3}}}
+	vArrayRaw, err = asn1.Marshal(vArray)
+	require.NoError(t, err)
+	vArrayRaw = append(vArrayRaw, 0, 0)
+	e = Element{CurveID: int(math.BN254), Raw: vArrayRaw}
+	eRaw, err = asn1.Marshal(e)
+	require.NoError(t, err)
+	v = Values{Values: [][]byte{eRaw}}
+	raw, err = asn1.Marshal(v)
+	require.NoError(t, err)
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextG1Array()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "values should not have trailing bytes")
+
+	// NextG1Array error - NewG1FromBytes failure
+	vArray = Values{Values: [][]byte{{1, 2, 3}}} // Invalid G1 bytes
+	vArrayRaw, err = asn1.Marshal(vArray)
+	require.NoError(t, err)
+	e = Element{CurveID: int(math.BN254), Raw: vArrayRaw}
+	eRaw, err = asn1.Marshal(e)
+	require.NoError(t, err)
+	v = Values{Values: [][]byte{eRaw}}
+	raw, err = asn1.Marshal(v)
+	require.NoError(t, err)
+	u, err = NewUnmarshaller(raw)
+	require.NoError(t, err)
+	_, err = u.NextG1Array()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to deserialize element")
+
+	// NewElementArray error - empty
+	_, err = NewElementArray([]*math.Zr{})
+	assert.Error(t, err)
+	assert.EqualError(t, err, "elements cannot be empty")
+}
