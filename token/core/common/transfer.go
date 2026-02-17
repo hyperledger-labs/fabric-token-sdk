@@ -36,9 +36,5 @@ func SelectIssuerForRedeem(issuers []driver.Identity, opts *driver.TransferOptio
 		return issuerSigningKey, nil
 	}
 
-	if len(issuers) < 1 {
-		return nil, errors.New("no issuer found")
-	}
-
 	return issuers[0], nil
 }
