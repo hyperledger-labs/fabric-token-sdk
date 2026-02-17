@@ -72,6 +72,12 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (any, error) {
 	}
 	defer request.Rws.Done()
 
+	// validate proposal
+	err = r.validateProposal(context, request)
+	if err != nil {
+		return nil, errors.Join(ErrValidateProposal, err)
+	}
+
 	// validate
 	err = r.validate(context, request, func(id token.ID) ([]byte, error) {
 		key, err := r.keyTranslator.CreateOutputKey(id.TxId, id.Index)
@@ -153,7 +159,7 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 		return nil, errors.Wrapf(ErrInvalidProposal, "non empty namespaces")
 	}
 
-	// TODO: check that tx contains a valid endorser proposal
+	// Validate chaincode name and version
 	if name, version := tx.Chaincode(); name != tmsID.Namespace || version != ChaincodeVersion {
 		return nil, errors.Wrapf(ErrInvalidProposal, "invalid chaincode")
 	}
@@ -178,6 +184,80 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 		Tms:              tms,
 		PublicParamsHash: tms.PublicParametersManager().PublicParamsHash(),
 	}, nil
+}
+
+func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, request *Request) error {
+	logger.DebugfContext(ctx.Context(), "Validate proposal for TX [%s]", request.Anchor)
+
+	// Get the signed proposal from the underlying Fabric transaction
+	signedProposal := request.Tx.Transaction.SignedProposal()
+	if signedProposal == nil {
+		return errors.Errorf("signed proposal is nil for tx [%s]", request.Anchor)
+	}
+
+	// Get the proposal
+	proposal := request.Tx.Transaction.Proposal()
+	if proposal == nil {
+		return errors.Errorf("proposal is nil for tx [%s]", request.Anchor)
+	}
+
+	// Verify the proposal signature
+	// The signature verification ensures that the proposal was signed by the creator
+	creator := request.Tx.Transaction.Creator()
+	if len(creator) == 0 {
+		return errors.Errorf("creator is empty for tx [%s]", request.Anchor)
+	}
+
+	// Get the proposal bytes for signature verification from the signed proposal
+	proposalBytes := signedProposal.ProposalBytes()
+	if len(proposalBytes) == 0 {
+		return errors.Errorf("proposal bytes are empty for tx [%s]", request.Anchor)
+	}
+
+	// Verify the signature on the proposal
+	signature := signedProposal.Signature()
+	if len(signature) == 0 {
+		return errors.Errorf("proposal signature is empty for tx [%s]", request.Anchor)
+	}
+
+	// Verify the signature over the proposal using the TMS signature service
+	// Try to get a verifier for the creator identity - try owner, issuer, and auditor verifiers
+	sigService := request.Tms.SigService()
+
+	// Try owner verifier first
+	verifier, err := sigService.OwnerVerifier(ctx.Context(), creator)
+	if err != nil {
+		// Try issuer verifier
+		verifier, err = sigService.IssuerVerifier(ctx.Context(), creator)
+		if err != nil {
+			// Try auditor verifier
+			verifier, err = sigService.AuditorVerifier(ctx.Context(), creator)
+			if err != nil {
+				return errors.Wrapf(err, "failed to get verifier for creator for tx [%s]", request.Anchor)
+			}
+		}
+	}
+
+	// Verify the signature
+	err = verifier.Verify(proposalBytes, signature)
+	if err != nil {
+		return errors.Wrapf(err, "failed to verify proposal signature for tx [%s]", request.Anchor)
+	}
+
+	// Validate that the token actions in the request are consistent with the proposal
+	// The token request should match what's in the transient data
+	// This ensures the relationship between the action, read-write set, and token actions
+	if len(request.RequestRaw) == 0 {
+		return errors.Errorf("token request is empty for tx [%s]", request.Anchor)
+	}
+
+	// The actions will be validated in the validate() method which checks:
+	// - Token actions are valid
+	// - Read-write set is consistent with the actions
+	// - Signatures on token actions are valid
+
+	logger.DebugfContext(ctx.Context(), "Proposal signature verified successfully for TX [%s]", request.Anchor)
+	return nil
 }
 
 func (r *RequestApprovalResponderView) translate(ctx context.Context, request *Request) error {

@@ -41,6 +41,8 @@ func mockNewRequestApprovalResponderView(t *testing.T, overrideTMSID *token.TMSI
 	es := &mock.EndorserService{}
 	fabricTx := &mock.FabricTransaction{}
 	fabricTx.IDReturns("a_tx_id")
+	fabricTx.CreatorReturns([]byte("creator_identity"))
+
 	tmsID := token.TMSID{
 		Network:   "a_network",
 		Channel:   "a_channel",
