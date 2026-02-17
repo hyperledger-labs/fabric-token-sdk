@@ -37,6 +37,16 @@ func TestZeroOneTwoAndCached(t *testing.T) {
 	require.True(t, ok)
 	rz := NewCachedZrFromInt(c, 3)
 	zrEquals(t, rz, v)
+
+	// test cache miss (curve id)
+	delete(valueCache, c.ID())
+	missed := NewCachedZrFromInt(c, 3)
+	zrEquals(t, missed, c.NewZrFromUint64(3))
+
+	// restore and test cache miss (index)
+	restoreCaches(vSnapshot, pSnapshot, sSnapshot)
+	missed = NewCachedZrFromInt(c, 999)
+	zrEquals(t, missed, c.NewZrFromUint64(999))
 }
 
 func TestPowerOfTwoAndSum(t *testing.T) {
@@ -52,6 +62,16 @@ func TestPowerOfTwoAndSum(t *testing.T) {
 	p0, ok := pc[0]
 	require.True(t, ok)
 	zrEquals(t, p0, PowerOfTwo(c, 0))
+
+	// test cache miss for PowerOfTwo (curve id)
+	delete(powerCache, c.ID())
+	missedP := PowerOfTwo(c, 10)
+	zrEquals(t, missedP, c.NewZrFromUint64(2).PowMod(c.NewZrFromUint64(10)))
+
+	// restore and test cache miss for PowerOfTwo (index)
+	restoreCaches(vSnapshot, pSnapshot, sSnapshot)
+	missedP = PowerOfTwo(c, 999)
+	zrEquals(t, missedP, c.NewZrFromUint64(2).PowMod(c.NewZrFromUint64(999)))
 
 	// cached sum
 	sc := sumOfPowerCache[c.ID()]
@@ -79,6 +99,10 @@ func TestPowerOfTwoAndSum(t *testing.T) {
 	} else {
 		require.Panics(t, func() { SumOfPowersOfTwo(c, n) })
 	}
+
+	// test cache miss for SumOfPowersOfTwo (curve id)
+	delete(sumOfPowerCache, c.ID())
+	require.Panics(t, func() { SumOfPowersOfTwo(c, 1) })
 }
 
 // helper: compare Zr values using Equals

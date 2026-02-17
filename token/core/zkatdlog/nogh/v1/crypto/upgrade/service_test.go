@@ -27,6 +27,15 @@ func TestTokensService_NewUpgradeChallenge(t *testing.T) {
 	challenge, err := ts.NewUpgradeChallenge()
 	require.NoError(t, err)
 	assert.Len(t, challenge, upgrade.ChallengeSize)
+
+	// Test with different maxPrecision
+	ts32, err := upgrade.NewService(nil, 32, nil, nil)
+	require.NoError(t, err)
+	require.NotNil(t, ts32)
+
+	ts64, err := upgrade.NewService(nil, 64, nil, nil)
+	require.NoError(t, err)
+	require.NotNil(t, ts64)
 }
 
 func TestTokensService_GenUpgradeProof(t *testing.T) {
@@ -115,7 +124,22 @@ func TestTokensService_GenUpgradeProof(t *testing.T) {
 			},
 		},
 		{
-			name:         "get signer fails",
+			name:         "signer sign fails",
+			ch:           ch,
+			ledgerTokens: validTokens,
+			wantErr:      true,
+			errMsg:       "failed to get signature: sign error",
+			getIdentityProvider: func() upgrade.IdentityProvider {
+				signer := &mock2.Signer{}
+				signer.SignReturns(nil, errors.New("sign error"))
+				mip := &mock.IdentityProvider{}
+				mip.GetSignerReturns(signer, nil)
+
+				return mip
+			},
+		},
+		{
+			name:         "valid",
 			ch:           ch,
 			ledgerTokens: validTokens,
 			wantErr:      false,
@@ -362,6 +386,25 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 			},
 		},
 		{
+			name:         "ProcessTokens fails in checkUpgradeProof",
+			ch:           ch,
+			ledgerTokens: invalidTokens,
+			proof: func() driver.TokensUpgradeProof {
+				proof := &upgrade.Proof{
+					Challenge:  ch,
+					Tokens:     invalidTokens,
+					Signatures: []upgrade.Signature{[]byte("a signature")},
+				}
+				raw, err := proof.Serialize()
+				require.NoError(t, err)
+
+				return raw
+			},
+			wantErr:         true,
+			errMsg:          "failed to process ledgerTokens: unsupported token format [token format1]",
+			getDeserializer: nilDeserializer,
+		},
+		{
 			name:         "valid but process fails",
 			ch:           ch,
 			ledgerTokens: validTokens,
@@ -388,6 +431,47 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 			expected:       true,
 			wantErrProcess: true,
 			processErrMsg:  "upgrade of unsupported token format [baff495e067aea1a0a5e6a37d72689316c457251e359a6796329761ca3227648] requested",
+		},
+		{
+			name: "valid and supported format",
+			ch:   ch,
+			ledgerTokens: func() []token.LedgerToken {
+				format32, _ := v1.SupportedTokenFormat(32)
+
+				return []token.LedgerToken{{
+					ID:     token.ID{TxId: "tx1", Index: 1},
+					Token:  validTokens[0].Token,
+					Format: format32,
+				}}
+			}(),
+			proof: func() driver.TokensUpgradeProof {
+				format32, _ := v1.SupportedTokenFormat(32)
+				lts := []token.LedgerToken{{
+					ID:     token.ID{TxId: "tx1", Index: 1},
+					Token:  validTokens[0].Token,
+					Format: format32,
+				}}
+				proof := &upgrade.Proof{
+					Challenge:  ch,
+					Tokens:     lts,
+					Signatures: []upgrade.Signature{[]byte("a signature")},
+				}
+				raw, err := proof.Serialize()
+				require.NoError(t, err)
+
+				return raw
+			},
+			wantErr: false,
+			getDeserializer: func() upgrade.Deserializer {
+				v := &mock2.Verifier{}
+				v.VerifyReturns(nil)
+				d := &mock.Deserializer{}
+				d.GetOwnerVerifierReturns(v, nil)
+
+				return d
+			},
+			expected:       true,
+			wantErrProcess: false,
 		},
 	}
 
@@ -424,4 +508,20 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("nil token upgrade request", func(t *testing.T) {
+		ts, err := upgrade.NewService(nil, 16, nil, nil)
+		require.NoError(t, err)
+		_, err = ts.ProcessTokensUpgradeRequest(t.Context(), nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "nil token upgrade request")
+	})
+
+	t.Run("ProcessTokens unsupported format", func(t *testing.T) {
+		ts, err := upgrade.NewService(nil, 16, nil, nil)
+		require.NoError(t, err)
+		_, err = ts.ProcessTokens([]token.LedgerToken{{Format: "invalid"}})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unsupported token format [invalid]")
+	})
 }

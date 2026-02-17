@@ -14,23 +14,19 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 )
 
-// IPA contains the proof that the inner product argument prover
-// sends to the verifier
+// IPA contains the proof for the inner product argument.
 type IPA struct {
-	// Left is the result of the reduction protocol of the left vector
+	// Left is the final reduced scalar from the left vector.
 	Left *mathlib.Zr
-	// Right is the result of the reduction protocol of the right vector
+	// Right is the final reduced scalar from the right vector.
 	Right *mathlib.Zr
-	// L is an array that contains commitments to the intermediary values
-	// of the reduction protocol. The size of L is logarithmic in the size
-	// of the left/right vector
+	// L contains the intermediate commitments for each round of the reduction.
 	L []*mathlib.G1
-	// R is an array that contains commitments to the intermediary values
-	// of the reduction protocol. The size of R is logarithmic in the size
-	// of the left/right vector
+	// R contains the intermediate commitments for each round of the reduction.
 	R []*mathlib.G1
 }
 
+// Serialize marshals the IPA into a byte slice.
 func (ipa *IPA) Serialize() ([]byte, error) {
 	lArray, err := asn1.NewElementArray(ipa.L)
 	if err != nil {
@@ -44,6 +40,7 @@ func (ipa *IPA) Serialize() ([]byte, error) {
 	return asn1.MarshalMath(ipa.Left, ipa.Right, lArray, rArray)
 }
 
+// Deserialize unmarshals a byte slice into the IPA.
 func (ipa *IPA) Deserialize(raw []byte) error {
 	unmarshaller, err := asn1.NewUnmarshaller(raw)
 	if err != nil {
@@ -69,6 +66,7 @@ func (ipa *IPA) Deserialize(raw []byte) error {
 	return nil
 }
 
+// Validate checks that the IPA proof elements are valid for the given curve.
 func (ipa *IPA) Validate(curve mathlib.CurveID) error {
 	if ipa.Left == nil {
 		return errors.New("invalid IPA proof: nil Left")
@@ -92,32 +90,29 @@ func (ipa *IPA) Validate(curve mathlib.CurveID) error {
 	return nil
 }
 
-// ipaProver is the prover for the inner product argument. It shows that a
-// value c is the inner product of two committed vectors a = (a_1, ..., a_n)
-// (leftVector) and b = (b_1, ..., b_n) (rightVector)
+// ipaProver manages the creation of an inner product argument proof.
 type ipaProver struct {
-	// rightVector is one of the committed vectors in Commitment
+	// rightVector is the first vector of the inner product.
 	rightVector []*mathlib.Zr
-	// leftVector is one of the committed vectors in Commitment
+	// leftVector is the second vector of the inner product.
 	leftVector []*mathlib.Zr
-	// InnerProduct is the inner product of leftVector and rightVector
+	// InnerProduct is the expected inner product result.
 	InnerProduct *mathlib.Zr
-	// Q is a random generators of G1
+	// Q is an auxiliary generator.
 	Q *mathlib.G1
-	// RightGenerators are the generators used to commit to rightVector
+	// RightGenerators are the generators for the right vector.
 	RightGenerators []*mathlib.G1
-	// LeftGenerators are the generators used to commit to leftVector
+	// LeftGenerators are the generators for the left vector.
 	LeftGenerators []*mathlib.G1
-	// Commitment is a Pedersen commitment to leftVector and rightVector
+	// Commitment is the Pedersen commitment to the vectors.
 	Commitment *mathlib.G1
-	// NumberOfRounds is the number of rounds in the reduction protocol.
-	// It corresponds to log_2(len(rightVector)) = log_2(len(leftVector))
+	// NumberOfRounds is log2 of the vector length.
 	NumberOfRounds uint64
-	// Curve is the curve over which the computations are performed
+	// Curve is the mathematical curve.
 	Curve *mathlib.Curve
 }
 
-// NewIPAProver returns an ipaProver as a function of the passed arguments
+// NewIPAProver returns a new ipaProver instance.
 func NewIPAProver(
 	innerProduct *mathlib.Zr,
 	leftVector, rightVector []*mathlib.Zr,
@@ -140,7 +135,7 @@ func NewIPAProver(
 	}
 }
 
-// Prove returns an IPA proof if no error occurs, else, it returns an error
+// Prove generates an inner product argument proof.
 func (p *ipaProver) Prove() (*IPA, error) {
 	array := common.GetG1Array(p.RightGenerators, p.LeftGenerators, []*mathlib.G1{p.Q, p.Commitment})
 	bytesToHash := make([][]byte, 3)
@@ -229,27 +224,25 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 	return left[0], right[0], LArray, RArray, nil
 }
 
-// ipaVerifier verifies given a proof that a value c is the inner
-// product of two vectors committed in Commitment
+// ipaVerifier manages the verification of an inner product argument proof.
 type ipaVerifier struct {
-	// InnerProduct is the value against which the proof is verified
+	// InnerProduct is the value being verified.
 	InnerProduct *mathlib.Zr
-	// Q is a random generators of G1
+	// Q is an auxiliary generator.
 	Q *mathlib.G1
-	// RightGenerators are the generators used to commit to rightVector
+	// RightGenerators are the generators for the right vector.
 	RightGenerators []*mathlib.G1
-	// LeftGenerators are the generators used to commit to leftVector
+	// LeftGenerators are the generators for the left vector.
 	LeftGenerators []*mathlib.G1
-	// Commitment is a Pedersen commitment to leftVector and rightVector
+	// Commitment is the Pedersen commitment to the vectors.
 	Commitment *mathlib.G1
-	// NumberOfRounds is the number of rounds in the reduction protocol.
-	// It corresponds to log_2(len(rightVector)) = log_2(len(leftVector))
+	// NumberOfRounds is log2 of the vector length.
 	NumberOfRounds uint64
-	// Curve is the curve over which the computations are performed
+	// Curve is the mathematical curve.
 	Curve *mathlib.Curve
 }
 
-// NewIPAVerifier returns an ipaVerifier as a function of the passed arguments
+// NewIPAVerifier returns an ipaVerifier instance.
 func NewIPAVerifier(
 	innerProduct *mathlib.Zr,
 	Q *mathlib.G1,
@@ -269,8 +262,7 @@ func NewIPAVerifier(
 	}
 }
 
-// Verify checks if the proof passed as a parameter is a valid inner
-// product argument
+// Verify checks if the provided inner product argument proof is valid.
 func (v *ipaVerifier) Verify(proof *IPA) error {
 	// check that the proof is well-formed
 	if proof.Left == nil || proof.Right == nil {

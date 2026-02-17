@@ -28,26 +28,33 @@ type (
 	Signature = []byte
 )
 
-//go:generate counterfeiter -o mock/des.go -fake-name Deserializer . Deserializer
-
+// Deserializer defines the interface for obtaining a verifier for an identity.
 type Deserializer interface {
+	// GetOwnerVerifier returns a verifier for the specified identity.
 	GetOwnerVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
 }
 
-//go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
-
+// IdentityProvider defines the interface for obtaining a signer for an identity.
 type IdentityProvider interface {
+	// GetSigner returns a signer for the specified identity.
 	GetSigner(ctx context.Context, id driver.Identity) (driver.Signer, error)
 }
 
+// Service provides functionality for token upgrades.
 type Service struct {
-	Logger                          logging.Logger
-	MaxPrecision                    uint64
+	// Logger is the system logger.
+	Logger logging.Logger
+	// MaxPrecision is the maximum allowed precision for tokens.
+	MaxPrecision uint64
+	// UpgradeSupportedTokenFormatList is the list of token formats that can be upgraded.
 	UpgradeSupportedTokenFormatList []token.Format
-	Deserializer                    Deserializer
-	IdentityProvider                IdentityProvider
+	// Deserializer is used to verify identities.
+	Deserializer Deserializer
+	// IdentityProvider is used to obtain signers for identities.
+	IdentityProvider IdentityProvider
 }
 
+// NewService creates a new Service instance.
 func NewService(
 	logger logging.Logger,
 	maxPrecision uint64,
@@ -75,6 +82,7 @@ func NewService(
 	}, nil
 }
 
+// NewUpgradeChallenge generates a new 32-byte random challenge for the upgrade process.
 func (s *Service) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
 	// generate a 32 bytes secure random slice
 	key := make([]byte, ChallengeSize)
@@ -90,8 +98,8 @@ func (s *Service) NewUpgradeChallenge() (driver.TokensUpgradeChallenge, error) {
 	return key, nil
 }
 
-// GenUpgradeProof does the following: For each token in input, it signs the concatenation of the challenge and the tokens to be upgraded.
-// These signatures are then added to the proof
+// GenUpgradeProof generates a proof for a token upgrade request.
+// For each token in input, it signs the concatenation of the challenge and the tokens to be upgraded.
 func (s *Service) GenUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, ledgerTokens []token.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
 	if len(ch) != ChallengeSize {
 		return nil, errors.Errorf("invalid challenge size, got [%d], expected [%d]", len(ch), ChallengeSize)
@@ -141,12 +149,14 @@ func (s *Service) GenUpgradeProof(ctx context.Context, ch driver.TokensUpgradeCh
 	return raw, nil
 }
 
+// CheckUpgradeProof verifies the validity of an upgrade proof against a challenge and a set of tokens.
 func (s *Service) CheckUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token.LedgerToken) (bool, error) {
 	_, v, err := s.checkUpgradeProof(ctx, ch, proof, tokens)
 
 	return v, err
 }
 
+// ProcessTokensUpgradeRequest validates a token upgrade request and returns the upgraded tokens.
 func (s *Service) ProcessTokensUpgradeRequest(ctx context.Context, utp *driver.TokenUpgradeRequest) ([]token.Token, error) {
 	if utp == nil {
 		return nil, errors.New("nil token upgrade request")
@@ -172,6 +182,7 @@ func (s *Service) ProcessTokensUpgradeRequest(ctx context.Context, utp *driver.T
 	return tokens, nil
 }
 
+// ProcessTokens parses ledger tokens and extracts their content (Owner, Type, Quantity).
 func (s *Service) ProcessTokens(ledgerTokens []token.LedgerToken) ([]token.Token, error) {
 	// for each token, extract type and value
 	tokens := make([]token.Token, len(ledgerTokens))
