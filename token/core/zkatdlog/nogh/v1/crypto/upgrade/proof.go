@@ -47,5 +47,6 @@ func SHA256Digest(ch driver.TokensUpgradeChallenge, tokens []token.LedgerToken) 
 			return nil, errors.Wrapf(err, "failed to write token to hash")
 		}
 	}
+
 	return h.Digest(), nil
 }

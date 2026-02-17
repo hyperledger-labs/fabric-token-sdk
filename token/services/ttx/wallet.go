@@ -17,6 +17,7 @@ import (
 func WithType(tokenType token2.Type) token.ListTokensOption {
 	return func(o *token.ListTokensOptions) error {
 		o.TokenType = tokenType
+
 		return nil
 	}
 }
@@ -31,6 +32,7 @@ func MyWallet(context view.Context, opts ...token.ServiceOption) *token.OwnerWal
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -50,6 +52,7 @@ func MyWalletFromTx(context view.Context, tx *Transaction) *token.OwnerWallet {
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -65,6 +68,7 @@ func GetWallet(context view.Context, id string, opts ...token.ServiceOption) *to
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -80,6 +84,7 @@ func GetWalletForChannel(context view.Context, channel, id string, opts ...token
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -93,6 +98,7 @@ func MyIssuerWallet(context view.Context, opts ...token.ServiceOption) *token.Is
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -108,6 +114,7 @@ func GetIssuerWallet(context view.Context, id string, opts ...token.ServiceOptio
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -123,6 +130,7 @@ func GetIssuerWalletForChannel(context view.Context, channel, id string, opts ..
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -136,6 +144,7 @@ func MyAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.A
 	if w == nil {
 		return nil
 	}
+
 	return w
 }
 
@@ -151,5 +160,6 @@ func GetAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.
 	if w == nil {
 		return nil
 	}
+
 	return w
 }

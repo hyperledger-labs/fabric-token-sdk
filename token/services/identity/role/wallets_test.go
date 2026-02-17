@@ -91,6 +91,7 @@ func TestIssuerWallet(t *testing.T) {
 		logger := logging.MustGetLogger("test")
 		id := driver.Identity("issuerIdentity")
 		w := role.NewIssuerWallet(logger, tv, "w1", id, signer)
+
 		return w, tv, signer
 	}
 
@@ -164,6 +165,7 @@ func TestLongTermOwnerWallet(t *testing.T) {
 
 		w, err := role.NewLongTermOwnerWallet(t.Context(), ip, tv, "w1", info)
 		require.NoError(t, err)
+
 		return w, ip, tv
 	}
 
@@ -210,6 +212,7 @@ func TestLongTermOwnerWallet(t *testing.T) {
 			}
 			t := tokensList[idx]
 			idx++
+
 			return t, nil
 		}
 
@@ -260,6 +263,7 @@ func TestAnonymousOwnerWallet(t *testing.T) {
 		// Create wallet
 		w, err := role.NewAnonymousOwnerWallet(logger, ip, tv, des, is, "w1", info, 10, &disabled.Provider{})
 		require.NoError(t, err)
+
 		return w, ip, tv, is, des
 	}
 

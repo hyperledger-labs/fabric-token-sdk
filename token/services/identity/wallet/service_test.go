@@ -39,6 +39,7 @@ func TestRegisterIdentityDelegation(t *testing.T) {
 	called := false
 	reg.RegisterIdentityCalls(func(context.Context, driver.IdentityConfiguration) error {
 		called = true
+
 		return nil
 	})
 	s := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[identity.RoleType]wallet.RoleRegistry{identity.OwnerRole: reg, identity.IssuerRole: reg})

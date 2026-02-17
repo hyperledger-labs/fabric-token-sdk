@@ -31,6 +31,7 @@ func CopyFile(src, dst string) error {
 	}
 	defer utils.IgnoreError(df.Close)
 	_, err = io.Copy(df, sf)
+
 	return err
 }
 
@@ -39,7 +40,7 @@ func CopyDir(srcDir, destDir string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(destDir, 0750); err != nil {
 		return err
 	}
 	for _, entry := range entries {
@@ -55,5 +56,6 @@ func CopyDir(srcDir, destDir string) error {
 			}
 		}
 	}
+
 	return nil
 }

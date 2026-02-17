@@ -336,6 +336,7 @@ func evalCondition(condition cond.Condition) (string, []common2.Param) {
 	sb := common2.NewBuilder()
 	condition.WriteString(sqlite.NewConditionInterpreter(), sb)
 	actualSql, actualArgs := sb.Build()
+
 	return actualSql, actualArgs
 }
 

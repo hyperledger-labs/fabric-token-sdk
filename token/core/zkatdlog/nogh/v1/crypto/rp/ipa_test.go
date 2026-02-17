@@ -35,7 +35,7 @@ type ipaSetup struct {
 func newIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
 	curve := math.Curves[curveID]
 	l := uint64(64)
-	nr := 63 - uint64(bits.LeadingZeros64(l))
+	nr := 63 - uint64(bits.LeadingZeros64(l)) // #nosec G115
 	leftGens := make([]*math.G1, l)
 	rightGens := make([]*math.G1, l)
 	left := make([]*math.Zr, l)
@@ -55,6 +55,7 @@ func newIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
 		com.Add(leftGens[i].Mul(left[i]))
 		com.Add(rightGens[i].Mul(right[i]))
 	}
+
 	return &ipaSetup{
 		left:      left,
 		right:     right,
@@ -105,7 +106,7 @@ func BenchmarkIPAProver(b *testing.B) {
 	require.NoError(b, pp.Start())
 	defer pp.Stop()
 	envs := make([]*ipaSetup, 0, 128)
-	for i := 0; i < 128; i++ {
+	for range 128 {
 		setup, err := newIpaSetup(math.BLS12_381_BBS_GURVY)
 		require.NoError(b, err)
 		envs = append(envs, setup)
@@ -154,6 +155,7 @@ func TestParallelIPAProver(t *testing.T) {
 				setup.curve,
 			)
 			_, err := prover.Prove()
+
 			return err
 		},
 	)

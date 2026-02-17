@@ -31,6 +31,7 @@ func (id Hashable) Raw() []byte {
 	if err != nil {
 		panic(err)
 	}
+
 	return hash.Sum(nil)
 }
 
@@ -60,11 +61,13 @@ func (h *Hasher) AddUInt64(i uint64) error {
 
 func (h *Hasher) AddBytes(b []byte) error {
 	_, err := h.h.Write(b)
+
 	return err
 }
 
 func (h *Hasher) AddString(s string) error {
 	_, err := h.h.Write([]byte(s))
+
 	return err
 }
 
@@ -72,6 +75,7 @@ func (h *Hasher) AddBool(b bool) (int, error) {
 	if b {
 		return h.h.Write([]byte{1})
 	}
+
 	return h.h.Write([]byte{0})
 }
 
@@ -93,5 +97,6 @@ func (h *Hasher) AddG1s(generators []*math.G1) error {
 			return errors.WithMessagef(err, "failed to add g1 element")
 		}
 	}
+
 	return nil
 }

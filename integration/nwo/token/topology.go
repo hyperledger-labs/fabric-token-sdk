@@ -66,6 +66,7 @@ func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel
 	for _, s := range Drivers {
 		if driver == s {
 			found = true
+
 			break
 		}
 	}
@@ -87,6 +88,7 @@ func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel
 		FSCNodes:        nodes,
 	}
 	t.TMSs = append(t.TMSs, tms)
+
 	return tms
 }
 

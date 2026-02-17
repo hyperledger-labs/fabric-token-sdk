@@ -80,6 +80,7 @@ func (p *RangeProofData) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshall InnerProduct")
 	}
+
 	return nil
 }
 
@@ -126,6 +127,7 @@ func (p *RangeProofData) Validate(curve math.CurveID) error {
 	if err := math2.CheckBaseElement(p.InnerProduct, curve); err != nil {
 		return errors.Wrapf(err, "invalid range proof data: invalid InnerProduct")
 	}
+
 	return nil
 }
 
@@ -144,6 +146,7 @@ func (p *RangeProof) Serialize() ([]byte, error) {
 func (p *RangeProof) Deserialize(bytes []byte) error {
 	p.Data = &RangeProofData{}
 	p.IPA = &IPA{}
+
 	return asn1.Unmarshal[asn1.Serializer](bytes, p.Data, p.IPA)
 }
 
@@ -160,6 +163,7 @@ func (p *RangeProof) Validate(curve math.CurveID) error {
 	if err := p.IPA.Validate(curve); err != nil {
 		return errors.Wrapf(err, "invalid range proof: invalid IPA")
 	}
+
 	return nil
 }
 
@@ -235,7 +239,7 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	rightGeneratorsPrime := make([]*math.G1, len(p.RightGenerators))
 	for i := range len(p.RightGenerators) {
 		// compute 1/y^i
-		yInv2i := yInv.PowMod(math2.NewCachedZrFromInt(p.Curve, uint64(i)))
+		yInv2i := yInv.PowMod(math2.NewCachedZrFromInt(p.Curve, uint64(i))) // #nosec G115
 		// compute the new generators H'_i = H_i^{1/y^i}
 		rightGeneratorsPrime[i] = p.RightGenerators[i].Mul(yInv2i)
 	}
@@ -335,7 +339,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 		// compute V_iy^i
 		randRightPrime[i] = p.Curve.ModMul(randomRight[i], y2i, p.Curve.GroupOrder)
 		// compute 2^iz^2
-		zPrime[i] = p.Curve.ModMul(zSquare, math2.PowerOfTwo(p.Curve, uint64(i)), p.Curve.GroupOrder)
+		zPrime[i] = p.Curve.ModMul(zSquare, math2.PowerOfTwo(p.Curve, uint64(i)), p.Curve.GroupOrder) // #nosec G115
 	}
 
 	// compute \sum y^iV_i(L_i-z)
@@ -560,7 +564,7 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 			z,
 			yPow[i],
 			zSquare,
-			math2.PowerOfTwo(v.Curve, uint64(i)),
+			math2.PowerOfTwo(v.Curve, uint64(i)), // #nosec G115
 			v.Curve.GroupOrder,
 		)
 		// recompute the generators H'_i = H_i^{1/y_i}
@@ -583,5 +587,6 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

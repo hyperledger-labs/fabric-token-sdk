@@ -31,12 +31,14 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
+
 	return pp, nil
 }
 
 func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
 	deserializer := NewDeserializer()
+
 	return validator.NewValidator(logger, pp.(*core2.PublicParams), deserializer, nil, nil, nil), nil
 }
 

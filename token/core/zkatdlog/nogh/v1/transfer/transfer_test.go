@@ -13,11 +13,13 @@ import (
 
 	math "github.com/IBM/mathlib"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,14 +28,57 @@ var (
 	TestCurve = math2.BLS12_381_BBS_GURVY_FAST_RNG
 )
 
+func TestProof_Validate_ErrConditions(t *testing.T) {
+	proof := &transfer.Proof{}
+	err := proof.Validate(math.BN254)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrMissingTypeAndSumProof)
+	assert.Contains(t, err.Error(), "invalid transfer proof: missing type-and-sum proof")
+
+	c := math.Curves[TestCurve]
+	proof.TypeAndSum = &transfer.TypeAndSumProof{}
+	err = proof.Validate(TestCurve)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrInvalidCommitmentToType)
+	require.ErrorIs(t, err, transfer.ErrInvalidTransferProof)
+
+	// valid type and sum, nil range correctness
+	proof.TypeAndSum = &transfer.TypeAndSumProof{
+		CommitmentToType:     c.GenG1.Copy(),
+		InputBlindingFactors: []*math.Zr{c.NewZrFromInt(1)},
+		InputValues:          []*math.Zr{c.NewZrFromInt(1)},
+		Type:                 c.NewZrFromInt(1),
+		TypeBlindingFactor:   c.NewZrFromInt(1),
+		EqualityOfSum:        c.NewZrFromInt(1),
+		Challenge:            c.NewZrFromInt(1),
+	}
+	err = proof.Validate(TestCurve)
+	require.NoError(t, err)
+
+	// invalid range correctness
+	proof.RangeCorrectness = &rp.RangeCorrectness{
+		Proofs: []*rp.RangeProof{nil},
+	}
+	err = proof.Validate(TestCurve)
+	require.Error(t, err)
+	require.ErrorIs(t, err, transfer.ErrInvalidTransferProof)
+}
+
 func TestTransfer(t *testing.T) {
 	t.Run("parameters and witness are initialized correctly", func(t *testing.T) {
 		env, err := newTransferEnv(t)
 		require.NoError(t, err)
-		proof, err := env.prover.Prove()
+		proofRaw, err := env.prover.Prove()
 		require.NoError(t, err)
-		require.NotNil(t, proof)
-		err = env.verifier.Verify(proof)
+		require.NotNil(t, proofRaw)
+
+		proof := &transfer.Proof{}
+		err = proof.Deserialize(proofRaw)
+		require.NoError(t, err)
+		assert.NotNil(t, proof.TypeAndSum)
+		assert.NotNil(t, proof.RangeCorrectness)
+
+		err = env.verifier.Verify(proofRaw)
 		require.NoError(t, err)
 	})
 	t.Run("Output Values > Input Values", func(t *testing.T) {
@@ -120,6 +165,7 @@ func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
 				func() *benchmarkTransferEnv {
 					env, err := newBenchmarkTransferEnv(1, tc.BenchmarkCase)
 					require.NoError(t, err)
+
 					return env
 				},
 				func(env *benchmarkTransferEnv) error {
@@ -134,6 +180,7 @@ func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
 						return err
 					}
 					_, err = prover.Prove()
+
 					return err
 				},
 			)
@@ -147,6 +194,7 @@ func setup(bits uint64, curveID math.CurveID) (*v1.PublicParams, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return pp, nil
 }
 
@@ -206,6 +254,7 @@ func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier, 
 		return nil, nil, err
 	}
 	verifier := transfer.NewVerifier(in, out, pp)
+
 	return prover, verifier, nil
 }
 
@@ -231,7 +280,7 @@ func prepareInputsForZKTransfer(pp *v1.PublicParams, numInputs int, numOutputs i
 	// prepare inputs
 	sumInputs := uint64(0)
 	for i := range numInputs {
-		v := uint64(i*10 + 500)
+		v := uint64(i*10 + 500) //nolint:gosec
 		sumInputs += v
 		inValues[i] = v
 	}
@@ -310,6 +359,7 @@ func newTransferEnv(tb testing.TB) (*transferEnv, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &transferEnv{
 		prover:   prover,
 		verifier: verifier,
@@ -321,6 +371,7 @@ func newTransferEnvWithWrongSum() (*transferEnv, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &transferEnv{
 		prover:   prover,
 		verifier: verifier,
@@ -332,6 +383,7 @@ func newTransferEnvWithInvalidRange() (*transferEnv, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &transferEnv{
 		prover:   prover,
 		verifier: verifier,
@@ -357,7 +409,7 @@ func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkT
 	}
 
 	entries := make([]singleProverEnv, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
 		if err != nil {
 			return nil, err
@@ -369,5 +421,6 @@ func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkT
 			d: out,
 		}
 	}
+
 	return &benchmarkTransferEnv{ProverEnvs: entries, pp: pp}, nil
 }

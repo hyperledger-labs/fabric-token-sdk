@@ -92,8 +92,10 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 			// It might be that this key was already inserted before. The node is restarting, for example.
 			return nil
 		}
+
 		return errors.Wrapf(err, "key exists already and the value does not match")
 	}
+
 	return err
 }
 
@@ -110,6 +112,7 @@ func (db *KeystoreStore) Get(key string, state interface{}) error {
 	}
 
 	logger.Debugf("got key [%s] successfully", key)
+
 	return nil
 }
 
@@ -123,6 +126,7 @@ func (db *KeystoreStore) GetRaw(key string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed retrieving key [%s]", key)
 	}
+
 	return raw, nil
 }
 

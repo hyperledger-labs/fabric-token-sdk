@@ -55,7 +55,7 @@ var cmd = &cobra.Command{
 	Long:  "Update certs in the public parameters file without changing the parameters themselves.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
@@ -69,6 +69,7 @@ var cmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to generate public parameters")
 		}
+
 		return nil
 	},
 }

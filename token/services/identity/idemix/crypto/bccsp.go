@@ -27,6 +27,7 @@ func NewKeyStore(curveID math.CurveID, backend keystore.KVS) (bccsp.KeyStore, er
 		KVS:        backend,
 		Translator: tr,
 	}
+
 	return keyStore, nil
 }
 
@@ -65,6 +66,7 @@ func NewBCCSPWithDummyKeyStore(curveID math.CurveID) (bccsp.BCCSP, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting crypto provider")
 	}
+
 	return cryptoProvider, nil
 }
 
@@ -98,5 +100,6 @@ func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translato
 	default:
 		return nil, nil, false, errors.Errorf("unsupported curve ID: %d", curveID)
 	}
+
 	return curve, tr, aries, nil
 }

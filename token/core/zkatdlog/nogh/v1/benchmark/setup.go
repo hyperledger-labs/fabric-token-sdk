@@ -132,6 +132,7 @@ func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs [
 			}
 		}
 	}
+
 	return &SetupConfigurations{
 		Configurations: configurations,
 	}, nil
@@ -143,8 +144,9 @@ func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs [
 func (c *SetupConfigurations) GetPublicParams(bits uint64, curveID math.CurveID) (*setup.PublicParams, error) {
 	configuration, ok := c.Configurations[key(bits, curveID)]
 	if !ok {
-		return nil, fmt.Errorf("configuration not found")
+		return nil, errors.New("configuration not found")
 	}
+
 	return configuration.PP, nil
 }
 
@@ -153,8 +155,9 @@ func (c *SetupConfigurations) GetPublicParams(bits uint64, curveID math.CurveID)
 func (c *SetupConfigurations) GetSetupConfiguration(bits uint64, curveID math.CurveID) (*SetupConfiguration, error) {
 	configuration, ok := c.Configurations[key(bits, curveID)]
 	if !ok {
-		return nil, fmt.Errorf("configuration not found")
+		return nil, errors.New("configuration not found")
 	}
+
 	return configuration, nil
 }
 
@@ -172,7 +175,7 @@ func (c *SetupConfigurations) SaveTo(dir string) error {
 		return errors.Errorf("nil SetupConfigurations")
 	}
 	// Ensure target base directory exists
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return errors.Wrapf(err, "failed creating base dir [%s]")
 	}
 
@@ -206,7 +209,7 @@ func (c *SetupConfigurations) SaveTo(dir string) error {
 
 		// create target directory and write
 		targetDir := filepath.Join(dir, filepath.Base(k))
-		if err := os.MkdirAll(targetDir, 0o755); err != nil {
+		if err := os.MkdirAll(targetDir, 0750); err != nil {
 			return errors.WithMessagef(err, "failed creating dir for key: %s", k)
 		}
 
@@ -223,6 +226,7 @@ func (c *SetupConfigurations) SaveTo(dir string) error {
 			return errors.WithMessagef(err, "failed writing pp.json for key: %s", k)
 		}
 	}
+
 	return nil
 }
 
@@ -297,6 +301,7 @@ func PrepareECDSASigner() (*Signer, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return signer, nil
 }
 
@@ -316,6 +321,7 @@ func NewECDSASigner() (*Signer, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Signer{SK: sk, Signer: crypto2.NewEcdsaSigner(sk)}, nil
 }
 

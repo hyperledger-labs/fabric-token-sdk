@@ -36,6 +36,7 @@ func (i *HashInfo) Validate() error {
 	if !i.HashEncoding.Available() {
 		return errors.New("encoding function not available")
 	}
+
 	return nil
 }
 
@@ -50,6 +51,7 @@ func (i *HashInfo) Image(preImage []byte) ([]byte, error) {
 	}
 	image := hash.Sum(nil)
 	image = []byte(i.HashEncoding.New().EncodeToString(image))
+
 	return image, nil
 }
 
@@ -58,6 +60,7 @@ func (i *HashInfo) Compare(image []byte) error {
 	if bytes.Equal(image, i.Hash) {
 		return nil
 	}
+
 	return errors.Errorf("passed image [%v] does not match the hash [%v]", image, i.Hash)
 }
 
@@ -87,6 +90,7 @@ func (s *Script) Validate(timeReference time.Time) error {
 	if err := s.HashInfo.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -114,19 +118,23 @@ func (s *ScriptAuth) IsMine(ctx context.Context, tok *token3.Token) (string, []s
 	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 	if err != nil {
 		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+
 		return "", nil, false
 	}
 	if owner.Type != ScriptType {
 		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, ScriptType)
+
 		return "", nil, false
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
 		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+
 		return "", nil, false
 	}
 	if script.Sender.IsNone() || script.Recipient.IsNone() {
 		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, invalid content [%v]", view.Identity(tok.Owner), tok.Type, tok.Quantity, script)
+
 		return "", nil, false
 	}
 
@@ -146,6 +154,7 @@ func (s *ScriptAuth) IsMine(ctx context.Context, tok *token3.Token) (string, []s
 	}
 
 	logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? %b", len(ids) != 0, view.Identity(tok.Owner), tok.Type, tok.Quantity)
+
 	return "", ids, len(ids) != 0
 }
 
@@ -158,6 +167,7 @@ func (s *ScriptAuth) OwnerType(raw []byte) (driver.IdentityType, []byte, error) 
 	if err != nil {
 		return "", nil, err
 	}
+
 	return owner.Type, owner.Identity, nil
 }
 

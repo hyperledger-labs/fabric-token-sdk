@@ -100,6 +100,7 @@ func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tr
 	if err != nil {
 		panic(err)
 	}
+
 	return NewDeliveryBasedLLMProvider(fnsp, tracerProvider, config, func(network, _ string) events.EventInfoMapper[KeyInfo] {
 		return &endorserTxInfoMapper{
 			network:  network,
@@ -136,6 +137,7 @@ func (p *deliveryBasedLLMProvider) NewManager(network, channel string) (Listener
 	if err != nil {
 		return nil, err
 	}
+
 	return &deliveryBasedLLM{flm}, nil
 }
 
@@ -171,6 +173,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 	}
 	if common.HeaderType(chdr.Type) != common.HeaderType_ENDORSER_TRANSACTION {
 		logger.DebugfContext(ctx, "Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
+
 		return nil, nil
 	}
 	rwSet, err := rwset.NewEndorserTransactionReader(m.network).Read(payl, chdr)
@@ -181,6 +184,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 	if len(block.Metadata) < int(common.BlockMetadataIndex_TRANSACTIONS_FILTER) {
 		return nil, errors.Errorf("block metadata lacks transaction filter")
 	}
+
 	return m.mapTxInfo(rwSet, chdr.TxId)
 }
 
@@ -198,6 +202,7 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 	if err != nil {
 		return nil, err
 	}
+
 	return collections.Values(infos), nil
 }
 
@@ -219,5 +224,6 @@ func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string)
 			}
 		}
 	}
+
 	return txInfos, nil
 }

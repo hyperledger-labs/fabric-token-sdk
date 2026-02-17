@@ -118,6 +118,7 @@ func (m *mockVerifierDES) DeserializeVerifier(ctx context.Context, id driver.Ide
 	if string(id) == "valid_multisig_identity" {
 		return &mockVerifier{}, nil
 	}
+
 	return nil, errors.New("invalid identity")
 }
 
@@ -127,6 +128,7 @@ func (m *mockAuditInfoMatcher) GetAuditInfoMatcher(ctx context.Context, owner dr
 	if string(auditInfo) == "valid_audit_info" {
 		return &mockMatcher{}, nil
 	}
+
 	return nil, errors.New("invalid audit info")
 }
 
@@ -136,6 +138,7 @@ func (m *mockAuditInfoProvider) GetAuditInfo(ctx context.Context, id token.Ident
 	if string(id) == "valid_multisig_identity" {
 		return []byte("valid_audit_info"), nil
 	}
+
 	return nil, errors.New("invalid identity")
 }
 

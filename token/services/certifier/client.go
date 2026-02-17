@@ -29,6 +29,7 @@ func NewCertificationClient(ctx context.Context, tms *token.ManagementService) (
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating certification manager with driver [%s]", driver)
 	}
+
 	return &CertificationClient{c: c}, nil
 }
 

@@ -54,6 +54,7 @@ func (c *UserProviderConfig) IssuerNames() []model.Username {
 	for i, issuer := range c.Issuers {
 		names[i] = issuer.Name
 	}
+
 	return names
 }
 
@@ -79,6 +80,7 @@ func newUserProvider(c UserProviderConfig, metrics *metrics.Metrics, tracerProvi
 		}
 		users[uc.Name] = []user.User{u}
 	}
+
 	return runner2.NewViewUserProvider(users), nil
 }
 
@@ -91,6 +93,7 @@ func newUser(corePath string, host string, connType ConnectionType, metrics *met
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create identity resolver")
 	}
+
 	return runner2.NewViewUser(cfg.GetString("fsc.id"), auditor, cli, idResolver, metrics, tracerProvider, logger), nil
 }
 
@@ -108,6 +111,7 @@ func newClient(corePath string, host string, connType ConnectionType) (driver.Co
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create view client")
 	}
+
 	return cfg, cli, nil
 }
 
@@ -130,6 +134,7 @@ func newGrpcClient(configProvider driver.ConfigService, host string) (api2.ViewC
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create signing identity")
 	}
+
 	return grpcclient.NewClient(&grpcclient.Config{ConnectionConfig: cc}, signer, noop.NewTracerProvider())
 }
 
@@ -138,6 +143,7 @@ func newWebClient(configProvider driver.ConfigService, host string) (api2.ViewCl
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse address")
 	}
+
 	return webclient.NewClient(&webclient.Config{
 		Host:        fmt.Sprintf("%s:%s", host, port),
 		CACertPath:  configProvider.GetStringSlice("fsc.web.tls.clientRootCAs.files")[0],
@@ -163,6 +169,7 @@ func newResolver(conf driver.ConfigService) (*resolver, error) {
 		}
 		ids[r.Name] = b
 	}
+
 	return &resolver{ids: ids}, nil
 }
 

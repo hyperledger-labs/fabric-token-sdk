@@ -8,6 +8,7 @@ package setup
 
 import (
 	"crypto/sha256"
+	math3 "math"
 	"math/bits"
 	"strconv"
 
@@ -104,6 +105,7 @@ func (rpp *RangeProofParams) ToProtos() (*pp.RangeProofParams, error) {
 		BitLength:       rpp.BitLength,
 		NumberOfRounds:  rpp.NumberOfRounds,
 	}
+
 	return rangeProofParams, nil
 }
 
@@ -127,6 +129,7 @@ func (rpp *RangeProofParams) FromProto(params *pp.RangeProofParams) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert q to proto")
 	}
+
 	return nil
 }
 
@@ -136,10 +139,14 @@ type IdemixIssuerPublicKey struct {
 }
 
 func (i *IdemixIssuerPublicKey) ToProtos() (*pp.IdemixIssuerPublicKey, error) {
+	if i.Curve < 0 {
+		return nil, errors.New("invalid curve id")
+	}
+
 	return &pp.IdemixIssuerPublicKey{
 		PublicKey: i.PublicKey,
 		CurverId: &math2.CurveID{
-			Id: uint64(i.Curve),
+			Id: uint64(i.Curve), // #nosec G115
 		},
 	}, nil
 }
@@ -152,7 +159,11 @@ func (i *IdemixIssuerPublicKey) FromProtos(s *pp.IdemixIssuerPublicKey) error {
 	if s.CurverId == nil {
 		return errors.New("invalid idemix issuer public key")
 	}
-	i.Curve = mathlib.CurveID(s.CurverId.Id)
+	if s.CurverId.Id > math3.MaxInt {
+		return errors.New("curve id out of range")
+	}
+	i.Curve = mathlib.CurveID(s.CurverId.Id) // #nosec G115
+
 	return nil
 }
 
@@ -193,6 +204,7 @@ func NewPublicParamsFromBytes(
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed parsing public parameters")
 	}
+
 	return pp, nil
 }
 
@@ -234,6 +246,7 @@ func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriver
 	pp.RangeProofParams.BitLength = bitLength
 	pp.RangeProofParams.NumberOfRounds = log2(bitLength)
 	pp.MaxToken = pp.ComputeMaxTokenValue()
+
 	return pp, nil
 }
 
@@ -313,9 +326,9 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 
 	publicParams := &pp.PublicParameters{
 		TokenDriverName:    string(p.DriverName),
-		TokenDriverVersion: uint64(p.DriverVersion),
+		TokenDriverVersion: uint64(p.DriverVersion), // #nosec G115 driver.TokenDriverVersion is a uint64
 		CurveId: &math2.CurveID{
-			Id: uint64(p.Curve),
+			Id: uint64(p.Curve), // #nosec G115
 		},
 		PedersenGenerators:     pg,
 		RangeProofParams:       rpp,
@@ -330,6 +343,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return pp3.Marshal(&pp2.PublicParameters{
 		Identifier: string(core.DriverIdentifier(p.DriverName, p.DriverVersion)),
 		Raw:        raw,
@@ -360,7 +374,10 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 	if publicParams.CurveId == nil {
 		return errors.Errorf("invalid curve id, expecting curve id, got nil")
 	}
-	p.Curve = mathlib.CurveID(publicParams.CurveId.Id)
+	if publicParams.CurveId.Id > math3.MaxInt {
+		return errors.New("curve id out of range")
+	}
+	p.Curve = mathlib.CurveID(publicParams.CurveId.Id) // #nosec G115
 	p.MaxToken = publicParams.MaxToken
 	p.QuantityPrecision = publicParams.QuantityPrecision
 	pg, err := utils2.FromG1ProtoSlice(publicParams.PedersenGenerators)
@@ -372,6 +389,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		if id == nil {
 			return nil, nil
 		}
+
 		return id.Raw, nil
 	})
 	if err != nil {
@@ -382,6 +400,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		if id == nil {
 			return nil, nil
 		}
+
 		return id.Raw, nil
 	})
 	if err != nil {
@@ -419,6 +438,7 @@ func (p *PublicParams) GeneratePedersenParameters() error {
 	for i := 0; i < len(p.PedersenGenerators); i++ {
 		p.PedersenGenerators[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
 	}
+
 	return nil
 }
 
@@ -473,6 +493,7 @@ func (p *PublicParams) ComputeHash() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to hash public parameters")
 	}
+
 	return hash.Sum(nil), nil
 }
 
@@ -485,6 +506,7 @@ func (p *PublicParams) String() string {
 	if err != nil {
 		return err.Error()
 	}
+
 	return string(res)
 }
 
@@ -531,6 +553,7 @@ func (p *PublicParams) Validate() error {
 	if maxToken != p.MaxToken {
 		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, p.MaxToken)
 	}
+
 	return nil
 }
 
@@ -539,5 +562,7 @@ func (p *PublicParams) Extras() driver.Extras {
 }
 
 func log2(x uint64) uint64 {
-	return 63 - uint64(bits.LeadingZeros64(x))
+	result := 63 - bits.LeadingZeros64(x)
+
+	return uint64(result) //nolint:gosec
 }

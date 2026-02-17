@@ -30,6 +30,7 @@ type ListTokensOption func(*ListTokensOptions) error
 func WithType(tokenType token.Type) ListTokensOption {
 	return func(o *ListTokensOptions) error {
 		o.TokenType = tokenType
+
 		return nil
 	}
 }
@@ -38,6 +39,7 @@ func WithType(tokenType token.Type) ListTokensOption {
 func WithContext(ctx context.Context) ListTokensOption {
 	return func(o *ListTokensOptions) error {
 		o.Context = ctx
+
 		return nil
 	}
 }
@@ -85,6 +87,7 @@ func (wm *WalletManager) Wallet(ctx context.Context, identity Identity) *Wallet 
 	if w == nil {
 		return nil
 	}
+
 	return &Wallet{w: w, managementService: wm.managementService}
 }
 
@@ -94,6 +97,7 @@ func (wm *WalletManager) OwnerWalletIDs(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get the list of owner wallet identifiers")
 	}
+
 	return ids, nil
 }
 
@@ -104,8 +108,10 @@ func (wm *WalletManager) OwnerWallet(ctx context.Context, id WalletLookupID) *Ow
 	w, err := wm.walletService.OwnerWallet(ctx, id)
 	if err != nil {
 		wm.managementService.logger.DebugfContext(ctx, "failed to get owner wallet for id [%s]: [%s]", id, err)
+
 		return nil
 	}
+
 	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
@@ -116,8 +122,10 @@ func (wm *WalletManager) IssuerWallet(ctx context.Context, id WalletLookupID) *I
 	w, err := wm.walletService.IssuerWallet(ctx, id)
 	if err != nil {
 		wm.managementService.logger.DebugfContext(ctx, "failed to get issuer wallet for id [%s]: [%s]", id, err)
+
 		return nil
 	}
+
 	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
@@ -128,8 +136,10 @@ func (wm *WalletManager) AuditorWallet(ctx context.Context, id WalletLookupID) *
 	w, err := wm.walletService.AuditorWallet(ctx, id)
 	if err != nil {
 		wm.managementService.logger.DebugfContext(ctx, "failed to get auditor wallet for id [%s]: [%s]", id, err)
+
 		return nil
 	}
+
 	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
@@ -140,8 +150,10 @@ func (wm *WalletManager) CertifierWallet(ctx context.Context, id WalletLookupID)
 	w, err := wm.walletService.CertifierWallet(ctx, id)
 	if err != nil {
 		wm.managementService.logger.DebugfContext(ctx, "failed to get certifier wallet for id [%s]: [%s]", id, err)
+
 		return nil
 	}
+
 	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
@@ -151,6 +163,7 @@ func (wm *WalletManager) GetEnrollmentID(ctx context.Context, identity Identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
+
 	return wm.walletService.GetEnrollmentID(ctx, identity, auditInfo)
 }
 
@@ -289,6 +302,7 @@ func (o *OwnerWallet) ListUnspentTokensIterator(opts ...ListTokensOption) (*Unsp
 	if err != nil {
 		return nil, err
 	}
+
 	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
@@ -302,6 +316,7 @@ func (o *OwnerWallet) Balance(ctx context.Context, opts ...ListTokensOption) (ui
 	if err != nil {
 		return 0, err
 	}
+
 	return sum, nil
 }
 
@@ -344,6 +359,7 @@ func (i *IssuerWallet) ListIssuedTokens(ctx context.Context, opts ...ListTokensO
 	if err != nil {
 		return nil, err
 	}
+
 	return i.w.HistoryTokens(ctx, compiledOpts)
 }
 
@@ -357,6 +373,7 @@ func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOption
 	if txOptions.Context == nil {
 		txOptions.Context = context.Background()
 	}
+
 	return &driver.ListTokensOptions{
 		TokenType: txOptions.TokenType,
 		Context:   txOptions.Context,

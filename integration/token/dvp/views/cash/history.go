@@ -43,5 +43,6 @@ func (i *ListIssuedTokensViewFactory) NewView(in []byte) (view.View, error) {
 	f := &ListIssuedTokensView{ListIssuedTokens: &ListIssuedTokens{}}
 	err := json.Unmarshal(in, f.ListIssuedTokens)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

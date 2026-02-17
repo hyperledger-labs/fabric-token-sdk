@@ -40,10 +40,11 @@ var cobraCommand = &cobra.Command{
 	Long:  `Gen Token Certifier Key Pair.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
+
 		return keyPairGen(args)
 	},
 }
@@ -76,7 +77,7 @@ func keyPairGen(args []string) error {
 	}
 
 	// 3. store key-pair under output
-	if err := os.MkdirAll(output, 0766); err != nil {
+	if err := os.MkdirAll(output, 0750); err != nil {
 		return errors.Wrap(err, "failed making output dir")
 	}
 	skPath := filepath.Join(output, "certifier.sk")

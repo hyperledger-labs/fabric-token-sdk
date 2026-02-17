@@ -61,5 +61,6 @@ func (p *SDK) Install() error {
 	}); err != nil {
 		return errors.WithMessagef(err, "failed to install issuer's views")
 	}
+
 	return nil
 }

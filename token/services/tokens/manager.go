@@ -64,6 +64,7 @@ func NewServiceManager(
 				Storage:         storage,
 				RequestsCache:   cacheInst,
 			}
+
 			return tokens, nil
 		}),
 	}
@@ -87,5 +88,6 @@ func GetService(sp token.ServiceProvider, tmsID token.TMSID) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return tokens, nil
 }

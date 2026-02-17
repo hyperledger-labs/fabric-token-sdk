@@ -31,6 +31,7 @@ func (r *RegisterIssuerIdentityView) Call(context view.Context) (interface{}, er
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 	err = tms.WalletManager().RegisterIssuerIdentity(context.Context(), r.ID, r.Path)
 	assert.NoError(err, "failed to register issuer wallet [%s:%s]", r.ID, r.TMSID)
+
 	return nil, nil
 }
 
@@ -60,6 +61,7 @@ func (r *RegisterOwnerIdentityView) Call(context view.Context) (interface{}, err
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 	err = tms.WalletManager().RegisterOwnerIdentityConfiguration(context.Context(), r.IdentityConfiguration)
 	assert.NoError(err, "failed to register owner wallet [%s:%s]", r.ID, r.TMSID)
+
 	return nil, nil
 }
 
@@ -90,6 +92,7 @@ func (r *RegisterRecipientDataView) Call(context view.Context) (interface{}, err
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 	err = tms.WalletManager().OwnerWallet(context.Context(), r.WalletID).RegisterRecipient(context.Context(), &r.RecipientData)
 	assert.NoError(err, "failed to register recipient data [%s:%s]", r.WalletID, r.TMSID)
+
 	return nil, nil
 }
 

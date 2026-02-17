@@ -10,16 +10,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestPutAndGet(t *testing.T) {
 	store := NewTrackedMemory()
 
 	data := "Alice"
-	assert.NoError(t, store.Put("user1", data))
+	require.NoError(t, store.Put("user1", data))
 
 	var retrievedData string
-	assert.NoError(t, store.Get("user1", &retrievedData))
+	require.NoError(t, store.Get("user1", &retrievedData))
 	assert.Equal(t, data, retrievedData)
 
 	assert.Equal(t, 1, store.PutCounter)
@@ -34,7 +35,7 @@ func TestGetNonExistentKey(t *testing.T) {
 	store := NewTrackedMemory()
 
 	var retrievedData string
-	assert.Error(t, store.Get("nonexistent", &retrievedData))
+	require.Error(t, store.Get("nonexistent", &retrievedData))
 
 	assert.Equal(t, 1, store.GetCounter)
 	assert.Len(t, store.GetHistory, 1)
@@ -46,11 +47,11 @@ func TestGetNonExistentKey(t *testing.T) {
 func TestTypeMismatch(t *testing.T) {
 	store := NewTrackedMemory()
 
-	assert.NoError(t, store.Put("number", 42))
+	require.NoError(t, store.Put("number", 42))
 
 	var wrongType string
 	err := store.Get("number", &wrongType)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, "failed retrieving state [,number], cannot unmarshal state: json: cannot unmarshal number into Go value of type string", err.Error())
 
 	assert.Equal(t, 1, store.GetCounter)

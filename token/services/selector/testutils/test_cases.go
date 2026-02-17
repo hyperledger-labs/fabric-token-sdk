@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 const defaultCurrency = "CHF"
@@ -44,7 +45,7 @@ func TestSufficientTokensOneReplica(t *testing.T, replica EnhancedManager) {
 	item := newToken(1)
 	unspentTokens := createDefaultTokens(collections.Repeat(item, 2)...)
 	err := storeTokens(replica, unspentTokens)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// The replica asks for CHF1
 	errs := parallelSelect(t, []EnhancedManager{replica}, []token.Quantity{newToken(1)})
@@ -55,7 +56,7 @@ func TestSufficientTokensBigDenominationsOneReplica(t *testing.T, replica Enhanc
 	// Create 1 token of value CHF100
 	unspentTokens := createDefaultTokens(newToken(100))
 	err := storeTokens(replica, unspentTokens)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// The replica asks for CHF1, ..., CHF1 for 100 times (total CHF100)
 	item := newToken(1)
@@ -68,7 +69,7 @@ func TestSufficientTokensBigDenominationsManyReplicas(t *testing.T, replicas []E
 	item := newToken(150)
 	unspentTokens := createDefaultTokens(collections.Repeat(item, 2)...)
 	err := storeTokens(replicas[0], unspentTokens)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Each replica asks for CHF100 (total CHF300)
 	item = newToken(1)
@@ -81,7 +82,7 @@ func TestInsufficientTokensOneReplica(t *testing.T, replica EnhancedManager) {
 	item := newToken(1)
 	unspentTokens := createDefaultTokens(collections.Repeat(item, 2)...)
 	err := storeTokens(replica, unspentTokens)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// The replica asks for CHF1, CHF1 (total CHF3)
 	item = newToken(1)
@@ -94,7 +95,7 @@ func TestSufficientTokensManyReplicas(t *testing.T, replicas []EnhancedManager) 
 	item := newToken(1)
 	unspentTokens := createDefaultTokens(collections.Repeat(item, 100)...)
 	err := storeTokens(replicas[0], unspentTokens)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Each replica asks for CHF5 (total CHF100)
 	errs := parallelSelect(t, replicas, []token.Quantity{newToken(5)})
@@ -106,14 +107,14 @@ func TestInsufficientTokensManyReplicas(t *testing.T, replicas []EnhancedManager
 	item := newToken(2)
 	unspentTokens := createDefaultTokens(collections.Repeat(item, 50)...)
 	err := storeTokens(replicas[0], unspentTokens)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Each replica asks for CHF3, and CHF3 (total CHF 240)
 	item = newToken(3)
 	errs := parallelSelect(t, replicas, collections.Repeat(item, 4))
 	assert.NotEmpty(t, errs)
 	sum, err := replicas[0].TokenSum()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 0, sum.Cmp(newToken(1)))
 }
 
@@ -137,6 +138,7 @@ func (m *enhancedManager) TokenSum() (token.Quantity, error) {
 		return nil, err
 	}
 	sum := unspent.Sum(TokenQuantityPrecision)
+
 	return sum, nil
 }
 
@@ -149,6 +151,7 @@ func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.Unspen
 		for _, t := range deleted {
 			if err := tx.Delete(context.TODO(), *t, "me"); err != nil {
 				err2 := tx.Rollback()
+
 				return errors.Wrapf(err, "failed to delete - while rolling back: %v", err2)
 			}
 		}
@@ -172,10 +175,12 @@ func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.Unspen
 				Issuer:         false,
 			}, []string{"alice"}); err != nil {
 				err2 := tx.Rollback()
+
 				return errors.Wrapf(err, "failed to insert - while rolling back: %v", err2)
 			}
 		}
 	}
+
 	return tx.Commit()
 }
 
@@ -201,10 +206,9 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 	wg.Add(len(quantities) * len(replicas))
 	for _, replica := range replicas {
 		for _, quantity := range quantities {
-			quantity, replica := quantity, replica
 			txID := newTxID()
 			sel, err := replica.NewSelector(txID)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			go func() {
 				defer utils.IgnoreErrorWithOneArg(replica.Close, txID)
 				tokens, sum, err := sel.Select(t.Context(), defaultTokenFilter, quantity.Hex(), defaultCurrency)
@@ -215,7 +219,7 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 					change := sum.Sub(quantity)
 					assert.GreaterOrEqual(t, change.ToBigInt().Int64(), int64(0))
 					assert.NotEmpty(t, tokens)
-					assert.NoError(t, deleteTokensAndStoreChange(replica, tokens, change))
+					require.NoError(t, deleteTokensAndStoreChange(replica, tokens, change))
 				}
 				if tokenSum, err := replica.TokenSum(); err == nil {
 					logger.Infof("Current sum of tokens in the DB: %s", tokenSum.Decimal())
@@ -228,6 +232,7 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 	close(errCh)
 	errMu.Lock()
 	defer errMu.Unlock()
+
 	return errs
 }
 
@@ -261,16 +266,17 @@ func createTokens(txs map[transaction.ID][]token.Quantity) []token.UnspentToken 
 	for txID, quantities := range txs {
 		for i, quantity := range quantities {
 			unspentTokens = append(unspentTokens, token.UnspentToken{
-				Id:       token.ID{TxId: txID, Index: uint64(i)},
+				Id:       token.ID{TxId: txID, Index: uint64(i)}, // #nosec G115
 				Owner:    defaultWalletOwner,
 				Type:     defaultCurrency,
 				Quantity: quantity.Hex(),
 			})
 		}
 	}
+
 	return unspentTokens
 }
 
 func newToken(quantity int) token.Quantity {
-	return token.NewQuantityFromUInt64(uint64(quantity))
+	return token.NewQuantityFromUInt64(uint64(quantity)) // #nosec G115
 }

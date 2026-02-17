@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestCertificationManager_NewCertificationRequest(t *testing.T) {
@@ -28,7 +29,7 @@ func TestCertificationManager_NewCertificationRequest(t *testing.T) {
 	ids := []*token.ID{{TxId: "a_transaction", Index: 0}}
 	request, err := manager.NewCertificationRequest(ids)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedRequest, request)
 }
 
@@ -48,7 +49,7 @@ func TestCertificationManager_Certify(t *testing.T) {
 	request := []byte("request")
 	certifications, err := manager.Certify(wallet, ids, tokens, request)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedCertifications, certifications)
 }
 
@@ -66,7 +67,7 @@ func TestCertificationManager_VerifyCertifications(t *testing.T) {
 	certifications := [][]byte{[]byte("a_certification")}
 	verifiedCertifications, err := manager.VerifyCertifications(ids, certifications)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedCertifications, verifiedCertifications)
 }
 
@@ -97,7 +98,7 @@ func TestCertificationClient_RequestCertification(t *testing.T) {
 	ids := []*token.ID{{TxId: "a_transaction", Index: 0}}
 	err := client.RequestCertification(t.Context(), ids...)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestCertificationManager_NewCertificationRequest_Error(t *testing.T) {
@@ -112,7 +113,7 @@ func TestCertificationManager_NewCertificationRequest_Error(t *testing.T) {
 	ids := []*token.ID{{TxId: "a_transaction", Index: 0}}
 	request, err := manager.NewCertificationRequest(ids)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, request)
 }
 
@@ -128,5 +129,5 @@ func TestCertificationClient_RequestCertification_Error(t *testing.T) {
 	ids := []*token.ID{{TxId: "a_transaction", Index: 0}}
 	err := client.RequestCertification(t.Context(), ids...)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }

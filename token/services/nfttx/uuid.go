@@ -33,6 +33,7 @@ func GenerateBytesUUID() []byte {
 // GenerateUUID returns a UUID based on RFC 4122
 func GenerateUUID() string {
 	uuid := GenerateBytesUUID()
+
 	return idBytesToStr(uuid)
 }
 

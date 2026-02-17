@@ -79,6 +79,7 @@ func (r *Role) GetIdentityInfo(ctx context.Context, id string) (idriver.Identity
 	if err != nil {
 		return nil, errors.WithMessagef(err, "[%s] failed to get identity for [%s]", r.networkID, id)
 	}
+
 	return info, nil
 }
 
@@ -140,21 +141,27 @@ func (r *Role) mapStringToID(ctx context.Context, v string) (driver.Identity, st
 	switch {
 	case len(label) == 0:
 		r.logger.DebugfContext(ctx, "passed empty label")
+
 		return nil, defaultIdentifier, nil
 	case label == defaultIdentifier:
 		r.logger.DebugfContext(ctx, "passed default identifier")
+
 		return nil, defaultIdentifier, nil
 	case label == defaultNetworkIdentity.UniqueID():
 		r.logger.DebugfContext(ctx, "passed default identity")
+
 		return nil, defaultIdentifier, nil
 	case label == string(defaultNetworkIdentity):
 		r.logger.DebugfContext(ctx, "passed default identity as string")
+
 		return nil, defaultIdentifier, nil
 	case defaultNetworkIdentity.Equal(labelAsIdentity):
 		r.logger.DebugfContext(ctx, "passed default identity as view identity")
+
 		return nil, defaultIdentifier, nil
 	case r.nodeIdentity.Equal(labelAsIdentity):
 		r.logger.DebugfContext(ctx, "passed node identity as view identity")
+
 		return nil, defaultIdentifier, nil
 	case r.localMembership.IsMe(ctx, labelAsIdentity):
 		r.logger.DebugfContext(ctx, "passed a local member")
@@ -163,10 +170,12 @@ func (r *Role) mapStringToID(ctx context.Context, v string) (driver.Identity, st
 			return nil, idIdentifier, nil
 		}
 		r.logger.DebugfContext(ctx, "failed getting identity info for [%s], returning the identity", id)
+
 		return id, "", nil
 	}
 
 	r.logger.DebugfContext(ctx, "cannot find match for string [%s]", v)
+
 	return nil, label, nil
 }
 
@@ -190,15 +199,19 @@ func (r *Role) mapIdentityToID(ctx context.Context, v driver.Identity) (driver.I
 	switch {
 	case id.IsNone():
 		r.logger.DebugfContext(ctx, "passed empty identity")
+
 		return nil, defaultIdentifier, nil
 	case id.Equal(defaultNetworkIdentity):
 		r.logger.DebugfContext(ctx, "passed default identity")
+
 		return nil, defaultIdentifier, nil
 	case string(id) == defaultIdentifier:
 		r.logger.DebugfContext(ctx, "passed default identifier")
+
 		return nil, defaultIdentifier, nil
 	case id.Equal(r.nodeIdentity):
 		r.logger.DebugfContext(ctx, "passed identity is the node identity (same bytes)")
+
 		return nil, defaultIdentifier, nil
 	case r.localMembership.IsMe(ctx, id):
 		r.logger.DebugfContext(ctx, "passed identity is me")
@@ -206,6 +219,7 @@ func (r *Role) mapIdentityToID(ctx context.Context, v driver.Identity) (driver.I
 			return id, idIdentifier, nil
 		}
 		r.logger.DebugfContext(ctx, "failed getting identity info for [%s], returning the identity", id)
+
 		return id, "", nil
 	}
 	r.logger.DebugfContext(ctx, "looking up identifier for identity as label [%s]", utils.Hashable(id))
@@ -219,5 +233,6 @@ func (r *Role) mapIdentityToID(ctx context.Context, v driver.Identity) (driver.I
 	}
 
 	r.logger.DebugfContext(ctx, "cannot find match for driver.Identity string [%s]", id)
+
 	return nil, string(id), nil
 }

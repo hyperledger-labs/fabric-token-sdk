@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 type cfgProvider func(string) driver2.Driver
@@ -87,50 +88,50 @@ func TTokenTransaction(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}, []string{"alice"})
-	assert.NoError(t, err)
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
 
 	tx, err = db.NewTokenDBTransaction()
 	if err != nil {
 		t.Fatal(err)
 	}
 	tok, owners, err := tx.GetToken(t.Context(), token.ID{TxId: "tx1"}, false)
-	assert.NoError(t, err, "get token")
+	require.NoError(t, err, "get token")
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.Equal(t, []string{"alice"}, owners)
 
-	assert.NoError(t, tx.Delete(t.Context(), token.ID{TxId: "tx1"}, "me"))
+	require.NoError(t, tx.Delete(t.Context(), token.ID{TxId: "tx1"}, "me"))
 	tok, owners, err = tx.GetToken(t.Context(), token.ID{TxId: "tx1"}, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, tok)
 	assert.Len(t, owners, 0)
 
 	tok, _, err = tx.GetToken(t.Context(), token.ID{TxId: "tx1"}, true) // include deleted
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "0x02", tok.Quantity)
-	assert.NoError(t, tx.Rollback())
+	require.NoError(t, tx.Rollback())
 
 	tx, err = db.NewTokenDBTransaction()
 	if err != nil {
 		t.Fatal(err)
 	}
 	tok, owners, err = tx.GetToken(t.Context(), token.ID{TxId: "tx1"}, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, tok)
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.Equal(t, []string{"alice"}, owners)
-	assert.NoError(t, tx.Delete(t.Context(), token.ID{TxId: "tx1"}, "me"))
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, tx.Delete(t.Context(), token.ID{TxId: "tx1"}, "me"))
+	require.NoError(t, tx.Commit())
 
 	tx, err = db.NewTokenDBTransaction()
 	if err != nil {
 		t.Fatal(err)
 	}
 	tok, owners, err = tx.GetToken(t.Context(), token.ID{TxId: "tx1"}, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, tok)
 	assert.Equal(t, []string(nil), owners)
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, tx.Commit())
 }
 
 func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
@@ -152,7 +153,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 			Auditor:        false,
 			Issuer:         false,
 		}
-		assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
+		require.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
 	}
 	tr := driver2.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 100),
@@ -170,7 +171,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"dan"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"dan"}))
 
 	tr = driver2.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 100), // only txid + index + ns is unique together
@@ -188,7 +189,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice", "bob"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice", "bob"}))
 
 	tr = driver2.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 101),
@@ -206,10 +207,10 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
 
 	tok, err := db.ListUnspentTokens(t.Context())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, tok.Tokens, 24, "unspentTokensIterator: expected all tokens to be returned (2 for the one owned by alice and bob)")
 	assert.Equal(t, "48", tok.Sum(64).Decimal(), "expect sum to be 2*22")
 	assert.Len(t, tok.ByType(TST).Tokens, 23, "expect filter on type to work")
@@ -219,7 +220,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 	}
 
 	tokens := getTokensBy(t, db, "alice", "")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, tokens, 22, "unspentTokensIteratorBy: expected only Alice tokens to be returned")
 
 	tokens = getTokensBy(t, db, "", ABC)
@@ -229,7 +230,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 	assert.Len(t, tokens, 1, "unspentTokensIteratorBy: expected only Alice ABC tokens to be returned")
 
 	unsp, err := db.GetTokens(t.Context(), &token.ID{TxId: "tx101", Index: 0})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, unsp, 1)
 	assert.Equal(t, "0x02", unsp[0].Quantity)
 	assert.Equal(t, ABC, unsp[0].Type)
@@ -251,25 +252,25 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, nil))
+	require.NoError(t, db.StoreToken(t.Context(), tr, nil))
 	_, err = db.GetTokens(t.Context(), &token.ID{TxId: fmt.Sprintf("tx%d", 2000)})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, owners, err := tx.GetToken(t.Context(), token.ID{TxId: fmt.Sprintf("tx%d", 2000)}, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, owners, 1)
-	assert.NoError(t, tx.Rollback())
+	require.NoError(t, tx.Rollback())
 }
 
 func getTokensBy(t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) []*token.UnspentToken {
 	t.Helper()
 	it, err := db.UnspentTokensIteratorBy(t.Context(), ownerEID, typ)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tokens, err := iterators.ReadAllPointers(it)
-	assert.NoError(t, err, "error iterating over tokens")
+	require.NoError(t, err, "error iterating over tokens")
 
 	return tokens
 }
@@ -293,7 +294,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
 	tr = driver2.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -310,7 +311,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"bob"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"bob"}))
 	tr = driver2.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -327,19 +328,19 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
-	assert.NoError(t, db.DeleteTokens(ctx, "tx103", &token.ID{TxId: "tx101", Index: 0}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
+	require.NoError(t, db.DeleteTokens(ctx, "tx103", &token.ID{TxId: "tx101", Index: 0}))
 
 	tok, err := db.ListUnspentTokens(t.Context())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, tok.Tokens, 2, "expected only tx101-0 to be deleted")
 
 	mine, err := db.IsMine(ctx, "tx101", 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, mine, "expected deleted token to not be mine")
 
 	mine, err = db.IsMine(ctx, "tx101", 1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, mine, "expected existing token to be mine")
 
 	tid := []*token.ID{
@@ -347,7 +348,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 		{TxId: "tx101", Index: 1},
 	}
 	deletedBy, deleted, err := db.WhoDeletedTokens(ctx, tid...)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, deleted[0], "expected tx101-0 to be deleted")
 	assert.Equal(t, "tx103", deletedBy[0], "expected tx101-0 to be deleted by tx103")
 	assert.False(t, deleted[1], "expected tx101-0 to not be deleted")
@@ -374,7 +375,7 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 		Auditor:        true,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, nil))
+	require.NoError(t, db.StoreToken(t.Context(), tr, nil))
 	tr = driver2.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -391,7 +392,7 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 		Auditor:        true,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, nil))
+	require.NoError(t, db.StoreToken(t.Context(), tr, nil))
 	tr = driver2.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -408,14 +409,14 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 		Auditor:        true,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, nil))
+	require.NoError(t, db.StoreToken(t.Context(), tr, nil))
 
 	tid := []*token.ID{
 		{TxId: "tx101", Index: 0},
 		{TxId: "tx101", Index: 1},
 	}
 	tok, err := db.ListAuditTokens(ctx, tid...)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, tok, 2)
 	assert.Equal(t, "0x01", tok[0].Quantity, "expected tx101-0 to be returned")
 	assert.Equal(t, "0x02", tok[1].Quantity, "expected tx101-1 to be returned")
@@ -425,7 +426,7 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 	}
 
 	tok, err = db.ListAuditTokens(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, tok, 0)
 }
 
@@ -449,7 +450,7 @@ func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         true,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, nil))
+	require.NoError(t, db.StoreToken(t.Context(), tr, nil))
 	tr = driver2.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -467,7 +468,7 @@ func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         true,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, nil))
+	require.NoError(t, db.StoreToken(t.Context(), tr, nil))
 	tr = driver2.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -485,7 +486,7 @@ func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         true,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, nil))
+	require.NoError(t, db.StoreToken(t.Context(), tr, nil))
 
 	tok, err := db.ListHistoryIssuedTokens(ctx)
 	if err != nil {
@@ -504,7 +505,7 @@ func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 	}
 
 	tok, err = db.ListHistoryIssuedTokens(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, tok.ByType("DEF").Tokens, 1, "expected tx102-0 to be filtered")
 	for _, token := range tok.Tokens {
 		assert.NotNil(t, token.Issuer, "expected issuer to not be nil")
@@ -534,7 +535,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"bob"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"bob"}))
 	tr = driver2.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -551,7 +552,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
 	tr = driver2.TokenRecord{
 		TxID:           "tx102",
 		Index:          1,
@@ -568,7 +569,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
 
 	ids := []*token.ID{
 		{TxId: "tx101", Index: 0},
@@ -576,7 +577,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 	}
 
 	infos, err := db.GetAllTokenInfos(t.Context(), ids)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for i, info := range infos {
 		assert.Equal(t, ids[i].TxId, string(info))
 		assert.Equal(t, uint64(0), ids[i].Index)
@@ -593,7 +594,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 		{TxId: "non existent", Index: 0},
 	}
 	_, err = db.GetTokenMetadata(t.Context(), ids)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	ids = []*token.ID{
 		{TxId: "tx102", Index: 1},
@@ -601,14 +602,14 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 		{TxId: "tx101", Index: 0},
 	}
 	infos, err = db.GetTokenMetadata(t.Context(), ids)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "tx102", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
 	assert.Equal(t, "tx101", string(infos[2]))
 
 	// infos and outputs
 	toks, infos, _, err := db.GetTokenOutputsAndMeta(t.Context(), ids)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, infos, 3)
 	assert.Equal(t, "tx102", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
@@ -633,7 +634,7 @@ func TDeleteMultiple(t *testing.T, db TestTokenDB) {
 		Type:           ABC,
 		Owner:          true,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
 	tr = driver2.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -646,7 +647,7 @@ func TDeleteMultiple(t *testing.T, db TestTokenDB) {
 		Type:           ABC,
 		Owner:          true,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"bob"}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"bob"}))
 	tr = driver2.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -659,19 +660,19 @@ func TDeleteMultiple(t *testing.T, db TestTokenDB) {
 		Type:           ABC,
 		Owner:          true,
 	}
-	assert.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
-	assert.NoError(t, db.DeleteTokens(t.Context(), "", &token.ID{TxId: "tx101", Index: 0}, &token.ID{TxId: "tx102", Index: 0}))
+	require.NoError(t, db.StoreToken(t.Context(), tr, []string{"alice"}))
+	require.NoError(t, db.DeleteTokens(t.Context(), "", &token.ID{TxId: "tx101", Index: 0}, &token.ID{TxId: "tx102", Index: 0}))
 
 	tok, err := db.ListUnspentTokens(t.Context())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, tok.Tokens, 1, "expected only tx101-0 and tx102-0 to be deleted", tok.Tokens)
 
 	mine, err := db.IsMine(t.Context(), "tx101", 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, mine, "expected deleted token to not be mine")
 
 	mine, err = db.IsMine(t.Context(), "tx101", 1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, mine, "expected existing token to be mine")
 }
 
@@ -684,31 +685,31 @@ func TPublicParams(t *testing.T, db TestTokenDB) {
 	b1Hash := utils.Hashable(b1).Raw()
 
 	res, err := db.PublicParams(ctx)
-	assert.NoError(t, err) // not found
+	require.NoError(t, err) // not found
 	assert.Nil(t, res)
 
 	err = db.StorePublicParams(ctx, b)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	res, err = db.PublicParams(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, res, b)
 
 	// retrieve by hash
 	res, err = db.PublicParamsByHash(ctx, bHash)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, res, b)
 
 	err = db.StorePublicParams(ctx, b1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	res, err = db.PublicParams(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, res, b1)
 
 	// retrieve by hash
 	res, err = db.PublicParamsByHash(ctx, b1Hash)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, res, b1)
 }
 
@@ -739,12 +740,12 @@ func TCertification(t *testing.T, db TestTokenDB) {
 				t.Error(err)
 			}
 
-			assert.NoError(t, db.StoreCertifications(ctx, map[*token.ID][]byte{
+			require.NoError(t, db.StoreCertifications(ctx, map[*token.ID][]byte{
 				tokenID: []byte(fmt.Sprintf("certification_%d", i)),
 			}))
 			assert.True(t, db.ExistsCertification(ctx, tokenID))
 			certifications, err := db.GetCertifications(ctx, []*token.ID{tokenID})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			for _, bytes := range certifications {
 				assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
 			}
@@ -760,7 +761,7 @@ func TCertification(t *testing.T, db TestTokenDB) {
 		}
 		assert.True(t, db.ExistsCertification(ctx, tokenID))
 		certifications, err := db.GetCertifications(ctx, []*token.ID{tokenID})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		for _, bytes := range certifications {
 			assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
 		}
@@ -774,16 +775,16 @@ func TCertification(t *testing.T, db TestTokenDB) {
 	assert.False(t, db.ExistsCertification(ctx, tokenID))
 
 	certifications, err := db.GetCertifications(ctx, []*token.ID{tokenID})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Empty(t, certifications)
 
 	// store an empty certification and check that an error is returned
 	err = db.StoreCertifications(ctx, map[*token.ID][]byte{
 		tokenID: {},
 	})
-	assert.Error(t, err)
+	require.Error(t, err)
 	certifications, err = db.GetCertifications(ctx, []*token.ID{tokenID})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Empty(t, certifications)
 }
 
@@ -862,7 +863,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 
 	// all
 	res, err := db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, res, 3)
 	assertEqual(t, tx1, res[0])
 	assertEqual(t, tx2, res[1])
@@ -873,48 +874,48 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 
 	// alice
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{WalletID: "alice"})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, res, 2)
 	assertEqual(t, tx1, res[0])
 	assertEqual(t, tx2, res[1])
 
 	// alice TST1
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{WalletID: "alice", TokenType: "TST1"})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, res, 1)
 	assertEqual(t, tx1, res[0])
 	balance, err := db.Balance(ctx, "alice", "TST1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, res[0].Amount, balance)
 
 	// alice TST
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{WalletID: "alice", TokenType: TST})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, res, 1)
 	assertEqual(t, tx2, res[0])
 	balance, err = db.Balance(ctx, "alice", TST)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, res[0].Amount, balance)
 
 	// bob TST
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{WalletID: "bob", TokenType: TST})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, res, 1)
 	assertEqual(t, tx21, res[0])
 	balance, err = db.Balance(ctx, "bob", TST)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, res[0].Amount, balance)
 
 	// spent
-	assert.NoError(t, db.DeleteTokens(ctx, "delby", &token.ID{TxId: "tx2", Index: 1}))
+	require.NoError(t, db.DeleteTokens(ctx, "delby", &token.ID{TxId: "tx2", Index: 1}))
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, res, 2)
 	assert.Equal(t, false, res[0].IsSpent, "tx1 is not spent")
 	assert.Equal(t, false, res[1].IsSpent, "tx2-0 is not spent")
 
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{IncludeDeleted: true})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, res, 3)
 	assert.Equal(t, false, res[0].IsSpent, "tx1 is not spent")
 	assert.Equal(t, false, res[1].IsSpent, "tx2-0 is not spent")
@@ -923,7 +924,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 
 	// by ids
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{IDs: []*token.ID{{TxId: "tx1", Index: 0}, {TxId: "tx2", Index: 0}}, IncludeDeleted: true})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, res, 2)
 	assertEqual(t, tx1, res[0])
 	assertEqual(t, tx2, res[1])
@@ -932,7 +933,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 func TTokenTypes(t *testing.T, db TestTokenDB) {
 	t.Helper()
 	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tx1 := driver2.TokenRecord{
 		TxID:           "tx1",
 		Index:          0,
@@ -967,67 +968,67 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, tx.StoreToken(t.Context(), tx1, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(t.Context(), tx2, []string{"alice"}))
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, tx.StoreToken(t.Context(), tx1, []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), tx2, []string{"alice"}))
+	require.NoError(t, tx.Commit())
 
 	it, err := db.SpendableTokensIteratorBy(t.Context(), "", TST)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, TST, 1)
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", "TST1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 1)
 
 	// make all non-spendable
 	tx, err = db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenFormats(t.Context(), []token.Format{"htlc"}))
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, err)
+	require.NoError(t, tx.SetSpendableBySupportedTokenFormats(t.Context(), []token.Format{"htlc"}))
+	require.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", TST)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, TST, 0)
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", "TST1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 0)
 
 	// make TST spendable
 	tx, err = db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenFormats(t.Context(), []token.Format{"CLEAR"}))
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, err)
+	require.NoError(t, tx.SetSpendableBySupportedTokenFormats(t.Context(), []token.Format{"CLEAR"}))
+	require.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", TST)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, TST, 1)
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", "TST1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 0)
 
 	// make TST1 spendable
 	tx, err = db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenFormats(t.Context(), []token.Format{"CLEAR1"}))
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, err)
+	require.NoError(t, tx.SetSpendableBySupportedTokenFormats(t.Context(), []token.Format{"CLEAR1"}))
+	require.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", TST)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, TST, 0)
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", "TST1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 1)
 
 	// make both spendable
 	tx, err = db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.SetSpendableBySupportedTokenFormats(t.Context(), []token.Format{"CLEAR", "CLEAR1"}))
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, err)
+	require.NoError(t, tx.SetSpendableBySupportedTokenFormats(t.Context(), []token.Format{"CLEAR", "CLEAR1"}))
+	require.NoError(t, tx.Commit())
 
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", TST)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, TST, 1)
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", "TST1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 1)
 }
 
@@ -1036,11 +1037,11 @@ func consumeSpendableTokensIterator(t *testing.T, it tdriver.SpendableTokensIter
 	defer it.Close()
 	for range count {
 		tok, err := it.Next()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, tokenType, tok.Type)
 	}
 	tok, err := it.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, tok)
 }
 

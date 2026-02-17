@@ -61,6 +61,7 @@ func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, w
 	}
 	result := resultBoxed.([]interface{})
 	ir := result[0].(*WithdrawalRequest)
+
 	return ir.RecipientData.Identity, result[1].(view.Session), nil
 }
 
@@ -83,6 +84,7 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
 	if err != nil {
 		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
+
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
@@ -90,6 +92,7 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 	err = session.SendWithContext(context.Context(), wr)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
+
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
@@ -99,18 +102,21 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 // WithWallet sets the wallet to use to retrieve a recipient identity if it has not been passed already
 func (r *RequestWithdrawalView) WithWallet(wallet string) *RequestWithdrawalView {
 	r.Wallet = wallet
+
 	return r
 }
 
 // WithTMSID sets the TMS ID to be used
 func (r *RequestWithdrawalView) WithTMSID(id token.TMSID) *RequestWithdrawalView {
 	r.TMSID = id
+
 	return r
 }
 
 // WithRecipientData sets the recipient data to use
 func (r *RequestWithdrawalView) WithRecipientData(data *RecipientData) *RequestWithdrawalView {
 	r.RecipientData = data
+
 	return r
 }
 
@@ -121,6 +127,7 @@ func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*tok
 			return nil, nil, errors.Wrapf(err, "tms not found for [%s]", r.TMSID)
 		}
 		tmsID := tms.ID()
+
 		return &tmsID, r.RecipientData, nil
 	}
 
@@ -131,15 +138,18 @@ func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*tok
 	)
 	if w == nil {
 		logger.Errorf("failed to get wallet [%s]", r.Wallet)
+
 		return nil, nil, errors.Errorf("wallet [%s:%s] not found", r.Wallet, r.TMSID)
 	}
 	recipientData, err := w.GetRecipientData(context.Context())
 	if err != nil {
 		logger.Errorf("failed to get recipient data: [%s]", err)
+
 		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
 	}
 
 	tmsID := w.TMS().ID()
+
 	return &tmsID, recipientData, nil
 }
 
@@ -156,6 +166,7 @@ func ReceiveWithdrawalRequest(context view.Context) (*WithdrawalRequest, error) 
 		return nil, err
 	}
 	ir := requestBoxed.(*WithdrawalRequest)
+
 	return ir, nil
 }
 
@@ -174,6 +185,7 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 
 	if err := tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {
 		logger.Errorf("failed to register recipient identity: [%s]", err)
+
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}
 
@@ -182,6 +194,7 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	logger.DebugfContext(context.Context(), "update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
 	if err := endpoint.GetService(context).Bind(context.Context(), caller, request.RecipientData.Identity); err != nil {
 		logger.DebugfContext(context.Context(), "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
+
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 	}
 

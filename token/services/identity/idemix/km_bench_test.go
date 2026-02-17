@@ -69,6 +69,7 @@ func TestParallelBenchmarkIdemixKMIdentity(t *testing.T) {
 		},
 		func(km *KeyManager) error {
 			_, err := keyManager.Identity(t.Context(), nil)
+
 			return err
 		},
 	)
@@ -96,6 +97,7 @@ func TestParallelBenchmarkIdemixSign(t *testing.T) {
 		},
 		func(s driver.Signer) error {
 			_, err := s.Sign([]byte("hello world"))
+
 			return err
 		},
 	)
@@ -169,6 +171,7 @@ func TestParallelBenchmarkIdemixDeserializeSigner(t *testing.T) {
 		},
 		func(s []byte) error {
 			_, err := keyManager.DeserializeSigner(t.Context(), s)
+
 			return err
 		},
 	)

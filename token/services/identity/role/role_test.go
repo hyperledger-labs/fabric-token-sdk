@@ -30,12 +30,13 @@ func setup(t *testing.T) (context.Context, *role.Role, *mock.LocalMembership) {
 	m.GetDefaultIdentifierReturns("defaultID")
 
 	r := role.NewRole(logger, identity.IssuerRole, "net1", driver.Identity("nodeID"), m)
+
 	return ctx, r, m
 }
 
 func TestRole_ID_returns_roleID(t *testing.T) {
 	_, r, _ := setup(t)
-	require.EqualValues(t, identity.IssuerRole, r.ID())
+	require.Equal(t, identity.IssuerRole, r.ID())
 }
 
 func TestRole_GetIdentityInfo_success_and_error(t *testing.T) {
@@ -99,6 +100,7 @@ func TestRole_MapToIdentity_mapStringToID_branches(t *testing.T) {
 	})
 	m.IsMeCalls(func(ctx context.Context, id driver.Identity) bool {
 		s := string(id)
+
 		return s == "member" || s == "member2"
 	})
 
@@ -155,7 +157,7 @@ func TestRole_MapToIdentity_mapStringToID_branches(t *testing.T) {
 	id, ident, err = r.MapToIdentity(ctx, "member2")
 	require.NoError(t, err)
 	require.Equal(t, driver.Identity("member2"), id)
-	require.Equal(t, "", ident)
+	require.Empty(t, ident)
 
 	// fallback: return label as identifier
 	// make IsMe return false for unknown
@@ -171,6 +173,7 @@ func TestRole_MapToIdentity_mapIdentityToID_branches(t *testing.T) {
 	// Use stubs for IsMe, GetIdentifier and GetIdentityInfo
 	m.IsMeCalls(func(ctx context.Context, id driver.Identity) bool {
 		s := string(id)
+
 		return s == "me" || s == "me2"
 	})
 	m.GetIdentifierCalls(func(ctx context.Context, id driver.Identity) (string, error) {
@@ -236,7 +239,7 @@ func TestRole_MapToIdentity_mapIdentityToID_branches(t *testing.T) {
 	id, ident, err = r.MapToIdentity(ctx, idVal2)
 	require.NoError(t, err)
 	require.Equal(t, idVal2, id)
-	require.Equal(t, "", ident)
+	require.Empty(t, ident)
 
 	// lookup identity as label via GetIdentityInfo succeeds
 	id, ident, err = r.MapToIdentity(ctx, driver.Identity("labelInfo"))

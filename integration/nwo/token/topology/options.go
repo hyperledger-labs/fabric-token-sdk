@@ -17,6 +17,7 @@ func (o *Options) Certifier() bool {
 	if res == nil {
 		return false
 	}
+
 	return res.(bool)
 }
 
@@ -37,6 +38,7 @@ func (o *Options) Issuers() []string {
 	for _, v := range boxed.([]interface{}) {
 		res = append(res, v.(string))
 	}
+
 	return res
 }
 
@@ -57,6 +59,7 @@ func (o *Options) Owners() []string {
 	for _, v := range boxed.([]interface{}) {
 		res = append(res, v.(string))
 	}
+
 	return res
 }
 
@@ -75,6 +78,7 @@ func (o *Options) IsRemoteOwner(id string) bool {
 	if !ok {
 		return false
 	}
+
 	return v.(bool)
 }
 
@@ -83,6 +87,7 @@ func (o *Options) Auditor() bool {
 	if res == nil {
 		return false
 	}
+
 	return res.(bool)
 }
 
@@ -95,6 +100,7 @@ func (o *Options) Endorser() bool {
 	if res == nil {
 		return false
 	}
+
 	return res.(bool)
 }
 
@@ -111,6 +117,7 @@ func (o *Options) IsUseHSMForIssuer(label string) bool {
 	if !ok {
 		return false
 	}
+
 	return v.(bool)
 }
 
@@ -123,6 +130,7 @@ func (o *Options) IsUseHSMForAuditor() bool {
 	if !ok {
 		return false
 	}
+
 	return v.(bool)
 }
 
@@ -150,5 +158,6 @@ func Convert(m map[interface{}]interface{}) *Options {
 	for k, v := range m["mapping"].(map[interface{}]interface{}) {
 		opts.Mapping[k.(string)] = v
 	}
+
 	return opts
 }

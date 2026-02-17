@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,6 +60,7 @@ func TestGetOrLoad(t *testing.T) {
 
 	loader := func() (string, error) {
 		loaderCalls++
+
 		return expectedValue, nil
 	}
 
@@ -109,6 +111,7 @@ func TestGetOrLoadConcurrency(t *testing.T) {
 		atomic.AddInt32(&loaderCalls, 1)
 		// Simulate a slow data source.
 		time.Sleep(100 * time.Millisecond)
+
 		return expectedValue, nil
 	}
 
@@ -116,12 +119,12 @@ func TestGetOrLoadConcurrency(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			defer wg.Done()
 			val, _, loadErr := c.GetOrLoad(key, loader)
-			require.NoError(t, loadErr)
-			require.Equal(t, expectedValue, val)
+			assert.NoError(t, loadErr)
+			assert.Equal(t, expectedValue, val)
 		}()
 	}
 

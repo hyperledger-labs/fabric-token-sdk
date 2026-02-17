@@ -16,6 +16,7 @@ func ToTokenID(id *request.TokenID) *token.ID {
 	if id == nil {
 		return nil
 	}
+
 	return &token.ID{
 		TxId:  id.TxId,
 		Index: id.Index,
@@ -30,6 +31,7 @@ func ToProtoIdentitySlice(identities []Identity) []*request.Identity {
 			Raw: id,
 		}
 	}
+
 	return res
 }
 
@@ -41,6 +43,7 @@ func FromProtoIdentitySlice(identities []*request.Identity) []Identity {
 			res[i] = id.Raw
 		}
 	}
+
 	return res
 }
 
@@ -49,5 +52,6 @@ func ToIdentity(id *request.Identity) Identity {
 	if id == nil {
 		return nil
 	}
+
 	return id.Raw
 }

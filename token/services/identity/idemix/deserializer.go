@@ -36,6 +36,7 @@ func NewDeserializer(
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
 	}
+
 	return NewDeserializerWithProvider(
 		schema.NewDefaultManager(),
 		schema.DefaultSchema,
@@ -138,6 +139,7 @@ func (i *Deserializer) MatchIdentity(ctx context.Context, id driver.Identity, ai
 	if err != nil {
 		return errors.WithMessagef(err, "failed to deserialize audit info")
 	}
+
 	return matcher.Match(ctx, id)
 }
 
@@ -169,5 +171,6 @@ func (c *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
 	}
+
 	return ai, nil
 }

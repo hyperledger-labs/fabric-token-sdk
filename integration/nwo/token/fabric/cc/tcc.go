@@ -27,6 +27,8 @@ import (
 )
 
 const (
+	// DefaultTokenChaincode is the default path to the token chaincode.
+	// #nosec G101 no passwords here
 	DefaultTokenChaincode                    = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main"
 	DefaultTokenChaincodeParamsReplaceSuffix = "/token/services/network/fabric/tcc/params.go"
 )
@@ -72,12 +74,14 @@ func (p *GenericBackend) PrepareNamespace(tms *topology3.TMS) {
 
 	// Standard Chaincode
 	policy := "AND ("
+	var policySb77 strings.Builder
 	for i, org := range orgs {
 		if i > 0 {
-			policy += ","
+			policySb77.WriteString(",")
 		}
-		policy += "'" + org + "MSP.member'"
+		policySb77.WriteString("'" + org + "MSP.member'")
 	}
+	policy += policySb77.String()
 	policy += ")"
 
 	var peers []string
@@ -112,6 +116,7 @@ func (p *GenericBackend) UpdatePublicParams(tms *topology3.TMS, ppRaw []byte) {
 	for _, chaincode := range p.Fabric(tms).Topology().Chaincodes {
 		if chaincode.Chaincode.Name == tms.Namespace {
 			cc = chaincode
+
 			break
 		}
 	}
@@ -131,7 +136,7 @@ func (p *GenericBackend) UpdatePublicParams(tms *topology3.TMS, ppRaw []byte) {
 		packageDir,
 		cc.Chaincode.Name+newChaincodeVersion+".tar.gz",
 	)
-	gomega.Expect(os.MkdirAll(packageDir, 0766)).ToNot(gomega.HaveOccurred())
+	gomega.Expect(os.MkdirAll(packageDir, 0750)).ToNot(gomega.HaveOccurred())
 
 	paramsFile := PublicParamsTemplate(ppRaw)
 
@@ -143,12 +148,14 @@ func (p *GenericBackend) UpdatePublicParams(tms *topology3.TMS, ppRaw []byte) {
 		func(filePath string, fileName string) (string, []byte) {
 			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
 				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
+
 				return "", paramsFile.Bytes()
 			}
 
 			for _, skipPath := range p.SkipPaths {
 				if strings.Contains(filePath, skipPath) {
 					logger.Debugf("skipping [%s:%s]? Yes", filePath, fileName)
+
 					return "", []byte{0}
 				}
 			}
@@ -183,7 +190,7 @@ func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 		packageDir,
 		cc.Chaincode.Name+".tar.gz",
 	)
-	gomega.Expect(os.MkdirAll(packageDir, 0766)).ToNot(gomega.HaveOccurred())
+	gomega.Expect(os.MkdirAll(packageDir, 0750)).ToNot(gomega.HaveOccurred())
 	paramsFile := PublicParamsTemplate(ppRaw)
 	port := p.TokenPlatform.GetContext().ReservePort()
 
@@ -197,12 +204,14 @@ func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 			// Is the public params?
 			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
 				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
+
 				return "", paramsFile.Bytes()
 			}
 
 			for _, skipPath := range p.SkipPaths {
 				if strings.Contains(filePath, skipPath) {
 					logger.Debugf("skipping [%s:%s]? Yes", filePath, fileName)
+
 					return "", []byte{0}
 				}
 			}
@@ -224,8 +233,10 @@ func (p *GenericBackend) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 				if err != nil {
 					panic("failed to marshal chaincode package connection into JSON")
 				}
+
 				return "", raw
 			}
+
 			return "", nil
 		},
 	)
@@ -261,5 +272,6 @@ func PublicParamsTemplate(ppRaw []byte) *bytes.Buffer {
 	paramsFile := bytes.NewBuffer(nil)
 	err = t.Execute(io.MultiWriter(paramsFile), nil)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
 	return paramsFile
 }

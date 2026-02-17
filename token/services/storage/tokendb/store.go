@@ -44,6 +44,7 @@ func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, err
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}
+
 	return c, nil
 }
 
@@ -63,6 +64,7 @@ func (d *StoreService) NewTransaction() (*Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Transaction{TokenStoreTransaction: tx}, nil
 }
 

@@ -25,6 +25,7 @@ func (n *NoCache[T]) Get(key string) (T, bool) {
 
 func (n *NoCache[T]) GetOrLoad(key string, loader func() (T, error)) (T, bool, error) {
 	v, err := loader()
+
 	return v, false, err
 }
 

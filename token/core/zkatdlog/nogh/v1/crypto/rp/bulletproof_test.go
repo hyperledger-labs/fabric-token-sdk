@@ -8,12 +8,10 @@ package rp_test
 
 import (
 	"context"
-	"fmt"
 	"math/bits"
 	"math/rand"
 	"strconv"
 	"testing"
-	"time"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
@@ -40,7 +38,7 @@ type bfSetup struct {
 func newBfSetup(curveID math.CurveID) (*bfSetup, error) {
 	curve := math.Curves[curveID]
 	l := uint64(64)
-	nr := 63 - uint64(bits.LeadingZeros64(l))
+	nr := 63 - uint64(bits.LeadingZeros64(l)) // #nosec G115
 	leftGens := make([]*math.G1, l)
 	rightGens := make([]*math.G1, l)
 
@@ -93,10 +91,8 @@ func TestBFProofVerify(t *testing.T) {
 		setup.l,
 		setup.curve,
 	)
-	start := time.Now()
 	proof, err := prover.Prove()
-	fmt.Printf("Prove took %v msec", time.Since(start).Milliseconds())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, proof)
 
 	verifier := rp.NewRangeVerifier(
@@ -110,10 +106,8 @@ func TestBFProofVerify(t *testing.T) {
 		setup.l,
 		setup.curve,
 	)
-	start = time.Now()
 	err = verifier.Verify(proof)
-	fmt.Printf("Verify took %v msec", time.Since(start).Milliseconds())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func BenchmarkBFProver(b *testing.B) {
@@ -122,7 +116,7 @@ func BenchmarkBFProver(b *testing.B) {
 	require.NoError(b, pp.Start())
 	defer pp.Stop()
 	envs := make([]*bfSetup, 0, 128)
-	for i := 0; i < 128; i++ {
+	for range 128 {
 		setup, err := newBfSetup(math.BLS12_381_BBS_GURVY)
 		require.NoError(b, err)
 		envs = append(envs, setup)
@@ -145,7 +139,7 @@ func BenchmarkBFProver(b *testing.B) {
 				setup.curve,
 			)
 			proof, err := prover.Prove()
-			assert.NoError(b, err)
+			require.NoError(b, err)
 			assert.NotNil(b, proof)
 		}
 	})
@@ -175,6 +169,7 @@ func TestParallelBFProver(t *testing.T) {
 				setup.curve,
 			)
 			_, err := prover.Prove()
+
 			return err
 		},
 	)

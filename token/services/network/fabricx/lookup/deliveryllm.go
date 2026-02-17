@@ -53,6 +53,7 @@ func newEndorserDeliveryBasedLLMProvider(fnsp *fabric.NetworkServiceProvider, tr
 	if err != nil {
 		panic(err)
 	}
+
 	return lookup.NewDeliveryBasedLLMProvider(fnsp, tracerProvider, config, func(network, channel string) events.EventInfoMapper[lookup.KeyInfo] {
 		return &endorserTxInfoMapper{
 			keyTranslator: keyTranslator,
@@ -73,16 +74,19 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, data []byte, block
 	_, payload, chdr, err := fabricutils.UnmarshalTx(data)
 	if err != nil {
 		logger.Debugf("failed to unmarshal tx [%d:%d]: %v", blockNum, txNum, err)
+
 		return nil, errors.Wrapf(err, "failed to unmarshal tx [%d:%d]", blockNum, txNum)
 	}
 	if chdr.Type != int32(common.HeaderType_MESSAGE) {
 		logger.Warnf("Tx with type [%d] found in [%d:%d]. Skipping...", chdr.Type, blockNum, txNum)
+
 		return nil, nil
 	}
 
 	tx := &protoblocktx.Tx{}
 	if err := proto.Unmarshal(payload.Data, tx); err != nil {
 		logger.Debugf("failed to unmarshal tx [%d:%d]: %v", blockNum, txNum, err)
+
 		return nil, errors.Wrapf(err, "failed to unmarshal tx payload [%d:%d]", blockNum, txNum)
 	}
 
@@ -107,6 +111,7 @@ func (m *endorserTxInfoMapper) mapTx(txID string, tx *protoblocktx.Tx) (map[driv
 					Namespace: ns.GetNsId(),
 					Value:     write.GetValue(),
 				}
+
 				break
 			}
 		}

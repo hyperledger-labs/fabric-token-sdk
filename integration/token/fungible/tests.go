@@ -36,7 +36,11 @@ import (
 )
 
 const (
-	DLogNamespace     = "dlog_token_chaincode"
+	// DLogNamespace is the default name for the namespace where the token chaincode is deployed when using the dlog driver
+	// #nosec G101 no passwords here
+	DLogNamespace = "dlog_token_chaincode"
+	// FabTokenNamespace is the default name for the namespace where the token chaincode is deployed when using the fabtoken driver
+	// #nosec G101  no passwords here
 	FabTokenNamespace = "fabtoken_token_chaincode"
 )
 
@@ -697,6 +701,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 			}))
 			if err != nil {
 				transfer <- err
+
 				return
 			}
 			transfer <- nil
@@ -736,6 +741,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 			if err != nil {
 				// The transaction failed, we return the error to the caller.
 				transferError <- err
+
 				return
 			}
 			// The transaction didn't fail, let's wait for it to be confirmed, and return no error
@@ -1257,6 +1263,7 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 		if !strings.Contains(errMsgs[0], "token format not supported [") {
 			return errors.Errorf("expected error format not supported [%v]", errMsgs)
 		}
+
 		return nil
 	}, alice)
 	CheckOwnerStore(network, nil, issuer, bob, charlie, manager)

@@ -148,6 +148,7 @@ func PemDecodeKey(keyBytes []byte) (interface{}, error) {
 		if err != nil {
 			return nil, errors.WithMessagef(err, "pem bytes are not cert encoded ")
 		}
+
 		return cert.PublicKey, nil
 	case "PUBLIC KEY":
 		key, err = x509.ParsePKIXPublicKey(block.Bytes)

@@ -56,6 +56,7 @@ func NewService(cp Provider) *Service {
 	}
 	enabled := cp.GetBool(EnabledPath)
 	loader := &loader{cp: cp, validators: nil}
+
 	return &Service{
 		cp:                   cp,
 		version:              version,
@@ -96,6 +97,7 @@ func (m *Service) LookupNamespace(network, channel string) (string, error) {
 	if len(hits) == 0 {
 		return "", errors.Errorf("no token-sdk configuration for network [%s], channel [%s]", network, channel)
 	}
+
 	return "", errors.Errorf("multiple token-sdk configurations for network [%s], channel [%s]", network, channel)
 }
 
@@ -122,6 +124,7 @@ func (m *Service) Configurations() ([]*Configuration, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed loading configurations")
 	}
+
 	return collections.Values(tmsConfigs), nil
 }
 
@@ -174,6 +177,7 @@ func (m *Service) AddConfiguration(raw []byte) error {
 	if err := m.configurationsHolder.Reset(); err != nil {
 		return errors.Wrapf(err, "failed resetting configurations holder")
 	}
+
 	return nil
 }
 
@@ -205,6 +209,7 @@ func (m *loader) load() (map[string]*Configuration, error) {
 			return nil, errors.WithMessagef(err, "cannot load token-sdk configuration for [%s]", id)
 		}
 	}
+
 	return tmsConfigs, nil
 }
 

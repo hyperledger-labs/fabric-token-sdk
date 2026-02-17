@@ -52,5 +52,6 @@ func GetMetrics(sp token.ServiceProvider) *Metrics {
 	if err != nil {
 		panic(err)
 	}
+
 	return s.(*Metrics)
 }

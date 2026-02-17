@@ -61,6 +61,7 @@ func (d *TypedIdentityDeserializer) GetAuditInfo(ctx context.Context, id driver.
 			return nil, errors.Wrapf(err, "failed getting audit info for mid [%s]", id.String())
 		}
 	}
+
 	return auditInfo.Bytes()
 }
 
@@ -89,6 +90,7 @@ func (d *TypedIdentityDeserializer) GetAuditInfoMatcher(ctx context.Context, own
 			return nil, err
 		}
 	}
+
 	return &InfoMatcher{AuditInfoMatcher: matchers}, nil
 }
 
@@ -106,6 +108,7 @@ func (d *TypedIdentityDeserializer) DeserializeVerifier(ctx context.Context, typ
 			return nil, errors.Wrapf(err, "failed to unmarshal multisig identity")
 		}
 	}
+
 	return verifier, nil
 }
 
@@ -115,6 +118,7 @@ func (d *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.
 	if err != nil {
 		return nil, err
 	}
+
 	return mid.Identities, nil
 }
 
@@ -127,5 +131,6 @@ func (a *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []
 	if err != nil {
 		return nil, err
 	}
+
 	return ei, nil
 }

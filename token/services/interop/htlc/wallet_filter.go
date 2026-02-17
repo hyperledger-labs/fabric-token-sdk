@@ -31,6 +31,7 @@ func (f *PreImageSelector) Filter(tok *token.UnspentToken, script *Script) (bool
 
 	if !script.HashInfo.HashFunc.Available() {
 		logger.Errorf("script hash function not available [%d]", script.HashInfo.HashFunc)
+
 		return false, nil
 	}
 	hash := script.HashInfo.HashFunc.New()
@@ -53,6 +54,7 @@ func SelectExpired(tok *token.UnspentToken, script *Script) (bool, error) {
 	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 	now := time.Now()
 	logger.Debugf("[%v]<=[%v], sender [%s], recipient [%s]?", script.Deadline, now, script.Sender.UniqueID(), script.Recipient.UniqueID())
+
 	return script.Deadline.Before(now), nil
 }
 
@@ -60,6 +62,7 @@ func SelectExpired(tok *token.UnspentToken, script *Script) (bool, error) {
 func SelectNonExpired(tok *token.UnspentToken, script *Script) (bool, error) {
 	now := time.Now()
 	logger.Debugf("[%v]>=[%v], sender [%s], recipient [%s]?", script.Deadline, now, script.Sender.UniqueID(), script.Recipient.UniqueID())
+
 	return script.Deadline.After(now), nil
 }
 
@@ -72,6 +75,7 @@ func (s *ExpiredAndHashSelector) Select(tok *token.UnspentToken, script *Script)
 	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 	now := time.Now()
 	logger.Debugf("[%v]<=[%v], sender [%s], recipient [%s]?", script.Deadline, now, script.Sender.UniqueID(), script.Recipient.UniqueID())
+
 	return script.Deadline.Before(now) && bytes.Equal(script.HashInfo.Hash, s.Hash), nil
 }
 
@@ -80,6 +84,7 @@ func IsScript(selector SelectFunction) iterators.Predicate[*token.UnspentToken] 
 		owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
 		if err != nil {
 			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+
 			return false
 		}
 		if owner.Type != ScriptType {
@@ -89,10 +94,12 @@ func IsScript(selector SelectFunction) iterators.Predicate[*token.UnspentToken] 
 		script := &Script{}
 		if err := json.Unmarshal(owner.Identity, script); err != nil {
 			logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+
 			return false
 		}
 		if script.Sender.IsNone() {
 			logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
+
 			return false
 		}
 		logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
@@ -100,8 +107,10 @@ func IsScript(selector SelectFunction) iterators.Predicate[*token.UnspentToken] 
 		pickItem, err := selector(tok, script)
 		if err != nil {
 			logger.Errorf("failed to select (token,script)[%v:%v] pair: %w", tok, script, err)
+
 			return false
 		}
+
 		return pickItem
 	}
 }

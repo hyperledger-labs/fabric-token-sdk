@@ -82,10 +82,12 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 			}
 			tokens[id.TxId] = ti
 			counter++
+
 			return nil
 		})
 		if err == nil {
 			s.Logger.DebugfContext(ctx, "retrieve [%d] token outputs for [%v]", len(tokens), ids)
+
 			return tokens, nil
 		}
 		s.Logger.DebugfContext(ctx, "failed to retrieve tokens for [%v], any pending transaction? [%s]", ids, err)
@@ -95,10 +97,12 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 		anyPending, anyError := s.isAnyPending(ctx, ids...)
 		if anyError != nil {
 			err = anyError
+
 			break
 		}
 		if anyError == nil && !anyPending {
 			s.Logger.DebugfContext(ctx, "failed to retrieve tokens: no transaction is pending")
+
 			break
 		}
 
@@ -117,6 +121,7 @@ func (s *VaultLedgerTokenLoader[T]) isAnyPending(ctx context.Context, ids ...*to
 			return pending, error
 		}
 	}
+
 	return false, nil
 }
 
@@ -196,6 +201,7 @@ func (s *VaultTokenInfoLoader[M]) GetTokenInfos(ctx context.Context, ids []*toke
 		}
 		inputInf[i] = ti
 	}
+
 	return inputInf, nil
 }
 

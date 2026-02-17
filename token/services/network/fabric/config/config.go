@@ -42,6 +42,7 @@ func (c *serviceListenerManagerConfig) Type() ManagerType {
 	if v := ManagerType(c.c.GetString("token.finality.type")); len(v) > 0 {
 		return v
 	}
+
 	return Delivery
 }
 
@@ -49,6 +50,7 @@ func (c *serviceListenerManagerConfig) CommitterMaxRetries() int {
 	if v := c.c.GetInt("token.finality.committer.maxRetries"); v >= 0 {
 		return v
 	}
+
 	return 3
 }
 
@@ -56,6 +58,7 @@ func (c *serviceListenerManagerConfig) CommitterRetryWaitDuration() time.Duratio
 	if v := c.c.GetDuration("token.finality.committer.retryWaitDuration"); v >= 0 {
 		return v
 	}
+
 	return 5 * time.Second
 }
 
@@ -63,6 +66,7 @@ func (c *serviceListenerManagerConfig) DeliveryMapperParallelism() int {
 	if v := c.c.GetInt("token.finality.delivery.mapperParallelism"); v > 0 {
 		return v
 	}
+
 	return 10
 }
 
@@ -74,6 +78,7 @@ func (c *serviceListenerManagerConfig) DeliveryLRUSize() int {
 	if v := c.c.GetInt("token.finality.delivery.lruSize"); v >= 0 {
 		return v
 	}
+
 	return 30
 }
 
@@ -81,6 +86,7 @@ func (c *serviceListenerManagerConfig) DeliveryLRUBuffer() int {
 	if v := c.c.GetInt("token.finality.delivery.lruBuffer"); v >= 0 {
 		return v
 	}
+
 	return 15
 }
 
@@ -88,6 +94,7 @@ func (c *serviceListenerManagerConfig) DeliveryListenerTimeout() time.Duration {
 	if v := c.c.GetDuration("token.finality.delivery.listenerTimeout"); v >= 0 {
 		return v
 	}
+
 	return 10 * time.Second
 }
 
@@ -95,5 +102,6 @@ func (c *serviceListenerManagerConfig) String() string {
 	if c.Type() == Delivery {
 		return fmt.Sprintf("Delivery [mapperParalellism: %d, lru: (%d, %d), listenerTimeout: %v]", c.DeliveryMapperParallelism(), c.DeliveryLRUSize(), c.DeliveryLRUBuffer(), c.DeliveryListenerTimeout())
 	}
+
 	return fmt.Sprintf("Invalid config type: [%s]", c.Type())
 }

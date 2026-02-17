@@ -44,11 +44,13 @@ func NewTMSAuthorization(logger logging.Logger, publicParameters driver.PublicPa
 		_, err := walletService.AuditorWallet(context.Background(), identity)
 		if err == nil {
 			amIAnAuditor = true
+
 			break
 		}
 		errs = append(errs, errors.Wrapf(err, "I'm not this auditor identity [%s]", identity))
 	}
 	logger.Debugf("am I an auditor? [%v], with errs [%v]", amIAnAuditor, errs)
+
 	return &WalletBasedAuthorization{Logger: logger, PublicParameters: publicParameters, WalletService: walletService, amIAnAuditor: amIAnAuditor}
 }
 
@@ -59,6 +61,7 @@ func (w *WalletBasedAuthorization) IsMine(ctx context.Context, tok *token2.Token
 	if err != nil {
 		return "", nil, false
 	}
+
 	return wallet.ID(), nil, true
 }
 
@@ -70,6 +73,7 @@ func (w *WalletBasedAuthorization) AmIAnAuditor() bool {
 
 func (w *WalletBasedAuthorization) Issued(ctx context.Context, issuer token.Identity, tok *token2.Token) bool {
 	_, err := w.WalletService.IssuerWallet(ctx, issuer)
+
 	return err == nil
 }
 
@@ -91,6 +95,7 @@ func (o *AuthorizationMultiplexer) IsMine(ctx context.Context, tok *token2.Token
 			return walletID, ids, true
 		}
 	}
+
 	return "", nil, false
 }
 
@@ -102,6 +107,7 @@ func (o *AuthorizationMultiplexer) AmIAnAuditor() bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -112,6 +118,7 @@ func (o *AuthorizationMultiplexer) Issued(ctx context.Context, issuer token.Iden
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -121,5 +128,6 @@ func (o *AuthorizationMultiplexer) OwnerType(raw []byte) (driver.IdentityType, [
 	if err != nil {
 		return "", nil, err
 	}
+
 	return owner.Type, owner.Identity, nil
 }

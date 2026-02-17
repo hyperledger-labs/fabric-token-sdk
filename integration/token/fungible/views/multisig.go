@@ -101,6 +101,7 @@ func (f *MultiSigLockViewFactory) NewView(in []byte) (view.View, error) {
 	v := &MultiSigLockView{MultiSigLock: &MultiSigLock{}}
 	err := json.Unmarshal(in, v.MultiSigLock)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return v, nil
 }
 

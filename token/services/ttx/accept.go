@@ -95,6 +95,7 @@ func (s *AcceptView) ack(context view.Context) error {
 	if err := session.SendWithContext(context.Context(), sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending ack")
 	}
+
 	return nil
 }
 

@@ -153,5 +153,6 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			TokenSelector: tokenSelector,
 		},
 	))
+
 	return ts, selector
 }

@@ -49,6 +49,7 @@ func IsAries(tms *topology.TMS) bool {
 	if ok {
 		return ariesBoxed.(bool)
 	}
+
 	return false
 }
 
@@ -85,7 +86,7 @@ func NewCryptoMaterialGeneratorWithCurveIdentifier(tokenPlatform generators.Toke
 
 func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), "idemix")
-	if err := os.MkdirAll(output, 0766); err != nil {
+	if err := os.MkdirAll(output, 0750); err != nil {
 		return "", err
 	}
 
@@ -105,6 +106,7 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 		return "", err
 	}
 	gomega.Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
+
 	return output, nil
 }
 
@@ -133,7 +135,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 
 		logger.Debugf("Generating owner identity [%s] for [%s]", owner, tmsID)
 		userOutput := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tmsID, "idemix", pathPrefix, owner)
-		if err := os.MkdirAll(userOutput, 0766); err != nil {
+		if err := os.MkdirAll(userOutput, 0750); err != nil {
 			return nil
 		}
 		// notice that if aries is enabled, curve is ignored
@@ -168,7 +170,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			err = os.WriteFile(
 				filepath.Join(userOutput, idemix.IdemixConfigDirUser, msp2.SignerConfigFull),
 				signerBytes,
-				0766,
+				0600,
 			)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -179,7 +181,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			err = os.WriteFile(
 				filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner),
 				raw,
-				0766,
+				0600,
 			)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
@@ -189,6 +191,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 		})
 	}
 	d.RevocationHandlerIndex++
+
 	return res
 }
 
@@ -202,6 +205,7 @@ func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n
 
 func (d *CryptoMaterialGenerator) Idemixgen(command common.Command) (*gexec.Session, error) {
 	cmd := common.NewCommand(d.TokenPlatform.GetBuilder().Build("github.com/IBM/idemix/tools/idemixgen"), command)
+
 	return d.StartSession(cmd, command.SessionName())
 }
 
@@ -217,6 +221,7 @@ func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gex
 	); err != nil {
 		return nil, err
 	}
+
 	return gexec.Start(
 		cmd,
 		gexec.NewPrefixedWriter(
@@ -237,5 +242,6 @@ func (d *CryptoMaterialGenerator) nextColor() string {
 	}
 
 	d.ColorIndex++
+
 	return fmt.Sprintf("%dm", color)
 }

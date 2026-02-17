@@ -160,6 +160,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create token service")
 	}
+
 	return service, nil
 }
 

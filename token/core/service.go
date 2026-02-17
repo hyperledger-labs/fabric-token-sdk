@@ -34,6 +34,7 @@ func newFactoryDirectory[T driver.PPReader](fs ...NamedFactory[T]) *factoryDirec
 	for _, f := range fs {
 		factories[f.Name] = f.Driver
 	}
+
 	return &factoryDirectory[T]{factories: factories}
 }
 
@@ -49,6 +50,7 @@ func (s *factoryDirectory[T]) PublicParametersFromBytes(params []byte) (driver.P
 	if f, ok := s.factories[TokenDriverIdentifier(pp.Identifier)]; ok {
 		return f.PublicParametersFromBytes(params)
 	}
+
 	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier)
 }
 
@@ -58,6 +60,7 @@ func serializedPublicParametersFromBytes(raw []byte) (*pp.PublicParameters, erro
 	if err := json.Unmarshal(raw, pp); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing public parameters")
 	}
+
 	return pp, nil
 }
 
@@ -75,6 +78,7 @@ func (s *PPManagerFactoryService) NewPublicParametersManager(pp driver.PublicPar
 	if instantiator, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
 		return instantiator.NewPublicParametersManager(pp)
 	}
+
 	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", DriverIdentifierFromPP(pp))
 }
 
@@ -82,6 +86,7 @@ func (s *PPManagerFactoryService) DefaultValidator(pp driver.PublicParameters) (
 	if instantiator, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
 		return instantiator.DefaultValidator(pp)
 	}
+
 	return nil, errors.Errorf("cannot load default validator, driver [%s] not found", DriverIdentifierFromPP(pp))
 }
 
@@ -101,6 +106,7 @@ func (s *WalletServiceFactoryService) NewWalletService(tmsConfig driver.Configur
 	if factory, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
 		return factory.NewWalletService(tmsConfig, pp)
 	}
+
 	return nil, errors.Errorf("no validator found for token driver [%s]", DriverIdentifierFromPP(pp))
 }
 
@@ -120,6 +126,7 @@ func (s *TokenDriverService) NewTokenService(tmsID driver.TMSID, publicParams []
 	if driver, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
 		return driver.NewTokenService(tmsID, publicParams)
 	}
+
 	return nil, errors.Errorf("no token driver named '%s' found", DriverIdentifierFromPP(pp))
 }
 
@@ -127,6 +134,7 @@ func (s *TokenDriverService) NewDefaultValidator(pp driver.PublicParameters) (dr
 	if driver, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
 		return driver.NewDefaultValidator(pp)
 	}
+
 	return nil, errors.Errorf("no validator found for token driver [%s]", DriverIdentifierFromPP(pp))
 }
 
@@ -137,5 +145,6 @@ func GetTokenDriverService(sp driver.ServiceProvider) (*TokenDriverService, erro
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get token driver service")
 	}
+
 	return s.(*TokenDriverService), nil
 }

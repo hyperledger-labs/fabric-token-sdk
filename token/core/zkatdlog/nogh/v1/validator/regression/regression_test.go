@@ -42,25 +42,25 @@ var testDataFS embed.FS
 func TestRegression(t *testing.T) {
 	t.Parallel()
 	for _, action := range []string{"transfers", "issues", "redeems", "swaps"} {
-		testRegressionParallel(t, "testdata/32-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i1_o1", action))
-		testRegressionParallel(t, "testdata/32-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i1_o2", action))
-		testRegressionParallel(t, "testdata/32-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i2_o1", action))
-		testRegressionParallel(t, "testdata/32-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i2_o2", action))
+		testRegressionParallel(t, "testdata/32-BLS12_381_BBS_GURVY", action+"_i1_o1")
+		testRegressionParallel(t, "testdata/32-BLS12_381_BBS_GURVY", action+"_i1_o2")
+		testRegressionParallel(t, "testdata/32-BLS12_381_BBS_GURVY", action+"_i2_o1")
+		testRegressionParallel(t, "testdata/32-BLS12_381_BBS_GURVY", action+"_i2_o2")
 
-		testRegressionParallel(t, "testdata/64-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i1_o1", action))
-		testRegressionParallel(t, "testdata/64-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i1_o2", action))
-		testRegressionParallel(t, "testdata/64-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i2_o1", action))
-		testRegressionParallel(t, "testdata/64-BLS12_381_BBS_GURVY", fmt.Sprintf("%s_i2_o2", action))
+		testRegressionParallel(t, "testdata/64-BLS12_381_BBS_GURVY", action+"_i1_o1")
+		testRegressionParallel(t, "testdata/64-BLS12_381_BBS_GURVY", action+"_i1_o2")
+		testRegressionParallel(t, "testdata/64-BLS12_381_BBS_GURVY", action+"_i2_o1")
+		testRegressionParallel(t, "testdata/64-BLS12_381_BBS_GURVY", action+"_i2_o2")
 
-		testRegressionParallel(t, "testdata/32-BN254", fmt.Sprintf("%s_i1_o1", action))
-		testRegressionParallel(t, "testdata/32-BN254", fmt.Sprintf("%s_i1_o2", action))
-		testRegressionParallel(t, "testdata/32-BN254", fmt.Sprintf("%s_i2_o1", action))
-		testRegressionParallel(t, "testdata/32-BN254", fmt.Sprintf("%s_i2_o2", action))
+		testRegressionParallel(t, "testdata/32-BN254", action+"_i1_o1")
+		testRegressionParallel(t, "testdata/32-BN254", action+"_i1_o2")
+		testRegressionParallel(t, "testdata/32-BN254", action+"_i2_o1")
+		testRegressionParallel(t, "testdata/32-BN254", action+"_i2_o2")
 
-		testRegressionParallel(t, "testdata/64-BN254", fmt.Sprintf("%s_i1_o1", action))
-		testRegressionParallel(t, "testdata/64-BN254", fmt.Sprintf("%s_i1_o2", action))
-		testRegressionParallel(t, "testdata/64-BN254", fmt.Sprintf("%s_i2_o1", action))
-		testRegressionParallel(t, "testdata/64-BN254", fmt.Sprintf("%s_i2_o2", action))
+		testRegressionParallel(t, "testdata/64-BN254", action+"_i1_o1")
+		testRegressionParallel(t, "testdata/64-BN254", action+"_i1_o2")
+		testRegressionParallel(t, "testdata/64-BN254", action+"_i2_o1")
+		testRegressionParallel(t, "testdata/64-BN254", action+"_i2_o2")
 	}
 }
 
@@ -120,6 +120,7 @@ func tokenServicesFactory(bytes []byte) (tcc.PublicParameters, tcc.Validator, er
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return ppm, token.NewValidator(v), nil
 }
 

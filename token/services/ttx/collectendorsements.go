@@ -71,6 +71,7 @@ func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *Colle
 	if err != nil {
 		panic(err)
 	}
+
 	return &CollectEndorsementsView{tx: tx, Opts: options, sessions: map[string]view.Session{}}
 }
 
@@ -127,6 +128,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	logger.DebugfContext(context.Context(), "distribute tx to [%d] involved parties", len(distributionList))
 	if err := c.distributeTxToParties(context, distributionList, nil); err != nil {
 		logger.ErrorfContext(context.Context(), "failed distributing tx: %s", err)
+
 		return nil, errors.WithMessagef(err, "failed distributing tx")
 	}
 
@@ -134,6 +136,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	logger.DebugfContext(context.Context(), "Cleanup audit")
 	if err := c.cleanupAudit(context); err != nil {
 		logger.ErrorfContext(context.Context(), "failed cleaning up audit: %s", err)
+
 		return nil, errors.WithMessagef(err, "failed cleaning up audit")
 	}
 
@@ -145,11 +148,13 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 		"namespace", c.tx.Namespace(),
 	}
 	metrics.EndorsedTransactions.With(labels...).Add(1)
+
 	return nil, nil
 }
 
 func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
 	logger.DebugfContext(context.Context(), "collecting signature on [%d] request issue", len(c.tx.TokenRequest.Metadata.Issues))
+
 	return c.requestSignatures(
 		c.tx.TokenRequest.IssueSigners(),
 		c.tx.TokenService().SigService().IssuerVerifier,
@@ -212,6 +217,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 				return nil, errors.WithMessagef(err, "failed joining multi-sig signatures")
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
+
 			continue
 		}
 
@@ -223,6 +229,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 				return nil, errors.WithMessagef(err, "failed signing local for party [%s]", signerIdentity)
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
+
 			continue
 		} else {
 			logger.DebugfContext(context.Context(), "failed to find a signer for party [%s]: [%s]", signerIdentity, err)
@@ -241,6 +248,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 				return nil, errors.WithMessagef(err, "failed signing external for party [%s]", signerIdentity)
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
+
 			continue
 		}
 
@@ -265,6 +273,7 @@ func (c *CollectEndorsementsView) signLocal(ctx context.Context, party view.Iden
 		return nil, err
 	}
 	logger.DebugfContext(ctx, "signature generated (local, me) [%s,%s,%s,%v]", utils.Hashable(requestRaw), utils.Hashable(sigma), party, logging.Identifier(signer))
+
 	return sigma, nil
 }
 
@@ -275,6 +284,7 @@ func (c *CollectEndorsementsView) signExternal(ctx context.Context, party view.I
 		return nil, err
 	}
 	logger.DebugfContext(ctx, "signature generated (external, me) [%s,%s,%s]", utils.Hashable(requestRaw), utils.Hashable(sigma), party)
+
 	return sigma, nil
 }
 
@@ -338,6 +348,7 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 		return nil, err
 	}
 	c.tx.Envelope = env
+
 	return env, nil
 }
 
@@ -360,10 +371,12 @@ func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Ide
 			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
 		}
 		c.sessions[c.tx.Opts.Auditor.String()] = sessionBoxed.(view.Session)
+
 		return []view.Identity{c.tx.Opts.Auditor}, nil
 	} else {
 		logger.Warnf("no auditor specified, skip auditing, but # auditors in public parameters is [%d]", len(auditors))
 	}
+
 	return nil, nil
 }
 
@@ -375,6 +388,7 @@ func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 		}
 		session.Close()
 	}
+
 	return nil
 }
 
@@ -382,6 +396,7 @@ func (c *CollectEndorsementsView) distributeTxToParties(context view.Context, di
 	logger.DebugfContext(context.Context(), "Start distribute to parties")
 	if c.Opts.SkipDistributeEnv {
 		logger.DebugfContext(context.Context(), "Skip distribute envelopes")
+
 		return nil
 	}
 
@@ -411,6 +426,7 @@ func (c *CollectEndorsementsView) distributeTxToParties(context view.Context, di
 		// If it is me, no need to open a remote connection. Just store the envelope locally.
 		if entry.IsMe && !entry.Auditor {
 			logger.DebugfContext(context.Context(), "tx [%d] is me [%s], endorse locally", i, entry.ID)
+
 			continue
 		} else {
 			logger.DebugfContext(context.Context(), "tx [%d] is not me [%s:%s], ask endorse", i, entry.ID, entry.EID)
@@ -571,6 +587,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		for _, entry := range distributionListCompressed {
 			if longTermIdentity.Equal(entry.LongTerm) {
 				found = true
+
 				break
 			}
 		}
@@ -623,6 +640,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 	}
 
 	logger.DebugfContext(context.Context(), "distributed tx to num parties [%d]", len(distributionListCompressed))
+
 	return distributionListCompressed, nil
 }
 
@@ -630,8 +648,10 @@ func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identi
 	s, ok := c.sessions[p.UniqueID()]
 	if ok {
 		logger.DebugfContext(context.Context(), "getSession: found session for [%s]", p.UniqueID())
+
 		return s, nil
 	}
+
 	return context.GetSession(context.Initiator(), p)
 }
 
@@ -642,6 +662,7 @@ func mergeSigmas(maps ...map[string][]byte) map[string][]byte {
 			merged[k] = v
 		}
 	}
+
 	return merged
 }
 
@@ -651,6 +672,7 @@ func IssueDistributionList(r *token.Request) []view.Identity {
 		distributionList = append(distributionList, issue.Issuer)
 		distributionList = append(distributionList, issue.Receivers...)
 	}
+
 	return distributionList
 }
 
@@ -660,6 +682,7 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 		distributionList = append(distributionList, transfer.Senders...)
 		distributionList = append(distributionList, transfer.Receivers...)
 	}
+
 	return distributionList
 }
 

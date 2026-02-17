@@ -90,7 +90,7 @@ func TestAddAndDeleteMultipleStatusListeners(t *testing.T) {
 	var channels []chan StatusEvent
 
 	// Add multiple listeners
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		ch := make(chan StatusEvent, i+1)
 		channels = append(channels, ch)
 		ss.AddStatusListener(txID, ch)
@@ -125,7 +125,7 @@ func TestNotifyMultipleListeners(t *testing.T) {
 	var channels []chan StatusEvent
 
 	// Add multiple listeners
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		ch := make(chan StatusEvent, 1)
 		channels = append(channels, ch)
 		ss.AddStatusListener(txID, ch)
@@ -165,7 +165,7 @@ func TestMapCleanupAfterManyTransactions(t *testing.T) {
 	// Simulate many transactions adding and removing listeners
 	numTransactions := 1000
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		txID := "tx" + string(rune(i))
 		ch := make(chan StatusEvent, 1)
 

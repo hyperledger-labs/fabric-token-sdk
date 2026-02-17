@@ -33,5 +33,6 @@ func (p *platformFactory) New(ctx api.Context, t api.Topology, builder api.Build
 	tp.AddNetworkHandler(fabricx.PlatformName, tfabric.NewNetworkHandler(tp, builder, &fabricx2.Backend{
 		ClientProvider: p.ClientProvider,
 	}))
+
 	return tp
 }

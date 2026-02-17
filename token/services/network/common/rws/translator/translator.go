@@ -37,6 +37,7 @@ func New(txID string, rws ExRWSet, keyTranslator KeyTranslator) *Translator {
 		counter:       0,
 		KeyTranslator: keyTranslator,
 	}
+
 	return w
 }
 
@@ -54,9 +55,11 @@ func (t *Translator) Write(ctx context.Context, action any) error {
 	err = t.commitProcess(ctx, action)
 	if err != nil {
 		logger.Errorf("error committing transaction with txID '%s': %s", t.TxID, err)
+
 		return err
 	}
 	logger.DebugfContext(ctx, "successfully processed transaction with txID '%s'", t.TxID)
+
 	return nil
 }
 
@@ -85,6 +88,7 @@ func (t *Translator) CommitTokenRequest(raw []byte, storeHash bool) ([]byte, err
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write token request'%s'", t.TxID)
 	}
+
 	return h, nil
 }
 
@@ -97,6 +101,7 @@ func (t *Translator) ReadTokenRequest() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read token request'%s'", t.TxID)
 	}
+
 	return tr, nil
 }
 
@@ -109,6 +114,7 @@ func (t *Translator) ReadSetupParameters() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get setup parameters")
 	}
+
 	return raw, nil
 }
 
@@ -120,6 +126,7 @@ func (t *Translator) AddPublicParamsDependency() error {
 	if err := t.RWSet.StateMustExist(setupKey, Latest); err != nil {
 		return errors.Wrapf(err, "failed to add public params dependency")
 	}
+
 	return nil
 }
 
@@ -130,6 +137,7 @@ func (t *Translator) QueryTokens(ctx context.Context, ids []*token.ID) ([][]byte
 		outputID, err := t.KeyTranslator.CreateOutputKey(id.TxId, id.Index)
 		if err != nil {
 			errs = append(errs, errors.Errorf("error creating output ID: %s", err))
+
 			continue
 			// return nil, errors.Errorf("error creating output ID: %s", err)
 		}
@@ -137,10 +145,12 @@ func (t *Translator) QueryTokens(ctx context.Context, ids []*token.ID) ([][]byte
 		bytes, err := t.RWSet.GetState(outputID)
 		if err != nil {
 			errs = append(errs, errors.Wrapf(err, "failed getting output for [%s]", outputID))
+
 			continue
 		}
 		if len(bytes) == 0 {
 			errs = append(errs, errors.Errorf("output for key [%s] does not exist", outputID))
+
 			continue
 		}
 		res = append(res, bytes)
@@ -148,6 +158,7 @@ func (t *Translator) QueryTokens(ctx context.Context, ids []*token.ID) ([][]byte
 	if len(errs) != 0 {
 		return nil, errors.Errorf("failed quering tokens [%v] with errs [%d][%v]", ids, len(errs), errs)
 	}
+
 	return res, nil
 }
 
@@ -188,6 +199,7 @@ func (t *Translator) checkProcess(action interface{}) error {
 	if err := t.checkAction(action); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -233,10 +245,12 @@ func (t *Translator) commitProcess(ctx context.Context, action interface{}) erro
 	err := t.commitAction(ctx, action)
 	if err != nil {
 		logger.Errorf("error committing action with txID '%s': %s", t.TxID, err)
+
 		return err
 	}
 
 	logger.DebugfContext(ctx, "action with txID '%s' committed successfully", t.TxID)
+
 	return nil
 }
 
@@ -249,6 +263,7 @@ func (t *Translator) commitAction(ctx context.Context, tokenAction interface{}) 
 	case SetupAction:
 		err = t.commitSetupAction(action)
 	}
+
 	return
 }
 
@@ -299,7 +314,7 @@ func (t *Translator) commitIssueAction(ctx context.Context, issueAction IssueAct
 	}
 	for i, output := range outputs {
 		// store output
-		outputID, err := t.KeyTranslator.CreateOutputKey(t.TxID, base+uint64(i))
+		outputID, err := t.KeyTranslator.CreateOutputKey(t.TxID, base+uint64(i)) // #nosec G115
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
@@ -309,7 +324,7 @@ func (t *Translator) commitIssueAction(ctx context.Context, issueAction IssueAct
 		if graphNonHiding {
 			// store also the serial number of this output.
 			// the serial number is used to check that the token exists at time of spending
-			sn, err := t.KeyTranslator.CreateOutputSNKey(t.TxID, base+uint64(i), output)
+			sn, err := t.KeyTranslator.CreateOutputSNKey(t.TxID, base+uint64(i), output) // #nosec G115
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
@@ -341,6 +356,7 @@ func (t *Translator) commitIssueAction(ctx context.Context, issueAction IssueAct
 	}
 
 	t.counter = t.counter + uint64(len(outputs))
+
 	return nil
 }
 
@@ -351,14 +367,14 @@ func (t *Translator) commitTransferAction(ctx context.Context, transferAction Tr
 	graphNonHiding := !transferAction.IsGraphHiding()
 
 	// store outputs
-	for i := 0; i < transferAction.NumOutputs(); i++ {
+	for i := range transferAction.NumOutputs() {
 		if !transferAction.IsRedeemAt(i) {
 			// store output
 			output, err := transferAction.SerializeOutputAt(i)
 			if err != nil {
 				return errors.Wrapf(err, "error serializing transfer output at index [%d]", i)
 			}
-			outputID, err := t.KeyTranslator.CreateOutputKey(t.TxID, base+uint64(i))
+			outputID, err := t.KeyTranslator.CreateOutputKey(t.TxID, base+uint64(i)) // #nosec G115
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
@@ -369,7 +385,7 @@ func (t *Translator) commitTransferAction(ctx context.Context, transferAction Tr
 			if graphNonHiding {
 				// store also the serial number of this output.
 				// the serial number is used to check that the token exists at time of spending
-				sn, err := t.KeyTranslator.CreateOutputSNKey(t.TxID, base+uint64(i), output)
+				sn, err := t.KeyTranslator.CreateOutputSNKey(t.TxID, base+uint64(i), output) // #nosec G115
 				if err != nil {
 					return errors.Errorf("error creating output ID: %s", err)
 				}
@@ -401,7 +417,8 @@ func (t *Translator) commitTransferAction(ctx context.Context, transferAction Tr
 		}
 	}
 
-	t.counter = t.counter + uint64(transferAction.NumOutputs())
+	t.counter = t.counter + uint64(transferAction.NumOutputs()) // #nosec G115
+
 	return nil
 }
 
@@ -431,6 +448,7 @@ func (t *Translator) checkInputs(action ActionWithInputs) error {
 			return errors.Wrapf(err, "invalid transfer: input must exist")
 		}
 	}
+
 	return nil
 }
 
@@ -485,6 +503,7 @@ func (t *Translator) spendInputs(ctx context.Context, action ActionWithInputs) e
 			return errors.Wrapf(err, "failed to append spent id [%s]", id)
 		}
 	}
+
 	return nil
 }
 
@@ -496,5 +515,6 @@ func (t *Translator) appendSpentID(id string) error {
 		}
 	}
 	t.SpentIDs = append(t.SpentIDs, id)
+
 	return nil
 }

@@ -13,6 +13,7 @@ import (
 	"os"
 	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"text/tabwriter"
@@ -167,7 +168,7 @@ func RunBenchmark[T any](
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for i := 0; i < cfg.Workers; i++ {
+	for i := range cfg.Workers {
 		workerID := i
 		go func() {
 			defer endWg.Done()
@@ -287,7 +288,7 @@ func measureMemory[T any](setup func() T, work func(T) error) (bytes, allocs uin
 	const samples = 5
 	data := setup()
 
-	for i := 0; i < samples; i++ {
+	for range samples {
 		runtime.GC()
 		time.Sleep(10 * time.Millisecond)
 		var m1, m2 runtime.MemStats
@@ -297,6 +298,7 @@ func measureMemory[T any](setup func() T, work func(T) error) (bytes, allocs uin
 		totalAllocs += m2.Mallocs - m1.Mallocs
 		totalBytes += m2.TotalAlloc - m1.TotalAlloc
 	}
+
 	return totalBytes / samples, totalAllocs / samples
 }
 
@@ -326,8 +328,8 @@ func analyzeResults(
 
 		for curr != nil {
 			limit := curr.idx
-			totalOps += uint64(limit)
-			for k := 0; k < limit; k++ {
+			totalOps += uint64(limit) // #nosec G115
+			for k := range limit {
 				lat := curr.data[k]
 				if lat == 0 {
 					continue
@@ -356,7 +358,7 @@ func analyzeResults(
 	}
 
 	opsPerSecReal := float64(totalOps) / duration.Seconds()
-	avgLatency := time.Duration(totalTimeNs / int64(totalOps))
+	avgLatency := time.Duration(totalTimeNs / int64(totalOps)) // #nosec G115
 	opsPerSecPure := 0.0
 	if avgLatency > 0 {
 		opsPerSecPure = float64(cfg.Workers) / avgLatency.Seconds()
@@ -429,7 +431,7 @@ func analyzeResults(
 		AllocsPerOp:   memAllocs,
 		AllocRateMBPS: allocRate,
 		NumGC:         numGC,
-		GCPauseTotal:  time.Duration(pauseNs),
+		GCPauseTotal:  time.Duration(pauseNs), // #nosec G115
 		GCOverhead:    gcOverhead,
 		ErrorCount:    totalErrors,
 		ErrorRate:     (float64(totalErrors) / float64(totalOps)) * 100,
@@ -475,6 +477,7 @@ func (r Result) printMainMetrics(w *tabwriter.Writer) (cvPct float64, tailRatio 
 		if condition {
 			return ColorGreen + goodMsg + ColorReset
 		}
+
 		return ColorRed + badMsg + ColorReset
 	}
 
@@ -614,9 +617,11 @@ func (r Result) printHeatmap(w *tabwriter.Writer) {
 		}
 
 		bar := ""
-		for i := 0; i < barLen; i++ {
-			bar += "█"
+		var barSb619 strings.Builder
+		for range barLen {
+			barSb619.WriteString("█")
 		}
+		bar += barSb619.String()
 
 		// 2. Format Label
 		label := fmt.Sprintf("%v-%v", b.LowBound, b.HighBound)
@@ -713,6 +718,7 @@ func percentile(sorted []time.Duration, p float64) time.Duration {
 	fraction := pos - float64(lower)
 	valLower := float64(sorted[lower])
 	valUpper := float64(sorted[upper])
+
 	return time.Duration(valLower + fraction*(valUpper-valLower))
 }
 
@@ -738,7 +744,7 @@ func calcHistogramImproved(latencies []time.Duration, min, max time.Duration, bu
 	}
 
 	currLower := float64(min)
-	for i := 0; i < buckets; i++ {
+	for i := range buckets {
 		currUpper := currLower * factor
 		if i == buckets-1 {
 			currUpper = float64(max)
@@ -757,6 +763,7 @@ func calcHistogramImproved(latencies []time.Duration, min, max time.Duration, bu
 		val := float64(lat)
 		if val < float64(min) {
 			res[0].Count++
+
 			continue
 		}
 
@@ -769,6 +776,7 @@ func calcHistogramImproved(latencies []time.Duration, min, max time.Duration, bu
 		}
 		res[idx].Count++
 	}
+
 	return res
 }
 
@@ -789,6 +797,7 @@ func printSparkline(w *tabwriter.Writer, timeline []TimePoint) {
 	for _, p := range timeline {
 		if maxOps == 0 {
 			writef(w, " ")
+
 			continue
 		}
 		ratio := p.OpsSec / maxOps

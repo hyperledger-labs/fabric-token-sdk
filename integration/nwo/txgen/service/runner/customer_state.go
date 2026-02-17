@@ -23,13 +23,13 @@ type customerState struct {
 }
 
 func (p *customerState) AddWithdrawn(m api.Amount) {
-	atomic.AddInt64(&p.WithdrawnAmount, m)
+	atomic.AddUint64(&p.WithdrawnAmount, m)
 }
 
 func (p *customerState) AddPaidMount(m api.Amount) {
-	atomic.AddInt64(&p.PaidAmount, m)
+	atomic.AddUint64(&p.PaidAmount, m)
 }
 
 func (p *customerState) AddReceivedMount(m api.Amount) {
-	atomic.AddInt64(&p.ReceivedAmount, m)
+	atomic.AddUint64(&p.ReceivedAmount, m)
 }

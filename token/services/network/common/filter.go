@@ -40,6 +40,7 @@ func (p *AcceptTxInDBFilterProvider) New(tmsID token3.TMSID) (*AcceptTxInDBsFilt
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get audit db for [%s]", tmsID)
 	}
+
 	return &AcceptTxInDBsFilter{
 		ttxDB:   ttxDB,
 		auditDB: auditDB,
@@ -65,5 +66,6 @@ func (t *AcceptTxInDBsFilter) Accept(txID string, env []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	return status != auditdb.Unknown, nil
 }

@@ -43,5 +43,6 @@ func (s *LockerProvider) New(network, channel, namespace string) (selector.Locke
 	if err != nil {
 		return nil, err
 	}
+
 	return inmemory.NewLocker(db, s.sleepTimeout, s.validTxEvictionTimeout), nil
 }

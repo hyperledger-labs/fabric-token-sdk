@@ -22,5 +22,6 @@ func IssueApplicationDataValidate[P driver.PublicParameters, T driver.Input, TA 
 			ctx.CountMetadataKey(key)
 		}
 	}
+
 	return nil
 }

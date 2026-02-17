@@ -27,6 +27,7 @@ func ToProtoG1(s *mathlib.G1) (*math.G1, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &math.G1{Raw: raw}, nil
 }
 
@@ -45,6 +46,7 @@ func FromG1Proto(p *math.G1) (*mathlib.G1, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal G1")
 	}
+
 	return g1, nil
 }
 
@@ -56,6 +58,7 @@ func ToProtoZr(s *mathlib.Zr) (*math.Zr, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &math.Zr{Raw: raw}, nil
 }
 
@@ -68,5 +71,6 @@ func FromZrProto(p *math.Zr) (*mathlib.Zr, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal Zr")
 	}
+
 	return zr, nil
 }

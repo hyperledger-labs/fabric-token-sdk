@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestMetadata_TestFilterBy(t *testing.T) {
@@ -119,7 +120,7 @@ func testFilterByCase0(t *testing.T) {
 	}
 	// Filter by Bob
 	filteredMetadata, err := metadata.FilterBy(t.Context(), "Bob")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 2, ws.GetEnrollmentIDCallCount())
 	// Check no issues were returned
@@ -133,7 +134,7 @@ func testFilterByCase0(t *testing.T) {
 
 	// Filter by Charlie
 	filteredMetadata, err = metadata.FilterBy(t.Context(), "Charlie")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 4, ws.GetEnrollmentIDCallCount())
 	// Check no issues were returned
@@ -147,7 +148,7 @@ func testFilterByCase0(t *testing.T) {
 
 	// Filter by Eve
 	filteredMetadata, err = metadata.FilterBy(t.Context(), "Eve")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 6, ws.GetEnrollmentIDCallCount())
 	// Check no issues were returned
@@ -161,7 +162,7 @@ func testFilterByCase0(t *testing.T) {
 
 	// Filter by Bob and Charlie
 	filteredMetadata, err = metadata.FilterBy(t.Context(), "Bob", "Charlie")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
 	// Check no issues were returned
@@ -175,7 +176,7 @@ func testFilterByCase0(t *testing.T) {
 
 	// No Filter
 	filteredMetadata, err = metadata.FilterBy(t.Context())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
 	// Check no issues were returned
@@ -257,7 +258,7 @@ func testFilterByCase1(t *testing.T) {
 
 	// Filter by Alice
 	filteredMetadata, err := metadata.FilterBy(t.Context(), "Alice")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 2, ws.GetEnrollmentIDCallCount())
 	// Check no transfers were returned
@@ -271,7 +272,7 @@ func testFilterByCase1(t *testing.T) {
 
 	// Filter by Bob
 	filteredMetadata, err = metadata.FilterBy(t.Context(), "Bob")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 4, ws.GetEnrollmentIDCallCount())
 	// Check no transfers were returned
@@ -285,7 +286,7 @@ func testFilterByCase1(t *testing.T) {
 
 	// Filter by Charlie
 	filteredMetadata, err = metadata.FilterBy(t.Context(), "Charlie")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 6, ws.GetEnrollmentIDCallCount())
 	// Check no transfers were returned
@@ -299,7 +300,7 @@ func testFilterByCase1(t *testing.T) {
 
 	// Filter by Alice and Bob
 	filteredMetadata, err = metadata.FilterBy(t.Context(), "Alice", "Bob")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
 	// Check no transfers were returned
@@ -313,7 +314,7 @@ func testFilterByCase1(t *testing.T) {
 
 	// No Filter
 	filteredMetadata, err = metadata.FilterBy(t.Context())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// assert the calls to the TMS
 	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
 	// Check no transfers were returned
@@ -414,10 +415,10 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.meta.Match(tt.action)
 			if tt.wantErr {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.expectedError)
+				require.Error(t, err)
+				require.EqualError(t, err, tt.expectedError)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

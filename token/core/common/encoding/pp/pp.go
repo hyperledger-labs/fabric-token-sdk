@@ -17,6 +17,7 @@ func Marshal(pp *pp.PublicParameters) ([]byte, error) {
 	if pp == nil {
 		return nil, errors.New("nil public parameters")
 	}
+
 	return json.Marshal(pp)
 }
 
@@ -26,5 +27,6 @@ func Unmarshal(raw []byte) (*pp.PublicParameters, error) {
 	if err := json.Unmarshal(raw, pp); err != nil {
 		return nil, err
 	}
+
 	return pp, nil
 }

@@ -21,5 +21,6 @@ func (p *PublicParamsStorage) PublicParams(ctx context.Context, networkID string
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network for [%s:%s:%s]", networkID, channel, namespace)
 	}
+
 	return vault.QueryEngine().PublicParams(ctx)
 }

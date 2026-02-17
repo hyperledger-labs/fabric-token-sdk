@@ -31,6 +31,7 @@ func UnmarshalTypedToken(token driver.Token) (*TypedToken, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedToken")
 	}
+
 	return si, nil
 }
 
@@ -39,6 +40,7 @@ func WrapWithType(typ driver.Type, id driver.Token) (driver.Token, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return raw, nil
 }
 
@@ -60,6 +62,7 @@ func UnmarshalTypedMetadata(metadata driver.Metadata) (*TypedMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedMetadata")
 	}
+
 	return si, nil
 }
 
@@ -68,5 +71,6 @@ func WrapMetadataWithType(typ driver.Type, id driver.Metadata) (driver.Metadata,
 	if err != nil {
 		return nil, err
 	}
+
 	return raw, nil
 }

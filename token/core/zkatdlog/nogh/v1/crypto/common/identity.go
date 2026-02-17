@@ -30,5 +30,6 @@ func (w *WrappedSigningIdentity) Sign(raw []byte) ([]byte, error) {
 	if w.Signer == nil {
 		return nil, errors.New("please initialize signing identity in WrappedSigningIdentity")
 	}
+
 	return w.Signer.Sign(raw)
 }

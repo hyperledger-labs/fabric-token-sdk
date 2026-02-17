@@ -35,6 +35,7 @@ func RoleToString(r RoleType) string {
 	if ok {
 		return s
 	}
+
 	return fmt.Sprintf("role%d", r)
 }
 

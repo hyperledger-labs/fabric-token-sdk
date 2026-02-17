@@ -47,5 +47,6 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&x509.AuditInfoDeserializer{}))
 	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})
+
 	return d
 }

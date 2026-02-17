@@ -91,12 +91,12 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed getting outputs")
 	// get outputs by the type of tokens received from Alice.
 	os := outputs.ByRecipient(other).ByType(t.FromAliceType)
-	assert.Equal(0, os.Sum().Cmp(big.NewInt(int64(t.FromAliceAmount))))
+	assert.Equal(0, os.Sum().Cmp(big.NewInt(0).SetUint64(t.FromAliceAmount)))
 	assert.Equal(os.Count(), os.ByType(t.FromAliceType).Count())
 
 	// get outputs by the type of tokens received from Bob.
 	os = outputs.ByRecipient(me).ByType(t.FromBobType)
-	assert.Equal(0, os.Sum().Cmp(big.NewInt(int64(t.FromBobAmount))))
+	assert.Equal(0, os.Sum().Cmp(big.NewInt(0).SetUint64(t.FromBobAmount)))
 	assert.Equal(os.Count(), os.ByType(t.FromBobType).Count())
 
 	// Alice is ready to collect all the required signatures and form the Transaction.
@@ -132,6 +132,7 @@ func (p *SwapInitiatorViewFactory) NewView(in []byte) (view.View, error) {
 	f := &SwapInitiatorView{Swap: &Swap{}}
 	err := json.Unmarshal(in, f.Swap)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }
 

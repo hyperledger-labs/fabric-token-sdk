@@ -64,6 +64,7 @@ func (r *viewRunner) Start(ctx context.Context) error {
 		}
 	}
 	r.logger.Infof("Done with initialization")
+
 	return nil
 }
 

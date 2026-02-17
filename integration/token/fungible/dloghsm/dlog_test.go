@@ -61,5 +61,6 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, names
 			ReplicationOpts: opts,
 		},
 	))
+
 	return ts, selector
 }

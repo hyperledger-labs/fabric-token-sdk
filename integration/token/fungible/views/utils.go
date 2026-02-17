@@ -51,6 +51,7 @@ func ServiceOpts(tmsId *token.TMSID, opts ...token.ServiceOption) []token.Servic
 	if tmsId != nil {
 		serviceOpts = append(serviceOpts, token.WithTMSID(*tmsId))
 	}
+
 	return append(serviceOpts, opts...)
 }
 
@@ -60,6 +61,7 @@ func TxOpts(tmsId *token.TMSID, opts ...ttx.TxOption) []ttx.TxOption {
 		txOpts = append(txOpts, ttx.WithTMSID(*tmsId))
 	}
 	txOpts = append(txOpts, opts...)
+
 	return txOpts
 }
 
@@ -68,6 +70,7 @@ func GetKVS(sp services.Provider) *kvs.KVS {
 	if err != nil {
 		panic(err)
 	}
+
 	return kvss.(*kvs.KVS)
 }
 
@@ -82,6 +85,7 @@ type SetKVSEntryView struct {
 
 func (s *SetKVSEntryView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(GetKVS(context).Put(context.Context(), s.Key, s.Value), "failed to put in KVS [%s:%s]", s.Key, s.Value)
+
 	return nil, nil
 }
 

@@ -66,6 +66,7 @@ func (p *fnsSigningIdentityProvider) DefaultIdentity(network, channel string) (v
 	if err != nil {
 		return nil, errors.Wrapf(err, "fns for [%s] not found", network)
 	}
+
 	return fns.LocalMembership().DefaultIdentity(), nil
 }
 
@@ -93,6 +94,7 @@ func (p *fnsBroadcaster) Broadcast(network, channel string, txID driver.TxID, en
 	}
 
 	logger.Infof("Wait for finality")
+
 	return <-final
 }
 
@@ -109,5 +111,6 @@ func getFinality(finality driver.Finality, txID string) error {
 		logger.Warnf("EOF returned. Maybe block 0 is not yet committed. Sleep and retry...")
 		time.Sleep(finalityRetryDuration)
 	}
+
 	return errors.New("max retries reached")
 }

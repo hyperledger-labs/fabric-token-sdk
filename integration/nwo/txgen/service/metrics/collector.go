@@ -16,6 +16,7 @@ import (
 
 func NewCollector(p metrics.Provider) *collector {
 	_, supportsGetters := p.(*Provider)
+
 	return &collector{
 		supportsGetters: supportsGetters,
 

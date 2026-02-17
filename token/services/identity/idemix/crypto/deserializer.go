@@ -102,5 +102,6 @@ func (d *Deserializer) DeserializeAuditInfo(_ context.Context, raw []byte) (*Aud
 	ai.IssuerPublicKey = d.IssuerPublicKey
 	ai.SchemaManager = d.SchemaManager
 	ai.Schema = d.Schema
+
 	return ai, nil
 }

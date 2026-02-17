@@ -40,6 +40,7 @@ func UnmarshalTypedToken(token driver.Token) (*tokens.TypedToken, error) {
 	if ttoken.Type != Type {
 		return nil, errors.Errorf("invalid token type [%v]", ttoken.Type)
 	}
+
 	return ttoken, nil
 }
 
@@ -55,6 +56,7 @@ func UnmarshalTypedMetadata(metadata driver.Metadata) (*tokens.TypedMetadata, er
 	if tmetadata.Type != Type {
 		return nil, errors.Errorf("invalid metadata type [%v]", tmetadata.Type)
 	}
+
 	return tmetadata, nil
 }
 
@@ -63,5 +65,6 @@ func UnmarshalToken(raw []byte) (*Token, error) {
 	if err := json.Unmarshal(raw, &token); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling token")
 	}
+
 	return token, nil
 }

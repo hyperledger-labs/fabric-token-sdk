@@ -69,6 +69,7 @@ func NewGenericDriver(
 	storeServiceManager ttxdb.StoreServiceManager,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
+
 	return NewDriver(
 		fnsProvider,
 		tokensManager,

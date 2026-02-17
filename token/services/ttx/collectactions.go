@@ -66,6 +66,7 @@ func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
 			}
 		}
 	}
+
 	return c.tx, nil
 }
 
@@ -165,6 +166,7 @@ func ReceiveAction(context view.Context) (*Transaction, *ActionTransfer, error) 
 		return nil, nil, err
 	}
 	result := res.([]interface{})
+
 	return result[0].(*Transaction), result[1].(*ActionTransfer), nil
 }
 

@@ -47,6 +47,7 @@ func (d *DBStorage) NewTransaction() (*transaction, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return NewTransaction(d.notifier, tx, d.tmsID)
 }
 
@@ -98,12 +99,15 @@ func (t *transaction) DeleteToken(ctx context.Context, tokenID token2.ID, delete
 	if err != nil {
 		if tok == nil {
 			logger.DebugfContext(ctx, "nothing further to delete for [%s]", tokenID)
+
 			return nil
 		}
+
 		return errors.WithMessagef(err, "failed to delete token [%s]", tokenID)
 	}
 	if tok == nil {
 		logger.DebugfContext(ctx, "nothing further to delete for [%s]", tokenID)
+
 		return nil
 	}
 	logger.DebugfContext(ctx, "Notify owners")
@@ -111,6 +115,7 @@ func (t *transaction) DeleteToken(ctx context.Context, tokenID token2.ID, delete
 		logger.DebugfContext(ctx, "post new delete-token event [%s:%s]", tokenID, owner)
 		t.Notify(ctx, DeleteToken, t.tmsID, owner, tok.Type, tokenID.TxId, tokenID.Index)
 	}
+
 	return nil
 }
 
@@ -120,6 +125,7 @@ func (t *transaction) DeleteTokens(ctx context.Context, deletedBy string, ids []
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -165,6 +171,7 @@ func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error 
 func (t *transaction) Notify(ctx context.Context, topic string, tmsID token.TMSID, walletID string, tokenType token2.Type, txID string, index uint64) {
 	if t.notifier == nil {
 		logger.WarnfContext(ctx, "cannot notify others!")
+
 		return
 	}
 
@@ -196,6 +203,7 @@ func (t *transaction) SetSpendableFlag(ctx context.Context, value bool, ids []*t
 			return err
 		}
 	}
+
 	return nil
 }
 

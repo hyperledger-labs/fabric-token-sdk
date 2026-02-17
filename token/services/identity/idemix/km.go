@@ -412,6 +412,7 @@ func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte)
 	if err := si.Verify(msg, sigma); err != nil {
 		return nil, errors.Wrap(err, "failed verifying verification signature")
 	}
+
 	return si, nil
 }
 
