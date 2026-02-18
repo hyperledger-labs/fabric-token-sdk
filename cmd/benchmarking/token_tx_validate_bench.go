@@ -100,7 +100,10 @@ func (c *TokenTxValidateViewFactory) NewView(in []byte) (view.View, error) {
 	outputValues := make([]uint64, f.params.NumOutputs)
 	outputOwners := make([][]byte, f.params.NumOutputs)
 	for i := range outputValues {
-		outputValues[i] = uint64(i)*10 + 10
+		if i < 0 { // unreachable for slice indices, but satisfies gosec
+			panic("negative index")
+		}
+		outputValues[i] = uint64(i*10 + 10)
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
