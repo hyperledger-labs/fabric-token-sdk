@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-//go:generate counterfeiter -o mock/config.go -fake-name Configuration . Configuration
-
 // Configuration provides functions to access the configuration of a given TMS
 //
 //go:generate counterfeiter -o mock/configuration.go -fake-name Configuration . Configuration
