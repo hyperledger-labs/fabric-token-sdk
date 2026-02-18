@@ -175,7 +175,7 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	}
 
 	// prepare transfer
-	_, tr, _, _, err = prepareTransferRequest(benchCase, pp, auditor, oID)
+	_, tr, _, _, err = prepareTransferRequest(benchCase, pp, auditor, setupConfiguration.AuditorSigner, oID)
 	if err != nil {
 		return nil, err
 	}
@@ -260,21 +260,32 @@ func prepareRedeemRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, audit
 	)
 }
 
-func prepareTransferRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+func prepareTransferRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, signer *benchmark.Signer, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	owners := make([][]byte, benchCase.NumOutputs)
 	for i := range benchCase.NumOutputs {
 		owners[i] = oID.ID
 	}
 
-	return prepareTransfer(benchCase, pp, oID.Signer, auditor, oID.AuditInfo, oID.ID, owners, nil, nil, nil)
+	return prepareTransfer(
+		benchCase,
+		pp,
+		oID.Signer,
+		auditor,
+		oID.AuditInfo,
+		oID.ID,
+		owners,
+		nil,
+		nil,
+		signer,
+	)
 }
 
 func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, auditorSigner *benchmark.Signer, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	sender1, tr1, trmetadata1, inputsForTransfer1, err := prepareTransferRequest(benchCase, pp, auditor, oID)
+	sender1, tr1, trmetadata1, inputsForTransfer1, err := prepareTransferRequest(benchCase, pp, auditor, auditorSigner, oID)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	sender2, tr2, trmetadata2, inputsForTransfer2, err := prepareTransferRequest(benchCase, pp, auditor, oID)
+	sender2, tr2, trmetadata2, inputsForTransfer2, err := prepareTransferRequest(benchCase, pp, auditor, auditorSigner, oID)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
