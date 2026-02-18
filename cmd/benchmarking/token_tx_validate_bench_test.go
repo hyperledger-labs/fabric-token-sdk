@@ -4,7 +4,7 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package views
+package benchmarking
 
 import (
 	"encoding/json"
@@ -45,7 +45,6 @@ func BenchmarkTokenTxValidate(b *testing.B) {
 }
 
 func BenchmarkTokenTxValidate_wFactory(b *testing.B) {
-	
 	for _, tc := range tokenTxCases {
 		name := fmt.Sprintf("in=%d/out=%d", tc.numInputs, tc.numOutputs)
 		b.Run(name, func(b *testing.B) {

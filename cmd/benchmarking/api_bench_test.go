@@ -1,12 +1,9 @@
-package views
+package benchmarking
 
 import (
-	"encoding/json"
-	"fmt"
 	"path"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/integration/benchmark"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/benchmark/node"
 	viewregistry "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/stretchr/testify/require"
@@ -40,23 +37,4 @@ func BenchmarkAPI(b *testing.B) {
 	node.RunAPIBenchmark(b, vm, zkpWorkload)
 
 	n.Stop()
-}
-
-func BenchmarkGRPCTokenTxValidate(b *testing.B) {
-	for _, tc := range tokenTxCases {
-		name := fmt.Sprintf("in=%d/out=%d", tc.numInputs, tc.numOutputs)
-		b.Run(name, func(b *testing.B) {
-			f := &TokenTxValidateViewFactory{}
-			p := &TokenTxValidateParams{NumInputs: tc.numInputs, NumOutputs: tc.numOutputs}
-			input, _ := json.Marshal(p)
-
-			b.RunParallel(func(pb *testing.PB) {
-				v, _ := f.NewView(input)
-				for pb.Next() {
-					_, _ = v.Call(nil)
-				}
-			})
-			benchmark.ReportTPS(b)
-		})
-	}
 }
