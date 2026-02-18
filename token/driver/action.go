@@ -104,3 +104,9 @@ type ActionWithInputs interface {
 type Action interface {
 	Validate() error
 }
+
+//go:generate counterfeiter -o mock/action_deserializer.go -fake-name ActionDeserializer . ActionDeserializer
+
+type ActionDeserializer[TA TransferAction, IA IssueAction] interface {
+	DeserializeActions(tr *TokenRequest) ([]IA, []TA, error)
+}

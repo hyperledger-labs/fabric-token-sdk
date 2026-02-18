@@ -191,10 +191,6 @@ func (fake *Validator) VerifyTokenRequestFromRawReturnsOnCall(i int, result1 []i
 func (fake *Validator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.unmarshalActionsMutex.RLock()
-	defer fake.unmarshalActionsMutex.RUnlock()
-	fake.verifyTokenRequestFromRawMutex.RLock()
-	defer fake.verifyTokenRequestFromRawMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

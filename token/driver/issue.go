@@ -33,6 +33,8 @@ type IssueOptions struct {
 }
 
 // IssueService models the token issue service
+//
+//go:generate counterfeiter -o mock/issue_service.go -fake-name IssueService . IssueService
 type IssueService interface {
 	// Issue generates an IssuerAction whose tokens are issued by the passed identity.
 	// The tokens to be issued are passed as pairs (value, owner).

@@ -12,45 +12,23 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-type MatcherDeserializer interface {
-	GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
-}
-
-// VerifierDeserializer is the interface for verifiers' deserializer.
-// A verifier checks the validity of a signature against the identity associated with the verifier
-type VerifierDeserializer interface {
-	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
-}
-
-// AuditMatcherProvider provides audit related deserialization functionalities
-type AuditMatcherProvider interface {
-	MatcherDeserializer
-	MatchIdentity(ctx context.Context, id driver.Identity, ai []byte) error
-	GetAuditInfo(ctx context.Context, id driver.Identity, p driver.AuditInfoProvider) ([]byte, error)
-}
-
-// RecipientExtractor extracts the recipients from an identity
-type RecipientExtractor interface {
-	Recipients(id driver.Identity) ([]driver.Identity, error)
-}
-
 // Deserializer deserializes verifiers associated with issuers, owners, and auditors
 type Deserializer struct {
 	identityType         string
-	auditorDeserializer  VerifierDeserializer
-	ownerDeserializer    VerifierDeserializer
-	issuerDeserializer   VerifierDeserializer
-	auditMatcherProvider AuditMatcherProvider
-	recipientExtractor   RecipientExtractor
+	auditorDeserializer  driver.VerifierDeserializer
+	ownerDeserializer    driver.VerifierDeserializer
+	issuerDeserializer   driver.VerifierDeserializer
+	auditMatcherProvider driver.AuditMatcherProvider
+	recipientExtractor   driver.RecipientExtractor
 }
 
 func NewDeserializer(
 	identityType string,
-	auditorDeserializer VerifierDeserializer,
-	ownerDeserializer VerifierDeserializer,
-	issuerDeserializer VerifierDeserializer,
-	auditMatcherProvider AuditMatcherProvider,
-	recipientExtractor RecipientExtractor,
+	auditorDeserializer driver.VerifierDeserializer,
+	ownerDeserializer driver.VerifierDeserializer,
+	issuerDeserializer driver.VerifierDeserializer,
+	auditMatcherProvider driver.AuditMatcherProvider,
+	recipientExtractor driver.RecipientExtractor,
 ) *Deserializer {
 	return &Deserializer{
 		identityType:         identityType,

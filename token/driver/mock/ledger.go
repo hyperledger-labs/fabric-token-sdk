@@ -8,7 +8,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type ValidatorLedger struct {
+type Ledger struct {
 	GetStateStub        func(token.ID) ([]byte, error)
 	getStateMutex       sync.RWMutex
 	getStateArgsForCall []struct {
@@ -26,7 +26,7 @@ type ValidatorLedger struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ValidatorLedger) GetState(arg1 token.ID) ([]byte, error) {
+func (fake *Ledger) GetState(arg1 token.ID) ([]byte, error) {
 	fake.getStateMutex.Lock()
 	ret, specificReturn := fake.getStateReturnsOnCall[len(fake.getStateArgsForCall)]
 	fake.getStateArgsForCall = append(fake.getStateArgsForCall, struct {
@@ -45,26 +45,26 @@ func (fake *ValidatorLedger) GetState(arg1 token.ID) ([]byte, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *ValidatorLedger) GetStateCallCount() int {
+func (fake *Ledger) GetStateCallCount() int {
 	fake.getStateMutex.RLock()
 	defer fake.getStateMutex.RUnlock()
 	return len(fake.getStateArgsForCall)
 }
 
-func (fake *ValidatorLedger) GetStateCalls(stub func(token.ID) ([]byte, error)) {
+func (fake *Ledger) GetStateCalls(stub func(token.ID) ([]byte, error)) {
 	fake.getStateMutex.Lock()
 	defer fake.getStateMutex.Unlock()
 	fake.GetStateStub = stub
 }
 
-func (fake *ValidatorLedger) GetStateArgsForCall(i int) token.ID {
+func (fake *Ledger) GetStateArgsForCall(i int) token.ID {
 	fake.getStateMutex.RLock()
 	defer fake.getStateMutex.RUnlock()
 	argsForCall := fake.getStateArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *ValidatorLedger) GetStateReturns(result1 []byte, result2 error) {
+func (fake *Ledger) GetStateReturns(result1 []byte, result2 error) {
 	fake.getStateMutex.Lock()
 	defer fake.getStateMutex.Unlock()
 	fake.GetStateStub = nil
@@ -74,7 +74,7 @@ func (fake *ValidatorLedger) GetStateReturns(result1 []byte, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *ValidatorLedger) GetStateReturnsOnCall(i int, result1 []byte, result2 error) {
+func (fake *Ledger) GetStateReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.getStateMutex.Lock()
 	defer fake.getStateMutex.Unlock()
 	fake.GetStateStub = nil
@@ -90,7 +90,7 @@ func (fake *ValidatorLedger) GetStateReturnsOnCall(i int, result1 []byte, result
 	}{result1, result2}
 }
 
-func (fake *ValidatorLedger) Invocations() map[string][][]interface{} {
+func (fake *Ledger) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
@@ -100,7 +100,7 @@ func (fake *ValidatorLedger) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *ValidatorLedger) recordInvocation(key string, args []interface{}) {
+func (fake *Ledger) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -112,4 +112,4 @@ func (fake *ValidatorLedger) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ driver.ValidatorLedger = new(ValidatorLedger)
+var _ driver.Ledger = new(Ledger)

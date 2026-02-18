@@ -4,21 +4,20 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type IssueAction struct {
-	ExtraSignersStub        func() []identity.Identity
+	ExtraSignersStub        func() []driver.Identity
 	extraSignersMutex       sync.RWMutex
 	extraSignersArgsForCall []struct {
 	}
 	extraSignersReturns struct {
-		result1 []identity.Identity
+		result1 []driver.Identity
 	}
 	extraSignersReturnsOnCall map[int]struct {
-		result1 []identity.Identity
+		result1 []driver.Identity
 	}
 	GetInputsStub        func() []*token.ID
 	getInputsMutex       sync.RWMutex
@@ -160,6 +159,59 @@ type IssueAction struct {
 	invocationsMutex sync.RWMutex
 }
 
+func (fake *IssueAction) ExtraSigners() []driver.Identity {
+	fake.extraSignersMutex.Lock()
+	ret, specificReturn := fake.extraSignersReturnsOnCall[len(fake.extraSignersArgsForCall)]
+	fake.extraSignersArgsForCall = append(fake.extraSignersArgsForCall, struct {
+	}{})
+	stub := fake.ExtraSignersStub
+	fakeReturns := fake.extraSignersReturns
+	fake.recordInvocation("ExtraSigners", []interface{}{})
+	fake.extraSignersMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *IssueAction) ExtraSignersCallCount() int {
+	fake.extraSignersMutex.RLock()
+	defer fake.extraSignersMutex.RUnlock()
+	return len(fake.extraSignersArgsForCall)
+}
+
+func (fake *IssueAction) ExtraSignersCalls(stub func() []driver.Identity) {
+	fake.extraSignersMutex.Lock()
+	defer fake.extraSignersMutex.Unlock()
+	fake.ExtraSignersStub = stub
+}
+
+func (fake *IssueAction) ExtraSignersReturns(result1 []driver.Identity) {
+	fake.extraSignersMutex.Lock()
+	defer fake.extraSignersMutex.Unlock()
+	fake.ExtraSignersStub = nil
+	fake.extraSignersReturns = struct {
+		result1 []driver.Identity
+	}{result1}
+}
+
+func (fake *IssueAction) ExtraSignersReturnsOnCall(i int, result1 []driver.Identity) {
+	fake.extraSignersMutex.Lock()
+	defer fake.extraSignersMutex.Unlock()
+	fake.ExtraSignersStub = nil
+	if fake.extraSignersReturnsOnCall == nil {
+		fake.extraSignersReturnsOnCall = make(map[int]struct {
+			result1 []driver.Identity
+		})
+	}
+	fake.extraSignersReturnsOnCall[i] = struct {
+		result1 []driver.Identity
+	}{result1}
+}
+
 func (fake *IssueAction) GetInputs() []*token.ID {
 	fake.getInputsMutex.Lock()
 	ret, specificReturn := fake.getInputsReturnsOnCall[len(fake.getInputsArgsForCall)]
@@ -210,59 +262,6 @@ func (fake *IssueAction) GetInputsReturnsOnCall(i int, result1 []*token.ID) {
 	}
 	fake.getInputsReturnsOnCall[i] = struct {
 		result1 []*token.ID
-	}{result1}
-}
-
-func (fake *IssueAction) ExtraSigners() []identity.Identity {
-	fake.extraSignersMutex.Lock()
-	ret, specificReturn := fake.extraSignersReturnsOnCall[len(fake.extraSignersArgsForCall)]
-	fake.extraSignersArgsForCall = append(fake.extraSignersArgsForCall, struct {
-	}{})
-	stub := fake.ExtraSignersStub
-	fakeReturns := fake.extraSignersReturns
-	fake.recordInvocation("ExtraSigners", []interface{}{})
-	fake.extraSignersMutex.Unlock()
-	if stub != nil {
-		return stub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *IssueAction) ExtraSignersCallCount() int {
-	fake.extraSignersMutex.RLock()
-	defer fake.extraSignersMutex.RUnlock()
-	return len(fake.extraSignersArgsForCall)
-}
-
-func (fake *IssueAction) ExtraSignersCalls(stub func() []identity.Identity) {
-	fake.extraSignersMutex.Lock()
-	defer fake.extraSignersMutex.Unlock()
-	fake.ExtraSignersStub = stub
-}
-
-func (fake *IssueAction) ExtraSignersReturns(result1 []identity.Identity) {
-	fake.extraSignersMutex.Lock()
-	defer fake.extraSignersMutex.Unlock()
-	fake.ExtraSignersStub = nil
-	fake.extraSignersReturns = struct {
-		result1 []identity.Identity
-	}{result1}
-}
-
-func (fake *IssueAction) ExtraSignersReturnsOnCall(i int, result1 []identity.Identity) {
-	fake.extraSignersMutex.Lock()
-	defer fake.extraSignersMutex.Unlock()
-	fake.ExtraSignersStub = nil
-	if fake.extraSignersReturnsOnCall == nil {
-		fake.extraSignersReturnsOnCall = make(map[int]struct {
-			result1 []identity.Identity
-		})
-	}
-	fake.extraSignersReturnsOnCall[i] = struct {
-		result1 []identity.Identity
 	}{result1}
 }
 
@@ -914,34 +913,6 @@ func (fake *IssueAction) ValidateReturnsOnCall(i int, result1 error) {
 func (fake *IssueAction) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getInputsMutex.RLock()
-	defer fake.getInputsMutex.RUnlock()
-	fake.extraSignersMutex.RLock()
-	defer fake.extraSignersMutex.RUnlock()
-	fake.getIssuerMutex.RLock()
-	defer fake.getIssuerMutex.RUnlock()
-	fake.getMetadataMutex.RLock()
-	defer fake.getMetadataMutex.RUnlock()
-	fake.getOutputsMutex.RLock()
-	defer fake.getOutputsMutex.RUnlock()
-	fake.getSerialNumbersMutex.RLock()
-	defer fake.getSerialNumbersMutex.RUnlock()
-	fake.getSerializedInputsMutex.RLock()
-	defer fake.getSerializedInputsMutex.RUnlock()
-	fake.getSerializedOutputsMutex.RLock()
-	defer fake.getSerializedOutputsMutex.RUnlock()
-	fake.isAnonymousMutex.RLock()
-	defer fake.isAnonymousMutex.RUnlock()
-	fake.isGraphHidingMutex.RLock()
-	defer fake.isGraphHidingMutex.RUnlock()
-	fake.numInputsMutex.RLock()
-	defer fake.numInputsMutex.RUnlock()
-	fake.numOutputsMutex.RLock()
-	defer fake.numOutputsMutex.RUnlock()
-	fake.serializeMutex.RLock()
-	defer fake.serializeMutex.RUnlock()
-	fake.validateMutex.RLock()
-	defer fake.validateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

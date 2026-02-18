@@ -110,7 +110,6 @@ func TestRegisterRecipientIdentityFailuresAndSuccess(t *testing.T) {
 	ip.RegisterRecipientIdentityCalls(func(context.Context, driver.Identity) error { return nil })
 	d.MatchIdentityCalls(func(context.Context, driver.Identity, []byte) error { return nil })
 	d.GetOwnerVerifierCalls(func(context.Context, driver.Identity) (driver.Verifier, error) { return &dmock.Verifier{}, nil })
-	ip.RegisterVerifierCalls(func(context.Context, driver.Identity, driver.Verifier) error { return nil })
 	ip.RegisterRecipientDataCalls(func(context.Context, *driver.RecipientData) error { return nil })
 
 	err = regSvc.RegisterRecipientIdentity(ctx, &driver.RecipientData{Identity: driver.Identity("id"), AuditInfo: []byte("ai")})

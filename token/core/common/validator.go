@@ -48,15 +48,11 @@ type ValidateIssueFunc[P driver.PublicParameters, T driver.Input, TA driver.Tran
 
 type ValidateAuditingFunc[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
 
-type ActionDeserializer[TA driver.TransferAction, IA driver.IssueAction] interface {
-	DeserializeActions(tr *driver.TokenRequest) ([]IA, []TA, error)
-}
-
 type Validator[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
 	Logger             logging.Logger
 	PublicParams       P
 	Deserializer       DS
-	ActionDeserializer ActionDeserializer[TA, IA]
+	ActionDeserializer driver.ActionDeserializer[TA, IA]
 
 	AuditingValidators []ValidateAuditingFunc[P, T, TA, IA, DS]
 	TransferValidators []ValidateTransferFunc[P, T, TA, IA, DS]
@@ -67,7 +63,7 @@ func NewValidator[P driver.PublicParameters, T driver.Input, TA driver.TransferA
 	Logger logging.Logger,
 	publicParams P,
 	deserializer DS,
-	actionDeserializer ActionDeserializer[TA, IA],
+	actionDeserializer driver.ActionDeserializer[TA, IA],
 	transferValidators []ValidateTransferFunc[P, T, TA, IA, DS],
 	issueValidators []ValidateIssueFunc[P, T, TA, IA, DS],
 	auditingValidators []ValidateAuditingFunc[P, T, TA, IA, DS],

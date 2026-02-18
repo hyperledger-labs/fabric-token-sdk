@@ -19,44 +19,17 @@ import (
 
 var logger = logging.MustGetLogger()
 
-type TokenVault interface {
-	IsPending(ctx context.Context, id *token.ID) (bool, error)
-	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error)
-	GetTokenOutputs(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error
-	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
-	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
-	PublicParams(ctx context.Context) ([]byte, error)
-	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
-}
-
-type LedgerToken interface {
-	GetOwner() []byte
-}
-
-type TokenDeserializer[T any] interface {
-	DeserializeToken([]byte) (T, error)
-}
-
-type MetadataDeserializer[M any] interface {
-	DeserializeMetadata([]byte) (M, error)
-}
-
-type TokenAndMetadataDeserializer[T any, M any] interface {
-	TokenDeserializer[T]
-	MetadataDeserializer[M]
-}
-
 type VaultLedgerTokenLoader[T any] struct {
 	Logger       logging.Logger
-	TokenVault   TokenVault
-	Deserializer TokenDeserializer[T]
+	TokenVault   driver.TokenVault
+	Deserializer driver.TokenDeserializer[T]
 
 	// Variables used to control retry condition
 	NumRetries int
 	RetryDelay time.Duration
 }
 
-func NewLedgerTokenLoader[T any](logger logging.Logger, _ trace.TracerProvider, tokenVault TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
+func NewLedgerTokenLoader[T any](logger logging.Logger, _ trace.TracerProvider, tokenVault driver.TokenVault, deserializer driver.TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
 	return &VaultLedgerTokenLoader[T]{
 		Logger:       logger,
 		TokenVault:   tokenVault,
@@ -132,11 +105,11 @@ type LoadedToken[T any, M any] struct {
 }
 
 type VaultLedgerTokenAndMetadataLoader[T any, M any] struct {
-	TokenVault   TokenVault
-	Deserializer TokenAndMetadataDeserializer[T, M]
+	TokenVault   driver.TokenVault
+	Deserializer driver.TokenAndMetadataDeserializer[T, M]
 }
 
-func NewVaultLedgerTokenAndMetadataLoader[T any, M any](tokenVault TokenVault, deserializer TokenAndMetadataDeserializer[T, M]) *VaultLedgerTokenAndMetadataLoader[T, M] {
+func NewVaultLedgerTokenAndMetadataLoader[T any, M any](tokenVault driver.TokenVault, deserializer driver.TokenAndMetadataDeserializer[T, M]) *VaultLedgerTokenAndMetadataLoader[T, M] {
 	return &VaultLedgerTokenAndMetadataLoader[T, M]{TokenVault: tokenVault, Deserializer: deserializer}
 }
 
@@ -180,10 +153,10 @@ func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ctx context.Context
 
 type VaultTokenInfoLoader[M any] struct {
 	TokenVault   driver.QueryEngine
-	Deserializer MetadataDeserializer[M]
+	Deserializer driver.MetadataDeserializer[M]
 }
 
-func NewVaultTokenInfoLoader[M any](tokenVault driver.QueryEngine, deserializer MetadataDeserializer[M]) *VaultTokenInfoLoader[M] {
+func NewVaultTokenInfoLoader[M any](tokenVault driver.QueryEngine, deserializer driver.MetadataDeserializer[M]) *VaultTokenInfoLoader[M] {
 	return &VaultTokenInfoLoader[M]{TokenVault: tokenVault, Deserializer: deserializer}
 }
 
@@ -219,12 +192,8 @@ func (s *VaultTokenLoader) GetTokens(ctx context.Context, ids []*token.ID) ([]*t
 	return s.TokenVault.GetTokens(ctx, ids...)
 }
 
-type TokenCertificationStorage interface {
-	GetCertifications(ctx context.Context, ids []*token.ID) ([][]byte, error)
-}
-
 type VaultTokenCertificationLoader struct {
-	TokenCertificationStorage TokenCertificationStorage
+	TokenCertificationStorage driver.TokenCertificationStorage
 }
 
 func (s *VaultTokenCertificationLoader) GetCertifications(ctx context.Context, ids []*token.ID) ([][]byte, error) {
