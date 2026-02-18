@@ -187,11 +187,11 @@ func (s *Service) ProcessTokens(ledgerTokens []token.LedgerToken) ([]token.Token
 	// for each token, extract type and value
 	tokens := make([]token.Token, len(ledgerTokens))
 	for i, tok := range ledgerTokens {
-		precision, ok := token2.Precisions[tok.Format]
+		_, ok := token2.Precisions[tok.Format]
 		if !ok {
 			return nil, errors.Errorf("unsupported token format [%s]", tok.Format)
 		}
-		fabToken, _, err := token2.ParseFabtokenToken(tok.Token, precision, s.MaxPrecision)
+		fabToken, _, err := token2.ParseFabtokenToken(tok.Token, s.MaxPrecision)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to check unspent tokens")
 		}
