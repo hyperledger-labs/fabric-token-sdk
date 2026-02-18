@@ -133,6 +133,7 @@ func GetTokensWithWitness(values []uint64, tokenType token.Type, pp []*math.G1, 
 	for i := range values {
 		bfs[i] = c.NewRandomZr(rand)
 	}
+
 	return GetTokensWithWitnessAndBF(values, bfs, tokenType, pp, c)
 }
 
