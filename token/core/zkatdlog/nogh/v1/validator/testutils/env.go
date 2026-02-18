@@ -138,14 +138,7 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	multiplexer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	multiplexer.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 	multiplexer.AddTypedVerifierDeserializer(ix509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&Deserializer{}, &Deserializer{}))
-	auditor = audit.NewAuditor(
-		logging.MustGetLogger(),
-		&noop.Tracer{},
-		multiplexer,
-		pp.PedersenGenerators,
-		setupConfiguration.AuditorSigner,
-		c,
-	)
+	auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, multiplexer, pp.PedersenGenerators, c)
 
 	// initialize enginw with pp
 	des, err := zkatdlog.NewDeserializer(pp)
@@ -192,7 +185,7 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	}
 
 	// atomic action request
-	sender, ar, _, _, err = prepareSwapRequest(benchCase, pp, auditor, oID)
+	sender, ar, _, _, err = prepareSwapRequest(benchCase, pp, auditor, setupConfiguration.AuditorSigner, oID)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +219,7 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ir, metadata, err := prepareIssue(auditor, issuer, issuerIdentity, setupConfiguration.OwnerIdentity)
+	ir, metadata, err := prepareIssue(auditor, issuer, issuerIdentity, setupConfiguration.OwnerIdentity, setupConfiguration.AuditorSigner)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -263,6 +256,7 @@ func prepareRedeemRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, audit
 		owners,
 		issuer,
 		issuerIdentity,
+		setupConfig.AuditorSigner,
 	)
 }
 
@@ -272,20 +266,10 @@ func prepareTransferRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, aud
 		owners[i] = oID.ID
 	}
 
-	return prepareTransfer(
-		benchCase,
-		pp,
-		oID.Signer,
-		auditor,
-		oID.AuditInfo,
-		oID.ID,
-		owners,
-		nil,
-		nil,
-	)
+	return prepareTransfer(benchCase, pp, oID.Signer, auditor, oID.AuditInfo, oID.ID, owners, nil, nil, nil)
 }
 
-func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, auditorSigner *benchmark.Signer, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	sender1, tr1, trmetadata1, inputsForTransfer1, err := prepareTransferRequest(benchCase, pp, auditor, oID)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -329,7 +313,7 @@ func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	sigma, err := auditor.Endorse(ar, "2")
+	sigma, err := auditorEndorse(auditorSigner, ar, "2")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -362,7 +346,7 @@ func prepareToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1
 	return token
 }
 
-func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte, oID *benchmark.OwnerIdentity) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
+func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte, oID *benchmark.OwnerIdentity, auditorSigner *benchmark.Signer) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
 	owners := make([][]byte, 1)
 	owners[0] = oID.ID
 	values := []uint64{40}
@@ -422,11 +406,11 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	if err != nil {
 		return nil, nil, err
 	}
-	sigma, err := auditor.Endorse(ir, "1")
+	sigma, err := auditorEndorse(auditorSigner, ir, "1")
 	if err != nil {
 		return nil, nil, err
 	}
-	araw, err := auditor.Signer.Serialize()
+	araw, err := auditorSigner.Serialize()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -438,7 +422,18 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	return ir, issueMetadata, nil
 }
 
-func prepareTransfer(benchCase *benchmark2.Case, pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+func prepareTransfer(
+	benchCase *benchmark2.Case,
+	pp *v1.PublicParams,
+	signer driver.SigningIdentity,
+	auditor *audit.Auditor,
+	auditInfo *crypto.AuditInfo,
+	id []byte,
+	owners [][]byte,
+	issuer *issue2.Issuer,
+	issuerIdentity []byte,
+	auditorSigner *benchmark.Signer,
+) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	signers := make([]driver.Signer, benchCase.NumInputs)
 	for i := range benchCase.NumInputs {
 		signers[i] = signer
@@ -568,11 +563,11 @@ func prepareTransfer(benchCase *benchmark2.Case, pp *v1.PublicParams, signer dri
 		return nil, nil, nil, nil, err
 	}
 
-	sigma, err := auditor.Endorse(tr, "1")
+	sigma, err := auditorEndorse(auditorSigner, tr, "1")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	araw, err := auditor.Signer.Serialize()
+	araw, err := auditorSigner.Serialize()
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -597,6 +592,16 @@ func prepareTransfer(benchCase *benchmark2.Case, pp *v1.PublicParams, signer dri
 	}
 
 	return sender, tr, transferMetadata, tokens, nil
+}
+
+func auditorEndorse(signer driver.Signer, tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
+	// Marshal tokenRequest
+	bytes, err := tokenRequest.MarshalToMessageToSign([]byte(txID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling token request [%s]", txID)
+	}
+	// Sign
+	return signer.Sign(bytes)
 }
 
 type Deserializer struct {
