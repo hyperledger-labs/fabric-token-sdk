@@ -256,6 +256,7 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 	// - Signatures on token actions are valid
 
 	logger.DebugfContext(ctx.Context(), "Proposal signature verified successfully for TX [%s]", request.Anchor)
+
 	return nil
 }
 
