@@ -23,7 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
-	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testing"
+	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testutils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	mock3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
@@ -51,6 +51,7 @@ func (m *mockSignatureProvider) HasBeenSignedBy(ctx context.Context, id driver.I
 	if m.HasBeenSignedByFunc != nil {
 		return m.HasBeenSignedByFunc(ctx, id, verifier)
 	}
+
 	return nil, nil
 }
 
@@ -203,6 +204,7 @@ func TestTransferSignatureValidateErrors(t *testing.T) {
 			if bytes.Equal(id, []byte("issuer1")) {
 				return nil, errors.New("issuer signature failed")
 			}
+
 			return []byte("sig"), nil
 		},
 	}
