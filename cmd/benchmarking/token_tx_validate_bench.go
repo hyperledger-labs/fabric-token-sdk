@@ -16,17 +16,41 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue/mock"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 const (
-	benchBitLength = 32
-	benchCurveID   = math.BLS12_381_BBS_GURVY
-	benchTokenType = "benchmark-token"
+	defaultNumInputs  = 1
+	deafultNumOutputs = 1
+	defaultBitLength  = 32
+	defaultTokenType  = "benchmark-token"
+	defaultCurveID    = math.BLS12_381_BBS_GURVY
 )
 
 type TokenTxValidateParams struct {
-	NumInputs  int `json:"num_inputs"`
-	NumOutputs int `json:"num_outputs"`
+	NumInputs  int    `json:"num_inputs"`
+	NumOutputs int    `json:"num_outputs"`
+	BitLength  uint64 `json:"bit_length,omitempty"`
+	TokenType  string `json:"token_type,omitempty"`
+	CurveID    int    `json:"curve_id,omitempty"`
+}
+
+func (t *TokenTxValidateParams) applyDefaults() {
+	if t.NumInputs <= 0 {
+		t.NumInputs = defaultNumInputs
+	}
+	if t.NumOutputs <= 0 {
+		t.NumOutputs = deafultNumOutputs
+	}
+	if t.BitLength <= 0 {
+		t.BitLength = defaultBitLength
+	}
+	if t.TokenType == "" {
+		t.TokenType = defaultTokenType
+	}
+	if t.CurveID <= 0 {
+		t.CurveID = int(defaultCurveID)
+	}
 }
 
 type TokenTxValidateView struct {
@@ -58,16 +82,15 @@ type TokenTxValidateViewFactory struct{}
 
 func (c *TokenTxValidateViewFactory) NewView(in []byte) (view.View, error) {
 	f := &TokenTxValidateView{}
+
 	if err := json.Unmarshal(in, &f.params); err != nil {
 		return nil, err
 	}
 
-	if f.params.NumOutputs <= 0 {
-		f.params.NumOutputs = 1
-	}
+	f.params.applyDefaults()
 
 	var err error
-	f.pubParams, err = v1.Setup(benchBitLength, nil, benchCurveID)
+	f.pubParams, err = v1.Setup(f.params.BitLength, nil, math.CurveID(f.params.CurveID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up public parameters: %w", err)
 	}
@@ -81,7 +104,7 @@ func (c *TokenTxValidateViewFactory) NewView(in []byte) (view.View, error) {
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
-	issuer := issue.NewIssuer(benchTokenType, &mock.SigningIdentity{}, f.pubParams)
+	issuer := issue.NewIssuer(token2.Type(f.params.TokenType), &mock.SigningIdentity{}, f.pubParams)
 	action, _, err := issuer.GenerateZKIssue(outputValues, outputOwners)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate ZK issue: %w", err)
