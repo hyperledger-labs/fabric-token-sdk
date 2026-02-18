@@ -100,7 +100,7 @@ func (c *TokenTxValidateViewFactory) NewView(in []byte) (view.View, error) {
 	outputValues := make([]uint64, f.params.NumOutputs)
 	outputOwners := make([][]byte, f.params.NumOutputs)
 	for i := range outputValues {
-		outputValues[i] = uint64(i*10 + 10)
+		outputValues[i] = uint64(i)*10 + 10
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
