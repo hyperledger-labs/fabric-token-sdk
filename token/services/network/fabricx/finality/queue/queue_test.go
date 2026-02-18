@@ -184,6 +184,7 @@ func TestEnqueueBlocking_ContextCancelled(t *testing.T) {
 
 	// Fill the queue with blocking event
 	blockChan := make(chan struct{})
+	defer close(blockChan)
 	blockingEvent := &mockEvent{
 		processFunc: func(ctx context.Context) error {
 			<-blockChan
@@ -202,8 +203,6 @@ func TestEnqueueBlocking_ContextCancelled(t *testing.T) {
 	err = eq.EnqueueBlocking(ctx, event)
 	require.Error(t, err)
 	assert.Equal(t, context.Canceled, err)
-
-	close(blockChan)
 }
 
 // TestEnqueueBlocking_QueueClosed tests blocking enqueue when queue closes
