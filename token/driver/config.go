@@ -9,6 +9,8 @@ package driver
 //go:generate counterfeiter -o mock/config.go -fake-name Configuration . Configuration
 
 // Configuration provides functions to access the configuration of a given TMS
+//
+//go:generate counterfeiter -o mock/configuration.go -fake-name Configuration . Configuration
 type Configuration interface {
 	// ID identities the TMS this configuration refers to.
 	ID() TMSID

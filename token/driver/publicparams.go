@@ -22,6 +22,8 @@ type PPReader interface {
 }
 
 // PPMFactory contains the static logic of the driver
+//
+//go:generate counterfeiter -o mock/ppm_factory.go -fake-name PPMFactory . PPMFactory
 type PPMFactory interface {
 	PPReader
 	// NewPublicParametersManager returns a new PublicParametersManager instance from the passed public parameters
@@ -31,6 +33,8 @@ type PPMFactory interface {
 }
 
 // PublicParamsFetcher models a public parameters fetcher.
+//
+//go:generate counterfeiter -o mock/pp_fetcher.go -fake-name PublicParamsFetcher . PublicParamsFetcher
 type PublicParamsFetcher interface {
 	// Fetch fetches the public parameters from a repository.
 	Fetch() ([]byte, error)
@@ -38,9 +42,9 @@ type PublicParamsFetcher interface {
 
 type Extras = map[string][]byte
 
-//go:generate counterfeiter -o mock/pp.go -fake-name PublicParameters . PublicParameters
-
 // PublicParameters is the interface that must be implemented by the driver public parameters.
+//
+//go:generate counterfeiter -o mock/pp.go -fake-name PublicParameters . PublicParameters
 type PublicParameters interface {
 	// TokenDriverName returns the name of the token driver
 	TokenDriverName() TokenDriverName
@@ -71,9 +75,9 @@ type PublicParameters interface {
 	Extras() Extras
 }
 
-//go:generate counterfeiter -o mock/ppm.go -fake-name PublicParamsManager . PublicParamsManager
-
 // PublicParamsManager is the interface that must be implemented by the driver public parameters' manager.
+//
+//go:generate counterfeiter -o mock/ppm.go -fake-name PublicParamsManager . PublicParamsManager
 type PublicParamsManager interface {
 	// PublicParameters returns the public parameters.
 	PublicParameters() PublicParameters
