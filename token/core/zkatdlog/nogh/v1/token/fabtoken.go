@@ -12,19 +12,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// ParseFabtokenToken unmarshals a raw fabtoken output and converts its quantity to a uint64 value.
-// It validates that the requested precision does not exceed the maximum precision allowed by the system.
-func ParseFabtokenToken(tok []byte, precision uint64, maxPrecision uint64) (*actions.Output, uint64, error) {
-	if precision < maxPrecision {
-		return nil, 0, errors.Errorf("unsupported precision [%d], max [%d]", precision, maxPrecision)
-	}
-
+// ParseFabtokenToken unmarshals a raw fabtoken output and converts its quantity to a uint64 value
+// using maxPrecision.
+func ParseFabtokenToken(tok []byte, maxPrecision uint64) (*actions.Output, uint64, error) {
 	output := &actions.Output{}
 	err := output.Deserialize(tok)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed to unmarshal fabtoken")
 	}
-	q, err := token.NewUBigQuantity(output.Quantity, precision)
+	q, err := token.NewUBigQuantity(output.Quantity, maxPrecision)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed to create quantity")
 	}

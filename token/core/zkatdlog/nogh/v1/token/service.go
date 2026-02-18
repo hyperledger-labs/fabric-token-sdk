@@ -188,11 +188,11 @@ func (s *TokensService) DeserializeToken(ctx context.Context, outputFormat token
 	}
 
 	// if we reach this point, we need to upgrade the token locally
-	precision, ok := Precisions[outputFormat]
+	_, ok := Precisions[outputFormat]
 	if !ok {
 		return nil, nil, nil, errors.Errorf("unsupported token format [%s]", outputFormat)
 	}
-	fabToken, value, err := ParseFabtokenToken(outputRaw, precision, s.PublicParametersManager.PublicParams().RangeProofParams.BitLength)
+	fabToken, value, err := ParseFabtokenToken(outputRaw, s.PublicParametersManager.PublicParams().QuantityPrecision)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to unmarshal fabtoken token")
 	}

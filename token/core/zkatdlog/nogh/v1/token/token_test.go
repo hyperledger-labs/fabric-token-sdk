@@ -491,6 +491,7 @@ func TestTokensService(t *testing.T) {
 		RangeProofParams: &noghv1.RangeProofParams{
 			BitLength: 64,
 		},
+		QuantityPrecision: 64,
 	}
 	ppm := &mockPPM{pp: pp}
 	deserializer := &mock.Deserializer{}
@@ -623,23 +624,23 @@ func TestParseFabtokenToken(t *testing.T) {
 	}
 	raw, _ := output.Serialize()
 
-	parsed, q, err := ParseFabtokenToken(raw, 64, 64)
+	parsed, q, err := ParseFabtokenToken(raw, 64)
 	require.NoError(t, err)
 	assert.Equal(t, output.Owner, parsed.Owner)
 	assert.Equal(t, uint64(16), q)
 
 	// Error cases
-	_, _, err = ParseFabtokenToken(raw, 64, 128)
+	_, _, err = ParseFabtokenToken(raw, 2)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported precision [64], max [128]")
+	assert.Contains(t, err.Error(), "failed to create quantity: 0x10 has precision 5 > 2")
 
-	_, _, err = ParseFabtokenToken([]byte("invalid"), 64, 64)
+	_, _, err = ParseFabtokenToken([]byte("invalid"), 64)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal fabtoken")
 
 	output.Quantity = "invalid"
 	raw, _ = output.Serialize()
-	_, _, err = ParseFabtokenToken(raw, 64, 64)
+	_, _, err = ParseFabtokenToken(raw, 64)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create quantity")
 }
