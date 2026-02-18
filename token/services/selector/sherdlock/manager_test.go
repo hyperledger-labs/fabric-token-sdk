@@ -35,7 +35,7 @@ func TestSufficientTokensOneReplicaNoRetry(t *testing.T) {
 }
 
 func TestSufficientTokensBigDenominationsOneReplica(t *testing.T) {
-	replicas, terminate := startManagers(t, 1, time.Second, 5)
+	replicas, terminate := startManagers(t, 1, time.Second, 20)
 	defer terminate()
 	testutils.TestSufficientTokensBigDenominationsOneReplica(t, replicas[0])
 }

@@ -221,9 +221,9 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 					assert.NotEmpty(t, tokens)
 					require.NoError(t, deleteTokensAndStoreChange(replica, tokens, change))
 				}
-				if tokenSum, err := replica.TokenSum(); err == nil {
-					logger.Infof("Current sum of tokens in the DB: %s", tokenSum.Decimal())
-				}
+				// if tokenSum, err := replica.TokenSum(); err == nil {
+				// 	logger.Infof("Current sum of tokens in the DB: %s", tokenSum.Decimal())
+				// }
 				wg.Done()
 			}()
 		}
