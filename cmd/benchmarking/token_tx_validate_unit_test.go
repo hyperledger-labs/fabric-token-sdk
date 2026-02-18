@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,11 +18,11 @@ func TestApplyDefaults_AllDefaultValues(t *testing.T) {
 	p := &TokenTxValidateParams{}
 	p.applyDefaults()
 
-	assert.Equal(t, defaultNumInputs, p.NumInputs)
-	assert.Equal(t, deafultNumOutputs, p.NumOutputs)
-	assert.Equal(t, uint64(defaultBitLength), p.BitLength)
-	assert.Equal(t, defaultTokenType, p.TokenType)
-	assert.Equal(t, int(defaultCurveID), p.CurveID)
+	require.Equal(t, defaultNumInputs, p.NumInputs)
+	require.Equal(t, deafultNumOutputs, p.NumOutputs)
+	require.Equal(t, uint64(defaultBitLength), p.BitLength)
+	require.Equal(t, defaultTokenType, p.TokenType)
+	require.Equal(t, int(defaultCurveID), p.CurveID)
 }
 
 func TestApplyDefaults_PreservesExplicitValues(t *testing.T) {
@@ -36,19 +35,19 @@ func TestApplyDefaults_PreservesExplicitValues(t *testing.T) {
 	}
 	p.applyDefaults()
 
-	assert.Equal(t, 5, p.NumInputs)
-	assert.Equal(t, 3, p.NumOutputs)
-	assert.Equal(t, uint64(64), p.BitLength)
-	assert.Equal(t, "my-token", p.TokenType)
-	assert.Equal(t, int(math.BN254), p.CurveID)
+	require.Equal(t, 5, p.NumInputs)
+	require.Equal(t, 3, p.NumOutputs)
+	require.Equal(t, uint64(64), p.BitLength)
+	require.Equal(t, "my-token", p.TokenType)
+	require.Equal(t, int(math.BN254), p.CurveID)
 }
 
 func TestApplyDefaults_NegativeInputsOutputs(t *testing.T) {
 	p := &TokenTxValidateParams{NumInputs: -1, NumOutputs: -5}
 	p.applyDefaults()
 
-	assert.Equal(t, defaultNumInputs, p.NumInputs)
-	assert.Equal(t, deafultNumOutputs, p.NumOutputs)
+	require.Equal(t, defaultNumInputs, p.NumInputs)
+	require.Equal(t, deafultNumOutputs, p.NumOutputs)
 }
 
 func TestNewView_DefaultParams(t *testing.T) {
@@ -61,13 +60,13 @@ func TestNewView_DefaultParams(t *testing.T) {
 	require.NotNil(t, v)
 
 	tv := v.(*TokenTxValidateView)
-	assert.Equal(t, defaultNumInputs, tv.params.NumInputs)
-	assert.Equal(t, deafultNumOutputs, tv.params.NumOutputs)
-	assert.Equal(t, uint64(defaultBitLength), tv.params.BitLength)
-	assert.Equal(t, defaultTokenType, tv.params.TokenType)
-	assert.Equal(t, int(defaultCurveID), tv.params.CurveID)
-	assert.NotNil(t, tv.pubParams)
-	assert.NotEmpty(t, tv.actionRaw)
+	require.Equal(t, defaultNumInputs, tv.params.NumInputs)
+	require.Equal(t, deafultNumOutputs, tv.params.NumOutputs)
+	require.Equal(t, uint64(defaultBitLength), tv.params.BitLength)
+	require.Equal(t, defaultTokenType, tv.params.TokenType)
+	require.Equal(t, int(defaultCurveID), tv.params.CurveID)
+	require.NotNil(t, tv.pubParams)
+	require.NotEmpty(t, tv.actionRaw)
 }
 
 func TestNewView_CustomParams(t *testing.T) {
@@ -87,10 +86,10 @@ func TestNewView_CustomParams(t *testing.T) {
 	require.NotNil(t, v)
 
 	tv := v.(*TokenTxValidateView)
-	assert.Equal(t, 2, tv.params.NumInputs)
-	assert.Equal(t, 3, tv.params.NumOutputs)
-	assert.Equal(t, uint64(64), tv.params.BitLength)
-	assert.Equal(t, "gold", tv.params.TokenType)
+	require.Equal(t, 2, tv.params.NumInputs)
+	require.Equal(t, 3, tv.params.NumOutputs)
+	require.Equal(t, uint64(64), tv.params.BitLength)
+	require.Equal(t, "gold", tv.params.TokenType)
 }
 
 func TestNewView_InvalidJSON(t *testing.T) {
@@ -121,8 +120,8 @@ func TestCall_VerifiesProofSuccessfully(t *testing.T) {
 			require.NoError(t, err)
 
 			result, err := v.Call(nil)
-			assert.NoError(t, err)
-			assert.Nil(t, result)
+			require.NoError(t, err)
+			require.Nil(t, result)
 		})
 	}
 }
@@ -143,19 +142,19 @@ func TestCall_TamperedProofFails(t *testing.T) {
 	}
 
 	_, err = tv.Call(nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestCall_EmptyActionRawFails(t *testing.T) {
 	v := &TokenTxValidateView{actionRaw: []byte{}}
 	_, err := v.Call(nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestCall_NilActionRawFails(t *testing.T) {
 	v := &TokenTxValidateView{}
 	_, err := v.Call(nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestNewView_MultipleOutputCounts(t *testing.T) {
@@ -171,8 +170,8 @@ func TestNewView_MultipleOutputCounts(t *testing.T) {
 			require.NoError(t, err)
 
 			result, err := v.Call(nil)
-			assert.NoError(t, err)
-			assert.Nil(t, result)
+			require.NoError(t, err)
+			require.Nil(t, result)
 		})
 	}
 }
@@ -192,5 +191,5 @@ func TestParamsJSON_RoundTrip(t *testing.T) {
 	decoded := &TokenTxValidateParams{}
 	require.NoError(t, json.Unmarshal(data, decoded))
 
-	assert.Equal(t, original, decoded)
+	require.Equal(t, original, decoded)
 }
