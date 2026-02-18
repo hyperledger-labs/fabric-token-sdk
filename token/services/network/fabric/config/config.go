@@ -90,7 +90,7 @@ func (c *serviceListenerManagerConfig) DeliveryMapperParallelism() int {
 }
 
 func (c *serviceListenerManagerConfig) DeliveryBlockProcessParallelism() int {
-	if v := c.c.GetInt(DeliveryBlockProcessParallelism); v > 0 {
+	if v := c.c.GetInt(DeliveryBlockProcessParallelism); v >= 0 {
 		return v
 	}
 
