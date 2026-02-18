@@ -17,7 +17,8 @@ import (
 
 var logger = logging.MustGetLogger()
 
-// IssueValidate validates the issue action
+// IssueValidate validates the issue action by checking its structure, verifying the zero-knowledge proof,
+// and ensuring the issuer is authorized and has signed the action.
 func IssueValidate(c context.Context, ctx *Context) error {
 	action := ctx.IssueAction
 
@@ -27,17 +28,18 @@ func IssueValidate(c context.Context, ctx *Context) error {
 
 	commitments, err := action.GetCommitments()
 	if err != nil {
-		return errors.New("failed to verify issue")
+		return ErrIssueVerificationFailed
 	}
+	// Verify the zero-knowledge proof that the commitments are well-formed
 	if err := issue.NewVerifier(
 		commitments,
 		ctx.PP).Verify(action.GetProof()); err != nil {
-		return err
+		return errors.Join(err, ErrInvalidZKP)
 	}
 
 	// Check the issuer is among those known
 	if issuers := ctx.PP.Issuers(); len(issuers) != 0 && !slices.ContainsFunc(issuers, action.Issuer.Equal) {
-		return errors.Errorf("issuer [%s] is not in issuers", action.Issuer)
+		return ErrIssuerNotAuthorized
 	}
 	logger.Debugf("Found issue owner [%s]", action.Issuer)
 
