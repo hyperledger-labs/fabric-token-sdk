@@ -14,23 +14,16 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/benchmark"
 )
 
-// var zkpWorkload = node.Workload{
-// 	Name:    "zkp",
-// 	Factory: &TokenTxValidateViewFactory{},
-// 	Params:  &TokenTxValidateParams,
-// }
-
 var tokenTxCases = []struct {
 	numInputs  int
 	numOutputs int
 }{
-	{1, 1},
-	{1, 2},
+	// {1, 1},
+	// {1, 2},
 	{2, 2},
 	// {5, 5},
 	// {10, 10},
 }
-
 
 func BenchmarkTokenTxValidate(b *testing.B) {
 	for _, tc := range tokenTxCases {
@@ -52,6 +45,7 @@ func BenchmarkTokenTxValidate(b *testing.B) {
 }
 
 func BenchmarkTokenTxValidate_wFactory(b *testing.B) {
+	
 	for _, tc := range tokenTxCases {
 		name := fmt.Sprintf("in=%d/out=%d", tc.numInputs, tc.numOutputs)
 		b.Run(name, func(b *testing.B) {
@@ -62,54 +56,6 @@ func BenchmarkTokenTxValidate_wFactory(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					v, _ := f.NewView(input)
-					_, _ = v.Call(nil)
-				}
-			})
-			benchmark.ReportTPS(b)
-		})
-	}
-}
-
-// var zkpWorkload = node.Workload{
-// 	Name:    "zkp",
-// 	Factory: &TokenTxValidateViewFactory{},
-// 	Params:  &TokenTxValidateParams{},
-// }
-
-// func BenchmarkTokenTxValidateAPI(b *testing.B) {
-// 	for _, tc := range tokenTxCases {
-// 		// ... setup node with node.GenerateConfig + node.SetupNode ...
-// 		vm, _ := viewregistry.GetManager(n)
-// 		node.RunAPIBenchmark(b, vm, zkpWorkload)
-
-// 		name := fmt.Sprintf("in=%d/out=%d", tc.numInputs, tc.numOutputs)
-// 		b.Run(name, func(b *testing.B) {
-// 			f := &TokenTxValidateViewFactory{}
-// 			p := &TokenTxValidateParams{NumInputs: tc.numInputs, NumOutputs: tc.numOutputs}
-// 			input, _ := json.Marshal(p)
-
-// 			b.RunParallel(func(pb *testing.PB) {
-// 				v, _ := f.NewView(input)
-// 				for pb.Next() {
-// 					_, _ = v.Call(nil)
-// 				}
-// 			})
-// 			benchmark.ReportTPS(b)
-// 		})
-// 	}
-// }
-
-func BenchmarkTokenTxValidateGRPC(b *testing.B) {
-	for _, tc := range tokenTxCases {
-		name := fmt.Sprintf("in=%d/out=%d", tc.numInputs, tc.numOutputs)
-		b.Run(name, func(b *testing.B) {
-			f := &TokenTxValidateViewFactory{}
-			p := &TokenTxValidateParams{NumInputs: tc.numInputs, NumOutputs: tc.numOutputs}
-			input, _ := json.Marshal(p)
-
-			b.RunParallel(func(pb *testing.PB) {
-				v, _ := f.NewView(input)
-				for pb.Next() {
 					_, _ = v.Call(nil)
 				}
 			})
