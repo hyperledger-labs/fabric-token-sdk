@@ -99,11 +99,10 @@ func (c *TokenTxValidateViewFactory) NewView(in []byte) (view.View, error) {
 	// createIssuerProofVerificationEnv in issuer_test.go.
 	outputValues := make([]uint64, f.params.NumOutputs)
 	outputOwners := make([][]byte, f.params.NumOutputs)
+	var val uint64
 	for i := range outputValues {
-		if i < 0 { // unreachable for slice indices, but satisfies gosec
-			panic("negative index")
-		}
-		outputValues[i] = uint64(i*10 + 10)
+		val += 10
+		outputValues[i] = val
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
