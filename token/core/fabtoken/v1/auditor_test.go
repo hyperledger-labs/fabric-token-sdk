@@ -13,6 +13,7 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestAuditorService verifies the functionality of the AuditorService.
@@ -23,9 +24,9 @@ func TestAuditorService(t *testing.T) {
 	t.Run("AuditorCheck", func(t *testing.T) {
 		// Test that AuditorCheck returns nil as expected for fabtoken
 		err := service.AuditorCheck(context.Background(), &driver.TokenRequest{}, &driver.TokenRequestMetadata{}, "")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = service.AuditorCheck(context.Background(), nil, nil, "")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }

@@ -102,8 +102,9 @@ func (p *SDK) Install() error {
 			dig.As(new(ftsconfig.Provider), new(sherdlock.ConfigProvider), new(simple.ConfigProvider)),
 		),
 		p.Container().Provide(ftsconfig.NewService),
+		p.Container().Provide(tms.NewConfigServiceWrapper),
 		p.Container().Provide(
-			tms.NewConfigServiceWrapper,
+			digutils.Identity[*tms.ConfigServiceWrapper](),
 			dig.As(new(ftscore.ConfigService), new(db2.ConfigService), new(tms.ConfigService)),
 		),
 
