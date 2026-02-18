@@ -159,7 +159,6 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 		return nil, errors.Wrapf(ErrInvalidProposal, "non empty namespaces")
 	}
 
-	// Validate chaincode name and version
 	if name, version := tx.Chaincode(); name != tmsID.Namespace || version != ChaincodeVersion {
 		return nil, errors.Wrapf(ErrInvalidProposal, "invalid chaincode")
 	}
