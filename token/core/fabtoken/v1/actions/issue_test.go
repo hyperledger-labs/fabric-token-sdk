@@ -9,6 +9,8 @@ package actions
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
 	"github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/require"
 )
@@ -127,4 +129,82 @@ func TestIssueAction_Validate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIssueAction_RemainingMethods(t *testing.T) {
+	action := &IssueAction{
+		Issuer: []byte("issuer"),
+		Outputs: []*Output{
+			{
+				Owner:    []byte("owner"),
+				Type:     "type",
+				Quantity: "11",
+			},
+		},
+		Metadata: map[string][]byte{
+			"foo": []byte("bar"),
+		},
+	}
+
+	assert.Equal(t, 0, action.NumInputs())
+	assert.Nil(t, action.GetInputs())
+	serInputs, err := action.GetSerializedInputs()
+	require.NoError(t, err)
+	assert.Nil(t, serInputs)
+	assert.Nil(t, action.GetSerialNumbers())
+	assert.Equal(t, 1, action.NumOutputs())
+	serOutputs, err := action.GetSerializedOutputs()
+	require.NoError(t, err)
+	assert.Len(t, serOutputs, 1)
+	assert.Len(t, action.GetOutputs(), 1)
+	assert.False(t, action.IsAnonymous())
+	assert.Equal(t, []byte("issuer"), action.GetIssuer())
+	assert.Equal(t, map[string][]byte{"foo": []byte("bar")}, action.GetMetadata())
+	assert.False(t, action.IsGraphHiding())
+	assert.Nil(t, action.ExtraSigners())
+
+	// Test GetSerializedOutputs with nil output
+	action.Outputs = append(action.Outputs, nil)
+	serOutputs, err = action.GetSerializedOutputs()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot serialize issue action outputs: nil output at index [1]")
+	assert.Nil(t, serOutputs)
+}
+
+func TestIssueAction_DeserializeError(t *testing.T) {
+	action := &IssueAction{}
+
+	// Invalid bytes
+	err := action.Deserialize([]byte("invalid"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to deserialize issue action")
+
+	// Version mismatch
+	// To test this we need a valid proto with a different version.
+	// We can manually create one if we have access to the proto struct.
+	// Since we are in the same package, we can use actions.IssueAction
+	invalidVersionAction := &actions.IssueAction{
+		Version: 0,
+	}
+	raw, err := proto.Marshal(invalidVersionAction)
+	require.NoError(t, err)
+	err = action.Deserialize(raw)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid issue version, expected [1], got [0]")
+
+	// Nil output in proto
+	nilOutputAction := &actions.IssueAction{
+		Version: ProtocolV1,
+		Outputs: []*actions.IssueActionOutput{
+			nil,
+			{Token: nil},
+		},
+	}
+	raw, err = proto.Marshal(nilOutputAction)
+	require.NoError(t, err)
+	err = action.Deserialize(raw)
+	require.NoError(t, err)
+	assert.Len(t, action.Outputs, 2)
+	assert.Nil(t, action.Outputs[0])
+	assert.Nil(t, action.Outputs[1])
 }

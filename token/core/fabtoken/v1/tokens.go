@@ -8,7 +8,6 @@ package v1
 
 import (
 	"context"
-	errors2 "errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
@@ -17,12 +16,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type TokensService struct {
 	IdentityDeserializer driver.Deserializer
-	OutputTokenFormat    token2.Format
+	OutputTokenFormat    token.Format
 }
 
 func NewTokensService(pp *setup.PublicParams, identityDeserializer driver.Deserializer) (*TokensService, error) {
@@ -51,7 +50,7 @@ func (s *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity
 }
 
 // Deobfuscate returns a deserialized token and the identity of its issuer
-func (s *TokensService) Deobfuscate(ctx context.Context, output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token2.Token, driver.Identity, []driver.Identity, token2.Format, error) {
+func (s *TokensService) Deobfuscate(ctx context.Context, output driver.TokenOutput, outputMetadata driver.TokenOutputMetadata) (*token.Token, driver.Identity, []driver.Identity, token.Format, error) {
 	tok := &actions.Output{}
 	if err := tok.Deserialize(output); err != nil {
 		return nil, nil, nil, "", errors.Wrap(err, "failed unmarshalling token")
@@ -67,15 +66,15 @@ func (s *TokensService) Deobfuscate(ctx context.Context, output driver.TokenOutp
 		return nil, nil, nil, "", errors.Wrapf(err, "failed to get recipients")
 	}
 
-	return &token2.Token{
+	return &token.Token{
 		Owner:    tok.Owner,
 		Type:     tok.Type,
 		Quantity: tok.Quantity,
 	}, metadata.Issuer, recipients, s.OutputTokenFormat, nil
 }
 
-func (s *TokensService) SupportedTokenFormats() []token2.Format {
-	return []token2.Format{s.OutputTokenFormat}
+func (s *TokensService) SupportedTokenFormats() []token.Format {
+	return []token.Format{s.OutputTokenFormat}
 }
 
 type TokensUpgradeService struct{}
@@ -84,17 +83,17 @@ func (s *TokensUpgradeService) NewUpgradeChallenge() (driver.TokensUpgradeChalle
 	return nil, errors.New("not supported")
 }
 
-func (s *TokensUpgradeService) GenUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, tokens []token2.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
+func (s *TokensUpgradeService) GenUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, tokens []token.LedgerToken, witness driver.TokensUpgradeWitness) (driver.TokensUpgradeProof, error) {
 	return nil, errors.New("not supported")
 }
 
-func (s *TokensUpgradeService) CheckUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token2.LedgerToken) (bool, error) {
+func (s *TokensUpgradeService) CheckUpgradeProof(ctx context.Context, ch driver.TokensUpgradeChallenge, proof driver.TokensUpgradeProof, tokens []token.LedgerToken) (bool, error) {
 	return false, errors.New("not supported")
 }
 
-func SupportedTokenFormat(precision uint64) (token2.Format, error) {
+func SupportedTokenFormat(precision uint64) (token.Format, error) {
 	hasher := utils.NewSHA256Hasher()
-	if err := errors2.Join(
+	if err := errors.Join(
 		hasher.AddInt32(fabtoken.Type),
 		hasher.AddString(x509.IdentityType),
 		hasher.AddUInt64(precision),
@@ -102,5 +101,5 @@ func SupportedTokenFormat(precision uint64) (token2.Format, error) {
 		return "", errors.Wrapf(err, "failed to generator token type")
 	}
 
-	return token2.Format(hasher.HexDigest()), nil
+	return token.Format(hasher.HexDigest()), nil
 }
