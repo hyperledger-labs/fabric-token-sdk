@@ -41,19 +41,23 @@ func init() {
 	)
 }
 
+// CurveWithFastRNG represents a curve with a fast random number generator.
 type CurveWithFastRNG struct {
 	driver.Curve
 	rng *rng.SecureRNG
 }
 
+// NewCurveWithFastRNG returns a new CurveWithFastRNG instance for the passed curve.
 func NewCurveWithFastRNG(c driver.Curve) *CurveWithFastRNG {
 	return &CurveWithFastRNG{Curve: c, rng: rng.NewSecureRNG()}
 }
 
+// Rand returns the random number generator associated with the curve.
 func (c *CurveWithFastRNG) Rand() (io.Reader, error) {
 	return c.rng, nil
 }
 
+// CurveIDToString returns the string representation of the passed curve ID.
 func CurveIDToString(id math.CurveID) string {
 	switch id {
 	case math.FP256BN_AMCL:
@@ -79,6 +83,7 @@ func CurveIDToString(id math.CurveID) string {
 	}
 }
 
+// StringToCurveID returns the curve ID associated with the passed string.
 func StringToCurveID(s string) math.CurveID {
 	switch s {
 	case "FP256BN_AMCL":

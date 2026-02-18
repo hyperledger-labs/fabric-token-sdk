@@ -49,7 +49,7 @@ func TestServiceWithCounterfeiter(t *testing.T) {
 	t.Run("GetterTests", func(t *testing.T) {
 		s, err := NewTokenService[driver.PublicParameters](
 			logger,
-			nil, // wallet.Service
+			nil, // driver.WalletService
 			ppm,
 			ip,
 			des,
