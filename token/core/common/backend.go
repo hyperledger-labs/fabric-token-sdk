@@ -16,24 +16,26 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// Backend represents a backend for token operations, providing access to the ledger and transaction signatures.
 type Backend struct {
 	Logger logging.Logger
 	// Ledger to access the ledger state
 	Ledger driver.GetStateFnc
-	// signed Message
+	// Message to be signed or verified
 	Message []byte
 	// Cursor is used to iterate over the signatures
 	Cursor int
-	// signatures on Message
+	// Sigs contains signatures on Message
 	Sigs [][]byte
 }
 
+// NewBackend returns a new Backend instance with the provided logger, ledger, message, and signatures.
 func NewBackend(logger logging.Logger, ledger driver.GetStateFnc, message []byte, sigs [][]byte) *Backend {
 	return &Backend{Logger: logger, Ledger: ledger, Message: message, Sigs: sigs}
 }
 
 // HasBeenSignedBy checks if a given Message has been signed by the signing identity matching
-// the passed verifier
+// the passed verifier. It returns the signature and any error encountered during verification.
 func (b *Backend) HasBeenSignedBy(ctx context.Context, id driver.Identity, verifier driver.Verifier) ([]byte, error) {
 	if b.Cursor >= len(b.Sigs) {
 		return nil, errors.New("invalid state, insufficient number of signatures")
@@ -46,10 +48,12 @@ func (b *Backend) HasBeenSignedBy(ctx context.Context, id driver.Identity, verif
 	return sigma, verifier.Verify(b.Message, sigma)
 }
 
+// GetState returns the state associated with the provided token ID from the ledger.
 func (b *Backend) GetState(id token.ID) ([]byte, error) {
 	return b.Ledger(id)
 }
 
+// Signatures returns the signatures associated with the backend.
 func (b *Backend) Signatures() [][]byte {
 	return b.Sigs
 }

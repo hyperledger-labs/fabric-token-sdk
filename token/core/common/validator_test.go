@@ -8,11 +8,14 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	dmock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,7 +24,7 @@ func TestAnchorInContext(t *testing.T) {
 	anchor := driver.TokenRequestAnchor("hello world")
 	anotherAnchor := driver.TokenRequestAnchor("another anchor")
 	v := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
-		nil,
+		&logging.MockLogger{},
 		nil,
 		nil,
 		nil,
@@ -56,16 +59,16 @@ func TestAnchorInContext(t *testing.T) {
 
 	// check anchor in the context for an issue action
 	ctx := t.Context()
-	err := v.VerifyIssue(ctx, anchor, nil, &mock.IssueAction{}, nil, nil, nil)
+	err := v.VerifyIssue(ctx, anchor, nil, &dmock.IssueAction{}, nil, nil, nil)
 	require.NoError(t, err)
-	err = v.VerifyIssue(ctx, anotherAnchor, nil, &mock.IssueAction{}, nil, nil, nil)
+	err = v.VerifyIssue(ctx, anotherAnchor, nil, &dmock.IssueAction{}, nil, nil, nil)
 	require.Error(t, err)
 	require.EqualError(t, err, "issue, anchor does not match, expected hello world, got another anchor")
 
 	// check anchor in the context for a transfer action
-	err = v.VerifyTransfer(ctx, anchor, nil, &mock.TransferAction{}, nil, nil, nil)
+	err = v.VerifyTransfer(ctx, anchor, nil, &dmock.TransferAction{}, nil, nil, nil)
 	require.NoError(t, err)
-	err = v.VerifyTransfer(ctx, anotherAnchor, nil, &mock.TransferAction{}, nil, nil, nil)
+	err = v.VerifyTransfer(ctx, anotherAnchor, nil, &dmock.TransferAction{}, nil, nil, nil)
 	require.Error(t, err)
 	require.EqualError(t, err, "transfer, anchor does not match, expected hello world, got another anchor")
 
@@ -75,4 +78,177 @@ func TestAnchorInContext(t *testing.T) {
 	err = v.VerifyAuditing(ctx, anotherAnchor, nil, nil, nil, nil)
 	require.Error(t, err)
 	require.EqualError(t, err, "audit, anchor does not match, expected hello world, got another anchor")
+}
+
+func TestValidatorWithCounterfeiter(t *testing.T) {
+	logger := &logging.MockLogger{}
+	pp := &dmock.PublicParameters{}
+	des := &dmock.Deserializer{}
+	ad := &dmock.ActionDeserializer[driver.TransferAction, driver.IssueAction]{}
+	ctx := context.Background()
+	anchor := driver.TokenRequestAnchor("anchor")
+
+	v := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
+		logger, pp, des, ad, nil, nil, nil,
+	)
+
+	t.Run("VerifyTokenRequest_Success", func(t *testing.T) {
+		tr := &driver.TokenRequest{}
+		ia := []driver.IssueAction{&dmock.IssueAction{}}
+		ta := []driver.TransferAction{&dmock.TransferAction{}}
+		ad.DeserializeActionsReturns(ia, ta, nil)
+
+		actions, attrs, err := v.VerifyTokenRequest(ctx, nil, nil, anchor, tr, nil)
+		require.NoError(t, err)
+		assert.Len(t, actions, 2)
+		assert.Nil(t, attrs)
+	})
+
+	t.Run("VerifyTokenRequest_AuditingError", func(t *testing.T) {
+		vErr := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
+			logger, pp, des, ad, nil, nil, []ValidateAuditingFunc[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
+				func(c context.Context, ctx *Context[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+					return errors.New("audit failed")
+				},
+			},
+		)
+		_, _, err := vErr.VerifyTokenRequest(ctx, nil, nil, anchor, &driver.TokenRequest{}, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "audit failed")
+	})
+
+	t.Run("VerifyTokenRequest_DeserializeActionsError", func(t *testing.T) {
+		ad.DeserializeActionsReturns(nil, nil, errors.New("deserialization failed"))
+		_, _, err := v.VerifyTokenRequest(ctx, nil, nil, anchor, &driver.TokenRequest{}, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "deserialization failed")
+	})
+
+	t.Run("VerifyTokenRequest_VerifyIssueError", func(t *testing.T) {
+		vErr := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
+			logger, pp, des, ad, nil, []ValidateIssueFunc[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
+				func(c context.Context, ctx *Context[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+					return errors.New("issue validation failed")
+				},
+			}, nil,
+		)
+		ad.DeserializeActionsReturns([]driver.IssueAction{&dmock.IssueAction{}}, nil, nil)
+		_, _, err := vErr.VerifyTokenRequest(ctx, nil, nil, anchor, &driver.TokenRequest{}, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "issue validation failed")
+	})
+
+	t.Run("VerifyTokenRequest_VerifyTransferError", func(t *testing.T) {
+		vErr := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
+			logger, pp, des, ad, []ValidateTransferFunc[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
+				func(c context.Context, ctx *Context[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+					return errors.New("transfer validation failed")
+				},
+			}, nil, nil,
+		)
+		ad.DeserializeActionsReturns(nil, []driver.TransferAction{&dmock.TransferAction{}}, nil)
+		_, _, err := vErr.VerifyTokenRequest(ctx, nil, nil, anchor, &driver.TokenRequest{}, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "transfer validation failed")
+	})
+
+	t.Run("UnmarshalActions", func(t *testing.T) {
+		tr := &driver.TokenRequest{}
+		raw, err := tr.Bytes()
+		require.NoError(t, err)
+
+		ad.DeserializeActionsReturns([]driver.IssueAction{&dmock.IssueAction{}}, nil, nil)
+		actions, err := v.UnmarshalActions(raw)
+		require.NoError(t, err)
+		assert.Len(t, actions, 1)
+
+		_, err = v.UnmarshalActions([]byte("invalid"))
+		require.Error(t, err)
+
+		ad.DeserializeActionsReturns(nil, nil, errors.New("bad actions"))
+		_, err = v.UnmarshalActions(raw)
+		require.Error(t, err)
+	})
+
+	t.Run("VerifyIssue_MetadataError", func(t *testing.T) {
+		issue := &dmock.IssueAction{}
+		issue.GetMetadataReturns(map[string][]byte{"k1": nil})
+
+		err := v.VerifyIssue(ctx, anchor, &driver.TokenRequest{}, issue, nil, nil, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "more metadata than those validated")
+
+		vCount := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
+			logger, pp, des, ad, nil, []ValidateIssueFunc[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
+				func(c context.Context, ctx *Context[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+					ctx.CountMetadataKey("k1")
+					ctx.CountMetadataKey("k1")
+
+					return nil
+				},
+			}, nil,
+		)
+		err = vCount.VerifyIssue(ctx, anchor, &driver.TokenRequest{}, issue, nil, nil, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "appeared more than one time")
+	})
+
+	t.Run("VerifyTransfer_MetadataError", func(t *testing.T) {
+		transfer := &dmock.TransferAction{}
+		transfer.GetMetadataReturns(map[string][]byte{"k1": nil})
+
+		err := v.VerifyTransfer(ctx, anchor, &driver.TokenRequest{}, transfer, nil, nil, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "more metadata than those validated")
+
+		vCount := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
+			logger, pp, des, ad, []ValidateTransferFunc[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]{
+				func(c context.Context, ctx *Context[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer]) error {
+					ctx.CountMetadataKey("k1")
+					ctx.CountMetadataKey("k1")
+
+					return nil
+				},
+			}, nil, nil,
+		)
+		err = vCount.VerifyTransfer(ctx, anchor, &driver.TokenRequest{}, transfer, nil, nil, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "appeared more than one time")
+	})
+
+	t.Run("VerifyTokenRequestFromRaw", func(t *testing.T) {
+		tr := &driver.TokenRequest{
+			Issues: [][]byte{[]byte("issue1")},
+			AuditorSignatures: []*driver.AuditorSignature{
+				{Identity: []byte("auditor"), Signature: []byte("sig")},
+			},
+			Signatures: [][]byte{[]byte("sig2")},
+		}
+		raw, err := tr.Bytes()
+		require.NoError(t, err)
+
+		ad.DeserializeActionsReturns([]driver.IssueAction{&dmock.IssueAction{}}, nil, nil)
+
+		actions, attrs, err := v.VerifyTokenRequestFromRaw(ctx, nil, anchor, raw)
+		require.NoError(t, err)
+		assert.Len(t, actions, 1)
+		assert.NotNil(t, attrs)
+		assert.Contains(t, attrs, TokenRequestToSign)
+		assert.Contains(t, attrs, TokenRequestSignatures)
+
+		_, _, err = v.VerifyTokenRequestFromRaw(ctx, nil, anchor, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "empty token request")
+
+		_, _, err = v.VerifyTokenRequestFromRaw(ctx, nil, anchor, []byte("invalid"))
+		require.Error(t, err)
+	})
+}
+
+func TestIsAnyNil(t *testing.T) {
+	var a *int
+	var b = 1
+	assert.True(t, IsAnyNil(a))
+	assert.False(t, IsAnyNil(&b))
+	assert.True(t, IsAnyNil(&b, a))
 }

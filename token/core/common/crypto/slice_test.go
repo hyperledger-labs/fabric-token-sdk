@@ -9,7 +9,9 @@ package crypto
 import (
 	"bytes"
 	"encoding/binary"
+	"math"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -60,6 +62,27 @@ func TestAppendFixed32(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestAppendFixed32_Panic(t *testing.T) {
+	if math.MaxUint32 == math.MaxInt64 {
+		// Not possible on 32-bit platforms
+		t.Skip("Skipping panic test on 32-bit architecture")
+	}
+
+	// Use unsafe to create a slice with a large length without allocating memory
+	var largeSlice []byte
+	sh := (*struct {
+		Data uintptr
+		Len  int
+		Cap  int
+	})(unsafe.Pointer(&largeSlice))
+	sh.Len = math.MaxUint32 + 1
+	sh.Cap = math.MaxUint32 + 1
+
+	assert.PanicsWithValue(t, "AppendFixed32 overflows uint32", func() {
+		AppendFixed32(nil, [][]byte{largeSlice})
+	})
 }
 
 // Verification Test: Reusing an existing buffer

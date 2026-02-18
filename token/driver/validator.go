@@ -46,6 +46,8 @@ type ValidatorLedger interface {
 }
 
 // Validator models a token request validator
+//
+//go:generate counterfeiter -o mock/validator.go -fake-name Validator . Validator
 type Validator interface {
 	// UnmarshalActions returns the actions contained in the serialized token request
 	UnmarshalActions(raw []byte) ([]interface{}, error)

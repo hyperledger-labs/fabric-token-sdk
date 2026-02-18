@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
+// Serializer defines an interface for serializing and deserializing values.
 type Serializer interface {
 	Serialize() ([]byte, error)
 	Deserialize([]byte) error
@@ -24,19 +25,23 @@ type element interface {
 	Bytes() []byte
 }
 
+// Values represents a list of serialized values.
 type Values struct {
 	Values [][]byte
 }
 
+// Element represents a serialized element with a curve ID.
 type Element struct {
 	CurveID int
 	Raw     []byte
 }
 
+// MarshalStd marshals the passed value using standard ASN.1 encoding.
 func MarshalStd(a any) ([]byte, error) {
 	return asn1.Marshal(a)
 }
 
+// Marshal marshals the passed serializers into a single byte slice.
 func Marshal[S Serializer](values ...S) ([]byte, error) {
 	v := Values{
 		Values: make([][]byte, len(values)),
@@ -55,6 +60,7 @@ func Marshal[S Serializer](values ...S) ([]byte, error) {
 	return asn1.Marshal(v)
 }
 
+// Unmarshal unmarshals the passed byte slice into the provided serializers.
 func Unmarshal[S Serializer](data []byte, values ...S) error {
 	v := &Values{}
 	_, err := asn1.Unmarshal(data, v)
@@ -77,6 +83,7 @@ func Unmarshal[S Serializer](data []byte, values ...S) error {
 	return nil
 }
 
+// UnmarshalTo unmarshals the passed byte slice into a slice of serializers created by the provided function.
 func UnmarshalTo[S Serializer](data []byte, newFunction func() S) ([]S, error) {
 	v := &Values{}
 	_, err := asn1.Unmarshal(data, v)
@@ -95,6 +102,7 @@ func UnmarshalTo[S Serializer](data []byte, newFunction func() S) ([]S, error) {
 	return res, nil
 }
 
+// MarshalMath marshals the passed elements into a single byte slice.
 func MarshalMath(values ...element) ([]byte, error) {
 	if len(values) == 0 {
 		return nil, errors.New("cannot marshal empty values")
@@ -120,6 +128,7 @@ type unmarshaller struct {
 	index int
 }
 
+// NewUnmarshaller returns a new unmarshaller for the passed byte slice.
 func NewUnmarshaller(raw []byte) (*unmarshaller, error) {
 	v := &Values{}
 	_, err := asn1.Unmarshal(raw, v)
@@ -130,6 +139,7 @@ func NewUnmarshaller(raw []byte) (*unmarshaller, error) {
 	return &unmarshaller{v: v, index: 0}, nil
 }
 
+// NextZr returns the next math.Zr from the unmarshaller.
 func (u *unmarshaller) NextZr() (*math.Zr, error) {
 	e, err := u.Next()
 	if err != nil {
@@ -143,6 +153,7 @@ func (u *unmarshaller) NextZr() (*math.Zr, error) {
 	return zr, nil
 }
 
+// NextG1 returns the next math.G1 from the unmarshaller.
 func (u *unmarshaller) NextG1() (*math.G1, error) {
 	e, err := u.Next()
 	if err != nil {
@@ -155,6 +166,7 @@ func (u *unmarshaller) NextG1() (*math.G1, error) {
 	return math.Curves[e.CurveID].NewG1FromBytes(e.Raw)
 }
 
+// NextG2 returns the next math.G2 from the unmarshaller.
 func (u *unmarshaller) NextG2() (*math.G2, error) {
 	e, err := u.Next()
 	if err != nil {
@@ -167,6 +179,7 @@ func (u *unmarshaller) NextG2() (*math.G2, error) {
 	return math.Curves[e.CurveID].NewG2FromBytes(e.Raw)
 }
 
+// Next returns the next element from the unmarshaller.
 func (u *unmarshaller) Next() (*Element, error) {
 	// check index
 	if u.index >= len(u.v.Values) {
@@ -185,6 +198,7 @@ func (u *unmarshaller) Next() (*Element, error) {
 	return e, nil
 }
 
+// NextZrArray returns the next slice of math.Zr from the unmarshaller.
 func (u *unmarshaller) NextZrArray() ([]*math.Zr, error) {
 	e, err := u.Next()
 	if err != nil {
@@ -211,6 +225,7 @@ func (u *unmarshaller) NextZrArray() ([]*math.Zr, error) {
 	return result, nil
 }
 
+// NextG1Array returns the next slice of math.G1 from the unmarshaller.
 func (u *unmarshaller) NextG1Array() ([]*math.G1, error) {
 	e, err := u.Next()
 	if err != nil {
@@ -274,6 +289,7 @@ func (e *elementArray) Bytes() []byte {
 	return e.raw
 }
 
+// NewElementArray returns a new element representing an array of elements.
 func NewElementArray[E element](factors []E) (element, error) {
 	return newElementArray(factors...)
 }
@@ -294,10 +310,12 @@ func (a *array[S]) Deserialize(bytes []byte) error {
 	return err
 }
 
+// NewArray returns a new Serializer representing an array of serializers.
 func NewArray[S Serializer](values []S) (*array[S], error) {
 	return &array[S]{Values: values}, nil
 }
 
+// NewArrayWithNew returns a new Serializer representing an array of serializers created by the provided function.
 func NewArrayWithNew[S Serializer](newFunction func() S) (*array[S], error) {
 	return &array[S]{newFunction: newFunction}, nil
 }

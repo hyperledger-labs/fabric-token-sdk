@@ -19,6 +19,7 @@ var (
 	ErrAuditorSignaturesPresent = errors.New("auditor signatures present")
 )
 
+// AuditingSignaturesValidate validates the auditor signatures in the token request.
 func AuditingSignaturesValidate[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](c context.Context, ctx *Context[P, T, TA, IA, DS]) error {
 	if len(ctx.PP.Auditors()) == 0 {
 		// enforce no auditor signatures are attached

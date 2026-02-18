@@ -12,8 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-//go:generate counterfeiter -o mock/tss.go -fake-name TokensService . TokensService
-
 type (
 	// TokensUpgradeChallenge is the challenge the issuer generates to make sure the client is not cheating
 	TokensUpgradeChallenge = []byte
@@ -29,6 +27,8 @@ type (
 )
 
 // TokensUpgradeService models the token update service
+//
+//go:generate counterfeiter -o mock/tokens_upgrade_service.go -fake-name TokensUpgradeService . TokensUpgradeService
 type TokensUpgradeService interface {
 	// NewUpgradeChallenge generates a new upgrade challenge
 	NewUpgradeChallenge() (TokensUpgradeChallenge, error)
@@ -39,6 +39,8 @@ type TokensUpgradeService interface {
 }
 
 // TokensService models the token service
+//
+//go:generate counterfeiter -o mock/tokens_service.go -fake-name TokensService . TokensService
 type TokensService interface {
 	// SupportedTokenFormats returns the supported token formats
 	SupportedTokenFormats() []token.Format

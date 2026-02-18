@@ -70,7 +70,7 @@ func NewSecureRNGWith(interval time.Duration, volume uint64) *SecureRNG {
 
 func newCipherWrapper() (*CipherWrapper, error) {
 	var key [32]byte
-	if _, err := rand.Read(key[:]); err != nil {
+	if _, err := rand.Reader.Read(key[:]); err != nil {
 		return nil, fmt.Errorf("RNG seed failed: %w", err)
 	}
 

@@ -11,7 +11,6 @@ import (
 	errors2 "errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -178,11 +177,11 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfo(ctx context.Context, i
 }
 
 type TypedIdentityVerifierDeserializer struct {
-	common.VerifierDeserializer
-	common.MatcherDeserializer
+	driver.VerifierDeserializer
+	driver.MatcherDeserializer
 }
 
-func NewTypedIdentityVerifierDeserializer(verifierDeserializer common.VerifierDeserializer, matcherDeserializer common.MatcherDeserializer) *TypedIdentityVerifierDeserializer {
+func NewTypedIdentityVerifierDeserializer(verifierDeserializer driver.VerifierDeserializer, matcherDeserializer driver.MatcherDeserializer) *TypedIdentityVerifierDeserializer {
 	return &TypedIdentityVerifierDeserializer{VerifierDeserializer: verifierDeserializer, MatcherDeserializer: matcherDeserializer}
 }
 

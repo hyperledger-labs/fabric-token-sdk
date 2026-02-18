@@ -15,13 +15,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
+// MetadataCounterID defines the type for metadata counter identifiers.
 type MetadataCounterID = string
 
 const (
-	TokenRequestToSign     driver.ValidationAttributeID = "trs"
+	// TokenRequestToSign is the attribute ID for the token request to sign.
+	TokenRequestToSign driver.ValidationAttributeID = "trs"
+	// TokenRequestSignatures is the attribute ID for the token request signatures.
 	TokenRequestSignatures driver.ValidationAttributeID = "sigs"
 )
 
+// Context contains the context for token request validation.
 type Context[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
 	Logger            logging.Logger
 	PP                P
@@ -38,36 +42,38 @@ type Context[P driver.PublicParameters, T driver.Input, TA driver.TransferAction
 	Attributes        driver.ValidationAttributes
 }
 
+// CountMetadataKey increments the counter for the passed metadata key.
 func (c *Context[P, T, TA, IA, DS]) CountMetadataKey(key string) {
 	c.MetadataCounter[key] = c.MetadataCounter[key] + 1
 }
 
+// ValidateTransferFunc is a function type for validating transfer actions.
 type ValidateTransferFunc[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
 
+// ValidateIssueFunc is a function type for validating issue actions.
 type ValidateIssueFunc[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
 
+// ValidateAuditingFunc is a function type for validating auditing information.
 type ValidateAuditingFunc[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] func(c context.Context, ctx *Context[P, T, TA, IA, DS]) error
 
-type ActionDeserializer[TA driver.TransferAction, IA driver.IssueAction] interface {
-	DeserializeActions(tr *driver.TokenRequest) ([]IA, []TA, error)
-}
-
+// Validator validates token requests.
 type Validator[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer] struct {
 	Logger             logging.Logger
 	PublicParams       P
 	Deserializer       DS
-	ActionDeserializer ActionDeserializer[TA, IA]
+	ActionDeserializer driver.ActionDeserializer[TA, IA]
 
 	AuditingValidators []ValidateAuditingFunc[P, T, TA, IA, DS]
 	TransferValidators []ValidateTransferFunc[P, T, TA, IA, DS]
 	IssueValidators    []ValidateIssueFunc[P, T, TA, IA, DS]
 }
 
+// NewValidator returns a new Validator instance for the passed arguments.
 func NewValidator[P driver.PublicParameters, T driver.Input, TA driver.TransferAction, IA driver.IssueAction, DS driver.Deserializer](
 	Logger logging.Logger,
 	publicParams P,
 	deserializer DS,
-	actionDeserializer ActionDeserializer[TA, IA],
+	actionDeserializer driver.ActionDeserializer[TA, IA],
 	transferValidators []ValidateTransferFunc[P, T, TA, IA, DS],
 	issueValidators []ValidateIssueFunc[P, T, TA, IA, DS],
 	auditingValidators []ValidateAuditingFunc[P, T, TA, IA, DS],
@@ -83,6 +89,7 @@ func NewValidator[P driver.PublicParameters, T driver.Input, TA driver.TransferA
 	}
 }
 
+// VerifyTokenRequestFromRaw verifies a token request from its raw representation.
 func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Context, getState driver.GetStateFnc, anchor driver.TokenRequestAnchor, raw []byte) ([]interface{}, driver.ValidationAttributes, error) {
 	logger.DebugfContext(ctx, "Verify token request from raw")
 	if len(raw) == 0 {
@@ -117,6 +124,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 	return v.VerifyTokenRequest(ctx, backend, backend, anchor, tr, attributes)
 }
 
+// VerifyTokenRequest verifies a token request.
 func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequest(
 	ctx context.Context,
 	ledger driver.Ledger,
@@ -152,6 +160,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequest(
 	return actions, attributes, nil
 }
 
+// UnmarshalActions unmarshals the actions from the passed raw representation of a token request.
 func (v *Validator[P, T, TA, IA, DS]) UnmarshalActions(raw []byte) ([]interface{}, error) {
 	tr := &driver.TokenRequest{}
 	err := tr.FromBytes(raw)
@@ -192,6 +201,7 @@ func (v *Validator[P, T, TA, IA, DS]) verifyIssues(
 	return nil
 }
 
+// VerifyIssue verifies an issue action.
 func (v *Validator[P, T, TA, IA, DS]) VerifyIssue(
 	ctx context.Context,
 	anchor driver.TokenRequestAnchor,
@@ -254,6 +264,7 @@ func (v *Validator[P, T, TA, IA, DS]) verifyTransfers(
 	return nil
 }
 
+// VerifyTransfer verifies a transfer action.
 func (v *Validator[P, T, TA, IA, DS]) VerifyTransfer(
 	ctx context.Context,
 	anchor driver.TokenRequestAnchor,
@@ -296,6 +307,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTransfer(
 	return nil
 }
 
+// VerifyAuditing verifies the auditing information in a token request.
 func (v *Validator[P, T, TA, IA, DS]) VerifyAuditing(
 	ctx context.Context,
 	anchor driver.TokenRequestAnchor,
@@ -323,6 +335,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyAuditing(
 	return nil
 }
 
+// IsAnyNil returns true if any of the passed arguments is nil.
 func IsAnyNil[T any](args ...*T) bool {
 	for _, arg := range args {
 		if arg == nil {
