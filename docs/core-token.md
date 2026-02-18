@@ -182,3 +182,39 @@ token:
                   Hash: SHA2
                   Security: 256
 ```
+
+# Configuration Defaults and Optional Sections
+
+## Optional: token.selector
+
+If not specified, the default selector implementation is used.
+
+Default values:
+- driver: sherdlock
+- retryInterval: 5s
+- numRetries: 3
+- leaseExpiry: 3m
+- leaseCleanupTickPeriod: 90s
+
+---
+
+## Optional: token.finality
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  finality:
+    type: delivery
+```
+
+Default values:
+
+- type: delivery
+- committer.maxRetries: 3
+- committer.retryWaitDuration: 5s
+- delivery.mapperParallelism: 10
+- delivery.blockProcessParallelism: 10
+- delivery.lruSize: 30
+- delivery.lruBuffer: 15
+- delivery.listenerTimeout: 10s

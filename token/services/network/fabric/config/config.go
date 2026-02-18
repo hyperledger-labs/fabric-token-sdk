@@ -25,20 +25,21 @@ type ListenerManagerConfig interface {
 }
 
 const (
-	Type                              = "token.finality.type"
-	CommitterMaxRetries               = "token.finality.committer.maxRetries"
-	CommitterRetryWaitDuration        = "token.finality.committer.retryWaitDuration"
-	DeliveryMapperParallelism         = "token.finality.delivery.mapperParallelism"
-	DeliveryBlockProcessParallelism   = "token.finality.delivery.blockProcessParallelism"
-	DeliveryLRUSize                   = "token.finality.delivery.lruSize"
-	DeliveryLRUBuffer                 = "token.finality.delivery.lruBuffer"
-	DeliveryListenerTimeout           = "token.finality.delivery.listenerTimeout"
-	DefaultCommitterMaxRetries        = 3
-	DefaultCommitterRetryWaitDuration = 5 * time.Second
-	DefaultDeliveryMapperParallelism  = 10
-	DefaultDeliveryLRUSize            = 30
-	DefaultDeliveryLRUBuffer          = 15
-	DefaultDeliveryListenerTimeout    = 10 * time.Second
+	Type                                   = "token.finality.type"
+	CommitterMaxRetries                    = "token.finality.committer.maxRetries"
+	CommitterRetryWaitDuration             = "token.finality.committer.retryWaitDuration"
+	DeliveryMapperParallelism              = "token.finality.delivery.mapperParallelism"
+	DeliveryBlockProcessParallelism        = "token.finality.delivery.blockProcessParallelism"
+	DeliveryLRUSize                        = "token.finality.delivery.lruSize"
+	DeliveryLRUBuffer                      = "token.finality.delivery.lruBuffer"
+	DeliveryListenerTimeout                = "token.finality.delivery.listenerTimeout"
+	DefaultCommitterMaxRetries             = 3
+	DefaultCommitterRetryWaitDuration      = 5 * time.Second
+	DefaultDeliveryMapperParallelism       = 10
+	DefaultDeliveryBlockProcessParallelism = 10
+	DefaultDeliveryLRUSize                 = 30
+	DefaultDeliveryLRUBuffer               = 15
+	DefaultDeliveryListenerTimeout         = 10 * time.Second
 )
 
 type ManagerType string
@@ -89,7 +90,11 @@ func (c *serviceListenerManagerConfig) DeliveryMapperParallelism() int {
 }
 
 func (c *serviceListenerManagerConfig) DeliveryBlockProcessParallelism() int {
-	return c.c.GetInt(DeliveryBlockProcessParallelism)
+	if v := c.c.GetInt(DeliveryBlockProcessParallelism); v >= 0 {
+		return v
+	}
+
+	return DefaultDeliveryBlockProcessParallelism
 }
 
 func (c *serviceListenerManagerConfig) DeliveryLRUSize() int {
