@@ -11,7 +11,7 @@ FAB_BINS ?= $(FABRIC_BINARY_BASE)/bin
 
 # integration test options
 GINKGO_TEST_OPTS ?=
-GINKGO_TEST_OPTS += --keep-going
+GINKGO_TEST_OPTS += --keep-going -cover
 
 TOP = .
 
@@ -39,11 +39,13 @@ install-tools:
 download-fabric:
 	./ci/scripts/download_fabric.sh $(FABRIC_BINARY_BASE) $(FABRIC_VERSION) $(FABRIC_CA_VERSION)
 
+GO_TEST_PARAMS ?= -coverpkg=./... -coverprofile=profile.cov
+GO_PACKAGES = $(shell go list ./... | grep -v '/integration/' | grep -v 'regression' | grep -v 'mock' |  grep -v 'protos-go' |  grep -v 'testutils'; go list ./integration/nwo/...)
+
 .PHONY: unit-tests
 # run standard unit tests
 unit-tests:
-	@go test -coverprofile=profile.cov $(shell go list ./... | grep -v '/integration/' | grep -v 'regression' | grep -v 'mock' |  grep -v 'protos-go' |  grep -v 'testutils')
-	cd integration/nwo/; go test -cover ./...
+	@go test $(GO_TEST_PARAMS) $(GO_PACKAGES)
 	cd token/services/storage/db/kvs/hashicorp/; go test -cover ./...
 
 .PHONY: unit-tests-race
