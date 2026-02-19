@@ -29,7 +29,7 @@ func main() {
 	// create server
 	n, err := node.SetupNode(nodeConfPath, node.NamedFactory{
 		Name:    "zkp",
-		Factory: &benchmarking.TokenTxValidateViewFactory{},
+		Factory: &benchmarking.TokenTxVerifyViewFactory{},
 	})
 	if err != nil {
 		panic(err)
