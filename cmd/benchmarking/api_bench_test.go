@@ -16,8 +16,8 @@ import (
 
 var zkpWorkload = node.Workload{
 	Name:    "zkp",
-	Factory: &TokenTxValidateViewFactory{},
-	Params:  &TokenTxValidateParams{},
+	Factory: &TokenTxVerifyViewFactory{},
+	Params:  &TokenTxVerifyParams{},
 }
 
 func BenchmarkAPI(b *testing.B) {
@@ -31,7 +31,7 @@ func BenchmarkAPI(b *testing.B) {
 	// create server
 	n, err := node.SetupNode(nodeConfPath, node.NamedFactory{
 		Name:    "zkp",
-		Factory: &TokenTxValidateViewFactory{},
+		Factory: &TokenTxVerifyViewFactory{},
 	})
 	require.NoError(b, err)
 
