@@ -192,6 +192,7 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 	signedProposal := request.Tx.Transaction.SignedProposal()
 	if signedProposal == nil {
 		logger.DebugfContext(ctx.Context(), "Signed proposal is nil for TX [%s], skipping proposal validation", request.Anchor)
+
 		return nil
 	}
 
@@ -199,6 +200,7 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 	proposal := request.Tx.Transaction.Proposal()
 	if proposal == nil {
 		logger.DebugfContext(ctx.Context(), "Proposal is nil for TX [%s], skipping proposal validation", request.Anchor)
+
 		return nil
 	}
 
@@ -225,6 +227,7 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 
 	if len(proposalBytes) == 0 {
 		logger.DebugfContext(ctx.Context(), "Proposal bytes are empty for TX [%s], skipping detailed validation", request.Anchor)
+
 		return nil
 	}
 
