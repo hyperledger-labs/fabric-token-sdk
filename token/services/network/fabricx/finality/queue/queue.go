@@ -150,6 +150,10 @@ func (eq *EventQueue) Enqueue(event Event) error {
 
 // EnqueueBlocking adds an event to the queue (blocks until space available or timeout)
 func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	eq.mu.RLock()
 	defer eq.mu.RUnlock()
 

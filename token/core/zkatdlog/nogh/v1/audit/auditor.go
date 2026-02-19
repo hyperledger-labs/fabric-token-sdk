@@ -17,29 +17,30 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
 
+// SigningIdentity is an alias for driver.SigningIdentity
+//
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
-
-// SigningIdentity models a signing identity
-type SigningIdentity interface {
-	driver.SigningIdentity
-}
+type SigningIdentity = driver.SigningIdentity
 
 // InfoMatcher deserialize audit information
+//
+//go:generate counterfeiter -o mock/info_matcher.go -fake-name InfoMatcher . InfoMatcher
 type InfoMatcher interface {
 	MatchIdentity(ctx context.Context, id driver.Identity, ai []byte) error
 }
 
+// InspectableIdentity contains the identity and its corresponding audit info.
 type InspectableIdentity struct {
 	Identity         driver.Identity
 	IdentityFromMeta driver.Identity
 	AuditInfo        []byte
 }
 
+// InspectableData contains the token data and its opening.
 type InspectableData struct {
 	Data      *math.G1
 	TokenType token2.Type
@@ -54,6 +55,7 @@ type InspectableToken struct {
 	Data     InspectableData
 }
 
+// NewInspectableToken creates a new InspectableToken.
 func NewInspectableToken(
 	token *token.Token,
 	ownerAuditInfo []byte,
@@ -94,42 +96,25 @@ type Auditor struct {
 	Tracer trace.Tracer
 	// Owner Identity InfoMatcher
 	InfoMatcher InfoMatcher
-	// Auditor's signing identity
-	Signer SigningIdentity
 	// Pedersen generators used to compute TokenData
 	PedersenParams []*math.G1
 	// Elliptic curve
 	Curve *math.Curve
 }
 
-func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatcher, pp []*math.G1, signer SigningIdentity, c *math.Curve) *Auditor {
+// NewAuditor creates a new Auditor.
+func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatcher, pp []*math.G1, c *math.Curve) *Auditor {
 	return &Auditor{
 		Logger:         logger,
 		Tracer:         tracer,
 		InfoMatcher:    infoMatcher,
 		PedersenParams: pp,
-		Signer:         signer,
 		Curve:          c,
 	}
 }
 
-// Endorse is called to sign a valid token request
-func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
-	// Marshal tokenRequest
-	bytes, err := tokenRequest.MarshalToMessageToSign([]byte(txID))
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling token request [%s]", txID)
-	}
-	// Sign
-	a.Logger.Debugf("Endorse [%s][%s]", utils.Hashable(bytes).String(), txID)
-	if a.Signer == nil {
-		return nil, errors.Errorf("audit of tx [%s] failed: signer is nil", txID)
-	}
-
-	return a.Signer.Sign(bytes)
-}
-
-// Check validates TokenRequest against TokenRequestMetadata
+// Check validates TokenRequest against TokenRequestMetadata.
+// It de-obfuscates issue and transfer requests and verifies their validity.
 func (a *Auditor) Check(
 	ctx context.Context,
 	tokenRequest *driver.TokenRequest,
@@ -150,6 +135,7 @@ func (a *Auditor) Check(
 	if err != nil {
 		return errors.Wrapf(err, "failed checking issues for [%s]", txID)
 	}
+	// verify issuer identities
 	for i, id := range identitiesFromIssue {
 		err = a.InspectIdentity(ctx, a.InfoMatcher, &id, i)
 		if err != nil {
@@ -173,6 +159,7 @@ func (a *Auditor) Check(
 
 // CheckTransferRequests verifies that the commitments in transfer inputs and outputs match the information provided in the clear.
 func (a *Auditor) CheckTransferRequests(ctx context.Context, inputs [][]*InspectableToken, outputsFromTransfer [][]*InspectableToken, txID driver.TokenRequestAnchor) error {
+	// Inspect outputs of each transfer action
 	for k, transferred := range outputsFromTransfer {
 		err := a.InspectOutputs(ctx, transferred)
 		if err != nil {
@@ -180,6 +167,7 @@ func (a *Auditor) CheckTransferRequests(ctx context.Context, inputs [][]*Inspect
 		}
 	}
 
+	// Inspect inputs of each transfer action
 	for k, i := range inputs {
 		err := a.InspectInputs(ctx, i)
 		if err != nil {
@@ -192,7 +180,7 @@ func (a *Auditor) CheckTransferRequests(ctx context.Context, inputs [][]*Inspect
 
 // CheckIssueRequests verifies that the commitments in issue outputs match the information provided in the clear.
 func (a *Auditor) CheckIssueRequests(ctx context.Context, outputsFromIssue [][]*InspectableToken, txID driver.TokenRequestAnchor) error {
-	// Inspect
+	// Inspect outputs of each issue action
 	for k, issued := range outputsFromIssue {
 		err := a.InspectOutputs(ctx, issued)
 		if err != nil {
@@ -221,14 +209,17 @@ func (a *Auditor) InspectOutput(ctx context.Context, output *InspectableToken, i
 	if output == nil || output.Data.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
+	// Recompute commitment from provided cleartext data
 	tokenComm := commit([]*math.Zr{
 		a.Curve.HashToZr([]byte(output.Data.TokenType)),
 		output.Data.Value,
 		output.Data.BF,
 	}, a.PedersenParams, a.Curve)
+	// Verify it matches the commitment in the token
 	if !tokenComm.Equals(output.Data.Data) {
 		return errors.Errorf("output at index [%d] does not match the provided opening", index)
 	}
+	// Verify owner identity if it's not a redeemed output
 	if !output.Identity.Identity.IsNone() { // this is not a redeemed output
 		if err := a.InspectIdentity(ctx, a.InfoMatcher, &output.Identity, index); err != nil {
 			return errors.Wrapf(err, "failed inspecting output at index [%d]", index)
@@ -245,6 +236,7 @@ func (a *Auditor) InspectInputs(ctx context.Context, inputs []*InspectableToken)
 			return errors.Errorf("invalid input at index [%d]", i)
 		}
 
+		// Verify input owner identity
 		if !input.Identity.Identity.IsNone() {
 			if err := a.InspectIdentity(ctx, a.InfoMatcher, &input.Identity, i); err != nil {
 				return errors.Wrapf(err, "failed inspecting input at index [%d]", i)
@@ -255,7 +247,7 @@ func (a *Auditor) InspectInputs(ctx context.Context, inputs []*InspectableToken)
 	return nil
 }
 
-// InspectIdentity verifies that the audit info matches the token owner
+// InspectIdentity verifies that the audit info matches the token owner.
 func (a *Auditor) InspectIdentity(ctx context.Context, matcher InfoMatcher, identity *InspectableIdentity, index int) error {
 	if identity.Identity.IsNone() {
 		return errors.Errorf("identity at index [%d] is nil, cannot inspect it", index)
@@ -263,12 +255,14 @@ func (a *Auditor) InspectIdentity(ctx context.Context, matcher InfoMatcher, iden
 	if len(identity.AuditInfo) == 0 {
 		return errors.Errorf("failed to inspect identity at index [%d]: audit info is nil", index)
 	}
+	// If identity is provided in metadata, it must match the one in the action
 	if len(identity.IdentityFromMeta) != 0 {
 		// enforce equality
 		if !bytes.Equal(identity.IdentityFromMeta, identity.Identity) {
 			return errors.Errorf("failed to inspect identity at index [%d]: identity does not match the identity form metadata", index)
 		}
 	}
+	// Use InfoMatcher to verify that AuditInfo corresponds to the Identity
 	if err := matcher.MatchIdentity(ctx, identity.Identity, identity.AuditInfo); err != nil {
 		return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 	}
@@ -276,8 +270,8 @@ func (a *Auditor) InspectIdentity(ctx context.Context, matcher InfoMatcher, iden
 	return nil
 }
 
-// GetAuditInfoForIssues returns an array of InspectableToken for each issue action
-// It takes a deserializer, an array of serialized issue actions and an array of issue metadata.
+// GetAuditInfoForIssues returns an array of InspectableToken for each issue action.
+// It takes an array of serialized issue actions and an array of issue metadata.
 func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver.IssueMetadata) ([][]*InspectableToken, []InspectableIdentity, error) {
 	if len(issues) != len(issueMetadata) {
 		return nil, nil, errors.Errorf("number of issues does not match number of provided metadata")
@@ -307,6 +301,7 @@ func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver
 			if ia.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
+			// Issue actions cannot redeem tokens
 			if ia.Outputs[i].IsRedeem() {
 				return nil, nil, errors.Errorf("issue cannot redeem tokens")
 			}
@@ -314,6 +309,7 @@ func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver
 				return nil, nil, errors.Errorf("issue must have at least one receiver")
 			}
 
+			// Create auditable token using the metadata provided in the request
 			outputs[k][i], err = NewInspectableToken(
 				ia.Outputs[i],
 				o.Receivers[0].AuditInfo,
@@ -336,7 +332,7 @@ func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver
 }
 
 // GetAuditInfoForTransfers returns an array of InspectableToken for each transfer action.
-// It takes a deserializer, an array of serialized transfer actions and an array of transfer metadata.
+// It takes an array of serialized transfer actions, an array of transfer metadata and input tokens.
 func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
@@ -350,6 +346,7 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 		if len(transferMetadata.Inputs) != len(inputs[k]) {
 			return nil, nil, errors.Errorf("number of inputs does not match the number of senders [%d]!=[%d]", len(transferMetadata.Inputs), len(inputs[k]))
 		}
+		// Process auditable inputs
 		auditableInputs[k] = make([]*InspectableToken, len(transferMetadata.Inputs))
 		for i := range len(transferMetadata.Inputs) {
 			var err error
@@ -359,6 +356,7 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			if transferMetadata.Inputs[i] == nil || len(transferMetadata.Inputs[i].Senders) == 0 || transferMetadata.Inputs[i].Senders[0] == nil {
 				return nil, nil, errors.Errorf("invalid metadata for input[%d][%d]", k, i)
 			}
+			// For inputs, we only need the audit info to identify the sender
 			auditableInputs[k][i], err = NewInspectableToken(inputs[k][i], transferMetadata.Inputs[i].Senders[0].AuditInfo, "", nil, nil)
 			if err != nil {
 				return nil, nil, err
@@ -372,6 +370,7 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 		if len(ta.Outputs) != len(transferMetadata.Outputs) {
 			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.Outputs), len(transferMetadata.Outputs))
 		}
+		// Process auditable outputs
 		outputs[k] = make([]*InspectableToken, len(ta.Outputs))
 		for i := range len(ta.Outputs) {
 			if ta.Outputs[i] == nil {
@@ -403,6 +402,7 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 	return auditableInputs, outputs, nil
 }
 
+// commit computes a Pedersen commitment for the given vector and generators.
 func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) *math.G1 {
 	com := c.NewG1()
 	for i := range vector {
