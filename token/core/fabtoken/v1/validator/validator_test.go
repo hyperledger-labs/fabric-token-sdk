@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
+	validator2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -153,7 +154,8 @@ func TestIssueValidate(t *testing.T) {
 		}
 		err := validator.IssueValidate(ctx, c)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "is not in issuers")
+		require.ErrorIs(t, err, validator2.ErrIssuerNotAuthorized)
+		assert.Contains(t, err.Error(), validator2.ErrIssuerNotAuthorized.Error())
 	})
 
 	t.Run("VerifierError", func(t *testing.T) {
