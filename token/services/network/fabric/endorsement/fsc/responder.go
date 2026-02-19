@@ -233,6 +233,7 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 
 	if len(signature) == 0 {
 		logger.DebugfContext(ctx.Context(), "Proposal signature is empty for TX [%s], skipping detailed validation", request.Anchor)
+
 		return nil
 	}
 
