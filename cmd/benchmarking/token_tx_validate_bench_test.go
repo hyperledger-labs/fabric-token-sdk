@@ -15,26 +15,30 @@ import (
 )
 
 var tokenTxCases = []struct {
-	numInputs  int
 	numOutputs int
 }{
-	// {1, 1},
-	// {1, 2},
-	{2, 2},
-	// {5, 5},
-	// {10, 10},
+	// { 1},
+	{2},
+	// { 5},
+	// { 10},
 }
 
 func BenchmarkTokenTxValidate(b *testing.B) {
 	for _, tc := range tokenTxCases {
-		name := fmt.Sprintf("in=%d/out=%d", tc.numInputs, tc.numOutputs)
+		name := fmt.Sprintf("out=%d", tc.numOutputs)
 		b.Run(name, func(b *testing.B) {
 			f := &TokenTxValidateViewFactory{}
-			p := &TokenTxValidateParams{NumInputs: tc.numInputs, NumOutputs: tc.numOutputs}
-			input, _ := json.Marshal(p)
+			p := &TokenTxValidateParams{NumOutputs: tc.numOutputs}
+			input, err := json.Marshal(p)
+			if err != nil {
+				b.Fatal(err)
+			}
 
 			b.RunParallel(func(pb *testing.PB) {
-				v, _ := f.NewView(input)
+				v, err := f.NewView(input)
+				if err != nil {
+					b.Fatal(err)
+				}
 				for pb.Next() {
 					_, _ = v.Call(nil)
 				}
@@ -46,10 +50,10 @@ func BenchmarkTokenTxValidate(b *testing.B) {
 
 func BenchmarkTokenTxValidate_wFactory(b *testing.B) {
 	for _, tc := range tokenTxCases {
-		name := fmt.Sprintf("in=%d/out=%d", tc.numInputs, tc.numOutputs)
+		name := fmt.Sprintf("out=%d", tc.numOutputs)
 		b.Run(name, func(b *testing.B) {
 			f := &TokenTxValidateViewFactory{}
-			p := &TokenTxValidateParams{NumInputs: tc.numInputs, NumOutputs: tc.numOutputs}
+			p := &TokenTxValidateParams{NumOutputs: tc.numOutputs}
 			input, _ := json.Marshal(p)
 
 			b.RunParallel(func(pb *testing.PB) {

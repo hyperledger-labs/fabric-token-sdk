@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	defaultNumInputs  = 1
 	deafultNumOutputs = 1
 	defaultBitLength  = 32
 	defaultTokenType  = "benchmark-token"
@@ -28,7 +27,6 @@ const (
 )
 
 type TokenTxValidateParams struct {
-	NumInputs  int    `json:"num_inputs"`
 	NumOutputs int    `json:"num_outputs"`
 	BitLength  uint64 `json:"bit_length,omitempty"`
 	TokenType  string `json:"token_type,omitempty"`
@@ -36,9 +34,6 @@ type TokenTxValidateParams struct {
 }
 
 func (t *TokenTxValidateParams) applyDefaults() {
-	if t.NumInputs <= 0 {
-		t.NumInputs = defaultNumInputs
-	}
 	if t.NumOutputs <= 0 {
 		t.NumOutputs = deafultNumOutputs
 	}
