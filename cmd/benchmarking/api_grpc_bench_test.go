@@ -30,7 +30,7 @@ func BenchmarkAPIGRPC(b *testing.B) {
 	// create server
 	n, err := node.SetupNode(nodeConfPath, node.NamedFactory{
 		Name:    "zkp",
-		Factory: &TokenTxValidateViewFactory{},
+		Factory: &TokenTxVerifyViewFactory{},
 	})
 	require.NoError(b, err)
 
