@@ -20,6 +20,7 @@ import (
 	idmock "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewDriver tests the creation of a new fabtoken driver.
@@ -70,22 +71,22 @@ func TestNewTokenService(t *testing.T) {
 
 	tmsID := tdriver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"}
 	pp, err := setup.NewWith(setup.FabTokenDriverName, setup.ProtocolV1, 64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pp.AddIssuer([]byte("issuer-1"))
 	pp.AddAuditor([]byte("auditor-1"))
 	ppBytes, err := pp.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Case 1: Empty public parameters
 	ts, err := d.NewTokenService(tmsID, nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, ts)
 	assert.Contains(t, err.Error(), "empty public parameters")
 
 	// Case 2: Failed getting network
 	networkProvider.GetNetworkReturns(nil, errors.New("network-error"))
 	ts, err = d.NewTokenService(tmsID, ppBytes)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, ts)
 	assert.Contains(t, err.Error(), "failed getting network [network-error]")
 
@@ -93,7 +94,7 @@ func TestNewTokenService(t *testing.T) {
 	networkProvider.GetNetworkReturns(&network.Network{}, nil)
 	vaultProvider.VaultReturns(nil, errors.New("vault-error"))
 	ts, err = d.NewTokenService(tmsID, ppBytes)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, ts)
 	assert.Contains(t, err.Error(), "failed getting vault [vault-error]")
 
@@ -101,14 +102,14 @@ func TestNewTokenService(t *testing.T) {
 	vaultProvider.VaultReturns(&dmock.Vault{}, nil)
 	configService.ConfigurationForReturns(nil, errors.New("config-error"))
 	ts, err = d.NewTokenService(tmsID, ppBytes)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, ts)
 	assert.Contains(t, err.Error(), "failed to get config for token service")
 
 	// Case 5: Failed to initialize public params manager (invalid bytes)
 	configService.ConfigurationForReturns(&dmock.Configuration{}, nil)
 	ts, err = d.NewTokenService(tmsID, []byte("invalid-pp"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, ts)
 	assert.Contains(t, err.Error(), "failed to initiliaze public params manager")
 
@@ -125,7 +126,7 @@ func TestNewTokenService(t *testing.T) {
 
 	storageProvider.IdentityStoreReturns(nil, errors.New("identity-store-error"))
 	ts, err = d.NewTokenService(tmsID, ppBytes)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, ts)
 	assert.Contains(t, err.Error(), "failed to initiliaze wallet service")
 
@@ -146,7 +147,7 @@ func TestNewTokenService(t *testing.T) {
 	configService.ConfigurationForReturns(config, nil)
 
 	ts, err = d.NewTokenService(tmsID, ppBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, ts)
 }
 
@@ -175,12 +176,12 @@ func TestNewDefaultValidator(t *testing.T) {
 
 	// Case 1: Valid public parameters
 	v, err := d.NewDefaultValidator(pp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, v)
 
 	// Case 2: Invalid public parameters type
 	v, err = d.NewDefaultValidator(&dmock.PublicParameters{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, v)
 	assert.Contains(t, err.Error(), "invalid public parameters type")
 }
@@ -190,15 +191,15 @@ func TestPublicParametersFromBytes(t *testing.T) {
 	d := &driver.Driver{}
 	pp, _ := setup.NewWith(setup.FabTokenDriverName, setup.ProtocolV1, 64)
 	ppBytes, err := pp.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	res, err := d.PublicParametersFromBytes(ppBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, uint64(64), res.Precision())
 
 	_, err = d.PublicParametersFromBytes([]byte("invalid"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal public parameters")
 }
 
@@ -208,17 +209,17 @@ func TestPPMFactory(t *testing.T) {
 	assert.Equal(t, core.DriverIdentifier(setup.FabTokenDriverName, setup.ProtocolV1), factory.Name)
 	assert.NotNil(t, factory.Driver)
 
-	ppmFactory := factory.Driver.(tdriver.PPMFactory)
+	ppmFactory := factory.Driver
 	pp, _ := setup.NewWith(setup.FabTokenDriverName, setup.ProtocolV1, 64)
 
 	// Success
 	ppm, err := ppmFactory.NewPublicParametersManager(pp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, ppm)
 
 	// Invalid type
 	_, err = ppmFactory.NewPublicParametersManager(&dmock.PublicParameters{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid public parameters type")
 }
 
@@ -229,7 +230,7 @@ func TestWalletServiceFactory(t *testing.T) {
 	assert.Equal(t, core.DriverIdentifier(setup.FabTokenDriverName, setup.ProtocolV1), factory.Name)
 	assert.NotNil(t, factory.Driver)
 
-	wsFactory := factory.Driver.(tdriver.WalletServiceFactory)
+	wsFactory := factory.Driver
 	tmsConfig := &dmock.Configuration{}
 	tmsConfig.IDReturns(tdriver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
 
@@ -247,27 +248,27 @@ func TestWalletServiceFactory(t *testing.T) {
 
 	// Success
 	ws, err := wsFactory.NewWalletService(tmsConfig, pp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, ws)
 
 	// Error path: IdentityStore failure
 	storageProvider.IdentityStoreReturns(nil, errors.New("identity store error"))
 	_, err = wsFactory.NewWalletService(tmsConfig, pp)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to open identity db")
 
 	// Error path: Keystore failure
 	storageProvider.IdentityStoreReturns(identityStore, nil)
 	storageProvider.KeystoreReturns(nil, errors.New("keystore error"))
 	_, err = wsFactory.NewWalletService(tmsConfig, pp)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to open keystore")
 
 	// Error path: WalletStore failure
 	storageProvider.KeystoreReturns(keystore, nil)
 	storageProvider.WalletStoreReturns(nil, errors.New("wallet store error"))
 	_, err = wsFactory.NewWalletService(tmsConfig, pp)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get identity storage provider")
 }
 
@@ -280,7 +281,7 @@ func TestDeserializers(t *testing.T) {
 	pp, _ := setup.NewWith(setup.FabTokenDriverName, setup.ProtocolV1, 64)
 	ppBytes, _ := pp.Serialize()
 	res, err := ppd.DeserializePublicParams(ppBytes, setup.FabTokenDriverName, setup.ProtocolV1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, res)
 
 	eidrh := driver.NewEIDRHDeserializer()

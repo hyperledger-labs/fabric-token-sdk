@@ -62,13 +62,13 @@ func TestNewService(t *testing.T) {
 	assert.Equal(t, tokensService, service.TokensService())
 	assert.Equal(t, tokensUpgradeService, service.TokensUpgradeService())
 	assert.Equal(t, authorization, service.Authorization())
-	
+
 	v, err := service.Validator()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, validator, v)
 
 	assert.Nil(t, service.CertificationService())
 
 	err = service.Done()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
