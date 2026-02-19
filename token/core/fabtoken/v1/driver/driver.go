@@ -21,7 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
-// Driver contains the non-static logic of the driver (including services)
+// Driver contains the non-static logic of the fabtoken driver (including services).
 type Driver struct {
 	*base
 	metricsProvider  cdriver.MetricsProvider
@@ -34,6 +34,7 @@ type Driver struct {
 	vaultProvider    cdriver.VaultProvider
 }
 
+// NewDriver returns a new factory for the fabtoken driver.
 func NewDriver(
 	metricsProvider cdriver.MetricsProvider,
 	tracerProvider cdriver.TracerProvider,
@@ -60,6 +61,7 @@ func NewDriver(
 	}
 }
 
+// NewTokenService returns a new fabtoken token manager service for the passed TMS ID and public parameters.
 func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
@@ -157,6 +159,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	return service, nil
 }
 
+// NewDefaultValidator returns a new fabtoken validator for the passed public parameters.
 func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
 	pp, ok := params.(*v1setup.PublicParams)
 	if !ok {

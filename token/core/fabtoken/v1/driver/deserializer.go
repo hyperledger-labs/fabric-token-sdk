@@ -17,12 +17,12 @@ import (
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
-// Deserializer deserializes verifiers associated with issuers, owners, and auditors
+// Deserializer deserializes verifiers associated with issuers, owners, and auditors for the fabtoken driver.
 type Deserializer struct {
 	*common.Deserializer
 }
 
-// NewDeserializer returns a deserializer
+// NewDeserializer returns a new deserializer for fabtoken.
 func NewDeserializer() *Deserializer {
 	des := deserializer.NewTypedVerifierDeserializerMultiplex()
 	des.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
@@ -32,16 +32,18 @@ func NewDeserializer() *Deserializer {
 	return &Deserializer{Deserializer: common.NewDeserializer(x509.IdentityType, des, des, des, des, des)}
 }
 
+// PublicParamsDeserializer deserializes fabtoken public parameters.
 type PublicParamsDeserializer struct{}
 
+// DeserializePublicParams deserializes the passed bytes into fabtoken public parameters.
 func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, name driver.TokenDriverName, version driver.TokenDriverVersion) (*v1.PublicParams, error) {
 	return v1.NewPublicParamsFromBytes(raw, name, version)
 }
 
-// EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token
+// EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token.
 type EIDRHDeserializer = deserializer.EIDRHDeserializer
 
-// NewEIDRHDeserializer returns an enrollmentService
+// NewEIDRHDeserializer returns a new EIDRHDeserializer for fabtoken.
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
