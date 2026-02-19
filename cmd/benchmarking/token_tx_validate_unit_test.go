@@ -18,7 +18,6 @@ func TestApplyDefaults_AllDefaultValues(t *testing.T) {
 	p := &TokenTxValidateParams{}
 	p.applyDefaults()
 
-	require.Equal(t, defaultNumInputs, p.NumInputs)
 	require.Equal(t, deafultNumOutputs, p.NumOutputs)
 	require.Equal(t, uint64(defaultBitLength), p.BitLength)
 	require.Equal(t, defaultTokenType, p.TokenType)
@@ -27,7 +26,6 @@ func TestApplyDefaults_AllDefaultValues(t *testing.T) {
 
 func TestApplyDefaults_PreservesExplicitValues(t *testing.T) {
 	p := &TokenTxValidateParams{
-		NumInputs:  5,
 		NumOutputs: 3,
 		BitLength:  64,
 		TokenType:  "my-token",
@@ -35,7 +33,6 @@ func TestApplyDefaults_PreservesExplicitValues(t *testing.T) {
 	}
 	p.applyDefaults()
 
-	require.Equal(t, 5, p.NumInputs)
 	require.Equal(t, 3, p.NumOutputs)
 	require.Equal(t, uint64(64), p.BitLength)
 	require.Equal(t, "my-token", p.TokenType)
@@ -43,10 +40,9 @@ func TestApplyDefaults_PreservesExplicitValues(t *testing.T) {
 }
 
 func TestApplyDefaults_NegativeInputsOutputs(t *testing.T) {
-	p := &TokenTxValidateParams{NumInputs: -1, NumOutputs: -5}
+	p := &TokenTxValidateParams{NumOutputs: -5}
 	p.applyDefaults()
 
-	require.Equal(t, defaultNumInputs, p.NumInputs)
 	require.Equal(t, deafultNumOutputs, p.NumOutputs)
 }
 
@@ -60,7 +56,6 @@ func TestNewView_DefaultParams(t *testing.T) {
 	require.NotNil(t, v)
 
 	tv := v.(*TokenTxValidateView)
-	require.Equal(t, defaultNumInputs, tv.params.NumInputs)
 	require.Equal(t, deafultNumOutputs, tv.params.NumOutputs)
 	require.Equal(t, uint64(defaultBitLength), tv.params.BitLength)
 	require.Equal(t, defaultTokenType, tv.params.TokenType)
@@ -72,7 +67,6 @@ func TestNewView_DefaultParams(t *testing.T) {
 func TestNewView_CustomParams(t *testing.T) {
 	factory := &TokenTxValidateViewFactory{}
 	p := &TokenTxValidateParams{
-		NumInputs:  2,
 		NumOutputs: 3,
 		BitLength:  64,
 		TokenType:  "gold",
@@ -86,7 +80,6 @@ func TestNewView_CustomParams(t *testing.T) {
 	require.NotNil(t, v)
 
 	tv := v.(*TokenTxValidateView)
-	require.Equal(t, 2, tv.params.NumInputs)
 	require.Equal(t, 3, tv.params.NumOutputs)
 	require.Equal(t, uint64(64), tv.params.BitLength)
 	require.Equal(t, "gold", tv.params.TokenType)
@@ -178,7 +171,6 @@ func TestNewView_MultipleOutputCounts(t *testing.T) {
 
 func TestParamsJSON_RoundTrip(t *testing.T) {
 	original := &TokenTxValidateParams{
-		NumInputs:  3,
 		NumOutputs: 5,
 		BitLength:  64,
 		TokenType:  "silver",
