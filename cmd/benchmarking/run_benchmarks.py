@@ -243,7 +243,7 @@ def run_and_parse_parallel_metrics(benchName, params, cpu=1, curve="BLS12_381_BB
     global timeout
     global output_folder_path
 
-    cmd = f"go test {folder} -test.run={benchName} -test.v -test.timeout {timeout} -bits='32' -num_inputs='2' -num_outputs='2' -cpu={cpu} -workers='NumCPU' -curves={curve} -duration='10s' -setup_samples=128 {params}"
+    cmd = f"go test {folder} -test.run={benchName} -test.v -test.timeout {timeout} -bits='32' -num_inputs='2' -num_outputs='2' -cpu={cpu} -workers={cpu} -curves={curve} -duration='60s' -setup_samples=128 {params}"
     print(f"{I} Running: {cmd}")
     I = I+1
 
@@ -318,19 +318,20 @@ output_folder_path = os.path.join(".", output_folder_name)
 os.makedirs(output_folder_path, exist_ok=True)
 
 non_parallel_tests = [
-    # ('BenchmarkSender', "-num_inputs 1,2,3 -num_outputs 1,2,3 ", ""), 
+    ('BenchmarkValidatorTransfer', "-num_inputs 1,2 -num_outputs 1,2,3 -bits 32,64", validator_benchmarks_folder),
+    ('BenchmarkSender', "-num_inputs 1,2,3 -num_outputs 1,2,3 ", ""), 
     ('BenchmarkVerificationSenderProof', "-num_inputs 1,2,3 -num_outputs 1,2,3 -bits 32,64", ""),
-    # ('BenchmarkTransferProofGeneration', "", ""), 
-    # ('BenchmarkIssuer', "", issuer_benchmarks_folder), 
-    # ('BenchmarkProofVerificationIssuer', "", issuer_benchmarks_folder), 
-    # ('BenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
+    ('BenchmarkTransferProofGeneration', "", ""), 
+    ('BenchmarkIssuer', "", issuer_benchmarks_folder), 
+    ('BenchmarkProofVerificationIssuer', "", issuer_benchmarks_folder), 
+    ('BenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
 ]
 parallel_tests = [
-    # ('TestParallelBenchmarkSender', "", ""), 
+    ('TestParallelBenchmarkValidatorTransfer', "", validator_benchmarks_folder), 
+    ('TestParallelBenchmarkSender', "", ""), 
     ('TestParallelBenchmarkVerificationSenderProof', "", ""),
-    # ('TestParallelBenchmarkTransferProofGeneration', "", ""),
-    # ('TestParallelBenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
-    # ('TestParallelBenchmarkValidatorTransfer', "", validator_benchmarks_folder), 
+    ('TestParallelBenchmarkTransferProofGeneration', "", ""),
+    ('TestParallelBenchmarkTransferServiceTransfer', "", v1_benchmarks_folder), 
 ]
 
 results = {}
