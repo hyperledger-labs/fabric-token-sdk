@@ -27,6 +27,7 @@ import (
 // To run this command, first make sure to install the tokengen tool. To do that run `make tokengen`.
 //go:generate tokengen gen zkatdlognogh.v1 --idemix "./testdata/idemix" --issuers "./testdata/issuers/msp" --auditors "./testdata/auditors/msp" --output "./testdata"
 
+// TestCompile checks if the tokengen tool can be compiled.
 func TestCompile(t *testing.T) {
 	gt := NewGomegaWithT(t)
 	_, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
@@ -34,6 +35,7 @@ func TestCompile(t *testing.T) {
 	defer gexec.CleanupBuildArtifacts()
 }
 
+// TestGenFullSuccess tests the generation of public parameters with all options.
 func TestGenFullSuccess(t *testing.T) {
 	gt := NewGomegaWithT(t)
 	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
@@ -75,6 +77,7 @@ func TestGenFullSuccess(t *testing.T) {
 	)
 }
 
+// TestGenFullSuccessWithVersionOverrideAndNewExtras tests the generation of public parameters with version override and extra parameters.
 func TestGenFullSuccessWithVersionOverrideAndNewExtras(t *testing.T) {
 	gt := NewGomegaWithT(t)
 	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
@@ -118,6 +121,7 @@ func TestGenFullSuccessWithVersionOverrideAndNewExtras(t *testing.T) {
 	)
 }
 
+// TestFullUpdate tests the full update of public parameters.
 func TestFullUpdate(t *testing.T) {
 	gt := NewWithT(t)
 	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
@@ -160,6 +164,7 @@ func TestFullUpdate(t *testing.T) {
 	)
 }
 
+// TestPartialUpdate tests the partial update of public parameters.
 func TestPartialUpdate(t *testing.T) {
 	gt := NewWithT(t)
 	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
@@ -197,6 +202,7 @@ func TestPartialUpdate(t *testing.T) {
 	)
 }
 
+// TestPartialUpdateWithVersion tests the partial update of public parameters with version override.
 func TestPartialUpdateWithVersion(t *testing.T) {
 	gt := NewWithT(t)
 	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
@@ -236,6 +242,7 @@ func TestPartialUpdateWithVersion(t *testing.T) {
 	)
 }
 
+// TestGenFailure tests the failure cases for generating public parameters.
 func TestGenFailure(t *testing.T) {
 	gt := NewGomegaWithT(t)
 	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
@@ -311,6 +318,7 @@ func TestGenFailure(t *testing.T) {
 	}
 }
 
+// validateOutputEquivalent validates that the generated public parameters are equivalent to the expected ones.
 func validateOutputEquivalent(
 	gt *WithT,
 	tempOutput, auditorsMSPdir, issuersMSPdir, idemixMSPdir string,
@@ -351,12 +359,14 @@ func validateOutputEquivalent(
 	}
 }
 
+// testGenRunWithError runs the tokengen command and expects an error.
 func testGenRunWithError(gt *WithT, tokengen string, args []string, errMsg string) {
 	b, err := exec.Command(tokengen, args...).CombinedOutput()
 	gt.Expect(err).To(HaveOccurred())
 	gt.Expect(string(b)).To(ContainSubstring(errMsg))
 }
 
+// testGenRun runs the tokengen command and expects no error.
 func testGenRun(gt *WithT, tokengen string, args []string) {
 	output, err := exec.Command(tokengen, args...).CombinedOutput()
 	gt.Expect(err).ToNot(HaveOccurred(), "failed running tokengen [%s:%v] with output \n[%s]", tokengen, args, string(output))

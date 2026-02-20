@@ -19,38 +19,46 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var driver string
+var driverName string
 var ppPath string
 var output string
+var ppmFactoryService *driver2.PPManagerFactoryService
 
-// KeyPairGenCmd returns the Cobra Command for the Certifier KeyGen
+func getPPMManagerFactoryService() *driver2.PPManagerFactoryService {
+	if ppmFactoryService != nil {
+		return ppmFactoryService
+	}
+
+	return driver2.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlogdriver.NewPPMFactory())
+}
+
+// KeyPairGenCmd returns the Cobra Command for generating a Token Certifier Key Pair.
 func KeyPairGenCmd() *cobra.Command {
+	var cobraCommand = &cobra.Command{
+		Use:   "certifier-keygen",
+		Short: "Gen Token Certifier Key Pair.",
+		Long:  `Gen Token Certifier Key Pair.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				return errors.New("trailing args detected")
+			}
+			// Parsing of the command line is done so silence cmd usage
+			cmd.SilenceUsage = true
+
+			return keyPairGen()
+		},
+	}
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
-	flags.StringVarP(&driver, "driver", "d", zkatdlognoghv1.DriverIdentifier, "driver (dlog)")
+	flags.StringVarP(&driverName, "driver", "d", zkatdlognoghv1.DriverIdentifier, "driver (dlog)")
 	flags.StringVarP(&ppPath, "pppath", "p", "", "path to the public parameters file")
 	flags.StringVarP(&output, "output", "o", ".", "output folder")
 
 	return cobraCommand
 }
 
-var cobraCommand = &cobra.Command{
-	Use:   "certifier-keygen",
-	Short: "Gen Token Certifier Key Pair.",
-	Long:  `Gen Token Certifier Key Pair.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 0 {
-			return errors.New("trailing args detected")
-		}
-		// Parsing of the command line is done so silence cmd usage
-		cmd.SilenceUsage = true
-
-		return keyPairGen(args)
-	},
-}
-
-// keyPairGen
-func keyPairGen(args []string) error {
+// keyPairGen generates a certifier key-pair.
+func keyPairGen() error {
 	// TODO:
 	// 1. load public parameters from ppPath
 	fmt.Printf("Read public parameters from file [%s]...\n", ppPath)
@@ -58,7 +66,7 @@ func keyPairGen(args []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed reading public parameters from [%s]", ppPath)
 	}
-	s := driver2.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlogdriver.NewPPMFactory())
+	s := getPPMManagerFactoryService()
 	pp, err := s.PublicParametersFromBytes(ppRaw)
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters loaded from [%s], len [%d]", ppPath, len(ppRaw))

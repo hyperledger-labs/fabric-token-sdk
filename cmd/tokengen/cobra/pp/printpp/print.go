@@ -18,16 +18,17 @@ import (
 )
 
 var (
-	// InputFile is the file that contains the public parameters
+	// InputFile is the file that contains the public parameters.
 	InputFile string
 )
 
+// Args defines the arguments for the public parameters inspector.
 type Args struct {
-	// InputFile is the file that contains the public parameters
+	// InputFile is the file that contains the public parameters.
 	InputFile string
 }
 
-// Cmd returns the Cobra Command for Version
+// Cmd returns the Cobra Command for inspecting public parameters.
 func Cmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
@@ -57,7 +58,7 @@ var cobraCommand = &cobra.Command{
 	},
 }
 
-// Print prints the public parameters
+// Print prints the public parameters in a human-readable format.
 func Print(args *Args) error {
 	raw, err := os.ReadFile(args.InputFile)
 	if err != nil {
