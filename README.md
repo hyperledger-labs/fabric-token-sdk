@@ -3,6 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/hyperledger-labs/fabric-token-sdk)](https://goreportcard.com/badge/github.com/hyperledger-labs/fabric-token-sdk)
 [![Go](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/go.yml)
 [![CodeQL](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/codeql-analysis.yml)
+[![Coverage Status](https://coveralls.io/repos/github/hyperledger-labs/fabric-token-sdk/badge.svg?branch=main)](https://coveralls.io/github/hyperledger-labs/fabric-token-sdk?branch=main)
 
 The `Fabric Token SDK` provides a collection of APIs and services that streamline development for token-based distributed applications.
 
