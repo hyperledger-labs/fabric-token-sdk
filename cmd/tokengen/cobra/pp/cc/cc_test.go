@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package cc
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestGeneratePackage tests the GeneratePackage function.
