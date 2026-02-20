@@ -70,12 +70,16 @@ jobs:
         run: make testing-docker-images
 
       - name: Unit Tests with Coverage
-        run: make unit-tests
+        run: |
+          make unit-tests
+          ./ci/scripts/filter-coverage.sh profile.cov profile.cov
 
       - name: Send coverage to Coveralls
         uses: shogo82148/actions-goveralls@v1
         with:
           path-to-profile: profile.cov
+          flag-name: utest-${{ matrix.tests }}
+          parallel: true
 
       - name: Run ${{ matrix.tests }}
         run: make ${{ matrix.tests }}
@@ -165,4 +169,24 @@ jobs:
           make fxconfig configtxgen fabricx-docker-images
 
       - name: Run ${{ matrix.tests }}
-        run: make integration-tests-${{ matrix.tests }}
+        run: |
+          mkdir -p covdata
+          GOCOVERDIR=$(realpath covdata) make integration-tests-${{ matrix.tests }}
+          go tool covdata textfmt -i=covdata -o coverage.profile
+          ./ci/scripts/filter-coverage.sh coverage.profile coverage.profile
+
+      - name: Send coverage to Coveralls
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: coverage.profile
+          flag-name: itest-${{ matrix.tests }}
+          parallel: true
+
+  publish-coverage:
+    needs: [ utest, itest ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finish coverage report
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          parallel-finished: true
