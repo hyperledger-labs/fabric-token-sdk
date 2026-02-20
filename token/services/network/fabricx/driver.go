@@ -77,11 +77,6 @@ func NewDriver(
 		return nil, errors.Wrapf(err, "failed creating event queue")
 	}
 
-	flmProvider, err := finality2.NewNotificationServiceBased(queryServiceProvider, finalityProvider, q)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed initializing finality provider")
-	}
-
 	d := &Driver{
 		fnsProvider:                fnsProvider,
 		tokensManager:              tokensManager,
@@ -94,12 +89,14 @@ func NewDriver(
 		defaultPublicParamsFetcher: ppFetcher,
 		queryExecutorProvider:      queryExecutorProvider,
 		keyTranslator:              kt,
-		flmProvider:                flmProvider,
-		llmProvider: lookup2.NewListenerManagerProvider(
-			fnsProvider,
-			tracerProvider,
-			kt,
-			config3.NewListenerManagerConfig(configService),
+		flmProvider: finality2.NewNotificationServiceBased(
+			queryServiceProvider,
+			finalityProvider,
+			q,
+		),
+		llmProvider: lookup2.NewCronNSListenerManagerProvider(
+			queryServiceProvider,
+			lookup2.NewConfig(configService),
 		),
 		EndorsementServiceProvider: endorsement.NewServiceProvider(
 			configs,

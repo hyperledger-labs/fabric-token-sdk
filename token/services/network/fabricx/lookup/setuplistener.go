@@ -37,6 +37,7 @@ type setupListenerProvider struct {
 }
 
 // GetListener returns a new listener for the given TMS ID.
+// The listener will update the version keeper when a status change is notified.
 func (p *setupListenerProvider) GetListener(tmsID token.TMSID) lookup.Listener {
 	return &setupListener{
 		Listener: p.lp.GetListener(tmsID),
@@ -44,12 +45,14 @@ func (p *setupListenerProvider) GetListener(tmsID token.TMSID) lookup.Listener {
 	}
 }
 
+// setupListener models a setup listener that updates a version keeper.
 type setupListener struct {
 	lookup.Listener
 	vk *pp.VersionKeeper
 }
 
 // OnStatus notifies the listener of a status change.
+// It also updates the version keeper.
 func (l *setupListener) OnStatus(ctx context.Context, key driver.PKey, value []byte) {
 	l.Listener.OnStatus(ctx, key, value)
 	l.vk.UpdateVersion()
