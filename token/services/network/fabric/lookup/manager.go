@@ -39,6 +39,8 @@ func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvi
 			LRUSize:                 lmConfig.DeliveryLRUSize(),
 			LRUBuffer:               lmConfig.DeliveryLRUBuffer(),
 		})
+	case config.Notification:
+		return nil
 	}
 	panic("unknown config type: " + lmConfig.Type())
 }
