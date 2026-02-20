@@ -72,6 +72,8 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	assert.NotNil(tms, "failed to get TMS")
 	assert.NotNil(tms.PublicParametersManager().PublicParameters(), "failed to validate local public parameters")
 
+	logger.Infof("check public parameters match [%s]", p.TMSID)
+
 	fetchedPPRaw, err := network.GetInstance(context, tms.Network(), tms.Channel()).FetchPublicParameters(tms.Namespace())
 	assert.NoError(err, "failed to fetch public params")
 	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
@@ -80,6 +82,12 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	assert.NotNil(pp)
 	assert.NoError(pp.Validate())
 	fetchedPPRawHash := token.PPHash(utils.Hashable(fetchedPPRaw).Raw())
+
+	logger.Infof("public params comparison [%s]!=[%s]",
+		logging.Base64(fetchedPPRawHash),
+		logging.Base64(tms.PublicParametersManager().PublicParamsHash()),
+	)
+
 	assert.Equal(
 		fetchedPPRawHash,
 		tms.PublicParametersManager().PublicParamsHash(),

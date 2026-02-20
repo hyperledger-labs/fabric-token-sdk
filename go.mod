@@ -11,6 +11,7 @@ require (
 	github.com/IBM/mathlib v0.0.3-0.20260204160318-5a4d1a385dfa
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/gin-gonic/gin v1.11.0
+	github.com/go-co-op/gocron/v2 v2.19.1
 	github.com/google/pprof v0.0.0-20260202012954-cb029daf43ef
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hyperledger-labs/fabric-smart-client v0.8.3-0.20260219175226-8f512e10d1a0
@@ -145,6 +146,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jaegertracing/jaeger-idl v0.6.0 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
+	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
@@ -231,6 +233,7 @@ require (
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/quic-go/webtransport-go v0.10.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
