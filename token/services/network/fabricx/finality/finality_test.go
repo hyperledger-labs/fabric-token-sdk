@@ -523,8 +523,7 @@ func TestNSListenerManagerProvider_NewManager(t *testing.T) {
 	mockQSP.GetReturns(mockQS, nil)
 
 	mockQueue := &mock.Queue{}
-	provider, err := finality.NewNotificationServiceBased(mockQSP, mockLMP, mockQueue)
-	require.NoError(t, err)
+	provider := finality.NewNotificationServiceBased(mockQSP, mockLMP, mockQueue)
 	require.NotNil(t, provider)
 
 	manager, err := provider.NewManager(network, channel)
@@ -552,8 +551,7 @@ func TestNSListenerManagerProvider_NewManager_ListenerManagerError(t *testing.T)
 	mockLMP.NewManagerReturns(nil, errors.New("listener manager creation failed"))
 
 	mockQueue := &mock.Queue{}
-	provider, err := finality.NewNotificationServiceBased(mockQSP, mockLMP, mockQueue)
-	require.NoError(t, err)
+	provider := finality.NewNotificationServiceBased(mockQSP, mockLMP, mockQueue)
 
 	manager, err := provider.NewManager(network, channel)
 	require.Error(t, err)
@@ -574,8 +572,7 @@ func TestNSListenerManagerProvider_NewManager_QueryServiceError(t *testing.T) {
 	mockQSP.GetReturns(nil, errors.New("query service retrieval failed"))
 
 	mockQueue := &mock.Queue{}
-	provider, err := finality.NewNotificationServiceBased(mockQSP, mockLMP, mockQueue)
-	require.NoError(t, err)
+	provider := finality.NewNotificationServiceBased(mockQSP, mockLMP, mockQueue)
 
 	manager, err := provider.NewManager(network, channel)
 	require.Error(t, err)
