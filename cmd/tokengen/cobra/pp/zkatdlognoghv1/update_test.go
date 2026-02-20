@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestUpdateCmd tests the UpdateCmd function.
 func TestUpdateCmd(t *testing.T) {
 	cmd := UpdateCmd()
 	assert.NotNil(t, cmd)
@@ -27,6 +28,7 @@ func TestUpdateCmd(t *testing.T) {
 	})
 }
 
+// TestUpdate tests the Update function.
 func TestUpdate(t *testing.T) {
 	wd, _ := os.Getwd()
 	testdataPath := filepath.Join(wd, "..", "..", "..", "testdata", "zkatdlognoghv1_pp.json")
@@ -79,6 +81,7 @@ func TestUpdate(t *testing.T) {
 	})
 }
 
+// generateUpdateTestCertificate generates a test certificate for update tests.
 func generateUpdateTestCertificate(t *testing.T) []byte {
 	t.Helper()
 	// Simple PEM certificate for testing

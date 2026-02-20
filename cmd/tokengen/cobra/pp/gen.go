@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// GenCmd returns the Cobra Command for Public Params Generation
+// GenCmd returns the Cobra Command for Public Parameters Generation.
 func GenCmd() *cobra.Command {
 	genCobraCommand.AddCommand(fabtokenv1.Cmd())
 	genCobraCommand.AddCommand(zkatdlognoghv1.Cmd())

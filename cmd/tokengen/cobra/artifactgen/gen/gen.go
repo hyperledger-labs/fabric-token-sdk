@@ -19,14 +19,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Topology represents a topology.
 type Topology struct {
 	Type string `yaml:"type,omitempty"`
 }
 
+// Topologies represents a list of topologies.
 type Topologies struct {
 	Topologies []Topology `yaml:"topologies,omitempty"`
 }
 
+// T represents a list of topologies.
 type T struct {
 	Topologies []interface{} `yaml:"topologies,omitempty"`
 }
@@ -35,7 +38,7 @@ var topologyFile string
 var output string
 var port int
 
-// Cmd returns the Cobra Command for Version
+// Cmd returns the Cobra Command for generating artifacts.
 func Cmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
@@ -85,6 +88,7 @@ func gen(args []string) error {
 	return nil
 }
 
+// LoadTopologies loads topologies from the given raw byte slice.
 func LoadTopologies(raw []byte) ([]api.Topology, error) {
 	names := &Topologies{}
 	if err := yaml.Unmarshal(raw, names); err != nil {

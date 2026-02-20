@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestLoadIssuerPublicKey tests the LoadIssuerPublicKey function.
 func TestLoadIssuerPublicKey(t *testing.T) {
 	tempDir := t.TempDir()
 

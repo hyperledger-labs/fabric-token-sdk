@@ -23,7 +23,7 @@ var driver string
 var ppPath string
 var output string
 
-// KeyPairGenCmd returns the Cobra Command for the Certifier KeyGen
+// KeyPairGenCmd returns the Cobra Command for generating a Token Certifier Key Pair.
 func KeyPairGenCmd() *cobra.Command {
 	var cobraCommand = &cobra.Command{
 		Use:   "certifier-keygen",
@@ -48,7 +48,7 @@ func KeyPairGenCmd() *cobra.Command {
 	return cobraCommand
 }
 
-// keyPairGen
+// keyPairGen generates a certifier key-pair.
 func keyPairGen() error {
 	// TODO:
 	// 1. load public parameters from ppPath

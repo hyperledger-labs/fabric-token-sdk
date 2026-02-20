@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestCmd tests the Cmd function.
 func TestCmd(t *testing.T) {
 	cmd := Cmd()
 	assert.NotNil(t, cmd)
@@ -60,6 +61,7 @@ func TestCmd(t *testing.T) {
 	})
 }
 
+// TestPrint tests the Print function.
 func TestPrint(t *testing.T) {
 	wd, _ := os.Getwd()
 	testdataPath := filepath.Join(wd, "..", "..", "..", "testdata", "zkatdlognoghv1_pp.json")

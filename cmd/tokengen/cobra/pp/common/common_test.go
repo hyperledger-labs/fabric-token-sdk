@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// generateTestCertificate generates a test certificate for common tests.
 func generateTestCertificate(t *testing.T) []byte {
 	t.Helper()
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -57,6 +58,7 @@ func generateTestCertificate(t *testing.T) []byte {
 	return out.Bytes()
 }
 
+// TestLoadExtras tests the LoadExtras function.
 func TestLoadExtras(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir := t.TempDir()
@@ -221,6 +223,7 @@ func TestLoadExtras(t *testing.T) {
 	})
 }
 
+// TestReadSingleCertificateFromFile tests the ReadSingleCertificateFromFile function.
 func TestReadSingleCertificateFromFile(t *testing.T) {
 	tempDir := t.TempDir()
 	certPath := filepath.Join(tempDir, "test.crt")
@@ -277,6 +280,7 @@ func TestReadSingleCertificateFromFile(t *testing.T) {
 	})
 }
 
+// TestGetCertificatesFromDir tests the GetCertificatesFromDir function.
 func TestGetCertificatesFromDir(t *testing.T) {
 	tempDir := t.TempDir()
 	certContent := generateTestCertificate(t)
@@ -350,19 +354,23 @@ func TestGetCertificatesFromDir(t *testing.T) {
 	})
 }
 
+// mockPP is a mock implementation of Public Parameters.
 type mockPP struct {
 	Auditors []driver.Identity
 	Issuers  []driver.Identity
 }
 
+// AddAuditor adds an auditor identity to the mock.
 func (m *mockPP) AddAuditor(raw driver.Identity) {
 	m.Auditors = append(m.Auditors, raw)
 }
 
+// AddIssuer adds an issuer identity to the mock.
 func (m *mockPP) AddIssuer(raw driver.Identity) {
 	m.Issuers = append(m.Issuers, raw)
 }
 
+// TestGetX509Identity tests the GetX509Identity function.
 func TestGetX509Identity(t *testing.T) {
 	tempDir := t.TempDir()
 	certContent := generateTestCertificate(t)
@@ -412,6 +420,7 @@ func TestGetX509Identity(t *testing.T) {
 	})
 }
 
+// TestSetupIssuersAndAuditors tests the SetupIssuersAndAuditors function.
 func TestSetupIssuersAndAuditors(t *testing.T) {
 	tempDir := t.TempDir()
 	certContent := generateTestCertificate(t)

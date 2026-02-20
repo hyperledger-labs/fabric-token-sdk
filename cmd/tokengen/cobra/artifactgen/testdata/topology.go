@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 )
 
+// Topology returns a list of topologies for testing.
 func Topology(tokenSDKDriver string, sdks ...node.SDK) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()

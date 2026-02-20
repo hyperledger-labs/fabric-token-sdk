@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestWriteTopologies tests the WriteTopologies function.
 func TestWriteTopologies(t *testing.T) {
 	tempDir := t.TempDir()
 	fileName := filepath.Join(tempDir, "topologies.yaml")

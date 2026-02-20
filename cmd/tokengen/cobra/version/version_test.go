@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestGetInfo tests the GetInfo function.
 func TestGetInfo(t *testing.T) {
 	info := GetInfo()
 	assert.Contains(t, info, ProgramName)
@@ -22,6 +23,7 @@ func TestGetInfo(t *testing.T) {
 	assert.Contains(t, info, "OS/Arch:")
 }
 
+// TestCmd tests the Cmd function.
 func TestCmd(t *testing.T) {
 	cmd := Cmd()
 	assert.NotNil(t, cmd)

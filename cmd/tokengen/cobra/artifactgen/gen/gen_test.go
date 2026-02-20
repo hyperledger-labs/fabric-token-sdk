@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestCmd tests the Cmd function.
 func TestCmd(t *testing.T) {
 	cmd := Cmd()
 	assert.NotNil(t, cmd)
@@ -28,6 +29,7 @@ func TestCmd(t *testing.T) {
 	})
 }
 
+// TestGen tests the gen function and LoadTopologies.
 func TestGen(t *testing.T) {
 	tempDir := t.TempDir()
 

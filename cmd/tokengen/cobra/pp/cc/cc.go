@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
-// GeneratePackage generates the chaincode package for the given raw public parameters
+// GeneratePackage generates the chaincode package for the given raw public parameters.
 func GeneratePackage(raw []byte, outputDir string) error {
 	t, err := template.New("node").Funcs(template.FuncMap{
 		"Params": func() string { return base64.StdEncoding.EncodeToString(raw) },

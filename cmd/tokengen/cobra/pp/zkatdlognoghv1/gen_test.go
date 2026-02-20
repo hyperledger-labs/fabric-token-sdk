@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestCmd tests the Cmd function.
 func TestCmd(t *testing.T) {
 	cmd := Cmd()
 	assert.NotNil(t, cmd)
@@ -27,9 +28,10 @@ func TestCmd(t *testing.T) {
 	})
 }
 
+// TestGen tests the Gen function.
 func TestGen(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	// Create dummy Idemix Issuer Public Key
 	idemixDir := filepath.Join(tempDir, "idemix")
 	err := os.MkdirAll(filepath.Join(idemixDir, "msp"), 0750)
@@ -114,6 +116,7 @@ func TestGen(t *testing.T) {
 	})
 }
 
+// generateZKATTestCertificate generates a test certificate.
 func generateZKATTestCertificate(t *testing.T) []byte {
 	t.Helper()
 

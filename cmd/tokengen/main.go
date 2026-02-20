@@ -18,18 +18,22 @@ import (
 	"github.com/spf13/viper"
 )
 
+// CmdRoot is the prefix for environment variables.
 const CmdRoot = "core"
 
-// The main command describes the service and
+// mainCmd describes the service and
 // defaults to printing the help message.
 var mainCmd = &cobra.Command{Use: "tokengen"}
 
+// main is the entry point for the tokengen command.
 func main() {
 	if err := Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the mainCmd.
 func Execute() error {
 	// For environment variables.
 	viper.SetEnvPrefix(CmdRoot)

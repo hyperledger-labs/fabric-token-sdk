@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// GeneratorArgs defines the arguments for the public parameters generator.
 type GeneratorArgs struct {
 	// IdemixMSPDir is the directory containing the Idemix MSP config (Issuer Key Pair)
 	IdemixMSPDir string
@@ -63,7 +64,7 @@ var (
 	Extras []string
 )
 
-// Cmd returns the Cobra Command for Version
+// Cmd returns the Cobra Command for ZKAT DLog public parameters generation.
 func Cmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
@@ -117,7 +118,7 @@ var cobraCommand = &cobra.Command{
 	},
 }
 
-// Gen generates the public parameters for the ZKATDLog driver
+// Gen generates the public parameters for the ZKATDLog driver.
 func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Load Idemix Issuer Public Key
 	_, ipkBytes, err := idemix.LoadIssuerPublicKey(args.IdemixMSPDir)

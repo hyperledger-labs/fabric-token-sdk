@@ -15,12 +15,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestKeyPairGenCmd tests the KeyPairGenCmd function.
 func TestKeyPairGenCmd(t *testing.T) {
 	cmd := KeyPairGenCmd()
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "certifier-keygen", cmd.Use)
 }
 
+// TestKeyPairGen tests the keyPairGen function.
 func TestKeyPairGen(t *testing.T) {
 	wd, _ := os.Getwd()
 	testdataPath := filepath.Join(wd, "..", "..", "testdata", "zkatdlognoghv1_pp.json")
@@ -53,6 +55,7 @@ func TestKeyPairGen(t *testing.T) {
 	})
 }
 
+// TestCobraCommand tests the Cobra command for generating certifier key pairs.
 func TestCobraCommand(t *testing.T) {
 	wd, _ := os.Getwd()
 	testdataPath := filepath.Join(wd, "..", "..", "testdata", "zkatdlognoghv1_pp.json")

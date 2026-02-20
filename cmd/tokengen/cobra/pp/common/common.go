@@ -23,15 +23,16 @@ const (
 	signcerts = "signcerts"
 )
 
-// PP defines an interface shared by all public parameters
+// PP defines an interface shared by all public parameters.
 type PP interface {
-	// AddAuditor adds an auditor to the public parameters
+	// AddAuditor adds an auditor to the public parameters.
 	AddAuditor(raw driver.Identity)
-	// AddIssuer adds an issuer to the public parameters
+	// AddIssuer adds an issuer to the public parameters.
 	AddIssuer(raw driver.Identity)
 }
 
-// GetX509Identity returns the x509 identity from the passed entry.
+// GetX509Identity returns the x509 identity from the passed entry directory.
+// It expects to find certificates in a 'signcerts' subdirectory within the entry directory.
 func GetX509Identity(entry string) (driver.Identity, error) {
 	// read certificate from entries[0]/signcerts
 	signcertDir := filepath.Join(entry, signcerts)
@@ -51,7 +52,8 @@ func GetX509Identity(entry string) (driver.Identity, error) {
 	return wrap, nil
 }
 
-// SetupIssuersAndAuditors sets up the issuers and auditors for the given public parameters
+// SetupIssuersAndAuditors sets up the issuers and auditors for the given public parameters.
+// It takes a list of directory paths for auditors and issuers.
 func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 	// Auditors
 	for _, auditor := range Auditors {

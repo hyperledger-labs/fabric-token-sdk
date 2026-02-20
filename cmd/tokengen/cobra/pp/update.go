@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// UpdateCmd returns the Cobra Command for updating the config file
+// UpdateCmd returns the Cobra Command for updating certificates in the public parameters file.
 func UpdateCmd() *cobra.Command {
 	// not implemented for fabtoken
 	updateCobraCommand.AddCommand(zkatdlognoghv1.UpdateCmd())

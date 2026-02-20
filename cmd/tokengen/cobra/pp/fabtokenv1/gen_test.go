@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestCmd tests the Cmd function.
 func TestCmd(t *testing.T) {
 	cmd := Cmd()
 	assert.NotNil(t, cmd)
@@ -27,6 +28,7 @@ func TestCmd(t *testing.T) {
 	})
 }
 
+// TestGen tests the Gen function.
 func TestGen(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -97,6 +99,7 @@ func TestGen(t *testing.T) {
 	})
 }
 
+// generateFabTestCertificate generates a test certificate for FabToken tests.
 func generateFabTestCertificate(t *testing.T) []byte {
 	t.Helper()
 	// Simple PEM certificate for testing
