@@ -15,9 +15,12 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/vault/queryservice"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality/queue"
 )
+
+var logger = logging.MustGetLogger()
 
 // QueryService models the FabricX query service needed by the NSListenerManager
 //
@@ -159,7 +162,7 @@ type NSListenerManagerProvider struct {
 }
 
 // NewQueryServiceBased creates a new NSListenerManagerProvider
-func NewQueryServiceBased(queryServiceProvider QueryServiceProvider, queue Queue, ) lookup.ListenerManagerProvider {
+func NewQueryServiceBased(queryServiceProvider QueryServiceProvider, queue Queue) lookup.ListenerManagerProvider {
 	return &NSListenerManagerProvider{
 		QueryServiceProvider: queryServiceProvider,
 		queue:                queue,
