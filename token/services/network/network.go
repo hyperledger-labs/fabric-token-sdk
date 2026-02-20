@@ -138,6 +138,10 @@ type LocalMembership struct {
 	lm driver.LocalMembership
 }
 
+func NewLocalMembership(lm driver.LocalMembership) *LocalMembership {
+	return &LocalMembership{lm: lm}
+}
+
 func (l *LocalMembership) DefaultIdentity() view.Identity {
 	return l.lm.DefaultIdentity()
 }
@@ -173,6 +177,10 @@ func (l *Ledger) TransferMetadataKey(k string) (string, error) {
 type Network struct {
 	n               driver.Network
 	localMembership *LocalMembership
+}
+
+func NewNetwork(n driver.Network, localMembership *LocalMembership) *Network {
+	return &Network{n: n, localMembership: localMembership}
 }
 
 // Name returns the name of the network

@@ -15,12 +15,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
+// WalletServiceFactory is a factory for fabtoken wallet services.
 type WalletServiceFactory struct {
 	*base
 
 	storageProvider identity.StorageProvider
 }
 
+// NewWalletServiceFactory returns a new factory for fabtoken wallet services.
 func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.NamedFactory[driver.WalletServiceFactory] {
 	return core.NamedFactory[driver.WalletServiceFactory]{
 		Name:   core.DriverIdentifier(v2.FabTokenDriverName, v2.ProtocolV1),
@@ -28,6 +30,7 @@ func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.Name
 	}
 }
 
+// NewWalletService returns a new fabtoken wallet service for the passed configuration and parameters.
 func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, params driver.PublicParameters) (driver.WalletService, error) {
 	tmsID := tmsConfig.ID()
 	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
