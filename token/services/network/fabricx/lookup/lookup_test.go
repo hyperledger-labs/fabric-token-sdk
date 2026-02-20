@@ -23,7 +23,7 @@ import (
 func TestNSListenerManager(t *testing.T) {
 	q := &mock.Queue{}
 	qs := &mock.QueryService{}
-	mgr := lookup.NewNSListenerManager(q, qs)
+	mgr := lookup.NewNSListenerManager(q, qs, lookup.NewConfig(&mock.Configuration{}))
 
 	assert.True(t, mgr.PermanentLookupListenerSupported())
 
@@ -62,7 +62,7 @@ func TestKeyCheck_Process(t *testing.T) {
 		q := &mock.Queue{}
 		qs := &mock.QueryService{}
 		qs.GetStateReturns(&driver2.VaultValue{Raw: []byte("value")}, nil)
-		mgr := lookup.NewNSListenerManager(q, qs)
+		mgr := lookup.NewNSListenerManager(q, qs, lookup.NewConfig(&mock.Configuration{}))
 		l := &mock.Listener{}
 		require.NoError(t, mgr.AddLookupListener("ns", "key", l))
 
@@ -77,7 +77,7 @@ func TestKeyCheck_Process(t *testing.T) {
 	t.Run("Removed", func(t *testing.T) {
 		q := &mock.Queue{}
 		qs := &mock.QueryService{}
-		mgr := lookup.NewNSListenerManager(q, qs)
+		mgr := lookup.NewNSListenerManager(q, qs, lookup.NewConfig(&mock.Configuration{}))
 		l := &mock.Listener{}
 		require.NoError(t, mgr.AddLookupListener("ns", "key", l))
 
@@ -97,7 +97,7 @@ func TestKeyCheck_Process(t *testing.T) {
 		q := &mock.Queue{}
 		qs := &mock.QueryService{}
 		qs.GetStateReturns(nil, nil)
-		mgr := lookup.NewNSListenerManager(q, qs)
+		mgr := lookup.NewNSListenerManager(q, qs, lookup.NewConfig(&mock.Configuration{}))
 		l := &mock.Listener{}
 		require.NoError(t, mgr.AddLookupListener("ns", "key", l))
 
@@ -119,7 +119,7 @@ func TestKeyCheck_Process(t *testing.T) {
 		q := &mock.Queue{}
 		qs := &mock.QueryService{}
 		qs.GetStateReturns(nil, nil)
-		mgr := lookup.NewNSListenerManager(q, qs)
+		mgr := lookup.NewNSListenerManager(q, qs, lookup.NewConfig(&mock.Configuration{}))
 		l := &mock.Listener{}
 		require.NoError(t, mgr.AddLookupListener("ns", "key", l))
 
@@ -148,7 +148,7 @@ func TestPermanentKeyCheck_Process(t *testing.T) {
 		// 3rd call: changed value
 		qs.GetStateReturnsOnCall(2, &driver2.VaultValue{Raw: []byte("v2")}, nil)
 
-		mgr := lookup.NewNSListenerManager(q, qs)
+		mgr := lookup.NewNSListenerManager(q, qs, lookup.NewConfig(&mock.Configuration{}))
 		l := &mock.Listener{}
 		require.NoError(t, mgr.AddPermanentLookupListener("ns", "key", l))
 
@@ -179,7 +179,7 @@ func TestPermanentKeyCheck_Process(t *testing.T) {
 	t.Run("Removed", func(t *testing.T) {
 		q := &mock.Queue{}
 		qs := &mock.QueryService{}
-		mgr := lookup.NewNSListenerManager(q, qs)
+		mgr := lookup.NewNSListenerManager(q, qs, lookup.NewConfig(&mock.Configuration{}))
 		l := &mock.Listener{}
 		require.NoError(t, mgr.AddPermanentLookupListener("ns", "key", l))
 
@@ -220,7 +220,7 @@ func TestNSListenerManagerProvider(t *testing.T) {
 	qsp := &mock.QueryServiceProvider{}
 	qsp.GetReturns(qs, nil)
 
-	p := lookup.NewQueryServiceBased(qsp, q)
+	p := lookup.NewQueryServiceBased(qsp, q, lookup.NewConfig(&mock.Configuration{}))
 
 	// Successful creation
 	mgr, err := p.NewManager("network", "channel")
