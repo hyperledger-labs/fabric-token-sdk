@@ -49,6 +49,7 @@ type Listener = lookup.Listener
 type NSListenerManager struct {
 	queue        Queue
 	queryService QueryService
+	config       ConfigGetter
 
 	mu        sync.RWMutex
 	listeners map[string][]Listener
@@ -58,10 +59,12 @@ type NSListenerManager struct {
 func NewNSListenerManager(
 	queue Queue,
 	qs QueryService,
+	config ConfigGetter,
 ) *NSListenerManager {
 	return &NSListenerManager{
 		queue:        queue,
 		queryService: qs,
+		config:       config,
 		listeners:    make(map[string][]Listener),
 	}
 }
@@ -85,7 +88,7 @@ func (n *NSListenerManager) AddPermanentLookupListener(namespace string, key str
 		Namespace:    namespace,
 		Key:          key,
 		Listener:     listener,
-		Interval:     1 * time.Minute,
+		Interval:     n.config.PermanentInterval(),
 	})
 }
 
@@ -106,8 +109,8 @@ func (n *NSListenerManager) AddLookupListener(namespace string, key string, list
 		Key:          key,
 		Listener:     l,
 		Original:     listener,
-		Deadline:     time.Now().Add(5 * time.Minute),
-		Interval:     2 * time.Second,
+		Deadline:     time.Now().Add(n.config.OnceDeadline()),
+		Interval:     n.config.OnceInterval(),
 	})
 }
 
@@ -159,13 +162,15 @@ func (n *NSListenerManager) isRegistered(key string, listener Listener) bool {
 type NSListenerManagerProvider struct {
 	QueryServiceProvider QueryServiceProvider
 	queue                Queue
+	config               ConfigGetter
 }
 
 // NewQueryServiceBased creates a new NSListenerManagerProvider
-func NewQueryServiceBased(queryServiceProvider QueryServiceProvider, queue Queue) lookup.ListenerManagerProvider {
+func NewQueryServiceBased(queryServiceProvider QueryServiceProvider, queue Queue, config ConfigGetter) lookup.ListenerManagerProvider {
 	return &NSListenerManagerProvider{
 		QueryServiceProvider: queryServiceProvider,
 		queue:                queue,
+		config:               config,
 	}
 }
 
@@ -175,7 +180,7 @@ func (n *NSListenerManagerProvider) NewManager(network, channel string) (lookup.
 		return nil, errors.Wrapf(err, "failed getting query service")
 	}
 
-	return NewNSListenerManager(n.queue, qs), nil
+	return NewNSListenerManager(n.queue, qs, n.config), nil
 }
 
 // KeyCheck represents a key check event

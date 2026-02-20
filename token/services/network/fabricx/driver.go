@@ -90,7 +90,7 @@ func NewDriver(
 		queryExecutorProvider:      queryExecutorProvider,
 		keyTranslator:              kt,
 		flmProvider:                finality2.NewNotificationServiceBased(queryServiceProvider, finalityProvider, q),
-		llmProvider:                lookup2.NewQueryServiceBased(queryServiceProvider, q),
+		llmProvider:                lookup2.NewQueryServiceBased(queryServiceProvider, q, lookup2.NewConfig(configService)),
 		EndorsementServiceProvider: endorsement.NewServiceProvider(
 			configs,
 			viewManager,
