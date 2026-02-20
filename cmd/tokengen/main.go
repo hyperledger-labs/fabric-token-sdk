@@ -25,6 +25,12 @@ const CmdRoot = "core"
 var mainCmd = &cobra.Command{Use: "tokengen"}
 
 func main() {
+	if err := Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func Execute() error {
 	// For environment variables.
 	viper.SetEnvPrefix(CmdRoot)
 	viper.AutomaticEnv()
@@ -37,10 +43,10 @@ func main() {
 
 	mainFlags.String("logging-level", "", "Legacy logging level flag")
 	if err := viper.BindPFlag("logging_level", mainFlags.Lookup("logging-level")); err != nil {
-		panic(err)
+		return err
 	}
 	if err := mainFlags.MarkHidden("logging-level"); err != nil {
-		panic(err)
+		return err
 	}
 
 	mainCmd.AddCommand(pp.GenCmd())
@@ -50,9 +56,5 @@ func main() {
 	mainCmd.AddCommand(gen.Cmd())
 	mainCmd.AddCommand(version.Cmd())
 
-	// On failure Cobra prints the usage message and error string, so we only
-	// need to exit with a non-0 status
-	if mainCmd.Execute() != nil {
-		os.Exit(1)
-	}
+	return mainCmd.Execute()
 }

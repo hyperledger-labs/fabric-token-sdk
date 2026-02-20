@@ -25,6 +25,20 @@ var output string
 
 // KeyPairGenCmd returns the Cobra Command for the Certifier KeyGen
 func KeyPairGenCmd() *cobra.Command {
+	var cobraCommand = &cobra.Command{
+		Use:   "certifier-keygen",
+		Short: "Gen Token Certifier Key Pair.",
+		Long:  `Gen Token Certifier Key Pair.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				return errors.New("trailing args detected")
+			}
+			// Parsing of the command line is done so silence cmd usage
+			cmd.SilenceUsage = true
+
+			return keyPairGen()
+		},
+	}
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
 	flags.StringVarP(&driver, "driver", "d", zkatdlognoghv1.DriverIdentifier, "driver (dlog)")
@@ -34,23 +48,8 @@ func KeyPairGenCmd() *cobra.Command {
 	return cobraCommand
 }
 
-var cobraCommand = &cobra.Command{
-	Use:   "certifier-keygen",
-	Short: "Gen Token Certifier Key Pair.",
-	Long:  `Gen Token Certifier Key Pair.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 0 {
-			return errors.New("trailing args detected")
-		}
-		// Parsing of the command line is done so silence cmd usage
-		cmd.SilenceUsage = true
-
-		return keyPairGen(args)
-	},
-}
-
 // keyPairGen
-func keyPairGen(args []string) error {
+func keyPairGen() error {
 	// TODO:
 	// 1. load public parameters from ppPath
 	fmt.Printf("Read public parameters from file [%s]...\n", ppPath)

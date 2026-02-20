@@ -55,9 +55,9 @@ var cobraCommand = &cobra.Command{
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
-		fmt.Print(GetInfo())
+		_, err := fmt.Fprint(cmd.OutOrStdout(), GetInfo())
 
-		return nil
+		return err
 	},
 }
 
