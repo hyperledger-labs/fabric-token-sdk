@@ -261,6 +261,7 @@ type WalletService interface {
 	SpendIDs(ids ...*token.ID) ([]string, error)
 }
 
+//go:generate counterfeiter -o mock/wallet_service_factory.go -fake-name WalletServiceFactory . WalletServiceFactory
 type WalletServiceFactory interface {
 	PPReader
 	// NewWalletService returns an instance of the WalletService interface for the passed arguments
