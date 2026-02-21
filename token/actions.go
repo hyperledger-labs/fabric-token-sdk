@@ -16,6 +16,11 @@ type IssueAction struct {
 	a driver.IssueAction
 }
 
+// NewIssueAction returns a new IssueAction for the given driver.IssueAction
+func NewIssueAction(a driver.IssueAction) *IssueAction {
+	return &IssueAction{a: a}
+}
+
 // Serialize returns the byte representation of the action.
 func (i *IssueAction) Serialize() ([]byte, error) {
 	return i.a.Serialize()

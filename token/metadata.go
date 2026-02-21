@@ -17,22 +17,32 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// Metadata contains the metadata of a Token Request
+// Metadata contains the metadata of a Token Request.
+// This metadata is used to unscramble the content of the actions in the Token Request.
+// It includes information about issuers, owners, and extra signers.
 type Metadata struct {
-	TokenService         driver.TokensService
-	WalletService        driver.WalletService
+	// TokenService is the service used to handle tokens.
+	TokenService driver.TokensService
+	// WalletService is the service used to handle wallets and identities.
+	WalletService driver.WalletService
+	// TokenRequestMetadata contains the metadata of the Token Request as defined by the driver.
 	TokenRequestMetadata *driver.TokenRequestMetadata
-	Logger               logging.Logger
+	// Logger is the logger used by this struct.
+	Logger logging.Logger
 }
 
 // SpentTokenID returns the token IDs of the tokens that were spent by the Token Request this metadata is associated with.
+// It iterates over all issue and transfer actions and collects the IDs of the input tokens.
 func (m *Metadata) SpentTokenID() []*token.ID {
 	var res []*token.ID
+	// Collect token IDs from issue actions.
+	// Note: issue actions usually don't have inputs, but some drivers might use them (e.g., for token upgrades).
 	for _, issue := range m.TokenRequestMetadata.Issues {
 		for _, input := range issue.Inputs {
 			res = append(res, input.TokenID)
 		}
 	}
+	// Collect token IDs from transfer actions.
 	for _, transfer := range m.TokenRequestMetadata.Transfers {
 		for _, input := range transfer.Inputs {
 			res = append(res, input.TokenID)
@@ -43,14 +53,17 @@ func (m *Metadata) SpentTokenID() []*token.ID {
 }
 
 // FilterBy returns a new Metadata containing only the metadata that matches the given enrollment IDs.
-// For Issue actions, for each issue:
-// - The sender;
-// - The returned metadata will contain only the outputs whose owner has the given enrollment IDs.
-// For Transfer actions, for each action:
-// - The list of token IDs will be empty;
-// - The returned metadata will contain only the outputs whose owner has the given enrollment IDs;
-// - The senders are included if and only if there is at least one output whose owner has the given enrollment IDs.
-// Application metadata is always included
+// This is used to share with a party only the metadata they are entitled to see.
+//
+// For Issue actions:
+// - The issuer information is always included.
+// - Only metadata for outputs owned by the given enrollment IDs is included.
+//
+// For Transfer actions:
+// - Only metadata for outputs owned by the given enrollment IDs is included.
+// - Sender information is included if and only if there is at least one output owned by the given enrollment IDs.
+//
+// Application metadata is always included.
 func (m *Metadata) FilterBy(ctx context.Context, eIDs ...string) (*Metadata, error) {
 	if len(eIDs) == 0 {
 		return m, nil
@@ -58,10 +71,12 @@ func (m *Metadata) FilterBy(ctx context.Context, eIDs ...string) (*Metadata, err
 
 	eIDSet := collections.NewSet(eIDs...)
 
+	// Filter issue metadata.
 	issues, err := m.filterIssues(ctx, m.TokenRequestMetadata.Issues, eIDSet)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed filtering issues")
 	}
+	// Filter transfer metadata.
 	transfers, err := m.filterTransfers(ctx, m.TokenRequestMetadata.Transfers, eIDSet)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed filtering transfers")
@@ -77,7 +92,6 @@ func (m *Metadata) FilterBy(ctx context.Context, eIDs ...string) (*Metadata, err
 		Logger: m.Logger,
 	}
 
-	// TODO: update this log
 	m.Logger.Debugf("filtered metadata for [% x] from [%d:%d] to [%d:%d]",
 		eIDs,
 		len(m.TokenRequestMetadata.Issues), len(m.TokenRequestMetadata.Transfers),
@@ -86,6 +100,7 @@ func (m *Metadata) FilterBy(ctx context.Context, eIDs ...string) (*Metadata, err
 	return clone, nil
 }
 
+// filterIssues filters the issue metadata based on the provided enrollment IDs.
 func (m *Metadata) filterIssues(ctx context.Context, issues []*driver.IssueMetadata, eIDSet collections.Set[string]) ([]*driver.IssueMetadata, error) {
 	cloned := make([]*driver.IssueMetadata, 0, len(issues))
 	for _, issue := range m.TokenRequestMetadata.Issues {
@@ -98,12 +113,15 @@ func (m *Metadata) filterIssues(ctx context.Context, issues []*driver.IssueMetad
 
 		counter := 0
 		for _, output := range issue.Outputs {
+			// Check if any of the receivers of the output matches the enrollment IDs.
 			if found, err := m.contains(ctx, output.Receivers, eIDSet); err != nil {
 				return nil, errors.WithMessagef(err, "failed checking receivers")
 			} else if found {
+				// If matched, include the full output metadata.
 				clone.Outputs = append(clone.Outputs, output)
 				counter++
 			} else {
+				// If not matched, include a nil entry to preserve the indexing.
 				clone.Outputs = append(clone.Outputs, nil)
 			}
 		}
@@ -115,6 +133,7 @@ func (m *Metadata) filterIssues(ctx context.Context, issues []*driver.IssueMetad
 	return cloned, nil
 }
 
+// filterTransfers filters the transfer metadata based on the provided enrollment IDs.
 func (m *Metadata) filterTransfers(ctx context.Context, issues []*driver.TransferMetadata, eIDSet collections.Set[string]) ([]*driver.TransferMetadata, error) {
 	cloned := make([]*driver.TransferMetadata, 0, len(issues))
 	for _, transfer := range m.TokenRequestMetadata.Transfers {
@@ -124,8 +143,7 @@ func (m *Metadata) filterTransfers(ctx context.Context, issues []*driver.Transfe
 			ExtraSigners: transfer.ExtraSigners,
 		}
 
-		// Filter outputs
-		// if the receiver has the given enrollment ID, add it. Otherwise, add empty entries
+		// Filter outputs: if the receiver has the given enrollment ID, add it. Otherwise, add empty entries.
 		counter := 0
 		for _, output := range transfer.Outputs {
 			if found, err := m.contains(ctx, output.Receivers, eIDSet); err != nil {
@@ -138,13 +156,11 @@ func (m *Metadata) filterTransfers(ctx context.Context, issues []*driver.Transfe
 			}
 		}
 
-		// if counter == 0, it means that this transfer does not contain any output for the given enrollment IDs.
-		// Therefore, no metadata should be given to the passed enrollment IDs.
-		// if counter > 0, it means that this transfer contains at least one output for the given enrollment IDs.
-		// Append the senders to the transfer metadata.
+		// Prepare empty input metadata entries.
 		for range transfer.Inputs {
 			clone.Inputs = append(clone.Inputs, &driver.TransferInputMetadata{})
 		}
+		// If at least one output matched, include the sender information for all inputs.
 		if counter > 0 {
 			for i, input := range transfer.Inputs {
 				clone.Inputs[i].Senders = input.Senders
@@ -158,13 +174,15 @@ func (m *Metadata) filterTransfers(ctx context.Context, issues []*driver.Transfe
 	return cloned, nil
 }
 
+// contains checks if any of the given auditable identities matches the provided enrollment IDs.
 func (m *Metadata) contains(ctx context.Context, receivers []*driver.AuditableIdentity, eIDSet collections.Set[string]) (bool, error) {
 	for _, receiver := range receivers {
-		// If the receiver has the given enrollment ID, add it
+		// Resolve the enrollment ID of the receiver.
 		recipientEID, err := m.WalletService.GetEnrollmentID(ctx, receiver.Identity, receiver.AuditInfo)
 		if err != nil {
 			return false, errors.Wrap(err, "failed getting enrollment ID")
 		}
+		// Check if the enrollment ID is in the set.
 		if eIDSet.Contains(recipientEID) {
 			logger.Debugf("eid [%s] found in list [%v]", recipientEID, eIDSet)
 
@@ -177,7 +195,7 @@ func (m *Metadata) contains(ctx context.Context, receivers []*driver.AuditableId
 	return false, nil
 }
 
-// Issue returns the i-th issue metadata, if present
+// Issue returns the i-th issue metadata, if present.
 func (m *Metadata) Issue(i int) (*IssueMetadata, error) {
 	if i >= len(m.TokenRequestMetadata.Issues) {
 		return nil, errors.Errorf("index [%d] out of range [0:%d]", i, len(m.TokenRequestMetadata.Issues))
@@ -186,7 +204,7 @@ func (m *Metadata) Issue(i int) (*IssueMetadata, error) {
 	return &IssueMetadata{IssueMetadata: m.TokenRequestMetadata.Issues[i]}, nil
 }
 
-// Transfer returns the i-th transfer metadata, if present
+// Transfer returns the i-th transfer metadata, if present.
 func (m *Metadata) Transfer(i int) (*TransferMetadata, error) {
 	if i >= len(m.TokenRequestMetadata.Transfers) {
 		return nil, errors.Errorf("index [%d] out of range [0:%d]", i, len(m.TokenRequestMetadata.Transfers))
@@ -195,48 +213,53 @@ func (m *Metadata) Transfer(i int) (*TransferMetadata, error) {
 	return &TransferMetadata{TransferMetadata: m.TokenRequestMetadata.Transfers[i]}, nil
 }
 
-// IssueMetadata contains the metadata of an issue action
+// IssueMetadata contains the metadata of an issue action.
 type IssueMetadata struct {
 	*driver.IssueMetadata
 }
 
-// Match returns true if the given action matches this metadata
+// Match returns true if the given action matches this metadata.
+// It performs a deep check of inputs, outputs, extra signers, and the issuer identity.
 func (m *IssueMetadata) Match(action *IssueAction) error {
 	if action == nil {
 		return errors.New("can't match issue metadata to issue action: nil issue action")
 	}
 
-	// validate action
+	// Validate the action's structure.
 	if err := action.Validate(); err != nil {
 		return errors.Wrap(err, "failed validating issue action")
 	}
 
-	// check inputs
+	// Check that the number of inputs matches.
 	if len(m.Inputs) != action.NumInputs() {
 		return errors.Errorf("expected [%d] inputs but got [%d]", len(m.Inputs), action.NumInputs())
 	}
 
-	// check outputs
+	// Check that the number of outputs matches.
 	if len(m.Outputs) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
 	}
 
-	// extra signer
-	extraSigner := action.a.ExtraSigners()
-	if len(m.ExtraSigners) != len(extraSigner) {
-		return errors.Errorf("expected [%d] extra signers but got [%d]", len(extraSigner), len(m.ExtraSigners))
+	// Check that the extra signers are the same.
+	extraSigners := action.a.ExtraSigners()
+	if len(m.ExtraSigners) != len(extraSigners) {
+		return errors.Errorf("expected [%d] extra signers but got [%d]", len(extraSigners), len(m.ExtraSigners))
 	}
-	// check that the extra signers are the same
-	for i, signer := range extraSigner {
+	for i, signer := range extraSigners {
 		if !slices.ContainsFunc(m.ExtraSigners, signer.Equal) {
 			return errors.Errorf("expected extra signer [%s] but got [%s]", signer, m.ExtraSigners[i])
 		}
 	}
 
+	// Check that the issuer identity matches.
+	if !m.Issuer.Identity.Equal(action.GetIssuer()) {
+		return errors.Errorf("expected issuer [%s] but got [%s]", m.Issuer.Identity, action.GetIssuer())
+	}
+
 	return nil
 }
 
-// IsOutputAbsent returns true if the given output's metadata is absent
+// IsOutputAbsent returns true if the j-th output's metadata is absent (e.g., filtered out).
 func (m *IssueMetadata) IsOutputAbsent(j int) bool {
 	if j < 0 || j >= len(m.Outputs) {
 		return true
@@ -245,44 +268,45 @@ func (m *IssueMetadata) IsOutputAbsent(j int) bool {
 	return m.Outputs[j] == nil
 }
 
-// TransferMetadata contains the metadata of a transfer action
+// TransferMetadata contains the metadata of a transfer action.
 type TransferMetadata struct {
 	*driver.TransferMetadata
 }
 
-// Match returns true if the given action matches this metadata
+// Match returns true if the given action matches this metadata.
+// It performs a deep check of inputs, outputs, extra signers, and the issuer identity (if present).
 func (m *TransferMetadata) Match(action *TransferAction) error {
 	if action == nil {
 		return errors.New("can't match transfer metadata to transfer action: nil issue action")
 	}
 
-	// validate action
+	// Validate the action's structure.
 	if err := action.Validate(); err != nil {
 		return errors.Wrap(err, "failed validating issue action")
 	}
 
-	// inputs
+	// Check that the number of inputs matches.
 	if len(m.Inputs) != action.NumInputs() {
 		return errors.Errorf("expected [%d] inputs but got [%d]", len(m.Inputs), action.NumInputs())
 	}
 
-	// outputs
+	// Check that the number of outputs matches.
 	if len(m.Outputs) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
 	}
 
-	// extra signer
-	extraSigner := action.ExtraSigners()
-	if len(m.ExtraSigners) != len(extraSigner) {
-		return errors.Errorf("expected [%d] extra signers but got [%d]", len(m.ExtraSigners), len(extraSigner))
+	// Check that the extra signers are the same.
+	extraSigners := action.ExtraSigners()
+	if len(m.ExtraSigners) != len(extraSigners) {
+		return errors.Errorf("expected [%d] extra signers but got [%d]", len(m.ExtraSigners), len(extraSigners))
 	}
-	// check that the extra signers are the same
-	for i, signer := range extraSigner {
+	for i, signer := range extraSigners {
 		if !signer.Equal(m.ExtraSigners[i]) {
 			return errors.Errorf("expected extra signer [%s] but got [%s]", m.ExtraSigners[i], signer)
 		}
 	}
 
+	// Check that the issuer identity matches, if present in the metadata.
 	if !m.Issuer.Equal(action.GetIssuer()) {
 		return errors.Errorf("expected issuer [%s] but got [%s]", m.Issuer, action.GetIssuer().Bytes())
 	}
@@ -290,18 +314,18 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	return nil
 }
 
-// IsOutputAbsent returns true if the given output's metadata is absent
+// IsOutputAbsent returns true if the j-th output's metadata is absent (e.g., filtered out).
 func (m *TransferMetadata) IsOutputAbsent(j int) bool {
-	if j >= len(m.Outputs) {
+	if j < 0 || j >= len(m.Outputs) {
 		return true
 	}
 
 	return m.Outputs[j] == nil
 }
 
-// IsInputAbsent returns true if the given input's metadata is absent
+// IsInputAbsent returns true if the j-th input's metadata is absent (e.g., filtered out).
 func (m *TransferMetadata) IsInputAbsent(j int) bool {
-	if j >= len(m.Inputs) {
+	if j < 0 || j >= len(m.Inputs) {
 		return true
 	}
 
