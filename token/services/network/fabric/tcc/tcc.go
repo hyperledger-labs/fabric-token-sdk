@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"sync"
 
@@ -212,7 +213,7 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 	}
 
 	logger.Debugf("reading %s ...", publicParamsPath)
-	paramsAsBytes, err := os.ReadFile(publicParamsPath)
+	paramsAsBytes, err := os.ReadFile(filepath.Clean(publicParamsPath)) // #nosec G703 the user can specify any path here
 	if err != nil {
 		logger.Errorf(
 			"unable to read file %s (%s). continue looking pub params from init args or cc\n", publicParamsPath, err.Error(),

@@ -562,7 +562,9 @@ func (p *PublicParams) Extras() driver.Extras {
 }
 
 func log2(x uint64) uint64 {
-	result := 63 - bits.LeadingZeros64(x)
+	if x == 0 {
+		return 0
+	}
 
-	return uint64(result) //nolint:gosec
+	return uint64(bits.Len64(x)) - 1 //nolint:gosec
 }

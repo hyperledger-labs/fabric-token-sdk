@@ -173,7 +173,7 @@ func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType
 		With(metrics.OperationLabel, operationType).Add(1)
 
 	start := time.Now()
-	response, err := u.httpClient.Do(request)
+	response, err := u.httpClient.Do(request) //nolint:gosec
 
 	successType := metrics.SuccessValues[err == nil || response != nil && response.StatusCode >= http.StatusBadRequest]
 	u.metrics.RequestsReceived.

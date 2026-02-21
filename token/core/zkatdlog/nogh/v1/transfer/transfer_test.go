@@ -258,7 +258,7 @@ func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier, 
 	return prover, verifier, nil
 }
 
-func prepareInputsForZKTransfer(pp *v1.PublicParams, numInputs int, numOutputs int) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1, error) {
+func prepareInputsForZKTransfer(pp *v1.PublicParams, numInputs uint64, numOutputs uint64) ([]*token.Metadata, []*token.Metadata, []*math.G1, []*math.G1, error) {
 	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
 	if err != nil {
@@ -280,12 +280,12 @@ func prepareInputsForZKTransfer(pp *v1.PublicParams, numInputs int, numOutputs i
 	// prepare inputs
 	sumInputs := uint64(0)
 	for i := range numInputs {
-		v := uint64(i*10 + 500) //nolint:gosec
+		v := i*10 + 500
 		sumInputs += v
 		inValues[i] = v
 	}
 
-	outputValue := sumInputs / uint64(numOutputs)
+	outputValue := sumInputs / numOutputs
 	sumOutputs := uint64(0)
 	for i := range numOutputs {
 		outValues[i] = outputValue
@@ -410,7 +410,7 @@ func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkT
 
 	entries := make([]singleProverEnv, n)
 	for i := range n {
-		intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
+		intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, uint64(benchmarkCase.NumInputs), uint64(benchmarkCase.NumOutputs)) //nolint:gosec
 		if err != nil {
 			return nil, err
 		}
