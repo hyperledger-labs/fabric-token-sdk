@@ -243,7 +243,7 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name: "match",
+			name:   "match",
 			action: &token.TransferAction{transferActionWithIssuer},
 			meta: &token.TransferMetadata{
 				&driver.TransferMetadata{
@@ -269,6 +269,7 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 			action: func() *token.TransferAction {
 				a := &mock.TransferAction{}
 				a.ValidateReturns(errors.New("validation failed"))
+
 				return &token.TransferAction{a}
 			}(),
 			meta: &token.TransferMetadata{
@@ -546,6 +547,7 @@ func TestIssueMetadata_Match(t *testing.T) {
 			action: func() *token.IssueAction {
 				a := &mock.IssueAction{}
 				a.ValidateReturns(errors.New("validation failed"))
+
 				return token.NewIssueAction(a)
 			}(),
 			wantErr:       true,
