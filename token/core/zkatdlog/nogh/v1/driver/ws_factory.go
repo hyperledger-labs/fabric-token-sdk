@@ -17,12 +17,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
+// WalletServiceFactory is a factory for creating zkatdlog wallet services.
 type WalletServiceFactory struct {
 	*Base
 
 	storageProvider identity.StorageProvider
 }
 
+// NewWalletServiceFactory returns a new factory for the zkatdlog wallet service.
 func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.NamedFactory[driver.WalletServiceFactory] {
 	return core.NamedFactory[driver.WalletServiceFactory]{
 		Name:   core.DriverIdentifier(v1.DLogNoGHDriverName, v1.ProtocolV1),
@@ -30,6 +32,7 @@ func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.Name
 	}
 }
 
+// NewWalletService returns a new zkatdlog wallet service for the passed configuration and public parameters.
 func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, params driver.PublicParameters) (driver.WalletService, error) {
 	tmsID := tmsConfig.ID()
 	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)

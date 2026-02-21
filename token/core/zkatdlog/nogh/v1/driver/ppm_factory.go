@@ -14,8 +14,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+// PPMFactory is a factory for creating zkatdlog public parameters managers.
 type PPMFactory struct{ *Base }
 
+// NewPPMFactory returns a new factory for the zkatdlog public parameters manager.
 func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
 	return core.NamedFactory[driver.PPMFactory]{
 		Name:   core.DriverIdentifier(v1.DLogNoGHDriverName, v1.ProtocolV1),
@@ -23,6 +25,7 @@ func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
 	}
 }
 
+// NewPublicParametersManager returns a new zkatdlog public parameters manager for the passed public parameters.
 func (d *PPMFactory) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
 	pp, ok := params.(*v1.PublicParams)
 	if !ok {

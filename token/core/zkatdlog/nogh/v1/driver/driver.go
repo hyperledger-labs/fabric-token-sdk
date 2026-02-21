@@ -8,50 +8,45 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	cdriver "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/upgrade"
 	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	v1token "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	"go.opentelemetry.io/otel/trace"
 )
 
+// Driver contains the non-static logic of the zkatdlog driver (including services).
 type Driver struct {
 	*Base
-	metricsProvider  metrics.Provider
-	tracerProvider   trace.TracerProvider
-	configService    *config.Service
-	storageProvider  identity.StorageProvider
-	identityProvider *id.Provider
-	endpointService  *endpoint.Service
-	networkProvider  *network.Provider
-	vaultProvider    *vault.Provider
+	metricsProvider  cdriver.MetricsProvider
+	tracerProvider   cdriver.TracerProvider
+	configService    cdriver.ConfigService
+	storageProvider  cdriver.StorageProvider
+	identityProvider cdriver.IdentityProvider
+	endpointService  cdriver.NetworkBinderService
+	networkProvider  cdriver.NetworkProvider
+	vaultProvider    cdriver.VaultProvider
 }
 
+// NewDriver returns a new factory for the zkatdlog driver.
 func NewDriver(
-	metricsProvider metrics.Provider,
-	tracerProvider trace.TracerProvider,
-	configService *config.Service,
-	storageProvider identity.StorageProvider,
-	identityProvider *id.Provider,
-	endpointService *endpoint.Service,
-	networkProvider *network.Provider,
-	vaultProvider *vault.Provider,
+	metricsProvider cdriver.MetricsProvider,
+	tracerProvider cdriver.TracerProvider,
+	configService cdriver.ConfigService,
+	storageProvider cdriver.StorageProvider,
+	identityProvider cdriver.IdentityProvider,
+	endpointService cdriver.NetworkBinderService,
+	networkProvider cdriver.NetworkProvider,
+	vaultProvider cdriver.VaultProvider,
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
 		Name: core.DriverIdentifier(v1setup.DLogNoGHDriverName, v1setup.ProtocolV1),
@@ -69,6 +64,7 @@ func NewDriver(
 	}
 }
 
+// NewTokenService returns a new zkatdlog token manager service for the passed TMS ID and public parameters.
 func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
 	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
@@ -193,8 +189,9 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	return service, err
 }
 
+// NewDefaultValidator returns a new zkatdlog validator for the passed public parameters.
 func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
-	pp, ok := params.(*setup.PublicParams)
+	pp, ok := params.(*v1setup.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}

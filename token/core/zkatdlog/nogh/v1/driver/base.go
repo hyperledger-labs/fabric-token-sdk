@@ -29,8 +29,10 @@ import (
 //go:generate counterfeiter -o mock/config.go -fake-name Config . Config
 type Config = core.Config
 
+// Base contains the static logic of the zkatdlog driver.
 type Base struct{}
 
+// PublicParametersFromBytes unmarshals the passed bytes into zkatdlog public parameters.
 func (d *Base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
 	pp, err := v1.NewPublicParamsFromBytes(params, v1.DLogNoGHDriverName, v1.ProtocolV1)
 	if err != nil {
@@ -40,6 +42,7 @@ func (d *Base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 	return pp, nil
 }
 
+// DefaultValidator returns a new zkatdlog validator for the passed public parameters.
 func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	deserializer, err := NewDeserializer(pp.(*v1.PublicParams))
 	if err != nil {
@@ -57,6 +60,7 @@ func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 	), nil
 }
 
+// NewWalletService returns a new zkatdlog wallet service.
 func (d *Base) NewWalletService(
 	tmsConfig core.Config,
 	binder identity.NetworkBinderService,
