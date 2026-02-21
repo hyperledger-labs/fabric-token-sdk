@@ -9,6 +9,7 @@ This page contains link to the development guidelines and more.
 - [Linting](./linting.md)
 - [Monitoring](./monitoring.md)
 - [Mock Files Generation](./mock.md)
+- [AI Agents Best Practices](./ai_agents.md)
 - [Tools: tokengen](./tokengen.md)
 - [Makefile Guide](./makefile.md)
 
