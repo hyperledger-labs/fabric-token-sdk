@@ -27,7 +27,7 @@ type ConfigGetter interface {
 
 //go:generate counterfeiter -o mock/configuration.go -fake-name Configuration . Configuration
 type Configuration interface {
-	GetInt(workers string) int
+	GetInt(key string) int
 }
 
 // NewConfig creates a new ConfigGetter
