@@ -8,7 +8,7 @@ package common
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
@@ -22,7 +22,7 @@ const (
 )
 
 func pathExists(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Clean(path)); os.IsNotExist(err) { //nolint:gosec
 		return false
 	}
 
@@ -36,7 +36,7 @@ func pathExists(path string) bool {
 //	export FAB_BINS=/tmp/fabric/bin/
 //	findCmdAtEnv("peer") will return "/tmp/fabric/bin/peer" if exists
 func findCmdAtEnv(cmd string) string {
-	cmdPath := path.Join(os.Getenv(FabricBinsPathEnvKey), cmd)
+	cmdPath := filepath.Join(os.Getenv(FabricBinsPathEnvKey), cmd)
 	if !pathExists(cmdPath) {
 		// cmd does not exist in folder provided via FabricBinsPathEnvKey
 		return ""

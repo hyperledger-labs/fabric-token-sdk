@@ -196,4 +196,4 @@ lint-auto-fix:
 # install golangci-lint
 install-linter-tool:
 	@echo "Installing golangci Linter"
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.8.0
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.10.1

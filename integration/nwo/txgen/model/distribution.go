@@ -8,7 +8,7 @@ package model
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strconv"
 	"strings"
 
@@ -75,7 +75,7 @@ func (d *Distribution) generateUniformAmounts(total api.Amount) ([]api.Amount, a
 	diff := maximum - minimum
 	amounts := make([]api.Amount, 0, 1)
 	for total > 0 {
-		r := uint64(rand.Int63n(int64(diff))) + minimum //nolint:gosec
+		r := rand.Uint64N(diff) + minimum
 		if r >= total {
 			amounts = append(amounts, total)
 

@@ -9,7 +9,7 @@ package sherdlock
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -64,7 +64,10 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 		if tokens, quantity, err := m.selector.Select(ctx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
 			return tokens, quantity, err
 		}
-		backoffDuration := time.Duration(rand.Int63n(int64(m.backoffInterval)))
+		var backoffDuration time.Duration
+		if m.backoffInterval > 0 {
+			backoffDuration = time.Duration(rand.Int64N(int64(m.backoffInterval)))
+		}
 		m.logger.DebugfContext(ctx, "Token selection aborted, so that other procs can retry. Release tokens and backoff for %v before retrying to select. In the meantime maybe some other process releases token locks or adds tokens.", backoffDuration)
 		time.Sleep(backoffDuration)
 		m.logger.DebugfContext(ctx, "Now it is our turn to retry...")
