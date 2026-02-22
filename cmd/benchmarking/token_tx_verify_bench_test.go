@@ -37,7 +37,7 @@ func (p *viewPool) createViews(b *testing.B, f *TokenTxVerifyViewFactory, input 
 	p.idx = 0
 }
 
-// nextView views from the pool in round-robin.
+// nextView returns views from the pool in round-robin.
 func (p *viewPool) nextView() view.View {
 	i := p.idx
 	p.idx = (p.idx + 1) % p.size
@@ -46,11 +46,10 @@ func (p *viewPool) nextView() view.View {
 }
 
 func BenchmarkTokenTxVerify(b *testing.B) {
-	p := &TokenTxVerifyParams{}
+	p := &TokenTxVerifyMetadata{}
 	p.applyDefaults()
 
-	name := fmt.Sprintf("out-tokens=%d", p.NumOutputTokens)
-	b.Run(name, func(b *testing.B) {
+	b.Run(fmt.Sprintf("out-tokens=%d", p.NumOutputTokens), func(b *testing.B) {
 		f := &TokenTxVerifyViewFactory{}
 		input, _ := json.Marshal(p)
 
@@ -67,20 +66,30 @@ func BenchmarkTokenTxVerify(b *testing.B) {
 	})
 }
 
-func BenchmarkTokenTxVerify_wFactory(b *testing.B) {
-	p := &TokenTxVerifyParams{}
+func BenchmarkTokenTxVerify_PreComputeProof(b *testing.B) {
+	p := &TokenTxVerifyMetadata{}
 	p.applyDefaults()
 
-	name := fmt.Sprintf("out-tokens=%d", p.NumOutputTokens)
-	b.Run(name, func(b *testing.B) {
+	b.Run(fmt.Sprintf("out-tokens=%d", p.NumOutputTokens), func(b *testing.B) {
 		f := &TokenTxVerifyViewFactory{}
 		input, _ := json.Marshal(p)
 
+		proofs := make([]*ProofData, b.N)
+		for i := range proofs {
+			proof, err := GenerateProofData(p)
+			require.NoError(b, err)
+			proofs[i] = proof
+		}
+		f.AddProofs(proofs...)
+
+		pool := &viewPool{}
+		pool.createViews(b, f, input, max(runtime.NumCPU()*4, 16))
+
 		b.ResetTimer()
+
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				v, _ := f.NewView(input)
-				_, _ = v.Call(nil)
+				_, _ = pool.nextView().Call(nil)
 			}
 		})
 		benchmark.ReportTPS(b)
