@@ -33,7 +33,7 @@ type TokenTxVerifyParams struct {
 	CurveID         int    `json:"curve_id,omitempty"`
 }
 
-func (t *TokenTxVerifyParams) applyDefaults() {
+func (t *TokenTxVerifyParams) applyDefaults() *TokenTxVerifyParams {
 	if t.NumOutputTokens <= 0 {
 		t.NumOutputTokens = deafultNumOutputs
 	}
@@ -46,6 +46,7 @@ func (t *TokenTxVerifyParams) applyDefaults() {
 	if t.CurveID <= 0 {
 		t.CurveID = int(defaultCurveID)
 	}
+	return t
 }
 
 type TokenTxVerifyView struct {
@@ -81,7 +82,6 @@ func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
 	if err := json.Unmarshal(in, &f.params); err != nil {
 		return nil, err
 	}
-
 	f.params.applyDefaults()
 
 	var err error
