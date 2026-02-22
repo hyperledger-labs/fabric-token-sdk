@@ -4,14 +4,13 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fxdlog
+package fdlog
 
 import (
 	"testing"
 
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
-	fabricx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	sdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/test-go/testify/require"
@@ -19,7 +18,7 @@ import (
 
 func TestFabricWiring(t *testing.T) {
 	require.NoError(t, sdk.DryRunWiring(
-		func(sdk dig2.SDK) *SDK { return NewFrom(tokensdk.NewFrom(fabricx.NewFrom(fabricsdk.NewFrom(sdk)))) },
+		func(sdk dig2.SDK) *SDK { return NewFrom(tokensdk.NewFrom(fabricsdk.NewFrom(sdk))) },
 		sdk.WithBool("token.enabled", true),
 		sdk.WithBool("fabric.enabled", true),
 	))

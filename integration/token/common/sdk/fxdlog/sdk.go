@@ -15,6 +15,7 @@ import (
 	fabricxsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
@@ -45,6 +46,7 @@ func (p *SDK) Install() error {
 
 	err := errors.Join(
 		// token driver
+		sdk.RegisterTokenDriverDependencies(p.Container()),
 		p.Container().Provide(dlog.NewDriver, dig.Group("token-drivers")),
 
 		// fabricx
