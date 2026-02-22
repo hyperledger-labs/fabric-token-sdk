@@ -15,7 +15,7 @@ import (
 )
 
 func TestApplyDefaults_AllDefaultValues(t *testing.T) {
-	p := &TokenTxVerifyMetadata{}
+	p := &TokenTxVerifyParams{}
 	p.applyDefaults()
 
 	require.Equal(t, deafultNumOutputs, p.NumOutputTokens)
@@ -25,7 +25,7 @@ func TestApplyDefaults_AllDefaultValues(t *testing.T) {
 }
 
 func TestApplyDefaults_PreservesExplicitValues(t *testing.T) {
-	p := &TokenTxVerifyMetadata{
+	p := &TokenTxVerifyParams{
 		NumOutputTokens: 3,
 		BitLength:       64,
 		TokenType:       "my-token",
@@ -40,7 +40,7 @@ func TestApplyDefaults_PreservesExplicitValues(t *testing.T) {
 }
 
 func TestApplyDefaults_NegativeInputsOutputs(t *testing.T) {
-	p := &TokenTxVerifyMetadata{NumOutputTokens: -5}
+	p := &TokenTxVerifyParams{NumOutputTokens: -5}
 	p.applyDefaults()
 
 	require.Equal(t, deafultNumOutputs, p.NumOutputTokens)
@@ -48,7 +48,7 @@ func TestApplyDefaults_NegativeInputsOutputs(t *testing.T) {
 
 func TestNewView_DefaultParams(t *testing.T) {
 	factory := &TokenTxVerifyViewFactory{}
-	input, err := json.Marshal(&TokenTxVerifyMetadata{})
+	input, err := json.Marshal(&TokenTxVerifyParams{})
 	require.NoError(t, err)
 
 	v, err := factory.NewView(input)
@@ -56,17 +56,17 @@ func TestNewView_DefaultParams(t *testing.T) {
 	require.NotNil(t, v)
 
 	tv := v.(*TokenTxVerifyView)
-	require.Equal(t, deafultNumOutputs, tv.meta.NumOutputTokens)
-	require.Equal(t, uint64(defaultBitLength), tv.meta.BitLength)
-	require.Equal(t, defaultTokenType, tv.meta.TokenType)
-	require.Equal(t, int(defaultCurveID), tv.meta.CurveID)
+	require.Equal(t, deafultNumOutputs, tv.params.NumOutputTokens)
+	require.Equal(t, uint64(defaultBitLength), tv.params.BitLength)
+	require.Equal(t, defaultTokenType, tv.params.TokenType)
+	require.Equal(t, int(defaultCurveID), tv.params.CurveID)
 	require.NotNil(t, tv.pubParams)
 	require.NotEmpty(t, tv.actionRaw)
 }
 
 func TestNewView_CustomParams(t *testing.T) {
 	factory := &TokenTxVerifyViewFactory{}
-	p := &TokenTxVerifyMetadata{
+	p := &TokenTxVerifyParams{
 		NumOutputTokens: 3,
 		BitLength:       64,
 		TokenType:       "gold",
@@ -80,9 +80,9 @@ func TestNewView_CustomParams(t *testing.T) {
 	require.NotNil(t, v)
 
 	tv := v.(*TokenTxVerifyView)
-	require.Equal(t, 3, tv.meta.NumOutputTokens)
-	require.Equal(t, uint64(64), tv.meta.BitLength)
-	require.Equal(t, "gold", tv.meta.TokenType)
+	require.Equal(t, 3, tv.params.NumOutputTokens)
+	require.Equal(t, uint64(64), tv.params.BitLength)
+	require.Equal(t, "gold", tv.params.TokenType)
 }
 
 func TestNewView_InvalidJSON(t *testing.T) {
@@ -105,7 +105,7 @@ func TestCall_VerifiesProofSuccessfully(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &TokenTxVerifyMetadata{NumOutputTokens: tt.numOutputs}
+			p := &TokenTxVerifyParams{NumOutputTokens: tt.numOutputs}
 			input, err := json.Marshal(p)
 			require.NoError(t, err)
 
@@ -121,7 +121,7 @@ func TestCall_VerifiesProofSuccessfully(t *testing.T) {
 
 func TestCall_TamperedProofFails(t *testing.T) {
 	factory := &TokenTxVerifyViewFactory{}
-	p := &TokenTxVerifyMetadata{NumOutputTokens: 2}
+	p := &TokenTxVerifyParams{NumOutputTokens: 2}
 	input, err := json.Marshal(p)
 	require.NoError(t, err)
 
@@ -155,7 +155,7 @@ func TestNewView_MultipleOutputCounts(t *testing.T) {
 
 	for _, numOutputs := range []int{1, 2, 4} {
 		t.Run("outputs_"+string(rune('0'+numOutputs)), func(t *testing.T) {
-			p := &TokenTxVerifyMetadata{NumOutputTokens: numOutputs}
+			p := &TokenTxVerifyParams{NumOutputTokens: numOutputs}
 			input, err := json.Marshal(p)
 			require.NoError(t, err)
 
@@ -170,7 +170,7 @@ func TestNewView_MultipleOutputCounts(t *testing.T) {
 }
 
 func TestParamsJSON_RoundTrip(t *testing.T) {
-	original := &TokenTxVerifyMetadata{
+	original := &TokenTxVerifyParams{
 		NumOutputTokens: 5,
 		BitLength:       64,
 		TokenType:       "silver",
@@ -180,7 +180,7 @@ func TestParamsJSON_RoundTrip(t *testing.T) {
 	data, err := json.Marshal(original)
 	require.NoError(t, err)
 
-	decoded := &TokenTxVerifyMetadata{}
+	decoded := &TokenTxVerifyParams{}
 	require.NoError(t, json.Unmarshal(data, decoded))
 
 	require.Equal(t, original, decoded)
