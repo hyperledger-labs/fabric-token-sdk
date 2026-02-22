@@ -8,6 +8,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"path"
 	"runtime"
 	"time"
@@ -26,12 +27,6 @@ var (
 	count        = flag.Int("count", 1, "Number of executions")
 )
 
-var ZKPWorkload = node.Workload{
-	Name:    "zkp",
-	Factory: &benchmarking.TokenTxVerifyViewFactory{},
-	Params:  &benchmarking.TokenTxVerifyMetadata{},
-}
-
 func main() {
 	flag.Parse()
 
@@ -40,9 +35,21 @@ func main() {
 	testdataPath := "./out/testdata" // for local debugging you can set testdataPath := "out/testdata"
 	clientConfPath := path.Join(testdataPath, "fsc", "nodes", "test-node.0", "client-config.yaml")
 
-	// filter workloads by flag
+	params := &benchmarking.TokenTxVerifyParams{}
+	fmt.Println("Pre-computing ZK proof...")
+	if err := params.SetupProof(); err != nil {
+		panic(fmt.Sprintf("failed to pre-compute proof: %v", err))
+	}
+	fmt.Println("Proof ready.")
+
+	zkpWorkload := node.Workload{
+		Name:    "zkp",
+		Factory: &benchmarking.TokenTxVerifyViewFactory{},
+		Params:  params,
+	}
+
 	selected := make([]node.Workload, 0, len(*workloadFlag))
-	selected = append(selected, ZKPWorkload)
+	selected = append(selected, zkpWorkload)
 
 	node.RunRemoteBenchmarkSuite(node.RemoteBenchmarkConfig{
 		Workloads:      selected,

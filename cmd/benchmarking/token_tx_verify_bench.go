@@ -27,19 +27,46 @@ const (
 	defaultCurveID    = math.BLS12_381_BBS_GURVY
 )
 
+var dummyIdemixPK = []byte("benchmark-dummy-idemix-pk")
+
 type ProofData struct {
 	PubParams *v1.PublicParams
 	ActionRaw []byte
 }
 
-type TokenTxVerifyMetadata struct {
-	NumOutputTokens int    `json:"num_outputs"`
-	BitLength       uint64 `json:"bit_length,omitempty"`
-	TokenType       string `json:"token_type,omitempty"`
-	CurveID         int    `json:"curve_id,omitempty"`
+func (p *ProofData) Marshal() (*WireProofData, error) {
+	ppRaw, err := p.PubParams.Serialize()
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize public parameters: %w", err)
+	}
+
+	return &WireProofData{PubParamsRaw: ppRaw, ActionRaw: p.ActionRaw}, nil
 }
 
-func (t *TokenTxVerifyMetadata) applyDefaults() *TokenTxVerifyMetadata {
+// WireProofData is the JSON-safe representation of ProofData for transport.
+type WireProofData struct {
+	PubParamsRaw []byte `json:"pub_params_raw"`
+	ActionRaw    []byte `json:"action_raw"`
+}
+
+func (w *WireProofData) Unmarshal() (*ProofData, error) {
+	pp, err := v1.NewPublicParamsFromBytes(w.PubParamsRaw, v1.DLogNoGHDriverName, v1.ProtocolV1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deserialize public parameters: %w", err)
+	}
+
+	return &ProofData{PubParams: pp, ActionRaw: w.ActionRaw}, nil
+}
+
+type TokenTxVerifyParams struct {
+	NumOutputTokens int            `json:"num_outputs"`
+	BitLength       uint64         `json:"bit_length,omitempty"`
+	TokenType       string         `json:"token_type,omitempty"`
+	CurveID         int            `json:"curve_id,omitempty"`
+	Proof           *WireProofData `json:"proof,omitempty"`
+}
+
+func (t *TokenTxVerifyParams) applyDefaults() *TokenTxVerifyParams {
 	if t.NumOutputTokens <= 0 {
 		t.NumOutputTokens = deafultNumOutputs
 	}
@@ -56,8 +83,20 @@ func (t *TokenTxVerifyMetadata) applyDefaults() *TokenTxVerifyMetadata {
 	return t
 }
 
+// SetupProof pre-generates a ZK proof and embeds it in the metadata so it
+// travels over the wire. Call this on the client before sending the workload.
+func (t *TokenTxVerifyParams) SetupProof() error {
+	proof, err := GenerateProofData(t)
+	if err != nil {
+		return err
+	}
+	t.Proof, err = proof.Marshal()
+
+	return err
+}
+
 type TokenTxVerifyView struct {
-	meta      TokenTxVerifyMetadata
+	params    TokenTxVerifyParams
 	pubParams *v1.PublicParams
 	actionRaw []byte
 }
@@ -78,11 +117,11 @@ func (q *TokenTxVerifyView) Call(viewCtx view.Context) (interface{}, error) {
 	return nil, issue.NewVerifier(coms, q.pubParams).Verify(action.GetProof())
 }
 
-// GenerateProofData creates a ZK issue proof andpublic parameters.
-func GenerateProofData(meta *TokenTxVerifyMetadata) (*ProofData, error) {
+// GenerateProofData creates a ZK issue proof and associated public parameters.
+func GenerateProofData(meta *TokenTxVerifyParams) (*ProofData, error) {
 	meta.applyDefaults()
 
-	pubParams, err := v1.Setup(meta.BitLength, nil, math.CurveID(meta.CurveID))
+	pubParams, err := v1.Setup(meta.BitLength, dummyIdemixPK, math.CurveID(meta.CurveID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up public parameters: %w", err)
 	}
@@ -118,9 +157,10 @@ type TokenTxVerifyViewFactory struct {
 	proofs []*ProofData
 }
 
-func (c *TokenTxVerifyViewFactory) SetupProofs(n int, meta *TokenTxVerifyMetadata) {
+// SetupProofs pre-generates n proofs into the factory's in-memory pool.
+func (c *TokenTxVerifyViewFactory) SetupProofs(n int, meta *TokenTxVerifyParams) {
 	if meta == nil {
-		meta = &TokenTxVerifyMetadata{}
+		meta = &TokenTxVerifyParams{}
 	}
 	meta.applyDefaults()
 	proofs := make([]*ProofData, n)
@@ -155,21 +195,30 @@ func (c *TokenTxVerifyViewFactory) popProof() *ProofData {
 	return p
 }
 
-// NewView builds a verification view. If proofs were added via AddProofs,
-// one is consumed and the expensive generation step is skipped.
-// Otherwise a fresh proof is generated from the JSON-encoded metadata.
+// NewView builds a verification view. Proof source priority:
+//  1. Wire proof embedded in the JSON params (remote/gRPC path)
+//  2. In-memory proof pool via AddProofs/SetupProofs (local bench path)
+//  3. Fresh generation (fallback)
 func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
 	f := &TokenTxVerifyView{}
 
-	if err := json.Unmarshal(in, &f.meta); err != nil {
+	if err := json.Unmarshal(in, &f.params); err != nil {
 		return nil, err
 	}
-	f.meta.applyDefaults()
+	f.params.applyDefaults()
 
-	proof := c.popProof()
-	if proof == nil {
+	var proof *ProofData
+	if f.params.Proof != nil {
 		var err error
-		proof, err = GenerateProofData(&f.meta)
+		proof, err = f.params.Proof.Unmarshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal wire proof: %w", err)
+		}
+	} else if p := c.popProof(); p != nil {
+		proof = p
+	} else {
+		var err error
+		proof, err = GenerateProofData(&f.params)
 		if err != nil {
 			return nil, err
 		}
