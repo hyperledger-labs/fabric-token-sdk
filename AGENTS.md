@@ -16,6 +16,14 @@ This directory contains the **Fabric Token SDK**, a project under Hyperledger La
     *   `integration/`: Integration tests and the Network Orchestrator (NWO).
 *   **Key Technologies:** Go (1.24+), Hyperledger Fabric, Fabric Smart Client, Idemix, Mathlib, Ginkgo (testing), Cobra (CLI).
 
+## Architecture & Design Patterns
+*   **Driver Pattern:** The SDK uses a plugin architecture. `token/driver` defines the interfaces (Ports). `token/core` contains the Adapters (Implementations).
+    *   **Goal:** Allow swapping the underlying token technology (e.g., from cleartext UTXO to ZK-UTXO) without changing the application logic.
+    *   **Agent Tip:** When analyzing bugs, check if the issue is in the *interface definition* (`driver`) or a specific *implementation* (`core/fabtoken` vs `core/zkatdlog`).
+*   **Service Pattern:** High-level logic is encapsulated in services (`token/services`).
+    *   **Token Transaction (TTX):** The most critical service. It orchestrates the lifecycle of a token transaction (Request -> Assemble -> Sign -> Commit).
+*   **Network Orchestrator (NWO):** Used for integration tests to programmatically define and spin up Fabric networks. It replaces manual `docker-compose` setups for testing.
+
 ## Building and Running
 
 ### Development Environment Setup
@@ -81,6 +89,11 @@ This directory contains the **Fabric Token SDK**, a project under Hyperledger La
 *   **Global Variables:** Avoid them to ensure testability and reduce side effects.
 *   **Linting:** Zero-tolerance policy. Use `golangci-lint` (via `make lint`) to enforce standards.
 
+### Documentation
+*   **GoDocs:** All exported functions, structs, and interfaces **MUST** have clear, concise comments explaining their purpose, parameters, and return values.
+*   **Test Documentation:** Test functions should briefly describe the scenario being tested (e.g., "Given X, when Y, then Z").
+*   **System Documentation:** Any changes to the SDK's behavior, architecture, or public API **MUST** be reflected in the `docs/` directory. Keep diagrams (PUML) and markdown files in sync with the code.
+
 ### Testing Strategy
 *   **Unit Tests:** Should be co-located with the code (`*_test.go`).
 *   **Integration Tests:** Located in `integration/`. Use the **Network Orchestrator (NWO)** in `integration/nwo` to spin up ephemeral Fabric networks.
@@ -104,10 +117,35 @@ This directory contains the **Fabric Token SDK**, a project under Hyperledger La
 *   `Makefile`: The central control hub. Read this to discover new targets.
 *   `go.mod`: Project dependencies.
 *   `tools/tools.go`: Tool dependencies (install with `make install-tools`).
-*   `token/core`: Driver implementations.
-    *   `fabtoken`: Unspent Transaction Output (UTXO) based driver without privacy.
-    *   `zkatdlog`: UTXO-based driver *with* Zero-Knowledge Privacy (Idemix).
-*   `integration/nwo`: Network Orchestrator for setting up test environments.
+*   `token/`: Core SDK logic.
+    *   `driver/`: **Interfaces** defining the contract for token drivers.
+    *   `core/`: **Implementations** of drivers.
+        *   `fabtoken`: UTXO-based driver (cleartext).
+        *   `zkatdlog`: UTXO-based driver with Zero-Knowledge Privacy (Idemix).
+    *   `services/`: High-level services consumed by the SDK.
+        *   `identity/`: Manages user identities and MSP interactions.
+        *   `network/`: Handles communication with the Fabric network (or other DLTs).
+        *   `ttx/`: **Token Transaction (TTX)** service for orchestration and atomic swaps.
+    *   `sdk/`: Public API entry points for applications.
+*   `integration/`: Integration tests.
+    *   `nwo/`: **Network Orchestrator** for spinning up test networks.
+    *   `token/`: Actual integration test suites (e.g., `fungible`, `nft`, `dvp`).
+
+## Debugging & Advanced Testing
+*   **Focused Integration Tests:**
+    *   Use `TEST_FILTER` to run specific tests (uses Ginkgo labels).
+        ```bash
+        # Run only tests matching label "T1" in the dlog-fabric suite
+        make integration-tests-dlog-fabric TEST_FILTER="T1"
+        ```
+    *   Alternatively, modify the test code: change `It("...", ...)` to `FIt("...", ...)` to focus, or `XIt("...", ...)` to skip. **Do not commit these changes.**
+*   **Locating Logs:**
+    *   **Integration Test Logs:** Found in the system's temporary directory (e.g., `/tmp/fsc-integration-<random>/...`).
+    *   **Container Logs:** Use `docker logs <container_name>` to inspect running containers.
+    *   **Tip:** To persist logs for debugging, you may temporarily modify the test to use `NewLocalTestSuite` (see `integration/token/test_utils.go`), which outputs to `./testdata`.
+*   **Debugging Helpers:**
+    *   **Wait for Input:** In integration tests, use `time.Sleep()` or a pause loop if you need to manually inspect the Docker state (containers will be torn down on test exit unless configured otherwise).
+    *   **Preserve Network:** Check if the Make target supports a `no-cleanup` option or manually comment out the cleanup code in the test suite `AfterSuite`.
 
 ## Troubleshooting
 *   **"Chaincode packaging failed":** Usually means `FAB_BINS` is not set or points to an invalid location.
