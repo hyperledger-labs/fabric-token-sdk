@@ -41,6 +41,7 @@ func (p *viewPool) createViews(b *testing.B, f *TokenTxVerifyViewFactory, input 
 func (p *viewPool) nextView() view.View {
 	i := p.idx
 	p.idx = (p.idx + 1) % p.size
+
 	return p.views[i%p.size]
 }
 

@@ -46,6 +46,7 @@ func (t *TokenTxVerifyParams) applyDefaults() *TokenTxVerifyParams {
 	if t.CurveID <= 0 {
 		t.CurveID = int(defaultCurveID)
 	}
+	
 	return t
 }
 
