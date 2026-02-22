@@ -34,12 +34,11 @@ func BenchmarkAPI(b *testing.B) {
 		Factory: &TokenTxVerifyViewFactory{},
 	})
 	require.NoError(b, err)
+	defer n.Stop()
 
 	vm, err := viewregistry.GetManager(n)
 	require.NoError(b, err)
 
 	// run workload via direct view API
 	node.RunAPIBenchmark(b, vm, zkpWorkload)
-
-	n.Stop()
 }
