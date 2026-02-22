@@ -29,7 +29,7 @@ var (
 var ZKPWorkload = node.Workload{
 	Name:    "zkp",
 	Factory: &benchmarking.TokenTxVerifyViewFactory{},
-	Params:  &benchmarking.TokenTxVerifyParams{},
+	Params:  &benchmarking.TokenTxVerifyMetadata{},
 }
 
 func main() {
