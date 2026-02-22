@@ -23,6 +23,7 @@ func mkScriptRaw(t *testing.T, sender, recipient []byte, deadline time.Time, has
 	s := &htlc.Script{Sender: sender, Recipient: recipient, Deadline: deadline, HashInfo: htlc.HashInfo{Hash: hash}}
 	r, err := json.Marshal(s)
 	require.NoError(t, err)
+
 	return s, r
 }
 
@@ -119,7 +120,7 @@ func TestMetadataClaimKeyCheck(t *testing.T) {
 	// reclaim path should return empty key
 	k, err := ihtlc.MetadataClaimKeyCheck(act, script, ihtlc.Reclaim, nil)
 	require.NoError(t, err)
-	require.Equal(t, "", k)
+	require.Empty(t, k)
 }
 
 func TestMetadataClaimKeyCheck_ImageErrorAndMismatch(t *testing.T) {

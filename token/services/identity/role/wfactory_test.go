@@ -33,6 +33,7 @@ func TestDefaultFactory(t *testing.T) {
 
 		f := role.NewDefaultFactory(logger, ip, tv, wc, des, &disabled.Provider{})
 		require.NotNil(t, f)
+
 		return f, ip, tv, wc, des, is
 	}
 
@@ -187,6 +188,7 @@ func (f *mockIdentityInfo) EnrollmentID() string {
 	if f.eid == "" {
 		return "enrollment-id"
 	}
+
 	return f.eid
 }
 
@@ -198,6 +200,7 @@ func (f *mockIdentityInfo) Get(context.Context) (driver.Identity, []byte, error)
 	if f.err != nil {
 		return nil, nil, f.err
 	}
+
 	return driver.Identity(f.id), []byte("audit-info"), nil
 }
 

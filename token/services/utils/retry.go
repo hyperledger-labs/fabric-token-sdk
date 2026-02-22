@@ -42,12 +42,14 @@ func (f *retryRunner) nextDelay(delay time.Duration) time.Duration {
 	if delay == 0 || !f.expBackoff {
 		return f.initialDelay
 	}
+
 	return 2 * delay
 }
 
 func (f *retryRunner) Run(runner func() error) error {
 	return f.RunWithErrors(func() (bool, error) {
 		err := runner()
+
 		return err == nil, err
 	})
 }
@@ -73,5 +75,6 @@ func (f *retryRunner) RunWithErrors(runner func() (bool, error)) error {
 	if len(errs) == 0 {
 		return ErrMaxRetriesExceeded
 	}
+
 	return errors.Join(errs...)
 }

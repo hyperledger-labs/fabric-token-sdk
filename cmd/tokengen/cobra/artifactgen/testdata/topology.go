@@ -4,21 +4,19 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package main
+package testdata
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
-	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/artifactgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 )
 
+// Topology returns a list of topologies for testing.
 func Topology(tokenSDKDriver string, sdks ...node.SDK) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
@@ -113,11 +111,5 @@ func Topology(tokenSDKDriver string, sdks ...node.SDK) []api.Topology {
 		fabricTopology,
 		tokenTopology,
 		fscTopology,
-	}
-}
-
-func main() {
-	if err := artifactgen.WriteTopologies("fungible.yaml", Topology(zkatdlognoghv1.DriverIdentifier, &tokensdk.SDK{}), 0766); err != nil {
-		panic(err)
 	}
 }

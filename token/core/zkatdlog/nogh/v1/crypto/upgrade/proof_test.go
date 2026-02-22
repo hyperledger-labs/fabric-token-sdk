@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestSerializeAndDeserialize(t *testing.T) {
@@ -31,20 +32,20 @@ func TestSerializeAndDeserialize(t *testing.T) {
 
 	// Test
 	data, err := p.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// deserialize fails
 	p2 := &Proof{}
 	err = p2.Deserialize(nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	p2 = &Proof{}
 	err = p2.Deserialize([]byte{1, 2, 3})
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// deserialize ok
 	p2 = &Proof{}
 	err = p2.Deserialize(data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Assert
 	assert.Equal(t, p, p2)
@@ -64,7 +65,7 @@ func TestSHA256Digest(t *testing.T) {
 
 	// Test
 	digest, err := SHA256Digest(p.Challenge, p.Tokens)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Assert
 	assert.Len(t, digest, ChallengeSize)
@@ -100,9 +101,9 @@ func TestEdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := SHA256Digest(tt.Challenge, tt.Tokens)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

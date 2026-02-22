@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestRequestSerialization(t *testing.T) {
@@ -30,20 +31,20 @@ func TestRequestSerialization(t *testing.T) {
 		},
 	}
 	raw, err := r.Bytes()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	r2 := NewRequest(nil, "")
 	err = r2.FromBytes(raw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	raw2, err := r2.Bytes()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, raw, raw2)
 
 	mRaw, err := r.MarshalToAudit()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mRaw2, err := r2.MarshalToAudit()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, mRaw, mRaw2)
 }

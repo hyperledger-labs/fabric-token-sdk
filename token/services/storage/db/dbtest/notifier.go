@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	assert2 "github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 type TestTokenDB interface {
@@ -59,6 +60,7 @@ func collectDBEvents(db driver.TokenNotifier) (*[]dbEvent, error) {
 			result = append(result, e)
 		}
 	}()
+
 	return &result, nil
 }
 
@@ -67,10 +69,10 @@ func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, err)
+	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
+	require.NoError(t, tx.Commit())
 
 	assert2.Eventually(t, func() bool { return len(*result) == 2 }, time.Second, 20*time.Millisecond)
 }
@@ -80,11 +82,11 @@ func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNo
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
-	assert.NoError(t, tx.Delete(t.Context(), token.ID{TxId: "tx1", Index: 1}, "alice"))
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, err)
+	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
+	require.NoError(t, tx.Delete(t.Context(), token.ID{TxId: "tx1", Index: 1}, "alice"))
+	require.NoError(t, tx.Commit())
 
 	assert2.Eventually(t, func() bool { return len(*result) == 3 }, time.Second, 20*time.Millisecond)
 }
@@ -94,9 +96,9 @@ func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.Token
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
+	require.NoError(t, err)
+	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
 
 	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
 }
@@ -106,11 +108,11 @@ func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier)
 	result, err := collectDBEvents(notifier)
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
-	assert.NoError(t, err)
-	// assert.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
+	require.NoError(t, err)
+	// require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
 	_, _, err = tx.GetToken(t.Context(), token.ID{TxId: "tx1"}, true)
-	assert.NoError(t, err)
-	assert.NoError(t, tx.Commit())
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
 
 	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
 }

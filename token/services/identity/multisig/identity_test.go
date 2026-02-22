@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMultiIdentity_SerializeDeserialize(t *testing.T) {
@@ -23,11 +24,11 @@ func TestMultiIdentity_SerializeDeserialize(t *testing.T) {
 	mi := &MultiIdentity{Identities: identities}
 
 	serialized, err := mi.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	deserialized := &MultiIdentity{}
 	err = deserialized.Deserialize(serialized)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, mi, deserialized)
 }
@@ -35,10 +36,10 @@ func TestMultiIdentity_SerializeDeserialize(t *testing.T) {
 func TestWrapIdentities(t *testing.T) {
 	identities := identities(t, "id1", "id2")
 	wrapped, err := WrapIdentities(identities...)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	unwrapped, isMultisig, err := Unwrap(wrapped)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, isMultisig)
 	assert.Equal(t, identities, unwrapped)
 }
@@ -46,7 +47,7 @@ func TestWrapIdentities(t *testing.T) {
 func TestUnwrap_InvalidIdentity(t *testing.T) {
 	invalidIdentity := []byte("invalid")
 	unwrapped, isMultisig, err := Unwrap(invalidIdentity)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.False(t, isMultisig)
 	assert.Nil(t, unwrapped)
 }
@@ -55,7 +56,7 @@ func TestInfoMatcher_Match(t *testing.T) {
 	identities := identities(t, "id1", "id2")
 	mi := &MultiIdentity{Identities: identities}
 	serialized, err := mi.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	matchers := []driver.Matcher{
 		&mockMatcher{expected: wrapIdentity(t, "id1")},
@@ -64,14 +65,14 @@ func TestInfoMatcher_Match(t *testing.T) {
 	infoMatcher := &InfoMatcher{AuditInfoMatcher: matchers}
 
 	err = infoMatcher.Match(t.Context(), serialized)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestInfoMatcher_Match_Invalid(t *testing.T) {
 	identities := identities(t, "id1", "id2")
 	mi := &MultiIdentity{Identities: identities}
 	serialized, err := mi.Serialize()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	matchers := []driver.Matcher{
 		&mockMatcher{expected: []byte("id1")},
@@ -80,16 +81,16 @@ func TestInfoMatcher_Match_Invalid(t *testing.T) {
 	infoMatcher := &InfoMatcher{AuditInfoMatcher: matchers}
 
 	err = infoMatcher.Match(t.Context(), serialized)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestWrapAuditInfo(t *testing.T) {
 	auditInfos := [][]byte{[]byte("audit1"), []byte("audit2")}
 	wrapped, err := WrapAuditInfo(auditInfos)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	isMultisig, unwrapped, err := UnwrapAuditInfo(wrapped)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, isMultisig)
 	assert.Equal(t, auditInfos, unwrapped)
 }
@@ -97,7 +98,7 @@ func TestWrapAuditInfo(t *testing.T) {
 func TestUnwrapAuditInfo_Invalid(t *testing.T) {
 	invalidInfo := []byte("invalid")
 	isMultisig, unwrapped, err := UnwrapAuditInfo(invalidInfo)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.False(t, isMultisig)
 	assert.Nil(t, unwrapped)
 }
@@ -105,17 +106,17 @@ func TestUnwrapAuditInfo_Invalid(t *testing.T) {
 func TestMultiIdentity_Deserialize_Error(t *testing.T) {
 	mi := &MultiIdentity{}
 	err := mi.Deserialize([]byte("invalid"))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestWrapIdentities_Error(t *testing.T) {
 	_, err := WrapIdentities()
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestUnwrap_Error(t *testing.T) {
 	_, _, err := Unwrap([]byte("invalid"))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestInfoMatcher_Match_Error(t *testing.T) {
@@ -127,17 +128,17 @@ func TestInfoMatcher_Match_Error(t *testing.T) {
 	infoMatcher := &InfoMatcher{AuditInfoMatcher: matchers}
 
 	err := infoMatcher.Match(t.Context(), invalidSerialized)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestWrapAuditInfo_Error(t *testing.T) {
 	_, err := WrapAuditInfo(nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestUnwrapAuditInfo_Error(t *testing.T) {
 	_, _, err := UnwrapAuditInfo([]byte("invalid"))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func identities(t *testing.T, names ...string) []token.Identity {
@@ -146,13 +147,15 @@ func identities(t *testing.T, names ...string) []token.Identity {
 	for i, name := range names {
 		ids[i] = wrapIdentity(t, name)
 	}
+
 	return ids
 }
 
 func wrapIdentity(t *testing.T, name string) token.Identity {
 	t.Helper()
 	id, err := identity.WrapWithType("name", []byte(name))
-	assert.NoError(t, err)
+	require.NoError(t, err)
+
 	return id
 }
 
@@ -164,5 +167,6 @@ func (m *mockMatcher) Match(ctx context.Context, raw []byte) error {
 	if !bytes.Equal(raw, m.expected) {
 		return errors.New("mismatch")
 	}
+
 	return nil
 }

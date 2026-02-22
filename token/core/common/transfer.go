@@ -12,8 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
-// SelectIssuerForRedeem return the issuer's public key to use for a redeem.
-// If opts specify an FSC issuer identity, then we expect to find the opts also the public key to add in the transfer action.
+// SelectIssuerForRedeem returns the issuer's public key to use for a redeem.
+// If opts specify an FSC issuer identity, then we expect to find in the opts also the public key to add in the transfer action.
 // Otherwise, the first public key in the public params is used.
 func SelectIssuerForRedeem(issuers []driver.Identity, opts *driver.TransferOptions) (driver.Identity, error) {
 	if len(issuers) == 0 {
@@ -32,11 +32,9 @@ func SelectIssuerForRedeem(issuers []driver.Identity, opts *driver.TransferOptio
 		if issuerSigningKey.IsNone() {
 			return nil, errors.New("issuer public params public key not found in opts")
 		}
+
 		return issuerSigningKey, nil
 	}
 
-	if len(issuers) < 1 {
-		return nil, errors.New("no issuer found")
-	}
 	return issuers[0], nil
 }

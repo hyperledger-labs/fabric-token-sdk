@@ -81,5 +81,6 @@ func (g *BalanceViewFactory) NewView(in []byte) (view.View, error) {
 	if err := json.Unmarshal(in, f.Balance); err != nil {
 		return nil, err
 	}
+
 	return f, nil
 }

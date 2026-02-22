@@ -84,6 +84,7 @@ func NewServiceManager(
 				})),
 				checkService: checkService,
 			}
+
 			return auditor, nil
 		}),
 		networkProvider:     networkProvider,
@@ -120,7 +121,21 @@ func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 
 	return iterators.ForEach(it, func(record *storage.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		return net.AddFinalityListener(tmsID.Namespace, record.TxID, finality.NewListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB, auditor.finalityTracer))
+
+		return net.AddFinalityListener(
+			tmsID.Namespace,
+			record.TxID,
+			finality.NewListener(
+				logger,
+				net,
+				tmsID.Namespace,
+				cm.tmsProvider,
+				tmsID,
+				auditor.auditDB,
+				tokenDB,
+				auditor.finalityTracer,
+			),
+		)
 	})
 }
 
@@ -132,8 +147,10 @@ var (
 func Get(sp token.ServiceProvider, w *token.AuditorWallet) *Service {
 	if w == nil {
 		logger.Debugf("no wallet provided")
+
 		return nil
 	}
+
 	return GetByTMSID(sp, w.TMS().ID())
 }
 
@@ -142,12 +159,15 @@ func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) *Service {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		logger.Errorf("failed to get manager service: [%s]", err)
+
 		return nil
 	}
 	auditor, err := s.(*ServiceManager).Auditor(tmsID)
 	if err != nil {
 		logger.Errorf("failed to get db for tms [%s]: [%s]", tmsID, err)
+
 		return nil
 	}
+
 	return auditor
 }

@@ -58,6 +58,7 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 	if v.Cmp(big.NewInt(0)) < 0 {
 		return nil, errors.New("quantity must be larger than 0")
 	}
+	// #nosec G115
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
 	}
@@ -77,6 +78,7 @@ func ToQuantitySum(precision uint64) iterators.Reducer[*UnspentToken, Quantity] 
 		if err != nil {
 			return nil, err
 		}
+
 		return sum.Add(q), nil
 	})
 }
@@ -92,6 +94,8 @@ func UInt64ToQuantity(u uint64, precision uint64) (Quantity, error) {
 	if v.Cmp(big.NewInt(0)) < 0 {
 		return nil, errors.New("quantity must be larger than 0")
 	}
+
+	// #nosec G115
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%d has precision %d > %d", u, v.BitLen(), precision)
 	}
@@ -140,6 +144,7 @@ func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
 	if v.Cmp(big.NewInt(0)) < 0 {
 		return nil, errors.New("quantity must be larger than 0")
 	}
+	// #nosec G115
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
 	}
@@ -157,11 +162,13 @@ func (q *BigQuantity) Add(b Quantity) Quantity {
 	sum := big.NewInt(0)
 	sum = sum.Add(q.Int, bq.Int)
 
+	// #nosec G115
 	if sum.BitLen() > int(q.Precision) {
 		panic(fmt.Sprintf("%s < %s", q.Text(10), b.Decimal()))
 	}
 
 	q.Int = sum
+
 	return q
 }
 
@@ -179,6 +186,7 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 	diff.Sub(q.Int, b.(*BigQuantity).Int)
 
 	q.Int = diff
+
 	return q
 }
 
@@ -234,6 +242,7 @@ func (q *UInt64Quantity) Add(b Quantity) Quantity {
 	}
 
 	q.Value = sum
+
 	return q
 }
 
@@ -250,6 +259,7 @@ func (q *UInt64Quantity) Sub(b Quantity) Quantity {
 	diff := q.Value - bq.Value
 
 	q.Value = diff
+
 	return q
 }
 
@@ -264,6 +274,7 @@ func (q *UInt64Quantity) Cmp(b Quantity) int {
 	} else if q.Value > bq.Value {
 		return 1
 	}
+
 	return 0
 }
 

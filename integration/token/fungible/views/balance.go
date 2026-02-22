@@ -86,6 +86,7 @@ func (g *BalanceViewFactory) NewView(in []byte) (view.View, error) {
 	if err := json.Unmarshal(in, f.BalanceQuery); err != nil {
 		return nil, err
 	}
+
 	return f, nil
 }
 
@@ -128,5 +129,6 @@ func (g *CoOwnedBalanceViewFactory) NewView(in []byte) (view.View, error) {
 	if err := json.Unmarshal(in, f.CoOwnedBalanceQuery); err != nil {
 		return nil, err
 	}
+
 	return f, nil
 }

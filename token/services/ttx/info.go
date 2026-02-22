@@ -54,6 +54,7 @@ func (a *TransactionInfoProvider) TransactionInfo(ctx context.Context, txID stri
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load transient for [%s]", txID)
 	}
+
 	return &TransactionInfo{
 		EndorsementAcks:     endorsementAcks,
 		ApplicationMetadata: applicationMetadata,
@@ -64,16 +65,20 @@ func (a *TransactionInfoProvider) TransactionInfo(ctx context.Context, txID stri
 func (a *TransactionInfoProvider) loadTransient(trRaw []byte, txID string) (map[string][]byte, error) {
 	if len(trRaw) == 0 {
 		logger.Debugf("transaction [%s], no token request found, skip it", txID)
+
 		return nil, nil
 	}
 	request, err := a.tms.NewFullRequestFromBytes(trRaw)
 	if err != nil {
 		logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
+
 		return nil, err
 	}
 	if request.Metadata == nil {
 		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
+
 		return nil, nil
 	}
+
 	return request.Metadata.Application, nil
 }

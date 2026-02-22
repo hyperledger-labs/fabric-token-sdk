@@ -33,6 +33,7 @@ func CompileOpts(opts ...TxOption) (*TxOptions, error) {
 			return nil, err
 		}
 	}
+
 	return txOptions, nil
 }
 
@@ -41,6 +42,7 @@ type TxOption func(*TxOptions) error
 func WithAuditor(auditor view.Identity) TxOption {
 	return func(o *TxOptions) error {
 		o.Auditor = auditor
+
 		return nil
 	}
 }
@@ -48,6 +50,7 @@ func WithAuditor(auditor view.Identity) TxOption {
 func WithNetwork(network string) TxOption {
 	return func(o *TxOptions) error {
 		o.TMSID.Network = network
+
 		return nil
 	}
 }
@@ -55,6 +58,7 @@ func WithNetwork(network string) TxOption {
 func WithChannel(channel string) TxOption {
 	return func(o *TxOptions) error {
 		o.TMSID.Channel = channel
+
 		return nil
 	}
 }
@@ -62,6 +66,7 @@ func WithChannel(channel string) TxOption {
 func WithNamespace(namespace string) TxOption {
 	return func(o *TxOptions) error {
 		o.TMSID.Namespace = namespace
+
 		return nil
 	}
 }
@@ -70,6 +75,7 @@ func WithNamespace(namespace string) TxOption {
 func WithNoCachingRequest() TxOption {
 	return func(o *TxOptions) error {
 		o.NoCachingRequest = true
+
 		return nil
 	}
 }
@@ -80,6 +86,7 @@ func WithTMS(network, channel, namespace string) TxOption {
 		o.TMSID.Network = network
 		o.TMSID.Channel = channel
 		o.TMSID.Namespace = namespace
+
 		return nil
 	}
 }
@@ -88,6 +95,7 @@ func WithTMS(network, channel, namespace string) TxOption {
 func WithTMSID(id token.TMSID) TxOption {
 	return func(o *TxOptions) error {
 		o.TMSID = id
+
 		return nil
 	}
 }
@@ -99,6 +107,7 @@ func WithTMSIDPointer(id *token.TMSID) TxOption {
 			return nil
 		}
 		o.TMSID = *id
+
 		return nil
 	}
 }
@@ -106,6 +115,7 @@ func WithTMSIDPointer(id *token.TMSID) TxOption {
 func WithNoTransactionVerification() TxOption {
 	return func(o *TxOptions) error {
 		o.NoTransactionVerification = true
+
 		return nil
 	}
 }
@@ -113,6 +123,7 @@ func WithNoTransactionVerification() TxOption {
 func WithTimeout(timeout time.Duration) TxOption {
 	return func(o *TxOptions) error {
 		o.Timeout = timeout
+
 		return nil
 	}
 }
@@ -120,6 +131,7 @@ func WithTimeout(timeout time.Duration) TxOption {
 func WithTxID(txID string) TxOption {
 	return func(o *TxOptions) error {
 		o.TxID = txID
+
 		return nil
 	}
 }
@@ -127,6 +139,7 @@ func WithTxID(txID string) TxOption {
 func WithTransactions(tx *Transaction) TxOption {
 	return func(o *TxOptions) error {
 		o.Transaction = tx
+
 		return nil
 	}
 }
@@ -134,6 +147,7 @@ func WithTransactions(tx *Transaction) TxOption {
 func WithNetworkTxID(id network.TxID) TxOption {
 	return func(o *TxOptions) error {
 		o.NetworkTxID = id
+
 		return nil
 	}
 }
@@ -142,6 +156,7 @@ func WithNetworkTxID(id network.TxID) TxOption {
 func WithAnonymousTransaction(v bool) TxOption {
 	return func(o *TxOptions) error {
 		o.AnonymousTransaction = v
+
 		return nil
 	}
 }
@@ -154,6 +169,7 @@ func CompileServiceOptions(opts ...token.ServiceOption) (*token.ServiceOptions, 
 			return nil, err
 		}
 	}
+
 	return txOptions, nil
 }
 
@@ -164,6 +180,7 @@ func WithRecipientData(recipientData *RecipientData) token.ServiceOption {
 			options.Params = map[string]interface{}{}
 		}
 		options.Params["RecipientData"] = recipientData
+
 		return nil
 	}
 }
@@ -178,6 +195,7 @@ func WithRecipientWalletID(walletID string) token.ServiceOption {
 			options.Params = map[string]interface{}{}
 		}
 		options.Params["RecipientWalletID"] = walletID
+
 		return nil
 	}
 }
@@ -187,5 +205,6 @@ func getRecipientWalletID(opts *token.ServiceOptions) string {
 	if !ok {
 		return ""
 	}
+
 	return wBoxed.(string)
 }

@@ -24,6 +24,7 @@ func NewRestUserProvider(config model.UserProviderConfig, metrics *metrics.Metri
 	for _, user := range config.Users {
 		users[user.Name] = newRestUser(user, metrics, newHttpClient(config.HttpClient), logger)
 	}
+
 	return &restUserProvider{users: users}
 }
 

@@ -57,6 +57,7 @@ func (o ServiceOptions) ParamAsString(key string) (string, error) {
 	if !ok {
 		return "", errors.Errorf("expecting string, found [%T]", o)
 	}
+
 	return s, nil
 }
 
@@ -68,6 +69,7 @@ func CompileServiceOptions(opts ...ServiceOption) (*ServiceOptions, error) {
 			return nil, err
 		}
 	}
+
 	return txOptions, nil
 }
 
@@ -78,6 +80,7 @@ type ServiceOption func(*ServiceOptions) error
 func WithNetwork(network string) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.Network = network
+
 		return nil
 	}
 }
@@ -86,6 +89,7 @@ func WithNetwork(network string) ServiceOption {
 func WithChannel(channel string) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.Channel = channel
+
 		return nil
 	}
 }
@@ -94,6 +98,7 @@ func WithChannel(channel string) ServiceOption {
 func WithNamespace(namespace string) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.Namespace = namespace
+
 		return nil
 	}
 }
@@ -102,6 +107,7 @@ func WithNamespace(namespace string) ServiceOption {
 func WithPublicParameterFetcher(ppFetcher PublicParamsFetcher) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.PublicParamsFetcher = ppFetcher
+
 		return nil
 	}
 }
@@ -110,6 +116,7 @@ func WithPublicParameterFetcher(ppFetcher PublicParamsFetcher) ServiceOption {
 func WithPublicParameter(publicParams []byte) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.PublicParams = publicParams
+
 		return nil
 	}
 }
@@ -120,6 +127,7 @@ func WithTMS(network, channel, namespace string) ServiceOption {
 		o.Network = network
 		o.Channel = channel
 		o.Namespace = namespace
+
 		return nil
 	}
 }
@@ -130,6 +138,7 @@ func WithTMSID(id TMSID) ServiceOption {
 		o.Network = id.Network
 		o.Channel = id.Channel
 		o.Namespace = id.Namespace
+
 		return nil
 	}
 }
@@ -143,6 +152,7 @@ func WithTMSIDPointer(id *TMSID) ServiceOption {
 		o.Network = id.Network
 		o.Channel = id.Channel
 		o.Namespace = id.Namespace
+
 		return nil
 	}
 }
@@ -151,6 +161,7 @@ func WithTMSIDPointer(id *TMSID) ServiceOption {
 func WithInitiator(initiator view.View) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.Initiator = initiator
+
 		return nil
 	}
 }
@@ -159,6 +170,7 @@ func WithInitiator(initiator view.View) ServiceOption {
 func WithDuration(duration time.Duration) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.Duration = duration
+
 		return nil
 	}
 }

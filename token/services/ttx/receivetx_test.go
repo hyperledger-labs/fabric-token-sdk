@@ -39,6 +39,7 @@ func TestReceiveTx(t *testing.T) {
 				ctx := &mock2.Context{}
 				ctx.SessionReturns(session)
 				ctx.ContextReturns(t.Context())
+
 				return ctx, nil
 			},
 			expectError:   true,
@@ -53,6 +54,7 @@ func TestReceiveTx(t *testing.T) {
 				ctx := &mock2.Context{}
 				ctx.SessionReturns(session)
 				ctx.ContextReturns(t.Context())
+
 				return ctx, []ttx.TxOption{ttx.WithTimeout(1 * time.Second)}
 			},
 			expectError: true,
@@ -72,6 +74,7 @@ func TestReceiveTx(t *testing.T) {
 				ctx.ContextReturns(t.Context())
 				np := &mock2.NetworkProvider{}
 				ctx.GetServiceReturnsOnCall(0, np, nil)
+
 				return ctx, []ttx.TxOption{ttx.WithTimeout(1 * time.Second)}
 			},
 			expectError: true,
@@ -119,6 +122,7 @@ func TestReceiveTx(t *testing.T) {
 				ch <- &view.Message{
 					Payload: txRaw,
 				}
+
 				return ctx, []ttx.TxOption{ttx.WithTimeout(1 * time.Second)}
 			},
 			expectError: false,
@@ -174,6 +178,7 @@ func TestReceiveTx(t *testing.T) {
 				ch <- &view.Message{
 					Payload: srRaw,
 				}
+
 				return ctx, []ttx.TxOption{ttx.WithTimeout(1 * time.Second)}
 			},
 			expectError: false,

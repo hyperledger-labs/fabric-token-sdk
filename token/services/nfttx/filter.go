@@ -50,6 +50,7 @@ func (s *filter) Filter(filter Filter, q string) ([]*token2.ID, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to select tokens")
 	}
+
 	return ids, nil
 }
 

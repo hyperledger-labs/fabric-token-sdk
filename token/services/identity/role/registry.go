@@ -56,6 +56,7 @@ func NewRegistry(logger logging.Logger, role identity.Role, storage idriver.Wall
 
 func (r *Registry) RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error {
 	r.Logger.DebugfContext(ctx, "register identity [%s:%s]", config.ID, config.URL)
+
 	return r.Role.RegisterIdentity(ctx, config)
 }
 
@@ -136,6 +137,7 @@ func (r *Registry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver
 			r.WalletMu.RUnlock()
 			if ok {
 				r.Logger.DebugfContext(ctx, "found wallet [%s:%s:%s:%s]", ident, walletID, w.ID(), identityWID)
+
 				return w, nil, identityWID, nil
 			}
 		}
@@ -151,11 +153,13 @@ func (r *Registry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver
 		idInfo, err = r.Role.GetIdentityInfo(ctx, walletIdentifier)
 		if err == nil {
 			r.Logger.DebugfContext(ctx, "identity info found at [%s]", logging.Prefix(walletIdentifier))
+
 			return nil, idInfo, walletIdentifier, nil
 		} else {
 			r.Logger.DebugfContext(ctx, "identity info not found at [%s]", logging.Prefix(walletIdentifier))
 		}
 	}
+
 	return nil, nil, "", errors.Errorf(
 		"failed to get wallet info for [%s]",
 		logging.Prefix(walletID),
@@ -169,6 +173,7 @@ func (r *Registry) RegisterWallet(ctx context.Context, id string, w driver.Walle
 	r.WalletMu.Lock()
 	defer r.WalletMu.Unlock()
 	r.Wallets[id] = w
+
 	return nil
 }
 
@@ -180,6 +185,7 @@ func (r *Registry) BindIdentity(ctx context.Context, identity driver.Identity, e
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal metadata")
 	}
+
 	return r.Storage.StoreIdentity(ctx, identity, eID, wID, int(r.Role.ID()), metaEncoded)
 }
 
@@ -211,6 +217,7 @@ func (r *Registry) WalletIDs(ctx context.Context) ([]string, error) {
 			duplicates[wID] = true
 		}
 	}
+
 	return walletIDs, nil
 }
 
@@ -221,6 +228,7 @@ func (r *Registry) GetIdentityMetadata(ctx context.Context, identity driver.Iden
 	if err != nil {
 		return errors.WithMessagef(err, "failed to retrieve identity's metadata [%s]", identity)
 	}
+
 	return json.Unmarshal(raw, &meta)
 }
 
@@ -232,6 +240,7 @@ func (r *Registry) GetWalletID(ctx context.Context, identity driver.Identity) (s
 		return "", nil
 	}
 	r.Logger.DebugfContext(ctx, "wallet [%s] is bound to identity [%s]", wID, identity)
+
 	return wID, nil
 }
 
@@ -250,6 +259,7 @@ func (r *Registry) WalletByID(ctx context.Context, role identity.RoleType, id dr
 		r.WalletMu.RUnlock()
 		if w != nil {
 			r.Logger.DebugfContext(ctx, "role [%d] lookup wallet by string [%s], found.", role, v)
+
 			return w, nil
 		}
 	}
@@ -260,10 +270,12 @@ func (r *Registry) WalletByID(ctx context.Context, role identity.RoleType, id dr
 	w, idInfo, wID, err := r.Lookup(ctx, id)
 	if err != nil {
 		r.Logger.DebugfContext(ctx, "failed with error [%+v]", err)
+
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%T]", id)
 	}
 	if w != nil {
 		r.Logger.DebugfContext(ctx, "yes [%s:%s]", w.ID(), wID)
+
 		return w, nil
 	}
 	r.Logger.DebugfContext(ctx, "no")
@@ -283,6 +295,7 @@ func (r *Registry) WalletByID(ctx context.Context, role identity.RoleType, id dr
 	}
 	r.Logger.DebugfContext(ctx, "register wallet [%s:%s] with label [%s]", newWallet.ID(), wID, wID)
 	r.Wallets[wID] = newWallet
+
 	return newWallet, nil
 }
 

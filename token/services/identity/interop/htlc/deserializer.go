@@ -74,6 +74,7 @@ func (t *TypedIdentityDeserializer) DeserializeVerifier(ctx context.Context, typ
 	v.HashInfo.Hash = script.HashInfo.Hash
 	v.HashInfo.HashFunc = script.HashInfo.HashFunc
 	v.HashInfo.HashEncoding = script.HashInfo.HashEncoding
+
 	return v, nil
 }
 
@@ -90,6 +91,7 @@ func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal htlc script")
 	}
+
 	return []driver.Identity{script.Recipient}, nil
 }
 
@@ -122,6 +124,7 @@ func (t *TypedIdentityDeserializer) GetAuditInfo(ctx context.Context, id driver.
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshaling audit info for script")
 	}
+
 	return auditInfoRaw, nil
 }
 
@@ -166,6 +169,7 @@ func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
 	}
+
 	return ai, nil
 }
 
@@ -198,6 +202,7 @@ func (a *AuditInfoMatcher) Match(ctx context.Context, id []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed matching recipient identity [%s]", scriptRecipient.String())
 	}
+
 	return nil
 }
 
@@ -209,5 +214,6 @@ func GetScriptSenderAndRecipient(id []byte) (sender, recipient driver.Identity, 
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to unmarshal htlc script")
 	}
+
 	return script.Sender, script.Recipient, nil
 }

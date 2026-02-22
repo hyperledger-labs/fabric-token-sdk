@@ -41,6 +41,9 @@ type Action interface {
 // The provided 'now' timestamp is used to determine whether the
 // HTLC is still claimable (now before deadline) or reclaimable (now after or equal to deadline).
 func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htlc.Script, OperationType, error) {
+	if len(outRawOwner) == 0 {
+		return nil, None, errors.Errorf("the output owner must be set")
+	}
 	sender, err := identity.UnmarshalTypedIdentity(senderRawOwner)
 	if err != nil {
 		return nil, None, err
@@ -59,12 +62,14 @@ func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htl
 		if !script.Recipient.Equal(outRawOwner) {
 			return nil, None, errors.New("owner of output token does not correspond to recipient in htlc request")
 		}
+
 		return script, Claim, nil
 	} else {
 		// this should be a reclaim
 		if !script.Sender.Equal(outRawOwner) {
 			return nil, None, errors.New("owner of output token does not correspond to sender in htlc request")
 		}
+
 		return script, Reclaim, nil
 	}
 }
@@ -126,5 +131,6 @@ func MetadataLockKeyCheck(action Action, script *htlc.Script) (string, error) {
 	if !bytes.Equal(value, htlc.LockValue(script.HashInfo.Hash)) {
 		return "", errors.Errorf("invalid action, cannot match htlc lock with metadata [%x]!=[%x]", value, script.HashInfo.Hash)
 	}
+
 	return key, nil
 }

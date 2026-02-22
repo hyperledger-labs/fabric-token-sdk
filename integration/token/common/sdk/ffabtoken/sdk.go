@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"go.uber.org/dig"
@@ -26,6 +27,7 @@ func NewSDK(registry services.Registry) *SDK {
 
 func (p *SDK) Install() error {
 	err := errors.Join(
+		sdk.RegisterTokenDriverDependencies(p.Container()),
 		p.Container().Provide(fabric.NewGenericDriver, dig.Group("network-drivers")),
 		p.Container().Provide(fabtoken.NewDriver, dig.Group("token-drivers")),
 	)

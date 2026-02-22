@@ -31,6 +31,7 @@ func NewMockedManagementService(t *testing.T, tmsID token.TMSID) *token.Manageme
 
 	res, err := token.NewManagementService(tmsID, tms, nil, vp, nil, nil)
 	require.NoError(t, err)
+
 	return res
 }
 
@@ -52,5 +53,6 @@ func NewMockedManagementServiceWithValidation(t *testing.T, tmsID token.TMSID) (
 
 	res, err := token.NewManagementService(tmsID, tms, nil, vp, nil, nil)
 	require.NoError(t, err)
+
 	return res, validator
 }

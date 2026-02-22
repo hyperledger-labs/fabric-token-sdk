@@ -65,11 +65,21 @@ func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 	if err := net.AddFinalityListener(
 		tx.Namespace(),
 		tx.ID(),
-		finality.NewListener(logger, a.tmsProvider, a.tmsID, a.ttxStoreService, a.tokensService, a.finalityTracer),
+		finality.NewListener(
+			logger,
+			net,
+			tx.Namespace(),
+			a.tmsProvider,
+			a.tmsID,
+			a.ttxStoreService,
+			a.tokensService,
+			a.finalityTracer,
+		),
 	); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.DebugfContext(ctx, "append done for request %s", tx.ID())
+
 	return nil
 }
 
@@ -85,6 +95,7 @@ func (a *Service) GetStatus(ctx context.Context, txID string) (TxStatus, string,
 	if err != nil {
 		return Unknown, "", err
 	}
+
 	return st, sm, nil
 }
 

@@ -24,10 +24,29 @@ type ListenerManagerConfig interface {
 	DeliveryLRUBuffer() int
 }
 
+const (
+	Type                                   = "token.finality.type"
+	CommitterMaxRetries                    = "token.finality.committer.maxRetries"
+	CommitterRetryWaitDuration             = "token.finality.committer.retryWaitDuration"
+	DeliveryMapperParallelism              = "token.finality.delivery.mapperParallelism"
+	DeliveryBlockProcessParallelism        = "token.finality.delivery.blockProcessParallelism"
+	DeliveryLRUSize                        = "token.finality.delivery.lruSize"
+	DeliveryLRUBuffer                      = "token.finality.delivery.lruBuffer"
+	DeliveryListenerTimeout                = "token.finality.delivery.listenerTimeout"
+	DefaultCommitterMaxRetries             = 3
+	DefaultCommitterRetryWaitDuration      = 5 * time.Second
+	DefaultDeliveryMapperParallelism       = 10
+	DefaultDeliveryBlockProcessParallelism = 10
+	DefaultDeliveryLRUSize                 = 30
+	DefaultDeliveryLRUBuffer               = 15
+	DefaultDeliveryListenerTimeout         = 10 * time.Second
+)
+
 type ManagerType string
 
 const (
-	Delivery ManagerType = "delivery"
+	Delivery     ManagerType = "delivery"
+	Notification ManagerType = "notification"
 )
 
 func NewListenerManagerConfig(configService driver.ConfigService) *serviceListenerManagerConfig {
@@ -39,61 +58,73 @@ type serviceListenerManagerConfig struct {
 }
 
 func (c *serviceListenerManagerConfig) Type() ManagerType {
-	if v := ManagerType(c.c.GetString("token.finality.type")); len(v) > 0 {
+	if v := ManagerType(c.c.GetString(Type)); len(v) > 0 {
 		return v
 	}
+
 	return Delivery
 }
 
 func (c *serviceListenerManagerConfig) CommitterMaxRetries() int {
-	if v := c.c.GetInt("token.finality.committer.maxRetries"); v >= 0 {
+	if v := c.c.GetInt(CommitterMaxRetries); v >= 0 {
 		return v
 	}
-	return 3
+
+	return DefaultCommitterMaxRetries
 }
 
 func (c *serviceListenerManagerConfig) CommitterRetryWaitDuration() time.Duration {
-	if v := c.c.GetDuration("token.finality.committer.retryWaitDuration"); v >= 0 {
+	if v := c.c.GetDuration(CommitterRetryWaitDuration); v >= 0 {
 		return v
 	}
-	return 5 * time.Second
+
+	return DefaultCommitterRetryWaitDuration
 }
 
 func (c *serviceListenerManagerConfig) DeliveryMapperParallelism() int {
-	if v := c.c.GetInt("token.finality.delivery.mapperParallelism"); v > 0 {
+	if v := c.c.GetInt(DeliveryMapperParallelism); v > 0 {
 		return v
 	}
-	return 10
+
+	return DefaultDeliveryMapperParallelism
 }
 
 func (c *serviceListenerManagerConfig) DeliveryBlockProcessParallelism() int {
-	return c.c.GetInt("token.finality.delivery.blockProcessParallelism")
+	if v := c.c.GetInt(DeliveryBlockProcessParallelism); v >= 0 {
+		return v
+	}
+
+	return DefaultDeliveryBlockProcessParallelism
 }
 
 func (c *serviceListenerManagerConfig) DeliveryLRUSize() int {
-	if v := c.c.GetInt("token.finality.delivery.lruSize"); v >= 0 {
+	if v := c.c.GetInt(DeliveryLRUSize); v >= 0 {
 		return v
 	}
-	return 30
+
+	return DefaultDeliveryLRUSize
 }
 
 func (c *serviceListenerManagerConfig) DeliveryLRUBuffer() int {
-	if v := c.c.GetInt("token.finality.delivery.lruBuffer"); v >= 0 {
+	if v := c.c.GetInt(DeliveryLRUBuffer); v >= 0 {
 		return v
 	}
-	return 15
+
+	return DefaultDeliveryLRUBuffer
 }
 
 func (c *serviceListenerManagerConfig) DeliveryListenerTimeout() time.Duration {
-	if v := c.c.GetDuration("token.finality.delivery.listenerTimeout"); v >= 0 {
+	if v := c.c.GetDuration(DeliveryListenerTimeout); v >= 0 {
 		return v
 	}
-	return 10 * time.Second
+
+	return DefaultDeliveryListenerTimeout
 }
 
 func (c *serviceListenerManagerConfig) String() string {
 	if c.Type() == Delivery {
 		return fmt.Sprintf("Delivery [mapperParalellism: %d, lru: (%d, %d), listenerTimeout: %v]", c.DeliveryMapperParallelism(), c.DeliveryLRUSize(), c.DeliveryLRUBuffer(), c.DeliveryListenerTimeout())
 	}
+
 	return fmt.Sprintf("Invalid config type: [%s]", c.Type())
 }

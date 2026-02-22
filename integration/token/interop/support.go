@@ -48,6 +48,7 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ token2.Ty
 	txID := common.JSONUnmarshalString(txid)
 	common2.CheckFinality(network, receiver, txID, nil, false)
 	common2.CheckFinality(network, auditor, txID, nil, false)
+
 	return common.JSONUnmarshalString(txid)
 }
 
@@ -63,6 +64,7 @@ func IssueCashWithTMS(network *integration.Infrastructure, tmsID token.TMSID, is
 	txID := common.JSONUnmarshalString(txid)
 	common2.CheckFinality(network, receiver, txID, &tmsID, false)
 	common2.CheckFinality(network, auditor, txID, &tmsID, false)
+
 	return txID
 }
 
@@ -75,6 +77,7 @@ func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ t
 
 	issuedTokens := &token2.IssuedTokens{}
 	common.JSONUnmarshal(res.([]byte), issuedTokens)
+
 	return issuedTokens
 }
 
@@ -107,10 +110,11 @@ func CheckBalanceReturnError(network *integration.Infrastructure, id *token3.Nod
 		}
 	}()
 	CheckBalance(network, id, wallet, typ, expected, opts...)
+
 	return nil
 }
 
-func CheckHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected int64, opts ...token.ServiceOption) {
+func CheckHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, opts ...token.ServiceOption) {
 	opt, err := token.CompileServiceOptions(opts...)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to compile options [%v]", opts)
 	tmsId := opt.TMSID()
@@ -126,9 +130,9 @@ func CheckHolding(network *integration.Infrastructure, id *token3.NodeReference,
 		TMSID:        tmsId,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
+	holding, err := strconv.ParseUint(common.JSONUnmarshalString(holdingBoxed), 10, 64)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	gomega.Expect(holding).To(gomega.Equal(int(expected)))
+	gomega.Expect(holding).To(gomega.Equal(expected))
 }
 
 func CheckBalanceWithLocked(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, expectedLocked uint64, expectedExpired uint64, opts ...token.ServiceOption) {
@@ -144,29 +148,30 @@ func CheckBalanceWithLocked(network *integration.Infrastructure, id *token3.Node
 	common.JSONUnmarshal(resBoxed.([]byte), result)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	balance, err := strconv.Atoi(result.Quantity)
+	balance, err := strconv.ParseUint(result.Quantity, 10, 64)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), 10, 64)
+	locked, err := strconv.ParseUint(result.Locked, 10, 64)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	locked, err := strconv.Atoi(result.Locked)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	expired, err := strconv.Atoi(result.Expired)
+	expired, err := strconv.ParseUint(result.Expired, 10, 64)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	gomega.Expect(balance).To(gomega.Equal(int(expected)), "expected [%d], got [%d]", expected, balance)
-	gomega.Expect(locked).To(gomega.Equal(int(expectedLocked)), "expected locked [%d], got [%d]", expectedLocked, locked)
-	gomega.Expect(expired).To(gomega.Equal(int(expectedExpired)), "expected expired [%d], got [%d]", expectedExpired, expired)
+	gomega.Expect(balance).To(gomega.Equal(expected), "expected [%d], got [%d]", expected, balance)                       // #nosec G115
+	gomega.Expect(locked).To(gomega.Equal(expectedLocked), "expected locked [%d], got [%d]", expectedLocked, locked)      // #nosec G115
+	gomega.Expect(expired).To(gomega.Equal(expectedExpired), "expected expired [%d], got [%d]", expectedExpired, expired) // #nosec G115
 }
 
 func CheckBalanceAndHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, opts ...token.ServiceOption) {
 	CheckBalance(network, id, wallet, typ, expected, opts...)
-	CheckHolding(network, id, wallet, typ, int64(expected), opts...)
+	CheckHolding(network, id, wallet, typ, expected, opts...)
 }
 
+// #nosec G115
 func CheckBalanceWithLockedAndHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expectedBalance uint64, expectedLocked uint64, expectedExpired uint64, expectedHolding int64, opts ...token.ServiceOption) {
 	CheckBalanceWithLocked(network, id, wallet, typ, expectedBalance, expectedLocked, expectedExpired, opts...)
 	if expectedHolding == -1 {
 		expectedHolding = int64(expectedBalance + expectedLocked + expectedExpired)
 	}
-	CheckHolding(network, id, wallet, typ, expectedHolding, opts...)
+	CheckHolding(network, id, wallet, typ, uint64(expectedHolding), opts...)
 }
 
 func CheckPublicParams(network *integration.Infrastructure, tmsID token.TMSID, ids ...*token3.NodeReference) {
@@ -196,6 +201,7 @@ func CheckOwnerStore(network *integration.Infrastructure, tmsID token.TMSID, exp
 				for _, message := range errorMessages {
 					if message == expectedError {
 						found = true
+
 						break
 					}
 				}
@@ -246,6 +252,7 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, tmsID token.TMS
 		tok := unspentTokens.At(i)
 		IDs = append(IDs, &tok.Id)
 	}
+
 	return IDs
 }
 
@@ -291,6 +298,7 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 		if len(hash) != 0 {
 			gomega.Expect(lockResult.Hash).To(gomega.BeEquivalentTo(hash))
 		}
+
 		return lockResult.TxID, lockResult.PreImage, lockResult.Hash
 	} else {
 		gomega.Expect(err).To(gomega.HaveOccurred())
@@ -307,6 +315,7 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 			txID = errMsg[index+4 : index+strings.Index(err.Error()[index:], "]>>>")]
 		}
 		fmt.Printf("Got error message, extracted tx id [%s]\n", txID)
+
 		return txID, nil, nil
 	}
 }
@@ -373,6 +382,7 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id *token
 		txID := common.JSONUnmarshalString(txIDBoxed)
 		common2.CheckFinality(network, id, txID, &tmsID, false)
 		common2.CheckFinality(network, auditor, txID, &tmsID, false)
+
 		return txID
 	} else {
 		gomega.Expect(err).To(gomega.HaveOccurred())
@@ -389,6 +399,7 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id *token
 			txID = errMsg[index+4 : index+strings.Index(err.Error()[index:], "]>>>")]
 		}
 		fmt.Printf("Got error message, extracted tx id [%s]\n", txID)
+
 		return txID
 	}
 }

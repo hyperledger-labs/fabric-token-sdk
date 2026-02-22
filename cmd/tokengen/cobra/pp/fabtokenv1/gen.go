@@ -22,23 +22,23 @@ import (
 )
 
 var (
-	// Driver is the Token-SDK driver to use
+	// Driver is the Token-SDK driver to use.
 	Driver string
-	// OutputDir is the directory to output the generated files
+	// OutputDir is the directory to output the generated files.
 	OutputDir string
-	// GenerateCCPackage indicates whether to generate the chaincode package
+	// GenerateCCPackage indicates whether to generate the chaincode package.
 	GenerateCCPackage bool
-	// Issuers is the list of issuer MSP directories containing the corresponding issuer certificate
+	// Issuers is the list of issuer MSP directories containing the corresponding issuer certificate.
 	Issuers []string
-	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
+	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate.
 	Auditors []string
-	// Version allows the caller of tokengen to override the version number put in the public params
+	// Version allows the caller of tokengen to override the version number put in the public parameters.
 	Version uint
-	// Extras allows the caller to add extra parameters to the public parameters
+	// Extras allows the caller to add extra parameters to the public parameters.
 	Extras []string
 )
 
-// Cmd returns the Cobra Command for Version
+// Cmd returns the Cobra Command for FabToken public parameters generation.
 func Cmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
@@ -58,7 +58,7 @@ var cobraCommand = &cobra.Command{
 	Long:  `Generates FabToken public parameters.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
@@ -78,22 +78,24 @@ var cobraCommand = &cobra.Command{
 				return err
 			}
 		}
+
 		return nil
 	},
 }
 
+// GeneratorArgs defines the arguments for the public parameters generator.
 type GeneratorArgs struct {
-	// OutputDir is the directory to output the generated files
+	// OutputDir is the directory to output the generated files.
 	OutputDir string
-	// GenerateCCPackage indicates whether to generate the chaincode package
+	// GenerateCCPackage indicates whether to generate the chaincode package.
 	GenerateCCPackage bool
-	// Issuers is the list of issuer MSP directories containing the corresponding issuer certificate
+	// Issuers is the list of issuer MSP directories containing the corresponding issuer certificate.
 	Issuers []string
-	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
+	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate.
 	Auditors []string
 }
 
-// Gen generates the public parameters for the FabToken driver
+// Gen generates the public parameters for the FabToken driver.
 func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Setup
 	ver := setupv1.ProtocolV1

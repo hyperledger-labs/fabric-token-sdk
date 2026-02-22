@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package gen
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -20,14 +19,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Topology represents a topology.
 type Topology struct {
 	Type string `yaml:"type,omitempty"`
 }
 
+// Topologies represents a list of topologies.
 type Topologies struct {
 	Topologies []Topology `yaml:"topologies,omitempty"`
 }
 
+// T represents a list of topologies.
 type T struct {
 	Topologies []interface{} `yaml:"topologies,omitempty"`
 }
@@ -36,7 +38,7 @@ var topologyFile string
 var output string
 var port int
 
-// Cmd returns the Cobra Command for Version
+// Cmd returns the Cobra Command for generating artifacts.
 func Cmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
@@ -53,10 +55,11 @@ var cobraCommand = &cobra.Command{
 	Long:  `Read topology from file and generates artifacts.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
+
 		return gen(args)
 	},
 }
@@ -70,49 +73,9 @@ func gen(args []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed reading topology file [%s]", topologyFile)
 	}
-	names := &Topologies{}
-	if err := yaml.Unmarshal(raw, names); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
-	}
-
-	t := &T{}
-	if err := yaml.Unmarshal(raw, t); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
-	}
-	t2 := []api.Topology{}
-	for i, topology := range names.Topologies {
-		switch topology.Type {
-		case fabric.TopologyName:
-			top := fabric.NewDefaultTopology()
-			r, err := yaml.Marshal(t.Topologies[i])
-			if err != nil {
-				return errors.Wrapf(err, "failed remarshalling topology configuration [%s]", topologyFile)
-			}
-			if err := yaml.Unmarshal(r, top); err != nil {
-				return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
-			}
-			t2 = append(t2, top)
-		case fsc.TopologyName:
-			top := fsc.NewTopology()
-			r, err := yaml.Marshal(t.Topologies[i])
-			if err != nil {
-				return errors.Wrapf(err, "failed remarshalling topology configuration [%s]", topologyFile)
-			}
-			if err := yaml.Unmarshal(r, top); err != nil {
-				return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
-			}
-			t2 = append(t2, top)
-		case token.TopologyName:
-			top := token.NewTopology()
-			r, err := yaml.Marshal(t.Topologies[i])
-			if err != nil {
-				return errors.Wrapf(err, "failed remarshalling topology configuration [%s]", topologyFile)
-			}
-			if err := yaml.Unmarshal(r, top); err != nil {
-				return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
-			}
-			t2 = append(t2, top)
-		}
+	t2, err := LoadTopologies(raw)
+	if err != nil {
+		return errors.Wrapf(err, "failed loading topologies from [%s]", topologyFile)
 	}
 
 	network, err := integration.New(port, output, t2...)
@@ -123,4 +86,54 @@ func gen(args []string) error {
 	network.Generate()
 
 	return nil
+}
+
+// LoadTopologies loads topologies from the given raw byte slice.
+func LoadTopologies(raw []byte) ([]api.Topology, error) {
+	names := &Topologies{}
+	if err := yaml.Unmarshal(raw, names); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling topologies")
+	}
+
+	t := &T{}
+	if err := yaml.Unmarshal(raw, t); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling topologies")
+	}
+	t2 := []api.Topology{}
+	for i, topology := range names.Topologies {
+		switch topology.Type {
+		case fabric.TopologyName:
+			top := fabric.NewDefaultTopology()
+			r, err := yaml.Marshal(t.Topologies[i])
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed remarshalling topology configuration")
+			}
+			if err := yaml.Unmarshal(r, top); err != nil {
+				return nil, errors.Wrapf(err, "failed unmarshalling topology")
+			}
+			t2 = append(t2, top)
+		case fsc.TopologyName:
+			top := fsc.NewTopology()
+			r, err := yaml.Marshal(t.Topologies[i])
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed remarshalling topology configuration")
+			}
+			if err := yaml.Unmarshal(r, top); err != nil {
+				return nil, errors.Wrapf(err, "failed unmarshalling topology")
+			}
+			t2 = append(t2, top)
+		case token.TopologyName:
+			top := token.NewTopology()
+			r, err := yaml.Marshal(t.Topologies[i])
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed remarshalling topology configuration")
+			}
+			if err := yaml.Unmarshal(r, top); err != nil {
+				return nil, errors.Wrapf(err, "failed unmarshalling topology")
+			}
+			t2 = append(t2, top)
+		}
+	}
+
+	return t2, nil
 }

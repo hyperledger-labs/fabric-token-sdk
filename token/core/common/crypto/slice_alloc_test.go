@@ -16,13 +16,14 @@ import (
 // helper to create test slices
 func makeSlices(num, size int) [][]byte {
 	s := make([][]byte, num)
-	for i := 0; i < num; i++ {
+	for i := range num {
 		b := make([]byte, size)
 		for j := range b {
 			b[j] = byte((i + j) % 256)
 		}
 		s[i] = b
 	}
+
 	return s
 }
 
@@ -32,7 +33,7 @@ func avgAllocBytes(fn func(), runs int) uint64 {
 	runtime.GC()
 	var before runtime.MemStats
 	runtime.ReadMemStats(&before)
-	for i := 0; i < runs; i++ {
+	for range runs {
 		fn()
 	}
 	runtime.GC()
@@ -42,7 +43,8 @@ func avgAllocBytes(fn func(), runs int) uint64 {
 	if after.TotalAlloc < before.TotalAlloc {
 		return 0
 	}
-	return (after.TotalAlloc - before.TotalAlloc) / uint64(runs)
+
+	return (after.TotalAlloc - before.TotalAlloc) / uint64(runs) // #nosec G115
 }
 
 func TestAppendFixed32VsBytesJoinAllocations(t *testing.T) {
@@ -64,7 +66,7 @@ func TestAppendFixed32VsBytesJoinAllocations(t *testing.T) {
 		pieces := make([][]byte, 0, len(s)*2)
 		for _, v := range s {
 			hdr := make([]byte, 4)
-			binary.LittleEndian.PutUint32(hdr, uint32(len(v)))
+			binary.LittleEndian.PutUint32(hdr, uint32(len(v))) // #nosec G115
 			pieces = append(pieces, hdr, v)
 		}
 		dst := bytes.Join(pieces, nil)
@@ -82,7 +84,7 @@ func TestAppendFixed32VsBytesJoinAllocations(t *testing.T) {
 		pieces := make([][]byte, 0, len(s)*2)
 		for _, v := range s {
 			hdr := make([]byte, 4)
-			binary.LittleEndian.PutUint32(hdr, uint32(len(v)))
+			binary.LittleEndian.PutUint32(hdr, uint32(len(v))) // #nosec G115
 			pieces = append(pieces, hdr, v)
 		}
 		dst := bytes.Join(pieces, nil)

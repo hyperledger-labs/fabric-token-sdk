@@ -65,6 +65,7 @@ func (r *BaseRunner) ShutDown() error {
 		r.logger.Infof("Waiting for runner to shut down...")
 		<-r.done
 		r.logger.Infof("Runner successfully shut down")
+
 		return nil
 	}
 }
@@ -97,9 +98,11 @@ func (r *BaseRunner) Start(ctx context.Context) error {
 				case <-ctx.Done():
 					r.logger.Infof("Context canceled. Shutting down...")
 					close(r.shutdown)
+
 					return
 				case <-r.shutdown:
 					r.logger.Infof("Shutting down...")
+
 					return
 				}
 			}
@@ -134,6 +137,7 @@ func (r *BaseRunner) initCustomerState(suiteConfig model.SuiteConfig) txgen.Erro
 		r.customers[u] = &customerState{Name: u, StartingAmount: balance}
 		// }
 	}
+
 	return nil
 }
 
@@ -192,6 +196,7 @@ func (r *BaseRunner) printTPS() {
 			activeRequestReportingInterval.Stop()
 			totalReqReportingInterval.Stop()
 			r.logger.Infof("Quitting TPS monitoring... %s", r.metricsReporter.GetActiveRequests())
+
 			return
 		}
 	}
@@ -230,6 +235,7 @@ func (r *BaseRunner) checkCustomerBalances() {
 		balanceInSystem, err := r.intermediary.GetBalance(c.Name)
 		if err != nil {
 			r.logger.Errorf("Can't do balance post-analysis of user '%s'", c.Name)
+
 			continue
 		}
 		r.logger.Infof("Balance of user %s: [%d]", c.Name, balanceInSystem)

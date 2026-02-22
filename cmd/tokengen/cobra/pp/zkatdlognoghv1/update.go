@@ -22,6 +22,7 @@ import (
 // InputFile is the file that contains the public parameters
 var InputFile string
 
+// UpdateArgs defines the arguments for updating public parameters.
 type UpdateArgs struct {
 	// InputFile is the file that contains the public parameters
 	InputFile string
@@ -35,7 +36,7 @@ type UpdateArgs struct {
 	Version uint
 }
 
-// UpdateCmd returns the Cobra Command for Update
+// UpdateCmd returns the Cobra Command for updating public parameters.
 func UpdateCmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cmd.Flags()
@@ -55,7 +56,7 @@ var cmd = &cobra.Command{
 	Long:  "Update certs in the public parameters file without changing the parameters themselves.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
@@ -69,11 +70,12 @@ var cmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to generate public parameters")
 		}
+
 		return nil
 	},
 }
 
-// Update prints a new version of the config file with updated certs
+// Update updates the public parameters with new certificates.
 func Update(args *UpdateArgs) error {
 	defer func() {
 		if e := recover(); e != nil {

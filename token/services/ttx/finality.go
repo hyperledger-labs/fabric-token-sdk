@@ -122,6 +122,7 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 			return nil, err
 		}
 	}
+
 	return nil, nil
 }
 
@@ -136,7 +137,8 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 	defer func() {
 		logger.DebugfContext(ctx, "Remove status listener")
 		finalityDB.DeleteStatusListener(txID, dbChannel)
-		logger.DebugfContext(ctx, "Removed status listener")
+		close(dbChannel)
+		logger.DebugfContext(ctx, "Removed status listener and closed channel")
 	}()
 
 	logger.DebugfContext(ctx, "Get status")
@@ -147,6 +149,7 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 		}
 		if status == ttxdb.Deleted {
 			logger.ErrorfContext(ctx, "Deleted tx")
+
 			return startCounter, errors.Wrapf(ErrFinalityInvalidTransaction, "transaction [%s] is not valid", txID)
 		}
 	}
@@ -159,6 +162,7 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 		select {
 		case <-ctx.Done():
 			timeout.Stop()
+
 			return i, errors.Wrapf(ErrFinalityTimeout, "failed to listen to transaction [%s] for timeout", txID)
 		case event := <-dbChannel:
 
@@ -169,6 +173,7 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 				return i, nil
 			}
 			logger.ErrorfContext(ctx, "transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
+
 			return i, errors.Wrapf(ErrFinalityInvalidTransaction, "transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 		case <-timeout.C:
 			timeout.Stop()
@@ -176,6 +181,7 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 			vd, _, err := finalityDB.GetStatus(ctx, txID)
 			if err != nil {
 				logger.DebugfContext(ctx, "Is [%s] final? not available yet, wait [err:%s, vc:%d]", txID, err, vd)
+
 				break
 			}
 			switch vd {
@@ -185,11 +191,13 @@ func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB f
 				return i, nil
 			case ttxdb.Deleted:
 				logger.ErrorfContext(ctx, "Listen to finality of [%s]. NOT VALID", txID)
+
 				return i, errors.Wrapf(ErrFinalityInvalidTransaction, "transaction [%s] is not valid", txID)
 			}
 		}
 	}
 
 	logger.ErrorfContext(ctx, "Is [%s] final? Failed to listen to transaction for timeout", txID)
+
 	return iterations, errors.Wrapf(ErrFinalityTimeout, "failed to listen to transaction [%s] for timeout", txID)
 }

@@ -120,6 +120,8 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 	logger.DebugfContext(ctx, "register tx status listener for tx [%s] at network [%s]", tx.ID(), tx.Network())
 	var r driver.FinalityListener = finality.NewListener(
 		logger,
+		net,
+		tx.Namespace(),
 		a.tmsProvider,
 		a.tmsID,
 		a.auditDB,
@@ -130,6 +132,7 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.DebugfContext(ctx, "append done for request [%s]", tx.ID())
+
 	return nil
 }
 
@@ -187,6 +190,7 @@ func (r *requestWrapper) AuditRecord(ctx context.Context) (*token.AuditRecord, e
 	if err := r.completeInputsWithEmptyEID(ctx, record); err != nil {
 		return nil, errors.WithMessagef(err, "failed filling gaps for request [%s]", r.r.Anchor)
 	}
+
 	return record, nil
 }
 
@@ -204,7 +208,7 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 		return errors.WithMessagef(err, "failed listing tokens for [%s]", filter.IDs())
 	}
 	precision := r.tms.PublicParametersManager().PublicParameters().Precision()
-	for i := 0; i < filter.Count(); i++ {
+	for i := range filter.Count() {
 		item := filter.At(i)
 		item.EnrollmentID = targetEID
 		item.Owner = tokens[i].Owner
@@ -215,6 +219,7 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 		}
 		item.Quantity = q
 	}
+
 	return nil
 }
 

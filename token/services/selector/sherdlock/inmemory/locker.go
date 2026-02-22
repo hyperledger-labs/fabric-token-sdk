@@ -33,11 +33,13 @@ func NewLocker(l Locker) *locker {
 
 func (l *locker) Lock(ctx context.Context, tokenID *token.ID, consumerTxID transaction.ID) error {
 	_, err := l.Locker.Lock(ctx, tokenID, consumerTxID, false)
+
 	return err
 }
 
 func (l *locker) UnlockByTxID(ctx context.Context, txID transaction.ID) error {
 	l.Locker.UnlockByTxID(ctx, txID)
+
 	return nil
 }
 

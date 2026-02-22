@@ -10,9 +10,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-// PublicParameters is a data structure to wrap public parameters and other host related information
+// PublicParameters models the public parameters of a token management system.
 type PublicParameters struct {
+	// TMSID is the ID of the token management system.
 	TMSID token.TMSID
-	Path  string
-	Raw   []byte
+	// Path is the path to the public parameters.
+	Path string
+	// Raw is the raw public parameters.
+	Raw []byte
 }

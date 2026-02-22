@@ -9,8 +9,11 @@ package actions
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func TestTransferAction_Validate(t *testing.T) {
@@ -221,10 +224,10 @@ func TestTransferAction_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.action.Validate()
 			if tt.wantErr {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.expectedError)
+				require.Error(t, err)
+				require.EqualError(t, err, tt.expectedError)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -258,19 +261,19 @@ func TestTransferAction_Serialization(t *testing.T) {
 		Issuer: nil,
 	}
 	raw, err := action.Serialize()
-	assert.NoError(t, err, "failed to serialize a new transfer action")
+	require.NoError(t, err, "failed to serialize a new transfer action")
 
 	action2 := &TransferAction{}
 	err = action2.Deserialize(raw)
-	assert.NoError(t, err, "failed to deserialize a new transfer action")
+	require.NoError(t, err, "failed to deserialize a new transfer action")
 	assert.Equal(t, action, action2, "deserialized action is not equal to the original one")
 
 	raw2, err := action2.Serialize()
-	assert.NoError(t, err, "failed to serialize a new transfer action")
+	require.NoError(t, err, "failed to serialize a new transfer action")
 
 	action3 := &TransferAction{}
 	err = action3.Deserialize(raw2)
-	assert.NoError(t, err, "failed to deserialize a new transfer action")
+	require.NoError(t, err, "failed to deserialize a new transfer action")
 	assert.Equal(t, action2, action3, "deserialized action is not equal to the original one")
 }
 
@@ -281,4 +284,122 @@ func TestTransferAction_GetIssuer(t *testing.T) {
 	}
 	issuer := action.GetIssuer()
 	assert.True(t, issuer.Equal(issuerId), "unexpected issuer id in TransferAction")
+}
+
+func TestTransferAction_RemainingMethods(t *testing.T) {
+	action := &TransferAction{
+		Inputs: []*TransferActionInput{
+			{
+				ID: &token.ID{
+					TxId:  "txid",
+					Index: 0,
+				},
+				Input: &Output{
+					Owner:    []byte("owner"),
+					Type:     "type",
+					Quantity: "11",
+				},
+			},
+		},
+		Outputs: []*Output{
+			{
+				Type:     "type",
+				Quantity: "11",
+				Owner:    []byte("owner"),
+			},
+			{
+				Type:     "type",
+				Quantity: "11",
+				Owner:    nil, // Redeem
+			},
+		},
+		Metadata: map[string][]byte{
+			"foo": []byte("bar"),
+		},
+		Issuer: []byte("issuer"),
+	}
+
+	assert.Equal(t, 1, action.NumInputs())
+	assert.Equal(t, 2, action.NumOutputs())
+	serOutputs, err := action.GetSerializedOutputs()
+	require.NoError(t, err)
+	assert.Len(t, serOutputs, 2)
+	assert.Len(t, action.GetOutputs(), 2)
+	assert.False(t, action.IsRedeemAt(0))
+	assert.True(t, action.IsRedeemAt(1))
+	assert.True(t, action.IsRedeem())
+	assert.False(t, action.IsGraphHiding())
+	serOutput, err := action.SerializeOutputAt(0)
+	require.NoError(t, err)
+	assert.NotNil(t, serOutput)
+	_, err = action.SerializeOutputAt(2)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to serialize output in transfer action: it does not exist")
+
+	inputs := action.GetInputs()
+	assert.Len(t, inputs, 1)
+	assert.Equal(t, "txid", inputs[0].TxId)
+
+	serInputs, err := action.GetSerializedInputs()
+	require.NoError(t, err)
+	assert.Len(t, serInputs, 1)
+	assert.NotNil(t, serInputs[0])
+
+	assert.Nil(t, action.GetSerialNumbers())
+	assert.Equal(t, map[string][]byte{"foo": []byte("bar")}, action.GetMetadata())
+	assert.Nil(t, action.ExtraSigners())
+
+	// Test Validate with Redeem and nil issuer
+	action.Issuer = nil
+	err = action.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Expected Issuer for a Redeem action")
+
+	// Test GetSerializedOutputs with nil output
+	action.Outputs = append(action.Outputs, nil)
+	_, err = action.GetSerializedOutputs()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot serialize transfer action outputs: nil output at index [2]")
+
+	// Test GetSerializedInputs with nil input
+	action.Inputs = append(action.Inputs, nil)
+	serInputs, err = action.GetSerializedInputs()
+	require.NoError(t, err)
+	assert.Len(t, serInputs, 2)
+	assert.Nil(t, serInputs[1])
+}
+
+func TestTransferAction_DeserializeError(t *testing.T) {
+	action := &TransferAction{}
+
+	// Invalid bytes
+	err := action.Deserialize([]byte("invalid"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to deserialize issue action")
+
+	// Version mismatch
+	invalidVersionAction := &actions.TransferAction{
+		Version: 0,
+	}
+	raw, err := proto.Marshal(invalidVersionAction)
+	require.NoError(t, err)
+	err = action.Deserialize(raw)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid issue version, expected [1], got [0]")
+
+	// Nil output in proto
+	nilOutputAction := &actions.TransferAction{
+		Version: ProtocolV1,
+		Outputs: []*actions.TransferActionOutput{
+			nil,
+			{Token: nil},
+		},
+	}
+	raw, err = proto.Marshal(nilOutputAction)
+	require.NoError(t, err)
+	err = action.Deserialize(raw)
+	require.NoError(t, err)
+	assert.Len(t, action.Outputs, 2)
+	assert.Nil(t, action.Outputs[0])
+	assert.Nil(t, action.Outputs[1])
 }

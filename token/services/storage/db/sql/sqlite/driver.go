@@ -66,6 +66,7 @@ func (d *Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (d
 	if err != nil {
 		return nil, err
 	}
+
 	return d.TokenLock.Get(*opts)
 }
 
@@ -74,6 +75,7 @@ func (d *Driver) NewWallet(name driver2.PersistenceName, params ...string) (driv
 	if err != nil {
 		return nil, err
 	}
+
 	return d.Wallet.Get(*opts)
 }
 
@@ -82,6 +84,7 @@ func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (dr
 	if err != nil {
 		return nil, err
 	}
+
 	return d.Identity.Get(*opts)
 }
 
@@ -90,6 +93,7 @@ func (d *Driver) NewKeyStore(name driver2.PersistenceName, params ...string) (dr
 	if err != nil {
 		return nil, err
 	}
+
 	return d.KeyStore.Get(*opts)
 }
 
@@ -107,6 +111,7 @@ func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string
 	if err != nil {
 		return nil, err
 	}
+
 	return d.TokenNotifier.Get(*opts)
 }
 
@@ -115,6 +120,7 @@ func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...str
 	if err != nil {
 		return nil, err
 	}
+
 	return d.AuditTx.Get(*opts)
 }
 
@@ -123,6 +129,7 @@ func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...str
 	if err != nil {
 		return nil, err
 	}
+
 	return d.OwnerTx.Get(*opts)
 }
 
@@ -155,6 +162,7 @@ func newProviderWithKeyMapper[V common.DBObject](dbProvider sqlite.DbProvider, c
 				return utils.Zero[V](), err
 			}
 		}
+
 		return p, nil
 	})
 }

@@ -145,6 +145,7 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		EndpointResolver: endpoint.GetService(context),
 	}
 	context.OnError(tx.Release)
+
 	return tx, nil
 }
 
@@ -188,6 +189,7 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 		FromRaw:         raw,
 	}
 	context.OnError(tx.Release)
+
 	return tx, nil
 }
 
@@ -199,6 +201,7 @@ func NewTransactionFromSignatureRequest(context view.Context, sr *SignatureReque
 		return nil, err
 	}
 	tx.FromSignatureRequest = sr
+
 	return tx, nil
 }
 
@@ -265,18 +268,21 @@ func (t *Transaction) NetworkTxID() network.TxID {
 // If eIDs is not nil, then metadata is filtered by the passed eIDs.
 func (t *Transaction) Bytes(eIDs ...string) ([]byte, error) {
 	logger.Debugf("marshalling tx, id [%s], for EIDs [%x]", t.TxID, eIDs)
+
 	return marshal(t, eIDs...)
 }
 
 // Issue appends a new Issue action to the TokenRequest of this transaction
 func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver view.Identity, typ token2.Type, q uint64, opts ...token.IssueOption) error {
 	_, err := t.TokenRequest.Issue(t.Context, wallet, receiver, typ, q, opts...)
+
 	return err
 }
 
 // Transfer appends a new Transfer action to the TokenRequest of this transaction
 func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ token2.Type, values []uint64, owners []view.Identity, opts ...token.TransferOption) error {
 	_, err := t.TokenRequest.Transfer(t.Context, wallet, typ, values, owners, opts...)
+
 	return err
 }
 
@@ -305,6 +311,7 @@ func (t *Transaction) Redeem(wallet *token.OwnerWallet, typ token2.Type, value u
 			return errors.Wrapf(err, "failed to bind issuer identity [%s]", action.GetIssuer())
 		}
 	}
+
 	return nil
 }
 
@@ -321,6 +328,7 @@ func (t *Transaction) Upgrade(
 	opts ...token.IssueOption,
 ) error {
 	_, err := t.TokenRequest.Upgrade(t.Context, wallet, receiver, challenge, tokens, proof, opts...)
+
 	return err
 }
 
@@ -349,6 +357,7 @@ func (t *Transaction) IsValid(ctx context.Context) error {
 	if t.TokenRequest == nil {
 		return errors.New("invalid transaction: nil token request")
 	}
+
 	return t.TokenRequest.IsValid(ctx)
 }
 
@@ -363,6 +372,7 @@ func (t *Transaction) Selector() (token.Selector, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get selector manager")
 	}
+
 	return sm.NewSelector(t.ID())
 }
 
@@ -372,6 +382,7 @@ func (t *Transaction) CloseSelector() error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get selector manager")
 	}
+
 	return sm.Close(t.ID())
 }
 
@@ -413,6 +424,7 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	// TODO: change this
 	t.TokenRequest = payload.TokenRequest
 	t.Transient = payload.Transient
+
 	return nil
 
 	// for _, bytes := range payload.Request.Issues {

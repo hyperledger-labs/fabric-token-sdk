@@ -19,6 +19,7 @@ func TestRunBenchmark(t *testing.T) {
 	setup := func() []byte {
 		// Simulate expensive database fetch or allocation
 		time.Sleep(2 * time.Millisecond)
+
 		return make([]byte, 1024)
 	}
 
@@ -27,6 +28,7 @@ func TestRunBenchmark(t *testing.T) {
 		// Simulate processing
 		time.Sleep(500 * time.Microsecond)
 		_ = len(data)
+
 		return nil
 	}
 

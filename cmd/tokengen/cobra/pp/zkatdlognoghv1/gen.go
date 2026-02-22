@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// GeneratorArgs defines the arguments for the public parameters generator.
 type GeneratorArgs struct {
 	// IdemixMSPDir is the directory containing the Idemix MSP config (Issuer Key Pair)
 	IdemixMSPDir string
@@ -63,7 +64,7 @@ var (
 	Extras []string
 )
 
-// Cmd returns the Cobra Command for Version
+// Cmd returns the Cobra Command for ZKAT DLog public parameters generation.
 func Cmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
@@ -86,7 +87,7 @@ var cobraCommand = &cobra.Command{
 	Long:  `Generates ZKAT DLog public parameters.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
@@ -102,6 +103,7 @@ var cobraCommand = &cobra.Command{
 		})
 		if err != nil {
 			fmt.Printf("failed to generate public parameters [%s]\n", err)
+
 			return errors.Wrap(err, "failed to generate public parameters")
 		}
 		// generate the chaincode package
@@ -111,11 +113,12 @@ var cobraCommand = &cobra.Command{
 				return err
 			}
 		}
+
 		return nil
 	},
 }
 
-// Gen generates the public parameters for the ZKATDLog driver
+// Gen generates the public parameters for the ZKATDLog driver.
 func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Load Idemix Issuer Public Key
 	_, ipkBytes, err := idemix.LoadIssuerPublicKey(args.IdemixMSPDir)

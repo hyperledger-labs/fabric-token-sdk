@@ -56,6 +56,7 @@ func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTim
 		validTxEvictionTimeout: validTxEvictionTimeout,
 	}
 	r.Start()
+
 	return r
 }
 
@@ -67,6 +68,7 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 	if _, ok := d.locked[k]; ok && !reclaim {
 		// return immediately
 		d.lock.RUnlock()
+
 		return "", AlreadyLockedError
 	}
 	d.lock.RUnlock()
@@ -87,6 +89,7 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					return e.TxID, errors.Errorf("already locked by [%s]", e)
 				}
+
 				return e.TxID, AlreadyLockedError
 			}
 			logger.DebugfContext(ctx, "[%s] already locked by [%s], reclaimed successful, tx status [%s]", id, e, ttxdb.TxStatusMessage[status])
@@ -95,12 +98,14 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				return e.TxID, errors.Errorf("already locked by [%s]", e)
 			}
+
 			return e.TxID, AlreadyLockedError
 		}
 	}
 	logger.DebugfContext(ctx, "locking [%s] for [%s]", id, txID)
 	now := time.Now()
 	d.locked[k] = &lockEntry{TxID: txID, Created: now, LastAccess: now}
+
 	return "", nil
 }
 
@@ -118,11 +123,13 @@ func (d *locker) UnlockIDs(ctx context.Context, ids ...*token2.ID) []*token2.ID 
 		if !ok {
 			notFound = append(notFound, &k)
 			logger.Warnf("unlocking [%s] hold by no one, skipping [%s]", id, entry)
+
 			continue
 		}
 		logger.DebugfContext(ctx, "unlocking [%s] hold by [%s]", id, entry)
 		delete(d.locked, k)
 	}
+
 	return notFound
 }
 
@@ -144,6 +151,7 @@ func (d *locker) IsLocked(id *token2.ID) bool {
 	defer d.lock.Unlock()
 
 	_, ok := d.locked[*id]
+
 	return ok
 }
 
@@ -155,6 +163,7 @@ func (d *locker) reclaim(ctx context.Context, id *token2.ID, txID string) (bool,
 	switch status {
 	case ttxdb.Deleted:
 		delete(d.locked, *id)
+
 		return true, status
 	default:
 		return false, status
@@ -175,6 +184,7 @@ func (d *locker) scan(ctx context.Context) {
 			if err != nil {
 				logger.Warnf("failed getting status for token [%s] locked by [%s], remove", id, entry)
 				removeList = append(removeList, id)
+
 				continue
 			}
 			switch status {
@@ -209,6 +219,7 @@ func (d *locker) scan(ctx context.Context) {
 			if l > 0 {
 				// time to do some token collection
 				logger.DebugfContext(ctx, "token collector: time to do some token collection, [%d] locked", l)
+
 				break
 			}
 		}

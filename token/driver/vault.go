@@ -93,3 +93,27 @@ type QueryEngine interface {
 	// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
 	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
 }
+
+//go:generate counterfeiter -o mock/token_vault.go -fake-name TokenVault . TokenVault
+
+type TokenVault interface {
+	IsPending(ctx context.Context, id *token.ID) (bool, error)
+	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error)
+	GetTokenOutputs(ctx context.Context, ids []*token.ID, callback QueryCallbackFunc) error
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (UnspentTokensIterator, error)
+	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
+	PublicParams(ctx context.Context) ([]byte, error)
+	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
+}
+
+//go:generate counterfeiter -o mock/ledger_token.go -fake-name LedgerToken . LedgerToken
+
+type LedgerToken interface {
+	GetOwner() []byte
+}
+
+//go:generate counterfeiter -o mock/token_certification_storage.go -fake-name TokenCertificationStorage . TokenCertificationStorage
+
+type TokenCertificationStorage interface {
+	GetCertifications(ctx context.Context, ids []*token.ID) ([][]byte, error)
+}

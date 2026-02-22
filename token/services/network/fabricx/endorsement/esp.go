@@ -22,20 +22,26 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
 
+// IdentityProvider models an identity provider.
 type IdentityProvider interface {
+	// Identity returns the identity associated with the given ID.
 	Identity(string) view.Identity
 }
 
+// ViewManager models a view manager.
 type ViewManager interface {
+	// InitiateView initiates the given view.
 	InitiateView(view view.View, ctx context.Context) (interface{}, error)
 }
 
 type ViewRegistry = fsc.ViewRegistry
 
+// ServiceProvider models a service provider for endorsement services.
 type ServiceProvider struct {
 	lazy.Provider[token2.TMSID, endorsement.Service]
 }
 
+// NewServiceProvider returns a new ServiceProvider instance.
 func NewServiceProvider(
 	configService common.Configuration,
 	viewManager ViewManager,
@@ -58,6 +64,7 @@ func NewServiceProvider(
 		storeServiceManager:           storeServiceManager,
 		fabricProvider:                fabricProvider,
 	}
+
 	return &ServiceProvider{Provider: lazy.NewProviderWithKeyMapper(key, l.load)}
 }
 
@@ -82,6 +89,7 @@ func (l *loader) load(tmsID token2.TMSID) (endorsement.Service, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return fsc.NewEndorsementService(
 		&NamespaceTxProcessor{},
 		tmsID,

@@ -16,20 +16,27 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// Proof represents the proof of ownership for tokens being upgraded.
 type Proof struct {
-	Challenge  driver.TokensUpgradeChallenge
-	Tokens     []token.LedgerToken
+	// Challenge is the random challenge provided by the system.
+	Challenge driver.TokensUpgradeChallenge
+	// Tokens is the list of tokens to be upgraded.
+	Tokens []token.LedgerToken
+	// Signatures is the list of signatures for each token in the list.
 	Signatures []Signature
 }
 
+// Serialize marshals the Proof into a JSON byte slice.
 func (p *Proof) Serialize() ([]byte, error) {
 	return json.Marshal(p)
 }
 
+// Deserialize unmarshals a JSON byte slice into the Proof.
 func (p *Proof) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, p)
 }
 
+// SHA256Digest computes the SHA256 hash of the challenge and tokens.
 func SHA256Digest(ch driver.TokensUpgradeChallenge, tokens []token.LedgerToken) ([]byte, error) {
 	h := utils.NewSHA256Hasher()
 	err := h.AddBytes(ch)
@@ -47,5 +54,6 @@ func SHA256Digest(ch driver.TokensUpgradeChallenge, tokens []token.LedgerToken) 
 			return nil, errors.Wrapf(err, "failed to write token to hash")
 		}
 	}
+
 	return h.Digest(), nil
 }

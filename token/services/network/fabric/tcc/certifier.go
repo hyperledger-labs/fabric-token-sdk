@@ -44,5 +44,6 @@ func (r *GetTokenView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying tokens")
 	}
+
 	return tokens, nil
 }

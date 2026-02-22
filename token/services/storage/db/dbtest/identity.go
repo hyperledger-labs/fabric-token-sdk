@@ -16,6 +16,7 @@ import (
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/stretchr/testify/assert"
+	"github.com/test-go/testify/require"
 )
 
 func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
@@ -53,27 +54,27 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 		Config: []byte("config"),
 		Raw:    []byte("raw"),
 	}
-	assert.NoError(t, db.AddConfiguration(ctx, expected))
+	require.NoError(t, db.AddConfiguration(ctx, expected))
 
 	it, err := db.IteratorConfigurations(ctx, expected.Type)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	c, err := it.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, reflect.DeepEqual(expected, *c))
 	it.Close()
 
 	exists, err := db.ConfigurationExists(ctx, expected.ID, expected.Type, expected.URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, exists)
 
 	_, err = db.IteratorConfigurations(ctx, "no core")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	next, err := it.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, next)
 
 	exists, err = db.ConfigurationExists(ctx, "pineapple", "no core", expected.URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, exists)
 
 	expected = driver.IdentityConfiguration{
@@ -83,7 +84,7 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 		Config: []byte("config"),
 		Raw:    []byte("raw"),
 	}
-	assert.NoError(t, db.AddConfiguration(ctx, expected))
+	require.NoError(t, db.AddConfiguration(ctx, expected))
 }
 
 func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
@@ -93,19 +94,19 @@ func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
 	auditInfo := []byte("alice_audit_info")
 	tokMeta := []byte("tok_meta")
 	tokMetaAudit := []byte("tok_meta_audit")
-	assert.NoError(t, db.StoreIdentityData(ctx, id, auditInfo, tokMeta, tokMetaAudit))
+	require.NoError(t, db.StoreIdentityData(ctx, id, auditInfo, tokMeta, tokMetaAudit))
 
 	auditInfo2, err := db.GetAuditInfo(ctx, id)
-	assert.NoError(t, err, "failed to retrieve audit info for [%s]", id)
+	require.NoError(t, err, "failed to retrieve audit info for [%s]", id)
 	assert.Equal(t, auditInfo, auditInfo2)
 
 	tokMeta2, tokMetaAudit2, err := db.GetTokenInfo(ctx, id)
-	assert.NoError(t, err, "failed to retrieve token info for [%s]", id)
+	require.NoError(t, err, "failed to retrieve token info for [%s]", id)
 	assert.Equal(t, tokMeta, tokMeta2)
 	assert.Equal(t, tokMetaAudit, tokMetaAudit2)
 
 	// should not fail
-	assert.NoError(t, db.StoreIdentityData(ctx, id, auditInfo, tokMeta, tokMetaAudit))
+	require.NoError(t, db.StoreIdentityData(ctx, id, auditInfo, tokMeta, tokMetaAudit))
 }
 
 func TSignerInfo(t *testing.T, db driver.IdentityStore) {
@@ -131,7 +132,7 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 	for i := range n {
 		alice := []byte(fmt.Sprintf("alice_%d", i))
 		exists, err := db.SignerInfoExists(t.Context(), alice)
-		assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
+		require.NoError(t, err, "failed to check signer info existence for [%s]", alice)
 		assert.True(t, exists)
 	}
 }
@@ -142,16 +143,16 @@ func tSignerInfo(t *testing.T, db driver.IdentityStore, index int) {
 	alice := []byte(fmt.Sprintf("alice_%d", index))
 	bob := []byte(fmt.Sprintf("bob_%d", index))
 	signerInfo := []byte("signer_info")
-	assert.NoError(t, db.StoreSignerInfo(ctx, alice, signerInfo))
+	require.NoError(t, db.StoreSignerInfo(ctx, alice, signerInfo))
 	exists, err := db.SignerInfoExists(ctx, alice)
-	assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
+	require.NoError(t, err, "failed to check signer info existence for [%s]", alice)
 	assert.True(t, exists)
 	signerInfo2, err := db.GetSignerInfo(ctx, alice)
-	assert.NoError(t, err, "failed to retrieve signer info for [%s]", alice)
+	require.NoError(t, err, "failed to retrieve signer info for [%s]", alice)
 	assert.Equal(t, signerInfo, signerInfo2)
 
 	exists, err = db.SignerInfoExists(ctx, bob)
-	assert.NoError(t, err, "failed to check signer info existence for [%s]", bob)
+	require.NoError(t, err, "failed to check signer info existence for [%s]", bob)
 	assert.False(t, exists)
 }
 
@@ -173,6 +174,6 @@ func TRegisterIdentityDescriptor(t *testing.T, db driver.IdentityStore) {
 		SignerInfo: SignerInfo,
 		Verifier:   verifier,
 	}
-	assert.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
-	assert.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
+	require.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
+	require.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
 }

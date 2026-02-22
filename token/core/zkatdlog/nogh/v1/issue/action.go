@@ -22,11 +22,15 @@ import (
 
 const ProtocolV1 = 1
 
+// ActionInput represents a token that is being redeemed by an issue action.
 type ActionInput struct {
-	ID    token2.ID
+	// ID is the unique identifier of the token.
+	ID token2.ID
+	// Token is the serialized representation of the token.
 	Token []byte
 }
 
+// ToProtos converts ActionInput to its protobuf representation.
 func (i *ActionInput) ToProtos() (*actions.IssueActionInput, error) {
 	return &actions.IssueActionInput{
 		Id: &actions.TokenID{
@@ -37,33 +41,36 @@ func (i *ActionInput) ToProtos() (*actions.IssueActionInput, error) {
 	}, nil
 }
 
+// FromProtos populates ActionInput from its protobuf representation.
 func (i *ActionInput) FromProtos(p *actions.IssueActionInput) error {
 	if p.Id != nil {
 		i.ID.TxId = p.Id.Id
 		i.ID.Index = p.Id.Index
 	}
 	i.Token = p.Token
+
 	return nil
 }
 
-// Action specifies an issue of one or more tokens
+// Action specifies an issue of one or more tokens.
+// It includes the issuer's identity, inputs, outputs, a zero-knowledge proof of validity, and metadata.
 type Action struct {
-	// Issuer is the identity of issuer
+	// Issuer is the identity of the issuer.
 	Issuer driver.Identity
-	// Inputs are the tokens to be redeemed by this issue action
+	// Inputs are the tokens to be redeemed by this issue action.
 	Inputs []*ActionInput
-	// Outputs are the newly issued tokens
-	Outputs []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
-	// Proof carries the ZKP of IssueAction validity
+	// Outputs are the newly issued tokens.
+	Outputs []*token.Token `json:"outputs,omitempty" protobuf:"bytes,1,rep,name=outputs,proto3"`
+	// Proof carries the ZKP of IssueAction validity.
 	Proof []byte
-	// Metadata of the issue action
+	// Metadata of the issue action.
 	Metadata map[string][]byte
 }
 
-// NewAction instantiates an IssueAction given the passed arguments
+// NewAction instantiates an Action given the issuer's identity, token commitments, owners, and a proof.
 func NewAction(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
 	if len(owners) != len(coms) {
-		return nil, errors.New("number of owners does not match number of tokens")
+		return nil, ErrOwnerTokenMismatch
 	}
 
 	outputs := make([]*token.Token, len(coms))
@@ -78,34 +85,42 @@ func NewAction(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*
 	}, nil
 }
 
+// NumInputs returns the number of inputs in the Action.
 func (i *Action) NumInputs() int {
 	return len(i.Inputs)
 }
 
+// GetInputs returns the identifiers of the tokens redeemed by the Action.
 func (i *Action) GetInputs() []*token2.ID {
 	res := make([]*token2.ID, len(i.Inputs))
 	for i, input := range i.Inputs {
 		if input == nil {
 			res[i] = nil
+
 			continue
 		}
 		res[i] = &input.ID
 	}
+
 	return res
 }
 
+// GetSerializedInputs returns the serialized tokens redeemed by the Action.
 func (i *Action) GetSerializedInputs() ([][]byte, error) {
 	res := make([][]byte, len(i.Inputs))
 	for i, input := range i.Inputs {
 		if input == nil {
 			res[i] = nil
+
 			continue
 		}
 		res[i] = input.Token
 	}
+
 	return res, nil
 }
 
+// GetSerialNumbers returns the serial numbers of the tokens (not used for issue).
 func (i *Action) GetSerialNumbers() []string {
 	return nil
 }
@@ -131,6 +146,7 @@ func (i *Action) GetOutputs() []driver.Output {
 	for i, tok := range i.Outputs {
 		res[i] = tok
 	}
+
 	return res
 }
 
@@ -139,14 +155,15 @@ func (i *Action) GetSerializedOutputs() ([][]byte, error) {
 	res := make([][]byte, len(i.Outputs))
 	for i, tok := range i.Outputs {
 		if tok == nil {
-			return nil, errors.New("invalid issue: there is a nil output")
+			return nil, ErrNilOutput
 		}
 		var err error
 		res[i], err = tok.Serialize()
 		if err != nil {
-			return nil, err
+			return nil, errors.Join(ErrSerializeOutputFailed, err)
 		}
 	}
+
 	return res, nil
 }
 
@@ -155,55 +172,59 @@ func (i *Action) GetIssuer() []byte {
 	return i.Issuer
 }
 
-// IsGraphHiding returns false, this driver does not hide the transaction graph
+// IsGraphHiding returns false, this driver does not hide the transaction graph.
 func (i *Action) IsGraphHiding() bool {
 	return false
 }
 
+// Validate ensures the Action is well-formed.
 func (i *Action) Validate() error {
 	if i.Issuer.IsNone() {
-		return errors.Errorf("issuer is not set")
+		return ErrIssuerNotSet
 	}
 	for _, input := range i.Inputs {
 		if input == nil {
-			return errors.Errorf("nil input in issue action")
+			return ErrNilInput
 		}
 		if len(input.Token) == 0 {
-			return errors.Errorf("nil input token in issue action")
+			return ErrNilInputToken
 		}
 		if len(input.ID.TxId) == 0 {
-			return errors.Errorf("nil input id in issue action")
+			return ErrNilInputID
 		}
 	}
 	if len(i.Outputs) == 0 {
-		return errors.Errorf("no outputs in issue action")
+		return ErrNoOutputs
 	}
 	for _, output := range i.Outputs {
 		if output == nil {
-			return errors.Errorf("nil output in issue action")
+			return ErrNilOutput
 		}
 	}
+
 	return nil
 }
 
+// ExtraSigners returns additional identities that must sign the transaction (none for issue).
 func (i *Action) ExtraSigners() []driver.Identity {
 	return nil
 }
 
-// Serialize marshal IssueAction
+// Serialize marshals the Action into its protobuf-encoded byte representation.
 func (i *Action) Serialize() ([]byte, error) {
 	// inputs
 	inputs, err := protos.ToProtosSlice[actions.IssueActionInput, *ActionInput](i.Inputs)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize inputs")
+		return nil, errors.Join(ErrSerializeInputsFailed, err)
 	}
 
 	// outputs
 	outputs, err := protos.ToProtosSliceFunc(i.Outputs, func(output *token.Token) (*actions.IssueActionOutput, error) {
 		data, err := utils.ToProtoG1(output.Data)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to serialize output")
+			return nil, errors.Join(ErrSerializeOutputFailed, err)
 		}
+
 		return &actions.IssueActionOutput{
 			Token: &actions.Token{
 				Owner: output.Owner,
@@ -212,7 +233,7 @@ func (i *Action) Serialize() ([]byte, error) {
 		}, nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize outputs")
+		return nil, errors.Join(ErrSerializeOutputsFailed, err)
 	}
 
 	issueAction := &actions.IssueAction{
@@ -227,27 +248,28 @@ func (i *Action) Serialize() ([]byte, error) {
 		},
 		Metadata: i.Metadata,
 	}
+
 	return proto.Marshal(issueAction)
 }
 
-// Deserialize un-marshals IssueAction
+// Deserialize unmarshals the Action from its protobuf-encoded byte representation.
 func (i *Action) Deserialize(raw []byte) error {
 	issueAction := &actions.IssueAction{}
 	err := proto.Unmarshal(raw, issueAction)
 	if err != nil {
-		return errors.Wrap(err, "failed to deserialize issue action")
+		return errors.Join(ErrDeserializeIssueActionFailed, err)
 	}
 
 	// assert version
 	if issueAction.Version != ProtocolV1 {
-		return errors.Errorf("invalid issue version, expected [%d], got [%d]", ProtocolV1, issueAction.Version)
+		return errors.Join(ErrInvalidProtocolVersion, errors.Errorf("expected [%d], got [%d]", ProtocolV1, issueAction.Version))
 	}
 
 	// inputs
 	i.Inputs = make([]*ActionInput, len(issueAction.Inputs))
 	i.Inputs = slices.GenericSliceOfPointers[ActionInput](len(issueAction.Inputs))
 	if err := protos.FromProtosSlice(issueAction.Inputs, i.Inputs); err != nil {
-		return errors.Wrap(err, "failed unmarshalling receivers metadata")
+		return errors.Join(ErrUnmarshalReceiversMetadataFailed, err)
 	}
 
 	// outputs
@@ -258,7 +280,7 @@ func (i *Action) Deserialize(raw []byte) error {
 		}
 		data, err := utils.FromG1Proto(output.Token.Data)
 		if err != nil {
-			return errors.Wrapf(err, "failed to deserialize output")
+			return errors.Join(ErrDeserializeOutputFailed, err)
 		}
 		i.Outputs[j] = &token.Token{
 			Owner: output.Token.Owner,
@@ -277,19 +299,20 @@ func (i *Action) Deserialize(raw []byte) error {
 	return nil
 }
 
-// GetCommitments return the Pedersen commitment of (type, value) in the Outputs
+// GetCommitments returns the Pedersen commitments of (type, value) for each output.
 func (i *Action) GetCommitments() ([]*math.G1, error) {
 	com := make([]*math.G1, len(i.Outputs))
 	for j := 0; j < len(com); j++ {
 		if i.Outputs[j] == nil {
-			return nil, errors.New("invalid issue: there is a nil output")
+			return nil, ErrNilOutput
 		}
 		com[j] = i.Outputs[j].Data
 	}
+
 	return com, nil
 }
 
-// GetProof returns IssueAction ZKP
+// GetProof returns the zero-knowledge proof of the Action's validity.
 func (i *Action) GetProof() []byte {
 	return i.Proof
 }

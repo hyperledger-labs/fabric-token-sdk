@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token4 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -36,7 +37,11 @@ import (
 )
 
 const (
-	DLogNamespace     = "dlog_token_chaincode"
+	// DLogNamespace is the default name for the namespace where the token chaincode is deployed when using the dlog driver
+	// #nosec G101 no passwords here
+	DLogNamespace = "dlog_token_chaincode"
+	// FabTokenNamespace is the default name for the namespace where the token chaincode is deployed when using the fabtoken driver
+	// #nosec G101  no passwords here
 	FabTokenNamespace = "fabtoken_token_chaincode"
 )
 
@@ -697,6 +702,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 			}))
 			if err != nil {
 				transfer <- err
+
 				return
 			}
 			transfer <- nil
@@ -736,6 +742,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 			if err != nil {
 				// The transaction failed, we return the error to the caller.
 				transferError <- err
+
 				return
 			}
 			// The transaction didn't fail, let's wait for it to be confirmed, and return no error
@@ -896,7 +903,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 	if updateWithAppend {
 		IssueCash(network, "", "USD", 110, alice, newAuditor, true, issuer)
 	} else {
-		IssueCash(network, "", "USD", 110, alice, newAuditor, true, issuer, "is not in issuers")
+		IssueCash(network, "", "USD", 110, alice, newAuditor, true, issuer, validator.ErrIssuerNotAuthorized.Error())
 	}
 	if newAuditorID != "auditor" {
 		if updateWithAppend {
@@ -1257,6 +1264,7 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 		if !strings.Contains(errMsgs[0], "token format not supported [") {
 			return errors.Errorf("expected error format not supported [%v]", errMsgs)
 		}
+
 		return nil
 	}, alice)
 	CheckOwnerStore(network, nil, issuer, bob, charlie, manager)

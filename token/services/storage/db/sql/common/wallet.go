@@ -65,6 +65,7 @@ func (db *WalletStore) GetWalletID(ctx context.Context, identity token.Identity,
 		return "", errors.Wrapf(err, "failed getting wallet id for identity [%v]", idHash)
 	}
 	logger.DebugfContext(ctx, "found wallet id for identity [%v]: %v", idHash, result)
+
 	return result, nil
 }
 
@@ -81,6 +82,7 @@ func (db *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.W
 	}
 
 	it := common.NewIterator(rows, func(walletID *driver.WalletID) error { return rows.Scan(walletID) })
+
 	return iterators.ReadAllValues(it)
 }
 
@@ -101,6 +103,7 @@ func (db *WalletStore) StoreIdentity(ctx context.Context, identity token.Identit
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%s]", wID, identity)
 	}
 	logger.DebugfContext(ctx, "stored wallet [%v] for identity [%s]", wID, identity)
+
 	return nil
 }
 
@@ -116,6 +119,7 @@ func (db *WalletStore) LoadMeta(ctx context.Context, identity token.Identity, wI
 		return nil, errors.Wrapf(err, "failed loading meta for id [%v]", idHash)
 	}
 	logger.DebugfContext(ctx, "loaded meta for id [%v, %v]: %v", identity, idHash, result)
+
 	return result, nil
 }
 

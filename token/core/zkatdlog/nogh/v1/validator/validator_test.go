@@ -13,7 +13,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
-	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testing"
+	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testutils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/stretchr/testify/require"
@@ -99,6 +99,7 @@ func BenchmarkValidatorTransfer(b *testing.B) {
 		},
 		func(ctx context.Context, env *testing2.Env) error {
 			_, _, err := env.Engine.VerifyTokenRequestFromRaw(ctx, nil, "1", env.TRWithTransferRaw)
+
 			return err
 		},
 	)
@@ -117,6 +118,7 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 		},
 		func(ctx context.Context, env *testing2.Env) error {
 			_, _, err := env.Engine.VerifyTokenRequestFromRaw(ctx, nil, "1", env.TRWithTransferRaw)
+
 			return err
 		},
 	)

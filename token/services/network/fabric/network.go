@@ -99,6 +99,7 @@ func (l *ledger) GetStates(ctx context.Context, namespace string, keys ...string
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling results for query by ids [%v", keys)
 	}
+
 	return values, nil
 }
 
@@ -189,6 +190,7 @@ func NewNetwork(
 	network.connectedNamespaces = lazy.NewProviderWithKeyMapper(func(s string) string {
 		return s
 	}, network.connect)
+
 	return network
 }
 
@@ -227,6 +229,7 @@ func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions,
 	if opt.PublicParamsFetcher == nil {
 		opt.PublicParamsFetcher = common2.NewPublicParamsFetcher(n, opt.Namespace)
 	}
+
 	return opt, nil
 }
 
@@ -247,6 +250,7 @@ func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementSe
 	if err != nil {
 		return nil, errors.Wrapf(err, "network not connected [%s]", tms.ID())
 	}
+
 	return endorsement.Endorse(context, requestRaw, signer, txID)
 }
 
@@ -259,6 +263,7 @@ func (n *Network) ComputeTxID(id *driver.TxID) string {
 	res := n.n.TransactionManager().ComputeTxID(temp)
 	id.Nonce = temp.Nonce
 	id.Creator = temp.Creator
+
 	return res
 }
 
@@ -282,10 +287,6 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener dr
 	return n.flm.AddFinalityListener(namespace, txID, listener)
 }
 
-func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
-	return n.flm.RemoveFinalityListener(txID, listener)
-}
-
 func (n *Network) LookupTransferMetadataKey(namespace string, key string, timeout time.Duration) ([]byte, error) {
 	transferMetadataKey, err := n.keyTranslator.CreateTransferActionMetadataKey(key)
 	if err != nil {
@@ -307,6 +308,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, key string, timeou
 		return nil, err
 	}
 	logger.Debugf("lookup transfer metadata key [%s] from [%s] in namespace [%s], done, result [%s][%s]", key, transferMetadataKey, namespace, l.value, l.err)
+
 	return l.value, l.err
 }
 
@@ -349,6 +351,7 @@ func (l *lookupListener) OnStatus(ctx context.Context, key string, value []byte)
 	if l.key == key {
 		l.value = value
 		l.wg.Done()
+
 		return
 	}
 }
@@ -358,6 +361,7 @@ func (l *lookupListener) OnError(ctx context.Context, key string, err error) {
 	if l.key == key {
 		l.err = err
 		l.wg.Done()
+
 		return
 	}
 }

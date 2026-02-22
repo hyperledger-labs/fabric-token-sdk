@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// UtilsCmd returns the Cobra Command for Public Params Utils command
+// UtilsCmd returns the Cobra Command for Public Parameters Utilities.
 func UtilsCmd() *cobra.Command {
 	utilsCobraCommand.AddCommand(printpp.Cmd())
 

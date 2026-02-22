@@ -99,6 +99,7 @@ func (l *Layout) PeersInOrg(orgName string) []Peer {
 			peers = append(peers, o)
 		}
 	}
+
 	return peers
 }
 
@@ -145,9 +146,9 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 	logger.Infof("generate [%s] identities [%v]", wallet, names)
 
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), n.ID(), wallet)
-	orgName := fmt.Sprintf("Org%s", n.ID())
-	mspID := fmt.Sprintf("%sMSP", orgName)
-	domain := fmt.Sprintf("%s.example.com", orgName)
+	orgName := "Org" + n.ID()
+	mspID := orgName + "MSP"
+	domain := orgName + ".example.com"
 
 	var userSpecs []ftopology.UserSpec
 	for _, name := range names {
@@ -202,7 +203,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 			in, err := os.Open(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			gomega.Expect(os.MkdirAll(filepath.Join(idOutput, x509.KeystoreFullFolder), 0766)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(os.MkdirAll(filepath.Join(idOutput, x509.KeystoreFullFolder), 0750)).NotTo(gomega.HaveOccurred())
 			out, err := os.Create(filepath.Join(idOutput, x509.KeystoreFullFolder, x509.PrivateKeyFileName))
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			_, err = io.Copy(out, in)
@@ -235,11 +236,12 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 
 		identities = append(identities, id)
 	}
+
 	return identities
 }
 
 func (d *CryptoMaterialGenerator) GenerateCryptoConfig(output string, layout *Layout) {
-	gomega.Expect(os.MkdirAll(output, 0770)).NotTo(gomega.HaveOccurred())
+	gomega.Expect(os.MkdirAll(output, 0750)).NotTo(gomega.HaveOccurred())
 	crypto, err := os.Create(filepath.Join(output, "crypto-config.yaml"))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	defer utils.IgnoreError(crypto.Close)
@@ -262,6 +264,7 @@ func (d *CryptoMaterialGenerator) GenerateArtifacts(output string) {
 
 func (d *CryptoMaterialGenerator) Cryptogen(command common.Command) (*gexec.Session, error) {
 	cmd := common.NewCommand(d.Builder.FSCCLI(), command)
+
 	return d.StartSession(cmd, command.SessionName())
 }
 
@@ -277,6 +280,7 @@ func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gex
 	); err != nil {
 		return nil, err
 	}
+
 	return gexec.Start(
 		cmd,
 		gexec.NewPrefixedWriter(
@@ -297,5 +301,6 @@ func (d *CryptoMaterialGenerator) NextColor() string {
 	}
 
 	d.ColorIndex++
+
 	return fmt.Sprintf("%dm", color)
 }

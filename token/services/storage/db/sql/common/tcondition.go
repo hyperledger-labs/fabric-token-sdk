@@ -28,6 +28,7 @@ func hasTokens(colTxID, colIdx common.Field, ids ...*token.ID) cond.Condition {
 	for i, id := range ids {
 		vals[i] = common.Tuple{id.TxId, id.Index}
 	}
+
 	return cond.InTuple([]common.Serializable{colTxID, colIdx}, vals)
 }
 
@@ -89,6 +90,7 @@ func HasMovementsParams(params driver2.QueryMovementsParams) cond.Condition {
 	case driver2.Received:
 		conds = append(conds, cond.Gt("amount", 0))
 	}
+
 	return cond.And(conds...)
 }
 
@@ -121,6 +123,7 @@ func HasTransactionParams(params driver2.QueryTransactionsParams, table common.T
 			cond.Eq("recipient_eid", params.RecipientWallet),
 		))
 	}
+
 	return cond.And(conds...)
 }
 
@@ -128,5 +131,6 @@ func utc(t *time.Time) time.Time {
 	if t == nil || t.IsZero() {
 		return time.Time{}
 	}
+
 	return t.UTC()
 }

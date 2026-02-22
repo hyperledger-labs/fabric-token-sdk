@@ -58,9 +58,11 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		assert.NotNil(auditorWallet, "cannot find auditor wallet [%s]", m.AuditorWalletID)
 		db, err := ttx.NewAuditor(context, auditorWallet)
 		assert.NoError(err, "failed to get auditor instance")
+
 		return db.Check(context.Context())
 	}
 	db := ttx.NewOwner(context, tms)
+
 	return db.Check(context.Context())
 }
 
@@ -114,6 +116,7 @@ func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, er
 	net, err := token.GetManagementService(context, token.WithTMSID(l.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(net, "cannot find tms [%s]", l.TMSID)
+
 	return net.Vault().NewQueryEngine().ListUnspentTokens(context.Context())
 }
 
@@ -149,9 +152,11 @@ func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, erro
 		}
 		IDs = append(IDs, id)
 		count++
+
 		return nil
 	}), "failed to match tokens")
 	assert.Equal(len(c.IDs), count, "got a mismatch; count is [%d] while there are [%d] ids", count, len(c.IDs))
+
 	return IDs, nil
 }
 

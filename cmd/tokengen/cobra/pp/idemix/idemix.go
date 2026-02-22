@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
-// LoadIssuerPublicKey reads the issuer public key from the config file
+// LoadIssuerPublicKey loads the Idemix issuer public key from the given MSP directory.
 func LoadIssuerPublicKey(idemixMSPDir string) (string, []byte, error) {
 	// Load Idemix Issuer Public Key
 	path := filepath.Join(idemixMSPDir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileIssuerPublicKey)

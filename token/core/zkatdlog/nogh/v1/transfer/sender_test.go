@@ -27,14 +27,46 @@ import (
 )
 
 func TestSender(t *testing.T) {
+	t.Run("mismatch", func(t *testing.T) {
+		_, err := transfer.NewSender([]driver.Signer{nil}, nil, nil, nil, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "number of tokens to be spent does not match number of openings")
+	})
+
+	t.Run("GenerateZKTransfer values != owners mismatch", func(t *testing.T) {
+		env, err := newSenderEnv(nil, 1, 1)
+		require.NoError(t, err)
+		_, _, err = env.sender.GenerateZKTransfer(t.Context(), []uint64{10, 20}, [][]byte{[]byte("owner1")})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "number of values [2] does not match number of recipients [1]")
+	})
+
+	t.Run("GenerateZKTransfer mismatched input types", func(t *testing.T) {
+		env, err := newSenderEnv(nil, 2, 1)
+		require.NoError(t, err)
+		env.sender.InputInformation[1].Type = "XYZ"
+		_, _, err = env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "please choose inputs of the same token type")
+	})
+
 	t.Run("success", func(t *testing.T) {
 		env, err := newSenderEnv(nil, 3, 2)
 		require.NoError(t, err)
 
-		transfer, _, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
+		tr, inf, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
 		require.NoError(t, err)
-		assert.NotNil(t, transfer)
-		raw, err := transfer.Serialize()
+		assert.NotNil(t, tr)
+		assert.Len(t, inf, 2)
+		assert.Equal(t, 3, tr.NumInputs())
+		assert.Equal(t, 2, tr.NumOutputs())
+		for i := range inf {
+			assert.Equal(t, token2.Type("ABC"), inf[i].Type)
+			val, err := inf[i].Value.Uint()
+			require.NoError(t, err)
+			assert.Equal(t, env.outvalues[i], val)
+		}
+		raw, err := tr.Serialize()
 		require.NoError(t, err)
 
 		sig, err := env.sender.SignTokenActions(raw)
@@ -84,6 +116,7 @@ func BenchmarkSender(b *testing.B) {
 				return err
 			}
 			_, err = transfer.Serialize()
+
 			return err
 		},
 	)
@@ -111,6 +144,7 @@ func BenchmarkParallelSender(b *testing.B) {
 				return err
 			}
 			_, err = transfer.Serialize()
+
 			return err
 		},
 	)
@@ -138,6 +172,7 @@ func TestParallelBenchmarkSender(t *testing.T) {
 				return err
 			}
 			_, err = transfer.Serialize()
+
 			return err
 		},
 	)
@@ -247,6 +282,7 @@ func prepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *ma
 	for i := range values {
 		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
 	}
+
 	return tokens
 }
 
@@ -314,12 +350,12 @@ func newSenderEnv(pp *v1.PublicParams, numInputs int, numOutputs int) (*senderEn
 		inputInf[i] = &token.Metadata{Type: "ABC", Value: invalues[i], BlindingFactor: inBF[i]}
 	}
 
-	outputValue := uint64(sumInputs / int64(numOutputs))
+	outputValue := uint64(sumInputs / int64(numOutputs)) // #nosec G115
 	sumOutputs := int64(0)
 	for i := range numOutputs {
 		owners[i] = []byte("bob")
 		outvalues[i] = outputValue
-		sumOutputs += int64(outputValue)
+		sumOutputs += int64(outputValue) // #nosec G115
 	}
 	// add any adjustment to the last output
 	delta := sumInputs - sumOutputs
@@ -356,6 +392,7 @@ func newBenchmarkSenderEnv(n int, benchmarkCase *benchmark2.Case, configurations
 			return nil, err
 		}
 	}
+
 	return &benchmarkSenderEnv{SenderEnvs: envs}, nil
 }
 
@@ -387,5 +424,6 @@ func newBenchmarkSenderProofVerificationEnv(ctx context.Context, n int, benchmar
 		env.transferRaw = raw
 		envs[i] = env
 	}
+
 	return &benchmarkSenderEnv{SenderEnvs: envs}, nil
 }

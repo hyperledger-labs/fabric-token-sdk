@@ -82,6 +82,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	for i, transfer := range transfers {
 		if err := transfer.Validate(); err != nil {
 			s.Logger.ErrorfContext(ctx, "failed to validate transfer: %s", err)
+
 			return errors.Wrapf(err, "failed to validate transfer")
 		}
 		inputTokens[i] = make([]*token.Token, len(transfer.Inputs))
@@ -91,7 +92,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	}
 
 	pp := s.PublicParametersManager.PublicParams()
-	auditor := audit.NewAuditor(s.Logger, s.tracer, s.Deserializer, pp.PedersenGenerators, nil, math.Curves[pp.Curve])
+	auditor := audit.NewAuditor(s.Logger, s.tracer, s.Deserializer, pp.PedersenGenerators, math.Curves[pp.Curve])
 	s.Logger.DebugfContext(ctx, "Start auditor check")
 	err = auditor.Check(
 		ctx,

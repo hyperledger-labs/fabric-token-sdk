@@ -69,6 +69,7 @@ func (m TransientMap) IsEmpty() bool {
 
 func (m TransientMap) Exists(key string) bool {
 	_, ok := m[key]
+
 	return ok
 }
 
@@ -115,6 +116,7 @@ func (e *Envelope) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return json.Marshal(raw)
 }
 
@@ -124,6 +126,7 @@ func (e *Envelope) UnmarshalJSON(raw []byte) error {
 	if err != nil {
 		return err
 	}
+
 	return e.e.FromBytes(r)
 }
 
@@ -133,6 +136,10 @@ func (e *Envelope) String() string {
 
 type LocalMembership struct {
 	lm driver.LocalMembership
+}
+
+func NewLocalMembership(lm driver.LocalMembership) *LocalMembership {
+	return &LocalMembership{lm: lm}
 }
 
 func (l *LocalMembership) DefaultIdentity() view.Identity {
@@ -152,6 +159,7 @@ func (l *Ledger) Status(id string) (ValidationCode, string, error) {
 	if err != nil {
 		return 0, "", err
 	}
+
 	return vc, "", nil
 }
 
@@ -169,6 +177,10 @@ func (l *Ledger) TransferMetadataKey(k string) (string, error) {
 type Network struct {
 	n               driver.Network
 	localMembership *LocalMembership
+}
+
+func NewNetwork(n driver.Network, localMembership *LocalMembership) *Network {
+	return &Network{n: n, localMembership: localMembership}
 }
 
 // Name returns the name of the network
@@ -210,6 +222,7 @@ func (n *Network) RequestApproval(context view.Context, tms *token.ManagementSer
 	if err != nil {
 		return nil, err
 	}
+
 	return &Envelope{e: env}, nil
 }
 
@@ -222,6 +235,7 @@ func (n *Network) ComputeTxID(id *TxID) string {
 	txID := n.n.ComputeTxID(temp)
 	id.Nonce = temp.Nonce
 	id.Creator = temp.Creator
+
 	return txID
 }
 
@@ -248,15 +262,8 @@ func (n *Network) LocalMembership() *LocalMembership {
 // AddFinalityListener registers a listener for transaction status for the passed transaction id.
 // If the status is already valid or invalid, the listener is called immediately.
 // When the listener is invoked, then it is also removed.
-// If the transaction id is empty, the listener will be called on status changes of any transaction.
-// In this case, the listener is not removed
 func (n *Network) AddFinalityListener(namespace string, txID string, listener FinalityListener) error {
 	return n.n.AddFinalityListener(namespace, txID, listener)
-}
-
-// RemoveFinalityListener unregisters the passed listener.
-func (n *Network) RemoveFinalityListener(id string, listener FinalityListener) error {
-	return n.n.RemoveFinalityListener(id, listener)
 }
 
 // LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
@@ -270,6 +277,7 @@ func (n *Network) Ledger() (*Ledger, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Ledger{l: l}, nil
 }
 
@@ -314,6 +322,7 @@ func (p *Provider) RegisterDriver(driver driver.Driver) {
 // GetNetwork returns a network instance for the given network and channel
 func (p *Provider) GetNetwork(network string, channel string) (*Network, error) {
 	logger.Debugf("GetNetwork: [%s:%s]", network, channel)
+
 	return p.networks.Get(netId{network: network, channel: channel})
 }
 
@@ -326,6 +335,7 @@ func (p *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, 
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network [%s:%s]", opt.Network, opt.Channel)
 	}
+
 	return n.Normalize(opt)
 }
 
@@ -349,6 +359,7 @@ func (p *Provider) Connect() error {
 			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
 		}
 	}
+
 	return nil
 }
 
@@ -369,14 +380,17 @@ func (np *networkProvider) newNetwork(netId netId) (*Network, error) {
 		nw, err := d.New(network, channel)
 		if err != nil {
 			errs = append(errs, errors.WithMessagef(err, "failed to create network [%s:%s]", network, channel))
+
 			continue
 		}
 		logger.Debugf("new network [%s:%s]", network, channel)
+
 		return &Network{
 			n:               nw,
 			localMembership: &LocalMembership{lm: nw.LocalMembership()},
 		}, nil
 	}
+
 	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
 }
 
@@ -385,8 +399,10 @@ func GetInstance(sp token.ServiceProvider, network, channel string) *Network {
 	n, err := GetProvider(sp).GetNetwork(network, channel)
 	if err != nil {
 		logger.Errorf("Failed to get network [%s:%s]: %s", network, channel, err)
+
 		return nil
 	}
+
 	return n
 }
 
@@ -395,5 +411,6 @@ func GetProvider(sp token.ServiceProvider) *Provider {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to get service: %s", err))
 	}
+
 	return s.(*Provider)
 }

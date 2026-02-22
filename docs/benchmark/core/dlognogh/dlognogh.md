@@ -227,6 +227,7 @@ python run_benchmarks.py
 This creates a subfolder that collects the logs of all the benchmarks and the csv file (**benchmark_results.csv**) that has a separate row for every invocation of the script with the selected metrics collected for all the benchmarks. 
 The folder is named **benchmark_logs_<date>** for example **benchmark_logs_2026-01-19_06-56-41**, where the date indicates the time when the script was run.
 
+The benchmarks are ran only for the BLS12_381_BBS_GURVY curve and repeated for 1, 2, 4, 8, 16, and 32 cpus.
 The script supports the following flags:
 
 `--count`
@@ -238,6 +239,16 @@ The script supports the following flags:
 `--benchName`
 : The single benchmark that should be run by the script. The default is to run the whole selection of benchmarks.
 
+**Plots summarizing the benchmark results: benchmark_results.pdf**
+
+As mentioned above, the run_benchmark.py script produces the results in the file benchmark_results.csv.
+A separate script **plot_lat_vs_tps.py** is used to produce a corresponding file **benchmark_results.pdf** that includes figures that summarize the benchmark results. this pdf file is also saved in the benchmark_logs folder along with the other results. 
+For every benchmark there will be a plot of the throughput vs the number of cpus, and another plot of the latency results vs. the throughput for the different number of cpus tested. 
+
+**Summary of the effects of bit counts and number of I/O tokens: benchmark_IOstats.csv**
+
+The run_benchmark.py script also runs the benchmarks under different setting of the number of bits (32/64) and the number of input/output tokens, and produces a table summarizing the time, RAM and number of allocations for each combination. This summary is saved in the benchmark_logs folder under **benchmark_results.csv**.
+
 **Example runs:**
 
 - Running all the selected benchmarks:
@@ -248,3 +259,4 @@ python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
 ```shell
 python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
 ```
+

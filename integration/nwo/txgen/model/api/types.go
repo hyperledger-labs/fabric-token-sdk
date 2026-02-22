@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 package api
 
-type Amount = int64
+type Amount = uint64
 type UUID [16]byte
 
 func (u UUID) String() string {

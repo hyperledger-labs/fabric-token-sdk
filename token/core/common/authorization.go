@@ -17,6 +17,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// Authorization defines an interface for checking the ownership, issuance, and auditor status of tokens.
 type Authorization interface {
 	// IsMine returns true if the passed token is owned by an owner wallet.
 	// It returns the ID of the owner wallet and any additional owner identifier, if supported.
@@ -37,6 +38,7 @@ type WalletBasedAuthorization struct {
 	amIAnAuditor     bool
 }
 
+// NewTMSAuthorization returns a new WalletBasedAuthorization for the passed public parameters and wallet service.
 func NewTMSAuthorization(logger logging.Logger, publicParameters driver.PublicParameters, walletService driver.WalletService) *WalletBasedAuthorization {
 	amIAnAuditor := false
 	var errs []error
@@ -44,11 +46,13 @@ func NewTMSAuthorization(logger logging.Logger, publicParameters driver.PublicPa
 		_, err := walletService.AuditorWallet(context.Background(), identity)
 		if err == nil {
 			amIAnAuditor = true
+
 			break
 		}
 		errs = append(errs, errors.Wrapf(err, "I'm not this auditor identity [%s]", identity))
 	}
 	logger.Debugf("am I an auditor? [%v], with errs [%v]", amIAnAuditor, errs)
+
 	return &WalletBasedAuthorization{Logger: logger, PublicParameters: publicParameters, WalletService: walletService, amIAnAuditor: amIAnAuditor}
 }
 
@@ -59,6 +63,7 @@ func (w *WalletBasedAuthorization) IsMine(ctx context.Context, tok *token2.Token
 	if err != nil {
 		return "", nil, false
 	}
+
 	return wallet.ID(), nil, true
 }
 
@@ -68,8 +73,10 @@ func (w *WalletBasedAuthorization) AmIAnAuditor() bool {
 	return w.amIAnAuditor
 }
 
+// Issued returns true if the passed issuer issued the passed token
 func (w *WalletBasedAuthorization) Issued(ctx context.Context, issuer token.Identity, tok *token2.Token) bool {
 	_, err := w.WalletService.IssuerWallet(ctx, issuer)
+
 	return err == nil
 }
 
@@ -91,6 +98,7 @@ func (o *AuthorizationMultiplexer) IsMine(ctx context.Context, tok *token2.Token
 			return walletID, ids, true
 		}
 	}
+
 	return "", nil, false
 }
 
@@ -102,9 +110,11 @@ func (o *AuthorizationMultiplexer) AmIAnAuditor() bool {
 			return true
 		}
 	}
+
 	return false
 }
 
+// Issued returns true it there exists an authorization checker that returns true
 func (o *AuthorizationMultiplexer) Issued(ctx context.Context, issuer token.Identity, tok *token2.Token) bool {
 	for _, authorization := range o.authorizations {
 		yes := authorization.Issued(ctx, issuer, tok)
@@ -112,14 +122,16 @@ func (o *AuthorizationMultiplexer) Issued(ctx context.Context, issuer token.Iden
 			return true
 		}
 	}
+
 	return false
 }
 
-// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
+// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes.
 func (o *AuthorizationMultiplexer) OwnerType(raw []byte) (driver.IdentityType, []byte, error) {
 	owner, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
 		return "", nil, err
 	}
+
 	return owner.Type, owner.Identity, nil
 }

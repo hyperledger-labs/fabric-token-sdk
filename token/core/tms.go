@@ -21,23 +21,35 @@ import (
 
 var logger = logging.MustGetLogger()
 
+// CallbackFunc defines a function signature for a callback invoked after a new TMS is created.
 type CallbackFunc func(tms driver.TokenManagerService, network, channel, namespace string) error
 
+// PublicParametersStorage defines the interface for retrieving public parameters from a storage.
+//
+//go:generate counterfeiter -o mock/pps.go -fake-name PublicParametersStorage . PublicParametersStorage
 type PublicParametersStorage interface {
+	// PublicParams returns the public parameters for the specified network, channel, and namespace.
 	PublicParams(ctx context.Context, networkID string, channel string, namespace string) ([]byte, error)
 }
 
+// ConfigService defines the interface for retrieving TMS configurations.
+//
+//go:generate counterfeiter -o mock/cs.go -fake-name ConfigService . ConfigService
 type ConfigService interface {
+	// Configurations returns all available TMS configurations.
 	Configurations() ([]driver.Configuration, error)
+	// ConfigurationFor returns the TMS configuration for the specified network, channel, and namespace.
 	ConfigurationFor(network string, channel string, namespace string) (driver.Configuration, error)
 }
 
+// PublicParameters represents the configuration for public parameters path.
 type PublicParameters struct {
+	// Path is the filesystem path to the public parameters.
 	Path string `yaml:"path"`
 }
 
 // TMSProvider is a token management service provider.
-// It is responsible for creating token management services for different networks.
+// It is responsible for creating and caching token management services for different networks.
 type TMSProvider struct {
 	configService           ConfigService
 	publicParametersStorage PublicParametersStorage
@@ -59,6 +71,7 @@ func NewTMSProvider(
 		services:                map[string]driver.TokenManagerService{},
 		tokenDriverService:      tokenDriverService,
 	}
+
 	return ms
 }
 
@@ -79,6 +92,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	service, ok := m.services[key]
 	if ok {
 		m.lock.RUnlock()
+
 		return service, nil
 	}
 	m.lock.RUnlock()
@@ -91,6 +105,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	service, ok = m.services[key]
 	if ok {
 		logger.Debugf("token manager service for [%s] with key [%s] exists, return it", opts, key)
+
 		return service, nil
 	}
 
@@ -100,9 +115,12 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 		return nil, err
 	}
 	m.services[key] = service
+
 	return service, nil
 }
 
+// NewTokenManagerService creates a new driver.TokenManagerService instance for the passed parameters.
+// It does not cache the created service.
 func (m *TMSProvider) NewTokenManagerService(opts driver.ServiceOptions) (driver.TokenManagerService, error) {
 	if len(opts.Network) == 0 {
 		return nil, errors.Errorf("network not specified")
@@ -116,9 +134,12 @@ func (m *TMSProvider) NewTokenManagerService(opts driver.ServiceOptions) (driver
 	if err != nil {
 		return nil, err
 	}
+
 	return service, nil
 }
 
+// Update updates the public parameters for the specified TMS.
+// If the service is already cached and the public parameters are different, it unloads the old service and reloads it.
 func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 	if len(opts.Network) == 0 {
 		return errors.Errorf("network not specified")
@@ -143,6 +164,7 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 		digest := sha256.Sum256(opts.PublicParams)
 		if bytes.Equal(service.PublicParamsManager().PublicParamsHash(), digest[:]) {
 			logger.Debugf("service found, no need to update token management system for [%s:%s:%s] for key [%s], public params are the same", opts.Network, opts.Channel, opts.Namespace, key)
+
 			return nil
 		}
 
@@ -161,9 +183,11 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 		// register the new service
 		m.services[key] = newService
 	}
+
 	return err
 }
 
+// SetCallback sets the callback function to be invoked when a new TMS is created.
 func (m *TMSProvider) SetCallback(callback CallbackFunc) {
 	m.callback = callback
 }
@@ -181,6 +205,7 @@ func (m *TMSProvider) getTokenManagerService(opts driver.ServiceOptions) (servic
 			logger.Fatalf("failed to initialize tms for [%s]: [%s]", opts, err)
 		}
 	}
+
 	return service, nil
 }
 
@@ -214,6 +239,7 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, err
 		}
 	}
 	logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, string(debug.Stack()))
+
 	return nil, errors.Errorf("cannot retrieve public params for [%s]", opts)
 }
 
@@ -221,6 +247,7 @@ func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {
 	if len(opts.PublicParams) != 0 {
 		return opts.PublicParams, nil
 	}
+
 	return nil, errors.Errorf("public parameter not found in options")
 }
 
@@ -232,6 +259,7 @@ func (m *TMSProvider) ppFromStorage(opts *driver.ServiceOptions) ([]byte, error)
 	if len(ppRaw) == 0 {
 		return nil, errors.Errorf("no public parames found in publicParametersStorage")
 	}
+
 	return ppRaw, nil
 }
 
@@ -250,8 +278,10 @@ func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) 
 		if err != nil {
 			return nil, errors.Errorf("failed to load public parameters from [%s]: [%s]", cPP.Path, err)
 		}
+
 		return ppRaw, nil
 	}
+
 	return nil, errors.Errorf("no public params found in configuration")
 }
 
@@ -265,8 +295,10 @@ func (m *TMSProvider) ppFromFetcher(opts *driver.ServiceOptions) ([]byte, error)
 			return nil, errors.Errorf("no public parames found in publicParametersStorage")
 		}
 		opts.PublicParams = ppRaw
+
 		return ppRaw, nil
 	}
+
 	return nil, errors.Errorf("no public params fetched available")
 }
 

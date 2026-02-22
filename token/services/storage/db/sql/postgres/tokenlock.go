@@ -36,6 +36,7 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common5.TableNames) (*Token
 	if err != nil {
 		return nil, err
 	}
+
 	return &TokenLockStore{TokenLockStore: tldb, ci: ci}, nil
 }
 
@@ -62,6 +63,7 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 	if err != nil {
 		db.Logger.Errorf("query failed: %s", query)
 	}
+
 	return err
 }
 
@@ -87,6 +89,7 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 
 	it := common4.NewIterator(rows, func(entry *lockEntry) error {
 		entry.LeaseExpiry = leaseExpiry
+
 		return rows.Scan(&entry.ConsumerTxID, &entry.TokenID.TxId, &entry.TokenID.Index, &entry.Status, &entry.CreatedAt, &entry.Now)
 	})
 	lockEntries, err := iterators.ReadAllValues(it)
@@ -95,6 +98,7 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 	}
 
 	db.Logger.Debugf("Found following entries ready for deletion: [%v]", lockEntries)
+
 	return nil
 }
 

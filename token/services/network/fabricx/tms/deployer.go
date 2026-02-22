@@ -24,12 +24,17 @@ import (
 
 var logger = logging.MustGetLogger()
 
+// DeployerService models a service for deploying TMSs.
 type DeployerService interface {
+	// DeployTMSs deploys all TMSs defined in the configuration.
 	DeployTMSs() error
+	// DeployTMS deploys the TMS with the given ID.
 	DeployTMS(tmsID token.TMSID) error
+	// DeployTMSWithPP deploys the TMS with the given ID and public parameters.
 	DeployTMSWithPP(tmsID token.TMSID, ppRaw []byte) error
 }
 
+// NewTMSDeployerService returns a new DeployerService instance.
 func NewTMSDeployerService(
 	ppFetcher *pp.PublicParametersService,
 	configService *config.Service,
@@ -57,6 +62,7 @@ func (s *deployerService) GetTMSIDs() ([]token.TMSID, error) {
 	tmss, err := s.configService.Configurations()
 	if err != nil {
 		logger.Errorf("Failed getting TMS configurations: %v", err)
+
 		return nil, err
 	}
 	for _, tms := range tmss {
@@ -81,6 +87,7 @@ func (s *deployerService) DeployTMSs() error {
 		logger.Infof("Deploying TMS [%s]", tmsID)
 		if err := s.DeployTMS(tmsID); err != nil {
 			logger.Errorf("Failed deploying TMS [%s]: %v", tmsID, err)
+
 			return err
 		}
 	}
@@ -101,6 +108,7 @@ func (s *deployerService) deployPublicParameters(tmsID token.TMSID) error {
 	if err != nil {
 		return err
 	}
+
 	return s.deployPublicParametersRaw(tmsID, ppRaw)
 }
 
@@ -109,6 +117,7 @@ func (s *deployerService) deployPublicParametersRaw(tmsID token.TMSID, ppRaw []b
 	if err != nil {
 		return err
 	}
+
 	return s.nsSubmitter.Submit(tmsID.Network, tmsID.Channel, tx)
 }
 
@@ -140,5 +149,6 @@ func GetTMSDeployerService(sp services.Provider) (DeployerService, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return s.(DeployerService), nil
 }

@@ -56,6 +56,7 @@ func (q *QueryEngine) UnspentTokensIterator(ctx context.Context) (*UnspentTokens
 	if err != nil {
 		return nil, err
 	}
+
 	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
@@ -65,6 +66,7 @@ func (q *QueryEngine) UnspentTokensIteratorBy(ctx context.Context, id string, to
 	if err != nil {
 		return nil, err
 	}
+
 	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
@@ -93,12 +95,14 @@ func (q *QueryEngine) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]
 					}
 					time.Sleep(q.RetryDelay)
 					retry = true
+
 					break
 				}
 			}
 
 			if retry {
 				tokens = nil
+
 				continue
 			}
 
@@ -124,6 +128,7 @@ func (q *QueryEngine) PublicParams(ctx context.Context) ([]byte, error) {
 // GetTokens returns the tokens stored in the vault matching the given ids
 func (q *QueryEngine) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*token.Token, error) {
 	tokens, err := q.qe.GetTokens(ctx, inputs...)
+
 	return tokens, err
 }
 
@@ -156,6 +161,7 @@ func (c *CertificationStorage) Exists(ctx context.Context, id *token.ID) bool {
 	if c == nil || c.c == nil {
 		return false
 	}
+
 	return c.c.Exists(ctx, id)
 }
 
@@ -163,6 +169,7 @@ func (c *CertificationStorage) Store(ctx context.Context, certifications map[*to
 	if c == nil || c.c == nil {
 		return errors.New("certification storage is not supported")
 	}
+
 	return c.c.Store(ctx, certifications)
 }
 

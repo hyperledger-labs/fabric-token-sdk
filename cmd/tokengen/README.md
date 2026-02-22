@@ -1,157 +1,53 @@
 # Tokengen
 
-`tokengen` is an utility for generating Fabric Token-SDK material. 
-It is provided as a means of preconfiguring public parameters, token chaincode, and so. 
-It would normally not be used in the operation of a production network.
+`tokengen` is a utility for generating Fabric Token-SDK material, such as public parameters, token chaincode packages, and other cryptographic artifacts. 
 
-## Syntax
+It is primarily used for pre-configuring development and testing environments.
 
-The `tokengen` command has five subcommands, as follows:
+## Build
 
-- artifacts
-- certifier-keygen
-- gen
-- help
-- version
+To build `tokengen`, run the following command from the root of the repository:
 
-## tokengen artifacts
-
-This command is used to centrally generate key material and configuration files.
-It takes in input a `topology` file, in `yaml` format, that describes the topologies of the networks involved.
-An example can be found [`here`](./samples/topology/fungible.yaml). 
-Topology files can be edited directly or they can be generated programmatically as shown [`here`](./samples/topology/fungible.go). 
-
-```
-Read topology from file and generates artifacts.
-
-Usage:
-tokengen artifacts [flags]
-
-Flags:
--h, --help              help for artifacts
--o, --output string     output folder (default "./testdata")
--p, --port int          host starting port (default 20000)
--t, --topology string   topology file in yaml format
+```bash
+make tokengen
 ```
 
-## tokengen certifier-keygen
+The binary will be generated in the `$GOROOT/bin` directory.
 
-```
-Gen Token Certifier Key Pair.
+## Usage
 
-Usage:
-  tokengen certifier-keygen [flags]
+The `tokengen` tool uses a command-line interface with several subcommands. You can always use the `--help` flag to see available options for any command.
 
-Flags:
-  -d, --driver string   driver (zkatdlognogh.v1) (default "zkatdlognogh.v1")
-  -h, --help            help for certifier-keygen
-  -o, --output string   output folder (default ".")
-  -p, --pppath string   path to the public parameters file
+```bash
+tokengen [command] --help
 ```
 
-## tokengen gen
+### Core Commands
 
-The `tokengen gen` command has two subcommands, as follows:
+- **`artifacts`**: Generates key material and configuration files from a topology description (YAML).
+- **`gen`**: Generates public parameters for specific drivers (e.g., `fabtoken.v1`, `zkatdlognogh.v1`).
+- **`update`**: Updates certificates within existing public parameters.
+- **`pp print`**: Inspects and prints human-readable details of a public parameters file.
+- **`certifier-keygen`**: Generates key pairs for token certifiers.
+- **`version`**: Displays the build version information.
 
-- fabtoken.v1: generates the public parameters for the fabtoken driver
-- zkatdlognogh.v1: generates the public parameters for the zkatdlognogh.v1 driver
+### Examples
 
-## tokengen gen fabtoken.v1
-
-```
-Usage:
-  tokengen gen fabtoken.v1 [flags]
-
-Flags:
-  -a, --auditors strings   list of auditor MSP directories containing the corresponding auditor certificate
-      --cc                 generate chaincode package
-  -h, --help               help for fabtoken.v1
-  -s, --issuers strings    list of issuer MSP directories containing the corresponding issuer certificate
-  -o, --output string      output folder (default ".")
-  -v, --version uint       allows the caller of tokengen to override the version number put in the public params
+#### Generate Public Parameters for FabToken
+```bash
+tokengen gen fabtoken.v1 --auditors ./msp/auditor --issuers ./msp/issuer --output ./params
 ```
 
-The public parameters are stored in the output folder with name `fabtokenv1_pp.json`.
-If version is overridden, then file name will be `("fabtokenv%d_pp.json", version)`.
-
-### tokengen gen zkatdlognogh.v1
-
-```
-Usage:
-  tokengen gen zkatdlognogh.v1 [flags]
-
-Flags:
-  -r, --aries               flag to indicate that aries should be used as backend for idemix
-  -a, --auditors strings    list of auditor MSP directories containing the corresponding auditor certificate
-  -b, --bits uint           bits is used to define the maximum quantity a token can contain (default 64)
-      --cc                  generate chaincode package
-  -x, --extra stringArray   extra data in key=value format, where value is the path to a file containing the data to load and store in the key
-  -h, --help                help for zkatdlognogh.v1
-  -i, --idemix string       idemix msp dir
-  -s, --issuers strings     list of issuer MSP directories containing the corresponding issuer certificate
-  -o, --output string       output folder (default ".")
-  -v, --version uint        allows the caller of tokengen to override the version number put in the public params
-``` 
-
-The public parameters are stored in the output folder with name `zkatdlognoghv1_pp.json`.
-If version is overridden, then file name will be `("zkatdlognogh%d_pp.json", version)`.
-
-### tokengen update zkatdlognogh.v1
-
-This command takes an existing `zkatdlognoghv1_pp.json` and allows you to update the issuer and/or auditor certificates, while keeping the public parameters intact.
-
-```
-Usage:
-  tokengen update zkatdlognogh.v1 [flags]
-
-Flags:
-  -a, --auditors strings    list of auditor MSP directories containing the corresponding auditor certificate
-  -x, --extra stringArray   extra data in key=value format, where is the path to a file containing the data to load and store in the key
-  -h, --help                help for zkatdlognogh.v1
-  -i, --input string        path of the public param file
-  -s, --issuers strings     list of issuer MSP directories containing the corresponding issuer certificate
-  -o, --output string       output folder (default ".")
-  -v, --version uint        allows the caller of tokengen to override the version number put in the public params
+#### Inspect Public Parameters
+```bash
+tokengen pp print --input ./params/fabtokenv1_pp.json
 ```
 
-## tokengen pp
-
-The `tokengen pp` command has the following subcommands:
-
-- print: Inspect public parameters
-
-### tokengen pp print
-
-```
-Usage:
-  tokengen pp print [flags]
-
-Flags:
-  -h, --help           help for print
-  -i, --input string   path of the public param file
+#### Generate Artifacts from Topology
+```bash
+tokengen artifacts --topology ./topology.yaml --output ./artifacts
 ```
 
-## tokengen help
+## Configuration
 
-```
-Help provides help for any command in the application.
-Simply type tokengen help [path to command] for full details.
-
-Usage:
-  tokengen help [command] [flags]
-
-Flags:
-  -h, --help   help for help
-```
-
-## tokengen version
-
-```
-Print current version of tokengen.
-
-Usage:
-  tokengen version [flags]
-
-Flags:
-  -h, --help   help for version
-```
+`tokengen` can also be configured via environment variables prefixed with `CORE_`. For example, `CORE_LOGGING_LEVEL=debug` will set the logging level to debug.

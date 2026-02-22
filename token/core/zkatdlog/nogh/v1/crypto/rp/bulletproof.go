@@ -14,12 +14,13 @@ import (
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 )
 
+// RangeProofData contains the elements of a Bulletproof-style range proof.
 type RangeProofData struct {
-	// T1 is a Pedersen commitment to a random tau1
+	// T1 is a Pedersen commitment to a random tau1.
 	T1 *math.G1
-	// T2 is a Pedersen commitment a random tau2
+	// T2 is a Pedersen commitment to a random tau2.
 	T2 *math.G1
-	// Tau = tau1x + tau2x^2 for a random challenge x
+	// Tau = tau1*x + tau2*x^2 + z^2*blindingFactor for random challenges x, z.
 	Tau *math.Zr
 	// C is a hiding Pedersen commitment to vectors left = (b_0, ...,b_{n-1})
 	// and right = (b_0 - 1, ..., b_{n-1}-1) with randomness rho, where
@@ -28,6 +29,7 @@ type RangeProofData struct {
 	// D is a hiding Pedersen commitment to two random vectors
 	// with randomness eta
 	D *math.G1
+	// Delta is the blinding factor for the inner product commitment.
 	// Delta = rho + x eta
 	Delta *math.Zr
 	// InnerProduct is the value of the inner product of the vectors committed in the non-hiding
@@ -35,6 +37,7 @@ type RangeProofData struct {
 	InnerProduct *math.Zr
 }
 
+// Serialize marshals the RangeProofData into a byte slice.
 func (p *RangeProofData) Serialize() ([]byte, error) {
 	return asn1.MarshalMath(
 		p.T1,
@@ -47,6 +50,7 @@ func (p *RangeProofData) Serialize() ([]byte, error) {
 	)
 }
 
+// Deserialize unmarshals a byte slice into the RangeProofData.
 func (p *RangeProofData) Deserialize(bytes []byte) error {
 	unmarshaller, err := asn1.NewUnmarshaller(bytes)
 	if err != nil {
@@ -80,9 +84,11 @@ func (p *RangeProofData) Deserialize(bytes []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshall InnerProduct")
 	}
+
 	return nil
 }
 
+// Validate checks that all elements in the RangeProofData are valid for the given curve.
 func (p *RangeProofData) Validate(curve math.CurveID) error {
 	if p.T1 == nil {
 		return errors.New("invalid range proof data: nil T1")
@@ -126,27 +132,32 @@ func (p *RangeProofData) Validate(curve math.CurveID) error {
 	if err := math2.CheckBaseElement(p.InnerProduct, curve); err != nil {
 		return errors.Wrapf(err, "invalid range proof data: invalid InnerProduct")
 	}
+
 	return nil
 }
 
-// RangeProof proves that a committed value < max
+// RangeProof represents a full range proof, including common data and the inner product argument.
 type RangeProof struct {
-	// Data contains all the elements of the range proof that are not in IPA
+	// Data contains the main proof elements.
 	Data *RangeProofData
-	// IPA is the proof that shows that InnerProduct is correct
+	// IPA is the inner product argument proof.
 	IPA *IPA
 }
 
+// Serialize marshals the RangeProof into a byte slice.
 func (p *RangeProof) Serialize() ([]byte, error) {
 	return asn1.Marshal[asn1.Serializer](p.Data, p.IPA)
 }
 
+// Deserialize unmarshals a byte slice into the RangeProof.
 func (p *RangeProof) Deserialize(bytes []byte) error {
 	p.Data = &RangeProofData{}
 	p.IPA = &IPA{}
+
 	return asn1.Unmarshal[asn1.Serializer](bytes, p.Data, p.IPA)
 }
 
+// Validate checks that the range proof and its components are valid.
 func (p *RangeProof) Validate(curve math.CurveID) error {
 	if p.Data == nil {
 		return errors.New("invalid range proof: nil data")
@@ -160,34 +171,33 @@ func (p *RangeProof) Validate(curve math.CurveID) error {
 	if err := p.IPA.Validate(curve); err != nil {
 		return errors.Wrapf(err, "invalid range proof: invalid IPA")
 	}
+
 	return nil
 }
 
-// rangeProver proves that a committed value < 2^BitLength.
+// rangeProver is an internal struct that manages the creation of a range proof.
 type rangeProver struct {
-	// value is the value committed in Commitment
+	// value is the committed value to be proven within range.
 	value uint64
-	// blindingFactor is the randomness used to compute Commitment
+	// blindingFactor is the randomness used for the value commitment.
 	blindingFactor *math.Zr
-	// Commitment is a hiding Pedersen commitment to value: Commitment = G^vH^r
+	// Commitment is the Pedersen commitment G^v H^r.
 	Commitment *math.G1
-	// CommitmentGenerators are the generators (G, H) used to compute Commitment
+	// CommitmentGenerators are the (G, H) generators.
 	CommitmentGenerators []*math.G1
-	// LeftGenerators are the generators that will be used to commit to
-	// the bits (b_0,..., b_{BitLength-1}) of value
+	// LeftGenerators are the generators for the left vector.
 	LeftGenerators []*math.G1
-	// RightGenerators are the generators that will be used to commit to (b_i-1)
+	// RightGenerators are the generators for the right vector.
 	RightGenerators []*math.G1
-	// P is a random generator of G1
+	// P is an auxiliary generator.
 	P *math.G1
-	// Q is a random generator of G1
+	// Q is an auxiliary generator for the inner product.
 	Q *math.G1
-	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
-	// number of rounds of the reduction protocol
+	// NumberOfRounds is log2 of the bit length.
 	NumberOfRounds uint64
-	// BitLength is the size of the binary representation of value
+	// BitLength is the maximum number of bits for the value.
 	BitLength uint64
-	// Curve is the curve over which the computation is performed
+	// Curve is the mathematical curve.
 	Curve *math.Curve
 }
 
@@ -235,7 +245,7 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	rightGeneratorsPrime := make([]*math.G1, len(p.RightGenerators))
 	for i := range len(p.RightGenerators) {
 		// compute 1/y^i
-		yInv2i := yInv.PowMod(math2.NewCachedZrFromInt(p.Curve, uint64(i)))
+		yInv2i := yInv.PowMod(math2.NewCachedZrFromInt(p.Curve, uint64(i))) // #nosec G115
 		// compute the new generators H'_i = H_i^{1/y^i}
 		rightGeneratorsPrime[i] = p.RightGenerators[i].Mul(yInv2i)
 	}
@@ -335,7 +345,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 		// compute V_iy^i
 		randRightPrime[i] = p.Curve.ModMul(randomRight[i], y2i, p.Curve.GroupOrder)
 		// compute 2^iz^2
-		zPrime[i] = p.Curve.ModMul(zSquare, math2.PowerOfTwo(p.Curve, uint64(i)), p.Curve.GroupOrder)
+		zPrime[i] = p.Curve.ModMul(zSquare, math2.PowerOfTwo(p.Curve, uint64(i)), p.Curve.GroupOrder) // #nosec G115
 	}
 
 	// compute \sum y^iV_i(L_i-z)
@@ -412,27 +422,25 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	return left, right, y, rp, nil
 }
 
-// rangeVerifier verifies that a committed value < 2^BitLength.
+// rangeVerifier is an internal struct that manages the verification of a range proof.
 type rangeVerifier struct {
-	// Commitment is a hiding Pedersen commitment to value: Commitment = G^vH^r
+	// Commitment is the Pedersen commitment to be verified.
 	Commitment *math.G1
-	// CommitmentGenerators are the generators (G, H) used to compute Commitment
+	// CommitmentGenerators are the (G, H) generators.
 	CommitmentGenerators []*math.G1
-	// LeftGenerators are the generators (G_0, ..., G_{BitLength}) that will be used to commit to
-	// the bits (b_0,..., b_{BitLength-1}) of value
+	// LeftGenerators are the generators for the left vector.
 	LeftGenerators []*math.G1
-	// RightGenerators are the generators (H_0, ..., H_{BitLength}) that will be used to commit to (b_i-1)
+	// RightGenerators are the generators for the right vector.
 	RightGenerators []*math.G1
-	// P is a random generator of G1
+	// P is an auxiliary generator.
 	P *math.G1
-	// Q is a random generator of G1
+	// Q is an auxiliary generator for the inner product.
 	Q *math.G1
-	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
-	// number of rounds of the reduction protocol
+	// NumberOfRounds is log2 of the bit length.
 	NumberOfRounds uint64
-	// BitLength is the size of the binary representation of value
+	// BitLength is the maximum number of bits for the value.
 	BitLength uint64
-	// Curve is the curve over which the computation is performed
+	// Curve is the mathematical curve.
 	Curve *math.Curve
 }
 
@@ -459,7 +467,8 @@ func NewRangeVerifier(
 	}
 }
 
-// Verify enable a rangeVerifier to checks the validity of a RangeProof
+// Verify enables a rangeVerifier to check the validity of a RangeProof.
+// It returns nil if the proof is valid, or an error otherwise.
 func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	// check that the proof is well-formed
 	if rp.Data.InnerProduct == nil || rp.Data.C == nil || rp.Data.D == nil {
@@ -560,7 +569,7 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 			z,
 			yPow[i],
 			zSquare,
-			math2.PowerOfTwo(v.Curve, uint64(i)),
+			math2.PowerOfTwo(v.Curve, uint64(i)), // #nosec G115
 			v.Curve.GroupOrder,
 		)
 		// recompute the generators H'_i = H_i^{1/y_i}
@@ -583,5 +592,6 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

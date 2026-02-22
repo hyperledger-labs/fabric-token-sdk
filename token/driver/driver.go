@@ -13,6 +13,8 @@ type ServiceProvider interface {
 }
 
 // Driver is the interface that must be implemented by a token driver.
+//
+//go:generate counterfeiter -o mock/driver.go -fake-name Driver . Driver
 type Driver interface {
 	PPReader
 	// NewTokenService returns a new TokenManagerService instance.

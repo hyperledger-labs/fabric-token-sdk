@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package testing
+package testutils
 
 import (
 	"bytes"
@@ -104,6 +104,7 @@ func (e *Env) saveToFile(path string, txID string, raw []byte) error {
 	if err := os.WriteFile(path, b, 0o600); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -137,14 +138,7 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	multiplexer := deserializer.NewTypedVerifierDeserializerMultiplex()
 	multiplexer.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 	multiplexer.AddTypedVerifierDeserializer(ix509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&Deserializer{}, &Deserializer{}))
-	auditor = audit.NewAuditor(
-		logging.MustGetLogger(),
-		&noop.Tracer{},
-		multiplexer,
-		pp.PedersenGenerators,
-		setupConfiguration.AuditorSigner,
-		c,
-	)
+	auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, multiplexer, pp.PedersenGenerators, c)
 
 	// initialize enginw with pp
 	des, err := zkatdlog.NewDeserializer(pp)
@@ -181,7 +175,7 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	}
 
 	// prepare transfer
-	_, tr, _, _, err = prepareTransferRequest(benchCase, pp, auditor, oID)
+	_, tr, _, _, err = prepareTransferRequest(benchCase, pp, auditor, setupConfiguration.AuditorSigner, oID)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +185,7 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	}
 
 	// atomic action request
-	sender, ar, _, _, err = prepareSwapRequest(benchCase, pp, auditor, oID)
+	sender, ar, _, _, err = prepareSwapRequest(benchCase, pp, auditor, setupConfiguration.AuditorSigner, oID)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +219,7 @@ func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ir, metadata, err := prepareIssue(auditor, issuer, issuerIdentity, setupConfiguration.OwnerIdentity)
+	ir, metadata, err := prepareIssue(auditor, issuer, issuerIdentity, setupConfiguration.OwnerIdentity, setupConfiguration.AuditorSigner)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -262,10 +256,11 @@ func prepareRedeemRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, audit
 		owners,
 		issuer,
 		issuerIdentity,
+		setupConfig.AuditorSigner,
 	)
 }
 
-func prepareTransferRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+func prepareTransferRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, signer *benchmark.Signer, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	owners := make([][]byte, benchCase.NumOutputs)
 	for i := range benchCase.NumOutputs {
 		owners[i] = oID.ID
@@ -281,15 +276,16 @@ func prepareTransferRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, aud
 		owners,
 		nil,
 		nil,
+		signer,
 	)
 }
 
-func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
-	sender1, tr1, trmetadata1, inputsForTransfer1, err := prepareTransferRequest(benchCase, pp, auditor, oID)
+func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor *audit.Auditor, auditorSigner *benchmark.Signer, oID *benchmark.OwnerIdentity) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+	sender1, tr1, trmetadata1, inputsForTransfer1, err := prepareTransferRequest(benchCase, pp, auditor, auditorSigner, oID)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	sender2, tr2, trmetadata2, inputsForTransfer2, err := prepareTransferRequest(benchCase, pp, auditor, oID)
+	sender2, tr2, trmetadata2, inputsForTransfer2, err := prepareTransferRequest(benchCase, pp, auditor, auditorSigner, oID)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -328,7 +324,7 @@ func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1.PublicParams, auditor
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	sigma, err := auditor.Endorse(ar, "2")
+	sigma, err := auditorEndorse(auditorSigner, ar, "2")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -348,6 +344,7 @@ func prepareTokens(values, bf []*math.Zr, tokenType string, pp []*math.G1, curve
 	for i := range values {
 		tokens[i] = prepareToken(values[i], bf[i], tokenType, pp, curve)
 	}
+
 	return tokens
 }
 
@@ -356,10 +353,11 @@ func prepareToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1
 	token.Add(pp[0].Mul(curve.HashToZr([]byte(tokenType))))
 	token.Add(pp[1].Mul(value))
 	token.Add(pp[2].Mul(rand))
+
 	return token
 }
 
-func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte, oID *benchmark.OwnerIdentity) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
+func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte, oID *benchmark.OwnerIdentity, auditorSigner *benchmark.Signer) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
 	owners := make([][]byte, 1)
 	owners[0] = oID.ID
 	values := []uint64{40}
@@ -419,11 +417,11 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	if err != nil {
 		return nil, nil, err
 	}
-	sigma, err := auditor.Endorse(ir, "1")
+	sigma, err := auditorEndorse(auditorSigner, ir, "1")
 	if err != nil {
 		return nil, nil, err
 	}
-	araw, err := auditor.Signer.Serialize()
+	araw, err := auditorSigner.Serialize()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -435,7 +433,18 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 	return ir, issueMetadata, nil
 }
 
-func prepareTransfer(benchCase *benchmark2.Case, pp *v1.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *crypto.AuditInfo, id []byte, owners [][]byte, issuer *issue2.Issuer, issuerIdentity []byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
+func prepareTransfer(
+	benchCase *benchmark2.Case,
+	pp *v1.PublicParams,
+	signer driver.SigningIdentity,
+	auditor *audit.Auditor,
+	auditInfo *crypto.AuditInfo,
+	id []byte,
+	owners [][]byte,
+	issuer *issue2.Issuer,
+	issuerIdentity []byte,
+	auditorSigner *benchmark.Signer,
+) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token, error) {
 	signers := make([]driver.Signer, benchCase.NumInputs)
 	for i := range benchCase.NumInputs {
 		signers[i] = signer
@@ -446,7 +455,7 @@ func prepareTransfer(benchCase *benchmark2.Case, pp *v1.PublicParams, signer dri
 	inValues := make([]*math.Zr, benchCase.NumInputs)
 	sumInputs := uint64(0)
 	for i := range benchCase.NumInputs {
-		v := uint64(i*10 + 500)
+		v := uint64(i*10 + 500) //nolint:gosec
 		sumInputs += v
 		inValues[i] = c.NewZrFromUint64(v)
 	}
@@ -565,11 +574,11 @@ func prepareTransfer(benchCase *benchmark2.Case, pp *v1.PublicParams, signer dri
 		return nil, nil, nil, nil, err
 	}
 
-	sigma, err := auditor.Endorse(tr, "1")
+	sigma, err := auditorEndorse(auditorSigner, tr, "1")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	araw, err := auditor.Signer.Serialize()
+	araw, err := auditorSigner.Serialize()
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -596,6 +605,16 @@ func prepareTransfer(benchCase *benchmark2.Case, pp *v1.PublicParams, signer dri
 	return sender, tr, transferMetadata, tokens, nil
 }
 
+func auditorEndorse(signer driver.Signer, tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
+	// Marshal tokenRequest
+	bytes, err := tokenRequest.MarshalToMessageToSign([]byte(txID))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling token request [%s]", txID)
+	}
+	// Sign
+	return signer.Sign(bytes)
+}
+
 type Deserializer struct {
 	auditInfo []byte
 }
@@ -608,6 +627,7 @@ func (d *Deserializer) Match(_ context.Context, id []byte) error {
 	if !bytes.Equal(d.auditInfo, identity) {
 		return errors.Errorf("identity mismatch [%s][%s]", utils2.Hashable(identity), utils2.Hashable(d.auditInfo))
 	}
+
 	return nil
 }
 

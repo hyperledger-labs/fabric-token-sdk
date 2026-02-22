@@ -11,11 +11,13 @@ import (
 	"runtime"
 	"runtime/debug"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/spf13/cobra"
 )
 
 const ProgramName = "tokengen"
 
+// Commit, Time, Modified hold build-time information.
 var Commit, Time, Modified = func() (string, string, string) {
 	if info, ok := debug.ReadBuildInfo(); ok {
 		var revision string
@@ -32,12 +34,14 @@ var Commit, Time, Modified = func() (string, string, string) {
 				modified = setting.Value
 			}
 		}
+
 		return revision, time, modified
 	}
+
 	return "", "", ""
 }()
 
-// Cmd returns the Cobra Command for Version
+// Cmd returns the Cobra Command for printing the version.
 func Cmd() *cobra.Command {
 	return cobraCommand
 }
@@ -48,16 +52,17 @@ var cobraCommand = &cobra.Command{
 	Long:  `Print current version of tokengen.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
-			return fmt.Errorf("trailing args detected")
+			return errors.New("trailing args detected")
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
-		fmt.Print(GetInfo())
-		return nil
+		_, err := fmt.Fprint(cmd.OutOrStdout(), GetInfo())
+
+		return err
 	},
 }
 
-// GetInfo returns version information for the peer
+// GetInfo returns version information for the tokengen tool.
 func GetInfo() string {
 	return fmt.Sprintf("%s\n"+
 		" Version: (%s, %s, %s)\n "+

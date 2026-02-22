@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLocalIdentity_String(t *testing.T) {
@@ -80,7 +81,7 @@ func TestIdentityInfo(t *testing.T) {
 	assert.True(t, info.Anonymous())
 
 	id, audit, err := info.Get(t.Context())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedIdentity, id)
 	assert.Equal(t, expectedAudit, audit)
 }

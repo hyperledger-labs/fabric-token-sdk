@@ -141,10 +141,6 @@ func (fake *Vault) QueryEngineReturnsOnCall(i int, result1 driver.QueryEngine) {
 func (fake *Vault) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.certificationStorageMutex.RLock()
-	defer fake.certificationStorageMutex.RUnlock()
-	fake.queryEngineMutex.RLock()
-	defer fake.queryEngineMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -75,6 +75,7 @@ func main() {
 					if err != nil {
 						return nil, nil, err
 					}
+
 					return ppm, token.NewValidator(v), nil
 				},
 			},
@@ -119,6 +120,7 @@ func main() {
 					if err != nil {
 						return nil, nil, err
 					}
+
 					return ppm, token.NewValidator(v), nil
 				},
 			},

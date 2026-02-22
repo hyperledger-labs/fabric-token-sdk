@@ -192,6 +192,8 @@ type IdentityType = string
 
 // Authorization defines method to check the relation between a token
 // and wallets (owner, auditor, etc.)
+//
+//go:generate counterfeiter -o mock/authorization.go -fake-name Authorization . Authorization
 type Authorization interface {
 	// IsMine returns true if the passed token is owned by an owner wallet.
 	// It returns the ID of the owner wallet (walletID) and any additional owner identifier (additionalOwners), if supported.
@@ -259,11 +261,14 @@ type WalletService interface {
 	SpendIDs(ids ...*token.ID) ([]string, error)
 }
 
+//go:generate counterfeiter -o mock/wallet_service_factory.go -fake-name WalletServiceFactory . WalletServiceFactory
 type WalletServiceFactory interface {
 	PPReader
 	// NewWalletService returns an instance of the WalletService interface for the passed arguments
 	NewWalletService(tmsConfig Configuration, params PublicParameters) (WalletService, error)
 }
+
+//go:generate counterfeiter -o mock/matcher.go -fake-name Matcher . Matcher
 
 // Matcher models a matcher that can be used to match identities
 type Matcher interface {

@@ -33,7 +33,7 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 	var signatures [][]byte
 
 	if len(ctx.TransferAction.Inputs) == 0 {
-		return errors.Errorf("invalid number of token inputs, expected at least 1")
+		return ErrInvalidInputs
 	}
 
 	var isRedeem bool
@@ -64,6 +64,7 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 		for _, output := range ctx.TransferAction.Outputs {
 			if output.Owner == nil {
 				isRedeem = true
+
 				break
 			}
 		}
@@ -72,7 +73,7 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 			ctx.Logger.Debugf("action is a redeem, verify the signature of the issuer")
 			issuer := ctx.TransferAction.GetIssuer()
 			if issuer == nil {
-				return errors.Errorf("On Redeem action, must have at least one issuer")
+				return ErrMissingIssuer
 			}
 			issuerVerifier, err := ctx.Deserializer.GetIssuerVerifier(c, issuer)
 			if err != nil {
@@ -89,7 +90,8 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 	return nil
 }
 
-// TransferUpgradeWitnessValidate validates that inputs that want to be upgraded, have a valid witness
+// TransferUpgradeWitnessValidate validates that inputs that want to be upgraded, have a valid witness.
+// It recomputes the commitment from the witness and compares it with the input token's data.
 func TransferUpgradeWitnessValidate(c context.Context, ctx *Context) error {
 	// recall that TransferActionValidate has been called before this function
 
@@ -98,27 +100,28 @@ func TransferUpgradeWitnessValidate(c context.Context, ctx *Context) error {
 		if witness != nil {
 			// check that the corresponding input is compatible with the witness
 			if witness.FabToken == nil {
-				return errors.Errorf("fabtoken token not found in witness")
+				return ErrFabTokenNotFound
 			}
-			// recompute commitment
+			// recompute commitment to ensure the witness matches the input token's data
 			// deserialize quantity witness.FabToken.Quantity
 			q, err := token2.ToQuantity(witness.FabToken.Quantity, ctx.PP.QuantityPrecision)
 			if err != nil {
 				return errors.Wrapf(err, "failed to unmarshal quantity")
 			}
-			tokens, _, err := token.GetTokensWithWitness([]uint64{q.ToBigInt().Uint64()}, witness.FabToken.Type, ctx.PP.PedersenGenerators, math.Curves[ctx.PP.Curve])
+			tokens, _, err := token.GetTokensWithWitnessAndBF([]uint64{q.ToBigInt().Uint64()}, []*math.Zr{witness.BlindingFactor}, witness.FabToken.Type, ctx.PP.PedersenGenerators, math.Curves[ctx.PP.Curve])
 			if err != nil {
 				return errors.Wrapf(err, "failed to compute commitment")
 			}
 			if !input.Token.Data.Equals(tokens[0]) {
-				return errors.Wrapf(err, "recomputed commitment does not match")
+				return ErrCommitmentMismatch
 			}
 			// check owner
 			if !bytes.Equal(input.Token.Owner, witness.FabToken.Owner) {
-				return errors.Errorf("owners do not correspond")
+				return ErrOwnersMismatch
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -133,13 +136,14 @@ func TransferZKProofValidate(c context.Context, ctx *Context) error {
 		in,
 		ctx.TransferAction.GetOutputCommitments(),
 		ctx.PP).Verify(ctx.TransferAction.GetProof()); err != nil {
-		return err
+		return errors.Join(err, ErrInvalidZKP)
 	}
 
 	return nil
 }
 
-// TransferHTLCValidate validates the HTLC scripts in the transfer action
+// TransferHTLCValidate validates the HTLC scripts in the transfer action.
+// It ensures that HTLC scripts only transfer ownership of a single token and that the script conditions are met.
 func TransferHTLCValidate(c context.Context, ctx *Context) error {
 	now := time.Now()
 
@@ -149,13 +153,17 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
 		if owner.Type == htlc.ScriptType {
+			// HTLC script must be a 1-to-1 transfer of ownership
 			if len(ctx.InputTokens) != 1 || len(ctx.TransferAction.GetOutputs()) != 1 {
-				return errors.Errorf("invalid transfer action: an htlc script only transfers the ownership of a token")
+				return ErrInvalidHTLCAction
 			}
 
-			out := ctx.TransferAction.GetOutputs()[0].(*token.Token)
+			out, ok := ctx.TransferAction.GetOutputs()[0].(*token.Token)
+			if !ok || out == nil {
+				return ErrHTLCOutputNotFound
+			}
 
-			// check that owner field in output is correct
+			// check that owner field in output is correct based on HTLC script (lock, claim, or reclaim)
 			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner, now)
 			if err != nil {
 				return errors.Wrap(err, "failed to verify transfer from htlc script")
@@ -173,15 +181,11 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 		}
 	}
 
-	for _, o := range ctx.TransferAction.GetOutputs() {
-		out, ok := o.(*token.Token)
-		if !ok {
-			return errors.Errorf("invalid output")
-		}
-		if out.IsRedeem() {
+	for _, o := range ctx.TransferAction.Outputs {
+		if o.IsRedeem() {
 			continue
 		}
-		owner, err := identity.UnmarshalTypedIdentity(out.Owner)
+		owner, err := identity.UnmarshalTypedIdentity(o.Owner)
 		if err != nil {
 			return err
 		}
@@ -199,8 +203,10 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
 			ctx.CountMetadataKey(metadataKey)
+
 			continue
 		}
 	}
+
 	return nil
 }

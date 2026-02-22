@@ -7,11 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"bytes"
 	"context"
+	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -38,19 +39,9 @@ func IssueValidate(c context.Context, ctx *Context) error {
 		}
 	}
 
-	issuers := ctx.PP.IssuerIDs
-	if len(issuers) != 0 {
-		// check that issuer of this issue action is authorized
-		found := false
-		for _, issuer := range issuers {
-			if bytes.Equal(action.Issuer, issuer) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return errors.Errorf("issuer [%s] is not in issuers", action.Issuer.String())
-		}
+	// Check the issuer is among those known
+	if issuers := ctx.PP.Issuers(); len(issuers) != 0 && !slices.ContainsFunc(issuers, action.Issuer.Equal) {
+		return validator.ErrIssuerNotAuthorized
 	}
 
 	// deserialize verifier for the issuer
@@ -62,5 +53,6 @@ func IssueValidate(c context.Context, ctx *Context) error {
 	if _, err := ctx.SignatureProvider.HasBeenSignedBy(c, action.Issuer, verifier); err != nil {
 		return errors.Wrapf(err, "failed verifying signature")
 	}
+
 	return nil
 }

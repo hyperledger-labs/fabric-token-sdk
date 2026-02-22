@@ -65,6 +65,7 @@ func (k *KeyManagerProvider) Get(ctx context.Context, idConfig *driver.IdentityC
 			return nil, errors.Wrapf(err, "failed to load config [%s]", idConfig.ID)
 		}
 	}
+
 	return k.registerIdentity(ctx, config, identityConfig, idConfig)
 }
 
@@ -73,6 +74,7 @@ func (k *KeyManagerProvider) registerIdentity(ctx context.Context, conf *crypto.
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to register provider")
 	}
+
 	return p, nil
 }
 
@@ -98,6 +100,7 @@ func (k *KeyManagerProvider) registerProvider(ctx context.Context, conf *crypto.
 		provider, conf, err = NewKeyManagerFromConf(conf, filepath.Join(translatedPath, ExtraPathElement), keyStorePath, opts, k.keyStore)
 		if err != nil {
 			logger.DebugfContext(ctx, "failed loading provider at [%s]: [%s]", filepath.Join(translatedPath, ExtraPathElement), err)
+
 			return nil, err
 		}
 	}
@@ -124,5 +127,6 @@ func (k *KeyManagerProvider) keyStorePath() string {
 	if !k.ignoreVerifyOnlyWallet {
 		return ""
 	}
+
 	return KeystoreFullFolder
 }

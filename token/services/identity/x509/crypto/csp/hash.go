@@ -19,6 +19,7 @@ type hasher struct {
 func (c *hasher) Hash(msg []byte, opts bccsp.HashOpts) ([]byte, error) {
 	h := c.hash()
 	h.Write(msg)
+
 	return h.Sum(nil), nil
 }
 

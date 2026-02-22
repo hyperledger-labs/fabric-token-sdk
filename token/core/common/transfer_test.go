@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSelectIssuerForRedeem(t *testing.T) {
@@ -26,33 +27,34 @@ func TestSelectIssuerForRedeem(t *testing.T) {
 
 	issuerFSCIdentity := view.Identity("fsc-identity")
 	issuerPPPublicKey := view.Identity("pp-public-key")
+	dummyIssuer := view.Identity("dummy-issuer")
 
 	testCases := []testCase{
 		{
 			name:    "opts with FSC issuer identity and public key",
-			issuers: nil,
+			issuers: []driver.Identity{dummyIssuer},
 			attributes: map[interface{}]interface{}{
 				ttx.IssuerFSCIdentityKey:        issuerFSCIdentity,
 				ttx.IssuerPublicParamsPublicKey: issuerPPPublicKey,
 			},
 			expectError:    false,
-			expectIdentity: nil,
+			expectIdentity: issuerPPPublicKey,
 		},
 		{
 			name:    "opts with FSC issuer identity but no public key",
-			issuers: nil,
+			issuers: []driver.Identity{dummyIssuer},
 			attributes: map[interface{}]interface{}{
 				ttx.IssuerFSCIdentityKey: issuerFSCIdentity,
 			},
-			expectError:    false,
+			expectError:    true,
 			expectIdentity: nil,
 		},
 		{
 			name:           "opts with no FSC issuer identity, issuers present",
-			issuers:        []driver.Identity{issuerFSCIdentity, issuerPPPublicKey},
+			issuers:        []driver.Identity{dummyIssuer, issuerPPPublicKey},
 			attributes:     map[interface{}]interface{}{},
 			expectError:    false,
-			expectIdentity: issuerFSCIdentity,
+			expectIdentity: dummyIssuer,
 		},
 		{
 			name:           "opts with no FSC issuer identity, no issuers",
@@ -63,22 +65,31 @@ func TestSelectIssuerForRedeem(t *testing.T) {
 		},
 		{
 			name:    "IssuerFSCIdentityKey is not a view Identity",
-			issuers: nil,
+			issuers: []driver.Identity{dummyIssuer},
 			attributes: map[interface{}]interface{}{
 				ttx.IssuerFSCIdentityKey: 1234,
 			},
-			expectError:    false,
+			expectError:    true,
 			expectIdentity: nil,
 		},
 		{
 			name:    "IssuerPublicParamsPublicKey is not a view Identity",
-			issuers: nil,
+			issuers: []driver.Identity{dummyIssuer},
 			attributes: map[interface{}]interface{}{
 				ttx.IssuerFSCIdentityKey:        issuerFSCIdentity,
 				ttx.IssuerPublicParamsPublicKey: 1234,
 			},
-			expectError:    false,
+			expectError:    true,
 			expectIdentity: nil,
+		},
+		{
+			name:    "IssuerFSCIdentityKey is none, issuers present",
+			issuers: []driver.Identity{dummyIssuer},
+			attributes: map[interface{}]interface{}{
+				ttx.IssuerFSCIdentityKey: view.Identity(nil),
+			},
+			expectError:    false,
+			expectIdentity: dummyIssuer,
 		},
 	}
 
@@ -86,10 +97,10 @@ func TestSelectIssuerForRedeem(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			id, err := SelectIssuerForRedeem(tc.issuers, &driver.TransferOptions{Attributes: tc.attributes})
 			if tc.expectError {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, id)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.expectIdentity, id)
 			}
 		})

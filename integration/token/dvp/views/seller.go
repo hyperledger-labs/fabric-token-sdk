@@ -110,5 +110,6 @@ func (s SellHouseViewFactory) NewView(in []byte) (view.View, error) {
 	f := &SellHouseView{Sell: &Sell{}}
 	err := json.Unmarshal(in, f)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

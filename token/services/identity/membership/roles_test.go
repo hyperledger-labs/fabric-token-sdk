@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewRoleFactory(t *testing.T) {
@@ -83,7 +84,7 @@ func TestRoleFactory_NewRole(t *testing.T) {
 		identityStore.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 		role, err := factory.NewRole(identity.OwnerRole, true, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, role)
 		assert.Equal(t, idriver.OwnerRole, role.ID())
 	})
@@ -92,7 +93,7 @@ func TestRoleFactory_NewRole(t *testing.T) {
 		storageProvider.IdentityStoreReturns(nil, errors.New("storage error"))
 
 		role, err := factory.NewRole(identity.OwnerRole, true, nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, role)
 		assert.Contains(t, err.Error(), "failed to get wallet path storage")
 	})
@@ -102,7 +103,7 @@ func TestRoleFactory_NewRole(t *testing.T) {
 		config.IdentitiesForRoleReturns(nil, errors.New("config error"))
 
 		role, err := factory.NewRole(identity.OwnerRole, true, nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, role)
 		assert.Contains(t, err.Error(), "failed to get identities for role")
 	})
@@ -116,7 +117,7 @@ func TestRoleFactory_NewRole(t *testing.T) {
 		identityStore.IteratorConfigurationsReturns(nil, errors.New("iterator error"))
 
 		role, err := factory.NewRole(identity.OwnerRole, true, nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, role)
 		assert.Contains(t, err.Error(), "failed to load identities")
 	})

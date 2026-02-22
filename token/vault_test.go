@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/test-go/testify/require"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -27,7 +28,7 @@ func TestQueryEngine_IsMine(t *testing.T) {
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	isMine, err := queryEngine.IsMine(t.Context(), expectedID)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, isMine)
 }
 
@@ -39,7 +40,7 @@ func TestQueryEngine_IsMine_Error(t *testing.T) {
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	isMine, err := queryEngine.IsMine(t.Context(), nil)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.False(t, isMine)
 	assert.Equal(t, expectedErr, err)
 }
@@ -56,20 +57,20 @@ func TestQueryEngine_ListAuditTokens(t *testing.T) {
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	tokens, err := queryEngine.ListAuditTokens(t.Context(), expectedIDs...)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
 	mockQE.ListAuditTokensReturnsOnCall(0, nil, errors.New("pending transactions"))
 	mockQE.ListAuditTokensReturnsOnCall(1, expectedTokens, nil)
 
 	tokens, err = queryEngine.ListAuditTokens(t.Context(), expectedIDs...)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
 	mockQE.ListAuditTokensReturns(nil, errors.New("pending transactions"))
 
 	tokens, err = queryEngine.ListAuditTokens(t.Context(), expectedIDs...)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, tokens)
-	assert.EqualError(t, err, "failed to get audit tokens: pending transactions")
+	require.EqualError(t, err, "failed to get audit tokens: pending transactions")
 }
 
 func TestQueryEngine_ListAuditTokens_IsPendingTrue(t *testing.T) {
@@ -88,7 +89,7 @@ func TestQueryEngine_ListAuditTokens_IsPendingTrue(t *testing.T) {
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	tokens, err := queryEngine.ListAuditTokens(ctx, expectedIDs...)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
 	assert.Equal(t, 1, mockQE.IsPendingCallCount())
 	_, id := mockQE.IsPendingArgsForCall(0)
@@ -111,7 +112,7 @@ func TestQueryEngine_ListAuditTokens_IsPendingTrueNumRetries(t *testing.T) {
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	tokens, err := queryEngine.ListAuditTokens(ctx, expectedIDs...)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Empty(t, tokens)
 	assert.Equal(t, 3, mockQE.IsPendingCallCount())
 	_, id := mockQE.IsPendingArgsForCall(0)
@@ -130,7 +131,7 @@ func TestQueryEngine_UnspentTokensIterator_Error(t *testing.T) {
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	iterator, err := queryEngine.UnspentTokensIterator(t.Context())
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, iterator)
 	assert.Equal(t, expectedErr, err)
 }
@@ -142,7 +143,7 @@ func TestQueryEngine_ListUnspentTokens(t *testing.T) {
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	unspentTokens, err := queryEngine.ListUnspentTokens(t.Context())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedUnspentTokens, unspentTokens)
 }
 
@@ -153,7 +154,7 @@ func TestQueryEngine_ListUnspentTokens_Error(t *testing.T) {
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	unspentTokens, err := queryEngine.ListUnspentTokens(t.Context())
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, unspentTokens)
 	assert.Equal(t, expectedErr, err)
 }
@@ -166,7 +167,7 @@ func TestQueryEngine_ListHistoryIssuedTokens(t *testing.T) {
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	issuedTokens, err := queryEngine.ListHistoryIssuedTokens(t.Context())
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedIssuedTokens, issuedTokens)
 }
 
@@ -178,7 +179,7 @@ func TestQueryEngine_ListHistoryIssuedTokens_Error(t *testing.T) {
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	issuedTokens, err := queryEngine.ListHistoryIssuedTokens(t.Context())
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, issuedTokens)
 	assert.Equal(t, expectedErr, err)
 }
@@ -191,7 +192,7 @@ func TestQueryEngine_PublicParams(t *testing.T) {
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	params, err := queryEngine.PublicParams(t.Context())
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedParams, params)
 }
 
@@ -203,7 +204,7 @@ func TestQueryEngine_PublicParams_Error(t *testing.T) {
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	params, err := queryEngine.PublicParams(t.Context())
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, params)
 	assert.Equal(t, expectedErr, err)
 }
@@ -219,7 +220,7 @@ func TestQueryEngine_GetTokens(t *testing.T) {
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	tokens, err := queryEngine.GetTokens(t.Context(), nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
 }
 
@@ -231,7 +232,7 @@ func TestQueryEngine_GetTokens_Error(t *testing.T) {
 
 	queryEngine := NewQueryEngine(logging.MustGetLogger(), mockQE, 3, time.Second)
 	tokens, err := queryEngine.GetTokens(t.Context(), nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, tokens)
 	assert.Equal(t, expectedErr, err)
 }
@@ -245,8 +246,8 @@ func TestCertificationStorage_Exists(t *testing.T) {
 	exists := certStorage.Exists(t.Context(), id)
 	assert.True(t, exists, "Expected certification to exist")
 	assert.Equal(t, 1, mockStorage.ExistsCallCount(), "Exists method should be called once")
-	_, id = mockStorage.ExistsArgsForCall(0)
-	assert.Equal(t, id, id, "Exists method should be called with the correct argument")
+	_, id2 := mockStorage.ExistsArgsForCall(0)
+	assert.Equal(t, id, id2, "Exists method should be called with the correct argument")
 }
 
 func TestCertificationStorage_Exists_NotExist(t *testing.T) {
@@ -272,7 +273,7 @@ func TestCertificationStorage_Store(t *testing.T) {
 
 	certStorage := &CertificationStorage{c: mockStorage}
 	err := certStorage.Store(t.Context(), certifications)
-	assert.NoError(t, err, "Expected no error while storing certifications")
+	require.NoError(t, err, "Expected no error while storing certifications")
 	assert.Equal(t, 1, mockStorage.StoreCallCount(), "Store method should be called once")
 	_, id := mockStorage.StoreArgsForCall(0)
 	assert.Equal(t, certifications, id, "Store method should be called with the correct argument")
@@ -289,8 +290,8 @@ func TestCertificationStorage_Store_Error(t *testing.T) {
 
 	certStorage := &CertificationStorage{c: mockStorage}
 	err := certStorage.Store(t.Context(), certifications)
-	assert.Error(t, err, "Expected an error while storing certifications")
-	assert.EqualError(t, err, mockErr.Error(), "Expected the same error returned by the storage")
+	require.Error(t, err, "Expected an error while storing certifications")
+	require.EqualError(t, err, mockErr.Error(), "Expected the same error returned by the storage")
 	assert.Equal(t, 1, mockStorage.StoreCallCount(), "Store method should be called once")
 	_, id := mockStorage.StoreArgsForCall(0)
 	assert.Equal(t, certifications, id, "Store method should be called with the correct argument")
@@ -305,7 +306,7 @@ func TestUnspentTokensIterator_Sum(t *testing.T) {
 	mockIterator.NextReturnsOnCall(2, nil, nil)
 
 	sum, err := iterators.Reduce[token.UnspentToken](mockIterator, token.ToQuantitySum(64))
-	assert.NoError(t, err, "Expected no error while summing tokens")
+	require.NoError(t, err, "Expected no error while summing tokens")
 	assert.NotNil(t, sum, "Expected a non-nil sum")
 	expectedSum := token.NewQuantityFromUInt64(30)
 	assert.Equal(t, 0, expectedSum.Cmp(sum), "Expected sum to be equal to 30")
@@ -321,8 +322,8 @@ func TestUnspentTokensIterator_Sum_ErrorInNext(t *testing.T) {
 
 	sum, err := iterators.Reduce[token.UnspentToken](mockIterator, token.ToQuantitySum(64))
 	assert.Nil(t, sum, "Expected a nil sum when Next returns an error")
-	assert.Error(t, err, "Expected an error when Next returns an error")
-	assert.EqualError(t, err, mockErr.Error(), "Expected the same error returned by Next")
+	require.Error(t, err, "Expected an error when Next returns an error")
+	require.EqualError(t, err, mockErr.Error(), "Expected the same error returned by Next")
 	assert.Equal(t, 1, mockIterator.NextCallCount(), "Next method should be called once")
 	assert.Equal(t, 1, mockIterator.CloseCallCount(), "Close method should be called")
 }
@@ -334,7 +335,7 @@ func TestUnspentTokensIterator_Sum_ErrorInToQuantity(t *testing.T) {
 
 	sum, err := iterators.Reduce[token.UnspentToken](mockIterator, token.ToQuantitySum(64))
 	assert.Nil(t, sum, "Expected a nil sum when ToQuantity fails")
-	assert.Error(t, err, "Expected an error when ToQuantity fails")
+	require.Error(t, err, "Expected an error when ToQuantity fails")
 	assert.Equal(t, 1, mockIterator.NextCallCount(), "Next method should be called once")
 	assert.Equal(t, 1, mockIterator.CloseCallCount(), "Close method should be called")
 }

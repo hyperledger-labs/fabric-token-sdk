@@ -12,10 +12,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
+// PublicParamsDeserializer deserializes public parameters from their raw representation.
 type PublicParamsDeserializer[T driver.PublicParameters] interface {
 	DeserializePublicParams(raw []byte, name driver.TokenDriverName, version driver.TokenDriverVersion) (T, error)
 }
 
+// PublicParamsManager manages public parameters.
 type PublicParamsManager[T driver.PublicParameters] struct {
 	publicParameters T
 	// label of the public params
@@ -24,6 +26,7 @@ type PublicParamsManager[T driver.PublicParameters] struct {
 	ppHash        driver.PPHash
 }
 
+// NewPublicParamsManager returns a new PublicParamsManager instance for the passed arguments.
 func NewPublicParamsManager[T driver.PublicParameters](
 	PublicParamsDeserializer PublicParamsDeserializer[T],
 	driverName driver.TokenDriverName,
@@ -53,6 +56,7 @@ func NewPublicParamsManager[T driver.PublicParameters](
 	return ppm, nil
 }
 
+// NewPublicParamsManagerFromParams returns a new PublicParamsManager instance for the passed public parameters.
 func NewPublicParamsManagerFromParams[T driver.PublicParameters](pp T) (*PublicParamsManager[T], error) {
 	if err := pp.Validate(); err != nil {
 		return nil, errors.WithMessagef(err, "invalid public parameters")
@@ -60,23 +64,28 @@ func NewPublicParamsManagerFromParams[T driver.PublicParameters](pp T) (*PublicP
 	if len(pp.Issuers()) == 0 {
 		logger.Warnf("no issuers definied in the public parameters")
 	}
+
 	return &PublicParamsManager[T]{
 		publicParameters: pp,
 	}, nil
 }
 
+// PublicParameters returns the public parameters managed by this manager.
 func (v *PublicParamsManager[T]) PublicParameters() driver.PublicParameters {
 	return v.publicParameters
 }
 
+// NewCertifierKeyPair returns a new certifier key pair.
 func (v *PublicParamsManager[T]) NewCertifierKeyPair() ([]byte, []byte, error) {
 	return nil, nil, errors.Errorf("not supported")
 }
 
+// PublicParams returns the public parameters managed by this manager.
 func (v *PublicParamsManager[T]) PublicParams() T {
 	return v.publicParameters
 }
 
+// PublicParamsHash returns the hash of the public parameters.
 func (v *PublicParamsManager[T]) PublicParamsHash() driver.PPHash {
 	return v.ppHash
 }

@@ -42,6 +42,7 @@ func NewIdentity(idemix *Deserializer, nymPublicKey bccsp.Key, proof []byte, ver
 		SchemaManager:    schemaManager,
 		Schema:           schema,
 	}
+
 	return id, nil
 }
 
@@ -58,6 +59,7 @@ func (id *Identity) Verify(msg []byte, sig []byte) error {
 			IssuerPK: id.Idemix.IssuerPublicKey,
 		},
 	)
+
 	return err
 }
 
@@ -75,6 +77,7 @@ func (id *Identity) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not serialize idemix identity")
 	}
+
 	return idemixIDBytes, nil
 }
 
@@ -146,6 +149,7 @@ func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return sig, nil
 }
 
@@ -166,5 +170,6 @@ func (v *NymSignatureVerifier) Verify(message, sigma []byte) error {
 			IssuerPK: v.IPK,
 		},
 	)
+
 	return err
 }

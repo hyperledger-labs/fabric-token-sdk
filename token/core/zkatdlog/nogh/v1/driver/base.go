@@ -36,6 +36,7 @@ func (d *Base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
 	}
+
 	return pp, nil
 }
 
@@ -45,6 +46,7 @@ func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
 	}
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", string(pp.TokenDriverName()))
+
 	return validator.New(
 		logger,
 		pp.(*v1.PublicParams),
@@ -140,6 +142,7 @@ func (d *Base) NewWalletService(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")
 	}
+
 	return wallet.NewService(
 		logger,
 		identityProvider,

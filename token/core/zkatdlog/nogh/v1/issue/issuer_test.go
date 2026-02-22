@@ -26,10 +26,10 @@ import (
 func TestProverVerifier(t *testing.T) {
 	prover, verifier := prepareZKIssue(t, 32, math.BLS12_381_BBS_GURVY, 2)
 	proof, err := prover.Prove()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, proof)
 	err = verifier.Verify(proof)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestIssuer tests the high-level issuer API: generating a ZK issue
@@ -133,7 +133,7 @@ func newIssuerEnv(pp *v1.PublicParams, numOutputs int) *issuerEnv {
 	outputValues := make([]uint64, numOutputs)
 	outputOwners := make([][]byte, numOutputs)
 	for i := range outputValues {
-		outputValues[i] = uint64(i*10 + 10)
+		outputValues[i] = uint64(i*10 + 10) // #nosec G115
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
@@ -151,7 +151,7 @@ func newIssuerProofVerificationEnv(tb testing.TB, pp *v1.PublicParams, numOutput
 	outputValues := make([]uint64, numOutputs)
 	outputOwners := make([][]byte, numOutputs)
 	for i := range outputValues {
-		outputValues[i] = uint64(i*10 + 10)
+		outputValues[i] = uint64(i*10 + 10) // #nosec G115
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
@@ -185,6 +185,7 @@ func newBenchmarkIssuerEnv(b *testing.B, n int, benchmarkCase *benchmark2.Case) 
 	for i := range envs {
 		envs[i] = newIssuerEnv(pp, benchmarkCase.NumOutputs)
 	}
+
 	return &benchmarkIssuerEnv{IssuerEnvs: envs}
 }
 
@@ -198,6 +199,7 @@ func newBenchmarkIssuerProofVerificationEnv(b *testing.B, n int, benchmarkCase *
 	for i := range envs {
 		envs[i] = newIssuerProofVerificationEnv(b, pp, benchmarkCase.NumOutputs)
 	}
+
 	return &benchmarkIssuerEnv{IssuerEnvs: envs}
 }
 
@@ -207,6 +209,7 @@ func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
 	tb.Helper()
 	pp, err := v1.Setup(bits, nil, curveID)
 	require.NoError(tb, err)
+
 	return pp
 }
 
@@ -215,11 +218,12 @@ func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
 func prepareZKIssue(t *testing.T, bits uint64, curveID math.CurveID, numOutputs int) (*issue2.Prover, *issue2.Verifier) {
 	t.Helper()
 	pp, err := v1.Setup(bits, nil, curveID)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tw, tokens := prepareInputsForZKIssue(pp, numOutputs)
 	prover, err := issue2.NewProver(tw, tokens, pp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	verifier := issue2.NewVerifier(tokens, pp)
+
 	return prover, verifier
 }
 
@@ -228,7 +232,7 @@ func prepareZKIssue(t *testing.T, bits uint64, curveID math.CurveID, numOutputs 
 func prepareInputsForZKIssue(pp *v1.PublicParams, numOutputs int) ([]*token.Metadata, []*math.G1) {
 	values := make([]uint64, numOutputs)
 	for i := range numOutputs {
-		values[i] = uint64(i*10 + 10)
+		values[i] = uint64(i*10 + 10) //nolint:gosec
 	}
 	curve := math.Curves[pp.Curve]
 	rand, _ := curve.Rand()
@@ -239,7 +243,52 @@ func prepareInputsForZKIssue(pp *v1.PublicParams, numOutputs int) ([]*token.Meta
 
 	tokens := make([]*math.G1, len(values))
 	for i := range values {
-		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
+		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve) // #nosec G115
 	}
+
 	return token.NewMetadata(pp.Curve, "ABC", values, bf), tokens
+}
+
+func TestIssuerSignTokenActions(t *testing.T) {
+	pp := setup(t, 32, math.BLS12_381_BBS_GURVY)
+	signer := &mock.SigningIdentity{}
+	issuer := issue2.NewIssuer("ABC", signer, pp)
+
+	raw := []byte("hello")
+	signer.SignReturns([]byte("signature"), nil)
+
+	sig, err := issuer.SignTokenActions(raw)
+	require.NoError(t, err)
+	assert.Equal(t, []byte("signature"), sig)
+	assert.Equal(t, 1, signer.SignCallCount())
+	assert.Equal(t, raw, signer.SignArgsForCall(0))
+
+	// Signer nil
+	issuer.Signer = nil
+	_, err = issuer.SignTokenActions(raw)
+	require.ErrorIs(t, err, issue2.ErrSignTokenActionsNilSigner)
+}
+
+// TestIssuerGenerateZKIssueErrors tests error conditions for GenerateZKIssue.
+func TestIssuerGenerateZKIssueErrors(t *testing.T) {
+	pp := setup(t, 32, math.BLS12_381_BBS_GURVY)
+	issuer := issue2.NewIssuer("ABC", &mock.SigningIdentity{}, pp)
+
+	// PublicParams nil
+	issuer.PublicParams = nil
+	_, _, err := issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
+	require.ErrorIs(t, err, issue2.ErrNilPublicParameters)
+	issuer.PublicParams = pp
+
+	// Inadmissible curve
+	oldCurve := issuer.PublicParams.Curve
+	issuer.PublicParams.Curve = math.CurveID(len(math.Curves) + 1)
+	_, _, err = issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
+	require.ErrorIs(t, err, issue2.ErrInvalidPublicParameters)
+	issuer.PublicParams.Curve = oldCurve
+
+	// Signer nil
+	issuer.Signer = nil
+	_, _, err = issuer.GenerateZKIssue([]uint64{10}, [][]byte{[]byte("alice")})
+	require.ErrorIs(t, err, issue2.ErrNilSigner)
 }

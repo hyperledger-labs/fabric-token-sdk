@@ -53,6 +53,7 @@ func Load() (*model.Configuration, api.Error) {
 			fmt.Errorf("cannot unmarshal the configuration file: %w", err),
 			"Internal Server Error",
 		)
+
 		return nil, appErr
 	}
 

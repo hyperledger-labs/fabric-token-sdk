@@ -65,6 +65,7 @@ func NewManager(
 	if leaseCleanupTickPeriod > 0 && leaseExpiry > 0 {
 		go m.cleaner(context.Background())
 	}
+
 	return m
 }
 
@@ -80,6 +81,7 @@ func (m *manager) Close(id transaction.ID) error {
 	if c, ok := m.selectorCache.Delete(id); ok {
 		return c.Close()
 	}
+
 	return errors.New("selector for " + id + " not found")
 }
 

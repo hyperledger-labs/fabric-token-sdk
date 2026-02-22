@@ -14,9 +14,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-// PPMFactory contains the static logic of the driver
+// PPMFactory contains the static logic of the fabtoken driver.
 type PPMFactory struct{ *base }
 
+// NewPPMFactory returns a new factory for the fabtoken public parameters manager.
 func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
 	return core.NamedFactory[driver.PPMFactory]{
 		Name:   core.DriverIdentifier(v1.FabTokenDriverName, v1.ProtocolV1),
@@ -24,10 +25,12 @@ func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
 	}
 }
 
+// NewPublicParametersManager returns a new fabtoken public parameters manager for the passed public parameters.
 func (d *PPMFactory) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
 	pp, ok := params.(*v1.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
+
 	return common.NewPublicParamsManagerFromParams[*v1.PublicParams](pp)
 }

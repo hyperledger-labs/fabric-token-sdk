@@ -36,6 +36,7 @@ func RunViewWithTimeout(ctx view.Context, v view.View, timeout time.Duration, op
 		viewContext: ctx,
 		ctx:         timeoutContext,
 	}
+
 	return newContext.RunView(v, opts...)
 }
 

@@ -23,23 +23,29 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-// base contains the common functionality
+// base contains the common functionality for the fabtoken driver.
 type base struct{}
 
+// PublicParametersFromBytes unmarshals the passed bytes into fabtoken public parameters.
 func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
 	pp, err := core2.NewPublicParamsFromBytes(params, core2.FabTokenDriverName, core2.ProtocolV1)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
+
 	return pp, nil
 }
 
+// DefaultValidator returns a new fabtoken validator for the passed public parameters.
 func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
 	deserializer := NewDeserializer()
+
 	return validator.NewValidator(logger, pp.(*core2.PublicParams), deserializer, nil, nil, nil), nil
 }
 
+// newWalletService returns a new wallet service for the passed configuration and parameters.
+// newWalletService returns a new wallet service for the passed configuration and parameters.
 func (d *base) newWalletService(
 	tmsConfig core.Config,
 	binder identity.NetworkBinderService,

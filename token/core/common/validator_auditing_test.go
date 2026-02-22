@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type (
@@ -35,6 +36,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 			context: func() (*TestContext, TestCheck) {
 				pp := &mock.PublicParameters{}
 				pp.AuditorsReturns(nil)
+
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
@@ -54,6 +56,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 			context: func() (*TestContext, TestCheck) {
 				pp := &mock.PublicParameters{}
 				pp.AuditorsReturns(nil)
+
 				return &TestContext{
 					PP:           pp,
 					TokenRequest: &driver.TokenRequest{},
@@ -67,6 +70,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 			context: func() (*TestContext, TestCheck) {
 				pp := &mock.PublicParameters{}
 				pp.AuditorsReturns([]identity.Identity{driver.Identity("auditor1")})
+
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
@@ -90,6 +94,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 
 				des := &mock.Deserializer{}
 				des.GetAuditorVerifierReturns(nil, errors.Errorf("auditor deserialize fail"))
+
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
@@ -118,6 +123,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				des.GetAuditorVerifierReturns(ver, nil)
 				sp := &mock.SignatureProvider{}
 				sp.HasBeenSignedByReturns(nil, errors.New("signature is not valid"))
+
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
@@ -142,6 +148,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				des.GetAuditorVerifierReturns(ver, nil)
 				sp := &mock.SignatureProvider{}
 				sp.HasBeenSignedByReturns(nil, errors.New("signature is not valid"))
+
 				return &TestContext{
 						PP: pp,
 						TokenRequest: &driver.TokenRequest{
@@ -155,10 +162,11 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 						Deserializer:      des,
 						SignatureProvider: sp,
 					}, func() bool {
-						id, ver2 := sp.HasBeenSignedByArgsForCall(0)
+						_, id, ver2 := sp.HasBeenSignedByArgsForCall(0)
 						if ver2 != ver {
 							return false
 						}
+
 						return auditor.Equal(id)
 					}
 			},
@@ -176,6 +184,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				des.GetAuditorVerifierReturns(ver, nil)
 				sp := &mock.SignatureProvider{}
 				sp.HasBeenSignedByReturns(nil, nil)
+
 				return &TestContext{
 						PP: pp,
 						TokenRequest: &driver.TokenRequest{
@@ -189,10 +198,11 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 						Deserializer:      des,
 						SignatureProvider: sp,
 					}, func() bool {
-						id, ver2 := sp.HasBeenSignedByArgsForCall(0)
+						_, id, ver2 := sp.HasBeenSignedByArgsForCall(0)
 						if ver2 != ver {
 							return false
 						}
+
 						return auditor.Equal(id)
 					}
 			},
@@ -204,10 +214,10 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 			ctx, check := tt.context()
 			err := AuditingSignaturesValidate(t.Context(), ctx)
 			if tt.err {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.errMsg)
+				require.Error(t, err)
+				require.EqualError(t, err, tt.errMsg)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			if check != nil {
 				assert.True(t, check())

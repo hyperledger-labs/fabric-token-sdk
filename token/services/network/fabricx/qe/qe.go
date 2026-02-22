@@ -25,7 +25,9 @@ type (
 	Data      = []byte
 )
 
+// QueryStatesExecutor models an executor for querying states.
 type QueryStatesExecutor interface {
+	// QueryStates returns the values of the given keys in the given namespace.
 	QueryStates(_ context.Context, namespace driver.Namespace, keys []string) ([]Data, error)
 }
 
@@ -34,18 +36,22 @@ type in struct {
 }
 
 // ExecutorProvider looks up tokens by parsing the whole ledger instead of using the chaincode.
+// ExecutorProvider models a provider for executors.
 type ExecutorProvider struct {
 	p lazy.Provider[in, *Executor]
 }
 
+// NewExecutorProvider returns a new ExecutorProvider instance.
 func NewExecutorProvider(qsProvider queryservice.Provider) *ExecutorProvider {
 	p := lazy.NewProviderWithKeyMapper[in, string, *Executor](
 		func(i in) string { return i.channel },
 		func(i in) (*Executor, error) {
 			l := NewExecutor(i.network, i.channel, qsProvider)
+
 			return l, nil
 		},
 	)
+
 	return &ExecutorProvider{p: p}
 }
 
@@ -61,6 +67,7 @@ func (p *ExecutorProvider) GetStateExecutor(network, channel string) (QueryState
 	return p.p.Get(in{network: network, channel: channel})
 }
 
+// Executor models an executor for querying tokens and states.
 type Executor struct {
 	qsProvider    queryservice.Provider
 	keyTranslator translator.KeyTranslator
@@ -68,6 +75,7 @@ type Executor struct {
 	channel       string
 }
 
+// NewExecutor returns a new Executor instance.
 func NewExecutor(network string, channel string, qsProvider queryservice.Provider) *Executor {
 	return &Executor{
 		network:       network,
@@ -116,6 +124,7 @@ func (e *Executor) QueryTokens(_ context.Context, namespace driver.Namespace, id
 		value := ns[key]
 		if len(value.Raw) == 0 {
 			errs = append(errs, errors.Errorf("output for key [%s] does not exist", key))
+
 			continue
 		}
 		tokens = append(tokens, value.Raw)
@@ -123,6 +132,7 @@ func (e *Executor) QueryTokens(_ context.Context, namespace driver.Namespace, id
 	if len(errs) != 0 {
 		return nil, errors2.Join(errs...)
 	}
+
 	return tokens, nil
 }
 
@@ -166,6 +176,7 @@ func (e *Executor) QuerySpentTokens(_ context.Context, namespace driver.Namespac
 		value := ns[key]
 		spentFlags[i] = len(value.Raw) == 0
 	}
+
 	return spentFlags, nil
 }
 
@@ -193,6 +204,7 @@ func (e *Executor) QueryStates(_ context.Context, namespace driver.Namespace, ke
 		value := ns[key]
 		if len(value.Raw) == 0 {
 			errs = append(errs, errors.Errorf("output for key [%s] does not exist", key))
+
 			continue
 		}
 		tokens = append(tokens, value.Raw)
@@ -200,5 +212,6 @@ func (e *Executor) QueryStates(_ context.Context, namespace driver.Namespace, ke
 	if len(errs) != 0 {
 		return nil, errors2.Join(errs...)
 	}
+
 	return tokens, nil
 }

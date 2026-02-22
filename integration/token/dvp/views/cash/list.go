@@ -44,5 +44,6 @@ func (i *ListUnspentTokensViewFactory) NewView(in []byte) (view.View, error) {
 	f := &ListUnspentTokensView{ListUnspentTokens: &ListUnspentTokens{}}
 	err := json.Unmarshal(in, f.ListUnspentTokens)
 	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

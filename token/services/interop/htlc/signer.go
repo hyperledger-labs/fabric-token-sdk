@@ -39,6 +39,7 @@ func (cs *ClaimSigner) Sign(tokenRequestAndTxID []byte) ([]byte, error) {
 		Preimage:           cs.Preimage,
 		RecipientSignature: sigma,
 	}
+
 	return json.Marshal(claimSignature)
 }
 
@@ -46,6 +47,7 @@ func concatTokenRequestTxIDPreimage(tokenRequestAndTxID []byte, preImage []byte)
 	var msg []byte
 	msg = append(msg, tokenRequestAndTxID...)
 	msg = append(msg, preImage...)
+
 	return msg
 }
 
@@ -108,11 +110,13 @@ func (v *Verifier) Verify(msg []byte, sigma []byte) error {
 		if err := cv.Verify(msg, sigma); err != nil {
 			return errors.WithMessagef(err, "failed verifying htlc claim signature")
 		}
+
 		return nil
 	}
 	// if timeout has elapsed, only a reclaim is possible
 	if err := v.Sender.Verify(msg, sigma); err != nil {
 		return errors.WithMessagef(err, "deadline elapsed, failed verifying htlc reclaim signature")
 	}
+
 	return nil
 }

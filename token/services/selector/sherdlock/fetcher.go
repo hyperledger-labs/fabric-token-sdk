@@ -77,6 +77,7 @@ func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, notifie
 	if !ok {
 		panic("undefined fetcher strategy: " + strategy)
 	}
+
 	return &fetcherProvider{
 		tokenStoreServiceManager: storeServiceManager,
 		notifierManager:          notifierManager,
@@ -123,11 +124,13 @@ func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID str
 	if err == nil && it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext() {
 		logger.DebugfContext(ctx, "eager iterator had tokens. Returning iterator")
 		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
+
 		return it, nil
 	}
 	logger.DebugfContext(ctx, "eager iterator had no tokens. Returning lazy iterator")
 
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
+
 	return f.lazyFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
 }
 
@@ -146,6 +149,7 @@ func (f *lazyFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	if err != nil {
 		return nil, err
 	}
+
 	return collections.NewPermutatedIterator[token2.UnspentTokenInWallet](it)
 }
 
@@ -164,12 +168,12 @@ type cachedFetcher struct {
 	mu               sync.RWMutex
 }
 
-func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
+func newCachedFetcher(tokenDB TokenDB, freshnessInterval time.Duration, maxQueriesBeforeRefresh uint32) *cachedFetcher {
 	return &cachedFetcher{
 		tokenDB:                 tokenDB,
 		cache:                   make(map[string]permutatableIterator[*token2.UnspentTokenInWallet]),
 		freshnessInterval:       freshnessInterval,
-		maxQueriesBeforeRefresh: uint32(maxQueriesBeforeRefresh),
+		maxQueriesBeforeRefresh: maxQueriesBeforeRefresh,
 	}
 }
 
@@ -178,12 +182,14 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	defer f.mu.Unlock()
 	if !f.isCacheStale() && !f.isCacheOverused() {
 		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process")
+
 		return
 	}
 	logger.DebugfContext(ctx, "Renew token cache")
 	it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
+
 		return
 	}
 	defer it.Close()
@@ -224,6 +230,7 @@ func (f *cachedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID st
 		return it.NewPermutation(), nil
 	}
 	logger.DebugfContext(ctx, "No tokens found in cache for [%s]. Only [%s] available. Returning empty iterator.", tokenKey(walletID, currency), collections.Keys(f.cache))
+
 	return collections.NewEmptyIterator[*token2.UnspentTokenInWallet](), nil
 }
 

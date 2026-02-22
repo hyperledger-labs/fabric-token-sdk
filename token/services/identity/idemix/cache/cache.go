@@ -123,6 +123,7 @@ func (c *IdentityCache) provisionIdentities() {
 		identityDescriptor, err := c.backed(ctx, c.auditInfo)
 		if err != nil {
 			logger.Errorf("failed to provision identity [%s]", err)
+
 			continue
 		}
 		logger.DebugfContext(ctx, "generated new idemix identity [%d]", count)

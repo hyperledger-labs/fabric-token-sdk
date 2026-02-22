@@ -41,5 +41,6 @@ type RegisterAuditorViewFactory struct{}
 
 func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
 	f := &RegisterAuditorView{}
+
 	return f, nil
 }

@@ -15,10 +15,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Topologies represents a list of topologies.
 type Topologies struct {
 	Topologies []api.Topology `yaml:"topologies,omitempty"`
 }
 
+// WriteTopologies writes the given topologies to the specified file.
 func WriteTopologies(fileName string, topologies []api.Topology, perm fs.FileMode) error {
 	raw, err := yaml.Marshal(&Topologies{Topologies: topologies})
 	if err != nil {
@@ -27,5 +29,6 @@ func WriteTopologies(fileName string, topologies []api.Topology, perm fs.FileMod
 	if err := os.WriteFile(fileName, raw, perm); err != nil {
 		return errors.Wrapf(err, "failed to write to [%s]", fileName)
 	}
+
 	return nil
 }

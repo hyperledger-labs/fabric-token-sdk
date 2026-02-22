@@ -68,6 +68,7 @@ func (r *TestCaseRunner) Run(scenario *model.TestCase, customers map[string]*cus
 	withdrawAmnts, err := scenario.Issue.Distribution.GetAmounts(funds)
 	if err != nil {
 		r.logger.Errorf("Can't generate withdraw amounts: %s", err.GetMessage())
+
 		return &TestCaseResult{
 			Success:   false,
 			Name:      scenario.Name,
@@ -102,6 +103,7 @@ func (r *TestCaseRunner) Run(scenario *model.TestCase, customers map[string]*cus
 	transferAmnts, err := scenario.Transfer.Distribution.GetAmounts(funds)
 	if err != nil {
 		r.logger.Errorf("Can't generate transfer amounts: %s", err.GetMessage())
+
 		return &TestCaseResult{
 			Success:   false,
 			Name:      scenario.Name,
@@ -121,6 +123,7 @@ func (r *TestCaseRunner) Run(scenario *model.TestCase, customers map[string]*cus
 		execErr := r.doPayments(payer, payees, transferAmnts, settings)
 		if execErr != nil {
 			r.logger.Error(execErr)
+
 			return &TestCaseResult{
 				Name:      scenario.Name,
 				Success:   false,
@@ -160,9 +163,11 @@ func (r *TestCaseRunner) doWithdrawals(customer *customerState, amounts []api.Am
 				return err
 			}
 			r.logger.Infof("Balance of %s is %d", customer.Name, balance)
+
 			return nil
 		})
 	}
+
 	return executorPool.Wait()
 }
 
@@ -193,8 +198,10 @@ func (r *TestCaseRunner) doPayments(payer *customerState, payees []*customerStat
 				return err
 			}
 			r.logger.Infof("Balance of %s is %d", payee.Name, balance)
+
 			return nil
 		})
 	}
+
 	return executorPool.Wait()
 }

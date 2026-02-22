@@ -48,6 +48,7 @@ func GetPublicParamsInputs(ii *integration.Infrastructure) ([]PublicParamsInputs
 			},
 		}
 	}
+
 	return pps, nil
 }
 
@@ -57,5 +58,6 @@ func find[L any, K any](items []L) K {
 			return typed
 		}
 	}
+
 	return utils.Zero[K]()
 }
