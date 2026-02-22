@@ -17,28 +17,32 @@ import (
 
 var numConn = flags.IntSlice("numConn", []int{1, 2, 4, 8}, "Number of grpc client connections - may be a comma-separated list")
 
-// BenchmarkAPIGRPC exercises the ViewAPI via grpc client
+// BenchmarkAPIGRPC exercises the ViewAPI via grpc client.
+// The proof is pre-computed and embedded in the workload params so every
+// gRPC request carries it.
 func BenchmarkAPIGRPC(b *testing.B) {
-	testdataPath := b.TempDir() // for local debugging you can set testdataPath := "out/testdata"
+	testdataPath := b.TempDir()
 	nodeConfPath := path.Join(testdataPath, "fsc", "nodes", "test-node.0")
 	clientConfPath := path.Join(nodeConfPath, "client-config.yaml")
 
-	// we generate our testdata
 	err := node.GenerateConfig(testdataPath)
 	require.NoError(b, err)
 
-	f := &TokenTxVerifyViewFactory{}
-	f.SetupProofs(1500, nil) // TODO: not hardcoded number
-	// create server
 	n, err := node.SetupNode(nodeConfPath, node.NamedFactory{
 		Name:    "zkp",
-		Factory: f,
+		Factory: &TokenTxVerifyViewFactory{},
 	})
 	require.NoError(b, err)
+	defer n.Stop()
 
-	// run all workloads via direct view API
-	node.RunAPIGRPCBenchmark(b, zkpWorkload,
-		clientConfPath, *numConn)
+	params := &TokenTxVerifyParams{}
+	require.NoError(b, params.SetupProof())
 
-	n.Stop()
+	wl := node.Workload{
+		Name:    "zkp",
+		Factory: &TokenTxVerifyViewFactory{},
+		Params:  params,
+	}
+
+	node.RunAPIGRPCBenchmark(b, wl, clientConfPath, *numConn)
 }

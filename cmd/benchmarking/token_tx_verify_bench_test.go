@@ -46,7 +46,7 @@ func (p *viewPool) nextView() view.View {
 }
 
 func BenchmarkTokenTxVerify(b *testing.B) {
-	p := &TokenTxVerifyMetadata{}
+	p := &TokenTxVerifyParams{}
 	p.applyDefaults()
 
 	b.Run(fmt.Sprintf("out-tokens=%d", p.NumOutputTokens), func(b *testing.B) {
@@ -67,7 +67,7 @@ func BenchmarkTokenTxVerify(b *testing.B) {
 }
 
 func BenchmarkTokenTxVerify_PreComputeProof(b *testing.B) {
-	p := &TokenTxVerifyMetadata{}
+	p := &TokenTxVerifyParams{}
 	p.applyDefaults()
 
 	b.Run(fmt.Sprintf("out-tokens=%d", p.NumOutputTokens), func(b *testing.B) {
