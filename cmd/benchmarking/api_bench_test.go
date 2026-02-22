@@ -17,7 +17,7 @@ import (
 var zkpWorkload = node.Workload{
 	Name:    "zkp",
 	Factory: &TokenTxVerifyViewFactory{},
-	Params:  &TokenTxVerifyParams{},
+	Params:  &TokenTxVerifyMetadata{},
 }
 
 func BenchmarkAPI(b *testing.B) {
@@ -28,10 +28,12 @@ func BenchmarkAPI(b *testing.B) {
 	err := node.GenerateConfig(testdataPath)
 	require.NoError(b, err)
 
+	f := &TokenTxVerifyViewFactory{}
+	f.SetupProofs(1500, nil) // TODO: not hardcoded number
 	// create server
 	n, err := node.SetupNode(nodeConfPath, node.NamedFactory{
 		Name:    "zkp",
-		Factory: &TokenTxVerifyViewFactory{},
+		Factory: f,
 	})
 	require.NoError(b, err)
 	defer n.Stop()
@@ -39,6 +41,7 @@ func BenchmarkAPI(b *testing.B) {
 	vm, err := viewregistry.GetManager(n)
 	require.NoError(b, err)
 
+	b.ResetTimer()
 	// run workload via direct view API
 	node.RunAPIBenchmark(b, vm, zkpWorkload)
 }

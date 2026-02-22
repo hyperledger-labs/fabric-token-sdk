@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -26,14 +27,19 @@ const (
 	defaultCurveID    = math.BLS12_381_BBS_GURVY
 )
 
-type TokenTxVerifyParams struct {
+type ProofData struct {
+	PubParams *v1.PublicParams
+	ActionRaw []byte
+}
+
+type TokenTxVerifyMetadata struct {
 	NumOutputTokens int    `json:"num_outputs"`
 	BitLength       uint64 `json:"bit_length,omitempty"`
 	TokenType       string `json:"token_type,omitempty"`
 	CurveID         int    `json:"curve_id,omitempty"`
 }
 
-func (t *TokenTxVerifyParams) applyDefaults() *TokenTxVerifyParams {
+func (t *TokenTxVerifyMetadata) applyDefaults() *TokenTxVerifyMetadata {
 	if t.NumOutputTokens <= 0 {
 		t.NumOutputTokens = deafultNumOutputs
 	}
@@ -51,16 +57,13 @@ func (t *TokenTxVerifyParams) applyDefaults() *TokenTxVerifyParams {
 }
 
 type TokenTxVerifyView struct {
-	params    TokenTxVerifyParams
+	meta      TokenTxVerifyMetadata
 	pubParams *v1.PublicParams
 	actionRaw []byte
 }
 
-// Call verifies a pre-computed ZK issue proof by deserializing the
+// Call verifies a pre-computed ZK proof by deserializing the
 // issue action and checking the proof against the token commitments.
-//
-// This benchmarks the ZKP verification path used by the
-// fabric-token-sdk validator for zkatdlog issue actions.
 func (q *TokenTxVerifyView) Call(viewCtx view.Context) (interface{}, error) {
 	action := &issue.Action{}
 	if err := action.Deserialize(q.actionRaw); err != nil {
@@ -75,26 +78,17 @@ func (q *TokenTxVerifyView) Call(viewCtx view.Context) (interface{}, error) {
 	return nil, issue.NewVerifier(coms, q.pubParams).Verify(action.GetProof())
 }
 
-type TokenTxVerifyViewFactory struct{}
+// GenerateProofData creates a ZK issue proof andpublic parameters.
+func GenerateProofData(meta *TokenTxVerifyMetadata) (*ProofData, error) {
+	meta.applyDefaults()
 
-func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
-	f := &TokenTxVerifyView{}
-
-	if err := json.Unmarshal(in, &f.params); err != nil {
-		return nil, err
-	}
-	f.params.applyDefaults()
-
-	var err error
-	f.pubParams, err = v1.Setup(f.params.BitLength, nil, math.CurveID(f.params.CurveID))
+	pubParams, err := v1.Setup(meta.BitLength, nil, math.CurveID(meta.CurveID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up public parameters: %w", err)
 	}
 
-	// Generate issue action following the same approach as
-	// createIssuerProofVerificationEnv in issuer_test.go.
-	outputValues := make([]uint64, f.params.NumOutputTokens)
-	outputOwners := make([][]byte, f.params.NumOutputTokens)
+	outputValues := make([]uint64, meta.NumOutputTokens)
+	outputOwners := make([][]byte, meta.NumOutputTokens)
 	var val uint64
 	for i := range outputValues {
 		val += 10
@@ -102,16 +96,87 @@ func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
-	issuer := issue.NewIssuer(token2.Type(f.params.TokenType), &mock.SigningIdentity{}, f.pubParams)
+	issuer := issue.NewIssuer(token2.Type(meta.TokenType), &mock.SigningIdentity{}, pubParams)
 	action, _, err := issuer.GenerateZKIssue(outputValues, outputOwners)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate ZK issue: %w", err)
 	}
 
-	f.actionRaw, err = action.Serialize()
+	actionRaw, err := action.Serialize()
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize issue action: %w", err)
 	}
+
+	return &ProofData{
+		PubParams: pubParams,
+		ActionRaw: actionRaw,
+	}, nil
+}
+
+type TokenTxVerifyViewFactory struct {
+	mu     sync.Mutex
+	proofs []*ProofData
+}
+
+func (c *TokenTxVerifyViewFactory) SetupProofs(n int, meta *TokenTxVerifyMetadata) {
+	if meta == nil {
+		meta = &TokenTxVerifyMetadata{}
+	}
+	meta.applyDefaults()
+	proofs := make([]*ProofData, n)
+	for i := range proofs {
+		proof, err := GenerateProofData(meta)
+		if err != nil {
+			panic(err)
+		}
+		proofs[i] = proof
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.proofs = proofs
+}
+
+// AddProofs enqueues pre-computed proofs for subsequent NewView calls.
+func (c *TokenTxVerifyViewFactory) AddProofs(proofs ...*ProofData) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.proofs = append(c.proofs, proofs...)
+}
+
+func (c *TokenTxVerifyViewFactory) popProof() *ProofData {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.proofs) == 0 {
+		return nil
+	}
+	p := c.proofs[len(c.proofs)-1]
+	c.proofs = c.proofs[:len(c.proofs)-1]
+
+	return p
+}
+
+// NewView builds a verification view. If proofs were added via AddProofs,
+// one is consumed and the expensive generation step is skipped.
+// Otherwise a fresh proof is generated from the JSON-encoded metadata.
+func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
+	f := &TokenTxVerifyView{}
+
+	if err := json.Unmarshal(in, &f.meta); err != nil {
+		return nil, err
+	}
+	f.meta.applyDefaults()
+
+	proof := c.popProof()
+	if proof == nil {
+		var err error
+		proof, err = GenerateProofData(&f.meta)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	f.pubParams = proof.PubParams
+	f.actionRaw = proof.ActionRaw
 
 	return f, nil
 }
