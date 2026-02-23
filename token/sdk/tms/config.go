@@ -11,14 +11,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 )
 
+// ConfigServiceWrapper wraps the config service to provide driver.Configuration interface.
 type ConfigServiceWrapper struct {
 	*config.Service
 }
 
+// NewConfigServiceWrapper creates a new config service wrapper.
 func NewConfigServiceWrapper(service *config.Service) *ConfigServiceWrapper {
 	return &ConfigServiceWrapper{Service: service}
 }
 
+// Configurations returns all TMS configurations as driver.Configuration interfaces.
 func (c *ConfigServiceWrapper) Configurations() ([]driver.Configuration, error) {
 	configs, err := c.Service.Configurations()
 	if err != nil {
@@ -32,6 +35,7 @@ func (c *ConfigServiceWrapper) Configurations() ([]driver.Configuration, error) 
 	return result, nil
 }
 
+// ConfigurationFor returns the configuration for the specified network, channel, and namespace.
 func (c *ConfigServiceWrapper) ConfigurationFor(network string, channel string, namespace string) (driver.Configuration, error) {
 	return c.Service.ConfigurationFor(network, channel, namespace)
 }
