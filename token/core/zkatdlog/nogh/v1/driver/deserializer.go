@@ -20,12 +20,12 @@ import (
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
-// Deserializer deserializes verifiers associated with issuers, owners, and auditors
+// Deserializer deserializes verifiers associated with issuers, owners, and auditors.
 type Deserializer struct {
 	*common.Deserializer
 }
 
-// NewDeserializer returns a deserializer
+// NewDeserializer returns a new zkatdlog deserializer.
 func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 	if pp == nil {
 		return nil, errors.New("failed to get deserializer: nil public parameters")
@@ -46,8 +46,10 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 	return &Deserializer{Deserializer: common.NewDeserializer(idemix2.IdentityType, des, des, des, des, des)}, nil
 }
 
+// TokenDeserializer deserializes zkatdlog tokens and metadata.
 type TokenDeserializer struct{}
 
+// DeserializeMetadata deserializes the passed bytes into a zkatdlog token metadata.
 func (d *TokenDeserializer) DeserializeMetadata(raw []byte) (*token.Metadata, error) {
 	metadata := &token.Metadata{}
 	if err := metadata.Deserialize(raw); err != nil {
@@ -57,6 +59,7 @@ func (d *TokenDeserializer) DeserializeMetadata(raw []byte) (*token.Metadata, er
 	return metadata, nil
 }
 
+// DeserializeToken deserializes the passed bytes into a zkatdlog token.
 func (d *TokenDeserializer) DeserializeToken(raw []byte) (*token.Token, error) {
 	token := &token.Token{}
 	if err := token.Deserialize(raw); err != nil {
@@ -66,16 +69,18 @@ func (d *TokenDeserializer) DeserializeToken(raw []byte) (*token.Token, error) {
 	return token, nil
 }
 
+// PublicParamsDeserializer deserializes zkatdlog public parameters.
 type PublicParamsDeserializer struct{}
 
+// DeserializePublicParams deserializes the passed bytes into zkatdlog public parameters.
 func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, name driver.TokenDriverName, version driver.TokenDriverVersion) (*v1.PublicParams, error) {
 	return v1.NewPublicParamsFromBytes(raw, name, version)
 }
 
-// EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token
+// EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token.
 type EIDRHDeserializer = deserializer.EIDRHDeserializer
 
-// NewEIDRHDeserializer returns an enrollmentService
+// NewEIDRHDeserializer returns a new zkatdlog EIDRHDeserializer.
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
 	d.AddDeserializer(idemix2.IdentityType, &idemix2.AuditInfoDeserializer{})

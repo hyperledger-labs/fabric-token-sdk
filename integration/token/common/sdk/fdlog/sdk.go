@@ -9,23 +9,30 @@ package fdlog
 import (
 	"errors"
 
+	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"go.uber.org/dig"
 )
 
 type SDK struct {
-	*tokensdk.SDK
+	dig2.SDK
 }
 
 func NewSDK(registry services.Registry) *SDK {
 	return &SDK{SDK: tokensdk.NewSDK(registry)}
 }
 
+func NewFrom(sdk dig2.SDK) *SDK {
+	return &SDK{SDK: sdk}
+}
+
 func (p *SDK) Install() error {
 	err := errors.Join(
+		sdk.RegisterTokenDriverDependencies(p.Container()),
 		p.Container().Provide(fabric.NewGenericDriver, dig.Group("network-drivers")),
 		p.Container().Provide(dlog.NewDriver, dig.Group("token-drivers")),
 	)
