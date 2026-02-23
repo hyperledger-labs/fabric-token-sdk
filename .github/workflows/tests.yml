@@ -169,7 +169,7 @@ jobs:
           make fxconfig configtxgen fabricx-docker-images
 
       - name: Run ${{ matrix.tests }}
-HEAD
+      
         run: |
           mkdir -p covdata
           GOCOVERDIR=$(realpath covdata) make integration-tests-${{ matrix.tests }}
