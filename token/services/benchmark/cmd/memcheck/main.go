@@ -432,7 +432,7 @@ func shortenPath(p string) string {
 }
 
 func writef(w *tabwriter.Writer, format string, a ...interface{}) {
-	_, _ = fmt.Fprintf(w, format, a...)
+	_, _ = fmt.Fprintf(w, format, a...) //nolint:gosec
 }
 
 func writeLine(w *tabwriter.Writer, s string) {

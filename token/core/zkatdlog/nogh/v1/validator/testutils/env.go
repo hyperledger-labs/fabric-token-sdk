@@ -455,11 +455,14 @@ func prepareTransfer(
 	inValues := make([]*math.Zr, benchCase.NumInputs)
 	sumInputs := uint64(0)
 	for i := range benchCase.NumInputs {
-		v := uint64(i*10 + 500) //nolint:gosec
+		v := uint64(i*10 + 500)
 		sumInputs += v
 		inValues[i] = c.NewZrFromUint64(v)
 	}
 
+	if benchCase.NumOutputs <= 0 {
+		return nil, nil, nil, nil, errors.Errorf("invalid number of outputs [%d]", benchCase.NumOutputs)
+	}
 	outputValue := sumInputs / uint64(benchCase.NumOutputs)
 	sumOutputs := uint64(0)
 	outValues := make([]uint64, benchCase.NumOutputs)
