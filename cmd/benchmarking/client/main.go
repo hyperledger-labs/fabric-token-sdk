@@ -37,8 +37,14 @@ func main() {
 
 	params := &benchmarking.TokenTxVerifyParams{}
 	fmt.Println("Pre-computing ZK proof...")
-	if err := params.SetupProof(); err != nil {
+	proof, err := benchmarking.GenerateProofData(params)
+	if err != nil {
 		panic(fmt.Sprintf("failed to pre-compute proof: %v", err))
+	}
+
+	params.Proof, err = proof.ToWire()
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal proof: %v", err))
 	}
 	fmt.Println("Proof ready.")
 
