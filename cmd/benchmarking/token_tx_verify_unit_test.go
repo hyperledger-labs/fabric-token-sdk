@@ -60,9 +60,6 @@ func TestNewView_DefaultParams(t *testing.T) {
 	require.Equal(t, uint64(defaultBitLength), tv.params.BitLength)
 	require.Equal(t, defaultTokenType, tv.params.TokenType)
 	require.Equal(t, int(defaultCurveID), tv.params.CurveID)
-	require.NotNil(t, tv.proof)
-	require.NotNil(t, tv.proof.PubParams)
-	require.NotEmpty(t, tv.proof.ActionRaw)
 }
 
 func TestNewView_CustomParams(t *testing.T) {
@@ -107,6 +104,10 @@ func TestCall_VerifiesProofSuccessfully(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &TokenTxVerifyParams{NumOutputTokens: tt.numOutputs}
+			proof, err := GenerateProofData(p)
+			require.NoError(t, err)
+			p.Proof, err = proof.ToWire()
+			require.NoError(t, err)
 			input, err := json.Marshal(p)
 			require.NoError(t, err)
 
@@ -123,6 +124,10 @@ func TestCall_VerifiesProofSuccessfully(t *testing.T) {
 func TestCall_TamperedProofFails(t *testing.T) {
 	factory := &TokenTxVerifyViewFactory{}
 	p := &TokenTxVerifyParams{NumOutputTokens: 2}
+	proof, err := GenerateProofData(p)
+	require.NoError(t, err)
+	p.Proof, err = proof.ToWire()
+	require.NoError(t, err)
 	input, err := json.Marshal(p)
 	require.NoError(t, err)
 
@@ -157,6 +162,10 @@ func TestNewView_MultipleOutputCounts(t *testing.T) {
 	for _, numOutputs := range []int{1, 2, 4} {
 		t.Run("outputs_"+string(rune('0'+numOutputs)), func(t *testing.T) {
 			p := &TokenTxVerifyParams{NumOutputTokens: numOutputs}
+			proof, err := GenerateProofData(p)
+			require.NoError(t, err)
+			p.Proof, err = proof.ToWire()
+			require.NoError(t, err)
 			input, err := json.Marshal(p)
 			require.NoError(t, err)
 

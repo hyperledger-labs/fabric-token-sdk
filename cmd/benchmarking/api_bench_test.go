@@ -32,7 +32,10 @@ func BenchmarkAPI(b *testing.B) {
 	require.NoError(b, err)
 
 	params := &TokenTxVerifyParams{}
-	require.NoError(b, params.SetupProof())
+	proof, err := GenerateProofData(params)
+	require.NoError(b, err)
+	params.Proof, err = proof.ToWire()
+	require.NoError(b, err)
 
 	wl := node.Workload{
 		Name:    "zkp",

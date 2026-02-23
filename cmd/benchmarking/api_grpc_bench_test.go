@@ -36,7 +36,10 @@ func BenchmarkAPIGRPC(b *testing.B) {
 	defer n.Stop()
 
 	params := &TokenTxVerifyParams{}
-	require.NoError(b, params.SetupProof())
+	proof, err := GenerateProofData(params)
+	require.NoError(b, err)
+	params.Proof, err = proof.ToWire()
+	require.NoError(b, err)
 
 	wl := node.Workload{
 		Name:    "zkp",

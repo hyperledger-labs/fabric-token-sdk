@@ -83,18 +83,6 @@ func (t *TokenTxVerifyParams) applyDefaults() *TokenTxVerifyParams {
 	return t
 }
 
-// SetupProof pre-generates a ZK proof and embeds it in the metadata so it
-// travels over the wire. Call this on the client before sending the workload.
-func (t *TokenTxVerifyParams) SetupProof() error {
-	proof, err := GenerateProofData(t)
-	if err != nil {
-		return err
-	}
-	t.Proof, err = proof.ToWire()
-
-	return err
-}
-
 type TokenTxVerifyView struct {
 	params TokenTxVerifyParams
 	proof  *ProofData
@@ -179,14 +167,7 @@ func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal wire proof: %w", err)
 		}
-	} else {
-		var err error
-		proof, err = GenerateProofData(&f.params)
-		if err != nil {
-			return nil, err
-		}
 	}
-
 	f.proof = proof
 
 	return f, nil
