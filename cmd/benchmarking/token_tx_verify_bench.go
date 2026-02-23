@@ -33,7 +33,7 @@ type ProofData struct {
 	ActionRaw []byte
 }
 
-func (p *ProofData) Marshal() (*WireProofData, error) {
+func (p *ProofData) ToWire() (*WireProofData, error) {
 	ppRaw, err := p.PubParams.Serialize()
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize public parameters: %w", err)
@@ -48,7 +48,7 @@ type WireProofData struct {
 	ActionRaw    []byte `json:"action_raw"`
 }
 
-func (w *WireProofData) Unmarshal() (*ProofData, error) {
+func (w *WireProofData) UnWire() (*ProofData, error) {
 	pp, err := v1.NewPublicParamsFromBytes(w.PubParamsRaw, v1.DLogNoGHDriverName, v1.ProtocolV1)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deserialize public parameters: %w", err)
@@ -66,7 +66,7 @@ type TokenTxVerifyParams struct {
 }
 
 func (t *TokenTxVerifyParams) applyDefaults() *TokenTxVerifyParams {
-	if t.NumOutputTokens <= 0 {
+	if t.NumOutputTokens < 0 {
 		t.NumOutputTokens = deafultNumOutputs
 	}
 	if t.BitLength <= 0 {
@@ -89,7 +89,7 @@ func (t *TokenTxVerifyParams) SetupProof() error {
 	if err != nil {
 		return err
 	}
-	t.Proof, err = proof.Marshal()
+	t.Proof, err = proof.ToWire()
 
 	return err
 }
@@ -115,9 +115,10 @@ func (q *TokenTxVerifyView) Call(viewCtx view.Context) (interface{}, error) {
 
 	err := issue.NewVerifier(coms, q.pubParams).Verify(action.GetProof())
 	if err != nil {
-		return nil, fmt.Errorf("Failed to Verify Proof %w", err)
+		return nil, fmt.Errorf("failed to Verify Proof %w", err)
 	}
-	return nil, err
+
+	return nil, nil
 }
 
 // GenerateProofData creates a ZK issue proof and associated public parameters.
@@ -157,23 +158,6 @@ func GenerateProofData(params *TokenTxVerifyParams) (*ProofData, error) {
 
 type TokenTxVerifyViewFactory struct{}
 
-// SetupProofs pre-generates n proofs into the factory's in-memory pool.
-func SetupProofs(n int, params *TokenTxVerifyParams) []*ProofData {
-	if params == nil {
-		params = &TokenTxVerifyParams{}
-	}
-	params.applyDefaults()
-	proofs := make([]*ProofData, n)
-	for i := range proofs {
-		proof, err := GenerateProofData(params)
-		if err != nil {
-			panic(err)
-		}
-		proofs[i] = proof
-	}
-	return proofs
-}
-
 // NewView builds a verification view. Proof source priority:
 //  1. Wire proof embedded in the JSON params (remote/gRPC path)
 //  2. Fresh generation (fallback)
@@ -188,7 +172,7 @@ func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
 	var proof *ProofData
 	if f.params.Proof != nil {
 		var err error
-		proof, err = f.params.Proof.Unmarshal()
+		proof, err = f.params.Proof.UnWire()
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal wire proof: %w", err)
 		}
