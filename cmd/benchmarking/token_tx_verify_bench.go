@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"sync"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -96,7 +95,7 @@ func (t *TokenTxVerifyParams) SetupProof() error {
 }
 
 type TokenTxVerifyView struct {
-	params    TokenTxVerifyParams
+	params    TokenTxVerifyParams // TODO remove duplicates
 	pubParams *v1.PublicParams
 	actionRaw []byte
 }
@@ -114,20 +113,24 @@ func (q *TokenTxVerifyView) Call(viewCtx view.Context) (interface{}, error) {
 		coms[i] = action.Outputs[i].Data
 	}
 
-	return nil, issue.NewVerifier(coms, q.pubParams).Verify(action.GetProof())
+	err := issue.NewVerifier(coms, q.pubParams).Verify(action.GetProof())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to Verify Proof %w", err)
+	}
+	return nil, err
 }
 
 // GenerateProofData creates a ZK issue proof and associated public parameters.
-func GenerateProofData(meta *TokenTxVerifyParams) (*ProofData, error) {
-	meta.applyDefaults()
+func GenerateProofData(params *TokenTxVerifyParams) (*ProofData, error) {
+	params.applyDefaults()
 
-	pubParams, err := v1.Setup(meta.BitLength, dummyIdemixPK, math.CurveID(meta.CurveID))
+	pubParams, err := v1.Setup(params.BitLength, dummyIdemixPK, math.CurveID(params.CurveID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up public parameters: %w", err)
 	}
 
-	outputValues := make([]uint64, meta.NumOutputTokens)
-	outputOwners := make([][]byte, meta.NumOutputTokens)
+	outputValues := make([]uint64, params.NumOutputTokens)
+	outputOwners := make([][]byte, params.NumOutputTokens)
 	var val uint64
 	for i := range outputValues {
 		val += 10
@@ -135,7 +138,7 @@ func GenerateProofData(meta *TokenTxVerifyParams) (*ProofData, error) {
 		outputOwners[i] = []byte("alice_" + strconv.Itoa(i))
 	}
 
-	issuer := issue.NewIssuer(token2.Type(meta.TokenType), &mock.SigningIdentity{}, pubParams)
+	issuer := issue.NewIssuer(token2.Type(params.TokenType), &mock.SigningIdentity{}, pubParams)
 	action, _, err := issuer.GenerateZKIssue(outputValues, outputOwners)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate ZK issue: %w", err)
@@ -152,53 +155,28 @@ func GenerateProofData(meta *TokenTxVerifyParams) (*ProofData, error) {
 	}, nil
 }
 
-type TokenTxVerifyViewFactory struct {
-	mu     sync.Mutex
-	proofs []*ProofData
-}
+type TokenTxVerifyViewFactory struct{}
 
 // SetupProofs pre-generates n proofs into the factory's in-memory pool.
-func (c *TokenTxVerifyViewFactory) SetupProofs(n int, meta *TokenTxVerifyParams) {
-	if meta == nil {
-		meta = &TokenTxVerifyParams{}
+func SetupProofs(n int, params *TokenTxVerifyParams) []*ProofData {
+	if params == nil {
+		params = &TokenTxVerifyParams{}
 	}
-	meta.applyDefaults()
+	params.applyDefaults()
 	proofs := make([]*ProofData, n)
 	for i := range proofs {
-		proof, err := GenerateProofData(meta)
+		proof, err := GenerateProofData(params)
 		if err != nil {
 			panic(err)
 		}
 		proofs[i] = proof
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.proofs = proofs
-}
-
-// AddProofs enqueues pre-computed proofs for subsequent NewView calls.
-func (c *TokenTxVerifyViewFactory) AddProofs(proofs ...*ProofData) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.proofs = append(c.proofs, proofs...)
-}
-
-func (c *TokenTxVerifyViewFactory) popProof() *ProofData {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if len(c.proofs) == 0 {
-		return nil
-	}
-	p := c.proofs[len(c.proofs)-1]
-	c.proofs = c.proofs[:len(c.proofs)-1]
-
-	return p
+	return proofs
 }
 
 // NewView builds a verification view. Proof source priority:
 //  1. Wire proof embedded in the JSON params (remote/gRPC path)
-//  2. In-memory proof pool via AddProofs/SetupProofs (local bench path)
-//  3. Fresh generation (fallback)
+//  2. Fresh generation (fallback)
 func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
 	f := &TokenTxVerifyView{}
 
@@ -214,8 +192,6 @@ func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal wire proof: %w", err)
 		}
-	} else if p := c.popProof(); p != nil {
-		proof = p
 	} else {
 		var err error
 		proof, err = GenerateProofData(&f.params)
