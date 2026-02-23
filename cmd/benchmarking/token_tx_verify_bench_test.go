@@ -37,17 +37,20 @@ func (vp *viewPool) CreateViewsWithProofs(b *testing.B, p *TokenTxVerifyParams, 
 
 	vp.views = make([]view.View, b.N)
 	for i := range vp.views {
-		p.Proof, _ = proofs[i].Marshal()
+		p.Proof, _ = proofs[i].ToWire()
 		input, _ := json.Marshal(p)
 		v, err := f.NewView(input)
 		require.NoError(b, err)
 		vp.views[i] = v
 	}
+	if b.N < 0 {
+		panic("negative size")
+	}
 	vp.size = uint64(b.N)
 	vp.idx.Store(0)
 }
 
-func (vp *viewPool) createViewsWithoutProof(b *testing.B, f *TokenTxVerifyViewFactory, input []byte, n uint64) {
+func (vp *viewPool) createViewsWithoutProof(b *testing.B, f *TokenTxVerifyViewFactory, input []byte, n int) {
 	b.Helper()
 	vp.views = make([]view.View, n)
 	for i := range vp.views {
@@ -55,13 +58,17 @@ func (vp *viewPool) createViewsWithoutProof(b *testing.B, f *TokenTxVerifyViewFa
 		require.NoError(b, err)
 		vp.views[i] = v
 	}
-	vp.size = n
+	if n < 0 {
+		panic("negative size")
+	}
+	vp.size = uint64(n)
 	vp.idx.Store(0)
 }
 
 // nextView returns views from the pool in round-robin.
 func (p *viewPool) nextView() view.View {
 	i := p.idx.Add(1) - 1
+
 	return p.views[i%p.size]
 }
 
@@ -74,7 +81,7 @@ func BenchmarkTokenTxVerify(b *testing.B) {
 		input, _ := json.Marshal(p)
 
 		pool := &viewPool{}
-		pool.createViewsWithoutProof(b, f, input, uint64(max(runtime.NumCPU()*4, 16)))
+		pool.createViewsWithoutProof(b, f, input, max(runtime.NumCPU()*4, 16))
 
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
