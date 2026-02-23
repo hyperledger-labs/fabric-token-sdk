@@ -12,24 +12,27 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokendb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
 
+// Provider creates and caches vault instances for TMS identifiers.
+// It manages access to token, transaction, and audit storage services.
 type Provider struct {
-	tokenStoreServiceManager tokens.StoreServiceManager
-	ttxStoreServiceManager   ttx.StoreServiceManager
-	auditStoreServiceManager auditor.StoreServiceManager
+	tokenStoreServiceManager tokendb.StoreServiceManager
+	ttxStoreServiceManager   ttxdb.StoreServiceManager
+	auditStoreServiceManager auditdb.StoreServiceManager
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 }
 
+// NewVaultProvider creates a vault provider with the given storage managers.
 func NewVaultProvider(
-	tokenStoreServiceManager tokens.StoreServiceManager,
-	ttxStoreServiceManager ttx.StoreServiceManager,
-	auditStoreServiceManager auditor.StoreServiceManager,
+	tokenStoreServiceManager tokendb.StoreServiceManager,
+	ttxStoreServiceManager ttxdb.StoreServiceManager,
+	auditStoreServiceManager auditdb.StoreServiceManager,
 ) *Provider {
 	return &Provider{
 		ttxStoreServiceManager:   ttxStoreServiceManager,
@@ -39,6 +42,8 @@ func NewVaultProvider(
 	}
 }
 
+// Vault returns a cached or newly created vault for the given TMS coordinates.
+// It uses double-checked locking to ensure thread-safe cache access.
 func (v *Provider) Vault(network string, channel string, namespace string) (driver.Vault, error) {
 	k := network + channel + namespace
 	// Check cache
