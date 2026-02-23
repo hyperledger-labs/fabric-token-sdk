@@ -8,6 +8,7 @@ package benchmarking
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -66,7 +67,7 @@ type TokenTxVerifyParams struct {
 }
 
 func (t *TokenTxVerifyParams) applyDefaults() *TokenTxVerifyParams {
-	if t.NumOutputTokens < 0 {
+	if t.NumOutputTokens <= 0 {
 		t.NumOutputTokens = deafultNumOutputs
 	}
 	if t.BitLength <= 0 {
@@ -95,16 +96,18 @@ func (t *TokenTxVerifyParams) SetupProof() error {
 }
 
 type TokenTxVerifyView struct {
-	params    TokenTxVerifyParams // TODO remove duplicates
-	pubParams *v1.PublicParams
-	actionRaw []byte
+	params TokenTxVerifyParams
+	proof  *ProofData
 }
 
 // Call verifies a pre-computed ZK proof by deserializing the
 // issue action and checking the proof against the token commitments.
 func (q *TokenTxVerifyView) Call(viewCtx view.Context) (interface{}, error) {
+	if q.proof == nil {
+		return nil, errors.New("proof data is nil")
+	}
 	action := &issue.Action{}
-	if err := action.Deserialize(q.actionRaw); err != nil {
+	if err := action.Deserialize(q.proof.ActionRaw); err != nil {
 		return nil, fmt.Errorf("failed to deserialize issue action: %w", err)
 	}
 
@@ -113,7 +116,7 @@ func (q *TokenTxVerifyView) Call(viewCtx view.Context) (interface{}, error) {
 		coms[i] = action.Outputs[i].Data
 	}
 
-	err := issue.NewVerifier(coms, q.pubParams).Verify(action.GetProof())
+	err := issue.NewVerifier(coms, q.proof.PubParams).Verify(action.GetProof())
 	if err != nil {
 		return nil, fmt.Errorf("failed to Verify Proof %w", err)
 	}
@@ -184,8 +187,7 @@ func (c *TokenTxVerifyViewFactory) NewView(in []byte) (view.View, error) {
 		}
 	}
 
-	f.pubParams = proof.PubParams
-	f.actionRaw = proof.ActionRaw
+	f.proof = proof
 
 	return f, nil
 }

@@ -60,8 +60,9 @@ func TestNewView_DefaultParams(t *testing.T) {
 	require.Equal(t, uint64(defaultBitLength), tv.params.BitLength)
 	require.Equal(t, defaultTokenType, tv.params.TokenType)
 	require.Equal(t, int(defaultCurveID), tv.params.CurveID)
-	require.NotNil(t, tv.pubParams)
-	require.NotEmpty(t, tv.actionRaw)
+	require.NotNil(t, tv.proof)
+	require.NotNil(t, tv.proof.PubParams)
+	require.NotEmpty(t, tv.proof.ActionRaw)
 }
 
 func TestNewView_CustomParams(t *testing.T) {
@@ -130,8 +131,8 @@ func TestCall_TamperedProofFails(t *testing.T) {
 
 	tv := v.(*TokenTxVerifyView)
 	// Corrupt the serialized action to invalidate the proof.
-	for i := len(tv.actionRaw) - 1; i >= len(tv.actionRaw)-8 && i >= 0; i-- {
-		tv.actionRaw[i] ^= 0xFF
+	for i := len(tv.proof.ActionRaw) - 1; i >= len(tv.proof.ActionRaw)-8 && i >= 0; i-- {
+		tv.proof.ActionRaw[i] ^= 0xFF
 	}
 
 	_, err = tv.Call(nil)
@@ -139,7 +140,7 @@ func TestCall_TamperedProofFails(t *testing.T) {
 }
 
 func TestCall_EmptyActionRawFails(t *testing.T) {
-	v := &TokenTxVerifyView{actionRaw: []byte{}}
+	v := &TokenTxVerifyView{proof: &ProofData{ActionRaw: []byte{}}}
 	_, err := v.Call(nil)
 	require.Error(t, err)
 }
