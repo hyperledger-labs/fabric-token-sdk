@@ -15,6 +15,8 @@ import (
 	"go.uber.org/dig"
 )
 
+// newMultiplexedDriver creates a multiplexed database driver from registered drivers.
+// It aggregates all token database drivers and provides a unified interface.
 func newMultiplexedDriver(in struct {
 	dig.In
 	Drivers        []dbdriver.NamedDriver `group:"token-db-drivers"`
@@ -23,6 +25,8 @@ func newMultiplexedDriver(in struct {
 	return multiplexed.NewDriver(in.ConfigProvider, in.Drivers...)
 }
 
+// newTokenDriverService creates a token driver service from registered token drivers.
+// It manages different token driver implementations (e.g., zkat, fabtoken).
 func newTokenDriverService(in struct {
 	dig.In
 	Drivers []core.NamedFactory[driver.Driver] `group:"token-drivers"`

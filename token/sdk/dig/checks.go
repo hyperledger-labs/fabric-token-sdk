@@ -12,6 +12,8 @@ import (
 	"go.uber.org/dig"
 )
 
+// NewAuditorCheckServiceProvider creates an auditor check service provider using dependency injection.
+// It aggregates TMS provider, network provider, and custom checkers from the DI container.
 func NewAuditorCheckServiceProvider(in struct {
 	dig.In
 	TMSProvider     common.TokenManagementServiceProvider
@@ -21,6 +23,8 @@ func NewAuditorCheckServiceProvider(in struct {
 	return db.NewAuditorCheckServiceProvider(in.TMSProvider, in.NetworkProvider, in.Checkers)
 }
 
+// NewOwnerCheckServiceProvider creates an owner check service provider using dependency injection.
+// It aggregates TMS provider, network provider, and custom checkers from the DI container.
 func NewOwnerCheckServiceProvider(in struct {
 	dig.In
 	TMSProvider     common.TokenManagementServiceProvider

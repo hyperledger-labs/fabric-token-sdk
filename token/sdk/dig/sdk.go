@@ -63,28 +63,35 @@ import (
 
 var logger = logging.MustGetLogger()
 
+// selectorProviders maps selector driver types to their constructor functions.
 var selectorProviders = map[sdriver.Driver]any{
 	sdriver.Simple:    simple.NewService,
 	sdriver.Sherdlock: sherdlock.NewService,
 	"":                sherdlock.NewService,
 }
 
+// SDK wraps the base SDK and provides token platform functionality.
 type SDK struct {
 	dig2.SDK
 }
 
+// TokenEnabled checks if the token platform is enabled in configuration.
 func (p *SDK) TokenEnabled() bool {
 	return p.ConfigService().GetBool("token.enabled")
 }
 
+// NewSDK creates a new token SDK from a service registry.
 func NewSDK(registry services.Registry) *SDK {
 	return NewFrom(fabricsdk.NewSDK(registry))
 }
 
+// NewFrom wraps an existing SDK with token platform capabilities.
 func NewFrom(sdk dig2.SDK) *SDK {
 	return &SDK{SDK: sdk}
 }
 
+// Install registers all token platform dependencies in the DI container.
+// It skips installation if the token platform is disabled in configuration.
 func (p *SDK) Install() error {
 	if !p.TokenEnabled() {
 		logger.Infof("Token platform not enabled, skipping")
@@ -154,9 +161,9 @@ func (p *SDK) Install() error {
 		p.Container().Provide(tokendb.NewStoreServiceManager),
 		p.Container().Provide(tokendb.NewNotifierManager),
 		p.Container().Provide(auditdb.NewStoreServiceManager),
-		p.Container().Provide(identitydb.NewStoreServiceManager),
-		p.Container().Provide(keystoredb.NewStoreServiceManager),
-		p.Container().Provide(walletdb.NewStoreServiceManager),
+		p.Container().Provide(identitydb.NewStoreServiceManager, dig.As(new(identity.IdentityStoreServiceManager))),
+		p.Container().Provide(keystoredb.NewStoreServiceManager, dig.As(new(identity.KeystoreStoreServiceManager))),
+		p.Container().Provide(walletdb.NewStoreServiceManager, dig.As(new(identity.WalletStoreServiceManager))),
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
 		p.Container().Provide(identity.NewDBStorageProvider),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
@@ -212,8 +219,9 @@ func (p *SDK) Install() error {
 		digutils.Register[ttxdb.StoreServiceManager](p.Container()),
 		digutils.Register[tokendb.StoreServiceManager](p.Container()),
 		digutils.Register[auditdb.StoreServiceManager](p.Container()),
-		digutils.Register[identitydb.StoreServiceManager](p.Container()),
-		digutils.Register[keystoredb.StoreServiceManager](p.Container()),
+		digutils.Register[identity.IdentityStoreServiceManager](p.Container()),
+		digutils.Register[identity.KeystoreStoreServiceManager](p.Container()),
+		digutils.Register[identity.WalletStoreServiceManager](p.Container()),
 		digutils.Register[*vault.Provider](p.Container()),
 		digutils.Register[driver.ConfigService](p.Container()),
 		digutils.Register[*identity.DBStorageProvider](p.Container()),
@@ -248,6 +256,8 @@ func (p *SDK) Install() error {
 	return nil
 }
 
+// Start initializes and starts the token platform services.
+// It skips startup if the token platform is disabled in configuration.
 func (p *SDK) Start(ctx context.Context) error {
 	if err := p.SDK.Start(ctx); err != nil {
 		return err
@@ -272,10 +282,12 @@ func (p *SDK) Start(ctx context.Context) error {
 	return nil
 }
 
+// connectNetworks establishes connections to all configured networks.
 func connectNetworks(networkProvider *network.Provider) error {
 	return networkProvider.Connect()
 }
 
+// registerNetworkDrivers registers all network drivers with the network provider.
 func registerNetworkDrivers(in struct {
 	dig.In
 	NetworkProvider *network.Provider

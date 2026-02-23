@@ -16,12 +16,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
 
+// LockerProvider creates token lockers for the simple selector service.
+// It manages transaction locking to prevent double-spending during token selection.
 type LockerProvider struct {
 	ttxStoreServiceManager db.StoreServiceManager[*ttxdb.StoreService]
 	sleepTimeout           time.Duration
 	validTxEvictionTimeout time.Duration
 }
 
+// NewLockerProvider creates a new locker provider with the given configuration.
 func NewLockerProvider(
 	ttxStoreServiceManager db.StoreServiceManager[*ttxdb.StoreService],
 	sleepTimeout time.Duration,
@@ -34,6 +37,7 @@ func NewLockerProvider(
 	}
 }
 
+// New creates a locker for the specified network, channel, and namespace.
 func (s *LockerProvider) New(network, channel, namespace string) (selector.Locker, error) {
 	db, err := s.ttxStoreServiceManager.StoreServiceByTMSId(token.TMSID{
 		Network:   network,

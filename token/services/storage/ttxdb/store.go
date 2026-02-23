@@ -23,6 +23,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 )
 
+//go:generate counterfeiter -o mock/store.go --fake-name TTXStoreServiceManager . StoreServiceManager
+
 type StoreServiceManager db.StoreServiceManager[*StoreService]
 
 var (
