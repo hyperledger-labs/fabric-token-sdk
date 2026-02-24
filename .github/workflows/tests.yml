@@ -169,7 +169,7 @@ jobs:
           make fxconfig configtxgen fabricx-docker-images
 
       - name: Run ${{ matrix.tests }}
-      
+
         run: |
           mkdir -p covdata
           GOCOVERDIR=$(realpath covdata) make integration-tests-${{ matrix.tests }}
@@ -191,7 +191,7 @@ jobs:
         uses: shogo82148/actions-goveralls@v1
         with:
           parallel-finished: true
-        run: make integration-tests-${{ matrix.tests }}
+        
   bench-check:
     needs: checks
     runs-on: ubuntu-latest
@@ -211,4 +211,4 @@ jobs:
 
       - name: Compile benchmarks (do not run)
         run: go test ./... -run=^$ -bench=^$
-ecb1d261 (ci: add bench-check job to compile benchmarks in CI without executing them)
+
