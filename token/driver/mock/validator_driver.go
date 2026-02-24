@@ -7,19 +7,18 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-type Driver struct {
-	NewTokenServiceStub        func(driver.TMSID, []byte) (driver.TokenManagerService, error)
-	newTokenServiceMutex       sync.RWMutex
-	newTokenServiceArgsForCall []struct {
-		arg1 driver.TMSID
-		arg2 []byte
+type ValidatorDriver struct {
+	NewDefaultValidatorStub        func(driver.PublicParameters) (driver.Validator, error)
+	newDefaultValidatorMutex       sync.RWMutex
+	newDefaultValidatorArgsForCall []struct {
+		arg1 driver.PublicParameters
 	}
-	newTokenServiceReturns struct {
-		result1 driver.TokenManagerService
+	newDefaultValidatorReturns struct {
+		result1 driver.Validator
 		result2 error
 	}
-	newTokenServiceReturnsOnCall map[int]struct {
-		result1 driver.TokenManagerService
+	newDefaultValidatorReturnsOnCall map[int]struct {
+		result1 driver.Validator
 		result2 error
 	}
 	PublicParametersFromBytesStub        func([]byte) (driver.PublicParameters, error)
@@ -39,24 +38,18 @@ type Driver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Driver) NewTokenService(arg1 driver.TMSID, arg2 []byte) (driver.TokenManagerService, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
-	fake.newTokenServiceMutex.Lock()
-	ret, specificReturn := fake.newTokenServiceReturnsOnCall[len(fake.newTokenServiceArgsForCall)]
-	fake.newTokenServiceArgsForCall = append(fake.newTokenServiceArgsForCall, struct {
-		arg1 driver.TMSID
-		arg2 []byte
-	}{arg1, arg2Copy})
-	stub := fake.NewTokenServiceStub
-	fakeReturns := fake.newTokenServiceReturns
-	fake.recordInvocation("NewTokenService", []interface{}{arg1, arg2Copy})
-	fake.newTokenServiceMutex.Unlock()
+func (fake *ValidatorDriver) NewDefaultValidator(arg1 driver.PublicParameters) (driver.Validator, error) {
+	fake.newDefaultValidatorMutex.Lock()
+	ret, specificReturn := fake.newDefaultValidatorReturnsOnCall[len(fake.newDefaultValidatorArgsForCall)]
+	fake.newDefaultValidatorArgsForCall = append(fake.newDefaultValidatorArgsForCall, struct {
+		arg1 driver.PublicParameters
+	}{arg1})
+	stub := fake.NewDefaultValidatorStub
+	fakeReturns := fake.newDefaultValidatorReturns
+	fake.recordInvocation("NewDefaultValidator", []interface{}{arg1})
+	fake.newDefaultValidatorMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -64,52 +57,52 @@ func (fake *Driver) NewTokenService(arg1 driver.TMSID, arg2 []byte) (driver.Toke
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *Driver) NewTokenServiceCallCount() int {
-	fake.newTokenServiceMutex.RLock()
-	defer fake.newTokenServiceMutex.RUnlock()
-	return len(fake.newTokenServiceArgsForCall)
+func (fake *ValidatorDriver) NewDefaultValidatorCallCount() int {
+	fake.newDefaultValidatorMutex.RLock()
+	defer fake.newDefaultValidatorMutex.RUnlock()
+	return len(fake.newDefaultValidatorArgsForCall)
 }
 
-func (fake *Driver) NewTokenServiceCalls(stub func(driver.TMSID, []byte) (driver.TokenManagerService, error)) {
-	fake.newTokenServiceMutex.Lock()
-	defer fake.newTokenServiceMutex.Unlock()
-	fake.NewTokenServiceStub = stub
+func (fake *ValidatorDriver) NewDefaultValidatorCalls(stub func(driver.PublicParameters) (driver.Validator, error)) {
+	fake.newDefaultValidatorMutex.Lock()
+	defer fake.newDefaultValidatorMutex.Unlock()
+	fake.NewDefaultValidatorStub = stub
 }
 
-func (fake *Driver) NewTokenServiceArgsForCall(i int) (driver.TMSID, []byte) {
-	fake.newTokenServiceMutex.RLock()
-	defer fake.newTokenServiceMutex.RUnlock()
-	argsForCall := fake.newTokenServiceArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+func (fake *ValidatorDriver) NewDefaultValidatorArgsForCall(i int) driver.PublicParameters {
+	fake.newDefaultValidatorMutex.RLock()
+	defer fake.newDefaultValidatorMutex.RUnlock()
+	argsForCall := fake.newDefaultValidatorArgsForCall[i]
+	return argsForCall.arg1
 }
 
-func (fake *Driver) NewTokenServiceReturns(result1 driver.TokenManagerService, result2 error) {
-	fake.newTokenServiceMutex.Lock()
-	defer fake.newTokenServiceMutex.Unlock()
-	fake.NewTokenServiceStub = nil
-	fake.newTokenServiceReturns = struct {
-		result1 driver.TokenManagerService
+func (fake *ValidatorDriver) NewDefaultValidatorReturns(result1 driver.Validator, result2 error) {
+	fake.newDefaultValidatorMutex.Lock()
+	defer fake.newDefaultValidatorMutex.Unlock()
+	fake.NewDefaultValidatorStub = nil
+	fake.newDefaultValidatorReturns = struct {
+		result1 driver.Validator
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *Driver) NewTokenServiceReturnsOnCall(i int, result1 driver.TokenManagerService, result2 error) {
-	fake.newTokenServiceMutex.Lock()
-	defer fake.newTokenServiceMutex.Unlock()
-	fake.NewTokenServiceStub = nil
-	if fake.newTokenServiceReturnsOnCall == nil {
-		fake.newTokenServiceReturnsOnCall = make(map[int]struct {
-			result1 driver.TokenManagerService
+func (fake *ValidatorDriver) NewDefaultValidatorReturnsOnCall(i int, result1 driver.Validator, result2 error) {
+	fake.newDefaultValidatorMutex.Lock()
+	defer fake.newDefaultValidatorMutex.Unlock()
+	fake.NewDefaultValidatorStub = nil
+	if fake.newDefaultValidatorReturnsOnCall == nil {
+		fake.newDefaultValidatorReturnsOnCall = make(map[int]struct {
+			result1 driver.Validator
 			result2 error
 		})
 	}
-	fake.newTokenServiceReturnsOnCall[i] = struct {
-		result1 driver.TokenManagerService
+	fake.newDefaultValidatorReturnsOnCall[i] = struct {
+		result1 driver.Validator
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *Driver) PublicParametersFromBytes(arg1 []byte) (driver.PublicParameters, error) {
+func (fake *ValidatorDriver) PublicParametersFromBytes(arg1 []byte) (driver.PublicParameters, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
@@ -133,26 +126,26 @@ func (fake *Driver) PublicParametersFromBytes(arg1 []byte) (driver.PublicParamet
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *Driver) PublicParametersFromBytesCallCount() int {
+func (fake *ValidatorDriver) PublicParametersFromBytesCallCount() int {
 	fake.publicParametersFromBytesMutex.RLock()
 	defer fake.publicParametersFromBytesMutex.RUnlock()
 	return len(fake.publicParametersFromBytesArgsForCall)
 }
 
-func (fake *Driver) PublicParametersFromBytesCalls(stub func([]byte) (driver.PublicParameters, error)) {
+func (fake *ValidatorDriver) PublicParametersFromBytesCalls(stub func([]byte) (driver.PublicParameters, error)) {
 	fake.publicParametersFromBytesMutex.Lock()
 	defer fake.publicParametersFromBytesMutex.Unlock()
 	fake.PublicParametersFromBytesStub = stub
 }
 
-func (fake *Driver) PublicParametersFromBytesArgsForCall(i int) []byte {
+func (fake *ValidatorDriver) PublicParametersFromBytesArgsForCall(i int) []byte {
 	fake.publicParametersFromBytesMutex.RLock()
 	defer fake.publicParametersFromBytesMutex.RUnlock()
 	argsForCall := fake.publicParametersFromBytesArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *Driver) PublicParametersFromBytesReturns(result1 driver.PublicParameters, result2 error) {
+func (fake *ValidatorDriver) PublicParametersFromBytesReturns(result1 driver.PublicParameters, result2 error) {
 	fake.publicParametersFromBytesMutex.Lock()
 	defer fake.publicParametersFromBytesMutex.Unlock()
 	fake.PublicParametersFromBytesStub = nil
@@ -162,7 +155,7 @@ func (fake *Driver) PublicParametersFromBytesReturns(result1 driver.PublicParame
 	}{result1, result2}
 }
 
-func (fake *Driver) PublicParametersFromBytesReturnsOnCall(i int, result1 driver.PublicParameters, result2 error) {
+func (fake *ValidatorDriver) PublicParametersFromBytesReturnsOnCall(i int, result1 driver.PublicParameters, result2 error) {
 	fake.publicParametersFromBytesMutex.Lock()
 	defer fake.publicParametersFromBytesMutex.Unlock()
 	fake.PublicParametersFromBytesStub = nil
@@ -178,7 +171,7 @@ func (fake *Driver) PublicParametersFromBytesReturnsOnCall(i int, result1 driver
 	}{result1, result2}
 }
 
-func (fake *Driver) Invocations() map[string][][]interface{} {
+func (fake *ValidatorDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
@@ -188,7 +181,7 @@ func (fake *Driver) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *Driver) recordInvocation(key string, args []interface{}) {
+func (fake *ValidatorDriver) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -200,4 +193,4 @@ func (fake *Driver) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ driver.Driver = new(Driver)
+var _ driver.ValidatorDriver = new(ValidatorDriver)

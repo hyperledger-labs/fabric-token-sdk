@@ -6,19 +6,20 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-// ServiceProvider is used to return instances of a given type
-type ServiceProvider interface {
-	// GetService returns an instance of the given type
-	GetService(v interface{}) (interface{}, error)
-}
-
-// Driver is the interface that must be implemented by a token driver.
+// Driver is the interface that must be implemented by a token driver to create TokenManagerService instances.
 //
 //go:generate counterfeiter -o mock/driver.go -fake-name Driver . Driver
 type Driver interface {
 	PPReader
 	// NewTokenService returns a new TokenManagerService instance.
 	NewTokenService(tmsID TMSID, publicParams []byte) (TokenManagerService, error)
+}
+
+// ValidatorDriver is the interface that must be implemented by a token driver to create Validator instances.
+//
+//go:generate counterfeiter -o mock/validator_driver.go -fake-name ValidatorDriver . ValidatorDriver
+type ValidatorDriver interface {
+	PPReader
 	// NewDefaultValidator returns a new Validator instance from the passed public parameters
 	NewDefaultValidator(pp PublicParameters) (Validator, error)
 }

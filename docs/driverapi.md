@@ -2,9 +2,10 @@
 
 The **Driver API** serves as the interface bridging the generic Token API with specific token implementations. It defines the protocols for token creation, transfer, and management within a given system.
 
-Each driver must implement the `driver.Driver` interface, fulfilling two primary objectives:
-1.  **Public Parameters**: Facilitates the retrieval of driver-specific public parameters.
-2.  **Token Management Service (TMS)**: Provides a mechanism to instantiate a new TMS tailored to the driver.
+Each driver must implement the `driver.Driver` and `driver.ValidatorDriver` interfaces, fulfilling three primary objectives:
+1.  **Public Parameters**: Through `driver.PPReader` (embedded in both), facilitates the retrieval of driver-specific public parameters from bytes.
+2.  **Token Management Service (TMS)**: Through `driver.Driver`, provides a mechanism to instantiate a new TMS tailored to the driver.
+3.  **Validation**: Through `driver.ValidatorDriver`, provides a mechanism to instantiate a new validator from public parameters.
 
 The `Token Management Service` interface, implemented by the driver, functions as the core execution engine. It is required to implement the following services:
 *   `Identity Service`: Manages identities and wallets.

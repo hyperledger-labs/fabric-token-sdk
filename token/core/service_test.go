@@ -242,15 +242,15 @@ func TestTokenDriverService_NewTokenService(t *testing.T) {
 	assert.Contains(t, err.Error(), "no token driver named 'unknown.v1' found")
 }
 
-// TestTokenDriverService_NewDefaultValidator verifies retrieval of the default validator
+// TestValidatorDriverService_NewDefaultValidator verifies retrieval of the default validator
 // and proper error handling when the token driver is not found.
-func TestTokenDriverService_NewDefaultValidator(t *testing.T) {
+func TestValidatorDriverService_NewDefaultValidator(t *testing.T) {
 	name := driver.TokenDriverName("test-driver")
 	version := driver.TokenDriverVersion(1)
 	identifier := core.DriverIdentifier(name, version)
 
-	driverMock := &mock.Driver{}
-	service := core.NewTokenDriverService([]core.NamedFactory[driver.Driver]{
+	driverMock := &mock.ValidatorDriver{}
+	service := core.NewValidatorDriverService([]core.NamedFactory[driver.ValidatorDriver]{
 		{
 			Name:   identifier,
 			Driver: driverMock,

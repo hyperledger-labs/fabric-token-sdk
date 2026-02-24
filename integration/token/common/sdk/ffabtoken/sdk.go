@@ -35,6 +35,7 @@ func (p *SDK) Install() error {
 		sdk.RegisterTokenDriverDependencies(p.Container()),
 		p.Container().Provide(fabric.NewGenericDriver, dig.Group("network-drivers")),
 		p.Container().Provide(fabtoken.NewDriver, dig.Group("token-drivers")),
+		p.Container().Provide(fabtoken.NewValidatorDriver, dig.Group("validator-drivers")),
 	)
 	if err != nil {
 		return err
