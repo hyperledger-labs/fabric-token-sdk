@@ -89,8 +89,15 @@ func NewDriver(
 		defaultPublicParamsFetcher: ppFetcher,
 		queryExecutorProvider:      queryExecutorProvider,
 		keyTranslator:              kt,
-		flmProvider:                finality2.NewNotificationServiceBased(queryServiceProvider, finalityProvider, q),
-		llmProvider:                lookup2.NewQueryServiceBased(queryServiceProvider, q, lookup2.NewConfig(configService)),
+		flmProvider: finality2.NewNotificationServiceBased(
+			queryServiceProvider,
+			finalityProvider,
+			q,
+		),
+		llmProvider: lookup2.NewCronNSListenerManagerProvider(
+			queryServiceProvider,
+			lookup2.NewConfig(configService),
+		),
 		EndorsementServiceProvider: endorsement.NewServiceProvider(
 			configs,
 			viewManager,

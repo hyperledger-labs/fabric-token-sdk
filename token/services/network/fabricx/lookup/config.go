@@ -34,8 +34,11 @@ type ConfigGetter interface {
 	OnceInterval() time.Duration
 }
 
+// Configuration models the configuration for the lookup service.
+//
 //go:generate counterfeiter -o mock/configuration.go -fake-name Configuration . Configuration
 type Configuration interface {
+	// GetDuration returns the duration for the given key.
 	GetDuration(key string) time.Duration
 }
 
@@ -48,7 +51,8 @@ type serviceConfig struct {
 	configuration Configuration
 }
 
-// PermanentInterval returns the polling interval for permanent lookups
+// PermanentInterval returns the polling interval for permanent lookups.
+// It returns the value from the configuration if it's greater than 0, otherwise it returns the default value.
 func (c *serviceConfig) PermanentInterval() time.Duration {
 	if v := c.configuration.GetDuration(PermanentInterval); v > 0 {
 		return v
@@ -57,7 +61,8 @@ func (c *serviceConfig) PermanentInterval() time.Duration {
 	return DefaultPermanentInterval
 }
 
-// OnceDeadline returns the deadline for one-time lookups
+// OnceDeadline returns the deadline for one-time lookups.
+// It returns the value from the configuration if it's greater than 0, otherwise it returns the default value.
 func (c *serviceConfig) OnceDeadline() time.Duration {
 	if v := c.configuration.GetDuration(OnceDeadline); v > 0 {
 		return v
@@ -66,7 +71,8 @@ func (c *serviceConfig) OnceDeadline() time.Duration {
 	return DefaultOnceDeadline
 }
 
-// OnceInterval returns the polling interval for one-time lookups
+// OnceInterval returns the polling interval for one-time lookups.
+// It returns the value from the configuration if it's greater than 0, otherwise it returns the default value.
 func (c *serviceConfig) OnceInterval() time.Duration {
 	if v := c.configuration.GetDuration(OnceInterval); v > 0 {
 		return v

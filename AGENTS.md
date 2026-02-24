@@ -152,3 +152,13 @@ This directory contains the **Fabric Token SDK**, a project under Hyperledger La
 *   **Docker errors:** Ensure `make testing-docker-images` has been run.
 *   **Linting errors on commit:** Run `make lint-auto-fix`.
 *   **Test timeouts:** Integration tests can be slow. Ensure you have allocated enough resources to Docker.
+
+## Workflow Rules
+
+- Before implementing any task, create a `plan.md` file in the project root containing:
+    - A clear description of the goal
+    - A numbered list of implementation steps
+    - An "Implementation Progress" section with each step marked as `[ ] Pending`
+- As you complete each step, update `plan.md` immediately, marking the step as `[x] Done` and adding a brief note about what was changed
+- If you encounter a blocker or make a significant decision, log it under a `## Notes & Decisions` section in `plan.md`
+- Mark the plan as `✅ COMPLETE` once all steps are done
