@@ -38,10 +38,19 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 
 // DefaultValidator returns a new fabtoken validator for the passed public parameters.
 func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+	ppp, ok := pp.(*core2.PublicParams)
+	if !ok {
+		return nil, errors.Errorf("invalid public parameters type [%T]", pp)
+	}
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
 	deserializer := NewDeserializer()
 
-	return validator.NewValidator(logger, pp.(*core2.PublicParams), deserializer, nil, nil, nil), nil
+	return validator.NewValidator(logger, ppp, deserializer, nil, nil, nil), nil
+}
+
+// NewDefaultValidator returns a new fabtoken validator for the passed public parameters.
+func (d *base) NewDefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+	return d.DefaultValidator(pp)
 }
 
 // newWalletService returns a new wallet service for the passed configuration and parameters.
