@@ -118,8 +118,8 @@ func (n *CronListenerManager) AddLookupListener(namespace string, key string, li
 			logger.Debugf("[KeyCheck] key [%s:%s] found, notify listener", namespace, key)
 			listener.OnStatus(context.Background(), key, v.Raw)
 
-			// Stop the job
-			n.RemoveLookupListener(key, listener)
+			// Stop the job, no error is expected here
+			_ = n.RemoveLookupListener(key, listener)
 
 			return
 		}
@@ -128,8 +128,8 @@ func (n *CronListenerManager) AddLookupListener(namespace string, key string, li
 			logger.Debugf("[KeyCheck] key [%s:%s] not found, deadline reached", namespace, key)
 			listener.OnError(context.Background(), key, errors.Errorf("key [%s:%s] not found", namespace, key))
 
-			// Stop the job
-			n.RemoveLookupListener(key, listener)
+			// Stop the job, no error is expected here
+			_ = n.RemoveLookupListener(key, listener)
 
 			return
 		}

@@ -38,7 +38,9 @@ func TestCronListenerManager(t *testing.T) {
 
 	mgr, err := lookup.NewCronListenerManager(qs, config)
 	require.NoError(t, err)
-	defer mgr.Stop()
+	defer func() {
+		_ = mgr.Stop()
+	}()
 
 	assert.True(t, mgr.PermanentLookupListenerSupported())
 
@@ -118,8 +120,8 @@ func TestCronNSListenerManagerProvider(t *testing.T) {
 	mgr, err := p.NewManager("network", "channel")
 	require.NoError(t, err)
 	assert.NotNil(t, mgr)
-	
+
 	cronMgr, ok := mgr.(*lookup.CronListenerManager)
 	assert.True(t, ok)
-	cronMgr.Stop()
+	require.NoError(t, cronMgr.Stop())
 }
