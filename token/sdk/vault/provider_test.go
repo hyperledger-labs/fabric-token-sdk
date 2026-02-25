@@ -21,8 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewVaultProvider_Counterfeiter verifies vault provider initialization.
-func TestNewVaultProvider_Counterfeiter(t *testing.T) {
+// TestNewVaultProvider verifies vault provider initialization.
+func TestNewVaultProvider(t *testing.T) {
 	tokenMgr := &tokenmock.TokenStoreServiceManager{}
 	ttxMgr := &ttxmock.TTXStoreServiceManager{}
 	auditMgr := &auditmock.AuditStoreServiceManager{}
@@ -32,8 +32,8 @@ func TestNewVaultProvider_Counterfeiter(t *testing.T) {
 	require.NotNil(t, provider)
 }
 
-// TestVaultProvider_Vault_Success_Counterfeiter verifies successful vault creation.
-func TestVaultProvider_Vault_Success_Counterfeiter(t *testing.T) {
+// TestVaultProvider_Vault_Success verifies successful vault creation.
+func TestVaultProvider_Vault_Success(t *testing.T) {
 	tokenMgr := &tokenmock.TokenStoreServiceManager{}
 	ttxMgr := &ttxmock.TTXStoreServiceManager{}
 	auditMgr := &auditmock.AuditStoreServiceManager{}
@@ -60,8 +60,8 @@ func TestVaultProvider_Vault_Success_Counterfeiter(t *testing.T) {
 	assert.Equal(t, 1, auditMgr.StoreServiceByTMSIdCallCount())
 }
 
-// TestVaultProvider_Vault_Cached_Counterfeiter verifies vault caching behavior.
-func TestVaultProvider_Vault_Cached_Counterfeiter(t *testing.T) {
+// TestVaultProvider_Vault_Cached verifies vault caching behavior.
+func TestVaultProvider_Vault_Cached(t *testing.T) {
 	tokenMgr := &tokenmock.TokenStoreServiceManager{}
 	ttxMgr := &ttxmock.TTXStoreServiceManager{}
 	auditMgr := &auditmock.AuditStoreServiceManager{}
@@ -97,8 +97,8 @@ func TestVaultProvider_Vault_Cached_Counterfeiter(t *testing.T) {
 	assert.Equal(t, 1, auditMgr.StoreServiceByTMSIdCallCount())
 }
 
-// TestVaultProvider_Vault_TokenDBError_Counterfeiter verifies error handling for token DB failures.
-func TestVaultProvider_Vault_TokenDBError_Counterfeiter(t *testing.T) {
+// TestVaultProvider_Vault_TokenDBError verifies error handling for token DB failures.
+func TestVaultProvider_Vault_TokenDBError(t *testing.T) {
 	tokenMgr := &tokenmock.TokenStoreServiceManager{}
 	ttxMgr := &ttxmock.TTXStoreServiceManager{}
 	auditMgr := &auditmock.AuditStoreServiceManager{}
@@ -119,8 +119,8 @@ func TestVaultProvider_Vault_TokenDBError_Counterfeiter(t *testing.T) {
 	assert.Equal(t, 1, tokenMgr.StoreServiceByTMSIdCallCount())
 }
 
-// TestVaultProvider_Vault_TTXDBError_Counterfeiter verifies error handling for transaction DB failures.
-func TestVaultProvider_Vault_TTXDBError_Counterfeiter(t *testing.T) {
+// TestVaultProvider_Vault_TTXDBError verifies error handling for transaction DB failures.
+func TestVaultProvider_Vault_TTXDBError(t *testing.T) {
 	tokenMgr := &tokenmock.TokenStoreServiceManager{}
 	ttxMgr := &ttxmock.TTXStoreServiceManager{}
 	auditMgr := &auditmock.AuditStoreServiceManager{}
@@ -145,8 +145,8 @@ func TestVaultProvider_Vault_TTXDBError_Counterfeiter(t *testing.T) {
 	assert.Equal(t, 1, ttxMgr.StoreServiceByTMSIdCallCount())
 }
 
-// TestVaultProvider_Vault_AuditDBError_Counterfeiter verifies error handling for audit DB failures.
-func TestVaultProvider_Vault_AuditDBError_Counterfeiter(t *testing.T) {
+// TestVaultProvider_Vault_AuditDBError verifies error handling for audit DB failures.
+func TestVaultProvider_Vault_AuditDBError(t *testing.T) {
 	tokenMgr := &tokenmock.TokenStoreServiceManager{}
 	ttxMgr := &ttxmock.TTXStoreServiceManager{}
 	auditMgr := &auditmock.AuditStoreServiceManager{}
@@ -174,8 +174,8 @@ func TestVaultProvider_Vault_AuditDBError_Counterfeiter(t *testing.T) {
 	assert.Equal(t, 1, auditMgr.StoreServiceByTMSIdCallCount())
 }
 
-// TestVaultProvider_Vault_MultipleNetworks_Counterfeiter verifies handling of multiple network vaults.
-func TestVaultProvider_Vault_MultipleNetworks_Counterfeiter(t *testing.T) {
+// TestVaultProvider_Vault_MultipleNetworks verifies handling of multiple network vaults.
+func TestVaultProvider_Vault_MultipleNetworks(t *testing.T) {
 	tokenMgr := &tokenmock.TokenStoreServiceManager{}
 	ttxMgr := &ttxmock.TTXStoreServiceManager{}
 	auditMgr := &auditmock.AuditStoreServiceManager{}
