@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package bench
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -17,10 +18,12 @@ import (
 	"strconv"
 	"strings"
 
-	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
+	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
+	tk "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 const (
@@ -108,43 +111,64 @@ func newTokenTransferVerifyParams(outputPath string,
 	}
 }
 
-type TransferServiceView struct {
-	params trandferServiceParams
-	proof  *ProofData
+type fakeLedger struct{}
+
+func (*fakeLedger) GetState(_ tk.ID) ([]byte, error) {
+	panic("not implemented")
 }
 
-// Call deserializes a token request, extracts its transfer actions,
-// and verifies each ZK proof.
-// To reflect token/core/zkatdlog/nogh/v1/transfer.go VerifyTransfer
+func newTokenValidator(ppRaw []byte) (*token.Validator, error) {
+	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+	ppm, err := is.PublicParametersFromBytes(ppRaw)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deserialize public parameters: %w", err)
+	}
+	v, err := is.DefaultValidator(ppm)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create default validator: %w", err)
+	}
+	return token.NewValidator(v), nil
+}
+
+type TransferServiceView struct {
+	params    trandferServiceParams
+	proof     *ProofData
+	validator *token.Validator
+}
+
+// Call runs the full token request validation pipeline matching the
+// regression test's UnmarshallAndVerifyWithMetadata path: auditing,
+// signatures, ZK proofs, HTLC, upgrade witnesses, and metadata checks.
+// Call Chain:
+//   1. token.Validator.UnmarshallAndVerifyWithMetadata -> driver.Validator.VerifyTokenRequestFromRaw
+//   2. VerifyTokenRequestFromRaw (from token/core/common/validator.go)
+//     - deserializes the raw bytes into a TokenRequest, prepares signed message + signatures
+// 	   - calls VerifyTokenRequest
+//   3. VerifyTokenRequest runs three stages:
+//     - Auditing validation (VerifyAuditing) [verifies auditor signatures]
+//     - Issue validation (verifyIssues) [verifies issue actions]
+//     - Transfer validation (verifyTransfers):
+//       a. TransferActionValidate [action.Validate()]
+//       b. TransferSignatureValidate [verifies sender signatures (deserializes owner identity, checks signature)]
+//       c. TransferUpgradeWitnessValidate
+//       d. TransferZKProofValidate [transfer.NewVerifier(in, outputCommitments, pp).Verify(proof)]
+//       e. TransferHTLCValidate
+//       f. TransferApplicationDataValidate [validates metadata]
+//   4. After all validators pass, it checks that all metadata have been validated
+
 func (q *TransferServiceView) Call(viewCtx view.Context) (interface{}, error) {
 	if q.proof == nil {
 		return nil, errors.New("proof data is nil")
 	}
 
-	tr := &driver.TokenRequest{}
-	if err := tr.FromBytes(q.proof.TokenRequestRaw); err != nil {
-		return nil, fmt.Errorf("failed to deserialize token request: %w", err)
-	}
-
-	pp := q.proof.PubParams
-	for _, raw := range tr.Transfers {
-		action := &transfer.Action{}
-		if err := action.Deserialize(raw); err != nil {
-			return nil, fmt.Errorf("failed to deserialize transfer action: %w", err)
-		}
-		if err := action.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid transfer action: %w", err)
-		}
-
-		inputTokens := action.InputTokens()
-		in := make([]*math.G1, len(inputTokens))
-		for i, tok := range inputTokens {
-			in[i] = tok.Data
-		}
-
-		if err := transfer.NewVerifier(in, action.GetOutputCommitments(), pp).Verify(action.GetProof()); err != nil {
-			return nil, fmt.Errorf("failed to verify transfer proof: %w", err)
-		}
+	_, _, err := q.validator.UnmarshallAndVerifyWithMetadata(
+		context.Background(),
+		&fakeLedger{},
+		token.RequestAnchor(q.proof.TxID),
+		q.proof.TokenRequestRaw,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify token request: %w", err)
 	}
 
 	return nil, nil
@@ -160,15 +184,19 @@ func (c *TransferServiceViewFactory) NewView(in []byte) (view.View, error) {
 	if err := json.Unmarshal(in, &f.params); err != nil {
 		return nil, err
 	}
-	var proof *ProofData
 	if f.params.Proof != nil {
-		var err error
-		proof, err = f.params.Proof.Deserialize()
+		proof, err := f.params.Proof.Deserialize()
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal wire proof: %w", err)
 		}
+		f.proof = proof
+
+		v, err := newTokenValidator(f.params.Proof.PubParamsRaw)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create token validator: %w", err)
+		}
+		f.validator = v
 	}
-	f.proof = proof
 
 	return f, nil
 }
