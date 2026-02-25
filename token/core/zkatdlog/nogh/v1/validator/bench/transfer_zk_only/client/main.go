@@ -2,30 +2,6 @@
 Copyright IBM Corp All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
-
-
-The Flow
-  Client                                  Server
-  ──────                                  ──────
-  1. Load proof data from disk
-     (pub params + token request)
-          │
-  2. JSON-serialize params               3. Receive gRPC request
-     (includes WireProofData)  ──gRPC──►     with name="zkp"
-                                          │
-                                       4. TransferServiceViewFactory.NewView(jsonBytes)
-                                          → deserialize WireProofData → ProofData
-                                          → create token.Validator from public params
-                                          │
-                                       5. TransferServiceView.Call()
-                                          → validator.UnmarshallAndVerifyWithMetadata(...)
-                                            (full pipeline: auditing, signatures, ZK proofs,
-                                             HTLC, upgrade witnesses, metadata checks)
-                                          │
-  6. Receive response            ◄────  7. Return result (nil, nil) on success
-     Record latency/throughput
-
-
 */
 
 package main
