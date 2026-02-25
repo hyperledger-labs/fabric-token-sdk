@@ -71,22 +71,12 @@ func (n *CronListenerManager) PermanentLookupListenerSupported() bool {
 // AddPermanentLookupListener adds a permanent lookup listener for the given key.
 // It schedules a recurring job that checks for state changes.
 func (n *CronListenerManager) AddPermanentLookupListener(namespace string, key string, listener Listener) error {
-	logger.Debugf("AddPermanentLookupListener [%s:%s]", namespace, key)
+	logger.Infof("AddPermanentLookupListener [%s:%s]", namespace, key)
 
-	var lastValue []byte
 	j, err := n.scheduler.NewJob(
 		gocron.DurationJob(n.config.PermanentInterval()),
-		gocron.NewTask(func() {
-			logger.Debugf("[PermanentKeyCheck] check for key [%s:%s]", namespace, key)
-			v, err := n.queryService.GetState(namespace, key)
-			if err == nil && v != nil && len(v.Raw) != 0 {
-				if !bytes.Equal(lastValue, v.Raw) {
-					logger.Debugf("[PermanentKeyCheck] key [%s:%s] found with new value, notify listener", namespace, key)
-					listener.OnStatus(context.Background(), key, v.Raw)
-					lastValue = v.Raw
-				}
-			}
-		}),
+		gocron.NewTask(NewPermanentJob(namespace, key, listener, n.queryService)),
+		gocron.WithSingletonMode(gocron.LimitModeReschedule),
 	)
 	if err != nil {
 		return errors.Wrapf(err, "failed scheduling permanent lookup job")
@@ -103,7 +93,7 @@ func (n *CronListenerManager) AddPermanentLookupListener(namespace string, key s
 // It schedules a recurring job that checks for the key until it is found or the deadline is reached.
 // The job is removed once it is invoked.
 func (n *CronListenerManager) AddLookupListener(namespace string, key string, listener lookup.Listener) error {
-	logger.Debugf("AddLookupListener [%s:%s]", namespace, key)
+	logger.Infof("AddLookupListener [%s:%s]", namespace, key)
 
 	deadline := time.Now().Add(n.config.OnceDeadline())
 
@@ -112,10 +102,10 @@ func (n *CronListenerManager) AddLookupListener(namespace string, key string, li
 	var err error
 
 	task := gocron.NewTask(func() {
-		logger.Debugf("[KeyCheck] check for key [%s:%s]", namespace, key)
+		logger.Infof("[KeyCheck] check for key [%s:%s]", namespace, key)
 		v, err := n.queryService.GetState(namespace, key)
 		if err == nil && v != nil && len(v.Raw) != 0 {
-			logger.Debugf("[KeyCheck] key [%s:%s] found, notify listener", namespace, key)
+			logger.Infof("[KeyCheck] key [%s:%s] found, notify listener", namespace, key)
 			listener.OnStatus(context.Background(), key, v.Raw)
 
 			// Stop the job, no error is expected here
@@ -125,7 +115,7 @@ func (n *CronListenerManager) AddLookupListener(namespace string, key string, li
 		}
 
 		if time.Now().After(deadline) {
-			logger.Debugf("[KeyCheck] key [%s:%s] not found, deadline reached", namespace, key)
+			logger.Infof("[KeyCheck] key [%s:%s] not found, deadline reached", namespace, key)
 			listener.OnError(context.Background(), key, errors.Errorf("key [%s:%s] not found", namespace, key))
 
 			// Stop the job, no error is expected here
@@ -138,6 +128,7 @@ func (n *CronListenerManager) AddLookupListener(namespace string, key string, li
 	j, err = n.scheduler.NewJob(
 		gocron.DurationJob(n.config.OnceInterval()),
 		task,
+		gocron.WithSingletonMode(gocron.LimitModeReschedule),
 	)
 	if err != nil {
 		return errors.Wrapf(err, "failed scheduling lookup job")
@@ -152,7 +143,7 @@ func (n *CronListenerManager) AddLookupListener(namespace string, key string, li
 
 // RemoveLookupListener removes a lookup listener for the given key and stops its associated job.
 func (n *CronListenerManager) RemoveLookupListener(id string, listener Listener) error {
-	logger.Debugf("RemoveLookupListener [%s]", id)
+	logger.Infof("RemoveLookupListener [%s]", id)
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
@@ -194,4 +185,29 @@ func (n *CronNSListenerManagerProvider) NewManager(network, channel string) (loo
 	}
 
 	return NewCronListenerManager(qs, n.config)
+}
+
+type PermanentJob struct {
+	namespace string
+	key       string
+	listener  Listener
+
+	queryService QueryService
+	lastValue    []byte
+}
+
+func NewPermanentJob(namespace string, key string, listener Listener, queryService QueryService) *PermanentJob {
+	return &PermanentJob{namespace: namespace, key: key, listener: listener, queryService: queryService}
+}
+
+func (j *PermanentJob) Run() {
+	logger.Infof("[PermanentKeyCheck] check for key [%s:%s]", j.namespace, j.key)
+	v, err := j.queryService.GetState(j.namespace, j.key)
+	if err == nil && v != nil && len(v.Raw) != 0 {
+		if !bytes.Equal(j.lastValue, v.Raw) {
+			logger.Infof("[PermanentKeyCheck] key [%s:%s] found with new value, notify listener", j.namespace, j.key)
+			j.listener.OnStatus(context.Background(), j.key, v.Raw)
+			j.lastValue = v.Raw
+		}
+	}
 }
