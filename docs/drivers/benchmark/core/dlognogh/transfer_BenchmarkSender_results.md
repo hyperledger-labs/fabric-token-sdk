@@ -9,7 +9,7 @@ goos: darwin
 goarch: arm64
 pkg: github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer
 cpu: Apple M1 Max
-                                                                                                      │ docs/benchmark/dlognogh/transfer_results.txt │
+                                                                                                      │ docs/drivers/benchmark/core/dlognogh/transfer_results.txt │
                                                                                                       │                    sec/op                    │
 Sender/Setup(bits_32,_curve_BN254,_#i_1,_#o_1)_with_1_workers                                                                            547.2µ ± 6%
 Sender/Setup(bits_32,_curve_BN254,_#i_1,_#o_2)_with_1_workers                                                                            56.35m ± 3%
@@ -121,7 +121,7 @@ VerificationSenderProof/Setup(bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,
 VerificationSenderProof/Setup(bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3)_with_1_workers                                    135.0m ± 3%
 geomean                                                                                                                                  45.58m
 
-                                                                                                      │ docs/benchmark/dlognogh/transfer_results.txt │
+                                                                                                      │ docs/drivers/benchmark/core/dlognogh/transfer_results.txt │
                                                                                                       │                     B/op                     │
 Sender/Setup(bits_32,_curve_BN254,_#i_1,_#o_1)_with_1_workers                                                                           23.53Ki ± 0%
 Sender/Setup(bits_32,_curve_BN254,_#i_1,_#o_2)_with_1_workers                                                                           1.164Mi ± 0%
@@ -233,7 +233,7 @@ VerificationSenderProof/Setup(bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,
 VerificationSenderProof/Setup(bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3)_with_1_workers                                   1.691Mi ± 0%
 geomean                                                                                                                                 742.7Ki
 
-                                                                                                      │ docs/benchmark/dlognogh/transfer_results.txt │
+                                                                                                      │ docs/drivers/benchmark/core/dlognogh/transfer_results.txt │
                                                                                                       │                  allocs/op                   │
 Sender/Setup(bits_32,_curve_BN254,_#i_1,_#o_1)_with_1_workers                                                                             436.0 ± 0%
 Sender/Setup(bits_32,_curve_BN254,_#i_1,_#o_2)_with_1_workers                                                                            17.51k ± 0%

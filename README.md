@@ -19,7 +19,7 @@ The project will be subject to rapid changes to complete the open-sourcing proce
 - [`Contributing`](CONTRIBUTING.md): How to contribute to the project.
 - [`Fabric Samples`](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk) Token SDK sample application is the
   quickest way to get a full network running with a REST API to issue, transfer and redeem tokens right away.
-- [`Benchmarks`](./docs/benchmark/benchmark.md): Benchmark guidelines and reports.
+- [`Benchmarks`](./docs/drivers/benchmark/benchmark.md): Benchmark guidelines and reports.
 - `Feedback`: Your help is the key to the success of the Fabric Token SDK. 
   - Submit your issues [`here`][`fabric-token-sdk` Issues]. 
   - Found a bug? Need help to fix an issue? You have a great idea for a new feature? Talk to us! You can reach us on
