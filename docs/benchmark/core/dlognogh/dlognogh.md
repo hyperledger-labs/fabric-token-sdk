@@ -1,5 +1,9 @@
 # ZKAT DLog No Graph Hiding Benchmarks
 
+> **Related Documentation:**
+> - [Testing Architecture](./dlognogh_architecture.md) - Understanding the test layers
+> - [Regression Tests](./dlognogh_regression.md) - Backwards compatibility testing
+
 Packages with benchmark tests:
 
 - `token/core/zkatdlog/nogh/v1/transfer`: 
