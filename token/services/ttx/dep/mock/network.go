@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -34,6 +35,18 @@ type Network struct {
 	anonymousIdentityReturnsOnCall map[int]struct {
 		result1 view.Identity
 		result2 error
+	}
+	BroadcastStub        func(context.Context, interface{}) error
+	broadcastMutex       sync.RWMutex
+	broadcastArgsForCall []struct {
+		arg1 context.Context
+		arg2 interface{}
+	}
+	broadcastReturns struct {
+		result1 error
+	}
+	broadcastReturnsOnCall map[int]struct {
+		result1 error
 	}
 	ComputeTxIDStub        func(*network.TxID) string
 	computeTxIDMutex       sync.RWMutex
@@ -187,6 +200,68 @@ func (fake *Network) AnonymousIdentityReturnsOnCall(i int, result1 view.Identity
 		result1 view.Identity
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *Network) Broadcast(arg1 context.Context, arg2 interface{}) error {
+	fake.broadcastMutex.Lock()
+	ret, specificReturn := fake.broadcastReturnsOnCall[len(fake.broadcastArgsForCall)]
+	fake.broadcastArgsForCall = append(fake.broadcastArgsForCall, struct {
+		arg1 context.Context
+		arg2 interface{}
+	}{arg1, arg2})
+	stub := fake.BroadcastStub
+	fakeReturns := fake.broadcastReturns
+	fake.recordInvocation("Broadcast", []interface{}{arg1, arg2})
+	fake.broadcastMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *Network) BroadcastCallCount() int {
+	fake.broadcastMutex.RLock()
+	defer fake.broadcastMutex.RUnlock()
+	return len(fake.broadcastArgsForCall)
+}
+
+func (fake *Network) BroadcastCalls(stub func(context.Context, interface{}) error) {
+	fake.broadcastMutex.Lock()
+	defer fake.broadcastMutex.Unlock()
+	fake.BroadcastStub = stub
+}
+
+func (fake *Network) BroadcastArgsForCall(i int) (context.Context, interface{}) {
+	fake.broadcastMutex.RLock()
+	defer fake.broadcastMutex.RUnlock()
+	argsForCall := fake.broadcastArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *Network) BroadcastReturns(result1 error) {
+	fake.broadcastMutex.Lock()
+	defer fake.broadcastMutex.Unlock()
+	fake.BroadcastStub = nil
+	fake.broadcastReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *Network) BroadcastReturnsOnCall(i int, result1 error) {
+	fake.broadcastMutex.Lock()
+	defer fake.broadcastMutex.Unlock()
+	fake.BroadcastStub = nil
+	if fake.broadcastReturnsOnCall == nil {
+		fake.broadcastReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.broadcastReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *Network) ComputeTxID(arg1 *network.TxID) string {
