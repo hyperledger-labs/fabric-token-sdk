@@ -1,0 +1,60 @@
+/*
+Copyright IBM Corp All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package main
+
+import (
+	"flag"
+	"fmt"
+	"path"
+	"runtime"
+	"time"
+
+	"github.com/hyperledger-labs/fabric-smart-client/integration/benchmark/node"
+	bench "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/bench/transfer_service"
+	"google.golang.org/grpc/benchmark/flags"
+)
+
+var (
+	numConn      = flags.IntSlice("numConn", []int{1, 2}, "Number of grpc client connections - may be a comma-separated list")
+	numWorker    = flags.IntSlice("cpu", []int{1, 2, 4, 8}, "Number of concurrent worker - may be a comma-separated list")
+	workloadFlag = flags.StringSlice("workloads", []string{"sign"}, "Workloads to execute - may be a comma-separated list")
+	warmupDur    = flag.Duration("warmup", 5*time.Second, "Warmup duration")
+	duration     = flag.Duration("benchtime", 10*time.Second, "Duration for every execution")
+	count        = flag.Int("count", 1, "Number of executions")
+)
+
+func main() {
+	flag.Parse()
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	testdataPath := "./out/testdata" // for local debugging you can set testdataPath := "out/testdata"
+	clientConfPath := path.Join(testdataPath, "fsc", "nodes", "test-node.0", "client-config.yaml")
+
+	params := bench.NewTokenTransferVerifyParamsSlice("")[0]
+	fmt.Println("Sending Pre-computing ZK proof...")
+
+	zkpWorkload := node.Workload{
+		Name:    "transfer-zkp",
+		Factory: &bench.TransferServiceViewFactory{},
+		Params:  params,
+	}
+
+	selected := make([]node.Workload, 0, len(*workloadFlag))
+	selected = append(selected, zkpWorkload)
+
+	node.RunRemoteBenchmarkSuite(node.RemoteBenchmarkConfig{
+		Workloads:      selected,
+		ClientConfPath: clientConfPath,
+		ConnCounts:     *numConn,
+		WorkerCounts:   *numWorker,
+		WarmupDur:      *warmupDur,
+		BenchTime:      *duration,
+		Count:          *count,
+		BenchName:      "BenchmarkAPIGRPCRemote",
+	})
+}
