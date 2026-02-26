@@ -25,6 +25,14 @@ func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {
 	}
 }
 
+// NewValidatorDriver returns a new factory for the zkatdlog validator driver.
+func NewValidatorDriver() core.NamedFactory[driver.ValidatorDriver] {
+	return core.NamedFactory[driver.ValidatorDriver]{
+		Name:   core.DriverIdentifier(v1.DLogNoGHDriverName, v1.ProtocolV1),
+		Driver: &PPMFactory{},
+	}
+}
+
 // NewPublicParametersManager returns a new zkatdlog public parameters manager for the passed public parameters.
 func (d *PPMFactory) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
 	pp, ok := params.(*v1.PublicParams)

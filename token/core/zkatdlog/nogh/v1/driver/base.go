@@ -44,7 +44,11 @@ func (d *Base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 
 // DefaultValidator returns a new zkatdlog validator for the passed public parameters.
 func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	deserializer, err := NewDeserializer(pp.(*v1.PublicParams))
+	ppp, ok := pp.(*v1.PublicParams)
+	if !ok {
+		return nil, errors.Errorf("invalid public parameters type [%T]", pp)
+	}
+	deserializer, err := NewDeserializer(ppp)
 	if err != nil {
 		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
 	}
@@ -52,12 +56,17 @@ func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 
 	return validator.New(
 		logger,
-		pp.(*v1.PublicParams),
+		ppp,
 		deserializer,
 		nil,
 		nil,
 		nil,
 	), nil
+}
+
+// NewDefaultValidator returns a new zkatdlog validator for the passed public parameters.
+func (d *Base) NewDefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+	return d.DefaultValidator(pp)
 }
 
 // NewWalletService returns a new zkatdlog wallet service.
