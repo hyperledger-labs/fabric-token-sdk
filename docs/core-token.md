@@ -73,6 +73,22 @@ token:
       workers: 10
       # queueSize is the size of the event buffer. Defaults to 1000.
       queueSize: 1000
+  
+  # fabricx configuration for FabricX-specific settings
+  fabricx:
+    # lookup configuration for the lookup service
+    lookup:
+      # permanent lookup configuration
+      permanent:
+        # interval is the polling interval for permanent lookups. Defaults to 1m.
+        interval: 1m
+      # one-time lookup configuration
+      once:
+        # deadline is the maximum time to wait for a one-time lookup. Defaults to 5m.
+        deadline: 5m
+        # interval is the polling interval for one-time lookups. Defaults to 2s.
+        interval: 2s
+        
   tms:
     mytms: # unique name of this token management system
       network: default # the name of the network this TMS refers to (Fabric, etc.)
@@ -218,3 +234,26 @@ Default values:
 - delivery.lruSize: 30
 - delivery.lruBuffer: 15
 - delivery.listenerTimeout: 10s
+
+---
+
+## Optional: token.fabricx.lookup
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  fabricx:
+    lookup:
+      permanent:
+        interval: 1m
+      once:
+        deadline: 5m
+        interval: 2s
+```
+
+Default values:
+
+- permanent.interval: 1m
+- once.deadline: 5m
+- once.interval: 2s

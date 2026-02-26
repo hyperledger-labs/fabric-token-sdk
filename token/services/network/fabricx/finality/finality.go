@@ -291,12 +291,12 @@ func NewNotificationServiceBased(
 	queryServiceProvider QueryServiceProvider,
 	listenerManagerProvider ListenerManagerProvider,
 	queue Queue,
-) (finality.ListenerManagerProvider, error) {
+) finality.ListenerManagerProvider {
 	return &NSListenerManagerProvider{
 		QueryServiceProvider:    queryServiceProvider,
 		ListenerManagerProvider: listenerManagerProvider,
 		queue:                   queue,
-	}, nil
+	}
 }
 
 func (n *NSListenerManagerProvider) NewManager(network, channel string) (finality.ListenerManager, error) {
