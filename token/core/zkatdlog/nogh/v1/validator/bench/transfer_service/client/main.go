@@ -63,7 +63,7 @@ func main() {
 	fmt.Println("Sending Pre-computing ZK proof...")
 
 	zkpWorkload := node.Workload{
-		Name:    "zkp",
+		Name:    "transfer-service",
 		Factory: &bench.TransferServiceViewFactory{},
 		Params:  params,
 	}

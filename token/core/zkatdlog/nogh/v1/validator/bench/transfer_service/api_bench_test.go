@@ -22,7 +22,7 @@ func BenchmarkAPI(b *testing.B) {
 	require.NoError(b, err)
 
 	n, err := node.SetupNode(nodeConfPath, node.NamedFactory{
-		Name:    "zkp",
+		Name:    "transfer-service",
 		Factory: &TransferServiceViewFactory{},
 	})
 	require.NoError(b, err)
@@ -32,7 +32,7 @@ func BenchmarkAPI(b *testing.B) {
 	require.NoError(b, err)
 
 	wl := node.Workload{
-		Name:    "zkp",
+		Name:    "transfer-service",
 		Factory: &TransferServiceViewFactory{},
 		Params:  NewTokenTransferVerifyParamsSlice("")[0],
 	}
