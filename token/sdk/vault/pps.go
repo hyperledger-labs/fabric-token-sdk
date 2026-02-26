@@ -12,10 +12,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
+// PublicParamsStorage retrieves public parameters from vault storage.
 type PublicParamsStorage struct {
 	Provider *Provider
 }
 
+// PublicParams returns the serialized public parameters for the given TMS coordinates.
 func (p *PublicParamsStorage) PublicParams(ctx context.Context, networkID string, channel string, namespace string) ([]byte, error) {
 	vault, err := p.Provider.Vault(networkID, channel, namespace)
 	if err != nil {

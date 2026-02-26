@@ -1108,11 +1108,46 @@ func (r *Request) FromBytes(raw []byte) error {
 }
 
 // AddAuditorSignature adds an auditor signature to the request.
+// PreAllocateAuditorSignatures pre-allocates the auditor signatures slice to avoid repeated reallocations.
+// Call this method if you know the expected number of auditors in advance.
+func (r *Request) PreAllocateAuditorSignatures(expectedCount int) {
+	if expectedCount > 0 && cap(r.Actions.AuditorSignatures) < expectedCount {
+		r.Actions.AuditorSignatures = make([]*driver.AuditorSignature, 0, expectedCount)
+	}
+}
+
+// AddAuditorSignature adds a single auditor signature to the request.
+// For better performance when adding multiple signatures, consider using AddAuditorSignatures instead.
 func (r *Request) AddAuditorSignature(identity Identity, sigma []byte) {
 	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, &driver.AuditorSignature{
 		Identity:  identity,
 		Signature: sigma,
 	})
+}
+
+// AddAuditorSignatures adds multiple auditor signatures in a single operation.
+// This is more efficient than calling AddAuditorSignature multiple times.
+func (r *Request) AddAuditorSignatures(identities []Identity, sigmas [][]byte) error {
+	if len(identities) != len(sigmas) {
+		return errors.Errorf("identities and signatures length mismatch: %d != %d", len(identities), len(sigmas))
+	}
+
+	// Pre-allocate if needed
+	if cap(r.Actions.AuditorSignatures) < len(r.Actions.AuditorSignatures)+len(identities) {
+		newCap := len(r.Actions.AuditorSignatures) + len(identities)
+		newSlice := make([]*driver.AuditorSignature, len(r.Actions.AuditorSignatures), newCap)
+		copy(newSlice, r.Actions.AuditorSignatures)
+		r.Actions.AuditorSignatures = newSlice
+	}
+
+	for i := range identities {
+		r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, &driver.AuditorSignature{
+			Identity:  identities[i],
+			Signature: sigmas[i],
+		})
+	}
+
+	return nil
 }
 
 func (r *Request) SetSignatures(sigmas map[string][]byte) bool {

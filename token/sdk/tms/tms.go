@@ -18,6 +18,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
+// PostInitializer performs post-initialization tasks for TMS instances.
+// It restores databases and configures supported token formats.
 type PostInitializer struct {
 	tokensProvider *tokens2.ServiceManager
 
@@ -26,6 +28,7 @@ type PostInitializer struct {
 	auditorManager  *auditor.ServiceManager
 }
 
+// NewPostInitializer creates a new post-initializer with the required service managers.
 func NewPostInitializer(tokensProvider *tokens2.ServiceManager, networkProvider *network.Provider, ownerManager *ttx.ServiceManager, auditorManager *auditor.ServiceManager) (*PostInitializer, error) {
 	return &PostInitializer{
 		tokensProvider:  tokensProvider,
@@ -35,6 +38,8 @@ func NewPostInitializer(tokensProvider *tokens2.ServiceManager, networkProvider 
 	}, nil
 }
 
+// PostInit performs initialization tasks after a TMS is created.
+// It restores owner and auditor databases and sets supported token formats.
 func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, channel, namespace string) error {
 	tmsID := token3.TMSID{
 		Network:   networkID,

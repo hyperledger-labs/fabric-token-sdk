@@ -39,6 +39,7 @@ type tokenRequest interface {
 	String() string
 }
 
+//go:generate counterfeiter -o mock/audit_store_service_manager.go --fake-name AuditStoreServiceManager . StoreServiceManager
 type StoreServiceManager db.StoreServiceManager[*StoreService]
 
 func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
