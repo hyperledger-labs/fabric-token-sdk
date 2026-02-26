@@ -29,7 +29,7 @@ func BenchmarkAPIGRPC(b *testing.B) {
 	require.NoError(b, err)
 
 	n, err := node.SetupNode(nodeConfPath, node.NamedFactory{
-		Name:    "zkp",
+		Name:    "transfer-service",
 		Factory: &TransferServiceViewFactory{},
 	})
 
@@ -37,14 +37,10 @@ func BenchmarkAPIGRPC(b *testing.B) {
 	defer n.Stop()
 
 	wl := node.Workload{
-		Name:    "zkp",
+		Name:    "transfer-service",
 		Factory: &TransferServiceViewFactory{},
 		Params:  NewTokenTransferVerifyParamsSlice("")[0], // TODO
 	}
 
 	node.RunAPIGRPCBenchmark(b, wl, clientConfPath, *numConn)
-
-	// for _, bm := range ... {
-	// 	node.RunAPIGRPPCBenchmark(b, wl, bm)
-	// }
 }

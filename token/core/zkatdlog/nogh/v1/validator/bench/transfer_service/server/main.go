@@ -28,7 +28,7 @@ func main() {
 
 	// create server
 	n, err := node.SetupNode(nodeConfPath, node.NamedFactory{
-		Name:    "zkp",
+		Name:    "transfer-service",
 		Factory: &bench.TransferServiceViewFactory{},
 	})
 	if err != nil {

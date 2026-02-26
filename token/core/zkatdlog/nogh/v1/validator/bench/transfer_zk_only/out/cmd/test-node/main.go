@@ -8,6 +8,8 @@ package main
 
 import (
 	fscnode "github.com/hyperledger-labs/fabric-smart-client/node"
+
+	
 )
 
 func main() {

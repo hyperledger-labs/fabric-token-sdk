@@ -127,6 +127,7 @@ func newTokenValidator(ppRaw []byte) (*token.Validator, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create default validator: %w", err)
 	}
+
 	return token.NewValidator(v), nil
 }
 
