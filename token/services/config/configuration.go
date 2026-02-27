@@ -41,10 +41,10 @@ func NewConfiguration(cp Provider, keyID string, tmsID driver.TMSID) *Configurat
 func (m *Configuration) Validate() error {
 	// check TMS ID
 	if len(m.tmsID.Network) == 0 {
-		return errors.New("missing network id")
+		return errors.New("token-sdk configuration error: missing required field 'network'")
 	}
 	if len(m.tmsID.Namespace) == 0 {
-		return errors.New("missing namespace id")
+		return errors.New("token-sdk configuration error: missing required field 'namespace'")
 	}
 
 	for _, validator := range m.validators {

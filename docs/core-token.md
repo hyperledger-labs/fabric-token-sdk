@@ -1,3 +1,25 @@
+## Minimal Token-SDK Configuration
+
+The Token SDK can start with the following minimal configuration:
+
+```yaml
+token:
+  enabled: true
+  tms:
+    default:
+      network: mynetwork
+      namespace: mynamespace
+```
+
+### Required Fields
+
+The following fields are strictly required:
+
+- `network`
+- `namespace`
+
+All other configuration sections are optional and use sensible defaults.
+
 # Example core.yaml section
 
 The following example provides descriptions for the various keys required by the Token SDK.
