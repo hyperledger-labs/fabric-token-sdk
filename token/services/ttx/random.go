@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"crypto/rand"
+	"io"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
@@ -17,12 +18,12 @@ const (
 	NonceSize = 24
 )
 
-// GetRandomBytes returns len random looking bytes
-func GetRandomBytes(len int) ([]byte, error) {
-	key := make([]byte, len)
+// GetRandomBytes returns length random bytes, guaranteeing the buffer is fully filled
+func GetRandomBytes(length int) ([]byte, error) {
+	key := make([]byte, length)
 
-	// TODO: rand could fill less bytes then len
-	_, err := rand.Read(key)
+	// Ensure the buffer is completely filled
+	_, err := io.ReadFull(rand.Reader, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting random bytes")
 	}
