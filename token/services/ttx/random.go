@@ -1,16 +1,37 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package ttx
 
 import (
-	"github.com/google/uuid"
+	"crypto/rand"
+	"io"
+
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
-// NonceSize is kept for compatibility but no longer used for direct byte allocation
 const (
+	// NonceSize is the default NonceSize
 	NonceSize = 24
 )
 
-// GetRandomNonce returns a secure random nonce based on UUID v4
+// GetRandomBytes returns length random bytes, guaranteeing the buffer is fully filled
+func GetRandomBytes(length int) ([]byte, error) {
+	key := make([]byte, length)
+
+	// Ensure the buffer is completely filled
+	_, err := io.ReadFull(rand.Reader, key)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting random bytes")
+	}
+
+	return key, nil
+}
+
+// GetRandomNonce returns a random byte array of length NonceSize
 func GetRandomNonce() ([]byte, error) {
-	u := uuid.New()
-	return u[:], nil
+	return GetRandomBytes(NonceSize)
 }
