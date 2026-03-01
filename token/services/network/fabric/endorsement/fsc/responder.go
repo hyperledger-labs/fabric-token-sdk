@@ -241,12 +241,6 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 	// Fabric endorsement layer which validates the proposal signature before this view is called.
 	// Here we validate the proposal structure and ensure all required components are present.
 
-	// Validate that the token request is present in the transient data
-	// This ensures the relationship between the proposal and the token actions
-	if len(request.RequestRaw) == 0 {
-		return errors.Errorf("token request is empty for tx [%s]", request.Anchor)
-	}
-
 	// The proposal header and payload should be present
 	if len(proposal.Header()) == 0 {
 		return errors.Errorf("proposal header is empty for tx [%s]", request.Anchor)
