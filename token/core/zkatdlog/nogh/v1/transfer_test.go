@@ -166,10 +166,10 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 		return nil, err
 	}
 	outputs := make([]*token.Token, benchmarkCase.NumOutputs)
-	for i := range benchmarkCase.NumOutputs {
+	for i := range outputs {
 		outputs[i] = &token.Token{
 			Owner:    ownerID,
-			Quantity: token.NewQuantityFromUInt64(uint64(i*10 + 10)).Hex(),
+			Quantity: token.NewQuantityFromUInt64(uint64(i)*10 + 10).Hex(),
 			Type:     "ABC",
 		}
 	}
@@ -178,8 +178,8 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 	numInputs := benchmarkCase.NumInputs
 	ids := make([]*token.ID, numInputs)
 	values := make([]uint64, numInputs)
-	for i := range numInputs {
-		values[i] = uint64(i*10 + 10)
+	for i := range values {
+		values[i] = uint64(i)*10 + 10
 	}
 	baseTokens, metadata, err := v1token.GetTokensWithWitness(values, "ABC", pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
