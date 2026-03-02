@@ -137,6 +137,7 @@ func (c *ChannelProvider) GetMSPManager(network, channel string) (fsc.MSPManager
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get channel [%s] for network [%s]", channel, network)
 	}
+
 	return ch.MSPManager(), nil
 }
 

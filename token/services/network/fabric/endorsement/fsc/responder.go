@@ -243,6 +243,7 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 	}
 
 	logger.DebugfContext(ctx.Context(), "Proposal validated successfully for TX [%s]", request.Anchor)
+
 	return nil
 }
 
