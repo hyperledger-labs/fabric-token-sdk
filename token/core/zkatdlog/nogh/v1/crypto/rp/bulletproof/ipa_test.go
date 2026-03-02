@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package rp_test
+package bulletproof_test
 
 import (
 	"context"
@@ -15,7 +15,8 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,8 +73,8 @@ func TestIPAProofVerify(t *testing.T) {
 	setup, err := newIpaSetup(math.BLS12_381_BBS_GURVY)
 	require.NoError(t, err)
 
-	prover := rp.NewIPAProver(
-		rp.InnerProduct(setup.left, setup.right, setup.curve),
+	prover := bulletproof.NewIPAProver(
+		math2.InnerProduct(setup.left, setup.right, setup.curve),
 		setup.left,
 		setup.right,
 		setup.Q,
@@ -87,8 +88,8 @@ func TestIPAProofVerify(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, proof)
 
-	verifier := rp.NewIPAVerifier(
-		rp.InnerProduct(setup.left, setup.right, setup.curve),
+	verifier := bulletproof.NewIPAVerifier(
+		math2.InnerProduct(setup.left, setup.right, setup.curve),
 		setup.Q,
 		setup.leftGens,
 		setup.rightGens,
@@ -115,8 +116,8 @@ func BenchmarkIPAProver(b *testing.B) {
 	b.Run("bench", func(b *testing.B) {
 		for b.Loop() {
 			setup := envs[rand.Intn(len(envs))]
-			prover := rp.NewIPAProver(
-				rp.InnerProduct(setup.left, setup.right, setup.curve),
+			prover := bulletproof.NewIPAProver(
+				math2.InnerProduct(setup.left, setup.right, setup.curve),
 				setup.left,
 				setup.right,
 				setup.Q,
@@ -143,8 +144,8 @@ func TestParallelIPAProver(t *testing.T) {
 			return newIpaSetup(c.CurveID)
 		},
 		func(ctx context.Context, setup *ipaSetup) error {
-			prover := rp.NewIPAProver(
-				rp.InnerProduct(setup.left, setup.right, setup.curve),
+			prover := bulletproof.NewIPAProver(
+				math2.InnerProduct(setup.left, setup.right, setup.curve),
 				setup.left,
 				setup.right,
 				setup.Q,

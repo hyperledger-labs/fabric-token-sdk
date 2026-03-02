@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package rp
+package csp
 
 import (
 	math "github.com/IBM/mathlib"
@@ -12,14 +12,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 )
 
-// RangeCorrectness contains a set of range proofs for multiple commitments.
-type RangeCorrectness struct {
+// CSPRangeCorrectness contains a set of range proofs for multiple commitments.
+type CSPRangeCorrectness struct {
 	// Proofs is a slice of range proofs.
-	Proofs []*RangeProof
+	Proofs []*CspRangeProof
 }
 
-// Serialize marshals the RangeCorrectness into a byte slice.
-func (r *RangeCorrectness) Serialize() ([]byte, error) {
+// Serialize marshals the CSPRangeCorrectness into a byte slice.
+func (r *CSPRangeCorrectness) Serialize() ([]byte, error) {
 	proofs, err := asn1.NewArray(r.Proofs)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal proofs")
@@ -28,10 +28,10 @@ func (r *RangeCorrectness) Serialize() ([]byte, error) {
 	return asn1.Marshal(proofs)
 }
 
-// Deserialize unmarshals a byte slice into the RangeCorrectness.
-func (r *RangeCorrectness) Deserialize(raw []byte) error {
-	proofs, err := asn1.NewArrayWithNew[*RangeProof](func() *RangeProof {
-		return &RangeProof{}
+// Deserialize unmarshals a byte slice into the CSPRangeCorrectness.
+func (r *CSPRangeCorrectness) Deserialize(raw []byte) error {
+	proofs, err := asn1.NewArrayWithNew[*CspRangeProof](func() *CspRangeProof {
+		return &CspRangeProof{}
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare proofs for unmarshalling")
@@ -46,7 +46,7 @@ func (r *RangeCorrectness) Deserialize(raw []byte) error {
 }
 
 // Validate checks that all range proofs in the set are valid for the given curve.
-func (r *RangeCorrectness) Validate(curve math.CurveID) error {
+func (r *CSPRangeCorrectness) Validate(curve math.CurveID) error {
 	for i, proof := range r.Proofs {
 		if proof == nil {
 			return errors.Errorf("invalid range proof: nil proof at index %d", i)
@@ -60,8 +60,8 @@ func (r *RangeCorrectness) Validate(curve math.CurveID) error {
 	return nil
 }
 
-// RangeCorrectnessProver manages the generation of a set of range proofs.
-type RangeCorrectnessProver struct {
+// CSPRangeCorrectnessProver manages the generation of a set of range proofs.
+type CSPRangeCorrectnessProver struct {
 	// Commitments is the set of Pedersen commitments for which range proofs are generated.
 	Commitments []*math.G1
 	// Values is the set of underlying values.
@@ -76,85 +76,58 @@ type RangeCorrectnessProver struct {
 	RightGenerators []*math.G1
 	// BitLength is the maximum bit length of the values.
 	BitLength uint64
-	// NumberOfRounds is log2 of the bit length.
-	NumberOfRounds uint64
-	// P is an auxiliary generator.
-	P *math.G1
-	// Q is an auxiliary generator.
-	Q *math.G1
 	// Curve is the mathematical curve.
 	Curve *math.Curve
 }
 
-// NewRangeCorrectnessProver returns a new RangeCorrectnessProver instance.
-func NewRangeCorrectnessProver(
+// NewCSPRangeCorrectnessProver returns a new CSPRangeCorrectnessProver instance.
+func NewCSPRangeCorrectnessProver(
 	coms []*math.G1,
 	values []uint64,
 	blindingFactors []*math.Zr,
 	pedersenParameters, leftGenerators, rightGenerators []*math.G1,
-	P, Q *math.G1,
-	bitLength, rounds uint64,
+	bitLength uint64,
 	c *math.Curve,
-) *RangeCorrectnessProver {
-	return &RangeCorrectnessProver{
+) *CSPRangeCorrectnessProver {
+	return &CSPRangeCorrectnessProver{
 		Commitments:        coms,
 		Values:             values,
 		BlindingFactors:    blindingFactors,
 		PedersenParameters: pedersenParameters,
 		LeftGenerators:     leftGenerators,
 		RightGenerators:    rightGenerators,
-		P:                  P,
-		Q:                  Q,
 		BitLength:          bitLength,
-		NumberOfRounds:     rounds,
 		Curve:              c,
 	}
 }
 
 // Prove generates a set of range proofs.
-func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
-	n := len(p.Commitments)
-
-	rc := &RangeCorrectness{
-		Proofs: make([]*RangeProof, n),
-	}
-
-	// SerialExecutor runs tasks immediately with no overhead
-	executor := NewSerialExecutor()
-	errs := make([]error, n)
-
-	for i := range n {
-		executor.Submit(func() {
-			bp := NewRangeProver(
-				p.Commitments[i],
-				p.Values[i],
-				p.PedersenParameters,
-				p.BlindingFactors[i],
-				p.LeftGenerators,
-				p.RightGenerators,
-				p.P,
-				p.Q,
-				p.NumberOfRounds,
-				p.BitLength,
-				p.Curve,
-			)
-			rc.Proofs[i], errs[i] = bp.Prove()
-		})
-	}
-
-	executor.Wait()
-
-	for _, err := range errs {
+func (p *CSPRangeCorrectnessProver) Prove() (*CSPRangeCorrectness, error) {
+	rc := &CSPRangeCorrectness{}
+	rc.Proofs = make([]*CspRangeProof, len(p.Commitments))
+	for i := range len(p.Commitments) {
+		bp := NewCspRangeProver(
+			p.Commitments[i],
+			p.Curve.NewZrFromUint64(p.Values[i]),
+			p.BlindingFactors[i],
+			p.PedersenParameters,
+			p.LeftGenerators,
+			p.RightGenerators,
+			p.BitLength,
+			p.Curve,
+		)
+		proof, err := bp.Prove()
 		if err != nil {
 			return nil, err
 		}
+		rc.Proofs[i] = proof
 	}
 
 	return rc, nil
 }
 
-// RangeCorrectnessVerifier manages the verification of a set of range proofs.
-type RangeCorrectnessVerifier struct {
+// CSPRangeCorrectnessVerifier manages the verification of a set of range proofs.
+type CSPRangeCorrectnessVerifier struct {
 	// Commitments is the set of Pedersen commitments being verified.
 	Commitments []*math.G1
 	// PedersenParameters are the generators (G, H).
@@ -165,72 +138,43 @@ type RangeCorrectnessVerifier struct {
 	RightGenerators []*math.G1
 	// BitLength is the maximum bit length of the values.
 	BitLength uint64
-	// NumberOfRounds is log2 of the bit length.
-	NumberOfRounds uint64
-	// P is an auxiliary generator.
-	P *math.G1
-	// Q is an auxiliary generator.
-	Q *math.G1
 	// Curve is the mathematical curve.
 	Curve *math.Curve
 }
 
-// NewRangeCorrectnessVerifier returns a new RangeCorrectnessVerifier instance.
-func NewRangeCorrectnessVerifier(
+// NewCSPRangeCorrectnessVerifier returns a new CSPRangeCorrectnessVerifier instance.
+func NewCSPRangeCorrectnessVerifier(
 	pedersenParameters, leftGenerators, rightGenerators []*math.G1,
-	P, Q *math.G1,
-	bitLength, rounds uint64,
+	bitLength uint64,
 	curve *math.Curve,
-) *RangeCorrectnessVerifier {
-	return &RangeCorrectnessVerifier{
+) *CSPRangeCorrectnessVerifier {
+	return &CSPRangeCorrectnessVerifier{
 		PedersenParameters: pedersenParameters,
 		LeftGenerators:     leftGenerators,
 		RightGenerators:    rightGenerators,
-		P:                  P,
-		Q:                  Q,
 		BitLength:          bitLength,
-		NumberOfRounds:     rounds,
 		Curve:              curve,
 	}
 }
 
 // Verify checks if the provided set of range proofs is valid.
-func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
+func (v *CSPRangeCorrectnessVerifier) Verify(rc *CSPRangeCorrectness) error {
 	if len(rc.Proofs) != len(v.Commitments) {
 		return errors.New("invalid range proof")
 	}
-
-	n := len(rc.Proofs)
-	executor := NewSerialExecutor()
-	errs := make([]error, n)
-
-	for i := range n {
-		executor.Submit(func() {
-			if rc.Proofs[i] == nil {
-				errs[i] = errors.Errorf("invalid range proof: nil proof at index %d", i)
-
-				return
-			}
-
-			bv := NewRangeVerifier(
-				v.Commitments[i],
-				v.PedersenParameters,
-				v.LeftGenerators,
-				v.RightGenerators,
-				v.P,
-				v.Q,
-				v.NumberOfRounds,
-				v.BitLength,
-				v.Curve,
-			)
-
-			errs[i] = bv.Verify(rc.Proofs[i])
-		})
-	}
-
-	executor.Wait()
-
-	for i, err := range errs {
+	for i := range len(rc.Proofs) {
+		if rc.Proofs[i] == nil {
+			return errors.Errorf("invalid range proof: nil proof at index %d", i)
+		}
+		bv := newCspRangeVerifier(
+			v.PedersenParameters,
+			v.LeftGenerators,
+			v.RightGenerators,
+			v.Commitments[i],
+			v.BitLength,
+			v.Curve,
+		)
+		err := bv.Verify(rc.Proofs[i])
 		if err != nil {
 			return errors.Wrapf(err, "invalid range proof at index %d", i)
 		}

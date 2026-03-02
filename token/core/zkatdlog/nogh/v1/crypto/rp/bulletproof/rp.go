@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package rp
+package bulletproof
 
 import (
 	math "github.com/IBM/mathlib"
@@ -250,8 +250,8 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 		rightGeneratorsPrime[i] = p.RightGenerators[i].Mul(yInv2i)
 	}
 	// compute the commitment to left and right
-	com := commitVector(left, right, p.LeftGenerators, rightGeneratorsPrime, p.Curve)
-	rp.Data.InnerProduct = InnerProduct(left, right, p.Curve)
+	com := CommitVector(left, right, p.LeftGenerators, rightGeneratorsPrime, p.Curve)
+	rp.Data.InnerProduct = math2.InnerProduct(left, right, p.Curve)
 	// produce the IPA
 	ipp := NewIPAProver(
 		rp.Data.InnerProduct,
@@ -302,12 +302,12 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 
 	// C commits to L = (b_0, ..., b_{p.BitLength}) and R = (b_0 - 1 , ..., b_{p.BitLength} - 1)
-	C := commitVectorPlusOne(left, right, p.LeftGenerators, p.RightGenerators, rho, p.P, p.Curve)
+	C := CommitVectorPlusOne(left, right, p.LeftGenerators, p.RightGenerators, rho, p.P, p.Curve)
 	// C is a hiding commitment thanks to rho
 	// C.Add(p.P.Mul(rho))
 
 	// D commits two random vectors U and V
-	D := commitVectorPlusOne(randomLeft, randomRight, p.LeftGenerators, p.RightGenerators, eta, p.P, p.Curve)
+	D := CommitVectorPlusOne(randomLeft, randomRight, p.LeftGenerators, p.RightGenerators, eta, p.P, p.Curve)
 	// D is a hiding commitment thanks to eta
 	// D.Add(p.P.Mul(eta))
 
@@ -358,7 +358,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	copy(rightScalars, randRightPrime)
 	copy(rightScalars[len(randRightPrime):], randomLeft)
 	copy(rightScalars[len(randRightPrime)+len(randomLeft):], randomLeft)
-	t1 := InnerProduct(leftScalars, rightScalars, p.Curve)
+	t1 := math2.InnerProduct(leftScalars, rightScalars, p.Curve)
 
 	// t1 := InnerProduct(leftPrime, randRightPrime, p.Curve)
 	// // compute \sum y^i(V_i(L_i-z) + (R_i +z)U_i)
@@ -371,7 +371,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	T1 := p.CommitmentGenerators[0].Mul2(t1, p.CommitmentGenerators[1], tau1)
 
 	// compute = \sum y^iU_iV_i
-	t2 := InnerProduct(randomLeft, randRightPrime, p.Curve)
+	t2 := math2.InnerProduct(randomLeft, randRightPrime, p.Curve)
 	// commit to t2
 	tau2 := p.Curve.NewRandomZr(rand)
 	T2 := p.CommitmentGenerators[0].Mul2(t2, p.CommitmentGenerators[1], tau2)
