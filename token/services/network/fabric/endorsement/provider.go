@@ -109,11 +109,35 @@ func (l *loader) load(tmsID token2.TMSID) (Service, error) {
 		NewEndorserService(l.tmsp, l.fabricProvider),
 		l.tmsp,
 		NewStorageProvider(l.storeServiceManager),
+		NewChannelProvider(l.fnsp),
 	)
 }
 
 func key(tmsID token2.TMSID) string {
 	return tmsID.Network + tmsID.Channel + tmsID.Namespace
+}
+
+// ChannelProvider provides access to the MSP manager for a given Fabric network and channel.
+type ChannelProvider struct {
+	fnsp *fabric.NetworkServiceProvider
+}
+
+// NewChannelProvider returns a new ChannelProvider instance.
+func NewChannelProvider(fnsp *fabric.NetworkServiceProvider) *ChannelProvider {
+	return &ChannelProvider{fnsp: fnsp}
+}
+
+// GetMSPManager returns the MSP manager for the given network and channel.
+func (c *ChannelProvider) GetMSPManager(network, channel string) (fsc.MSPManager, error) {
+	fns, err := c.fnsp.FabricNetworkService(network)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get fabric network service for [%s]", network)
+	}
+	ch, err := fns.Channel(channel)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get channel [%s] for network [%s]", channel, network)
+	}
+	return ch.MSPManager(), nil
 }
 
 // NamespaceTxProcessor models a namespace transaction processor for fabric

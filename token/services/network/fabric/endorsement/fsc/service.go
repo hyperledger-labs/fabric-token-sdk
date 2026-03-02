@@ -51,6 +51,7 @@ func NewEndorsementService(
 	endorserService EndorserService,
 	tokenManagementSystemProvider TokenManagementSystemProvider,
 	storageProvider StorageProvider,
+	channelProvider ChannelProvider,
 ) (*EndorsementService, error) {
 	if configuration.GetBool(AmIAnEndorserKey) {
 		logger.Debug("this node is an endorser, prepare it...")
@@ -64,6 +65,7 @@ func NewEndorsementService(
 				endorserService,
 				tokenManagementSystemProvider,
 				storageProvider,
+				channelProvider,
 			),
 			&RequestApprovalView{},
 		); err != nil {

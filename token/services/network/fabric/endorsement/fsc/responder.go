@@ -46,6 +46,7 @@ type RequestApprovalResponderView struct {
 	getTranslator                 TranslatorProviderFunc
 	tokenManagementSystemProvider TokenManagementSystemProvider
 	storageProvider               StorageProvider
+	channelProvider               ChannelProvider
 }
 
 func NewRequestApprovalResponderView(
@@ -54,6 +55,7 @@ func NewRequestApprovalResponderView(
 	endorserService EndorserService,
 	tokenManagementSystemProvider TokenManagementSystemProvider,
 	storageProvider StorageProvider,
+	channelProvider ChannelProvider,
 ) *RequestApprovalResponderView {
 	return &RequestApprovalResponderView{
 		keyTranslator:                 keyTranslator,
@@ -61,6 +63,7 @@ func NewRequestApprovalResponderView(
 		endorserService:               endorserService,
 		tokenManagementSystemProvider: tokenManagementSystemProvider,
 		storageProvider:               storageProvider,
+		channelProvider:               channelProvider,
 	}
 }
 
@@ -190,56 +193,25 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 
 	// Get the signed proposal from the underlying Fabric transaction
 	signedProposal := request.Tx.Transaction.SignedProposal()
-	if signedProposal == nil {
-		logger.DebugfContext(ctx.Context(), "Signed proposal is nil for TX [%s], skipping proposal validation", request.Anchor)
-
-		return nil
-	}
 
 	// Get the proposal
 	proposal := request.Tx.Transaction.Proposal()
-	if proposal == nil {
-		logger.DebugfContext(ctx.Context(), "Proposal is nil for TX [%s], skipping proposal validation", request.Anchor)
 
-		return nil
-	}
-
-	// Verify the proposal signature
-	// The signature verification ensures that the proposal was signed by the creator
+	// The creator identity must be present
 	creator := request.Tx.Transaction.Creator()
 	if len(creator) == 0 {
 		return errors.Errorf("creator is empty for tx [%s]", request.Anchor)
 	}
 
-	// Get the proposal bytes for signature verification from the signed proposal
-	// Use a defer/recover to handle cases where the signed proposal is not fully initialized
-	var proposalBytes []byte
-	var signature []byte
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logger.DebugfContext(ctx.Context(), "Failed to access signed proposal fields for TX [%s]: %v", request.Anchor, r)
-			}
-		}()
-		proposalBytes = signedProposal.ProposalBytes()
-		signature = signedProposal.Signature()
-	}()
-
+	// The proposal bytes and signature must be present
+	proposalBytes := signedProposal.ProposalBytes()
 	if len(proposalBytes) == 0 {
-		logger.DebugfContext(ctx.Context(), "Proposal bytes are empty for TX [%s], skipping detailed validation", request.Anchor)
-
-		return nil
+		return errors.Errorf("proposal bytes are empty for tx [%s]", request.Anchor)
 	}
-
+	signature := signedProposal.Signature()
 	if len(signature) == 0 {
-		logger.DebugfContext(ctx.Context(), "Proposal signature is empty for TX [%s], skipping detailed validation", request.Anchor)
-
-		return nil
+		return errors.Errorf("proposal signature is empty for tx [%s]", request.Anchor)
 	}
-
-	// Note: The actual signature verification of the Fabric MSP signature is performed by the
-	// Fabric endorsement layer which validates the proposal signature before this view is called.
-	// Here we validate the proposal structure and ensure all required components are present.
 
 	// The proposal header and payload should be present
 	if len(proposal.Header()) == 0 {
@@ -249,14 +221,28 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 		return errors.Errorf("proposal payload is empty for tx [%s]", request.Anchor)
 	}
 
-	// The actions will be validated in the validate() method which checks:
-	// - Token actions are valid and properly signed
-	// - Read-write set is consistent with the actions
-	// - Token request matches the actions
-	// This ensures the complete relationship between the proposal, actions, read-write set, and token actions
+	// Verify the creator is known to the network via MSP.
+	// In the Fabric protocol, the endorser is responsible for checking that the proposal signer
+	// is recognized by at least one MSP in the channel configuration.
+	mspManager, err := r.channelProvider.GetMSPManager(request.TMSID.Network, request.TMSID.Channel)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get MSP manager for tx [%s]", request.Anchor)
+	}
+	if err := mspManager.IsValid(creator); err != nil {
+		return errors.Wrapf(err, "creator identity is not valid for tx [%s]", request.Anchor)
+	}
 
-	logger.DebugfContext(ctx.Context(), "Proposal structure validated successfully for TX [%s]", request.Anchor)
+	// Verify the proposal signature using the creator's verifier.
+	// This ensures the proposal was indeed signed by the claimed creator.
+	verifier, err := mspManager.GetVerifier(creator)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get verifier for creator for tx [%s]", request.Anchor)
+	}
+	if err := verifier.Verify(proposalBytes, signature); err != nil {
+		return errors.Wrapf(err, "proposal signature verification failed for tx [%s]", request.Anchor)
+	}
 
+	logger.DebugfContext(ctx.Context(), "Proposal validated successfully for TX [%s]", request.Anchor)
 	return nil
 }
 

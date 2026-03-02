@@ -108,6 +108,7 @@ func (l *loader) load(tmsID token2.TMSID) (endorsement.Service, error) {
 		endorsement.NewEndorserService(l.tokenManagementSystemProvider, l.fabricProvider),
 		l.tokenManagementSystemProvider,
 		endorsement.NewStorageProvider(l.storeServiceManager),
+		endorsement.NewChannelProvider(l.fabricProvider),
 	)
 }
 
