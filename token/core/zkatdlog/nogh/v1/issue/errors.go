@@ -85,4 +85,7 @@ var (
 	ErrDeserializeChallengeFailed = errors.New("failed to deserialize challenge")
 	// ErrDeserializeCommitmentToTypeFailed is returned when commitment to type deserialization fails
 	ErrDeserializeCommitmentToTypeFailed = errors.New("failed to deserialize commitment to type")
+	// ErrNilProof is returned when the proof is nil
+	ErrNilProof         = errors.New("nil proof")
+	ErrInvalidProofType = errors.New("invalid proof type")
 )

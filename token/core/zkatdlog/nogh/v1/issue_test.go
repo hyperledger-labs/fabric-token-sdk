@@ -11,6 +11,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -217,7 +218,8 @@ func (ts *testSetup) createValidAction(t *testing.T, issuer []byte) (driver.Issu
 				Data:  tokens[1],
 			},
 		},
-		Proof: proof,
+		ProofType: rp.RangeProofType,
+		Proof:     proof,
 	}
 
 	// Prepare metadata

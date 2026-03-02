@@ -135,7 +135,9 @@ func TransferZKProofValidate(c context.Context, ctx *Context) error {
 	if err := transfer.NewVerifier(
 		in,
 		ctx.TransferAction.GetOutputCommitments(),
-		ctx.PP).Verify(ctx.TransferAction.GetProof()); err != nil {
+		ctx.PP,
+		ctx.TransferAction.ProofType,
+	).Verify(ctx.TransferAction.GetProof()); err != nil {
 		return errors.Join(err, ErrInvalidZKP)
 	}
 

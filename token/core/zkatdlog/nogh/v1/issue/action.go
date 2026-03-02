@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
@@ -60,7 +61,9 @@ type Action struct {
 	// Inputs are the tokens to be redeemed by this issue action.
 	Inputs []*ActionInput
 	// Outputs are the newly issued tokens.
-	Outputs []*token.Token `json:"outputs,omitempty" protobuf:"bytes,1,rep,name=outputs,proto3"`
+	Outputs []*token.Token
+	// ProofType is the type of proof
+	ProofType rp.ProofType
 	// Proof carries the ZKP of IssueAction validity.
 	Proof []byte
 	// Metadata of the issue action.
@@ -79,9 +82,10 @@ func NewAction(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*
 	}
 
 	return &Action{
-		Issuer:  issuer,
-		Outputs: outputs,
-		Proof:   proof,
+		Issuer:    issuer,
+		Outputs:   outputs,
+		Proof:     proof,
+		ProofType: rp.RangeProofType,
 	}, nil
 }
 
@@ -201,6 +205,9 @@ func (i *Action) Validate() error {
 			return ErrNilOutput
 		}
 	}
+	if i.ProofType != rp.RangeProofType && i.ProofType != rp.CSPRangeProofType {
+		return ErrInvalidProofType
+	}
 
 	return nil
 }
@@ -236,16 +243,32 @@ func (i *Action) Serialize() ([]byte, error) {
 		return nil, errors.Join(ErrSerializeOutputsFailed, err)
 	}
 
+	var proof *actions.Proof
+	switch i.ProofType {
+	case rp.RangeProofType:
+		proof = &actions.Proof{
+			ProofType: &actions.Proof_Proof{
+				Proof: i.Proof,
+			},
+		}
+	case rp.CSPRangeProofType:
+		proof = &actions.Proof{
+			ProofType: &actions.Proof_CspBasedProof{
+				CspBasedProof: i.Proof,
+			},
+		}
+	default:
+		return nil, ErrInvalidProofType
+	}
+
 	issueAction := &actions.IssueAction{
 		Version: ProtocolV1,
 		Issuer: &pp.Identity{
 			Raw: i.Issuer,
 		},
-		Inputs:  inputs,
-		Outputs: outputs,
-		Proof: &actions.Proof{
-			Proof: i.Proof,
-		},
+		Inputs:   inputs,
+		Outputs:  outputs,
+		Proof:    proof,
 		Metadata: i.Metadata,
 	}
 
@@ -289,7 +312,16 @@ func (i *Action) Deserialize(raw []byte) error {
 	}
 
 	if issueAction.Proof != nil {
-		i.Proof = issueAction.Proof.Proof
+		switch issueAction.Proof.GetProofType().(type) {
+		case *actions.Proof_CspBasedProof:
+			i.ProofType = rp.CSPRangeProofType
+			i.Proof = issueAction.Proof.GetCspBasedProof()
+		case *actions.Proof_Proof:
+			i.ProofType = rp.RangeProofType
+			i.Proof = issueAction.Proof.GetProof()
+		default:
+			return ErrInvalidProofType
+		}
 	}
 	if issueAction.Issuer != nil {
 		i.Issuer = issueAction.Issuer.Raw
