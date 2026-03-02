@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package rp_test
+package bulletproof_test
 
 import (
 	"context"
@@ -14,8 +14,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,10 +34,11 @@ type bfSetup struct {
 	curve     *math.Curve
 }
 
-func newBfSetup(curveID math.CurveID) (*bfSetup, error) {
+func newBfSetup(curveID math.CurveID, b uint64, value int64) (*bfSetup, error) {
 	curve := math.Curves[curveID]
-	l := uint64(64)
-	nr := 63 - uint64(bits.LeadingZeros64(l)) // #nosec G115
+	l := b
+	nr := log2(l)
+
 	leftGens := make([]*math.G1, l)
 	rightGens := make([]*math.G1, l)
 
@@ -56,7 +56,7 @@ func newBfSetup(curveID math.CurveID) (*bfSetup, error) {
 		rightGens[i] = curve.HashToG1([]byte(strconv.Itoa(2*i + 1)))
 	}
 	bf := curve.NewRandomZr(rand)
-	com := G.Mul(curve.NewZrFromInt(115))
+	com := G.Mul(curve.NewZrFromInt(value))
 	com.Add(H.Mul(bf))
 
 	return &bfSetup{
@@ -75,10 +75,10 @@ func newBfSetup(curveID math.CurveID) (*bfSetup, error) {
 }
 
 func TestBFProofVerify(t *testing.T) {
-	setup, err := newBfSetup(math.BLS12_381_BBS_GURVY)
+	setup, err := newBfSetup(math.BLS12_381_BBS_GURVY, 32, 115)
 	require.NoError(t, err)
 
-	prover := rp.NewRangeProver(
+	prover := bulletproof.NewRangeProver(
 		setup.com,
 		115,
 		[]*math.G1{setup.G, setup.H},
@@ -95,7 +95,7 @@ func TestBFProofVerify(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, proof)
 
-	verifier := rp.NewRangeVerifier(
+	verifier := bulletproof.NewRangeVerifier(
 		setup.com,
 		[]*math.G1{setup.G, setup.H},
 		setup.leftGens,
@@ -111,23 +111,24 @@ func TestBFProofVerify(t *testing.T) {
 }
 
 func BenchmarkBFProver(b *testing.B) {
-	pp, err := profile.New(profile.WithAll(), profile.WithPath("./profile"))
-	require.NoError(b, err)
-	require.NoError(b, pp.Start())
-	defer pp.Stop()
+	// pp, err := profile.New(profile.WithAll(), profile.WithPath("./profile"))
+	// require.NoError(b, err)
+	// require.NoError(b, pp.Start())
+	// defer pp.Stop()
 	envs := make([]*bfSetup, 0, 128)
 	for range 128 {
-		setup, err := newBfSetup(math.BLS12_381_BBS_GURVY)
+		setup, err := newBfSetup(math.BLS12_381_BBS_GURVY, 64, 1_000_000_000_000_000)
 		require.NoError(b, err)
 		envs = append(envs, setup)
 	}
 
 	b.Run("bench", func(b *testing.B) {
+		b.ResetTimer()
 		for b.Loop() {
 			setup := envs[rand.Intn(len(envs))]
-			prover := rp.NewRangeProver(
+			prover := bulletproof.NewRangeProver(
 				setup.com,
-				115,
+				1_000_000_000_000_000,
 				[]*math.G1{setup.G, setup.H},
 				setup.bf,
 				setup.leftGens,
@@ -145,6 +146,46 @@ func BenchmarkBFProver(b *testing.B) {
 	})
 }
 
+func BenchmarkBFVerifier(b *testing.B) {
+	setup, err := newBfSetup(math.BLS12_381_BBS_GURVY, 32, 115)
+	require.NoError(b, err)
+
+	prover := bulletproof.NewRangeProver(
+		setup.com,
+		115,
+		[]*math.G1{setup.G, setup.H},
+		setup.bf,
+		setup.leftGens,
+		setup.rightGens,
+		setup.P,
+		setup.Q,
+		setup.nr,
+		setup.l,
+		setup.curve,
+	)
+	proof, err := prover.Prove()
+	require.NoError(b, err)
+
+	verifier := bulletproof.NewRangeVerifier(
+		setup.com,
+		[]*math.G1{setup.G, setup.H},
+		setup.leftGens,
+		setup.rightGens,
+		setup.P,
+		setup.Q,
+		setup.nr,
+		setup.l,
+		setup.curve,
+	)
+
+	b.Run("bench", func(b *testing.B) {
+		for b.Loop() {
+			err = verifier.Verify(proof)
+			require.NoError(b, err)
+		}
+	})
+}
+
 func TestParallelBFProver(t *testing.T) {
 	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
@@ -152,12 +193,12 @@ func TestParallelBFProver(t *testing.T) {
 	test := benchmark2.NewTest[*bfSetup](cases)
 	test.RunBenchmark(t,
 		func(c *benchmark2.Case) (*bfSetup, error) {
-			return newBfSetup(c.CurveID)
+			return newBfSetup(c.CurveID, c.Bits, 1_000_000_000_000_000)
 		},
 		func(ctx context.Context, setup *bfSetup) error {
-			prover := rp.NewRangeProver(
+			prover := bulletproof.NewRangeProver(
 				setup.com,
-				115,
+				1_000_000_000_000_000,
 				[]*math.G1{setup.G, setup.H},
 				setup.bf,
 				setup.leftGens,
@@ -173,4 +214,12 @@ func TestParallelBFProver(t *testing.T) {
 			return err
 		},
 	)
+}
+
+func log2(x uint64) uint64 {
+	if x == 0 {
+		return 0
+	}
+
+	return uint64(bits.Len64(x)) - 1 //nolint:gosec
 }

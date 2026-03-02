@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package rp
+package bulletproof
 
 import (
 	mathlib "github.com/IBM/mathlib"
@@ -172,7 +172,7 @@ func (p *ipaProver) Prove() (*IPA, error) {
 // of the left vector and right is a function of right vector.
 // Both vectors are committed in com which is passed as a parameter to reduce
 func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mathlib.G1, []*mathlib.G1, error) {
-	leftGen, rightGen := cloneGenerators(p.LeftGenerators, p.RightGenerators)
+	leftGen, rightGen := CloneGenerators(p.LeftGenerators, p.RightGenerators)
 
 	left := p.leftVector
 	right := p.rightVector
@@ -182,14 +182,14 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 	for i := range p.NumberOfRounds {
 		// in each round the size of the vector is reduced by 2
 		n := len(leftGen) / 2
-		leftIP := InnerProduct(left[:n], right[n:], p.Curve)
-		rightIP := InnerProduct(left[n:], right[:n], p.Curve)
+		leftIP := math.InnerProduct(left[:n], right[n:], p.Curve)
+		rightIP := math.InnerProduct(left[n:], right[:n], p.Curve)
 		// LArray[i] is a commitment to left[:n], right[n:] and their inner product
-		LArray[i] = commitVectorPlusOne(left[:n], right[n:], leftGen[n:], rightGen[:n], leftIP, X, p.Curve)
+		LArray[i] = CommitVectorPlusOne(left[:n], right[n:], leftGen[n:], rightGen[:n], leftIP, X, p.Curve)
 		// LArray[i].Add(X.Mul(leftIP))
 
 		// RArray[i] is a commitment to left[n:], right[:n] and their inner product
-		RArray[i] = commitVectorPlusOne(left[n:], right[:n], leftGen[:n], rightGen[n:], rightIP, X, p.Curve)
+		RArray[i] = CommitVectorPlusOne(left[n:], right[:n], leftGen[:n], rightGen[n:], rightIP, X, p.Curve)
 		// RArray[i].Add(X.Mul(rightIP))
 
 		// compute this round's challenge x
@@ -292,7 +292,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 
 	X := v.Q.Mul(x)
 
-	leftGen, rightGen := cloneGenerators(v.LeftGenerators, v.RightGenerators)
+	leftGen, rightGen := CloneGenerators(v.LeftGenerators, v.RightGenerators)
 	xSquareList := make([]*mathlib.Zr, v.NumberOfRounds)
 	xSquareInvList := make([]*mathlib.Zr, v.NumberOfRounds)
 	xList := make([]*mathlib.Zr, v.NumberOfRounds)
@@ -332,7 +332,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	// - scalars:    proof.Left.s || proof.Right.s^{-1} || xsquareInvList || xSqureList || proof.Left * proof.Right
 	generators := make([]*mathlib.G1, len(leftGen)+len(rightGen)+len(proof.L)+len(proof.R)+1)
 	scalars := make([]*mathlib.Zr, len(generators))
-	s, sInv := computeSVector(1<<v.NumberOfRounds, xList, v.Curve)
+	s, sInv := ComputeSVector(1<<v.NumberOfRounds, xList, v.Curve)
 	for i := 0; i < len(s); i++ {
 		s[i] = v.Curve.ModMul(s[i], proof.Left, v.Curve.GroupOrder)
 		sInv[i] = v.Curve.ModMul(sInv[i], proof.Right, v.Curve.GroupOrder)
@@ -395,11 +395,7 @@ func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*
 	return leftGen[:l], rightGen[:l]
 }
 
-func InnerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {
-	return c.ModAddMul(left, right, c.GroupOrder)
-}
-
-func commitVector(
+func CommitVector(
 	left []*mathlib.Zr,
 	right []*mathlib.Zr,
 	leftgen []*mathlib.G1,
@@ -417,7 +413,7 @@ func commitVector(
 	return c.MultiScalarMul(points, scalars)
 }
 
-func commitVectorPlusOne(
+func CommitVectorPlusOne(
 	left []*mathlib.Zr,
 	right []*mathlib.Zr,
 	leftgen []*mathlib.G1,
@@ -439,7 +435,7 @@ func commitVectorPlusOne(
 	return c.MultiScalarMul(points, scalars)
 }
 
-func cloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.G1, []*mathlib.G1) {
+func CloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.G1, []*mathlib.G1) {
 	leftGen := make([]*mathlib.G1, len(LeftGenerators))
 	for i := range LeftGenerators {
 		leftGen[i] = LeftGenerators[i].Copy()
@@ -452,13 +448,13 @@ func cloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.
 	return leftGen, rightGen
 }
 
-// computeSVector computes the s vector and its entry-wise inverse of s as detailed below:
+// ComputeSVector computes the s vector and its entry-wise inverse of s as detailed below:
 // b(i,j) = 1 if (logn - j)^{th} bit of i-1 is 1, else its -1
 // s[i] = \prod_{j=1}^{\log n} x_j^{bits(i,j)}
 // sInv[i] = s[i].Inverse
 // Input: n, challenges = [x_1,\ldots,x_{\log n}]
 // Returns (s, sInv) where sInv[i] = s[i]^{-1}, computed via batch inversion.
-func computeSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, []*mathlib.Zr) {
+func ComputeSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, []*mathlib.Zr) {
 	log2n := len(challenges)
 
 	// Verify n is consistent with number of challenges
@@ -467,7 +463,7 @@ func computeSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) ([]*m
 	}
 
 	// Precompute challenge inverses (log2n inversions instead of O(n*log2n))
-	challengeInvs := BatchInverse(challenges, curve)
+	challengeInvs := math.BatchInverse(challenges, curve)
 
 	s := make([]*mathlib.Zr, n)
 
@@ -499,40 +495,7 @@ func computeSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) ([]*m
 
 		s[i-1] = si
 	}
-	sInv := BatchInverse(s, curve)
+	sInv := math.BatchInverse(s, curve)
 
 	return s, sInv
-}
-
-// BatchInverse computes the entry-wise modular inverse of elems using
-// Montgomery's trick: a single InvModOrder call plus O(n) multiplications.
-// todo! Perhaps this can be added to mathlib.
-func BatchInverse(elems []*mathlib.Zr, curve *mathlib.Curve) []*mathlib.Zr {
-	n := len(elems)
-	if n == 0 {
-		return nil
-	}
-
-	inv := make([]*mathlib.Zr, n)
-
-	// Forward pass: build prefix products
-	// prefixProd[i] = elems[0] * elems[1] * ... * elems[i]
-	prefixProd := make([]*mathlib.Zr, n)
-	prefixProd[0] = elems[0].Copy()
-	for i := 1; i < n; i++ {
-		prefixProd[i] = curve.ModMul(prefixProd[i-1], elems[i], curve.GroupOrder)
-	}
-
-	// Single inversion of the total product
-	acc := prefixProd[n-1].Copy()
-	acc.InvModOrder()
-
-	// Backward pass: extract individual inverses
-	for i := n - 1; i >= 1; i-- {
-		inv[i] = curve.ModMul(prefixProd[i-1], acc, curve.GroupOrder)
-		acc = curve.ModMul(acc, elems[i], curve.GroupOrder)
-	}
-	inv[0] = acc
-
-	return inv
 }

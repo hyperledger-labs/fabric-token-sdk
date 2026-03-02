@@ -71,4 +71,6 @@ var (
 	ErrInvalidEqualityOfSum = errors.New("EqualityOfSum is invalid")
 	// ErrInvalidChallenge is returned when a challenge is invalid
 	ErrInvalidChallenge = errors.New("Challenge is invalid")
+	// ErrNilProof is returned when the proof is nil
+	ErrNilProof = errors.New("nil proof")
 )

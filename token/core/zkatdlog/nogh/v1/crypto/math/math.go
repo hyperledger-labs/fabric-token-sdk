@@ -105,3 +105,40 @@ func isNilInterface(i interface{}) bool {
 
 	return rv.Kind() == reflect.Ptr && rv.IsNil()
 }
+
+func InnerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {
+	return c.ModAddMul(left, right, c.GroupOrder)
+}
+
+// BatchInverse computes the entry-wise modular inverse of elems using
+// Montgomery's trick: a single InvModOrder call plus O(n) multiplications.
+// todo! Perhaps this can be added to mathlib.
+func BatchInverse(elems []*mathlib.Zr, curve *mathlib.Curve) []*mathlib.Zr {
+	n := len(elems)
+	if n == 0 {
+		return nil
+	}
+
+	inv := make([]*mathlib.Zr, n)
+
+	// Forward pass: build prefix products
+	// prefixProd[i] = elems[0] * elems[1] * ... * elems[i]
+	prefixProd := make([]*mathlib.Zr, n)
+	prefixProd[0] = elems[0].Copy()
+	for i := 1; i < n; i++ {
+		prefixProd[i] = curve.ModMul(prefixProd[i-1], elems[i], curve.GroupOrder)
+	}
+
+	// Single inversion of the total product
+	acc := prefixProd[n-1].Copy()
+	acc.InvModOrder()
+
+	// Backward pass: extract individual inverses
+	for i := n - 1; i >= 1; i-- {
+		inv[i] = curve.ModMul(prefixProd[i-1], acc, curve.GroupOrder)
+		acc = curve.ModMul(acc, elems[i], curve.GroupOrder)
+	}
+	inv[0] = acc
+
+	return inv
+}

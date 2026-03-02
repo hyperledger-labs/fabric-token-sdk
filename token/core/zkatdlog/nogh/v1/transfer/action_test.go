@@ -18,6 +18,7 @@ import (
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
 	zkatmath "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -410,8 +411,9 @@ func TestAction_Validate(t *testing.T) {
 			expectedError: "expected issuer for a redeem action",
 		},
 		{
-			name: "",
+			name: "valid",
 			action: &transfer.Action{
+				ProofType: rp.RangeProofType,
 				Inputs: []*transfer.ActionInput{
 					{
 						ID: &token.ID{TxId: "txid"},
@@ -659,7 +661,7 @@ func randomAction(curve *math.Curve, rand io.Reader, b require.TestingT) *transf
 		getRandomBytes(b, 32),
 	}
 	proof := getRandomBytes(b, 32)
-	action, err := transfer.NewAction(tokenIDs, inputToken, commitments, owners, proof)
+	action, err := transfer.NewAction(tokenIDs, inputToken, commitments, owners, proof, rp.RangeProofType)
 	require.NoError(b, err, "failed to create a new transfer action")
 	assert.NotNil(b, action)
 	action.Metadata = map[string][]byte{

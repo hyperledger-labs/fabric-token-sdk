@@ -109,7 +109,14 @@ func BenchmarkTransferServiceTransfer(b *testing.B) {
 func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
-	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves, idemixnym.IdentityType)
+	proofType := benchmark.ProofType()
+	configurations, err := benchmark.NewSetupConfigurationsWithParams(benchmark.SetupParams{
+		IdemixTestdataPath: "./testdata",
+		Bits:               bits,
+		CurveIDs:           curves,
+		OwnerIdentityType:  idemixnym.IdentityType,
+		ProofType:          proofType,
+	})
 	require.NoError(t, err)
 
 	test := benchmark2.NewTest[*benchmarkTransferEnv](cases)

@@ -78,6 +78,8 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*
 	if err != nil {
 		return nil, nil, errors.Join(ErrCreateActionFailed, err)
 	}
+	// Set the proof type based on the prover used
+	issue.ProofType = prover.RangeProofType()
 
 	// Prepare metadata for each issued token.
 	inf := make([]*token.Metadata, len(values))
