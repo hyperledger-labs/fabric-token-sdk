@@ -12,8 +12,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
@@ -64,6 +66,50 @@ func TestRegression(t *testing.T) {
 	}
 }
 
+func BenchmarkTranferRegression2in2out(b *testing.B) {
+	rootDir := "testdata/32-BLS12_381_BBS_GURVY"
+	subFolder := "transfers_i2_o2"
+
+	paramsData, err := testDataFS.ReadFile(filepath.Join(rootDir, "params.txt"))
+	require.NoError(b, err)
+	ppRaw, err := base64.StdEncoding.DecodeString(string(paramsData))
+	require.NoError(b, err)
+	_, tokenValidator, err := tokenServicesFactory(ppRaw)
+	require.NoError(b, err)
+
+	type testVector struct {
+		ReqRaw []byte `json:"req_raw"`
+		TXID   string `json:"txid"`
+	}
+	vectors := make([]testVector, 64)
+	for i := range vectors {
+		jsonData, err := testDataFS.ReadFile(
+			filepath.Join(rootDir, subFolder, fmt.Sprintf("output.%d.json", i)),
+		)
+		require.NoError(b, err)
+		err = json.Unmarshal(jsonData, &vectors[i])
+		require.NoError(b, err)
+	}
+
+	var idx atomic.Int64
+	b.Run("2in2out", func(b *testing.B) {
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				v := vectors[idx.Add(1)%int64(len(vectors))]
+				_, _, err := tokenValidator.UnmarshallAndVerifyWithMetadata(
+					b.Context(),
+					&fakeLedger{},
+					token.RequestAnchor(v.TXID),
+					v.ReqRaw,
+				)
+				require.NoError(b, err)
+			}
+		})
+		benchmark.ReportTPS(b)
+	})
+}
+
 func testRegressionParallel(t *testing.T, rootDir, subFolder string) {
 	t.Helper()
 	t.Run(fmt.Sprintf("%s-%s", rootDir, subFolder), func(t *testing.T) {
@@ -72,7 +118,7 @@ func testRegressionParallel(t *testing.T, rootDir, subFolder string) {
 	})
 }
 
-func testRegression(t *testing.T, rootDir, subFolder string) {
+func testRegression(t testing.TB, rootDir, subFolder string) {
 	t.Helper()
 	t.Logf("regression test for [%s:%s]", rootDir, subFolder)
 	paramsData, err := testDataFS.ReadFile(filepath.Join(rootDir, "params.txt"))
