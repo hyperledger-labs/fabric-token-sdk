@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
+	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	tk "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -37,11 +38,55 @@ var (
 )
 
 type trandferServiceParams struct {
-	OutputPath     string         `json:"test_root_path,omitempty"`
-	CurveID        string         `json:"curve_id,omitempty"`
-	NumInputs      int            `json:"num_inputs"`
-	NumOutputs     int            `json:"num_outputs"`
-	WiredTokenData *WireTokenData `json:"proof,omitempty"`
+	OutputPath string     `json:"test_root_path,omitempty"`
+	TokenData  *TokenData `json:"proof,omitempty"`
+}
+
+func (p *trandferServiceParams) PublicParamsRaw() ([]byte, error) {
+	paramsTxt := filepath.Join(filepath.Dir(filepath.Dir(p.OutputPath)), "params.txt")
+	raw, err := os.ReadFile(paramsTxt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read params file %s: %w", paramsTxt, err)
+	}
+	ppRaw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(raw)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to base64-decode params file: %w", err)
+	}
+	return ppRaw, nil
+}
+
+func (p *trandferServiceParams) PublicParams() (*v1setup.PublicParams, error) {
+	ppRaw, err := p.PublicParamsRaw()
+	if err != nil {
+		return nil, err
+	}
+	return v1setup.NewPublicParamsFromBytes(ppRaw, v1setup.DLogNoGHDriverName, v1setup.ProtocolV1)
+}
+
+func (p *trandferServiceParams) NumInputs() int {
+	subDir := filepath.Base(filepath.Dir(p.OutputPath))
+	if m := regexp.MustCompile(`_i(\d+)_o(\d+)$`).FindStringSubmatch(subDir); len(m) == 3 {
+		n, _ := strconv.Atoi(m[1])
+		return n
+	}
+	return 0
+}
+
+func (p *trandferServiceParams) NumOutputs() int {
+	subDir := filepath.Base(filepath.Dir(p.OutputPath))
+	if m := regexp.MustCompile(`_i(\d+)_o(\d+)$`).FindStringSubmatch(subDir); len(m) == 3 {
+		n, _ := strconv.Atoi(m[2])
+		return n
+	}
+	return 0
+}
+
+func (p *trandferServiceParams) CurveID() string {
+	dirName := filepath.Base(filepath.Dir(filepath.Dir(p.OutputPath)))
+	if parts := strings.SplitN(dirName, "-", 2); len(parts) == 2 {
+		return parts[1]
+	}
+	return ""
 }
 
 func NewTokenTransferVerifyParamsSlice(TestRootPath string) []*trandferServiceParams {
@@ -60,37 +105,19 @@ func NewTokenTransferVerifyParamsSlice(TestRootPath string) []*trandferServicePa
 		panic(fmt.Errorf("failed to base64-decode params.txt: %w", err))
 	}
 
-	dirName := filepath.Base(filepath.Dir(TestRootPath))
-	var curveID string
-	if parts := strings.SplitN(dirName, "-", 2); len(parts) == 2 {
-		curveID = parts[1]
-	}
-
-	var numInputs, numOutputs int
-	subDir := filepath.Base(TestRootPath)
-	if m := regexp.MustCompile(`_i(\d+)_o(\d+)$`).FindStringSubmatch(subDir); len(m) == 3 {
-		numInputs, _ = strconv.Atoi(m[1])
-		numOutputs, _ = strconv.Atoi(m[2])
-	}
-
 	outPaths, err := os.ReadDir(TestRootPath)
 	if err != nil {
 		panic(err)
 	}
 	ret := make([]*trandferServiceParams, len(outPaths))
 	for i, outPath := range outPaths {
-		ret[i] = newTokenTransferVerifyParams(filepath.Join(TestRootPath, outPath.Name()), curveID, numInputs, numOutputs, ppRaw)
+		ret[i] = newTokenTransferVerifyParams(filepath.Join(TestRootPath, outPath.Name()), ppRaw)
 	}
 
 	return ret
 }
 
-func newTokenTransferVerifyParams(outputPath string,
-	curveID string,
-	numInputs int,
-	numOutputs int,
-	ppRaw []byte,
-) *trandferServiceParams {
+func newTokenTransferVerifyParams(outputPath string, ppRaw []byte) *trandferServiceParams {
 	outputRaw, err := os.ReadFile(outputPath)
 	if err != nil {
 		panic(fmt.Errorf("failed to read %s: %w", outputPath, err))
@@ -106,11 +133,7 @@ func newTokenTransferVerifyParams(outputPath string,
 
 	return &trandferServiceParams{
 		OutputPath: outputPath,
-		CurveID:    curveID,
-		NumInputs:  numInputs,
-		NumOutputs: numOutputs,
-		WiredTokenData: &WireTokenData{
-			PubParamsRaw:    ppRaw,
+		TokenData: &TokenData{
 			TokenRequestRaw: tokenData.ReqRaw,
 			TxID:            tokenData.TXID,
 		},
@@ -191,16 +214,18 @@ func (c *TransferServiceViewFactory) NewView(in []byte) (view.View, error) {
 	if err := json.Unmarshal(in, &f.params); err != nil {
 		return nil, err
 	}
-	if f.params.WiredTokenData != nil {
-		tokenData, err := f.params.WiredTokenData.Deserialize()
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal wire proof: %w", err)
-		}
-		f.tokenData = tokenData
+	if f.params.TokenData != nil {
+
+		f.tokenData = f.params.TokenData
 
 		var initErr error
 		once.Do(func() {
-			cachedValidator, initErr = newTokenValidator(f.params.WiredTokenData.PubParamsRaw)
+			ppRaw, err := f.params.PublicParamsRaw()
+			if err != nil {
+				initErr = err
+			} else {
+				cachedValidator, initErr = newTokenValidator(ppRaw)
+			}
 		})
 		if initErr != nil {
 			return nil, fmt.Errorf("failed to create token validator: %w", initErr)

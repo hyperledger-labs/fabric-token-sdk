@@ -81,7 +81,7 @@ func BenchmarkTransferService(b *testing.B) {
 	f := &TransferServiceViewFactory{}
 	pool, params := CreateViewsWithProofs(b, "", f, defaultNumViews)
 
-	b.Run(fmt.Sprintf("out-tokens=%din-tokens=%d", params[0].NumOutputs, params[0].NumInputs), func(b *testing.B) {
+	b.Run(fmt.Sprintf("out-tokens=%din-tokens=%d", params[0].NumOutputs(), params[0].NumInputs()), func(b *testing.B) {
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
