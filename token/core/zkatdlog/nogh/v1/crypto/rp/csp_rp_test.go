@@ -27,11 +27,11 @@ type rpSetup struct {
 // AGenerators has n+1 elements (for a_0..a_n).
 // BGenerators has n+1 elements (for b_0, b_{n+1}..b_{2n}).
 // VCommitment = v·VGenerators[0] + r·VGenerators[1].
-func newRPSetup(t testing.TB, curve *math.Curve, n uint64, value int64) *rpSetup {
-	t.Helper()
+func newRPSetup(tb testing.TB, curve *math.Curve, n uint64, value int64) *rpSetup {
+	tb.Helper()
 
 	rand, err := curve.Rand()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	aGens := make([]*math.G1, n+1)
 	for i := uint64(0); i <= n; i++ {
@@ -68,6 +68,7 @@ func newRPSetup(t testing.TB, curve *math.Curve, n uint64, value int64) *rpSetup
 		NumberOfBits: n,
 		Curve:        curve,
 	}
+
 	return &rpSetup{prover: p, verifier: v_, curve: curve}
 }
 
@@ -212,7 +213,7 @@ func BenchmarkRangeProofProve(b *testing.B) {
 	for _, tc := range cases {
 		setup := newRPSetup(b, curve, tc.n, tc.value)
 		b.Run(fmt.Sprintf("n=%d", tc.n), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, err := setup.prover.Prove()
 				if err != nil {
 					b.Fatal(err)
@@ -239,7 +240,7 @@ func BenchmarkRangeProofVerify(b *testing.B) {
 			b.Fatal(err)
 		}
 		b.Run(fmt.Sprintf("n=%d", tc.n), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				if err := setup.verifier.Verify(proof); err != nil {
 					b.Fatal(err)
 				}

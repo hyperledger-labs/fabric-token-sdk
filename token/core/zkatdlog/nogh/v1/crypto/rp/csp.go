@@ -98,7 +98,7 @@ func (p *cspProver) Prove() (*CSPProof, error) {
 	witness := make([]*mathlib.Zr, len(p.witness))
 	copy(witness, p.witness)
 
-	for i := uint64(0); i < p.NumberOfRounds; i++ {
+	for i := range p.NumberOfRounds {
 		n := len(generators) / 2
 
 		// Cross-commitments via MSM:
@@ -127,7 +127,7 @@ func (p *cspProver) Prove() (*CSPProof, error) {
 		// Fold generators:  gen'[j] = gen_L[j] + c · gen_R[j]
 		// Fold linear form: f'[j]   = f_L[j]   + c · f_R[j]
 		// Fold witness:     w'[j]   = c · w_L[j] + w_R[j]
-		for j := 0; j < n; j++ {
+		for j := range n {
 			generators[j].Add(generators[n+j].Mul(c))
 
 			linearForm[j] = p.Curve.ModAdd(
@@ -146,7 +146,6 @@ func (p *cspProver) Prove() (*CSPProof, error) {
 		generators = generators[:n]
 		linearForm = linearForm[:n]
 		witness = witness[:n]
-
 	}
 
 	return &CSPProof{
@@ -204,7 +203,7 @@ func (v *cspVerifier) Verify(proof *CSPProof) error {
 	com := v.Commitment.Copy()
 	val := v.Value.Copy()
 
-	for i := uint64(0); i < v.NumberOfRounds; i++ {
+	for i := range v.NumberOfRounds {
 		// Absorb cross terms (same order as Prove()).
 		tr.Absorb(proof.Left[i].Bytes())
 		tr.Absorb(proof.Right[i].Bytes())
@@ -272,12 +271,13 @@ func cspSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) []*mathli
 	k := len(challenges)
 	s := make([]*mathlib.Zr, n)
 	s[0] = curve.NewZrFromInt(1)
-	for r := 0; r < k; r++ {
+	for r := range k {
 		halfLen := 1 << r      // number of entries already filled
 		c := challenges[k-1-r] // reverse order matches bit(i, k-1-r)
-		for i := 0; i < halfLen; i++ {
+		for i := range halfLen {
 			s[i+halfLen] = curve.ModMul(s[i], c, curve.GroupOrder)
 		}
 	}
+
 	return s
 }

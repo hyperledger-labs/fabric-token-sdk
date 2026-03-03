@@ -39,5 +39,6 @@ func (tr *Transcript) Squeeze() (*mathlib.Zr, error) {
 	}
 	x := tr.Curve.HashToZr(raw)
 	tr.Absorb(x.Bytes())
+
 	return x, nil
 }
