@@ -1,13 +1,14 @@
-import plotly.graph_objects as go
 import re
 import sys
 from pathlib import Path
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+st.set_page_config(
+    layout="wide", page_icon=":chart_with_upwards_trend:", page_title="TPS Degradation")
 
 # Generic benchmark line parser
-RE_LINE = re.compile(
+SERVICE_RE = re.compile(
     r'^(?P<bench>\S+)-(?P<workers>\d+)\s+'
     r'(?P<iterations>\d+)\s+'
     r'(?P<tps>[\d.]+)\s+TPS\s+'
@@ -23,17 +24,34 @@ def ns2ms(ns):
     """Nano Seconds to Milliseconds"""
     return ns / 1e6
 
+
 # ----------------------------
 # PARSER
 # ----------------------------
+LOCAL_RE = re.compile(
+    r'^'
+    r'(?P<bench>Benchmark[^\s/]+)'          # Benchmark name
+    r'(?:/(?P<params>.+?))?'                # everything after / (lazy)
+    r'(?:-(?P<workers>\d+))?'               # trailing -workers
+    r'\s+'
+    r'(?P<iterations>\d+)'                  # iterations
+    r'\s+'
+    r'(?P<ns>\d+)\s+ns/op'                  # ns/op
+    r'\s+'
+    r'(?P<tps>[\d.]+)\s+TPS'                # TPS
+    r'$'
+)
 
 
-def parse(path: Path):
+def parse(path: Path, regex=SERVICE_RE):
     rows = []
 
-    for line in path.read_text().splitlines():
-        m = RE_LINE.match(line.strip())
+    for i, line in enumerate(path.read_text().splitlines()):
+        m = regex.match(line.strip())
         if not m:
+            if i == 9:
+                from IPython import embed
+                embed(colors="Neutral")
             continue
 
         data = m.groupdict()
@@ -43,15 +61,16 @@ def parse(path: Path):
 
         row = {
             "bench": bench,
-            "workers": int(data["workers"]),
+            "workers": int(data["workers"] or -1),
             "iterations": int(data["iterations"]),
             "tps": float(data["tps"]),
             **p_dct
         }
 
         # Parse latency percentiles dynamically
-        for p in RE_PERCENTILE.finditer(data["rest"]):
-            row[f"{p.group('name')} (ms)"] = ns2ms(int(p.group("value")))
+        if "rest" in data:
+            for p in RE_PERCENTILE.finditer(data["rest"]):
+                row[f"{p.group('name')} (ms)"] = ns2ms(int(p.group("value")))
 
         rows.append(row)
 
@@ -221,12 +240,8 @@ def parse_combined(dfs: dict[str, pd.DataFrame]):
     return dct
 
 
-def make_combined_figures(dfs: dict[str, pd.DataFrame]):
-    """
-    dfs: dict[nc_value -> combined dataframe across multiple bench files]
-    Returns:
-        dict[nc_value -> plotly Figure]
-    """
+def make_combined_figures(dfs: dict[str, pd.DataFrame],
+                          local_dfs: dict[str, pd.DataFrame]):
 
     figs = {}
 
@@ -250,11 +265,16 @@ def make_combined_figures(dfs: dict[str, pd.DataFrame]):
         # -------------------------
         # TPS FIGURE
         # -------------------------
+        agg["bench"] += "-2machines"
+        for name, df in local_dfs.items():
+            df['bench'] = name
+        agg = pd.concat([agg, *local_dfs.values()], ignore_index=True)
+
         fig = px.line(
             agg,
             x="workers",
             y="tps",
-            color="bench",           # ← legend is bench
+            color="bench",
             markers=True,
             title=f"TPS (nc={nc})",
             labels={
@@ -280,7 +300,6 @@ def make_combined_figures(dfs: dict[str, pd.DataFrame]):
                 var_name="percentile",
                 value_name="latency"
             )
-
             fig_lat = px.line(
                 latency_df,
                 x="workers",
@@ -326,17 +345,24 @@ if __name__ == "__main__":
     directory = Path("bench5")
 
     for path in directory.glob("*.txt"):
-        st.markdown(f"## {path.stem.strip("res_transfer_").upper()}")
-        st.markdown("---")
-        df = parse(path)
-        for fig in make_figures(df):
-            st.plotly_chart(fig)
+        with st.expander(f"`{path.stem.strip("res_transfer_").upper()}`"):
+            if path.name.startswith("local"):
+                df = parse(path, regex=LOCAL_RE)
+            else:
+                df = parse(path)
+            for fig in make_figures(df):
+                st.plotly_chart(fig)
 
     dfs = parse_combined({p.stem.strip("res_transfer_").upper(): parse(p).copy()
-                          for p in directory.glob("*.txt")})
-    figs = make_combined_figures(dfs)
+                          for p in directory.glob("*.txt") if not p.name.startswith("local")})
+    figs = make_combined_figures(dfs, local_dfs={p.stem: parse(p, regex=LOCAL_RE).copy()
+                                                 for p in directory.glob("*.txt") if p.name.startswith("local")})
     st.subheader("Combined TPS")
     tabs = st.tabs(list(figs.keys()))
     for fig, tab in zip(figs.values(), tabs):
         with tab:
             st.plotly_chart(fig)
+
+#TODO Add allon snumbers
+#TODO Write down average testdata file (token)
+#Todo: 
