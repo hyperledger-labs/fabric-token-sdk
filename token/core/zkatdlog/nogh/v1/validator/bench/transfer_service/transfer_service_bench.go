@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -30,12 +31,17 @@ const (
 	defaultTestRoot = "../../regression/testdata/32-BLS12_381_BBS_GURVY/transfers_i2_o2"
 )
 
+var (
+	once            sync.Once
+	cachedValidator *token.Validator
+)
+
 type trandferServiceParams struct {
-	OutputPath string         `json:"test_root_path,omitempty"`
-	CurveID    string         `json:"curve_id,omitempty"`
-	NumInputs  int            `json:"num_inputs"`
-	NumOutputs int            `json:"num_outputs"`
-	Proof      *WireProofData `json:"proof,omitempty"`
+	OutputPath     string         `json:"test_root_path,omitempty"`
+	CurveID        string         `json:"curve_id,omitempty"`
+	NumInputs      int            `json:"num_inputs"`
+	NumOutputs     int            `json:"num_outputs"`
+	WiredTokenData *WireTokenData `json:"proof,omitempty"`
 }
 
 func NewTokenTransferVerifyParamsSlice(TestRootPath string) []*trandferServiceParams {
@@ -103,7 +109,7 @@ func newTokenTransferVerifyParams(outputPath string,
 		CurveID:    curveID,
 		NumInputs:  numInputs,
 		NumOutputs: numOutputs,
-		Proof: &WireProofData{
+		WiredTokenData: &WireTokenData{
 			PubParamsRaw:    ppRaw,
 			TokenRequestRaw: tokenData.ReqRaw,
 			TxID:            tokenData.TXID,
@@ -133,7 +139,7 @@ func newTokenValidator(ppRaw []byte) (*token.Validator, error) {
 
 type TransferServiceView struct {
 	params    trandferServiceParams
-	proof     *ProofData
+	tokenData *TokenData
 	validator *token.Validator
 }
 
@@ -158,15 +164,15 @@ type TransferServiceView struct {
 //   4. After all validators pass, it checks that all metadata have been validated
 
 func (q *TransferServiceView) Call(viewCtx view.Context) (interface{}, error) {
-	if q.proof == nil {
+	if q.tokenData == nil {
 		return nil, errors.New("proof data is nil")
 	}
 
 	_, _, err := q.validator.UnmarshallAndVerifyWithMetadata(
 		context.Background(),
 		&fakeLedger{},
-		token.RequestAnchor(q.proof.TxID),
-		q.proof.TokenRequestRaw,
+		token.RequestAnchor(q.tokenData.TxID),
+		q.tokenData.TokenRequestRaw,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify token request: %w", err)
@@ -185,18 +191,21 @@ func (c *TransferServiceViewFactory) NewView(in []byte) (view.View, error) {
 	if err := json.Unmarshal(in, &f.params); err != nil {
 		return nil, err
 	}
-	if f.params.Proof != nil {
-		proof, err := f.params.Proof.Deserialize()
+	if f.params.WiredTokenData != nil {
+		tokenData, err := f.params.WiredTokenData.Deserialize()
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal wire proof: %w", err)
 		}
-		f.proof = proof
+		f.tokenData = tokenData
 
-		v, err := newTokenValidator(f.params.Proof.PubParamsRaw)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create token validator: %w", err)
+		var initErr error
+		once.Do(func() {
+			cachedValidator, initErr = newTokenValidator(f.params.WiredTokenData.PubParamsRaw)
+		})
+		if initErr != nil {
+			return nil, fmt.Errorf("failed to create token validator: %w", initErr)
 		}
-		f.validator = v
+		f.validator = cachedValidator
 	}
 
 	return f, nil
