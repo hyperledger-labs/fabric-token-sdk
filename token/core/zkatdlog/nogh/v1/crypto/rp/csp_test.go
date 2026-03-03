@@ -27,7 +27,7 @@ type cspSetup struct {
 // Commitment = MSM(generators, witness), Value = ⟨linearForm, witness⟩.
 func newCSPSetup(t *testing.T, curve *math.Curve, rounds uint64) *cspSetup {
 	t.Helper()
-	n := int(uint64(1) << rounds)
+	n := int(uint64(1) << rounds) // #nosec G115
 
 	rand, err := curve.Rand()
 	require.NoError(t, err)
@@ -36,7 +36,7 @@ func newCSPSetup(t *testing.T, curve *math.Curve, rounds uint64) *cspSetup {
 	witness := make([]*math.Zr, n)
 	linearForm := make([]*math.Zr, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		generators[i] = curve.HashToG1([]byte("csp-gen-" + strconv.Itoa(i)))
 		witness[i] = curve.NewRandomZr(rand)
 		linearForm[i] = curve.NewRandomZr(rand)
@@ -85,10 +85,10 @@ func TestCSPProveVerify(t *testing.T) {
 				fmt.Printf("Time to prove nr %d = %d msec", r, time2.Since(start).Milliseconds())
 				require.NoError(t, err)
 				require.NotNil(t, proof)
-				require.Len(t, proof.Left, int(r))
-				require.Len(t, proof.Right, int(r))
-				require.Len(t, proof.VLeft, int(r))
-				require.Len(t, proof.VRight, int(r))
+				require.Len(t, proof.Left, int(r))   // #nosec G115
+				require.Len(t, proof.Right, int(r))  // #nosec G115
+				require.Len(t, proof.VLeft, int(r))  // #nosec G115
+				require.Len(t, proof.VRight, int(r)) // #nosec G115
 
 				start = time2.Now()
 				err = setup.verifier.Verify(proof)
@@ -219,9 +219,9 @@ func TestCSPSVector(t *testing.T) {
 	require.Len(t, s, n)
 
 	// Naive check: s[i] = prod_{r=0}^{k-1} c_r^{bit(i, k-1-r)}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		expected := curve.NewZrFromInt(1)
-		for r := 0; r < k; r++ {
+		for r := range k {
 			bit := (i >> (k - 1 - r)) & 1
 			if bit == 1 {
 				expected = curve.ModMul(expected, challenges[r], curve.GroupOrder)

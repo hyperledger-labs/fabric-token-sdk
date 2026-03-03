@@ -38,6 +38,7 @@ func nativeElem[T any, E gnarkFr[T]]() E { return E(new(T)) }
 func nativeFromZr[T any, E gnarkFr[T]](z *mathlib.Zr) E {
 	e := nativeElem[T, E]()
 	e.SetBigInt(new(big.Int).SetBytes(z.Bytes()))
+
 	return e
 }
 
@@ -45,6 +46,7 @@ func nativeFromZr[T any, E gnarkFr[T]](z *mathlib.Zr) E {
 func nativeToZr[T any, E gnarkFr[T]](e E, curve *mathlib.Curve) *mathlib.Zr {
 	var bi big.Int
 	e.BigInt(&bi)
+
 	return curve.NewZrFromBytes(bi.Bytes())
 }
 
@@ -88,7 +90,7 @@ func nativeBatchInverse[T any, E gnarkFr[T]](elems []E) []E {
 // only once at the boundary (once for input c, n+1 times for the output slice),
 // so the O(n²) arithmetic runs entirely in native Montgomery form.
 func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
-	m := int(n) + 1
+	m := int(n) + 1 // #nosec G115
 
 	// Convert c once.
 	cE := nativeFromZr[T, E](c)
@@ -96,7 +98,7 @@ func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, 
 	// cMinusJ[j] = c - j  for j = 0..n
 	cMinusJ := make([]T, m)
 	cMinusJE := make([]E, m)
-	for j := 0; j < m; j++ {
+	for j := range m {
 		cMinusJE[j] = E(&cMinusJ[j])
 		var jE T
 		E(&jE).SetInt64(int64(j))
@@ -113,12 +115,12 @@ func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, 
 		denomsE[i] = E(&denoms[i])
 	}
 
-	for i := 0; i < m; i++ {
+	for i := range m {
 		numersE[i].SetInt64(1)
 		denomsE[i].SetInt64(1)
 		var diff T
 		diffE := E(&diff)
-		for j := 0; j < m; j++ {
+		for j := range m {
 			if j == i {
 				continue
 			}
@@ -131,25 +133,26 @@ func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, 
 	denomInvs := nativeBatchInverse[T, E](denomsE)
 
 	result := make([]*mathlib.Zr, m)
-	for i := 0; i < m; i++ {
+	for i := range m {
 		var prod T
 		E(&prod).Mul(numersE[i], denomInvs[i])
 		result[i] = nativeToZr[T, E](E(&prod), curve)
 	}
+
 	return result, nil
 }
 
 // getLagrangeMultipliersPartialNative is the native fr.Element implementation of
 // getLagrangeMultipliersPartial. Same boundary-only conversion strategy.
 func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
-	total := 2*int(n) + 1 // all evaluation points: 0..2n
+	total := 2*int(n) + 1 // #nosec G115 // all evaluation points: 0..2n
 
 	cE := nativeFromZr[T, E](c)
 
 	// cMinusJ[j] = c - j  for j = 0..2n
 	cMinusJ := make([]T, total)
 	cMinusJE := make([]E, total)
-	for j := 0; j < total; j++ {
+	for j := range total {
 		cMinusJE[j] = E(&cMinusJ[j])
 		var jE T
 		E(&jE).SetInt64(int64(j))
@@ -157,10 +160,10 @@ func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathl
 	}
 
 	// Relevant indices in the full point set: {0, n+1, n+2, ..., 2n}
-	relevant := make([]int, int(n)+1)
+	relevant := make([]int, int(n)+1) // #nosec G115
 	relevant[0] = 0
-	for k := 1; k <= int(n); k++ {
-		relevant[k] = int(n) + k
+	for k := 1; k <= int(n); k++ { // #nosec G115
+		relevant[k] = int(n) + k // #nosec G115
 	}
 
 	numers := make([]T, len(relevant))
@@ -177,7 +180,7 @@ func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathl
 		denomsE[k].SetInt64(1)
 		var diff T
 		diffE := E(&diff)
-		for j := 0; j < total; j++ {
+		for j := range total {
 			if j == i {
 				continue
 			}
@@ -195,17 +198,18 @@ func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathl
 		E(&prod).Mul(numersE[k], denomInvs[k])
 		result[k] = nativeToZr[T, E](E(&prod), curve)
 	}
+
 	return result, nil
 }
 
 // interpolateNative is the native fr.Element implementation of interpolate.
 func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
-	m := int(n) + 1
+	m := int(n) + 1 // #nosec G115
 
 	// Convert all input values to native elements once.
 	vals := make([]T, m)
 	valsE := make([]E, m)
-	for i := 0; i < m; i++ {
+	for i := range m {
 		valsE[i] = E(&vals[i])
 		valsE[i].SetBigInt(new(big.Int).SetBytes(valuesOverN[i].Bytes()))
 	}
@@ -218,7 +222,7 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 		denomsE[i].SetInt64(1)
 		var diff T
 		diffE := E(&diff)
-		for j := 0; j < m; j++ {
+		for j := range m {
 			if j == i {
 				continue
 			}
@@ -229,20 +233,20 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 	denomInvs := nativeBatchInverse[T, E](denomsE)
 
 	// First m entries are the inputs verbatim.
-	result := make([]*mathlib.Zr, 2*int(n)+1)
+	result := make([]*mathlib.Zr, 2*int(n)+1) // #nosec G115
 	copy(result, valuesOverN)
 
 	// Evaluate at each x in {n+1, ..., 2n} via Lagrange interpolation.
-	for x := int(n) + 1; x <= 2*int(n); x++ {
+	for x := int(n) + 1; x <= 2*int(n); x++ { // #nosec G115
 		// xMinusJ[j] = x - j, and px = ∏_j xMinusJ[j]
 		xMinusJ := make([]T, m)
 		xMinusJE := make([]E, m)
 		var px T
 		pxE := E(&px)
 		pxE.SetInt64(1)
-		for j := 0; j < m; j++ {
+		for j := range m {
 			xMinusJE[j] = E(&xMinusJ[j])
-			xMinusJE[j].SetInt64(int64(x - j))
+			xMinusJE[j].SetInt64(int64(x - j)) // #nosec G115
 			pxE.Mul(pxE, xMinusJE[j])
 		}
 
@@ -250,7 +254,7 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 
 		var val T
 		valE := E(&val)
-		for i := 0; i < m; i++ {
+		for i := range m {
 			var li T
 			liE := E(&li)
 			liE.Mul(pxE, xMinusJInvs[i])
@@ -260,28 +264,8 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 		}
 		result[x] = nativeToZr[T, E](valE, curve)
 	}
-	return result, nil
-}
 
-// nativeCurveDispatch calls fn with the native fr.Element type parameters
-// appropriate for the given curve, or returns (nil, false) for unsupported curves.
-func nativeCurveDispatch[R any](
-	curve *mathlib.Curve,
-	fn func() (R, error),
-	bls func() (R, error),
-	bn func() (R, error),
-) (R, bool) {
-	switch curve.GroupOrder.CurveID() {
-	case mathlib.BLS12_381, mathlib.BLS12_381_GURVY, mathlib.BLS12_381_BBS, mathlib.BLS12_381_BBS_GURVY:
-		r, _ := bls()
-		return r, true
-	case mathlib.BN254:
-		r, _ := bn()
-		return r, true
-	default:
-		var zero R
-		return zero, false
-	}
+	return result, nil
 }
 
 // nativeLagrangeMultipliers dispatches getLagrangeMultipliers to the native
@@ -290,11 +274,14 @@ func nativeLagrangeMultipliers(n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([
 	switch curve.GroupOrder.CurveID() {
 	case mathlib.BLS12_381, mathlib.BLS12_381_GURVY, mathlib.BLS12_381_BBS, mathlib.BLS12_381_BBS_GURVY:
 		r, err := getLagrangeMultipliersNative[bls12381fr.Element, *bls12381fr.Element](n, c, curve)
+
 		return r, true, err
 	case mathlib.BN254:
 		r, err := getLagrangeMultipliersNative[bn254fr.Element, *bn254fr.Element](n, c, curve)
+
 		return r, true, err
 	}
+
 	return nil, false, nil
 }
 
@@ -304,11 +291,14 @@ func nativeLagrangeMultipliersPartial(n uint64, c *mathlib.Zr, curve *mathlib.Cu
 	switch curve.GroupOrder.CurveID() {
 	case mathlib.BLS12_381, mathlib.BLS12_381_GURVY, mathlib.BLS12_381_BBS, mathlib.BLS12_381_BBS_GURVY:
 		r, err := getLagrangeMultipliersPartialNative[bls12381fr.Element, *bls12381fr.Element](n, c, curve)
+
 		return r, true, err
 	case mathlib.BN254:
 		r, err := getLagrangeMultipliersPartialNative[bn254fr.Element, *bn254fr.Element](n, c, curve)
+
 		return r, true, err
 	}
+
 	return nil, false, nil
 }
 
@@ -318,10 +308,13 @@ func nativeInterpolate(n uint64, vals []*mathlib.Zr, curve *mathlib.Curve) ([]*m
 	switch curve.GroupOrder.CurveID() {
 	case mathlib.BLS12_381, mathlib.BLS12_381_GURVY, mathlib.BLS12_381_BBS, mathlib.BLS12_381_BBS_GURVY:
 		r, err := interpolateNative[bls12381fr.Element, *bls12381fr.Element](n, vals, curve)
+
 		return r, true, err
 	case mathlib.BN254:
 		r, err := interpolateNative[bn254fr.Element, *bn254fr.Element](n, vals, curve)
+
 		return r, true, err
 	}
+
 	return nil, false, nil
 }

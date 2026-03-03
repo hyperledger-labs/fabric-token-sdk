@@ -24,9 +24,10 @@ func toBits(v *mathlib.Zr, n uint64, curve *mathlib.Curve) ([]*mathlib.Zr, error
 	}
 
 	bits := make([]*mathlib.Zr, n)
-	for i := uint64(0); i < n; i++ {
-		bits[i] = curve.NewZrFromInt(int64(val.Bit(int(i))))
+	for i := range n {
+		bits[i] = curve.NewZrFromUint64(uint64(val.Bit(int(i)))) // #nosec G115
 	}
+
 	return bits, nil
 }
 
@@ -38,6 +39,7 @@ func fieldDiffInt(a, b int, curve *mathlib.Curve) *mathlib.Zr {
 	}
 	diff := curve.NewZrFromInt(int64(b - a))
 	diff.Neg()
+
 	return diff
 }
 
@@ -59,11 +61,11 @@ func getLagrangeMultipliers(n uint64, c *mathlib.Zr, Curve *mathlib.Curve) ([]*m
 	if r, ok, err := nativeLagrangeMultipliers(n, c, Curve); ok {
 		return r, err
 	}
-	m := int(n) + 1 // number of evaluation points: 0, 1, ..., n
+	m := int(n) + 1 // #nosec G115 // number of evaluation points: 0, 1, ..., n
 
 	// Precompute (c - j) for j = 0..n.
 	cMinusJ := make([]*mathlib.Zr, m)
-	for j := 0; j < m; j++ {
+	for j := range m {
 		neg := Curve.NewZrFromInt(int64(j))
 		neg.Neg()
 		cMinusJ[j] = Curve.ModAdd(c, neg, Curve.GroupOrder)
@@ -71,10 +73,10 @@ func getLagrangeMultipliers(n uint64, c *mathlib.Zr, Curve *mathlib.Curve) ([]*m
 
 	numers := make([]*mathlib.Zr, m)
 	denoms := make([]*mathlib.Zr, m)
-	for i := 0; i < m; i++ {
+	for i := range m {
 		numer := Curve.NewZrFromInt(1)
 		denom := Curve.NewZrFromInt(1)
-		for j := 0; j < m; j++ {
+		for j := range m {
 			if j == i {
 				continue
 			}
@@ -87,9 +89,10 @@ func getLagrangeMultipliers(n uint64, c *mathlib.Zr, Curve *mathlib.Curve) ([]*m
 
 	denomInvs := BatchInverse(denoms, Curve)
 	result := make([]*mathlib.Zr, m)
-	for i := 0; i < m; i++ {
+	for i := range m {
 		result[i] = Curve.ModMul(numers[i], denomInvs[i], Curve.GroupOrder)
 	}
+
 	return result, nil
 }
 
@@ -106,21 +109,21 @@ func getLagrangeMultipliersPartial(n uint64, c *mathlib.Zr, Curve *mathlib.Curve
 	if r, ok, err := nativeLagrangeMultipliersPartial(n, c, Curve); ok {
 		return r, err
 	}
-	total := 2*int(n) + 1 // all evaluation points: 0, 1, ..., 2n
+	total := 2*int(n) + 1 // #nosec G115 // all evaluation points: 0, 1, ..., 2n
 
 	// Precompute (c - j) for j = 0..2n.
 	cMinusJ := make([]*mathlib.Zr, total)
-	for j := 0; j < total; j++ {
+	for j := range total {
 		neg := Curve.NewZrFromInt(int64(j))
 		neg.Neg()
 		cMinusJ[j] = Curve.ModAdd(c, neg, Curve.GroupOrder)
 	}
 
 	// Indices of interest: {0, n+1, n+2, ..., 2n} — n+1 values in total.
-	relevant := make([]int, int(n)+1)
+	relevant := make([]int, int(n)+1) // #nosec G115
 	relevant[0] = 0
-	for k := 1; k <= int(n); k++ {
-		relevant[k] = int(n) + k
+	for k := 1; k <= int(n); k++ { // #nosec G115
+		relevant[k] = int(n) + k // #nosec G115
 	}
 
 	numers := make([]*mathlib.Zr, len(relevant))
@@ -128,7 +131,7 @@ func getLagrangeMultipliersPartial(n uint64, c *mathlib.Zr, Curve *mathlib.Curve
 	for k, i := range relevant {
 		numer := Curve.NewZrFromInt(1)
 		denom := Curve.NewZrFromInt(1)
-		for j := 0; j < total; j++ {
+		for j := range total {
 			if j == i {
 				continue
 			}
@@ -144,6 +147,7 @@ func getLagrangeMultipliersPartial(n uint64, c *mathlib.Zr, Curve *mathlib.Curve
 	for k := range relevant {
 		result[k] = Curve.ModMul(numers[k], denomInvs[k], Curve.GroupOrder)
 	}
+
 	return result, nil
 }
 
@@ -162,13 +166,13 @@ func interpolate(n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve) ([]*
 	if r, ok, err := nativeInterpolate(n, valuesOverN, curve); ok {
 		return r, err
 	}
-	m := int(n) + 1 // number of known points (indices 0..n)
+	m := int(n) + 1 // #nosec G115 // number of known points (indices 0..n)
 
 	// Step 1: precompute denominator d_i = ∏_{j≠i}(i-j) for i=0..n. O(n²).
 	denoms := make([]*mathlib.Zr, m)
-	for i := 0; i < m; i++ {
+	for i := range m {
 		d := curve.NewZrFromInt(1)
-		for j := 0; j < m; j++ {
+		for j := range m {
 			if j == i {
 				continue
 			}
@@ -179,15 +183,15 @@ func interpolate(n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve) ([]*
 	denomInvs := BatchInverse(denoms, curve)
 
 	// Result: first n+1 entries are the inputs, followed by n new values.
-	result := make([]*mathlib.Zr, 2*int(n)+1)
+	result := make([]*mathlib.Zr, 2*int(n)+1) // #nosec G115
 	copy(result, valuesOverN)
 
 	// Step 2: for each x in {n+1, ..., 2n} evaluate p(x). O(n) per point.
-	for x := int(n) + 1; x <= 2*int(n); x++ {
+	for x := int(n) + 1; x <= 2*int(n); x++ { // #nosec G115
 		// xMinusJ[j] = x - j, and P(x) = ∏_j xMinusJ[j].
 		xMinusJ := make([]*mathlib.Zr, m)
 		px := curve.NewZrFromInt(1)
-		for j := 0; j < m; j++ {
+		for j := range m {
 			xMinusJ[j] = fieldDiffInt(x, j, curve)
 			px = curve.ModMul(px, xMinusJ[j], curve.GroupOrder)
 		}
@@ -196,13 +200,14 @@ func interpolate(n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve) ([]*
 		xMinusJInvs := BatchInverse(xMinusJ, curve)
 
 		val := curve.NewZrFromInt(0)
-		for i := 0; i < m; i++ {
+		for i := range m {
 			li := curve.ModMul(px, xMinusJInvs[i], curve.GroupOrder)
 			li = curve.ModMul(li, denomInvs[i], curve.GroupOrder)
 			val = curve.ModAdd(val, curve.ModMul(li, valuesOverN[i], curve.GroupOrder), curve.GroupOrder)
 		}
 		result[x] = val
 	}
+
 	return result, nil
 }
 
@@ -587,5 +592,6 @@ func (rv *cspRangeVerifier) Verify(proof *CspRangeProof) error {
 		NumberOfRounds: cspRounds,
 		Curve:          rv.Curve,
 	}
+
 	return cspV.Verify(&proof.cspProof)
 }
