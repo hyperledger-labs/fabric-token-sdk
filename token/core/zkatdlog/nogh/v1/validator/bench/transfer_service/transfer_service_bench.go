@@ -69,7 +69,7 @@ func (p *trandferServiceParams) NumInputs() int {
 		n, _ := strconv.Atoi(m[1])
 		return n
 	}
-	return 0
+	return -1
 }
 
 func (p *trandferServiceParams) NumOutputs() int {
@@ -78,7 +78,7 @@ func (p *trandferServiceParams) NumOutputs() int {
 		n, _ := strconv.Atoi(m[2])
 		return n
 	}
-	return 0
+	return -1
 }
 
 func (p *trandferServiceParams) CurveID() string {
