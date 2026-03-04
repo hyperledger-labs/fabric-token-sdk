@@ -77,7 +77,7 @@ func (vp *viewPool) nextView() view.View {
 	return vp.views[i%int64(l)]
 }
 
-func BenchmarkTransferService(b *testing.B) {
+func BenchmarkLocalTransferService(b *testing.B) {
 	f := &TransferServiceViewFactory{}
 	pool, params := CreateViewsWithProofs(b, "", f, defaultNumViews)
 
