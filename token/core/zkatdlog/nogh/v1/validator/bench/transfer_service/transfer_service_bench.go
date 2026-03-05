@@ -52,6 +52,7 @@ func (p *trandferServiceParams) PublicParamsRaw() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to base64-decode params file: %w", err)
 	}
+
 	return ppRaw, nil
 }
 
@@ -60,6 +61,7 @@ func (p *trandferServiceParams) PublicParams() (*v1setup.PublicParams, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return v1setup.NewPublicParamsFromBytes(ppRaw, v1setup.DLogNoGHDriverName, v1setup.ProtocolV1)
 }
 
@@ -69,6 +71,7 @@ func (p *trandferServiceParams) NumInputs() int {
 		n, _ := strconv.Atoi(m[1])
 		return n
 	}
+
 	return -1
 }
 
