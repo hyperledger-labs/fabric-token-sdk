@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger/fabric-protos-go-apiv2/common"
-	"github.com/hyperledger/fabric-x-committer/api/protoblocktx"
+	"github.com/hyperledger/fabric-x-common/api/applicationpb"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/proto"
@@ -83,7 +83,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, data []byte, block
 		return nil, nil
 	}
 
-	tx := &protoblocktx.Tx{}
+	tx := &applicationpb.Tx{}
 	if err := proto.Unmarshal(payload.Data, tx); err != nil {
 		logger.Debugf("failed to unmarshal tx [%d:%d]: %v", blockNum, txNum, err)
 
@@ -93,7 +93,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, data []byte, block
 	return m.mapTx(chdr.TxId, tx)
 }
 
-func (m *endorserTxInfoMapper) mapTx(txID string, tx *protoblocktx.Tx) (map[driver.Namespace]lookup.KeyInfo, error) {
+func (m *endorserTxInfoMapper) mapTx(txID string, tx *applicationpb.Tx) (map[driver.Namespace]lookup.KeyInfo, error) {
 	key, err := m.keyTranslator.CreateSetupKey()
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)

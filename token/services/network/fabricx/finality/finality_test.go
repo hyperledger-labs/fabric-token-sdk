@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality/queue"
-	"github.com/hyperledger/fabric-x-committer/api/protoblocktx"
+	"github.com/hyperledger/fabric-x-common/api/committerpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -113,7 +113,7 @@ func TestListenerEvent_Process_Unknown_TxCheckSucceeds(t *testing.T) {
 	mockListener := &mock.Listener{}
 
 	// TxCheck will query the transaction status
-	mockQS.GetTransactionStatusReturns(int32(protoblocktx.Status_COMMITTED), nil)
+	mockQS.GetTransactionStatusReturns(int32(committerpb.Status_COMMITTED), nil)
 	mockKT.CreateTokenRequestKeyReturns(key, nil)
 	mockQS.GetStateReturns(&cdriver.VaultValue{Raw: tokenRequestHash}, nil)
 
@@ -150,7 +150,7 @@ func TestListenerEvent_Process_Unknown_TxCheckFails(t *testing.T) {
 	mockListener := &mock.Listener{}
 
 	// TxCheck will fail to query the transaction status
-	mockQS.GetTransactionStatusReturns(int32(protoblocktx.Status_NOT_VALIDATED), errors.New("query failed"))
+	mockQS.GetTransactionStatusReturns(int32(committerpb.Status_STATUS_UNSPECIFIED), errors.New("query failed"))
 
 	event := &finality.ListenerEvent{
 		QueryService:  mockQS,
@@ -184,7 +184,7 @@ func TestListenerEvent_Process_Busy_TxCheckSucceeds(t *testing.T) {
 	mockListener := &mock.Listener{}
 
 	// TxCheck will query the transaction status and find it committed
-	mockQS.GetTransactionStatusReturns(int32(protoblocktx.Status_COMMITTED), nil)
+	mockQS.GetTransactionStatusReturns(int32(committerpb.Status_COMMITTED), nil)
 	mockKT.CreateTokenRequestKeyReturns(key, nil)
 	mockQS.GetStateReturns(&cdriver.VaultValue{Raw: tokenRequestHash}, nil)
 
@@ -280,7 +280,7 @@ func TestTxCheck_Process_Valid(t *testing.T) {
 	mockKT := &mock.KeyTranslator{}
 	mockListener := &mock.Listener{}
 
-	mockQS.GetTransactionStatusReturns(int32(protoblocktx.Status_COMMITTED), nil)
+	mockQS.GetTransactionStatusReturns(int32(committerpb.Status_COMMITTED), nil)
 	mockKT.CreateTokenRequestKeyReturns(key, nil)
 	mockQS.GetStateReturns(&cdriver.VaultValue{Raw: tokenRequestHash}, nil)
 
@@ -318,7 +318,7 @@ func TestTxCheck_Process_Invalid(t *testing.T) {
 	mockKT := &mock.KeyTranslator{}
 	mockListener := &mock.Listener{}
 
-	mockQS.GetTransactionStatusReturns(int32(protoblocktx.Status_ABORTED_SIGNATURE_INVALID), nil)
+	mockQS.GetTransactionStatusReturns(int32(committerpb.Status_ABORTED_SIGNATURE_INVALID), nil)
 
 	txCheck := &finality.TxCheck{
 		QueryService:  mockQS,
@@ -349,7 +349,7 @@ func TestTxCheck_Process_Unknown(t *testing.T) {
 	mockKT := &mock.KeyTranslator{}
 	mockListener := &mock.Listener{}
 
-	mockQS.GetTransactionStatusReturns(int32(protoblocktx.Status_NOT_VALIDATED), nil)
+	mockQS.GetTransactionStatusReturns(int32(committerpb.Status_STATUS_UNSPECIFIED), nil)
 
 	txCheck := &finality.TxCheck{
 		QueryService:  mockQS,
@@ -679,7 +679,7 @@ func TestFabricXFSCStatus_Committed(t *testing.T) {
 	mockKT := &mock.KeyTranslator{}
 	mockListener := &mock.Listener{}
 
-	mockQS.GetTransactionStatusReturns(int32(protoblocktx.Status_COMMITTED), nil)
+	mockQS.GetTransactionStatusReturns(int32(committerpb.Status_COMMITTED), nil)
 	mockKT.CreateTokenRequestKeyReturns("key", nil)
 	mockQS.GetStateReturns(&cdriver.VaultValue{Raw: []byte("hash")}, nil)
 
@@ -704,7 +704,7 @@ func TestFabricXFSCStatus_NotValidated(t *testing.T) {
 	mockKT := &mock.KeyTranslator{}
 	mockListener := &mock.Listener{}
 
-	mockQS.GetTransactionStatusReturns(int32(protoblocktx.Status_NOT_VALIDATED), nil)
+	mockQS.GetTransactionStatusReturns(int32(committerpb.Status_STATUS_UNSPECIFIED), nil)
 
 	txCheck := &finality.TxCheck{
 		QueryService:  mockQS,
@@ -724,7 +724,7 @@ func TestFabricXFSCStatus_Invalid(t *testing.T) {
 	mockKT := &mock.KeyTranslator{}
 	mockListener := &mock.Listener{}
 
-	mockQS.GetTransactionStatusReturns(int32(protoblocktx.Status_ABORTED_SIGNATURE_INVALID), nil)
+	mockQS.GetTransactionStatusReturns(int32(committerpb.Status_ABORTED_SIGNATURE_INVALID), nil)
 
 	txCheck := &finality.TxCheck{
 		QueryService:  mockQS,
