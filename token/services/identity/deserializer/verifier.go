@@ -13,21 +13,17 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 var logger = logging.MustGetLogger()
 
-type TypedVerifierDeserializer interface {
-	DeserializeVerifier(ctx context.Context, typ identity.Type, raw []byte) (driver.Verifier, error)
-	Recipients(id driver.Identity, typ identity.Type, raw []byte) ([]driver.Identity, error)
-	GetAuditInfo(ctx context.Context, id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error)
-	GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
-}
+type TypedVerifierDeserializer = driver2.TypedVerifierDeserializer
 
 type TypedVerifierDeserializerMultiplex struct {
-	deserializers map[string][]TypedVerifierDeserializer
+	deserializers map[string][]driver2.TypedVerifierDeserializer
 }
 
 func NewTypedVerifierDeserializerMultiplex() *TypedVerifierDeserializerMultiplex {

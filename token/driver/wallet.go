@@ -268,9 +268,9 @@ type WalletServiceFactory interface {
 	NewWalletService(tmsConfig Configuration, params PublicParameters) (WalletService, error)
 }
 
-//go:generate counterfeiter -o mock/matcher.go -fake-name Matcher . Matcher
-
 // Matcher models a matcher that can be used to match identities
+//
+//go:generate counterfeiter -o mock/matcher.go -fake-name Matcher . Matcher
 type Matcher interface {
 	// Match returns true if the passed identity matches this matcher
 	Match(ctx context.Context, identity []byte) error
