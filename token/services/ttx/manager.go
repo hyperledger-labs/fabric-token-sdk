@@ -18,21 +18,21 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	"go.opentelemetry.io/otel/trace"
 )
 
+// StoreServiceManager handles StoreService instances.
 type StoreServiceManager = ttxdb.StoreServiceManager
 
-type TokensServiceManager services.ServiceManager[*tokens.Service]
+// TokensServiceManager handles TokensService instances.
+type TokensServiceManager = dep.TokensServiceManager
 
-type CheckServiceProvider interface {
-	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Service) (CheckService, error)
-}
+// CheckServiceProvider handles CheckService instances.
+type CheckServiceProvider = dep.CheckServiceProvider
 
-// ServiceManager handles the services
+// ServiceManager handles the lifecycle of Service instances per TMS.
 type ServiceManager struct {
 	p lazy.Provider[token.TMSID, *Service]
 
@@ -40,11 +40,11 @@ type ServiceManager struct {
 	tokensServiceManager TokensServiceManager
 }
 
-// NewServiceManager creates a new Service manager.
+// NewServiceManager creates a new ServiceManager.
 func NewServiceManager(
 	networkProvider dep.NetworkProvider,
 	tmsProvider dep.TokenManagementServiceProvider,
-	ttxStoreServiceManager StoreServiceManager,
+	ttxStoreServiceManager dep.StoreServiceManager,
 	tokensServiceManager TokensServiceManager,
 	tracerProvider trace.TracerProvider,
 	checkServiceProvider CheckServiceProvider,
@@ -86,12 +86,12 @@ func NewServiceManager(
 	}
 }
 
-// ServiceByTMSId returns the Service for the given TMS
+// ServiceByTMSId returns the Service for the given TMS ID.
 func (m *ServiceManager) ServiceByTMSId(tmsID token.TMSID) (*Service, error) {
 	return m.p.Get(tmsID)
 }
 
-// RestoreTMS restores the ttxdb corresponding to the passed TMS ID.
+// RestoreTMS restores the state for the passed TMS ID by re-subscribing to finality for pending transactions.
 func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) error {
 	net, err := m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
@@ -142,7 +142,7 @@ var (
 	managerType = reflect.TypeOf((*ServiceManager)(nil))
 )
 
-// Get returns the Service instance for the passed TMS
+// Get returns the Service instance for the passed TMS.
 func Get(sp token.ServiceProvider, tms dep.TokenManagementService) *Service {
 	if tms == nil {
 		logger.Debugf("no TMS provided")
