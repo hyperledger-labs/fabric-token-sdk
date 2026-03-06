@@ -36,6 +36,10 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 		return ErrInvalidInputs
 	}
 
+	// Cache verifiers within this transaction to avoid redundant verifyProof() calls
+	// for inputs with the same owner identity
+	verifierCache := make(map[string]driver.Verifier)
+
 	var isRedeem bool
 	var inputToken []*token.Token
 	for i, in := range ctx.TransferAction.Inputs {
@@ -44,10 +48,19 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 
 		// check sender signature
 		ctx.Logger.Debugf("check sender [%d][%s]", i, driver.Identity(tok.Owner).UniqueID())
-		verifier, err := ctx.Deserializer.GetOwnerVerifier(c, tok.Owner)
-		if err != nil {
-			return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
+
+		// Check cache first to avoid redundant expensive verifyProof() calls
+		ownerKey := driver.Identity(tok.Owner).UniqueID()
+		verifier, cached := verifierCache[ownerKey]
+		if !cached {
+			var err error
+			verifier, err = ctx.Deserializer.GetOwnerVerifier(c, tok.Owner)
+			if err != nil {
+				return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", i, in, driver.Identity(tok.Owner))
+			}
+			verifierCache[ownerKey] = verifier
 		}
+
 		ctx.Logger.Debugf("signature verification [%d][%v][%s]", i, in, driver.Identity(tok.Owner).UniqueID())
 		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(c, tok.Owner, verifier)
 		if err != nil {
@@ -132,10 +145,11 @@ func TransferZKProofValidate(c context.Context, ctx *Context) error {
 		in[i] = tok.Data
 	}
 
-	if err := transfer.NewVerifier(
+	err := transfer.NewVerifier(
 		in,
 		ctx.TransferAction.GetOutputCommitments(),
-		ctx.PP).Verify(ctx.TransferAction.GetProof()); err != nil {
+		ctx.PP).Verify(ctx.TransferAction.GetProof())
+	if err != nil {
 		return errors.Join(err, ErrInvalidZKP)
 	}
 
