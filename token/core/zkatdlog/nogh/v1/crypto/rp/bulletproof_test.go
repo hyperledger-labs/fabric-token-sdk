@@ -145,6 +145,46 @@ func BenchmarkBFProver(b *testing.B) {
 	})
 }
 
+func BenchmarkBFVerifier(b *testing.B) {
+	setup, err := newBfSetup(math.BLS12_381_BBS_GURVY)
+	require.NoError(b, err)
+
+	prover := rp.NewRangeProver(
+		setup.com,
+		115,
+		[]*math.G1{setup.G, setup.H},
+		setup.bf,
+		setup.leftGens,
+		setup.rightGens,
+		setup.P,
+		setup.Q,
+		setup.nr,
+		setup.l,
+		setup.curve,
+	)
+	proof, err := prover.Prove()
+	require.NoError(b, err)
+
+	verifier := rp.NewRangeVerifier(
+		setup.com,
+		[]*math.G1{setup.G, setup.H},
+		setup.leftGens,
+		setup.rightGens,
+		setup.P,
+		setup.Q,
+		setup.nr,
+		setup.l,
+		setup.curve,
+	)
+
+	b.Run("bench", func(b *testing.B) {
+		for b.Loop() {
+			err = verifier.Verify(proof)
+			require.NoError(b, err)
+		}
+	})
+}
+
 func TestParallelBFProver(t *testing.T) {
 	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
