@@ -170,10 +170,34 @@ traceinspector:
 memcheck:
 	@go install ./token/services/benchmark/cmd/memcheck
 
-.PHONY: idemixgen
+.PHONY: txgen
 # install idemixgen/txgen tool
 txgen:
 	@go install github.com/IBM/idemix/tools/idemixgen
+
+.PHONY: profile-validator-transfer
+# regenerate validator transfer profile documentation
+profile-validator-transfer:
+	@echo "Regenerating validator transfer profile..."
+	@cd tools/profiler && ./profile.sh BenchmarkValidatorTransfer -f VerifyTokenRequestFromRaw 
+
+.PHONY: profile
+# run profiler on any test or benchmark
+# Usage: make profile TEST=BenchmarkValidatorTransfer [ROOT=VerifyTokenRequestFromRaw]
+# Usage: make profile TEST=TestMyFunction
+profile:
+	@if [ -z "$(TEST)" ]; then \
+		echo "Error: TEST parameter is required"; \
+		echo "Usage: make profile TEST=<test_or_benchmark_name> [ROOT=<root_function>]"; \
+		echo "Example: make profile TEST=BenchmarkValidatorTransfer ROOT=VerifyTokenRequestFromRaw"; \
+		exit 1; \
+	fi
+	@echo "Running profiler on $(TEST)..."
+	@if [ -n "$(ROOT)" ]; then \
+		cd tools/profiler && ./profile.sh $(TEST) -f $(ROOT); \
+	else \
+		cd tools/profiler && ./profile.sh $(TEST); \
+	fi
 
 .PHONY: clean-all-containers
 # clean up all docker containers

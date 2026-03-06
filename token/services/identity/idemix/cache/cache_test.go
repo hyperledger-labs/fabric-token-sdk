@@ -179,8 +179,12 @@ func TestFetchIdentityFromCacheNilEntry(t *testing.T) {
 		}, nil
 	}, 10, nil, NewMetrics(&disabled.Provider{}))
 
-	// Send nil to cache to test nil handling
+	// Pre-populate the cache with nil before calling Identity()
+	// Since cache is buffered, this completes immediately
 	c.cache <- nil
+
+	// Small delay to ensure the nil is in the buffer before Identity() reads
+	time.Sleep(10 * time.Millisecond)
 
 	identityDescriptor, err := c.Identity(context.Background(), nil)
 	require.NoError(t, err)
