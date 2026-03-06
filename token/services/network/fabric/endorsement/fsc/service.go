@@ -116,14 +116,14 @@ func (e *EndorsementService) Endorse(context view.Context, requestRaw []byte, si
 	}
 	logger.DebugfContext(context.Context(), "request approval via fts endrosers with policy [%s]: [%d]...", e.PolicyType, len(endorsers))
 
-	envBoxed, err := e.ViewManager.InitiateView(NewRequestApprovalView(
+	envBoxed, err := e.ViewManager.InitiateView(context.Context(), NewRequestApprovalView(
 		e.TmsID,
 		txID,
 		requestRaw,
 		nil,
 		endorsers,
 		e.EndorserService,
-	), context.Context())
+	))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to request approval")
 	}
