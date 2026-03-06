@@ -294,3 +294,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
+
+replace github.com/hyperledger-labs/fabric-token-sdk/tools/benchprof/tracer => /home/akram/go/src/github.com/hyperledger-labs/fabric-token-sdk/tools/benchprof/tracer
