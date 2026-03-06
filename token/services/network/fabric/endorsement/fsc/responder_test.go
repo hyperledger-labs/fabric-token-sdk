@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	fabricdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -23,14 +24,54 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// mockSignedProposal implements driver.SignedProposal for testing
+type mockSignedProposal struct {
+	proposalBytes []byte
+	signature     []byte
+}
+
+func (m *mockSignedProposal) ProposalBytes() []byte    { return m.proposalBytes }
+func (m *mockSignedProposal) Signature() []byte        { return m.signature }
+func (m *mockSignedProposal) ProposalHash() []byte     { return nil }
+func (m *mockSignedProposal) ChaincodeName() string    { return "" }
+func (m *mockSignedProposal) ChaincodeVersion() string { return "" }
+
+// mockProposal implements driver.Proposal for testing
+type mockProposal struct {
+	header  []byte
+	payload []byte
+}
+
+func (m *mockProposal) Header() []byte  { return m.header }
+func (m *mockProposal) Payload() []byte { return m.payload }
+
+var _ fabricdriver.SignedProposal = &mockSignedProposal{}
+var _ fabricdriver.Proposal = &mockProposal{}
+
+// alwaysValidVerifier is a test verifier that always returns nil (valid)
+type alwaysValidVerifier struct{}
+
+func (v *alwaysValidVerifier) Verify(message, sigma []byte) error {
+	return nil
+}
+
+// rejectingVerifier is a test verifier that always rejects signatures
+type rejectingVerifier struct{}
+
+func (v *rejectingVerifier) Verify(message, sigma []byte) error {
+	return errors.New("invalid signature")
+}
+
 type MockNewRequestApprovalResponderView struct {
-	view      *fsc.RequestApprovalResponderView
-	ctx       *mock.Context
-	fabricTx  *mock.FabricTransaction
-	tmsIDRaw  []byte
-	validator *mock2.Validator
-	rws       *mock.FabricRWSet
-	es        *mock.EndorserService
+	view            *fsc.RequestApprovalResponderView
+	ctx             *mock.Context
+	fabricTx        *mock.FabricTransaction
+	tmsIDRaw        []byte
+	validator       *mock2.Validator
+	rws             *mock.FabricRWSet
+	es              *mock.EndorserService
+	channelProvider *mock.ChannelProvider
+	mspManager      *mock.MSPManager
 }
 
 func mockNewRequestApprovalResponderView(t *testing.T, overrideTMSID *token.TMSID) *MockNewRequestApprovalResponderView {
@@ -41,6 +82,16 @@ func mockNewRequestApprovalResponderView(t *testing.T, overrideTMSID *token.TMSI
 	es := &mock.EndorserService{}
 	fabricTx := &mock.FabricTransaction{}
 	fabricTx.IDReturns("a_tx_id")
+	fabricTx.CreatorReturns([]byte("creator_identity"))
+	fabricTx.SignedProposalReturns(&mockSignedProposal{
+		proposalBytes: []byte("proposal_bytes"),
+		signature:     []byte("proposal_signature"),
+	})
+	fabricTx.ProposalReturns(&mockProposal{
+		header:  []byte("proposal_header"),
+		payload: []byte("proposal_payload"),
+	})
+
 	tmsID := token.TMSID{
 		Network:   "a_network",
 		Channel:   "a_channel",
@@ -75,6 +126,13 @@ func mockNewRequestApprovalResponderView(t *testing.T, overrideTMSID *token.TMSI
 	storageProvider.GetStorageReturns(storage, nil)
 	storage.AppendValidationRecordReturns(nil)
 
+	mspManager := &mock.MSPManager{}
+	mspManager.IsValidReturns(nil)
+	mspManager.GetVerifierReturns(&alwaysValidVerifier{}, nil)
+
+	channelProvider := &mock.ChannelProvider{}
+	channelProvider.GetMSPManagerReturns(mspManager, nil)
+
 	view := fsc.NewRequestApprovalResponderView(
 		nil,
 		func(txID string, namespace string, rws *fabric.RWSet) (fsc.Translator, error) {
@@ -83,16 +141,19 @@ func mockNewRequestApprovalResponderView(t *testing.T, overrideTMSID *token.TMSI
 		es,
 		tmsp,
 		storageProvider,
+		channelProvider,
 	)
 
 	return &MockNewRequestApprovalResponderView{
-		view:      view,
-		ctx:       ctx,
-		fabricTx:  fabricTx,
-		tmsIDRaw:  tmsIDRaw,
-		validator: validator,
-		rws:       rws,
-		es:        es,
+		view:            view,
+		ctx:             ctx,
+		fabricTx:        fabricTx,
+		tmsIDRaw:        tmsIDRaw,
+		validator:       validator,
+		rws:             rws,
+		es:              es,
+		channelProvider: channelProvider,
+		mspManager:      mspManager,
 	}
 }
 
@@ -250,6 +311,153 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			expectError:      true,
 			expectErrorType:  fsc.ErrInvalidProposal,
 			expectErrContain: "invalid function [strawberry]",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "empty creator",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.CreatorReturns([]byte{})
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "creator is empty for tx",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "empty proposal bytes",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.SignedProposalReturns(&mockSignedProposal{
+					proposalBytes: nil,
+					signature:     []byte("proposal_signature"),
+				})
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "proposal bytes are empty for tx",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "empty proposal signature",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.SignedProposalReturns(&mockSignedProposal{
+					proposalBytes: []byte("proposal_bytes"),
+					signature:     nil,
+				})
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "proposal signature is empty for tx",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "empty proposal header",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.ProposalReturns(&mockProposal{
+					header:  nil,
+					payload: []byte("proposal_payload"),
+				})
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "proposal header is empty for tx",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "empty proposal payload",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.ProposalReturns(&mockProposal{
+					header:  []byte("proposal_header"),
+					payload: nil,
+				})
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "proposal payload is empty for tx",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "failed to get MSP manager",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.channelProvider.GetMSPManagerReturns(nil, errors.New("no msp manager available"))
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "failed to get MSP manager",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "failed to get verifier for creator",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.mspManager.GetVerifierReturns(nil, errors.New("no verifier for identity"))
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "failed to get verifier for creator",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "creator identity not valid (unknown to network)",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.mspManager.IsValidReturns(errors.New("identity not known to any MSP"))
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "creator identity is not valid",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "proposal signature verification failed",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.mspManager.GetVerifierReturns(&rejectingVerifier{}, nil)
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "proposal signature verification failed",
 			verify: func(m *MockNewRequestApprovalResponderView, res any) {
 				assert.Equal(t, 1, m.rws.DoneCallCount())
 			},
