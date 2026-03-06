@@ -31,7 +31,7 @@ type IdentityProvider interface {
 // ViewManager models a view manager.
 type ViewManager interface {
 	// InitiateView initiates the given view.
-	InitiateView(view view.View, ctx context.Context) (interface{}, error)
+	InitiateView(ctx context.Context, view view.View) (interface{}, error)
 }
 
 type ViewRegistry = fsc.ViewRegistry

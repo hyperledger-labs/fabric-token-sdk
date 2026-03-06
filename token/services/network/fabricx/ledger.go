@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/qe"
-	"github.com/hyperledger/fabric-x-committer/api/protoblocktx"
+	"github.com/hyperledger/fabric-x-common/api/committerpb"
 )
 
 var logger = logging.MustGetLogger()
@@ -46,8 +46,8 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	}
 	logger.Debugf("ledger status of [%s] is [%d]", id, tx.ValidationCode())
 
-	switch protoblocktx.Status(tx.ValidationCode()) {
-	case protoblocktx.Status_COMMITTED:
+	switch committerpb.Status(tx.ValidationCode()) {
+	case committerpb.Status_COMMITTED:
 		return driver.Valid, nil
 	default:
 		return driver.Invalid, nil
