@@ -455,7 +455,7 @@ func prepareTransfer(
 	if benchCase.NumOutputs <= 0 {
 		return nil, nil, nil, nil, errors.Errorf("invalid number of outputs [%d]", benchCase.NumOutputs)
 	}
-	outputValue := sumInputs / uint64(benchCase.NumOutputs) //nolint:gosec
+	outputValue := sumInputs / uint64(benchCase.NumOutputs)
 	sumOutputs := uint64(0)
 	outValues := make([]uint64, benchCase.NumOutputs)
 	for i := range benchCase.NumOutputs {
