@@ -11,9 +11,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 )
 
 type AuditorCheckServiceProvider struct {
@@ -31,7 +30,7 @@ func NewAuditorCheckServiceProvider(tmsProvider common.TokenManagementServicePro
 }
 
 func (a *AuditorCheckServiceProvider) CheckService(id token.TMSID, adb *auditdb.StoreService, tdb *tokens.Service) (auditor.CheckService, error) {
-	return common.NewChecksService(append(common.NewDefaultCheckers(a.tmsProvider, a.networkProvider, adb, tdb, id), a.checkers...)), nil
+	return common.NewChecksService(append(common.NewDefaultCheckers(a.tmsProvider, a.networkProvider, adb, id), a.checkers...)), nil
 }
 
 type OwnerCheckServiceProvider struct {
@@ -48,6 +47,6 @@ func NewOwnerCheckServiceProvider(tmsProvider common.TokenManagementServiceProvi
 	}
 }
 
-func (a *OwnerCheckServiceProvider) CheckService(id token.TMSID, txdb *ttxdb.StoreService, tdb *tokens.Service) (ttx.CheckService, error) {
-	return common.NewChecksService(append(common.NewDefaultCheckers(a.tmsProvider, a.networkProvider, txdb, tdb, id), a.checkers...)), nil
+func (a *OwnerCheckServiceProvider) CheckService(id token.TMSID, adb dep.StoreService, _ dep.TokensService) (dep.CheckService, error) {
+	return common.NewChecksService(append(common.NewDefaultCheckers(a.tmsProvider, a.networkProvider, adb, id), a.checkers...)), nil
 }
