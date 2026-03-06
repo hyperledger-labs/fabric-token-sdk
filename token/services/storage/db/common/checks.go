@@ -32,10 +32,12 @@ type TokenTransactionDB interface {
 	Transactions(ctx context.Context, params driver.QueryTransactionsParams, pagination driver2.Pagination) (*driver2.PageIterator[*driver.TransactionRecord], error)
 }
 
+//go:generate counterfeiter -o mock/token_management_service_provider.go --fake-name TokenManagementServiceProvider . TokenManagementServiceProvider
 type TokenManagementServiceProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
 
+//go:generate counterfeiter -o mock/network_provider.go --fake-name NetworkProvider . NetworkProvider
 type NetworkProvider interface {
 	GetNetwork(network string, channel string) (*network.Network, error)
 }
