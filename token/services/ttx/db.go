@@ -14,8 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
@@ -33,22 +31,18 @@ type (
 
 const txIdLabel tracing.LabelName = "tx_id"
 
-type CheckService interface {
-	Check(ctx context.Context) ([]string, error)
-}
-
-// Service is the interface for the owner service
+// Service provides access to the token transaction store and related services for a specific TMS.
 type Service struct {
 	networkProvider dep.NetworkProvider
 	tmsID           token.TMSID
-	ttxStoreService *ttxdb.StoreService
-	tokensService   *tokens.Service
+	ttxStoreService dep.StoreService
+	tokensService   dep.TokensService
 	tmsProvider     dep.TokenManagementServiceProvider
 	finalityTracer  trace.Tracer
-	checkService    CheckService
+	checkService    dep.CheckService
 }
 
-// Append adds the passed transaction to the database
+// Append adds the passed transaction to the database and registers a finality listener.
 func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 	// append request to the db
 	if err := a.ttxStoreService.AppendTransactionRecord(ctx, tx.Request()); err != nil {
@@ -83,13 +77,13 @@ func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 	return nil
 }
 
-// SetStatus sets the status of the audit records with the passed transaction id to the passed status
+// SetStatus sets the status of the transaction with the given ID.
 func (a *Service) SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error {
 	return a.ttxStoreService.SetStatus(ctx, txID, status, message)
 }
 
-// GetStatus return the status of the given transaction id.
-// It returns an error if no transaction with that id is found
+// GetStatus returns the status of the given transaction ID.
+// It returns an error if no transaction with that ID is found.
 func (a *Service) GetStatus(ctx context.Context, txID string) (TxStatus, string, error) {
 	st, sm, err := a.ttxStoreService.GetStatus(ctx, txID)
 	if err != nil {
@@ -99,19 +93,22 @@ func (a *Service) GetStatus(ctx context.Context, txID string) (TxStatus, string,
 	return st, sm, nil
 }
 
-// GetTokenRequest returns the token request bound to the passed transaction id, if available.
+// GetTokenRequest returns the token request bound to the passed transaction ID, if available.
 func (a *Service) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
 	return a.ttxStoreService.GetTokenRequest(ctx, txID)
 }
 
+// AppendTransactionEndorseAck records an endorsement acknowledgement for the given transaction ID.
 func (a *Service) AppendTransactionEndorseAck(ctx context.Context, txID string, id view.Identity, sigma []byte) error {
 	return a.ttxStoreService.AddTransactionEndorsementAck(ctx, txID, id, sigma)
 }
 
+// GetTransactionEndorsementAcks returns all endorsement acknowledgements for the given transaction ID.
 func (a *Service) GetTransactionEndorsementAcks(ctx context.Context, id string) (map[string][]byte, error) {
 	return a.ttxStoreService.GetTransactionEndorsementAcks(ctx, id)
 }
 
+// Check performs a consistency check on the underlying database.
 func (a *Service) Check(ctx context.Context) ([]string, error) {
 	return a.checkService.Check(ctx)
 }
