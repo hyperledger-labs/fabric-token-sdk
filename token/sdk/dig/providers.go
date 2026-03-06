@@ -29,3 +29,10 @@ func newTokenDriverService(in struct {
 }) *core.TokenDriverService {
 	return core.NewTokenDriverService(in.Drivers)
 }
+
+func newValidatorDriverService(in struct {
+	dig.In
+	Drivers []core.NamedFactory[driver.ValidatorDriver] `group:"validator-drivers"`
+}) *core.ValidatorDriverService {
+	return core.NewValidatorDriverService(in.Drivers)
+}
