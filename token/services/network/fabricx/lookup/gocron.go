@@ -9,12 +9,14 @@ package lookup
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"sync"
 	"time"
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/vault/queryservice"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 )
@@ -205,10 +207,11 @@ func (j *PermanentJob) Run() {
 	logger.Infof("[PermanentKeyCheck] check for key [%s:%s]", j.namespace, j.key)
 	v, err := j.queryService.GetState(j.namespace, j.key)
 	if err == nil && v != nil && len(v.Raw) != 0 {
-		if !bytes.Equal(j.lastValue, v.Raw) {
-			logger.Infof("[PermanentKeyCheck] key [%s:%s] found with new value, notify listener", j.namespace, j.key)
+		newHash := token.Hashable(v.Raw).Raw()
+		if !bytes.Equal(j.lastValue, newHash) {
+			logger.Debugf("[PermanentKeyCheck] key [%s:%s] found with new value [%s], notify listener", j.namespace, j.key, base64.StdEncoding.EncodeToString(newHash))
 			j.listener.OnStatus(context.Background(), j.key, v.Raw)
-			j.lastValue = v.Raw
+			j.lastValue = token.Hashable(v.Raw).Raw()
 		}
 	}
 }
