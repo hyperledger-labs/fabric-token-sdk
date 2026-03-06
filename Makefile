@@ -2,7 +2,7 @@
 FABRIC_VERSION ?= 3.1.1
 FABRIC_CA_VERSION ?= 1.5.7
 FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
-FABRIC_X_TOOLS_VERSION ?= v0.1.0
+FABRIC_X_TOOLS_VERSION ?= b353b61
 FABRIC_X_COMMITTER_VERSION ?= 0.1.9
 
 # need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
