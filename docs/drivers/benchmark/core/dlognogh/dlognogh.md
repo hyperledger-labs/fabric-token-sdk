@@ -1,5 +1,9 @@
 # ZKAT DLog No Graph Hiding Benchmarks
 
+> **Related Documentation:**
+> - [Testing Architecture](./dlognogh_architecture.md) - Understanding the test layers
+> - [Regression Tests](./dlognogh_regression.md) - Backwards compatibility testing
+
 Packages with benchmark tests:
 
 - `token/core/zkatdlog/nogh/v1/transfer`: 
@@ -117,7 +121,7 @@ Example results have been produced on an Apple M1 Max and can be consulted [here
 This is a test that runs multiple instances of the above benchmark in parallel.
 This allows the analyst to understand if shared data structures are actual bottlenecks.
 
-It uses a custom-made runner whose documentation can be found [here](../../../../token/services/benchmark/runner.md).
+It uses a custom-made runner whose documentation can be found [here](../../../../../token/services/benchmark/runner.md).
 
 ```shell
 go test ./token/core/zkatdlog/nogh/v1/transfer -test.run=TestParallelBenchmarkSender -test.v -test.timeout 0 -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2" -workers="NumCPU" -duration="10s" -setup_samples=128 | tee bench.txt
