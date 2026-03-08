@@ -1,107 +1,93 @@
 import re
 import sys
 from pathlib import Path
+from typing import Any
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 st.set_page_config(
-    layout="wide", page_icon=":chart_with_upwards_trend:", page_title="TPS Degradation")
+    layout="wide", page_icon=":chart_with_upwards_trend:", page_title="TPS Degradation", initial_sidebar_state="collapsed")
 
-DEFAULT_BENCH_DIR = "bench6"
-
-SERVICE_RE = re.compile(
-    r'^(?P<bench>\S+)-(?P<workers>\d+)\s+'
-    r'(?P<iterations>\d+)\s+'
-    r'(?P<tps>[\d.]+)\s+TPS\s+'
-    r'(?P<rest>.+)$'
-)
-
-RE_PERCENTILE = re.compile(
-    r'(?P<value>\d+)\s+ns/op\s+\((?P<name>p\d+)\)'
-)
-
-LOCAL_RE = re.compile(
-    r'^'
-    r'(?P<bench>Benchmark[^\s/]+)'          # Benchmark name
-    r'(?:/(?P<params>.+?))?'                # everything after / (lazy)
-    r'(?:-(?P<workers>\d+))?'               # trailing -workers
-    r'\s+'
-    r'(?P<iterations>\d+)'                  # iterations
-    r'\s+'
-    r'(?P<ns>\d+)\s+ns/op'                  # ns/op
-    r'\s+'
-    r'(?P<tps>[\d.]+)\s+TPS'                # TPS
-    r'$'
-)
+IGNORE_COLS = {"bench", "workers", "tps", "iterations", "ns/op"}
+DEFAULT_BENCH_DIR = "bench"
 
 
-def ns2ms(ns):
-    """Nano Seconds to Milliseconds"""
-    return ns / 1e6
+def _is_number(s: str) -> bool:
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 
-def parse(path: Path, regex=SERVICE_RE):
+def simple_parser(path: Path) -> pd.DataFrame:
     rows = []
-
-    for line in path.read_text().splitlines():
-        m = regex.match(line.strip())
-        if not m:
+    for ln in path.read_text().splitlines():
+        if not ln.startswith("Benchmark"):
+            continue
+        first, *cols = ln.split()
+        if not cols:
             continue
 
-        data = m.groupdict()
-        bench, *parts = data["bench"].split("/")
+        bench_name, *params = first.split("/")
+        if params:
+            parts = params[-1].rsplit("-", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                last_param, workers = parts[0], int(parts[1])
+            else:
+                last_param, workers = params[-1], 1
+            row: dict[str, Any] = {"bench": bench_name, "workers": workers}
+            for p in [*params[:-1], last_param]:
+                if "=" in p:
+                    k, v = p.split("=", 1)
+                    row[k] = v
+        else:
+            parts = bench_name.rsplit("-", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                bench_name, workers = parts[0], int(parts[1])
+            else:
+                workers = 1
+            row = {"bench": bench_name, "workers": workers}
 
-        if data.get("params"):
-            parts.extend(data["params"].split("/"))
+        row["iterations"] = int(cols.pop(0))
 
-        p_dct = dict(p.split("=", 1) for p in parts if "=" in p)
-
-        row = {
-            "bench": bench,
-            "workers": int(data["workers"] or -1),
-            "iterations": int(data["iterations"]),
-            "tps": float(data["tps"]),
-            **p_dct
-        }
-
-        if "rest" in data:
-            for p in RE_PERCENTILE.finditer(data["rest"]):
-                row[f"{p.group('name')} (ms)"] = ns2ms(int(p.group("value")))
+        i = 0
+        while i < len(cols):
+            pval = cols[i]
+            j = i + 1
+            while j < len(cols) and not _is_number(cols[j]):
+                j += 1
+            pname = " ".join(cols[i + 1:j])
+            row[pname] = float(pval)
+            i = j
 
         rows.append(row)
 
-    return pd.DataFrame(rows)
-
-
-def try_parse(path: Path):
-    """Try SERVICE_RE first, fall back to LOCAL_RE."""
-    df = parse(path, regex=SERVICE_RE)
+    df = pd.DataFrame(rows)
     if df.empty:
-        df = parse(path, regex=LOCAL_RE)
+        return df
+
+    if "TPS" in df.columns:
+        df = df.rename(columns={"TPS": "tps"})
+    for col in [c for c in df.columns if c.startswith("ns/op") and "(" in c]:
+        label = col.split("(")[1].rstrip(")")
+        df[f"{label} (ms)"] = df[col] / 1e6
+        df = df.drop(columns=[col])
+
     return df
 
 
-# ----------------------------
-# STRUCTURED PARALLEL LOG PARSER
-# ----------------------------
+# --- STRUCTURED PARALLEL LOG PARSER ---
+
 ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
-
-PARALLEL_RUN_RE = re.compile(
-    r'=== RUN\s+(\S+)/(.+?)_with_(\d+)_workers'
-)
-
-PARALLEL_THROUGHPUT_RE = re.compile(
-    r'Pure Throughput\s+([\d.]+)/s'
-)
-
+PARALLEL_RUN_RE = re.compile(r'=== RUN\s+(\S+)/(.+?)_with_(\d+)_workers')
+PARALLEL_THROUGHPUT_RE = re.compile(r'Pure Throughput\s+([\d.]+)/s')
 PARALLEL_LATENCY_RE = re.compile(
     r'(Min|P50 \(Median\)|Average|P95|P99\.9|P99|P5|Max)\s+'
-    r'([\d.]+(?:ms|[n\xb5\xc2]+s|s))'
-)
+    r'([\d.]+(?:ms|[n\xb5\xc2]+s|s))')
 
 
 def _parse_ms(s: str) -> float:
-    """Parse a duration string (e.g. '36.86ms') into milliseconds."""
     m = re.match(r'([\d.]+)(.*)', s)
     val, unit = float(m.group(1)), m.group(2)
     if unit == 'ms':
@@ -113,9 +99,11 @@ def _parse_ms(s: str) -> float:
     raise ValueError(f"unknown unit: {unit}")
 
 
+LATENCY_KEYS = {'P5': 'p5 (ms)', 'P95': 'p95 (ms)', 'P99': 'p99 (ms)'}
+
+
 def parse_parallel_log(path: Path) -> pd.DataFrame:
     text = ANSI_ESCAPE_RE.sub('', path.read_text())
-
     rows: list[dict] = []
     current: dict = {}
 
@@ -144,21 +132,8 @@ def parse_parallel_log(path: Path) -> pd.DataFrame:
             continue
 
         m = PARALLEL_LATENCY_RE.match(line)
-        if m:
-            name, raw = m.group(1), m.group(2)
-            ms_val = _parse_ms(raw)
-            key_map = {
-                # 'P50 (Median)': 'p50 (ms)',
-                'P5':           'p5 (ms)',
-                'P95':          'p95 (ms)',
-                'P99':          'p99 (ms)',
-                # 'P99.9':        'p99.9 (ms)',
-                # 'Min':          'min (ms)',
-                # 'Max':          'max (ms)',
-                # 'Average':      'avg (ms)',
-            }
-            if name in key_map:
-                current[key_map[name]] = ms_val
+        if m and m.group(1) in LATENCY_KEYS:
+            current[LATENCY_KEYS[m.group(1)]] = _parse_ms(m.group(2))
             continue
 
         m = re.match(r'Total Ops\s+(\d+)', line)
@@ -167,7 +142,6 @@ def parse_parallel_log(path: Path) -> pd.DataFrame:
 
     if current:
         rows.append(current)
-
     return pd.DataFrame(rows)
 
 
@@ -175,107 +149,63 @@ def has_multi_nc(df: pd.DataFrame) -> bool:
     return "nc" in df.columns and df["nc"].nunique() > 1
 
 
-# ----------------------------
-# PLOTTING
-# ----------------------------
+# --- PLOTTING ---
+
+
+def _tps_fig(df, color_col, title):
+    fig = px.line(df, x='workers', y='tps', color=color_col,
+                  markers=True, title=title,
+                  labels={'workers': 'Workers', 'tps': 'TPS', color_col: ''})
+    fig.update_layout(template='plotly_white', hovermode='x unified')
+    return fig
+
+
+def _latency_fig(df, color_col, dash_col, title):
+    latency_cols = [c for c in df.columns if c.endswith('(ms)')]
+    if not latency_cols:
+        return None
+    melted = df.melt(id_vars=[color_col, 'workers'], value_vars=latency_cols,
+                     var_name='percentile', value_name='latency')
+    fig = px.line(melted, x='workers', y='latency',
+                  color=dash_col, line_dash=color_col, markers=True, title=title,
+                  labels={'workers': 'Workers', 'latency': 'Latency (ms)', dash_col: ''})
+    fig.update_layout(template='plotly_white', hovermode='x unified')
+    return fig
+
+
+def _aggregate(df, group_cols):
+    numeric = [c for c in df.select_dtypes(
+        include='number').columns if c != 'workers']
+    return (df.groupby(group_cols)[numeric]
+              .mean().reset_index().sort_values('workers'))
 
 
 def make_figures(df):
-
-    param_cols = [c for c in df.columns if c not in (
-        'bench', 'workers', 'tps')]
-    ignore_cols = ["iterations"]
-
+    param_cols = [
+        c for c in df.columns if c not in IGNORE_COLS and not c.endswith("(ms)")]
     figs = []
 
     for bench, bdf in df.groupby('bench'):
-
-        cols = [
-            c for c in param_cols
-            if bdf[c].notna().any()
-            and not c.endswith("(ms)")
-        ]
-        varying = [c for c in cols if bdf[c].nunique() > 1]
-        fixed = [c for c in cols if bdf[c].nunique() <= 1]
-
-        varying = [c for c in varying if c not in ignore_cols]
-        fixed = [c for c in fixed if c not in ignore_cols]
-
         bdf = bdf.copy()
+        varying = [c for c in param_cols if c in bdf and bdf[c].nunique() > 1]
+        fixed = [c for c in param_cols if c in bdf and bdf[c].nunique()
+                 <= 1 and bdf[c].notna().any()]
 
-        # Build legend label
         bdf['series'] = (
             bdf[varying].astype(str).apply(
                 lambda r: ', '.join(f'{k}={v}' for k, v in r.items()), axis=1)
             if varying else bench
         )
 
-        numeric_cols = [
-            c for c in bdf.select_dtypes(include='number').columns
-            if c not in ('workers',)
-        ]
-        agg = (
-            bdf.groupby(['series', 'workers'])[numeric_cols]
-            .mean()
-            .reset_index()
-            .sort_values('workers', ascending=False)
-        )
+        agg = _aggregate(bdf, ['series', 'workers'])
+        fixed_str = ', '.join(str(bdf[c].dropna().iloc[0]) for c in fixed)
+        suffix = f' ({fixed_str})' if fixed_str else ''
 
-        fixed_str = ', '.join(f'{bdf[c].dropna().iloc[0]}' for c in fixed)
-        title_suffix = f' ({fixed_str})' if fixed_str else ''
-
-        # -----------------
-        # TPS FIGURE
-        # -----------------
-        fig_tps = px.line(
-            agg,
-            x='workers',
-            y='tps',
-            color='series',
-            markers=True,
-            title=f'{bench}\n{title_suffix}',
-            labels={
-                'workers': 'Workers (GOMAXPROCS)',
-                'tps': 'TPS',
-                'series': ''
-            }
-        )
-        fig_tps.update_layout(template='plotly_white',
-                              hovermode='x unified')
-        figs.append(fig_tps)
-
-        # -----------------
-        # LATENCY FIGURE
-        # -----------------
-        latency_cols = [c for c in agg.columns if c.endswith('(ms)')]
-
-        if latency_cols:
-            latency_df = agg.melt(
-                id_vars=['series', 'workers'],
-                value_vars=latency_cols,
-                var_name='percentile',
-                value_name='latency'
-            )
-
-            fig_lat = px.line(
-                latency_df,
-                x='workers',
-                y='latency',
-                color='percentile',
-                line_dash='series',
-                markers=True,
-                title=f'{bench} - Latency{title_suffix}',
-                labels={
-                    'workers': 'Workers (GOMAXPROCS)',
-                    'latency': 'Latency (ms)',
-                    'percentile': ''
-                }
-            )
-
-            fig_lat.update_layout(template='plotly_white',
-                                  hovermode='x unified',
-                                  legend=dict(tracegroupgap=10))
-            figs.append(fig_lat)
+        figs.append(_tps_fig(agg, 'series', f'{bench}{suffix}'))
+        lat = _latency_fig(agg, 'series', 'percentile',
+                           f'{bench} - Latency{suffix}')
+        if lat:
+            figs.append(lat)
 
     return figs
 
@@ -286,125 +216,58 @@ def parse_combined(dfs: dict[str, pd.DataFrame]):
     dct = {}
     for df in dfs.values():
         for key, group in df.groupby("nc"):
-            if key not in dct:
-                dct[key] = group
-            else:
-                dct[key] = pd.concat([dct[key], group], ignore_index=True)
+            dct[key] = pd.concat(
+                [dct.get(key, pd.DataFrame()), group], ignore_index=True)
     return dct
 
 
-def make_combined_figures(dfs: dict[str, pd.DataFrame],
-                          local_dfs: dict[str, pd.DataFrame]):
-
+def make_combined_figures(dfs, local_dfs):
     figs = {}
-
     for nc, df in sorted(dfs.items(), key=lambda x: x[0]):
+        agg = _aggregate(df, ["bench", "workers"])
 
-        df = df.copy()
-
-        numeric_cols = [
-            c for c in df.select_dtypes(include="number").columns
-            if c != "workers"
-        ]
-
-        agg = (
-            df.groupby(["bench", "workers"])[numeric_cols]
-            .mean()
-            .reset_index()
-            .sort_values("workers")
-        )
-
-        # -------------------------
-        # TPS FIGURE
-        # -------------------------
-        agg["bench"] += "-2machines"
         local_parts = []
         for name, ldf in local_dfs.items():
             ldf = ldf.copy()
             ldf['bench'] = name
             local_parts.append(ldf)
-        agg = pd.concat([agg, *local_parts],
-                        ignore_index=True).sort_values(["workers", "tps"], ascending=[True, False])
-
-        fig = px.line(
-            agg,
-            x="workers",
-            y="tps",
-            color="bench",
-            markers=True,
-            title=f"TPS (nc={nc})",
-            labels={
-                "workers": "Workers",
-                "tps": "TPS",
-                "bench": ""
-            }
+        agg = _aggregate(
+            pd.concat([agg, *local_parts], ignore_index=True),
+            ["bench", "workers"]
         )
 
-        fig.update_layout(
-            template="plotly_white",
-            hovermode="x unified"
-        )
-
-        figs[nc] = fig
-
-        latency_cols = [c for c in agg.columns if c.endswith("(ms)")]
-
-        if latency_cols:
-            latency_df = agg.melt(
-                id_vars=["bench", "workers"],
-                value_vars=latency_cols,
-                var_name="percentile",
-                value_name="latency"
-            )
-            fig_lat = px.line(
-                latency_df,
-                x="workers",
-                y="latency",
-                color="bench",
-                line_dash="percentile",
-                markers=True,
-                title=f"Latency (nc={nc})",
-                labels={
-                    "workers": "Workers (GOMAXPROCS)",
-                    "latency": "Latency (ms)",
-                    "bench": ""
-                }
-            )
-
-            figs[f"{nc}_latency"] = fig_lat
+        figs[nc] = _tps_fig(agg, 'bench', f'TPS (nc={nc})')
+        lat = _latency_fig(agg, 'bench', 'percentile', f'Latency (nc={nc})')
+        if lat:
+            figs[f"{nc}_latency"] = lat
 
     return figs
 
 
-if __name__ == "__main__":
-
-    directory = Path(sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BENCH_DIR)
+def main():
+    with st.sidebar:
+        directory = st.text_input(
+            "Directory", value=DEFAULT_BENCH_DIR, key="benchdir")
+    directory = Path(directory)
 
     all_dfs = {}
     for path in sorted(directory.glob("*.txt")):
-        df = try_parse(path)
+        df = simple_parser(path)
         if df.empty:
             continue
         all_dfs[path.stem] = df
-        with st.expander(f"`{path.stem.removeprefix('res_transfer_').upper()}`"):
+        with st.expander(f"`{path.stem}`"):
             for fig in make_figures(df):
                 st.plotly_chart(fig)
 
-    multi = {name: df.copy()
-             for name, df in all_dfs.items() if has_multi_nc(df)}
-    single = {name: df.copy()
-              for name, df in all_dfs.items() if not has_multi_nc(df)}
+    multi = {n: df.copy() for n, df in all_dfs.items() if has_multi_nc(df)}
+    single = {n: df.copy()
+              for n, df in all_dfs.items() if not has_multi_nc(df)}
 
     dfs = parse_combined({
-        name.removeprefix("res_transfer_").upper(): df
-        for name, df in multi.items()
+        n: df for n, df in multi.items()
     })
-    for path in sorted(directory.glob("*.csv")):
-        df = pd.read_csv(path)
-        assert not df.empty
-        with st.expander(f"`{path.stem}`"):
-            st.dataframe(df)
-        single[path.stem] = df
+
     for path in sorted(directory.glob("*.log")):
         df = parse_parallel_log(path)
         assert not df.empty
@@ -418,3 +281,7 @@ if __name__ == "__main__":
     for fig, tab in zip(figs.values(), tabs):
         with tab:
             st.plotly_chart(fig)
+
+
+if __name__ == "__main__":
+    main()
