@@ -236,8 +236,16 @@ def parse_combined(dfs: dict[str, pd.DataFrame]):
 def make_combined_figures(dfs, local_dfs):
     figs = {"_All": None}
     all_dfs = []
+    for name, d in local_dfs.items():
+        d = d.copy()
+        d["bench"] = name
+        all_dfs.append(_aggregate(d, ["bench", "workers"]))
+
     for nc, df in sorted(dfs.items(), key=lambda x: x[0]):
         agg = _aggregate(df, ["bench", "workers"])
+        d = agg.copy()
+        d["bench"] = d["bench"] + f" (nc={nc})"
+        all_dfs.append(d)
         local_parts = []
         for name, ldf in local_dfs.items():
             ldf = ldf.copy()
@@ -249,9 +257,6 @@ def make_combined_figures(dfs, local_dfs):
         )
 
         figs[nc] = _tps_fig(agg, 'bench', f'TPS (nc={nc})')
-        d = agg.copy()
-        d["bench"] = d["bench"] + f" (nc={nc})"
-        all_dfs.append(d)
         lat = _latency_fig(agg, 'bench', 'percentile', f'Latency (nc={nc})')
         if lat:
             figs[f"{nc}_latency"] = lat

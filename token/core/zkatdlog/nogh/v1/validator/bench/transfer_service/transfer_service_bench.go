@@ -222,7 +222,6 @@ func (c *TransferServiceViewFactory) NewView(in []byte) (view.View, error) {
 		return nil, err
 	}
 	if f.params.TokenData != nil {
-
 		f.tokenData = f.params.TokenData
 
 		var initErr error
