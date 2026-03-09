@@ -8,8 +8,9 @@ import streamlit as st
 st.set_page_config(
     layout="wide", page_icon=":chart_with_upwards_trend:", page_title="TPS Degradation", initial_sidebar_state="collapsed")
 
-IGNORE_COLS = {"bench", "workers", "tps", "iterations", "ns/op"}
-DEFAULT_BENCH_DIR = "bench"
+IGNORE_COLS = {"bench", "workers", "tps",
+               "iterations", "ns/op", "B/op", "allocs/op"}
+DEFAULT_BENCH_DIR = "bench2"
 
 
 def _is_number(s: str) -> bool:
@@ -89,13 +90,15 @@ PARALLEL_LATENCY_RE = re.compile(
 
 def _parse_ms(s: str) -> float:
     m = re.match(r'([\d.]+)(.*)', s)
-    val, unit = float(m.group(1)), m.group(2)
+    val, unit = float(m.group(1)), m.group(2)  # type: ignore
     if unit == 'ms':
         return val
     if unit == 'ns':
         return val / 1e6
     if unit == 's':
         return val * 1e3
+    if '\xb5' in unit or 'µ' in unit:
+        return val / 1e3
     raise ValueError(f"unknown unit: {unit}")
 
 
@@ -156,7 +159,17 @@ def _tps_fig(df, color_col, title):
     fig = px.line(df, x='workers', y='tps', color=color_col,
                   markers=True, title=title,
                   labels={'workers': 'Workers', 'tps': 'TPS', color_col: ''})
-    fig.update_layout(template='plotly_white', hovermode='x unified')
+    # fig.update_xaxes(
+    #     showgrid=True,
+    #     # griddash='dash',
+    # )
+    fig.update_yaxes(
+        # showgrid=True,
+        nticks=25,
+        # griddash='dash',
+    )
+    fig.update_layout(template='plotly_white',
+                      hovermode='x unified')
     return fig
 
 
@@ -167,8 +180,8 @@ def _latency_fig(df, color_col, dash_col, title):
     melted = df.melt(id_vars=[color_col, 'workers'], value_vars=latency_cols,
                      var_name='percentile', value_name='latency')
     fig = px.line(melted, x='workers', y='latency',
-                  color=dash_col, line_dash=color_col, markers=True, title=title,
-                  labels={'workers': 'Workers', 'latency': 'Latency (ms)', dash_col: ''})
+                  color=color_col, line_dash=dash_col, markers=True, title=title,
+                  labels={'workers': 'Workers', 'latency': 'Latency (ms)', color_col: ''})
     fig.update_layout(template='plotly_white', hovermode='x unified')
     return fig
 
@@ -176,8 +189,7 @@ def _latency_fig(df, color_col, dash_col, title):
 def _aggregate(df, group_cols):
     numeric = [c for c in df.select_dtypes(
         include='number').columns if c != 'workers']
-    return (df.groupby(group_cols)[numeric]
-              .mean().reset_index().sort_values('workers'))
+    return (df.groupby(group_cols)[numeric].mean().reset_index().sort_values('workers'))
 
 
 def make_figures(df):
@@ -259,6 +271,7 @@ def main():
         with st.expander(f"`{path.stem}`"):
             for fig in make_figures(df):
                 st.plotly_chart(fig)
+                st.dataframe(df)
 
     multi = {n: df.copy() for n, df in all_dfs.items() if has_multi_nc(df)}
     single = {n: df.copy()
@@ -270,8 +283,11 @@ def main():
 
     for path in sorted(directory.glob("*.log")):
         df = parse_parallel_log(path)
-        assert not df.empty
+        if df.empty:
+            continue
         with st.expander(f"`{path.stem}`"):
+            for fig in make_figures(df):
+                st.plotly_chart(fig)
             st.dataframe(df)
         single[path.stem] = df
 
