@@ -234,10 +234,10 @@ def parse_combined(dfs: dict[str, pd.DataFrame]):
 
 
 def make_combined_figures(dfs, local_dfs):
-    figs = {}
+    figs = {"_All": None}
+    all_dfs = []
     for nc, df in sorted(dfs.items(), key=lambda x: x[0]):
         agg = _aggregate(df, ["bench", "workers"])
-
         local_parts = []
         for name, ldf in local_dfs.items():
             ldf = ldf.copy()
@@ -249,10 +249,14 @@ def make_combined_figures(dfs, local_dfs):
         )
 
         figs[nc] = _tps_fig(agg, 'bench', f'TPS (nc={nc})')
+        d = agg.copy()
+        d["bench"] = d["bench"] + f" (nc={nc})"
+        all_dfs.append(d)
         lat = _latency_fig(agg, 'bench', 'percentile', f'Latency (nc={nc})')
         if lat:
             figs[f"{nc}_latency"] = lat
-
+    figs["_All"] = _tps_fig(
+        pd.concat(all_dfs, ignore_index=True), 'bench', 'TPS (All)')
     return figs
 
 
@@ -261,6 +265,18 @@ def main():
         directory = st.text_input(
             "Directory", value=DEFAULT_BENCH_DIR, key="benchdir")
     directory = Path(directory)
+
+    single = {}
+
+    for path in sorted(directory.glob("*.log")):
+        df = parse_parallel_log(path)
+        if df.empty:
+            continue
+        with st.expander(f"`{path.stem}`"):
+            for fig in make_figures(df):
+                st.plotly_chart(fig)
+            st.dataframe(df)
+        single[path.stem] = df
 
     all_dfs = {}
     for path in sorted(directory.glob("*.txt")):
@@ -274,22 +290,12 @@ def main():
                 st.dataframe(df)
 
     multi = {n: df.copy() for n, df in all_dfs.items() if has_multi_nc(df)}
-    single = {n: df.copy()
-              for n, df in all_dfs.items() if not has_multi_nc(df)}
+    single.update({n: df.copy()
+                   for n, df in all_dfs.items() if not has_multi_nc(df)})
 
     dfs = parse_combined({
         n: df for n, df in multi.items()
     })
-
-    for path in sorted(directory.glob("*.log")):
-        df = parse_parallel_log(path)
-        if df.empty:
-            continue
-        with st.expander(f"`{path.stem}`"):
-            for fig in make_figures(df):
-                st.plotly_chart(fig)
-            st.dataframe(df)
-        single[path.stem] = df
 
     figs = make_combined_figures(dfs, local_dfs=single)
     st.subheader("Combined TPS")
