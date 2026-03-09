@@ -69,6 +69,7 @@ func (p *trandferServiceParams) NumInputs() int {
 	subDir := filepath.Base(filepath.Dir(p.OutputPath))
 	if m := regexp.MustCompile(`_i(\d+)_o(\d+)$`).FindStringSubmatch(subDir); len(m) == 3 {
 		n, _ := strconv.Atoi(m[1])
+
 		return n
 	}
 
@@ -79,8 +80,10 @@ func (p *trandferServiceParams) NumOutputs() int {
 	subDir := filepath.Base(filepath.Dir(p.OutputPath))
 	if m := regexp.MustCompile(`_i(\d+)_o(\d+)$`).FindStringSubmatch(subDir); len(m) == 3 {
 		n, _ := strconv.Atoi(m[2])
+
 		return n
 	}
+
 	return -1
 }
 
@@ -89,6 +92,7 @@ func (p *trandferServiceParams) CurveID() string {
 	if parts := strings.SplitN(dirName, "-", 2); len(parts) == 2 {
 		return parts[1]
 	}
+
 	return ""
 }
 
