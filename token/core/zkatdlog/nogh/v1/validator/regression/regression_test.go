@@ -122,17 +122,17 @@ func testRegressionParallel(t *testing.T, rootDir, subFolder string) {
 	})
 }
 
-func testRegression(t testing.TB, rootDir, subFolder string) {
-	t.Helper()
-	t.Logf("regression test for [%s:%s]", rootDir, subFolder)
+func testRegression(tb testing.TB, rootDir, subFolder string) {
+	tb.Helper()
+	tb.Logf("regression test for [%s:%s]", rootDir, subFolder)
 	paramsData, err := testDataFS.ReadFile(filepath.Join(rootDir, "params.txt"))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	ppRaw, err := base64.StdEncoding.DecodeString(string(paramsData))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	_, tokenValidator, err := tokenServicesFactory(ppRaw)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	var tokenData struct {
 		ReqRaw []byte `json:"req_raw"`
@@ -145,16 +145,16 @@ func testRegression(t testing.TB, rootDir, subFolder string) {
 			fmt.Sprintf("output.%d.json", i),
 		)
 		jsonData, err := testDataFS.ReadFile(filePath)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		err = json.Unmarshal(jsonData, &tokenData)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		_, _, err = tokenValidator.UnmarshallAndVerifyWithMetadata(
-			t.Context(),
+			tb.Context(),
 			&fakeLedger{},
 			token.RequestAnchor(tokenData.TXID),
 			tokenData.ReqRaw,
 		)
-		require.NoError(t, err, "failed verification of the token request in [%s]", filePath)
+		require.NoError(tb, err, "failed verification of the token request in [%s]", filePath)
 	}
 }
 
