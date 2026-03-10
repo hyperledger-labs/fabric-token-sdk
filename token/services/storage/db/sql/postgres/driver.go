@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
@@ -25,14 +26,15 @@ type configProvider interface {
 type Driver struct {
 	cp configProvider
 
-	TokenLock     lazy.Provider[postgres.Config, *TokenLockStore]
-	Wallet        lazy.Provider[postgres.Config, *WalletStore]
-	Identity      lazy.Provider[postgres.Config, *IdentityStore]
-	Token         lazy.Provider[postgres.Config, *TokenStore]
-	TokenNotifier lazy.Provider[postgres.Config, *TokenNotifier]
-	AuditTx       lazy.Provider[postgres.Config, *AuditTransactionStore]
-	OwnerTx       lazy.Provider[postgres.Config, *TransactionStore]
-	KeyStore      lazy.Provider[postgres.Config, *KeystoreStore]
+	TokenLock        lazy.Provider[postgres.Config, *TokenLockStore]
+	Wallet           lazy.Provider[postgres.Config, *WalletStore]
+	Identity         lazy.Provider[postgres.Config, *IdentityStore]
+	IdentityNotifier lazy.Provider[postgres.Config, *IdentityNotifier]
+	Token            lazy.Provider[postgres.Config, *TokenStore]
+	TokenNotifier    lazy.Provider[postgres.Config, *TokenNotifier]
+	AuditTx          lazy.Provider[postgres.Config, *AuditTransactionStore]
+	OwnerTx          lazy.Provider[postgres.Config, *TransactionStore]
+	KeyStore         lazy.Provider[postgres.Config, *KeystoreStore]
 }
 
 func NewNamedDriver(config driver3.Config, dbProvider postgres.DbProvider) driver3.NamedDriver {
@@ -47,18 +49,69 @@ func NewDriver(config driver3.Config) *Driver {
 }
 
 func NewDriverWithDbProvider(config driver3.Config, dbProvider postgres.DbProvider) *Driver {
-	return &Driver{
+	d := &Driver{
 		cp: postgres.NewConfigProvider(common.NewConfig(config)),
-
-		TokenLock:     newProviderWithKeyMapper(dbProvider, NewTokenLockStore),
-		Wallet:        newProviderWithKeyMapper(dbProvider, NewWalletStore),
-		Identity:      newProviderWithKeyMapper(dbProvider, NewIdentityStore),
-		Token:         newProviderWithKeyMapper(dbProvider, NewTokenStore),
-		TokenNotifier: newTokenNotifierProvider(dbProvider),
-		AuditTx:       newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore),
-		OwnerTx:       newProviderWithKeyMapper(dbProvider, NewTransactionStore),
-		KeyStore:      newProviderWithKeyMapper(dbProvider, NewKeystoreStore),
 	}
+
+	d.TokenLock = newProviderWithKeyMapper(dbProvider, NewTokenLockStore)
+	d.Wallet = newProviderWithKeyMapper(dbProvider, NewWalletStore)
+	d.Identity = newIdentityStoreProvider(dbProvider)
+	d.IdentityNotifier = newIdentityNotifierProvider(dbProvider)
+	d.Token = newProviderWithKeyMapper(dbProvider, NewTokenStore)
+	d.TokenNotifier = newTokenNotifierProvider(dbProvider)
+	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore)
+	d.OwnerTx = newProviderWithKeyMapper(dbProvider, NewTransactionStore)
+	d.KeyStore = newProviderWithKeyMapper(dbProvider, NewKeystoreStore)
+
+	return d
+}
+
+func newIdentityStoreProvider(dbProvider postgres.DbProvider) lazy.Provider[postgres.Config, *IdentityStore] {
+	return lazy.NewProviderWithKeyMapper(key, func(o postgres.Config) (*IdentityStore, error) {
+		opts := postgres.Opts{
+			DataSource:      o.DataSource,
+			MaxOpenConns:    o.MaxOpenConns,
+			MaxIdleConns:    *o.MaxIdleConns,
+			MaxIdleTime:     *o.MaxIdleTime,
+			TablePrefix:     o.TablePrefix,
+			TableNameParams: o.TableNameParams,
+			Tracing:         o.Tracing,
+		}
+		dbs, err := dbProvider.Get(opts)
+		if err != nil {
+			return nil, err
+		}
+		tableNames, err := common3.GetTableNames(o.TablePrefix, o.TableNameParams...)
+		if err != nil {
+			return nil, err
+		}
+
+		notifier, err := NewIdentityNotifier(dbs, tableNames, o.DataSource)
+		if err != nil {
+			return nil, err
+		}
+
+		p, err := common3.NewIdentityStoreWithNotifier(
+			dbs.ReadDB,
+			dbs.WriteDB,
+			tableNames,
+			secondcache.NewTyped[bool](5000),
+			secondcache.NewTyped[[]byte](5000),
+			postgres.NewConditionInterpreter(),
+			&postgres.ErrorMapper{},
+			notifier,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if !o.SkipCreateTable {
+			if err := p.CreateSchema(); err != nil {
+				return nil, err
+			}
+		}
+
+		return p, nil
+	})
 }
 
 func (d *Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (driver3.TokenLockStore, error) {
@@ -86,6 +139,16 @@ func (d *Driver) NewIdentity(name driver2.PersistenceName, params ...string) (dr
 	}
 
 	return d.Identity.Get(*opts)
+}
+
+// NewIdentityNotifier returns a new IdentityNotifier for the given persistence name and params.
+func (d *Driver) NewIdentityNotifier(name driver2.PersistenceName, params ...string) (driver3.TokenNotifier, error) {
+	opts, err := d.cp.GetOpts(name, params...)
+	if err != nil {
+		return nil, err
+	}
+
+	return d.IdentityNotifier.Get(*opts)
 }
 
 func (d *Driver) NewKeyStore(name driver2.PersistenceName, params ...string) (driver3.KeyStore, error) {
@@ -159,6 +222,40 @@ func newProviderWithKeyMapper[V common.DBObject](dbProvider postgres.DbProvider,
 		if !o.SkipCreateTable {
 			if err := p.CreateSchema(); err != nil {
 				return utils.Zero[V](), err
+			}
+		}
+
+		return p, nil
+	})
+}
+
+// newIdentityNotifierProvider returns a lazy provider for IdentityNotifier.
+func newIdentityNotifierProvider(dbProvider postgres.DbProvider) lazy.Provider[postgres.Config, *IdentityNotifier] {
+	return lazy.NewProviderWithKeyMapper(key, func(o postgres.Config) (*IdentityNotifier, error) {
+		opts := postgres.Opts{
+			DataSource:      o.DataSource,
+			MaxOpenConns:    o.MaxOpenConns,
+			MaxIdleConns:    *o.MaxIdleConns,
+			MaxIdleTime:     *o.MaxIdleTime,
+			TablePrefix:     o.TablePrefix,
+			TableNameParams: o.TableNameParams,
+			Tracing:         o.Tracing,
+		}
+		dbs, err := dbProvider.Get(opts)
+		if err != nil {
+			return nil, err
+		}
+		tableNames, err := common3.GetTableNames(o.TablePrefix, o.TableNameParams...)
+		if err != nil {
+			return nil, err
+		}
+		p, err := NewIdentityNotifier(dbs, tableNames, o.DataSource)
+		if err != nil {
+			return nil, err
+		}
+		if !o.SkipCreateTable {
+			if err := p.CreateSchema(); err != nil {
+				return nil, err
 			}
 		}
 

@@ -60,6 +60,15 @@ func (d Driver) NewIdentity(name driver2.PersistenceName, params ...string) (dri
 	return dr.NewIdentity(name, params...)
 }
 
+func (d Driver) NewIdentityNotifier(name driver2.PersistenceName, params ...string) (driver4.TokenNotifier, error) {
+	dr, err := d.getDriver(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return dr.NewIdentityNotifier(name, params...)
+}
+
 func (d Driver) NewKeyStore(name driver2.PersistenceName, params ...string) (driver4.KeyStore, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {
