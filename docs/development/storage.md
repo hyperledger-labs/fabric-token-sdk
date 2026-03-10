@@ -33,6 +33,7 @@ This system leverages several stores, each with a specific purpose:
   The `identitydb` plays a crucial role in managing user identities and wallets within the network.
   It securely stores wallet configurations, identity-related audit information, and so on, enabling secure interactions with the token system.
   The `identitydb.StoreService` is located under [`token/services/identitydb`](./../../token/services/storage/identitydb).
+  It also supports **Dynamic Identity Discovery** via the `IdentityNotifier`. This notifier allows services like `LocalMembership` to pro-actively subscribe to new identity configurations added to the database at runtime, ensuring the SDK can pick up new identities without a restart.
 
 ## Configuration
 

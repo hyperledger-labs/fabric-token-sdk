@@ -8,6 +8,7 @@ package sqlite
 
 import (
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/notifier"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
@@ -23,3 +24,13 @@ func NewIdentityStore(dbs *common2.RWDB, tableNames common3.TableNames) (*Identi
 		&sqlite.ErrorMapper{},
 	)
 }
+
+type IdentityNotifier struct {
+	*notifier.Notifier
+}
+
+func NewIdentityNotifier(*common2.RWDB, common3.TableNames) (*IdentityNotifier, error) {
+	return &IdentityNotifier{Notifier: notifier.NewNotifier()}, nil
+}
+
+func (db *IdentityNotifier) CreateSchema() error { return nil }

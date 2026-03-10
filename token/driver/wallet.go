@@ -173,13 +173,19 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (Identity, error)
 }
 
-// IdentityConfiguration contains configuration-related information of an identity
+// IdentityConfiguration contains configuration-related information of an identity.
+// It is used to describe how an identity should be loaded and managed by the SDK.
 type IdentityConfiguration struct {
-	ID     string
-	Type   string
-	URL    string
+	// ID is the unique identifier for this identity configuration.
+	ID string
+	// Type is the type of the identity (e.g., "bccsp", "idemix").
+	Type string
+	// URL is the location of the identity's credential material (e.g., path to MSP folder).
+	URL string
+	// Config contains driver-specific configuration options in encoded format.
 	Config []byte
-	Raw    []byte
+	// Raw contains the raw identity material if already loaded.
+	Raw []byte
 }
 
 // WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.

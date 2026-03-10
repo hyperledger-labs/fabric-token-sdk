@@ -22,6 +22,9 @@ type Driver interface {
 
 	NewIdentity(driver.PersistenceName, ...string) (IdentityStore, error)
 
+	// NewIdentityNotifier returns a new IdentityNotifier for the given persistence name and params.
+	NewIdentityNotifier(driver.PersistenceName, ...string) (TokenNotifier, error)
+
 	NewToken(driver.PersistenceName, ...string) (TokenStore, error)
 
 	NewTokenNotifier(driver.PersistenceName, ...string) (TokenNotifier, error)

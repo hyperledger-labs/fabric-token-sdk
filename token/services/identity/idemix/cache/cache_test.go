@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -100,9 +101,9 @@ func TestFetchIdentityFromBackendError(t *testing.T) {
 
 // TestFetchIdentityFromCacheTimeout verifies on-demand generation after cache timeout.
 func TestFetchIdentityFromCacheTimeout(t *testing.T) {
-	callCount := make(chan struct{}, 10)
+	var callCount atomic.Int32
 	c := NewIdentityCache(func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
-		callCount <- struct{}{}
+		callCount.Add(1)
 		// Simulate slow backend - not strictly needed for the test
 		// time.Sleep(10 * time.Millisecond)
 		return &idriver.IdentityDescriptor{
@@ -118,7 +119,7 @@ func TestFetchIdentityFromCacheTimeout(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, driver.Identity([]byte("timeout identity")), identityDescriptor.Identity)
 	assert.Equal(t, []byte("timeout audit"), identityDescriptor.AuditInfo)
-	assert.Len(t, callCount, 1)
+	assert.Equal(t, int32(1), callCount.Load())
 }
 
 // TestFetchIdentityFromCacheTimeoutError verifies error handling after cache timeout.
@@ -139,13 +140,13 @@ func TestFetchIdentityFromCacheTimeoutError(t *testing.T) {
 
 // TestProvisionIdentitiesError verifies provisioning retries after errors.
 func TestProvisionIdentitiesError(t *testing.T) {
-	callCount := make(chan struct{}, 100)
-	maxCalls := 3
+	var callCount atomic.Int32
+	maxCalls := int32(3)
 
 	c := NewIdentityCache(func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 		// Fail 3 times then succeed
-		callCount <- struct{}{} // send once per call
-		if len(callCount) <= maxCalls {
+		current := callCount.Add(1)
+		if current <= maxCalls {
 			return nil, errors.New("provision error")
 		}
 
@@ -163,15 +164,15 @@ func TestProvisionIdentitiesError(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Verify that provisioning continued after errors
-	assert.Greater(t, len(callCount), maxCalls)
+	assert.Greater(t, callCount.Load(), maxCalls)
 }
 
 // TestFetchIdentityFromCacheNilEntry verifies backend fallback for nil cache entries.
 func TestFetchIdentityFromCacheNilEntry(t *testing.T) {
-	backendCalled := make(chan struct{}, 1)
+	var backendCalledCount atomic.Int32
 
 	c := NewIdentityCache(func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
-		backendCalled <- struct{}{}
+		backendCalledCount.Add(1)
 
 		return &idriver.IdentityDescriptor{
 			Identity:  []byte("backend fallback"),
@@ -189,12 +190,7 @@ func TestFetchIdentityFromCacheNilEntry(t *testing.T) {
 	identityDescriptor, err := c.Identity(context.Background(), nil)
 	require.NoError(t, err)
 	assert.Eventually(t, func() bool {
-		select {
-		case <-backendCalled:
-			return true
-		default:
-			return false
-		}
+		return backendCalledCount.Load() > 0
 	}, time.Second, 10*time.Millisecond)
 	assert.Equal(t, driver.Identity([]byte("backend fallback")), identityDescriptor.Identity)
 }

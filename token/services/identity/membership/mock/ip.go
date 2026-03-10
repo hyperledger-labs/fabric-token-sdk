@@ -5,8 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	drivera "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 )
 
@@ -36,11 +35,11 @@ type IdentityProvider struct {
 	isMeReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	RegisterIdentityDescriptorStub        func(context.Context, *drivera.IdentityDescriptor, driver.Identity) error
+	RegisterIdentityDescriptorStub        func(context.Context, *driver.IdentityDescriptor, driver.Identity) error
 	registerIdentityDescriptorMutex       sync.RWMutex
 	registerIdentityDescriptorArgsForCall []struct {
 		arg1 context.Context
-		arg2 *drivera.IdentityDescriptor
+		arg2 *driver.IdentityDescriptor
 		arg3 driver.Identity
 	}
 	registerIdentityDescriptorReturns struct {
@@ -178,12 +177,12 @@ func (fake *IdentityProvider) IsMeReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
-func (fake *IdentityProvider) RegisterIdentityDescriptor(arg1 context.Context, arg2 *drivera.IdentityDescriptor, arg3 driver.Identity) error {
+func (fake *IdentityProvider) RegisterIdentityDescriptor(arg1 context.Context, arg2 *driver.IdentityDescriptor, arg3 driver.Identity) error {
 	fake.registerIdentityDescriptorMutex.Lock()
 	ret, specificReturn := fake.registerIdentityDescriptorReturnsOnCall[len(fake.registerIdentityDescriptorArgsForCall)]
 	fake.registerIdentityDescriptorArgsForCall = append(fake.registerIdentityDescriptorArgsForCall, struct {
 		arg1 context.Context
-		arg2 *drivera.IdentityDescriptor
+		arg2 *driver.IdentityDescriptor
 		arg3 driver.Identity
 	}{arg1, arg2, arg3})
 	stub := fake.RegisterIdentityDescriptorStub
@@ -205,13 +204,13 @@ func (fake *IdentityProvider) RegisterIdentityDescriptorCallCount() int {
 	return len(fake.registerIdentityDescriptorArgsForCall)
 }
 
-func (fake *IdentityProvider) RegisterIdentityDescriptorCalls(stub func(context.Context, *drivera.IdentityDescriptor, driver.Identity) error) {
+func (fake *IdentityProvider) RegisterIdentityDescriptorCalls(stub func(context.Context, *driver.IdentityDescriptor, driver.Identity) error) {
 	fake.registerIdentityDescriptorMutex.Lock()
 	defer fake.registerIdentityDescriptorMutex.Unlock()
 	fake.RegisterIdentityDescriptorStub = stub
 }
 
-func (fake *IdentityProvider) RegisterIdentityDescriptorArgsForCall(i int) (context.Context, *drivera.IdentityDescriptor, driver.Identity) {
+func (fake *IdentityProvider) RegisterIdentityDescriptorArgsForCall(i int) (context.Context, *driver.IdentityDescriptor, driver.Identity) {
 	fake.registerIdentityDescriptorMutex.RLock()
 	defer fake.registerIdentityDescriptorMutex.RUnlock()
 	argsForCall := fake.registerIdentityDescriptorArgsForCall[i]
