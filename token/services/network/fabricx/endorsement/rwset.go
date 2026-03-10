@@ -29,27 +29,39 @@ type RWSetWrapper struct {
 	ppVersion uint64
 }
 
-// NewRWSetWrapper returns a new RWSetWrapper instance.
+// NewRWSetWrapper returns a new RWSetWrapper instance that binds a read-write set
+// to a specific namespace, transaction ID, and public parameters version.
 func NewRWSetWrapper(RWSet rwSet, namespace translator.Namespace, txID translator.TxID, ppVersion uint64) *RWSetWrapper {
 	return &RWSetWrapper{RWSet: RWSet, Namespace: namespace, TxID: txID, ppVersion: ppVersion}
 }
 
+// SetState writes the given key-value pair to the wrapped read-write set
+// using the configured namespace.
 func (w *RWSetWrapper) SetState(key translator.Key, value translator.Value) error {
 	return w.RWSet.SetState(w.Namespace, key, value)
 }
 
+// GetState reads the value for the given key from the wrapped read-write set
+// using the configured namespace.
 func (w *RWSetWrapper) GetState(key translator.Key) (translator.Value, error) {
 	return w.RWSet.GetState(w.Namespace, key)
 }
 
+// DeleteState marks the given key for deletion in the wrapped read-write set
+// using the configured namespace.
 func (w *RWSetWrapper) DeleteState(key translator.Key) error {
 	return w.RWSet.DeleteState(w.Namespace, key)
 }
 
+// StateMustNotExist adds a read dependency to the read-write set asserting
+// that the given key does not exist in the configured namespace (version is nil).
 func (w *RWSetWrapper) StateMustNotExist(key translator.Key) error {
 	return w.RWSet.AddReadAt(w.Namespace, key, nil)
 }
 
+// StateMustExist adds a read dependency to the read-write set asserting
+// that the given key exists. If version is VersionZero (0), it asserts existence at version 0.
+// If version is Latest, it asserts existence at the current public parameters version.
 func (w *RWSetWrapper) StateMustExist(key translator.Key, version translator.KeyVersion) error {
 	switch version {
 	case translator.VersionZero:

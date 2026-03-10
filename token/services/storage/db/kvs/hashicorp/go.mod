@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/hashicorp/vault/api v1.16.0
-	github.com/hyperledger-labs/fabric-smart-client v0.8.3-0.20260219175226-8f512e10d1a0
+	github.com/hyperledger-labs/fabric-smart-client v0.8.3-0.20260302105910-adde99d4bf54
 	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250528165839-032fb9265504
 	github.com/stretchr/testify v1.11.1
 	github.com/test-go/testify v1.1.4
@@ -115,7 +115,7 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.38.0 // indirect
 	go.opentelemetry.io/otel/log v0.6.0 // indirect
 	go.opentelemetry.io/otel/metric v1.40.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.38.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.40.0 // indirect
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.7.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

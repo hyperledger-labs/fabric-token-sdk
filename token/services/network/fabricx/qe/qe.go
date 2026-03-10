@@ -41,7 +41,8 @@ type ExecutorProvider struct {
 	p lazy.Provider[in, *Executor]
 }
 
-// NewExecutorProvider returns a new ExecutorProvider instance.
+// NewExecutorProvider returns a new ExecutorProvider instance that
+// lazily creates and caches Executor instances for each channel.
 func NewExecutorProvider(qsProvider queryservice.Provider) *ExecutorProvider {
 	p := lazy.NewProviderWithKeyMapper[in, string, *Executor](
 		func(i in) string { return i.channel },
@@ -55,19 +56,25 @@ func NewExecutorProvider(qsProvider queryservice.Provider) *ExecutorProvider {
 	return &ExecutorProvider{p: p}
 }
 
+// GetSpentExecutor returns the Executor for the given network and channel
+// as a driver3.SpentTokenQueryExecutor.
 func (p *ExecutorProvider) GetSpentExecutor(network, channel string) (driver3.SpentTokenQueryExecutor, error) {
 	return p.p.Get(in{network: network, channel: channel})
 }
 
+// GetExecutor returns the Executor for the given network and channel
+// as a driver3.TokenQueryExecutor.
 func (p *ExecutorProvider) GetExecutor(network, channel string) (driver3.TokenQueryExecutor, error) {
 	return p.p.Get(in{network: network, channel: channel})
 }
 
+// GetStateExecutor returns the Executor for the given network and channel
+// as a QueryStatesExecutor.
 func (p *ExecutorProvider) GetStateExecutor(network, channel string) (QueryStatesExecutor, error) {
 	return p.p.Get(in{network: network, channel: channel})
 }
 
-// Executor models an executor for querying tokens and states.
+// Executor models a state and token query service implementation for FabricX.
 type Executor struct {
 	qsProvider    queryservice.Provider
 	keyTranslator translator.KeyTranslator
@@ -75,7 +82,7 @@ type Executor struct {
 	channel       string
 }
 
-// NewExecutor returns a new Executor instance.
+// NewExecutor returns a new Executor instance for the specified network and channel.
 func NewExecutor(network string, channel string, qsProvider queryservice.Provider) *Executor {
 	return &Executor{
 		network:       network,
@@ -85,6 +92,8 @@ func NewExecutor(network string, channel string, qsProvider queryservice.Provide
 	}
 }
 
+// QueryTokens retrieves raw token data from the ledger for the specified token IDs.
+// It generates output keys for each ID and performs a batch state query.
 func (e *Executor) QueryTokens(_ context.Context, namespace driver.Namespace, ids []*token.ID) ([]TokenData, error) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -136,6 +145,9 @@ func (e *Executor) QueryTokens(_ context.Context, namespace driver.Namespace, id
 	return tokens, nil
 }
 
+// QuerySpentTokens checks if the specified token IDs have been spent by
+// verifying their existence in the ledger. For non-graph hiding drivers,
+// a token is considered spent if its key is missing (empty raw value).
 func (e *Executor) QuerySpentTokens(_ context.Context, namespace driver.Namespace, ids []*token.ID, meta []string) ([]bool, error) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -180,6 +192,8 @@ func (e *Executor) QuerySpentTokens(_ context.Context, namespace driver.Namespac
 	return spentFlags, nil
 }
 
+// QueryStates retrieves the raw values for the provided keys from the specified
+// namespace. It triggers a batch query to the query service.
 func (e *Executor) QueryStates(_ context.Context, namespace driver.Namespace, keys []string) ([]Data, error) {
 	if len(keys) == 0 {
 		return nil, nil

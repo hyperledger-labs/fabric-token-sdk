@@ -63,7 +63,9 @@ type EventQueue struct {
 	mu           sync.RWMutex
 }
 
-// NewEventQueue creates and starts a new event queue with fixed workers
+// NewEventQueue creates and starts a new event queue with the specified
+// number of workers and buffer size. It validates that both values are
+// greater than 0 before starting the worker pool.
 func NewEventQueue(cfg Config) (*EventQueue, error) {
 	if cfg.Workers <= 0 {
 		return nil, errors.New("workers must be greater than 0")
@@ -88,7 +90,7 @@ func NewEventQueue(cfg Config) (*EventQueue, error) {
 	return eq, nil
 }
 
-// start initializes all worker goroutines
+// start initializes and launches all configured worker goroutines.
 func (eq *EventQueue) start() {
 	for i := range eq.workers {
 		eq.wg.Add(1)
@@ -96,7 +98,9 @@ func (eq *EventQueue) start() {
 	}
 }
 
-// worker processes events from the queue
+// worker represents a single goroutine that pulls events from the queue
+// and processes them until the channel is closed or the context is canceled.
+// It includes panic recovery to prevent worker crashes from affecting the pool.
 func (eq *EventQueue) worker(id int) {
 	defer eq.wg.Done()
 	defer func() {
@@ -131,7 +135,8 @@ func (eq *EventQueue) worker(id int) {
 	}
 }
 
-// Enqueue adds an event to the queue (non-blocking)
+// Enqueue adds an event to the queue in a non-blocking manner.
+// If the queue is full, it immediately returns ErrQueueFull.
 func (eq *EventQueue) Enqueue(event Event) error {
 	eq.mu.RLock()
 	defer eq.mu.RUnlock()
@@ -148,7 +153,8 @@ func (eq *EventQueue) Enqueue(event Event) error {
 	}
 }
 
-// EnqueueBlocking adds an event to the queue (blocks until space available or timeout)
+// EnqueueBlocking adds an event to the queue, blocking until space is
+// available, the context is canceled, or the queue is closed.
 func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -173,7 +179,8 @@ func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) error {
 	}
 }
 
-// Shutdown gracefully stops the queue with a timeout
+// Shutdown gracefully stops the event queue by setting the closed flag,
+// signaling workers to stop, and waiting for them to finish within the timeout.
 func (eq *EventQueue) Shutdown(timeout time.Duration) error {
 	var shutdownErr error
 	eq.shutdownOnce.Do(func() {
@@ -216,7 +223,8 @@ func (eq *EventQueue) Shutdown(timeout time.Duration) error {
 	return shutdownErr
 }
 
-// Stats returns queue statistics
+// Stats returns current statistics about the EventQueue, including
+// the number of workers, buffer size, pending events, and closed status.
 func (eq *EventQueue) Stats() Stats {
 	return Stats{
 		Workers:   eq.workers,

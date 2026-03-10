@@ -27,7 +27,9 @@ type Network struct {
 	ledger driver.Ledger
 }
 
-// NewNetwork returns a new Network instance.
+// NewNetwork returns a new Network instance for the specified FabricX environment.
+// It initializes a base Fabric network and overrides its ledger with a
+// FabricX-specific implementation that uses the provided state query executor.
 func NewNetwork(
 	n *ffabric.NetworkService,
 	ch *ffabric.Channel,
@@ -73,7 +75,7 @@ func NewNetwork(
 	return &Network{Network: tn, ledger: l}
 }
 
-// Ledger returns the ledger associated with this network.
+// Ledger returns the FabricX-specific ledger implementation associated with this network.
 func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
 }

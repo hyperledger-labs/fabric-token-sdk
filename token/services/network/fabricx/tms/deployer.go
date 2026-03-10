@@ -34,7 +34,8 @@ type DeployerService interface {
 	DeployTMSWithPP(tmsID token.TMSID, ppRaw []byte) error
 }
 
-// NewTMSDeployerService returns a new DeployerService instance.
+// NewTMSDeployerService returns a new DeployerService instance for
+// token management systems.
 func NewTMSDeployerService(
 	ppFetcher *pp.PublicParametersService,
 	configService *config.Service,
@@ -55,6 +56,7 @@ type deployerService struct {
 	keyTranslator translator.KeyTranslator
 }
 
+// GetTMSIDs returns all token management system IDs defined in the configuration.
 func (s *deployerService) GetTMSIDs() ([]token.TMSID, error) {
 	tmsIDs := make([]token.TMSID, 0)
 
@@ -73,6 +75,8 @@ func (s *deployerService) GetTMSIDs() ([]token.TMSID, error) {
 	return tmsIDs, nil
 }
 
+// DeployTMSs iterates through all configured token management systems
+// and triggers their deployment.
 func (s *deployerService) DeployTMSs() error {
 	logger.Infof("Deploying TMSs...")
 
@@ -95,14 +99,17 @@ func (s *deployerService) DeployTMSs() error {
 	return nil
 }
 
+// DeployTMS fetches the public parameters for the specified TMS and deploys them.
 func (s *deployerService) DeployTMS(tmsID token.TMSID) error {
 	return s.deployPublicParameters(tmsID)
 }
 
+// DeployTMSWithPP deploys the provided raw public parameters for the specified TMS.
 func (s *deployerService) DeployTMSWithPP(tmsID token.TMSID, ppRaw []byte) error {
 	return s.deployPublicParametersRaw(tmsID, ppRaw)
 }
 
+// deployPublicParameters fetches public parameters and passes them to the deployment logic.
 func (s *deployerService) deployPublicParameters(tmsID token.TMSID) error {
 	ppRaw, err := s.ppFetcher.Fetch(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
@@ -112,6 +119,8 @@ func (s *deployerService) deployPublicParameters(tmsID token.TMSID) error {
 	return s.deployPublicParametersRaw(tmsID, ppRaw)
 }
 
+// deployPublicParametersRaw constructs a public parameters transaction and
+// submits it to the network.
 func (s *deployerService) deployPublicParametersRaw(tmsID token.TMSID, ppRaw []byte) error {
 	tx, err := s.createPublicParametersTx(ppRaw, tmsID.Namespace)
 	if err != nil {
@@ -121,6 +130,8 @@ func (s *deployerService) deployPublicParametersRaw(tmsID token.TMSID, ppRaw []b
 	return s.nsSubmitter.Submit(tmsID.Network, tmsID.Channel, tx)
 }
 
+// createPublicParametersTx builds a FabricX transaction that writes the raw
+// public parameters and their SHA256 hash to the ledger using the setup keys.
 func (s *deployerService) createPublicParametersTx(ppRaw []byte, namespaceID cdriver.Namespace) (*protoblocktx.Tx, error) {
 	key, err := s.keyTranslator.CreateSetupKey()
 	if err != nil {
@@ -144,6 +155,7 @@ func (s *deployerService) createPublicParametersTx(ppRaw []byte, namespaceID cdr
 	return tx, nil
 }
 
+// GetTMSDeployerService returns the DeployerService instance from the service provider.
 func GetTMSDeployerService(sp services.Provider) (DeployerService, error) {
 	s, err := sp.GetService(reflect.TypeOf((*DeployerService)(nil)))
 	if err != nil {

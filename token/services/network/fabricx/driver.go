@@ -39,7 +39,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// NewDriver returns a new Driver instance.
+// NewDriver returns a new Driver instance for the FabricX network.
+// It initializes core services including the query executor provider, listener managers,
+// and endorsement service provider. It also validates that the finality type
+// is set to "notification" and initializes the event queue for finality notifications.
 func NewDriver(
 	fnsProvider *fabric2.NetworkServiceProvider,
 	tokensManager *tokens.ServiceManager,
@@ -77,11 +80,6 @@ func NewDriver(
 		return nil, errors.Wrapf(err, "failed creating event queue")
 	}
 
-	flmProvider, err := finality2.NewNotificationServiceBased(queryServiceProvider, finalityProvider, q)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed initializing finality provider")
-	}
-
 	d := &Driver{
 		fnsProvider:                fnsProvider,
 		tokensManager:              tokensManager,
@@ -94,12 +92,14 @@ func NewDriver(
 		defaultPublicParamsFetcher: ppFetcher,
 		queryExecutorProvider:      queryExecutorProvider,
 		keyTranslator:              kt,
-		flmProvider:                flmProvider,
-		llmProvider: lookup2.NewListenerManagerProvider(
-			fnsProvider,
-			tracerProvider,
-			kt,
-			config3.NewListenerManagerConfig(configService),
+		flmProvider: finality2.NewNotificationServiceBased(
+			queryServiceProvider,
+			finalityProvider,
+			q,
+		),
+		llmProvider: lookup2.NewCronNSListenerManagerProvider(
+			queryServiceProvider,
+			lookup2.NewConfig(configService),
 		),
 		EndorsementServiceProvider: endorsement.NewServiceProvider(
 			configs,
@@ -143,7 +143,10 @@ type Driver struct {
 	queryExecutorProvider      *qe.ExecutorProvider
 }
 
-// New returns a new Network instance for the given network and channel.
+// New returns a new Network instance for the specified network and channel.
+// It retrieves the Fabric network service and channel, initializes the necessary
+// query executors (token, spent token, and state) for that context,
+// and sets up finality and lookup listener managers.
 func (d *Driver) New(network, channel string) (driver.Network, error) {
 	fns, err := d.fnsProvider.FabricNetworkService(network)
 	if err != nil {

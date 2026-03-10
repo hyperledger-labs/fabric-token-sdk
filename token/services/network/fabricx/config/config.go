@@ -31,7 +31,8 @@ const (
 	Notification ManagerType = "notification"
 )
 
-// NewListenerManagerConfig returns a new listener manager configuration.
+// NewListenerManagerConfig returns a new listener manager configuration instance
+// that wraps the provided Configuration interface to retrieve settings.
 func NewListenerManagerConfig(configuration Configuration) *serviceListenerManagerConfig {
 	return &serviceListenerManagerConfig{c: configuration}
 }
@@ -41,7 +42,8 @@ type serviceListenerManagerConfig struct {
 	c Configuration
 }
 
-// Type returns the manager type.
+// Type returns the manager type from the configuration using the Type key.
+// If the configured value is empty, it defaults to the Notification manager type.
 func (c *serviceListenerManagerConfig) Type() ManagerType {
 	if v := ManagerType(c.c.GetString(Type)); len(v) > 0 {
 		return v
