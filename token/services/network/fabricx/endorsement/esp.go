@@ -41,7 +41,9 @@ type ServiceProvider struct {
 	lazy.Provider[token2.TMSID, endorsement.Service]
 }
 
-// NewServiceProvider returns a new ServiceProvider instance.
+// NewServiceProvider returns a new ServiceProvider instance for FabricX endorsement.
+// It uses a lazy provider to load endorsement services for different TMS IDs
+// based on their configuration and requirements.
 func NewServiceProvider(
 	configService common.Configuration,
 	viewManager ViewManager,
@@ -80,6 +82,10 @@ type loader struct {
 	fabricProvider                *fabric.NetworkServiceProvider
 }
 
+// load creates and returns an endorsement.Service for the specified TMS ID.
+// It retrieves the necessary configuration, initializes an FSC endorsement service,
+// and sets up a translator factory that uses the current public parameters version
+// from the version keeper.
 func (l *loader) load(tmsID token2.TMSID) (endorsement.Service, error) {
 	configuration, err := l.configService.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
@@ -120,7 +126,8 @@ func key(tmsID token2.TMSID) string {
 type NamespaceTxProcessor struct {
 }
 
-// EnableTxProcessing does nothing because for FabricX the endorser is stateless
+// EnableTxProcessing is a no-op implementation because for FabricX
+// the endorser service is stateless and does not require pre-processing.
 func (n *NamespaceTxProcessor) EnableTxProcessing(tmsID token2.TMSID) error {
 	return nil
 }

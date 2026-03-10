@@ -58,6 +58,9 @@ type signerWithPublicVersion interface {
 	GetPublicVersion() msp.Identity
 }
 
+// DefaultSigningIdentity returns the default signing identity for the specified
+// network and channel. It retrieves the identity from the membership service
+// of the Fabric network service.
 func (p *fnsSigningIdentityProvider) DefaultSigningIdentity(network, channel string) (Signer, error) {
 	fns, err := p.fnsProvider.FabricNetworkService(network)
 	if err != nil {
@@ -69,6 +72,8 @@ func (p *fnsSigningIdentityProvider) DefaultSigningIdentity(network, channel str
 	}, nil
 }
 
+// DefaultIdentity returns the default serialized identity for the specified
+// network and channel.
 func (p *fnsSigningIdentityProvider) DefaultIdentity(network, channel string) (view.Identity, error) {
 	fns, err := p.fnsProvider.FabricNetworkService(network)
 	if err != nil {
@@ -82,6 +87,9 @@ type fnsBroadcaster struct {
 	fnsProvider *fabric.NetworkServiceProvider
 }
 
+// Broadcast sends the transaction envelope to the ordering service and blocks
+// until finality is confirmed. It starts a background goroutine to poll
+// for finality while performing the broadcast operation.
 func (p *fnsBroadcaster) Broadcast(network, channel string, txID driver.TxID, env *cb.Envelope) error {
 	fns, err := p.fnsProvider.FabricNetworkService(network)
 	if err != nil {
@@ -106,6 +114,10 @@ func (p *fnsBroadcaster) Broadcast(network, channel string, txID driver.TxID, en
 	return <-final
 }
 
+// getFinality polls the finality service to determine if a transaction has
+// been committed to the ledger. It includes retry logic with a delay to
+// handle EOF errors, which can occur during network startup or when
+// block 0 is not yet available.
 func getFinality(finality driver.Finality, txID string) error {
 	logger.Infof("wait for finality [txID=%v]", txID)
 	for range finalityEOFRetries {

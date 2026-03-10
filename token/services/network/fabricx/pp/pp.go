@@ -10,7 +10,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-// PublicParameters models the public parameters of a token management system.
+// PublicParameters represents the public configuration data for a
+// specific token management system (TMS). It includes the unique TMS
+// identifier, the ledger path where parameters are stored,
+// and the raw byte content of the parameters.
 type PublicParameters struct {
 	// TMSID is the ID of the token management system.
 	TMSID token.TMSID

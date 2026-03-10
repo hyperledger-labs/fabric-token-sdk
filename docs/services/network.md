@@ -7,33 +7,132 @@ The network service architecture is depicted below:
 
 ![network_service.png](../imgs/network_service.png)
 
+## Overview
+
+The Network Service is a critical component of the Fabric Token SDK that abstracts the complexities of the underlying Distributed Ledger Technology (DLT). It serves several key purposes:
+
+- **Unified Interface**: Regardless of the backend (Fabric, Fabric-X, etc.), it provides a common set of APIs for transaction management and ledger interaction.
+- **Transaction Lifecycle Management**: Handles the submission (broadcasting) of transactions and provides mechanisms to wait for their finality (commitment and validity).
+- **Ledger Querying (QE)**: Allows services to retrieve the current state of tokens and other ledger entries through a specialized Query Engine.
+- **Public Parameters (PP) Management**: Monitors the ledger for updates to the system's public parameters and ensures the SDK is always using the latest version to maintain cryptographic integrity.
+- **Identity & Membership**: Interfaces with the local Membership Service Provider (MSP) to provide identities for signing and transaction creation.
+
+The service uses a **Driver-based architecture**, allowing for different implementations to be plugged in based on the specific requirements and features of the target network.
+
 ## Fabric 
 
-The Fabric-based network implementation utilizes the Fabric Smart Client for configuration and operations, including chaincode queries and transaction broadcasting.
+The Fabric-based network implementation utilizes the Fabric Smart Client (FSC) to interact with the underlying Hyperledger Fabric network. It leverages FSC's configuration, transaction management, and communication layers to provide a robust backend for the Token SDK.
 
-During bootstrap, the Token SDK processes the TMS defined in the configuration.
-For each TMS, the network provider retrieves the network instance corresponding to the `network` and `channel` specified in the TMS ID.
-Failure to retrieve the network instance results in a bootstrap failure.
-Upon success, the `Connect` function on the `Network` instance is invoked with the target namespace.
-This function establishes a connection to the backend, enabling the Token SDK to receive updates on public parameters and transaction finality.
+### Lifecycle and Bootstrap
+During the Token SDK bootstrap process, the system initializes a `Network` instance for each TMS (Token Management Service) defined in the configuration. The mapping is determined by the `network` and `channel` fields in the TMS identifier. If the specified network cannot be initialized (e.g., due to missing FSC configuration for that network), the bootstrap process will fail.
 
-When `Connect` is called, the Fabric network implementation establishes two `Fabric Delivery` streams to receive committed blocks:
-- One stream is used to analyze transactions that update the public parameters.
-  More specifically, for each transaction in a block, the parser checks if the RW set contains a write whose key is the `setup key`.
-  The setup key is set as `\x00seU+0000`. If such a key is found in a valid transaction, then the listener added upon calling `Connect` does the following:
-    - It invokes the `Update` function of the TMS provider passing the TMS ID and the byte representation of the new public parameters.
-      The function works as follows: if a TMS instance with the passed ID does not exist, it creates one.
-      If a TMS with that ID already exists, then:
-        - A new instance of TMS is created with the new public parameters.
-        - If the previous step succeeds, then the `Done` function on the old TMS instance is invoked to release all allocated resources.
-    - If the above step succeeds, then the public parameters are appended to the `PublicParameters` table.
-- The other stream is dedicated to transaction finality. Services can add listeners to the `Network` instance to listen for the finality of specific transactions.
-  The `ttx` service and the `audit` service add a listener when a transaction has reached the point of being ready to be submitted to the ordering service.
-  (For more information, look at the sections dedicated to these services). Both services use the same listener.
-  This listener performs the following actions upon notification of the finality of a transaction:
-    - If the transaction's status is valid, then the token request's hash contained in the transaction is matched against the hash of the token request stored in the database.
-      If they match, then the `Tokens` table is updated by inserting the new tokens and marking the spent tokens as deleted.
-      The corresponding token request in the `Requests` table is marked as `Valid` with a change of the status field.
-    - If the transaction's status is invalid, then the corresponding token request in the `Requests` table is marked as `Invalid` or `Deleted`.
-      In all other cases, an error is returned.
+Upon successful initialization, the `Connect` function is invoked for the target namespace. This step is crucial as it:
+- Registers listeners for **Public Parameters** updates.
+- Initializes the **Endorsement Service** for the specific namespace.
+- Sets up the **Finality** and **Lookup** managers.
+
+### Public Parameters Monitoring
+The Fabric driver monitors the ledger for updates to a specific "setup key" (usually `\x00seU+0000`). It uses a `PermanentLookupListener` that triggers whenever a valid transaction writes to this key. When an update is detected:
+1. The **TMS Provider** is updated with the new parameters. If a TMS instance already exists, it is replaced by a new one initialized with the updated cryptographic material, and the old instance is gracefully decommissioned.
+2. The new public parameters are persisted in the local **Tokens Database** to ensure consistency across restarts.
+
+### Finality Management
+The Fabric driver supports two primary modes for monitoring transaction finality, configurable via `token.finality.type`:
+
+- **Delivery Mode (`delivery`)**: This is the default mode for Fabric. It establishes a dedicated block delivery stream from the peer. The driver parses incoming blocks, processes read-write sets, and notifies registered listeners when a specific transaction ID is committed and validated. It includes advanced features like:
+    - **Parallel Processing**: Blocks and transactions can be processed in parallel to improve throughput.
+    - **LRU Caching**: Uses a Least Recently Used cache to track recently processed blocks and prevent redundant work.
+- **Notification Mode (`notification`)**: In this mode, the driver relies on event notifications from the underlying network service rather than pulling the entire block stream.
+
+Regardless of the mode, the `ttx` and `audit` services utilize these listeners to update the local token vault and request status (e.g., marking a request as `Valid` or `Invalid`) once a transaction reaches finality on the ledger.
+
+## FabricX
+
+The `fabricx` driver is a specialized implementation designed for the Fabric-X network. It shares the same overall goals as the standard Fabric driver but introduces several implementation-specific optimizations and behaviors.
+
+### Async Finality Processing
+FabricX handles transaction finality notifications asynchronously using an internal `EventQueue`. This queue is serviced by a pool of workers (by default, 10 workers with a queue size of 1000). This decoupled architecture ensures that the main network event loop remains non-blocking even when processing a high volume of finality notifications or performing complex transaction checks.
+
+### Robust Transaction Submission
+The transaction submission process in FabricX involves a multi-step preparation phase:
+1. **Transaction ID Calculation**: Computes a unique ID based on a nonce and the creator's identity.
+2. **Namespace Marshaling**: Uses ASN1 marshaling for the target namespace (`TxNamespace`) before signing. This ensures the transaction structure meets the specific requirements of the Fabric-X MSP and ledger.
+3. **Broadcasting & Confirmation**: Once signed, the transaction is broadcast to the network. The broadcaster includes retry logic specifically for `io.EOF` errors, which often occur during network startup or transient connectivity issues.
+
+### Public Parameters Versioning
+Unlike the standard Fabric driver, FabricX employs a `VersionKeeper` to manage the lifecycle of public parameters.
+- **Initialization**: The first time public parameters are updated, the version is initialized (the counter does not increment).
+- **Updates**: Subsequent updates to the public parameters increment an atomic version counter.
+- **Setup**: The TMS deployment process writes both the raw public parameters and their SHA256 hash to the ledger using specific setup keys defined by the translator.
+
+### Query Engine (QE) and Token Detection
+The Query Engine in FabricX is responsible for retrieving the state of tokens from the ledger. For non-graph-hiding drivers, it determines if a token is spent by checking for the absence of its key in the ledger (a `nil` raw value). It supports batch retrieval of states to minimize network round-trips.
+
+### Finality Retries
+During the initial connection phase, FabricX implements a specific retry strategy for retrieving finality information. If block 0 is not yet committed (a common scenario during network cold-starts), the driver will retry the operation (up to 5 times with a 2-second delay) to ensure a stable connection is established.
+
+## Configuration
+
+The Network Service and its drivers can be fine-tuned through the application configuration. Below are the key configuration parameters and examples for both Fabric and FabricX.
+
+### TMS Configuration
+Each Token Management Service must be mapped to a network and channel.
+
+```yaml
+token:
+  enabled: true
+  tms:
+    my-tms-id:
+      network: fabric-network-name # Matches fsc.networks configuration
+      channel: my-channel
+      namespace: my-chaincode-id
+```
+
+### Fabric Finality Configuration
+These settings control the behavior of the Fabric driver's finality manager.
+
+```yaml
+token:
+  finality:
+    # Mode: "delivery" (default) or "notification"
+    type: delivery
+    committer:
+      maxRetries: 3
+      retryWaitDuration: 5s
+    delivery:
+      # Number of parallel workers for mapping transactions
+      mapperParallelism: 10
+      # Number of parallel workers for processing blocks
+      blockProcessParallelism: 10
+      # Size of the LRU cache for block tracking
+      lruSize: 30
+      # Wait duration before timing out a delivery listener
+      listenerTimeout: 10s
+```
+
+### FabricX Specific Configuration
+FabricX introduces additional settings for its asynchronous event queue and lookup service.
+
+```yaml
+token:
+  finality:
+    # FabricX defaults to "notification" mode
+    type: notification
+    notification:
+      # Number of worker goroutines for the async queue
+      workers: 10
+      # Size of the event buffer
+      queueSize: 1000
+
+  fabricx:
+    lookup:
+      permanent:
+        # Polling interval for permanent lookups (e.g., public params)
+        interval: 1m
+      once:
+        # Max time allowed for a one-time lookup
+        deadline: 5m
+        # Polling interval for one-time lookups
+        interval: 2s
+```
 

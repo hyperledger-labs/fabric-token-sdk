@@ -39,7 +39,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// NewDriver returns a new Driver instance.
+// NewDriver returns a new Driver instance for the FabricX network.
+// It initializes core services including the query executor provider, listener managers,
+// and endorsement service provider. It also validates that the finality type
+// is set to "notification" and initializes the event queue for finality notifications.
 func NewDriver(
 	fnsProvider *fabric2.NetworkServiceProvider,
 	tokensManager *tokens.ServiceManager,
@@ -140,7 +143,10 @@ type Driver struct {
 	queryExecutorProvider      *qe.ExecutorProvider
 }
 
-// New returns a new Network instance for the given network and channel.
+// New returns a new Network instance for the specified network and channel.
+// It retrieves the Fabric network service and channel, initializes the necessary
+// query executors (token, spent token, and state) for that context,
+// and sets up finality and lookup listener managers.
 func (d *Driver) New(network, channel string) (driver.Network, error) {
 	fns, err := d.fnsProvider.FabricNetworkService(network)
 	if err != nil {

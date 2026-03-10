@@ -31,16 +31,20 @@ const (
 	finalityRetryDuration = 2 * time.Second
 )
 
-// NewSubmitterFromFNS returns a new submitter instance from the given network service provider.
+// NewSubmitterFromFNS returns a new submitter instance that uses the
+// provided Fabric Network Service Provider for identity and broadcasting.
 func NewSubmitterFromFNS(fnsp *fabric.NetworkServiceProvider) *submitter {
 	return NewSubmitter(&fnsSigningIdentityProvider{fnsProvider: fnsp}, &fnsBroadcaster{fnsProvider: fnsp})
 }
 
-// NewSubmitter returns a new submitter instance.
+// NewSubmitter returns a new submitter instance with the provided
+// identity and broadcaster services, using the default transaction ID calculator.
 func NewSubmitter(signingIdentityProvider SigningIdentityProvider, envelopeBroadcaster EnvelopeBroadcaster) *submitter {
 	return NewSubmitterCustomTxID(signingIdentityProvider, envelopeBroadcaster, protoutil.ComputeTxID)
 }
 
+// NewSubmitterCustomTxID returns a new submitter instance with a custom
+// transaction ID calculator.
 func NewSubmitterCustomTxID(signingIdentityProvider SigningIdentityProvider, envelopeBroadcaster EnvelopeBroadcaster, txIDCalculator func(nonce, creator []byte) string) *submitter {
 	return &submitter{
 		txIDCalculator:          txIDCalculator,
@@ -55,6 +59,13 @@ type submitter struct {
 	envelopeBroadcaster     EnvelopeBroadcaster
 }
 
+// Submit prepares, signs, and broadcasts the given transaction to the specified
+// network and channel. It performs the following steps:
+// 1. Retrieves the default signing identity and creator.
+// 2. Generates a random nonce and computes the transaction ID.
+// 3. Marshals each namespace in the transaction into ASN1 and signs it.
+// 4. Marshals the complete transaction into protobuf.
+// 5. Wraps the transaction in a Fabric envelope and broadcasts it.
 func (s *submitter) Submit(network, channel string, tx *protoblocktx.Tx) error {
 	logger.Infof("Submitting to [%s,%s] following %d namespaces: [%v]", network, channel, len(tx.GetNamespaces()), tx.GetNamespaces())
 

@@ -103,6 +103,10 @@ type ListenerEvent struct {
 	Namespace string
 }
 
+// Process handles a finality event notification.
+// If the status is Unknown or Busy, it triggers a manual transaction check.
+// If the status is Valid, it retrieves the token request hash from the ledger.
+// Finally, it notifies the wrapped listener with the transaction's status and hash.
 func (l *ListenerEvent) Process(ctx context.Context) error {
 	logger.Debugf("[ListenerEvent] get notification for [%s], status [%d]", l.TxID, l.Status)
 
@@ -159,7 +163,10 @@ type TxCheck struct {
 	Namespace string
 }
 
-// Process processes the transaction check event
+// Process executes the transaction check by querying the current status of
+// a transaction from the query service. If the transaction is in a known
+// state (Valid or Invalid), it notifies the listener. If it's still
+// processing (Unknown or Busy), it returns an error.
 func (t *TxCheck) Process(ctx context.Context) error {
 	logger.Debugf("[TxCheck] check for transaction [%s]", t.TxID)
 
@@ -200,7 +207,7 @@ func (t *TxCheck) String() string {
 	return fmt.Sprintf("TxCheck[%s]", t.TxID)
 }
 
-// NSFinalityListener is a finality listener that uses a queue to process events
+// NSFinalityListener is a finality listener that uses a queue to process events asynchronously.
 type NSFinalityListener struct {
 	namespace     string
 	listener      Listener
@@ -209,7 +216,8 @@ type NSFinalityListener struct {
 	keyTranslator KeyTranslator
 }
 
-// NewNSFinalityListener creates a new NSFinalityListener
+// NewNSFinalityListener creates a new NSFinalityListener for the given namespace
+// and listener, using the specified queue for asynchronous processing.
 func NewNSFinalityListener(
 	namespace string,
 	listener Listener,
@@ -226,7 +234,8 @@ func NewNSFinalityListener(
 	}
 }
 
-// OnStatus notifies the listener of a status change.
+// OnStatus enqueues a ListenerEvent for the transaction ID and status
+// to be processed asynchronously by the worker pool.
 func (l *NSFinalityListener) OnStatus(ctx context.Context, txID cdriver.TxID, status fdriver.ValidationCode, statusMessage string) {
 	// processing the event must be fast
 	// we enqueue an event to be processed asynchronously
@@ -243,7 +252,8 @@ func (l *NSFinalityListener) OnStatus(ctx context.Context, txID cdriver.TxID, st
 	}
 }
 
-// NSListenerManager is a finality listener manager that uses a notification service
+// NSListenerManager is a listener manager that handles finality notifications
+// and initial transaction state checks.
 type NSListenerManager struct {
 	lm            finalityx.ListenerManager
 	queue         Queue
@@ -251,7 +261,8 @@ type NSListenerManager struct {
 	keyTranslator KeyTranslator
 }
 
-// NewNSListenerManager creates a new NSListenerManager
+// NewNSListenerManager creates a new NSListenerManager wrapping an underlying
+// listener manager and utilizing an event queue.
 func NewNSListenerManager(
 	lm finalityx.ListenerManager,
 	queue Queue,
@@ -261,7 +272,11 @@ func NewNSListenerManager(
 	return &NSListenerManager{lm: lm, queue: queue, queryService: qs, keyTranslator: keyTranslator}
 }
 
-// AddFinalityListener adds a finality listener for the given transaction ID.
+// AddFinalityListener adds a listener for the specified transaction ID.
+// It first enqueues a TxCheck to verify the transaction's current state on the
+// ledger and then registers an NSFinalityListener with the underlying manager
+// to catch future status updates. It uses an OnlyOnceListener to ensure
+// the callback is triggered exactly once.
 func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, listener Listener) error {
 	logger.Debugf("AddFinalityListener [%s]", txID)
 	l := &OnlyOnceListener{listener: listener}
@@ -279,14 +294,15 @@ func (n *NSListenerManager) AddFinalityListener(namespace string, txID string, l
 	return n.lm.AddFinalityListener(txID, NewNSFinalityListener(namespace, l, n.queue, n.queryService, n.keyTranslator))
 }
 
-// NSListenerManagerProvider is a provider for NSListenerManager
+// NSListenerManagerProvider is a provider for creating NSListenerManager instances.
 type NSListenerManagerProvider struct {
 	QueryServiceProvider    QueryServiceProvider
 	ListenerManagerProvider ListenerManagerProvider
 	queue                   Queue
 }
 
-// NewNotificationServiceBased creates a new NSListenerManagerProvider
+// NewNotificationServiceBased creates a provider for NSListenerManager
+// that relies on a query service and an event queue.
 func NewNotificationServiceBased(
 	queryServiceProvider QueryServiceProvider,
 	listenerManagerProvider ListenerManagerProvider,
@@ -299,6 +315,8 @@ func NewNotificationServiceBased(
 	}
 }
 
+// NewManager returns a new NSListenerManager for the specified network and channel.
+// It initializes the underlying listener manager and retrieves the query service.
 func (n *NSListenerManagerProvider) NewManager(network, channel string) (finality.ListenerManager, error) {
 	finalityManager, err := n.ListenerManagerProvider.NewManager(network, channel)
 	if err != nil {
@@ -313,19 +331,21 @@ func (n *NSListenerManagerProvider) NewManager(network, channel string) (finalit
 	return NewNSListenerManager(finalityManager, n.queue, qs, &keys.Translator{}), nil
 }
 
-// OnlyOnceListener ensures that the listener is notified only once
+// OnlyOnceListener ensures that the wrapped finality listener is notified
+// exactly once, regardless of how many times its OnStatus method is called.
 type OnlyOnceListener struct {
 	listener Listener
 	once     sync.Once
 }
 
-// OnStatus notifies the listener of a status change.
+// OnStatus notifies the wrapped listener only if it hasn't been notified before.
 func (o *OnlyOnceListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
 	o.once.Do(func() {
 		o.listener.OnStatus(ctx, txID, status, message, tokenRequestHash)
 	})
 }
 
+// fabricXFSCStatus maps Fabric-X transaction status codes to FSC validation codes.
 func fabricXFSCStatus(c int32) fdriver.ValidationCode {
 	switch protoblocktx.Status(c) {
 	case protoblocktx.Status_NOT_VALIDATED:

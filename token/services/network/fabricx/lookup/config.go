@@ -42,7 +42,8 @@ type Configuration interface {
 	GetDuration(key string) time.Duration
 }
 
-// NewConfig creates a new ConfigGetter
+// NewConfig creates a new ConfigGetter instance that uses the provided
+// Configuration interface to retrieve lookup service settings.
 func NewConfig(configuration Configuration) *serviceConfig {
 	return &serviceConfig{configuration: configuration}
 }
@@ -52,7 +53,8 @@ type serviceConfig struct {
 }
 
 // PermanentInterval returns the polling interval for permanent lookups.
-// It returns the value from the configuration if it's greater than 0, otherwise it returns the default value.
+// It retrieves the duration from configuration; if the value is not
+// greater than 0, it defaults to 1 minute.
 func (c *serviceConfig) PermanentInterval() time.Duration {
 	if v := c.configuration.GetDuration(PermanentInterval); v > 0 {
 		return v
@@ -61,8 +63,9 @@ func (c *serviceConfig) PermanentInterval() time.Duration {
 	return DefaultPermanentInterval
 }
 
-// OnceDeadline returns the deadline for one-time lookups.
-// It returns the value from the configuration if it's greater than 0, otherwise it returns the default value.
+// OnceDeadline returns the maximum time allowed for a one-time lookup.
+// It retrieves the duration from configuration; if the value is not
+// greater than 0, it defaults to 5 minutes.
 func (c *serviceConfig) OnceDeadline() time.Duration {
 	if v := c.configuration.GetDuration(OnceDeadline); v > 0 {
 		return v
@@ -72,7 +75,8 @@ func (c *serviceConfig) OnceDeadline() time.Duration {
 }
 
 // OnceInterval returns the polling interval for one-time lookups.
-// It returns the value from the configuration if it's greater than 0, otherwise it returns the default value.
+// It retrieves the duration from configuration; if the value is not
+// greater than 0, it defaults to 2 seconds.
 func (c *serviceConfig) OnceInterval() time.Duration {
 	if v := c.configuration.GetDuration(OnceInterval); v > 0 {
 		return v

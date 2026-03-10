@@ -48,8 +48,8 @@ type CronListenerManager struct {
 	jobs map[Listener]gocron.Job
 }
 
-// NewCronListenerManager creates a new CronListenerManager.
-// It initializes and starts the gocron scheduler.
+// NewCronListenerManager initializes a lookup listener manager and starts
+// its underlying gocron scheduler for task orchestration.
 func NewCronListenerManager(qs QueryService, config ConfigGetter) (*CronListenerManager, error) {
 	s, err := gocron.NewScheduler()
 	if err != nil {
@@ -65,13 +65,15 @@ func NewCronListenerManager(qs QueryService, config ConfigGetter) (*CronListener
 	}, nil
 }
 
-// PermanentLookupListenerSupported returns true if permanent lookup listeners are supported.
+// PermanentLookupListenerSupported returns true, confirming that periodic
+// state checks are implemented by this manager.
 func (n *CronListenerManager) PermanentLookupListenerSupported() bool {
 	return true
 }
 
-// AddPermanentLookupListener adds a permanent lookup listener for the given key.
-// It schedules a recurring job that checks for state changes.
+// AddPermanentLookupListener registers a listener that is notified whenever
+// the value of a key changes. It schedules a recurring job that polls
+// the query service at the configured permanent interval.
 func (n *CronListenerManager) AddPermanentLookupListener(namespace string, key string, listener Listener) error {
 	logger.Infof("AddPermanentLookupListener [%s:%s]", namespace, key)
 
@@ -92,9 +94,10 @@ func (n *CronListenerManager) AddPermanentLookupListener(namespace string, key s
 	return nil
 }
 
-// AddLookupListener adds a lookup listener for the given key.
-// It schedules a recurring job that checks for the key until it is found or the deadline is reached.
-// The job is removed once it is invoked.
+// AddLookupListener registers a listener that waits for a specific key to
+// be created or updated. It schedules a job that polls the ledger
+// repeatedly until the key is found or the configured deadline is reached.
+// The job is automatically removed after completion.
 func (n *CronListenerManager) AddLookupListener(namespace string, key string, listener lookup.Listener) error {
 	logger.Infof("AddLookupListener [%s:%s]", namespace, key)
 
@@ -144,7 +147,8 @@ func (n *CronListenerManager) AddLookupListener(namespace string, key string, li
 	return nil
 }
 
-// RemoveLookupListener removes a lookup listener for the given key and stops its associated job.
+// RemoveLookupListener stops and removes the gocron job associated
+// with the provided listener.
 func (n *CronListenerManager) RemoveLookupListener(id string, listener Listener) error {
 	logger.Infof("RemoveLookupListener [%s]", id)
 	n.mu.Lock()
@@ -161,7 +165,7 @@ func (n *CronListenerManager) RemoveLookupListener(id string, listener Listener)
 	return nil
 }
 
-// Stop stops the scheduler and waits for jobs to finish.
+// Stop shuts down the gocron scheduler and waits for active jobs to finish.
 func (n *CronListenerManager) Stop() error {
 	return n.scheduler.Shutdown()
 }
@@ -172,7 +176,9 @@ type CronNSListenerManagerProvider struct {
 	config               ConfigGetter
 }
 
-// NewCronNSListenerManagerProvider creates a new CronNSListenerManagerProvider.
+// NewCronNSListenerManagerProvider creates a provider that initializes
+// CronListenerManager instances using the specified query service provider
+// and configuration.
 func NewCronNSListenerManagerProvider(queryServiceProvider QueryServiceProvider, config ConfigGetter) lookup.ListenerManagerProvider {
 	return &CronNSListenerManagerProvider{
 		QueryServiceProvider: queryServiceProvider,
@@ -180,7 +186,8 @@ func NewCronNSListenerManagerProvider(queryServiceProvider QueryServiceProvider,
 	}
 }
 
-// NewManager creates a new ListenerManager for the given network and channel.
+// NewManager creates a new CronListenerManager for the specified network
+// and channel by retrieving the appropriate query service.
 func (n *CronNSListenerManagerProvider) NewManager(network, channel string) (lookup.ListenerManager, error) {
 	qs, err := n.QueryServiceProvider.Get(network, channel)
 	if err != nil {
@@ -199,10 +206,14 @@ type PermanentJob struct {
 	lastValue    []byte
 }
 
+// NewPermanentJob returns a state object for tracking a key's value across polls.
 func NewPermanentJob(namespace string, key string, listener Listener, queryService QueryService) *PermanentJob {
 	return &PermanentJob{namespace: namespace, key: key, listener: listener, queryService: queryService}
 }
 
+// Run executes a single poll of the ledger key. It compares the current value
+// hash with the last seen hash and notifies the listener only if a change
+// is detected.
 func (j *PermanentJob) Run() {
 	logger.Infof("[PermanentKeyCheck] check for key [%s:%s]", j.namespace, j.key)
 	v, err := j.queryService.GetState(j.namespace, j.key)

@@ -28,7 +28,8 @@ type ledger struct {
 	executor      qe.QueryStatesExecutor
 }
 
-// NewLedger returns a new ledger instance.
+// NewLedger returns a new ledger instance for the specified Fabric channel.
+// It uses the provided key translator for state keys and a query executor for state access.
 func NewLedger(ch *fabric.Channel, keyTranslator translator.KeyTranslator, executor qe.QueryStatesExecutor) *ledger {
 	return &ledger{
 		ch:            ch,
@@ -39,6 +40,8 @@ func NewLedger(ch *fabric.Channel, keyTranslator translator.KeyTranslator, execu
 }
 
 // Status returns the validation code of the transaction with the given ID.
+// It retrieves the transaction from the Fabric ledger and maps its internal
+// validation code to a driver.ValidationCode (Valid or Invalid).
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	tx, err := l.l.GetTransactionByID(id)
 	if err != nil {
@@ -54,12 +57,14 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	}
 }
 
-// GetStates returns the values of the given keys in the given namespace.
+// GetStates returns the raw byte values of the given keys within the specified namespace.
+// It delegates the query to the configured state executor.
 func (l *ledger) GetStates(ctx context.Context, namespace string, keys ...string) ([][]byte, error) {
 	return l.executor.QueryStates(ctx, namespace, keys)
 }
 
-// TransferMetadataKey returns the key used to store the metadata of a transfer action.
+// TransferMetadataKey returns the ledger key used to store metadata for a transfer action.
+// It uses the key translator to generate the appropriate key for the given input.
 func (l *ledger) TransferMetadataKey(k string) (string, error) {
 	return l.keyTranslator.CreateTransferActionMetadataKey(k)
 }
