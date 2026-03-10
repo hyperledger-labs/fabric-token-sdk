@@ -17,6 +17,7 @@ import (
 )
 
 type (
+	//go:generate counterfeiter -o mocks/key_store.go -fake-name KeyStore github.com/hyperledger/fabric-lib-go/bccsp.KeyStore
 	KeyStore = bccsp.KeyStore
 )
 
