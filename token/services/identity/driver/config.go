@@ -30,6 +30,8 @@ func (i *ConfiguredIdentity) String() string {
 // Config is a read-only view over identity service configuration.
 // Implementors provide lookup helpers used by the identity service to resolve configured
 // identities and to normalize configured paths.
+//
+//go:generate counterfeiter -o mock/config.go -fake-name Config . Config
 type Config interface {
 	// CacheSizeForOwnerID returns the cache size to be used for the given owner wallet.
 	// If not defined for the given id, the function returns -1.
