@@ -75,3 +75,22 @@ type NamespaceTxProcessor interface {
 	// EnableTxProcessing signals the backend to process all the transactions for the given tms id
 	EnableTxProcessing(tmsID token.TMSID) error
 }
+
+// MSPManager provides MSP-based identity validation and signature verification for a Fabric channel.
+// It is used to verify that the proposal creator is known to the network.
+//
+//go:generate counterfeiter -o mock/msp_manager.go -fake-name MSPManager . MSPManager
+type MSPManager interface {
+	// IsValid checks that the identity is valid (i.e., known to the network via MSP)
+	IsValid(identity view.Identity) error
+	// GetVerifier returns a verifier for the given identity, which can be used to verify signatures
+	GetVerifier(identity view.Identity) (driver.Verifier, error)
+}
+
+// ChannelProvider provides access to the MSP manager for a given Fabric network and channel.
+//
+//go:generate counterfeiter -o mock/channel_provider.go -fake-name ChannelProvider . ChannelProvider
+type ChannelProvider interface {
+	// GetMSPManager returns the MSP manager for the given network and channel
+	GetMSPManager(network, channel string) (MSPManager, error)
+}

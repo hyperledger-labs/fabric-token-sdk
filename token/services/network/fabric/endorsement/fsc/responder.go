@@ -46,6 +46,7 @@ type RequestApprovalResponderView struct {
 	getTranslator                 TranslatorProviderFunc
 	tokenManagementSystemProvider TokenManagementSystemProvider
 	storageProvider               StorageProvider
+	channelProvider               ChannelProvider
 }
 
 func NewRequestApprovalResponderView(
@@ -54,6 +55,7 @@ func NewRequestApprovalResponderView(
 	endorserService EndorserService,
 	tokenManagementSystemProvider TokenManagementSystemProvider,
 	storageProvider StorageProvider,
+	channelProvider ChannelProvider,
 ) *RequestApprovalResponderView {
 	return &RequestApprovalResponderView{
 		keyTranslator:                 keyTranslator,
@@ -61,6 +63,7 @@ func NewRequestApprovalResponderView(
 		endorserService:               endorserService,
 		tokenManagementSystemProvider: tokenManagementSystemProvider,
 		storageProvider:               storageProvider,
+		channelProvider:               channelProvider,
 	}
 }
 
@@ -71,6 +74,12 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (any, error) {
 		return nil, errors.Join(ErrReceivedProposal, err)
 	}
 	defer request.Rws.Done()
+
+	// validate proposal
+	err = r.validateProposal(context, request)
+	if err != nil {
+		return nil, errors.Join(ErrValidateProposal, err)
+	}
 
 	// validate
 	err = r.validate(context, request, func(id token.ID) ([]byte, error) {
@@ -153,7 +162,6 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 		return nil, errors.Wrapf(ErrInvalidProposal, "non empty namespaces")
 	}
 
-	// TODO: check that tx contains a valid endorser proposal
 	if name, version := tx.Chaincode(); name != tmsID.Namespace || version != ChaincodeVersion {
 		return nil, errors.Wrapf(ErrInvalidProposal, "invalid chaincode")
 	}
@@ -178,6 +186,65 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 		Tms:              tms,
 		PublicParamsHash: tms.PublicParametersManager().PublicParamsHash(),
 	}, nil
+}
+
+func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, request *Request) error {
+	logger.DebugfContext(ctx.Context(), "Validate proposal for TX [%s]", request.Anchor)
+
+	// Get the signed proposal from the underlying Fabric transaction
+	signedProposal := request.Tx.Transaction.SignedProposal()
+
+	// Get the proposal
+	proposal := request.Tx.Transaction.Proposal()
+
+	// The creator identity must be present
+	creator := request.Tx.Transaction.Creator()
+	if len(creator) == 0 {
+		return errors.Errorf("creator is empty for tx [%s]", request.Anchor)
+	}
+
+	// The proposal bytes and signature must be present
+	proposalBytes := signedProposal.ProposalBytes()
+	if len(proposalBytes) == 0 {
+		return errors.Errorf("proposal bytes are empty for tx [%s]", request.Anchor)
+	}
+	signature := signedProposal.Signature()
+	if len(signature) == 0 {
+		return errors.Errorf("proposal signature is empty for tx [%s]", request.Anchor)
+	}
+
+	// The proposal header and payload should be present
+	if len(proposal.Header()) == 0 {
+		return errors.Errorf("proposal header is empty for tx [%s]", request.Anchor)
+	}
+	if len(proposal.Payload()) == 0 {
+		return errors.Errorf("proposal payload is empty for tx [%s]", request.Anchor)
+	}
+
+	// Verify the creator is known to the network via MSP.
+	// In the Fabric protocol, the endorser is responsible for checking that the proposal signer
+	// is recognized by at least one MSP in the channel configuration.
+	mspManager, err := r.channelProvider.GetMSPManager(request.TMSID.Network, request.TMSID.Channel)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get MSP manager for tx [%s]", request.Anchor)
+	}
+	if err := mspManager.IsValid(creator); err != nil {
+		return errors.Wrapf(err, "creator identity is not valid for tx [%s]", request.Anchor)
+	}
+
+	// Verify the proposal signature using the creator's verifier.
+	// This ensures the proposal was indeed signed by the claimed creator.
+	verifier, err := mspManager.GetVerifier(creator)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get verifier for creator for tx [%s]", request.Anchor)
+	}
+	if err := verifier.Verify(proposalBytes, signature); err != nil {
+		return errors.Wrapf(err, "proposal signature verification failed for tx [%s]", request.Anchor)
+	}
+
+	logger.DebugfContext(ctx.Context(), "Proposal validated successfully for TX [%s]", request.Anchor)
+
+	return nil
 }
 
 func (r *RequestApprovalResponderView) translate(ctx context.Context, request *Request) error {
