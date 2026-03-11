@@ -142,5 +142,6 @@ func (s *Service[T]) Validator() (driver.Validator, error) {
 
 // Done releases all the resources allocated by this service.
 func (s *Service[T]) Done() error {
-	return nil
+	// call done on all the services that support it
+	return s.walletService.Done()
 }

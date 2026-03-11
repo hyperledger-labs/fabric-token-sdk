@@ -178,6 +178,7 @@ type LocalMembership struct {
 	targetIdentities          []view.Identity // optional list of identities to prefer
 	anonymous                 bool            // when true, only anonymous identities are considered selectable by default
 	stopNotifier              chan struct{}
+	closeOnce                 sync.Once
 }
 
 // NewLocalMembership creates a new LocalMembership instance.
@@ -222,6 +223,13 @@ func NewLocalMembership(
 // DefaultNetworkIdentity returns the root network identity used when binding loaded identities.
 func (l *LocalMembership) DefaultNetworkIdentity() token.Identity {
 	return l.defaultNetworkIdentity
+}
+
+// Close stops the background identity notifier.
+func (l *LocalMembership) Close() {
+	l.closeOnce.Do(func() {
+		close(l.stopNotifier)
+	})
 }
 
 // IsMe reports whether the given identity belongs to this local membership set.

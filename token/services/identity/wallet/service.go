@@ -32,11 +32,13 @@ type RoleRegistries map[identity.RoleType]RoleRegistry
 // RoleRegistry models an external registry that holds wallets for a given role.
 // It is used by the wallet service to lookup and register identities and wallets.
 //
-//go:generate counterfeiter -o mock/registry.go -fake-name Registry . Registry
+//go:generate counterfeiter -o mock/registry.go -fake-name RoleRegistry . RoleRegistry
 type RoleRegistry interface {
 	WalletIDs(ctx context.Context) ([]string, error)
 	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
 	WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error)
+	// Done releases all the resources allocated by this service.
+	Done() error
 }
 
 // Service implements the driver.WalletService interface.
@@ -203,6 +205,16 @@ func (s *Service) SpendIDs(ids ...*token.ID) ([]string, error) {
 	}
 
 	return res, nil
+}
+
+// Done releases all the resources allocated by this service.
+func (s *Service) Done() error {
+	var err error
+	for _, reg := range s.RoleRegistries {
+		err = errors.Join(err, reg.Done())
+	}
+
+	return err
 }
 
 // Convert converts a map of concrete registries into a map of the RoleRegistry interface type.
