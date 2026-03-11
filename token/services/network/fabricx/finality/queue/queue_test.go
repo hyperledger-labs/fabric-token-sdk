@@ -344,6 +344,7 @@ func TestEventProcessing_RetryThenSucceed(t *testing.T) {
 			if n < 3 {
 				return errors.New("transient error")
 			}
+
 			return nil
 		},
 	}
