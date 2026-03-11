@@ -397,12 +397,12 @@ func (l *LocalMembership) Load(ctx context.Context, identities []idriver.Configu
 
 	l.logger.Debugf("load identities [%s] done", l.IdentityType)
 
-	go l.listen()
+	go l.listen(ctx)
 
 	return nil
 }
 
-func (l *LocalMembership) listen() {
+func (l *LocalMembership) listen(ctx context.Context) {
 	notifier, err := l.identityDB.Notifier()
 	if err != nil {
 		l.logger.Errorf("failed to get notifier: %s", err)
@@ -442,7 +442,12 @@ func (l *LocalMembership) listen() {
 		return
 	}
 
-	<-l.stopNotifier
+	select {
+	case <-ctx.Done():
+		l.logger.Debugf("context cancelled, stop listening")
+	case <-l.stopNotifier:
+		l.logger.Debugf("stopNotifier closed, stop listening")
+	}
 	// TODO: unsubscribe if supported
 }
 

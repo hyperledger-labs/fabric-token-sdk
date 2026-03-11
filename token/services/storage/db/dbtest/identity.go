@@ -40,6 +40,7 @@ var IdentityCases = []struct {
 	{"IdentityInfo", TIdentityInfo},
 	{"SignerInfo", TSignerInfo},
 	{"Configurations", TConfigurations},
+	{"GetConfiguration", TGetConfiguration},
 	{"SignerInfoConcurrent", TSignerInfoConcurrent},
 	{"RegisterIdentityDescriptor", TRegisterIdentityDescriptor},
 }
@@ -85,6 +86,37 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 		Raw:    []byte("raw"),
 	}
 	require.NoError(t, db.AddConfiguration(ctx, expected))
+}
+
+func TGetConfiguration(t *testing.T, db driver.IdentityStore) {
+	t.Helper()
+	ctx := t.Context()
+	expected := driver.IdentityConfiguration{
+		ID:     "pineapple",
+		Type:   "core",
+		URL:    "look here",
+		Config: []byte("config"),
+		Raw:    []byte("raw"),
+	}
+	require.NoError(t, db.AddConfiguration(ctx, expected))
+
+	c, err := db.GetConfiguration(ctx, expected.ID, expected.Type, expected.URL)
+	require.NoError(t, err)
+	assert.NotNil(t, c)
+	assert.Equal(t, expected, *c)
+
+	// Test not found
+	c, err = db.GetConfiguration(ctx, "non-existent", expected.Type, expected.URL)
+	require.NoError(t, err)
+	assert.Nil(t, c)
+
+	c, err = db.GetConfiguration(ctx, expected.ID, "non-existent", expected.URL)
+	require.NoError(t, err)
+	assert.Nil(t, c)
+
+	c, err = db.GetConfiguration(ctx, expected.ID, expected.Type, "non-existent")
+	require.NoError(t, err)
+	assert.Nil(t, c)
 }
 
 func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
