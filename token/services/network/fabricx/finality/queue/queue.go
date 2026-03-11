@@ -19,6 +19,13 @@ import (
 
 var logger = logging.MustGetLogger()
 
+const (
+	// DefaultMaxRetries is the default number of times a failed event will be retried before being dropped.
+	DefaultMaxRetries = 3
+	// DefaultRetryInterval is the default initial delay between retries. The delay doubles after each attempt.
+	DefaultRetryInterval = time.Second
+)
+
 var (
 	// ErrQueueClosed is returned when an event is added to a closed queue
 	ErrQueueClosed = errors.New("queue is closed")
@@ -47,20 +54,24 @@ type Stats struct {
 
 // Config holds configuration for the EventQueue
 type Config struct {
-	Workers   int // Number of worker goroutines
-	QueueSize int // Size of the event buffer
+	Workers       int           // Number of worker goroutines
+	QueueSize     int           // Size of the event buffer
+	MaxRetries    int           // Max retries for a failed event (0 uses DefaultMaxRetries)
+	RetryInterval time.Duration // Initial delay between retries, doubles each attempt (0 uses DefaultRetryInterval)
 }
 
 // EventQueue manages a pool of workers processing events
 type EventQueue struct {
-	workers      int
-	events       chan Event
-	wg           sync.WaitGroup
-	ctx          context.Context
-	cancel       context.CancelFunc
-	shutdownOnce sync.Once
-	closed       bool
-	mu           sync.RWMutex
+	workers       int
+	maxRetries    int
+	retryInterval time.Duration
+	events        chan Event
+	wg            sync.WaitGroup
+	ctx           context.Context
+	cancel        context.CancelFunc
+	shutdownOnce  sync.Once
+	closed        bool
+	mu            sync.RWMutex
 }
 
 // NewEventQueue creates and starts a new event queue with the specified
@@ -75,13 +86,24 @@ func NewEventQueue(cfg Config) (*EventQueue, error) {
 		return nil, errors.New("queue size must be greater than 0")
 	}
 
+	maxRetries := cfg.MaxRetries
+	if maxRetries <= 0 {
+		maxRetries = DefaultMaxRetries
+	}
+	retryInterval := cfg.RetryInterval
+	if retryInterval <= 0 {
+		retryInterval = DefaultRetryInterval
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	eq := &EventQueue{
-		workers: cfg.Workers,
-		events:  make(chan Event, cfg.QueueSize),
-		ctx:     ctx,
-		cancel:  cancel,
-		closed:  false,
+		workers:       cfg.Workers,
+		maxRetries:    maxRetries,
+		retryInterval: retryInterval,
+		events:        make(chan Event, cfg.QueueSize),
+		ctx:           ctx,
+		cancel:        cancel,
+		closed:        false,
 	}
 
 	// Start worker pool
@@ -98,16 +120,25 @@ func (eq *EventQueue) start() {
 	}
 }
 
-// worker represents a single goroutine that pulls events from the queue
-// and processes them until the channel is closed or the context is canceled.
-// It includes panic recovery to prevent worker crashes from affecting the pool.
+// worker is the top-level goroutine for a worker. It delegates to runWorker
+// and restarts on panic so the pool does not degrade over time.
 func (eq *EventQueue) worker(id int) {
 	defer eq.wg.Done()
+	for {
+		if stopped := eq.runWorker(id); stopped {
+			return
+		}
+		// runWorker returned false after recovering from a panic — restart the loop.
+	}
+}
+
+// runWorker processes events until the channel is closed or context is canceled.
+// It returns true for a normal exit and false when recovered from a panic.
+func (eq *EventQueue) runWorker(id int) (stopped bool) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("Worker %d recovered from panic: %v", id, r)
-			// Don't restart worker to prevent unbounded goroutine creation
-			// The pool will continue with remaining workers
+			logger.Errorf("Worker %d recovered from panic: %v, restarting", id, r)
+			stopped = false
 		}
 	}()
 
@@ -115,21 +146,42 @@ func (eq *EventQueue) worker(id int) {
 		select {
 		case event, ok := <-eq.events:
 			if !ok {
-				// Channel closed, worker exits
 				logger.Debugf("Worker %d shutting down", id)
+
+				return true
+			}
+
+			eq.processWithRetry(id, event)
+
+		case <-eq.ctx.Done():
+			logger.Debugf("Worker %d received shutdown signal", id)
+
+			return true
+		}
+	}
+}
+
+// processWithRetry executes the event with exponential-backoff retries.
+// If all attempts fail, the event is dropped and an error is logged.
+func (eq *EventQueue) processWithRetry(workerID int, event Event) {
+	delay := eq.retryInterval
+	for attempt := 0; attempt <= eq.maxRetries; attempt++ {
+		if err := event.Process(eq.ctx); err != nil {
+			if attempt == eq.maxRetries {
+				logger.Errorf("Worker %d: event [%v] failed after %d retries, dropping: %v", workerID, event, eq.maxRetries+1, err)
 
 				return
 			}
+			logger.Warnf("Worker %d: error processing event [%v] (attempt %d/%d): %v, retrying in %v", workerID, event, attempt+1, eq.maxRetries+1, err, delay)
+			select {
+			case <-time.After(delay):
+				delay *= 2
+			case <-eq.ctx.Done():
+				logger.Warnf("Worker %d: context canceled during retry backoff for event [%v]", workerID, event)
 
-			// Process the event with context
-			if err := event.Process(eq.ctx); err != nil {
-				logger.Debugf("Worker %d: error processing event: %v", id, err)
+				return
 			}
-
-		case <-eq.ctx.Done():
-			// Context canceled, exit gracefully
-			logger.Debugf("Worker %d received shutdown signal", id)
-
+		} else {
 			return
 		}
 	}
