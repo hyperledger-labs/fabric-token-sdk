@@ -41,7 +41,7 @@ func NewLedger(ch *fabric.Channel, keyTranslator translator.KeyTranslator, execu
 
 // Status returns the validation code of the transaction with the given ID.
 // It retrieves the transaction from the Fabric ledger and maps its internal
-// validation code to a driver.ValidationCode (Valid or Invalid).
+// validation code to a driver.ValidationCode (Unknown, Valid, or Invalid).
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	tx, err := l.l.GetTransactionByID(id)
 	if err != nil {
@@ -50,6 +50,8 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	logger.Debugf("ledger status of [%s] is [%d]", id, tx.ValidationCode())
 
 	switch protoblocktx.Status(tx.ValidationCode()) {
+	case protoblocktx.Status_NOT_VALIDATED:
+		return driver.Unknown, nil
 	case protoblocktx.Status_COMMITTED:
 		return driver.Valid, nil
 	default:
