@@ -198,3 +198,42 @@ func TestFetchIdentityFromCacheNilEntry(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 	assert.Equal(t, driver.Identity([]byte("backend fallback")), identityDescriptor.Identity)
 }
+
+// TestIdentityCache_Close verifies that Close() stops the background provisioning.
+func TestIdentityCache_Close(t *testing.T) {
+	var callCount atomic.Int32
+	// Backend function that just increments a counter
+	backend := func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
+		callCount.Add(1)
+
+		return &idriver.IdentityDescriptor{
+			Identity:  []byte("id"),
+			AuditInfo: []byte("ai"),
+		}, nil
+	}
+
+	c := NewIdentityCache(backend, 10, nil, NewMetrics(&disabled.Provider{}))
+	// Set a very short timeout so we don't wait long if the cache is empty
+	c.cacheTimeout = 1 * time.Millisecond
+
+	// Trigger provisioning
+	_, err := c.Identity(context.Background(), nil)
+	require.NoError(t, err)
+
+	// Wait for some provisioning to happen
+	assert.Eventually(t, func() bool {
+		return callCount.Load() > 0
+	}, time.Second, 10*time.Millisecond)
+
+	// Close the cache
+	c.Close()
+
+	// Capture the count after close
+	countAfterClose := callCount.Load()
+
+	// Wait a bit to ensure no more calls are made
+	time.Sleep(100 * time.Millisecond)
+
+	// Count should not have increased significantly (it might increase by 1 if a call was already in progress)
+	assert.LessOrEqual(t, callCount.Load(), countAfterClose+1)
+}

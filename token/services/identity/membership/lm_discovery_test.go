@@ -283,3 +283,37 @@ func TestLocalMembership_Notifier(t *testing.T) {
 		return slices.Contains(ids, "new")
 	}, 2*time.Second, 100*time.Millisecond)
 }
+
+func TestLocalMembership_Close(t *testing.T) {
+	ctx := t.Context()
+
+	ip := &mock.IdentityProvider{}
+	des := &mock.SignerDeserializerManager{}
+	iss := &mock.IdentityStoreService{}
+	iss.ConfigurationExistsReturns(false, nil)
+	iss.AddConfigurationReturns(nil)
+	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
+
+	kmp := &mock.KeyManagerProvider{}
+
+	lm := membership.NewLocalMembership(
+		logging.MustGetLogger("test"),
+		&mock.Config{},
+		[]byte("netid"),
+		des,
+		iss,
+		"testType",
+		false,
+		ip,
+		kmp,
+	)
+
+	err := lm.Load(ctx, nil, nil)
+	require.NoError(t, err)
+
+	// Close the membership
+	lm.Close()
+
+	// Should be safe to call multiple times
+	lm.Close()
+}
