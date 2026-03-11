@@ -216,9 +216,9 @@ type Authorization interface {
 	OwnerType(raw []byte) (IdentityType, []byte, error)
 }
 
-//go:generate counterfeiter -o mock/ws.go -fake-name WalletService . WalletService
-
 // WalletService models the wallet service that handles issuer, owner, auditor, and certifier wallets
+//
+//go:generate counterfeiter -o mock/ws.go -fake-name WalletService . WalletService
 type WalletService interface {
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
 	RegisterRecipientIdentity(ctx context.Context, data *RecipientData) error
@@ -265,6 +265,9 @@ type WalletService interface {
 
 	// SpendIDs returns the spend ids for the passed token ids
 	SpendIDs(ids ...*token.ID) ([]string, error)
+
+	// Done releases all the resources allocated by this service.
+	Done() error
 }
 
 //go:generate counterfeiter -o mock/wallet_service_factory.go -fake-name WalletServiceFactory . WalletServiceFactory

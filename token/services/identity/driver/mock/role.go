@@ -9,6 +9,16 @@ import (
 )
 
 type Role struct {
+	DoneStub        func() error
+	doneMutex       sync.RWMutex
+	doneArgsForCall []struct {
+	}
+	doneReturns struct {
+		result1 error
+	}
+	doneReturnsOnCall map[int]struct {
+		result1 error
+	}
 	GetIdentityInfoStub        func(context.Context, string) (driver.IdentityInfo, error)
 	getIdentityInfoMutex       sync.RWMutex
 	getIdentityInfoArgsForCall []struct {
@@ -75,6 +85,59 @@ type Role struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *Role) Done() error {
+	fake.doneMutex.Lock()
+	ret, specificReturn := fake.doneReturnsOnCall[len(fake.doneArgsForCall)]
+	fake.doneArgsForCall = append(fake.doneArgsForCall, struct {
+	}{})
+	stub := fake.DoneStub
+	fakeReturns := fake.doneReturns
+	fake.recordInvocation("Done", []interface{}{})
+	fake.doneMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *Role) DoneCallCount() int {
+	fake.doneMutex.RLock()
+	defer fake.doneMutex.RUnlock()
+	return len(fake.doneArgsForCall)
+}
+
+func (fake *Role) DoneCalls(stub func() error) {
+	fake.doneMutex.Lock()
+	defer fake.doneMutex.Unlock()
+	fake.DoneStub = stub
+}
+
+func (fake *Role) DoneReturns(result1 error) {
+	fake.doneMutex.Lock()
+	defer fake.doneMutex.Unlock()
+	fake.DoneStub = nil
+	fake.doneReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *Role) DoneReturnsOnCall(i int, result1 error) {
+	fake.doneMutex.Lock()
+	defer fake.doneMutex.Unlock()
+	fake.DoneStub = nil
+	if fake.doneReturnsOnCall == nil {
+		fake.doneReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.doneReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *Role) GetIdentityInfo(arg1 context.Context, arg2 string) (driver.IdentityInfo, error) {

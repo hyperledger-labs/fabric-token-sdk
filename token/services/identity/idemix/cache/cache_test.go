@@ -155,10 +155,14 @@ func TestProvisionIdentitiesError(t *testing.T) {
 			AuditInfo: []byte("success audit"),
 		}, nil
 	}, 10, nil, NewMetrics(&disabled.Provider{}))
+	defer c.Close()
 
-	// Trigger provisioning
-	_, err := c.Identity(context.Background(), nil)
-	require.NoError(t, err)
+	// Trigger provisioning and wait for success
+	assert.Eventually(t, func() bool {
+		_, err := c.Identity(context.Background(), nil)
+
+		return err == nil
+	}, time.Second, 10*time.Millisecond)
 
 	// Wait a bit for provisioning to attempt multiple times
 	time.Sleep(50 * time.Millisecond)

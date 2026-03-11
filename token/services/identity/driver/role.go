@@ -79,4 +79,6 @@ type Role interface {
 	RegisterIdentity(ctx context.Context, config IdentityConfiguration) error
 	// IdentityIDs returns the identifiers contained in this role
 	IdentityIDs() ([]string, error)
+	// Done releases all the resources allocated by this service.
+	Done() error
 }
