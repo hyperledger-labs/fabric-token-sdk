@@ -120,6 +120,7 @@ func NewTestSuite(startPort func() int, topologies []api.Topology) *TestSuite {
 				return nil, err
 			}
 			i.EnableRaceDetector()
+
 			return i, nil
 		},
 	}
@@ -136,6 +137,7 @@ func NewLocalTestSuite(startPort func() int, topologies []api.Topology) *TestSui
 			}
 			i.EnableRaceDetector()
 			i.DeleteOnStop = false
+			
 			return i, nil
 		},
 	}
