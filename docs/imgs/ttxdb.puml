@@ -41,7 +41,7 @@ entity "Validations" as req_vals {
     stored_at : TIMESTAMP
 }
 
-entity "Endorsmenets" as tx_ends {
+entity "Endorsements" as tx_ends {
     * id : CHAR(36) <<PK>>
     --
     tx_id : TEXT

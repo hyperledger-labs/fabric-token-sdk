@@ -54,12 +54,9 @@ func (r *AuditorSignature) FromProtos(tr *request.AuditorSignature) error {
 	return nil
 }
 
-// TokenRequest is a collection of Token Action:
-// Issues, to create new Tokens;
-// Transfers, to manipulate Tokens (e.g., transfer ownership or redeem)
-// The actions in the collection are independent. An action cannot spend tokens created by another action
-// in the same Token Request.
-// In addition, actions comes with a set of Witnesses to verify the right to spend or the right to issue a given token
+// TokenRequest represents a collection of token actions (issuance and transfer).
+// Each action within the request is logically independent, though they are processed together.
+// A TokenRequest also includes the signatures (witnesses) required to authorize its actions.
 type TokenRequest struct {
 	Issues            [][]byte
 	Transfers         [][]byte
@@ -497,13 +494,14 @@ func (t *TransferMetadata) TokenIDs() []*token.ID {
 	return res
 }
 
-// TokenRequestMetadata is a collection of actions metadata
+// TokenRequestMetadata contains the supplementary information needed to process and interpret a TokenRequest.
+// It includes metadata for each issuance and transfer action, enabling de-obfuscation and identity recovery.
 type TokenRequestMetadata struct {
-	// Issues is the list of issue actions metadata
+	// Issues contains metadata for each issuance action in the corresponding TokenRequest.
 	Issues []*IssueMetadata
-	// Transfers is the list of transfer actions metadata
+	// Transfers contains metadata for each transfer action in the corresponding TokenRequest.
 	Transfers []*TransferMetadata
-	// Application enables attaching more info to the TokenRequestMetadata
+	// Application allows for attaching arbitrary application-level metadata to the token request.
 	Application map[string][]byte
 }
 

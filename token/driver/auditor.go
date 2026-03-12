@@ -8,10 +8,14 @@ package driver
 
 import "context"
 
-// AuditorService models the auditor service
+// AuditorService defines the methods for auditing token transactions.
+// It provides mechanisms for authorized auditors to inspect transaction requests
+// and their associated metadata and anchor to ensure compliance and validity.
 //
 //go:generate counterfeiter -o mock/auditor_service.go -fake-name AuditorService . AuditorService
 type AuditorService interface {
-	// AuditorCheck verifies the well-formedness of the passed request with the respect to the passed metadata and anchor
+	// AuditorCheck performs a comprehensive validation of a token request and its metadata.
+	// It ensures that the transaction is well-formed and meets all auditing requirements
+	// within the context of the provided anchor.
 	AuditorCheck(ctx context.Context, request *TokenRequest, metadata *TokenRequestMetadata, anchor TokenRequestAnchor) error
 }

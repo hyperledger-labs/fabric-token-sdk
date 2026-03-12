@@ -30,23 +30,38 @@ func (t TMSID) Equal(tmsid TMSID) bool {
 
 //go:generate counterfeiter -o mock/tms.go -fake-name TokenManagerService . TokenManagerService
 
-// TokenManagerService is the entry point of the Driver API and gives access to the rest of the API
+// TokenManagerService is the core entry point of the Driver API. It provides access to a comprehensive
+// suite of services for token issuance, transfer, auditing, and management. Each driver implementation
+// must provide a concrete implementation of this interface to enable the SDK to interact with its
+// specific token technology.
 type TokenManagerService interface {
+	// IssueService returns an instance of the IssueService interface, which manages the issuance of new tokens.
 	IssueService() IssueService
+	// TransferService returns an instance of the TransferService interface, which handles the transfer of token ownership.
 	TransferService() TransferService
+	// TokensService returns an instance of the TokensService interface, providing general token management utilities.
 	TokensService() TokensService
-	// TokensUpgradeService return an instance of the TokensUpgradeService interface
+	// TokensUpgradeService returns an instance of the TokensUpgradeService interface, enabling token upgrades.
 	TokensUpgradeService() TokensUpgradeService
+	// AuditorService returns an instance of the AuditorService interface, facilitating token auditing capabilities.
 	AuditorService() AuditorService
+	// CertificationService returns an instance of the CertificationService interface, managing token certifications.
 	CertificationService() CertificationService
+	// Deserializer returns an instance of the Deserializer interface, which deserializes identities to obtain signature verifiers.
 	Deserializer() Deserializer
+	// IdentityProvider returns an instance of the IdentityProvider interface, managing identities and their associated information.
 	IdentityProvider() IdentityProvider
+	// Validator returns an instance of the Validator interface, which provides mechanisms for validating token transactions.
 	Validator() (Validator, error)
+	// PublicParamsManager returns an instance of the PublicParamsManager interface, managing the driver's public parameters.
 	PublicParamsManager() PublicParamsManager
+	// Configuration returns an instance of the Configuration interface, providing access to driver-specific configuration.
 	Configuration() Configuration
+	// WalletService returns an instance of the WalletService interface, which manages issuer, owner, auditor, and certifier wallets.
 	WalletService() WalletService
+	// Authorization returns an instance of the Authorization interface, used to check the relationship between tokens and wallets.
 	Authorization() Authorization
-	// Done releases all the resources allocated by this service
+	// Done releases all the resources allocated by this service, ensuring a clean shutdown.
 	Done() error
 }
 

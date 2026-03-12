@@ -6,14 +6,20 @@ Each driver must implement the `driver.Driver` interface, fulfilling two primary
 1.  **Public Parameters**: Facilitates the retrieval of driver-specific public parameters.
 2.  **Token Management Service (TMS)**: Provides a mechanism to instantiate a new TMS tailored to the driver.
 
-The `Token Management Service` interface, implemented by the driver, functions as the core execution engine. It is required to implement the following services:
-*   `Identity Service`: Manages identities and wallets.
-*   `Issue Service`: Orchestrates the issuance of new tokens.
-*   `Transfer Service`: Manages the transfer of token ownership.
-*   `Token Service`: Provides general token management utilities.
-*   `Auditor Service`: Enables auditing capabilities.
-*   `Validation Service`: Validates token transactions.
-*   `Vault`: Provides secure access to token storage.
+The `Token Management Service` interface, implemented by the driver, functions as the core execution engine. It provides access to several specialized services that handle different aspects of the token lifecycle:
+*   **Issue Service**: Orchestrates the issuance of new tokens, allowing authorized parties to create tokens and assign them to recipients.
+*   **Transfer Service**: Manages the transfer of token ownership, enabling the movement of tokens from one party to another while ensuring the integrity of the transaction.
+*   **Tokens Service**: Provides general token management utilities, such as de-obfuscating token outputs to reveal their details (type, value, owner) and extracting recipient identities.
+*   **Tokens Upgrade Service**: Handles the process of upgrading tokens from one version or format to another, ensuring continuity and consistency during transitions.
+*   **Auditor Service**: Enables auditing capabilities, allowing authorized auditors to inspect transaction details and ensure compliance with regulatory requirements.
+*   **Certification Service**: Manages token certifications, providing mechanisms for certifying tokens and verifying their authenticity.
+*   **Deserializer**: Responsible for deserializing identity data into signature verifiers, which are used to validate transaction signatures.
+*   **Identity Provider**: Manages identity-related concepts, including the registration and retrieval of signature signers and verifiers, as well as audit information for various parties.
+*   **Validator**: Performs rigorous validation of token transactions, ensuring they adhere to the driver's rules and maintain the ledger's integrity.
+*   **Public Parameters Manager**: Manages the driver's public parameters, including their retrieval, updates, and distribution across the network.
+*   **Configuration**: Provides access to driver-specific configuration settings, allowing the TMS to adapt its behavior based on the environment.
+*   **Wallet Service**: Handles the management of different types of wallets (issuer, owner, auditor, certifier), facilitating identity lookup and signature generation.
+*   **Authorization**: Checks the relationships between tokens and wallets, determining if a party has the necessary permissions to perform certain actions (e.g., spending, auditing, issuing).
 
 Currently, the Fabric Token SDK offers two reference driver implementations: `FabToken` and `ZKATDLog` (Zero-Knowledge Authenticated Token based on Discrete Logarithm).
 
