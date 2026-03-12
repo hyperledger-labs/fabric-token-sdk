@@ -20,16 +20,24 @@ type TransferOptions struct {
 
 //go:generate counterfeiter -o mock/ts.go -fake-name TransferService . TransferService
 
-// TransferService models the token transfer service
+// TransferService defines the methods to manage the token transfer lifecycle.
+//
+//go:generate counterfeiter -o mock/ts.go -fake-name TransferService . TransferService
 type TransferService interface {
-	// Transfer generates a TransferAction that spend the passed token ids and created the passed outputs.
-	// In addition, a set of options can be specified to further customize the transfer command.
-	// The function returns an TransferAction and the associated metadata.
+	// Transfer generates a TransferAction to transfer the specified tokens.
+	// It uses the provided wallet and anchor, along with a list of token identifiers and target outputs.
+	// Additional options can be provided through TransferOptions.
+	// The method returns:
+	// - A TransferAction, which encodes the transfer details for the ledger.
+	// - TransferMetadata, containing additional information for the requester.
+	// - An error if the transfer generation fails.
 	Transfer(ctx context.Context, anchor TokenRequestAnchor, wallet OwnerWallet, ids []*token2.ID, outputs []*token2.Token, opts *TransferOptions) (TransferAction, *TransferMetadata, error)
 
-	// VerifyTransfer checks the well-formedness of the passed TransferAction with the respect to the passed output metadata
+	// VerifyTransfer validates the well-formedness and correctness of a TransferAction.
+	// It ensures that the transfer adheres to the driver's rules and correctly spends its inputs
+	// to produce its outputs.
 	VerifyTransfer(ctx context.Context, tr TransferAction, outputMetadata []*TransferOutputMetadata) error
 
-	// DeserializeTransferAction deserializes the passed bytes into an TransferAction
+	// DeserializeTransferAction reconstructs a TransferAction from its serialized byte representation.
 	DeserializeTransferAction(raw []byte) (TransferAction, error)
 }

@@ -10,12 +10,14 @@
 - [Prerequisites, Dependencies, Dependents, and Incompatibilities](#prerequisites-dependencies-dependents-and-incompatibilities)
 - [Terminology and Glossary](#terminology-and-glossary)
 - [Architecture, Interfaces, and Impact](#architecture-interfaces-and-impact)
+- [Token Lifecycle](#token-lifecycle)
 - [Developer Experience](#developer-experience)
 - [Command Line Interface (CLI)](#command-line-interface-cli)
 - [Performance, Scalability, and Resource Consumption](#performance-scalability-and-resource-consumption)
 - [Serviceability, Logging and Troubleshooting](#serviceability-logging-and-troubleshooting)
 - [Monitoring, Metrics and Events](#monitoring-metrics-and-events)
 - [High Availability and Disaster Recovery](#high-availability-and-disaster-recovery)
+- [Upgradability](#upgradability)
 - [Build, Packaging and Deployment](#build-packaging-and-deployment)
 - [Platform Support](#platform-support)
 - [Testing](#testing)
@@ -91,6 +93,13 @@ Other prerequisites are inherited directly from the Fabric Smart Client.
 - For an introduction to the concepts of Database, Persistence, Driver, and Store, read [this documentation](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/platform/view/db-driver.md).
 - **FSC**: Fabric Smart Client.
 - **FTS**: Fabric Token SDK.
+- **UTXO (Unspent Transaction Output)**: A model where the state is represented as a set of unspent outputs. Each transaction consumes some outputs and creates new ones.
+- **ZKP (Zero-Knowledge Proof)**: A cryptographic method by which one party can prove to another that a given statement is true, without conveying any information apart from the fact that the statement is indeed true.
+- **MSP (Membership Service Provider)**: An abstraction that provides credentials to clients and nodes to participate in a Fabric network.
+- **TTX (Token Transaction)**: A specialized service and transaction type within the SDK for orchestrating complex token operations like atomic swaps and multi-party transfers.
+- **TMS ID**: A unique identifier for a Token Management Service, typically composed of `Network`, `Channel`, and `Namespace`.
+- **Enrollment ID**: A unique identifier for a user within a Membership Service Provider (MSP), used to link multiple cryptographic identities to the same logical user for auditing.
+- **NWO (Network Orchestrator)**: A tool used in integration tests to programmatically manage and deploy Fabric and FSC networks.
 - **Issuer**: A role authorized to create (issue) new tokens.
 - **Auditor**: A role responsible for overseeing token requests and ensuring proper use and compliance.
 - **Certifier**: A role that verifies the existence and legitimacy of specific tokens, used in drivers supporting Token Identity Hiding.
@@ -118,6 +127,14 @@ The architecture consists of the following layers:
 * [`Driver API`](./driverapi.md): The underlying API upon which the `Token API` is built. The Driver API is instantiated in a `Driver`.
 * [`Drivers`](./driverapi.md): A `Driver` implements the `Driver API` and defines token representation, operations, and validation rules.
 * [`Services`](./services.md): Pre-built functionalities, such as assembling transactions and selecting unspent tokens, built on top of `Token API`
+
+## Token Lifecycle
+
+The lifecycle of a token in the Fabric Token SDK is as follows:
+
+![image](imgs/token_lifecycle.png)
+
+A token is created during an **Issue** transaction. It remains **Unspent** in the local vault until it is selected for a **Transfer** or **Redeem** operation. During transaction assembly, it is **Locked** to prevent double-spending. If the transaction commits successfully, the token is marked as **Spent**. If a driver upgrade occurs and the token's format is no longer supported, it must undergo an **Upgrade** transaction to remain spendable.
 
 ## Developer Experience
 
@@ -155,6 +172,11 @@ The Fabric Token SDK's design allows multiple replica nodes to be attached to th
 If a conflict arises, only one replica will succeed.
 Replica nodes can be attached to the shared datasource on-demand.
 In this way, the new replica becomes aware of the current status of all transactions and tokens processed so far.
+
+## Upgradability
+
+The Token SDK supports the upgrade of its core components, including tokens on the ledger, drivers, and local storage schemas.
+For more details, see the [Upgradability Guide](./upgradability.md).
 
 ## Build, Packaging and Deployment
 

@@ -10,6 +10,7 @@ Welcome to the Fabric Token SDK documentation.
 *   [**Driver API**](driverapi.md): The interface for building token drivers.
 *   [**Core Token**](core-token.md): Core token definitions.
 *   [**Services**](services.md): Additional services like transaction assembly.
+*   [**Upgradability**](upgradability.md): How to upgrade tokens, drivers, and storage.
 
 ## Development
 

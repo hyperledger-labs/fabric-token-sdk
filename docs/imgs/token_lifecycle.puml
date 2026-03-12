@@ -1,0 +1,22 @@
+@startuml
+!theme plain
+title Token Lifecycle in Fabric Token SDK
+
+state "On-Ledger (New)" as new <<choice>>
+state "Unspent (Available)" as unspent
+state "Locked (Pending)" as locked
+state "Spent (Invalid)" as spent
+state "Unsupported (Upgrade Required)" as unsupported
+
+[*] --> new : Issue Transaction
+new --> unspent : Commit to Ledger
+
+unspent --> locked : Assemble Transaction (TTX)
+locked --> spent : Commit Transaction
+locked --> unspent : Transaction Failed/Timeout
+
+unspent --> unsupported : Driver Upgrade (Format Mismatch)
+unsupported --> new : Upgrade Transaction (Burn & Re-issue)
+
+spent --> [*]
+@enduml
