@@ -225,6 +225,7 @@ func TestListenerEvent_Process_RetriesOnTransientError(t *testing.T) {
 		if attempts < 3 {
 			return nil, errors.New("transient peer error")
 		}
+
 		return &cdriver.VaultValue{Raw: tokenRequestHash}, nil
 	}
 	mockKT.CreateTokenRequestKeyReturns(key, nil)
