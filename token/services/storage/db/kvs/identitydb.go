@@ -62,6 +62,32 @@ func (s *IdentityStore) AddConfiguration(ctx context.Context, wp storage.Identit
 	return s.kvs.Put(ctx, k, &wp)
 }
 
+func (s *IdentityStore) GetConfiguration(ctx context.Context, id, typ, url string) (*storage.IdentityConfiguration, error) {
+	k, err := kvs.CreateCompositeKey(
+		IdentityDBPrefix,
+		[]string{
+			IdentityDBConfigurationPrefix,
+			s.tmsID.String(),
+			typ,
+			mergeIDURL(id, url),
+		},
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create key")
+	}
+
+	if !s.kvs.Exists(ctx, k) {
+		return nil, nil
+	}
+
+	var res storage.IdentityConfiguration
+	if err := s.kvs.Get(ctx, k, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
 func (s *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (idriver.IdentityConfigurationIterator, error) {
 	it, err := s.kvs.GetByPartialCompositeID(
 		ctx,
@@ -94,6 +120,10 @@ func (s *IdentityStore) ConfigurationExists(ctx context.Context, id, configurati
 	}
 
 	return s.kvs.Exists(ctx, k), nil
+}
+
+func (s *IdentityStore) Notifier() (idriver.IdentityConfigurationNotifier, error) {
+	return nil, nil
 }
 
 func (s *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {

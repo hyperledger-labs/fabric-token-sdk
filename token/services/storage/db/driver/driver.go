@@ -9,6 +9,7 @@ package driver
 import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
 type NamedDriver = driver2.NamedDriver[Driver]
@@ -21,6 +22,9 @@ type Driver interface {
 	NewWallet(driver.PersistenceName, ...string) (WalletStore, error)
 
 	NewIdentity(driver.PersistenceName, ...string) (IdentityStore, error)
+
+	// NewIdentityNotifier returns a new IdentityNotifier for the given persistence name and params.
+	NewIdentityNotifier(driver.PersistenceName, ...string) (idriver.IdentityConfigurationNotifier, error)
 
 	NewToken(driver.PersistenceName, ...string) (TokenStore, error)
 

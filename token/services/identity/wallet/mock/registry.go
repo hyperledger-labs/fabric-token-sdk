@@ -10,7 +10,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 )
 
-type Registry struct {
+type RoleRegistry struct {
+	DoneStub        func() error
+	doneMutex       sync.RWMutex
+	doneArgsForCall []struct {
+	}
+	doneReturns struct {
+		result1 error
+	}
+	doneReturnsOnCall map[int]struct {
+		result1 error
+	}
 	RegisterIdentityStub        func(context.Context, driver.IdentityConfiguration) error
 	registerIdentityMutex       sync.RWMutex
 	registerIdentityArgsForCall []struct {
@@ -55,7 +65,60 @@ type Registry struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Registry) RegisterIdentity(arg1 context.Context, arg2 driver.IdentityConfiguration) error {
+func (fake *RoleRegistry) Done() error {
+	fake.doneMutex.Lock()
+	ret, specificReturn := fake.doneReturnsOnCall[len(fake.doneArgsForCall)]
+	fake.doneArgsForCall = append(fake.doneArgsForCall, struct {
+	}{})
+	stub := fake.DoneStub
+	fakeReturns := fake.doneReturns
+	fake.recordInvocation("Done", []interface{}{})
+	fake.doneMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *RoleRegistry) DoneCallCount() int {
+	fake.doneMutex.RLock()
+	defer fake.doneMutex.RUnlock()
+	return len(fake.doneArgsForCall)
+}
+
+func (fake *RoleRegistry) DoneCalls(stub func() error) {
+	fake.doneMutex.Lock()
+	defer fake.doneMutex.Unlock()
+	fake.DoneStub = stub
+}
+
+func (fake *RoleRegistry) DoneReturns(result1 error) {
+	fake.doneMutex.Lock()
+	defer fake.doneMutex.Unlock()
+	fake.DoneStub = nil
+	fake.doneReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *RoleRegistry) DoneReturnsOnCall(i int, result1 error) {
+	fake.doneMutex.Lock()
+	defer fake.doneMutex.Unlock()
+	fake.DoneStub = nil
+	if fake.doneReturnsOnCall == nil {
+		fake.doneReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.doneReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *RoleRegistry) RegisterIdentity(arg1 context.Context, arg2 driver.IdentityConfiguration) error {
 	fake.registerIdentityMutex.Lock()
 	ret, specificReturn := fake.registerIdentityReturnsOnCall[len(fake.registerIdentityArgsForCall)]
 	fake.registerIdentityArgsForCall = append(fake.registerIdentityArgsForCall, struct {
@@ -75,26 +138,26 @@ func (fake *Registry) RegisterIdentity(arg1 context.Context, arg2 driver.Identit
 	return fakeReturns.result1
 }
 
-func (fake *Registry) RegisterIdentityCallCount() int {
+func (fake *RoleRegistry) RegisterIdentityCallCount() int {
 	fake.registerIdentityMutex.RLock()
 	defer fake.registerIdentityMutex.RUnlock()
 	return len(fake.registerIdentityArgsForCall)
 }
 
-func (fake *Registry) RegisterIdentityCalls(stub func(context.Context, driver.IdentityConfiguration) error) {
+func (fake *RoleRegistry) RegisterIdentityCalls(stub func(context.Context, driver.IdentityConfiguration) error) {
 	fake.registerIdentityMutex.Lock()
 	defer fake.registerIdentityMutex.Unlock()
 	fake.RegisterIdentityStub = stub
 }
 
-func (fake *Registry) RegisterIdentityArgsForCall(i int) (context.Context, driver.IdentityConfiguration) {
+func (fake *RoleRegistry) RegisterIdentityArgsForCall(i int) (context.Context, driver.IdentityConfiguration) {
 	fake.registerIdentityMutex.RLock()
 	defer fake.registerIdentityMutex.RUnlock()
 	argsForCall := fake.registerIdentityArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *Registry) RegisterIdentityReturns(result1 error) {
+func (fake *RoleRegistry) RegisterIdentityReturns(result1 error) {
 	fake.registerIdentityMutex.Lock()
 	defer fake.registerIdentityMutex.Unlock()
 	fake.RegisterIdentityStub = nil
@@ -103,7 +166,7 @@ func (fake *Registry) RegisterIdentityReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *Registry) RegisterIdentityReturnsOnCall(i int, result1 error) {
+func (fake *RoleRegistry) RegisterIdentityReturnsOnCall(i int, result1 error) {
 	fake.registerIdentityMutex.Lock()
 	defer fake.registerIdentityMutex.Unlock()
 	fake.RegisterIdentityStub = nil
@@ -117,7 +180,7 @@ func (fake *Registry) RegisterIdentityReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *Registry) WalletByID(arg1 context.Context, arg2 identity.RoleType, arg3 driver.WalletLookupID) (driver.Wallet, error) {
+func (fake *RoleRegistry) WalletByID(arg1 context.Context, arg2 identity.RoleType, arg3 driver.WalletLookupID) (driver.Wallet, error) {
 	fake.walletByIDMutex.Lock()
 	ret, specificReturn := fake.walletByIDReturnsOnCall[len(fake.walletByIDArgsForCall)]
 	fake.walletByIDArgsForCall = append(fake.walletByIDArgsForCall, struct {
@@ -138,26 +201,26 @@ func (fake *Registry) WalletByID(arg1 context.Context, arg2 identity.RoleType, a
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *Registry) WalletByIDCallCount() int {
+func (fake *RoleRegistry) WalletByIDCallCount() int {
 	fake.walletByIDMutex.RLock()
 	defer fake.walletByIDMutex.RUnlock()
 	return len(fake.walletByIDArgsForCall)
 }
 
-func (fake *Registry) WalletByIDCalls(stub func(context.Context, identity.RoleType, driver.WalletLookupID) (driver.Wallet, error)) {
+func (fake *RoleRegistry) WalletByIDCalls(stub func(context.Context, identity.RoleType, driver.WalletLookupID) (driver.Wallet, error)) {
 	fake.walletByIDMutex.Lock()
 	defer fake.walletByIDMutex.Unlock()
 	fake.WalletByIDStub = stub
 }
 
-func (fake *Registry) WalletByIDArgsForCall(i int) (context.Context, identity.RoleType, driver.WalletLookupID) {
+func (fake *RoleRegistry) WalletByIDArgsForCall(i int) (context.Context, identity.RoleType, driver.WalletLookupID) {
 	fake.walletByIDMutex.RLock()
 	defer fake.walletByIDMutex.RUnlock()
 	argsForCall := fake.walletByIDArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *Registry) WalletByIDReturns(result1 driver.Wallet, result2 error) {
+func (fake *RoleRegistry) WalletByIDReturns(result1 driver.Wallet, result2 error) {
 	fake.walletByIDMutex.Lock()
 	defer fake.walletByIDMutex.Unlock()
 	fake.WalletByIDStub = nil
@@ -167,7 +230,7 @@ func (fake *Registry) WalletByIDReturns(result1 driver.Wallet, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *Registry) WalletByIDReturnsOnCall(i int, result1 driver.Wallet, result2 error) {
+func (fake *RoleRegistry) WalletByIDReturnsOnCall(i int, result1 driver.Wallet, result2 error) {
 	fake.walletByIDMutex.Lock()
 	defer fake.walletByIDMutex.Unlock()
 	fake.WalletByIDStub = nil
@@ -183,7 +246,7 @@ func (fake *Registry) WalletByIDReturnsOnCall(i int, result1 driver.Wallet, resu
 	}{result1, result2}
 }
 
-func (fake *Registry) WalletIDs(arg1 context.Context) ([]string, error) {
+func (fake *RoleRegistry) WalletIDs(arg1 context.Context) ([]string, error) {
 	fake.walletIDsMutex.Lock()
 	ret, specificReturn := fake.walletIDsReturnsOnCall[len(fake.walletIDsArgsForCall)]
 	fake.walletIDsArgsForCall = append(fake.walletIDsArgsForCall, struct {
@@ -202,26 +265,26 @@ func (fake *Registry) WalletIDs(arg1 context.Context) ([]string, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *Registry) WalletIDsCallCount() int {
+func (fake *RoleRegistry) WalletIDsCallCount() int {
 	fake.walletIDsMutex.RLock()
 	defer fake.walletIDsMutex.RUnlock()
 	return len(fake.walletIDsArgsForCall)
 }
 
-func (fake *Registry) WalletIDsCalls(stub func(context.Context) ([]string, error)) {
+func (fake *RoleRegistry) WalletIDsCalls(stub func(context.Context) ([]string, error)) {
 	fake.walletIDsMutex.Lock()
 	defer fake.walletIDsMutex.Unlock()
 	fake.WalletIDsStub = stub
 }
 
-func (fake *Registry) WalletIDsArgsForCall(i int) context.Context {
+func (fake *RoleRegistry) WalletIDsArgsForCall(i int) context.Context {
 	fake.walletIDsMutex.RLock()
 	defer fake.walletIDsMutex.RUnlock()
 	argsForCall := fake.walletIDsArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *Registry) WalletIDsReturns(result1 []string, result2 error) {
+func (fake *RoleRegistry) WalletIDsReturns(result1 []string, result2 error) {
 	fake.walletIDsMutex.Lock()
 	defer fake.walletIDsMutex.Unlock()
 	fake.WalletIDsStub = nil
@@ -231,7 +294,7 @@ func (fake *Registry) WalletIDsReturns(result1 []string, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *Registry) WalletIDsReturnsOnCall(i int, result1 []string, result2 error) {
+func (fake *RoleRegistry) WalletIDsReturnsOnCall(i int, result1 []string, result2 error) {
 	fake.walletIDsMutex.Lock()
 	defer fake.walletIDsMutex.Unlock()
 	fake.WalletIDsStub = nil
@@ -247,7 +310,7 @@ func (fake *Registry) WalletIDsReturnsOnCall(i int, result1 []string, result2 er
 	}{result1, result2}
 }
 
-func (fake *Registry) Invocations() map[string][][]interface{} {
+func (fake *RoleRegistry) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
@@ -257,7 +320,7 @@ func (fake *Registry) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *Registry) recordInvocation(key string, args []interface{}) {
+func (fake *RoleRegistry) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -269,4 +332,4 @@ func (fake *Registry) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ wallet.RoleRegistry = new(Registry)
+var _ wallet.RoleRegistry = new(RoleRegistry)

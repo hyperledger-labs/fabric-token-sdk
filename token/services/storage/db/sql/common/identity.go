@@ -47,11 +47,13 @@ type identityTables struct {
 	Signers                string
 }
 
+// IdentityStore is a SQL-backed implementation of the IdentityStore interface.
 type IdentityStore struct {
-	readDB  *sql.DB
-	writeDB *sql.DB
-	table   identityTables
-	ci      common3.CondInterpreter
+	readDB   *sql.DB
+	writeDB  *sql.DB
+	table    identityTables
+	ci       common3.CondInterpreter
+	notifier idriver.IdentityConfigurationNotifier
 
 	signerInfoCache cache[bool]
 	auditInfoCache  cache[[]byte]
@@ -65,6 +67,7 @@ func newIdentityStore(
 	auditInfoCache cache[[]byte],
 	ci common3.CondInterpreter,
 	errorWrapper driver2.SQLErrorWrapper,
+	notifier idriver.IdentityConfigurationNotifier,
 ) *IdentityStore {
 	return &IdentityStore{
 		readDB:          readDB,
@@ -74,6 +77,7 @@ func newIdentityStore(
 		auditInfoCache:  auditInfoCache,
 		ci:              ci,
 		errorWrapper:    errorWrapper,
+		notifier:        notifier,
 	}
 }
 
@@ -131,6 +135,33 @@ func NewIdentityStore(
 		auditInfoCache,
 		ci,
 		errorWrapper,
+		nil,
+	), nil
+}
+
+// NewIdentityStoreWithNotifier creates a new IdentityStore with a notifier.
+func NewIdentityStoreWithNotifier(
+	readDB, writeDB *sql.DB,
+	tables TableNames,
+	signerInfoCache cache[bool],
+	auditInfoCache cache[[]byte],
+	ci common3.CondInterpreter,
+	errorWrapper driver2.SQLErrorWrapper,
+	notifier idriver.IdentityConfigurationNotifier,
+) (*IdentityStore, error) {
+	return newIdentityStore(
+		readDB,
+		writeDB,
+		identityTables{
+			IdentityConfigurations: tables.IdentityConfigurations,
+			IdentityInfo:           tables.IdentityInfo,
+			Signers:                tables.Signers,
+		},
+		signerInfoCache,
+		auditInfoCache,
+		ci,
+		errorWrapper,
+		notifier,
 	), nil
 }
 
@@ -138,6 +169,8 @@ func (db *IdentityStore) CreateSchema() error {
 	return common.InitSchema(db.writeDB, []string{db.GetSchema()}...)
 }
 
+// AddConfiguration stores an identity configuration in the database.
+// It also enqueues an event to the notifier if available.
 func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.IdentityConfiguration) error {
 	query, args := q.InsertInto(db.table.IdentityConfigurations).
 		Fields("id", "type", "url", "conf", "raw").
@@ -146,10 +179,48 @@ func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.Identit
 	logging.Debug(logger, query, args)
 
 	_, err := db.writeDB.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
 
-	return err
+	if db.notifier != nil {
+		if e, ok := db.notifier.(interface {
+			EnqueueEvent(operation idriver.Operation, m map[idriver.ColumnKey]string)
+		}); ok {
+			e.EnqueueEvent(idriver.Insert, map[idriver.ColumnKey]string{
+				"id":   wp.ID,
+				"type": wp.Type,
+				"url":  wp.URL,
+			})
+		}
+	}
+
+	return nil
 }
 
+// GetConfiguration returns the configuration with the given id, type, and url.
+func (db *IdentityStore) GetConfiguration(ctx context.Context, id, typ, url string) (*driver.IdentityConfiguration, error) {
+	query, args := q.Select().
+		FieldsByName("id", "type", "url", "conf", "raw").
+		From(q.Table(db.table.IdentityConfigurations)).
+		Where(cond.And(cond.Eq("id", id), cond.Eq("type", typ), cond.Eq("url", url))).
+		Format(db.ci)
+	logging.Debug(logger, query, args)
+	row := db.readDB.QueryRowContext(ctx, query, args...)
+	c := &driver.IdentityConfiguration{}
+	err := row.Scan(&c.ID, &c.Type, &c.URL, &c.Config, &c.Raw)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// IteratorConfigurations returns an iterator to all configurations of the given type.
 func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (idriver.IdentityConfigurationIterator, error) {
 	query, args := q.Select().
 		FieldsByName("id", "url", "conf", "raw").
@@ -182,6 +253,11 @@ func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url s
 	logger.DebugfContext(ctx, "found configuration for [%s:%s:%s]", id, typ, url)
 
 	return len(result) != 0, nil
+}
+
+// Notifier returns the IdentityNotifier associated with this store.
+func (db *IdentityStore) Notifier() (idriver.IdentityConfigurationNotifier, error) {
+	return db.notifier, nil
 }
 
 func (db *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {

@@ -299,6 +299,11 @@ func (r *Registry) WalletByID(ctx context.Context, role identity.RoleType, id dr
 	return newWallet, nil
 }
 
+// Done releases all the resources allocated by this service.
+func (r *Registry) Done() error {
+	return r.Role.Done()
+}
+
 func toViewIdentity(id driver.WalletLookupID) (driver.Identity, bool) {
 	switch v := id.(type) {
 	case driver.Identity:

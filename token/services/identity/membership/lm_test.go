@@ -56,6 +56,7 @@ func TestRegisterIdentity_PersistsAndRegisters(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("e1")
@@ -133,6 +134,7 @@ func TestRegisterIdentity_AnonymousDoesNotBind(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("e2")
@@ -177,6 +179,7 @@ func TestIDsAndDefaultIdentifier(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 	km1 := &mock.KeyManager{}
 	km1.EnrollmentIDReturns("e1")
@@ -269,6 +272,7 @@ func TestRegisterIdentity_EmptyEnrollmentID(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("")
@@ -413,6 +417,7 @@ func TestRegisterLocalIdentities_SuccessAndNoValidFound(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 	// first call (root) -> nil, second call (subdir) -> succeed
 	km := &mock.KeyManager{}
@@ -548,6 +553,7 @@ func TestLoad_Success(t *testing.T) {
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
+	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("e1")
@@ -592,6 +598,7 @@ func TestLoad_WithTargets(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 	km := &mock.KeyManager{}
@@ -679,6 +686,7 @@ func TestLoad_MergeStoredIdentities(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 	// Stored identity
 	storedConfig := idriver.IdentityConfiguration{

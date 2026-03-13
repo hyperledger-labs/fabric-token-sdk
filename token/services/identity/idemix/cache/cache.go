@@ -36,6 +36,8 @@ type IdentityCache struct {
 	cacheTimeout time.Duration
 	// Cache performance metrics
 	metrics *Metrics
+	// Cancellation function for background provisioning
+	cancel context.CancelFunc
 }
 
 // NewIdentityCache creates a new identity cache with specified size and backend.
@@ -52,6 +54,13 @@ func NewIdentityCache(backed IdentityCacheBackendFunc, size int, auditInfo []byt
 	return ci
 }
 
+// Close stops the background identity provisioning.
+func (c *IdentityCache) Close() {
+	if c.cancel != nil {
+		c.cancel()
+	}
+}
+
 // Identity retrieves an identity from cache or generates on-demand.
 func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	// Is the auditInfo equal to that used to fill the cache? If yes, use the cache
@@ -62,7 +71,9 @@ func (c *IdentityCache) Identity(ctx context.Context, auditInfo []byte) (*idrive
 	c.once.Do(func() {
 		logger.DebugfContext(ctx, "provision identities with cache size [%d]", cap(c.cache))
 		if cap(c.cache) > 0 {
-			go c.provisionIdentities()
+			var backgroundCtx context.Context
+			backgroundCtx, c.cancel = context.WithCancel(context.Background())
+			go c.provisionIdentities(backgroundCtx)
 		}
 	})
 
@@ -127,18 +138,27 @@ func (c *IdentityCache) fetchIdentityFromBackend(ctx context.Context, auditInfo 
 }
 
 // provisionIdentities continuously fills cache with pre-generated identities.
-func (c *IdentityCache) provisionIdentities() {
+func (c *IdentityCache) provisionIdentities(ctx context.Context) {
 	count := 0
-	ctx := context.Background()
 	for {
 		identityDescriptor, err := c.backed(ctx, c.auditInfo)
 		if err != nil {
 			logger.Errorf("failed to provision identity [%s]", err)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(1 * time.Second):
+			}
 
 			continue
 		}
 		logger.DebugfContext(ctx, "generated new idemix identity [%d]", count)
 		c.metrics.CacheLevelGauge.Add(1)
-		c.cache <- identityDescriptor
+		select {
+		case c.cache <- identityDescriptor:
+			count++
+		case <-ctx.Done():
+			return
+		}
 	}
 }
