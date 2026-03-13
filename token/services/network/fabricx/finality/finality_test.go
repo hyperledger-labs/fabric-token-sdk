@@ -10,6 +10,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
@@ -206,6 +207,83 @@ func TestListenerEvent_Process_Busy_TxCheckSucceeds(t *testing.T) {
 	assert.Equal(t, 1, mockListener.OnStatusCallCount())
 }
 
+func TestListenerEvent_Process_RetriesOnTransientError(t *testing.T) {
+	ctx := t.Context()
+	txID := "tx123"
+	namespace := "token-namespace"
+	tokenRequestHash := []byte("hash123")
+	key := "token-request-key"
+
+	mockQS := &mock.QueryService{}
+	mockKT := &mock.KeyTranslator{}
+	mockListener := &mock.Listener{}
+
+	var attempts int
+	// Fail twice, succeed on third attempt
+	mockQS.GetStateStub = func(_ string, _ string) (*cdriver.VaultValue, error) {
+		attempts++
+		if attempts < 3 {
+			return nil, errors.New("transient peer error")
+		}
+
+		return &cdriver.VaultValue{Raw: tokenRequestHash}, nil
+	}
+	mockKT.CreateTokenRequestKeyReturns(key, nil)
+
+	event := &finality.ListenerEvent{
+		QueryService:  mockQS,
+		KeyTranslator: mockKT,
+		Listener:      mockListener,
+		TxID:          txID,
+		Status:        fdriver.Valid,
+		Namespace:     namespace,
+		MaxRetries:    3,
+		RetryInterval: 10 * time.Millisecond,
+	}
+
+	err := event.Process(ctx)
+	require.NoError(t, err)
+
+	// Should have retried and eventually called OnStatus
+	assert.Equal(t, 3, attempts)
+	assert.Equal(t, 1, mockListener.OnStatusCallCount())
+	assert.Equal(t, 0, mockListener.OnErrorCallCount())
+}
+
+func TestListenerEvent_Process_CallsOnErrorAfterAllRetriesExhausted(t *testing.T) {
+	ctx := t.Context()
+	txID := "tx123"
+	key := "token-request-key"
+
+	mockQS := &mock.QueryService{}
+	mockKT := &mock.KeyTranslator{}
+	mockListener := &mock.Listener{}
+
+	mockKT.CreateTokenRequestKeyReturns(key, nil)
+	mockQS.GetStateReturns(nil, errors.New("persistent peer error"))
+
+	event := &finality.ListenerEvent{
+		QueryService:  mockQS,
+		KeyTranslator: mockKT,
+		Listener:      mockListener,
+		TxID:          txID,
+		Status:        fdriver.Valid,
+		Namespace:     "token-namespace",
+		MaxRetries:    2,
+		RetryInterval: 10 * time.Millisecond,
+	}
+
+	err := event.Process(ctx)
+	require.NoError(t, err)
+
+	// All retries exhausted — OnStatus must NOT be called, OnError must be called once
+	assert.Equal(t, 0, mockListener.OnStatusCallCount())
+	assert.Equal(t, 1, mockListener.OnErrorCallCount())
+	_, callTxID, callErr := mockListener.OnErrorArgsForCall(0)
+	assert.Equal(t, txID, callTxID)
+	assert.Contains(t, callErr.Error(), "persistent peer error")
+}
+
 func TestListenerEvent_Process_CreateTokenRequestKeyError(t *testing.T) {
 	ctx := t.Context()
 	txID := "tx123"
@@ -224,12 +302,18 @@ func TestListenerEvent_Process_CreateTokenRequestKeyError(t *testing.T) {
 		Status:        fdriver.Valid,
 		StatusMessage: "",
 		Namespace:     "token-namespace",
+		MaxRetries:    2,
+		RetryInterval: 10 * time.Millisecond,
 	}
 
 	err := event.Process(ctx)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "can't create for token request")
-	assert.Contains(t, err.Error(), "key creation failed")
+	require.NoError(t, err)
+	// All retries exhausted — listener must be notified via OnError
+	assert.Equal(t, 0, mockListener.OnStatusCallCount())
+	assert.Equal(t, 1, mockListener.OnErrorCallCount())
+	_, callTxID, callErr := mockListener.OnErrorArgsForCall(0)
+	assert.Equal(t, txID, callTxID)
+	assert.Contains(t, callErr.Error(), "key creation failed")
 }
 
 func TestListenerEvent_Process_GetStateError(t *testing.T) {
@@ -252,12 +336,18 @@ func TestListenerEvent_Process_GetStateError(t *testing.T) {
 		Status:        fdriver.Valid,
 		StatusMessage: "",
 		Namespace:     "token-namespace",
+		MaxRetries:    2,
+		RetryInterval: 10 * time.Millisecond,
 	}
 
 	err := event.Process(ctx)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "can't get state for token request")
-	assert.Contains(t, err.Error(), "state retrieval failed")
+	require.NoError(t, err)
+	// All retries exhausted — listener must be notified via OnError
+	assert.Equal(t, 0, mockListener.OnStatusCallCount())
+	assert.Equal(t, 1, mockListener.OnErrorCallCount())
+	_, callTxID, callErr := mockListener.OnErrorArgsForCall(0)
+	assert.Equal(t, txID, callTxID)
+	assert.Contains(t, callErr.Error(), "state retrieval failed")
 }
 
 func TestListenerEvent_String(t *testing.T) {

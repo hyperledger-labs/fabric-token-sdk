@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
@@ -26,6 +27,13 @@ import (
 )
 
 var logger = logging.MustGetLogger()
+
+const (
+	// defaultMaxRetries is the number of times a ListenerEvent will retry on transient errors.
+	defaultMaxRetries = 3
+	// defaultRetryInterval is the initial backoff delay; it doubles after each attempt.
+	defaultRetryInterval = time.Second
+)
 
 // ConfigService models the configuration service needed by the NSListenerManager
 //
@@ -101,17 +109,58 @@ type ListenerEvent struct {
 	StatusMessage string
 	// Namespace is the namespace of the transaction
 	Namespace string
+
+	// MaxRetries is the number of retry attempts on transient errors (0 uses defaultMaxRetries).
+	MaxRetries int
+	// RetryInterval is the initial backoff delay between retries, doubling each attempt (0 uses defaultRetryInterval).
+	RetryInterval time.Duration
 }
 
-// Process handles a finality event notification.
+// Process handles a finality event notification with exponential-backoff retries.
 // If the status is Unknown or Busy, it triggers a manual transaction check.
 // If the status is Valid, it retrieves the token request hash from the ledger.
-// Finally, it notifies the wrapped listener with the transaction's status and hash.
+// It notifies the wrapped listener on success, or calls OnError if all retries are exhausted.
 func (l *ListenerEvent) Process(ctx context.Context) error {
+	maxRetries := l.MaxRetries
+	if maxRetries <= 0 {
+		maxRetries = defaultMaxRetries
+	}
+	retryInterval := l.RetryInterval
+	if retryInterval <= 0 {
+		retryInterval = defaultRetryInterval
+	}
+
+	delay := retryInterval
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		err := l.process(ctx)
+		if err == nil {
+			return nil
+		}
+		if attempt == maxRetries {
+			logger.Errorf("[ListenerEvent] tx [%s] failed after %d attempts: %v — notifying listener", l.TxID, maxRetries+1, err)
+			l.Listener.OnError(ctx, l.TxID, err)
+
+			return nil
+		}
+		logger.Warnf("[ListenerEvent] tx [%s] attempt %d/%d failed: %v, retrying in %v", l.TxID, attempt+1, maxRetries+1, err, delay)
+		select {
+		case <-time.After(delay):
+			delay *= 2
+		case <-ctx.Done():
+			logger.Warnf("[ListenerEvent] tx [%s] context canceled during retry backoff", l.TxID)
+
+			return nil
+		}
+	}
+
+	return nil
+}
+
+// process executes a single attempt at handling the finality event.
+func (l *ListenerEvent) process(ctx context.Context) error {
 	logger.Debugf("[ListenerEvent] get notification for [%s], status [%d]", l.TxID, l.Status)
 
 	if l.Status == fdriver.Unknown || l.Status == fdriver.Busy {
-		// perform a query
 		txCheck := TxCheck{
 			QueryService:  l.QueryService,
 			KeyTranslator: l.KeyTranslator,
@@ -120,14 +169,12 @@ func (l *ListenerEvent) Process(ctx context.Context) error {
 			Namespace:     l.Namespace,
 		}
 		if err := txCheck.Process(ctx); err == nil {
-			// this means that the query has notified the event
 			return nil
 		}
 	}
 
 	var tokenRequestHash []byte
 	if l.Status == fdriver.Valid {
-		// fetch token request hash key
 		key, err := l.KeyTranslator.CreateTokenRequestKey(l.TxID)
 		if err != nil {
 			return errors.Wrapf(err, "can't create for token request [%s]", l.TxID)
@@ -342,6 +389,13 @@ type OnlyOnceListener struct {
 func (o *OnlyOnceListener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
 	o.once.Do(func() {
 		o.listener.OnStatus(ctx, txID, status, message, tokenRequestHash)
+	})
+}
+
+// OnError forwards the error to the wrapped listener only if it hasn't been notified before.
+func (o *OnlyOnceListener) OnError(ctx context.Context, txID string, err error) {
+	o.once.Do(func() {
+		o.listener.OnError(ctx, txID, err)
 	})
 }
 

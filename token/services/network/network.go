@@ -38,6 +38,8 @@ var logger = logging.MustGetLogger()
 type FinalityListener interface {
 	// OnStatus is called when the status of a transaction changes
 	OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte)
+	// OnError is called when the finality event cannot be delivered after all retries are exhausted
+	OnError(ctx context.Context, txID string, err error)
 }
 
 type GetFunc func() (view.Identity, []byte, error)
