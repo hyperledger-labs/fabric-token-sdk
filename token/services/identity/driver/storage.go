@@ -109,6 +109,24 @@ const (
 	Update = driver2.Update
 )
 
+// IdentityConfigurationRecord contains the primary key fields of an identity configuration.
+type IdentityConfigurationRecord struct {
+	// ID is the unique identifier of the identity.
+	ID string
+	// Type is the type of the identity (e.g. "fabtoken", "zkatdlog").
+	Type string
+	// URL is the path to the credentials relevant to this identity.
+	URL string
+}
+
+// IdentityConfigurationNotifier is used to subscribe to configuration changes in the identity storage.
+type IdentityConfigurationNotifier interface {
+	// Subscribe registers a callback function to be called when an identity configuration is inserted or updated.
+	Subscribe(callback func(Operation, IdentityConfigurationRecord)) error
+	// UnsubscribeAll unregisters all callbacks.
+	UnsubscribeAll() error
+}
+
 // IdentityStoreService provides persistent storage operations for identity
 // configurations, audit data, token metadata, and signer-related information.
 //
@@ -123,8 +141,8 @@ type IdentityStoreService interface {
 	ConfigurationExists(ctx context.Context, id, typ, url string) (bool, error)
 	// IteratorConfigurations returns an iterator to all configurations stored
 	IteratorConfigurations(ctx context.Context, configurationType string) (IdentityConfigurationIterator, error)
-	// Notifier returns an IdentityNotifier for this store to subscribe to configuration changes.
-	Notifier() (IdentityNotifier, error)
+	// Notifier returns an IdentityConfigurationNotifier for this store to subscribe to configuration changes.
+	Notifier() (IdentityConfigurationNotifier, error)
 	// StoreIdentityData stores the passed identity and token information
 	StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 	// GetAuditInfo retrieves the audit info bounded to the given identity

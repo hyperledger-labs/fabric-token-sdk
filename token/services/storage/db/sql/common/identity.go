@@ -53,7 +53,7 @@ type IdentityStore struct {
 	writeDB  *sql.DB
 	table    identityTables
 	ci       common3.CondInterpreter
-	notifier idriver.IdentityNotifier
+	notifier idriver.IdentityConfigurationNotifier
 
 	signerInfoCache cache[bool]
 	auditInfoCache  cache[[]byte]
@@ -67,7 +67,7 @@ func newIdentityStore(
 	auditInfoCache cache[[]byte],
 	ci common3.CondInterpreter,
 	errorWrapper driver2.SQLErrorWrapper,
-	notifier idriver.IdentityNotifier,
+	notifier idriver.IdentityConfigurationNotifier,
 ) *IdentityStore {
 	return &IdentityStore{
 		readDB:          readDB,
@@ -147,7 +147,7 @@ func NewIdentityStoreWithNotifier(
 	auditInfoCache cache[[]byte],
 	ci common3.CondInterpreter,
 	errorWrapper driver2.SQLErrorWrapper,
-	notifier idriver.IdentityNotifier,
+	notifier idriver.IdentityConfigurationNotifier,
 ) (*IdentityStore, error) {
 	return newIdentityStore(
 		readDB,
@@ -256,7 +256,7 @@ func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url s
 }
 
 // Notifier returns the IdentityNotifier associated with this store.
-func (db *IdentityStore) Notifier() (idriver.IdentityNotifier, error) {
+func (db *IdentityStore) Notifier() (idriver.IdentityConfigurationNotifier, error) {
 	return db.notifier, nil
 }
 

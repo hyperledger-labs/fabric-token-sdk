@@ -11,6 +11,7 @@ import (
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	driver4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
 
@@ -60,7 +61,7 @@ func (d Driver) NewIdentity(name driver2.PersistenceName, params ...string) (dri
 	return dr.NewIdentity(name, params...)
 }
 
-func (d Driver) NewIdentityNotifier(name driver2.PersistenceName, params ...string) (driver4.TokenNotifier, error) {
+func (d Driver) NewIdentityNotifier(name driver2.PersistenceName, params ...string) (idriver.IdentityConfigurationNotifier, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {
 		return nil, err

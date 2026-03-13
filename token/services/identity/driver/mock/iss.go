@@ -136,16 +136,16 @@ type IdentityStoreService struct {
 		result1 driver.IdentityConfigurationIterator
 		result2 error
 	}
-	NotifierStub        func() (driver.IdentityNotifier, error)
+	NotifierStub        func() (driver.IdentityConfigurationNotifier, error)
 	notifierMutex       sync.RWMutex
 	notifierArgsForCall []struct {
 	}
 	notifierReturns struct {
-		result1 driver.IdentityNotifier
+		result1 driver.IdentityConfigurationNotifier
 		result2 error
 	}
 	notifierReturnsOnCall map[int]struct {
-		result1 driver.IdentityNotifier
+		result1 driver.IdentityConfigurationNotifier
 		result2 error
 	}
 	RegisterIdentityDescriptorStub        func(context.Context, *driver.IdentityDescriptor, drivera.Identity) error
@@ -799,7 +799,7 @@ func (fake *IdentityStoreService) IteratorConfigurationsReturnsOnCall(i int, res
 	}{result1, result2}
 }
 
-func (fake *IdentityStoreService) Notifier() (driver.IdentityNotifier, error) {
+func (fake *IdentityStoreService) Notifier() (driver.IdentityConfigurationNotifier, error) {
 	fake.notifierMutex.Lock()
 	ret, specificReturn := fake.notifierReturnsOnCall[len(fake.notifierArgsForCall)]
 	fake.notifierArgsForCall = append(fake.notifierArgsForCall, struct {
@@ -823,34 +823,34 @@ func (fake *IdentityStoreService) NotifierCallCount() int {
 	return len(fake.notifierArgsForCall)
 }
 
-func (fake *IdentityStoreService) NotifierCalls(stub func() (driver.IdentityNotifier, error)) {
+func (fake *IdentityStoreService) NotifierCalls(stub func() (driver.IdentityConfigurationNotifier, error)) {
 	fake.notifierMutex.Lock()
 	defer fake.notifierMutex.Unlock()
 	fake.NotifierStub = stub
 }
 
-func (fake *IdentityStoreService) NotifierReturns(result1 driver.IdentityNotifier, result2 error) {
+func (fake *IdentityStoreService) NotifierReturns(result1 driver.IdentityConfigurationNotifier, result2 error) {
 	fake.notifierMutex.Lock()
 	defer fake.notifierMutex.Unlock()
 	fake.NotifierStub = nil
 	fake.notifierReturns = struct {
-		result1 driver.IdentityNotifier
+		result1 driver.IdentityConfigurationNotifier
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *IdentityStoreService) NotifierReturnsOnCall(i int, result1 driver.IdentityNotifier, result2 error) {
+func (fake *IdentityStoreService) NotifierReturnsOnCall(i int, result1 driver.IdentityConfigurationNotifier, result2 error) {
 	fake.notifierMutex.Lock()
 	defer fake.notifierMutex.Unlock()
 	fake.NotifierStub = nil
 	if fake.notifierReturnsOnCall == nil {
 		fake.notifierReturnsOnCall = make(map[int]struct {
-			result1 driver.IdentityNotifier
+			result1 driver.IdentityConfigurationNotifier
 			result2 error
 		})
 	}
 	fake.notifierReturnsOnCall[i] = struct {
-		result1 driver.IdentityNotifier
+		result1 driver.IdentityConfigurationNotifier
 		result2 error
 	}{result1, result2}
 }

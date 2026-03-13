@@ -4,15 +4,15 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 )
 
-type IdentityNotifier struct {
-	SubscribeStub        func(driver.TriggerCallback) error
+type IdentityConfigurationNotifier struct {
+	SubscribeStub        func(func(driver.Operation, driver.IdentityConfigurationRecord)) error
 	subscribeMutex       sync.RWMutex
 	subscribeArgsForCall []struct {
-		arg1 driver.TriggerCallback
+		arg1 func(driver.Operation, driver.IdentityConfigurationRecord)
 	}
 	subscribeReturns struct {
 		result1 error
@@ -34,11 +34,11 @@ type IdentityNotifier struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *IdentityNotifier) Subscribe(arg1 driver.TriggerCallback) error {
+func (fake *IdentityConfigurationNotifier) Subscribe(arg1 func(driver.Operation, driver.IdentityConfigurationRecord)) error {
 	fake.subscribeMutex.Lock()
 	ret, specificReturn := fake.subscribeReturnsOnCall[len(fake.subscribeArgsForCall)]
 	fake.subscribeArgsForCall = append(fake.subscribeArgsForCall, struct {
-		arg1 driver.TriggerCallback
+		arg1 func(driver.Operation, driver.IdentityConfigurationRecord)
 	}{arg1})
 	stub := fake.SubscribeStub
 	fakeReturns := fake.subscribeReturns
@@ -53,26 +53,26 @@ func (fake *IdentityNotifier) Subscribe(arg1 driver.TriggerCallback) error {
 	return fakeReturns.result1
 }
 
-func (fake *IdentityNotifier) SubscribeCallCount() int {
+func (fake *IdentityConfigurationNotifier) SubscribeCallCount() int {
 	fake.subscribeMutex.RLock()
 	defer fake.subscribeMutex.RUnlock()
 	return len(fake.subscribeArgsForCall)
 }
 
-func (fake *IdentityNotifier) SubscribeCalls(stub func(driver.TriggerCallback) error) {
+func (fake *IdentityConfigurationNotifier) SubscribeCalls(stub func(func(driver.Operation, driver.IdentityConfigurationRecord)) error) {
 	fake.subscribeMutex.Lock()
 	defer fake.subscribeMutex.Unlock()
 	fake.SubscribeStub = stub
 }
 
-func (fake *IdentityNotifier) SubscribeArgsForCall(i int) driver.TriggerCallback {
+func (fake *IdentityConfigurationNotifier) SubscribeArgsForCall(i int) func(driver.Operation, driver.IdentityConfigurationRecord) {
 	fake.subscribeMutex.RLock()
 	defer fake.subscribeMutex.RUnlock()
 	argsForCall := fake.subscribeArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *IdentityNotifier) SubscribeReturns(result1 error) {
+func (fake *IdentityConfigurationNotifier) SubscribeReturns(result1 error) {
 	fake.subscribeMutex.Lock()
 	defer fake.subscribeMutex.Unlock()
 	fake.SubscribeStub = nil
@@ -81,7 +81,7 @@ func (fake *IdentityNotifier) SubscribeReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *IdentityNotifier) SubscribeReturnsOnCall(i int, result1 error) {
+func (fake *IdentityConfigurationNotifier) SubscribeReturnsOnCall(i int, result1 error) {
 	fake.subscribeMutex.Lock()
 	defer fake.subscribeMutex.Unlock()
 	fake.SubscribeStub = nil
@@ -95,7 +95,7 @@ func (fake *IdentityNotifier) SubscribeReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *IdentityNotifier) UnsubscribeAll() error {
+func (fake *IdentityConfigurationNotifier) UnsubscribeAll() error {
 	fake.unsubscribeAllMutex.Lock()
 	ret, specificReturn := fake.unsubscribeAllReturnsOnCall[len(fake.unsubscribeAllArgsForCall)]
 	fake.unsubscribeAllArgsForCall = append(fake.unsubscribeAllArgsForCall, struct {
@@ -113,19 +113,19 @@ func (fake *IdentityNotifier) UnsubscribeAll() error {
 	return fakeReturns.result1
 }
 
-func (fake *IdentityNotifier) UnsubscribeAllCallCount() int {
+func (fake *IdentityConfigurationNotifier) UnsubscribeAllCallCount() int {
 	fake.unsubscribeAllMutex.RLock()
 	defer fake.unsubscribeAllMutex.RUnlock()
 	return len(fake.unsubscribeAllArgsForCall)
 }
 
-func (fake *IdentityNotifier) UnsubscribeAllCalls(stub func() error) {
+func (fake *IdentityConfigurationNotifier) UnsubscribeAllCalls(stub func() error) {
 	fake.unsubscribeAllMutex.Lock()
 	defer fake.unsubscribeAllMutex.Unlock()
 	fake.UnsubscribeAllStub = stub
 }
 
-func (fake *IdentityNotifier) UnsubscribeAllReturns(result1 error) {
+func (fake *IdentityConfigurationNotifier) UnsubscribeAllReturns(result1 error) {
 	fake.unsubscribeAllMutex.Lock()
 	defer fake.unsubscribeAllMutex.Unlock()
 	fake.UnsubscribeAllStub = nil
@@ -134,7 +134,7 @@ func (fake *IdentityNotifier) UnsubscribeAllReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *IdentityNotifier) UnsubscribeAllReturnsOnCall(i int, result1 error) {
+func (fake *IdentityConfigurationNotifier) UnsubscribeAllReturnsOnCall(i int, result1 error) {
 	fake.unsubscribeAllMutex.Lock()
 	defer fake.unsubscribeAllMutex.Unlock()
 	fake.UnsubscribeAllStub = nil
@@ -148,7 +148,7 @@ func (fake *IdentityNotifier) UnsubscribeAllReturnsOnCall(i int, result1 error) 
 	}{result1}
 }
 
-func (fake *IdentityNotifier) Invocations() map[string][][]interface{} {
+func (fake *IdentityConfigurationNotifier) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
@@ -158,7 +158,7 @@ func (fake *IdentityNotifier) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *IdentityNotifier) recordInvocation(key string, args []interface{}) {
+func (fake *IdentityConfigurationNotifier) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -170,4 +170,4 @@ func (fake *IdentityNotifier) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ membership.IdentityNotifier = new(IdentityNotifier)
+var _ membership.IdentityConfigurationNotifier = new(IdentityConfigurationNotifier)
