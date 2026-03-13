@@ -60,6 +60,7 @@ func (fake *Listener) OnErrorArgsForCall(i int) (context.Context, string, error)
 	fake.onErrorMutex.RLock()
 	defer fake.onErrorMutex.RUnlock()
 	argsForCall := fake.onErrorArgsForCall[i]
+
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
