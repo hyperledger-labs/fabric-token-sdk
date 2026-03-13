@@ -1,6 +1,6 @@
 module github.com/hyperledger-labs/fabric-token-sdk
 
-go 1.25.0
+go 1.25.5
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -12,12 +12,11 @@ require (
 	github.com/go-co-op/gocron/v2 v2.19.1
 	github.com/google/pprof v0.0.0-20260302011040-a15ffb7f9dcc
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.8.3-0.20260302105910-adde99d4bf54
+	github.com/hyperledger-labs/fabric-smart-client v0.8.3-0.20260313090348-ce520738c067
 	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.0
 	github.com/hyperledger/fabric-lib-go v1.1.3-0.20240523144151-25edd1eaf5f5
 	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.7
-	github.com/hyperledger/fabric-x-committer v0.1.7
-	github.com/hyperledger/fabric-x-common v0.0.0-20251023133631-047a3c32c228
+	github.com/hyperledger/fabric-x-common v0.1.1-0.20260219094834-26c5a49ed548
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/jackc/pgxlisten v0.0.0-20250802141604-12b92425684c
 	github.com/mitchellh/mapstructure v1.5.0
@@ -53,7 +52,7 @@ require (
 	cloud.google.com/go/monitoring v1.21.2 // indirect
 	cloud.google.com/go/storage v1.49.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
-	github.com/BurntSushi/toml v1.4.1-0.20240526193622-a339e1f7089c // indirect
+	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.30.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.48.1 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.48.1 // indirect
@@ -85,7 +84,7 @@ require (
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v28.3.3+incompatible // indirect
+	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dunglas/httpsfv v1.1.0 // indirect
@@ -96,7 +95,7 @@ require (
 	github.com/filecoin-project/go-clock v0.1.0 // indirect
 	github.com/flynn/noise v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/fsouza/go-dockerclient v1.12.0 // indirect
+	github.com/fsouza/go-dockerclient v1.12.3 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
@@ -128,7 +127,7 @@ require (
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.4 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/hyperledger/aries-bbs-go v0.0.0-20240528084656-761671ea73bc // indirect
@@ -282,7 +281,7 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260311193753-579e4da9a98c // indirect
 	golang.org/x/text v0.35.0 // indirect
-	golang.org/x/time v0.12.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.43.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/api v0.215.0 // indirect
