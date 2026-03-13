@@ -53,6 +53,11 @@ func NewListener(logger logging.Logger, net dep.Network, namespace string, tmsPr
 	}
 }
 
+// OnError is called when a finality event for txID could not be delivered after all retries.
+func (t *Listener) OnError(ctx context.Context, txID string, err error) {
+	t.logger.Errorf("finality listener: all retries exhausted for tx [%s]: %v", txID, err)
+}
+
 func (t *Listener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
 	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()

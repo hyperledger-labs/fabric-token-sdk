@@ -9,6 +9,13 @@ import (
 )
 
 type Listener struct {
+	OnErrorStub        func(context.Context, string, error)
+	onErrorMutex       sync.RWMutex
+	onErrorArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+		arg3 error
+	}
 	OnStatusStub        func(context.Context, string, int, string, []byte)
 	onStatusMutex       sync.RWMutex
 	onStatusArgsForCall []struct {
@@ -20,6 +27,40 @@ type Listener struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *Listener) OnError(arg1 context.Context, arg2 string, arg3 error) {
+	fake.onErrorMutex.Lock()
+	fake.onErrorArgsForCall = append(fake.onErrorArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+		arg3 error
+	}{arg1, arg2, arg3})
+	stub := fake.OnErrorStub
+	fake.recordInvocation("OnError", []interface{}{arg1, arg2, arg3})
+	fake.onErrorMutex.Unlock()
+	if stub != nil {
+		fake.OnErrorStub(arg1, arg2, arg3)
+	}
+}
+
+func (fake *Listener) OnErrorCallCount() int {
+	fake.onErrorMutex.RLock()
+	defer fake.onErrorMutex.RUnlock()
+	return len(fake.onErrorArgsForCall)
+}
+
+func (fake *Listener) OnErrorCalls(stub func(context.Context, string, error)) {
+	fake.onErrorMutex.Lock()
+	defer fake.onErrorMutex.Unlock()
+	fake.OnErrorStub = stub
+}
+
+func (fake *Listener) OnErrorArgsForCall(i int) (context.Context, string, error) {
+	fake.onErrorMutex.RLock()
+	defer fake.onErrorMutex.RUnlock()
+	argsForCall := fake.onErrorArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *Listener) OnStatus(arg1 context.Context, arg2 string, arg3 int, arg4 string, arg5 []byte) {

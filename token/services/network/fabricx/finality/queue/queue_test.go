@@ -307,9 +307,9 @@ func TestEventProcessing_Success(t *testing.T) {
 	}
 }
 
-// TestEventProcessing_WithError tests event processing that returns errors is retried
+// TestEventProcessing_WithError tests that a failing event is processed once and the error is logged
 func TestEventProcessing_WithError(t *testing.T) {
-	cfg := queue.Config{Workers: 2, QueueSize: 10, MaxRetries: 2, RetryInterval: 10 * time.Millisecond}
+	cfg := queue.Config{Workers: 2, QueueSize: 10}
 	eq, err := queue.NewEventQueue(cfg)
 	require.NoError(t, err)
 	defer func() { _ = eq.Shutdown(time.Second) }()
@@ -324,37 +324,10 @@ func TestEventProcessing_WithError(t *testing.T) {
 	err = eq.Enqueue(event)
 	require.NoError(t, err)
 
-	// Wait for retries: attempt 1 + 10ms + attempt 2 + 20ms + attempt 3 (final)
-	time.Sleep(200 * time.Millisecond)
-	// Event should have been processed MaxRetries+1 = 3 times total
-	assert.Equal(t, int32(3), atomic.LoadInt32(&event.processed))
-}
-
-// TestEventProcessing_RetryThenSucceed tests that a transiently failing event succeeds on retry
-func TestEventProcessing_RetryThenSucceed(t *testing.T) {
-	cfg := queue.Config{Workers: 1, QueueSize: 10, MaxRetries: 3, RetryInterval: 10 * time.Millisecond}
-	eq, err := queue.NewEventQueue(cfg)
-	require.NoError(t, err)
-	defer func() { _ = eq.Shutdown(time.Second) }()
-
-	var attempts int32
-	event := &mockEvent{
-		processFunc: func(ctx context.Context) error {
-			n := atomic.AddInt32(&attempts, 1)
-			if n < 3 {
-				return errors.New("transient error")
-			}
-
-			return nil
-		},
-	}
-
-	err = eq.Enqueue(event)
-	require.NoError(t, err)
-
-	time.Sleep(200 * time.Millisecond)
-	// Should have been called 3 times: 2 failures then 1 success
-	assert.Equal(t, int32(3), atomic.LoadInt32(&attempts))
+	// Wait for processing
+	time.Sleep(100 * time.Millisecond)
+	// Queue does not retry — event is processed exactly once
+	assert.Equal(t, int32(1), atomic.LoadInt32(&event.processed))
 }
 
 // TestEventProcessing_WithPanic tests worker recovery from panic
