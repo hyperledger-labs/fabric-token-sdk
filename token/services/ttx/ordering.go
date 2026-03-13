@@ -11,8 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 )
 
 type orderingView struct {
@@ -23,11 +22,7 @@ type orderingView struct {
 // The view does the following:
 // 1. It broadcasts the token transaction to the proper backend.
 func NewOrderingView(tx *Transaction, opts ...TxOption) *orderingView {
-	return NewOrderingViewWithOpts(append([]TxOption{WithTransactions(tx)}, opts...)...)
-}
-
-func NewOrderingViewWithOpts(opts ...TxOption) *orderingView {
-	return &orderingView{opts: opts}
+	return &orderingView{opts: append([]TxOption{WithTransactions(tx)}, opts...)}
 }
 
 // Call execute the view.
@@ -44,12 +39,12 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// cache the token request into the tokens db
-	t, err := tokens.GetService(context, options.Transaction.TMSID())
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", options.Transaction.TMSID())
-	}
 	if !options.NoCachingRequest {
-		if err := t.CacheRequest(context.Context(), options.Transaction.TMSID(), options.Transaction.TokenRequest); err != nil {
+		storageProvider, err := GetStorageProvider(context)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get storage provider")
+		}
+		if err := storageProvider.CacheRequest(context.Context(), options.Transaction.TMSID(), options.Transaction.TokenRequest); err != nil {
 			logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", options.Transaction.TokenRequest.Anchor, err)
 		}
 	}
@@ -61,11 +56,15 @@ func (o *orderingView) broadcast(context view.Context, transaction *Transaction)
 	if transaction == nil {
 		return errors.Errorf("transaction is nil")
 	}
-	nw := network.GetInstance(context, transaction.Network(), transaction.Channel())
-	if nw == nil {
-		return errors.Errorf("network [%s] not found", transaction.Network())
+	np, err := dep.GetNetworkProvider(context)
+	if err != nil {
+		return errors.Join(err, ErrDepNotAvailableInContext)
 	}
-	if err := nw.Broadcast(context.Context(), transaction.Envelope); err != nil {
+	network, err := np.GetNetwork(transaction.Network(), transaction.Channel())
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get network [%s]", transaction.Network())
+	}
+	if err := network.Broadcast(context.Context(), transaction.Envelope); err != nil {
 		return errors.WithMessagef(err, "failed to broadcast token transaction [%s]", transaction.ID())
 	}
 

@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
@@ -19,12 +20,16 @@ import (
 
 var logger = logging.MustGetLogger()
 
-// EscrowAuth implements the Authorization interface for this script
-type EscrowAuth struct {
-	WalletService driver.WalletService
+type WalletService interface {
+	OwnerWallet(ctx context.Context, t token.WalletLookupID) (driver.OwnerWallet, error)
 }
 
-func NewEscrowAuth(walletService driver.WalletService) *EscrowAuth {
+// EscrowAuth implements the Authorization interface for this script
+type EscrowAuth struct {
+	WalletService WalletService
+}
+
+func NewEscrowAuth(walletService WalletService) *EscrowAuth {
 	return &EscrowAuth{WalletService: walletService}
 }
 
