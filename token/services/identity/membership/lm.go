@@ -58,8 +58,8 @@ type SignerDeserializerManager interface {
 	AddTypedSignerDeserializer(typ idriver.IdentityType, d idriver.TypedSignerDeserializer)
 }
 
-//go:generate counterfeiter -o mock/in.go -fake-name IdentityNotifier . IdentityNotifier
-type IdentityNotifier = idriver.IdentityNotifier
+//go:generate counterfeiter -o mock/in.go -fake-name IdentityConfigurationNotifier . IdentityConfigurationNotifier
+type IdentityConfigurationNotifier = idriver.IdentityConfigurationNotifier
 
 //go:generate counterfeiter -o mock/ici.go -fake-name IdentityConfigurationIterator . IdentityConfigurationIterator
 type IdentityConfigurationIterator = idriver.IdentityConfigurationIterator
@@ -81,8 +81,8 @@ type IdentityStoreService interface {
 	// IteratorConfigurations returns an iterator over all configurations of
 	// a given type stored in the persistent store.
 	IteratorConfigurations(ctx context.Context, configurationType string) (IdentityConfigurationIterator, error)
-	// Notifier returns an IdentityNotifier for this store.
-	Notifier() (idriver.IdentityNotifier, error)
+	// Notifier returns an IdentityConfigurationNotifier for this store.
+	Notifier() (idriver.IdentityConfigurationNotifier, error)
 }
 
 // IdentityProvider is an alias for the driver-level identity provider used to
@@ -177,7 +177,6 @@ type LocalMembership struct {
 	localIdentitiesByConfig   map[string]*LocalIdentity
 	targetIdentities          []view.Identity // optional list of identities to prefer
 	anonymous                 bool            // when true, only anonymous identities are considered selectable by default
-	stopNotifier              chan struct{}
 	closeOnce                 sync.Once
 }
 
@@ -216,7 +215,6 @@ func NewLocalMembership(
 		KeyManagerProviders:       keyManagerProviders,
 		anonymous:                 defaultAnonymous,
 		IdentityProvider:          identityProvider,
-		stopNotifier:              make(chan struct{}),
 	}
 }
 
@@ -228,7 +226,18 @@ func (l *LocalMembership) DefaultNetworkIdentity() token.Identity {
 // Close stops the background identity notifier.
 func (l *LocalMembership) Close() {
 	l.closeOnce.Do(func() {
-		close(l.stopNotifier)
+		notifier, err := l.identityDB.Notifier()
+		if err != nil {
+			logger.Errorf("failed to get identity notifier: [%s]", err)
+		}
+		if notifier == nil {
+			logger.Errorf("no notifier available for [%s]", l.IdentityType)
+
+			return
+		}
+		if err := notifier.UnsubscribeAll(); err != nil {
+			logger.Errorf("failed to unsubscribe [%s]: [%s]", l.IdentityType, err)
+		}
 	})
 }
 
@@ -397,58 +406,40 @@ func (l *LocalMembership) Load(ctx context.Context, identities []idriver.Configu
 
 	l.logger.Debugf("load identities [%s] done", l.IdentityType)
 
-	go l.listen(ctx)
+	if err := l.subscribeNotifier(); err != nil {
+		return errors.Wrap(err, "failed to subscribe notifier")
+	}
 
 	return nil
 }
 
-func (l *LocalMembership) listen(ctx context.Context) {
+func (l *LocalMembership) subscribeNotifier() error {
 	notifier, err := l.identityDB.Notifier()
 	if err != nil {
-		l.logger.Errorf("failed to get notifier: %s", err)
-
-		return
+		return errors.Wrapf(err, "failed to get notifier")
 	}
 	if notifier == nil {
-		l.logger.Infof("no notifier available for [%s]", l.IdentityType)
-
-		return
+		return errors.Wrapf(err, "no notifier available for [%s]", l.IdentityType)
 	}
 
-	err = notifier.Subscribe(func(operation idriver.Operation, m map[idriver.ColumnKey]string) {
-		l.logger.Debugf("received notification: [%v][%v]", operation, m)
+	err = notifier.Subscribe(func(operation idriver.Operation, record idriver.IdentityConfigurationRecord) {
+		l.logger.Debugf("received notification: [%v][%v]", operation, record)
 		// we care only about insertions in the identity configurations table
 		if operation != idriver.Insert {
 			return
 		}
-		// m contains the primary key: id, type, url
-		id, ok1 := m["id"]
-		typ, ok2 := m["type"]
-		url, ok3 := m["url"]
-		if !ok1 || !ok2 || !ok3 {
-			l.logger.Errorf("invalid notification: [%v]", m)
-
-			return
-		}
-		if typ != l.IdentityType {
+		// record contains: id, type, url
+		if record.Type != l.IdentityType {
 			// not for us
 			return
 		}
-		l.handleConfig(id, typ, url)
+		l.handleConfig(record.ID, record.Type, record.URL)
 	})
 	if err != nil {
-		l.logger.Errorf("failed to subscribe to notifier: %s", err)
-
-		return
+		return errors.Wrapf(err, "failed to subscribe to notifier")
 	}
 
-	select {
-	case <-ctx.Done():
-		l.logger.Debugf("context cancelled, stop listening")
-	case <-l.stopNotifier:
-		l.logger.Debugf("stopNotifier closed, stop listening")
-	}
-	// TODO: unsubscribe if supported
+	return nil
 }
 
 func (l *LocalMembership) handleConfig(id, typ, url string) {

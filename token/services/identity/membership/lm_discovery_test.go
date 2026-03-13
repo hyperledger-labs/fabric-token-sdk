@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	fscdriver "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership/mock"
@@ -215,7 +214,7 @@ func TestLocalMembership_Notifier(t *testing.T) {
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
 
-	notifier := &mock.IdentityNotifier{}
+	notifier := &mock.IdentityConfigurationNotifier{}
 	iss.NotifierReturns(notifier, nil)
 
 	km := &mock.KeyManager{}
@@ -241,8 +240,8 @@ func TestLocalMembership_Notifier(t *testing.T) {
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
 	var mu sync.Mutex
-	var subCallback fscdriver.TriggerCallback
-	notifier.SubscribeStub = func(callback fscdriver.TriggerCallback) error {
+	var subCallback func(idriver.Operation, idriver.IdentityConfigurationRecord)
+	notifier.SubscribeStub = func(callback func(idriver.Operation, idriver.IdentityConfigurationRecord)) error {
 		mu.Lock()
 		defer mu.Unlock()
 		subCallback = callback
@@ -267,10 +266,10 @@ func TestLocalMembership_Notifier(t *testing.T) {
 	mu.Lock()
 	callback := subCallback
 	mu.Unlock()
-	callback(idriver.Insert, map[idriver.ColumnKey]string{
-		"id":   "new",
-		"type": "testType",
-		"url":  "/tmp/new",
+	callback(idriver.Insert, idriver.IdentityConfigurationRecord{
+		ID:   "new",
+		Type: "testType",
+		URL:  "/tmp/new",
 	})
 
 	// Wait for background processing (though handleConfig is called synchronously in the callback in my implementation,

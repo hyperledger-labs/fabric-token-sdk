@@ -122,7 +122,7 @@ func (s *IdentityStore) ConfigurationExists(ctx context.Context, id, configurati
 	return s.kvs.Exists(ctx, k), nil
 }
 
-func (s *IdentityStore) Notifier() (idriver.IdentityNotifier, error) {
+func (s *IdentityStore) Notifier() (idriver.IdentityConfigurationNotifier, error) {
 	return nil, nil
 }
 
