@@ -200,7 +200,7 @@ func TestCachedFetcher_UnspentTokensIteratorBy_CacheMiss(t *testing.T) {
 	// Query for non-existent key
 	it, err := fetcher.UnspentTokensIteratorBy(ctx, "wallet2", "EUR")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, it)
 	// Should return empty iterator
 	assert.False(t, it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext())
