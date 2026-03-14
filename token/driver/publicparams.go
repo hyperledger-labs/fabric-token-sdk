@@ -42,47 +42,49 @@ type PublicParamsFetcher interface {
 
 type Extras = map[string][]byte
 
-// PublicParameters is the interface that must be implemented by the driver public parameters.
+// PublicParameters defines the common interface for a driver's public parameters.
+// These parameters are shared among all participants in the token network and
+// define the rules and characteristics of the token system.
 //
 //go:generate counterfeiter -o mock/pp.go -fake-name PublicParameters . PublicParameters
 type PublicParameters interface {
-	// TokenDriverName returns the name of the token driver
+	// TokenDriverName returns the unique name of the token driver.
 	TokenDriverName() TokenDriverName
-	// TokenDriverVersion return the version of the token driver
+	// TokenDriverVersion returns the version of the token driver for which these parameters are valid.
 	TokenDriverVersion() TokenDriverVersion
-	// TokenDataHiding returns true if the token data is hidden
+	// TokenDataHiding indicates whether token values and types are hidden (obfuscated).
 	TokenDataHiding() bool
-	// GraphHiding returns true if the token graph is hidden
+	// GraphHiding indicates whether the transaction graph (linkage between tokens) is hidden.
 	GraphHiding() bool
-	// MaxTokenValue returns the maximum token value
+	// MaxTokenValue returns the maximum value any single token can have.
 	MaxTokenValue() uint64
-	// CertificationDriver returns the certification driver identifier
+	// CertificationDriver returns the identifier of the certification driver, if any.
 	CertificationDriver() string
-	// Auditors returns the list of auditors.
+	// Auditors returns the list of identities authorized to audit transactions.
 	Auditors() []Identity
-	// Issuers returns the list of issuers.
+	// Issuers returns the list of identities authorized to issue tokens.
 	Issuers() []Identity
-	// Precision returns the precision used to represent the token value.
+	// Precision returns the numeric precision used for token values.
 	Precision() uint64
-	// String returns a readable version of the public parameters
+	// String provides a human-readable representation of the public parameters.
 	String() string
-	// Serialize returns the serialized version of this public parameters
+	// Serialize converts the public parameters into their byte representation.
 	Serialize() ([]byte, error)
-	// Validate returns true if the public parameters are well-formed
+	// Validate checks if the public parameters are internally consistent and valid.
 	Validate() error
-	// Extras gives access to extra data, if available.
-	// Extras always returns an initialized Extras that can be modified.
+	// Extras provides access to additional, driver-specific parameters.
 	Extras() Extras
 }
 
-// PublicParamsManager is the interface that must be implemented by the driver public parameters' manager.
+// PublicParamsManager provides methods for managing and accessing the driver's public parameters.
+// It also facilitates the generation of cryptographic materials like certifier key pairs.
 //
 //go:generate counterfeiter -o mock/ppm.go -fake-name PublicParamsManager . PublicParamsManager
 type PublicParamsManager interface {
-	// PublicParameters returns the public parameters.
+	// PublicParameters returns the current set of public parameters.
 	PublicParameters() PublicParameters
-	// NewCertifierKeyPair generates a new key pair for the certifier, if supported
+	// NewCertifierKeyPair generates a new public-private key pair for a certifier, if supported by the driver.
 	NewCertifierKeyPair() ([]byte, []byte, error)
-	// PublicParamsHash returns the hash of the raw public parameters
+	// PublicParamsHash returns a unique hash of the serialized public parameters.
 	PublicParamsHash() PPHash
 }

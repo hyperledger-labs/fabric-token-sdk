@@ -15,7 +15,71 @@ Let us now describe in more detail the implementation of the Driver API:
 
 ## Public Parameters and Manager
 
-The relevant messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/core/zkatdlog/nogh/protos).
+The `DLOG w/o Graph Hiding` driver uses a complex set of public parameters to define its cryptographic environment and access control.
+
+### Structure
+The `PublicParams` (v1) include:
+- **DriverName**: Always set to `"zkatdlognogh"`.
+- **DriverVersion**: The version of the driver (currently `1`).
+- **Curve**: The identifier of the pairing-friendly elliptic curve (e.g., `bls12_381_bbs`).
+- **PedersenGenerators**: A set of G1 elements ($g_0, g_1, g_2$) used for the commitments to token types and values.
+- **RangeProofParams**: Parameters for the zero-knowledge range proofs, including:
+    - **P, Q**: Base points for the proofs.
+    - **Left/Right Generators**: Vectors of G1 elements used in the inner-product proof.
+    - **BitLength**: The supported range of token values ($2^{BitLength}$). Supported values: `16, 32, 64`.
+- **IdemixIssuerPublicKeys**: Public keys of the Idemix issuers, enabling owner anonymity. Multiple keys can be defined to allow for rotation.
+- **AuditorIDs**: A list of X.509 identities authorized to audit transactions.
+- **IssuerIDs**: A list of X.509 identities authorized to issue tokens.
+- **MaxToken**: The maximum quantity any single token can hold.
+- **QuantityPrecision**: The numeric precision for token quantities (aligned with the `BitLength`).
+
+### Management
+Public parameters can be generated and inspected using the [`tokengen`](../../cmd/tokengen/README.md) utility.
+
+```bash
+# Generate ZKAT-DLOG public parameters
+tokengen gen zkatdlognoghv1 --curve bls12_381_bbs --idemix-issuer-pk ./msp/idemix --output ./params
+```
+
+### Protobuf Messages
+
+DLog (NOGH) uses Protocol Buffers to maintain a stable and versioned interface for its privacy-preserving cryptographic material. The definitions are located in `token/core/zkatdlog/nogh/protos/`.
+
+#### Public Parameters (`noghpp.proto`)
+The `PublicParameters` message defines the cryptographic rules for the ZKAT-DLOG system:
+- `token_driver_name`: Unique driver identifier (`"zkatdlognogh"`).
+- `token_driver_version`: Current driver version (e.g., `1`).
+- `curve_id`: The pairing-friendly elliptic curve used for all group operations.
+- `pedersen_generators`: List of G1 elements for commitments.
+- `range_proof_params`: Specialized parameters for the inner-product range proof.
+- `idemix_issuer_public_keys`: Public keys of Idemix issuers to enable owner anonymity.
+- `auditors`: Identities of authorized auditors.
+- `issuers`: Identities of authorized issuers.
+- `max_token`: Maximum allowable token value.
+- `quantity_precision`: Bit-length for range proofs.
+- `extra_data`: Extensibility map.
+
+#### Tokens and Metadata (`noghactions.proto`)
+- `Token`: Represents a privacy-preserving token on the ledger.
+    - `owner`: Serialized owner identity (e.g., Idemix pseudonym).
+    - `data`: Pedersen commitment (G1 element) to the token's type and value.
+- `TokenMetadata`: The corresponding cleartext information (held privately by the owner).
+    - `type`: Token type string.
+    - `value`: Numeric quantity (encoded as a Zr group element).
+    - `blinding_factor`: Randomness (Zr element) used in the commitment.
+    - `issuer`: Identity of the token's original issuer.
+- `TransferAction`:
+    - `inputs`: List of `TokenID`, `Token`, and an optional `upgrade_witness` for FabToken to DLog in-place upgrades.
+    - `outputs`: List of new `Token` commitments.
+    - `proof`: The zero-knowledge proof of validity.
+    - `metadata`: Driver-specific metadata.
+- `IssueAction`:
+    - `issuer`: Authorizing issuer's identity.
+    - `outputs`: List of new `Token` commitments.
+    - `proof`: ZK proof of issuance validity.
+    - `metadata`: Driver-specific metadata.
+
+The relevant protobuf messages are [`here`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/core/zkatdlog/nogh/protos).
 
 ## Issuer Service
 
@@ -220,7 +284,7 @@ The `IdentityConfigurations` table contains the information about the identities
 
 So, let us ask: How does this table get populated?
 There are two ways:
-- From the configuration file. Here is an example taken from [`here`](../core-token.md):
+- From the configuration file. Here is an example taken from [`here`](../configuration.md):
 ```yaml
       # sections dedicated to the definition of the wallets
       wallets:

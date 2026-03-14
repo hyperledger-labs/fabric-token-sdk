@@ -1,26 +1,4 @@
-## Minimal Token-SDK Configuration
-
-The Token SDK can start with the following minimal configuration:
-
-```yaml
-token:
-  enabled: true
-  tms:
-    default:
-      network: mynetwork
-      namespace: mynamespace
-```
-
-### Required Fields
-
-The following fields are strictly required:
-
-- `network`
-- `namespace`
-
-All other configuration sections are optional and use sensible defaults.
-
-# Example core.yaml section
+# Token-SDK Configuration Example
 
 The following example provides descriptions for the various keys required by the Token SDK.
 
@@ -221,9 +199,31 @@ token:
                   Security: 256
 ```
 
-# Configuration Defaults and Optional Sections
+## Minimal Token-SDK Configuration
 
-## Optional: token.selector
+The Token SDK can start with the following minimal configuration:
+
+```yaml
+token:
+  enabled: true
+  tms:
+    default:
+      network: mynetwork
+      namespace: mynamespace
+```
+
+## Configuration Defaults and Optional Sections
+
+### Required Fields
+
+The following fields are strictly required:
+
+- `network`
+- `namespace`
+
+All other configuration sections are optional and use sensible defaults.
+
+### Optional: token.selector
 
 If not specified, the default selector implementation is used.
 
@@ -236,7 +236,7 @@ Default values:
 
 ---
 
-## Optional: token.finality
+### Optional: token.finality
 
 If not specified, the default configuration is:
 
@@ -259,7 +259,7 @@ Default values:
 
 ---
 
-## Optional: token.fabricx.lookup
+### Optional: token.fabricx.lookup
 
 If not specified, the default configuration is:
 

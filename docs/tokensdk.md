@@ -1,173 +1,166 @@
 # The Fabric Token SDK
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents** 
+The Fabric Token SDK (FTS) is a comprehensive framework for building token-based decentralized applications. It provides a modular, extensible, and privacy-preserving architecture that abstracts the complexities of the underlying blockchain platform.
 
-- [Introduction](#introduction)
-- [Consumer Interaction Model](#consumer-interaction-model)
-- [Requirements and Use Cases](#requirements-and-use-cases)
-- [Prerequisites, Dependencies, Dependents, and Incompatibilities](#prerequisites-dependencies-dependents-and-incompatibilities)
-- [Terminology and Glossary](#terminology-and-glossary)
-- [Architecture, Interfaces, and Impact](#architecture-interfaces-and-impact)
-- [Developer Experience](#developer-experience)
-- [Command Line Interface (CLI)](#command-line-interface-cli)
-- [Performance, Scalability, and Resource Consumption](#performance-scalability-and-resource-consumption)
-- [Serviceability, Logging and Troubleshooting](#serviceability-logging-and-troubleshooting)
-- [Monitoring, Metrics and Events](#monitoring-metrics-and-events)
-- [High Availability and Disaster Recovery](#high-availability-and-disaster-recovery)
-- [Build, Packaging and Deployment](#build-packaging-and-deployment)
-- [Platform Support](#platform-support)
-- [Testing](#testing)
+---
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+## Key Concepts & Terminology
 
-## Introduction
+- **UTXO (Unspent Transaction Output)**: The fundamental data model where a token is an output of a transaction that has not yet been spent.
+- **TMS (Token Management Service)**: The central hub of the Token SDK, providing access to wallets, vault, and selection services for a specific `(Network, Channel, Namespace)`.
+- **Token Request**: A collection of token operations (Actions) and signatures bundled into an atomic transaction for the ledger.
+- **Action**: An individual operation within a request, such as `Issue` (creating new tokens) or `Transfer` (spending existing tokens).
+- **Token Request Metadata**: Private data (e.g., blinding factors, audit information) required by participants and auditors to process privacy-preserving tokens.
+- **Anchor**: A unique reference (e.g., Fabric Transaction ID) that binds a Token Request to a specific ledger event.
+- **Public Parameters**: The global cryptographic configuration (e.g., curves, generators, authorized issuers) that governs a TMS instance.
+- **Vault**: The local node's storage for unspent tokens, transaction history, and associated metadata.
+- **Selector**: A service that identifies and locks available UTXOs to prevent double-spending in concurrent local transactions.
+- **Wallet**: A digital container for cryptographic identities (X.509 or Idemix) and the tokens they own.
+- **Pedersen Commitment**: A cryptographic structure used by privacy drivers to hide token values and types while enabling zero-knowledge proofs of balance.
+- **Idemix (Identity Mixer)**: An anonymous credential system used to provide owner anonymity and transaction unlinkability.
+- **NOGH (No Graph Hiding)**: A ZKAT-DLOG variant that hides token values and types but reveals the spending graph for optimized performance.
+- **TCC (Token Chaincode)**: A Fabric component responsible for validating Token Requests and persisting Public Parameters.
+- **In-place Upgrade**: A mechanism allowing newer drivers to spend legacy token formats directly without an explicit migration transaction.
+- **Burn and Re-issue**: A protocol for major token migrations that involves consuming old tokens and creating new ones in a single atomic transaction.
 
-The Fabric Token SDK (FTS) provides a suite of APIs and services designed for the development of token-based decentralized applications on Hyperledger Fabric and other distributed ledger platforms.
+---
 
-Key features include:
-*   **UTXO Model**: Utilizes the Unspent Transaction Output model for accurate and secure token tracking.
-*   **Wallet Management**: Manages cryptographic material and tracks ownership of unspent outputs.
-*   **Privacy Flexibility**: Supports a spectrum of privacy requirements, ranging from full transparency to Zero-Knowledge Proofs (ZKP) for transaction obfuscation.
-*   **Extensible Architecture**: Enables the creation of custom services atop the core API to address specific business logic.
+## Architectural Layers
 
-The Fabric Token SDK stack comprises the following architectural layers:
-*   **Services**: High-level functionalities, such as transaction assembly and token selection.
-*   **Token API**: An abstraction layer that facilitates token interaction across diverse backend systems.
-*   **Driver API**: An interface that translates generic token operations into backend-specific implementations.
-*   **Drivers**: Implementations that define token representations, operations, and validation rules for specific ledgers.
+The Token SDK is organized into a vertical stack of layers, each providing a specific level of abstraction. A key design principle is the isolation of the **Network Service** to handle backend-specific complexities, allowing drivers to remain entirely ledger-agnostic.
 
-The SDK leverages the **Fabric Smart Client** stack for secure workflow orchestration, storage, and event management.
+```mermaid
+graph TD
+    subgraph "Application Layer"
+        UserApp[User Application / View]
+    end
 
-Developers are empowered with the following capabilities:
+    subgraph "Services Layer"
+        TTX[TTX: Transaction Orchestration]
+        Selector[Selector: UTXO Selection]
+        Auditor[Auditor: Compliance Service]
+        Identity[Identity: FTS Identity Service]
+    end
 
-* **Tokenization Made Easy:** Create tokens representing any type of asset, be it physical or digital.
-* **Privacy by Design:** Select the appropriate privacy level for your specific use case, without modifying your application logic.
-* **Peer-to-Peer Transactions:** Orchestrate token transfers directly between users, streamlining the process.
-* **Atomic Swaps:** Facilitate secure exchanges of different tokens without relying on intermediaries.
-* **Transaction Auditing:** Review transactions before they are finalized, ensuring accuracy and compliance.
-* **Interoperability:** Connect with token systems on other blockchain networks, fostering broader ecosystems.
-* **Seamless Integration:** Add a token layer to existing applications, regardless of platform, with minimal effort.
+    subgraph "Token API"
+        TMS[Token Management Service]
+        WalletAPI[Wallet API]
+        VaultAPI[Vault API]
+    end
 
-## Consumer Interaction Model
+    subgraph "Driver Layer (Backend Agnostic)"
+        DriverAPI[Driver API Interface]
+        Drivers[Drivers: FabToken / ZKAT-DLOG]
+    end
 
-The Token SDK APIs are consumed by developers to perform various token-related operations.
-Developers must decide how to configure the Token SDK to achieve their intended goals.
-Additionally, they are responsible for defining the initial content of the datasource used by the Token SDK.
+    subgraph "Network Service Layer"
+        NetService[Network Service: Translation & Submission]
+    end
 
-## Getting Started
+    subgraph "Infrastructure"
+        DLT[Blockchain Ledger: Fabric, FabricX]
+    end
 
-To get started with the Fabric Token SDK, we recommend running the samples provided in the [Fabric Samples](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk) repository.
-This will allow you to see the SDK in action and understand how to build token-based applications.
+    UserApp --> TTX
+    UserApp --> TMS
+    UserApp --> NetService
+    
+    TTX --> Selector
+    TTX --> TMS
+    TTX --> NetService
+    
+    TMS --> DriverAPI
+    TMS --> Identity
+    DriverAPI --> Drivers
+    
+    NetService --> DLT
+```
 
-## Requirements and Use Cases
+### Key Components
+- **Services Layer**: High-level libraries for common patterns. `TTX` handles multi-party flows. The **Identity Service** is internal to the Token SDK and manages cryptographic materials, signatures, and identity resolution independently of the underlying platform.
+- **Token API**: The primary developer entry point. The `ManagementService` (TMS) acts as a gateway to all token functionalities for a specific namespace.
+- **Driver Layer**: This layer is **backend-agnostic**. Drivers (like FabToken or ZKAT-DLOG) focus exclusively on token logic, cryptographic proofs, and data structures without any awareness of the underlying network (Fabric, FabricX, etc.).
+- **Network Service Layer**: The "bridge" between the SDK and the blockchain. It handles the translation of token requests into the format understood by the specific backend and manages communication (broadcasting, finality listening).
 
-The SDK is designed for token-based applications that require:
-- **Privacy**: Support for varying levels of transaction privacy.
-- **Backend Agnosticism**: The ability to operate across different underlying distributed ledger technologies.
+---
 
-## Prerequisites, Dependencies, Dependents, and Incompatibilities
+## Integration with Fabric Smart Client (FSC)
 
-The SDK leverages the following related projects:
-- [`Fabric Smart Client (FSC)`](https://github.com/hyperledger-labs/fabric-smart-client): For complex workflow orchestration, secure storage, and event listening.
-- [`Idemix`](https://github.com/IBM/idemix): For anonymous credentials.
-- [`Mathlib`](https://github.com/IBM/mathlib): For elliptic curve math operations.
+The Token SDK is built atop the **Fabric Smart Client**, leveraging its foundational platform services for workflow orchestration and infrastructure. Notably, the SDK manages its own identities and does not rely on the FSC identity service. However, the entire SDK consistently uses FSC's cross-cutting facilities for error handling, logging, and system monitoring.
 
-A system administrator in charge of a Token-SDK-based application is responsible for preparing:
+```mermaid
+graph LR
+    subgraph FTS [Fabric Token SDK]
+        FTSCore[SDK]
+    end
 
-- **Configuration**: FTS needs to be configured according to the specific use case.
-  FTS uses the FSC's config service to access its configuration.
-  An example of such a configuration can be found [`here`](./core-token.md).
-- **Data storage**: FTS requires an SQL data source to store information relevant to its functioning.
-- **HSM**: Required when Hardware Security Modules are used to store secret keys.
-- **External Key Store**: Required if using an external key management system.
+    subgraph FSC Services
+        Network[Network: Event Listening & Broadcast]
+        Storage[Storage: SQL Vault & DB]
+        Workflow[Workflow: View System]
+        Errors[Errors: Project-wide handling]
+        Logging[Logging: Unified infrastructure]
+        Monitoring[Monitoring: Metrics & Traces]
+    end
 
-In some configurations, FTS might run in a stateless container (volume-less).
-Other prerequisites are inherited directly from the Fabric Smart Client.
+    FTSCore -.-> Network
+    FTSCore -.-> Storage
+    FTSCore -.-> Workflow
+    FTSCore -.-> Errors
+    FTSCore -.-> Logging
+    FTSCore -.-> Monitoring
+```
 
-## Terminology and Glossary
+- **Workflow**: All token operations are orchestrated within FSC **Views**.
+- **Network**: The SDK uses the FSC Network Service to listen for ledger events (e.g., Public Parameter updates or transaction finality).
+- **Storage**: Tokens and transaction metadata are stored in the FSC-managed local database.
+- **Error Handling**: The SDK utilizes FSC's specialized error packages to provide consistent and descriptive error reporting across all layers.
+- **Logging**: The project relies on FSC's logging infrastructure for unified output, level control, and context-aware logs.
+- **Monitoring**: Integrated project-wide with FSC's metrics (Prometheus) and tracing (OpenTelemetry) providers.
 
-- For an introduction to the concepts of Database, Persistence, Driver, and Store, read [this documentation](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/platform/view/db-driver.md).
-- **FSC**: Fabric Smart Client.
-- **FTS**: Fabric Token SDK.
-- **Issuer**: A role authorized to create (issue) new tokens.
-- **Auditor**: A role responsible for overseeing token requests and ensuring proper use and compliance.
-- **Certifier**: A role that verifies the existence and legitimacy of specific tokens, used in drivers supporting Token Identity Hiding.
-- **Owner**: A role that holds tokens and can transfer or redeem them.
-- **FabToken**: A simplified driver implementation that stores token transaction details openly on the ledger without privacy.
-- **ZKATDLog**: A privacy-focused driver implementation (Zero-Knowledge Authenticated Token DLog) using Zero-Knowledge Proofs.
-- **Public Parameters**: Global configuration settings for the token infrastructure, such as driver version, precision, and max token value.
-- **Selector**: A service used to select tokens for transactions, aiming to minimize the risk of accidental double-spending.
-- **Token Management Service (TMS)**: The central hub of the Token SDK, providing access to services like Identity, Issue, Transfer, and more.
-- **Token Request**: A collection of token operations (issue, transfer, redeem) to be executed atomically.
-- **Token Transaction**: A transaction that wraps a Token Request for submission to the backend ledger.
-- **Validator**: A component that validates token requests against public parameters and limits.
-- **Wallet**: A digital vault that stores a long-term identity and derived credentials, used for signing and verifying operations.
-- **Key Store (`keystore`)**: Stores cryptographic keys used by the system.
+---
 
-## Architecture, Interfaces, and Impact
+## Token Lifecycle
 
-The FTS stack is illustrated in the following diagram:
+The lifecycle of a token (UTXO) is governed by state transitions from creation to consumption.
 
-![image](imgs/stack.png)
+```mermaid
+graph LR
+    Issued[Issued] --> Unspent[Unspent / Available]
+    Unspent --> Locked[Locked / Pending]
+    Locked -->|Commit Success| Spent[Spent]
+    Locked -->|Abort / Timeout| Unspent
+    Unspent -->|Driver Upgrade| UpgradeRequired[Upgrade Required]
+    UpgradeUpgradeRequired -->|Upgrade Tx| Unspent
+```
 
-The architecture consists of the following layers:
+1.  **Issuance**: An authorized issuer creates a new token output on the ledger. See [Issuance Details](services/ttx.md#issue-operation).
+2.  **Discovery**: The Token SDK registers a listener to the **Network Service** to learn when transactions assembled by the node (and therefore registered in the local Transaction DB) are confirmed or rejected on the ledger. Upon notification, the SDK updates the local [Token Store](services/storage.md#token-store-tokendb) to make the tokens available in the [Vault](tokenapi.md#token-vault).
+3.  **Selection & Locking**: When an owner wants to spend tokens, the [Selector](tokenapi.md#token-selector-manager) picks available UTXOs and **locks** them locally to prevent double-spending. See [Transfer Operation](services/ttx.md#transfer-operation).
+4.  **Spending (Assembly & Signing)**: The initiator assembles a [Token Request](tokenapi.md#building-a-token-transaction) and collects the necessary signatures. See [Collecting Endorsements](services/ttx.md#collect-endorsements).
+5.  **Commitment & Finality**: The transaction is submitted to the [Ordering Service](services/ttx.md#ordering-a-transaction). The [Network Service](services/network.md#finality-management) monitors its status until it reaches [Finality](services/ttx.md#finality-of-a-transaction).
+6.  **Upgradability**: If the network transitions to a new driver version, existing tokens may be marked as "Upgrade Required" until a migration transaction is performed. See [Upgradability Guide](upgradability.md).
 
-* [`Token API`](./tokenapi.md): Provides a common abstraction for interacting with tokens across different backends.
-* [`Driver API`](./driverapi.md): The underlying API upon which the `Token API` is built. The Driver API is instantiated in a `Driver`.
-* [`Drivers`](./driverapi.md): A `Driver` implements the `Driver API` and defines token representation, operations, and validation rules.
-* [`Services`](./services.md): Pre-built functionalities, such as assembling transactions and selecting unspent tokens, built on top of `Token API`
+---
 
 ## Developer Experience
 
-Developers primarily interact with the Token API and the services to build their token-based applications.
-Driver developers, on the other hand, implement the Driver API.
+- **High-Level API**: Developers typically use the `ManagementService` and `TTX` views to build applications.
+- **Testing**: The SDK includes the **Network Orchestrator (NWO)** for spinning up full Fabric networks in integration tests.
+- **CLI**: The `tokengen` tool is used to generate cryptographic material, chaincode packages, and public parameters. See [tokengen documentation](../cmd/tokengen/README.md).
 
-## Command Line Interface (CLI)
+---
 
-FTS comes equipped with `tokengen`, a utility for generating Fabric Token SDK material.
-It is provided as a means of preconfiguring public parameters, token chaincode, and other necessary artifacts.
+## Operation & Maintenance
 
-For a complete list of available commands, see the [`tokengen documentation`](./../cmd/tokengen/README.md).
+- **High Availability**: Multiple FSC nodes can share the same SQL backend. The SDK's locking mechanism and state synchronization ensure consistency across replicas.
+- **Monitoring**: Integrated with FSC's metrics (Prometheus) and tracing (OpenTelemetry) for performance analysis.
+- **Upgradability**: Supports atomic "Burn and Re-issue" and in-place upgrades for protocol evolution. See [Upgradability Guide](./upgradability.md).
 
-## Performance, Scalability, and Resource Consumption
-
-The Token SDK handles the entire lifecycle of token transactions.
-Different parts of the Token SDK run on different network nodes with distinct roles.
-Careful orchestration of their interactions guarantees that a token transaction is successfully processed.
-
-## Serviceability, Logging and Troubleshooting
-
-The Token SDK uses the logging infrastructure offered by the Fabric Smart Client. Applications should rely on the standard Fabric Smart Client logging mechanisms for consistency.
-
-## Monitoring, Metrics and Events
-
-The Token SDK adopts the monitoring infrastructure provided by the [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/platform/view/monitoring.md).
-
-We use the following two methods to monitor application performance:
-* **Metrics**: Provide an overview of overall system performance using aggregated results (e.g., total requests, requests per second, current state of a variable, average duration, percentile of duration).
-* **Traces**: Help analyze single requests by breaking down their lifecycles into smaller components.
-
-## High Availability and Disaster Recovery
-
-The Fabric Token SDK's design allows multiple replica nodes to be attached to the same shared datasource.
-If a conflict arises, only one replica will succeed.
-Replica nodes can be attached to the shared datasource on-demand.
-In this way, the new replica becomes aware of the current status of all transactions and tokens processed so far.
-
-## Build, Packaging and Deployment
-
-The Token SDK is typically embedded as a dependency in a third-party application.
+---
 
 ## Platform Support
 
-The Token SDK is written in Go. Therefore, any platform supporting Go can run it.
-We require at least **Go 1.24**.
-
-Certain components might require CGO (e.g., HSM support).
-
-## Testing
-
-The Token SDK comes equipped with unit and integration tests.
-Similar to the Fabric Smart Client, the Token SDK adopts the philosophy: [`Write tests. Not too many. Mostly integration.`](https://kentcdodds.com/blog/write-tests)
+- **Language**: Go 1.24+
+- **Backends**: Hyperledger Fabric, FabricX.
+- **Cryptography**: Supports standard ECDSA and privacy-preserving Idemix/BBS+ curves.
