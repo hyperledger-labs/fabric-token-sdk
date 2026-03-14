@@ -21,22 +21,28 @@ import (
 
 var managerType = reflect.TypeOf((*ServiceManager)(nil))
 
+// StoreServiceManager defines the interface for obtaining a token database store service by TMS ID.
 type StoreServiceManager = tokendb.StoreServiceManager
 
+// TMSProvider defines the interface for obtaining a token management service.
 type TMSProvider interface {
+	// GetManagementService returns the management service for the given options.
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
 
+// NetworkProvider defines the interface for obtaining a network instance.
 type NetworkProvider interface {
+	// GetNetwork returns the network for the given network and channel identifiers.
 	GetNetwork(network string, channel string) (*network.Network, error)
 }
 
-// ServiceManager handles the services
+// ServiceManager handles the lifecycle and lazy initialization of Service instances per TMS.
+// It uses a lazy provider to ensure that services are only created when needed.
 type ServiceManager struct {
 	p lazy.Provider[token.TMSID, *Service]
 }
 
-// NewServiceManager creates a new Service manager.
+// NewServiceManager creates a new ServiceManager instance.
 func NewServiceManager(
 	tmsProvider TMSProvider,
 	storeServiceManager StoreServiceManager,
@@ -70,12 +76,12 @@ func NewServiceManager(
 	}
 }
 
-// ServiceByTMSId returns the Service for the given TMS
+// ServiceByTMSId returns the Service instance associated with the given TMS identifier.
 func (cm *ServiceManager) ServiceByTMSId(tmsID token.TMSID) (*Service, error) {
 	return cm.p.Get(tmsID)
 }
 
-// GetService returns the Service instance for the passed TMS
+// GetService is a helper function that retrieves the ServiceManager from the provider and returns the Service for the given TMS ID.
 func GetService(sp token.ServiceProvider, tmsID token.TMSID) (*Service, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {

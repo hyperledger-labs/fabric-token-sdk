@@ -8,9 +8,10 @@ Welcome to the Fabric Token SDK documentation.
 *   [**Token API**](tokenapi.md): The high-level API for interacting with tokens.
 *   [**Token API Usage**](token_sdk_usage.md): API Usage Guide.
 *   [**Driver API**](driverapi.md): The interface for building token drivers.
-*   [**Core Token**](core-token.md): Core token definitions.
+*   [**Core Token**](configuration.md): Core token definitions.
 *   [**Services**](services.md): Additional services like transaction assembly.
 *   [**Upgradability**](upgradability.md): How to upgrade tokens, drivers, and storage.
+*   [**Public Parameters Lifecycle**](public_parameters.md): How public parameters are generated, published, and updated across the network.
 
 ## Development
 
@@ -19,6 +20,10 @@ If you are developing *using* the SDK or contributing *to* the SDK, check out th
 *   [General Guidelines](development/general.md)
 *   [Idiomatic Go](development/idiomatic.md)
 *   [Testing](development/testing.md)
+
+## Evolution
+
+*   [**Evolution Summary (v0.4.0 -> Present)**](evolution_summary.md): A summary of how the functionalities provided by the token-sdk have evolved since tag v0.4.0.
 
 ## Guides & Tutorials
 

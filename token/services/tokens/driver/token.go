@@ -13,18 +13,19 @@ import (
 )
 
 type (
+	// Type represents the type identifier for a token or metadata format.
 	Type = int32
 )
 
-// Token wraps the byte representation of a lower level token.
+// Token is a byte slice representing the serialized form of a token as handled by the Tokens Service.
 type Token []byte
 
-// Equal return true if the identities are the same
+// Equal returns true if two Token representations are byte-for-byte identical.
 func (id Token) Equal(id2 Token) bool {
 	return bytes.Equal(id, id2)
 }
 
-// UniqueID returns a unique identifier of this token
+// UniqueID returns a hexadecimal string representation of the hash of the token, serving as a unique identifier.
 func (id Token) UniqueID() string {
 	if len(id) == 0 {
 		return "<empty>"
@@ -33,7 +34,7 @@ func (id Token) UniqueID() string {
 	return utils.Hashable(id).String()
 }
 
-// Hash returns the hash of this token
+// Hash returns the raw hash string of the token.
 func (id Token) Hash() string {
 	if len(id) == 0 {
 		return "<empty>"
@@ -42,30 +43,30 @@ func (id Token) Hash() string {
 	return utils.Hashable(id).RawString()
 }
 
-// String returns a string representation of this token
+// String returns the unique identifier for the token.
 func (id Token) String() string {
 	return id.UniqueID()
 }
 
-// Bytes returns the byte representation of this token
+// Bytes returns the raw byte representation of the token.
 func (id Token) Bytes() []byte {
 	return id
 }
 
-// IsNone returns true if this token is empty
+// IsNone returns true if the token representation is empty.
 func (id Token) IsNone() bool {
 	return len(id) == 0
 }
 
-// Metadata wraps the byte representation of a lower level metadata.
+// Metadata is a byte slice representing serialized metadata associated with a token.
 type Metadata []byte
 
-// Equal return true if the identities are the same
+// Equal returns true if two Metadata representations are byte-for-byte identical.
 func (id Metadata) Equal(id2 Metadata) bool {
 	return bytes.Equal(id, id2)
 }
 
-// UniqueID returns a unique identifier of this metadata
+// UniqueID returns a hexadecimal string representation of the hash of the metadata.
 func (id Metadata) UniqueID() string {
 	if len(id) == 0 {
 		return "<empty>"
@@ -74,7 +75,7 @@ func (id Metadata) UniqueID() string {
 	return utils.Hashable(id).String()
 }
 
-// Hash returns the hash of this metadata
+// Hash returns the raw hash string of the metadata.
 func (id Metadata) Hash() string {
 	if len(id) == 0 {
 		return "<empty>"
@@ -83,17 +84,17 @@ func (id Metadata) Hash() string {
 	return utils.Hashable(id).RawString()
 }
 
-// String returns a string representation of this metadata
+// String returns the unique identifier for the metadata.
 func (id Metadata) String() string {
 	return id.UniqueID()
 }
 
-// Bytes returns the byte representation of this metadata
+// Bytes returns the raw byte representation of the metadata.
 func (id Metadata) Bytes() []byte {
 	return id
 }
 
-// IsNone returns true if this metadata is empty
+// IsNone returns true if the metadata representation is empty.
 func (id Metadata) IsNone() bool {
 	return len(id) == 0
 }
