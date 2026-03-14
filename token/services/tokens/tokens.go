@@ -22,45 +22,71 @@ import (
 
 var logger = logging.MustGetLogger()
 
+// MetaData defines the interface for accessing metadata associated with a token request.
 type MetaData interface {
+	// SpentTokenID returns the list of token identifiers that have been spent in this transaction.
 	SpentTokenID() []*token2.ID
 }
 
+// GetTMSProviderFunc is a function type that returns a token management service provider.
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 
+// UnspendableTokensIterator is an alias for the driver's UnsupportedTokensIterator.
 type UnspendableTokensIterator = driver.UnsupportedTokensIterator
 
-// Transaction models a token transaction
+// Transaction models a token transaction within the SDK, providing access to its identifiers and request content.
 type Transaction interface {
+	// ID returns the transaction identifier.
 	ID() string
+	// Network returns the network name the transaction belongs to.
 	Network() string
+	// Channel returns the channel name.
 	Channel() string
+	// Namespace returns the namespace (chaincode ID) of the transaction.
 	Namespace() string
+	// Request returns the underlying token request.
 	Request() *token.Request
 }
 
+// Cache defines the interface for caching token requests and their extracted actions.
 type Cache interface {
+	// Get retrieves a cache entry by key.
 	Get(key string) (*CacheEntry, bool)
+	// Add adds a new entry to the cache.
 	Add(key string, value *CacheEntry)
+	// Delete removes an entry from the cache.
 	Delete(key string)
 }
 
+// CacheEntry represents a cached token request along with its pre-extracted spend and append actions.
 type CacheEntry struct {
-	Request   *token.Request
-	ToSpend   []*token2.ID
-	ToAppend  []TokenToAppend
+	// Request is the original token request.
+	Request *token.Request
+	// ToSpend is the list of token IDs to be marked as spent.
+	ToSpend []*token2.ID
+	// ToAppend is the list of tokens to be added to the local store.
+	ToAppend []TokenToAppend
+	// MsgToSign is the serialized message that was signed.
 	MsgToSign []byte
 }
 
-// Service is the interface for the token service
+// Service provides high-level operations for managing the local lifecycle of tokens.
+// It handles the synchronization of tokens between the ledger and the local TokenDB,
+// manages request caching, and provides utilities for state inspection.
 type Service struct {
-	TMSProvider     TMSProvider
+	// TMSProvider is used to obtain management services for different TMS IDs.
+	TMSProvider TMSProvider
+	// NetworkProvider is used to interact with the underlying blockchain network.
 	NetworkProvider NetworkProvider
-	Storage         *DBStorage
-
+	// Storage manages the persistent storage of tokens in TokenDB.
+	Storage *DBStorage
+	// RequestsCache provides an in-memory cache for pending token requests to optimize commit performance.
 	RequestsCache Cache
 }
 
+// Append extracts actions from a token request and applies them to the local storage.
+// It identifies which tokens are mine, which were issued by me, or which I am auditing,
+// and updates the local state accordingly.
 func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.RequestAnchor, request *token.Request) (err error) {
 	if request == nil {
 		logger.DebugfContext(ctx, "transaction [%s], no request found, skip it", txID)
@@ -131,6 +157,7 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.Requ
 	return nil
 }
 
+// AppendRaw unmarshals a raw token request and appends its extracted actions to the local storage.
 func (t *Service) AppendRaw(ctx context.Context, tmsID token.TMSID, txID token.RequestAnchor, requestRaw []byte) (err error) {
 	logger.DebugfContext(ctx, "get tms for [%s]", txID)
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
@@ -147,6 +174,7 @@ func (t *Service) AppendRaw(ctx context.Context, tmsID token.TMSID, txID token.R
 	return t.Append(ctx, tmsID, txID, tr)
 }
 
+// CacheRequest extracts actions from a token request and caches them locally to avoid redundant parsing during the commit phase.
 func (t *Service) CacheRequest(ctx context.Context, tmsID token.TMSID, request *token.Request) error {
 	toSpend, toAppend, err := t.extractActions(ctx, tmsID, request.Anchor, request)
 	if err != nil {
@@ -168,6 +196,7 @@ func (t *Service) CacheRequest(ctx context.Context, tmsID token.TMSID, request *
 	return nil
 }
 
+// GetCachedTokenRequest retrieves a cached token request and its serialized message.
 func (t *Service) GetCachedTokenRequest(txID string) (*token.Request, []byte) {
 	res, ok := t.RequestsCache.Get(txID)
 	if !ok {
@@ -181,9 +210,8 @@ func (t *Service) removeCachedTokenRequest(txID string) {
 	t.RequestsCache.Delete(txID)
 }
 
-// AppendTransaction appends the content of the passed transaction to the token db.
-// If the transaction is already in there, nothing more happens.
-// The operation is atomic.
+// AppendTransaction appends the actions of the provided transaction to the local store.
+// If the transaction has already been processed, it is skipped. This operation is atomic.
 func (t *Service) AppendTransaction(ctx context.Context, tx Transaction) (err error) {
 	return t.Append(ctx, token.TMSID{
 		Network:   tx.Network(),
@@ -192,23 +220,22 @@ func (t *Service) AppendTransaction(ctx context.Context, tx Transaction) (err er
 	}, token.RequestAnchor(tx.ID()), tx.Request())
 }
 
-// StorePublicParams stores the passed public parameters in the token db
+// StorePublicParams persists the raw byte representation of public parameters in TokenDB.
 func (t *Service) StorePublicParams(ctx context.Context, raw []byte) error {
 	return t.Storage.StorePublicParams(ctx, raw)
 }
 
-// DeleteTokensBy marks the entries corresponding to the passed token ids as deleted.
-// The deletion is attributed to the passed deletedBy argument.
+// DeleteTokensBy marks the tokens identified by ids as spent in the database, attributed to a specific actor.
 func (t *Service) DeleteTokensBy(ctx context.Context, deletedBy string, ids ...*token2.ID) (err error) {
 	return t.Storage.tokenDB.DeleteTokens(ctx, deletedBy, ids...)
 }
 
-// DeleteTokens marks the entries corresponding to the passed token ids as deleted.
-// The deletion is attributed to the caller of this function.
+// DeleteTokens marks the tokens as spent in the database, attributed to the caller's stack trace.
 func (t *Service) DeleteTokens(ctx context.Context, ids ...*token2.ID) (err error) {
 	return t.DeleteTokensBy(ctx, string(debug.Stack()), ids...)
 }
 
+// SetSpendableFlag sets the spendable status for the specified tokens.
 func (t *Service) SetSpendableFlag(ctx context.Context, value bool, ids ...*token2.ID) error {
 	tx, err := t.Storage.NewTransaction()
 	if err != nil {
@@ -225,6 +252,7 @@ func (t *Service) SetSpendableFlag(ctx context.Context, value bool, ids ...*toke
 	return tx.Commit()
 }
 
+// SetSpendableBySupportedTokenTypes sets the spendable flag for all tokens that match the provided formats.
 func (t *Service) SetSpendableBySupportedTokenTypes(ctx context.Context, types []token2.Format) error {
 	tx, err := t.Storage.NewTransaction()
 	if err != nil {
@@ -244,18 +272,19 @@ func (t *Service) SetSpendableBySupportedTokenTypes(ctx context.Context, types [
 	return nil
 }
 
+// SetSupportedTokenFormats updates the list of token formats currently supported by the storage.
 func (t *Service) SetSupportedTokenFormats(tokenTypes []token2.Format) error {
 	return t.Storage.tokenDB.SetSupportedTokenFormats(tokenTypes)
 }
 
-// UnsupportedTokensIteratorBy returns the minimum information for upgrade about the tokens that are not supported
+// UnsupportedTokensIteratorBy returns an iterator for tokens that are no longer supported,
+// typically used during upgrade processes.
 func (t *Service) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.UnsupportedTokensIterator, error) {
 	return t.Storage.tokenDB.UnsupportedTokensIteratorBy(ctx, walletID, typ)
 }
 
-// PruneInvalidUnspentTokens checks that each unspent token is actually available on the ledger.
-// Those that are not available are deleted.
-// The function returns the list of deleted token ids
+// PruneInvalidUnspentTokens identifies and removes unspent tokens from the local store
+// that are no longer available on the ledger.
 func (t *Service) PruneInvalidUnspentTokens(ctx context.Context) ([]*token2.ID, error) {
 	tmsID := t.Storage.tmsID
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))

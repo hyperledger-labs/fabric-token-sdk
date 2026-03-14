@@ -9,13 +9,23 @@ The SDK manages upgradability at three distinct layers:
 
 ---
 
-## 1. Token Upgradability (Ledger)
+## Token Upgradability (Ledger)
 
-When a token driver's format changes (e.g., moving from a transparent to a zero-knowledge format, or updating the cryptographic curves), existing tokens on the ledger may become "unspendable" by the new driver.
+The SDK manages token upgrades using two distinct mechanisms: the **Atomic "Burn and Re-issue" protocol** for across-format migrations and **In-place Upgrades** for backward-compatible transitions.
+
+### In-Place Upgrades
+
+In-place upgrades allow the SDK to spend tokens from a previous driver version or format (e.g., Fabtoken) directly as if they were native to the current driver (e.g., ZKAT-DLOG), without requiring an explicit ledger transaction first.
+
+#### Criteria for In-Place Upgrades:
+The current driver determines compatibility based on several criteria:
+1.  **Format Support**: The token's format must be included in the driver's `SupportedTokenFormats()`.
+2.  **Precision Compatibility**: For Fabtoken to DLog upgrades, the original token's precision must be less than or equal to the current driver's maximum supported precision (e.g., 64-bit).
+3.  **Automatic Commitment**: When the driver encounters a compatible legacy token (like Fabtoken), it automatically generates a Pedersen commitment and an **Upgrade Witness**. This witness allows the new driver to prove the validity of the original token while treating it as a zero-knowledge commitment in the new transaction.
 
 ### The "Burn and Re-issue" Mechanism
 
-To migrate these tokens, the SDK implements an atomic "Burn and Re-issue" protocol. This ensures that the total supply remains constant while the token's underlying representation is updated.
+When in-place upgrade is not possible (e.g., moving to a completely incompatible cryptographic curve or increasing precision beyond limits), the SDK implements an atomic "Burn and Re-issue" protocol. 
 
 #### Step-by-Step Flow:
 1.  **Identification**: The owner identifies tokens that are no longer supported.
@@ -76,7 +86,7 @@ err = tx.Upgrade(
 
 ---
 
-## 2. Driver Upgradability
+## Driver Upgradability
 
 The SDK handles driver transitions gracefully during its startup sequence.
 
@@ -107,7 +117,7 @@ func SupportedTokenFormat(precision uint64) (token.Format, error) {
 
 ---
 
-## 3. Storage DB Schema Upgradability
+## Storage DB Schema Upgradability
 
 The local storage (SQL) uses a "Lazy Creation" strategy.
 
@@ -137,6 +147,42 @@ If a new version of the Token SDK adds a column (e.g., `ledger_metadata` or `spe
     ```
 2.  **Vault Re-scan**: For non-critical nodes or during development, you can simply delete the local database file (e.g., `vault.db`). The SDK's `Vault` service can re-sync its state by scanning the ledger, though this may take time depending on the ledger size.
 3.  **Check Release Notes**: Always check the SDK release notes for "Database Schema Changes" which will list any required manual `ALTER` statements.
+
+---
+
+## Serialization and Protocol Stability
+
+The Token SDK relies heavily on **Protocol Buffers (Protobuf)** for serializing all core objects, including Public Parameters, Token Requests, and individual Actions. This choice is fundamental to the SDK's ability to evolve over time while maintaining compatibility between nodes running different software versions.
+
+### The Role of Protobuf in Upgradability
+
+Protobuf provides a binary serialization format that is both efficient and highly extensible. The SDK leverages several Protobuf features to ensure long-term stability:
+
+1.  **Field Numbering and Compatibility**: 
+    - **Backward Compatibility**: Newer versions of the SDK can add new fields to messages (e.g., adding an optional `Priority` field to a `TokenRequest`). Older nodes receiving these messages will simply ignore the unknown fields and continue processing the data they recognize.
+    - **Forward Compatibility**: Newer nodes can receive messages from older nodes. Any missing fields in the older message are assigned their default values (e.g., `0` for integers, `""` for strings), allowing the new logic to handle them gracefully.
+
+2.  **Opaque "Raw" Envelopes**: 
+    The SDK uses a "wrapper" pattern for driver-specific data. For example, the `PublicParameters` message at the driver API level looks like this:
+    ```protobuf
+    message PublicParameters {
+      string identifier = 1; // e.g., "zkatdlognogh/v1"
+      bytes raw = 2;        // Opaque driver-specific bytes
+    }
+    ```
+    This allows the core SDK to handle the delivery and storage of public parameters without needing to understand their internal structure. The `raw` bytes are only unmarshalled by the specific driver version identified by the `identifier`.
+
+For more details on the specific Protobuf messages used by each driver, see:
+- [**FabToken Protobuf Messages**](drivers/fabtoken.md#protobuf-messages)
+- [**DLog (NOGH) Protobuf Messages**](drivers/dlogwogh.md#protobuf-messages)
+
+3.  **Extensible Metadata**: 
+    Most core messages (like `IssueMetadata` or `PublicParameters`) include a `map<string, bytes> extra_data` or `application` field. This allows developers to attach arbitrary information to transactions or configurations without modifying the underlying `.proto` definitions, avoiding the need for a full protocol migration for application-specific changes.
+
+### Recommendations for Protocol Changes
+*   **Never Reuse Field Numbers**: Once a field number is assigned in a `.proto` file, it must never be reassigned to a different field, even if the original field is deprecated.
+*   **Prefer Optional Fields**: Use `proto3` defaults or explicitly check for presence to ensure that missing fields from older clients don't cause crashes.
+*   **Versioned Packages**: For major, breaking changes in a driver's internal logic, create a new protobuf package (e.g., `package zkatdlognogh.v2;`). This allows both the old and new unmarshallers to coexist in the same codebase.
 
 ---
 

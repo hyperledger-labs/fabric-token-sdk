@@ -1,0 +1,173 @@
+@startuml
+!theme plain
+skinparam componentStyle rectangle
+
+title Fabric Token SDK - Unified Storage Database Schema
+
+package "Transaction & Audit Store (TTXDB / AuditDB)" {
+    entity "Requests" as requests {
+        * tx_id : TEXT <<PK>>
+        --
+        request : BYTEA
+        status : INT
+        status_message : TEXT
+        application_metadata : JSONB
+        public_metadata : JSONB
+        pp_hash : BYTEA
+    }
+
+    entity "Transactions" as txs {
+        * id : CHAR(36) <<PK>>
+        --
+        tx_id : TEXT <<FK>>
+        action_type : INT
+        sender_eid : TEXT
+        recipient_eid : TEXT
+        token_type : TEXT
+        amount : BIGINT
+        stored_at : TIMESTAMP
+    }
+
+    entity "Movements" as movements {
+        * id : CHAR(36) <<PK>>
+        --
+        tx_id : TEXT <<FK>>
+        enrollment_id : TEXT
+        token_type : TEXT
+        amount : BIGINT
+        stored_at : TIMESTAMP
+    }
+
+    entity "Validations" as req_vals {
+        * tx_id : TEXT <<PK, FK>>
+        --
+        metadata : BYTEA
+        stored_at : TIMESTAMP
+    }
+
+    entity "Endorsements" as tx_ends {
+        * id : CHAR(36) <<PK>>
+        --
+        tx_id : TEXT
+        endorser : BYTEA
+        sigma : BYTEA
+        stored_at : TIMESTAMP
+    }
+
+    txs }o--|| requests : "tx_id"
+    movements }o--|| requests : "tx_id"
+    req_vals ||--|| requests : "tx_id"
+    tx_ends }o..|| requests : "tx_id (no FK constraint)"
+}
+
+package "Token Store (TokenDB)" {
+    entity "Tokens" as tokens {
+        * tx_id : TEXT <<PK>>
+        * idx : INT <<PK>>
+        --
+        amount : BIGINT
+        token_type : TEXT
+        quantity : TEXT
+        issuer_raw : BYTEA
+        owner_raw : BYTEA
+        owner_type : TEXT
+        owner_identity : BYTEA
+        owner_wallet_id : TEXT
+        ledger : BYTEA
+        ledger_type : TEXT
+        ledger_metadata : BYTEA
+        stored_at : TIMESTAMP
+        is_deleted : BOOL
+        spent_by : TEXT
+        spent_at : TIMESTAMP
+        owner : BOOL
+        auditor : BOOL
+        issuer : BOOL
+        spendable : BOOL
+    }
+
+    entity "TokenOwners" as tkn_own {
+        * tx_id : TEXT <<PK, FK>>
+        * idx : INT <<PK, FK>>
+        * wallet_id : TEXT <<PK>>
+    }
+
+    entity "PublicParameters" as public_params {
+        * raw_hash : BYTEA <<PK>>
+        --
+        raw : BYTEA
+        stored_at : TIMESTAMP
+    }
+
+    entity "TokenCertifications" as tkn_crts {
+        * tx_id : TEXT <<PK, FK>>
+        * idx : INT <<PK, FK>>
+        --
+        certification : BYTEA
+        stored_at : TIMESTAMP
+    }
+
+    entity "TokenLocks" as tkn_locks {
+        * tx_id : TEXT <<PK>>
+        * idx : INT <<PK>>
+        --
+        consumer_tx_id : TEXT
+        created_at : TIMESTAMP
+    }
+
+    tkn_own }o--|| tokens : "(tx_id, idx)"
+    tkn_crts }o--|| tokens : "(tx_id, idx)"
+    tkn_locks |o--o| tokens : "(tx_id, idx)"
+}
+
+package "Wallet & Identity Store (WalletDB / IdentityDB)" {
+    entity "Wallets" as wallets {
+        * identity_hash : TEXT <<PK>>
+        * wallet_id : TEXT <<PK>>
+        * role_id : INT <<PK>>
+        --
+        meta : BYTEA
+        enrollment_id : TEXT
+        created_at : TIMESTAMP
+    }
+
+    entity "IdentityConfigurations" as id_cfgs {
+        * id : TEXT <<PK>>
+        * type : TEXT <<PK>>
+        * url : TEXT <<PK>>
+        --
+        conf : BYTEA
+        raw : BYTEA
+    }
+
+    entity "IdentityInfo" as id_info {
+        * identity_hash : TEXT <<PK>>
+        --
+        identity : BYTEA
+        identity_audit_info : BYTEA
+        token_metadata : BYTEA
+        token_metadata_audit_info : BYTEA
+    }
+
+    entity "IdentitySigners" as id_signers {
+        * identity_hash : TEXT <<PK>>
+        --
+        identity : BYTEA
+        info : BYTEA
+    }
+
+    wallets }o--|| id_info : "identity_hash"
+    wallets }o--|| id_signers : "identity_hash"
+}
+
+entity "KeyStore" as key_store {
+    * key : TEXT <<PK>>
+    --
+    val : BYTEA
+}
+
+' Relationships between packages
+tkn_own }o--|| wallets : "wallet_id"
+tokens }o--|| wallets : "owner_wallet_id"
+
+@enduml

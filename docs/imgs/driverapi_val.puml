@@ -1,0 +1,35 @@
+@startuml
+skinparam componentStyle rectangle
+
+title Token SDK Driver API - Validation & Auditing
+
+package "Validation & Auditing" {
+    interface Validator {
+        + UnmarshalActions(raw: []byte): ([]interface{}, error)
+        + VerifyTokenRequestFromRaw(getState: GetStateFnc, anchor: TokenRequestAnchor, raw: []byte): ([]interface{}, ValidationAttributes, error)
+    }
+
+    interface AuditorService {
+        + AuditorCheck(request: *TokenRequest, metadata: *TokenRequestMetadata, anchor: TokenRequestAnchor): error
+    }
+
+    interface CertificationService {
+        + IsCertified(id: token.ID): bool
+        + RequestCertification(id: token.ID): error
+    }
+
+    interface PublicParamsManager {
+        + PublicParameters(): PublicParameters
+        + PublicParamsHash(): PPHash
+        + NewCertifierKeyPair(): ([]byte, []byte, error)
+    }
+
+    interface Authorization {
+        + IsMine(tok: *token.Token): (walletID: string, additionalOwners: []string, mine: bool)
+        + AmIAnAuditor(): bool
+        + Issued(issuer: Identity, tok: *token.Token): bool
+        + OwnerType(raw: []byte): (IdentityType, []byte, error)
+    }
+}
+
+@enduml

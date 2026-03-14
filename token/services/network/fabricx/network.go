@@ -21,15 +21,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Network models a FabricX network.
+// Network models a FabricX network implementation.
+// It extends the standard Fabric network and provides a specialized ledger implementation.
 type Network struct {
 	*fabric.Network
 	ledger driver.Ledger
 }
 
-// NewNetwork returns a new Network instance for the specified FabricX environment.
-// It initializes a base Fabric network and overrides its ledger with a
-// FabricX-specific implementation that uses the provided state query executor.
+// NewNetwork returns a new Network instance for the specified FabricX configuration.
+// It initializes a base Fabric network and overrides its ledger with a FabricX-specific
+// implementation that supports advanced state query executors.
 func NewNetwork(
 	n *ffabric.NetworkService,
 	ch *ffabric.Channel,
@@ -75,7 +76,7 @@ func NewNetwork(
 	return &Network{Network: tn, ledger: l}
 }
 
-// Ledger returns the FabricX-specific ledger implementation associated with this network.
+// Ledger returns the FabricX-specific ledger implementation for this network.
 func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
 }

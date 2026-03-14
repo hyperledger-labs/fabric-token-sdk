@@ -1,60 +1,43 @@
 # Identity Service
 
-The **Identity Service** (`token/services/identity`) provides a unified interface for managing identities, signatures, and verification within the Fabric Token SDK. 
-It abstracts the underlying cryptographic details, allowing the SDK to support multiple identity types (e.g., X.509, Idemix) and different storage backends seamlessly.
+The **Identity Service** (`token/services/identity`) is an **internal infrastructure service** of the Fabric Token SDK. It provides a unified interface for managing identities, signatures, and verification, operating **independently** of the core Fabric Smart Client (FSC) identity service. 
 
-This service is a fundamental component used by token drivers and other services (like the Token Transaction (TTX) service) to handle:
-*   **Signatures**: Generating and verifying signatures for transactions.
-*   **Identity Resolution**: resolving long-term identities to ephemeral identities and vice-versa.
-*   **Auditability**: Managing audit information to reveal the enrollment ID behind an anonymous identity (if allowed).
-*   **Role Management**: Handling identities for different roles (Issuer, Auditor, Owner, Certifier).
+This independence ensures that token-related cryptographic material (such as Idemix pseudonyms or X.509 certificates used for token ownership) is managed according to the specific privacy and security requirements of the Token Drivers, regardless of the underlying DLT platform.
 
-## How the Identity Service is Used
+## Overview
 
-The Identity Service is consumed by other components of the Fabric Token SDK,
-such as the Token Transaction (TTX) service and token drivers, to perform
-identity-related operations including signing, verification, and identity
-resolution.
+The Identity Service abstracts the complexity of different cryptographic schemes, allowing the SDK to support multiple identity types (e.g., X.509, Idemix) and different storage backends seamlessly. 
 
-Rather than interacting with cryptographic primitives directly, services rely
-on the Identity Service interfaces, allowing different identity implementations
-to be plugged in transparently.
+It is a fundamental component used by token drivers and application services (like the TTX service) to handle:
+*   **Signature Management**: Generating and verifying signatures for token requests.
+*   **Identity Resolution**: Resolving long-term identities to ephemeral pseudonyms and vice-versa.
+*   **Auditability**: Managing audit information to reveal the enrollment ID behind an anonymous identity (when authorized).
+*   **Wallet Management**: Handling identities for different roles such as Issuer, Auditor, Owner, and Certifier.
 
 ## Architecture
 
-The Identity Service is designed to implement the **Driver API** interfaces defined in `token/driver/wallet.go`. 
-This ensures that the token management system can interact with any identity implementation through a standard set of methods.  
-
-### Conceptual Metaphor
-
-To better understand the components, imagine a **Corporate Security Department**:
-
-*   **Identity Service (The Department)**: The entire division responsible for security and access.
-*   **Wallet Service (The Keymaster)**: Maintains a registry of all employees (Wallets) and the badges (Keys) they possess. It knows who has access to what.
-*   **Identity Provider (The Passport Office)**: Verifies identities. It checks if a badge is authentic and extracts information from it (Project ID, Department ID).
-*   **Roles (Job Titles)**: Groups of employees with similar access rights (e.g., "Auditors" have special keys to view records, "Issuers" have keys to create assets).
-*   **Key Managers (The Badge Makers)**: The specific machines or protocols used to create the badges (e.g., one machine makes standard plastic cards (X.509), another makes high-tech smart cards (Idemix)).
+The Identity Service implements the **Driver API** interfaces defined in `token/driver/wallet.go`. This ensures that the Token Management System (TMS) can interact with any identity implementation through a standard set of methods.
 
 ### Component Mapping
 
-Here is how the service components map to the Driver API:
+The following table shows how the internal components map to the Driver API interfaces:
 
 | Component              | Implements Driver Interface | Description                                           |
 |:-----------------------|:----------------------------|:------------------------------------------------------|
 | `identity.Provider`    | `driver.IdentityProvider`   | Core identity management & verification.              |
 | `wallet.Service`       | `driver.WalletService`      | Registry for all wallets (Owner, Issuer, etc.).       |
-| `role.LongTermOwnerWallet`     | `driver.OwnerWallet`        | Long Term Identity-based  Onwer wallet functionality. |
-| `role.AnonymousOwnerWallet`     | `driver.OwnerWallet`        | Anonymous Identity-based  Onwer wallet functionality. |
+| `role.LongTermOwnerWallet` | `driver.OwnerWallet`      | Long-Term Identity-based Owner wallet functionality.  |
+| `role.AnonymousOwnerWallet` | `driver.OwnerWallet`     | Anonymous Identity-based Owner wallet functionality.  |
 | `role.IssuerWallet`    | `driver.IssuerWallet`       | Issuer wallet functionality.                          |
 | `role.AuditorWallet`   | `driver.AuditorWallet`      | Auditor wallet functionality.                         |
 | `role.CertifierWallet` | `driver.CertifierWallet`    | Certifier wallet functionality.                       |
 
-### Component Interaction Diagram
+### Component Interaction
 
 ```mermaid
 classDiagram
     direction TB
-    %% Driver Interfaces
+%% Driver Interfaces
     class IdentityProvider {
         <<interface>>
         +GetSigner()
@@ -67,14 +50,14 @@ classDiagram
         +IssuerWallet()
         +RegisterRecipientIdentity()
     }
-    
-    %% Concrete Implementations
-    class identity.Provider {
+
+%% Concrete Implementations
+    class identity_Provider["identity.Provider"] {
         -Storage
         -Deserializers
         -SignerCache
     }
-    class wallet.Service {
+    class wallet_Service["wallet.Service"] {
         -RoleRegistry
         -IdentityProvider
         -OwnerWallet
@@ -82,23 +65,23 @@ classDiagram
         -AuditorWallet
         -CertifierWallet
     }
-    class role.Role {
-        -LocalMembership 
+    class role_Role["role.Role"] {
+        -LocalMembership
         +GetIdentityInfo()
     }
-    class membership.KeyManagerProvider {
+    class membership_KeyManagerProvider["membership.KeyManagerProvider"] {
         <<interface>>
         +Get() KeyManager
     }
 
-    identity.Provider ..|> IdentityProvider : Implements
-    wallet.Service ..|> WalletService : Implements
-    wallet.Service --> identity.Provider : Uses
-    wallet.Service --> role.Role : Uses (via RoleRegistry)
-    role.Role --> membership.KeyManagerProvider : Uses (via LocalMembership)
+    identity_Provider ..|> IdentityProvider : Implements
+    wallet_Service ..|> WalletService : Implements
+    wallet_Service --> identity_Provider : Uses
+    wallet_Service --> role_Role : Uses (via RoleRegistry)
+    role_Role --> membership_KeyManagerProvider : Uses (via LocalMembership)
 
-    note for identity.Provider "Handles low-level crypto\nand identity verification"
-    note for wallet.Service "High-level management\nof wallets and roles"
+    note for identity_Provider "Handles low-level crypto\nand identity verification"
+    note for wallet_Service "High-level management\nof wallets and roles"
 ```
 
 ### LocalMembership

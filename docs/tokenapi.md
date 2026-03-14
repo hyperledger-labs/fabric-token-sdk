@@ -1,188 +1,101 @@
 # Token API
 
-The Token API provides a powerful and versatile way to manage tokens across different implementations and backends.
-It acts as an abstraction layer, simplifying token interaction for developers.
+The **Token API** (`token/`) provides a powerful and versatile abstraction for managing digital tokens across various distributed ledger backends. It decouples application logic from the underlying cryptographic and consensus mechanisms, allowing developers to build sophisticated token-based applications that are both portable and privacy-preserving.
 
-Below is a pictorial representation of the `Token API`:
+## The Token Data Model
 
-![tokenapi.png](imgs/tokenapi.png)
+The SDK defines a token as a discrete unit of value with a three-part structure:
 
-This API handles tokens defined by a three-part structure:
+*   **Owner**: A byte slice (`[]byte`) representing the entity with the right to spend the token. Driver implementations interpret this field based on their specific technology (e.g., an X.509 certificate, an Idemix pseudonym, or a script).
+*   **Type**: A case-sensitive string (`token.Type`) representing the token's denomination or category (e.g., "USD", "Gold", "Diamond_ID").
+*   **Quantity**: A base-16 string (`0x`-prefixed) representing the amount. The SDK uses a configurable **Precision** to handle fractional values consistently across drivers.
 
-* **Owner:** This identifies the token's rightful owner. Driver implementations can interpret this field based on their specific needs. It could represent a public key, a script, or anything the underlying driver supports.
-* **Type:** Think of this as the token's denomination, a string value specific to your application. 
-  Examples include digital currency denominations or unique identifiers. Types are case-sensitive, if not specified otherwise.
-* **Quantity:** This represents the amount stored by the token. It's always a non-negative number encoded as a string in base 16, prefixed with "0x".
+Tokens are uniquely identified by a `token.ID`, which consists of the **Transaction ID** that created it and its **Index** within that transaction's outputs.
 
-Tokens of the same type are considered **fungible**.
-This means they can be merged or split (unless restricted), similar to how interchangeable units of currency behave.
-However, the API also allows for the creation of **non-fungible tokens** (NFTs).
-These unique tokens have a quantity of 1 and a unique type.
-Drivers can further enhance non-fungible token functionality with additional features.
+### Fungibility and NFTs
+*   **Fungible Tokens**: Multiple tokens of the same `Type` can be merged or split during a transfer, provided the total quantity is preserved.
+*   **Non-Fungible Tokens (NFTs)**: Unique tokens typically characterized by a quantity of 1 and a unique `Type` or metadata.
 
-Spending a token requires authorization from the rightful owner.
-This process depends on the Driver implementation.
-For instance, if the Owner field holds a public key, a valid signature using that key is necessary.
-Script-based tokens require an input that satisfies the script's conditions.
+## Token Management Service (TMS)
 
-The Token API empowers developers with essential operations:
+The [ManagementService](../token/tms.go) (TMS) is the primary entry point for the Token API. It orchestrates all token-related operations for a specific "space" on the ledger.
 
-* **Issue:** Creates new tokens. The designated issuers, determined by driver-specific issuing policies, control this operation.
-* **Transfer:** Shifts ownership of a token. Transfers can only involve tokens of the same type. Only rightful owner can transfer tokens.
-* **Redeem:** Deletes tokens. Depending on the driver, either the owner or designated redeemers can perform this action.
+### TMS Identification
+A TMS is uniquely identified by a [TMSID](../token/driver/tms.go):
+1.  **Network**: The identifier of the underlying DLT (e.g., "fabric").
+2.  **Channel**: The partition or channel within the network.
+3.  **Namespace**: The specific smart contract or chaincode managing the tokens.
 
-**Token Requests** bundle these operations, ensuring they are executed atomically; meaning all operations succeed or fail together.
-
-## Token Management Service and Provider
-
-The Token Management Service (TMS) acts as the central hub for the Token SDK.
-It provides access to all other APIs within the SDK.
-
-A TMS is uniquely identified by a four-part address:
-
-1. **Network:** Identifies the underlying network or backend system.
-2. **Channel (Optional):** Specifies the channel within the network. If not applicable, it remains empty.
-3. **Namespace:** Defines the specific namespace within the channel where tokens are stored.
-4. **Public Parameters:** Holds all the crucial information needed to operate the particular token infrastructure.
-
-In the case of Fabric, `Network` is any label decided by developer to identify the Fabric network in the FSC stack.
-`Channel` is an existing Fabric channel name and `Namespace` is an existing namespace in that channel.
-
-Every Token Management Service (TMS) is linked to a set of public parameters.
-This information holds the key to operating the token infrastructure effectively.
-
-Each TMS must be defined in the configuration.
-When a TMS is accessed for the first time, its data structures are created and kept in memory, ready for use.
-
-Instances of the Token Management Service are created by a provider, the `Token Management Service Provider` (TMSP).
+```mermaid
+graph TD
+    TMSP[TMS Provider] -->|GetManagementService| TMS[Management Service]
+    TMS --> Vault[Vault]
+    TMS --> WM[Wallet Manager]
+    TMS --> PPM[Public Params Manager]
+    TMS --> Selector[Selector Manager]
+    TMS --> Validator[Validator]
+    TMS --> Certification[Certification Manager]
+```
 
 ## Public Parameters Manager
 
-The public parameters are held by the Public Parameters Manager.
-
-While some parameters are specific to different drivers, some common details are included:
-* **Driver Name:** A string uniquely identifying the driver.
-* **Driver Version:** The version of the driver.
-* **Precision:** Dictates the level of detail used to represent the amount stored in a token.
-* **MaxTokenValue:** Sets a limit on the maximum quantity a single token can hold.
-* **Token Data Hiding:** When enabled (true), the content of the tokens is obscured.
-* **Token Identity Hiding:** With this set to true, tokens become untraceable within the system. (Previously referred to as Graph Hiding).
-* **Auditors:** Identifies authorized auditors for the token system.
-* **Issuer:** Identifies authorized issuers for the token system.
-
-A TMS can be created only upon presenting concrete public parameters.
-When the `Token Management Service Provider` is requested to create a new TMS, the TMSP inspects the public parameters.
-Depending on the `Driver Name` and `Driver Version`, a matching implementation of the `Driver API` is selected, if available.
-Available `Driver API` implementations must be compiled into the Go executable.
-The drivers are registered via the FSC's dependency injection framework and provided to the TMSP as a dependency.
+The [PublicParametersManager](../token/publicparams.go) holds the cryptographic setup required to operate a specific token system. These parameters are often referred to as the "Trust Anchor" and include:
+*   **Driver Identity**: The name and version of the active token driver (e.g., `fabtoken`, `zkatdlog`).
+*   **System Constraints**: Maximum token value, supported precision, and privacy levels (e.g., hiding amounts or owners).
+*   **Role Definitions**: Authorized identities for Issuers and Auditors.
 
 ## Wallet Manager
 
-A Wallet acts like a digital identity vault, holding a long-term identity (think of it as a main key) and any credentials derived from it.
-This identity can take different forms, such as an X.509 Certificate for signing purposes or an [`Idemix Credential`](https://github.com/IBM/idemix) with its associated pseudonyms.
-Ultimately, the specific driver you are using determines what constitutes a valid long-term identity.
+The [WalletManager](../token/wallet.go) manages the digital identities used to interact with tokens. It categorizes identities into specialized roles:
 
-Wallets play a crucial role in signing and verifying operations.
-Whenever a signature is needed, the system looks to the appropriate wallet within the Wallet Manager to locate the necessary keys.
-This manager keeps track of wallets for different roles like Issuers, Owners, and Auditors.
-Notably, Certifiers aren't supported because this driver doesn't handle a specific privacy feature called Token Identity Hiding.
+*   **Owner Wallet**: Manages identities that can receive, hold, and transfer tokens. It provides methods to list unspent tokens and check balances.
+*   **Issuer Wallet**: Manages identities authorized to mint new tokens.
+*   **Auditor Wallet**: Manages identities capable of viewing and verifying private transaction details without being a participant.
+*   **Certifier Wallet**: Used in specific drivers to provide an additional layer of transaction validation or "certification".
 
-Depending on the type of wallet, you can extract additional information.
-For instance, an Issuer Wallet lets you see a list of issued tokens, while an Owner Wallet shows you their unspent tokens.
+## Token Requests and Transactions
 
-The `Wallet Manager` serves as the central hub for managing all these wallets.
+A [Request](../token/request.go) is a ledger-agnostic blueprint for a token transaction. It bundles multiple actions into a single atomic unit.
 
-## Building a Token Transaction
+### Core Actions
+*   **Issue**: Minting new tokens into the system.
+*   **Transfer**: Reassigning ownership of existing tokens (includes **Redeem** by transferring to a null owner).
 
-A `Token Request` can be understood as a blueprint for a secure financial transaction.
-It groups together different actions like issuing new tokens, transferring ownership, or redeeming existing ones.
-These actions must happen all at once, ensuring everything goes smoothly.
+### The Request Lifecycle
+1.  **Assemble**: Add actions to the `Request` using a TMS.
+2.  **Sign**: Generate witnesses (signatures or ZK proofs) using the appropriate Wallets.
+3.  **Translate**: The [Network Service](./services/network.md) converts the request into a ledger-specific format (e.g., a Fabric RWSet).
+4.  **Commit**: The transaction is submitted to the network and monitored for finality.
 
-The `Token Request` offers a toolbox for developers to easily add or review the actions included in this blueprint.
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant TMS as TMS
+    participant WM as Wallet Manager
+    participant NS as Network Service
+    participant Ledger as DLT Ledger
 
-Here is a pictorial representation of a token request
-![token_request.png](imgs/token_request.png)
+    App->>TMS: NewRequest()
+    App->>TMS: Transfer(Wallet, Amount, Recipient)
+    TMS->>WM: GetSigner(Identity)
+    App->>NS: Broadcast(Request)
+    NS->>Ledger: Submit Transaction
+    Ledger-->>NS: Finality Notification
+    NS-->>App: Transaction Confirmed
+```
 
-Here is a breakdown of its key components:
+## Token Vault and Selector
 
-* **Anchor:** This acts like a reference point, tying the actions to a specific transaction within the system. In Hyperledger Fabric, the anchor corresponds to the transaction ID.
-* **Actions:** This is the heart of the blueprint, containing a set of specific token operations:
-    * **Issue:** Creates new tokens.
-    * **Transfer:** Manages existing tokens, allowing ownership changes or redemption.
+The SDK provides sophisticated tools for managing the local state of tokens:
 
-  In not otherwise specified, for simplicity, these actions within the request are independent. 
-  Meaning that, one action cannot utilize tokens created by another action within the same request. 
-
-  Additionally, each action comes with witnesses, which are essentially verifications. 
-  These witnesses confirm the "right to spend" or "right to issue" a particular token. 
-  In simpler scenarios, witnesses might be signatures from token owners or issuers.
-* **Metadata:** This serves as a secure communication channel between involved parties. 
-  It holds secret information that allows them to verify the details of the token actions. 
-  This is especially important when using privacy-focused drivers based on Zero-Knowledge proofs. 
-  Importantly, the ledger itself doesn't store this metadata.
-
-Behind the scenes, when parties collaborate to create a token transaction, they are essentially building a `Token Request`.
-This request is then translated into a format that the specific ledger system (like Hyperledger Fabric) understands.
-Remember, a `Token Request` itself is independent of the underlying ledger.
-To be processed, it needs a translation service called the `Token Request Translator`.
-This translator converts the request into the transaction format specific to the chosen ledger backend.
-Since this translation depends on the ledger being used, the `Token Request Translator` is a separate service on top of the core `Token API`.
-
-In Fabric, a special component called the `Token Chaincode` is responsible for validating and translating these token requests.
-This component runs the `Validator` to check the validity of token requests against given public parameters.
-Validation can also be performed by network nodes running the Token SDK and equipped with the proper endorsement keys.
-
-The Token SDK provides a handy service, the `ttx service`, to streamline working with token requests as transactions.
-This service takes care of the entire process, from creation to completion.
-
-Both the Token API and the Driver API contain a struct describing a token request.
-The one provided by the Token API encapsulates the one provided by the Driver API.
-It offers higher level functions that internally perform all the necessary calls to the Driver API's token request.
+*   **Token Vault**: A specialized query engine ([Vault](../token/vault.go)) that tracks the status of tokens (Unspent, Spent, Pending) and provides historical insights into transaction outcomes.
+*   **Token Selector**: A smart selection engine ([Selector](../token/selector.go)) that identifies the optimal set of unspent tokens to satisfy a transfer request. It automatically **locks** tokens to prevent double-spending in highly concurrent environments.
 
 ## Validator
 
-The Validator acts as the guardian of token requests, ensuring they adhere to specific rules.
-These rules vary depending on the types of tokens supported (fungible or non-fungible) and the chosen driver implementation.
+The [Validator](../token/validator.go) is the guardian of the token system. It is responsible for verifying that a `Token Request` adheres to all system rules before it is committed to the ledger. This includes:
+*   **Integrity**: Ensuring the sum of inputs equals the sum of outputs.
+*   **Authorization**: Verifying that all inputs are signed by their rightful owners.
+*   **Policy**: Enforcing issuer and auditor constraints defined in the Public Parameters.
 
-The validator meticulously examines each token request against two key aspects:
-
-- The provided anchor (think of it as a reference point, like a transaction ID in Fabric).
-- The target ledger (though some implementations might not require the ledger itself).
-
-While specific validation rules can differ based on the driver, some general principles hold true. A valid token request should:
-
-- Be structurally sound (well-formed).
-- Align with the constraints of the payment system. This means:
-    - Only authorized owners can transfer tokens.
-    - Tokens can't be conjured out of thin air (they must be issued properly).
-    - The system should be auditable (transactions can be traced and verified).
-- Additional requirements can be enforced by individual implementations as needed.
-
-The implementation of the Driver API's `Validator` contains the specific checks performed by that driver.
-Further details are postponed to the sections about the Driver API.
-
-## Token Vault
-
-Token Vault is your central hub for everything token-related.
-It works seamlessly across different systems, offering a comprehensive toolkit to understand your token holdings.
-
-With Token Vault, you can:
-
-* **Gain instant insights:** See all your tokens in one place, check their status, and get detailed information about each one.
-* **Track transactions:** Easily query if a transaction is pending or confirm ownership of a specific token.
-* **Explore unspent tokens:** Utilize iterators to discover tokens you haven't used yet.
-* **List all tokens:** Get a complete overview of all your available tokens or those issued on the network.
-* **Dive deeper:** Retrieve specific details about tokens and their outputs. (For certain systems) You can even find out who deleted a token, if applicable.
-
-The `Token Vault` is built on top of the `Transactions DB`, `Audit Transactions DB`, and `Tokens DB`.
-
-## Token Selector Manager
-
-The Token SDK empowers developers to select specific tokens from the vault for transactions using the `token.Selector` function.
-This selector acts like a refined filter, allowing you to specify conditions like token type, amount, and even ownership.
-To safeguard against double-spending, any chosen token is automatically locked until the transaction's fate is sealed – be it commitment, rejection, timeout, or manual unlock.
-This ensures developers leverage the appropriate tokens while eliminating double-spending woes.
-
-## Config Manager
-
-This component grants you access to the TMS's configuration, giving you full control over its behavior.
+In privacy-preserving drivers, the Validator performs complex Zero-Knowledge proof verification to ensure transaction validity without revealing sensitive data.
