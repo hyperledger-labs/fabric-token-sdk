@@ -417,6 +417,7 @@ func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) 
 	tokens, err := s.GetTokens()
 	if err != nil {
 		logger.Warnf("failed to get tokens db [%v]", err)
+
 		return
 	}
 	if err := tokens.StorePublicParams(ctx, value); err != nil {
