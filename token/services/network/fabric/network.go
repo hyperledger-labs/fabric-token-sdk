@@ -417,6 +417,8 @@ func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) 
 	tokens, err := s.GetTokens()
 	if err != nil {
 		logger.Warnf("failed to get tokens db [%v]", err)
+
+		return
 	}
 	if err := tokens.StorePublicParams(ctx, value); err != nil {
 		logger.Warnf("failed to store public parameter key [%s]: [%v]", key, err)
@@ -424,6 +426,5 @@ func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) 
 }
 
 func (s *setupListener) OnError(ctx context.Context, key string, err error) {
-	// TODO implement me
-	panic("implement me")
+	logger.Warnf("setup listener error for TMS [%s] key [%s]: [%v]", s.TMSID, key, err)
 }
