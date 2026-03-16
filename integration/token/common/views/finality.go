@@ -90,3 +90,7 @@ func (l *finalityListener) OnStatus(ctx context.Context, txID string, status int
 	fmt.Printf("Received finality from network for TX [%s][%d]", txID, status)
 	l.success()
 }
+
+func (l *finalityListener) OnError(ctx context.Context, txID string, err error) {
+	fmt.Printf("Finality error for TX [%s]: %v", txID, err)
+}

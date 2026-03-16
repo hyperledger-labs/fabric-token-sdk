@@ -307,7 +307,7 @@ func TestEventProcessing_Success(t *testing.T) {
 	}
 }
 
-// TestEventProcessing_WithError tests event processing that returns errors
+// TestEventProcessing_WithError tests that a failing event is processed once and the error is logged
 func TestEventProcessing_WithError(t *testing.T) {
 	cfg := queue.Config{Workers: 2, QueueSize: 10}
 	eq, err := queue.NewEventQueue(cfg)
@@ -326,7 +326,8 @@ func TestEventProcessing_WithError(t *testing.T) {
 
 	// Wait for processing
 	time.Sleep(100 * time.Millisecond)
-	assert.True(t, event.wasProcessed())
+	// Queue does not retry — event is processed exactly once
+	assert.Equal(t, int32(1), atomic.LoadInt32(&event.processed))
 }
 
 // TestEventProcessing_WithPanic tests worker recovery from panic
