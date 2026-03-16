@@ -12,7 +12,7 @@ require (
 	github.com/go-co-op/gocron/v2 v2.19.1
 	github.com/google/pprof v0.0.0-20260302011040-a15ffb7f9dcc
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.8.3-0.20260316122833-9a345f89f28a
+	github.com/hyperledger-labs/fabric-smart-client v0.8.3-0.20260316131351-160c89f6350b
 	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.0
 	github.com/hyperledger/fabric-lib-go v1.1.3-0.20240523144151-25edd1eaf5f5
 	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.7
