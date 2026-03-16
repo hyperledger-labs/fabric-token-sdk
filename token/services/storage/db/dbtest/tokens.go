@@ -28,25 +28,27 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 		t.Run(c.Name, func(xt *testing.T) {
 			driver := cfgProvider(c.Name)
 			db, err := driver.NewToken("", c.Name)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(xt, err)
 			tokenDB, ok := db.(TestTokenDB)
 			assert.True(xt, ok)
 			defer utils.IgnoreError(tokenDB.Close)
 			c.Fn(t, db.(TestTokenDB))
 		})
 	}
-	// for _, c := range TokenNotifierCases {
-	//	db, err := initTokenNDB(sql2.Postgres, pgConnStr, c.Name, 10)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//	t.Run(c.Name, func(xt *testing.T) {
-	//		defer Close(db)
-	//		c.Fn(xt, db)
-	//	})
-	// }
+
+	for _, c := range TokenNotifierCases {
+		t.Run(c.Name, func(xt *testing.T) {
+			driver := cfgProvider(c.Name)
+			db, err := driver.NewToken("", c.Name)
+			require.NoError(xt, err)
+			tokenDB, ok := db.(TestTokenDB)
+			assert.True(xt, ok)
+			defer utils.IgnoreError(tokenDB.Close)
+			notifier, err := driver.NewTokenNotifier("", c.Name)
+			require.NoError(xt, err)
+			c.Fn(t, db.(TestTokenDB), notifier)
+		})
+	}
 }
 
 var tokensCases = []struct {

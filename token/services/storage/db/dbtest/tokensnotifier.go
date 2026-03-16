@@ -41,6 +41,41 @@ var TokenNotifierCases = []struct {
 	{"SubscribeRead", TSubscribeRead},
 }
 
+var tokenRecords = []driver.TokenRecord{
+	{
+		TxID:           "tx1",
+		Index:          0,
+		IssuerRaw:      []byte{},
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x01",
+		Type:           ABC,
+		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
+	},
+	{
+		TxID:           "tx1",
+		Index:          1,
+		IssuerRaw:      []byte{},
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x01",
+		Type:           ABC,
+		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
+	},
+}
+
 type dbEvent struct {
 	op   driver2.Operation
 	vals map[driver2.ColumnKey]string
@@ -70,8 +105,8 @@ func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
-	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[0], []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[1], []string{"alice"}))
 	require.NoError(t, tx.Commit())
 
 	assert2.Eventually(t, func() bool { return len(*result) == 2 }, time.Second, 20*time.Millisecond)
@@ -83,8 +118,8 @@ func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNo
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
-	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[0], []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[1], []string{"alice"}))
 	require.NoError(t, tx.Delete(t.Context(), token.ID{TxId: "tx1", Index: 1}, "alice"))
 	require.NoError(t, tx.Commit())
 
@@ -97,8 +132,8 @@ func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.Token
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
-	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))
-	require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 1}, []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[0], []string{"alice"}))
+	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[1], []string{"alice"}))
 
 	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
 }

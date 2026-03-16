@@ -9,7 +9,6 @@ package memory
 import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
-	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	sqlite2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/sqlite"
 )
@@ -37,10 +36,6 @@ func (d *Driver) NewWallet(_ driver2.PersistenceName, params ...string) (driver3
 
 func (d *Driver) NewIdentity(_ driver2.PersistenceName, params ...string) (driver3.IdentityStore, error) {
 	return ((*sqlite2.Driver)(d)).Identity.Get(mem.Op.GetConfig(params...))
-}
-
-func (d *Driver) NewIdentityNotifier(_ driver2.PersistenceName, params ...string) (idriver.IdentityConfigurationNotifier, error) {
-	return ((*sqlite2.Driver)(d)).IdentityNotifier.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewKeyStore(_ driver2.PersistenceName, params ...string) (driver3.KeyStore, error) {

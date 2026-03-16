@@ -11,7 +11,10 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
@@ -31,6 +34,18 @@ func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
 			c.Fn(xt, db)
 		})
 	}
+
+	for _, c := range IdentityNotificationCases {
+		driver := cfgProvider(c.Name)
+		db, err := driver.NewIdentity("", c.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Run(c.Name, func(xt *testing.T) {
+			c.Fn(xt, db)
+		})
+	}
 }
 
 var IdentityCases = []struct {
@@ -43,6 +58,13 @@ var IdentityCases = []struct {
 	{"GetConfiguration", TGetConfiguration},
 	{"SignerInfoConcurrent", TSignerInfoConcurrent},
 	{"RegisterIdentityDescriptor", TRegisterIdentityDescriptor},
+}
+
+var IdentityNotificationCases = []struct {
+	Name string
+	Fn   func(*testing.T, driver.IdentityStore)
+}{
+	{"IdentityNotifier", TIdentityNotifier},
 }
 
 func TConfigurations(t *testing.T, db driver.IdentityStore) {
@@ -208,4 +230,64 @@ func TRegisterIdentityDescriptor(t *testing.T, db driver.IdentityStore) {
 	}
 	require.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
 	require.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
+}
+
+func TIdentityNotifier(t *testing.T, db driver.IdentityStore) {
+	t.Helper()
+	logging.Init(logging.Config{
+		Format:  "%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}",
+		LogSpec: "debug",
+	})
+	t.Helper()
+	ctx := t.Context()
+
+	notifier, err := db.Notifier()
+	require.NoError(t, err)
+
+	result, err := collectICEvents(notifier)
+	require.NoError(t, err)
+
+	expected := driver.IdentityConfiguration{
+		ID:     fmt.Sprintf("pineapple-%d", time.Now().UnixNano()),
+		Type:   "core",
+		URL:    "look here",
+		Config: []byte("config"),
+		Raw:    []byte("raw"),
+	}
+	require.NoError(t, db.AddConfiguration(ctx, expected))
+
+	conf, err := db.GetConfiguration(ctx, expected.ID, expected.Type, expected.URL)
+	require.NoError(t, err)
+	assert.Equal(t, expected, *conf)
+
+	assert.Eventually(t, func() bool { return len(*result) == 1 }, time.Minute, 20*time.Millisecond)
+	require.Equal(t, driver2.Insert, (*result)[0].op)
+	require.Equal(t, idriver.IdentityConfigurationRecord{
+		ID:   expected.ID,
+		Type: expected.Type,
+		URL:  expected.URL,
+	}, (*result)[0].record)
+}
+
+type icDBEvent struct {
+	op     driver2.Operation
+	record idriver.IdentityConfigurationRecord
+}
+
+func collectICEvents(db idriver.IdentityConfigurationNotifier) (*[]icDBEvent, error) {
+	ch := make(chan icDBEvent)
+	err := db.Subscribe(func(operation idriver.Operation, record idriver.IdentityConfigurationRecord) {
+		ch <- icDBEvent{op: operation, record: record}
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]icDBEvent, 0, 1)
+	go func() {
+		for e := range ch {
+			result = append(result, e)
+		}
+	}()
+
+	return &result, nil
 }
