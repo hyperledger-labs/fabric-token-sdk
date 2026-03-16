@@ -285,8 +285,8 @@ func concatenateIDs(keys []string) string {
 	return strings.Join(fields, fmt.Sprintf(" || '%s' || ", keySeparator))
 }
 
-func createLockTag(m string) uint64 {
+func createLockTag(m string) int64 {
 	h := sha256.Sum256([]byte(m))
 
-	return binary.BigEndian.Uint64(h[:])
+	return int64(binary.BigEndian.Uint64(h[:])) //nolint:gosec
 }
