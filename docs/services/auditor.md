@@ -1,6 +1,7 @@
 # Auditor Service
 
-The **Auditor Service** (`token/services/auditor`) provides specialized tools and interfaces for nodes acting in an oversight or compliance role. It allows authorized auditors to inspect token transactions, verify the validity of public parameters, and ensure the integrity of the token system without compromising the privacy of non-audited users.
+The **Auditor Service** (`token/services/auditor`) provides specialized tools and interfaces for nodes acting in an oversight or compliance role. 
+It allows authorized auditors to inspect token transactions.
 
 ## Core Responsibilities
 
@@ -26,7 +27,7 @@ sequenceDiagram
     TTX->>Auditor: AuditApproveView
     
     Note over Auditor: 1. De-obfuscate Request
-    Auditor->>Auditor: Verify Public Parameters
+    Auditor->>Auditor: Verify Validity
     Auditor->>Auditor: Inspect Actions & Metadata
     
     Note over Auditor: 2. Sign & Store

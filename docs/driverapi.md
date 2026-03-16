@@ -11,7 +11,14 @@ Each driver must implement the `driver.Driver` interface, fulfilling three prima
 
 The `Token Management Service` interface, implemented by the driver, functions as the core execution engine for a specific TMS instance (defined by its network, channel, and namespace).
 
-![driverapi_core.png](imgs/driverapi_core.png)
+```mermaid
+graph TD
+    subgraph "Core Architecture"
+        Driver -- creates --> TokenManagerService
+        TokenManagerService -- "provides access to" --> SpecializedServices["Specialized Services (Issue, Transfer, etc.)"]
+        TokenManagerService -- "manages" --> PublicParameters
+    end
+```
 
 It provides access to several specialized services that handle different aspects of the token lifecycle.
 
@@ -19,7 +26,15 @@ It provides access to several specialized services that handle different aspects
 
 The lifecycle of a token (issuance, transfer, upgrade) is managed by the following services:
 
-![driverapi_ops.png](imgs/driverapi_ops.png)
+```mermaid
+graph TD
+    subgraph "Token Operations"
+        IssueService
+        TransferService
+        TokensService
+        TokensUpgradeService
+    end
+```
 
 *   **Issue Service**: Orchestrates the issuance of new tokens. It generates `IssueAction` and `IssueMetadata`, allowing authorized parties to create tokens and assign them to recipients. It also handles the verification and deserialization of issuance actions.
 *   **Transfer Service**: Manages the transfer of token ownership. It generates `TransferAction` and `TransferMetadata`, enabling the movement of tokens from one party to another while ensuring transaction integrity. It also handles the verification and deserialization of transfer actions.
@@ -30,7 +45,16 @@ The lifecycle of a token (issuance, transfer, upgrade) is managed by the followi
 
 The driver provides mechanisms to ensure that token transactions are valid and compliant with the system's rules.
 
-![driverapi_val.png](imgs/driverapi_val.png)
+```mermaid
+graph TD
+    subgraph "Validation & Auditing"
+        Validator
+        AuditorService
+        CertificationService
+        PublicParamsManager
+        Authorization
+    end
+```
 
 *   **Validator**: Performs rigorous validation of token transactions. It unmarshals actions from a token request and verifies the request against the ledger state and a provided anchor.
 *   **Auditor Service**: Enables auditing capabilities, allowing authorized auditors to inspect token requests and their associated metadata against a provided anchor to ensure compliance.
@@ -42,7 +66,15 @@ The driver provides mechanisms to ensure that token transactions are valid and c
 
 The management of cryptographic identities and wallets is handled by the following services:
 
-![driverapi_id.png](imgs/driverapi_id.png)
+```mermaid
+graph TD
+    subgraph "Identity & Wallet Management"
+        WalletService -- provides --> OwnerWallet
+        IdentityProvider
+        Deserializer
+        Configuration
+    end
+```
 
 *   **Wallet Service**: Handles the management of different types of wallets (issuer, owner, auditor, certifier). It facilitates wallet lookup, identity registration, and provides access to wallet-specific functionalities like balance calculation and token listing.
 *   **Identity Provider**: Acts as a central registry for identities and their cryptographic materials. It manages the registration and retrieval of signature signers and verifiers, audit information, and enrollment IDs.
