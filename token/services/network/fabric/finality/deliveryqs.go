@@ -24,9 +24,17 @@ const (
 	FirstBlock       = 1
 )
 
+type txLedger interface {
+	GetTransactionByID(txID string) (*fabric.ProcessedTransaction, error)
+}
+
+type blockScanner interface {
+	ScanFromBlock(ctx context.Context, block uint64, callback fabric.DeliveryCallback) error
+}
+
 type DeliveryScanQueryByID struct {
-	Delivery *fabric.Delivery
-	Ledger   *fabric.Ledger
+	Delivery blockScanner
+	Ledger   txLedger
 	Mapper   events2.EventInfoMapper[TxInfo]
 }
 
