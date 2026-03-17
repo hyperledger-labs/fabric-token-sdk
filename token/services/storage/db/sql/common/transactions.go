@@ -170,6 +170,7 @@ func (db *TransactionStore) QueryTransactions(ctx context.Context, params driver
 			return errors.Errorf("invalid amount [%s]", amountStr)
 		}
 		r.Amount = bi
+
 		return errors2.Join(
 			unmarshal(appMeta, &r.ApplicationMetadata),
 			unmarshal(pubMeta, &r.PublicMetadata),
