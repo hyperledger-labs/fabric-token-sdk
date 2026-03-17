@@ -76,7 +76,7 @@ func HTLCTwoFabricNetworksTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.SetLogging("fsc.platform.view.services.comm=debug:fts.services.ttx=debug:info", "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -141,7 +141,7 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.SetLogging("fsc.platform.view.services.comm=debug:fts.services.ttx=debug:info", "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
