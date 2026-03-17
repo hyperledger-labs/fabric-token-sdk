@@ -47,7 +47,7 @@ func Topology(opts common.Opts) []api.Topology {
 	// FSC
 	fscTopology := fsc.NewTopology()
 	fscTopology.P2PCommunicationType = opts.CommType
-	fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 
 	issuer := fscTopology.NewTemplate("issuer")
 	issuer1 := fscTopology.AddNodeFromTemplate("issuer1", issuer).
