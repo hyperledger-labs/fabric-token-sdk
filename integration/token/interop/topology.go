@@ -30,7 +30,7 @@ func HTLCSingleFabricNetworkTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.SetLogging("fsc.platform.view.services.comm=debug:info", "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).

@@ -57,7 +57,7 @@ func Topology(opts common.Opts) []api.Topology {
 		fscTopology.EnablePrometheusMetrics()
 		fscTopology.EnableTracing(tracing.File)
 	}
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.SetLogging("fsc.platform.view.services.comm=debug:info", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
