@@ -43,7 +43,7 @@ func Topology(opts Opts) []api.Topology {
 	// FSC
 	fscTopology := fsc.NewTopology()
 	fscTopology.P2PCommunicationType = opts.CommType
-	fscTopology.SetLogging("fsc.platform.view.services.comm=debug:fts.services.ttx=debug:info", "")
+	fscTopology.SetLogging("debug", "")
 	fscTopology.EnableLogToFile()
 	fscTopology.EnablePrometheusMetrics()
 
