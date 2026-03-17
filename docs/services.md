@@ -18,12 +18,14 @@ graph TD
 
     subgraph "Token SDK Services (Infrastructure)"
         Identity[Identity Service]
+        Config[Config Service]
         Network[Network Service]
         Storage[Storage Service]
         Tokens[Tokens Service]
         Selector[Selector Service]
         Auditor[Auditor Service]
         Certifier[Certifier Service]
+        Benchmark[Benchmark Service]
     end
 
     subgraph "Core Components"
@@ -69,6 +71,9 @@ Infrastructure services are internal to the SDK and provide the building blocks 
 ### Identity Service
 The [Identity Service](./services/identity.md) is internal to the Token SDK and is **independent** of the FSC identity service. It handles the management of cryptographic material, signatures, and wallets (supporting both X.509 and Idemix) specifically for token operations. This isolation ensures that token-related identities are managed according to the requirements of the token drivers (e.g., privacy-preserving signatures).
 
+### Config Service
+The [Config Service](./services/config.md) manages configuration settings for the Token SDK. It provides a centralized way to access and manage configuration values for various components of the SDK, including token management services, drivers, and internal services.
+
 ### Network Service
 The [Network Service](./services/network.md) acts as a bridge layer. It translates generic token requests into backend-specific formats (such as Fabric or FabricX) and manages communication with the underlying ledger. It is also responsible for tracking transaction finality and triggering listeners when transactions are committed.
 
@@ -90,3 +95,6 @@ The [Auditor Service](./services/auditor.md) provides tools for oversight and co
 
 ### Certifier Service
 The [Certifier Service](./services/certifier.md) handles the lifecycle of token certifications, which are used in certain driver implementations (like `zkatdlog`) to provide additional proofs of validity or ownership that can be verified off-chain.
+
+### Benchmark Service
+The [Benchmark Service](./services/benchmark.md) provides performance benchmarking capabilities for the Token SDK. It allows developers and operators to measure the performance of various token operations under different configurations and workloads.

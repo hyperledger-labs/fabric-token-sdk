@@ -111,6 +111,8 @@ func SupportedTokenFormat(precision uint64) (token.Format, error) {
 }
 ```
 
+For more information on how token formats are used in the SDK's token service, see the [Tokens Service documentation](./services/tokens.md).
+
 ### Recommendations for Driver Upgrades
 *   **Side-by-Side Migration**: If possible, deploy the new driver version on a subset of nodes first to verify transaction validation before a full network rollout.
 *   **Monitor "Spendable" Balance**: Use the `Balance` API to monitor the ratio of spendable vs. unspendable tokens. A sudden drop in spendable balance indicates a driver mismatch.
