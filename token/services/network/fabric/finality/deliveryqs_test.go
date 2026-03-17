@@ -81,6 +81,7 @@ func evicted(txIDs ...string) map[cdriver.TxID][]events2.ListenerEntry[finality.
 	for _, id := range txIDs {
 		m[id] = nil
 	}
+
 	return m
 }
 
@@ -89,6 +90,7 @@ func drain(ch <-chan []finality.TxInfo) []finality.TxInfo {
 	for batch := range ch {
 		all = append(all, batch...)
 	}
+
 	return all
 }
 
