@@ -6,7 +6,7 @@ title Fabric Token SDK - Unified Storage Database Schema
 
 package "Transaction & Audit Store (TTXDB / AuditDB)" {
     entity "Requests" as requests {
-        * tx_id : TEXT <<PK>>
+        * tx_id : TEXT <<PK, NOT NULL>>
         --
         request : BYTEA
         status : INT
@@ -19,30 +19,30 @@ package "Transaction & Audit Store (TTXDB / AuditDB)" {
     entity "Transactions" as txs {
         * id : CHAR(36) <<PK>>
         --
-        tx_id : TEXT <<FK>>
+        tx_id : TEXT <<FK, NOT NULL>>
         action_type : INT
         sender_eid : TEXT
         recipient_eid : TEXT
-        token_type : TEXT
-        amount : BIGINT
-        stored_at : TIMESTAMP
+        token_type : TEXT <<NOT NULL>>
+        amount : BIGINT <<NOT NULL>>
+        stored_at : TIMESTAMP <<NOT NULL>>
     }
 
     entity "Movements" as movements {
         * id : CHAR(36) <<PK>>
         --
-        tx_id : TEXT <<FK>>
+        tx_id : TEXT <<FK, NOT NULL>>
         enrollment_id : TEXT
-        token_type : TEXT
-        amount : BIGINT
-        stored_at : TIMESTAMP
+        token_type : TEXT <<NOT NULL>>
+        amount : BIGINT <<NOT NULL>>
+        stored_at : TIMESTAMP <<NOT NULL>>
     }
 
     entity "Validations" as req_vals {
-        * tx_id : TEXT <<PK, FK>>
+        * tx_id : TEXT <<PK, FK, NOT NULL>>
         --
         metadata : BYTEA
-        stored_at : TIMESTAMP
+        stored_at : TIMESTAMP <<NOT NULL>>
     }
 
     entity "Endorsements" as tx_ends {
@@ -62,54 +62,54 @@ package "Transaction & Audit Store (TTXDB / AuditDB)" {
 
 package "Token Store (TokenDB)" {
     entity "Tokens" as tokens {
-        * tx_id : TEXT <<PK>>
-        * idx : INT <<PK>>
+        * tx_id : TEXT <<PK, NOT NULL>>
+        * idx : INT <<PK, NOT NULL>>
         --
-        amount : BIGINT
-        token_type : TEXT
-        quantity : TEXT
+        amount : BIGINT <<NOT NULL>>
+        token_type : TEXT <<NOT NULL>>
+        quantity : TEXT <<NOT NULL>>
         issuer_raw : BYTEA
-        owner_raw : BYTEA
-        owner_type : TEXT
-        owner_identity : BYTEA
+        owner_raw : BYTEA <<NOT NULL>>
+        owner_type : TEXT <<NOT NULL>>
+        owner_identity : BYTEA <<NOT NULL>>
         owner_wallet_id : TEXT
-        ledger : BYTEA
-        ledger_type : TEXT
-        ledger_metadata : BYTEA
-        stored_at : TIMESTAMP
-        is_deleted : BOOL
-        spent_by : TEXT
+        ledger : BYTEA <<NOT NULL>>
+        ledger_type : TEXT <<DEFAULT ''>>
+        ledger_metadata : BYTEA <<NOT NULL>>
+        stored_at : TIMESTAMP <<NOT NULL>>
+        is_deleted : BOOL <<NOT NULL, DEFAULT false>>
+        spent_by : TEXT <<NOT NULL, DEFAULT ''>>
         spent_at : TIMESTAMP
-        owner : BOOL
-        auditor : BOOL
-        issuer : BOOL
-        spendable : BOOL
+        owner : BOOL <<NOT NULL, DEFAULT false>>
+        auditor : BOOL <<NOT NULL, DEFAULT false>>
+        issuer : BOOL <<NOT NULL, DEFAULT false>>
+        spendable : BOOL <<NOT NULL, DEFAULT true>>
     }
 
     entity "TokenOwners" as tkn_own {
-        * tx_id : TEXT <<PK, FK>>
-        * idx : INT <<PK, FK>>
-        * wallet_id : TEXT <<PK>>
+        * tx_id : TEXT <<PK, NOT NULL, FK>>
+        * idx : INT <<PK, NOT NULL, FK>>
+        * wallet_id : TEXT <<PK, NOT NULL>>
     }
 
     entity "PublicParameters" as public_params {
-        * raw_hash : BYTEA <<PK>>
+        * raw_hash : BYTEA <<PK, NOT NULL>>
         --
-        raw : BYTEA
-        stored_at : TIMESTAMP
+        raw : BYTEA <<NOT NULL>>
+        stored_at : TIMESTAMP <<NOT NULL>>
     }
 
     entity "TokenCertifications" as tkn_crts {
-        * tx_id : TEXT <<PK, FK>>
-        * idx : INT <<PK, FK>>
+        * tx_id : TEXT <<PK, NOT NULL, FK>>
+        * idx : INT <<PK, NOT NULL, FK>>
         --
-        certification : BYTEA
-        stored_at : TIMESTAMP
+        certification : BYTEA <<NOT NULL>>
+        stored_at : TIMESTAMP <<NOT NULL>>
     }
 
     entity "TokenLocks" as tkn_locks {
-        * tx_id : TEXT <<PK>>
-        * idx : INT <<PK>>
+        * tx_id : TEXT <<PK, NOT NULL>>
+        * idx : INT <<PK, NOT NULL>>
         --
         consumer_tx_id : TEXT
         created_at : TIMESTAMP
@@ -122,9 +122,9 @@ package "Token Store (TokenDB)" {
 
 package "Wallet & Identity Store (WalletDB / IdentityDB)" {
     entity "Wallets" as wallets {
-        * identity_hash : TEXT <<PK>>
-        * wallet_id : TEXT <<PK>>
-        * role_id : INT <<PK>>
+        * identity_hash : TEXT <<PK, NOT NULL>>
+        * wallet_id : TEXT <<PK, NOT NULL>>
+        * role_id : INT <<PK, NOT NULL>>
         --
         meta : BYTEA
         enrollment_id : TEXT
@@ -132,16 +132,16 @@ package "Wallet & Identity Store (WalletDB / IdentityDB)" {
     }
 
     entity "IdentityConfigurations" as id_cfgs {
-        * id : TEXT <<PK>>
-        * type : TEXT <<PK>>
-        * url : TEXT <<PK>>
+        * id : TEXT <<PK, NOT NULL>>
+        * type : TEXT <<PK, NOT NULL>>
+        * url : TEXT <<PK, NOT NULL>>
         --
         conf : BYTEA
         raw : BYTEA
     }
 
     entity "IdentityInfo" as id_info {
-        * identity_hash : TEXT <<PK>>
+        * identity_hash : TEXT <<PK, NOT NULL>>
         --
         identity : BYTEA
         identity_audit_info : BYTEA
@@ -150,7 +150,7 @@ package "Wallet & Identity Store (WalletDB / IdentityDB)" {
     }
 
     entity "IdentitySigners" as id_signers {
-        * identity_hash : TEXT <<PK>>
+        * identity_hash : TEXT <<PK, NOT NULL>>
         --
         identity : BYTEA
         info : BYTEA
@@ -161,7 +161,7 @@ package "Wallet & Identity Store (WalletDB / IdentityDB)" {
 }
 
 entity "KeyStore" as key_store {
-    * key : TEXT <<PK>>
+    * key : TEXT <<PK, NOT NULL>>
     --
     val : BYTEA
 }
