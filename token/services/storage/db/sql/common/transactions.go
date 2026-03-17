@@ -366,7 +366,7 @@ func (db *TransactionStore) GetSchema() string {
 			sender_eid TEXT NOT NULL,
 			recipient_eid TEXT NOT NULL,
 			token_type TEXT NOT NULL,
-			amount NUMERIC NOT NULL,
+			amount NUMERIC(78, 0) NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
@@ -377,7 +377,7 @@ func (db *TransactionStore) GetSchema() string {
 			tx_id TEXT NOT NULL REFERENCES %s,
 			enrollment_id TEXT NOT NULL,
 			token_type TEXT NOT NULL,
-			amount NUMERIC NOT NULL,
+			amount NUMERIC(78, 0) NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
