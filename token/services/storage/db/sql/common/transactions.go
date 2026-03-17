@@ -125,7 +125,7 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver4.Q
 			return errors.Errorf("invalid amount [%s]", amount)
 		}
 		r.Amount = bi
-		logger.DebugfContext(ctx, "movement [%s:%s:%s]", r.TxID, r.Status, r.Amount)
+		logger.DebugfContext(ctx, "movement [%s:%s:%s]", r.TxID, r.Status, r.Amount.String())
 
 		return nil
 	})
