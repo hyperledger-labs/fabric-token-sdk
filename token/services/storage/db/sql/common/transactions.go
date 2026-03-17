@@ -116,12 +116,16 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver4.Q
 	}
 
 	it := common.NewIterator(rows, func(r *driver4.MovementRecord) error {
-		var amount int64
+		var amount string
 		if err := rows.Scan(&r.TxID, &r.EnrollmentID, &r.TokenType, &amount, &r.Status); err != nil {
 			return err
 		}
-		r.Amount = big.NewInt(amount)
-		logger.DebugfContext(ctx, "movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
+		bi, ok := new(big.Int).SetString(amount, 10)
+		if !ok {
+			return errors.Errorf("invalid amount [%s]", amount)
+		}
+		r.Amount = bi
+		logger.DebugfContext(ctx, "movement [%s:%s:%s]", r.TxID, r.Status, r.Amount)
 
 		return nil
 	})
@@ -153,14 +157,19 @@ func (db *TransactionStore) QueryTransactions(ctx context.Context, params driver
 	}
 
 	results := common.NewIterator(rows, func(r *driver4.TransactionRecord) error {
-		var amount int64
+		var amountRaw interface{}
 		var appMeta []byte
 		var pubMeta []byte
-		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amount, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
+		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amountRaw, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
 			return err
 		}
-		r.Amount = big.NewInt(amount)
+		amountStr := fmt.Sprintf("%v", amountRaw)
 
+		bi, ok := new(big.Int).SetString(amountStr, 10)
+		if !ok {
+			return errors.Errorf("invalid amount [%s]", amountStr)
+		}
+		r.Amount = bi
 		return errors2.Join(
 			unmarshal(appMeta, &r.ApplicationMetadata),
 			unmarshal(pubMeta, &r.PublicMetadata),
@@ -357,7 +366,7 @@ func (db *TransactionStore) GetSchema() string {
 			sender_eid TEXT NOT NULL,
 			recipient_eid TEXT NOT NULL,
 			token_type TEXT NOT NULL,
-			amount BIGINT NOT NULL,
+			amount NUMERIC NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
@@ -368,7 +377,7 @@ func (db *TransactionStore) GetSchema() string {
 			tx_id TEXT NOT NULL REFERENCES %s,
 			enrollment_id TEXT NOT NULL,
 			token_type TEXT NOT NULL,
-			amount BIGINT NOT NULL,
+			amount NUMERIC NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
@@ -459,14 +468,11 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver4.Transact
 	rows := make([]common3.Tuple, len(rs))
 	for i, r := range rs {
 		logger.DebugfContext(ctx, "adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
-		if !r.Amount.IsInt64() {
-			return errors.New("the database driver does not support larger values than int64")
-		}
 		id, err := uuid.GenerateUUID()
 		if err != nil {
 			return errors.Wrapf(err, "error generating uuid")
 		}
-		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.Int64(), r.Timestamp.UTC()}
+		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.String(), r.Timestamp.UTC()}
 	}
 
 	query, args := q.InsertInto(w.table.Transactions).
@@ -518,15 +524,11 @@ func (w *AtomicWrite) AddMovement(ctx context.Context, rs ...driver4.MovementRec
 	rows := make([]common3.Tuple, len(rs))
 	for i, r := range rs {
 		logger.DebugfContext(ctx, "adding movement record [%s]", r)
-
-		if !r.Amount.IsInt64() {
-			return errors.New("the database driver does not support larger values than int64")
-		}
 		id, err := uuid.GenerateUUID()
 		if err != nil {
 			return errors.Wrapf(err, "error generating uuid")
 		}
-		rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), now}
+		rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.String(), now}
 	}
 
 	query, args := q.InsertInto(w.table.Movements).
