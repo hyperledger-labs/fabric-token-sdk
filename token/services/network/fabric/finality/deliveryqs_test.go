@@ -37,6 +37,7 @@ func (f *fakeLedger) GetTransactionByID(txID string) (*fabric.ProcessedTransacti
 	if !ok {
 		return nil, fmt.Errorf("TXID [%s] not available", txID)
 	}
+
 	return r.pt, r.err
 }
 
@@ -48,6 +49,7 @@ type fakeScanner struct {
 func (f *fakeScanner) ScanFromBlock(_ context.Context, block uint64, _ fabric.DeliveryCallback) error {
 	f.called = true
 	f.startBlock = block
+
 	return nil
 }
 
@@ -65,6 +67,7 @@ func (f *fakeMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]finality
 	if !ok {
 		return nil, errors.New("unexpected tx in mapper")
 	}
+
 	return r.infos, r.err
 }
 
