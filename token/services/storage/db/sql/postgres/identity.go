@@ -12,8 +12,10 @@ import (
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
+// IdentityStore is an alias for common.IdentityStore.
 type IdentityStore = sqlcommon.IdentityStore
 
+// IdentityNotifier handles notifications for identity configurations.
 type IdentityNotifier struct {
 	*Notifier
 }
