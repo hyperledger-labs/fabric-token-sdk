@@ -334,7 +334,7 @@ func TestAWAddTransaction(t *testing.T, store transactionsStoreConstructor) {
 	mockDB.ExpectBegin()
 	mockDB.
 		ExpectExec("INSERT INTO TRANSACTIONS \\(id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7, \\$8\\)").
-		WithArgs(AnyUUID{}, input.TxID, 1, input.SenderEID, input.RecipientEID, input.TokenType, input.Amount.Int64(), input.Timestamp.UTC()).
+		WithArgs(AnyUUID{}, input.TxID, 1, input.SenderEID, input.RecipientEID, input.TokenType, input.Amount.String(), input.Timestamp.UTC()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
 
@@ -391,7 +391,7 @@ func TestAWAddMovement(t *testing.T, store transactionsStoreConstructor) {
 	mockDB.
 		ExpectExec("INSERT INTO MOVEMENTS \\(id, tx_id, enrollment_id, token_type, amount, stored_at\\) "+
 			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6\\)").
-		WithArgs(AnyUUID{}, input.TxID, input.EnrollmentID, input.TokenType, input.Amount.Int64(), now).
+		WithArgs(AnyUUID{}, input.TxID, input.EnrollmentID, input.TokenType, input.Amount.String(), now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
 
