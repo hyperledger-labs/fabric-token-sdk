@@ -423,7 +423,7 @@ func (l *LocalMembership) subscribeNotifier() error {
 	}
 
 	err = notifier.Subscribe(func(operation idriver.Operation, record idriver.IdentityConfigurationRecord) {
-		l.logger.Debugf("received notification: [%v][%v]", operation, record)
+		l.logger.Infof("received notification: [%v][%v]", operation, record)
 		// we care only about insertions in the identity configurations table
 		if operation != idriver.Insert {
 			return
