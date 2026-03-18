@@ -116,13 +116,14 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver4.Q
 	}
 
 	it := common.NewIterator(rows, func(r *driver4.MovementRecord) error {
-		var amount string
-		if err := rows.Scan(&r.TxID, &r.EnrollmentID, &r.TokenType, &amount, &r.Status); err != nil {
+		var amountRaw interface{}
+		if err := rows.Scan(&r.TxID, &r.EnrollmentID, &r.TokenType, &amountRaw, &r.Status); err != nil {
 			return err
 		}
-		bi, ok := new(big.Int).SetString(amount, 10)
+		amountStr := fmt.Sprintf("%v", amountRaw)
+		bi, ok := new(big.Int).SetString(amountStr, 10)
 		if !ok {
-			return errors.Errorf("invalid amount [%s]", amount)
+			return errors.Errorf("invalid amount [%s]", amountStr)
 		}
 		r.Amount = bi
 		logger.DebugfContext(ctx, "movement [%s:%s:%s]", r.TxID, r.Status, r.Amount.String())
