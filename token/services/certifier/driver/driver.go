@@ -12,11 +12,13 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+//go:generate counterfeiter -o mock/certification_client.go -fake-name CertificationClient . CertificationClient
 type CertificationClient interface {
 	IsCertified(ctx context.Context, id *token2.ID) bool
 	RequestCertification(ctx context.Context, ids ...*token2.ID) error
 }
 
+//go:generate counterfeiter -o mock/certification_service.go -fake-name CertificationService . CertificationService
 type CertificationService interface {
 	Start() error
 }

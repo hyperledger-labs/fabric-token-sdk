@@ -19,10 +19,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+//go:generate sh -c "counterfeiter -o backend_mock.go -fake-name BackendMock . Backend && sed -i '/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\\/services\\/certifier\\/interactive\"/d' backend_mock.go && sed -i 's/interactive\\.CertificationRequest/CertificationRequest/g' backend_mock.go && sed -i 's/interactive\\.Backend/Backend/g' backend_mock.go"
 type Backend interface {
 	Load(context view.Context, cr *CertificationRequest) ([][]byte, error)
 }
 
+//go:generate sh -c "counterfeiter -o responder_registry_mock.go -fake-name ResponderRegistryMock . ResponderRegistry && sed -i '/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\\/services\\/certifier\\/interactive\"/d' responder_registry_mock.go && sed -i 's/interactive\\.ResponderRegistry/ResponderRegistry/g' responder_registry_mock.go"
 type ResponderRegistry interface {
 	RegisterResponder(responder view.View, initiatedBy interface{}) error
 }
