@@ -108,7 +108,7 @@ func (l *ledger) TransferMetadataKey(k string) (string, error) {
 }
 
 type ViewManager interface {
-	InitiateView(view view.View, ctx context.Context) (interface{}, error)
+	InitiateView(ctx context.Context, view view.View) (interface{}, error)
 }
 
 type ViewRegistry interface {

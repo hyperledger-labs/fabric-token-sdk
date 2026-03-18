@@ -23,13 +23,10 @@ func NewChaincodePublicParamsFetcher(viewManager *view.Manager) *chaincodePublic
 }
 
 func (f *chaincodePublicParamsFetcher) Fetch(network driver2.Network, channel driver2.Channel, namespace driver2.Namespace) ([]byte, error) {
-	ppBoxed, err := f.viewManager.InitiateView(
-		chaincode.NewQueryView(
-			namespace,
-			QueryPublicParamsFunction,
-		).WithNetwork(network).WithChannel(channel),
-		context.Background(),
-	)
+	ppBoxed, err := f.viewManager.InitiateView(context.Background(), chaincode.NewQueryView(
+		namespace,
+		QueryPublicParamsFunction,
+	).WithNetwork(network).WithChannel(channel))
 	if err != nil {
 		return nil, err
 	}
