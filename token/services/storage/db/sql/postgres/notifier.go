@@ -151,7 +151,13 @@ func (db *Notifier) dispatch(operation driver.Operation, m map[driver.ColumnKey]
 	copy(subscribers, db.subscribers)
 	db.mu.RUnlock()
 
+	logger.Infof("dispatching to [%d] subscribers", len(subscribers))
 	for _, callback := range subscribers {
+		if callback == nil {
+			logger.Errorf("a nil callback found for [%s], skip it", db.table)
+
+			continue
+		}
 		callback(operation, m)
 	}
 }
@@ -159,6 +165,10 @@ func (db *Notifier) dispatch(operation driver.Operation, m map[driver.ColumnKey]
 // Subscribe registers a callback function to be called when a matching database event occurs.
 // It returns an error if the notifier is closed or if the listener fails to start.
 func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
+	if callback == nil {
+		return errors.Errorf("cannot subscribe to a nil callback")
+	}
+
 	db.mu.Lock()
 	if db.closed {
 		db.mu.Unlock()
