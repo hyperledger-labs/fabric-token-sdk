@@ -9,12 +9,10 @@ package dbtest
 import (
 	"context"
 	"testing"
-	"time"
 
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	assert2 "github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/assert"
 	"github.com/test-go/testify/require"
 )
@@ -76,32 +74,17 @@ var tokenRecords = []driver.TokenRecord{
 	},
 }
 
-type dbEvent struct {
-	op   driver2.Operation
-	vals map[driver2.ColumnKey]string
+type tokenSubscriber struct {
+	notifier driver.TokenNotifier
 }
 
-func collectDBEvents(db driver.TokenNotifier) (*[]dbEvent, error) {
-	ch := make(chan dbEvent)
-	err := db.Subscribe(func(operation driver2.Operation, m map[driver2.ColumnKey]string) {
-		ch <- dbEvent{op: operation, vals: m}
-	})
-	if err != nil {
-		return nil, err
-	}
-	result := make([]dbEvent, 0, 1)
-	go func() {
-		for e := range ch {
-			result = append(result, e)
-		}
-	}()
-
-	return &result, nil
+func (t *tokenSubscriber) Subscribe(f func(operation driver2.Operation, vals map[driver2.ColumnKey]string)) error {
+	return t.notifier.Subscribe(f)
 }
 
 func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
-	result, err := collectDBEvents(notifier)
+	result, err := collectDBEvents(&tokenSubscriber{notifier: notifier})
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
@@ -109,12 +92,12 @@ func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier
 	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[1], []string{"alice"}))
 	require.NoError(t, tx.Commit())
 
-	assert2.Eventually(t, func() bool { return len(*result) == 2 }, time.Second, 20*time.Millisecond)
+	require.NoError(t, result.AssertSize(2))
 }
 
 func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
-	result, err := collectDBEvents(notifier)
+	result, err := collectDBEvents(&tokenSubscriber{notifier: notifier})
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
@@ -123,24 +106,24 @@ func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNo
 	require.NoError(t, tx.Delete(t.Context(), token.ID{TxId: "tx1", Index: 1}, "alice"))
 	require.NoError(t, tx.Commit())
 
-	assert2.Eventually(t, func() bool { return len(*result) == 3 }, time.Second, 20*time.Millisecond)
+	require.NoError(t, result.AssertSize(3))
 }
 
 func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
-	result, err := collectDBEvents(notifier)
+	result, err := collectDBEvents(&tokenSubscriber{notifier: notifier})
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
 	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[0], []string{"alice"}))
 	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[1], []string{"alice"}))
 
-	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
+	require.NoError(t, result.AssertSize(0))
 }
 
 func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
-	result, err := collectDBEvents(notifier)
+	result, err := collectDBEvents(&tokenSubscriber{notifier: notifier})
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
@@ -149,5 +132,5 @@ func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier)
 	require.NoError(t, err)
 	require.NoError(t, tx.Commit())
 
-	assert2.Eventually(t, func() bool { return len(*result) == 0 }, time.Second, 20*time.Millisecond)
+	require.NoError(t, result.AssertSize(0))
 }

@@ -244,7 +244,7 @@ func TIdentityNotifier(t *testing.T, db driver.IdentityStore) {
 	notifier, err := db.Notifier()
 	require.NoError(t, err)
 
-	result, err := collectICEvents(notifier)
+	result, err := collectDBEvents(notifier)
 	require.NoError(t, err)
 
 	expected := driver.IdentityConfiguration{
@@ -260,34 +260,12 @@ func TIdentityNotifier(t *testing.T, db driver.IdentityStore) {
 	require.NoError(t, err)
 	assert.Equal(t, expected, *conf)
 
-	assert.Eventually(t, func() bool { return len(*result) == 1 }, time.Minute, 20*time.Millisecond)
-	require.Equal(t, driver2.Insert, (*result)[0].op)
+	require.NoError(t, result.AssertSize(1))
+	values := result.Values()
+	require.Equal(t, driver2.Insert, values[0].Op)
 	require.Equal(t, idriver.IdentityConfigurationRecord{
 		ID:   expected.ID,
 		Type: expected.Type,
 		URL:  expected.URL,
-	}, (*result)[0].record)
-}
-
-type icDBEvent struct {
-	op     driver2.Operation
-	record idriver.IdentityConfigurationRecord
-}
-
-func collectICEvents(db idriver.IdentityConfigurationNotifier) (*[]icDBEvent, error) {
-	ch := make(chan icDBEvent)
-	err := db.Subscribe(func(operation idriver.Operation, record idriver.IdentityConfigurationRecord) {
-		ch <- icDBEvent{op: operation, record: record}
-	})
-	if err != nil {
-		return nil, err
-	}
-	result := make([]icDBEvent, 0, 1)
-	go func() {
-		for e := range ch {
-			result = append(result, e)
-		}
-	}()
-
-	return &result, nil
+	}, values[0].Val)
 }
