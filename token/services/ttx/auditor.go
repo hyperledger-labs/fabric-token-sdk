@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	session3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/session"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -22,7 +23,6 @@ import (
 	dauditor "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 )
 
@@ -148,8 +148,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	// Receive signature
 	logger.DebugfContext(context.Context(), "Receiving signature for [%s]", a.tx.ID())
 
-	jsonSession := session2.NewFromSession(context, session)
-	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
+	signature, err := session3.ReadMessageWithTimeout(session, time.Minute)
 	if err != nil {
 		logger.ErrorfContext(context.Context(), "failed to read audit event: %s", err)
 
@@ -171,21 +170,19 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 
 func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session, error) {
 	logger.DebugfContext(context.Context(), "Starting remote auditing session with [%s] for [%s]", a.tx.Opts.Auditor.UniqueID(), a.tx.ID())
-	session, err := context.GetSession(a, a.tx.Opts.Auditor)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed getting session")
-	}
-
 	// Send transaction
 	txRaw, err := a.tx.Bytes()
 	if err != nil {
 		return nil, err
 	}
+	session, err := context.GetSession(a, a.tx.Opts.Auditor)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting session")
+	}
 	err = session.SendWithContext(context.Context(), txRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
-
 	return session, nil
 }
 
