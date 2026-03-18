@@ -16,9 +16,24 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
+//go:generate counterfeiter -o mock/audit_info_provider.go -fake-name AuditInfoProvider github.com/hyperledger-labs/fabric-token-sdk/token/driver.AuditInfoProvider
+//go:generate counterfeiter -o mock/verifier.go -fake-name Verifier github.com/hyperledger-labs/fabric-token-sdk/token/driver.Verifier
+//go:generate counterfeiter -o mock/matcher.go -fake-name Matcher github.com/hyperledger-labs/fabric-token-sdk/token/driver.Matcher
+//go:generate counterfeiter -o mock/audit_info_matcher.go -fake-name AuditInfoMatcher . AuditInfoMatcher
+//go:generate sed -i "/var _ multisig\\.AuditInfoMatcher = new(AuditInfoMatcher)/d" mock/audit_info_matcher.go
+//go:generate sed -i "/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\\/services\\/identity\\/multisig\"/d" mock/audit_info_matcher.go
+
+//go:generate counterfeiter -o mock/verifier_des.go -fake-name VerifierDES . VerifierDES
+//go:generate sed -i "/var _ multisig\\.VerifierDES = new(VerifierDES)/d" mock/verifier_des.go
+//go:generate sed -i "/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\\/services\\/identity\\/multisig\"/d" mock/verifier_des.go
+
 type VerifierDES interface {
 	DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error)
 }
+
+//go:generate counterfeiter -o mock/audit_info_matcher.go -fake-name AuditInfoMatcher . AuditInfoMatcher
+//go:generate sed -i "/var _ multisig\\.AuditInfoMatcher = new(AuditInfoMatcher)/d" mock/audit_info_matcher.go
+//go:generate sed -i "/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\\/services\\/identity\\/multisig\"/d" mock/audit_info_matcher.go
 
 type AuditInfoMatcher interface {
 	GetAuditInfoMatcher(ctx context.Context, owner driver.Identity, auditInfo []byte) (driver.Matcher, error)
