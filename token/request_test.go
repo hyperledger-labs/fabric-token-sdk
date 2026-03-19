@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token tests Request serialization and application metadata handling.
 package token
 
 import (
@@ -18,6 +19,9 @@ import (
 	"github.com/test-go/testify/require"
 )
 
+// TestRequestSerialization verifies that a Request can be serialized to bytes and
+// deserialized back without data loss. Tests both full serialization (Bytes/FromBytes)
+// and audit-specific serialization (MarshalToAudit).
 func TestRequestSerialization(t *testing.T) {
 	r := NewRequest(nil, "hello world")
 	r.Actions = &driver.TokenRequest{
@@ -69,6 +73,8 @@ func TestRequest_FromBytes_ErrorCases(t *testing.T) {
 	})
 }
 
+// TestRequest_ApplicationMetadata verifies that ApplicationMetadata correctly retrieves
+// metadata values by key, returning nil for non-existent keys.
 func TestRequest_ApplicationMetadata(t *testing.T) {
 	// Test case: No application metadata set
 	request := &Request{
@@ -100,6 +106,8 @@ func TestRequest_ApplicationMetadata(t *testing.T) {
 	assert.Nil(t, data)
 }
 
+// TestRequest_SetApplicationMetadata verifies that SetApplicationMetadata correctly
+// stores metadata values, initializing the metadata structure if needed.
 func TestRequest_SetApplicationMetadata(t *testing.T) {
 	// Test case: No application metadata set
 	request := &Request{}
