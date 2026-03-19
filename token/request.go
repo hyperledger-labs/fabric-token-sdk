@@ -4,6 +4,10 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token provides the Request type for building and managing token transactions.
+// A Request assembles token actions (issue, transfer, redeem) and their metadata,
+// handles serialization, validation, and signature collection. It supports both
+// fungible and non-fungible tokens with privacy-preserving features.
 package token
 
 import (
@@ -32,6 +36,7 @@ const (
 // ActionMetadata models the action metadata as a map from string to byte array
 type ActionMetadata = map[string][]byte
 
+// Binder binds ephemeral identities to long-term identities for privacy-preserving transactions.
 type Binder interface {
 	Bind(ctx context.Context, longTerm Identity, ephemeral ...Identity) error
 }
@@ -48,12 +53,13 @@ type (
 // RecipientData contains information about the identity of a token owner
 type RecipientData = driver.RecipientData
 
-// IssueOptions models the options that can be passed to the issue command
+// IssueOptions contains optional parameters for token issuance operations.
 type IssueOptions struct {
 	// Attributes is a container of generic options that might be driver specific
 	Attributes map[interface{}]interface{}
 }
 
+// compileIssueOptions aggregates multiple IssueOption functions into a single IssueOptions struct.
 func compileIssueOptions(opts ...IssueOption) (*IssueOptions, error) {
 	txOptions := &IssueOptions{}
 	for _, opt := range opts {
@@ -65,10 +71,10 @@ func compileIssueOptions(opts ...IssueOption) (*IssueOptions, error) {
 	return txOptions, nil
 }
 
-// IssueOption is a function that modify IssueOptions
+// IssueOption is a function that modifies IssueOptions.
 type IssueOption func(*IssueOptions) error
 
-// WithIssueAttribute sets an attribute to be used to customize the issue command
+// WithIssueAttribute adds a custom attribute to an issue operation.
 func WithIssueAttribute(attr, value interface{}) IssueOption {
 	return func(o *IssueOptions) error {
 		if o.Attributes == nil {
@@ -80,12 +86,12 @@ func WithIssueAttribute(attr, value interface{}) IssueOption {
 	}
 }
 
-// WithIssueMetadata sets issue action metadata
+// WithIssueMetadata adds metadata to an issue action (automatically prefixed).
 func WithIssueMetadata(key string, value []byte) IssueOption {
 	return WithIssueAttribute(IssueMetadataPrefix+key, value)
 }
 
-// TransferOptions models the options that can be passed to the transfer command
+// TransferOptions contains optional parameters for token transfer operations.
 type TransferOptions struct {
 	// Attributes is a container of generic options that might be driver specific
 	Attributes map[interface{}]interface{}
@@ -97,6 +103,7 @@ type TransferOptions struct {
 	RestRecipientIdentity *RecipientData
 }
 
+// CompileTransferOptions aggregates multiple TransferOption functions into a single TransferOptions struct.
 func CompileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
 	txOptions := &TransferOptions{}
 	for _, opt := range opts {
@@ -108,7 +115,7 @@ func CompileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
 	return txOptions, nil
 }
 
-// TransferOption is a function that modify TransferOptions
+// TransferOption is a function that modifies TransferOptions.
 type TransferOption func(*TransferOptions) error
 
 // WithTokenSelector sets the passed token selector
@@ -120,7 +127,7 @@ func WithTokenSelector(selector Selector) TransferOption {
 	}
 }
 
-// WithTransferMetadata sets transfer action metadata
+// WithTransferMetadata adds metadata to a transfer action (automatically prefixed).
 func WithTransferMetadata(key string, value []byte) TransferOption {
 	return WithTransferAttribute(TransferMetadataPrefix+key, value)
 }
@@ -148,7 +155,7 @@ func WithTokenIDs(ids ...*token.ID) TransferOption {
 	}
 }
 
-// WithTransferAttribute sets an attribute to be used to customize the transfer command
+// WithTransferAttribute adds a custom attribute to a transfer operation.
 func WithTransferAttribute(attr, value interface{}) TransferOption {
 	return func(o *TransferOptions) error {
 		if o.Attributes == nil {
@@ -494,7 +501,7 @@ func (r *Request) Upgrade(
 	return &IssueAction{a: action}, nil
 }
 
-// Outputs returns the sequence of outputs of the request supporting sequential and parallel aggregate operations.
+// Outputs returns all token outputs created by this request's actions.
 func (r *Request) Outputs(ctx context.Context) (*OutputStream, error) {
 	return r.outputs(ctx, false)
 }
@@ -802,9 +809,8 @@ func (r *Request) extractTransferOutputs(ctx context.Context, i int, counter uin
 	return outputs, counter, nil
 }
 
-// Inputs returns the sequence of inputs of the request supporting sequential and parallel aggregate operations.
-// Notice that the inputs do not carry Type and Quantity because this information might be available to all parties.
-// If you are an auditor, you can use the AuditInputs method to get everything.
+// Inputs returns all token inputs consumed by this request's transfer actions.
+// Note: Type and Quantity are not included (use AuditRecord for full details).
 func (r *Request) Inputs(ctx context.Context) (*InputStream, error) {
 	return r.inputs(ctx, false)
 }
@@ -897,10 +903,12 @@ func (r *Request) extractTransferInputs(ctx context.Context, actionIndex int, me
 	return inputs, nil
 }
 
+// InputsAndOutputs returns both inputs and outputs along with action metadata.
 func (r *Request) InputsAndOutputs(ctx context.Context) (*InputStream, *OutputStream, map[string][]byte, error) {
 	return r.inputsAndOutputs(ctx, false, false, false)
 }
 
+// InputsAndOutputsNoRecipients returns inputs and outputs without recipient identity information.
 func (r *Request) InputsAndOutputsNoRecipients(ctx context.Context) (*InputStream, *OutputStream, error) {
 	is, os, _, err := r.inputsAndOutputs(ctx, false, false, true)
 
@@ -1011,7 +1019,7 @@ func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyAct
 	return inputStream, os, attributes, nil
 }
 
-// IsValid checks that the request is valid.
+// IsValid validates the request structure and verifies all actions.
 func (r *Request) IsValid(ctx context.Context) error {
 	// check request fields
 	if r.TokenService == nil {
@@ -1032,8 +1040,7 @@ func (r *Request) IsValid(ctx context.Context) error {
 	return nil
 }
 
-// MarshalToAudit marshals the request to a message suitable for audit signature.
-// In particular, metadata is not included.
+// MarshalToAudit serializes the request for auditor signatures (excludes metadata).
 func (r *Request) MarshalToAudit() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for audit", r.Anchor)
@@ -1042,7 +1049,7 @@ func (r *Request) MarshalToAudit() ([]byte, error) {
 	return r.Actions.MarshalToMessageToSign([]byte(r.Anchor))
 }
 
-// MarshalToSign marshals the request to a message suitable for signing.
+// MarshalToSign serializes the request for participant signatures.
 func (r *Request) MarshalToSign() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for signing", r.Anchor)
@@ -1051,7 +1058,7 @@ func (r *Request) MarshalToSign() ([]byte, error) {
 	return r.Actions.MarshalToMessageToSign([]byte(r.Anchor))
 }
 
-// RequestToBytes marshals the request's actions to bytes.
+// RequestToBytes serializes only the actions (excludes metadata and anchor).
 func (r *Request) RequestToBytes() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s]", r.Anchor)
@@ -1060,8 +1067,7 @@ func (r *Request) RequestToBytes() ([]byte, error) {
 	return r.Actions.Bytes()
 }
 
-// Bytes marshals the request to bytes.
-// It includes: Anchor (or ID), actions, and metadata.
+// Bytes serializes the complete request (anchor, actions, and metadata).
 func (r *Request) Bytes() ([]byte, error) {
 	requestProto, err := r.Actions.ToProtos()
 	if err != nil {
@@ -1081,7 +1087,7 @@ func (r *Request) Bytes() ([]byte, error) {
 	return proto.Marshal(requestWithMetadata)
 }
 
-// FromBytes unmarshalls the request from bytes overriding the content of the current request.
+// FromBytes deserializes a request from bytes, replacing current content.
 func (r *Request) FromBytes(raw []byte) error {
 	requestWithMetadata := &request.TokenRequestWithMetadata{}
 	if err := proto.Unmarshal(raw, requestWithMetadata); err != nil {
@@ -1107,7 +1113,7 @@ func (r *Request) FromBytes(raw []byte) error {
 	return nil
 }
 
-// AddAuditorSignature adds an auditor signature to the request.
+// AddAuditorSignature appends an auditor's signature to the request.
 func (r *Request) AddAuditorSignature(identity Identity, sigma []byte) {
 	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, &driver.AuditorSignature{
 		Identity:  identity,
@@ -1115,6 +1121,7 @@ func (r *Request) AddAuditorSignature(identity Identity, sigma []byte) {
 	})
 }
 
+// SetSignatures assigns signatures to all signers. Returns true if all signatures are present.
 func (r *Request) SetSignatures(sigmas map[string][]byte) bool {
 	signers := append(r.IssueSigners(), r.TransferSigners()...)
 	signatures := make([][]byte, len(signers))
@@ -1133,6 +1140,7 @@ func (r *Request) SetSignatures(sigmas map[string][]byte) bool {
 	return all
 }
 
+// TransferSigners returns all identities that must sign transfer actions.
 func (r *Request) TransferSigners() []Identity {
 	signers := make([]Identity, 0)
 	for _, transfer := range r.Transfers() {
@@ -1146,6 +1154,7 @@ func (r *Request) TransferSigners() []Identity {
 	return signers
 }
 
+// IssueSigners returns all identities that must sign issue actions.
 func (r *Request) IssueSigners() []Identity {
 	signers := make([]Identity, 0)
 	for _, issue := range r.Issues() {
@@ -1156,12 +1165,13 @@ func (r *Request) IssueSigners() []Identity {
 	return signers
 }
 
-// SetTokenService sets the token service.
+// SetTokenService assigns the TMS to this request.
 func (r *Request) SetTokenService(service *ManagementService) {
 	r.TokenService = service
 }
 
-// BindTo binds transfers' senders and receivers, that are senders, that are not me to the passed identity
+// BindTo binds all external identities (senders/receivers not owned by caller) to the specified identity.
+// Used for privacy-preserving transactions to link ephemeral identities.
 func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) error {
 	for i := range r.Actions.Transfers {
 		// senders
@@ -1211,7 +1221,7 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 	return nil
 }
 
-// Issues returns the list of issued tokens.
+// Issues returns all issue actions in this request.
 func (r *Request) Issues() []*Issue {
 	var issues []*Issue
 	for _, issue := range r.Metadata.Issues {
@@ -1225,7 +1235,7 @@ func (r *Request) Issues() []*Issue {
 	return issues
 }
 
-// Transfers returns the list of transfers.
+// Transfers returns all transfer actions in this request.
 func (r *Request) Transfers() []*Transfer {
 	var transfers []*Transfer
 	for _, transfer := range r.Metadata.Transfers {
@@ -1240,8 +1250,7 @@ func (r *Request) Transfers() []*Transfer {
 	return transfers
 }
 
-// AuditCheck performs the audit check of the request in addition to
-// the checks of the token request itself via IsValid.
+// AuditCheck validates the request and performs auditor-specific checks.
 func (r *Request) AuditCheck(ctx context.Context) error {
 	r.TokenService.logger.DebugfContext(ctx, "audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
 	if err := r.IsValid(ctx); err != nil {
@@ -1256,8 +1265,8 @@ func (r *Request) AuditCheck(ctx context.Context) error {
 	)
 }
 
-// AuditRecord return the audit record of the request.
-// The audit record contains: The anchor, the audit inputs and outputs
+// AuditRecord returns the complete audit record with inputs, outputs, and metadata.
+// Includes full token details (type, quantity, owner info) for auditing purposes.
 func (r *Request) AuditRecord(ctx context.Context) (*AuditRecord, error) {
 	inputs, outputs, attr, err := r.inputsAndOutputs(ctx, true, false, false)
 	if err != nil {
@@ -1308,7 +1317,7 @@ func (r *Request) AuditRecord(ctx context.Context) (*AuditRecord, error) {
 	}, nil
 }
 
-// ApplicationMetadata returns the application metadata corresponding to the given key
+// ApplicationMetadata retrieves application-specific metadata by key (returns nil if not found).
 func (r *Request) ApplicationMetadata(k string) []byte {
 	if len(r.Metadata.Application) == 0 {
 		return nil
@@ -1317,8 +1326,7 @@ func (r *Request) ApplicationMetadata(k string) []byte {
 	return r.Metadata.Application[k]
 }
 
-// SetApplicationMetadata sets application metadata in terms of key-value pairs.
-// The Token-SDK does not control the format of the metadata.
+// SetApplicationMetadata stores application-specific metadata (format not validated by SDK).
 func (r *Request) SetApplicationMetadata(k string, v []byte) {
 	if r.Metadata == nil {
 		r.Metadata = &driver.TokenRequestMetadata{}
@@ -1329,7 +1337,7 @@ func (r *Request) SetApplicationMetadata(k string, v []byte) {
 	r.Metadata.Application[k] = v
 }
 
-// FilterMetadataBy returns a new Request with the metadata filtered by the given enrollment IDs.
+// FilterMetadataBy creates a new request with metadata filtered to show only the specified enrollment ID's data.
 func (r *Request) FilterMetadataBy(ctx context.Context, eIDs ...string) (*Request, error) {
 	meta := &Metadata{
 		TokenService:         r.TokenService.tms.TokensService(),
@@ -1350,7 +1358,7 @@ func (r *Request) FilterMetadataBy(ctx context.Context, eIDs ...string) (*Reques
 	}, nil
 }
 
-// GetMetadata returns the metadata of the request.
+// GetMetadata returns the request's metadata wrapper with helper methods.
 func (r *Request) GetMetadata() (*Metadata, error) {
 	return &Metadata{
 		TokenService:         r.TokenService.tms.TokensService(),
@@ -1362,6 +1370,7 @@ func (r *Request) GetMetadata() (*Metadata, error) {
 
 func (r *Request) AllApplicationMetadata() map[string][]byte { return r.Metadata.Application }
 
+// PublicParamsHash returns the hash of the public parameters used by this request.
 func (r *Request) PublicParamsHash() PPHash {
 	return r.TokenService.PublicParametersManager().PublicParamsHash()
 }
