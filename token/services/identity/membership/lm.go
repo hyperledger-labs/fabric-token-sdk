@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"gopkg.in/yaml.v2"
 )
@@ -58,6 +59,9 @@ type SignerDeserializerManager interface {
 	AddTypedSignerDeserializer(typ idriver.IdentityType, d idriver.TypedSignerDeserializer)
 }
 
+//go:generate counterfeiter -o mock/in.go -fake-name IdentityConfigurationNotifier . IdentityConfigurationNotifier
+type IdentityConfigurationNotifier = idriver.IdentityConfigurationNotifier
+
 //go:generate counterfeiter -o mock/ici.go -fake-name IdentityConfigurationIterator . IdentityConfigurationIterator
 type IdentityConfigurationIterator = idriver.IdentityConfigurationIterator
 
@@ -70,12 +74,16 @@ type IdentityStoreService interface {
 	// AddConfiguration stores an identity configuration and the path to the
 	// credentials relevant to this identity. The context may carry caller info.
 	AddConfiguration(ctx context.Context, wp idriver.IdentityConfiguration) error
+	// GetConfiguration returns the configuration with the given id and type.
+	GetConfiguration(ctx context.Context, id, typ, url string) (*idriver.IdentityConfiguration, error)
 	// ConfigurationExists returns true if a configuration with the given id,
 	// type and URL already exists in the store.
 	ConfigurationExists(ctx context.Context, id, typ, url string) (bool, error)
 	// IteratorConfigurations returns an iterator over all configurations of
 	// a given type stored in the persistent store.
 	IteratorConfigurations(ctx context.Context, configurationType string) (IdentityConfigurationIterator, error)
+	// Notifier returns an IdentityConfigurationNotifier for this store.
+	Notifier() (idriver.IdentityConfigurationNotifier, error)
 }
 
 // IdentityProvider is an alias for the driver-level identity provider used to
@@ -167,8 +175,10 @@ type LocalMembership struct {
 	localIdentities           []*LocalIdentity
 	localIdentitiesByName     map[string][]LocalIdentityWithPriority
 	localIdentitiesByIdentity map[string]*LocalIdentity
+	localIdentitiesByConfig   map[string]*LocalIdentity
 	targetIdentities          []view.Identity // optional list of identities to prefer
 	anonymous                 bool            // when true, only anonymous identities are considered selectable by default
+	closeOnce                 sync.Once
 }
 
 // NewLocalMembership creates a new LocalMembership instance.
@@ -201,6 +211,7 @@ func NewLocalMembership(
 		identityDB:                identityDB,
 		localIdentitiesByName:     map[string][]LocalIdentityWithPriority{},
 		localIdentitiesByIdentity: map[string]*LocalIdentity{},
+		localIdentitiesByConfig:   map[string]*LocalIdentity{},
 		IdentityType:              identityType,
 		KeyManagerProviders:       keyManagerProviders,
 		anonymous:                 defaultAnonymous,
@@ -211,6 +222,23 @@ func NewLocalMembership(
 // DefaultNetworkIdentity returns the root network identity used when binding loaded identities.
 func (l *LocalMembership) DefaultNetworkIdentity() token.Identity {
 	return l.defaultNetworkIdentity
+}
+
+// Close stops the background identity notifier.
+func (l *LocalMembership) Close() {
+	l.closeOnce.Do(func() {
+		notifier, err := l.identityDB.Notifier()
+		if err != nil {
+			if errors.Is(err, storage.ErrNotSupported) {
+				// notithing to close
+				return
+			}
+			logger.Errorf("failed to get identity notifier: [%s]", err)
+		}
+		if err := notifier.UnsubscribeAll(); err != nil {
+			logger.Errorf("failed to unsubscribe [%s]: [%s]", l.IdentityType, err)
+		}
+	})
 }
 
 // IsMe reports whether the given identity belongs to this local membership set.
@@ -311,6 +339,7 @@ func (l *LocalMembership) Load(ctx context.Context, identities []idriver.Configu
 	l.targetIdentities = targets
 	l.localIdentities = make([]*LocalIdentity, 0)
 	l.localIdentitiesByName = make(map[string][]LocalIdentityWithPriority, 0)
+	l.localIdentitiesByConfig = make(map[string]*LocalIdentity, 0)
 
 	// prepare all identity configurations
 	identityConfigurations, defaults, err := l.toIdentityConfiguration(identities)
@@ -377,7 +406,73 @@ func (l *LocalMembership) Load(ctx context.Context, identities []idriver.Configu
 
 	l.logger.Debugf("load identities [%s] done", l.IdentityType)
 
+	if err := l.subscribeNotifier(); err != nil {
+		return errors.Wrap(err, "failed to subscribe notifier")
+	}
+
 	return nil
+}
+
+func (l *LocalMembership) subscribeNotifier() error {
+	notifier, err := l.identityDB.Notifier()
+	if err != nil {
+		if errors.Is(err, storage.ErrNotSupported) {
+			logger.Warnf("identity notifier not supported")
+
+			return nil
+		}
+
+		return errors.Wrapf(err, "failed to get notifier")
+	}
+
+	err = notifier.Subscribe(func(operation idriver.Operation, record idriver.IdentityConfigurationRecord) {
+		l.logger.Infof("received notification: [%v][%v]", operation, record)
+		// we care only about insertions in the identity configurations table
+		if operation != idriver.Insert {
+			return
+		}
+		// record contains: id, type, url
+		if record.Type != l.IdentityType {
+			// not for us
+			return
+		}
+		l.handleConfig(record.ID, record.Type, record.URL)
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to subscribe to notifier")
+	}
+
+	return nil
+}
+
+func (l *LocalMembership) handleConfig(id, typ, url string) {
+	l.localIdentitiesMutex.Lock()
+	defer l.localIdentitiesMutex.Unlock()
+
+	l.logger.Debugf("handle config for [%s:%s:%s]", id, typ, url)
+	config, err := l.identityDB.GetConfiguration(context.Background(), id, typ, url)
+	if err != nil {
+		l.logger.Errorf("failed to get configuration for [%s:%s:%s]: %s", id, typ, url, err)
+
+		return
+	}
+	if config == nil {
+		l.logger.Errorf("configuration not found for [%s:%s:%s]", id, typ, url)
+
+		return
+	}
+
+	key := l.configKey(config)
+	if _, ok := l.localIdentitiesByConfig[key]; ok {
+		l.logger.Debugf("configuration [%s] already loaded", key)
+
+		return
+	}
+
+	l.logger.Infof("load identity configuration [%+v]", config)
+	if err := l.registerIdentityConfiguration(context.Background(), config, false); err != nil {
+		l.logger.Errorf("failed loading identity with err [%s]", err)
+	}
 }
 
 // getDefaultIdentifier returns the name of the current default identity (may return empty string).
@@ -602,6 +697,13 @@ func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *Identity
 	}
 	l.logger.Debugf("new local identity for [%s:%s] - [%v]", name, eID, localIdentity)
 
+	if defaultID {
+		l.logger.Infof("set default identity to [%s]", name)
+		for _, li := range l.localIdentities {
+			li.Default = false
+		}
+	}
+
 	list, ok := l.localIdentitiesByName[name]
 	if !ok {
 		list = make([]LocalIdentityWithPriority, 0)
@@ -628,8 +730,60 @@ func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *Identity
 	}
 
 	l.localIdentities = append(l.localIdentities, localIdentity)
+	l.localIdentitiesByConfig[l.configKey(config)] = localIdentity
 
 	return nil
+}
+
+func (l *LocalMembership) refreshAndGet(ctx context.Context, label string) *LocalIdentity {
+	l.localIdentitiesMutex.Lock()
+	defer l.localIdentitiesMutex.Unlock()
+
+	// Double check
+	identities, ok := l.localIdentitiesByName[label]
+	if ok {
+		return identities[0].Identity
+	}
+	mapped, ok := l.localIdentitiesByIdentity[label]
+	if ok {
+		return mapped
+	}
+
+	l.logger.DebugfContext(ctx, "refresh and get local identity for label [%s]", utils.Hashable(label))
+	storedIdentityConfigurations, err := l.storedIdentityConfigurations(ctx)
+	if err != nil {
+		l.logger.ErrorfContext(ctx, "failed to load stored identity configurations: %s", err)
+
+		return nil
+	}
+
+	for _, identityConfiguration := range storedIdentityConfigurations {
+		key := l.configKey(&identityConfiguration)
+		if _, ok := l.localIdentitiesByConfig[key]; ok {
+			continue
+		}
+
+		l.logger.InfofContext(ctx, "load identity configuration [%+v]", identityConfiguration)
+		if err := l.registerIdentityConfiguration(ctx, &identityConfiguration, false); err != nil {
+			l.logger.ErrorfContext(ctx, "failed loading identity with err [%s]", err)
+		}
+	}
+
+	// check again
+	identities, ok = l.localIdentitiesByName[label]
+	if ok {
+		return identities[0].Identity
+	}
+	mapped, ok = l.localIdentitiesByIdentity[label]
+	if ok {
+		return mapped
+	}
+
+	return nil
+}
+
+func (l *LocalMembership) configKey(config *IdentityConfiguration) string {
+	return config.ID + "@" + config.Type + "@" + config.URL
 }
 
 func (l *LocalMembership) getLocalIdentity(ctx context.Context, label string) *LocalIdentity {
@@ -645,15 +799,22 @@ func (l *LocalMembership) getLocalIdentity(ctx context.Context, label string) *L
 		return mapped
 	}
 
-	l.logger.DebugfContext(ctx, "local identity not found for label [%s][%v]", utils.Hashable(label), l.localIdentitiesByName)
+	l.logger.DebugfContext(ctx, "local identity not found for label [%s][%v], try to refresh", utils.Hashable(label), l.localIdentitiesByName)
 
-	return nil
+	l.localIdentitiesMutex.RUnlock()
+	res := l.refreshAndGet(ctx, label)
+	l.localIdentitiesMutex.RLock()
+
+	return res
 }
 
 func (l *LocalMembership) storedIdentityConfigurations(ctx context.Context) ([]idriver.IdentityConfiguration, error) {
 	it, err := l.identityDB.IteratorConfigurations(ctx, l.IdentityType)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get registered identities from kvs")
+	}
+	if it == nil {
+		return nil, nil
 	}
 
 	return collections.ReadAll[idriver.IdentityConfiguration](it)

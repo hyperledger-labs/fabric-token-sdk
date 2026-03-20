@@ -173,13 +173,19 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (Identity, error)
 }
 
-// IdentityConfiguration contains configuration-related information of an identity
+// IdentityConfiguration contains configuration-related information of an identity.
+// It is used to describe how an identity should be loaded and managed by the SDK.
 type IdentityConfiguration struct {
-	ID     string
-	Type   string
-	URL    string
+	// ID is the unique identifier for this identity configuration.
+	ID string
+	// Type is the type of the identity (e.g., "bccsp", "idemix").
+	Type string
+	// URL is the location of the identity's credential material (e.g., path to MSP folder).
+	URL string
+	// Config contains driver-specific configuration options in encoded format.
 	Config []byte
-	Raw    []byte
+	// Raw contains the raw identity material if already loaded.
+	Raw []byte
 }
 
 // WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.
@@ -210,9 +216,9 @@ type Authorization interface {
 	OwnerType(raw []byte) (IdentityType, []byte, error)
 }
 
-//go:generate counterfeiter -o mock/ws.go -fake-name WalletService . WalletService
-
 // WalletService models the wallet service that handles issuer, owner, auditor, and certifier wallets
+//
+//go:generate counterfeiter -o mock/ws.go -fake-name WalletService . WalletService
 type WalletService interface {
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
 	RegisterRecipientIdentity(ctx context.Context, data *RecipientData) error
@@ -259,6 +265,9 @@ type WalletService interface {
 
 	// SpendIDs returns the spend ids for the passed token ids
 	SpendIDs(ids ...*token.ID) ([]string, error)
+
+	// Done releases all the resources allocated by this service.
+	Done() error
 }
 
 //go:generate counterfeiter -o mock/wallet_service_factory.go -fake-name WalletServiceFactory . WalletServiceFactory

@@ -11,9 +11,14 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/require"
@@ -31,6 +36,18 @@ func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
 			c.Fn(xt, db)
 		})
 	}
+
+	for _, c := range IdentityNotificationCases {
+		driver := cfgProvider(c.Name)
+		db, err := driver.NewIdentity("", c.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Run(c.Name, func(xt *testing.T) {
+			c.Fn(xt, db)
+		})
+	}
 }
 
 var IdentityCases = []struct {
@@ -40,8 +57,16 @@ var IdentityCases = []struct {
 	{"IdentityInfo", TIdentityInfo},
 	{"SignerInfo", TSignerInfo},
 	{"Configurations", TConfigurations},
+	{"GetConfiguration", TGetConfiguration},
 	{"SignerInfoConcurrent", TSignerInfoConcurrent},
 	{"RegisterIdentityDescriptor", TRegisterIdentityDescriptor},
+}
+
+var IdentityNotificationCases = []struct {
+	Name string
+	Fn   func(*testing.T, driver.IdentityStore)
+}{
+	{"IdentityNotifier", TIdentityNotifier},
 }
 
 func TConfigurations(t *testing.T, db driver.IdentityStore) {
@@ -85,6 +110,37 @@ func TConfigurations(t *testing.T, db driver.IdentityStore) {
 		Raw:    []byte("raw"),
 	}
 	require.NoError(t, db.AddConfiguration(ctx, expected))
+}
+
+func TGetConfiguration(t *testing.T, db driver.IdentityStore) {
+	t.Helper()
+	ctx := t.Context()
+	expected := driver.IdentityConfiguration{
+		ID:     "pineapple",
+		Type:   "core",
+		URL:    "look here",
+		Config: []byte("config"),
+		Raw:    []byte("raw"),
+	}
+	require.NoError(t, db.AddConfiguration(ctx, expected))
+
+	c, err := db.GetConfiguration(ctx, expected.ID, expected.Type, expected.URL)
+	require.NoError(t, err)
+	assert.NotNil(t, c)
+	assert.Equal(t, expected, *c)
+
+	// Test not found
+	c, err = db.GetConfiguration(ctx, "non-existent", expected.Type, expected.URL)
+	require.NoError(t, err)
+	assert.Nil(t, c)
+
+	c, err = db.GetConfiguration(ctx, expected.ID, "non-existent", expected.URL)
+	require.NoError(t, err)
+	assert.Nil(t, c)
+
+	c, err = db.GetConfiguration(ctx, expected.ID, expected.Type, "non-existent")
+	require.NoError(t, err)
+	assert.Nil(t, c)
 }
 
 func TIdentityInfo(t *testing.T, db driver.IdentityStore) {
@@ -176,4 +232,45 @@ func TRegisterIdentityDescriptor(t *testing.T, db driver.IdentityStore) {
 	}
 	require.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
 	require.NoError(t, db.RegisterIdentityDescriptor(ctx, descriptor, aliasID))
+}
+
+func TIdentityNotifier(t *testing.T, db driver.IdentityStore) {
+	t.Helper()
+	logging.Init(logging.Config{
+		Format:  "%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}",
+		LogSpec: "debug",
+	})
+	t.Helper()
+	ctx := t.Context()
+
+	notifier, err := db.Notifier()
+	if errors.Is(err, storage.ErrNotSupported) {
+		t.Skip("notifier not supported")
+	}
+	require.NoError(t, err)
+
+	result, err := collectDBEvents(notifier)
+	require.NoError(t, err)
+
+	expected := driver.IdentityConfiguration{
+		ID:     fmt.Sprintf("pineapple-%d", time.Now().UnixNano()),
+		Type:   "core",
+		URL:    "look here",
+		Config: []byte("config"),
+		Raw:    []byte("raw"),
+	}
+	require.NoError(t, db.AddConfiguration(ctx, expected))
+
+	conf, err := db.GetConfiguration(ctx, expected.ID, expected.Type, expected.URL)
+	require.NoError(t, err)
+	assert.Equal(t, expected, *conf)
+
+	require.NoError(t, result.AssertSize(1))
+	values := result.Values()
+	require.Equal(t, driver2.Insert, values[0].Op)
+	require.Equal(t, idriver.IdentityConfigurationRecord{
+		ID:   expected.ID,
+		Type: expected.Type,
+		URL:  expected.URL,
+	}, values[0].Val)
 }

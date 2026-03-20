@@ -27,33 +27,29 @@ func NewDriver() *Driver {
 }
 
 func (d *Driver) NewTokenLock(_ driver2.PersistenceName, params ...string) (driver3.TokenLockStore, error) {
-	return d.TokenLock.Get(mem.Op.GetConfig(params...))
+	return ((*sqlite2.Driver)(d)).TokenLock.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewWallet(_ driver2.PersistenceName, params ...string) (driver3.WalletStore, error) {
-	return d.Wallet.Get(mem.Op.GetConfig(params...))
+	return ((*sqlite2.Driver)(d)).Wallet.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewIdentity(_ driver2.PersistenceName, params ...string) (driver3.IdentityStore, error) {
-	return d.Identity.Get(mem.Op.GetConfig(params...))
+	return ((*sqlite2.Driver)(d)).Identity.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewKeyStore(_ driver2.PersistenceName, params ...string) (driver3.KeyStore, error) {
-	return d.KeyStore.Get(mem.Op.GetConfig(params...))
+	return ((*sqlite2.Driver)(d)).KeyStore.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewToken(_ driver2.PersistenceName, params ...string) (driver3.TokenStore, error) {
-	return d.Token.Get(mem.Op.GetConfig(params...))
-}
-
-func (d *Driver) NewTokenNotifier(_ driver2.PersistenceName, params ...string) (driver3.TokenNotifier, error) {
-	return d.TokenNotifier.Get(mem.Op.GetConfig(params...))
+	return ((*sqlite2.Driver)(d)).Token.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewAuditTransaction(_ driver2.PersistenceName, params ...string) (driver3.AuditTransactionStore, error) {
-	return d.AuditTx.Get(mem.Op.GetConfig(params...))
+	return ((*sqlite2.Driver)(d)).AuditTx.Get(mem.Op.GetConfig(params...))
 }
 
 func (d *Driver) NewOwnerTransaction(_ driver2.PersistenceName, params ...string) (driver3.TokenTransactionStore, error) {
-	return d.OwnerTx.Get(mem.Op.GetConfig(params...))
+	return ((*sqlite2.Driver)(d)).OwnerTx.Get(mem.Op.GetConfig(params...))
 }

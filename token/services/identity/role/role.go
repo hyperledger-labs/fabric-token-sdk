@@ -33,6 +33,7 @@ type LocalMembership interface {
 	GetDefaultIdentifier() string
 	RegisterIdentity(ctx context.Context, config driver.IdentityConfiguration) error
 	IDs() ([]string, error)
+	Close()
 }
 
 // Role models a role whose identities are anonymous.
@@ -91,6 +92,13 @@ func (r *Role) RegisterIdentity(ctx context.Context, config driver.IdentityConfi
 // IdentityIDs returns the identifiers known to this Role (delegates to LocalMembership.IDs).
 func (r *Role) IdentityIDs() ([]string, error) {
 	return r.localMembership.IDs()
+}
+
+// Done releases all the resources allocated by this service.
+func (r *Role) Done() error {
+	r.localMembership.Close()
+
+	return nil
 }
 
 // MapToIdentity returns the identity for the given WalletLookupID argument.

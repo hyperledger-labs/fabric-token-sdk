@@ -57,22 +57,21 @@ type FetcherProvider interface {
 	GetFetcher(tmsID token.TMSID) (tokenFetcher, error)
 }
 
-type fetchFunc func(db *tokendb.StoreService, notifier *tokendb.Notifier, m *Metrics) tokenFetcher
+type fetchFunc func(db *tokendb.StoreService, m *Metrics) tokenFetcher
 
 type fetcherProvider struct {
 	tokenStoreServiceManager tokendb.StoreServiceManager
-	notifierManager          tokendb.NotifierManager
 	metrics                  *Metrics
 	fetch                    fetchFunc
 }
 
 var fetchers = map[FetcherStrategy]fetchFunc{
-	Mixed: func(db *tokendb.StoreService, notifier *tokendb.Notifier, m *Metrics) tokenFetcher {
+	Mixed: func(db *tokendb.StoreService, m *Metrics) tokenFetcher {
 		return newMixedFetcher(db, m)
 	},
 }
 
-func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, notifierManager tokendb.NotifierManager, metricsProvider metrics.Provider, strategy FetcherStrategy) *fetcherProvider {
+func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, metricsProvider metrics.Provider, strategy FetcherStrategy) *fetcherProvider {
 	fetcher, ok := fetchers[strategy]
 	if !ok {
 		panic("undefined fetcher strategy: " + strategy)
@@ -80,7 +79,6 @@ func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, notifie
 
 	return &fetcherProvider{
 		tokenStoreServiceManager: storeServiceManager,
-		notifierManager:          notifierManager,
 		metrics:                  newMetrics(metricsProvider),
 		fetch:                    fetcher,
 	}
@@ -91,12 +89,8 @@ func (p *fetcherProvider) GetFetcher(tmsID token.TMSID) (tokenFetcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	tokenNotifier, err := p.notifierManager.StoreServiceByTMSId(tmsID)
-	if err != nil {
-		return nil, err
-	}
 
-	return p.fetch(tokenDB, tokenNotifier, p.metrics), nil
+	return p.fetch(tokenDB, p.metrics), nil
 }
 
 // mixedFetcher combines both eager and lazy strategies

@@ -24,12 +24,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// TokenLockStore implements the token lock storage for Postgres.
 type TokenLockStore struct {
 	*common5.TokenLockStore
 
 	ci common3.CondInterpreter
 }
 
+// NewTokenLockStore returns a new TokenLockStore for the given RWDB and table names.
 func NewTokenLockStore(dbs *common2.RWDB, tableNames common5.TableNames) (*TokenLockStore, error) {
 	ci := postgres.NewConditionInterpreter()
 	tldb, err := common5.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames, ci)
@@ -40,6 +42,7 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common5.TableNames) (*Token
 	return &TokenLockStore{TokenLockStore: tldb, ci: ci}, nil
 }
 
+// Cleanup removes stale token locks that have expired.
 func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration) error {
 	if err := db.logStaleLocks(ctx, leaseExpiry); err != nil {
 		db.Logger.Warnf("Could not log stale locks: %v", err)
@@ -67,6 +70,7 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 	return err
 }
 
+// logStaleLocks logs the token locks that are about to be deleted.
 func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Duration) error {
 	if !db.Logger.IsEnabledFor(zapcore.InfoLevel) {
 		return nil

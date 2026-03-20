@@ -7,19 +7,40 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
-	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
+	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
-type IdentityStore = common3.IdentityStore
+// IdentityStore is an alias for common.IdentityStore.
+type IdentityStore = sqlcommon.IdentityStore
 
-func NewIdentityStore(dbs *common2.RWDB, tableNames common3.TableNames) (*IdentityStore, error) {
-	return common3.NewCachedIdentityStore(
-		dbs.ReadDB,
-		dbs.WriteDB,
-		tableNames,
-		postgres.NewConditionInterpreter(),
-		&postgres.ErrorMapper{},
-	)
+// IdentityNotifier handles notifications for identity configurations.
+type IdentityNotifier struct {
+	*Notifier
+}
+
+// NewIdentityNotifier returns a new IdentityNotifier for the given RWDB and table names.
+func NewIdentityNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, dataSource string) (*IdentityNotifier, error) {
+	return &IdentityNotifier{
+		Notifier: NewNotifier(
+			dbs.WriteDB,
+			tableNames.IdentityConfigurations,
+			dataSource,
+			AllOperations,
+			*NewSimplePrimaryKey("id"),
+			*NewSimplePrimaryKey("type"),
+			*NewSimplePrimaryKey("url"),
+		)}, nil
+}
+
+// Subscribe registers a callback function to be called when an identity configuration is inserted or updated.
+func (n *IdentityNotifier) Subscribe(callback func(idriver.Operation, idriver.IdentityConfigurationRecord)) error {
+	return n.Notifier.Subscribe(func(operation idriver.Operation, m map[idriver.ColumnKey]string) {
+		callback(operation, idriver.IdentityConfigurationRecord{
+			ID:   m["id"],
+			Type: m["type"],
+			URL:  m["url"],
+		})
+	})
 }

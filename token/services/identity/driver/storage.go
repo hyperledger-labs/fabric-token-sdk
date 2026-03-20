@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -90,6 +91,42 @@ type IdentityDescriptor struct {
 	Ephemeral bool
 }
 
+// IdentityNotifier is an alias to the driver-level notifier.
+// It is used to subscribe to events in the identity storage.
+type IdentityNotifier = driver2.Notifier
+
+type (
+	// Operation defines the type of database operation (Insert, Update, etc.).
+	Operation = driver2.Operation
+	// ColumnKey defines the name of a database column.
+	ColumnKey = driver2.ColumnKey
+)
+
+const (
+	// Insert indicates a record was added to the table.
+	Insert = driver2.Insert
+	// Update indicates an existing record was modified.
+	Update = driver2.Update
+)
+
+// IdentityConfigurationRecord contains the primary key fields of an identity configuration.
+type IdentityConfigurationRecord struct {
+	// ID is the unique identifier of the identity.
+	ID string
+	// Type is the type of the identity (e.g. "fabtoken", "zkatdlog").
+	Type string
+	// URL is the path to the credentials relevant to this identity.
+	URL string
+}
+
+// IdentityConfigurationNotifier is used to subscribe to configuration changes in the identity storage.
+type IdentityConfigurationNotifier interface {
+	// Subscribe registers a callback function to be called when an identity configuration is inserted or updated.
+	Subscribe(callback func(Operation, IdentityConfigurationRecord)) error
+	// UnsubscribeAll unregisters all callbacks.
+	UnsubscribeAll() error
+}
+
 // IdentityStoreService provides persistent storage operations for identity
 // configurations, audit data, token metadata, and signer-related information.
 //
@@ -97,10 +134,15 @@ type IdentityDescriptor struct {
 type IdentityStoreService interface {
 	// AddConfiguration stores an identity and the path to the credentials relevant to this identity
 	AddConfiguration(ctx context.Context, wp IdentityConfiguration) error
+	// GetConfiguration returns the configuration with the given id, type, and url.
+	// It returns nil if the configuration does not exist.
+	GetConfiguration(ctx context.Context, id, typ, url string) (*IdentityConfiguration, error)
 	// ConfigurationExists returns true if a configuration with the given id and type exists.
 	ConfigurationExists(ctx context.Context, id, typ, url string) (bool, error)
 	// IteratorConfigurations returns an iterator to all configurations stored
 	IteratorConfigurations(ctx context.Context, configurationType string) (IdentityConfigurationIterator, error)
+	// Notifier returns an IdentityConfigurationNotifier for this store to subscribe to configuration changes.
+	Notifier() (IdentityConfigurationNotifier, error)
 	// StoreIdentityData stores the passed identity and token information
 	StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 	// GetAuditInfo retrieves the audit info bounded to the given identity
