@@ -69,19 +69,26 @@ A [Request](../token/request.go) is a ledger-agnostic blueprint for a token tran
 
 ```mermaid
 sequenceDiagram
-    participant App as Application
-    participant TMS as TMS
+    autonumber
+    actor App as Application
+    participant TMS as Token Management<br/>Service
     participant WM as Wallet Manager
     participant NS as Network Service
     participant Ledger as DLT Ledger
 
-    App->>TMS: NewRequest()
-    App->>TMS: Transfer(Wallet, Amount, Recipient)
-    TMS->>WM: GetSigner(Identity)
-    App->>NS: Broadcast(Request)
-    NS->>Ledger: Submit Transaction
-    Ledger-->>NS: Finality Notification
-    NS-->>App: Transaction Confirmed
+    box darkgreen Token SDK Stack
+        participant TMS
+        participant WM
+        participant NS
+    end
+
+    App->>+TMS: NewRequest()
+    App->>+TMS: Transfer(Wallet, Amount, Recipient)
+    TMS->>+WM: GetSigner(Identity)
+    App->>+NS: Broadcast(Request)
+    NS->>+Ledger: Submit Transaction
+    Ledger-->>-NS: Finality Notification
+    NS-->>-App: Transaction Confirmed
 ```
 
 ## Token Vault and Selector

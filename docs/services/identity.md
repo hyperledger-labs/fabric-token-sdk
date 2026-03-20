@@ -80,8 +80,8 @@ classDiagram
     wallet_Service --> role_Role : Uses (via RoleRegistry)
     role_Role --> membership_KeyManagerProvider : Uses (via LocalMembership)
 
-    note for membership_KeyManagerProvider "Handles low-level crypto\nand identity verification"
-    note for wallet_Service "High-level management\nof wallets and roles"
+    note for membership_KeyManagerProvider "Handles low-level crypto<br/>and identity verification"
+    note for wallet_Service "High-level management<br/>of wallets and roles"
 ```
 
 ### LocalMembership

@@ -15,25 +15,31 @@ The service implements a standardized HTLC lifecycle to ensure secure, trustless
 
 ```mermaid
 sequenceDiagram
-    participant Alice (Network A)
-    participant Bob (Network B)
-    
+    autonumber
+    participant Alice as Party A<br/>(Network A)
+    participant Bob as Party B<br/>(Network B)
+
+    box darkgreen Token SDK Stack
+        participant Alice
+        participant Bob
+    end
+
     Note over Alice: 1. Generate Preimage & Lock (A)
-    Alice->>Alice: Generate random preimage 'S' and hash 'H = hash(S)'
-    Alice->>Alice: Create HTLC(H, timeout, Bob's Identity)
-    Alice->>Alice: Broadcast Lock Transaction on Network A
-    
+    Alice->>+Alice: Generate random preimage 'S' and hash 'H = hash(S)'
+    Alice->>+Alice: Create HTLC(H, timeout, Bob's Identity)
+    Alice->>+Alice: Broadcast Lock Transaction on Network A
+
     Note over Bob: 2. Lock (B)
-    Bob->>Bob: Wait for Network A Transaction
-    Bob->>Bob: Create HTLC(H, timeout/2, Alice's Identity)
-    Bob->>Bob: Broadcast Lock Transaction on Network B
-    
+    Bob->>+Bob: Wait for Network A Transaction
+    Bob->>+Bob: Create HTLC(H, timeout/2, Alice's Identity)
+    Bob->>+Bob: Broadcast Lock Transaction on Network B
+
     Note over Alice: 3. Release (B)
-    Alice->>Alice: Reveal 'S' to release tokens on Network B
-    Alice->>Bob: (Publicly revealed on Ledger B)
-    
+    Alice->>+Alice: Reveal 'S' to release tokens on Network B
+    Alice->>+Bob: (Publicly revealed on Ledger B)
+
     Note over Bob: 4. Release (A)
-    Bob->>Bob: Use 'S' from Ledger B to release tokens on Network A
+    Bob->>+Bob: Use 'S' from Ledger B to release tokens on Network A
 ```
 
 ## Key Capabilities

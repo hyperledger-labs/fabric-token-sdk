@@ -113,6 +113,78 @@ func SupportedTokenFormat(precision uint64) (token.Format, error) {
 
 For more information on how token formats are used in the SDK's token service, see the [Tokens Service documentation](./services/tokens.md).
 
+### Public Parameters Upgrade Process
+
+The Fabric Token SDK provides a structured approach for upgrading public parameters across the network. 
+This process ensures that all participants can smoothly transition to new cryptographic parameters while maintaining compatibility.
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Admin as Administrator<br/>(or Issuer)
+    participant Fabric as Ledger<br/>(Fabric/FabricX/etc)
+
+    box darkgreen Token SDK Stack
+        participant Network as Network Service
+        participant Provider as TMS Provider
+        participant TMS as Token Management<br/>Service
+        participant Driver as Driver API
+    end
+
+    Admin->>+Fabric: Generate & Publish<br/>New Public Parameters
+    Fabric->>+Network: Ledger Update<br/>Notification
+    deactivate Fabric
+
+    Network->>+Provider: GetManagementServiceProvider
+    Provider->>+TMS: Update/Create TMS<br/>(with new PP)
+    TMS->>+Driver: Set Public Parameters
+
+    Driver-->>-TMS: Ready for Token Operations
+    TMS-->>-Provider: TMS Instance
+    Provider-->>-Network: TMS Response
+    Network-->>-Admin: Update Complete<br/>(Optional Notification)
+```
+
+#### Process Overview
+
+1. **Generation**: New public parameters are created using tools like [tokengen](./development/tokengen.md) or custom processes
+2. **Publishing**: Parameters are distributed to the network backend (for Fabric: via chaincode transactions or configuration updates)
+3. **Detection**: The Network Service monitors the ledger for public parameter updates
+4. **Fetching**: The SDK retrieves new parameters through the `PublicParamsFetcher` interface
+5. **Update**: The `TokenManagerServiceProvider` compares new vs existing parameters and updates the TMS if changed
+6. **Propagation**: All subsequent token operations use the upgraded public parameters
+
+#### Verification
+
+After the upgrade process completes, administrators can verify that all nodes are synchronized by retrieving the public parameters using the Token API's PublicParametersManager. This ensures that the new parameters have been successfully propagated throughout the network.
+
+```go
+// Get the TMS for verification
+tms, err := token.GetManagementService(context, token.WithTMSID(myTMSID))
+if err != nil {
+    return err
+}
+
+// Get the Public Parameters Manager
+ppm := tms.PublicParametersManager()
+
+// Retrieve the current public parameters
+currentPP := ppm.PublicParameters()
+if currentPP == nil {
+    return fmt.Errorf("public parameters not available")
+}
+
+// Verify the parameters match the expected values
+// (Implementation-specific validation would go here)
+```
+
+#### Key References
+
+- See [Public Parameters Documentation](./public_parameters.md) for PP structure details
+- See [Driver API](./driverapi.md) for driver-PP interaction mechanisms
+- See [Tokens Service](./services/tokens.md) for how tokens service utilizes PP
+
 ### Recommendations for Driver Upgrades
 *   **Side-by-Side Migration**: If possible, deploy the new driver version on a subset of nodes first to verify transaction validation before a full network rollout.
 *   **Monitor "Spendable" Balance**: Use the `Balance` API to monitor the ratio of spendable vs. unspendable tokens. A sudden drop in spendable balance indicates a driver mismatch.

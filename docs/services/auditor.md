@@ -17,25 +17,33 @@ The Auditor Service is typically invoked during the `CollectEndorsements` phase 
 
 ```mermaid
 sequenceDiagram
+    autonumber
     participant Initiator
     participant TTX as TTX Service
     participant Auditor as Auditor Service
     participant Network as Network Service
 
+    box darkgreen Token SDK Stack
+        participant TTX
+        participant Auditor
+        participant Network
+    end
+
     Note over Initiator: Transaction Assembly
-    Initiator->>TTX: CollectEndorsements
-    TTX->>Auditor: AuditApproveView
-    
+    Initiator->>+TTX: CollectEndorsements
+    TTX->>+Auditor: AuditApproveView
+
     Note over Auditor: 1. De-obfuscate Request
-    Auditor->>Auditor: Verify Validity
-    Auditor->>Auditor: Inspect Actions & Metadata
-    
+    Auditor->>+Auditor: Verify Validity
+    Auditor->>+Auditor: Inspect Actions & Metadata
+
     Note over Auditor: 2. Sign & Store
-    Auditor->>Auditor: Generate Auditor Signature
-    Auditor->>Auditor: Update AuditDB
-    
-    Auditor-->>TTX: Auditor Signature
-    TTX->>Network: Request Approval
+    Auditor->>+Auditor: Generate Auditor Signature
+    Auditor->>+Auditor: Update AuditDB
+
+    Auditor-->>-TTX: Auditor Signature
+    TTX->>+Network: Request Approval
+    Network-->>-TTX: Request Approved
 ```
 
 ## Audit Management

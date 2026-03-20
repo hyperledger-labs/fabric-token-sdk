@@ -10,37 +10,45 @@ The lifecycle of a token transaction typically involves the following stages, co
 
 ```mermaid
 sequenceDiagram
+    autonumber
     participant Initiator
     participant Recipient
     participant Auditor
     participant Network as Network Service
     participant Ledger as DLT / Ledger
 
+    box darkgreen Token SDK Stack
+        participant Initiator
+        participant Recipient
+        participant Auditor
+        participant Network
+    end
+
     Note over Initiator: 1. Request Identities
-    Initiator->>Recipient: RequestRecipientIdentityView
-    Recipient-->>Initiator: Recipient Data (Identity + Audit Info)
+    Initiator->>+Recipient: RequestRecipientIdentityView
+    Recipient-->>-Initiator: Recipient Data (Identity + Audit Info)
 
     Note over Initiator: 2. Assemble Request
-    Initiator->>Initiator: Issue / Transfer / Redeem operations
+    Initiator->>+Initiator: Issue / Transfer / Redeem operations
 
     Note over Initiator: 3. Collect Endorsements
-    Initiator->>Initiator: Sign locally
-    Initiator->>Recipient: Request Signatures (for spent tokens)
-    Recipient-->>Initiator: Signature
-    Initiator->>Auditor: AuditApproveView
-    Auditor-->>Initiator: Auditor Signature
-    Initiator->>Network: RequestApproval (DLT Endorsement)
-    Network-->>Initiator: Endorsed Envelope
+    Initiator->>+Initiator: Sign locally
+    Initiator->>+Recipient: Request Signatures (for spent tokens)
+    Recipient-->>-Initiator: Signature
+    Initiator->>+Auditor: AuditApproveView
+    Auditor-->>-Initiator: Auditor Signature
+    Initiator->>+Network: RequestApproval (DLT Endorsement)
+    Network-->>-Initiator: Endorsed Envelope
 
     Note over Initiator: 4. Distribution & Ordering
-    Initiator->>Recipient: Distribute Transaction Metadata
-    Initiator->>Network: Broadcast Transaction
-    Network->>Ledger: Submit to Orderer
+    Initiator->>+Recipient: Distribute Transaction Metadata
+    Initiator->>+Network: Broadcast Transaction
+    Network->>+Ledger: Submit to Orderer
 
     Note over Initiator: 5. Finality Tracking
-    Initiator->>Network: Listen for Finality
-    Ledger-->>Network: Transaction Committed
-    Network-->>Initiator: Notify Finality
+    Initiator->>+Network: Listen for Finality
+    Ledger-->>-Network: Transaction Committed
+    Network-->>-Initiator: Notify Finality
 ```
 
 ## Transaction Creation
