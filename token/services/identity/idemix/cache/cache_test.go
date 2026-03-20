@@ -168,7 +168,8 @@ func TestProvisionIdentitiesError(t *testing.T) {
 
 // TestFetchIdentityFromCacheNilEntry verifies backend fallback for nil cache entries.
 func TestFetchIdentityFromCacheNilEntry(t *testing.T) {
-	backendCalled := make(chan struct{}, 1)
+	// Use buffered channel large enough for both provisionIdentities and fetchIdentityFromCache
+	backendCalled := make(chan struct{}, 100)
 
 	c := NewIdentityCache(func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 		backendCalled <- struct{}{}
