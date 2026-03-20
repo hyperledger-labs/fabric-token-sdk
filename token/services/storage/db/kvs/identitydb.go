@@ -123,7 +123,7 @@ func (s *IdentityStore) ConfigurationExists(ctx context.Context, id, configurati
 }
 
 func (s *IdentityStore) Notifier() (idriver.IdentityConfigurationNotifier, error) {
-	return nil, nil
+	return nil, storage.ErrNotSupported
 }
 
 func (s *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
