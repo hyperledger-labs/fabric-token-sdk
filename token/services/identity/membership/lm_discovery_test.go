@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,6 +33,7 @@ func TestLocalMembership_Discovery(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.NotifierReturns(nil, storage.ErrNotSupported)
 
 	km1 := &mock.KeyManager{}
 	km1.EnrollmentIDReturns("e1")
@@ -67,6 +69,7 @@ func TestLocalMembership_Discovery(t *testing.T) {
 
 	// Initially empty Load
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
+
 	err := lm.Load(ctx, nil, nil)
 	require.NoError(t, err)
 
@@ -100,6 +103,7 @@ func TestLocalMembership_DefaultOverride(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.NotifierReturns(nil, storage.ErrNotSupported)
 
 	km1 := &mock.KeyManager{}
 	km1.EnrollmentIDReturns("e1")
@@ -155,6 +159,7 @@ func TestLocalMembership_DoubleCheckedLocking(t *testing.T) {
 	iss := &mock.IdentityStoreService{}
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
+	iss.NotifierReturns(nil, storage.ErrNotSupported)
 
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("e1")
@@ -292,6 +297,7 @@ func TestLocalMembership_Close(t *testing.T) {
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
+	iss.NotifierReturns(nil, storage.ErrNotSupported)
 
 	kmp := &mock.KeyManagerProvider{}
 

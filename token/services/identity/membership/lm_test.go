@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -553,7 +554,7 @@ func TestLoad_Success(t *testing.T) {
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
-	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
+	iss.NotifierReturns(nil, storage.ErrNotSupported)
 
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("e1")
@@ -599,7 +600,7 @@ func TestLoad_WithTargets(t *testing.T) {
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
-	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
+	iss.NotifierReturns(nil, storage.ErrNotSupported)
 
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("e1")
@@ -687,6 +688,7 @@ func TestLoad_MergeStoredIdentities(t *testing.T) {
 	iss.ConfigurationExistsReturns(false, nil)
 	iss.AddConfigurationReturns(nil)
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
+	iss.NotifierReturns(nil, storage.ErrNotSupported)
 
 	// Stored identity
 	storedConfig := idriver.IdentityConfiguration{
@@ -742,6 +744,7 @@ func TestLoad_PickFirstAsDefault(t *testing.T) {
 	des := &mock.SignerDeserializerManager{}
 	iss := &mock.IdentityStoreService{}
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
+	iss.NotifierReturns(nil, storage.ErrNotSupported)
 
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("e1")
@@ -778,6 +781,7 @@ func TestLoad_AnonymousFiltering(t *testing.T) {
 	des := &mock.SignerDeserializerManager{}
 	iss := &mock.IdentityStoreService{}
 	iss.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
+	iss.NotifierReturns(nil, storage.ErrNotSupported)
 
 	// Non-anonymous key manager
 	kmNonAnon := &mock.KeyManager{}

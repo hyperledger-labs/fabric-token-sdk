@@ -49,6 +49,7 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 			notifier, err := db.Notifier()
 			if err != nil && errors.Is(err, storage.ErrNotSupported) {
 				t.Logf("notifier not supported, skip test")
+
 				return
 			}
 			require.NoError(xt, err)

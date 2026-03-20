@@ -229,6 +229,10 @@ func (l *LocalMembership) Close() {
 	l.closeOnce.Do(func() {
 		notifier, err := l.identityDB.Notifier()
 		if err != nil {
+			if errors.Is(err, storage.ErrNotSupported) {
+				// notithing to close
+				return
+			}
 			logger.Errorf("failed to get identity notifier: [%s]", err)
 		}
 		if err := notifier.UnsubscribeAll(); err != nil {
