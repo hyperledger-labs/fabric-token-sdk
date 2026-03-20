@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -183,6 +184,89 @@ func TestMapCleanupAfterManyTransactions(t *testing.T) {
 	}
 
 	t.Logf("Map properly cleaned up: %d entries (expected 0)", mapSize)
+}
+
+func TestNotifyClosedChannelDoesNotPanic(t *testing.T) {
+	// Regression test: Notify must not panic when a consumer closes its channel
+	// after the listener slice is cloned but before the send executes.
+	ss := NewStatusSupport()
+	txID := "txClosedCh"
+
+	ch1 := make(chan StatusEvent, 1)
+	ch2 := make(chan StatusEvent, 1)
+	ss.AddStatusListener(txID, ch1)
+	ss.AddStatusListener(txID, ch2)
+
+	// Simulate the consumer departing: close ch1 before Notify sends to it.
+	// Delete from map first (as dbFinality's defer does), then close.
+	ss.DeleteStatusListener(txID, ch1)
+	close(ch1)
+
+	event := StatusEvent{
+		Ctx:               t.Context(),
+		TxID:              txID,
+		ValidationCode:    0,
+		ValidationMessage: "should not panic",
+	}
+
+	// Notify should not panic even though ch1 is closed.
+	// ch1 is still in the clone because DeleteStatusListener races with Notify
+	// in production; here we force the issue by keeping ch1 in the slice via
+	// a second AddStatusListener call with a fresh reference.
+	// Instead, directly call safeSend to prove it handles closed channels.
+	ss.safeSend(event, ch1) // must not panic
+
+	// ch2 must still receive the event when Notify is called.
+	go ss.Notify(event)
+	select {
+	case e := <-ch2:
+		if e.TxID != txID {
+			t.Fatalf("Unexpected TxID: %s", e.TxID)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatalf("ch2 should have received the event")
+	}
+
+	ss.DeleteStatusListener(txID, ch2)
+}
+
+func TestNotifyContextCanceled(t *testing.T) {
+	// Notify must not block forever if the context is canceled and the channel
+	// buffer is full.
+	ss := NewStatusSupport()
+	txID := "txCtxCancel"
+
+	ch := make(chan StatusEvent, 1)
+	ss.AddStatusListener(txID, ch)
+
+	// Fill the buffer so the next send would block.
+	ch <- StatusEvent{TxID: "filler"}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel() // cancel immediately
+
+	event := StatusEvent{
+		Ctx:               ctx,
+		TxID:              txID,
+		ValidationCode:    0,
+		ValidationMessage: "ctx done",
+	}
+
+	// Notify should return promptly because ctx is already canceled.
+	done := make(chan struct{})
+	go func() {
+		ss.Notify(event)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// success — Notify did not block
+	case <-time.After(2 * time.Second):
+		t.Fatalf("Notify blocked despite canceled context")
+	}
+
+	ss.DeleteStatusListener(txID, ch)
 }
 
 func TestMapGrowthWithMultipleListenersPerTx(t *testing.T) {

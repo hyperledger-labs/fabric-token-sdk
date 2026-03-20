@@ -93,6 +93,25 @@ func (c *StatusSupport) Notify(event StatusEvent) {
 	c.mutex.RUnlock()
 
 	for _, listener := range clone {
-		listener <- event
+		c.safeSend(event, listener)
+	}
+}
+
+// safeSend sends the event to the listener channel without blocking indefinitely
+// and without panicking if the channel has been concurrently closed by its consumer.
+// After the RLock in Notify is released, a consumer may call DeleteStatusListener
+// followed by close(ch). A bare send would panic on a closed channel, and a blocking
+// send without a context guard could block forever if the buffer is full and the
+// consumer has departed. This method handles both cases.
+func (c *StatusSupport) safeSend(event StatusEvent, listener chan StatusEvent) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.WarnfContext(event.Ctx, "listener channel closed for tx [%s], skipping", event.TxID)
+		}
+	}()
+	select {
+	case listener <- event:
+	case <-event.Ctx.Done():
+		logger.WarnfContext(event.Ctx, "context canceled while notifying listener for tx [%s]", event.TxID)
 	}
 }
