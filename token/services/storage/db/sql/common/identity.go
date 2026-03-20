@@ -25,6 +25,7 @@ import (
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
@@ -183,18 +184,6 @@ func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.Identit
 		return err
 	}
 
-	if db.notifier != nil {
-		if e, ok := db.notifier.(interface {
-			EnqueueEvent(operation idriver.Operation, m map[idriver.ColumnKey]string)
-		}); ok {
-			e.EnqueueEvent(idriver.Insert, map[idriver.ColumnKey]string{
-				"id":   wp.ID,
-				"type": wp.Type,
-				"url":  wp.URL,
-			})
-		}
-	}
-
 	return nil
 }
 
@@ -257,6 +246,10 @@ func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url s
 
 // Notifier returns the IdentityNotifier associated with this store.
 func (db *IdentityStore) Notifier() (idriver.IdentityConfigurationNotifier, error) {
+	if db.notifier == nil {
+		return nil, storage.ErrNotSupported
+	}
+
 	return db.notifier, nil
 }
 

@@ -26,15 +26,14 @@ type configProvider interface {
 type Driver struct {
 	cp configProvider
 
-	TokenLock        lazy.Provider[sqlite.Config, *TokenLockStore]
-	Wallet           lazy.Provider[sqlite.Config, *WalletStore]
-	Identity         lazy.Provider[sqlite.Config, *IdentityStore]
-	IdentityNotifier lazy.Provider[sqlite.Config, *IdentityNotifier]
-	Token            lazy.Provider[sqlite.Config, *TokenStore]
-	TokenNotifier    lazy.Provider[sqlite.Config, *TokenNotifier]
-	AuditTx          lazy.Provider[sqlite.Config, *AuditTransactionStore]
-	OwnerTx          lazy.Provider[sqlite.Config, *OwnerTransactionStore]
-	KeyStore         lazy.Provider[sqlite.Config, *KeystoreStore]
+	TokenLock     lazy.Provider[sqlite.Config, *TokenLockStore]
+	Wallet        lazy.Provider[sqlite.Config, *WalletStore]
+	Identity      lazy.Provider[sqlite.Config, *IdentityStore]
+	Token         lazy.Provider[sqlite.Config, *TokenStore]
+	TokenNotifier lazy.Provider[sqlite.Config, *TokenNotifier]
+	AuditTx       lazy.Provider[sqlite.Config, *AuditTransactionStore]
+	OwnerTx       lazy.Provider[sqlite.Config, *OwnerTransactionStore]
+	KeyStore      lazy.Provider[sqlite.Config, *KeystoreStore]
 }
 
 func NewNamedDriver(config driver3.Config, dbProvider sqlite.DbProvider) driver3.NamedDriver {
@@ -56,7 +55,6 @@ func NewDriverWithDbProvider(config driver3.Config, dbProvider sqlite.DbProvider
 	d.TokenLock = newProviderWithKeyMapper(dbProvider, NewTokenLockStore)
 	d.Wallet = newProviderWithKeyMapper(dbProvider, NewWalletStore)
 	d.Identity = newIdentityStoreProvider(dbProvider)
-	d.IdentityNotifier = newProviderWithKeyMapper(dbProvider, NewIdentityNotifier)
 	d.Token = newProviderWithKeyMapper(dbProvider, NewTokenStore)
 	d.TokenNotifier = newProviderWithKeyMapper(dbProvider, NewTokenNotifier)
 	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore)
@@ -87,11 +85,6 @@ func newIdentityStoreProvider(dbProvider sqlite.DbProvider) lazy.Provider[sqlite
 			return nil, err
 		}
 
-		notifier, err := NewIdentityNotifier(dbs, tableNames)
-		if err != nil {
-			return nil, err
-		}
-
 		p, err := common2.NewIdentityStoreWithNotifier(
 			dbs.ReadDB,
 			dbs.WriteDB,
@@ -100,7 +93,7 @@ func newIdentityStoreProvider(dbProvider sqlite.DbProvider) lazy.Provider[sqlite
 			secondcache.NewTyped[[]byte](5000),
 			sqlite.NewConditionInterpreter(),
 			&sqlite.ErrorMapper{},
-			notifier,
+			nil,
 		)
 		if err != nil {
 			return nil, err

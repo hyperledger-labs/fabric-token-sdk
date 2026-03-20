@@ -13,10 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/require"
@@ -242,6 +244,9 @@ func TIdentityNotifier(t *testing.T, db driver.IdentityStore) {
 	ctx := t.Context()
 
 	notifier, err := db.Notifier()
+	if errors.Is(err, storage.ErrNotSupported) {
+		t.Skip("notifier not supported")
+	}
 	require.NoError(t, err)
 
 	result, err := collectDBEvents(notifier)

@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"gopkg.in/yaml.v2"
 )
@@ -230,11 +231,6 @@ func (l *LocalMembership) Close() {
 		if err != nil {
 			logger.Errorf("failed to get identity notifier: [%s]", err)
 		}
-		if notifier == nil {
-			logger.Errorf("no notifier available for [%s]", l.IdentityType)
-
-			return
-		}
 		if err := notifier.UnsubscribeAll(); err != nil {
 			logger.Errorf("failed to unsubscribe [%s]: [%s]", l.IdentityType, err)
 		}
@@ -416,10 +412,13 @@ func (l *LocalMembership) Load(ctx context.Context, identities []idriver.Configu
 func (l *LocalMembership) subscribeNotifier() error {
 	notifier, err := l.identityDB.Notifier()
 	if err != nil {
+		if errors.Is(err, storage.ErrNotSupported) {
+			logger.Warnf("identity notifier not supported")
+
+			return nil
+		}
+
 		return errors.Wrapf(err, "failed to get notifier")
-	}
-	if notifier == nil {
-		return errors.Wrapf(err, "no notifier available for [%s]", l.IdentityType)
 	}
 
 	err = notifier.Subscribe(func(operation idriver.Operation, record idriver.IdentityConfigurationRecord) {
