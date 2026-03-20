@@ -198,10 +198,41 @@ type TokenStore interface {
 	Balance(ctx context.Context, ownerEID string, typ token.Type) (uint64, error)
 	// SetSupportedTokenFormats sets the supported token formats
 	SetSupportedTokenFormats(formats []token.Format) error
+	// Notifier returns a TokenNotifier for this store to subscribe to token changes.
+	Notifier() (TokenNotifier, error)
 }
 
-// TokenNotifier is the observable version of TokenStore
-type TokenNotifier driver2.Notifier
+type (
+	// Operation defines the type of database operation (Insert, Update, etc.).
+	Operation = driver2.Operation
+	// ColumnKey defines the name of a database column.
+	ColumnKey = driver2.ColumnKey
+)
+
+const (
+	// Insert indicates a record was added to the table.
+	Insert = driver2.Insert
+	// Update indicates an existing record was modified.
+	Update = driver2.Update
+	// Delete indicates an existing record was deleted.
+	Delete = driver2.Delete
+)
+
+// TokenRecordReference contains the primary key fields of a token record.
+type TokenRecordReference struct {
+	// TxID is the unique identifier of the transaction that created the token.
+	TxID string
+	// Index is the index of the token in the transaction.
+	Index uint64
+}
+
+// TokenNotifier is used to subscribe to token changes in the storage.
+type TokenNotifier interface {
+	// Subscribe registers a callback function to be called when a token record is inserted, updated or deleted.
+	Subscribe(callback func(Operation, TokenRecordReference)) error
+	// UnsubscribeAll unregisters all callbacks.
+	UnsubscribeAll() error
+}
 
 // TokenNotifierDriver is the interface for a token database driver
 type TokenNotifierDriver interface {

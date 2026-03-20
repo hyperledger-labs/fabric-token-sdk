@@ -30,14 +30,13 @@ type Driver struct {
 	cp configProvider
 
 	// Lazy providers for various store types to ensure they are initialized only when needed.
-	TokenLock     lazy.Provider[postgres.Config, *TokenLockStore]
-	Wallet        lazy.Provider[postgres.Config, *WalletStore]
-	Identity      lazy.Provider[postgres.Config, *IdentityStore]
-	Token         lazy.Provider[postgres.Config, *TokenStore]
-	TokenNotifier lazy.Provider[postgres.Config, *TokenNotifier]
-	AuditTx       lazy.Provider[postgres.Config, *AuditTransactionStore]
-	OwnerTx       lazy.Provider[postgres.Config, *TransactionStore]
-	KeyStore      lazy.Provider[postgres.Config, *KeystoreStore]
+	TokenLock lazy.Provider[postgres.Config, *TokenLockStore]
+	Wallet    lazy.Provider[postgres.Config, *WalletStore]
+	Identity  lazy.Provider[postgres.Config, *IdentityStore]
+	Token     lazy.Provider[postgres.Config, *TokenStore]
+	AuditTx   lazy.Provider[postgres.Config, *AuditTransactionStore]
+	OwnerTx   lazy.Provider[postgres.Config, *TransactionStore]
+	KeyStore  lazy.Provider[postgres.Config, *KeystoreStore]
 }
 
 // NewNamedDriver returns a NamedDriver for Postgres.
@@ -62,13 +61,57 @@ func NewDriverWithDbProvider(config driver3.Config, dbProvider postgres.DbProvid
 	d.TokenLock = newProviderWithKeyMapper(dbProvider, NewTokenLockStore)
 	d.Wallet = newProviderWithKeyMapper(dbProvider, NewWalletStore)
 	d.Identity = newIdentityStoreProvider(dbProvider)
-	d.Token = newProviderWithKeyMapper(dbProvider, NewTokenStore)
-	d.TokenNotifier = newTokenNotifierProvider(dbProvider)
+	d.Token = newTokenStoreProvider(dbProvider)
 	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore)
 	d.OwnerTx = newProviderWithKeyMapper(dbProvider, NewTransactionStore)
 	d.KeyStore = newProviderWithKeyMapper(dbProvider, NewKeystoreStore)
 
 	return d
+}
+
+// newTokenStoreProvider returns a lazy provider for TokenStore.
+func newTokenStoreProvider(dbProvider postgres.DbProvider) lazy.Provider[postgres.Config, *TokenStore] {
+	return lazy.NewProviderWithKeyMapper(key, func(o postgres.Config) (*TokenStore, error) {
+		opts := postgres.Opts{
+			DataSource:      o.DataSource,
+			MaxOpenConns:    o.MaxOpenConns,
+			MaxIdleConns:    *o.MaxIdleConns,
+			MaxIdleTime:     *o.MaxIdleTime,
+			TablePrefix:     o.TablePrefix,
+			TableNameParams: o.TableNameParams,
+			Tracing:         o.Tracing,
+		}
+		dbs, err := dbProvider.Get(opts)
+		if err != nil {
+			return nil, err
+		}
+		tableNames, err := common3.GetTableNames(o.TablePrefix, o.TableNameParams...)
+		if err != nil {
+			return nil, err
+		}
+
+		// notifier
+		notifier, err := NewTokenNotifier(dbs, tableNames, o.DataSource)
+		if err != nil {
+			return nil, err
+		}
+
+		// db
+		p, err := NewTokenStoreWithNotifier(dbs, tableNames, notifier)
+		if err != nil {
+			return nil, err
+		}
+		if !o.SkipCreateTable {
+			if err := p.CreateSchema(); err != nil {
+				return nil, err
+			}
+			if err := notifier.CreateSchema(); err != nil {
+				return nil, err
+			}
+		}
+
+		return p, nil
+	})
 }
 
 // newIdentityStoreProvider returns a lazy provider for IdentityStore.
@@ -175,16 +218,6 @@ func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (drive
 	return d.Token.Get(*opts)
 }
 
-// NewTokenNotifier returns a new TokenNotifier.
-func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string) (driver3.TokenNotifier, error) {
-	opts, err := d.cp.GetOpts(name, params...)
-	if err != nil {
-		return nil, err
-	}
-
-	return d.TokenNotifier.Get(*opts)
-}
-
 // NewAuditTransaction returns a new AuditTransactionStore.
 func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver3.AuditTransactionStore, error) {
 	opts, err := d.cp.GetOpts(name, append(params, "aud")...)
@@ -232,40 +265,6 @@ func newProviderWithKeyMapper[V common.DBObject](dbProvider postgres.DbProvider,
 		if !o.SkipCreateTable {
 			if err := p.CreateSchema(); err != nil {
 				return utils.Zero[V](), err
-			}
-		}
-
-		return p, nil
-	})
-}
-
-// newTokenNotifierProvider returns a lazy provider for TokenNotifier.
-func newTokenNotifierProvider(dbProvider postgres.DbProvider) lazy.Provider[postgres.Config, *TokenNotifier] {
-	return lazy.NewProviderWithKeyMapper(key, func(o postgres.Config) (*TokenNotifier, error) {
-		opts := postgres.Opts{
-			DataSource:      o.DataSource,
-			MaxOpenConns:    o.MaxOpenConns,
-			MaxIdleConns:    *o.MaxIdleConns,
-			MaxIdleTime:     *o.MaxIdleTime,
-			TablePrefix:     o.TablePrefix,
-			TableNameParams: o.TableNameParams,
-			Tracing:         o.Tracing,
-		}
-		dbs, err := dbProvider.Get(opts)
-		if err != nil {
-			return nil, err
-		}
-		tableNames, err := common3.GetTableNames(o.TablePrefix, o.TableNameParams...)
-		if err != nil {
-			return nil, err
-		}
-		p, err := NewTokenNotifier(dbs, tableNames, o.DataSource)
-		if err != nil {
-			return nil, err
-		}
-		if !o.SkipCreateTable {
-			if err := p.CreateSchema(); err != nil {
-				return nil, err
 			}
 		}
 

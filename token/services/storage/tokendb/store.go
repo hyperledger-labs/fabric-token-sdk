@@ -16,22 +16,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 )
 
-//go:generate counterfeiter -o mock/token_store_service_manager.go --fake-name TokenStoreServiceManager . StoreServiceManager
-
 type (
+	//go:generate counterfeiter -o mock/token_store_service_manager.go --fake-name TokenStoreServiceManager . StoreServiceManager
 	StoreServiceManager db.StoreServiceManager[*StoreService]
-	NotifierManager     db.StoreServiceManager[*Notifier]
 )
 
-type Notifier struct {
-	driver.TokenNotifier
-}
-
 var managerType = reflect.TypeOf((*StoreServiceManager)(nil))
-
-func NewNotifierManager(cp db.ConfigService, drivers multiplexed.Driver) NotifierManager {
-	return db.NewStoreServiceManager(cp, "tokendb.persistence", drivers.NewTokenNotifier, func(p driver.TokenNotifier) (*Notifier, error) { return &Notifier{p}, nil })
-}
 
 func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
 	return db.NewStoreServiceManager(cp, "tokendb.persistence", drivers.NewToken, newStoreService)

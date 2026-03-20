@@ -26,14 +26,13 @@ type configProvider interface {
 type Driver struct {
 	cp configProvider
 
-	TokenLock     lazy.Provider[sqlite.Config, *TokenLockStore]
-	Wallet        lazy.Provider[sqlite.Config, *WalletStore]
-	Identity      lazy.Provider[sqlite.Config, *IdentityStore]
-	Token         lazy.Provider[sqlite.Config, *TokenStore]
-	TokenNotifier lazy.Provider[sqlite.Config, *TokenNotifier]
-	AuditTx       lazy.Provider[sqlite.Config, *AuditTransactionStore]
-	OwnerTx       lazy.Provider[sqlite.Config, *OwnerTransactionStore]
-	KeyStore      lazy.Provider[sqlite.Config, *KeystoreStore]
+	TokenLock lazy.Provider[sqlite.Config, *TokenLockStore]
+	Wallet    lazy.Provider[sqlite.Config, *WalletStore]
+	Identity  lazy.Provider[sqlite.Config, *IdentityStore]
+	Token     lazy.Provider[sqlite.Config, *TokenStore]
+	AuditTx   lazy.Provider[sqlite.Config, *AuditTransactionStore]
+	OwnerTx   lazy.Provider[sqlite.Config, *OwnerTransactionStore]
+	KeyStore  lazy.Provider[sqlite.Config, *KeystoreStore]
 }
 
 func NewNamedDriver(config driver3.Config, dbProvider sqlite.DbProvider) driver3.NamedDriver {
@@ -56,7 +55,6 @@ func NewDriverWithDbProvider(config driver3.Config, dbProvider sqlite.DbProvider
 	d.Wallet = newProviderWithKeyMapper(dbProvider, NewWalletStore)
 	d.Identity = newIdentityStoreProvider(dbProvider)
 	d.Token = newProviderWithKeyMapper(dbProvider, NewTokenStore)
-	d.TokenNotifier = newProviderWithKeyMapper(dbProvider, NewTokenNotifier)
 	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore)
 	d.OwnerTx = newProviderWithKeyMapper(dbProvider, NewTransactionStore)
 	d.KeyStore = newProviderWithKeyMapper(dbProvider, NewKeystoreStore)
@@ -151,15 +149,6 @@ func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (drive
 	}
 
 	return d.Token.Get(*opts)
-}
-
-func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string) (driver3.TokenNotifier, error) {
-	opts, err := d.cp.GetOpts(name, params...)
-	if err != nil {
-		return nil, err
-	}
-
-	return d.TokenNotifier.Get(*opts)
 }
 
 func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver3.AuditTransactionStore, error) {

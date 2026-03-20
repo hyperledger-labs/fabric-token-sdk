@@ -11,8 +11,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -44,7 +46,11 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 			tokenDB, ok := db.(TestTokenDB)
 			assert.True(xt, ok)
 			defer utils.IgnoreError(tokenDB.Close)
-			notifier, err := driver.NewTokenNotifier("", c.Name)
+			notifier, err := db.Notifier()
+			if err != nil && errors.Is(err, storage.ErrNotSupported) {
+				t.Logf("notifier not supported, skip test")
+				return
+			}
 			require.NoError(xt, err)
 			c.Fn(t, db.(TestTokenDB), notifier)
 		})

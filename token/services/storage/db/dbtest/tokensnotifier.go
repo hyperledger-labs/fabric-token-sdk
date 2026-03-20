@@ -10,7 +10,6 @@ import (
 	"context"
 	"testing"
 
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
@@ -33,10 +32,45 @@ var TokenNotifierCases = []struct {
 	Name string
 	Fn   func(*testing.T, TestTokenDB, driver.TokenNotifier)
 }{
+	{"TokenNotifier", TTokenNotifier},
 	{"SubscribeStore", TSubscribeStore},
 	{"SubscribeStoreDelete", TSubscribeStoreDelete},
 	{"SubscribeStoreNoCommit", TSubscribeStoreNoCommit},
 	{"SubscribeRead", TSubscribeRead},
+}
+
+func TTokenNotifier(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
+	t.Helper()
+	ctx := t.Context()
+
+	result, err := collectDBEvents[driver.TokenRecordReference](&tokenSubscriber{notifier: notifier})
+	require.NoError(t, err)
+
+	tr := driver.TokenRecord{
+		TxID:           "tx-notify-1",
+		Index:          0,
+		IssuerRaw:      []byte{},
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x02",
+		Type:           TST,
+		Amount:         2,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
+	}
+	require.NoError(t, db.StoreToken(ctx, tr, []string{"alice"}))
+
+	require.NoError(t, result.AssertSize(1))
+	values := result.Values()
+	require.Equal(t, driver.Insert, values[0].Op)
+	require.Equal(t, driver.TokenRecordReference{
+		TxID:  tr.TxID,
+		Index: tr.Index,
+	}, values[0].Val)
 }
 
 var tokenRecords = []driver.TokenRecord{
@@ -78,13 +112,13 @@ type tokenSubscriber struct {
 	notifier driver.TokenNotifier
 }
 
-func (t *tokenSubscriber) Subscribe(f func(operation driver2.Operation, vals map[driver2.ColumnKey]string)) error {
+func (t *tokenSubscriber) Subscribe(f func(operation driver.Operation, vals driver.TokenRecordReference)) error {
 	return t.notifier.Subscribe(f)
 }
 
 func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
-	result, err := collectDBEvents(&tokenSubscriber{notifier: notifier})
+	result, err := collectDBEvents[driver.TokenRecordReference](&tokenSubscriber{notifier: notifier})
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
@@ -97,7 +131,7 @@ func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier
 
 func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
-	result, err := collectDBEvents(&tokenSubscriber{notifier: notifier})
+	result, err := collectDBEvents[driver.TokenRecordReference](&tokenSubscriber{notifier: notifier})
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
@@ -111,7 +145,7 @@ func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNo
 
 func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
-	result, err := collectDBEvents(&tokenSubscriber{notifier: notifier})
+	result, err := collectDBEvents[driver.TokenRecordReference](&tokenSubscriber{notifier: notifier})
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
@@ -123,7 +157,7 @@ func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.Token
 
 func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
-	result, err := collectDBEvents(&tokenSubscriber{notifier: notifier})
+	result, err := collectDBEvents[driver.TokenRecordReference](&tokenSubscriber{notifier: notifier})
 	assert.Nil(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)

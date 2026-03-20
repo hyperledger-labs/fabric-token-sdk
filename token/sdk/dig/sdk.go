@@ -152,14 +152,13 @@ func (p *SDK) Install() error {
 		),
 
 		// selector service
-		p.Container().Provide(func(tokenStoreServiceManager tokendb.StoreServiceManager, notifierManager tokendb.NotifierManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
-			return sherdlock.NewFetcherProvider(tokenStoreServiceManager, notifierManager, metricsProvider, sherdlock.Mixed)
+		p.Container().Provide(func(tokenStoreServiceManager tokendb.StoreServiceManager, metricsProvider metrics.Provider) sherdlock.FetcherProvider {
+			return sherdlock.NewFetcherProvider(tokenStoreServiceManager, metricsProvider, sherdlock.Mixed)
 		}),
 
 		// storage
 		p.Container().Provide(ttxdb.NewStoreServiceManager),
 		p.Container().Provide(tokendb.NewStoreServiceManager),
-		p.Container().Provide(tokendb.NewNotifierManager),
 		p.Container().Provide(auditdb.NewStoreServiceManager),
 		p.Container().Provide(identitydb.NewStoreServiceManager, dig.As(new(identity.IdentityStoreServiceManager))),
 		p.Container().Provide(keystoredb.NewStoreServiceManager, dig.As(new(identity.KeystoreStoreServiceManager))),

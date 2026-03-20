@@ -24,8 +24,6 @@ type Driver interface {
 
 	NewToken(driver.PersistenceName, ...string) (TokenStore, error)
 
-	NewTokenNotifier(driver.PersistenceName, ...string) (TokenNotifier, error)
-
 	NewAuditTransaction(driver.PersistenceName, ...string) (AuditTransactionStore, error)
 
 	NewOwnerTransaction(driver.PersistenceName, ...string) (TokenTransactionStore, error)

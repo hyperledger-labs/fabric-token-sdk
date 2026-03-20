@@ -78,15 +78,6 @@ func (d Driver) NewToken(name driver2.PersistenceName, params ...string) (driver
 	return dr.NewToken(name, params...)
 }
 
-func (d Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string) (driver4.TokenNotifier, error) {
-	dr, err := d.getDriver(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return dr.NewTokenNotifier(name, params...)
-}
-
 func (d Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver4.AuditTransactionStore, error) {
 	dr, err := d.getDriver(name)
 	if err != nil {

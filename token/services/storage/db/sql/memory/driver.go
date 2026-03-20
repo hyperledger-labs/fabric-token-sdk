@@ -46,10 +46,6 @@ func (d *Driver) NewToken(_ driver2.PersistenceName, params ...string) (driver3.
 	return ((*sqlite2.Driver)(d)).Token.Get(mem.Op.GetConfig(params...))
 }
 
-func (d *Driver) NewTokenNotifier(_ driver2.PersistenceName, params ...string) (driver3.TokenNotifier, error) {
-	return ((*sqlite2.Driver)(d)).TokenNotifier.Get(mem.Op.GetConfig(params...))
-}
-
 func (d *Driver) NewAuditTransaction(_ driver2.PersistenceName, params ...string) (driver3.AuditTransactionStore, error) {
 	return ((*sqlite2.Driver)(d)).AuditTx.Get(mem.Op.GetConfig(params...))
 }
