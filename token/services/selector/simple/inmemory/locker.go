@@ -177,13 +177,19 @@ func (d *locker) Start() {
 func (d *locker) scan(ctx context.Context) {
 	for {
 		logger.DebugfContext(ctx, "token collector: scan locked tokens")
-		var removeList []token2.ID
+		// Track both token ID and the txID that was observed during the scan,
+		// so we can re-validate before deleting (prevents TOCTOU race with Lock/reclaim).
+		type removeEntry struct {
+			id   token2.ID
+			txID string
+		}
+		var removeList []removeEntry
 		d.lock.RLock()
 		for id, entry := range d.locked {
 			status, _, err := d.ttxdb.GetStatus(ctx, entry.TxID)
 			if err != nil {
 				logger.Warnf("failed getting status for token [%s] locked by [%s], remove", id, entry)
-				removeList = append(removeList, id)
+				removeList = append(removeList, removeEntry{id: id, txID: entry.TxID})
 
 				continue
 			}
@@ -191,11 +197,11 @@ func (d *locker) scan(ctx context.Context) {
 			case ttxdb.Confirmed:
 				// remove only if elapsed enough time from last access, to avoid concurrency issue
 				if time.Since(entry.LastAccess) > d.validTxEvictionTimeout {
-					removeList = append(removeList, id)
+					removeList = append(removeList, removeEntry{id: id, txID: entry.TxID})
 					logger.DebugfContext(ctx, "token [%s] locked by [%s] in status [%s], time elapsed, remove", id, entry, ttxdb.TxStatusMessage[status])
 				}
 			case ttxdb.Deleted:
-				removeList = append(removeList, id)
+				removeList = append(removeList, removeEntry{id: id, txID: entry.TxID})
 				logger.DebugfContext(ctx, "token [%s] locked by [%s] in status [%s], remove", id, entry, ttxdb.TxStatusMessage[status])
 			default:
 				logger.DebugfContext(ctx, "token [%s] locked by [%s] in status [%s], skip", id, entry, ttxdb.TxStatusMessage[status])
@@ -206,7 +212,13 @@ func (d *locker) scan(ctx context.Context) {
 		d.lock.Lock()
 		logger.DebugfContext(ctx, "token collector: freeing [%d] items", len(removeList))
 		for _, s := range removeList {
-			delete(d.locked, s)
+			// Re-validate: only delete if the entry still belongs to the same
+			// transaction that was inspected during the RLock scan phase.
+			// Between RUnlock and Lock, a Lock(reclaim=true) call may have
+			// reclaimed this token and re-locked it for a new transaction.
+			if entry, ok := d.locked[s.id]; ok && entry.TxID == s.txID {
+				delete(d.locked, s.id)
+			}
 		}
 		d.lock.Unlock()
 
