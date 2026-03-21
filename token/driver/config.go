@@ -6,21 +6,28 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-// Configuration provides functions to access the configuration of a given TMS
+// Configuration provides methods for accessing the configuration of a specific Token Management Service (TMS).
+// It abstracts the configuration's source and structure, allowing the TMS to retrieve settings
+// such as identifiers, paths, and values in different formats.
 //
 //go:generate counterfeiter -o mock/configuration.go -fake-name Configuration . Configuration
 type Configuration interface {
-	// ID identities the TMS this configuration refers to.
+	// ID returns the unique identifier of the TMS to which this configuration applies.
 	ID() TMSID
-	// IsSet checks to see if the key has been set in any of the data locations
+
+	// IsSet checks if a specific configuration key is defined.
 	IsSet(key string) bool
-	// UnmarshalKey takes a single key and unmarshals it into a struct.
-	// The key must be relative to the TMS this configuration refers to.
+
+	// UnmarshalKey decodes the configuration value associated with a key into a provided struct or interface.
+	// The key is typically relative to the TMS configuration block.
 	UnmarshalKey(key string, rawVal interface{}) error
-	// GetString returns the value associated with the key as a string
+
+	// GetString retrieves the value for a key as a string.
 	GetString(key string) string
-	// GetBool returns the value associated with the key as a bool
+
+	// GetBool retrieves the value for a key as a boolean.
 	GetBool(key string) bool
-	// TranslatePath translates the passed path relative to the config path
+
+	// TranslatePath converts a relative configuration path into an absolute file system path.
 	TranslatePath(path string) string
 }

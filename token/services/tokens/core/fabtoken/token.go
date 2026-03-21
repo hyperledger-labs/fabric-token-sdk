@@ -16,22 +16,27 @@ import (
 )
 
 const (
+	// Type is the identifier for the Fabtoken (cleartext) token representation.
 	Type driver.Type = 1
 )
 
-// Token carries the output of an action
+// Token represents a token where its type, value, and owner are stored in the clear on the ledger.
+// This matches the default Hyperledger Fabric token implementation (Fabtoken).
 type Token = token2.Token
 
-// Metadata contains a serialization of the issuer of the token..
-// Type, value and owner of token can be derived from the token itself.
+// Metadata contains information associated with a Fabtoken, primarily the identity of the issuer.
+// Since the token itself is in the clear, metadata is used for supplemental information like issuer verification.
 type Metadata struct {
+	// Issuer is the serialized identity of the entity that issued the token.
 	Issuer []byte
 }
 
+// WrapTokenWithType serializes the token and wraps it with the Fabtoken type identifier.
 func WrapTokenWithType(token driver.Token) (driver.Token, error) {
 	return tokens.WrapWithType(Type, token)
 }
 
+// UnmarshalTypedToken deserializes a byte slice into a TypedToken and verifies it matches the Fabtoken type.
 func UnmarshalTypedToken(token driver.Token) (*tokens.TypedToken, error) {
 	ttoken, err := tokens.UnmarshalTypedToken(token)
 	if err != nil {
@@ -44,10 +49,12 @@ func UnmarshalTypedToken(token driver.Token) (*tokens.TypedToken, error) {
 	return ttoken, nil
 }
 
+// WrapMetadataWithType serializes the metadata and wraps it with the Fabtoken type identifier.
 func WrapMetadataWithType(metadata driver.Metadata) (driver.Metadata, error) {
 	return tokens.WrapMetadataWithType(Type, metadata)
 }
 
+// UnmarshalTypedMetadata deserializes a byte slice into a TypedMetadata and verifies it matches the Fabtoken type.
 func UnmarshalTypedMetadata(metadata driver.Metadata) (*tokens.TypedMetadata, error) {
 	tmetadata, err := tokens.UnmarshalTypedMetadata(metadata)
 	if err != nil {
@@ -60,6 +67,7 @@ func UnmarshalTypedMetadata(metadata driver.Metadata) (*tokens.TypedMetadata, er
 	return tmetadata, nil
 }
 
+// UnmarshalToken deserializes raw bytes into a cleartext Token structure.
 func UnmarshalToken(raw []byte) (*Token, error) {
 	token := &Token{}
 	if err := json.Unmarshal(raw, &token); err != nil {

@@ -32,21 +32,24 @@ type IssueOptions struct {
 	Wallet IssuerWallet
 }
 
-// IssueService models the token issue service
+// IssueService defines the methods to manage the token issuance lifecycle.
 //
 //go:generate counterfeiter -o mock/issue_service.go -fake-name IssueService . IssueService
 type IssueService interface {
-	// Issue generates an IssuerAction whose tokens are issued by the passed identity.
-	// The tokens to be issued are passed as pairs (value, owner).
-	// In addition, a set of options can be specified to further customize the issue command.
-	// The function returns an IssuerAction, the associated metadata, and the identity of the issuer (depending on the implementation, it can be different from
-	// the one passed in input).
-	// The metadata is an array with an entry for each output created by the action.
+	// Issue generates an IssuerAction for the issuance of tokens of the specified type.
+	// It takes the identity of the issuer, the token type, and a list of values and their respective owners.
+	// Optional configuration can be provided through IssueOptions.
+	// The method returns:
+	// - An IssueAction, which captures the issuance details for the ledger.
+	// - IssueMetadata, containing additional information about the issuance for the requester.
+	// - An error if the issuance generation fails.
 	Issue(ctx context.Context, issuerIdentity Identity, tokenType token.Type, values []uint64, owners [][]byte, opts *IssueOptions) (IssueAction, *IssueMetadata, error)
 
-	// VerifyIssue checks the well-formedness of the passed IssuerAction with the respect to the passed metadata
+	// VerifyIssue validates the well-formedness and correctness of an IssueAction.
+	// It checks the action against the provided metadata to ensure that the issuance is valid
+	// according to the driver's rules.
 	VerifyIssue(ctx context.Context, ia IssueAction, metadata []*IssueOutputMetadata) error
 
-	// DeserializeIssueAction deserializes the passed bytes into an IssuerAction
+	// DeserializeIssueAction reconstructs an IssueAction from its serialized byte representation.
 	DeserializeIssueAction(raw []byte) (IssueAction, error)
 }

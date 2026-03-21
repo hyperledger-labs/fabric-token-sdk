@@ -328,6 +328,6 @@ For deeper dives into specific components, consult the following documentation:
 
 *   **Concepts & Architecture**: [`tokensdk.md`](./tokensdk.md) - High-level overview of the SDK, terminology, and architecture.
 *   **API Specification**: [`tokenapi.md`](./tokenapi.md) - Detailed explanation of the Token API, Token Requests, and Wallet Manager.
-*   **Configuration**: [`core-token.md`](./core-token.md) - Reference for compiling `core.yaml` and configuring the SDK.
+*   **Configuration**: [`core-token.md`](configuration.md) - Reference for compiling `core.yaml` and configuring the SDK.
 *   **Services**: [`services.md`](./services.md) - Overview of the supporting services like Identity and Network services.
 *   **Drivers**: [`driverapi.md`](./driverapi.md) - Information on implementing custom token drivers.
