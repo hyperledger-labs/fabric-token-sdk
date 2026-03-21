@@ -469,8 +469,8 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver4.Transact
 			return errors.Wrapf(err, "error generating uuid")
 		}
 		if r.Amount.BitLen() > 255 {
-        return errors.Errorf("amount [%s] exceeds maximum supported size of 255 bits", r.Amount.String())
-    }
+			return errors.Errorf("amount [%s] exceeds maximum supported size of 255 bits", r.Amount.String())
+		}
 		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.String(), r.Timestamp.UTC()}
 	}
 
