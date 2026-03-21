@@ -22,6 +22,7 @@ func (b *BigInt) Scan(value interface{}) error {
 	if value == nil {
 		b.Int = new(big.Int)
 		b.SetInt64(0)
+
 		return nil
 	}
 
@@ -34,6 +35,7 @@ func (b *BigInt) Scan(value interface{}) error {
 	case int64:
 		b.Int = new(big.Int)
 		b.SetInt64(v)
+
 		return nil
 	default:
 		return fmt.Errorf("cannot scan type %T into BigInt", value)
@@ -45,5 +47,6 @@ func (b *BigInt) Scan(value interface{}) error {
 	if _, ok := b.SetString(str, 10); !ok {
 		return fmt.Errorf("failed to parse NUMERIC %q into big.Int", str)
 	}
+
 	return nil
 }
