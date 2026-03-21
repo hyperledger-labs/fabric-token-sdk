@@ -8,76 +8,77 @@ package driver
 
 import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
-// SetupAction is the action used to update the public parameters
+// SetupAction defines the interface for actions that update the driver's public parameters.
 type SetupAction interface {
+	// GetSetupParameters returns the serialized public parameters from the setup action.
 	GetSetupParameters() ([]byte, error)
 }
 
 //go:generate counterfeiter -o mock/ia.go -fake-name IssueAction . IssueAction
 
-// IssueAction is the action used to issue tokens
+// IssueAction represents a single token issuance event on the ledger.
 type IssueAction interface {
 	Action
 	ActionWithInputs
-	// Serialize returns the serialized version of the action
+	// Serialize converts the action into its serialized byte representation.
 	Serialize() ([]byte, error)
-	// NumOutputs returns the number of outputs of the action
+	// NumOutputs returns the total number of tokens created by this issuance.
 	NumOutputs() int
-	// GetSerializedOutputs returns the serialized outputs of the action
+	// GetSerializedOutputs retrieves the serialized representation of each created token.
 	GetSerializedOutputs() ([][]byte, error)
-	// GetOutputs returns the outputs of the action
+	// GetOutputs returns the list of created tokens as Output interfaces.
 	GetOutputs() []Output
-	// IsAnonymous returns true if the issuer is anonymous
+	// IsAnonymous indicates whether the issuer's identity is hidden.
 	IsAnonymous() bool
-	// GetIssuer returns the issuer of the action
+	// GetIssuer returns the identifier of the party that issued the tokens.
 	GetIssuer() []byte
-	// GetMetadata returns the metadata of the action
+	// GetMetadata returns any additional driver-specific metadata associated with the issuance.
 	GetMetadata() map[string][]byte
-	// IsGraphHiding returns true if the action is graph hiding
+	// IsGraphHiding indicates whether the link between inputs and outputs is obfuscated.
 	IsGraphHiding() bool
-	// ExtraSigners returns the extra signers of the action
+	// ExtraSigners returns any additional identities that must sign this action.
 	ExtraSigners() []Identity
 }
 
-// Input models an input of an action
+// Input represents a specific token that is being spent in a transaction.
 type Input interface {
-	// GetOwner returns the owner of this token
+	// GetOwner returns the cryptographic owner of the token.
 	GetOwner() []byte
 }
 
-// Output models an output of an action
+// Output represents a token that is being created as a result of a transaction.
 type Output interface {
-	// Serialize returns the serialized version of the output
+	// Serialize converts the output into its serialized byte representation.
 	Serialize() ([]byte, error)
-	// IsRedeem returns true if the output is a redeem output
+	// IsRedeem indicates whether the output is being redeemed (burned) rather than assigned to an owner.
 	IsRedeem() bool
-	// GetOwner returns the owner of this token
+	// GetOwner returns the cryptographic owner assigned to the created token.
 	GetOwner() []byte
 }
 
 //go:generate counterfeiter -o mock/ta.go -fake-name TransferAction . TransferAction
 
-// TransferAction is the action used to transfer tokens
+// TransferAction represents a token transfer event on the ledger.
 type TransferAction interface {
 	Action
 	ActionWithInputs
-	// Serialize returns the serialized version of the action
+	// Serialize converts the action into its serialized byte representation.
 	Serialize() ([]byte, error)
-	// NumOutputs returns the number of outputs of the action
+	// NumOutputs returns the total number of tokens created by this transfer.
 	NumOutputs() int
-	// GetSerializedOutputs returns the serialized outputs of the action
+	// GetSerializedOutputs retrieves the serialized representation of each created token.
 	GetSerializedOutputs() ([][]byte, error)
-	// GetOutputs returns the outputs of the action
+	// GetOutputs returns the list of created tokens as Output interfaces.
 	GetOutputs() []Output
-	// IsRedeemAt returns true if the output is a redeem output at the passed index
+	// IsRedeemAt checks if a specific output, by its index, is a redeem output.
 	IsRedeemAt(index int) bool
-	// SerializeOutputAt returns the serialized output at the passed index
+	// SerializeOutputAt returns the serialized representation of a specific output.
 	SerializeOutputAt(index int) ([]byte, error)
-	// IsGraphHiding returns true if the action is graph hiding
+	// IsGraphHiding indicates whether the link between inputs and outputs is obfuscated.
 	IsGraphHiding() bool
-	// GetMetadata returns the action's metadata
+	// GetMetadata returns any additional driver-specific metadata associated with the transfer.
 	GetMetadata() map[string][]byte
-	// GetIssuer returns a non-empty identity of the issuer in case the transfer contains redeeming outputs
+	// GetIssuer returns the identity of the issuer in cases where the transfer includes redemption.
 	GetIssuer() Identity
 }
 
