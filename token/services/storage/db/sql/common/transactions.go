@@ -158,19 +158,13 @@ func (db *TransactionStore) QueryTransactions(ctx context.Context, params driver
 	}
 
 	results := common.NewIterator(rows, func(r *driver4.TransactionRecord) error {
-		var amountRaw interface{}
+		var amount BigInt
 		var appMeta []byte
 		var pubMeta []byte
-		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amountRaw, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
+		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amount, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
 			return err
 		}
-		amountStr := fmt.Sprintf("%v", amountRaw)
-
-		bi, ok := new(big.Int).SetString(amountStr, 10)
-		if !ok {
-			return errors.Errorf("invalid amount [%s]", amountStr)
-		}
-		r.Amount = bi
+		r.Amount = amount.Int
 
 		return errors2.Join(
 			unmarshal(appMeta, &r.ApplicationMetadata),
@@ -474,6 +468,9 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver4.Transact
 		if err != nil {
 			return errors.Wrapf(err, "error generating uuid")
 		}
+		if r.Amount.BitLen() > 255 {
+        return errors.Errorf("amount [%s] exceeds maximum supported size of 255 bits", r.Amount.String())
+    }
 		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.String(), r.Timestamp.UTC()}
 	}
 
