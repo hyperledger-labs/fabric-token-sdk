@@ -18,7 +18,7 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	for _, t := range integration.WebSocketNoReplicationOnly {
+	for _, t := range integration.AllTestTypes {
 		Describe("Fungible with Auditor ne Issuer", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, t.ReplicationFactor, "alice", "bob")
 			BeforeEach(ts.Setup)
@@ -35,6 +35,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 		CommType:        commType,
 		SDKs:            []nodepkg.SDK{&fall.SDK{}},
 		ReplicationOpts: opts,
+		FSCLogSpec:      "debug",
 	}))
 
 	return ts, selector

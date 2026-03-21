@@ -23,7 +23,7 @@ import (
 	ndriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality/queue"
-	"github.com/hyperledger/fabric-x-committer/api/protoblocktx"
+	"github.com/hyperledger/fabric-x-common/api/committerpb"
 )
 
 var logger = logging.MustGetLogger()
@@ -401,10 +401,10 @@ func (o *OnlyOnceListener) OnError(ctx context.Context, txID string, err error) 
 
 // fabricXFSCStatus maps Fabric-X transaction status codes to FSC validation codes.
 func fabricXFSCStatus(c int32) fdriver.ValidationCode {
-	switch protoblocktx.Status(c) {
-	case protoblocktx.Status_NOT_VALIDATED:
+	switch committerpb.Status(c) {
+	case committerpb.Status_STATUS_UNSPECIFIED:
 		return fdriver.Unknown
-	case protoblocktx.Status_COMMITTED:
+	case committerpb.Status_COMMITTED:
 		return fdriver.Valid
 	default:
 		return fdriver.Invalid

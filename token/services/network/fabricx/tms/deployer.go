@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
-	"github.com/hyperledger/fabric-x-committer/api/protoblocktx"
+	"github.com/hyperledger/fabric-x-common/api/applicationpb"
 )
 
 var logger = logging.MustGetLogger()
@@ -132,7 +132,7 @@ func (s *deployerService) deployPublicParametersRaw(tmsID token.TMSID, ppRaw []b
 
 // createPublicParametersTx builds a FabricX transaction that writes the raw
 // public parameters and their SHA256 hash to the ledger using the setup keys.
-func (s *deployerService) createPublicParametersTx(ppRaw []byte, namespaceID cdriver.Namespace) (*protoblocktx.Tx, error) {
+func (s *deployerService) createPublicParametersTx(ppRaw []byte, namespaceID cdriver.Namespace) (*applicationpb.Tx, error) {
 	key, err := s.keyTranslator.CreateSetupKey()
 	if err != nil {
 		return nil, err
@@ -143,12 +143,12 @@ func (s *deployerService) createPublicParametersTx(ppRaw []byte, namespaceID cdr
 	}
 
 	valueHash := sha256.Sum256(ppRaw)
-	tx := &protoblocktx.Tx{
-		Namespaces: []*protoblocktx.TxNamespace{{
+	tx := &applicationpb.Tx{
+		Namespaces: []*applicationpb.TxNamespace{{
 			NsId:        namespaceID,
 			NsVersion:   0,
-			ReadsOnly:   []*protoblocktx.Read{{Key: []byte("initialized")}},
-			BlindWrites: []*protoblocktx.Write{{Key: []byte(key), Value: ppRaw}, {Key: []byte(keyHash), Value: valueHash[:]}},
+			ReadsOnly:   []*applicationpb.Read{{Key: []byte("initialized")}},
+			BlindWrites: []*applicationpb.Write{{Key: []byte(key), Value: ppRaw}, {Key: []byte(keyHash), Value: valueHash[:]}},
 		}},
 	}
 

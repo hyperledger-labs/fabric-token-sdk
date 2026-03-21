@@ -15,15 +15,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/fabricutils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/transaction"
 	cb "github.com/hyperledger/fabric-protos-go-apiv2/common"
-	"github.com/hyperledger/fabric-x-committer/api/protoblocktx"
-	"github.com/hyperledger/fabric-x-committer/utils/signature"
+	"github.com/hyperledger/fabric-x-common/api/applicationpb"
+	"github.com/hyperledger/fabric-x-common/api/msppb"
 	"github.com/hyperledger/fabric-x-common/protoutil"
 )
 
 // Submitter models a transaction submitter.
 type Submitter interface {
 	// Submit submits the given transaction for the given network and channel.
-	Submit(network, channel string, tx *protoblocktx.Tx) error
+	Submit(network, channel string, tx *applicationpb.Tx) error
 }
 
 const (
@@ -66,7 +66,7 @@ type submitter struct {
 // 3. Marshals each namespace in the transaction into ASN1 and signs it.
 // 4. Marshals the complete transaction into protobuf.
 // 5. Wraps the transaction in a Fabric envelope and broadcasts it.
-func (s *submitter) Submit(network, channel string, tx *protoblocktx.Tx) error {
+func (s *submitter) Submit(network, channel string, tx *applicationpb.Tx) error {
 	logger.Infof("Submitting to [%s,%s] following %d namespaces: [%v]", network, channel, len(tx.GetNamespaces()), tx.GetNamespaces())
 
 	signer, err := s.signingIdentityProvider.DefaultSigningIdentity(network, channel)
@@ -79,6 +79,11 @@ func (s *submitter) Submit(network, channel string, tx *protoblocktx.Tx) error {
 		return err
 	}
 
+	identity := &msppb.Identity{}
+	if err := proto.Unmarshal(serializedCreator, identity); err != nil {
+		return errors.Wrapf(err, "failed unmarshaling default identity")
+	}
+
 	nonce, err := transaction.GetRandomNonce()
 	if err != nil {
 		return errors.Wrapf(err, "failed getting random nonce")
@@ -86,11 +91,11 @@ func (s *submitter) Submit(network, channel string, tx *protoblocktx.Tx) error {
 
 	txID := s.txIDCalculator(nonce, serializedCreator)
 
-	tx.Signatures = make([][]byte, len(tx.GetNamespaces()))
+	tx.Endorsements = make([]*applicationpb.Endorsements, len(tx.GetNamespaces()))
 	for idx, ns := range tx.GetNamespaces() {
 		// Note that a default msp signer hash the msg before signing.
 		// For that reason we use the TxNamespace message as ASN1 encoded msg
-		digest, err := signature.ASN1MarshalTxNamespace(txID, ns)
+		digest, err := ns.ASN1Marshal(txID)
 		if err != nil {
 			return errors.Wrap(err, "failed asn1 marshal tx")
 		}
@@ -99,7 +104,14 @@ func (s *submitter) Submit(network, channel string, tx *protoblocktx.Tx) error {
 		if err != nil {
 			return errors.Wrap(err, "failed signing tx")
 		}
-		tx.Signatures[idx] = sig
+		tx.Endorsements[idx] = &applicationpb.Endorsements{
+			EndorsementsWithIdentity: []*applicationpb.EndorsementWithIdentity{
+				{
+					Endorsement: sig,
+					Identity:    identity,
+				},
+			},
+		}
 	}
 
 	txRaw, err := proto.Marshal(tx)

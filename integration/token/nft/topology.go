@@ -30,7 +30,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	// fscTopology.SetLogging("grpc=error:debug", "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	fscTopology.AddNodeByName("issuer").
