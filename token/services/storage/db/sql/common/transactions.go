@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	errors2 "errors"
 	"fmt"
-	"math/big"
 	"strings"
 	"time"
 
@@ -31,6 +30,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	driver4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
+
+// maxAmountBits is the maximum bit length supported by NUMERIC(78, 0).
+// NUMERIC(78, 0) stores up to 10^78 values, fitting in ~259 bits.
+// 255 is used as a conservative safe upper bound.
+const maxAmountBits = 255
 
 type transactionTables struct {
 	Movements             string
@@ -116,16 +120,11 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver4.Q
 	}
 
 	it := common.NewIterator(rows, func(r *driver4.MovementRecord) error {
-		var amountRaw interface{}
-		if err := rows.Scan(&r.TxID, &r.EnrollmentID, &r.TokenType, &amountRaw, &r.Status); err != nil {
+		var amount BigInt
+		if err := rows.Scan(&r.TxID, &r.EnrollmentID, &r.TokenType, &amount, &r.Status); err != nil {
 			return err
 		}
-		amountStr := fmt.Sprintf("%v", amountRaw)
-		bi, ok := new(big.Int).SetString(amountStr, 10)
-		if !ok {
-			return errors.Errorf("invalid amount [%s]", amountStr)
-		}
-		r.Amount = bi
+		r.Amount = amount.Int
 		logger.DebugfContext(ctx, "movement [%s:%s:%s]", r.TxID, r.Status, r.Amount.Int64())
 
 		return nil
@@ -468,8 +467,8 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver4.Transact
 		if err != nil {
 			return errors.Wrapf(err, "error generating uuid")
 		}
-		if r.Amount.BitLen() > 255 {
-			return errors.Errorf("amount [%s] exceeds maximum supported size of 255 bits", r.Amount.String())
+		if r.Amount.BitLen() > maxAmountBits {
+			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount.String(), maxAmountBits)
 		}
 		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.String(), r.Timestamp.UTC()}
 	}
@@ -527,7 +526,10 @@ func (w *AtomicWrite) AddMovement(ctx context.Context, rs ...driver4.MovementRec
 		if err != nil {
 			return errors.Wrapf(err, "error generating uuid")
 		}
-		rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.String(), now}
+		if r.Amount.BitLen() > maxAmountBits {
+			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount.String(), maxAmountBits)
+		}
+			rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.String(), now}
 	}
 
 	query, args := q.InsertInto(w.table.Movements).
