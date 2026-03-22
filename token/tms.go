@@ -20,6 +20,8 @@ var logger = logging.MustGetLogger()
 // TMSID models a TMS identifier
 type TMSID = driver.TMSID
 
+//go:generate counterfeiter -o mock/service_provider.go -fake-name ServiceProvider . ServiceProvider
+
 // ServiceProvider is used to return instances of a given type
 type ServiceProvider interface {
 	// GetService returns an instance of the given type
@@ -167,7 +169,7 @@ func (t *ManagementService) CertificationManager() *CertificationManager {
 func (t *ManagementService) CertificationClient(ctx context.Context) (*CertificationClient, error) {
 	certificationClient, err := t.certificationClientProvider.New(ctx, nil)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create ceritifacation client")
+		return nil, errors.WithMessagef(err, "failed to create certification client")
 	}
 
 	return &CertificationClient{cc: certificationClient}, nil

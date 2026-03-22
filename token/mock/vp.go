@@ -97,8 +97,6 @@ func (fake *VaultProvider) VaultReturnsOnCall(i int, result1 driver.Vault, resul
 func (fake *VaultProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.vaultMutex.RLock()
-	defer fake.vaultMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

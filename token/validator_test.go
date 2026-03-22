@@ -11,10 +11,12 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/require"
 )
 
+// TestValidator_UnmarshalActions verifies unmarshaling token actions from raw bytes
 func TestValidator_UnmarshalActions(t *testing.T) {
 	validator := &Validator{
 		backend: &mock.Validator{},
@@ -32,6 +34,7 @@ func TestValidator_UnmarshalActions(t *testing.T) {
 	assert.Equal(t, expectedActions, actions)
 }
 
+// TestValidator_UnmarshallAndVerify verifies unmarshaling and verifying token request
 func TestValidator_UnmarshallAndVerify(t *testing.T) {
 	validator := &Validator{
 		backend: &mock.Validator{},
@@ -50,6 +53,7 @@ func TestValidator_UnmarshallAndVerify(t *testing.T) {
 	assert.Equal(t, expectedActions, actions)
 }
 
+// TestValidator_UnmarshallAndVerifyWithMetadata verifies unmarshaling and verifying token request with metadata
 func TestValidator_UnmarshallAndVerifyWithMetadata(t *testing.T) {
 	validator := &Validator{
 		backend: &mock.Validator{},
@@ -69,6 +73,7 @@ func TestValidator_UnmarshallAndVerifyWithMetadata(t *testing.T) {
 	assert.Equal(t, expectedMetadata, metadata)
 }
 
+// TestValidator_UnmarshalActions_Error verifies error handling when unmarshaling actions fails
 func TestValidator_UnmarshalActions_Error(t *testing.T) {
 	validator := &Validator{
 		backend: &mock.Validator{},
@@ -85,6 +90,7 @@ func TestValidator_UnmarshalActions_Error(t *testing.T) {
 	assert.Nil(t, actions)
 }
 
+// TestValidator_UnmarshallAndVerify_Error verifies error handling when unmarshaling and verifying fails
 func TestValidator_UnmarshallAndVerify_Error(t *testing.T) {
 	validator := &Validator{
 		backend: &mock.Validator{},
@@ -101,6 +107,7 @@ func TestValidator_UnmarshallAndVerify_Error(t *testing.T) {
 	assert.Nil(t, actions)
 }
 
+// TestValidator_UnmarshallAndVerifyWithMetadata_Error verifies error handling when unmarshaling with metadata fails
 func TestValidator_UnmarshallAndVerifyWithMetadata_Error(t *testing.T) {
 	validator := &Validator{
 		backend: &mock.Validator{},
@@ -115,4 +122,54 @@ func TestValidator_UnmarshallAndVerifyWithMetadata_Error(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, actions)
 	assert.Nil(t, metadata)
+}
+
+// TestNewValidator verifies Validator constructor initializes backend correctly
+func TestNewValidator(t *testing.T) {
+	mockBackend := &mock.Validator{}
+	validator := NewValidator(mockBackend)
+
+	assert.NotNil(t, validator)
+	assert.Equal(t, mockBackend, validator.backend)
+}
+
+// TestNewLedgerFromGetter verifies ledger creation from state getter function
+func TestNewLedgerFromGetter(t *testing.T) {
+	getStateFn := func(id token.ID) ([]byte, error) {
+		return []byte("state_data"), nil
+	}
+
+	ledger := NewLedgerFromGetter(getStateFn)
+
+	assert.NotNil(t, ledger)
+	assert.NotNil(t, ledger.f)
+}
+
+// TestStateGetter_GetState verifies state retrieval from ledger
+func TestStateGetter_GetState(t *testing.T) {
+	expectedData := []byte("state_data")
+	getStateFn := func(id token.ID) ([]byte, error) {
+		return expectedData, nil
+	}
+
+	ledger := NewLedgerFromGetter(getStateFn)
+	data, err := ledger.GetState(token.ID{TxId: "tx1", Index: 0})
+
+	require.NoError(t, err)
+	assert.Equal(t, expectedData, data)
+}
+
+// TestStateGetter_GetState_Error verifies error handling in state retrieval
+func TestStateGetter_GetState_Error(t *testing.T) {
+	expectedErr := errors.New("state error")
+	getStateFn := func(id token.ID) ([]byte, error) {
+		return nil, expectedErr
+	}
+
+	ledger := NewLedgerFromGetter(getStateFn)
+	data, err := ledger.GetState(token.ID{TxId: "tx1", Index: 0})
+
+	require.Error(t, err)
+	assert.Nil(t, data)
+	assert.Equal(t, expectedErr, err)
 }

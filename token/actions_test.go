@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token tests actions.go which provides wrappers for token actions (Issue, Transfer).
 package token
 
 import (
@@ -129,4 +130,60 @@ func TestTransferAction_IsGraphHiding(t *testing.T) {
 	transferAction := &TransferAction{mockTransferAction}
 	isGraphHiding := transferAction.IsGraphHiding()
 	assert.True(t, isGraphHiding)
+}
+
+// TestIssueAction_IsGraphHiding tests the IsGraphHiding method for IssueAction
+func TestIssueAction_IsGraphHiding(t *testing.T) {
+	mockIssueAction := &mock.IssueAction{}
+	mockIssueAction.IsGraphHidingReturns(true)
+	issueAction := &IssueAction{a: mockIssueAction}
+	isGraphHiding := issueAction.IsGraphHiding()
+	assert.True(t, isGraphHiding)
+}
+
+// TestIssueAction_NumInputs tests the NumInputs method for IssueAction
+func TestIssueAction_NumInputs(t *testing.T) {
+	mockIssueAction := &mock.IssueAction{}
+	mockIssueAction.NumInputsReturns(3)
+	issueAction := &IssueAction{a: mockIssueAction}
+	numInputs := issueAction.NumInputs()
+	assert.Equal(t, 3, numInputs)
+}
+
+// TestIssueAction_Validate tests the Validate method for IssueAction
+func TestIssueAction_Validate(t *testing.T) {
+	mockIssueAction := &mock.IssueAction{}
+	mockIssueAction.ValidateReturns(nil)
+	issueAction := &IssueAction{a: mockIssueAction}
+	err := issueAction.Validate()
+	require.NoError(t, err)
+}
+
+// TestTransferAction_GetSerialNumbers tests the GetSerialNumbers method for TransferAction
+func TestTransferAction_GetSerialNumbers(t *testing.T) {
+	mockTransferAction := &mock.TransferAction{}
+	mockSerialNumbers := []string{"serial1", "serial2"}
+	mockTransferAction.GetSerialNumbersReturns(mockSerialNumbers)
+	transferAction := &TransferAction{mockTransferAction}
+	serialNumbers := transferAction.GetSerialNumbers()
+	assert.Equal(t, mockSerialNumbers, serialNumbers)
+}
+
+// TestTransferAction_Validate tests the Validate method for TransferAction
+func TestTransferAction_Validate(t *testing.T) {
+	mockTransferAction := &mock.TransferAction{}
+	mockTransferAction.ValidateReturns(nil)
+	transferAction := &TransferAction{mockTransferAction}
+	err := transferAction.Validate()
+	require.NoError(t, err)
+}
+
+// TestTransferAction_GetIssuer tests the GetIssuer method for TransferAction
+func TestTransferAction_GetIssuer(t *testing.T) {
+	mockTransferAction := &mock.TransferAction{}
+	mockIssuer := Identity([]byte{1, 2, 3})
+	mockTransferAction.GetIssuerReturns(mockIssuer)
+	transferAction := &TransferAction{mockTransferAction}
+	issuer := transferAction.GetIssuer()
+	assert.Equal(t, mockIssuer, issuer)
 }

@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token provides token stream operations for filtering, aggregating, and querying token collections.
 package token
 
 import (

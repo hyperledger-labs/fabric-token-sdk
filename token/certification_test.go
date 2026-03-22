@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token tests certification.go which provides token certification request and verification functionality.
 package token
 
 import (

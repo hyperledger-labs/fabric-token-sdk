@@ -104,6 +104,8 @@ func (o ServiceOptions) ParamAsString(key string) (string, error) {
 	return s, nil
 }
 
+//go:generate counterfeiter -o mock/token_manager_service_provider.go -fake-name TokenManagerServiceProvider . TokenManagerServiceProvider
+
 type TokenManagerServiceProvider interface {
 	// GetTokenManagerService returns a TokenManagerService instance for the passed parameters
 	// If a TokenManagerService is not available, it creates one.
