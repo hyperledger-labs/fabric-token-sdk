@@ -529,7 +529,7 @@ func (w *AtomicWrite) AddMovement(ctx context.Context, rs ...driver4.MovementRec
 		if r.Amount.BitLen() > maxAmountBits {
 			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount.String(), maxAmountBits)
 		}
-			rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.String(), now}
+		rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.String(), now}
 	}
 
 	query, args := q.InsertInto(w.table.Movements).
