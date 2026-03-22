@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token provides token vault functionality for querying and storing token state and transaction status.
 package token
 
 import (

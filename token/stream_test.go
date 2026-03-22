@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token tests stream.go which provides token stream filtering, aggregation, and query functionality.
 package token
 
 import (

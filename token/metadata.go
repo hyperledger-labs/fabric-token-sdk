@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token provides token transaction metadata filtering and matching functionality for issues and transfers.
 package token
 
 import (
