@@ -125,7 +125,7 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver4.Q
 			return err
 		}
 		r.Amount = amount.Int
-		logger.DebugfContext(ctx, "movement [%s:%s:%s]", r.TxID, r.Status, r.Amount.Int64())
+		logger.DebugfContext(ctx, "movement [%s:%s:%s]", r.TxID, r.Status, r.Amount)
 
 		return nil
 	})
@@ -468,7 +468,7 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver4.Transact
 			return errors.Wrapf(err, "error generating uuid")
 		}
 		if r.Amount.BitLen() > maxAmountBits {
-			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount.String(), maxAmountBits)
+			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount, maxAmountBits)
 		}
 		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.String(), r.Timestamp.UTC()}
 	}
@@ -527,7 +527,7 @@ func (w *AtomicWrite) AddMovement(ctx context.Context, rs ...driver4.MovementRec
 			return errors.Wrapf(err, "error generating uuid")
 		}
 		if r.Amount.BitLen() > maxAmountBits {
-			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount.String(), maxAmountBits)
+			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount, maxAmountBits)
 		}
 		rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.String(), now}
 	}
