@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	errors2 "errors"
 	"fmt"
-	"math/big"
 	"strings"
 	"time"
 
@@ -31,6 +30,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	driver4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
+
+// maxAmountBits is the maximum bit length supported by NUMERIC(78, 0).
+// NUMERIC(78, 0) stores up to 10^78 values, fitting in ~259 bits.
+// 255 is used as a conservative safe upper bound.
+const maxAmountBits = 255
 
 type transactionTables struct {
 	Movements             string
@@ -116,12 +120,12 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params driver4.Q
 	}
 
 	it := common.NewIterator(rows, func(r *driver4.MovementRecord) error {
-		var amount int64
+		var amount BigInt
 		if err := rows.Scan(&r.TxID, &r.EnrollmentID, &r.TokenType, &amount, &r.Status); err != nil {
 			return err
 		}
-		r.Amount = big.NewInt(amount)
-		logger.DebugfContext(ctx, "movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
+		r.Amount = amount.Int
+		logger.DebugfContext(ctx, "movement [%s:%s:%s]", r.TxID, r.Status, r.Amount)
 
 		return nil
 	})
@@ -153,13 +157,13 @@ func (db *TransactionStore) QueryTransactions(ctx context.Context, params driver
 	}
 
 	results := common.NewIterator(rows, func(r *driver4.TransactionRecord) error {
-		var amount int64
+		var amount BigInt
 		var appMeta []byte
 		var pubMeta []byte
 		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amount, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
 			return err
 		}
-		r.Amount = big.NewInt(amount)
+		r.Amount = amount.Int
 
 		return errors2.Join(
 			unmarshal(appMeta, &r.ApplicationMetadata),
@@ -357,7 +361,7 @@ func (db *TransactionStore) GetSchema() string {
 			sender_eid TEXT NOT NULL,
 			recipient_eid TEXT NOT NULL,
 			token_type TEXT NOT NULL,
-			amount BIGINT NOT NULL,
+			amount NUMERIC(78, 0) NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
@@ -368,7 +372,7 @@ func (db *TransactionStore) GetSchema() string {
 			tx_id TEXT NOT NULL REFERENCES %s,
 			enrollment_id TEXT NOT NULL,
 			token_type TEXT NOT NULL,
-			amount BIGINT NOT NULL,
+			amount NUMERIC(78, 0) NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
@@ -459,14 +463,14 @@ func (w *AtomicWrite) AddTransaction(ctx context.Context, rs ...driver4.Transact
 	rows := make([]common3.Tuple, len(rs))
 	for i, r := range rs {
 		logger.DebugfContext(ctx, "adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
-		if !r.Amount.IsInt64() {
-			return errors.New("the database driver does not support larger values than int64")
-		}
 		id, err := uuid.GenerateUUID()
 		if err != nil {
 			return errors.Wrapf(err, "error generating uuid")
 		}
-		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.Int64(), r.Timestamp.UTC()}
+		if r.Amount.BitLen() > maxAmountBits {
+			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount, maxAmountBits)
+		}
+		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.String(), r.Timestamp.UTC()}
 	}
 
 	query, args := q.InsertInto(w.table.Transactions).
@@ -518,15 +522,14 @@ func (w *AtomicWrite) AddMovement(ctx context.Context, rs ...driver4.MovementRec
 	rows := make([]common3.Tuple, len(rs))
 	for i, r := range rs {
 		logger.DebugfContext(ctx, "adding movement record [%s]", r)
-
-		if !r.Amount.IsInt64() {
-			return errors.New("the database driver does not support larger values than int64")
-		}
 		id, err := uuid.GenerateUUID()
 		if err != nil {
 			return errors.Wrapf(err, "error generating uuid")
 		}
-		rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), now}
+		if r.Amount.BitLen() > maxAmountBits {
+			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount, maxAmountBits)
+		}
+		rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.String(), now}
 	}
 
 	query, args := q.InsertInto(w.table.Movements).
