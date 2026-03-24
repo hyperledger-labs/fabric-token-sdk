@@ -8,6 +8,7 @@ package nym
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -19,17 +20,28 @@ type AuditInfo struct {
 	IdemixSignature []byte
 }
 
+// FromBytes deserializes the AuditInfo from JSON format.
+func (a *AuditInfo) FromBytes(raw []byte) error {
+	return json.Unmarshal(raw, a)
+}
+
 func (a *AuditInfo) Match(ctx context.Context, id []byte) error {
+	if err := a.AuditInfo.Match(ctx, a.IdemixSignature); err != nil {
+		return err
+	}
+
+	eidAuditOpts, err := a.SchemaManager.EidNymAuditOpts(a.Schema, a.Attributes)
+	if err != nil {
+		return errors.Wrap(err, "error while getting a RhNymAuditOpts")
+	}
+	eidAuditOpts.RNymEid = a.EidNymAuditData.Rand
+	eidAuditOpts.AuditVerificationType = types.AuditExpectEidNym
+
 	valid, err := a.Csp.Verify(
 		a.IssuerPublicKey,
 		id,
 		nil,
-		&types.EidNymAuditOpts{
-			AuditVerificationType: types.AuditExpectEidNym,
-			EidIndex:              crypto.EIDIndex,
-			EnrollmentID:          string(a.Attributes[crypto.EIDIndex]),
-			RNymEid:               a.RhNymAuditData.Rand,
-		},
+		eidAuditOpts,
 	)
 	if err != nil {
 		return errors.Wrap(err, "error while verifying the nym eid")
@@ -38,7 +50,7 @@ func (a *AuditInfo) Match(ctx context.Context, id []byte) error {
 		return errors.New("invalid nym eid")
 	}
 
-	return a.AuditInfo.Match(ctx, a.IdemixSignature)
+	return nil
 }
 
 // DeserializeAuditInfo deserializes the audit information from JSON.

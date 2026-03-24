@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym/nym"
 )
 
@@ -56,18 +55,14 @@ func (k *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.
 	if err := json.Unmarshal(signerInfoRaw, auditInfo); err != nil {
 		return nil, errors.Wrapf(err, "failed to deserialize audit info")
 	}
-	auditInfoRaw, err := auditInfo.Bytes()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize audit info")
-	}
 
-	id, signer, err := nym.NewSignerProviderImpl(k, auditInfoRaw).NewSigner(ctx)
+	signer, err := k.backend.DeserializeSigner(ctx, auditInfo.IdemixSignature)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot deserializer signer, cannot create signer")
 	}
 
 	return &nym.Signer{
-		Creator: id,
+		Creator: auditInfo.IdemixSignature,
 		Signer:  signer,
 	}, nil
 }
@@ -88,14 +83,27 @@ func (k *KeyManager) IdentityType() identity.Type {
 	return IdentityType
 }
 
-func (k *KeyManager) Identity(ctx context.Context, _ []byte) (*idriver.IdentityDescriptor, error) {
-	descriptor, err := k.backend.Identity(ctx, nil)
+func (k *KeyManager) Identity(ctx context.Context, referenceAuditInfo []byte) (*idriver.IdentityDescriptor, error) {
+	var backendAuditInfoRaw []byte
+	if len(referenceAuditInfo) != 0 {
+		// extract the audit infor for the backed
+		auditInfo, err := nym.DeserializeAuditInfo(referenceAuditInfo)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to deserialize audit info")
+		}
+		backendAuditInfoRaw, err = auditInfo.Bytes()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to serialize audit info")
+		}
+	}
+
+	descriptor, err := k.backend.Identity(ctx, backendAuditInfoRaw)
 	if err != nil {
 		return nil, err
 	}
 
 	// compile options and check for idemix
-	ai, err := crypto.DeserializeAuditInfo(descriptor.AuditInfo)
+	ai, err := k.backend.DeserializeAuditInfo(ctx, descriptor.AuditInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -109,19 +117,23 @@ func (k *KeyManager) Identity(ctx context.Context, _ []byte) (*idriver.IdentityD
 		return nil, errors.Wrap(err, "failed to marshal audit info")
 	}
 
-	signerProvider := nym.NewSignerProviderImpl(k, descriptor.AuditInfo)
-	id, signer, err := signerProvider.NewSigner(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create signer")
-	}
-
 	return &idriver.IdentityDescriptor{
 		// Commitment to the Enrollment ID is the new identity
-		Identity:   ai.EidNymAuditData.Nym.Bytes(),
-		AuditInfo:  auditInfoRaw,
-		Signer:     &nym.Signer{Creator: id, Signer: signer},
+		Identity:  ai.EidNymAuditData.Nym.Bytes(),
+		AuditInfo: auditInfoRaw,
+		Signer: &nym.Signer{
+			Creator: descriptor.Identity,
+			Signer:  descriptor.Signer,
+		},
 		SignerInfo: auditInfoRaw,
-		Verifier:   nil,
-		Ephemeral:  false,
+		Verifier: &nym.Verifier{
+			NymEID: ai.EidNymAuditData.Nym.Bytes(),
+			Backed: k.backend.Deserializer,
+		},
+		Ephemeral: false,
 	}, nil
+}
+
+func (k *KeyManager) DeserializeAuditInfo(ctx context.Context, raw []byte) (*nym.AuditInfo, error) {
+	return nym.DeserializeAuditInfo(raw)
 }
