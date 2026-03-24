@@ -59,9 +59,9 @@ var (
 	}
 
 	AllTestTypes = []*InfrastructureType{
-		// WebSocketNoReplication,
+		WebSocketNoReplication,
 		LibP2PNoReplication,
-		// WebSocketWithReplication,
+		WebSocketWithReplication,
 	}
 )
 
