@@ -162,7 +162,90 @@ Advanced identity encryption based on Zero-Knowledge Proofs (ZKP).
 *   **Anonymity**: Users can prove they hold a valid credential without revealing their actual identity.
 *   **Unlinkability**: Different transactions from the same user appear uncorrelated.
 *   **Auditability**: Includes "audit info" facilitating regulatory compliance by allowing authorized auditors to reveal the identity.
+*   **Identity Format**: The identity is a **full Idemix signature** that carries attributes (enrollment ID, revocation handle, etc.) and serves as the token owner field.
+*   **Signature Format**: Signatures are **nym signatures** (pseudonym-based) that do not carry attributes, providing unlinkability between transactions.
 *   **Implementation**: `token/services/identity/idemix`.
+
+#### 3. IdemixNym (Idemix with Pseudonym-based Identity)
+An extension of Idemix that uses a **commitment to the Enrollment ID (EID)** as the identity instead of the full Idemix signature.
+*   **Enhanced Privacy**: The identity itself is a pseudonym (nym) - a cryptographic commitment to the enrollment ID - rather than the full Idemix signature with attributes.
+*   **Reduced Identity Size**: The nym EID is significantly smaller than a full Idemix signature, reducing storage and transmission overhead in the token owner field.
+*   **Backward Compatible Auditability**: Maintains full auditability through the audit info, which contains both the nym proof and the original Idemix signature.
+*   **Signature Wrapping**: Signatures are nym signatures wrapped in ASN.1 format with the full Idemix signature as the "Creator" field, allowing verifiers to deserialize and verify using standard Idemix verification.
+*   **Implementation**: `token/services/identity/idemixnym`.
+
+**Key Differences from Standard Idemix:**
+
+| Aspect | Idemix | IdemixNym |
+|:-------|:-------|:----------|
+| **Identity (Token Owner)** | Full Idemix signature with attributes | Nym EID (commitment to enrollment ID) |
+| **Identity Size** | Large (~several KB) | Small (~32-64 bytes) |
+| **Signature Type** | Nym signature (no attributes) | Nym signature (no attributes) |
+| **Signature Packaging** | Raw nym signature | ASN.1 wrapper: Creator (full Idemix sig) + nym signature |
+| **Audit Info** | Contains EID/RH nym proofs | Contains EID/RH nym proofs + full Idemix signature |
+| **Verification** | Deserialize identity → verify nym signature | Extract Creator → deserialize to Idemix identity → verify nym signature |
+| **Storage Overhead** | High (full signature as identity) | Low (small nym as identity) |
+| **Use Case** | Standard anonymous credentials | Optimized for storage-constrained scenarios |
+
+**IdemixNym Architecture:**
+
+The IdemixNym package wraps the standard Idemix implementation:
+
+```go
+// KeyManager wraps idemix.KeyManager
+type KeyManager struct {
+    backend              *idemix.KeyManager
+    identityStoreService IdentityStoreService
+}
+
+// Identity transformation
+func (k *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*IdentityDescriptor, error) {
+    // 1. Get full Idemix identity from backend
+    descriptor, err := k.backend.Identity(ctx, backendAuditInfo)
+    
+    // 2. Extract the nym EID from audit info
+    ai, err := k.backend.DeserializeAuditInfo(ctx, descriptor.AuditInfo)
+    
+    // 3. Create nym-based identity descriptor
+    return &IdentityDescriptor{
+        Identity:  ai.EidNymAuditData.Nym.Bytes(),  // Nym EID as identity
+        AuditInfo: nymAuditInfo,                     // Contains both nym proof and Idemix signature
+        Signer:    nymSigner,                        // Wraps signatures with Creator field
+        Verifier:  nymVerifier,                      // Verifies against nym EID
+    }
+}
+```
+
+**Signature Structure:**
+
+IdemixNym signatures use ASN.1 encoding to wrap the signature with the creator:
+
+```asn1
+NymSignature ::= SEQUENCE {
+    creator    OCTET STRING,  -- Full Idemix signature
+    signature  OCTET STRING   -- Actual signature bytes
+}
+```
+
+This allows verifiers to:
+1. Deserialize the signature to extract the Creator (full Idemix signature)
+2. Deserialize the Creator to obtain the Idemix identity and verification key
+3. Verify the signature using the standard Idemix verification process
+
+**Advantages of IdemixNym:**
+
+1. **Storage Efficiency**: Nym EID identities are much smaller than full Idemix signatures, reducing storage requirements in ledgers and databases.
+2. **Network Efficiency**: Smaller identities mean less data transmitted over the network during token operations.
+3. **Privacy Preservation**: The nym EID reveals no information about the user beyond what's necessary for verification.
+4. **Flexible Verification**: Verifiers can choose to verify just the signature or also audit the identity by checking the nym proof.
+5. **Seamless Integration**: Works with existing Idemix infrastructure (same issuer keys, same credential format).
+
+**When to Use IdemixNym:**
+
+- **High-volume token systems** where identity size impacts performance
+- **Ledger storage optimization** scenarios where reducing on-chain data is critical
+- **Privacy-focused applications** that want minimal identity exposure
+- **Systems with frequent identity lookups** where smaller identities improve cache efficiency
 
 ### Other Identity Types
 
