@@ -280,7 +280,7 @@ func testSignerSignVerifyIntegration(t *testing.T, configPath string, curveID ma
 	}
 
 	// test multiple sign/verify cycles
-	for i := range 5{
+	for i := range 5 {
 		msg := []byte("test message " + string(rune(i)))
 		sigma, err := signer.Sign(msg)
 		require.NoError(t, err)
