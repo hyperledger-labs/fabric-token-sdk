@@ -150,8 +150,8 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			ReplicationOpts:     opts,
 			FSCBasedEndorsement: mask&WithEndorsers > 0,
 			// FSCLogSpec:          "fsc=debug:fts=debug:info",
-			FSCLogSpec:          "info",
-			TokenSelector:       tokenSelector,
+			FSCLogSpec:    "info",
+			TokenSelector: tokenSelector,
 		},
 	))
 

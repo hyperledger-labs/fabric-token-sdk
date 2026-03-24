@@ -46,9 +46,9 @@ func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
 			ReplicationOpts: opts,
 			CommType:        fsc.LibP2P,
 			// FSCLogSpec:      "token-sdk=debug:info",
-			FSCLogSpec:          "info",
-			SDKs:            []nodepkg.SDK{sdks[backend]},
-			Monitoring:      true,
+			FSCLogSpec: "info",
+			SDKs:       []nodepkg.SDK{sdks[backend]},
+			Monitoring: true,
 		},
 	))
 
