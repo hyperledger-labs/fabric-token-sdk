@@ -88,6 +88,7 @@ type EIDRHDeserializer = deserializer.EIDRHDeserializer
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
 	d.AddDeserializer(idemix.IdentityType, &idemix.AuditInfoDeserializer{})
+	d.AddDeserializer(idemixnym.IdentityType, &idemixnym.AuditInfoDeserializer{})
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix.AuditInfoDeserializer{}))
 	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})

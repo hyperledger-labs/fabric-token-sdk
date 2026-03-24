@@ -96,3 +96,15 @@ func (d *Deserializer) deserializeAuditInfo(raw []byte) (*nym.AuditInfo, error) 
 
 	return ai, nil
 }
+
+type AuditInfoDeserializer struct{}
+
+// DeserializeAuditInfo deserializes a given raw AuditInfo into an AuditInfo
+func (c *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
+	ai, err := nym.DeserializeAuditInfo(raw)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
+	}
+
+	return ai, nil
+}
