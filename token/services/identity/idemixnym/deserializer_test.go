@@ -74,7 +74,7 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID) 
 	assert.NotNil(t, verifier)
 
 	// test DeserializeAuditInfo
-	auditInfo, err := d.DeserializeAuditInfo(t.Context(), auditInfoRaw)
+	auditInfo, err := d.DeserializeAuditInfo(t.Context(), nil, auditInfoRaw)
 	require.NoError(t, err)
 	assert.NotNil(t, auditInfo)
 	assert.Equal(t, "alice", auditInfo.EnrollmentID())
@@ -134,11 +134,11 @@ func testDeserializerErrorPaths(t *testing.T, configPath string, curveID math.Cu
 	require.NotNil(t, d)
 
 	// test DeserializeAuditInfo with invalid input
-	_, err = d.DeserializeAuditInfo(t.Context(), nil)
+	_, err = d.DeserializeAuditInfo(t.Context(), nil, nil)
 	require.Error(t, err)
-	_, err = d.DeserializeAuditInfo(t.Context(), []byte{})
+	_, err = d.DeserializeAuditInfo(t.Context(), nil, []byte{})
 	require.Error(t, err)
-	_, err = d.DeserializeAuditInfo(t.Context(), []byte{0, 1, 2})
+	_, err = d.DeserializeAuditInfo(t.Context(), nil, []byte{0, 1, 2})
 	require.Error(t, err)
 
 	// test GetAuditInfoMatcher with invalid input
@@ -186,15 +186,15 @@ func TestDeserializeAuditInfoEdgeCases(t *testing.T) {
 	d := NewDeserializer(backendDeserializer)
 
 	// Test with empty bytes
-	_, err = d.DeserializeAuditInfo(context.Background(), []byte{})
+	_, err = d.DeserializeAuditInfo(context.Background(), nil, []byte{})
 	require.Error(t, err)
 
 	// Test with nil
-	_, err = d.DeserializeAuditInfo(context.Background(), nil)
+	_, err = d.DeserializeAuditInfo(context.Background(), nil, nil)
 	require.Error(t, err)
 
 	// Test with invalid JSON
-	_, err = d.DeserializeAuditInfo(context.Background(), []byte("invalid json"))
+	_, err = d.DeserializeAuditInfo(context.Background(), nil, []byte("invalid json"))
 	require.Error(t, err)
 }
 

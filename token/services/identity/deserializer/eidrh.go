@@ -33,7 +33,7 @@ func (e *EIDRHDeserializer) AddDeserializer(typ string, d driver2.AuditInfoDeser
 
 // GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
 func (e *EIDRHDeserializer) GetEnrollmentID(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
-	ai, err := e.getAuditInfo(ctx, identity, auditInfo)
+	ai, err := e.DeserializeAuditInfo(ctx, identity, auditInfo)
 	if err != nil {
 		return "", err
 	}
@@ -43,7 +43,7 @@ func (e *EIDRHDeserializer) GetEnrollmentID(ctx context.Context, identity driver
 
 // GetRevocationHandler returns the revocation handle associated with the identity matched to the passed auditInfo
 func (e *EIDRHDeserializer) GetRevocationHandler(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, error) {
-	ai, err := e.getAuditInfo(ctx, identity, auditInfo)
+	ai, err := e.DeserializeAuditInfo(ctx, identity, auditInfo)
 	if err != nil {
 		return "", err
 	}
@@ -52,7 +52,7 @@ func (e *EIDRHDeserializer) GetRevocationHandler(ctx context.Context, identity d
 }
 
 func (e *EIDRHDeserializer) GetEIDAndRH(ctx context.Context, identity driver.Identity, auditInfo []byte) (string, string, error) {
-	ai, err := e.getAuditInfo(ctx, identity, auditInfo)
+	ai, err := e.DeserializeAuditInfo(ctx, identity, auditInfo)
 	if err != nil {
 		return "", "", err
 	}
@@ -60,7 +60,7 @@ func (e *EIDRHDeserializer) GetEIDAndRH(ctx context.Context, identity driver.Ide
 	return ai.EnrollmentID(), ai.RevocationHandle(), nil
 }
 
-func (e *EIDRHDeserializer) getAuditInfo(ctx context.Context, id driver.Identity, auditInfo []byte) (driver2.AuditInfo, error) {
+func (e *EIDRHDeserializer) DeserializeAuditInfo(ctx context.Context, id driver.Identity, auditInfo []byte) (driver2.AuditInfo, error) {
 	if len(auditInfo) == 0 {
 		return nil, errors.Errorf("nil audit info")
 	}
@@ -73,7 +73,7 @@ func (e *EIDRHDeserializer) getAuditInfo(ctx context.Context, id driver.Identity
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
-	res, err := d.DeserializeAuditInfo(ctx, auditInfo)
+	res, err := d.DeserializeAuditInfo(ctx, si.Identity, auditInfo)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to deserialize audit info for identity type [%s]", si.Type)
 	}

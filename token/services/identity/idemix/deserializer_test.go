@@ -88,20 +88,20 @@ func testNewDeserializer(t *testing.T, configPath string, curveID math.CurveID) 
 	require.NoError(t, err)
 
 	// check audit info
-	auditInfo, err := d.DeserializeAuditInfo(t.Context(), auditInfoRaw)
+	auditInfo, err := d.DeserializeAuditInfo(t.Context(), nil, auditInfoRaw)
 	require.NoError(t, err)
 	assert.NotNil(t, auditInfo)
 	assert.Equal(t, "alice", auditInfo.EnrollmentID())
 	assert.Equal(t, "150", auditInfo.RevocationHandle())
 	auditInfoDeser := &AuditInfoDeserializer{}
 	// check invalid input
-	_, err = auditInfoDeser.DeserializeAuditInfo(t.Context(), nil)
+	_, err = auditInfoDeser.DeserializeAuditInfo(t.Context(), nil, nil)
 	require.Error(t, err)
-	_, err = auditInfoDeser.DeserializeAuditInfo(t.Context(), []byte{})
+	_, err = auditInfoDeser.DeserializeAuditInfo(t.Context(), nil, []byte{})
 	require.Error(t, err)
-	_, err = auditInfoDeser.DeserializeAuditInfo(t.Context(), []byte{0, 1, 2, 3})
+	_, err = auditInfoDeser.DeserializeAuditInfo(t.Context(), nil, []byte{0, 1, 2, 3})
 	require.Error(t, err)
-	auditInfo2, err := auditInfoDeser.DeserializeAuditInfo(t.Context(), auditInfoRaw)
+	auditInfo2, err := auditInfoDeser.DeserializeAuditInfo(t.Context(), nil, auditInfoRaw)
 	require.NoError(t, err)
 	assert.Equal(t, "alice", auditInfo2.EnrollmentID())
 	assert.Equal(t, "150", auditInfo2.RevocationHandle())
@@ -184,10 +184,10 @@ func TestAuditInfoDeserializerEdgeCases(t *testing.T) {
 	deserializer := &AuditInfoDeserializer{}
 
 	// Test with empty bytes
-	_, err := deserializer.DeserializeAuditInfo(context.Background(), []byte{})
+	_, err := deserializer.DeserializeAuditInfo(context.Background(), nil, []byte{})
 	require.Error(t, err)
 
 	// Test with nil
-	_, err = deserializer.DeserializeAuditInfo(context.Background(), nil)
+	_, err = deserializer.DeserializeAuditInfo(context.Background(), nil, nil)
 	require.Error(t, err)
 }

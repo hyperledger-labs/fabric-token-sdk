@@ -161,7 +161,7 @@ func TestAuditInfoDeserializer(t *testing.T) {
 		auditInfoBytes, err := ai.Bytes()
 		require.NoError(t, err)
 
-		deserializedAI, err := des.DeserializeAuditInfo(ctx, auditInfoBytes)
+		deserializedAI, err := des.DeserializeAuditInfo(ctx, nil, auditInfoBytes)
 		require.NoError(t, err)
 		assert.NotNil(t, deserializedAI)
 		assert.Equal(t, "user123", deserializedAI.EnrollmentID())
@@ -170,7 +170,7 @@ func TestAuditInfoDeserializer(t *testing.T) {
 
 	// Test failure deserializing invalid raw AuditInfo
 	t.Run("Invalid AuditInfo", func(t *testing.T) {
-		_, err := des.DeserializeAuditInfo(ctx, []byte("invalid"))
+		_, err := des.DeserializeAuditInfo(ctx, nil, []byte("invalid"))
 		require.Error(t, err)
 	})
 }

@@ -130,7 +130,7 @@ func (d *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byt
 }
 
 // DeserializeAuditInfo deserializes a given raw AuditInfo into an AuditInfo
-func (d *Deserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
+func (d *Deserializer) DeserializeAuditInfo(ctx context.Context, identity driver.Identity, raw []byte) (driver2.AuditInfo, error) {
 	return d.Deserializer.DeserializeAuditInfo(ctx, raw)
 }
 
@@ -160,7 +160,7 @@ func (d *Deserializer) Info(ctx context.Context, id []byte, auditInfoRaw []byte)
 		if err != nil {
 			return "", errors.WithMessagef(err, "failed to get audit info matcher")
 		}
-		ai, err := d.DeserializeAuditInfo(ctx, auditInfoRaw)
+		ai, err := d.DeserializeAuditInfo(ctx, nil, auditInfoRaw)
 		if err != nil {
 			return "", errors.Wrapf(err, "failed to deserialize audit info")
 		}
@@ -178,7 +178,7 @@ func (d *Deserializer) String() string {
 type AuditInfoDeserializer struct{}
 
 // DeserializeAuditInfo deserializes a given raw AuditInfo into an AuditInfo
-func (c *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
+func (c *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, identity driver.Identity, raw []byte) (driver2.AuditInfo, error) {
 	ai, err := crypto2.DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))

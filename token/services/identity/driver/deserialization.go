@@ -64,5 +64,5 @@ type AuditInfo interface {
 type AuditInfoDeserializer interface {
 	// DeserializeAuditInfo deserializes the provided raw bytes into an AuditInfo value.
 	// The context may carry ancillary information required for deserialization.
-	DeserializeAuditInfo(ctx context.Context, raw []byte) (AuditInfo, error)
+	DeserializeAuditInfo(ctx context.Context, identity tdriver.Identity, raw []byte) (AuditInfo, error)
 }

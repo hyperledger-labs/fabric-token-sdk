@@ -52,7 +52,7 @@ func (a *AuditInfoMatcher) Match(_ context.Context, id []byte) error {
 
 type AuditInfoDeserializer struct{}
 
-func (a *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
+func (a *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, identity driver.Identity, raw []byte) (driver2.AuditInfo, error) {
 	ai := &AuditInfo{}
 	err := ai.FromBytes(raw)
 	if err != nil {

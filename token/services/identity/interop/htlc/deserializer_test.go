@@ -136,25 +136,25 @@ func TestAuditDeserializer(t *testing.T) {
 	a := htlc.NewAuditDeserializer(mockA)
 
 	// invalid
-	_, err := a.DeserializeAuditInfo(ctx, []byte("invalid"))
+	_, err := a.DeserializeAuditInfo(ctx, nil, []byte("invalid"))
 	require.Error(t, err)
 
 	// no recipient
 	si := &htlc.ScriptInfo{Sender: []byte("s")}
 	r, _ := json.Marshal(si)
-	_, err = a.DeserializeAuditInfo(ctx, r)
+	_, err = a.DeserializeAuditInfo(ctx, nil, r)
 	require.Error(t, err)
 
 	// inner deserializer error
 	si = &htlc.ScriptInfo{Recipient: []byte("r")}
 	r, _ = json.Marshal(si)
 	mockA.DeserializeAuditInfoReturns(nil, errors.New("nope"))
-	_, err = a.DeserializeAuditInfo(ctx, r)
+	_, err = a.DeserializeAuditInfo(ctx, nil, r)
 	require.Error(t, err)
 
 	// success
 	mockA.DeserializeAuditInfoReturns(&fakeAuditInfo{}, nil)
-	ai, err := a.DeserializeAuditInfo(ctx, r)
+	ai, err := a.DeserializeAuditInfo(ctx, nil, r)
 	require.NoError(t, err)
 	require.NotNil(t, ai)
 }

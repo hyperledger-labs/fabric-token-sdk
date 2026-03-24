@@ -11,7 +11,10 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
+
+type Script = htlc.Script
 
 // AuditInfoProvider models a component that can provide audit information for
 // a given identity. Implementations return a serialized audit information
