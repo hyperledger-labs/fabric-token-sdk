@@ -68,7 +68,8 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 			SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
 			ReplicationOpts: opts,
 			WebEnabled:      true, // Needed for the Remote Wallet with websockets
-			FSCLogSpec:      "fsc=debug:fts=debug:info",
+			// FSCLogSpec:      "fsc=debug:fts=debug:info",
+			FSCLogSpec:          "info",
 		},
 	))
 
