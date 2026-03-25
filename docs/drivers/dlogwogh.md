@@ -632,7 +632,7 @@ func (s *TransferService) prepareInputs(ctx context.Context, loadedTokens []Load
 
 ### 8.3 Tokens Service
 
-**Implementation**: [`token/tokens.go`](../../token/core/zkatdlog/nogh/v1/token/tokens.go)
+**Implementation**: [`token/tokens.go`](../../token/core/zkatdlog/nogh/v1/token/service.go)
 
 Provides token deserialization and format conversion.
 
@@ -1558,7 +1558,6 @@ type Metrics struct {
 ### 14.2 Technical Specifications
 
 - [Idemix: Identity Mixer Specification](https://hyperledger-fabric.readthedocs.io/en/latest/idemix.html)
-- [BLS12-381 Curve Specification](https://tools.ietf.org/id/draft-yonezawa-pairing-friendly-curves-02.html)
 
 ### 14.3 Implementation References
 
