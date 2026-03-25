@@ -386,6 +386,11 @@ func (p *KeyManager) Anonymous() bool {
 	return true
 }
 
+// IdentityType returns the type of the identity
+func (p *KeyManager) IdentityType() identity.Type {
+	return IdentityType
+}
+
 // DeserializeSigningIdentity deserializes a signing identity from the given raw bytes
 func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (driver.SigningIdentity, error) {
 	id, err := p.Deserialize(ctx, raw)
@@ -413,9 +418,4 @@ func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte)
 	}
 
 	return si, nil
-}
-
-// IdentityType returns the type of the identity
-func (p *KeyManager) IdentityType() identity.Type {
-	return IdentityType
 }

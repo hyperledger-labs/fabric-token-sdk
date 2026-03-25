@@ -27,13 +27,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	ix509 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace/noop"
 )
@@ -131,24 +127,16 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 
 	c := math.Curves[pp.Curve]
 
-	idemixDes, err := idemix2.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, benchCase.CurveID)
+	deserializer, err := zkatdlog.NewDeserializer(pp)
 	if err != nil {
 		return nil, err
 	}
-	multiplexer := deserializer.NewTypedVerifierDeserializerMultiplex()
-	multiplexer.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
-	multiplexer.AddTypedVerifierDeserializer(ix509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&Deserializer{}, &Deserializer{}))
-	auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, multiplexer, pp.PedersenGenerators, c)
+	auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, deserializer, pp.PedersenGenerators, c)
 
-	// initialize enginw with pp
-	des, err := zkatdlog.NewDeserializer(pp)
-	if err != nil {
-		return nil, err
-	}
 	engine = validator.New(
 		logging.MustGetLogger(),
 		pp,
-		des,
+		deserializer,
 		nil,
 		nil,
 		nil,
@@ -215,11 +203,13 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 
 func prepareNonAnonymousIssueRequest(pp *v1.PublicParams, auditor *audit.Auditor, setupConfiguration *benchmark.SetupConfiguration) (*issue2.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata, error) {
 	issuer := issue2.NewIssuer("ABC", setupConfiguration.IssuerSigner, pp)
-	issuerIdentity, err := setupConfiguration.IssuerSigner.Serialize()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	ir, metadata, err := prepareIssue(auditor, issuer, issuerIdentity, setupConfiguration.OwnerIdentity, setupConfiguration.AuditorSigner)
+	ir, metadata, err := prepareIssue(
+		auditor,
+		issuer,
+		setupConfiguration.IssuerSigner,
+		setupConfiguration.OwnerIdentity,
+		setupConfiguration.AuditorSigner,
+	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -357,7 +347,7 @@ func prepareToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1
 	return token
 }
 
-func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity []byte, oID *benchmark.OwnerIdentity, auditorSigner *benchmark.Signer) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
+func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerSigner *benchmark.Signer, oID *benchmark.OwnerIdentity, auditorSigner *benchmark.Signer) (*driver.TokenRequest, *driver.TokenRequestMetadata, error) {
 	owners := make([][]byte, 1)
 	owners[0] = oID.ID
 	values := []uint64{40}
@@ -367,14 +357,16 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 		return nil, nil, err
 	}
 
-	auditInfoRaw, err := oID.AuditInfo.Bytes()
+	// Get the issuer's audit info from the issuer's signer
+	issuerIdentity, err := issuerSigner.Serialize()
 	if err != nil {
 		return nil, nil, err
 	}
+
 	metadata := &driver.IssueMetadata{
 		Issuer: driver.AuditableIdentity{
 			Identity:  issuerIdentity,
-			AuditInfo: issuerIdentity,
+			AuditInfo: issuerSigner.AuditInfo,
 		},
 	}
 	for i := range len(issue.Outputs) {
@@ -387,7 +379,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer, issuerIdentity 
 			Receivers: []*driver.AuditableIdentity{
 				{
 					Identity:  nil,
-					AuditInfo: auditInfoRaw,
+					AuditInfo: oID.AuditInfo,
 				},
 			},
 		})
@@ -438,7 +430,7 @@ func prepareTransfer(
 	pp *v1.PublicParams,
 	signer driver.SigningIdentity,
 	auditor *audit.Auditor,
-	auditInfo *crypto.AuditInfo,
+	auditInfo []byte,
 	id []byte,
 	owners [][]byte,
 	issuer *issue2.Issuer,
@@ -530,10 +522,6 @@ func prepareTransfer(
 			return nil, nil, nil, nil, err
 		}
 	}
-	auditInfoRaw, err := auditInfo.Bytes()
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
 	metadata := &driver.TransferMetadata{}
 	for range len(transfer2.Inputs) {
 		metadata.Inputs = append(metadata.Inputs, &driver.TransferInputMetadata{
@@ -541,7 +529,7 @@ func prepareTransfer(
 			Senders: []*driver.AuditableIdentity{
 				{
 					Identity:  nil,
-					AuditInfo: auditInfoRaw,
+					AuditInfo: auditInfo,
 				},
 			},
 		})
@@ -554,11 +542,11 @@ func prepareTransfer(
 		}
 		metadata.Outputs = append(metadata.Outputs, &driver.TransferOutputMetadata{
 			OutputMetadata:  marshalledinf,
-			OutputAuditInfo: auditInfoRaw,
+			OutputAuditInfo: auditInfo,
 			Receivers: []*driver.AuditableIdentity{
 				{
 					Identity:  nil,
-					AuditInfo: auditInfoRaw,
+					AuditInfo: auditInfo,
 				},
 			},
 		})

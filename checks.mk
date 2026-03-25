@@ -41,7 +41,7 @@ govet:
 misspell:
 	@echo Running misspell
 	@{ \
-	OUTPUT="$$(find . -type f | grep -v '.golangci.yml' | xargs misspell || true)"; \
+	OUTPUT="$$(find . -type f | grep -v '.golangci.yml' | grep -v 'testdata' | xargs misspell || true)"; \
 	if [ -n "$$OUTPUT" ]; then \
 		echo "The following files are have spelling errors:"; \
 		echo "$$OUTPUT"; \

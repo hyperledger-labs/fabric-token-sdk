@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -98,7 +99,7 @@ func TestSender(t *testing.T) {
 func BenchmarkSender(b *testing.B) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(b, err)
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(b, err)
 
 	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
@@ -126,7 +127,7 @@ func BenchmarkSender(b *testing.B) {
 func BenchmarkParallelSender(b *testing.B) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(b, err)
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(b, err)
 
 	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
@@ -154,7 +155,7 @@ func BenchmarkParallelSender(b *testing.B) {
 func TestParallelBenchmarkSender(t *testing.T) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(t, err)
 
 	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
@@ -182,7 +183,7 @@ func TestParallelBenchmarkSender(t *testing.T) {
 func BenchmarkVerificationSenderProof(b *testing.B) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(b, err)
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(b, err)
 
 	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
@@ -215,7 +216,7 @@ func BenchmarkVerificationSenderProof(b *testing.B) {
 func BenchmarkVerificationParallelSenderProof(b *testing.B) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(b, err)
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(b, err)
 
 	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
@@ -248,7 +249,7 @@ func BenchmarkVerificationParallelSenderProof(b *testing.B) {
 func TestParallelBenchmarkVerificationSenderProof(t *testing.T) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(t, err)
 
 	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)

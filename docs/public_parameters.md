@@ -21,7 +21,7 @@ tokengen gen zkatdlognogh.v1 --curve bls12_381_bbs --idemix-issuer-pk ./msp/idem
 
 ### Driver-Specific Details:
 - **[FabToken](drivers/fabtoken.md#public-parameters)**: Focuses on auditor and issuer identities (X.509).
-- **[DLOG w/o Graph Hiding](drivers/dlogwogh.md#public-parameters-and-manager)**: Includes Pedersen generators, range proof parameters, and Idemix issuer keys for privacy.
+- **[DLOG w/o Graph Hiding](drivers/dlogwogh.md#4-public-parameters)**: Includes Pedersen generators, range proof parameters, and Idemix issuer keys for privacy.
 
 ---
 

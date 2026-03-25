@@ -15,18 +15,17 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit/mock"
+	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -406,14 +405,13 @@ func setupAuditorTest(t *testing.T) (*mock.SigningIdentity, *v1.PublicParams, *a
 	require.NoError(t, err)
 	pp, err := v1.Setup(32, ipk, math.BLS12_381_BBS_GURVY)
 	require.NoError(t, err)
-	idemixDes, err := idemix.NewDeserializer(slices.GetUnique(pp.IdemixIssuerPublicKeys).PublicKey, math.BLS12_381_BBS_GURVY)
+
+	deserializer, err := zkatdlog.NewDeserializer(pp)
 	require.NoError(t, err)
-	des := deserializer.NewTypedVerifierDeserializerMultiplex()
-	des.AddTypedVerifierDeserializer(idemix.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
 	auditor := audit.NewAuditor(
 		logging.MustGetLogger(),
 		&noop.Tracer{},
-		des,
+		deserializer,
 		pp.PedersenGenerators,
 		math.Curves[pp.Curve],
 	)

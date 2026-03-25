@@ -135,5 +135,40 @@ func (k *KeyManager) Identity(ctx context.Context, referenceAuditInfo []byte) (*
 }
 
 func (k *KeyManager) DeserializeAuditInfo(ctx context.Context, raw []byte) (*nym.AuditInfo, error) {
-	return nym.DeserializeAuditInfo(raw)
+	ai, err := nym.DeserializeAuditInfo(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to deserialize audit info")
+	}
+	ai.Csp = k.backend.Csp
+	ai.IssuerPublicKey = k.backend.IssuerPublicKey
+	ai.SchemaManager = k.backend.SchemaManager
+	ai.Schema = k.backend.Schema
+
+	return ai, nil
+}
+
+// DeserializeSigningIdentity deserializes a signing identity from the given raw bytes
+func (k *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (driver.SigningIdentity, error) {
+	signer, err := k.DeserializeSigner(ctx, raw)
+	if err != nil {
+		return nil, err
+	}
+
+	return &signerIdentity{
+		id:     raw,
+		signer: signer,
+	}, nil
+}
+
+type signerIdentity struct {
+	id     []byte
+	signer driver.Signer
+}
+
+func (s *signerIdentity) Sign(raw []byte) ([]byte, error) {
+	return s.signer.Sign(raw)
+}
+
+func (s *signerIdentity) Serialize() ([]byte, error) {
+	return s.id, nil
 }
