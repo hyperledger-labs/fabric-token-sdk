@@ -34,14 +34,20 @@ import (
 )
 
 const (
+	// QueryPublicParamsFunction is the chaincode function name for querying public parameters.
 	QueryPublicParamsFunction = "queryPublicParams"
-	QueryTokensFunctions      = "queryTokens"
-	AreTokensSpent            = "areTokensSpent"
+	// QueryTokensFunctions is the chaincode function name for querying token data.
+	QueryTokensFunctions = "queryTokens"
+	// AreTokensSpent is the chaincode function name for checking if tokens are spent.
+	AreTokensSpent = "areTokensSpent"
 )
 
 var logger = logging.MustGetLogger()
 
+// GetTokensFunc is a function type that returns a token Service instance.
 type GetTokensFunc = func() (*tokens.Service, error)
+
+// GetTMSProviderFunc is a function type that returns a ManagementServiceProvider.
 type GetTMSProviderFunc = func() *token2.ManagementServiceProvider
 
 type lm struct {
@@ -56,6 +62,7 @@ func (n *lm) AnonymousIdentity() (view.Identity, error) {
 	return n.lm.AnonymousIdentity()
 }
 
+// ledger provides access to the Fabric ledger via the FSC fabric layer.
 type ledger struct {
 	l             *fabric.Ledger
 	ch            *fabric.Channel
@@ -66,6 +73,7 @@ func newLedger(ch *fabric.Channel, keyTranslator translator.KeyTranslator) *ledg
 	return &ledger{ch: ch, l: ch.Ledger(), keyTranslator: keyTranslator}
 }
 
+// Status retrieves the validation status of a transaction from the Fabric ledger.
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	tx, err := l.l.GetTransactionByID(id)
 	if err != nil {
@@ -80,6 +88,7 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	}
 }
 
+// GetStates performs a multi-key state query against the token chaincode.
 func (l *ledger) GetStates(ctx context.Context, namespace string, keys ...string) ([][]byte, error) {
 	if len(keys) == 0 {
 		return nil, errors.Errorf("keys cannot be empty")
@@ -107,22 +116,29 @@ func (l *ledger) TransferMetadataKey(k string) (string, error) {
 	return l.keyTranslator.CreateTransferActionMetadataKey(k)
 }
 
+// ViewManager models the interface for initiating FSC views.
 type ViewManager interface {
 	InitiateView(view view.View, ctx context.Context) (interface{}, error)
 }
 
+// ViewRegistry models the interface for registering view responders.
 type ViewRegistry interface {
 	RegisterResponder(responder view.View, initiatedBy interface{}) error
 }
 
+// EndorsementService models the interface for transaction endorsement.
 type EndorsementService = endorsement.Service
 
+// EndorsementServiceProvider provides endorsement services for different TMS IDs.
 type EndorsementServiceProvider = lazy.Provider[token2.TMSID, EndorsementService]
 
+// SetupListenerProvider defines the interface for obtaining lookup listeners for public parameters setup.
 type SetupListenerProvider interface {
 	GetListener(token2.TMSID) lookup.Listener
 }
 
+// Network implements the driver.Network interface for Hyperledger Fabric.
+// It orchestrates finality listeners, state queries, and endorsement requests.
 type Network struct {
 	n               *fabric.NetworkService
 	ch              *fabric.Channel
@@ -147,6 +163,7 @@ type Network struct {
 	connectedNamespaces lazy.Provider[string, []token2.ServiceOption]
 }
 
+// NewNetwork creates a new Fabric Network instance.
 func NewNetwork(
 	n *fabric.NetworkService,
 	ch *fabric.Channel,
@@ -194,14 +211,17 @@ func NewNetwork(
 	return network
 }
 
+// Name returns the name of the Fabric network.
 func (n *Network) Name() string {
 	return n.n.Name()
 }
 
+// Channel returns the name of the Fabric channel.
 func (n *Network) Channel() string {
 	return n.ch.Name()
 }
 
+// Normalize ensures that network, channel, and namespace are correctly set in the options.
 func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions, error) {
 	if len(opt.Network) == 0 {
 		opt.Network = n.n.Name()
@@ -233,18 +253,22 @@ func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions,
 	return opt, nil
 }
 
+// Connect initializes listeners for public parameters and initializes the endorsement service for the namespace.
 func (n *Network) Connect(ns string) (opts []token2.ServiceOption, err error) {
 	return n.connectedNamespaces.Get(ns)
 }
 
+// Broadcast sends a transaction envelope to the ordering service.
 func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
 	return n.n.Ordering().Broadcast(ctx, blob)
 }
 
+// NewEnvelope returns a new transaction envelope for the Fabric network.
 func (n *Network) NewEnvelope() driver.Envelope {
 	return n.n.TransactionManager().NewEnvelope()
 }
 
+// RequestApproval requests an endorsement for a token request.
 func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	endorsement, err := n.endorsementServiceProvider.Get(tms.ID())
 	if err != nil {
@@ -254,6 +278,7 @@ func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementSe
 	return endorsement.Endorse(context, requestRaw, signer, txID)
 }
 
+// ComputeTxID calculates the Fabric transaction ID based on creator and nonce.
 func (n *Network) ComputeTxID(id *driver.TxID) string {
 	logger.Debugf("compute tx id for [%s]", id.String())
 	temp := &fabric.TxID{
@@ -267,26 +292,32 @@ func (n *Network) ComputeTxID(id *driver.TxID) string {
 	return res
 }
 
+// FetchPublicParameters queries the chaincode for the current public parameters.
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return n.defaultPublicParamsFetcher.Fetch(n.Name(), n.Channel(), namespace)
 }
 
+// QueryTokens retrieves token data from the global state.
 func (n *Network) QueryTokens(ctx context.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	return n.tokenQueryExecutor.QueryTokens(ctx, namespace, IDs)
 }
 
+// AreTokensSpent checks if tokens have been consumed by verifying their existence in the ledger.
 func (n *Network) AreTokensSpent(ctx context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
 	return n.spentTokenQueryExecutor.QuerySpentTokens(ctx, namespace, tokenIDs, meta)
 }
 
+// LocalMembership returns the membership service for the local FSC node.
 func (n *Network) LocalMembership() driver.LocalMembership {
 	return n.localMembership
 }
 
+// AddFinalityListener registers a callback for transaction status updates.
 func (n *Network) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
 	return n.flm.AddFinalityListener(namespace, txID, listener)
 }
 
+// LookupTransferMetadataKey performs a scan to find transfer metadata matching a sub-key.
 func (n *Network) LookupTransferMetadataKey(namespace string, key string, timeout time.Duration) ([]byte, error) {
 	transferMetadataKey, err := n.keyTranslator.CreateTransferActionMetadataKey(key)
 	if err != nil {
@@ -312,6 +343,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, key string, timeou
 	return l.value, l.err
 }
 
+// Ledger returns direct access to the ledger querying layer.
 func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
 }
@@ -380,6 +412,7 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) error {
 	}
 }
 
+// NewSetupListenerProvider returns a provider for listeners that monitor public parameter updates.
 func NewSetupListenerProvider(tmsProvider *token2.ManagementServiceProvider, tokensProvider *tokens.ServiceManager) *setupListenerProvider {
 	return &setupListenerProvider{
 		tmsProvider:    tmsProvider,
@@ -392,6 +425,7 @@ type setupListenerProvider struct {
 	tokensProvider *tokens.ServiceManager
 }
 
+// GetListener returns a setupListener configured for the specified TMS ID.
 func (p *setupListenerProvider) GetListener(tmsID token2.TMSID) lookup.Listener {
 	return &setupListener{
 		GetTMSProvider: func() *token2.ManagementServiceProvider { return p.tmsProvider },
@@ -408,6 +442,7 @@ type setupListener struct {
 	TMSID          token2.TMSID
 }
 
+// OnStatus is triggered when the setup key (public parameters) is updated on the ledger.
 func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) {
 	logger.Infof("update TMS [%s] with key-value [%s][%s]", s.TMSID, key, utils.Hashable(value))
 	tsmProvider := s.GetTMSProvider()
@@ -417,6 +452,8 @@ func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) 
 	tokens, err := s.GetTokens()
 	if err != nil {
 		logger.Warnf("failed to get tokens db [%v]", err)
+
+		return
 	}
 	if err := tokens.StorePublicParams(ctx, value); err != nil {
 		logger.Warnf("failed to store public parameter key [%s]: [%v]", key, err)
@@ -424,6 +461,5 @@ func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) 
 }
 
 func (s *setupListener) OnError(ctx context.Context, key string, err error) {
-	// TODO implement me
-	panic("implement me")
+	logger.Warnf("setup listener error for TMS [%s] key [%s]: [%v]", s.TMSID, key, err)
 }

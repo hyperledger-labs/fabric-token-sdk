@@ -17,80 +17,84 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// FinalityListener is the interface that must be implemented to receive transaction status change notifications
+// FinalityListener defines the interface for receiving transaction status change notifications from the network.
 type FinalityListener interface {
-	// OnStatus is called when the status of a transaction changes
+	// OnStatus is called when the validation status of a transaction changes on the ledger.
 	OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte)
+	// OnError is called when the finality event cannot be delivered after all retries are exhausted
+	OnError(ctx context.Context, txID string, err error)
 }
 
+// TransientMap models the temporary, non-persisted metadata associated with a transaction proposal.
 type TransientMap = map[string][]byte
 
+// TxID represents a network-agnostic transaction identifier.
 type TxID struct {
-	Nonce   []byte
+	// Nonce is a random value used to prevent replay attacks.
+	Nonce []byte
+	// Creator is the serialized identity of the entity that created the transaction.
 	Creator []byte
 }
 
+// String returns a base64-encoded string representation of the transaction ID.
 func (t *TxID) String() string {
 	return fmt.Sprintf("[%s:%s]", base64.StdEncoding.EncodeToString(t.Nonce), base64.StdEncoding.EncodeToString(t.Creator))
 }
 
-// Network models a backend that stores tokens
+// Network models a DLT backend that stores and validates token transactions.
 type Network interface {
-	// Name returns the name of the network
+	// Name returns the identifier of the network.
 	Name() string
 
-	// Channel returns the channel name, empty if not applicable
+	// Channel returns the name of the channel or ledger partition, if applicable.
 	Channel() string
 
+	// Normalize populates default values in service options based on network configuration.
 	Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions, error)
 
+	// Connect initializes the connection to the backend for a specific namespace.
 	Connect(ns string) ([]token2.ServiceOption, error)
 
-	// Broadcast sends the passed blob to the network
+	// Broadcast submits a transaction or data blob to the network's ordering service.
 	Broadcast(ctx context.Context, blob interface{}) error
 
-	// NewEnvelope returns a new instance of an envelope
+	// NewEnvelope creates a new, empty transaction envelope specific to the backend.
 	NewEnvelope() Envelope
 
-	// RequestApproval requests approval for the passed request and returns the returned envelope
+	// RequestApproval requests an endorsement for a token request from the network's approval service.
 	RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID TxID) (Envelope, error)
 
-	// ComputeTxID computes the network transaction id from the passed abstract transaction id
+	// ComputeTxID calculates the ledger-specific transaction ID from an abstract TxID.
 	ComputeTxID(id *TxID) string
 
-	// FetchPublicParameters returns the public parameters for the network.
-	// If namespace is not supported, the argument is ignored.
+	// FetchPublicParameters retrieves the latest cryptographic public parameters from the ledger.
 	FetchPublicParameters(namespace string) ([]byte, error)
 
-	// QueryTokens retrieves the token content for the passed token ids
+	// QueryTokens retrieves raw token data for the specified IDs from the ledger state.
 	QueryTokens(ctx context.Context, namespace string, IDs []*token.ID) ([][]byte, error)
 
-	// AreTokensSpent retrieves the spent flag for the passed ids
+	// AreTokensSpent checks the spent status of multiple tokens on the distributed ledger.
 	AreTokensSpent(ctx context.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error)
 
-	// LocalMembership returns the local membership
+	// LocalMembership returns the local membership service for managing node identities.
 	LocalMembership() LocalMembership
 
 	// AddFinalityListener registers a listener for transaction status for the passed transaction id.
 	// If the status is already valid or invalid, the listener is called immediately.
 	// When the listener is invoked, then it is also removed.
-	// If the transaction id is empty, the listener will be called on status changes of any transaction.
-	// In this case, the listener is not removed
 	AddFinalityListener(namespace string, txID string, listener FinalityListener) error
 
-	// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
-	// The operation gets canceled if the passed timeout elapses or, if stopOnLastTx is true, when the last transaction in the vault is reached.
+	// LookupTransferMetadataKey scans the ledger for metadata associated with a transfer action.
 	LookupTransferMetadataKey(namespace string, key string, timeout time.Duration) ([]byte, error)
 
-	// Ledger gives access to the remote ledger
+	// Ledger provides access to the underlying ledger service for direct state interaction.
 	Ledger() (Ledger, error)
 }
 
+// FinalityListenerManager defines the interface for managing transaction finality subscriptions.
 type FinalityListenerManager interface {
 	// AddFinalityListener registers a listener for transaction status for the passed transaction id.
 	// If the status is already valid or invalid, the listener is called immediately.
 	// When the listener is invoked, then it is also removed.
-	// If the transaction id is empty, the listener will be called on status changes of any transaction.
-	// In this case, the listener is not removed
 	AddFinalityListener(namespace string, txID string, listener FinalityListener) error
 }

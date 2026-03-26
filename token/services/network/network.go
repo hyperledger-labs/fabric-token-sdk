@@ -23,56 +23,70 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// ValidationCode represents the status of a transaction on the ledger.
 type ValidationCode = driver.ValidationCode
 
 const (
-	Valid   = driver.Valid   // Transaction is valid and committed
-	Invalid = driver.Invalid // Transaction is invalid and has been discarded
-	Busy    = driver.Busy    // Transaction does not yet have a validity state
-	Unknown = driver.Unknown // Transaction is unknown
+	Valid   = driver.Valid   // Valid indicates the transaction is valid and committed.
+	Invalid = driver.Invalid // Invalid indicates the transaction is invalid and has been discarded.
+	Busy    = driver.Busy    // Busy indicates the transaction is still being processed.
+	Unknown = driver.Unknown // Unknown indicates the transaction state is not known.
 )
 
 var logger = logging.MustGetLogger()
 
-// FinalityListener is the interface that must be implemented to receive transaction status change notifications
+// FinalityListener defines the interface for receiving notifications when a transaction's status changes on the ledger.
 type FinalityListener interface {
-	// OnStatus is called when the status of a transaction changes
+	// OnStatus is called when the status of a transaction changes.
 	OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte)
+	// OnError is called when the finality event cannot be delivered after all retries are exhausted
+	OnError(ctx context.Context, txID string, err error)
 }
 
+// GetFunc is a function type that returns identity and raw byte information.
 type GetFunc func() (view.Identity, []byte, error)
 
+// TxID represents a unique transaction identifier composed of a nonce and the creator's identity.
 type TxID struct {
-	Nonce   []byte
+	// Nonce is a random byte slice used to ensure uniqueness.
+	Nonce []byte
+	// Creator is the serialized identity of the transaction creator.
 	Creator []byte
 }
 
-func (t TxID) String() string {
+// String returns a string representation of the transaction ID.
+func (t *TxID) String() string {
 	return fmt.Sprintf("[%s:%s]", base64.StdEncoding.EncodeToString(t.Nonce), base64.StdEncoding.EncodeToString(t.Creator))
 }
 
+// TransientMap models the transient data passed with a transaction proposal, which is not persisted on the ledger.
 type TransientMap map[string][]byte
 
+// Set adds a raw byte slice to the transient map.
 func (m TransientMap) Set(key string, raw []byte) error {
 	m[key] = raw
 
 	return nil
 }
 
+// Get retrieves a raw byte slice from the transient map.
 func (m TransientMap) Get(id string) []byte {
 	return m[id]
 }
 
+// IsEmpty returns true if the transient map has no entries.
 func (m TransientMap) IsEmpty() bool {
 	return len(m) == 0
 }
 
+// Exists checks if a specific key is present in the transient map.
 func (m TransientMap) Exists(key string) bool {
 	_, ok := m[key]
 
 	return ok
 }
 
+// SetState marshals a Go object into JSON and stores it in the transient map.
 func (m TransientMap) SetState(key string, state interface{}) error {
 	raw, err := json.Marshal(state)
 	if err != nil {
@@ -83,6 +97,7 @@ func (m TransientMap) SetState(key string, state interface{}) error {
 	return nil
 }
 
+// GetState unmarshals a JSON-encoded value from the transient map into a Go object.
 func (m TransientMap) GetState(key string, state interface{}) error {
 	value, ok := m[key]
 	if !ok {
@@ -95,22 +110,27 @@ func (m TransientMap) GetState(key string, state interface{}) error {
 	return json.Unmarshal(value, state)
 }
 
+// Envelope wraps a ledger-specific transaction envelope.
 type Envelope struct {
 	e driver.Envelope
 }
 
+// Bytes serializes the envelope into bytes.
 func (e *Envelope) Bytes() ([]byte, error) {
 	return e.e.Bytes()
 }
 
+// FromBytes deserializes an envelope from bytes.
 func (e *Envelope) FromBytes(raw []byte) error {
 	return e.e.FromBytes(raw)
 }
 
+// TxID returns the transaction identifier within the envelope.
 func (e *Envelope) TxID() string {
 	return e.e.TxID()
 }
 
+// MarshalJSON provides custom JSON marshaling for the envelope.
 func (e *Envelope) MarshalJSON() ([]byte, error) {
 	raw, err := e.e.Bytes()
 	if err != nil {
@@ -120,6 +140,7 @@ func (e *Envelope) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
+// UnmarshalJSON provides custom JSON unmarshaling for the envelope.
 func (e *Envelope) UnmarshalJSON(raw []byte) error {
 	var r []byte
 	err := json.Unmarshal(raw, &r)
@@ -130,30 +151,37 @@ func (e *Envelope) UnmarshalJSON(raw []byte) error {
 	return e.e.FromBytes(r)
 }
 
+// String returns a string representation of the envelope.
 func (e *Envelope) String() string {
 	return e.e.String()
 }
 
+// LocalMembership provides access to identities managed by the local node.
 type LocalMembership struct {
 	lm driver.LocalMembership
 }
 
+// NewLocalMembership creates a new LocalMembership wrapper.
 func NewLocalMembership(lm driver.LocalMembership) *LocalMembership {
 	return &LocalMembership{lm: lm}
 }
 
+// DefaultIdentity returns the default identity of the local node.
 func (l *LocalMembership) DefaultIdentity() view.Identity {
 	return l.lm.DefaultIdentity()
 }
 
+// AnonymousIdentity returns a fresh anonymous identity for privacy-preserving operations.
 func (l *LocalMembership) AnonymousIdentity() (view.Identity, error) {
 	return l.lm.AnonymousIdentity()
 }
 
+// Ledger provides high-level access to the distributed ledger for status checks and state queries.
 type Ledger struct {
 	l driver.Ledger
 }
 
+// Status returns the validation code for a specific transaction ID.
 func (l *Ledger) Status(id string) (ValidationCode, string, error) {
 	vc, err := l.l.Status(id)
 	if err != nil {
@@ -163,37 +191,39 @@ func (l *Ledger) Status(id string) (ValidationCode, string, error) {
 	return vc, "", nil
 }
 
-// GetStates returns the value corresponding to the given keys stored in the given namespace.
+// GetStates returns the raw byte values for the given keys in a specific namespace.
 func (l *Ledger) GetStates(ctx context.Context, namespace string, keys ...string) ([][]byte, error) {
 	return l.l.GetStates(ctx, namespace, keys...)
 }
 
-// TransferMetadataKey returns the transfer metadata key associated to the given key
+// TransferMetadataKey returns the ledger key associated with transfer metadata for a given key.
 func (l *Ledger) TransferMetadataKey(k string) (string, error) {
 	return l.l.TransferMetadataKey(k)
 }
 
-// Network provides access to the remote network
+// Network serves as the primary bridge to a specific blockchain network (e.g., Fabric or FabricX).
+// it provides methods for broadcasting transactions, requesting approvals, and monitoring finality.
 type Network struct {
 	n               driver.Network
 	localMembership *LocalMembership
 }
 
+// NewNetwork creates a new Network instance.
 func NewNetwork(n driver.Network, localMembership *LocalMembership) *Network {
 	return &Network{n: n, localMembership: localMembership}
 }
 
-// Name returns the name of the network
+// Name returns the identifier of the network.
 func (n *Network) Name() string {
 	return n.n.Name()
 }
 
-// Channel returns the channel name
+// Channel returns the name of the channel or partition within the network.
 func (n *Network) Channel() string {
 	return n.n.Channel()
 }
 
-// Broadcast sends the given blob to the network
+// Broadcast submits a transaction envelope or generic blob to the network's ordering service.
 func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
 	switch b := blob.(type) {
 	case *Envelope:
@@ -203,17 +233,17 @@ func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
 	}
 }
 
-// AnonymousIdentity returns a fresh anonymous identity
+// AnonymousIdentity returns a fresh anonymous identity from the local membership.
 func (n *Network) AnonymousIdentity() (view.Identity, error) {
 	return n.n.LocalMembership().AnonymousIdentity()
 }
 
-// NewEnvelope creates a new envelope
+// NewEnvelope creates a new, empty ledger-specific transaction envelope.
 func (n *Network) NewEnvelope() *Envelope {
 	return &Envelope{e: n.n.NewEnvelope()}
 }
 
-// RequestApproval requests approval for the given token request
+// RequestApproval sends a token request to an endorsement service and returns the resulting endorsed envelope.
 func (n *Network) RequestApproval(context view.Context, tms *token.ManagementService, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
 	env, err := n.n.RequestApproval(context, tms, requestRaw, signer, driver.TxID{
 		Nonce:   txID.Nonce,
@@ -226,7 +256,7 @@ func (n *Network) RequestApproval(context view.Context, tms *token.ManagementSer
 	return &Envelope{e: env}, nil
 }
 
-// ComputeTxID computes the transaction ID in the target network format for the given tx id
+// ComputeTxID calculates the transaction identifier in the network's native format.
 func (n *Network) ComputeTxID(id *TxID) string {
 	temp := &driver.TxID{
 		Nonce:   id.Nonce,
@@ -239,39 +269,37 @@ func (n *Network) ComputeTxID(id *TxID) string {
 	return txID
 }
 
-// FetchPublicParameters returns the public parameters for the given namespace
+// FetchPublicParameters retrieves the public parameters for a specific namespace from the network.
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return n.n.FetchPublicParameters(namespace)
 }
 
-// QueryTokens returns the tokens corresponding to the given token ids int the given namespace
+// QueryTokens retrieves the raw byte representation of tokens from the ledger.
 func (n *Network) QueryTokens(ctx context.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
 	return n.n.QueryTokens(ctx, namespace, IDs)
 }
 
-// AreTokensSpent retrieves the spent flag for the passed ids
+// AreTokensSpent checks the spent status of multiple tokens on the ledger.
 func (n *Network) AreTokensSpent(ctx context.Context, namespace string, tokenIDs []*token2.ID, meta []string) ([]bool, error) {
 	return n.n.AreTokensSpent(ctx, namespace, tokenIDs, meta)
 }
 
-// LocalMembership returns the local membership for this network
+// LocalMembership returns the local membership service associated with this network.
 func (n *Network) LocalMembership() *LocalMembership {
 	return n.localMembership
 }
 
-// AddFinalityListener registers a listener for transaction status for the passed transaction id.
-// If the status is already valid or invalid, the listener is called immediately.
-// When the listener is invoked, then it is also removed.
+// AddFinalityListener registers a listener to be notified when a transaction reaches a final state on the ledger.
 func (n *Network) AddFinalityListener(namespace string, txID string, listener FinalityListener) error {
 	return n.n.AddFinalityListener(namespace, txID, listener)
 }
 
-// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
-// The operation gets canceled if the passed timeout gets reached or, if stopOnLastTx is true, when the last transaction in the vault is reached.
+// LookupTransferMetadataKey performs a ledger scan to find a metadata key matching the provided sub-key.
 func (n *Network) LookupTransferMetadataKey(namespace, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
 	return n.n.LookupTransferMetadataKey(namespace, key, timeout)
 }
 
+// Ledger provides access to the ledger service for this network.
 func (n *Network) Ledger() (*Ledger, error) {
 	l, err := n.n.Ledger()
 	if err != nil {
@@ -281,15 +309,17 @@ func (n *Network) Ledger() (*Ledger, error) {
 	return &Ledger{l: l}, nil
 }
 
+// Normalize fills in default values for network, channel, and namespace in the service options.
 func (n *Network) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
 	return n.n.Normalize(opt)
 }
 
+// Connect establishes a connection to the network for a specific namespace.
 func (n *Network) Connect(ns string) ([]token.ServiceOption, error) {
 	return n.n.Connect(ns)
 }
 
-// Provider returns an instance of network provider
+// Provider manages multiple Network instances, providing lazy initialization and lookup by network/channel ID.
 type Provider struct {
 	networks        lazy.Provider[netId, *Network]
 	networkProvider *networkProvider
@@ -304,7 +334,7 @@ func key(id netId) string {
 	return id.network + id.channel
 }
 
-// NewProvider returns a new instance of network provider
+// NewProvider returns a new network Provider instance.
 func NewProvider(configService *ftsconfig.Service) *Provider {
 	ms := &networkProvider{drivers: make([]driver.Driver, 0)}
 
@@ -315,18 +345,19 @@ func NewProvider(configService *ftsconfig.Service) *Provider {
 	}
 }
 
+// RegisterDriver adds a new network driver to the provider.
 func (p *Provider) RegisterDriver(driver driver.Driver) {
 	p.networkProvider.registerDriver(driver)
 }
 
-// GetNetwork returns a network instance for the given network and channel
+// GetNetwork returns the Network instance for the specified network and channel identifiers.
 func (p *Provider) GetNetwork(network string, channel string) (*Network, error) {
 	logger.Debugf("GetNetwork: [%s:%s]", network, channel)
 
 	return p.networks.Get(netId{network: network, channel: channel})
 }
 
-// Normalize sets the unset options to their default values
+// Normalize ensures that network-related options are fully populated based on the configured environment.
 func (p *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
 	if opt == nil {
 		return nil, errors.New("no service options provided")
@@ -339,7 +370,7 @@ func (p *Provider) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, 
 	return n.Normalize(opt)
 }
 
-// Connect invokes `Connect` on all configured TMS
+// Connect initializes and connects all configured token management systems to their respective networks.
 func (p *Provider) Connect() error {
 	configurations, err := p.configService.Configurations()
 	if err != nil {
@@ -406,6 +437,7 @@ func GetInstance(sp token.ServiceProvider, network, channel string) *Network {
 	return n
 }
 
+// GetProvider retrieves the network Provider from the service provider.
 func GetProvider(sp token.ServiceProvider) *Provider {
 	s, err := sp.GetService(&Provider{})
 	if err != nil {

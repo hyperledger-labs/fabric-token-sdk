@@ -64,6 +64,8 @@ func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error
 	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
 	if err != nil {
 		logger.ErrorfContext(context.Context(), "failed receiving request: %s", err)
+
+		return nil, err
 	}
 
 	return tx, nil

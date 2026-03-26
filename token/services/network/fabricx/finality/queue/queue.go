@@ -98,16 +98,25 @@ func (eq *EventQueue) start() {
 	}
 }
 
-// worker represents a single goroutine that pulls events from the queue
-// and processes them until the channel is closed or the context is canceled.
-// It includes panic recovery to prevent worker crashes from affecting the pool.
+// worker is the top-level goroutine for a worker. It delegates to runWorker
+// and restarts on panic so the pool does not degrade over time.
 func (eq *EventQueue) worker(id int) {
 	defer eq.wg.Done()
+	for {
+		if stopped := eq.runWorker(id); stopped {
+			return
+		}
+		// runWorker returned false after recovering from a panic — restart the loop.
+	}
+}
+
+// runWorker processes events until the channel is closed or context is canceled.
+// It returns true for a normal exit and false when recovered from a panic.
+func (eq *EventQueue) runWorker(id int) (stopped bool) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("Worker %d recovered from panic: %v", id, r)
-			// Don't restart worker to prevent unbounded goroutine creation
-			// The pool will continue with remaining workers
+			logger.Errorf("Worker %d recovered from panic: %v, restarting", id, r)
+			stopped = false
 		}
 	}()
 
@@ -115,22 +124,19 @@ func (eq *EventQueue) worker(id int) {
 		select {
 		case event, ok := <-eq.events:
 			if !ok {
-				// Channel closed, worker exits
 				logger.Debugf("Worker %d shutting down", id)
 
-				return
+				return true
 			}
 
-			// Process the event with context
 			if err := event.Process(eq.ctx); err != nil {
-				logger.Debugf("Worker %d: error processing event: %v", id, err)
+				logger.Errorf("Worker %d: error processing event [%v]: %v", id, event, err)
 			}
 
 		case <-eq.ctx.Done():
-			// Context canceled, exit gracefully
 			logger.Debugf("Worker %d received shutdown signal", id)
 
-			return
+			return true
 		}
 	}
 }

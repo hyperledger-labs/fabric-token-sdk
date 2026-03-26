@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
@@ -25,14 +26,13 @@ type configProvider interface {
 type Driver struct {
 	cp configProvider
 
-	TokenLock     lazy.Provider[sqlite.Config, *TokenLockStore]
-	Wallet        lazy.Provider[sqlite.Config, *WalletStore]
-	Identity      lazy.Provider[sqlite.Config, *IdentityStore]
-	Token         lazy.Provider[sqlite.Config, *TokenStore]
-	TokenNotifier lazy.Provider[sqlite.Config, *TokenNotifier]
-	AuditTx       lazy.Provider[sqlite.Config, *AuditTransactionStore]
-	OwnerTx       lazy.Provider[sqlite.Config, *OwnerTransactionStore]
-	KeyStore      lazy.Provider[sqlite.Config, *KeystoreStore]
+	TokenLock lazy.Provider[sqlite.Config, *TokenLockStore]
+	Wallet    lazy.Provider[sqlite.Config, *WalletStore]
+	Identity  lazy.Provider[sqlite.Config, *IdentityStore]
+	Token     lazy.Provider[sqlite.Config, *TokenStore]
+	AuditTx   lazy.Provider[sqlite.Config, *AuditTransactionStore]
+	OwnerTx   lazy.Provider[sqlite.Config, *OwnerTransactionStore]
+	KeyStore  lazy.Provider[sqlite.Config, *KeystoreStore]
 }
 
 func NewNamedDriver(config driver3.Config, dbProvider sqlite.DbProvider) driver3.NamedDriver {
@@ -47,18 +47,63 @@ func NewDriver(config driver3.Config) *Driver {
 }
 
 func NewDriverWithDbProvider(config driver3.Config, dbProvider sqlite.DbProvider) *Driver {
-	return &Driver{
+	d := &Driver{
 		cp: sqlite.NewConfigProvider(common.NewConfig(config)),
-
-		TokenLock:     newProviderWithKeyMapper(dbProvider, NewTokenLockStore),
-		Wallet:        newProviderWithKeyMapper(dbProvider, NewWalletStore),
-		Identity:      newProviderWithKeyMapper(dbProvider, NewIdentityStore),
-		Token:         newProviderWithKeyMapper(dbProvider, NewTokenStore),
-		TokenNotifier: newProviderWithKeyMapper(dbProvider, NewTokenNotifier),
-		AuditTx:       newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore),
-		OwnerTx:       newProviderWithKeyMapper(dbProvider, NewTransactionStore),
-		KeyStore:      newProviderWithKeyMapper(dbProvider, NewKeystoreStore),
 	}
+
+	d.TokenLock = newProviderWithKeyMapper(dbProvider, NewTokenLockStore)
+	d.Wallet = newProviderWithKeyMapper(dbProvider, NewWalletStore)
+	d.Identity = newIdentityStoreProvider(dbProvider)
+	d.Token = newProviderWithKeyMapper(dbProvider, NewTokenStore)
+	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore)
+	d.OwnerTx = newProviderWithKeyMapper(dbProvider, NewTransactionStore)
+	d.KeyStore = newProviderWithKeyMapper(dbProvider, NewKeystoreStore)
+
+	return d
+}
+
+func newIdentityStoreProvider(dbProvider sqlite.DbProvider) lazy.Provider[sqlite.Config, *IdentityStore] {
+	return lazy.NewProviderWithKeyMapper(key, func(o sqlite.Config) (*IdentityStore, error) {
+		opts := sqlite.Opts{
+			DataSource:      o.DataSource,
+			SkipPragmas:     o.SkipPragmas,
+			MaxOpenConns:    o.MaxOpenConns,
+			MaxIdleConns:    *o.MaxIdleConns,
+			MaxIdleTime:     *o.MaxIdleTime,
+			TablePrefix:     o.TablePrefix,
+			TableNameParams: o.TableNameParams,
+			Tracing:         o.Tracing,
+		}
+		dbs, err := dbProvider.Get(opts)
+		if err != nil {
+			return nil, err
+		}
+		tableNames, err := common2.GetTableNames(o.TablePrefix, o.TableNameParams...)
+		if err != nil {
+			return nil, err
+		}
+
+		p, err := common2.NewIdentityStoreWithNotifier(
+			dbs.ReadDB,
+			dbs.WriteDB,
+			tableNames,
+			secondcache.NewTyped[bool](5000),
+			secondcache.NewTyped[[]byte](5000),
+			sqlite.NewConditionInterpreter(),
+			&sqlite.ErrorMapper{},
+			nil,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if !o.SkipCreateTable {
+			if err := p.CreateSchema(); err != nil {
+				return nil, err
+			}
+		}
+
+		return p, nil
+	})
 }
 
 func (d *Driver) NewTokenLock(name driver2.PersistenceName, params ...string) (driver3.TokenLockStore, error) {
@@ -104,15 +149,6 @@ func (d *Driver) NewToken(name driver2.PersistenceName, params ...string) (drive
 	}
 
 	return d.Token.Get(*opts)
-}
-
-func (d *Driver) NewTokenNotifier(name driver2.PersistenceName, params ...string) (driver3.TokenNotifier, error) {
-	opts, err := d.cp.GetOpts(name, params...)
-	if err != nil {
-		return nil, err
-	}
-
-	return d.TokenNotifier.Get(*opts)
 }
 
 func (d *Driver) NewAuditTransaction(name driver2.PersistenceName, params ...string) (driver3.AuditTransactionStore, error) {

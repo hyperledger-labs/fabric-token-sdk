@@ -38,6 +38,16 @@ type WalletService struct {
 		result1 driver.CertifierWallet
 		result2 error
 	}
+	DoneStub        func() error
+	doneMutex       sync.RWMutex
+	doneArgsForCall []struct {
+	}
+	doneReturns struct {
+		result1 error
+	}
+	doneReturnsOnCall map[int]struct {
+		result1 error
+	}
 	GetAuditInfoStub        func(context.Context, driver.Identity) ([]byte, error)
 	getAuditInfoMutex       sync.RWMutex
 	getAuditInfoArgsForCall []struct {
@@ -333,6 +343,59 @@ func (fake *WalletService) CertifierWalletReturnsOnCall(i int, result1 driver.Ce
 		result1 driver.CertifierWallet
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *WalletService) Done() error {
+	fake.doneMutex.Lock()
+	ret, specificReturn := fake.doneReturnsOnCall[len(fake.doneArgsForCall)]
+	fake.doneArgsForCall = append(fake.doneArgsForCall, struct {
+	}{})
+	stub := fake.DoneStub
+	fakeReturns := fake.doneReturns
+	fake.recordInvocation("Done", []interface{}{})
+	fake.doneMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *WalletService) DoneCallCount() int {
+	fake.doneMutex.RLock()
+	defer fake.doneMutex.RUnlock()
+	return len(fake.doneArgsForCall)
+}
+
+func (fake *WalletService) DoneCalls(stub func() error) {
+	fake.doneMutex.Lock()
+	defer fake.doneMutex.Unlock()
+	fake.DoneStub = stub
+}
+
+func (fake *WalletService) DoneReturns(result1 error) {
+	fake.doneMutex.Lock()
+	defer fake.doneMutex.Unlock()
+	fake.DoneStub = nil
+	fake.doneReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *WalletService) DoneReturnsOnCall(i int, result1 error) {
+	fake.doneMutex.Lock()
+	defer fake.doneMutex.Unlock()
+	fake.DoneStub = nil
+	if fake.doneReturnsOnCall == nil {
+		fake.doneReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.doneReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *WalletService) GetAuditInfo(arg1 context.Context, arg2 driver.Identity) ([]byte, error) {

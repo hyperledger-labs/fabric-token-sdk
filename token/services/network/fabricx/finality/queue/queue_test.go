@@ -123,15 +123,28 @@ func TestEnqueue_QueueFull(t *testing.T) {
 
 	// Create blocking events
 	blockChan := make(chan struct{})
+	startedChan := make(chan struct{}, 1)
 	blockingEvent := &mockEvent{
 		processFunc: func(ctx context.Context) error {
+			startedChan <- struct{}{}
 			<-blockChan
 
 			return nil
 		},
 	}
 
-	// Fill the queue
+	// First event will be picked up by the worker
+	err = eq.Enqueue(blockingEvent)
+	require.NoError(t, err)
+
+	// Wait for worker to be busy
+	select {
+	case <-startedChan:
+	case <-time.After(time.Second):
+		t.Fatal("Timeout waiting for worker to start")
+	}
+
+	// Now fill the queue buffer (QueueSize: 2)
 	err = eq.Enqueue(blockingEvent)
 	require.NoError(t, err)
 	err = eq.Enqueue(blockingEvent)
@@ -216,8 +229,10 @@ func TestEnqueueBlocking_QueueClosed(t *testing.T) {
 	defer close(blockChan)
 
 	// First event - will be picked up by worker and block
+	startedChan := make(chan struct{}, 1)
 	blockingEvent1 := &mockEvent{
 		processFunc: func(ctx context.Context) error {
+			startedChan <- struct{}{}
 			<-blockChan
 
 			return nil
@@ -227,7 +242,11 @@ func TestEnqueueBlocking_QueueClosed(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for worker to pick up the event
-	time.Sleep(50 * time.Millisecond)
+	select {
+	case <-startedChan:
+	case <-time.After(time.Second):
+		t.Fatal("Timeout waiting for worker to start")
+	}
 
 	// Second event - will fill the queue buffer
 	blockingEvent2 := &mockEvent{
@@ -307,7 +326,7 @@ func TestEventProcessing_Success(t *testing.T) {
 	}
 }
 
-// TestEventProcessing_WithError tests event processing that returns errors
+// TestEventProcessing_WithError tests that a failing event is processed once and the error is logged
 func TestEventProcessing_WithError(t *testing.T) {
 	cfg := queue.Config{Workers: 2, QueueSize: 10}
 	eq, err := queue.NewEventQueue(cfg)
@@ -326,7 +345,8 @@ func TestEventProcessing_WithError(t *testing.T) {
 
 	// Wait for processing
 	time.Sleep(100 * time.Millisecond)
-	assert.True(t, event.wasProcessed())
+	// Queue does not retry — event is processed exactly once
+	assert.Equal(t, int32(1), atomic.LoadInt32(&event.processed))
 }
 
 // TestEventProcessing_WithPanic tests worker recovery from panic

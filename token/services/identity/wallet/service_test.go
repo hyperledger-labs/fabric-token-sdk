@@ -35,7 +35,7 @@ func TestNewServiceFields(t *testing.T) {
 
 func TestRegisterIdentityDelegation(t *testing.T) {
 	ctx := t.Context()
-	reg := &wmock.Registry{}
+	reg := &wmock.RoleRegistry{}
 	called := false
 	reg.RegisterIdentityCalls(func(context.Context, driver.IdentityConfiguration) error {
 		called = true
@@ -47,7 +47,7 @@ func TestRegisterIdentityDelegation(t *testing.T) {
 	require.True(t, called)
 
 	// test error propagation
-	errReg := &wmock.Registry{}
+	errReg := &wmock.RoleRegistry{}
 	errReg.RegisterIdentityReturns(errors.New("boom"))
 	s2 := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[identity.RoleType]wallet.RoleRegistry{identity.OwnerRole: errReg})
 	reqErr := s2.RegisterOwnerIdentity(ctx, driver.IdentityConfiguration{})
@@ -118,10 +118,10 @@ func TestRegisterRecipientIdentityFailuresAndSuccess(t *testing.T) {
 
 func TestWalletAndLookupFunctions(t *testing.T) {
 	ctx := t.Context()
-	ownerReg := &wmock.Registry{}
-	issuerReg := &wmock.Registry{}
-	auditorReg := &wmock.Registry{}
-	certifierReg := &wmock.Registry{}
+	ownerReg := &wmock.RoleRegistry{}
+	issuerReg := &wmock.RoleRegistry{}
+	auditorReg := &wmock.RoleRegistry{}
+	certifierReg := &wmock.RoleRegistry{}
 	s := wallet.NewService(
 		&logging.MockLogger{},
 		&dmock.IdentityProvider{},
@@ -189,8 +189,8 @@ func TestSpendIDsAndConvert(t *testing.T) {
 	require.Equal(t, []string{"[tx1:1]"}, res)
 
 	// Convert map
-	in := map[identity.RoleType]*wmock.Registry{identity.OwnerRole: {}}
-	out := wallet.Convert[*wmock.Registry](in)
+	in := map[identity.RoleType]*wmock.RoleRegistry{identity.OwnerRole: {}}
+	out := wallet.Convert[*wmock.RoleRegistry](in)
 	require.Len(t, out, 1)
 	_, ok := out[identity.OwnerRole]
 	require.True(t, ok)

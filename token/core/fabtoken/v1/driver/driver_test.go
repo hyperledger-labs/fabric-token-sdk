@@ -19,6 +19,7 @@ import (
 	imock "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver/mock"
 	idmock "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -133,6 +134,7 @@ func TestNewTokenService(t *testing.T) {
 	// Case 7: Success
 	identityStore := &imock.IdentityStoreService{}
 	identityStore.IteratorConfigurationsReturns(&mock2.IdentityConfigurationIterator{}, nil)
+	identityStore.NotifierReturns(nil, storage.ErrNotSupported)
 	keystore := &mock2.Keystore{}
 	walletStore := &imock.WalletStoreService{}
 	storageProvider.IdentityStoreReturns(identityStore, nil)
@@ -236,6 +238,7 @@ func TestWalletServiceFactory(t *testing.T) {
 
 	identityStore := &imock.IdentityStoreService{}
 	identityStore.IteratorConfigurationsReturns(&mock2.IdentityConfigurationIterator{}, nil)
+	identityStore.NotifierReturns(nil, storage.ErrNotSupported)
 	keystore := &mock2.Keystore{}
 	walletStore := &imock.WalletStoreService{}
 	storageProvider.IdentityStoreReturns(identityStore, nil)

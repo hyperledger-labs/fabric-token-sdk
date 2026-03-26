@@ -25,6 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -43,7 +44,7 @@ func NewTokenStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondIn
 		Ownership:      tables.Ownership,
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
-	}, ci), nil
+	}, ci, nil), nil
 }
 
 func (db *TokenStore) CreateSchema() error {
@@ -51,22 +52,41 @@ func (db *TokenStore) CreateSchema() error {
 }
 
 type TokenStore struct {
-	readDB  *sql.DB
-	writeDB *sql.DB
-	table   tokenTables
-	ci      common3.CondInterpreter
+	readDB   *sql.DB
+	writeDB  *sql.DB
+	table    tokenTables
+	ci       common3.CondInterpreter
+	notifier driver.TokenNotifier
 
 	sttMutex              sync.RWMutex
 	supportedTokenFormats []token.Format
 }
 
-func newTokenStore(readDB, writeDB *sql.DB, tables tokenTables, ci common3.CondInterpreter) *TokenStore {
+func newTokenStore(readDB, writeDB *sql.DB, tables tokenTables, ci common3.CondInterpreter, notifier driver.TokenNotifier) *TokenStore {
 	return &TokenStore{
-		readDB:  readDB,
-		writeDB: writeDB,
-		table:   tables,
-		ci:      ci,
+		readDB:   readDB,
+		writeDB:  writeDB,
+		table:    tables,
+		ci:       ci,
+		notifier: notifier,
 	}
+}
+
+func NewTokenStoreWithNotifier(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, notifier driver.TokenNotifier) (*TokenStore, error) {
+	return newTokenStore(readDB, writeDB, tokenTables{
+		Tokens:         tables.Tokens,
+		Ownership:      tables.Ownership,
+		PublicParams:   tables.PublicParams,
+		Certifications: tables.Certifications,
+	}, ci, notifier), nil
+}
+
+func (db *TokenStore) Notifier() (driver.TokenNotifier, error) {
+	if db.notifier == nil {
+		return nil, storage.ErrNotSupported
+	}
+
+	return db.notifier, nil
 }
 
 func (db *TokenStore) StoreToken(ctx context.Context, tr driver.TokenRecord, owners []string) (err error) {

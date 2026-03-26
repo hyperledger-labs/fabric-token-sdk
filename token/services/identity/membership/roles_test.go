@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -64,6 +65,7 @@ func TestRoleFactory_NewRole(t *testing.T) {
 	storageProvider := &mock.StorageProvider{}
 	deserializerManager := &mock.SignerDeserializerManager{}
 	identityStore := &mock2.IdentityStoreService{}
+	identityStore.NotifierReturns(nil, storage.ErrNotSupported)
 
 	factory := membership.NewRoleFactory(
 		logger,
