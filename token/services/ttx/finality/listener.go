@@ -61,7 +61,7 @@ func (t *Listener) OnError(ctx context.Context, txID string, err error) {
 func (t *Listener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
 	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()
-	if err := t.retryRunner.Run(func() error {
+	if err := t.retryRunner.RunWithContext(newCtx, func() error {
 		err := t.runOnStatus(newCtx, txID, status, message, tokenRequestHash)
 		if err != nil {
 			t.logger.Errorf("finality listener on [%s] failed with error: [%+v], retrying...", txID, err)
