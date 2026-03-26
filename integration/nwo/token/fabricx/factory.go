@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	tokentopology "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/fabricx/tmsdeploy"
+	"github.com/onsi/gomega"
 )
 
 type ClientProvider interface {
@@ -25,10 +26,13 @@ type Backend struct {
 	ClientProvider ClientProvider
 }
 
-func (b *Backend) PrepareNamespace(t *tokentopology.TMS) {
-	switch n := t.BackendTopology.(type) {
+func (b *Backend) PrepareNamespace(tms *tokentopology.TMS) {
+	switch n := tms.BackendTopology.(type) {
 	case *topology.Topology:
-		n.AddNamespaceWithUnanimity(t.Namespace)
+		orgs := fabric.GetOrgs(tms)
+		gomega.Expect(orgs).ToNot(gomega.BeEmpty(), "missing orgs for tms [%s:%s:%s:%s:%s]", tms.Network, tms.Channel, tms.Namespace, tms.Driver, tms.Alias)
+
+		n.AddNamespaceWithUnanimity(tms.Namespace, orgs...)
 	default:
 		panic(fmt.Sprintf("unknown backend network type %T", n))
 	}
