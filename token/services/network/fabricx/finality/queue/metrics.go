@@ -50,9 +50,11 @@ func newMetrics(p metrics.Provider) *Metrics {
 // It is used when no provider is configured (e.g. in tests).
 type noopProvider struct{}
 
-func (p *noopProvider) NewCounter(_ metrics.CounterOpts) metrics.Counter       { return &noopCounter{} }
-func (p *noopProvider) NewGauge(_ metrics.GaugeOpts) metrics.Gauge             { return &noopGauge{} }
-func (p *noopProvider) NewHistogram(_ metrics.HistogramOpts) metrics.Histogram { return &noopHistogram{} }
+func (p *noopProvider) NewCounter(_ metrics.CounterOpts) metrics.Counter { return &noopCounter{} }
+func (p *noopProvider) NewGauge(_ metrics.GaugeOpts) metrics.Gauge       { return &noopGauge{} }
+func (p *noopProvider) NewHistogram(_ metrics.HistogramOpts) metrics.Histogram {
+	return &noopHistogram{}
+}
 
 type noopCounter struct{}
 
