@@ -13,7 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
@@ -33,17 +34,20 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 
 	des := deserializer.NewTypedVerifierDeserializerMultiplex()
 	for _, idemixIssuerPublicKey := range pp.IdemixIssuerPublicKeys {
-		idemixDes, err := idemix2.NewDeserializer(idemixIssuerPublicKey.PublicKey, idemixIssuerPublicKey.Curve)
+		idemixDes, err := idemix.NewDeserializer(idemixIssuerPublicKey.PublicKey, idemixIssuerPublicKey.Curve)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", idemixIssuerPublicKey.Curve)
 		}
-		des.AddTypedVerifierDeserializer(idemix2.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+		des.AddTypedVerifierDeserializer(idemix.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixDes, idemixDes))
+
+		idemixNymDes := idemixnym.NewDeserializer(idemixDes)
+		des.AddTypedVerifierDeserializer(idemixnym.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(idemixNymDes, idemixNymDes))
 	}
 	des.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	des.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(des))
 	des.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(des, des))
 
-	return &Deserializer{Deserializer: common.NewDeserializer(idemix2.IdentityType, des, des, des, des, des)}, nil
+	return &Deserializer{Deserializer: common.NewDeserializer(idemix.IdentityType, des, des, des, des, des)}, nil
 }
 
 // TokenDeserializer deserializes zkatdlog tokens and metadata.
@@ -83,9 +87,10 @@ type EIDRHDeserializer = deserializer.EIDRHDeserializer
 // NewEIDRHDeserializer returns a new zkatdlog EIDRHDeserializer.
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d := deserializer.NewEIDRHDeserializer()
-	d.AddDeserializer(idemix2.IdentityType, &idemix2.AuditInfoDeserializer{})
+	d.AddDeserializer(idemix.IdentityType, &idemix.AuditInfoDeserializer{})
+	d.AddDeserializer(idemixnym.IdentityType, &idemixnym.AuditInfoDeserializer{})
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
-	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(&idemix2.AuditInfoDeserializer{}))
+	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(d))
 	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})
 
 	return d

@@ -347,7 +347,7 @@ func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.
 	return p.DeserializeSigningIdentity(ctx, raw)
 }
 
-// Returns a string that includes the given identity.
+// Info returns a string that includes the given identity.
 // If AuditInfo is also provided then the id is cryptographically verified against it
 // and the Enrollment ID (EID) is extracted from the audit info and is printed as well.
 func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (string, error) {
@@ -386,6 +386,11 @@ func (p *KeyManager) Anonymous() bool {
 	return true
 }
 
+// IdentityType returns the type of the identity
+func (p *KeyManager) IdentityType() identity.Type {
+	return IdentityType
+}
+
 // DeserializeSigningIdentity deserializes a signing identity from the given raw bytes
 func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (driver.SigningIdentity, error) {
 	id, err := p.Deserialize(ctx, raw)
@@ -413,9 +418,4 @@ func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte)
 	}
 
 	return si, nil
-}
-
-// IdentityType returns the type of the identity
-func (p *KeyManager) IdentityType() identity.Type {
-	return IdentityType
 }

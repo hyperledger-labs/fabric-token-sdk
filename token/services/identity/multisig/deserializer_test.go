@@ -434,7 +434,7 @@ func TestAuditInfoDeserializer_DeserializeAuditInfo_Success(t *testing.T) {
 	raw, err := ai.Bytes()
 	require.NoError(t, err)
 
-	result, err := deserializer.DeserializeAuditInfo(context.Background(), raw)
+	result, err := deserializer.DeserializeAuditInfo(context.Background(), nil, raw)
 	require.NoError(t, err)
 	assert.NotNil(t, result)
 
@@ -447,7 +447,7 @@ func TestAuditInfoDeserializer_DeserializeAuditInfo_Success(t *testing.T) {
 func TestAuditInfoDeserializer_DeserializeAuditInfo_Invalid(t *testing.T) {
 	deserializer := &AuditInfoDeserializer{}
 
-	result, err := deserializer.DeserializeAuditInfo(context.Background(), []byte("invalid"))
+	result, err := deserializer.DeserializeAuditInfo(context.Background(), nil, []byte("invalid"))
 	require.Error(t, err)
 	assert.Nil(t, result)
 }

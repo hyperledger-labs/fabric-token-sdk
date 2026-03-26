@@ -28,20 +28,19 @@ import (
 	mock3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	testUseCaseExtra = &benchmark2.Case{
-		Bits:       32,
-		CurveID:    math.BLS12_381_BBS_GURVY,
-		NumInputs:  2,
-		NumOutputs: 2,
-	}
-)
+var testUseCaseExtra = &benchmark2.Case{
+	Bits:       32,
+	CurveID:    math.BLS12_381_BBS_GURVY,
+	NumInputs:  2,
+	NumOutputs: 2,
+}
 
 type mockSignatureProvider struct {
 	HasBeenSignedByFunc func(ctx context.Context, id driver.Identity, verifier driver.Verifier) ([]byte, error)
@@ -60,7 +59,7 @@ func (m *mockSignatureProvider) Signatures() [][]byte {
 }
 
 func TestIssueValidateErrors(t *testing.T) {
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCaseExtra.Bits}, []math.CurveID{testUseCaseExtra.CurveID})
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCaseExtra.Bits}, []math.CurveID{testUseCaseExtra.CurveID}, idemixnym.IdentityType)
 	require.NoError(t, err)
 	env, err := testing2.NewEnv(testUseCaseExtra, configurations)
 	require.NoError(t, err)

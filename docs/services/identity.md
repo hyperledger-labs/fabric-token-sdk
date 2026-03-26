@@ -145,7 +145,11 @@ This allows the SDK to be extensible and capable of handling different cryptogra
 
 `TypedIdentity` (defined in `token/services/identity/typed.go`) acts as a generic container. 
 It wraps the raw identity bytes with a type label, enabling the system to verify deserializers and process signatures correctly without hardcoding implementation details.
-*   **Structure**: Contains a `Type` (string) and the `Identity` (raw bytes).
+
+*   **Encoding**: ASN.1 encoded `SEQUENCE`.
+*   **Structure**:
+    - `Type` (string): The identifier of the identity scheme (e.g., `"x509"`, `"idemix"`).
+    - `Identity` (bytes): The raw payload of the identity, specific to the key manager.
 
 ### Default Key Managers
 
@@ -153,16 +157,63 @@ The identity service includes two primary implementations for concrete identitie
 
 #### 1. X.509
 Standard PKIX identities.
-*   **Transparency**: Verification reveals the identity of the signer.
+*   **Identity (Payload)**: A standard X.509 certificate.
+*   **Audit Info**: JSON-encoded `AuditInfo` structure containing the Enrollment ID and Revocation Handle.
+    - `EID` (string): The enrollment identifier.
+    - `RH` (bytes): The revocation handle.
+*   **Encoding**:
+    - `TypedIdentity` payload: Raw X.509 certificate bytes.
+    - Audit Info: JSON.
 *   **Usage**: Ideal for infrastructure components (nodes, services) or scenarios where anonymity is not required.
 *   **Implementation**: `token/services/identity/x509`.
 
 #### 2. Idemix (Identity Mixer)
 Advanced identity encryption based on Zero-Knowledge Proofs (ZKP).
+*   **Identity (Payload)**: A **full Idemix signature** acting as a commitment to the user's attributes. It is encoded as a Protobuf `SerializedIdemixIdentity` message.
+    - `NymPublicKey` (bytes): The pseudonym public key ($N = g^{sk} \cdot h^r$).
+    - `Proof` (bytes): A zero-knowledge proof of credential possession and nym derivation.
+    - `Schema` (string): The version of the credential schema.
+*   **Audit Info**: JSON-encoded `AuditInfo` structure.
+    - `EidNymAuditData`: Cryptographic data required to de-anonymize the Enrollment ID.
+    - `RhNymAuditData`: Cryptographic data required to de-anonymize the Revocation Handle.
+    - `Attributes` (array of bytes): The cleartext values of the attributes (e.g., EID at index 2, RH at index 3).
+    - `Schema` (string): The credential schema version.
+*   **Encoding**:
+    - `TypedIdentity` payload: Protobuf.
+    - Audit Info: JSON.
 *   **Anonymity**: Users can prove they hold a valid credential without revealing their actual identity.
 *   **Unlinkability**: Different transactions from the same user appear uncorrelated.
-*   **Auditability**: Includes "audit info" facilitating regulatory compliance by allowing authorized auditors to reveal the identity.
+*   **Auditability**: Authorized auditors can reveal the Enrollment ID using the audit info.
+*   **Signature Format**: Signatures are **nym signatures** (pseudonym-based) that do not carry attributes, providing unlinkability between transactions.
 *   **Implementation**: `token/services/identity/idemix`.
+
+#### 3. IdemixNym (Idemix with Pseudonym-based Identity)
+An extension of Idemix that uses a **commitment to the Enrollment ID (EID)** as the identity instead of the full Idemix signature.
+*   **Identity (Payload)**: A small **Nym EID** (a cryptographic commitment to the enrollment ID, $g^{sk} \cdot h^{r_{eid}}$).
+*   **Audit Info**: JSON-encoded structure that extends the standard Idemix `AuditInfo`.
+    - Includes all fields from Idemix `AuditInfo`.
+    - `IdemixSignature` (bytes): The full Idemix signature that would have been the identity in the standard Idemix manager.
+*   **Encoding**:
+    - `TypedIdentity` payload: Raw bytes of the nym.
+    - Audit Info: JSON.
+*   **Signature Packaging**: Signatures are wrapped in an ASN.1 `SEQUENCE` containing:
+    - `Creator` (bytes): The full Idemix signature (enabling verification against the IPK).
+    - `Signature` (bytes): The actual pseudonym signature bytes.
+*   **Enhanced Privacy**: The identity itself is a pseudonym (nym) rather than the full Idemix signature with attributes.
+*   **Reduced Identity Size**: The nym EID is significantly smaller than a full Idemix signature, reducing storage and transmission overhead.
+*   **Backward Compatible Auditability**: Maintains full auditability through the audit info, which contains both the nym proof and the original Idemix signature.
+*   **Implementation**: `token/services/identity/idemixnym`.
+
+**Key Differences from Standard Idemix:**
+
+| Aspect | Idemix | IdemixNym |
+|:-------|:-------|:----------|
+| **Identity (Token Owner)** | Full Idemix signature with attributes | Nym EID (commitment to enrollment ID) |
+| **Identity Payload Encoding** | Protobuf | Raw bytes |
+| **Audit Info Encoding** | JSON | JSON (extended) |
+| **Signature Encoding** | Raw bytes | ASN.1 (Creator + Signature) |
+| **Identity Size** | Large (~several KB) | Small (~32-64 bytes) |
+| **Storage Overhead** | High | Low |
 
 ### Other Identity Types
 
@@ -171,13 +222,30 @@ The architecture supports specialized identity types for complex use cases:
 #### Multisig
 Located in `token/services/identity/multisig`.
 *   **Concept**: An identity that wraps multiple sub-identities.
+*   **Identity (Payload)**: An ASN.1 encoded `MultiIdentity` sequence.
+    - `Identities` (array of `TypedIdentity` bytes): The constituent identities.
+*   **Audit Info**: JSON-encoded `AuditInfo` structure.
+    - `IdentityAuditInfos` (array of `IdentityAuditInfo`): A list of audit information blobs for each constituent identity.
+*   **Encoding**:
+    - `TypedIdentity` payload: ASN.1.
+    - Audit Info: JSON.
 *   **Usage**: Useful for requiring multiple signatures or representing a group of parties.
 *   **Auditability**: Aggregates audit information for all underlying identities.
 
 #### HTLC (Hashed Time Lock Contract)
 Located in `token/services/identity/interop/htlc`.
 *   **Concept**: A script-based identity used primarily for interoperability mechanisms like atomic swaps.
-*   **Structure**: Encapsulates a **Sender** identity, a **Recipient** identity, hash lock information, and a timeout.
+*   **Identity (Payload)**: A JSON-encoded `Script` structure defining the swap conditions.
+    - `Sender` (bytes): The wrapped identity of the sender.
+    - `Recipient` (bytes): The wrapped identity of the recipient.
+    - `Deadline` (uint64): The timeout period.
+    - `HashInfo`: Information about the hash lock.
+*   **Audit Info**: A JSON-encoded `ScriptInfo` structure.
+    - `Sender` (bytes): The audit info for the sender's identity.
+    - `Recipient` (bytes): The audit info for the recipient's identity.
+*   **Encoding**:
+    - `TypedIdentity` payload: JSON.
+    - Audit Info: JSON.
 *   **Behavior**: Validation involves satisfying the script conditions (e.g., providing the hash preimage).
 
 ## Extending the Identity Service

@@ -135,26 +135,30 @@ func TestAuditDeserializer(t *testing.T) {
 	mockA := &identityDriverMock.AuditInfoDeserializer{}
 	a := htlc.NewAuditDeserializer(mockA)
 
+	script := &htlc.Script{}
+	scriptRaw, err := json.Marshal(script)
+	require.NoError(t, err)
+
 	// invalid
-	_, err := a.DeserializeAuditInfo(ctx, []byte("invalid"))
+	_, err = a.DeserializeAuditInfo(ctx, scriptRaw, []byte("invalid"))
 	require.Error(t, err)
 
 	// no recipient
 	si := &htlc.ScriptInfo{Sender: []byte("s")}
 	r, _ := json.Marshal(si)
-	_, err = a.DeserializeAuditInfo(ctx, r)
+	_, err = a.DeserializeAuditInfo(ctx, scriptRaw, r)
 	require.Error(t, err)
 
 	// inner deserializer error
 	si = &htlc.ScriptInfo{Recipient: []byte("r")}
 	r, _ = json.Marshal(si)
 	mockA.DeserializeAuditInfoReturns(nil, errors.New("nope"))
-	_, err = a.DeserializeAuditInfo(ctx, r)
+	_, err = a.DeserializeAuditInfo(ctx, scriptRaw, r)
 	require.Error(t, err)
 
 	// success
 	mockA.DeserializeAuditInfoReturns(&fakeAuditInfo{}, nil)
-	ai, err := a.DeserializeAuditInfo(ctx, r)
+	ai, err := a.DeserializeAuditInfo(ctx, scriptRaw, r)
 	require.NoError(t, err)
 	require.NotNil(t, ai)
 }

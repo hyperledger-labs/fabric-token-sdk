@@ -11,23 +11,28 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	ix509 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
@@ -63,9 +68,10 @@ type SetupConfigurations struct {
 
 // NewSetupConfigurations loads test data from the given idemixTestdataPath and
 // builds setup configurations for each combination of the provided bit sizes
-// and curveIDs. It returns a container mapping keys to configurations or an
-// error if any setup step fails.
-func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs []math.CurveID) (*SetupConfigurations, error) {
+// and curveIDs. The ownerIdentityType parameter determines whether to load
+// idemix or idemixnym owner identities.
+// It returns a container mapping keys to configurations or an error if any setup step fails.
+func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs []math.CurveID, ownerIdentityType identity.Type) (*SetupConfigurations, error) {
 	configurations := map[string]*SetupConfiguration{}
 	for _, curveID := range curveIDs {
 		var ipk []byte
@@ -78,7 +84,7 @@ func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs [
 			if err != nil {
 				return nil, err
 			}
-			oID, err = loadOwnerIdentity(context.Background(), idemixPath, curveID)
+			oID, err = loadOwnerIdentityByType(context.Background(), idemixPath, curveID, ownerIdentityType)
 			if err != nil {
 				return nil, err
 			}
@@ -90,7 +96,7 @@ func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs [
 			if err != nil {
 				return nil, err
 			}
-			oID, err = loadOwnerIdentity(context.Background(), idemixPath, curveID)
+			oID, err = loadOwnerIdentityByType(context.Background(), idemixPath, curveID, ownerIdentityType)
 			if err != nil {
 				return nil, err
 			}
@@ -102,7 +108,7 @@ func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs [
 		if err != nil {
 			return nil, err
 		}
-		issuerSigner, err := NewECDSASigner()
+		issuerSigner, err := PrepareECDSASigner()
 		if err != nil {
 			return nil, err
 		}
@@ -175,7 +181,7 @@ func (c *SetupConfigurations) SaveTo(dir string) error {
 		return errors.Errorf("nil SetupConfigurations")
 	}
 	// Ensure target base directory exists
-	if err := os.MkdirAll(dir, 0750); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return errors.Wrapf(err, "failed creating base dir [%s]")
 	}
 
@@ -209,7 +215,7 @@ func (c *SetupConfigurations) SaveTo(dir string) error {
 
 		// create target directory and write
 		targetDir := filepath.Join(dir, filepath.Base(k))
-		if err := os.MkdirAll(targetDir, 0750); err != nil {
+		if err := os.MkdirAll(targetDir, 0o750); err != nil {
 			return errors.WithMessagef(err, "failed creating dir for key: %s", k)
 		}
 
@@ -235,11 +241,25 @@ func (c *SetupConfigurations) SaveTo(dir string) error {
 // identity capable of producing proofs for the owner.
 type OwnerIdentity struct {
 	ID        driver.Identity
-	AuditInfo *crypto.AuditInfo
+	AuditInfo []byte
 	Signer    driver.SigningIdentity
 }
 
-func loadOwnerIdentity(ctx context.Context, dir string, curveID math.CurveID) (*OwnerIdentity, error) {
+// loadOwnerIdentityByType loads an owner identity based on the specified identity type.
+// It delegates to either loadIdemixOwnerIdentity or loadIdemixNymOwnerIdentity.
+func loadOwnerIdentityByType(ctx context.Context, dir string, curveID math.CurveID, idType identity.Type) (*OwnerIdentity, error) {
+	switch idType {
+	case idemix2.IdentityType:
+		return loadIdemixOwnerIdentity(ctx, dir, curveID)
+	case idemixnym.IdentityType:
+		return loadIdemixNymOwnerIdentity(ctx, dir, curveID)
+	default:
+		return nil, errors.Errorf("unsupported identity type: %v", idType)
+	}
+}
+
+// loadIdemixOwnerIdentity loads an idemix owner identity using types.Standard signature type.
+func loadIdemixOwnerIdentity(ctx context.Context, dir string, curveID math.CurveID) (*OwnerIdentity, error) {
 	backend, err := kvs.NewInMemory()
 	if err != nil {
 		return nil, err
@@ -256,10 +276,72 @@ func loadOwnerIdentity(ctx context.Context, dir string, curveID math.CurveID) (*
 	if err != nil {
 		return nil, err
 	}
-	p, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	idemixKM, err := idemix2.NewKeyManager(config, types.Standard, cryptoProvider)
 	if err != nil {
 		return nil, err
 	}
+
+	identityDescriptor, err := idemixKM.Identity(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	id := identityDescriptor.Identity
+	audit := identityDescriptor.AuditInfo
+
+	auditInfo, err := idemixKM.DeserializeAuditInfo(ctx, audit)
+	if err != nil {
+		return nil, err
+	}
+	err = auditInfo.Match(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := idemixKM.DeserializeSigningIdentity(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err = identity.WrapWithType(idemix2.IdentityType, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &OwnerIdentity{
+		ID:        id,
+		AuditInfo: audit,
+		Signer:    signer,
+	}, nil
+}
+
+// loadIdemixNymOwnerIdentity loads an idemixnym owner identity using types.EidNymRhNym signature type.
+func loadIdemixNymOwnerIdentity(ctx context.Context, dir string, curveID math.CurveID) (*OwnerIdentity, error) {
+	backend, err := kvs.NewInMemory()
+	if err != nil {
+		return nil, err
+	}
+	config, err := crypto.NewConfig(dir)
+	if err != nil {
+		return nil, err
+	}
+	keyStore, err := crypto.NewKeyStore(curveID, kvs.Keystore(backend))
+	if err != nil {
+		return nil, err
+	}
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
+	if err != nil {
+		return nil, err
+	}
+	idemixKM, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	if err != nil {
+		return nil, err
+	}
+	ids := kvs.NewIdentityStore(backend, driver.TMSID{
+		Network:   "net",
+		Channel:   "ch",
+		Namespace: "ns",
+	})
+	p := idemixnym.NewKeyManager(idemixKM, ids)
 
 	identityDescriptor, err := p.Identity(ctx, nil)
 	if err != nil {
@@ -267,6 +349,9 @@ func loadOwnerIdentity(ctx context.Context, dir string, curveID math.CurveID) (*
 	}
 	id := identityDescriptor.Identity
 	audit := identityDescriptor.AuditInfo
+	if err := ids.StoreSignerInfo(ctx, id, audit); err != nil {
+		return nil, err
+	}
 
 	auditInfo, err := p.DeserializeAuditInfo(ctx, audit)
 	if err != nil {
@@ -282,25 +367,65 @@ func loadOwnerIdentity(ctx context.Context, dir string, curveID math.CurveID) (*
 		return nil, err
 	}
 
-	id, err = identity.WrapWithType(idemix2.IdentityType, id)
+	id, err = identity.WrapWithType(idemixnym.IdentityType, id)
 	if err != nil {
 		return nil, err
 	}
 
 	return &OwnerIdentity{
 		ID:        id,
-		AuditInfo: auditInfo,
+		AuditInfo: audit,
 		Signer:    signer,
 	}, nil
 }
 
-// PrepareECDSASigner creates and returns a new ephemeral ECDSA-based Signer.
-// This function is a small helper that currently delegates to NewECDSASigner.
+// PrepareECDSASigner creates and returns a new ephemeral ECDSA-based Signer
+// with its corresponding AuditInfo populated. The AuditInfo contains the enrollment ID
+// and revocation handle extracted from the signer's serialized identity.
 func PrepareECDSASigner() (*Signer, error) {
 	signer, err := NewECDSASigner()
 	if err != nil {
 		return nil, err
 	}
+
+	// Serialize the signer to get the wrapped identity
+	wrappedIdentity, err := signer.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize signer")
+	}
+
+	// Unwrap the typed identity to get the raw PEM-encoded public key
+	typedIdentity, err := identity.UnmarshalTypedIdentity(wrappedIdentity)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal typed identity")
+	}
+
+	// Extract enrollment ID from the identity
+	eid, err := crypto2.GetEnrollmentID(typedIdentity.Identity)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get enrollment ID")
+	}
+
+	// Extract revocation handle from the identity
+	rh, err := crypto2.GetRevocationHandle(typedIdentity.Identity)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get revocation handle")
+	}
+
+	// Create and populate the AuditInfo
+	auditInfo := &ix509.AuditInfo{
+		EID: eid,
+		RH:  rh,
+	}
+
+	// Serialize the audit info to bytes
+	auditInfoBytes, err := auditInfo.Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize audit info")
+	}
+
+	// Store the audit info in the signer
+	signer.AuditInfo = auditInfoBytes
 
 	return signer, nil
 }
@@ -308,9 +433,13 @@ func PrepareECDSASigner() (*Signer, error) {
 // Signer wraps an ECDSA private key and a driver.Signer implementation. It
 // is used to produce signatures and to serialize the corresponding public
 // key as an identity when wiring up public parameters for benchmarks.
+// It also carries the audit information for the signer.
 type Signer struct {
 	SK     *ecdsa.PrivateKey
 	Signer driver.Signer
+
+	ID        []byte
+	AuditInfo []byte
 }
 
 // NewECDSASigner generates a new ephemeral P-256 ECDSA key pair and returns
@@ -322,7 +451,40 @@ func NewECDSASigner() (*Signer, error) {
 		return nil, err
 	}
 
-	return &Signer{SK: sk, Signer: crypto2.NewEcdsaSigner(sk)}, nil
+	// Create a self-signed certificate template
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "benchmark-signer",
+		},
+		NotBefore: time.Now().Add(-time.Hour),
+		NotAfter:  time.Now().Add(24 * time.Hour),
+		KeyUsage:  x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+	}
+
+	// Create the self-signed certificate
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &sk.PublicKey, sk)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create self-signed certificate")
+	}
+
+	// Encode the certificate as PEM
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if certPEM == nil {
+		return nil, errors.New("failed to encode certificate to PEM")
+	}
+
+	// Wrap the certificate with the x509 identity type
+	wrap, err := identity.WrapWithType(ix509.IdentityType, certPEM)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed wrapping identity")
+	}
+
+	return &Signer{
+		SK:     sk,
+		Signer: crypto2.NewEcdsaSigner(sk),
+		ID:     wrap,
+	}, nil
 }
 
 // Sign signs the provided message using the underlying driver.Signer.
@@ -330,19 +492,9 @@ func (d *Signer) Sign(message []byte) ([]byte, error) {
 	return d.Signer.Sign(message)
 }
 
-// Serialize returns a wrapped x509 identity containing the signer's public
-// key encoded as PEM. The returned bytes are ready to be used as an identity
+// Serialize returns a wrapped x509 identity containing a self-signed certificate
+// with the signer's public key. The returned bytes are ready to be used as an identity
 // payload by components that accept ix509 identities.
 func (d *Signer) Serialize() ([]byte, error) {
-	pkRaw, err := x509.PemEncodeKey(&d.SK.PublicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed marshalling public key")
-	}
-
-	wrap, err := identity.WrapWithType(ix509.IdentityType, pkRaw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed wrapping identity")
-	}
-
-	return wrap, nil
+	return d.ID, nil
 }

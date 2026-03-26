@@ -248,7 +248,7 @@ Protobuf provides a binary serialization format that is both efficient and highl
 
 For more details on the specific Protobuf messages used by each driver, see:
 - [**FabToken Protobuf Messages**](drivers/fabtoken.md#protobuf-messages)
-- [**DLog (NOGH) Protobuf Messages**](drivers/dlogwogh.md#protobuf-messages)
+- [**DLog (NOGH) Protobuf Messages**](drivers/dlogwogh.md#107-protobuf-message-definitions)
 
 3.  **Extensible Metadata**: 
     Most core messages (like `IssueMetadata` or `PublicParameters`) include a `map<string, bytes> extra_data` or `application` field. This allows developers to attach arbitrary information to transactions or configurations without modifying the underlying `.proto` definitions, avoiding the need for a full protocol migration for application-specific changes.

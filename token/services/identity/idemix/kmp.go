@@ -25,6 +25,12 @@ import (
 
 var logger = logging.MustGetLogger()
 
+type NewKeyManagerFunc = func(
+	conf *crypto2.Config,
+	sigType bccsp.SignatureType,
+	csp bccsp.BCCSP,
+) (membership.KeyManager, error)
+
 type KeyManagerProvider struct {
 	issuerPublicKey []byte
 	curveID         math.CurveID
@@ -32,6 +38,8 @@ type KeyManagerProvider struct {
 	config          idriver.Config
 	cacheSize       int
 	metricsProvider metrics.Provider
+
+	newKeyManager NewKeyManagerFunc
 
 	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
 	ignoreVerifyOnlyWallet bool
@@ -46,6 +54,30 @@ func NewKeyManagerProvider(
 	ignoreVerifyOnlyWallet bool,
 	metricsProvider metrics.Provider,
 ) *KeyManagerProvider {
+	return NewKeyManagerProviderWithKeyManagerFactory(
+		issuerPublicKey,
+		curveID,
+		keyStore,
+		config,
+		cacheSize,
+		ignoreVerifyOnlyWallet,
+		metricsProvider,
+		func(conf *crypto2.Config, sigType bccsp.SignatureType, csp bccsp.BCCSP) (membership.KeyManager, error) {
+			return NewKeyManager(conf, sigType, csp)
+		},
+	)
+}
+
+func NewKeyManagerProviderWithKeyManagerFactory(
+	issuerPublicKey []byte,
+	curveID math.CurveID,
+	keyStore bccsp.KeyStore,
+	config idriver.Config,
+	cacheSize int,
+	ignoreVerifyOnlyWallet bool,
+	metricsProvider metrics.Provider,
+	newKeyManager NewKeyManagerFunc,
+) *KeyManagerProvider {
 	return &KeyManagerProvider{
 		issuerPublicKey:        issuerPublicKey,
 		curveID:                curveID,
@@ -54,6 +86,7 @@ func NewKeyManagerProvider(
 		cacheSize:              cacheSize,
 		ignoreVerifyOnlyWallet: ignoreVerifyOnlyWallet,
 		metricsProvider:        metricsProvider,
+		newKeyManager:          newKeyManager,
 	}
 }
 
@@ -78,7 +111,7 @@ func (l *KeyManagerProvider) Get(ctx context.Context, identityConfig *driver.Ide
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider")
 	}
-	keyManager, err := NewKeyManager(conf, bccsp.EidNymRhNym, cryptoProvider)
+	keyManager, err := l.newKeyManager(conf, bccsp.EidNymRhNym, cryptoProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating idemix key manager provider from [%s]", identityConfig.URL)
 	}

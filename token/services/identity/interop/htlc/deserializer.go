@@ -156,18 +156,24 @@ func NewAuditDeserializer(auditInfoDeserializer idriver.AuditInfoDeserializer) *
 // produce a driver.AuditInfo.
 // The method performs basic validation on the
 // ScriptInfo payload and returns descriptive errors for common failure scenarios.
-func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (idriver.AuditInfo, error) {
+func (a *AuditDeserializer) DeserializeAuditInfo(ctx context.Context, identity driver.Identity, raw []byte) (idriver.AuditInfo, error) {
+	script := &htlc.Script{}
+	err := json.Unmarshal(identity, script)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal htlc identity")
+	}
+
 	si := &ScriptInfo{}
-	err := json.Unmarshal(raw, si)
+	err = json.Unmarshal(raw, si)
 	if err != nil || (len(si.Sender) == 0 && len(si.Recipient) == 0) {
-		return nil, errors.Errorf("ivalid audit info, failed unmarshal [%s][%d][%d]", string(raw), len(si.Sender), len(si.Recipient))
+		return nil, errors.Errorf("invalid audit info, failed unmarshal [%s][%d][%d]", string(raw), len(si.Sender), len(si.Recipient))
 	}
 	if len(si.Recipient) == 0 {
 		return nil, errors.Errorf("no recipient defined")
 	}
-	ai, err := a.AuditInfoDeserializer.DeserializeAuditInfo(ctx, si.Recipient)
+	ai, err := a.AuditInfoDeserializer.DeserializeAuditInfo(ctx, script.Recipient, si.Recipient)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
+		return nil, errors.Wrapf(err, "failed unmarshalling audit info [%s]", raw)
 	}
 
 	return ai, nil

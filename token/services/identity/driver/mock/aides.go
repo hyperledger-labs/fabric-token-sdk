@@ -5,15 +5,17 @@ import (
 	"context"
 	"sync"
 
+	drivera "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
 type AuditInfoDeserializer struct {
-	DeserializeAuditInfoStub        func(context.Context, []byte) (driver.AuditInfo, error)
+	DeserializeAuditInfoStub        func(context.Context, drivera.Identity, []byte) (driver.AuditInfo, error)
 	deserializeAuditInfoMutex       sync.RWMutex
 	deserializeAuditInfoArgsForCall []struct {
 		arg1 context.Context
-		arg2 []byte
+		arg2 drivera.Identity
+		arg3 []byte
 	}
 	deserializeAuditInfoReturns struct {
 		result1 driver.AuditInfo
@@ -27,24 +29,25 @@ type AuditInfoDeserializer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *AuditInfoDeserializer) DeserializeAuditInfo(arg1 context.Context, arg2 []byte) (driver.AuditInfo, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *AuditInfoDeserializer) DeserializeAuditInfo(arg1 context.Context, arg2 drivera.Identity, arg3 []byte) (driver.AuditInfo, error) {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.deserializeAuditInfoMutex.Lock()
 	ret, specificReturn := fake.deserializeAuditInfoReturnsOnCall[len(fake.deserializeAuditInfoArgsForCall)]
 	fake.deserializeAuditInfoArgsForCall = append(fake.deserializeAuditInfoArgsForCall, struct {
 		arg1 context.Context
-		arg2 []byte
-	}{arg1, arg2Copy})
+		arg2 drivera.Identity
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
 	stub := fake.DeserializeAuditInfoStub
 	fakeReturns := fake.deserializeAuditInfoReturns
-	fake.recordInvocation("DeserializeAuditInfo", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("DeserializeAuditInfo", []interface{}{arg1, arg2, arg3Copy})
 	fake.deserializeAuditInfoMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -58,17 +61,17 @@ func (fake *AuditInfoDeserializer) DeserializeAuditInfoCallCount() int {
 	return len(fake.deserializeAuditInfoArgsForCall)
 }
 
-func (fake *AuditInfoDeserializer) DeserializeAuditInfoCalls(stub func(context.Context, []byte) (driver.AuditInfo, error)) {
+func (fake *AuditInfoDeserializer) DeserializeAuditInfoCalls(stub func(context.Context, drivera.Identity, []byte) (driver.AuditInfo, error)) {
 	fake.deserializeAuditInfoMutex.Lock()
 	defer fake.deserializeAuditInfoMutex.Unlock()
 	fake.DeserializeAuditInfoStub = stub
 }
 
-func (fake *AuditInfoDeserializer) DeserializeAuditInfoArgsForCall(i int) (context.Context, []byte) {
+func (fake *AuditInfoDeserializer) DeserializeAuditInfoArgsForCall(i int) (context.Context, drivera.Identity, []byte) {
 	fake.deserializeAuditInfoMutex.RLock()
 	defer fake.deserializeAuditInfoMutex.RUnlock()
 	argsForCall := fake.deserializeAuditInfoArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *AuditInfoDeserializer) DeserializeAuditInfoReturns(result1 driver.AuditInfo, result2 error) {

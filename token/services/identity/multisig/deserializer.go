@@ -140,7 +140,7 @@ func (d *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.
 type AuditInfoDeserializer struct {
 }
 
-func (a *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, raw []byte) (driver2.AuditInfo, error) {
+func (a *AuditInfoDeserializer) DeserializeAuditInfo(ctx context.Context, identity driver.Identity, raw []byte) (driver2.AuditInfo, error) {
 	ei := &AuditInfo{}
 	err := json.Unmarshal(raw, ei)
 	if err != nil {

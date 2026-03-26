@@ -16,17 +16,16 @@ import (
 	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testutils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	testUseCase = &benchmark2.Case{
-		Bits:       32,
-		CurveID:    math.BLS12_381_BBS_GURVY,
-		NumInputs:  2,
-		NumOutputs: 2,
-	}
-)
+var testUseCase = &benchmark2.Case{
+	Bits:       32,
+	CurveID:    math.BLS12_381_BBS_GURVY,
+	NumInputs:  2,
+	NumOutputs: 2,
+}
 
 type actionType int
 
@@ -47,7 +46,7 @@ func TestValidator(t *testing.T) {
 		testVerifyNoErrorOnAction(t, RedeemAction)
 	})
 	t.Run("engine is called correctly with atomic swap", func(t *testing.T) {
-		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID}, idemixnym.IdentityType)
 		require.NoError(t, err)
 		env, err := testing2.NewEnv(testUseCase, configurations)
 		require.NoError(t, err)
@@ -60,7 +59,7 @@ func TestValidator(t *testing.T) {
 		require.Len(t, actions, 2)
 	})
 	t.Run("when the sender's signature is not valid: wrong txID", func(t *testing.T) {
-		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID}, idemixnym.IdentityType)
 		require.NoError(t, err)
 		env, err := testing2.NewEnv(testUseCase, configurations)
 		require.NoError(t, err)
@@ -89,7 +88,7 @@ func BenchmarkValidatorTransfer(b *testing.B) {
 	defer pp.Stop()
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(b, err)
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(b, err)
 
 	test := benchmark2.NewTest[*testing2.Env](cases)
@@ -108,7 +107,7 @@ func BenchmarkValidatorTransfer(b *testing.B) {
 func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(t, err)
 
 	test := benchmark2.NewTest[*testing2.Env](cases)
@@ -126,7 +125,7 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 
 func testVerifyNoErrorOnAction(t *testing.T, actionType actionType) {
 	t.Helper()
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID})
+	configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID}, idemixnym.IdentityType)
 	require.NoError(t, err)
 	env, err := testing2.NewEnv(testUseCase, configurations)
 	require.NoError(t, err)

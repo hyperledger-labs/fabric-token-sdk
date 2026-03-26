@@ -25,6 +25,7 @@ import (
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
@@ -74,7 +75,7 @@ func BenchmarkTransferServiceTransfer(b *testing.B) {
 	outputs, err := benchmark2.NumOutputs(1, 2, 3)
 	require.NoError(b, err)
 	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, []int{1})
-	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(b, err)
 
 	for _, tc := range testCases {
@@ -108,7 +109,7 @@ func BenchmarkTransferServiceTransfer(b *testing.B) {
 func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
-	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves)
+	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves, idemixnym.IdentityType)
 	require.NoError(t, err)
 
 	test := benchmark2.NewTest[*benchmarkTransferEnv](cases)
