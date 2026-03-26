@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
@@ -47,8 +48,9 @@ type Stats struct {
 
 // Config holds configuration for the EventQueue
 type Config struct {
-	Workers   int // Number of worker goroutines
-	QueueSize int // Size of the event buffer
+	Workers         int              // Number of worker goroutines
+	QueueSize       int              // Size of the event buffer
+	MetricsProvider metrics.Provider // Optional metrics provider; uses noop when nil
 }
 
 // EventQueue manages a pool of workers processing events
@@ -61,6 +63,7 @@ type EventQueue struct {
 	shutdownOnce sync.Once
 	closed       bool
 	mu           sync.RWMutex
+	metrics      *Metrics
 }
 
 // NewEventQueue creates and starts a new event queue with the specified
@@ -82,6 +85,7 @@ func NewEventQueue(cfg Config) (*EventQueue, error) {
 		ctx:     ctx,
 		cancel:  cancel,
 		closed:  false,
+		metrics: newMetrics(cfg.MetricsProvider),
 	}
 
 	// Start worker pool
@@ -131,6 +135,7 @@ func (eq *EventQueue) runWorker(id int) (stopped bool) {
 
 			if err := event.Process(eq.ctx); err != nil {
 				logger.Errorf("Worker %d: error processing event [%v]: %v", id, event, err)
+				eq.metrics.ProcessingErrors.Add(1)
 			}
 
 		case <-eq.ctx.Done():
@@ -153,8 +158,12 @@ func (eq *EventQueue) Enqueue(event Event) error {
 
 	select {
 	case eq.events <- event:
+		eq.metrics.PendingEvents.Set(float64(len(eq.events)))
+
 		return nil
 	default:
+		eq.metrics.EnqueueDrops.Add(1)
+
 		return ErrQueueFull
 	}
 }
@@ -176,6 +185,7 @@ func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) error {
 	select {
 	case eq.events <- event:
 		logger.Debugf("EnqueueBlocking event: [%v]", event)
+		eq.metrics.PendingEvents.Set(float64(len(eq.events)))
 
 		return nil
 	case <-ctx.Done():
