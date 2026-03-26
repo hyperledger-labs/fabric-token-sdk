@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	IdentityType identity.Type = "x509"
+	IdentityType identity.Type = driver.X509IdentityType
 )
 
 var logger = logging.MustGetLogger()

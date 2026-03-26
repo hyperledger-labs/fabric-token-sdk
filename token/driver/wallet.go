@@ -188,7 +188,13 @@ type IdentityConfiguration struct {
 type WalletLookupID = any
 
 // IdentityType identifies the type of identity
-type IdentityType = string
+type IdentityType = int32
+
+const (
+    UnknownIdentityType IdentityType = 0 // _ = unused per Angelo
+    IdemixIdentityType  IdentityType = 1
+    X509IdentityType    IdentityType = 2
+)
 
 // Authorization defines method to check the relation between a token
 // and wallets (owner, auditor, etc.)

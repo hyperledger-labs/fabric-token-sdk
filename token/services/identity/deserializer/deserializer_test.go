@@ -20,7 +20,7 @@ import (
 )
 
 // Helper function to create a typed identity
-func createTypedIdentity(t *testing.T, idType string, rawIdentity []byte) driver.Identity {
+func createTypedIdentity(t *testing.T, idType identity.Type, rawIdentity []byte) driver.Identity {
 	t.Helper()
 
 	ti := identity.TypedIdentity{
@@ -47,7 +47,7 @@ func TestTypedAuditInfoMatcher(t *testing.T) {
 		})
 
 		typedMatcher := &TypedAuditInfoMatcher{matcher: matcher}
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 
 		err := typedMatcher.Match(context.Background(), typedID)
 		require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestTypedAuditInfoMatcher(t *testing.T) {
 		matcher.MatchReturns(expectedErr)
 
 		typedMatcher := &TypedAuditInfoMatcher{matcher: matcher}
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 
 		err := typedMatcher.Match(context.Background(), typedID)
 		require.Error(t, err)
@@ -99,9 +99,9 @@ func TestEIDRHDeserializer(t *testing.T) {
 		mockDeserializer := &identitydrivermock.AuditInfoDeserializer{}
 		mockDeserializer.DeserializeAuditInfoReturns(mockAuditInfo, nil)
 
-		deserializer.AddDeserializer("test-type", mockDeserializer)
+		deserializer.AddDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		eid, err := deserializer.GetEnrollmentID(context.Background(), typedID, []byte("audit-info"))
 
 		require.NoError(t, err)
@@ -121,9 +121,9 @@ func TestEIDRHDeserializer(t *testing.T) {
 		mockDeserializer := &identitydrivermock.AuditInfoDeserializer{}
 		mockDeserializer.DeserializeAuditInfoReturns(mockAuditInfo, nil)
 
-		deserializer.AddDeserializer("test-type", mockDeserializer)
+		deserializer.AddDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		rh, err := deserializer.GetRevocationHandler(context.Background(), typedID, []byte("audit-info"))
 
 		require.NoError(t, err)
@@ -144,9 +144,9 @@ func TestEIDRHDeserializer(t *testing.T) {
 		mockDeserializer := &identitydrivermock.AuditInfoDeserializer{}
 		mockDeserializer.DeserializeAuditInfoReturns(mockAuditInfo, nil)
 
-		deserializer.AddDeserializer("test-type", mockDeserializer)
+		deserializer.AddDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		eid, rh, err := deserializer.GetEIDAndRH(context.Background(), typedID, []byte("audit-info"))
 
 		require.NoError(t, err)
@@ -161,7 +161,7 @@ func TestEIDRHDeserializer(t *testing.T) {
 	// when the audit info is nil
 	t.Run("NilAuditInfo", func(t *testing.T) {
 		deserializer := NewEIDRHDeserializer()
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 
 		_, err := deserializer.GetEnrollmentID(context.Background(), typedID, nil)
 		require.Error(t, err)
@@ -172,7 +172,7 @@ func TestEIDRHDeserializer(t *testing.T) {
 	// when the audit info is empty
 	t.Run("EmptyAuditInfo", func(t *testing.T) {
 		deserializer := NewEIDRHDeserializer()
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 
 		_, err := deserializer.GetEnrollmentID(context.Background(), typedID, []byte{})
 		require.Error(t, err)
@@ -193,7 +193,7 @@ func TestEIDRHDeserializer(t *testing.T) {
 	// when the typed identity is of an unrecognized type
 	t.Run("NoDeserializerFound", func(t *testing.T) {
 		deserializer := NewEIDRHDeserializer()
-		typedID := createTypedIdentity(t, "unknown-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(0), []byte("raw-identity"))
 
 		_, err := deserializer.GetEnrollmentID(context.Background(), typedID, []byte("audit-info"))
 		require.Error(t, err)
@@ -208,9 +208,9 @@ func TestEIDRHDeserializer(t *testing.T) {
 		mockDeserializer := &identitydrivermock.AuditInfoDeserializer{}
 		mockDeserializer.DeserializeAuditInfoReturns(nil, errors.New("deserialize error"))
 
-		deserializer.AddDeserializer("test-type", mockDeserializer)
+		deserializer.AddDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		_, err := deserializer.GetEnrollmentID(context.Background(), typedID, []byte("audit-info"))
 
 		require.Error(t, err)
@@ -230,9 +230,9 @@ func TestTypedSignerDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedSignerDeserializer{}
 		mockDeserializer.DeserializeSignerReturns(mockSigner, nil)
 
-		multiplex.AddTypedSignerDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedSignerDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		signer, err := multiplex.DeserializeSigner(context.Background(), typedID)
 
 		require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestTypedSignerDeserializerMultiplex(t *testing.T) {
 	// with any TypedSignerDeserializer
 	t.Run("DeserializeSigner_NoDeserializerFound", func(t *testing.T) {
 		multiplex := NewTypedSignerDeserializerMultiplex()
-		typedID := createTypedIdentity(t, "unknown-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(0), []byte("raw-identity"))
 
 		_, err := multiplex.DeserializeSigner(context.Background(), typedID)
 		require.Error(t, err)
@@ -275,10 +275,10 @@ func TestTypedSignerDeserializerMultiplex(t *testing.T) {
 		mockDeserializer2 := &identitydrivermock.TypedSignerDeserializer{}
 		mockDeserializer2.DeserializeSignerReturns(nil, errors.New("should not be called"))
 
-		multiplex.AddTypedSignerDeserializer("test-type", mockDeserializer1)
-		multiplex.AddTypedSignerDeserializer("test-type", mockDeserializer2)
+		multiplex.AddTypedSignerDeserializer(identity.Type(99), mockDeserializer1)
+		multiplex.AddTypedSignerDeserializer(identity.Type(99), mockDeserializer2)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		signer, err := multiplex.DeserializeSigner(context.Background(), typedID)
 
 		require.NoError(t, err)
@@ -300,10 +300,10 @@ func TestTypedSignerDeserializerMultiplex(t *testing.T) {
 		mockDeserializer2 := &identitydrivermock.TypedSignerDeserializer{}
 		mockDeserializer2.DeserializeSignerReturns(mockSigner, nil)
 
-		multiplex.AddTypedSignerDeserializer("test-type", mockDeserializer1)
-		multiplex.AddTypedSignerDeserializer("test-type", mockDeserializer2)
+		multiplex.AddTypedSignerDeserializer(identity.Type(99), mockDeserializer1)
+		multiplex.AddTypedSignerDeserializer(identity.Type(99), mockDeserializer2)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		signer, err := multiplex.DeserializeSigner(context.Background(), typedID)
 
 		require.NoError(t, err)
@@ -324,10 +324,10 @@ func TestTypedSignerDeserializerMultiplex(t *testing.T) {
 		mockDeserializer2 := &identitydrivermock.TypedSignerDeserializer{}
 		mockDeserializer2.DeserializeSignerReturns(nil, errors.New("second fails"))
 
-		multiplex.AddTypedSignerDeserializer("test-type", mockDeserializer1)
-		multiplex.AddTypedSignerDeserializer("test-type", mockDeserializer2)
+		multiplex.AddTypedSignerDeserializer(identity.Type(99), mockDeserializer1)
+		multiplex.AddTypedSignerDeserializer(identity.Type(99), mockDeserializer2)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		_, err := multiplex.DeserializeSigner(context.Background(), typedID)
 
 		require.Error(t, err)
@@ -348,9 +348,9 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer.DeserializeVerifierReturns(mockVerifier, nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		verifier, err := multiplex.DeserializeVerifier(context.Background(), typedID)
 
 		require.NoError(t, err)
@@ -374,7 +374,7 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 	// with any TypedVerifierDeserializer
 	t.Run("DeserializeVerifier_NoDeserializerFound", func(t *testing.T) {
 		multiplex := NewTypedVerifierDeserializerMultiplex()
-		typedID := createTypedIdentity(t, "unknown-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(0), []byte("raw-identity"))
 
 		_, err := multiplex.DeserializeVerifier(context.Background(), typedID)
 		require.Error(t, err)
@@ -389,9 +389,9 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer.DeserializeVerifierReturns(nil, errors.New("deserialize failed"))
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		_, err := multiplex.DeserializeVerifier(context.Background(), typedID)
 
 		require.Error(t, err)
@@ -406,9 +406,9 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer.RecipientsReturns([]driver.Identity{[]byte("recipient")}, nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		recipients, err := multiplex.Recipients(typedID)
 
 		require.NoError(t, err)
@@ -441,7 +441,7 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 	// fails as expected
 	t.Run("Recipients_NoDeserializerFound", func(t *testing.T) {
 		multiplex := NewTypedVerifierDeserializerMultiplex()
-		typedID := createTypedIdentity(t, "unknown-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(0), []byte("raw-identity"))
 
 		_, err := multiplex.Recipients(typedID)
 		require.Error(t, err)
@@ -456,9 +456,9 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer.RecipientsReturns(nil, errors.New("recipients failed"))
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		_, err := multiplex.Recipients(typedID)
 
 		require.Error(t, err)
@@ -475,9 +475,9 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer.GetAuditInfoMatcherReturns(mockMatcher, nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		matcher, err := multiplex.GetAuditInfoMatcher(context.Background(), typedID, []byte("audit-info"))
 
 		require.NoError(t, err)
@@ -513,7 +513,7 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 	// with an id of an unrecognized type then no deserializer is found
 	t.Run("GetAuditInfoMatcher_NoDeserializerFound", func(t *testing.T) {
 		multiplex := NewTypedVerifierDeserializerMultiplex()
-		typedID := createTypedIdentity(t, "unknown-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(0), []byte("raw-identity"))
 
 		_, err := multiplex.GetAuditInfoMatcher(context.Background(), typedID, []byte("audit-info"))
 		require.Error(t, err)
@@ -531,9 +531,9 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer.GetAuditInfoMatcherReturns(mockMatcher, nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		err := multiplex.MatchIdentity(context.Background(), typedID, []byte("audit-info"))
 
 		require.NoError(t, err)
@@ -554,7 +554,7 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 	// to a TypedVerifierDeserializerMultiplex
 	t.Run("MatchIdentity_GetMatcherError", func(t *testing.T) {
 		multiplex := NewTypedVerifierDeserializerMultiplex()
-		typedID := createTypedIdentity(t, "unknown-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(0), []byte("raw-identity"))
 
 		err := multiplex.MatchIdentity(context.Background(), typedID, []byte("audit-info"))
 		require.Error(t, err)
@@ -573,9 +573,9 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer.GetAuditInfoMatcherReturns(mockMatcher, nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		err := multiplex.MatchIdentity(context.Background(), typedID, []byte("audit-info"))
 
 		require.Error(t, err)
@@ -593,10 +593,10 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer.GetAuditInfoReturns([]byte("audit-info"), nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
 
 		mockProvider := &drivermock.AuditInfoProvider{}
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		auditInfo, err := multiplex.GetAuditInfo(context.Background(), typedID, mockProvider)
 
 		require.NoError(t, err)
@@ -618,7 +618,7 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 	// for which no deserializer was set on the TypedVerifierDeserializerMultiplex
 	t.Run("GetAuditInfo_NoDeserializerFound", func(t *testing.T) {
 		multiplex := NewTypedVerifierDeserializerMultiplex()
-		typedID := createTypedIdentity(t, "unknown-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(0), []byte("raw-identity"))
 
 		mockProvider := &drivermock.AuditInfoProvider{}
 		_, err := multiplex.GetAuditInfo(context.Background(), typedID, mockProvider)
@@ -634,10 +634,10 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer.GetAuditInfoReturns(nil, errors.New("get audit info failed"))
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
 
 		mockProvider := &drivermock.AuditInfoProvider{}
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		_, err := multiplex.GetAuditInfo(context.Background(), typedID, mockProvider)
 
 		require.Error(t, err)
@@ -660,19 +660,19 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer2.DeserializeVerifierReturns(mockVerifier2, nil)
 
 		// Add first deserializer for type1
-		multiplex.AddTypedVerifierDeserializer("type1", mockDeserializer1)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(1), mockDeserializer1)
 
 		// Add second deserializer for type2
-		multiplex.AddTypedVerifierDeserializer("type2", mockDeserializer2)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(2), mockDeserializer2)
 
 		// Verify both types work
-		typedID1 := createTypedIdentity(t, "type1", []byte("raw-identity"))
+		typedID1 := createTypedIdentity(t, identity.Type(1), []byte("raw-identity"))
 		verifier1, err := multiplex.DeserializeVerifier(context.Background(), typedID1)
 		require.NoError(t, err)
 		assert.NotNil(t, verifier1)
 		assert.Equal(t, 1, mockDeserializer1.DeserializeVerifierCallCount())
 
-		typedID2 := createTypedIdentity(t, "type2", []byte("raw-identity"))
+		typedID2 := createTypedIdentity(t, identity.Type(2), []byte("raw-identity"))
 		verifier2, err := multiplex.DeserializeVerifier(context.Background(), typedID2)
 		require.NoError(t, err)
 		assert.NotNil(t, verifier2)
@@ -692,10 +692,10 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer2 := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer2.GetAuditInfoMatcherReturns(mockMatcher, nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer1)
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer2)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer1)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer2)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		matcher, err := multiplex.GetAuditInfoMatcher(context.Background(), typedID, []byte("audit-info"))
 
 		require.NoError(t, err)
@@ -721,10 +721,10 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer2 := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer2.DeserializeVerifierReturns(mockVerifier, nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer1)
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer2)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer1)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer2)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		verifier, err := multiplex.DeserializeVerifier(context.Background(), typedID)
 
 		require.NoError(t, err)
@@ -747,10 +747,10 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer2 := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer2.RecipientsReturns([]driver.Identity{[]byte("recipient")}, nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer1)
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer2)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer1)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer2)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		recipients, err := multiplex.Recipients(typedID)
 
 		require.NoError(t, err)
@@ -773,11 +773,11 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		mockDeserializer2 := &identitydrivermock.TypedVerifierDeserializer{}
 		mockDeserializer2.GetAuditInfoReturns([]byte("audit-info"), nil)
 
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer1)
-		multiplex.AddTypedVerifierDeserializer("test-type", mockDeserializer2)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer1)
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer2)
 
 		mockProvider := &drivermock.AuditInfoProvider{}
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		auditInfo, err := multiplex.GetAuditInfo(context.Background(), typedID, mockProvider)
 
 		require.NoError(t, err)
@@ -799,7 +799,7 @@ func TestTypedIdentityVerifierDeserializer(t *testing.T) {
 
 		deserializer := NewTypedIdentityVerifierDeserializer(mockVerifierDeserializer, mockMatcherDeserializer)
 
-		verifier, err := deserializer.DeserializeVerifier(context.Background(), "test-type", []byte("raw-identity"))
+		verifier, err := deserializer.DeserializeVerifier(context.Background(), identity.Type(99), []byte("raw-identity"))
 		require.NoError(t, err)
 		assert.NotNil(t, verifier)
 		assert.Equal(t, mockVerifier, verifier)
@@ -813,8 +813,8 @@ func TestTypedIdentityVerifierDeserializer(t *testing.T) {
 
 		deserializer := NewTypedIdentityVerifierDeserializer(mockVerifierDeserializer, mockMatcherDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
-		recipients, err := deserializer.Recipients(typedID, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
+		recipients, err := deserializer.Recipients(typedID, identity.Type(99), []byte("raw-identity"))
 
 		require.NoError(t, err)
 		assert.Len(t, recipients, 1)
@@ -832,8 +832,8 @@ func TestTypedIdentityVerifierDeserializer(t *testing.T) {
 		provider := &drivermock.AuditInfoProvider{}
 		provider.GetAuditInfoReturns([]byte("audit-info"), nil)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
-		auditInfo, err := deserializer.GetAuditInfo(context.Background(), typedID, "test-type", []byte("raw-identity"), provider)
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
+		auditInfo, err := deserializer.GetAuditInfo(context.Background(), typedID, identity.Type(99), []byte("raw-identity"), provider)
 
 		require.NoError(t, err)
 		assert.Equal(t, []byte("audit-info"), auditInfo)
@@ -852,8 +852,8 @@ func TestTypedIdentityVerifierDeserializer(t *testing.T) {
 		provider := &drivermock.AuditInfoProvider{}
 		provider.GetAuditInfoReturns(nil, expectedErr)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
-		_, err := deserializer.GetAuditInfo(context.Background(), typedID, "test-type", []byte("raw-identity"), provider)
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
+		_, err := deserializer.GetAuditInfo(context.Background(), typedID, identity.Type(99), []byte("raw-identity"), provider)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed getting audit info for recipient identity")
@@ -871,7 +871,7 @@ func TestTypedIdentityVerifierDeserializer(t *testing.T) {
 
 		deserializer := NewTypedIdentityVerifierDeserializer(mockVerifierDeserializer, mockMatcherDeserializer)
 
-		typedID := createTypedIdentity(t, "test-type", []byte("raw-identity"))
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
 		matcher, err := deserializer.GetAuditInfoMatcher(context.Background(), typedID, []byte("audit-info"))
 
 		require.NoError(t, err)

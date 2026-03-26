@@ -153,7 +153,7 @@ func identities(t *testing.T, names ...string) []token.Identity {
 
 func wrapIdentity(t *testing.T, name string) token.Identity {
 	t.Helper()
-	id, err := identity.WrapWithType("name", []byte(name))
+	id, err := identity.WrapWithType(identity.Type(99), []byte(name))
 	require.NoError(t, err)
 
 	return id

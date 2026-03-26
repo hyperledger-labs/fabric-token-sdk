@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -66,7 +67,7 @@ type TokenToAppend struct {
 	tokenOnLedgerFormat   token2.Format
 	tokenOnLedger         []byte
 	tokenOnLedgerMetadata []byte
-	ownerType             string
+	ownerType             tdriver.IdentityType
 	ownerIdentity         token.Identity
 	ownerWalletID         string
 	owners                []string

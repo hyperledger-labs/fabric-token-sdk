@@ -35,7 +35,7 @@ func hasTokens(colTxID, colIdx common.Field, ids ...*token.ID) cond.Condition {
 func HasTokenDetails(params driver2.QueryTokenDetailsParams, tokenTable common.Table) cond.Condition {
 	conds := []cond.Condition{cond.Eq("owner", true)}
 
-	if len(params.OwnerType) > 0 {
+	if params.OwnerType != 0 {
 		conds = append(conds, cond.Eq("owner_type", params.OwnerType))
 	}
 	if len(params.TokenType) > 0 {

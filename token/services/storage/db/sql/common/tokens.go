@@ -837,7 +837,7 @@ func (db *TokenStore) GetSchema() string {
 			quantity TEXT NOT NULL,
 			issuer_raw BYTEA,
 			owner_raw BYTEA NOT NULL,
-			owner_type TEXT NOT NULL,
+			owner_type INT NOT NULL,
 			owner_identity BYTEA NOT NULL,
 			owner_wallet_id TEXT, 
 			ledger BYTEA NOT NULL,

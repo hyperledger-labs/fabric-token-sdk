@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
@@ -283,11 +284,11 @@ func TestTokenSql(t *testing.T) {
 			name: "owner and htlc with deleted",
 			params: driver2.QueryTokenDetailsParams{
 				WalletID:       "me",
-				OwnerType:      "htlc",
+				OwnerType:      htlc.ScriptType,
 				IncludeDeleted: true,
 			},
 			expectedSql:  "(owner = $1) AND (owner_type = $2) AND (owner_wallet_id = $3)",
-			expectedArgs: []common2.Param{true, "htlc", "me"},
+			expectedArgs: []common2.Param{true, htlc.ScriptType, "me"},
 		},
 		{
 			name:         "owner and type",
@@ -380,11 +381,11 @@ func TestTokenSqlNoJoin(t *testing.T) {
 			name: "owner and htlc with deleted",
 			params: driver2.QueryTokenDetailsParams{
 				WalletID:       "me",
-				OwnerType:      "htlc",
+				OwnerType:      htlc.ScriptType,
 				IncludeDeleted: true,
 			},
 			expectedSql:  "(owner = $1) AND (owner_type = $2) AND (owner_wallet_id = $3)",
-			expectedArgs: []common2.Param{true, "htlc", "me"},
+			expectedArgs: []common2.Param{true, htlc.ScriptType, "me"},
 		},
 		{
 			name:         "owner and type",

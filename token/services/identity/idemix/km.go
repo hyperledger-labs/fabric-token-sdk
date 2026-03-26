@@ -23,7 +23,7 @@ import (
 
 const (
 	Any          bccsp.SignatureType = 100
-	IdentityType identity.Type       = "idemix"
+	IdentityType identity.Type       = driver.IdemixIdentityType
 )
 
 // SKI implies Subject Key Identifier

@@ -23,11 +23,11 @@ type EIDRHDeserializer struct {
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	return &EIDRHDeserializer{
-		deserializers: map[string]driver2.AuditInfoDeserializer{},
+		deserializers: map[identity.Type]driver2.AuditInfoDeserializer{},
 	}
 }
 
-func (e *EIDRHDeserializer) AddDeserializer(typ string, d driver2.AuditInfoDeserializer) {
+func (e *EIDRHDeserializer) AddDeserializer(typ identity.Type, d driver2.AuditInfoDeserializer) {
 	e.deserializers[typ] = d
 }
 

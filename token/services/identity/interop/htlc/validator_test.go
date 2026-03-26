@@ -71,7 +71,7 @@ func TestVerifyOwner_Errors(t *testing.T) {
 	require.Error(t, err)
 
 	// wrong type
-	tid := identity.TypedIdentity{Type: "foo", Identity: []byte("x")}
+	tid := identity.TypedIdentity{Type: identity.Type(0), Identity: []byte("x")}
 	b, err := tid.Bytes()
 	require.NoError(t, err)
 	_, _, err = ihtlc.VerifyOwner(b, []byte("r"), time.Now())

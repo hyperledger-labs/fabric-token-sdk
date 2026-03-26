@@ -64,7 +64,7 @@ func TestRegisterIdentity_PersistsAndRegisters(t *testing.T) {
 	// return an identity descriptor with raw identity
 	idDesc := &idriver.IdentityDescriptor{Identity: []byte("id1"), AuditInfo: []byte("ai")}
 	km.IdentityReturns(idDesc, nil)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturns(km, nil)
@@ -138,7 +138,7 @@ func TestRegisterIdentity_AnonymousDoesNotBind(t *testing.T) {
 	km.EnrollmentIDReturns("e2")
 	km.AnonymousReturns(true)
 	km.IsRemoteReturns(true)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturns(km, nil)
@@ -184,7 +184,7 @@ func TestIDsAndDefaultIdentifier(t *testing.T) {
 	km1.IsRemoteReturns(false)
 	idDesc1 := &idriver.IdentityDescriptor{Identity: []byte("idA"), AuditInfo: []byte("aiA")}
 	km1.IdentityReturns(idDesc1, nil)
-	km1.IdentityTypeReturns("typ")
+	km1.IdentityTypeReturns(identity.Type(99))
 
 	km2 := &mock.KeyManager{}
 	km2.EnrollmentIDReturns("e2")
@@ -192,7 +192,7 @@ func TestIDsAndDefaultIdentifier(t *testing.T) {
 	km2.IsRemoteReturns(false)
 	idDesc2 := &idriver.IdentityDescriptor{Identity: []byte("idB"), AuditInfo: []byte("aiB")}
 	km2.IdentityReturns(idDesc2, nil)
-	km2.IdentityTypeReturns("typ")
+	km2.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturnsOnCall(0, km1, nil)
@@ -274,7 +274,7 @@ func TestRegisterIdentity_EmptyEnrollmentID(t *testing.T) {
 	km.EnrollmentIDReturns("")
 	km.AnonymousReturns(false)
 	km.IsRemoteReturns(false)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturns(km, nil)
@@ -327,7 +327,7 @@ func TestRegisterIdentity_BindFails(t *testing.T) {
 	km.IsRemoteReturns(false)
 	idDesc := &idriver.IdentityDescriptor{Identity: []byte("id1"), AuditInfo: []byte("ai")}
 	km.IdentityReturns(idDesc, nil)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturns(km, nil)
@@ -421,7 +421,7 @@ func TestRegisterLocalIdentities_SuccessAndNoValidFound(t *testing.T) {
 	km.IsRemoteReturns(false)
 	idDesc := &idriver.IdentityDescriptor{Identity: []byte("ida"), AuditInfo: []byte("aia")}
 	km.IdentityReturns(idDesc, nil)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturnsOnCall(0, nil, stdErrors.New("root no"))
@@ -477,7 +477,7 @@ func TestTypedIdentityInfo_Get_RegisterAndBindFailures(t *testing.T) {
 	desc := &idriver.IdentityDescriptor{Identity: []byte("idX"), AuditInfo: []byte("aiX")}
 	ti := &membership.TypedIdentityInfo{
 		GetIdentity:      func(context.Context, []byte) (*idriver.IdentityDescriptor, error) { return desc, nil },
-		IdentityType:     "typ",
+		IdentityType:     identity.Type(99),
 		EnrollmentID:     "e",
 		RootIdentity:     token.Identity("root"),
 		IdentityProvider: ip,
@@ -500,7 +500,7 @@ func TestTypedIdentityInfo_Get_RegisterAndBindFailures(t *testing.T) {
 	ip2.RegisterIdentityDescriptorReturns(stdErrors.New("regfail"))
 	ti2 := &membership.TypedIdentityInfo{
 		GetIdentity:      func(context.Context, []byte) (*idriver.IdentityDescriptor, error) { return desc, nil },
-		IdentityType:     "typ",
+		IdentityType:     identity.Type(99),
 		EnrollmentID:     "e",
 		RootIdentity:     token.Identity("root"),
 		IdentityProvider: ip2,
@@ -514,7 +514,7 @@ func TestTypedIdentityInfo_Get_RegisterAndBindFailures(t *testing.T) {
 	ip3.BindReturns(stdErrors.New("bindfail"))
 	ti3 := &membership.TypedIdentityInfo{
 		GetIdentity:      func(context.Context, []byte) (*idriver.IdentityDescriptor, error) { return desc, nil },
-		IdentityType:     "typ",
+		IdentityType:     identity.Type(99),
 		EnrollmentID:     "e",
 		RootIdentity:     token.Identity("root"),
 		IdentityProvider: ip3,
@@ -531,7 +531,7 @@ func TestTypedSignerDeserializer_DeserializeSigner(t *testing.T) {
 	km.DeserializeSignerReturns(signer, nil)
 
 	td := &membership.TypedSignerDeserializer{KeyManager: km}
-	s, err := td.DeserializeSigner(ctx, "typ", []byte("raw"))
+	s, err := td.DeserializeSigner(ctx, identity.Type(99), []byte("raw"))
 	require.NoError(t, err)
 	assert.Equal(t, signer, s)
 }
@@ -555,7 +555,7 @@ func TestLoad_Success(t *testing.T) {
 	km.IsRemoteReturns(false)
 	idDesc := &idriver.IdentityDescriptor{Identity: []byte("id1"), AuditInfo: []byte("ai")}
 	km.IdentityReturns(idDesc, nil)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturns(km, nil)
@@ -600,7 +600,7 @@ func TestLoad_WithTargets(t *testing.T) {
 	km.IsRemoteReturns(false)
 	idDesc := &idriver.IdentityDescriptor{Identity: []byte("id1"), AuditInfo: []byte("ai")}
 	km.IdentityReturns(idDesc, nil)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturns(km, nil)
@@ -696,7 +696,7 @@ func TestLoad_MergeStoredIdentities(t *testing.T) {
 	km.IsRemoteReturns(false)
 	idDesc := &idriver.IdentityDescriptor{Identity: []byte("id1"), AuditInfo: []byte("ai")}
 	km.IdentityReturns(idDesc, nil)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturns(km, nil)

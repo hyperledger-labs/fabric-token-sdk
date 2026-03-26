@@ -30,7 +30,7 @@ type TokenRecord struct {
 	// OwnerRaw is the serialization of the owner TypedIdentity
 	OwnerRaw []byte
 	// OwnerType is the deserialized type inside OwnerRaw
-	OwnerType string
+	OwnerType driver.IdentityType
 	// OwnerIdentity is the deserialized Identity inside OwnerRaw
 	OwnerIdentity []byte
 	// OwnerWalletID is the identifier of the wallet that owns this token, it might be empty
@@ -65,7 +65,7 @@ type TokenDetails struct {
 	// OwnerIdentity is the serialization of the owner identity
 	OwnerIdentity []byte
 	// OwnerType is the deserialized type inside OwnerRaw
-	OwnerType string
+	OwnerType driver.IdentityType
 	// OwnerEnrollment is the enrollment id of the owner
 	OwnerEnrollment string
 	// Type is the type of token
@@ -85,7 +85,7 @@ type QueryTokenDetailsParams struct {
 	// WalletID is the optional identifier of the wallet owning the token
 	WalletID string
 	// OwnerType is the type of owner, for instance 'idemix' or 'htlc'
-	OwnerType string
+	OwnerType driver.IdentityType
 	// TokenType (optional) is the type of token
 	TokenType token.Type
 	// IDs is an optional list of specific token ids to return

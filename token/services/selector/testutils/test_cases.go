@@ -18,6 +18,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -163,7 +164,7 @@ func (m *enhancedManager) UpdateTokens(deleted []*token.ID, added []token.Unspen
 				Index:          t.Id.Index,
 				IssuerRaw:      []byte{},
 				OwnerRaw:       t.Owner,
-				OwnerType:      "idemix",
+				OwnerType:      tdriver.IdemixIdentityType,
 				OwnerIdentity:  []byte{},
 				Ledger:         []byte("ledger"),
 				LedgerMetadata: []byte{},

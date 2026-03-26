@@ -73,7 +73,7 @@ func TestGetAuditInfo_InvalidType(t *testing.T) {
 	rawIdentity := []byte("valid_raw_identity")
 	provider := &mockAuditInfoProvider{}
 
-	auditInfo, err := deserializer.GetAuditInfo(t.Context(), id, identity.Type("InvalidType"), rawIdentity, provider)
+	auditInfo, err := deserializer.GetAuditInfo(t.Context(), id, identity.Type(999), rawIdentity, provider)
 	require.Error(t, err)
 	assert.Nil(t, auditInfo)
 }
