@@ -17,6 +17,7 @@ import (
 	fabricx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
@@ -58,6 +59,7 @@ func NewDriver(
 	storeServiceManager ttxdb.StoreServiceManager,
 	queryServiceProvider queryservice.Provider,
 	finalityProvider *finalityx.Provider,
+	metricsProvider metrics.Provider,
 ) (driver.Driver, error) {
 	vkp := pp2.NewVersionKeeperProvider()
 	kt := &keys.Translator{}
@@ -73,8 +75,9 @@ func NewDriver(
 	// Load event queue configuration from token.finality.notification
 	qCfg := queue.NewConfig(configService)
 	q, err := queue.NewEventQueue(queue.Config{
-		Workers:   qCfg.Workers(),
-		QueueSize: qCfg.QueueSize(),
+		Workers:         qCfg.Workers(),
+		QueueSize:       qCfg.QueueSize(),
+		MetricsProvider: metricsProvider,
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed creating event queue")
