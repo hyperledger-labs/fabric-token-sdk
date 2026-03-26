@@ -1,5 +1,5 @@
 import re
-import sys
+import os
 from pathlib import Path
 from typing import Any
 import pandas as pd
@@ -10,7 +10,7 @@ st.set_page_config(
 
 IGNORE_COLS = {"bench", "workers", "tps",
                "iterations", "ns/op", "B/op", "allocs/op"}
-DEFAULT_BENCH_DIR = "bench2"
+DEFAULT_BENCH_DIR = "bench"
 
 
 def _is_number(s: str) -> bool:
@@ -75,6 +75,10 @@ def simple_parser(path: Path) -> pd.DataFrame:
         df[f"{label} (ms)"] = df[col] / 1e6
         df = df.drop(columns=[col])
 
+    if 'tps' in df.columns and 'workers' in df.columns:
+        # Little's Law (latency = concurrency / throughput)
+        df['avg (ms)'] = df['workers'] * 1000 / df['tps']
+
     return df
 
 
@@ -102,13 +106,21 @@ def _parse_ms(s: str) -> float:
     raise ValueError(f"unknown unit: {unit}")
 
 
-LATENCY_KEYS = {'P5': 'p5 (ms)', 'P95': 'p95 (ms)', 'P99': 'p99 (ms)'}
+LATENCY_KEYS = {
+    'P50 (Median)': 'p50 (ms)',
+    'P5': 'p5 (ms)',
+    'P95': 'p95 (ms)',
+    'P99': 'p99 (ms)',
+}
+DISPLAY_LATENCY = {'avg (ms)', 'p50 (ms)', 'p95 (ms)'}
+WORKERS_RE = re.compile(r'^Workers\s+(\d+)')
 
 
-def parse_parallel_log(path: Path) -> pd.DataFrame:
+def parse_parallel_log(path: Path, default_bench: str | None = None) -> pd.DataFrame:
     text = ANSI_ESCAPE_RE.sub('', path.read_text())
     rows: list[dict] = []
     current: dict = {}
+    has_run_lines = bool(PARALLEL_RUN_RE.search(text))
 
     for line in text.splitlines():
         line = line.strip()
@@ -128,6 +140,18 @@ def parse_parallel_log(path: Path) -> pd.DataFrame:
                         k, v = token.split('_', 1)
                         current[k] = v
             continue
+
+        if not has_run_lines:
+            m = WORKERS_RE.match(line)
+            if m:
+                workers = int(m.group(1))
+                if current:
+                    rows.append(current)
+                current = {
+                    'bench': default_bench or path.stem,
+                    'workers': workers,
+                }
+                continue
 
         m = PARALLEL_THROUGHPUT_RE.match(line)
         if m:
@@ -157,16 +181,12 @@ def has_multi_nc(df: pd.DataFrame) -> bool:
 
 def _tps_fig(df, color_col, title):
     fig = px.line(df, x='workers', y='tps', color=color_col,
+                  symbol=color_col,
                   markers=True, title=title,
-                  labels={'workers': 'Workers', 'tps': 'TPS', color_col: ''})
-    # fig.update_xaxes(
-    #     showgrid=True,
-    #     # griddash='dash',
-    # )
+                  labels={'workers': 'Workers', 'tps': 'TPS', color_col: ''},
+                  symbol_sequence=SHAPES)
     fig.update_yaxes(
-        # showgrid=True,
         nticks=25,
-        # griddash='dash',
     )
     fig.update_layout(template='plotly_white',
                       hovermode='x unified')
@@ -174,14 +194,17 @@ def _tps_fig(df, color_col, title):
 
 
 def _latency_fig(df, color_col, dash_col, title):
-    latency_cols = [c for c in df.columns if c.endswith('(ms)')]
+    latency_cols = [c for c in df.columns if c in DISPLAY_LATENCY]
     if not latency_cols:
         return None
     melted = df.melt(id_vars=[color_col, 'workers'], value_vars=latency_cols,
                      var_name='percentile', value_name='latency')
+    dash_map = {'avg (ms)': 'dash', 'p50 (ms)': 'solid', 'p95 (ms)': 'dot'}
     fig = px.line(melted, x='workers', y='latency',
                   color=color_col, line_dash=dash_col, markers=True, title=title,
-                  labels={'workers': 'Workers', 'latency': 'Latency (ms)', color_col: ''})
+                  labels={'workers': 'Workers',
+                          'latency': 'Latency (ms)', color_col: ''},
+                  line_dash_map=dash_map)
     fig.update_layout(template='plotly_white', hovermode='x unified')
     return fig
 
@@ -233,6 +256,9 @@ def parse_combined(dfs: dict[str, pd.DataFrame]):
     return dct
 
 
+SHAPES = ['circle', 'square', 'diamond', 'cross', 'hexagon', 'star']
+
+
 def make_combined_figures(dfs, local_dfs):
     figs = {"_All": None}
     all_dfs = []
@@ -265,12 +291,28 @@ def make_combined_figures(dfs, local_dfs):
     return figs
 
 
-def main():
+def _get_dir():
+    def_dir = Path(os.environ.get("DEF_BENCH", DEFAULT_BENCH_DIR))
+
     with st.sidebar:
         directory = st.text_input(
-            "Directory", value=DEFAULT_BENCH_DIR, key="benchdir")
-    directory = Path(directory)
+            "Directory", value=str(def_dir) if def_dir.exists() else "", key="benchdir")
+        os.environ["DEF_BENCH"] = directory
 
+    if not directory:
+        st.info(f"Please input a Folder in the Sidebar")
+        return None
+    directory = Path(directory)
+    if not directory.exists():
+        st.error(f"Directory `{directory}` does not exist")
+        return None
+    return directory
+
+
+def main():
+    directory = _get_dir()
+    if not directory:
+        return
     single = {}
 
     for path in sorted(directory.glob("*.log")):
