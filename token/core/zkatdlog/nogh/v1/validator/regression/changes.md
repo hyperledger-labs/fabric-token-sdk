@@ -23,6 +23,10 @@ The token driver [`token/core/zkatdlog/nogh/v1`](../../) now uses **Idemix pseud
    - **Issuer identities**: Formatted as X.509 certificates
    - **Auditor identities**: Formatted as X.509 certificates
 
+New testdata is located under [`testdata2`](./testdata2).
+Notice that the testdata at location [`testdata`](./testdata) is unchanged. 
+This allows us to check that the validator still validate correctly token requests that contain `idemix.IdentityType`. 
+
 ### Implementation Details
 
 The change affects the following components:
@@ -41,3 +45,5 @@ The change affects the following components:
 
 We replace `bytes.Join` with a more memory efficient version `crypto.AppendFixed32` (`token/core/common/crypto/slice.go`).
 The test under `token/core/common/crypto/slice_alloc_test.go` checks that this is indeed the case.
+
+Testdata is located under [`testdata`](./testdata).
