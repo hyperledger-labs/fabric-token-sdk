@@ -3,6 +3,22 @@
 > **Related Documentation:**
 > - [Testing Architecture](./dlognogh_architecture.md) - Understanding the test layers
 > - [Regression Tests](./dlognogh_regression.md) - Backwards compatibility testing
+> - [Driver Specification](../../dlogwogh.md) - Complete driver documentation including CSP range proofs
+
+## Range Proof Systems
+
+**As of commit 586d4f58**, the driver supports two range proof systems:
+
+1. **Bulletproofs** (Original) - IPA-based range proofs
+2. **Compressed Sigma Protocols (CSP)** (New) - Recursive folding with optimized verification
+
+The proof system is selected via the `-proof_type` flag:
+- `bulletproof` or `1` - Uses Bulletproof range proofs (default)
+- `csp` or `2` - Uses Compressed Sigma Protocol range proofs
+
+**Performance Impact**: CSP proofs offer improved verification performance through optimized Lagrange interpolation, particularly beneficial for high-throughput scenarios. Benchmark results will vary based on the selected proof system.
+
+## Benchmark Packages
 
 Packages with benchmark tests:
 
@@ -39,6 +55,7 @@ The benchmark accepts the following tunable parameters:
 - CurveID: the `math.CurveID` used (examples: `BN254`, `BLS12_381_BBS_GURVY`).
 - NumInputs: number of input tokens provided to the sender (1, 2, ...).
 - NumOutputs: number of outputs produced by the transfer (1, 2, ...).
+- ProofType: the range proof system to use (`bulletproof` or `csp`).
 
 These parameters can be configured from the command line using the following flags:
 
@@ -51,6 +68,8 @@ These parameters can be configured from the command line using the following fla
         a comma-separate list of number of inputs (1,2,3,...)
   -num_outputs string
         a comma-separate list of number of outputs (1,2,3,...)
+  -proof_type string
+        range proof system: bulletproof (default) or csp
 ```
 
 ### Default parameter set used in the benchmark
