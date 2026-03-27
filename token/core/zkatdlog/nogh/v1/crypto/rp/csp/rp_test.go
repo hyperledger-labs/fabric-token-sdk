@@ -149,9 +149,8 @@ func TestRangeProofOutOfRange(t *testing.T) {
 	}
 
 	_, err = prover.Prove()
-	require.NoError(t, err)
-
-	// TODO: validate it to confirm the proof is not valid
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "does not fit")
 }
 
 // TestRangeProofWrongCommitment checks that Verify fails when VCommitment is replaced.

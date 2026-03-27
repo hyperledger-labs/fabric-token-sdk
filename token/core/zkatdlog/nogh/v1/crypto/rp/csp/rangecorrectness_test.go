@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -159,7 +158,7 @@ func TestCSPRangeCorrectnessEmptyCommitments(t *testing.T) {
 
 	rc, err := prover.Prove()
 	require.NoError(t, err)
-	require.Len(t, rc.Proofs, 0)
+	require.Empty(t, rc.Proofs)
 
 	verifier := NewCSPRangeCorrectnessVerifier(
 		pedersenParams,
@@ -314,6 +313,10 @@ func TestCSPRangeCorrectnessSerializationRoundTrip(t *testing.T) {
 	err = rc2.Deserialize(serialized)
 	require.NoError(t, err)
 	require.Len(t, rc2.Proofs, numCommitments)
+
+	// Validate to restore Curve fields
+	err = rc2.Validate(math.BN254)
+	require.NoError(t, err)
 
 	// Verify deserialized proof
 	verifier := NewCSPRangeCorrectnessVerifier(
@@ -581,7 +584,7 @@ func TestCSPRangeCorrectnessDeserializeInvalid(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := rc.Deserialize(tc.data)
-			assert.Error(t, err)
+			require.Error(t, err)
 		})
 	}
 }

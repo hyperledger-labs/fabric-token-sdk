@@ -179,7 +179,7 @@ func TestCSPWrongVectorLength(t *testing.T) {
 
 	_, err := setup.prover.Prove()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "2^NumberOfRounds")
+	require.Contains(t, err.Error(), "invalid length")
 }
 
 // TestCSPMalformedProof checks that Verify() rejects a proof with the wrong
@@ -199,7 +199,7 @@ func TestCSPMalformedProof(t *testing.T) {
 
 	err = setup.verifier.Verify(proof)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "wrong number of rounds")
+	require.Contains(t, err.Error(), "invalid length")
 }
 
 // TestCSPSVector validates the coefficient vector produced by cspSVector against
