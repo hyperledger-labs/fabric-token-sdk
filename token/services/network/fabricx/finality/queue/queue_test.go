@@ -14,10 +14,64 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality/queue"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// --- minimal mock metrics provider for histogram tests ---
+
+type mockHistogram struct {
+	mu           sync.Mutex
+	observations []float64
+}
+
+func (h *mockHistogram) With(_ ...string) metrics.Histogram { return h }
+
+func (h *mockHistogram) Observe(v float64) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.observations = append(h.observations, v)
+}
+
+func (h *mockHistogram) count() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	return len(h.observations)
+}
+
+type mockProvider struct {
+	histogram *mockHistogram
+}
+
+func newMockProvider() *mockProvider {
+	return &mockProvider{histogram: &mockHistogram{}}
+}
+
+func (p *mockProvider) NewCounter(_ metrics.CounterOpts) metrics.Counter {
+	return &noopMetricCounter{}
+}
+
+func (p *mockProvider) NewGauge(_ metrics.GaugeOpts) metrics.Gauge {
+	return &noopMetricGauge{}
+}
+
+func (p *mockProvider) NewHistogram(_ metrics.HistogramOpts) metrics.Histogram {
+	return p.histogram
+}
+
+type noopMetricCounter struct{}
+
+func (c *noopMetricCounter) With(_ ...string) metrics.Counter { return c }
+func (c *noopMetricCounter) Add(_ float64)                    {}
+
+type noopMetricGauge struct{}
+
+func (g *noopMetricGauge) With(_ ...string) metrics.Gauge { return g }
+func (g *noopMetricGauge) Add(_ float64)                  {}
+func (g *noopMetricGauge) Set(_ float64)                  {}
 
 // mockEvent is a test implementation of the Event interface
 type mockEvent struct {
@@ -603,6 +657,69 @@ func TestWorkerContextCancellation(t *testing.T) {
 	// Some events may not have completed
 	count := atomic.LoadInt32(&processedAfterCancel)
 	assert.True(t, count >= 0 && count <= 5)
+}
+
+// TestProcessingDuration_ObservedOnSuccess verifies that ProcessingDuration is
+// recorded exactly once for each event that completes without error.
+func TestProcessingDuration_ObservedOnSuccess(t *testing.T) {
+	provider := newMockProvider()
+	cfg := queue.Config{
+		Workers:         2,
+		QueueSize:       10,
+		MetricsProvider: provider,
+	}
+
+	eq, err := queue.NewEventQueue(cfg)
+	require.NoError(t, err)
+	defer func() { _ = eq.Shutdown(time.Second) }()
+
+	const numEvents = 5
+	for range numEvents {
+		err = eq.Enqueue(&mockEvent{})
+		require.NoError(t, err)
+	}
+
+	require.Eventually(t, func() bool {
+		return provider.histogram.count() == numEvents
+	}, time.Second, 10*time.Millisecond, "expected %d duration observations, got %d", numEvents, provider.histogram.count())
+
+	provider.histogram.mu.Lock()
+	defer provider.histogram.mu.Unlock()
+	for _, d := range provider.histogram.observations {
+		assert.GreaterOrEqual(t, d, 0.0, "duration must be non-negative")
+	}
+}
+
+// TestProcessingDuration_NotObservedOnError verifies that ProcessingDuration is
+// NOT recorded when event.Process returns an error (errors go to ProcessingErrors only).
+func TestProcessingDuration_NotObservedOnError(t *testing.T) {
+	provider := newMockProvider()
+	cfg := queue.Config{
+		Workers:         1,
+		QueueSize:       10,
+		MetricsProvider: provider,
+	}
+
+	eq, err := queue.NewEventQueue(cfg)
+	require.NoError(t, err)
+	defer func() { _ = eq.Shutdown(time.Second) }()
+
+	var processed int32
+	failingEvent := &mockEvent{
+		processFunc: func(ctx context.Context) error {
+			atomic.AddInt32(&processed, 1)
+
+			return errors.New("deliberate failure")
+		},
+	}
+	err = eq.Enqueue(failingEvent)
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		return atomic.LoadInt32(&processed) == 1
+	}, time.Second, 10*time.Millisecond)
+
+	assert.Equal(t, 0, provider.histogram.count(), "duration must not be recorded for failed events")
 }
 
 // TestQueueDraining tests that queue drains events before shutdown
