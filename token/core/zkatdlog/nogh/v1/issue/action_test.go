@@ -226,4 +226,14 @@ func TestValidate(t *testing.T) {
 	err = action.Validate()
 	require.ErrorIs(t, err, ErrNilOutput)
 	action.Outputs = oldOutputs
+
+	// Empty proof
+	oldProof := action.Proof
+	action.Proof = []byte{}
+	err = action.Validate()
+	require.ErrorIs(t, err, ErrEmptyProof)
+	action.Proof = oldProof
+
+	// Valid action again
+	require.NoError(t, action.Validate())
 }

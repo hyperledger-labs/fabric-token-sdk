@@ -208,6 +208,9 @@ func (i *Action) Validate() error {
 	if i.ProofType != rp.RangeProofType && i.ProofType != rp.CSPRangeProofType {
 		return ErrInvalidProofType
 	}
+	if len(i.Proof) == 0 {
+		return ErrEmptyProof
+	}
 
 	return nil
 }

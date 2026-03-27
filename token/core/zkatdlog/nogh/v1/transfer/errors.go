@@ -73,4 +73,6 @@ var (
 	ErrInvalidChallenge = errors.New("Challenge is invalid")
 	// ErrNilProof is returned when the proof is nil
 	ErrNilProof = errors.New("nil proof")
+	// ErrEmptyProof is returned when the proof is empty
+	ErrEmptyProof = errors.New("proof cannot be empty")
 )
