@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	proofType = flag.String("proof_type", "1", "1 or RangeProof, 2 or CSPRangeProof")
+	proofType = flag.String("proof_type", "1", "1 or bulletproof or bf, 2 or csp")
 )
 
 // ProofType returns the proof type flag value (0 = RangeProof, 1 = CSPRangeProof).
@@ -28,11 +28,11 @@ func ProofType() rp.ProofType {
 	switch strings.ToLower(str) {
 	case "1":
 		return rp.RangeProofType
-	case "rangeproof":
+	case "bf", "bulletproof":
 		return rp.RangeProofType
 	case "2":
 		return rp.CSPRangeProofType
-	case "csprangeproof":
+	case "csp":
 		return rp.CSPRangeProofType
 	}
 	panic(fmt.Errorf("invalid proof_type: %s", str))
