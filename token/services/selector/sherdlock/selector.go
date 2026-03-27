@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
+	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -46,6 +47,7 @@ type selector struct {
 	fetcher   tokenFetcher
 	locker    tokenLocker
 	precision uint64
+	mu        sync.Mutex // protects cache field for concurrent Close() calls
 }
 
 type stubbornSelector struct {
@@ -163,7 +165,10 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 }
 
 func (s *selector) Close() error {
-	if s.isClosed() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.cache == nil {
 		return errors.New("selector is already closed")
 	}
 	s.cache.Close()
@@ -173,6 +178,9 @@ func (s *selector) Close() error {
 }
 
 func (s *selector) isClosed() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	return s.cache == nil
 }
 
