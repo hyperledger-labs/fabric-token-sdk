@@ -20,10 +20,10 @@ import (
 func toBits(v *mathlib.Zr, n uint64, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
 	val := new(big.Int).SetBytes(v.Bytes())
 
-	// limit := new(big.Int).Lsh(big.NewInt(1), uint(n))
-	// if val.Cmp(limit) >= 0 {
-	// 	return nil, errors.Errorf("value %s does not fit in %d bits", val, n)
-	// }
+	limit := new(big.Int).Lsh(big.NewInt(1), uint(n))
+	if val.Cmp(limit) >= 0 {
+		return nil, errors.Errorf("value %s does not fit in %d bits", val, n)
+	}
 
 	bits := make([]*mathlib.Zr, n)
 	for i := range n {
@@ -343,16 +343,24 @@ func (p *CspRangeProof) Deserialize(raw []byte) error {
 }
 
 func (p *CspRangeProof) Validate(curve mathlib.CurveID) error {
+	// Restore the Curve field after deserialization
+	p.cspProof.Curve = mathlib.Curves[curve]
+
 	return nil
 }
 
 func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
+	// Validate all inputs
+	if err := validateRangeProverInputs(cspp); err != nil {
+		return nil, errors.Wrap(err, "invalid range prover inputs")
+	}
+
 	tr := Transcript{Curve: cspp.Curve}
 	tr.InitHasher()
 	n := cspp.NumberOfBits
 	rand, err := cspp.Curve.Rand()
 	if err != nil {
-		return nil, errors.New("Unable to initialize rng")
+		return nil, errors.Wrap(err, "failed to initialize random number generator")
 	}
 
 	// Absorb the public statement.
@@ -380,7 +388,7 @@ func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
 	b0 := cspp.Curve.ModSub(a0, cspp.Curve.NewZrFromUint64(1), cspp.Curve.GroupOrder)
 	bitsOfV, err := toBits(cspp.v, n, cspp.Curve)
 	if err != nil {
-		return nil, errors.Errorf("Number does not fit in %d bits", n)
+		return nil, err
 	}
 
 	aCoeffs := make([]*mathlib.Zr, n+1)
@@ -575,6 +583,16 @@ func newCspRangeVerifier(VGenerators []*mathlib.G1, AGenerators []*mathlib.G1, B
 // It mirrors the prover transcript exactly, reconstructs all challenges, rebuilds
 // the aggregated linear form, and delegates the final check to cspVerifier.
 func (rv *cspRangeVerifier) Verify(proof *CspRangeProof) error {
+	// Validate all inputs
+	if err := validateRangeVerifierInputs(rv); err != nil {
+		return errors.Wrap(err, "invalid range verifier inputs")
+	}
+
+	// Validate proof structure
+	if err := validateRangeProof(proof); err != nil {
+		return errors.Wrap(err, "invalid range proof structure")
+	}
+
 	tr := Transcript{Curve: rv.Curve}
 	tr.InitHasher()
 	n := rv.NumberOfBits

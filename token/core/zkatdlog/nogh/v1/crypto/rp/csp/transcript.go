@@ -18,9 +18,16 @@ type Transcript struct {
 	Curve   *mathlib.Curve
 }
 
-// Initialize the hasher state
+// InitHasher initializes the Fiat-Shamir transcript with proper domain separation.
+// The domain separator should be a protocol-specific label to prevent cross-protocol attacks.
 func (tr *Transcript) InitHasher() {
-	key := sha256.Sum256([]byte("hello"))
+	tr.InitHasherWithDomain("CSP-RangeProof-v1")
+}
+
+// InitHasherWithDomain initializes the transcript with a custom domain separator.
+// This provides domain separation between different proof types and protocol versions.
+func (tr *Transcript) InitHasherWithDomain(domainSeparator string) {
+	key := sha256.Sum256([]byte(domainSeparator))
 	tr.fsState = key[:]
 }
 
