@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package utils
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -16,15 +17,22 @@ import (
 // RetryRunner receives a function that potentially fails and retries according to the specified strategy
 type RetryRunner interface {
 	Run(func() error) error
+	// RunWithContext retries like Run but stops early if ctx is canceled.
+	RunWithContext(ctx context.Context, runner func() error) error
 }
 
 var ErrMaxRetriesExceeded = errors.New("maximum number of retries exceeded")
 
 const Infinitely = -1
 
+// defaultMaxDelay caps exponential backoff to prevent workers from sleeping for
+// unbounded durations (hours/days) after a burst of transient failures.
+const defaultMaxDelay = 30 * time.Second
+
 func NewRetryRunner(logger logging2.Logger, maxTimes int, delay time.Duration, expBackoff bool) *retryRunner {
 	return &retryRunner{
 		initialDelay: delay,
+		maxDelay:     defaultMaxDelay,
 		expBackoff:   expBackoff,
 		maxTimes:     maxTimes,
 		logger:       logger,
@@ -33,25 +41,61 @@ func NewRetryRunner(logger logging2.Logger, maxTimes int, delay time.Duration, e
 
 type retryRunner struct {
 	initialDelay time.Duration
-	expBackoff   bool
-	maxTimes     int
-	logger       logging2.Logger
+	// maxDelay caps the exponential backoff. Zero means no cap.
+	maxDelay   time.Duration
+	expBackoff bool
+	maxTimes   int
+	logger     logging2.Logger
 }
 
 func (f *retryRunner) nextDelay(delay time.Duration) time.Duration {
 	if delay == 0 || !f.expBackoff {
 		return f.initialDelay
 	}
+	next := 2 * delay
+	if f.maxDelay > 0 && next > f.maxDelay {
+		return f.maxDelay
+	}
 
-	return 2 * delay
+	return next
 }
 
+// Run retries runner until it succeeds or maxTimes is exhausted.
+// Uses context.Background() — prefer RunWithContext for cancelable retries.
 func (f *retryRunner) Run(runner func() error) error {
-	return f.RunWithErrors(func() (bool, error) {
-		err := runner()
+	return f.RunWithContext(context.Background(), runner)
+}
 
-		return err == nil, err
-	})
+// RunWithContext retries runner until it succeeds, ctx is canceled, or maxTimes
+// attempts are exhausted. The backoff sleep respects ctx cancellation so callers
+// (e.g. queue workers shutting down) are not blocked for the full sleep duration.
+func (f *retryRunner) RunWithContext(ctx context.Context, runner func() error) error {
+	var (
+		errs  []error
+		delay time.Duration
+	)
+	for i := 0; f.maxTimes < 0 || i < f.maxTimes; i++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := runner(); err == nil {
+			return nil
+		} else {
+			errs = append(errs, err)
+		}
+		delay = f.nextDelay(delay)
+		f.logger.Warnf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
+		select {
+		case <-time.After(delay):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	if len(errs) == 0 {
+		return ErrMaxRetriesExceeded
+	}
+
+	return errors.Join(errs...)
 }
 
 // RunWithErrors will retry until runner() returns true or until it returns maxTimes false.
