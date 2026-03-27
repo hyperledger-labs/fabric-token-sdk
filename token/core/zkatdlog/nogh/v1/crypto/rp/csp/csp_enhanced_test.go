@@ -146,7 +146,7 @@ func TestCSPNonPowerOfTwoSize(t *testing.T) {
 
 	_, err = prover.Prove()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "2^NumberOfRounds")
+	require.Contains(t, err.Error(), "invalid length")
 }
 
 // TestCSPEmptyVectors verifies behavior with empty vectors.
@@ -208,7 +208,7 @@ func TestCSPTamperedMultipleRounds(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test tampering each round
-	for round := 0; round < 3; round++ {
+	for round := range 3 {
 		t.Run("round_"+string(rune('0'+round)), func(t *testing.T) {
 			tamperedProof := &CSPProof{
 				Left:   make([]*math.G1, len(proof.Left)),
@@ -256,10 +256,10 @@ func TestCSPSVectorProperties(t *testing.T) {
 	assert.True(t, s[0].Equals(curve.NewZrFromInt(1)), "s[0] should be 1")
 
 	// Property 2: s[i + 2^r] = s[i] * c_{k-1-r} for all valid i, r
-	for r := 0; r < k; r++ {
+	for r := range k {
 		halfLen := 1 << r
 		c := challenges[k-1-r]
-		for i := 0; i < halfLen; i++ {
+		for i := range halfLen {
 			expected := curve.ModMul(s[i], c, curve.GroupOrder)
 			assert.True(t, s[i+halfLen].Equals(expected),
 				"s[%d] should equal s[%d] * c[%d]", i+halfLen, i, k-1-r)
@@ -293,7 +293,7 @@ func TestCSPSVectorDifferentChallenges(t *testing.T) {
 			differentCount++
 		}
 	}
-	assert.Greater(t, differentCount, 0, "s-vectors with different challenges should differ")
+	assert.Positive(t, differentCount, "s-vectors with different challenges should differ")
 }
 
 // TestCSPVerifierRejectsWrongNumberOfRounds verifies various malformed proof structures.
@@ -347,7 +347,7 @@ func TestCSPVerifierRejectsWrongNumberOfRounds(t *testing.T) {
 
 			err := setup.verifier.Verify(tamperedProof)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "wrong number of rounds")
+			require.Contains(t, err.Error(), "invalid length")
 		})
 	}
 }

@@ -61,12 +61,9 @@ type CSPProof struct {
 //	f'_j   = f_L[j]   + c · f_R[j]
 //	w'_j   = c · w_L[j] + w_R[j]
 func (p *cspProver) Prove() (*CSPProof, error) {
-	// Check that sizes of Generators, LinearForm and witness is 2^{NumberOfRounds}.
-	expected := uint64(1) << p.NumberOfRounds
-	if uint64(len(p.Generators)) != expected ||
-		uint64(len(p.LinearForm)) != expected ||
-		uint64(len(p.witness)) != expected {
-		return nil, errors.New("inconsistent vector sizes: each must have length 2^NumberOfRounds")
+	// Validate all inputs
+	if err := validateCSPProverInputs(p); err != nil {
+		return nil, errors.Wrap(err, "invalid CSP prover inputs")
 	}
 
 	// Initialize transcript.
@@ -179,11 +176,14 @@ type cspVerifier struct {
 // This is similar to the optimisation used in Bulletproof verifier:
 // See: Page 17, Section 3, https://eprint.iacr.org/2017/1066.pdf
 func (v *cspVerifier) Verify(proof *CSPProof) error {
-	if uint64(len(proof.Left)) != v.NumberOfRounds ||
-		uint64(len(proof.Right)) != v.NumberOfRounds ||
-		uint64(len(proof.VLeft)) != v.NumberOfRounds ||
-		uint64(len(proof.VRight)) != v.NumberOfRounds {
-		return errors.New("malformed proof: wrong number of rounds")
+	// Validate verifier inputs
+	if err := validateCSPVerifierInputs(v); err != nil {
+		return errors.Wrap(err, "invalid CSP verifier inputs")
+	}
+
+	// Validate proof structure
+	if err := validateCSPProof(proof, v.NumberOfRounds); err != nil {
+		return errors.Wrap(err, "invalid CSP proof structure")
 	}
 
 	// Initialize transcript — must mirror Prove() exactly.

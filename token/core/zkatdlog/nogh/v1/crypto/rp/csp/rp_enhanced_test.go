@@ -39,11 +39,11 @@ func TestToBitsValidRange(t *testing.T) {
 			v := curve.NewZrFromInt(tc.value)
 			bits, err := toBits(v, tc.n, curve)
 			require.NoError(t, err)
-			require.Len(t, bits, int(tc.n))
+			require.Equal(t, tc.n, uint64(len(bits)))
 
 			// Verify bits reconstruct the original value
 			reconstructed := big.NewInt(0)
-			for i := uint64(0); i < tc.n; i++ {
+			for i := range tc.n {
 				bitVal := new(big.Int).SetBytes(bits[i].Bytes())
 				if bitVal.Cmp(big.NewInt(0)) != 0 {
 					reconstructed.SetBit(reconstructed, int(i), 1)
@@ -76,14 +76,14 @@ func TestToBitsSingleBitSet(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	n := uint64(8)
 
-	for bitPos := uint64(0); bitPos < n; bitPos++ {
+	for bitPos := range n {
 		value := int64(1 << bitPos)
 		v := curve.NewZrFromInt(value)
 		bits, err := toBits(v, n, curve)
 		require.NoError(t, err)
 
 		// Only the specified bit should be 1
-		for i := uint64(0); i < n; i++ {
+		for i := range n {
 			if i == bitPos {
 				assert.True(t, bits[i].Equals(curve.NewZrFromInt(1)),
 					"bit %d should be 1", i)
@@ -114,11 +114,11 @@ func TestFieldDiffInt(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := fieldDiffInt(tc.a, tc.b, curve)
-			
+
 			// Convert to signed integer for comparison
 			resultBytes := result.Bytes()
 			resultBig := new(big.Int).SetBytes(resultBytes)
-			
+
 			// Handle negative values (field elements > order/2 are negative)
 			orderBytes := curve.GroupOrder.Bytes()
 			order := new(big.Int).SetBytes(orderBytes)
@@ -126,7 +126,7 @@ func TestFieldDiffInt(t *testing.T) {
 			if resultBig.Cmp(halfOrder) > 0 {
 				resultBig.Sub(resultBig, order)
 			}
-			
+
 			assert.Equal(t, tc.expected, resultBig.Int64())
 		})
 	}
@@ -208,7 +208,7 @@ func TestInterpolateCorrectness(t *testing.T) {
 	require.NoError(t, err)
 
 	n := uint64(3)
-	
+
 	// Create random polynomial values at {0, 1, 2, 3}
 	vals := make([]*math.Zr, n+1)
 	for i := range vals {
@@ -263,6 +263,10 @@ func TestRangeProofSerializationRoundTrip(t *testing.T) {
 	err = proof2.Deserialize(serialized)
 	require.NoError(t, err)
 
+	// Validate to restore Curve field
+	err = proof2.Validate(math.BN254)
+	require.NoError(t, err)
+
 	// Verify deserialized proof
 	err = setup.verifier.Verify(proof2)
 	require.NoError(t, err)
@@ -284,7 +288,7 @@ func TestRangeProofDeserializeInvalid(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := proof.Deserialize(tc.data)
-			assert.Error(t, err)
+			require.Error(t, err)
 		})
 	}
 }
@@ -412,7 +416,7 @@ func TestRangeProofConsecutiveValues(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	n := uint64(4) // Range [0, 15]
 
-	for value := int64(0); value < 16; value++ {
+	for value := range int64(16) {
 		t.Run("value_"+string(rune('0'+value)), func(t *testing.T) {
 			setup, err := newRPSetup(curve, n, value)
 			require.NoError(t, err)
@@ -433,7 +437,7 @@ func TestRangeProofLargeBitLength(t *testing.T) {
 	}
 
 	curve := math.Curves[math.BN254]
-	n := uint64(32) // 32-bit range
+	n := uint64(32)         // 32-bit range
 	value := int64(1 << 20) // 1 million
 
 	setup, err := newRPSetup(curve, n, value)

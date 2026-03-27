@@ -234,10 +234,10 @@ func TestNativeBatchInverseBLS12381(t *testing.T) {
 	for i := range n {
 		var prod bls12381fr.Element
 		prod.Mul(elems[i], invs[i])
-		
+
 		var one bls12381fr.Element
 		one.SetInt64(1)
-		
+
 		assert.True(t, prod.Equal(&one), "element * inverse should equal 1 at index %d", i)
 	}
 }
@@ -262,10 +262,10 @@ func TestNativeBatchInverseBN254(t *testing.T) {
 	for i := range n {
 		var prod bn254fr.Element
 		prod.Mul(elems[i], invs[i])
-		
+
 		var one bn254fr.Element
 		one.SetInt64(1)
-		
+
 		assert.True(t, prod.Equal(&one), "element * inverse should equal 1 at index %d", i)
 	}
 }
@@ -292,10 +292,10 @@ func TestNativeBatchInverseSingle(t *testing.T) {
 
 	var prod bls12381fr.Element
 	prod.Mul(elem, invs[0])
-	
+
 	var one bls12381fr.Element
 	one.SetInt64(1)
-	
+
 	assert.True(t, prod.Equal(&one), "element * inverse should equal 1")
 }
 
@@ -324,7 +324,7 @@ func TestNativeConversionOneValue(t *testing.T) {
 // TestNativeConversionLargeValue verifies conversion of large field element.
 func TestNativeConversionLargeValue(t *testing.T) {
 	curve := math.Curves[math.BN254]
-	
+
 	// Create a large value close to field order
 	orderBytes := curve.GroupOrder.Bytes()
 	largeInt := new(big.Int).SetBytes(orderBytes)
