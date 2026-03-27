@@ -411,6 +411,40 @@ func TestAction_Validate(t *testing.T) {
 			expectedError: "expected issuer for a redeem action",
 		},
 		{
+			name: "empty proof",
+			action: &transfer.Action{
+				ProofType: rp.RangeProofType,
+				Inputs: []*transfer.ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner:    []byte("owner"),
+								Type:     "type",
+								Quantity: "10",
+							},
+							BlindingFactor: &math.Zr{},
+						},
+					},
+				},
+				Outputs: []*token2.Token{
+					{
+						Owner: []byte("owner"),
+						Data:  &math.G1{},
+					},
+				},
+				Issuer: []byte("issuer"),
+				Proof:  []byte{},
+			},
+			wantErr:       true,
+			expectedErr:   transfer.ErrEmptyProof,
+			expectedError: "proof cannot be empty",
+		},
+		{
 			name: "valid",
 			action: &transfer.Action{
 				ProofType: rp.RangeProofType,
@@ -438,6 +472,7 @@ func TestAction_Validate(t *testing.T) {
 					},
 				},
 				Issuer: []byte("issuer"),
+				Proof:  []byte("proof"),
 			},
 			wantErr: false,
 		},
