@@ -4,6 +4,10 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token provides the Token Management Service (TMS), the main entry point for token operations.
+// TMS manages token requests, wallets, validators, vaults, and public parameters for a specific
+// network/channel/namespace combination. It coordinates all token-related activities including
+// issuance, transfer, and redemption of tokens.
 package token
 
 import (
@@ -26,10 +30,9 @@ type ServiceProvider interface {
 	GetService(v interface{}) (interface{}, error)
 }
 
-// ManagementService (TMS, for short) is the entry point for the Token API. A TMS is uniquely
-// identified by a network, channel, namespace, and public parameters.
-// The TMS gives access, among other things, to the wallet manager, the public parameters,
-// the token selector, and so on.
+// ManagementService (TMS) is the main entry point for all token operations.
+// Each TMS instance is uniquely identified by network, channel, and namespace.
+// It provides access to wallets, validators, vaults, selectors, and public parameters.
 type ManagementService struct {
 	id     TMSID
 	tms    driver.TokenManagerService
@@ -50,7 +53,8 @@ type ManagementService struct {
 	certificationManager    *CertificationManager
 }
 
-// NewManagementService returns a new instance of ManagementService with the given arguments
+// NewManagementService creates a new TMS instance for the specified network/channel/namespace.
+// Returns an error if initialization fails.
 func NewManagementService(
 	id TMSID,
 	tms driver.TokenManagerService,
@@ -78,10 +82,9 @@ func NewManagementService(
 	return ms, nil
 }
 
-// GetManagementService returns the management service for the passed options. If no options are passed,
-// the default management service is returned.
+// GetManagementService retrieves a TMS instance using the provided options.
+// Returns the default TMS if no options are specified.
 // Options: WithNetwork, WithChannel, WithNamespace, WithPublicParameterFetcher, WithTMS, WithTMSID
-// The function returns ErrFailedToGetTMS in an error occurs.
 func GetManagementService(sp ServiceProvider, opts ...ServiceOption) (*ManagementService, error) {
 	ms, err := GetManagementServiceProvider(sp).GetManagementService(opts...)
 	if err != nil {
@@ -91,43 +94,42 @@ func GetManagementService(sp ServiceProvider, opts ...ServiceOption) (*Managemen
 	return ms, nil
 }
 
-// String returns a string representation of the TMS
+// String returns a human-readable identifier for this TMS (format: "TMS[network:channel:namespace]").
 func (t *ManagementService) String() string {
 	return fmt.Sprintf("TMS[%s:%s:%s]", t.Network(), t.Channel(), t.Network())
 }
 
-// Network returns the network identifier
+// Network returns the blockchain network identifier for this TMS.
 func (t *ManagementService) Network() string {
 	return t.id.Network
 }
 
-// Channel returns the channel identifier
+// Channel returns the channel identifier for this TMS.
 func (t *ManagementService) Channel() string {
 	return t.id.Channel
 }
 
-// Namespace returns the namespace identifier, empty if not defined
+// Namespace returns the namespace identifier for this TMS (empty string if not defined).
 func (t *ManagementService) Namespace() string {
 	return t.id.Namespace
 }
 
-// NewRequest returns a new Token Request whose anchor is the passed id
+// NewRequest creates a new empty token request with the specified anchor ID.
 func (t *ManagementService) NewRequest(id RequestAnchor) (*Request, error) {
 	return NewRequest(t, id), nil
 }
 
-// NewRequestFromBytes returns a new Token Request for the passed anchor, and whose actions and metadata are
-// unmarshalled from the passed bytes
+// NewRequestFromBytes deserializes a token request from its actions and metadata bytes.
 func (t *ManagementService) NewRequestFromBytes(anchor RequestAnchor, actions []byte, meta []byte) (*Request, error) {
 	return NewRequestFromBytes(t, anchor, actions, meta)
 }
 
-// NewFullRequestFromBytes returns a new Token Request for the serialized version
+// NewFullRequestFromBytes deserializes a complete token request from bytes.
 func (t *ManagementService) NewFullRequestFromBytes(tr []byte) (*Request, error) {
 	return NewFullRequestFromBytes(t, tr)
 }
 
-// NewMetadataFromBytes unmarshals the passed bytes into a Metadata object
+// NewMetadataFromBytes deserializes request metadata from bytes.
 func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) {
 	tokenRequestMetadata := &driver.TokenRequestMetadata{}
 	if err := tokenRequestMetadata.FromBytes(raw); err != nil {
@@ -142,28 +144,27 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 	}, nil
 }
 
-// Validator returns a new token validator for this TMS
+// Validator returns the validator for verifying token transactions.
 func (t *ManagementService) Validator() (*Validator, error) {
 	return t.validator, nil
 }
 
-// Vault returns the Token Vault for this TMS
+// Vault returns the token vault for storing and querying tokens.
 func (t *ManagementService) Vault() *Vault {
 	return t.vault
 }
 
-// WalletManager returns the wallet manager for this TMS
+// WalletManager returns the manager for owner, issuer, and auditor wallets.
 func (t *ManagementService) WalletManager() *WalletManager {
 	return t.walletManager
 }
 
-// CertificationManager returns the certification manager for this TMS.
-// It returns nil if certification is not supported.
+// CertificationManager returns the manager for token certification (nil if not supported).
 func (t *ManagementService) CertificationManager() *CertificationManager {
 	return t.certificationManager
 }
 
-// CertificationClient returns the certification client for this TMS
+// CertificationClient creates a new certification client for requesting token certifications.
 func (t *ManagementService) CertificationClient(ctx context.Context) (*CertificationClient, error) {
 	certificationClient, err := t.certificationClientProvider.New(ctx, nil)
 	if err != nil {
@@ -173,23 +174,22 @@ func (t *ManagementService) CertificationClient(ctx context.Context) (*Certifica
 	return &CertificationClient{cc: certificationClient}, nil
 }
 
-// PublicParametersManager returns a manager that gives access to the public parameters
-// governing this TMS.
+// PublicParametersManager returns the manager for accessing TMS public parameters.
 func (t *ManagementService) PublicParametersManager() *PublicParametersManager {
 	return t.publicParametersManager
 }
 
-// SelectorManager returns a manager that gives access to the token selectors
+// SelectorManager returns the manager for token selection strategies.
 func (t *ManagementService) SelectorManager() (SelectorManager, error) {
 	return t.selectorManagerProvider.SelectorManager(t)
 }
 
-// SigService returns the signature service for this TMS
+// SigService returns the service for signature verification and deserialization.
 func (t *ManagementService) SigService() *SignatureService {
 	return t.signatureService
 }
 
-// ID returns the TMS identifier
+// ID returns the unique identifier (network, channel, namespace) for this TMS.
 func (t *ManagementService) ID() TMSID {
 	return TMSID{
 		Network:   t.Network(),
@@ -198,19 +198,22 @@ func (t *ManagementService) ID() TMSID {
 	}
 }
 
-// Configuration returns the configuration for this TMS
+// Configuration returns the TMS configuration settings.
 func (t *ManagementService) Configuration() *Configuration {
 	return t.conf
 }
 
+// Authorization returns the authorization service for access control.
 func (t *ManagementService) Authorization() *Authorization {
 	return t.auth
 }
 
+// TokensService returns the service for token operations and upgrades.
 func (t *ManagementService) TokensService() *TokensService {
 	return t.tokensService
 }
 
+// init initializes all TMS components (vault, wallets, validator, etc.).
 func (t *ManagementService) init() error {
 	v, err := t.vaultProvider.Vault(t.id.Network, t.id.Channel, t.id.Namespace)
 	if err != nil {
@@ -248,6 +251,7 @@ func (t *ManagementService) init() error {
 	return nil
 }
 
+// NewWalletManager creates a wallet manager from a driver wallet service.
 func NewWalletManager(walletService driver.WalletService) *WalletManager {
 	return &WalletManager{walletService: walletService}
 }
