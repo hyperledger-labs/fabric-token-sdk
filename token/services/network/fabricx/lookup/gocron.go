@@ -15,7 +15,7 @@ import (
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/vault/queryservice"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/committer/queryservice"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"

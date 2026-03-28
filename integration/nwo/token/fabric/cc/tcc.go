@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	topology3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/onsi/gomega"
@@ -69,8 +70,9 @@ func (p *GenericBackend) PrepareNamespace(tms *topology3.TMS) {
 	if tms.Transient {
 		return
 	}
-	orgs, ok := tms.BackendParams["fabric.orgs"].([]string)
-	gomega.Expect(ok).To(gomega.BeTrue(), "missing orgs for tms [%s:%s:%s:%s:%s]", tms.Network, tms.Channel, tms.Namespace, tms.Driver, tms.Alias)
+
+	orgs := fabric.GetOrgs(tms)
+	gomega.Expect(orgs).ToNot(gomega.BeEmpty(), "missing orgs for tms [%s:%s:%s:%s:%s]", tms.Network, tms.Channel, tms.Namespace, tms.Driver, tms.Alias)
 
 	// Standard Chaincode
 	policy := "AND ("
