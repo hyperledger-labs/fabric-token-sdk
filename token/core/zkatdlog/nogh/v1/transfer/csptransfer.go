@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package transfer
 
 import (
-	"sync"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
@@ -122,9 +120,6 @@ func NewCSPBasedProver(inputWitness, outputWitness []*token.Metadata, inputs, ou
 
 // Prove produces a serialized zero-knowledge Proof.
 func (p *CSPBasedProver) Prove() ([]byte, error) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-
 	var tsProof *TypeAndSumProof
 	var rangeProof *csp.CSPRangeCorrectness
 	if p.RangeCorrectness != nil {
