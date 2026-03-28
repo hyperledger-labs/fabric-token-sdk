@@ -364,9 +364,18 @@ func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
 		return nil, errors.Wrap(err, "failed to initialize random number generator")
 	}
 
-	// Absorb the public statement.
-	tr.Absorb(cspp.VGenerators[0].Bytes())
-	tr.Absorb(cspp.VGenerators[1].Bytes())
+	// Absorb the public statement: VCommitment || VGenerators || AGenerators || BGenerators || NumberOfBits.
+	tr.Absorb(cspp.VCommitment.Bytes())
+	for _, g := range cspp.VGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	for _, g := range cspp.AGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	for _, g := range cspp.BGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	tr.Absorb(new(big.Int).SetUint64(n).Bytes())
 
 	// Schnorr proof of knowledge for VCommitment = v·G_v + r·G_r.
 	// Prover samples blinding scalars, commits, then responds to the FS challenge.
@@ -599,8 +608,17 @@ func (rv *cspRangeVerifier) Verify(proof *CspRangeProof) error {
 	n := rv.NumberOfBits
 
 	// Replay transcript: absorb the same public statement as the prover.
-	tr.Absorb(rv.VGenerators[0].Bytes())
-	tr.Absorb(rv.VGenerators[1].Bytes())
+	tr.Absorb(rv.VCommitment.Bytes())
+	for _, g := range rv.VGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	for _, g := range rv.AGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	for _, g := range rv.BGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	tr.Absorb(new(big.Int).SetUint64(n).Bytes())
 
 	// Verify Schnorr PoK for VCommitment = v·G_v + r·G_r.
 	// Check: z_v·G_v + z_r·G_r == pokA + e·V
