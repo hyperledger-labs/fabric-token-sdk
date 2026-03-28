@@ -18,6 +18,9 @@ import (
 )
 
 // TestNativeLagrangeMultipliersBLS12381 verifies native implementation for BLS12-381.
+// Given a BLS12-381 curve and a random evaluation point,
+// When native Lagrange multipliers are computed,
+// Then they should match the results from the fallback implementation.
 func TestNativeLagrangeMultipliersBLS12381(t *testing.T) {
 	curve := math.Curves[math.BLS12_381_BBS_GURVY]
 	rand, err := curve.Rand()
@@ -43,6 +46,9 @@ func TestNativeLagrangeMultipliersBLS12381(t *testing.T) {
 }
 
 // TestNativeLagrangeMultipliersBN254 verifies native implementation for BN254.
+// Given a BN254 curve and a random evaluation point,
+// When native Lagrange multipliers are computed,
+// Then they should match the results from the fallback implementation.
 func TestNativeLagrangeMultipliersBN254(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	rand, err := curve.Rand()
@@ -67,6 +73,9 @@ func TestNativeLagrangeMultipliersBN254(t *testing.T) {
 }
 
 // TestNativeLagrangeMultipliersPartialBLS12381 verifies partial native implementation.
+// Given a BLS12-381 curve and a random evaluation point,
+// When partial native Lagrange multipliers are computed,
+// Then they should match the results from the fallback implementation.
 func TestNativeLagrangeMultipliersPartialBLS12381(t *testing.T) {
 	curve := math.Curves[math.BLS12_381_BBS_GURVY]
 	rand, err := curve.Rand()
@@ -91,6 +100,9 @@ func TestNativeLagrangeMultipliersPartialBLS12381(t *testing.T) {
 }
 
 // TestNativeLagrangeMultipliersPartialBN254 verifies partial native implementation for BN254.
+// Given a BN254 curve and a random evaluation point,
+// When partial native Lagrange multipliers are computed,
+// Then they should match the results from the fallback implementation.
 func TestNativeLagrangeMultipliersPartialBN254(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	rand, err := curve.Rand()
@@ -115,6 +127,9 @@ func TestNativeLagrangeMultipliersPartialBN254(t *testing.T) {
 }
 
 // TestNativeInterpolateBLS12381 verifies native interpolation for BLS12-381.
+// Given a BLS12-381 curve and a set of initial values,
+// When native interpolation is performed,
+// Then the results should match the results from the fallback implementation.
 func TestNativeInterpolateBLS12381(t *testing.T) {
 	curve := math.Curves[math.BLS12_381_BBS_GURVY]
 	rand, err := curve.Rand()
@@ -148,6 +163,9 @@ func TestNativeInterpolateBLS12381(t *testing.T) {
 }
 
 // TestNativeInterpolateBN254 verifies native interpolation for BN254.
+// Given a BN254 curve and a set of initial values,
+// When native interpolation is performed,
+// Then the results should match the results from the fallback implementation.
 func TestNativeInterpolateBN254(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	rand, err := curve.Rand()
@@ -181,6 +199,9 @@ func TestNativeInterpolateBN254(t *testing.T) {
 }
 
 // TestNativeFromZrToZrRoundTrip verifies conversion round-trip for BLS12-381.
+// Given a random BLS12-381 scalar,
+// When it is converted to a native element and back,
+// Then the value should be preserved.
 func TestNativeFromZrToZrRoundTripBLS12381(t *testing.T) {
 	curve := math.Curves[math.BLS12_381_BBS_GURVY]
 	rand, err := curve.Rand()
@@ -198,6 +219,9 @@ func TestNativeFromZrToZrRoundTripBLS12381(t *testing.T) {
 }
 
 // TestNativeFromZrToZrRoundTripBN254 verifies conversion round-trip for BN254.
+// Given a random BN254 scalar,
+// When it is converted to a native element and back,
+// Then the value should be preserved.
 func TestNativeFromZrToZrRoundTripBN254(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	rand, err := curve.Rand()
@@ -215,6 +239,9 @@ func TestNativeFromZrToZrRoundTripBN254(t *testing.T) {
 }
 
 // TestNativeBatchInverseBLS12381 verifies batch inversion for BLS12-381.
+// Given a set of random BLS12-381 native field elements,
+// When batch inversion is performed,
+// Then each element multiplied by its inverse should equal 1.
 func TestNativeBatchInverseBLS12381(t *testing.T) {
 	curve := math.Curves[math.BLS12_381_BBS_GURVY]
 	rand, err := curve.Rand()
@@ -243,6 +270,9 @@ func TestNativeBatchInverseBLS12381(t *testing.T) {
 }
 
 // TestNativeBatchInverseBN254 verifies batch inversion for BN254.
+// Given a set of random BN254 native field elements,
+// When batch inversion is performed,
+// Then each element multiplied by its inverse should equal 1.
 func TestNativeBatchInverseBN254(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	rand, err := curve.Rand()
@@ -271,6 +301,9 @@ func TestNativeBatchInverseBN254(t *testing.T) {
 }
 
 // TestNativeBatchInverseEmpty verifies batch inversion with empty input.
+// Given an empty slice of field elements,
+// When batch inversion is performed,
+// Then the result should be nil.
 func TestNativeBatchInverseEmpty(t *testing.T) {
 	var elems []*bls12381fr.Element
 	invs := nativeBatchInverse[bls12381fr.Element, *bls12381fr.Element](elems)
@@ -278,6 +311,9 @@ func TestNativeBatchInverseEmpty(t *testing.T) {
 }
 
 // TestNativeBatchInverseSingle verifies batch inversion with single element.
+// Given a single random field element,
+// When batch inversion is performed,
+// Then the result multiplied by the original should equal 1.
 func TestNativeBatchInverseSingle(t *testing.T) {
 	curve := math.Curves[math.BLS12_381_BBS_GURVY]
 	rand, err := curve.Rand()
@@ -300,6 +336,9 @@ func TestNativeBatchInverseSingle(t *testing.T) {
 }
 
 // TestNativeConversionZeroValue verifies conversion of zero value.
+// Given a zero scalar,
+// When it is converted to a native element and back,
+// Then the result should be zero.
 func TestNativeConversionZeroValue(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	zero := curve.NewZrFromInt(0)
@@ -311,6 +350,9 @@ func TestNativeConversionZeroValue(t *testing.T) {
 }
 
 // TestNativeConversionOneValue verifies conversion of one value.
+// Given a scalar value of one,
+// When it is converted to a native element and back,
+// Then the result should be one.
 func TestNativeConversionOneValue(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	one := curve.NewZrFromInt(1)
@@ -322,6 +364,9 @@ func TestNativeConversionOneValue(t *testing.T) {
 }
 
 // TestNativeConversionLargeValue verifies conversion of large field element.
+// Given a large scalar value close to the field order,
+// When it is converted to a native element and back,
+// Then the value should be preserved.
 func TestNativeConversionLargeValue(t *testing.T) {
 	curve := math.Curves[math.BN254]
 
@@ -338,6 +383,9 @@ func TestNativeConversionLargeValue(t *testing.T) {
 }
 
 // TestNativeLagrangeMultipliersConsistency verifies consistency across multiple calls.
+// Given an evaluation point,
+// When native Lagrange multipliers are computed multiple times,
+// Then the results should be identical.
 func TestNativeLagrangeMultipliersConsistency(t *testing.T) {
 	curve := math.Curves[math.BLS12_381_BBS_GURVY]
 	rand, err := curve.Rand()
@@ -364,6 +412,9 @@ func TestNativeLagrangeMultipliersConsistency(t *testing.T) {
 }
 
 // TestNativeInterpolateConsistency verifies interpolation consistency.
+// Given a set of values,
+// When native interpolation is performed multiple times,
+// Then the results should be identical.
 func TestNativeInterpolateConsistency(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	rand, err := curve.Rand()

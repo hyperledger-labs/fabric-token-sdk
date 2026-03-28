@@ -14,10 +14,13 @@ import (
 )
 
 // TestAllCurvesSupported verifies that all critical tests run successfully
-// with both BLS12_381_BBS and BN254 curves.
+// with both BLS12_381_BBS_GURVY and BN254 curves.
+// Given a set of supported curves,
+// When critical protocol operations (transcript, CSP, range proof, validation) are tested,
+// Then all operations should succeed on each curve.
 func TestAllCurvesSupported(t *testing.T) {
 	curves := []mathlib.CurveID{
-		mathlib.BLS12_381_BBS,
+		mathlib.BLS12_381_BBS_GURVY,
 		mathlib.BN254,
 	}
 

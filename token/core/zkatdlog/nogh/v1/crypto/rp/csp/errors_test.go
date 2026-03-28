@@ -16,9 +16,12 @@ import (
 
 // TestTypedErrors verifies that validation functions return the correct typed errors
 // and that callers can use errors.Is() for error checking.
+// Given various invalid input scenarios,
+// When the validation functions are called,
+// Then they should return specific typed errors (e.g., ErrNilCurve, ErrInvalidLength).
 func TestTypedErrors(t *testing.T) {
 	curves := []mathlib.CurveID{
-		mathlib.BLS12_381_BBS,
+		mathlib.BLS12_381_BBS_GURVY,
 		mathlib.BN254,
 	}
 
@@ -53,7 +56,7 @@ func TestTypedErrors(t *testing.T) {
 				// Test validateG1Slice with element from different curve
 				otherCurveID := mathlib.BN254
 				if curveID == mathlib.BN254 {
-					otherCurveID = mathlib.BLS12_381_BBS
+					otherCurveID = mathlib.BLS12_381_BBS_GURVY
 				}
 				otherCurve := mathlib.Curves[otherCurveID]
 				elements := []*mathlib.G1{curve.GenG1, otherCurve.GenG1}
