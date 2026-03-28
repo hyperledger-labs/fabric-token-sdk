@@ -19,13 +19,12 @@ import (
 // elliptic curve instances used in CSP proofs. This is a foundational validation
 // that ensures all cryptographic operations have a valid curve context.
 //
-// Test coverage:
-// - Validates that non-nil curve instances from the mathlib are accepted
-// - Ensures nil curve pointers are rejected with appropriate error messages
-// - Runs for both BN254 and BLS12_381_BBS curves to ensure cross-curve compatibility
+// Given a curve instance (valid or nil),
+// When the validateCurve function is called,
+// Then it should correctly identify valid curves and reject nil instances.
 func TestValidateCurve(t *testing.T) {
 	curves := []mathlib.CurveID{
-		mathlib.BLS12_381_BBS,
+		mathlib.BLS12_381_BBS_GURVY,
 		mathlib.BN254,
 	}
 
@@ -53,18 +52,12 @@ func TestValidateCurve(t *testing.T) {
 // are properly validated before use in CSP proofs. G1 elements represent commitments,
 // generators, and proof components in the cryptographic protocol.
 //
-// Test coverage:
-// - Validates that slices with correct length and valid G1 points pass validation
-// - Ensures nil slices are rejected to prevent nil pointer dereferences
-// - Verifies that slices with incorrect length are rejected (critical for protocol security)
-// - Confirms that slices containing nil elements are detected and rejected
-// - Tests both BN254 and BLS12_381_BBS curves to ensure cross-curve compatibility
-//
-// Note: The validation allows infinity points (identity elements) as they are valid
-// in CSP proofs for zero witnesses and identity generators.
+// Given a slice of G1 elements (valid, nil, wrong length, or containing nil),
+// When the validateG1Slice function is called,
+// Then it should only accept correctly formatted slices.
 func TestValidateG1Slice(t *testing.T) {
 	curves := []mathlib.CurveID{
-		mathlib.BLS12_381_BBS,
+		mathlib.BLS12_381_BBS_GURVY,
 		mathlib.BN254,
 	}
 
@@ -110,18 +103,12 @@ func TestValidateG1Slice(t *testing.T) {
 // validated before use in CSP proofs. Zr elements represent witnesses, challenges,
 // responses, and other scalar values in the cryptographic protocol.
 //
-// Test coverage:
-// - Validates that slices with correct length and valid Zr scalars pass validation
-// - Ensures nil slices are rejected to prevent nil pointer dereferences
-// - Verifies that slices with incorrect length are rejected (critical for protocol security)
-// - Confirms that slices containing nil elements are detected and rejected
-// - Tests both BN254 and BLS12_381_BBS curves to ensure cross-curve compatibility
-//
-// Note: Zr elements must belong to the correct curve's scalar field. The validation
-// uses the math package's CheckZrElements utility to ensure curve consistency.
+// Given a slice of Zr elements (valid, nil, wrong length, or containing nil),
+// When the validateZrSlice function is called,
+// Then it should only accept correctly formatted slices consistent with the curve field.
 func TestValidateZrSlice(t *testing.T) {
 	curves := []mathlib.CurveID{
-		mathlib.BLS12_381_BBS,
+		mathlib.BLS12_381_BBS_GURVY,
 		mathlib.BN254,
 	}
 
@@ -166,23 +153,12 @@ func TestValidateZrSlice(t *testing.T) {
 // validated before proof generation. The CSP (Compressed Sigma Protocol) prover requires
 // specific structural constraints on its inputs to ensure correct and secure proof generation.
 //
-// Test coverage:
-// - Validates that a properly constructed prover with all required fields passes validation
-// - Ensures nil curve is rejected (required for all cryptographic operations)
-// - Verifies that nil commitment is rejected (the commitment is the public statement being proven)
-// - Confirms that generators with incorrect length are rejected (must match 2^rounds)
-// - Tests both BN254 and BLS12_381_BBS curves to ensure cross-curve compatibility
-//
-// The prover structure includes:
-// - Commitment: The public G1 point being proven (C = <generators, witness>)
-// - Generators: G1 points used in the inner product (length must be 2^rounds)
-// - LinearForm: Zr scalars defining the linear form being proven (length must be 2^rounds)
-// - Value: The claimed evaluation of the linear form
-// - NumberOfRounds: Determines the proof size (log2 of vector length)
-// - witness: Private Zr scalars satisfying the commitment equation
+// Given a CSP prover instance with various input configurations,
+// When the validateCSPProverInputs function is called,
+// Then it should correctly validate the curve, commitment, value, generators, and witness.
 func TestValidateCSPProverInputs(t *testing.T) {
 	curves := []mathlib.CurveID{
-		mathlib.BLS12_381_BBS,
+		mathlib.BLS12_381_BBS_GURVY,
 		mathlib.BN254,
 	}
 
@@ -254,24 +230,12 @@ func TestValidateCSPProverInputs(t *testing.T) {
 // validated before proof generation. The range prover proves that a committed value lies
 // within a specific range [0, 2^n) without revealing the value itself.
 //
-// Test coverage:
-// - Validates that a properly constructed range prover with all required fields passes validation
-// - Ensures nil value is rejected (the secret value being range-proven)
-// - Verifies that zero bits is rejected (must prove at least 1 bit)
-// - Confirms that more than 64 bits is rejected (implementation limit)
-// - Tests both BN254 and BLS12_381_BBS curves to ensure cross-curve compatibility
-//
-// The range prover structure includes:
-// - VCommitment: Public commitment to the value being range-proven (C = v*G + r*H)
-// - v: The secret value being proven to be in range [0, 2^n)
-// - r: The randomness used in the commitment (for hiding)
-// - VGenerators: G1 points [G, H] used for the Pedersen commitment
-// - AGenerators: G1 points for the bit decomposition (length n+1)
-// - BGenerators: G1 points for the bit decomposition (length n+1)
-// - NumberOfBits: The bit length n defining the range [0, 2^n)
+// Given a range prover instance with various input configurations,
+// When the validateRangeProverInputs function is called,
+// Then it should correctly validate the curve, commitment, value, randomness, and bits.
 func TestValidateRangeProverInputs(t *testing.T) {
 	curves := []mathlib.CurveID{
-		mathlib.BLS12_381_BBS,
+		mathlib.BLS12_381_BBS_GURVY,
 		mathlib.BN254,
 	}
 
@@ -345,25 +309,12 @@ func TestValidateRangeProverInputs(t *testing.T) {
 // without revealing the value. The proof structure combines a CSP proof with additional
 // components for the range constraint.
 //
-// Test coverage:
-// - Validates that a properly constructed range proof with all required fields passes validation
-// - Ensures nil proof is rejected to prevent nil pointer dereferences
-// - Verifies that nil pComm (polynomial commitment) is rejected
-// - Tests both BN254 and BLS12_381_BBS curves to ensure cross-curve compatibility
-//
-// The range proof structure includes:
-// - pComm: Commitment to the polynomial representing the bit decomposition
-// - pokV: Proof of knowledge for the value commitment (includes A point and Z responses)
-// - u: Challenge scalar used in the Fiat-Shamir transformation
-// - sComm: Commitment to the polynomial evaluation
-// - sEval: The evaluation of the polynomial at the challenge point
-// - cspProof: The underlying CSP proof demonstrating the inner product relation
-//
-// Note: The CSP proof components (Left, Right, VLeft, VRight) may contain infinity
-// points in edge cases (zero witnesses, identity generators), which are valid.
+// Given a range proof structure (valid or malformed),
+// When the validateRangeProof function is called,
+// Then it should correctly identify structural invalidities.
 func TestValidateRangeProof(t *testing.T) {
 	curves := []mathlib.CurveID{
-		mathlib.BLS12_381_BBS,
+		mathlib.BLS12_381_BBS_GURVY,
 		mathlib.BN254,
 	}
 

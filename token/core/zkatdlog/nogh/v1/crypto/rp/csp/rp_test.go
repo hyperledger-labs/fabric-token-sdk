@@ -80,6 +80,10 @@ func newRPSetup(curve *math.Curve, n uint64, value int64) (*rpSetup, error) {
 //	n=2  → 2·2+4=8=2³   (2-bit range  [0, 3])
 //	n=30 → 2·30+4=64=2⁶ (30-bit range [0, 2³⁰-1])
 //	n=62 → 2·62+4=128=2⁷ (62-bit range [0, 2⁶²-1])
+//
+// Given an honest prover and a value in range,
+// When a range proof is generated and verified,
+// Then the verification should succeed.
 func TestRangeProofProveVerify(t *testing.T) {
 	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
 	cases := []struct {
@@ -113,97 +117,129 @@ func TestRangeProofProveVerify(t *testing.T) {
 }
 
 // TestRangeProofOutOfRange checks that Prove rejects a value that exceeds 2^n - 1.
+// Given a range prover,
+// When a value that does not fit in n bits is provided,
+// Then the proof generation should fail.
 func TestRangeProofOutOfRange(t *testing.T) {
-	curve := math.Curves[math.BN254]
-	n := uint64(4) // valid range [0, 15]
+	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
+	for _, curveID := range curves {
+		t.Run(fmt.Sprintf("curveID=%d", curveID), func(t *testing.T) {
+			curve := math.Curves[curveID]
+			n := uint64(4) // valid range [0, 15]
 
-	rand, err := curve.Rand()
-	require.NoError(t, err)
+			rand, err := curve.Rand()
+			require.NoError(t, err)
 
-	aGens := make([]*math.G1, n+1)
-	for i := uint64(0); i <= n; i++ {
-		aGens[i] = curve.HashToG1([]byte("a-gen-" + strconv.FormatUint(i, 10)))
+			aGens := make([]*math.G1, n+1)
+			for i := uint64(0); i <= n; i++ {
+				aGens[i] = curve.HashToG1([]byte("a-gen-" + strconv.FormatUint(i, 10)))
+			}
+			bGens := make([]*math.G1, n+1)
+			for i := uint64(0); i <= n; i++ {
+				bGens[i] = curve.HashToG1([]byte("b-gen-" + strconv.FormatUint(i, 10)))
+			}
+			vGens := []*math.G1{
+				curve.HashToG1([]byte("v-gen-0")),
+				curve.HashToG1([]byte("v-gen-1")),
+			}
+
+			v := curve.NewZrFromInt(16) // 16 = 2^4, one past the 4-bit max
+			r := curve.NewRandomZr(rand)
+			vComm := curve.MultiScalarMul(vGens, []*math.Zr{v, r})
+
+			prover := &cspRangeProver{
+				VGenerators:  vGens,
+				AGenerators:  aGens,
+				BGenerators:  bGens,
+				VCommitment:  vComm,
+				NumberOfBits: n,
+				v:            v,
+				r:            r,
+				Curve:        curve,
+			}
+
+			_, err = prover.Prove()
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "does not fit")
+		})
 	}
-	bGens := make([]*math.G1, n+1)
-	for i := uint64(0); i <= n; i++ {
-		bGens[i] = curve.HashToG1([]byte("b-gen-" + strconv.FormatUint(i, 10)))
-	}
-	vGens := []*math.G1{
-		curve.HashToG1([]byte("v-gen-0")),
-		curve.HashToG1([]byte("v-gen-1")),
-	}
-
-	v := curve.NewZrFromInt(16) // 16 = 2^4, one past the 4-bit max
-	r := curve.NewRandomZr(rand)
-	vComm := curve.MultiScalarMul(vGens, []*math.Zr{v, r})
-
-	prover := &cspRangeProver{
-		VGenerators:  vGens,
-		AGenerators:  aGens,
-		BGenerators:  bGens,
-		VCommitment:  vComm,
-		NumberOfBits: n,
-		v:            v,
-		r:            r,
-		Curve:        curve,
-	}
-
-	_, err = prover.Prove()
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "does not fit")
 }
 
 // TestRangeProofWrongCommitment checks that Verify fails when VCommitment is replaced.
+// Given an honest range proof,
+// When the verifier's commitment is replaced with a random point,
+// Then the verification should fail.
 func TestRangeProofWrongCommitment(t *testing.T) {
-	curve := math.Curves[math.BN254]
-	setup, err := newRPSetup(curve, 2, 1)
-	require.NoError(t, err)
+	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
+	for _, curveID := range curves {
+		t.Run(fmt.Sprintf("curveID=%d", curveID), func(t *testing.T) {
+			curve := math.Curves[curveID]
+			setup, err := newRPSetup(curve, 2, 1)
+			require.NoError(t, err)
 
-	proof, err := setup.prover.Prove()
-	require.NoError(t, err)
+			proof, err := setup.prover.Prove()
+			require.NoError(t, err)
 
-	rand, err := curve.Rand()
-	require.NoError(t, err)
-	setup.verifier.VCommitment = curve.GenG1.Mul(curve.NewRandomZr(rand))
+			rand, err := curve.Rand()
+			require.NoError(t, err)
+			setup.verifier.VCommitment = curve.GenG1.Mul(curve.NewRandomZr(rand))
 
-	err = setup.verifier.Verify(proof)
-	require.Error(t, err)
+			err = setup.verifier.Verify(proof)
+			require.Error(t, err)
+		})
+	}
 }
 
 // TestRangeProofTamperedPoKA checks that Verify rejects a proof with a wrong PoK blinding commitment.
+// Given an honest range proof,
+// When the PoK component (pokV.A) is tampered with,
+// Then the verification should fail.
 func TestRangeProofTamperedPoKA(t *testing.T) {
-	curve := math.Curves[math.BN254]
-	setup, err := newRPSetup(curve, 2, 1)
-	require.NoError(t, err)
+	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
+	for _, curveID := range curves {
+		t.Run(fmt.Sprintf("curveID=%d", curveID), func(t *testing.T) {
+			curve := math.Curves[curveID]
+			setup, err := newRPSetup(curve, 2, 1)
+			require.NoError(t, err)
 
-	proof, err := setup.prover.Prove()
-	require.NoError(t, err)
+			proof, err := setup.prover.Prove()
+			require.NoError(t, err)
 
-	rand, err := curve.Rand()
-	require.NoError(t, err)
-	proof.pokV.A = curve.GenG1.Mul(curve.NewRandomZr(rand))
+			rand, err := curve.Rand()
+			require.NoError(t, err)
+			proof.pokV.A = curve.GenG1.Mul(curve.NewRandomZr(rand))
 
-	err = setup.verifier.Verify(proof)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "proof of knowledge")
+			err = setup.verifier.Verify(proof)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "proof of knowledge")
+		})
+	}
 }
 
 // TestRangeProofTamperedPoKZ checks that Verify rejects a proof with a wrong PoK response.
+// Given an honest range proof,
+// When the PoK response (pokV.Z[0]) is tampered with,
+// Then the verification should fail.
 func TestRangeProofTamperedPoKZ(t *testing.T) {
-	curve := math.Curves[math.BN254]
-	setup, err := newRPSetup(curve, 2, 1)
-	require.NoError(t, err)
+	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
+	for _, curveID := range curves {
+		t.Run(fmt.Sprintf("curveID=%d", curveID), func(t *testing.T) {
+			curve := math.Curves[curveID]
+			setup, err := newRPSetup(curve, 2, 1)
+			require.NoError(t, err)
 
-	proof, err := setup.prover.Prove()
-	require.NoError(t, err)
+			proof, err := setup.prover.Prove()
+			require.NoError(t, err)
 
-	rand, err := curve.Rand()
-	require.NoError(t, err)
-	proof.pokV.Z[0] = curve.NewRandomZr(rand)
+			rand, err := curve.Rand()
+			require.NoError(t, err)
+			proof.pokV.Z[0] = curve.NewRandomZr(rand)
 
-	err = setup.verifier.Verify(proof)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "proof of knowledge")
+			err = setup.verifier.Verify(proof)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "proof of knowledge")
+		})
+	}
 }
 
 // BenchmarkRangeProofProve measures prover performance for n=30 and n=62.
