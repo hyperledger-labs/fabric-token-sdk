@@ -17,13 +17,14 @@ import (
 
 // toBits returns the n-bit little-endian representation of v as field elements,
 // where bits[0] is the LSB and bits[n-1] is the MSB. Returns an error if v >= 2^n.
+// Here, one can check if v can be encoded correctly. If not, the verification will fail.
+//
+//	limit := new(big.Int).Lsh(big.NewInt(1), uint(n))
+//	if val.Cmp(limit) >= 0 {
+//		return nil, errors.Errorf("value %s does not fit in %d bits", val, n)
+//	}
 func toBits(v *mathlib.Zr, n uint64, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
 	val := new(big.Int).SetBytes(v.Bytes())
-
-	limit := new(big.Int).Lsh(big.NewInt(1), uint(n))
-	if val.Cmp(limit) >= 0 {
-		return nil, errors.Errorf("value %s does not fit in %d bits", val, n)
-	}
 
 	bits := make([]*mathlib.Zr, n)
 	for i := range n {
@@ -351,7 +352,7 @@ func (p *CspRangeProof) Validate(curve mathlib.CurveID) error {
 
 func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
 	// Validate all inputs
-	if err := validateRangeProverInputs(cspp); err != nil {
+	if err := validateRangeProverInputs(cspp.Curve, cspp); err != nil {
 		return nil, errors.Wrap(err, "invalid range prover inputs")
 	}
 
@@ -584,12 +585,12 @@ func newCspRangeVerifier(VGenerators []*mathlib.G1, AGenerators []*mathlib.G1, B
 // the aggregated linear form, and delegates the final check to cspVerifier.
 func (rv *cspRangeVerifier) Verify(proof *CspRangeProof) error {
 	// Validate all inputs
-	if err := validateRangeVerifierInputs(rv); err != nil {
+	if err := validateRangeVerifierInputs(rv.Curve, rv); err != nil {
 		return errors.Wrap(err, "invalid range verifier inputs")
 	}
 
 	// Validate proof structure
-	if err := validateRangeProof(proof); err != nil {
+	if err := validateRangeProof(rv.Curve, proof); err != nil {
 		return errors.Wrap(err, "invalid range proof structure")
 	}
 

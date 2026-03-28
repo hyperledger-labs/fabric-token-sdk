@@ -91,7 +91,7 @@ func TestTypedErrors(t *testing.T) {
 					witness:        wit,
 				}
 
-				err = validateCSPProverInputs(p)
+				err = validateCSPProverInputs(curve, p)
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrNilCommitment)
 			})
@@ -118,7 +118,7 @@ func TestTypedErrors(t *testing.T) {
 					Curve:        curve,
 				}
 
-				err := validateRangeProverInputs(p)
+				err := validateRangeProverInputs(curve, p)
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrNilValue)
 			})
@@ -138,14 +138,14 @@ func TestTypedErrors(t *testing.T) {
 					Curve:        curve,
 				}
 
-				err := validateRangeProverInputs(p)
+				err := validateRangeProverInputs(curve, p)
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrInvalidBitCount)
 			})
 
 			t.Run("NilProofError", func(t *testing.T) {
 				// Test validateRangeProof with nil proof
-				err := validateRangeProof(nil)
+				err := validateRangeProof(curve, nil)
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrNilProof)
 			})
