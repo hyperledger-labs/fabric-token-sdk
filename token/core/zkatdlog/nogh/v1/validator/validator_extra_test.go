@@ -443,3 +443,172 @@ func TestDeserializeActionsErrors(t *testing.T) {
 	_, _, err = ad.DeserializeActions(tr)
 	require.Error(t, err)
 }
+
+// TestTransferVerifierCache tests that when multiple inputs have the same owner,
+// the verifier is only deserialized once (cache hit)
+func TestTransferVerifierCache(t *testing.T) {
+	ctx := context.Background()
+
+	// Create a transfer action with 3 inputs, where 2 have the same owner
+	sameOwner := []byte("same-owner-identity")
+	differentOwner := []byte("different-owner-identity")
+
+	transferAction := &transfer.Action{
+		Inputs: []*transfer.ActionInput{
+			{Token: &token.Token{Owner: sameOwner}},      // Input 0: same owner
+			{Token: &token.Token{Owner: sameOwner}},      // Input 1: same owner (should hit cache)
+			{Token: &token.Token{Owner: differentOwner}}, // Input 2: different owner
+		},
+		Outputs: []*token.Token{
+			{Owner: []byte("output-owner")},
+		},
+	}
+
+	// Track deserializer calls
+	deserializerCallCount := 0
+	ownerCallsByIdentity := make(map[string]int)
+
+	mockDes := &mock3.Deserializer{}
+	mockDes.GetOwnerVerifierCalls(func(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+		deserializerCallCount++
+		key := string(id)
+		ownerCallsByIdentity[key]++
+
+		return &mock3.Verifier{}, nil
+	})
+
+	mockSigProv := &mockSignatureProvider{
+		HasBeenSignedByFunc: func(ctx context.Context, id driver.Identity, verifier driver.Verifier) ([]byte, error) {
+			return []byte("signature"), nil
+		},
+	}
+
+	validatorCtx := &validator.Context{
+		Logger:            &logging.MockLogger{},
+		TransferAction:    transferAction,
+		Deserializer:      mockDes,
+		SignatureProvider: mockSigProv,
+		PP:                &v1.PublicParams{},
+	}
+
+	// Execute validation
+	err := validator.TransferSignatureValidate(ctx, validatorCtx)
+	require.NoError(t, err)
+
+	// Verify results - WITH cache implementation
+	t.Logf("Total GetOwnerVerifier calls: %d", deserializerCallCount)
+	t.Logf("Calls for same owner: %d", ownerCallsByIdentity[string(sameOwner)])
+	t.Logf("Calls for different owner: %d", ownerCallsByIdentity[string(differentOwner)])
+
+	// With verifier cache: deserializer is called only once per unique owner
+	// Expected: 2 calls total (once for sameOwner, once for differentOwner)
+	require.Equal(t, 2, deserializerCallCount, "With cache: should call deserializer only for unique owners")
+	require.Equal(t, 1, ownerCallsByIdentity[string(sameOwner)], "With cache: same owner called only once")
+	require.Equal(t, 1, ownerCallsByIdentity[string(differentOwner)], "Different owner called once")
+
+	// Calculate cache effectiveness
+	uniqueOwners := 2
+	totalInputs := 3
+	cacheHits := totalInputs - uniqueOwners
+	cacheHitRate := float64(cacheHits) / float64(totalInputs) * 100
+
+	t.Logf("Cache hit rate: %.1f%% (%d cache hits out of %d inputs)",
+		cacheHitRate, cacheHits, totalInputs)
+}
+
+// TestTransferVerifierCacheError tests that cache doesn't interfere with error handling
+func TestTransferVerifierCacheError(t *testing.T) {
+	ctx := context.Background()
+
+	sameOwner := []byte("same-owner-identity")
+
+	transferAction := &transfer.Action{
+		Inputs: []*transfer.ActionInput{
+			{Token: &token.Token{Owner: sameOwner}},
+			{Token: &token.Token{Owner: sameOwner}}, // Should use cached verifier
+		},
+		Outputs: []*token.Token{
+			{Owner: []byte("output-owner")},
+		},
+	}
+
+	// Mock deserializer that returns error on first call
+	callCount := 0
+	mockDes := &mock3.Deserializer{}
+	mockDes.GetOwnerVerifierCalls(func(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+		callCount++
+		if callCount == 1 {
+			return nil, errors.New("deserializer error")
+		}
+
+		return &mock3.Verifier{}, nil
+	})
+
+	mockSigProv := &mockSignatureProvider{
+		HasBeenSignedByFunc: func(ctx context.Context, id driver.Identity, verifier driver.Verifier) ([]byte, error) {
+			return []byte("signature"), nil
+		},
+	}
+
+	validatorCtx := &validator.Context{
+		Logger:            &logging.MockLogger{},
+		TransferAction:    transferAction,
+		Deserializer:      mockDes,
+		SignatureProvider: mockSigProv,
+		PP:                &v1.PublicParams{},
+	}
+
+	// Execute validation - should fail on first input
+	err := validator.TransferSignatureValidate(ctx, validatorCtx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed deserializing owner")
+	require.Equal(t, 1, callCount, "Should stop on first error")
+}
+
+// TestTransferVerifierCacheSignatureError tests signature verification error with cache
+func TestTransferVerifierCacheSignatureError(t *testing.T) {
+	ctx := context.Background()
+
+	sameOwner := []byte("same-owner-identity")
+
+	transferAction := &transfer.Action{
+		Inputs: []*transfer.ActionInput{
+			{Token: &token.Token{Owner: sameOwner}},
+			{Token: &token.Token{Owner: sameOwner}}, // Should use cached verifier
+		},
+		Outputs: []*token.Token{
+			{Owner: []byte("output-owner")},
+		},
+	}
+
+	mockDes := &mock3.Deserializer{}
+	mockDes.GetOwnerVerifierCalls(func(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+		return &mock3.Verifier{}, nil
+	})
+
+	// Mock signature provider that fails on second call
+	sigCallCount := 0
+	mockSigProv := &mockSignatureProvider{
+		HasBeenSignedByFunc: func(ctx context.Context, id driver.Identity, verifier driver.Verifier) ([]byte, error) {
+			sigCallCount++
+			if sigCallCount == 2 {
+				return nil, errors.New("signature verification failed")
+			}
+
+			return []byte("signature"), nil
+		},
+	}
+
+	validatorCtx := &validator.Context{
+		Logger:            &logging.MockLogger{},
+		TransferAction:    transferAction,
+		Deserializer:      mockDes,
+		SignatureProvider: mockSigProv,
+		PP:                &v1.PublicParams{},
+	}
+
+	// Execute validation - should fail on second input signature verification
+	err := validator.TransferSignatureValidate(ctx, validatorCtx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed signature verification")
+}
