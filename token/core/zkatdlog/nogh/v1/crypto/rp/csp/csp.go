@@ -62,7 +62,7 @@ type CSPProof struct {
 //	w'_j   = c · w_L[j] + w_R[j]
 func (p *cspProver) Prove() (*CSPProof, error) {
 	// Validate all inputs
-	if err := validateCSPProverInputs(p); err != nil {
+	if err := validateCSPProverInputs(p.Curve, p); err != nil {
 		return nil, errors.Wrap(err, "invalid CSP prover inputs")
 	}
 
@@ -177,12 +177,12 @@ type cspVerifier struct {
 // See: Page 17, Section 3, https://eprint.iacr.org/2017/1066.pdf
 func (v *cspVerifier) Verify(proof *CSPProof) error {
 	// Validate verifier inputs
-	if err := validateCSPVerifierInputs(v); err != nil {
+	if err := validateCSPVerifierInputs(v.Curve, v); err != nil {
 		return errors.Wrap(err, "invalid CSP verifier inputs")
 	}
 
 	// Validate proof structure
-	if err := validateCSPProof(proof, v.NumberOfRounds); err != nil {
+	if err := validateCSPProof(v.Curve, proof, v.NumberOfRounds); err != nil {
 		return errors.Wrap(err, "invalid CSP proof structure")
 	}
 
