@@ -15,6 +15,7 @@ import (
 	"github.com/test-go/testify/require"
 )
 
+// TestPublicParameters_Precision verifies retrieval of precision from public parameters
 func TestPublicParameters_Precision(t *testing.T) {
 	pp := &PublicParameters{
 		PublicParameters: &mock.PublicParameters{},
@@ -28,6 +29,7 @@ func TestPublicParameters_Precision(t *testing.T) {
 	assert.Equal(t, uint64(6), precision)
 }
 
+// TestPublicParameters_CertificationDriver verifies retrieval of certification driver from public parameters
 func TestPublicParameters_CertificationDriver(t *testing.T) {
 	pp := &PublicParameters{
 		PublicParameters: &mock.PublicParameters{},
@@ -41,6 +43,7 @@ func TestPublicParameters_CertificationDriver(t *testing.T) {
 	assert.Equal(t, "my_certification_driver", certDriver)
 }
 
+// TestPublicParameters_GraphHiding verifies graph hiding setting from public parameters
 func TestPublicParameters_GraphHiding(t *testing.T) {
 	pp := &PublicParameters{
 		PublicParameters: &mock.PublicParameters{},
@@ -54,6 +57,7 @@ func TestPublicParameters_GraphHiding(t *testing.T) {
 	assert.True(t, graphHiding)
 }
 
+// TestPublicParameters_TokenDataHiding verifies token data hiding setting from public parameters
 func TestPublicParameters_TokenDataHiding(t *testing.T) {
 	pp := &PublicParameters{
 		PublicParameters: &mock.PublicParameters{},
@@ -67,6 +71,7 @@ func TestPublicParameters_TokenDataHiding(t *testing.T) {
 	assert.False(t, tokenDataHiding)
 }
 
+// TestPublicParameters_MaxTokenValue verifies retrieval of maximum token value from public parameters
 func TestPublicParameters_MaxTokenValue(t *testing.T) {
 	pp := &PublicParameters{
 		PublicParameters: &mock.PublicParameters{},
@@ -80,6 +85,7 @@ func TestPublicParameters_MaxTokenValue(t *testing.T) {
 	assert.Equal(t, uint64(1000), maxTokenValue)
 }
 
+// TestPublicParameters_Serialize verifies serialization of public parameters
 func TestPublicParameters_Serialize(t *testing.T) {
 	pp := &PublicParameters{
 		PublicParameters: &mock.PublicParameters{},
@@ -94,6 +100,7 @@ func TestPublicParameters_Serialize(t *testing.T) {
 	assert.Equal(t, []byte("serialized_data"), serializedData)
 }
 
+// TestPublicParameters_Identifier verifies retrieval of identifier from public parameters
 func TestPublicParameters_Identifier(t *testing.T) {
 	pp := &PublicParameters{
 		PublicParameters: &mock.PublicParameters{},
@@ -107,6 +114,7 @@ func TestPublicParameters_Identifier(t *testing.T) {
 	assert.Equal(t, driver.TokenDriverName("my_identifier"), identifier)
 }
 
+// TestPublicParameters_Auditors verifies retrieval of auditors list from public parameters
 func TestPublicParameters_Auditors(t *testing.T) {
 	pp := &PublicParameters{
 		PublicParameters: &mock.PublicParameters{},
@@ -121,6 +129,7 @@ func TestPublicParameters_Auditors(t *testing.T) {
 	assert.Equal(t, expectedAuditors, auditors)
 }
 
+// TestPublicParametersManager_PublicParameters verifies retrieval of public parameters from manager
 func TestPublicParametersManager_PublicParameters(t *testing.T) {
 	ppm := &PublicParametersManager{
 		ppm: &mock.PublicParamsManager{},
@@ -138,6 +147,7 @@ func TestPublicParametersManager_PublicParameters(t *testing.T) {
 	assert.NotNil(t, pp)
 }
 
+// TestPublicParametersManager_PublicParameters_Nil verifies behavior when public parameters manager is nil
 func TestPublicParametersManager_PublicParameters_Nil(t *testing.T) {
 	ppm := &PublicParametersManager{
 		ppm: &mock.PublicParamsManager{},
@@ -147,4 +157,19 @@ func TestPublicParametersManager_PublicParameters_Nil(t *testing.T) {
 	mockPPM.PublicParametersReturns(nil)
 	pp := ppm.PublicParameters()
 	assert.Nil(t, pp)
+}
+
+// TestPublicParametersManager_PublicParamsHash verifies public parameters hash retrieval
+func TestPublicParametersManager_PublicParamsHash(t *testing.T) {
+	mockPPM := &mock.PublicParamsManager{}
+	expectedHash := PPHash("hash123")
+	mockPPM.PublicParamsHashReturns(expectedHash)
+
+	ppm := &PublicParametersManager{
+		ppm: mockPPM,
+	}
+
+	hash := ppm.PublicParamsHash()
+	assert.Equal(t, expectedHash, hash)
+	assert.Equal(t, 1, mockPPM.PublicParamsHashCallCount())
 }
