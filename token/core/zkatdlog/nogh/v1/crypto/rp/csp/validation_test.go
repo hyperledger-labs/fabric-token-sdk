@@ -192,7 +192,7 @@ func TestValidateCSPProverInputs(t *testing.T) {
 
 			t.Run("ValidInputs", func(t *testing.T) {
 				// Verify that a properly constructed prover passes all validation checks
-				err := validateCSPProverInputs(p)
+				err := validateCSPProverInputs(curve, p)
 				require.NoError(t, err)
 			})
 
@@ -200,7 +200,7 @@ func TestValidateCSPProverInputs(t *testing.T) {
 				// Verify that nil curve is rejected (required for all crypto operations)
 				pCopy := *p
 				pCopy.Curve = nil
-				err := validateCSPProverInputs(&pCopy)
+				err := validateCSPProverInputs(nil, &pCopy)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "invalid curve")
 			})
@@ -209,7 +209,7 @@ func TestValidateCSPProverInputs(t *testing.T) {
 				// Verify that nil commitment is rejected (the public statement being proven)
 				pCopy := *p
 				pCopy.Commitment = nil
-				err := validateCSPProverInputs(&pCopy)
+				err := validateCSPProverInputs(curve, &pCopy)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "commitment cannot be nil")
 			})
@@ -218,7 +218,7 @@ func TestValidateCSPProverInputs(t *testing.T) {
 				// Verify that generators with incorrect length are rejected (must be 2^rounds)
 				pCopy := *p
 				pCopy.Generators = gens[:size-1]
-				err := validateCSPProverInputs(&pCopy)
+				err := validateCSPProverInputs(curve, &pCopy)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "invalid length")
 			})
@@ -268,7 +268,7 @@ func TestValidateRangeProverInputs(t *testing.T) {
 
 			t.Run("ValidInputs", func(t *testing.T) {
 				// Verify that a properly constructed range prover passes all validation checks
-				err := validateRangeProverInputs(p)
+				err := validateRangeProverInputs(curve, p)
 				require.NoError(t, err)
 			})
 
@@ -276,7 +276,7 @@ func TestValidateRangeProverInputs(t *testing.T) {
 				// Verify that nil value is rejected (the secret being range-proven)
 				pCopy := *p
 				pCopy.v = nil
-				err := validateRangeProverInputs(&pCopy)
+				err := validateRangeProverInputs(curve, &pCopy)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "value cannot be nil")
 			})
@@ -285,7 +285,7 @@ func TestValidateRangeProverInputs(t *testing.T) {
 				// Verify that zero bits is rejected (must prove at least 1 bit)
 				pCopy := *p
 				pCopy.NumberOfBits = 0
-				err := validateRangeProverInputs(&pCopy)
+				err := validateRangeProverInputs(curve, &pCopy)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "invalid number of bits")
 				assert.Contains(t, err.Error(), "must be greater than 0")
@@ -295,7 +295,7 @@ func TestValidateRangeProverInputs(t *testing.T) {
 				// Verify that more than 64 bits is rejected (implementation limit)
 				pCopy := *p
 				pCopy.NumberOfBits = 65
-				err := validateRangeProverInputs(&pCopy)
+				err := validateRangeProverInputs(curve, &pCopy)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "invalid number of bits")
 				assert.Contains(t, err.Error(), "cannot exceed 64")
@@ -342,13 +342,13 @@ func TestValidateRangeProof(t *testing.T) {
 
 			t.Run("ValidProof", func(t *testing.T) {
 				// Verify that a properly constructed range proof passes all validation checks
-				err := validateRangeProof(proof)
+				err := validateRangeProof(curve, proof)
 				require.NoError(t, err)
 			})
 
 			t.Run("NilProof", func(t *testing.T) {
 				// Verify that nil proof is rejected to prevent nil pointer dereferences
-				err := validateRangeProof(nil)
+				err := validateRangeProof(curve, nil)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "proof cannot be nil")
 			})
@@ -357,7 +357,7 @@ func TestValidateRangeProof(t *testing.T) {
 				// Verify that nil polynomial commitment is rejected (critical proof component)
 				proofCopy := *proof
 				proofCopy.pComm = nil
-				err := validateRangeProof(&proofCopy)
+				err := validateRangeProof(curve, &proofCopy)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "pComm cannot be nil")
 			})
