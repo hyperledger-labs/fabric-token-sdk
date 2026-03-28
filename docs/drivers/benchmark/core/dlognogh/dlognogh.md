@@ -3,7 +3,7 @@
 > **Related Documentation:**
 > - [Testing Architecture](./dlognogh_architecture.md) - Understanding the test layers
 > - [Regression Tests](./dlognogh_regression.md) - Backwards compatibility testing
-> - [Driver Specification](../../dlogwogh.md) - Complete driver documentation including CSP range proofs
+> - [Driver Specification](../../../dlogwogh.md) - Complete driver documentation including CSP range proofs
 
 ## Range Proof Systems
 
