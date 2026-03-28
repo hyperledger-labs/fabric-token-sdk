@@ -11,28 +11,29 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 )
 
-// Proof proves that an IssueAction is valid by demonstrating that all issued tokens
+// BulletProof proves that an IssueAction is valid by demonstrating that all issued tokens
 // have the same type and that their values are within the authorized range.
-type Proof struct {
+type BulletProof struct {
 	// SameType is the proof that all issued tokens have the same type.
 	SameType *SameType
 	// RangeCorrectness is the proof that issued tokens have values in the authorized range.
-	RangeCorrectness *rp.RangeCorrectness
+	RangeCorrectness *bulletproof.RangeCorrectness
 }
 
-// Serialize marshals the Proof into its byte representation.
-func (p *Proof) Serialize() ([]byte, error) {
+// Serialize marshals the BulletProof into its byte representation.
+func (p *BulletProof) Serialize() ([]byte, error) {
 	return asn1.Marshal[asn1.Serializer](p.SameType, p.RangeCorrectness)
 }
 
-// Deserialize unmarshals the Proof from its byte representation.
-func (p *Proof) Deserialize(bytes []byte) error {
+// Deserialize unmarshals the BulletProof from its byte representation.
+func (p *BulletProof) Deserialize(bytes []byte) error {
 	p.SameType = &SameType{}
-	p.RangeCorrectness = &rp.RangeCorrectness{}
+	p.RangeCorrectness = &bulletproof.RangeCorrectness{}
 
 	if err := asn1.Unmarshal[asn1.Serializer](bytes, p.SameType, p.RangeCorrectness); err != nil {
 		return errors.Join(ErrDeserializeProofFailed, err)
@@ -41,18 +42,18 @@ func (p *Proof) Deserialize(bytes []byte) error {
 	return nil
 }
 
-// Prover produces a proof of validity for an IssueAction.
-type Prover struct {
+// BulletProofProver produces a proof of validity for an IssueAction.
+type BulletProofProver struct {
 	// SameType is the prover for the same-type property.
 	SameType *SameTypeProver
 	// RangeCorrectness is the prover for the range correctness property.
-	RangeCorrectness *rp.RangeCorrectnessProver
+	RangeCorrectness *bulletproof.RangeCorrectnessProver
 }
 
-// NewProver instantiates a Prover for an issue action using the provided witnesses, tokens, and public parameters.
-func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*Prover, error) {
+// NewBulletProofProver instantiates a BulletProofProver for an issue action using the provided witnesses, tokens, and public parameters.
+func NewBulletProofProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*BulletProofProver, error) {
 	c := math.Curves[pp.Curve]
-	p := &Prover{}
+	p := &BulletProofProver{}
 	tokenType := c.HashToZr([]byte(tw[0].Type))
 	commitmentToType := pp.PedersenGenerators[0].Mul(tokenType)
 
@@ -83,7 +84,7 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 		coms[i].Sub(commitmentToType)
 	}
 	// The range prover takes commitments to values (tokens[i] / commitmentToType).
-	p.RangeCorrectness = rp.NewRangeCorrectnessProver(
+	p.RangeCorrectness = bulletproof.NewRangeCorrectnessProver(
 		coms,
 		values,
 		blindingFactors,
@@ -101,7 +102,7 @@ func NewProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicParams) (*P
 }
 
 // Prove generates the zero-knowledge proof of validity.
-func (p *Prover) Prove() ([]byte, error) {
+func (p *BulletProofProver) Prove() ([]byte, error) {
 	// Generate same-type proof.
 	st, err := p.SameType.Prove()
 	if err != nil {
@@ -114,10 +115,15 @@ func (p *Prover) Prove() ([]byte, error) {
 		return nil, errors.Join(ErrGenerateRangeProofFailed, err)
 	}
 
-	proof := &Proof{
+	proof := &BulletProof{
 		SameType:         st,
 		RangeCorrectness: rc,
 	}
 
 	return proof.Serialize()
+}
+
+// RangeProofType returns the type of range proof used by this prover.
+func (p *BulletProofProver) RangeProofType() rp.ProofType {
+	return rp.RangeProofType
 }

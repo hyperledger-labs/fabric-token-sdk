@@ -15,6 +15,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
@@ -28,70 +29,82 @@ import (
 )
 
 func TestSender(t *testing.T) {
-	t.Run("mismatch", func(t *testing.T) {
-		_, err := transfer.NewSender([]driver.Signer{nil}, nil, nil, nil, nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "number of tokens to be spent does not match number of openings")
-	})
+	proofTypes := []struct {
+		name      string
+		proofType rp.ProofType
+	}{
+		{"RangeProof", rp.RangeProofType},
+		{"CSPRangeProof", rp.CSPRangeProofType},
+	}
 
-	t.Run("GenerateZKTransfer values != owners mismatch", func(t *testing.T) {
-		env, err := newSenderEnv(nil, 1, 1)
-		require.NoError(t, err)
-		_, _, err = env.sender.GenerateZKTransfer(t.Context(), []uint64{10, 20}, [][]byte{[]byte("owner1")})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "number of values [2] does not match number of recipients [1]")
-	})
+	for _, pt := range proofTypes {
+		t.Run(pt.name, func(t *testing.T) {
+			t.Run("mismatch", func(t *testing.T) {
+				_, err := transfer.NewSender([]driver.Signer{nil}, nil, nil, nil, nil)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "number of tokens to be spent does not match number of openings")
+			})
 
-	t.Run("GenerateZKTransfer mismatched input types", func(t *testing.T) {
-		env, err := newSenderEnv(nil, 2, 1)
-		require.NoError(t, err)
-		env.sender.InputInformation[1].Type = "XYZ"
-		_, _, err = env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "please choose inputs of the same token type")
-	})
+			t.Run("GenerateZKTransfer values != owners mismatch", func(t *testing.T) {
+				env, err := newSenderEnvWithProofType(nil, 1, 1, pt.proofType)
+				require.NoError(t, err)
+				_, _, err = env.sender.GenerateZKTransfer(t.Context(), []uint64{10, 20}, [][]byte{[]byte("owner1")})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "number of values [2] does not match number of recipients [1]")
+			})
 
-	t.Run("success", func(t *testing.T) {
-		env, err := newSenderEnv(nil, 3, 2)
-		require.NoError(t, err)
+			t.Run("GenerateZKTransfer mismatched input types", func(t *testing.T) {
+				env, err := newSenderEnvWithProofType(nil, 2, 1, pt.proofType)
+				require.NoError(t, err)
+				env.sender.InputInformation[1].Type = "XYZ"
+				_, _, err = env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "please choose inputs of the same token type")
+			})
 
-		tr, inf, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
-		require.NoError(t, err)
-		assert.NotNil(t, tr)
-		assert.Len(t, inf, 2)
-		assert.Equal(t, 3, tr.NumInputs())
-		assert.Equal(t, 2, tr.NumOutputs())
-		for i := range inf {
-			assert.Equal(t, token2.Type("ABC"), inf[i].Type)
-			val, err := inf[i].Value.Uint()
-			require.NoError(t, err)
-			assert.Equal(t, env.outvalues[i], val)
-		}
-		raw, err := tr.Serialize()
-		require.NoError(t, err)
+			t.Run("success", func(t *testing.T) {
+				env, err := newSenderEnvWithProofType(nil, 3, 2, pt.proofType)
+				require.NoError(t, err)
 
-		sig, err := env.sender.SignTokenActions(raw)
-		require.NoError(t, err)
-		assert.Equal(t, 3, env.fakeSigningIdentity.SignCallCount())
-		assert.Len(t, sig, 3)
-	})
+				tr, inf, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
+				require.NoError(t, err)
+				assert.NotNil(t, tr)
+				assert.Len(t, inf, 2)
+				assert.Equal(t, 3, tr.NumInputs())
+				assert.Equal(t, 2, tr.NumOutputs())
+				for i := range inf {
+					assert.Equal(t, token2.Type("ABC"), inf[i].Type)
+					val, err := inf[i].Value.Uint()
+					require.NoError(t, err)
+					assert.Equal(t, env.outvalues[i], val)
+				}
+				raw, err := tr.Serialize()
+				require.NoError(t, err)
 
-	t.Run("when signature fails", func(t *testing.T) {
-		env, err := newSenderEnv(nil, 3, 2)
-		require.NoError(t, err)
-		env.fakeSigningIdentity.SignReturnsOnCall(2, nil, errors.New("banana republic"))
-		transfer, _, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
-		require.NoError(t, err)
-		assert.NotNil(t, transfer)
-		raw, err := transfer.Serialize()
-		require.NoError(t, err)
+				sig, err := env.sender.SignTokenActions(raw)
+				require.NoError(t, err)
+				assert.Equal(t, 3, env.fakeSigningIdentity.SignCallCount())
+				assert.Len(t, sig, 3)
+			})
 
-		sig, err := env.sender.SignTokenActions(raw)
-		require.Error(t, err)
-		assert.Nil(t, sig)
-		assert.Equal(t, 3, env.fakeSigningIdentity.SignCallCount())
-		assert.Contains(t, err.Error(), "banana republic")
-	})
+			t.Run("when signature fails", func(t *testing.T) {
+				env, err := newSenderEnvWithProofType(nil, 3, 2, pt.proofType)
+				require.NoError(t, err)
+				env.fakeSigningIdentity.SignReturnsOnCall(2, nil, errors.New("banana republic"))
+				transfer, _, err := env.sender.GenerateZKTransfer(t.Context(), env.outvalues, env.owners)
+				require.NoError(t, err)
+				assert.NotNil(t, transfer)
+				raw, err := transfer.Serialize()
+				require.NoError(t, err)
+
+				sig, err := env.sender.SignTokenActions(raw)
+				require.Error(t, err)
+				assert.Nil(t, sig)
+				assert.Equal(t, 3, env.fakeSigningIdentity.SignCallCount())
+				assert.Contains(t, err.Error(), "banana republic")
+			})
+		})
+	}
 }
 
 // BenchmarkSender benchmarks transfer action generation and serialization.
@@ -207,6 +220,7 @@ func BenchmarkVerificationSenderProof(b *testing.B) {
 				inputTokens,
 				ta.GetOutputCommitments(),
 				env.SenderEnvs[0].sender.PublicParams,
+				ta.ProofType,
 			).Verify(ta.GetProof())
 		},
 	)
@@ -240,6 +254,7 @@ func BenchmarkVerificationParallelSenderProof(b *testing.B) {
 				inputTokens,
 				ta.GetOutputCommitments(),
 				env.SenderEnvs[0].sender.PublicParams,
+				ta.ProofType,
 			).Verify(ta.GetProof())
 		},
 	)
@@ -273,6 +288,7 @@ func TestParallelBenchmarkVerificationSenderProof(t *testing.T) {
 				inputTokens,
 				ta.GetOutputCommitments(),
 				env.SenderEnvs[0].sender.PublicParams,
+				ta.ProofType,
 			).Verify(ta.GetProof())
 		},
 	)
@@ -295,7 +311,7 @@ type senderEnv struct {
 	transferRaw         []byte
 }
 
-func newSenderEnv(pp *v1.PublicParams, numInputs int, numOutputs int) (*senderEnv, error) {
+func newSenderEnvWithProofType(pp *v1.PublicParams, numInputs int, numOutputs int, proofType rp.ProofType) (*senderEnv, error) {
 	var (
 		fakeSigningIdentity *mock.SigningIdentity
 		signers             []driver.Signer
@@ -312,7 +328,7 @@ func newSenderEnv(pp *v1.PublicParams, numInputs int, numOutputs int) (*senderEn
 	)
 	var err error
 	if pp == nil {
-		pp, err = setup(TestBits, TestCurve)
+		pp, err = setupWithProofType(TestBits, TestCurve, proofType)
 		if err != nil {
 			return nil, err
 		}
@@ -382,13 +398,17 @@ type benchmarkSenderEnv struct {
 }
 
 func newBenchmarkSenderEnv(n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*benchmarkSenderEnv, error) {
+	return newBenchmarkSenderEnvWithProofType(n, benchmarkCase, configurations, rp.RangeProofType)
+}
+
+func newBenchmarkSenderEnvWithProofType(n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations, proofType rp.ProofType) (*benchmarkSenderEnv, error) {
 	envs := make([]*senderEnv, n)
 	pp, err := configurations.GetPublicParams(benchmarkCase.Bits, benchmarkCase.CurveID)
 	if err != nil {
 		return nil, err
 	}
 	for i := range envs {
-		envs[i], err = newSenderEnv(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
+		envs[i], err = newSenderEnvWithProofType(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs, proofType)
 		if err != nil {
 			return nil, err
 		}
@@ -398,6 +418,10 @@ func newBenchmarkSenderEnv(n int, benchmarkCase *benchmark2.Case, configurations
 }
 
 func newBenchmarkSenderProofVerificationEnv(ctx context.Context, n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations) (*benchmarkSenderEnv, error) {
+	return newBenchmarkSenderProofVerificationEnvWithProofType(ctx, n, benchmarkCase, configurations, rp.RangeProofType)
+}
+
+func newBenchmarkSenderProofVerificationEnvWithProofType(ctx context.Context, n int, benchmarkCase *benchmark2.Case, configurations *benchmark.SetupConfigurations, proofType rp.ProofType) (*benchmarkSenderEnv, error) {
 	envs := make([]*senderEnv, n)
 	pp, err := configurations.GetPublicParams(benchmarkCase.Bits, benchmarkCase.CurveID)
 	if err != nil {
@@ -405,7 +429,7 @@ func newBenchmarkSenderProofVerificationEnv(ctx context.Context, n int, benchmar
 	}
 
 	for i := range envs {
-		env, err := newSenderEnv(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs)
+		env, err := newSenderEnvWithProofType(pp, benchmarkCase.NumInputs, benchmarkCase.NumOutputs, proofType)
 		if err != nil {
 			return nil, err
 		}

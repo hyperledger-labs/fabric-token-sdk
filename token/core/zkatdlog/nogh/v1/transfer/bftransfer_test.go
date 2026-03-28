@@ -13,7 +13,9 @@ import (
 
 	math "github.com/IBM/mathlib"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
@@ -56,8 +58,8 @@ func TestProof_Validate_ErrConditions(t *testing.T) {
 	require.NoError(t, err)
 
 	// invalid range correctness
-	proof.RangeCorrectness = &rp.RangeCorrectness{
-		Proofs: []*rp.RangeProof{nil},
+	proof.RangeCorrectness = &bulletproof.RangeCorrectness{
+		Proofs: []*bulletproof.RangeProof{nil},
 	}
 	err = proof.Validate(TestCurve)
 	require.Error(t, err)
@@ -65,44 +67,64 @@ func TestProof_Validate_ErrConditions(t *testing.T) {
 }
 
 func TestTransfer(t *testing.T) {
-	t.Run("parameters and witness are initialized correctly", func(t *testing.T) {
-		env, err := newTransferEnv(t)
-		require.NoError(t, err)
-		proofRaw, err := env.prover.Prove()
-		require.NoError(t, err)
-		require.NotNil(t, proofRaw)
+	proofTypes := []struct {
+		name      string
+		proofType rp.ProofType
+	}{
+		{"RangeProof", rp.RangeProofType},
+		{"CSPRangeProof", rp.CSPRangeProofType},
+	}
 
-		proof := &transfer.Proof{}
-		err = proof.Deserialize(proofRaw)
-		require.NoError(t, err)
-		assert.NotNil(t, proof.TypeAndSum)
-		assert.NotNil(t, proof.RangeCorrectness)
+	for _, pt := range proofTypes {
+		t.Run(pt.name, func(t *testing.T) {
+			t.Run("parameters and witness are initialized correctly", func(t *testing.T) {
+				env, err := newTransferEnvWithProofType(t, pt.proofType)
+				require.NoError(t, err)
+				proofRaw, err := env.prover.Prove()
+				require.NoError(t, err)
+				require.NotNil(t, proofRaw)
 
-		err = env.verifier.Verify(proofRaw)
-		require.NoError(t, err)
-	})
-	t.Run("Output Values > Input Values", func(t *testing.T) {
-		env, err := newTransferEnvWithWrongSum()
-		require.NoError(t, err)
+				if pt.proofType == rp.CSPRangeProofType {
+					proof := &transfer.CSPProof{}
+					err = proof.Deserialize(proofRaw)
+					require.NoError(t, err)
+					assert.NotNil(t, proof.TypeAndSum)
+					assert.NotNil(t, proof.RangeCorrectness)
+				} else {
+					proof := &transfer.Proof{}
+					err = proof.Deserialize(proofRaw)
+					require.NoError(t, err)
+					assert.NotNil(t, proof.TypeAndSum)
+					assert.NotNil(t, proof.RangeCorrectness)
+				}
 
-		proof, err := env.prover.Prove()
-		require.NoError(t, err)
-		require.NotNil(t, proof)
-		err = env.verifier.Verify(proof)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid transfer proof: invalid sum and type proof")
-	})
-	t.Run("Output Values out of range", func(t *testing.T) {
-		env, err := newTransferEnvWithInvalidRange()
-		require.NoError(t, err)
+				err = env.verifier.Verify(proofRaw)
+				require.NoError(t, err)
+			})
+			t.Run("Output Values > Input Values", func(t *testing.T) {
+				env, err := newTransferEnvWithWrongSumAndProofType(pt.proofType)
+				require.NoError(t, err)
 
-		proof, err := env.prover.Prove()
-		require.NotNil(t, proof)
-		require.NoError(t, err)
-		err = env.verifier.Verify(proof)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid range proof at index 0: invalid range proof")
-	})
+				proof, err := env.prover.Prove()
+				require.NoError(t, err)
+				require.NotNil(t, proof)
+				err = env.verifier.Verify(proof)
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "invalid transfer proof: invalid sum and type proof")
+			})
+			t.Run("Output Values out of range", func(t *testing.T) {
+				env, err := newTransferEnvWithInvalidRangeAndProofType(pt.proofType)
+				require.NoError(t, err)
+
+				proof, err := env.prover.Prove()
+				require.NoError(t, err)
+				require.NotNil(t, proof)
+				err = env.verifier.Verify(proof)
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "invalid range proof at index 0")
+			})
+		})
+	}
 }
 
 // BenchmarkTransferProofGeneration benchmarks the ZK proof generation for a transfer operation
@@ -115,11 +137,12 @@ func BenchmarkTransferProofGeneration(b *testing.B) {
 	outputs, err := benchmark2.NumOutputs(1, 2, 3)
 	require.NoError(b, err)
 	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, []int{1})
+	proofType := benchmark.ProofType()
 
 	for _, tc := range testCases {
 		b.Run(tc.Name, func(b *testing.B) {
-			// prepare env
-			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase)
+			// prepare env with specified proof type
+			env, err := newBenchmarkTransferEnvWithProofType(b.N, tc.BenchmarkCase, proofType)
 			require.NoError(b, err)
 
 			b.ResetTimer()
@@ -155,6 +178,8 @@ func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
 	workers, err := benchmark2.Workers(runtime.NumCPU())
 	require.NoError(t, err)
 	testCases := benchmark2.GenerateCases(bits, curves, inputs, outputs, workers)
+	// proofType := benchmark.ProofType()
+	proofType := rp.CSPRangeProofType
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
@@ -163,7 +188,7 @@ func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
 					benchmark2.Duration(),
 					3*time.Second),
 				func() *benchmarkTransferEnv {
-					env, err := newBenchmarkTransferEnv(1, tc.BenchmarkCase)
+					env, err := newBenchmarkTransferEnvWithProofType(1, tc.BenchmarkCase, proofType)
 					require.NoError(t, err)
 
 					return env
@@ -189,8 +214,15 @@ func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
 	}
 }
 
-func setup(bits uint64, curveID math.CurveID) (*v1.PublicParams, error) {
-	pp, err := v1.Setup(bits, nil, curveID)
+func setupWithProofType(bits uint64, curveID math.CurveID, proofType rp.ProofType) (*v1.PublicParams, error) {
+	pp, err := v1.NewWith(v1.SetupParams{
+		DriverName:     v1.DLogNoGHDriverName,
+		DriverVersion:  v1.ProtocolV1,
+		BitLength:      bits,
+		IdemixIssuerPK: nil,
+		CurveID:        curveID,
+		ProofType:      proofType,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -198,8 +230,8 @@ func setup(bits uint64, curveID math.CurveID) (*v1.PublicParams, error) {
 	return pp, nil
 }
 
-func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier, error) {
-	pp, err := setup(TestBits, TestCurve)
+func prepareZKTransferWithProofType(proofType rp.ProofType) (transfer.Prover, transfer.Verifier, error) {
+	pp, err := setupWithProofType(TestBits, TestCurve, proofType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -213,13 +245,13 @@ func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	verifier := transfer.NewVerifier(in, out, pp)
+	verifier := transfer.NewVerifier(in, out, pp, proofType)
 
 	return prover, verifier, nil
 }
 
-func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier, error) {
-	pp, err := setup(TestBits, TestCurve)
+func prepareZKTransferWithWrongSumAndProofType(proofType rp.ProofType) (transfer.Prover, transfer.Verifier, error) {
+	pp, err := setupWithProofType(TestBits, TestCurve, proofType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -233,13 +265,13 @@ func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier, erro
 	if err != nil {
 		return nil, nil, err
 	}
-	verifier := transfer.NewVerifier(in, out, pp)
+	verifier := transfer.NewVerifier(in, out, pp, proofType)
 
 	return prover, verifier, nil
 }
 
-func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier, error) {
-	pp, err := setup(8, TestCurve)
+func prepareZKTransferWithInvalidRangeAndProofType(proofType rp.ProofType) (transfer.Prover, transfer.Verifier, error) {
+	pp, err := setupWithProofType(8, TestCurve, proofType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -253,7 +285,7 @@ func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier, 
 	if err != nil {
 		return nil, nil, err
 	}
-	verifier := transfer.NewVerifier(in, out, pp)
+	verifier := transfer.NewVerifier(in, out, pp, proofType)
 
 	return prover, verifier, nil
 }
@@ -349,13 +381,13 @@ func prepareInvalidInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, 
 }
 
 type transferEnv struct {
-	prover   *transfer.Prover
-	verifier *transfer.Verifier
+	prover   transfer.Prover
+	verifier transfer.Verifier
 }
 
-func newTransferEnv(tb testing.TB) (*transferEnv, error) {
+func newTransferEnvWithProofType(tb testing.TB, proofType rp.ProofType) (*transferEnv, error) {
 	tb.Helper()
-	prover, verifier, err := prepareZKTransfer()
+	prover, verifier, err := prepareZKTransferWithProofType(proofType)
 	if err != nil {
 		return nil, err
 	}
@@ -366,8 +398,8 @@ func newTransferEnv(tb testing.TB) (*transferEnv, error) {
 	}, nil
 }
 
-func newTransferEnvWithWrongSum() (*transferEnv, error) {
-	prover, verifier, err := prepareZKTransferWithWrongSum()
+func newTransferEnvWithWrongSumAndProofType(proofType rp.ProofType) (*transferEnv, error) {
+	prover, verifier, err := prepareZKTransferWithWrongSumAndProofType(proofType)
 	if err != nil {
 		return nil, err
 	}
@@ -378,8 +410,8 @@ func newTransferEnvWithWrongSum() (*transferEnv, error) {
 	}, nil
 }
 
-func newTransferEnvWithInvalidRange() (*transferEnv, error) {
-	prover, verifier, err := prepareZKTransferWithInvalidRange()
+func newTransferEnvWithInvalidRangeAndProofType(proofType rp.ProofType) (*transferEnv, error) {
+	prover, verifier, err := prepareZKTransferWithInvalidRangeAndProofType(proofType)
 	if err != nil {
 		return nil, err
 	}
@@ -402,8 +434,8 @@ type benchmarkTransferEnv struct {
 	pp         *v1.PublicParams
 }
 
-func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkTransferEnv, error) {
-	pp, err := setup(benchmarkCase.Bits, benchmarkCase.CurveID)
+func newBenchmarkTransferEnvWithProofType(n int, benchmarkCase *benchmark2.Case, proofType rp.ProofType) (*benchmarkTransferEnv, error) {
+	pp, err := setupWithProofType(benchmarkCase.Bits, benchmarkCase.CurveID, proofType)
 	if err != nil {
 		return nil, err
 	}

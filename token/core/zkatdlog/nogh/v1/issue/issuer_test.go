@@ -12,6 +12,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue/mock"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -24,28 +25,60 @@ import (
 // TestProverVerifier exercises a full prover -> verifier round-trip for
 // a generated ZK-issue proof using the given curve and output count.
 func TestProverVerifier(t *testing.T) {
-	prover, verifier := prepareZKIssue(t, 32, math.BLS12_381_BBS_GURVY, 2)
-	proof, err := prover.Prove()
-	require.NoError(t, err)
-	assert.NotNil(t, proof)
-	err = verifier.Verify(proof)
-	require.NoError(t, err)
+	proofTypes := []struct {
+		name      string
+		setupFunc func(testing.TB, uint64, math.CurveID) *v1.PublicParams
+	}{
+		{"BulletProof", setup},
+		{"CSPProof", setupCSP},
+	}
+
+	for _, pt := range proofTypes {
+		t.Run(pt.name, func(t *testing.T) {
+			prover, verifier := prepareZKIssueWithSetup(t, 32, math.BLS12_381_BBS_GURVY, 2, pt.setupFunc)
+			proof, err := prover.Prove()
+			require.NoError(t, err)
+			assert.NotNil(t, proof)
+			err = verifier.Verify(proof)
+			require.NoError(t, err)
+		})
+	}
 }
 
 // TestIssuer tests the high-level issuer API: generating a ZK issue
 // action and verifying the resulting proof.
 func TestIssuer(t *testing.T) {
-	pp := setup(t, 32, math.BLS12_381_BBS_GURVY)
-	issuer := issue2.NewIssuer("ABC", &mock.SigningIdentity{}, pp)
-	action, _, err := issuer.GenerateZKIssue([]uint64{10, 20}, [][]byte{[]byte("alice"), []byte("bob")})
-	require.NoError(t, err)
-
-	// check the proof
-	coms := make([]*math.G1, len(action.Outputs))
-	for i := range len(action.Outputs) {
-		coms[i] = action.Outputs[i].Data
+	proofTypes := []struct {
+		name      string
+		setupFunc func(testing.TB, uint64, math.CurveID) *v1.PublicParams
+		proofType string
+	}{
+		{"BulletProof", setup, "RangeProofType"},
+		{"CSPProof", setupCSP, "CSPRangeProofType"},
 	}
-	require.NoError(t, issue2.NewVerifier(coms, pp).Verify(action.GetProof()))
+
+	for _, pt := range proofTypes {
+		t.Run(pt.name, func(t *testing.T) {
+			pp := pt.setupFunc(t, 32, math.BLS12_381_BBS_GURVY)
+			issuer := issue2.NewIssuer("ABC", &mock.SigningIdentity{}, pp)
+			action, _, err := issuer.GenerateZKIssue([]uint64{10, 20}, [][]byte{[]byte("alice"), []byte("bob")})
+			require.NoError(t, err)
+
+			// check the proof type is set correctly
+			if pt.proofType == "RangeProofType" {
+				assert.Equal(t, rp.RangeProofType, action.ProofType)
+			} else {
+				assert.Equal(t, rp.CSPRangeProofType, action.ProofType)
+			}
+
+			// check the proof
+			coms := make([]*math.G1, len(action.Outputs))
+			for i := range len(action.Outputs) {
+				coms[i] = action.Outputs[i].Data
+			}
+			require.NoError(t, issue2.NewVerifier(coms, pp).Verify(action.GetProof()))
+		})
+	}
 }
 
 // BenchmarkIssuer measures the cost of creating ZK-issue actions under
@@ -213,18 +246,32 @@ func setup(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
 	return pp
 }
 
-// prepareZKIssue prepares a prover and verifier pair along with token inputs
-// for a ZK-issue proof using the provided bits, curve and number of outputs.
-func prepareZKIssue(t *testing.T, bits uint64, curveID math.CurveID, numOutputs int) (*issue2.Prover, *issue2.Verifier) {
+// prepareZKIssueWithSetup prepares a prover and verifier pair using a custom setup function
+func prepareZKIssueWithSetup(t *testing.T, bits uint64, curveID math.CurveID, numOutputs int, setupFunc func(testing.TB, uint64, math.CurveID) *v1.PublicParams) (issue2.Prover, issue2.Verifier) {
 	t.Helper()
-	pp, err := v1.Setup(bits, nil, curveID)
-	require.NoError(t, err)
+	pp := setupFunc(t, bits, curveID)
 	tw, tokens := prepareInputsForZKIssue(pp, numOutputs)
 	prover, err := issue2.NewProver(tw, tokens, pp)
 	require.NoError(t, err)
 	verifier := issue2.NewVerifier(tokens, pp)
 
 	return prover, verifier
+}
+
+// setupCSP initializes public parameters with CSP range proofs for tests and benchmarks
+func setupCSP(tb testing.TB, bits uint64, curveID math.CurveID) *v1.PublicParams {
+	tb.Helper()
+	pp, err := v1.NewWith(v1.SetupParams{
+		DriverName:     v1.DLogNoGHDriverName,
+		DriverVersion:  v1.ProtocolV1,
+		BitLength:      bits,
+		IdemixIssuerPK: nil,
+		CurveID:        curveID,
+		ProofType:      rp.CSPRangeProofType,
+	})
+	require.NoError(tb, err)
+
+	return pp
 }
 
 // prepareInputsForZKIssue creates deterministic token metadata and token
