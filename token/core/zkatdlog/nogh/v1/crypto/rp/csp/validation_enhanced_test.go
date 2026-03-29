@@ -125,6 +125,7 @@ func TestValidateCSPVerifierInputs(t *testing.T) {
 	t.Run("NilCurve", func(t *testing.T) {
 		err := validateCSPVerifierInputs(nil, v)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNilCurve)
 		assert.Contains(t, err.Error(), "invalid curve")
 	})
 
@@ -188,6 +189,7 @@ func TestValidateCSPProof(t *testing.T) {
 	t.Run("InvalidCurve", func(t *testing.T) {
 		err := validateCSPProof(nil, proof, rounds)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNilCurve)
 		assert.Contains(t, err.Error(), "invalid proof curve")
 	})
 
@@ -355,6 +357,7 @@ func TestValidateRangeProverInputsEnhanced(t *testing.T) {
 	t.Run("InvalidCurve", func(t *testing.T) {
 		err := validateRangeProverInputs(nil, p)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNilCurve)
 		assert.Contains(t, err.Error(), "invalid curve")
 	})
 }
@@ -384,6 +387,7 @@ func TestValidateRangeVerifierInputs(t *testing.T) {
 	t.Run("NilCurve", func(t *testing.T) {
 		err := validateRangeVerifierInputs(nil, v)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNilCurve)
 		assert.Contains(t, err.Error(), "invalid curve")
 	})
 
@@ -472,6 +476,7 @@ func TestValidateRangeProofEnhanced(t *testing.T) {
 		pCopy.pokV.A = nil
 		err := validateRangeProof(curve, &pCopy)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNilCommitment)
 		assert.Contains(t, err.Error(), "proof.pokV.A cannot be nil")
 	})
 
@@ -496,6 +501,7 @@ func TestValidateRangeProofEnhanced(t *testing.T) {
 		pCopy.u = nil
 		err := validateRangeProof(curve, &pCopy)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNilValue)
 		assert.Contains(t, err.Error(), "proof.u cannot be nil")
 	})
 
@@ -504,6 +510,7 @@ func TestValidateRangeProofEnhanced(t *testing.T) {
 		pCopy.sComm = nil
 		err := validateRangeProof(curve, &pCopy)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNilCommitment)
 		assert.Contains(t, err.Error(), "proof.sComm cannot be nil")
 	})
 
@@ -520,12 +527,14 @@ func TestValidateRangeProofEnhanced(t *testing.T) {
 		pCopy.sEval = nil
 		err := validateRangeProof(curve, &pCopy)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNilValue)
 		assert.Contains(t, err.Error(), "proof.sEval cannot be nil")
 	})
 
 	t.Run("InvalidCurve", func(t *testing.T) {
 		err := validateRangeProof(nil, proof)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNilCurve)
 		assert.Contains(t, err.Error(), "invalid curve")
 	})
 }

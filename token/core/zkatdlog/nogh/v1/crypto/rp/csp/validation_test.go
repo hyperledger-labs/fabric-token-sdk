@@ -42,6 +42,7 @@ func TestValidateCurve(t *testing.T) {
 				// Verify that nil curve is rejected to prevent nil pointer dereferences
 				err := validateCurve(nil)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNilCurve)
 				assert.Contains(t, err.Error(), "curve cannot be nil")
 			})
 		})
@@ -84,6 +85,7 @@ func TestValidateG1Slice(t *testing.T) {
 				elements := []*mathlib.G1{curve.GenG1}
 				err := validateG1Slice("test", elements, curve, 2)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrInvalidLength)
 				assert.Contains(t, err.Error(), "invalid length")
 			})
 
@@ -92,6 +94,7 @@ func TestValidateG1Slice(t *testing.T) {
 				elements := []*mathlib.G1{curve.GenG1, nil}
 				err := validateG1Slice("test", elements, curve, 2)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNilElement)
 				assert.Contains(t, err.Error(), "element cannot be nil")
 				assert.Contains(t, err.Error(), "test[1]")
 			})
@@ -135,6 +138,7 @@ func TestValidateZrSlice(t *testing.T) {
 				elements := []*mathlib.Zr{curve.NewZrFromInt(1)}
 				err := validateZrSlice("test", elements, curve, 2)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrInvalidLength)
 				assert.Contains(t, err.Error(), "invalid length")
 			})
 
@@ -202,6 +206,7 @@ func TestValidateCSPProverInputs(t *testing.T) {
 				pCopy.Curve = nil
 				err := validateCSPProverInputs(nil, &pCopy)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNilCurve)
 				assert.Contains(t, err.Error(), "invalid curve")
 			})
 
@@ -211,6 +216,7 @@ func TestValidateCSPProverInputs(t *testing.T) {
 				pCopy.Commitment = nil
 				err := validateCSPProverInputs(curve, &pCopy)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNilCommitment)
 				assert.Contains(t, err.Error(), "commitment cannot be nil")
 			})
 
@@ -220,6 +226,7 @@ func TestValidateCSPProverInputs(t *testing.T) {
 				pCopy.Generators = gens[:size-1]
 				err := validateCSPProverInputs(curve, &pCopy)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrInvalidLength)
 				assert.Contains(t, err.Error(), "invalid length")
 			})
 		})
@@ -278,6 +285,7 @@ func TestValidateRangeProverInputs(t *testing.T) {
 				pCopy.v = nil
 				err := validateRangeProverInputs(curve, &pCopy)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNilValue)
 				assert.Contains(t, err.Error(), "value cannot be nil")
 			})
 
@@ -287,6 +295,7 @@ func TestValidateRangeProverInputs(t *testing.T) {
 				pCopy.NumberOfBits = 0
 				err := validateRangeProverInputs(curve, &pCopy)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrInvalidBitCount)
 				assert.Contains(t, err.Error(), "invalid number of bits")
 				assert.Contains(t, err.Error(), "must be greater than 0")
 			})
@@ -297,6 +306,7 @@ func TestValidateRangeProverInputs(t *testing.T) {
 				pCopy.NumberOfBits = 65
 				err := validateRangeProverInputs(curve, &pCopy)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrInvalidBitCount)
 				assert.Contains(t, err.Error(), "invalid number of bits")
 				assert.Contains(t, err.Error(), "cannot exceed 64")
 			})
@@ -350,6 +360,7 @@ func TestValidateRangeProof(t *testing.T) {
 				// Verify that nil proof is rejected to prevent nil pointer dereferences
 				err := validateRangeProof(curve, nil)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNilProof)
 				assert.Contains(t, err.Error(), "proof cannot be nil")
 			})
 
@@ -359,6 +370,7 @@ func TestValidateRangeProof(t *testing.T) {
 				proofCopy.pComm = nil
 				err := validateRangeProof(curve, &proofCopy)
 				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNilCommitment)
 				assert.Contains(t, err.Error(), "pComm cannot be nil")
 			})
 		})
