@@ -5,10 +5,23 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/committer/queryservice"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality"
 )
 
 type QueryService struct {
+	GetConfigTransactionStub        func() (*queryservice.ConfigTransactionInfo, error)
+	getConfigTransactionMutex       sync.RWMutex
+	getConfigTransactionArgsForCall []struct {
+	}
+	getConfigTransactionReturns struct {
+		result1 *queryservice.ConfigTransactionInfo
+		result2 error
+	}
+	getConfigTransactionReturnsOnCall map[int]struct {
+		result1 *queryservice.ConfigTransactionInfo
+		result2 error
+	}
 	GetStateStub        func(driver.Namespace, driver.PKey) (*driver.VaultValue, error)
 	getStateMutex       sync.RWMutex
 	getStateArgsForCall []struct {
@@ -51,6 +64,62 @@ type QueryService struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *QueryService) GetConfigTransaction() (*queryservice.ConfigTransactionInfo, error) {
+	fake.getConfigTransactionMutex.Lock()
+	ret, specificReturn := fake.getConfigTransactionReturnsOnCall[len(fake.getConfigTransactionArgsForCall)]
+	fake.getConfigTransactionArgsForCall = append(fake.getConfigTransactionArgsForCall, struct {
+	}{})
+	stub := fake.GetConfigTransactionStub
+	fakeReturns := fake.getConfigTransactionReturns
+	fake.recordInvocation("GetConfigTransaction", []interface{}{})
+	fake.getConfigTransactionMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *QueryService) GetConfigTransactionCallCount() int {
+	fake.getConfigTransactionMutex.RLock()
+	defer fake.getConfigTransactionMutex.RUnlock()
+	return len(fake.getConfigTransactionArgsForCall)
+}
+
+func (fake *QueryService) GetConfigTransactionCalls(stub func() (*queryservice.ConfigTransactionInfo, error)) {
+	fake.getConfigTransactionMutex.Lock()
+	defer fake.getConfigTransactionMutex.Unlock()
+	fake.GetConfigTransactionStub = stub
+}
+
+func (fake *QueryService) GetConfigTransactionReturns(result1 *queryservice.ConfigTransactionInfo, result2 error) {
+	fake.getConfigTransactionMutex.Lock()
+	defer fake.getConfigTransactionMutex.Unlock()
+	fake.GetConfigTransactionStub = nil
+	fake.getConfigTransactionReturns = struct {
+		result1 *queryservice.ConfigTransactionInfo
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *QueryService) GetConfigTransactionReturnsOnCall(i int, result1 *queryservice.ConfigTransactionInfo, result2 error) {
+	fake.getConfigTransactionMutex.Lock()
+	defer fake.getConfigTransactionMutex.Unlock()
+	fake.GetConfigTransactionStub = nil
+	if fake.getConfigTransactionReturnsOnCall == nil {
+		fake.getConfigTransactionReturnsOnCall = make(map[int]struct {
+			result1 *queryservice.ConfigTransactionInfo
+			result2 error
+		})
+	}
+	fake.getConfigTransactionReturnsOnCall[i] = struct {
+		result1 *queryservice.ConfigTransactionInfo
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *QueryService) GetState(arg1 driver.Namespace, arg2 driver.PKey) (*driver.VaultValue, error) {
