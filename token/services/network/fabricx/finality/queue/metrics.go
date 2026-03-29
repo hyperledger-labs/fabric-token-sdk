@@ -23,6 +23,10 @@ type Metrics struct {
 	// ProcessingErrors counts the total number of errors returned by
 	// event.Process inside worker goroutines.
 	ProcessingErrors metrics.Counter
+	// ProcessingDuration is a histogram of successful event processing times in
+	// worker goroutines, measured in seconds. Only recorded on success; error
+	// paths are already counted by ProcessingErrors.
+	ProcessingDuration metrics.Histogram
 }
 
 func newMetrics(p metrics.Provider) *Metrics {
@@ -42,6 +46,11 @@ func newMetrics(p metrics.Provider) *Metrics {
 		ProcessingErrors: p.NewCounter(metrics.CounterOpts{
 			Name: "finality_queue_processing_errors_total",
 			Help: "Total number of errors returned by event.Process in worker goroutines",
+		}),
+		ProcessingDuration: p.NewHistogram(metrics.HistogramOpts{
+			Name:    "finality_queue_processing_duration_seconds",
+			Help:    "Histogram of successful event processing time in worker goroutines (seconds)",
+			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5},
 		}),
 	}
 }

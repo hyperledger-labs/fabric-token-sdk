@@ -133,9 +133,12 @@ func (eq *EventQueue) runWorker(id int) (stopped bool) {
 				return true
 			}
 
+			start := time.Now()
 			if err := event.Process(eq.ctx); err != nil {
 				logger.Errorf("Worker %d: error processing event [%v]: %v", id, event, err)
 				eq.metrics.ProcessingErrors.Add(1)
+			} else {
+				eq.metrics.ProcessingDuration.Observe(time.Since(start).Seconds())
 			}
 
 		case <-eq.ctx.Done():
