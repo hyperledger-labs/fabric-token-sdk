@@ -430,7 +430,7 @@ func TestTokensService_CheckUpgradeProof(t *testing.T) {
 			},
 			expected:       true,
 			wantErrProcess: true,
-			processErrMsg:  "upgrade of unsupported token format [baff495e067aea1a0a5e6a37d72689316c457251e359a6796329761ca3227648] requested",
+			processErrMsg:  "upgrade of unsupported token format [7dd587e7695e5755632163cfdb8e80644001bf64d726e12fee02cf21e2cd212a] requested",
 		},
 		{
 			name: "valid and supported format",
