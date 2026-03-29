@@ -7,8 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package csp
 
 import (
-	"errors"
-	"fmt"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
@@ -20,10 +19,10 @@ func validateCurve(curve *mathlib.Curve) error {
 		return ErrNilCurve
 	}
 	if curve.GroupOrder == nil {
-		return fmt.Errorf("%w: group order cannot be nil", ErrInvalidCurve)
+		return errors.Wrapf(ErrInvalidCurve, "group order cannot be nil")
 	}
 	if curve.GenG1 == nil {
-		return fmt.Errorf("%w: generator G1 cannot be nil", ErrInvalidCurve)
+		return errors.Wrapf(ErrInvalidCurve, "generator G1 cannot be nil")
 	}
 
 	return nil
@@ -34,18 +33,18 @@ func validateCurve(curve *mathlib.Curve) error {
 // appear in generators or proof elements for edge cases.
 func validateG1Slice(name string, elements []*mathlib.G1, curve *mathlib.Curve, expectedLen int) error {
 	if elements == nil {
-		return fmt.Errorf("%s cannot be nil", name)
+		return errors.Errorf("%s cannot be nil", name)
 	}
 	if expectedLen > 0 && len(elements) != expectedLen {
-		return fmt.Errorf("%w: %s expected %d, got %d", ErrInvalidLength, name, expectedLen, len(elements))
+		return errors.Wrapf(ErrInvalidLength, "%s expected %d, got %d", name, expectedLen, len(elements))
 	}
 	// Check each element for nil and curve ID match, but allow infinity
 	for i, elem := range elements {
 		if elem == nil {
-			return fmt.Errorf("%w: %s[%d]", ErrNilElement, name, i)
+			return errors.Wrapf(ErrNilElement, "%s[%d]", name, i)
 		}
 		if elem.CurveID() != curve.ID() {
-			return fmt.Errorf("%w: %s[%d]", ErrWrongCurveID, name, i)
+			return errors.Wrapf(ErrWrongCurveID, "%s[%d]", name, i)
 		}
 	}
 
@@ -55,13 +54,13 @@ func validateG1Slice(name string, elements []*mathlib.G1, curve *mathlib.Curve, 
 // validateZrSlice checks if a slice of Zr elements is valid using the math package utilities.
 func validateZrSlice(name string, elements []*mathlib.Zr, curve *mathlib.Curve, expectedLen int) error {
 	if elements == nil {
-		return fmt.Errorf("%s cannot be nil", name)
+		return errors.Errorf("%s cannot be nil", name)
 	}
 	if expectedLen > 0 && len(elements) != expectedLen {
-		return fmt.Errorf("%w: %s expected %d, got %d", ErrInvalidLength, name, expectedLen, len(elements))
+		return errors.Wrapf(ErrInvalidLength, "%s expected %d, got %d", name, expectedLen, len(elements))
 	}
 	if err := math.CheckZrElements(elements, curve.ID(), uint64(len(elements))); err != nil {
-		return fmt.Errorf("%s validation failed: %w", name, err)
+		return errors.Wrapf(err, "%s validation failed", name)
 	}
 
 	return nil
@@ -70,7 +69,7 @@ func validateZrSlice(name string, elements []*mathlib.Zr, curve *mathlib.Curve, 
 // validateCSPProverInputs validates all inputs for CSP prover.
 func validateCSPProverInputs(curve *mathlib.Curve, p *cspProver) error {
 	if err := validateCurve(curve); err != nil {
-		return fmt.Errorf("invalid curve: %w", err)
+		return errors.Wrapf(err, "invalid curve")
 	}
 	if p.Commitment == nil {
 		return ErrNilCommitment
@@ -96,7 +95,7 @@ func validateCSPProverInputs(curve *mathlib.Curve, p *cspProver) error {
 // validateCSPVerifierInputs validates all inputs for CSP verifier.
 func validateCSPVerifierInputs(curve *mathlib.Curve, v *cspVerifier) error {
 	if err := validateCurve(curve); err != nil {
-		return fmt.Errorf("invalid curve: %w", err)
+		return errors.Wrapf(err, "invalid curve")
 	}
 	if v.Commitment == nil {
 		return ErrNilCommitment
@@ -124,7 +123,7 @@ func validateCSPProof(curve *mathlib.Curve, proof *CSPProof, expectedRounds uint
 		return ErrNilProof
 	}
 	if err := validateCurve(curve); err != nil {
-		return fmt.Errorf("invalid proof curve: %w", err)
+		return errors.Wrapf(err, "invalid proof curve")
 	}
 	// Validate proof arrays without strict infinity checks (proof elements can be infinity)
 	if proof.Left == nil {
@@ -132,42 +131,42 @@ func validateCSPProof(curve *mathlib.Curve, proof *CSPProof, expectedRounds uint
 	}
 	// Validate proof arrays length - use uint64 comparison to avoid conversion
 	if uint64(len(proof.Left)) != expectedRounds {
-		return fmt.Errorf("%w: proof.Left expected %d, got %d", ErrInvalidLength, expectedRounds, len(proof.Left))
+		return errors.Wrapf(ErrInvalidLength, "proof.Left expected %d, got %d", expectedRounds, len(proof.Left))
 	}
 	if proof.Right == nil {
 		return errors.New("proof.Right cannot be nil")
 	}
 	if uint64(len(proof.Right)) != expectedRounds {
-		return fmt.Errorf("%w: proof.Right expected %d, got %d", ErrInvalidLength, expectedRounds, len(proof.Right))
+		return errors.Wrapf(ErrInvalidLength, "proof.Right expected %d, got %d", expectedRounds, len(proof.Right))
 	}
 	for i, elem := range proof.Left {
 		if elem == nil {
-			return fmt.Errorf("%w: proof.Left[%d]", ErrNilElement, i)
+			return errors.Wrapf(ErrNilElement, "proof.Left[%d]", i)
 		}
 		if elem.CurveID() != curve.ID() {
-			return fmt.Errorf("%w: proof.Left[%d]", ErrWrongCurveID, i)
+			return errors.Wrapf(ErrWrongCurveID, "proof.Left[%d]", i)
 		}
 	}
 	for i, elem := range proof.Right {
 		if elem == nil {
-			return fmt.Errorf("%w: proof.Right[%d]", ErrNilElement, i)
+			return errors.Wrapf(ErrNilElement, "proof.Right[%d]", i)
 		}
 		if elem.CurveID() != curve.ID() {
-			return fmt.Errorf("%w: proof.Right[%d]", ErrWrongCurveID, i)
+			return errors.Wrapf(ErrWrongCurveID, "proof.Right[%d]", i)
 		}
 	}
 	// For Zr slices, validate length using uint64 comparison
 	if uint64(len(proof.VLeft)) != expectedRounds {
-		return fmt.Errorf("%w: proof.VLeft expected %d, got %d", ErrInvalidLength, expectedRounds, len(proof.VLeft))
+		return errors.Wrapf(ErrInvalidLength, "proof.VLeft expected %d, got %d", expectedRounds, len(proof.VLeft))
 	}
 	if uint64(len(proof.VRight)) != expectedRounds {
-		return fmt.Errorf("%w: proof.VRight expected %d, got %d", ErrInvalidLength, expectedRounds, len(proof.VRight))
+		return errors.Wrapf(ErrInvalidLength, "proof.VRight expected %d, got %d", expectedRounds, len(proof.VRight))
 	}
 	if err := math.CheckZrElements(proof.VLeft, curve.ID(), expectedRounds); err != nil {
-		return fmt.Errorf("proof.VLeft validation failed: %w", err)
+		return errors.Wrapf(err, "proof.VLeft validation failed")
 	}
 	if err := math.CheckZrElements(proof.VRight, curve.ID(), expectedRounds); err != nil {
-		return fmt.Errorf("proof.VRight validation failed: %w", err)
+		return errors.Wrapf(err, "proof.VRight validation failed")
 	}
 
 	return nil
@@ -176,7 +175,7 @@ func validateCSPProof(curve *mathlib.Curve, proof *CSPProof, expectedRounds uint
 // validateRangeProverInputs validates all inputs for range proof prover.
 func validateRangeProverInputs(curve *mathlib.Curve, p *cspRangeProver) error {
 	if err := validateCurve(curve); err != nil {
-		return fmt.Errorf("invalid curve: %w", err)
+		return errors.Wrapf(err, "invalid curve")
 	}
 	if p.VCommitment == nil {
 		return ErrNilCommitment
@@ -188,10 +187,10 @@ func validateRangeProverInputs(curve *mathlib.Curve, p *cspRangeProver) error {
 		return ErrNilRandomness
 	}
 	if p.NumberOfBits == 0 {
-		return fmt.Errorf("%w: must be greater than 0", ErrInvalidBitCount)
+		return errors.Wrapf(ErrInvalidBitCount, "must be greater than 0")
 	}
 	if p.NumberOfBits > 64 {
-		return fmt.Errorf("%w: cannot exceed 64", ErrInvalidBitCount)
+		return errors.Wrapf(ErrInvalidBitCount, "cannot exceed 64")
 	}
 
 	if err := validateG1Slice("VGenerators", p.VGenerators, curve, 2); err != nil {
@@ -210,16 +209,16 @@ func validateRangeProverInputs(curve *mathlib.Curve, p *cspRangeProver) error {
 // validateRangeVerifierInputs validates all inputs for range proof verifier.
 func validateRangeVerifierInputs(curve *mathlib.Curve, v *cspRangeVerifier) error {
 	if err := validateCurve(curve); err != nil {
-		return fmt.Errorf("invalid curve: %w", err)
+		return errors.Wrapf(err, "invalid curve")
 	}
 	if v.VCommitment == nil {
 		return ErrNilCommitment
 	}
 	if v.NumberOfBits == 0 {
-		return fmt.Errorf("%w: must be greater than 0", ErrInvalidBitCount)
+		return errors.Wrapf(ErrInvalidBitCount, "must be greater than 0")
 	}
 	if v.NumberOfBits > 64 {
-		return fmt.Errorf("%w: cannot exceed 64", ErrInvalidBitCount)
+		return errors.Wrapf(ErrInvalidBitCount, "cannot exceed 64")
 	}
 
 	if err := validateG1Slice("VGenerators", v.VGenerators, curve, 2); err != nil {
@@ -241,34 +240,34 @@ func validateRangeProof(curve *mathlib.Curve, proof *CspRangeProof) error {
 		return ErrNilProof
 	}
 	if err := validateCurve(curve); err != nil {
-		return fmt.Errorf("invalid curve: %w", err)
+		return errors.Wrapf(err, "invalid curve")
 	}
 	if proof.pComm == nil {
-		return errors.New("proof.pComm cannot be nil")
+		return errors.Wrap(ErrNilCommitment, "proof.pComm cannot be nil")
 	}
 	if proof.pComm.CurveID() != curve.ID() {
-		return fmt.Errorf("%w: proof.pComm", ErrWrongCurveID)
+		return errors.Wrapf(ErrWrongCurveID, "proof.pComm")
 	}
 	if proof.pokV.A == nil {
-		return errors.New("proof.pokV.A cannot be nil")
+		return errors.Wrap(ErrNilCommitment, "proof.pokV.A cannot be nil")
 	}
 	if proof.pokV.A.CurveID() != curve.ID() {
-		return fmt.Errorf("%w: proof.pokV.A", ErrWrongCurveID)
+		return errors.Wrapf(ErrWrongCurveID, "proof.pokV.A")
 	}
 	if err := validateZrSlice("proof.pokV.Z", proof.pokV.Z, curve, 2); err != nil {
 		return err
 	}
 	if proof.u == nil {
-		return errors.New("proof.u cannot be nil")
+		return errors.Wrap(ErrNilValue, "proof.u cannot be nil")
 	}
 	if proof.sComm == nil {
-		return errors.New("proof.sComm cannot be nil")
+		return errors.Wrap(ErrNilCommitment, "proof.sComm cannot be nil")
 	}
 	if proof.sComm.CurveID() != curve.ID() {
-		return fmt.Errorf("%w: proof.sComm", ErrWrongCurveID)
+		return errors.Wrapf(ErrWrongCurveID, "proof.sComm")
 	}
 	if proof.sEval == nil {
-		return errors.New("proof.sEval cannot be nil")
+		return errors.Wrap(ErrNilValue, "proof.sEval cannot be nil")
 	}
 
 	return validateCSPProof(curve, &proof.cspProof, uint64(len(proof.cspProof.Left)))
