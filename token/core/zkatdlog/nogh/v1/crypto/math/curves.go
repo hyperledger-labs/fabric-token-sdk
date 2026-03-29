@@ -30,6 +30,11 @@ var (
 	// Keys: math.CurveID -> map[uint64]*math.Zr
 	valueCache = make(map[math.CurveID]map[uint64]*math.Zr)
 
+	// valueCache maps a curve ID to a map of small integers (uint64)
+	// pre-converted into *math.Zr instances for fast reuse.
+	// Keys: math.CurveID -> map[uint64]*math.Zr
+	valueNegCache = make(map[math.CurveID]map[uint64]*math.Zr)
+
 	// powerCache maps a curve ID to precomputed powers of two.
 	// Keys: math.CurveID -> map[uint64]*math.Zr where the inner key is the
 	// exponent i and the value is 2^i (in the curve's Zr group).
@@ -77,6 +82,31 @@ func NewCachedZrFromInt(c *math.Curve, i uint64) *math.Zr {
 		logger.Warnf("no hit for [%d:%d]", c.ID(), i)
 
 		return c.NewZrFromUint64(i)
+	}
+
+	return v
+}
+
+// NewCachedNegZrFromInt returns a *math.Zr corresponding to the integer i
+// for the curve c. If a cached value exists in valueCache for the given
+// curve and index, it is returned. On cache miss the function logs a
+// warning and returns a freshly allocated Zr via c.NewZrFromUint64(i).
+func NewCachedNegZrFromInt(c *math.Curve, i uint64) *math.Zr {
+	cc, ok := valueNegCache[c.ID()]
+	if !ok {
+		logger.Warnf("no hit for [%d:%d]", c.ID(), i)
+
+		v := c.NewZrFromUint64(i)
+		v.Neg()
+
+		return v
+	}
+	v, ok := cc[i]
+	if !ok {
+		logger.Warnf("no hit for [%d:%d]", c.ID(), i)
+
+		v := c.NewZrFromUint64(i)
+		v.Neg()
 	}
 
 	return v
@@ -136,11 +166,17 @@ func init() {
 	}
 	for _, id := range curveIDs {
 		c := math.Curves[id]
-		values := make(map[uint64]*math.Zr, NumBits)
-		for i := range NumBits {
+		l := 2*int(NumBits) + 1
+		values := make(map[uint64]*math.Zr, l)
+		valuesNeg := make(map[uint64]*math.Zr, l)
+		for i := range l + 1 {
 			values[uint64(i)] = c.NewZrFromUint64(uint64(i)) // #nosec G115
+
+			valuesNeg[uint64(i)] = c.NewZrFromUint64(uint64(i)) // #nosec G115
+			valuesNeg[uint64(i)].Neg()
 		}
 		valueCache[id] = values
+		valueNegCache[id] = valuesNeg
 
 		powers := make(map[uint64]*math.Zr, NumBits)
 		for i := range NumBits {
