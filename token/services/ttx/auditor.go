@@ -278,6 +278,7 @@ func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveV
 }
 
 func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
+	start := time.Now()
 	// Append audit records
 	if err := auditor.Get(context, a.w).Append(context.Context(), a.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed appending audit records for transaction %s", a.tx.ID())
@@ -301,7 +302,9 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 		"channel", a.tx.Channel(),
 		"namespace", a.tx.Namespace(),
 	}
-	GetMetrics(context).AuditApprovedTransactions.With(labels...).Add(1)
+	metrics := GetMetrics(context)
+	metrics.AuditApprovedTransactions.With(labels...).Add(1)
+	metrics.AuditApprovalDuration.With(labels...).Observe(time.Since(start).Seconds())
 
 	return nil, nil
 }

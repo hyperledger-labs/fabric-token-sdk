@@ -85,6 +85,7 @@ func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *Colle
 // the token transaction valid.
 func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error) {
 	metrics := GetMetrics(context)
+	start := time.Now()
 
 	externalWallets := make(map[string]ExternalWalletSigner)
 
@@ -148,6 +149,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 		"namespace", c.tx.Namespace(),
 	}
 	metrics.EndorsedTransactions.With(labels...).Add(1)
+	metrics.EndorsementDuration.With(labels...).Observe(time.Since(start).Seconds())
 
 	return nil, nil
 }

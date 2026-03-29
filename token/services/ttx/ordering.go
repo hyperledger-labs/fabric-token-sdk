@@ -34,6 +34,7 @@ func NewOrderingViewWithOpts(opts ...TxOption) *orderingView {
 // The view does the following:
 // 1. It broadcasts the token transaction to the proper backend.
 func (o *orderingView) Call(context view.Context) (interface{}, error) {
+	start := time.Now()
 	// Compile options
 	options, err := CompileOpts(o.opts...)
 	if err != nil {
@@ -53,6 +54,13 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 			logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", options.Transaction.TokenRequest.Anchor, err)
 		}
 	}
+
+	labels := []string{
+		"network", options.Transaction.Network(),
+		"channel", options.Transaction.Channel(),
+		"namespace", options.Transaction.Namespace(),
+	}
+	GetMetrics(context).OrderingDuration.With(labels...).Observe(time.Since(start).Seconds())
 
 	return nil, nil
 }

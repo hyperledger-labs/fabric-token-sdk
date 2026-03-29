@@ -13,6 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
+var defaultDurationBuckets = []float64{.01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30}
+
 var (
 	spKey = reflect.TypeOf((*Metrics)(nil))
 
@@ -31,12 +33,33 @@ var (
 		Help:       "The number of accepted transactions.",
 		LabelNames: []string{"network", "channel", "namespace"},
 	}
+	endorsementDuration = metrics.HistogramOpts{
+		Name:       "endorsement_duration_seconds",
+		Help:       "Duration of the full endorsement collection phase including signatures, audit, and chaincode approval.",
+		LabelNames: []string{"network", "channel", "namespace"},
+		Buckets:    defaultDurationBuckets,
+	}
+	auditApprovalDuration = metrics.HistogramOpts{
+		Name:       "audit_approval_duration_seconds",
+		Help:       "Duration of the auditor approval phase including validation, append, and signing.",
+		LabelNames: []string{"network", "channel", "namespace"},
+		Buckets:    defaultDurationBuckets,
+	}
+	orderingDuration = metrics.HistogramOpts{
+		Name:       "ordering_duration_seconds",
+		Help:       "Duration of the transaction broadcast to the ordering service.",
+		LabelNames: []string{"network", "channel", "namespace"},
+		Buckets:    defaultDurationBuckets,
+	}
 )
 
 type Metrics struct {
 	EndorsedTransactions      metrics.Counter
 	AuditApprovedTransactions metrics.Counter
 	AcceptedTransactions      metrics.Counter
+	EndorsementDuration       metrics.Histogram
+	AuditApprovalDuration     metrics.Histogram
+	OrderingDuration          metrics.Histogram
 }
 
 func NewMetrics(p metrics.Provider) *Metrics {
@@ -44,6 +67,9 @@ func NewMetrics(p metrics.Provider) *Metrics {
 		EndorsedTransactions:      p.NewCounter(endorsedTransactions),
 		AuditApprovedTransactions: p.NewCounter(auditApprovedTransactions),
 		AcceptedTransactions:      p.NewCounter(acceptedTransactions),
+		EndorsementDuration:       p.NewHistogram(endorsementDuration),
+		AuditApprovalDuration:     p.NewHistogram(auditApprovalDuration),
+		OrderingDuration:          p.NewHistogram(orderingDuration),
 	}
 }
 
