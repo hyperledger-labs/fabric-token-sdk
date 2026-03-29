@@ -477,7 +477,7 @@ func ComputeSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) ([]*m
 
 	for i := 1; i <= n; i++ {
 		// Start with s_i = 1
-		si := curve.NewZrFromInt(1)
+		si := math.One(curve)
 
 		// Compute product over j=1 to log2(n).
 		// At round j the generator fold splits on bit (log2n - j) of the

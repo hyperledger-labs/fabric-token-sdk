@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -449,7 +450,7 @@ func prepareTransfer(
 	for i := range inValues {
 		v := uint64(i*10 + 500)
 		sumInputs += v
-		inValues[i] = c.NewZrFromUint64(v)
+		inValues[i] = math2.NewCachedZrFromInt(c, v)
 	}
 
 	if benchCase.NumOutputs <= 0 {

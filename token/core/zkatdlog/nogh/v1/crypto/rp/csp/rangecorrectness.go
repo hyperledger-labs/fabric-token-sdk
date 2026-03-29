@@ -10,6 +10,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 )
 
 // CSPRangeCorrectness contains a set of range proofs for multiple commitments.
@@ -108,7 +109,7 @@ func (p *CSPRangeCorrectnessProver) Prove() (*CSPRangeCorrectness, error) {
 	for i := range len(p.Commitments) {
 		bp := NewCspRangeProver(
 			p.Commitments[i],
-			p.Curve.NewZrFromUint64(p.Values[i]),
+			math2.NewCachedZrFromInt(p.Curve, p.Values[i]),
 			p.BlindingFactors[i],
 			p.PedersenParameters,
 			p.LeftGenerators,

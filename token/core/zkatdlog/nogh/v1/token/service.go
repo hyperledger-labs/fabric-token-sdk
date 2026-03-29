@@ -208,7 +208,7 @@ func (s *TokensService) DeserializeToken(ctx context.Context, outputFormat token
 			Data:  tokens[0],
 		}, &Metadata{
 			Type:           fabToken.Type,
-			Value:          curve.NewZrFromUint64(value),
+			Value:          math.NewCachedZrFromInt(curve, value),
 			BlindingFactor: meta[0].BlindingFactor,
 		}, &UpgradeWitness{
 			FabToken:       fabToken,

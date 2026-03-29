@@ -28,7 +28,7 @@ func toBits(v *mathlib.Zr, n uint64, curve *mathlib.Curve) ([]*mathlib.Zr, error
 
 	bits := make([]*mathlib.Zr, n)
 	for i := range n {
-		bits[i] = curve.NewZrFromUint64(uint64(val.Bit(int(i)))) // #nosec G115
+		bits[i] = math.NewCachedZrFromInt(curve, uint64(val.Bit(int(i)))) // #nosec G115
 	}
 
 	return bits, nil
@@ -38,12 +38,10 @@ func toBits(v *mathlib.Zr, n uint64, curve *mathlib.Curve) ([]*mathlib.Zr, error
 // Handles negative differences by negating the absolute value.
 func fieldDiffInt(a, b int, curve *mathlib.Curve) *mathlib.Zr {
 	if a >= b {
-		return curve.NewZrFromInt(int64(a - b))
+		return math.NewCachedZrFromInt(curve, uint64(a-b)) //nolint:gosec
 	}
-	diff := curve.NewZrFromInt(int64(b - a))
-	diff.Neg()
 
-	return diff
+	return math.NewCachedNegZrFromInt(curve, uint64(b-a)) //nolint:gosec
 }
 
 // getLagrangeMultipliers returns Lagrange coefficients [x_0, x_1, ..., x_n] such that
@@ -58,10 +56,10 @@ func fieldDiffInt(a, b int, curve *mathlib.Curve) *mathlib.Zr {
 
 // Note that this is O(n^2) algorithm but field operations are significantly faster.
 // We can revisit it if it ever becomes a bottle-neck to have FFT based implementation.
-func getLagrangeMultipliers(n uint64, c *mathlib.Zr, Curve *mathlib.Curve) ([]*mathlib.Zr, error) {
+func getLagrangeMultipliers(n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
 	// For BN254 and BLS12 curves, we perform arithmetic over gnark crypto native type
 	// instead of mathlib wrapper, which uses slower big.Int conversion.
-	if r, ok, err := nativeLagrangeMultipliers(n, c, Curve); ok {
+	if r, ok, err := nativeLagrangeMultipliers(n, c, curve); ok {
 		return r, err
 	}
 	m := int(n) + 1 // #nosec G115 // number of evaluation points: 0, 1, ..., n
@@ -69,31 +67,30 @@ func getLagrangeMultipliers(n uint64, c *mathlib.Zr, Curve *mathlib.Curve) ([]*m
 	// Precompute (c - j) for j = 0..n.
 	cMinusJ := make([]*mathlib.Zr, m)
 	for j := range m {
-		neg := Curve.NewZrFromInt(int64(j))
-		neg.Neg()
-		cMinusJ[j] = Curve.ModAdd(c, neg, Curve.GroupOrder)
+		neg := math.NewCachedNegZrFromInt(curve, uint64(j))
+		cMinusJ[j] = curve.ModAdd(c, neg, curve.GroupOrder)
 	}
 
 	numers := make([]*mathlib.Zr, m)
 	denoms := make([]*mathlib.Zr, m)
 	for i := range m {
-		numer := Curve.NewZrFromInt(1)
-		denom := Curve.NewZrFromInt(1)
+		numer := math.One(curve)
+		denom := math.One(curve)
 		for j := range m {
 			if j == i {
 				continue
 			}
-			numer = Curve.ModMul(numer, cMinusJ[j], Curve.GroupOrder)
-			denom = Curve.ModMul(denom, fieldDiffInt(i, j, Curve), Curve.GroupOrder)
+			numer = curve.ModMul(numer, cMinusJ[j], curve.GroupOrder)
+			denom = curve.ModMul(denom, fieldDiffInt(i, j, curve), curve.GroupOrder)
 		}
 		numers[i] = numer
 		denoms[i] = denom
 	}
 
-	denomInvs := math.BatchInverse(denoms, Curve)
+	denomInvs := math.BatchInverse(denoms, curve)
 	result := make([]*mathlib.Zr, m)
 	for i := range m {
-		result[i] = Curve.ModMul(numers[i], denomInvs[i], Curve.GroupOrder)
+		result[i] = curve.ModMul(numers[i], denomInvs[i], curve.GroupOrder)
 	}
 
 	return result, nil
@@ -107,9 +104,9 @@ func getLagrangeMultipliers(n uint64, c *mathlib.Zr, Curve *mathlib.Curve) ([]*m
 // The multipliers are the standard Lagrange basis values over the full set of 2n+1
 // evaluation points {0, 1, ..., 2n}; only those for {0, n+1, ..., 2n} are returned
 // because the remaining evaluations at {1, ..., n} are assumed to be zero.
-func getLagrangeMultipliersPartial(n uint64, c *mathlib.Zr, Curve *mathlib.Curve) ([]*mathlib.Zr, error) {
+func getLagrangeMultipliersPartial(n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
 	// Use native gnark-crypto FrElement for faster field arithmetic.
-	if r, ok, err := nativeLagrangeMultipliersPartial(n, c, Curve); ok {
+	if r, ok, err := nativeLagrangeMultipliersPartial(n, c, curve); ok {
 		return r, err
 	}
 	total := 2*int(n) + 1 // #nosec G115 // all evaluation points: 0, 1, ..., 2n
@@ -117,9 +114,8 @@ func getLagrangeMultipliersPartial(n uint64, c *mathlib.Zr, Curve *mathlib.Curve
 	// Precompute (c - j) for j = 0..2n.
 	cMinusJ := make([]*mathlib.Zr, total)
 	for j := range total {
-		neg := Curve.NewZrFromInt(int64(j))
-		neg.Neg()
-		cMinusJ[j] = Curve.ModAdd(c, neg, Curve.GroupOrder)
+		neg := math.NewCachedNegZrFromInt(curve, uint64(j))
+		cMinusJ[j] = curve.ModAdd(c, neg, curve.GroupOrder)
 	}
 
 	// Indices of interest: {0, n+1, n+2, ..., 2n} — n+1 values in total.
@@ -132,23 +128,23 @@ func getLagrangeMultipliersPartial(n uint64, c *mathlib.Zr, Curve *mathlib.Curve
 	numers := make([]*mathlib.Zr, len(relevant))
 	denoms := make([]*mathlib.Zr, len(relevant))
 	for k, i := range relevant {
-		numer := Curve.NewZrFromInt(1)
-		denom := Curve.NewZrFromInt(1)
+		numer := math.One(curve)
+		denom := math.One(curve)
 		for j := range total {
 			if j == i {
 				continue
 			}
-			numer = Curve.ModMul(numer, cMinusJ[j], Curve.GroupOrder)
-			denom = Curve.ModMul(denom, fieldDiffInt(i, j, Curve), Curve.GroupOrder)
+			numer = curve.ModMul(numer, cMinusJ[j], curve.GroupOrder)
+			denom = curve.ModMul(denom, fieldDiffInt(i, j, curve), curve.GroupOrder)
 		}
 		numers[k] = numer
 		denoms[k] = denom
 	}
 
-	denomInvs := math.BatchInverse(denoms, Curve)
+	denomInvs := math.BatchInverse(denoms, curve)
 	result := make([]*mathlib.Zr, len(relevant))
 	for k := range relevant {
-		result[k] = Curve.ModMul(numers[k], denomInvs[k], Curve.GroupOrder)
+		result[k] = curve.ModMul(numers[k], denomInvs[k], curve.GroupOrder)
 	}
 
 	return result, nil
@@ -174,7 +170,7 @@ func interpolate(n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve) ([]*
 	// Step 1: precompute denominator d_i = ∏_{j≠i}(i-j) for i=0..n. O(n²).
 	denoms := make([]*mathlib.Zr, m)
 	for i := range m {
-		d := curve.NewZrFromInt(1)
+		d := math.One(curve)
 		for j := range m {
 			if j == i {
 				continue
@@ -193,7 +189,7 @@ func interpolate(n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve) ([]*
 	for x := int(n) + 1; x <= 2*int(n); x++ { // #nosec G115
 		// xMinusJ[j] = x - j, and P(x) = ∏_j xMinusJ[j].
 		xMinusJ := make([]*mathlib.Zr, m)
-		px := curve.NewZrFromInt(1)
+		px := math.One(curve)
 		for j := range m {
 			xMinusJ[j] = fieldDiffInt(x, j, curve)
 			px = curve.ModMul(px, xMinusJ[j], curve.GroupOrder)
@@ -202,7 +198,7 @@ func interpolate(n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve) ([]*
 		// Batch-invert xMinusJ so L_i(x) = px * xMinusJ[i]^{-1} * denomInvs[i].
 		xMinusJInvs := math.BatchInverse(xMinusJ, curve)
 
-		val := curve.NewZrFromInt(0)
+		val := math.Zero(curve)
 		for i := range m {
 			li := curve.ModMul(px, xMinusJInvs[i], curve.GroupOrder)
 			li = curve.ModMul(li, denomInvs[i], curve.GroupOrder)
@@ -395,7 +391,7 @@ func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
 	//   aCoeffs = [a_0, a_1, ..., a_n]:  a_1..a_n are bits of v, a_0 is random
 	//   bCoeffs = [b_0, b_{n+1}, ..., b_{2n}]:  b_i = a(i)*(a(i)-1)
 	a0 := cspp.Curve.NewRandomZr(rand)
-	b0 := cspp.Curve.ModSub(a0, cspp.Curve.NewZrFromUint64(1), cspp.Curve.GroupOrder)
+	b0 := cspp.Curve.ModSub(a0, math.One(cspp.Curve), cspp.Curve.GroupOrder)
 	bitsOfV, err := toBits(cspp.v, n, cspp.Curve)
 	if err != nil {
 		return nil, err
@@ -414,7 +410,7 @@ func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
 	bCoeffs[0] = cspp.Curve.ModMul(a0, b0, cspp.Curve.GroupOrder)
 	for i := uint64(1); i <= n; i++ {
 		ai := aCoeffsExt[n+i]
-		aiMinus1 := cspp.Curve.ModSub(ai, cspp.Curve.NewZrFromUint64(1), cspp.Curve.GroupOrder)
+		aiMinus1 := cspp.Curve.ModSub(ai, math.One(cspp.Curve), cspp.Curve.GroupOrder)
 		bCoeffs[i] = cspp.Curve.ModMul(ai, aiMinus1, cspp.Curve.GroupOrder)
 	}
 
@@ -479,13 +475,11 @@ func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
 	gammaSquare := cspp.Curve.ModMul(gamma, gamma, cspp.Curve.GroupOrder)
 	lf := make([]*mathlib.Zr, len(pExt))
 	for i := range lf {
-		lf[i] = cspp.Curve.NewZrFromInt(0)
+		lf[i] = math.Zero(cspp.Curve)
 	}
-	// L1 contributions.
-	pow2 := cspp.Curve.NewZrFromInt(1)
+	// L1 contribution1s.
 	for i := uint64(1); i <= n; i++ {
-		lf[i] = cspp.Curve.ModMul(eta, pow2, cspp.Curve.GroupOrder)
-		pow2 = cspp.Curve.ModMul(pow2, cspp.Curve.NewZrFromInt(2), cspp.Curve.GroupOrder)
+		lf[i] = cspp.Curve.ModMul(eta, math.PowerOfTwo(cspp.Curve, i-1), cspp.Curve.GroupOrder)
 	}
 	negEta := eta.Copy()
 	negEta.Neg()
@@ -500,7 +494,7 @@ func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
 	}
 
 	// Claimed value: lVal = gamma*u + gamma^2*u*(u-1)  (L1(pExt)=0 for honest prover).
-	uMinus1 := cspp.Curve.ModSub(u, cspp.Curve.NewZrFromUint64(1), cspp.Curve.GroupOrder)
+	uMinus1 := cspp.Curve.ModSub(u, math.One(cspp.Curve), cspp.Curve.GroupOrder)
 	lVal := cspp.Curve.ModAdd(
 		cspp.Curve.ModMul(gamma, u, cspp.Curve.GroupOrder),
 		cspp.Curve.ModMul(gammaSquare, cspp.Curve.ModMul(u, uMinus1, cspp.Curve.GroupOrder), cspp.Curve.GroupOrder),
@@ -546,9 +540,9 @@ func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
 		cspRounds++
 	}
 	for uint64(len(wit)) < paddedSize {
-		wit = append(wit, cspp.Curve.NewZrFromInt(0))
+		wit = append(wit, math.Zero(cspp.Curve))
 		gExt = append(gExt, cspp.Curve.GenG1)
-		lf = append(lf, cspp.Curve.NewZrFromInt(0))
+		lf = append(lf, math.Zero(cspp.Curve))
 	}
 
 	// Non-ZK CSP proof for the blinded statement.
@@ -677,12 +671,10 @@ func (rv *cspRangeVerifier) Verify(proof *CspRangeProof) error {
 	gammaSquare := rv.Curve.ModMul(gamma, gamma, rv.Curve.GroupOrder)
 	lf := make([]*mathlib.Zr, 2*n+4)
 	for i := range lf {
-		lf[i] = rv.Curve.NewZrFromInt(0)
+		lf[i] = math.Zero(rv.Curve)
 	}
-	pow2 := rv.Curve.NewZrFromInt(1)
 	for i := uint64(1); i <= n; i++ {
-		lf[i] = rv.Curve.ModMul(eta, pow2, rv.Curve.GroupOrder)
-		pow2 = rv.Curve.ModMul(pow2, rv.Curve.NewZrFromInt(2), rv.Curve.GroupOrder)
+		lf[i] = rv.Curve.ModMul(eta, math.PowerOfTwo(rv.Curve, i-1), rv.Curve.GroupOrder)
 	}
 	negEta := eta.Copy()
 	negEta.Neg()
@@ -695,7 +687,7 @@ func (rv *cspRangeVerifier) Verify(proof *CspRangeProof) error {
 	}
 
 	// lVal = gamma*u + gamma^2*u*(u-1)
-	uMinus1 := rv.Curve.ModSub(proof.u, rv.Curve.NewZrFromUint64(1), rv.Curve.GroupOrder)
+	uMinus1 := rv.Curve.ModSub(proof.u, math.One(rv.Curve), rv.Curve.GroupOrder)
 	lVal := rv.Curve.ModAdd(
 		rv.Curve.ModMul(gamma, proof.u, rv.Curve.GroupOrder),
 		rv.Curve.ModMul(gammaSquare, rv.Curve.ModMul(proof.u, uMinus1, rv.Curve.GroupOrder), rv.Curve.GroupOrder),
@@ -727,7 +719,7 @@ func (rv *cspRangeVerifier) Verify(proof *CspRangeProof) error {
 	}
 	for uint64(len(gExt)) < paddedSize {
 		gExt = append(gExt, rv.Curve.GenG1)
-		lf = append(lf, rv.Curve.NewZrFromInt(0))
+		lf = append(lf, math.Zero(rv.Curve))
 	}
 
 	cspV := &cspVerifier{
