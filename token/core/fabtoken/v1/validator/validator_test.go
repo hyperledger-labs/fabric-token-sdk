@@ -657,8 +657,8 @@ func TestTransferHTLCValidate(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("NoHTLC", func(t *testing.T) {
-		owner1, _ := identity.WrapWithType("x509", []byte("owner1"))
-		owner2, _ := identity.WrapWithType("x509", []byte("owner2"))
+		owner1, _ := identity.WrapWithType(x509.IdentityType, []byte("owner1"))
+		owner2, _ := identity.WrapWithType(x509.IdentityType, []byte("owner2"))
 		ta := &actions.TransferAction{
 			Outputs: []*actions.Output{{Owner: owner1}},
 		}
@@ -671,8 +671,8 @@ func TestTransferHTLCValidate(t *testing.T) {
 	})
 
 	t.Run("InputIsHTLC_Reclaim_Success", func(t *testing.T) {
-		sender, _ := identity.WrapWithType("x509", []byte("sender"))
-		recipient, _ := identity.WrapWithType("x509", []byte("recipient"))
+		sender, _ := identity.WrapWithType(x509.IdentityType, []byte("sender"))
+		recipient, _ := identity.WrapWithType(x509.IdentityType, []byte("recipient"))
 		preimage := []byte("preimage")
 		hash := crypto.SHA256.New()
 		hash.Write(preimage)
@@ -709,8 +709,8 @@ func TestTransferHTLCValidate(t *testing.T) {
 	})
 
 	t.Run("InputIsHTLC_Claim_Success", func(t *testing.T) {
-		sender, _ := identity.WrapWithType("x509", []byte("sender"))
-		recipient, _ := identity.WrapWithType("x509", []byte("recipient"))
+		sender, _ := identity.WrapWithType(x509.IdentityType, []byte("sender"))
+		recipient, _ := identity.WrapWithType(x509.IdentityType, []byte("recipient"))
 		preimage := []byte("preimage")
 		hash := crypto.SHA256.New()
 		hash.Write(preimage)
@@ -760,8 +760,8 @@ func TestTransferHTLCValidate(t *testing.T) {
 	})
 
 	t.Run("OutputIsHTLC_Success", func(t *testing.T) {
-		sender, _ := identity.WrapWithType("x509", []byte("sender"))
-		recipient, _ := identity.WrapWithType("x509", []byte("recipient"))
+		sender, _ := identity.WrapWithType(x509.IdentityType, []byte("sender"))
+		recipient, _ := identity.WrapWithType(x509.IdentityType, []byte("recipient"))
 		preimage := []byte("preimage")
 		hash := crypto.SHA256.New()
 		hash.Write(preimage)
@@ -815,8 +815,8 @@ func TestTransferHTLCValidate(t *testing.T) {
 	})
 
 	t.Run("InputIsHTLC_TwoOutputs_Error", func(t *testing.T) {
-		sender, _ := identity.WrapWithType("x509", []byte("sender"))
-		recipient, _ := identity.WrapWithType("x509", []byte("recipient"))
+		sender, _ := identity.WrapWithType(x509.IdentityType, []byte("sender"))
+		recipient, _ := identity.WrapWithType(x509.IdentityType, []byte("recipient"))
 		script := &htlc.Script{
 			Sender:    sender,
 			Recipient: recipient,
@@ -845,8 +845,8 @@ func TestTransferHTLCValidate(t *testing.T) {
 	})
 
 	t.Run("InputIsHTLC_TypeMismatch_Error", func(t *testing.T) {
-		sender, _ := identity.WrapWithType("x509", []byte("sender"))
-		recipient, _ := identity.WrapWithType("x509", []byte("recipient"))
+		sender, _ := identity.WrapWithType(x509.IdentityType, []byte("sender"))
+		recipient, _ := identity.WrapWithType(x509.IdentityType, []byte("recipient"))
 		script := &htlc.Script{
 			Sender:    sender,
 			Recipient: recipient,
@@ -874,8 +874,8 @@ func TestTransferHTLCValidate(t *testing.T) {
 	})
 
 	t.Run("InputIsHTLC_QuantityMismatch_Error", func(t *testing.T) {
-		sender, _ := identity.WrapWithType("x509", []byte("sender"))
-		recipient, _ := identity.WrapWithType("x509", []byte("recipient"))
+		sender, _ := identity.WrapWithType(x509.IdentityType, []byte("sender"))
+		recipient, _ := identity.WrapWithType(x509.IdentityType, []byte("recipient"))
 		script := &htlc.Script{
 			Sender:    sender,
 			Recipient: recipient,
@@ -903,8 +903,8 @@ func TestTransferHTLCValidate(t *testing.T) {
 	})
 
 	t.Run("InputIsHTLC_Redeem_Error", func(t *testing.T) {
-		sender, _ := identity.WrapWithType("x509", []byte("sender"))
-		recipient, _ := identity.WrapWithType("x509", []byte("recipient"))
+		sender, _ := identity.WrapWithType(x509.IdentityType, []byte("sender"))
+		recipient, _ := identity.WrapWithType(x509.IdentityType, []byte("recipient"))
 		script := &htlc.Script{
 			Sender:    sender,
 			Recipient: recipient,
@@ -932,8 +932,8 @@ func TestTransferHTLCValidate(t *testing.T) {
 	})
 
 	t.Run("OutputIsHTLC_Expired_Error", func(t *testing.T) {
-		sender, _ := identity.WrapWithType("x509", []byte("sender"))
-		recipient, _ := identity.WrapWithType("x509", []byte("recipient"))
+		sender, _ := identity.WrapWithType(x509.IdentityType, []byte("sender"))
+		recipient, _ := identity.WrapWithType(x509.IdentityType, []byte("recipient"))
 		script := &htlc.Script{
 			Sender:    sender,
 			Recipient: recipient,

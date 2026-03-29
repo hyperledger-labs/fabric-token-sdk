@@ -35,12 +35,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testUseCaseExtra = &benchmark2.Case{
-	Bits:       32,
-	CurveID:    math.BLS12_381_BBS_GURVY,
-	NumInputs:  2,
-	NumOutputs: 2,
-}
+var (
+	testUseCaseExtra = &benchmark2.Case{
+		Bits:       32,
+		CurveID:    math.BLS12_381_BBS_GURVY,
+		NumInputs:  2,
+		NumOutputs: 2,
+	}
+)
 
 type mockSignatureProvider struct {
 	HasBeenSignedByFunc func(ctx context.Context, id driver.Identity, verifier driver.Verifier) ([]byte, error)
@@ -292,8 +294,8 @@ func TestTransferZKProofValidateErrors(t *testing.T) {
 }
 
 func TestTransferHTLCValidateErrors(t *testing.T) {
-	validSenderID, _ := identity.WrapWithType("x509", []byte("owner1"))
-	validRecipientID, _ := identity.WrapWithType("x509", []byte("recipient"))
+	validSenderID, _ := identity.WrapWithType(x509.IdentityType, []byte("owner1"))
+	validRecipientID, _ := identity.WrapWithType(x509.IdentityType, []byte("recipient"))
 
 	newCtx := func() *validator.Context {
 		return &validator.Context{
