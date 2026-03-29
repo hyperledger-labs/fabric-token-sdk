@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file implements a generic, thread-safe registry for storing and retrieving drivers by key.
+// Holder provides concurrent access to a map of drivers with panic on duplicate registration.
 package drivers
 
 import (

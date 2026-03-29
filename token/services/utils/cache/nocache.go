@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file implements a no-op cache that always misses and never stores values.
+// NoCache is useful for testing or when caching should be disabled without changing code.
 package cache
 
 import (

@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file tests ristretto.go which implements a high-performance cache using Ristretto v2.
+// Tests cover basic operations, concurrency, singleflight deduplication, and error handling.
 package cache
 
 import (

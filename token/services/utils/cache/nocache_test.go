@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file tests nocache.go which implements a no-op cache.
+// Tests verify that NoCache always returns cache misses and never stores values.
 package cache
 
 import (

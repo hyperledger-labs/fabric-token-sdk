@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file tests decoder.go which provides strict JSON unmarshaling.
+// Tests verify that unknown fields are properly rejected.
 package json
 
 import (

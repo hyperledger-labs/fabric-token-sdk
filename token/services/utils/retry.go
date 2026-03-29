@@ -4,6 +4,9 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file provides retry logic with exponential backoff and context cancellation support.
+// RetryRunner executes functions with configurable retry strategies, supporting both
+// fixed and exponential backoff delays with a maximum delay cap.
 package utils
 
 import (
