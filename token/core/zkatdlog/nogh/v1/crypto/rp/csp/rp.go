@@ -136,9 +136,20 @@ type rangeProver struct {
 	BGenerators  []*mathlib.G1  // generators to commit to b(X) by committing to b(n+1),...b(2n)
 	NumberOfBits uint64         // number of bits n; the value must lie in [0, 2^n - 1]
 	Curve        *mathlib.Curve // curve
+
+	TranscriptHeader []byte
 }
 
-func NewRangeProver(VCommitment *mathlib.G1, v *mathlib.Zr, r *mathlib.Zr, VGenerators []*mathlib.G1, AGenerators []*mathlib.G1, BGenerators []*mathlib.G1, numberOfBits uint64, curve *mathlib.Curve) *rangeProver {
+func NewRangeProver(
+	VCommitment *mathlib.G1,
+	v *mathlib.Zr,
+	r *mathlib.Zr,
+	VGenerators []*mathlib.G1,
+	AGenerators []*mathlib.G1,
+	BGenerators []*mathlib.G1,
+	numberOfBits uint64,
+	curve *mathlib.Curve,
+) *rangeProver {
 	return &rangeProver{
 		VCommitment:  VCommitment,
 		v:            v,
@@ -151,35 +162,44 @@ func NewRangeProver(VCommitment *mathlib.G1, v *mathlib.Zr, r *mathlib.Zr, VGene
 	}
 }
 
+func (rp *rangeProver) WithTranscriptHeader(h []byte) *rangeProver {
+	rp.TranscriptHeader = h
+
+	return rp
+}
+
 func (rp *rangeProver) Prove() (*RangeProof, error) {
 	// Validate all inputs
 	if err := validateRangeProverInputs(rp.Curve, rp); err != nil {
 		return nil, errors.Wrap(err, "invalid range prover inputs")
 	}
 
-	tr := Transcript{Curve: rp.Curve}
-	tr.InitHasher()
 	n := rp.NumberOfBits
+	tr := Transcript{Curve: rp.Curve}
+	if len(rp.TranscriptHeader) != 0 {
+		tr.SetState(rp.TranscriptHeader)
+	} else {
+		tr.InitHasher()
+		// Absorb the public statement: VCommitment || VGenerators || AGenerators || BGenerators || NumberOfBits.
+		for _, g := range rp.VGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		for _, g := range rp.AGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		for _, g := range rp.BGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		tr.Absorb(new(big.Int).SetUint64(n).Bytes())
+	}
+	tr.Absorb(rp.VCommitment.Bytes())
+
+	// Schnorr proof of knowledge for VCommitment = v·G_v + r·G_r.
+	// Prover samples blinding scalars, commits, then responds to the FS challenge.
 	rand, err := rp.Curve.Rand()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize random number generator")
 	}
-
-	// Absorb the public statement: VCommitment || VGenerators || AGenerators || BGenerators || NumberOfBits.
-	tr.Absorb(rp.VCommitment.Bytes())
-	for _, g := range rp.VGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	for _, g := range rp.AGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	for _, g := range rp.BGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	tr.Absorb(new(big.Int).SetUint64(n).Bytes())
-
-	// Schnorr proof of knowledge for VCommitment = v·G_v + r·G_r.
-	// Prover samples blinding scalars, commits, then responds to the FS challenge.
 	pokTv := rp.Curve.NewRandomZr(rand)
 	pokTr := rp.Curve.NewRandomZr(rand)
 	pokA := rp.Curve.MultiScalarMul(rp.VGenerators, []*mathlib.Zr{pokTv, pokTr})
@@ -189,8 +209,16 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 		return nil, errors.New("unable to obtain PoK challenge")
 	}
 	// z_v = t_v + e·v,  z_r = t_r + e·r
-	pokZv := rp.Curve.ModAdd(pokTv, rp.Curve.ModMul(pokE, rp.v, rp.Curve.GroupOrder), rp.Curve.GroupOrder)
-	pokZr := rp.Curve.ModAdd(pokTr, rp.Curve.ModMul(pokE, rp.r, rp.Curve.GroupOrder), rp.Curve.GroupOrder)
+	pokZv := rp.Curve.ModAddMul2(
+		pokTv, math.One(rp.Curve),
+		pokE, rp.v,
+		rp.Curve.GroupOrder,
+	)
+	pokZr := rp.Curve.ModAddMul2(
+		pokTr, math.One(rp.Curve),
+		pokE, rp.r,
+		rp.Curve.GroupOrder,
+	)
 
 	// Step 1: Compute witness p = aCoeffs || bCoeffs where
 	//   aCoeffs = [a_0, a_1, ..., a_n]:  a_1..a_n are bits of v, a_0 is random
@@ -257,7 +285,7 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 
 	// Extended commitment: pCommExt = pComm + eta * VCommitment.
 	pCommExt := pComm.Copy()
-	pCommExt.Add(rp.VCommitment.Copy().Mul(eta))
+	pCommExt.Add(rp.VCommitment.Mul(eta))
 
 	// Extended witness pExt = aCoeffs || bCoeffs || v || r
 	// over generators  gExt = AGenerators || BGenerators || VGenerators.
@@ -267,8 +295,8 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 	pExt[2*n+2] = rp.v.Copy()
 	pExt[2*n+3] = rp.r.Copy()
 	copy(gExt, g)
-	gExt[2*n+2] = rp.VGenerators[0].Copy().Mul(eta)
-	gExt[2*n+3] = rp.VGenerators[1].Copy().Mul(eta)
+	gExt[2*n+2] = rp.VGenerators[0].Mul(eta)
+	gExt[2*n+3] = rp.VGenerators[1].Mul(eta)
 
 	// Build aggregated linear form lf = L1 + gamma*L2 + gamma^2*L3 over pExt.
 	//
@@ -291,7 +319,11 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 	lf[2*n+2] = negEta
 	// L2 contributions: add gamma*mu[i] at positions 0..n.
 	for i := uint64(0); i <= n; i++ {
-		lf[i] = rp.Curve.ModAdd(lf[i], rp.Curve.ModMul(gamma, mu[i], rp.Curve.GroupOrder), rp.Curve.GroupOrder)
+		lf[i] = rp.Curve.ModAddMul2(
+			lf[i], math.One(rp.Curve),
+			gamma, mu[i],
+			rp.Curve.GroupOrder,
+		)
 	}
 	// L3 contributions: gamma^2*nu[k] at positions n+1..2n+1.
 	for k := uint64(0); k <= n; k++ {
@@ -300,9 +332,9 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 
 	// Claimed value: lVal = gamma*u + gamma^2*u*(u-1)  (L1(pExt)=0 for honest prover).
 	uMinus1 := rp.Curve.ModSub(u, math.One(rp.Curve), rp.Curve.GroupOrder)
-	lVal := rp.Curve.ModAdd(
-		rp.Curve.ModMul(gamma, u, rp.Curve.GroupOrder),
-		rp.Curve.ModMul(gammaSquare, rp.Curve.ModMul(u, uMinus1, rp.Curve.GroupOrder), rp.Curve.GroupOrder),
+	lVal := rp.Curve.ModAddMul2(
+		gamma, u,
+		gammaSquare, rp.Curve.ModMul(u, uMinus1, rp.Curve.GroupOrder),
 		rp.Curve.GroupOrder,
 	)
 
@@ -326,15 +358,19 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 	//   L(wit)         = lVal + rho*sVal
 	wit := make([]*mathlib.Zr, len(pExt))
 	for i := range pExt {
-		wit[i] = rp.Curve.ModAdd(
-			pExt[i],
-			rp.Curve.ModMul(rho, sBlind[i], rp.Curve.GroupOrder),
+		wit[i] = rp.Curve.ModAddMul2(
+			pExt[i], math.One(rp.Curve),
+			rho, sBlind[i],
 			rp.Curve.GroupOrder,
 		)
 	}
 	witComm := pCommExt.Copy()
 	witComm.Add(sComm.Mul(rho))
-	witVal := rp.Curve.ModAdd(lVal, rp.Curve.ModMul(rho, sVal, rp.Curve.GroupOrder), rp.Curve.GroupOrder)
+	witVal := rp.Curve.ModAddMul2(
+		lVal, math.One(rp.Curve),
+		rho, sVal,
+		rp.Curve.GroupOrder,
+	)
 
 	// Pad witness / generators / linear form to the next power of 2 for CSP.
 	witSize := uint64(len(wit))
@@ -360,7 +396,7 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 		Curve:          rp.Curve,
 		witness:        wit,
 	}
-	cspProof, err := cspP.Prove()
+	cspProof, err := cspP.WithTranscriptHeader(rp.TranscriptHeader).Prove()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate CSP proof")
 	}
@@ -382,10 +418,18 @@ type rangeVerifier struct {
 	VCommitment  *mathlib.G1   // commitment to value v
 	NumberOfBits uint64        // number of bits n; the value must lie in [0, 2^n - 1]
 	Curve        *mathlib.Curve
+
+	TranscriptHeader []byte
 }
 
 func NewRangeVerifier(VGenerators []*mathlib.G1, AGenerators []*mathlib.G1, BGenerators []*mathlib.G1, VCommitment *mathlib.G1, numberOfBits uint64, curve *mathlib.Curve) *rangeVerifier {
 	return &rangeVerifier{VGenerators: VGenerators, AGenerators: AGenerators, BGenerators: BGenerators, VCommitment: VCommitment, NumberOfBits: numberOfBits, Curve: curve}
+}
+
+func (rv *rangeVerifier) WithTranscriptHeader(h []byte) *rangeVerifier {
+	rv.TranscriptHeader = h
+
+	return rv
 }
 
 // Verify checks that proof is a valid CSP range proof against the public statement.
@@ -402,22 +446,26 @@ func (rv *rangeVerifier) Verify(proof *RangeProof) error {
 		return errors.Wrap(err, "invalid range proof structure")
 	}
 
-	tr := Transcript{Curve: rv.Curve}
-	tr.InitHasher()
 	n := rv.NumberOfBits
+	tr := Transcript{Curve: rv.Curve}
+	if len(rv.TranscriptHeader) != 0 {
+		tr.SetState(rv.TranscriptHeader)
+	} else {
+		tr.InitHasher()
 
-	// Replay transcript: absorb the same public statement as the prover.
+		// Replay transcript: absorb the same public statement as the prover.
+		for _, g := range rv.VGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		for _, g := range rv.AGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		for _, g := range rv.BGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		tr.Absorb(new(big.Int).SetUint64(n).Bytes())
+	}
 	tr.Absorb(rv.VCommitment.Bytes())
-	for _, g := range rv.VGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	for _, g := range rv.AGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	for _, g := range rv.BGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	tr.Absorb(new(big.Int).SetUint64(n).Bytes())
 
 	// Verify Schnorr PoK for VCommitment = v·G_v + r·G_r.
 	// Check: z_v·G_v + z_r·G_r == pokA + e·V
@@ -428,7 +476,7 @@ func (rv *rangeVerifier) Verify(proof *RangeProof) error {
 	}
 	pokLHS := rv.Curve.MultiScalarMul(rv.VGenerators, proof.pokV.Z)
 	pokRHS := proof.pokV.A.Copy()
-	pokRHS.Add(rv.VCommitment.Copy().Mul(pokE))
+	pokRHS.Add(rv.VCommitment.Mul(pokE))
 	if !pokLHS.Equals(pokRHS) {
 		return errors.New("proof of knowledge for value commitment failed")
 	}
@@ -463,14 +511,14 @@ func (rv *rangeVerifier) Verify(proof *RangeProof) error {
 
 	// pCommExt = pComm + eta * VCommitment
 	pCommExt := proof.pComm.Copy()
-	pCommExt.Add(rv.VCommitment.Copy().Mul(eta))
+	pCommExt.Add(rv.VCommitment.Mul(eta))
 
 	// Rebuild gExt = AGenerators || BGenerators || VGenerators (size 2n+4).
 	gExt := make([]*mathlib.G1, 2*n+4)
 	copy(gExt, rv.AGenerators)
 	copy(gExt[n+1:], rv.BGenerators)
-	gExt[2*n+2] = rv.VGenerators[0].Copy().Mul(eta)
-	gExt[2*n+3] = rv.VGenerators[1].Copy().Mul(eta)
+	gExt[2*n+2] = rv.VGenerators[0].Mul(eta)
+	gExt[2*n+3] = rv.VGenerators[1].Mul(eta)
 
 	// Rebuild lf = L1 + gamma*L2 + gamma^2*L3 — identical to the prover.
 	gammaSquare := rv.Curve.ModMul(gamma, gamma, rv.Curve.GroupOrder)
@@ -485,7 +533,11 @@ func (rv *rangeVerifier) Verify(proof *RangeProof) error {
 	negEta.Neg()
 	lf[2*n+2] = negEta
 	for i := uint64(0); i <= n; i++ {
-		lf[i] = rv.Curve.ModAdd(lf[i], rv.Curve.ModMul(gamma, mu[i], rv.Curve.GroupOrder), rv.Curve.GroupOrder)
+		lf[i] = rv.Curve.ModAddMul2(
+			lf[i], math.One(rv.Curve),
+			gamma, mu[i],
+			rv.Curve.GroupOrder,
+		)
 	}
 	for k := uint64(0); k <= n; k++ {
 		lf[n+1+k] = rv.Curve.ModMul(gammaSquare, nu[k], rv.Curve.GroupOrder)
@@ -493,9 +545,9 @@ func (rv *rangeVerifier) Verify(proof *RangeProof) error {
 
 	// lVal = gamma*u + gamma^2*u*(u-1)
 	uMinus1 := rv.Curve.ModSub(proof.u, math.One(rv.Curve), rv.Curve.GroupOrder)
-	lVal := rv.Curve.ModAdd(
-		rv.Curve.ModMul(gamma, proof.u, rv.Curve.GroupOrder),
-		rv.Curve.ModMul(gammaSquare, rv.Curve.ModMul(proof.u, uMinus1, rv.Curve.GroupOrder), rv.Curve.GroupOrder),
+	lVal := rv.Curve.ModAddMul2(
+		gamma, proof.u,
+		gammaSquare, rv.Curve.ModMul(proof.u, uMinus1, rv.Curve.GroupOrder),
 		rv.Curve.GroupOrder,
 	)
 
@@ -509,10 +561,14 @@ func (rv *rangeVerifier) Verify(proof *RangeProof) error {
 
 	// witComm = pCommExt + rho*sComm
 	witComm := pCommExt.Copy()
-	witComm.Add(proof.sComm.Copy().Mul(rho))
+	witComm.Add(proof.sComm.Mul(rho))
 
 	// witVal = lVal + rho*sEval
-	witVal := rv.Curve.ModAdd(lVal, rv.Curve.ModMul(rho, proof.sEval, rv.Curve.GroupOrder), rv.Curve.GroupOrder)
+	witVal := rv.Curve.ModAddMul2(
+		lVal, math.One(rv.Curve),
+		rho, proof.sEval,
+		rv.Curve.GroupOrder,
+	)
 
 	// Pad gExt and lf to the next power of 2 (same logic as prover).
 	extSize := uint64(len(gExt))
@@ -536,7 +592,7 @@ func (rv *rangeVerifier) Verify(proof *RangeProof) error {
 		Curve:          rv.Curve,
 	}
 
-	return cspV.Verify(&proof.cspProof)
+	return cspV.WithTranscriptHeader(rv.TranscriptHeader).Verify(&proof.cspProof)
 }
 
 // toBits returns the n-bit little-endian representation of v as field elements,
@@ -726,6 +782,7 @@ func interpolate(n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve) ([]*
 		for i := range m {
 			li := curve.ModMul(px, xMinusJInvs[i], curve.GroupOrder)
 			li = curve.ModMul(li, denomInvs[i], curve.GroupOrder)
+
 			val = curve.ModAdd(val, curve.ModMul(li, valuesOverN[i], curve.GroupOrder), curve.GroupOrder)
 		}
 		result[x] = val

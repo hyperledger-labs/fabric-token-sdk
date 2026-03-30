@@ -9,6 +9,7 @@ package setup
 import (
 	"crypto/sha256"
 	math3 "math"
+	"math/big"
 	"math/bits"
 	"strconv"
 
@@ -24,6 +25,7 @@ import (
 	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/csp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
@@ -50,9 +52,10 @@ type SetupParams struct {
 }
 
 type CSPRangeProofParams struct {
-	LeftGenerators  []*mathlib.G1
-	RightGenerators []*mathlib.G1
-	BitLength       uint64
+	LeftGenerators     []*mathlib.G1
+	RightGenerators    []*mathlib.G1
+	BitLength          uint64
+	RPTranscriptHeader []byte
 }
 
 func (rpp *CSPRangeProofParams) Validate(curveID mathlib.CurveID) error {
@@ -632,6 +635,22 @@ func (p *PublicParams) ComputeMaxTokenValue() uint64 {
 		return 1<<p.RangeProofParams.BitLength - 1
 	}
 	if p.CSPRangeProofParams != nil {
+		tr := csp.Transcript{Curve: mathlib.Curves[p.Curve]}
+		tr.InitHasher()
+		// Absorb the public statement: VCommitment || VGenerators || AGenerators || BGenerators || NumberOfBits.
+		for _, g := range p.PedersenGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		for _, g := range p.CSPRangeProofParams.LeftGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		for _, g := range p.CSPRangeProofParams.RightGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		n := p.CSPRangeProofParams.BitLength
+		tr.Absorb(new(big.Int).SetUint64(n).Bytes())
+		p.CSPRangeProofParams.RPTranscriptHeader = tr.State()
+
 		return 1<<p.CSPRangeProofParams.BitLength - 1
 	}
 
@@ -708,7 +727,7 @@ func (p *PublicParams) Validate() error {
 
 	maxToken := p.ComputeMaxTokenValue()
 	if maxToken != p.MaxToken {
-		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, p.MaxToken)
+		return errors.Errorf("invalid max token, [%d]!=[%d]", maxToken, p.MaxToken)
 	}
 
 	return nil

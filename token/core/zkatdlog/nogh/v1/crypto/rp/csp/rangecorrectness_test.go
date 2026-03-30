@@ -54,7 +54,7 @@ func TestCSPRangeCorrectnessProveVerify(t *testing.T) {
 			}
 
 			// Prove
-			prover := NewCSPRangeCorrectnessProver(
+			prover := NewRangeCorrectnessProver(
 				commitments,
 				values,
 				blindingFactors,
@@ -71,7 +71,7 @@ func TestCSPRangeCorrectnessProveVerify(t *testing.T) {
 			require.Len(t, rc.Proofs, numCommitments)
 
 			// Verify
-			verifier := NewCSPRangeCorrectnessVerifier(
+			verifier := NewRangeCorrectnessVerifier(
 				pedersenParams,
 				leftGens,
 				rightGens,
@@ -116,7 +116,7 @@ func TestCSPRangeCorrectnessSingleCommitment(t *testing.T) {
 			v := curve.NewZrFromUint64(value)
 			commitment := curve.MultiScalarMul(pedersenParams, []*math.Zr{v, blindingFactor})
 
-			prover := NewCSPRangeCorrectnessProver(
+			prover := NewRangeCorrectnessProver(
 				[]*math.G1{commitment},
 				[]uint64{value},
 				[]*math.Zr{blindingFactor},
@@ -131,7 +131,7 @@ func TestCSPRangeCorrectnessSingleCommitment(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, rc.Proofs, 1)
 
-			verifier := NewCSPRangeCorrectnessVerifier(
+			verifier := NewRangeCorrectnessVerifier(
 				pedersenParams,
 				leftGens,
 				rightGens,
@@ -168,7 +168,7 @@ func TestCSPRangeCorrectnessEmptyCommitments(t *testing.T) {
 				rightGens[i] = curve.HashToG1([]byte{byte(i), 1})
 			}
 
-			prover := NewCSPRangeCorrectnessProver(
+			prover := NewRangeCorrectnessProver(
 				[]*math.G1{},
 				[]uint64{},
 				[]*math.Zr{},
@@ -183,7 +183,7 @@ func TestCSPRangeCorrectnessEmptyCommitments(t *testing.T) {
 			require.NoError(t, err)
 			require.Empty(t, rc.Proofs)
 
-			verifier := NewCSPRangeCorrectnessVerifier(
+			verifier := NewRangeCorrectnessVerifier(
 				pedersenParams,
 				leftGens,
 				rightGens,
@@ -232,11 +232,11 @@ func TestCSPRangeCorrectnessMismatchedProofCount(t *testing.T) {
 			}
 
 			// Create proof with only 1 proof
-			rc := &CSPRangeCorrectness{
+			rc := &RangeCorrectness{
 				Proofs: []*RangeProof{{}},
 			}
 
-			verifier := NewCSPRangeCorrectnessVerifier(
+			verifier := NewRangeCorrectnessVerifier(
 				pedersenParams,
 				leftGens,
 				rightGens,
@@ -279,11 +279,11 @@ func TestCSPRangeCorrectnessNilProof(t *testing.T) {
 
 			commitment := curve.GenG1.Mul(curve.NewRandomZr(rand))
 
-			rc := &CSPRangeCorrectness{
+			rc := &RangeCorrectness{
 				Proofs: []*RangeProof{nil},
 			}
 
-			verifier := NewCSPRangeCorrectnessVerifier(
+			verifier := NewRangeCorrectnessVerifier(
 				pedersenParams,
 				leftGens,
 				rightGens,
@@ -336,7 +336,7 @@ func TestCSPRangeCorrectnessSerializationRoundTrip(t *testing.T) {
 				commitments[i] = curve.MultiScalarMul(pedersenParams, []*math.Zr{v, blindingFactors[i]})
 			}
 
-			prover := NewCSPRangeCorrectnessProver(
+			prover := NewRangeCorrectnessProver(
 				commitments,
 				values,
 				blindingFactors,
@@ -356,7 +356,7 @@ func TestCSPRangeCorrectnessSerializationRoundTrip(t *testing.T) {
 			require.NotEmpty(t, serialized)
 
 			// Deserialize
-			rc2 := &CSPRangeCorrectness{}
+			rc2 := &RangeCorrectness{}
 			err = rc2.Deserialize(serialized)
 			require.NoError(t, err)
 			require.Len(t, rc2.Proofs, numCommitments)
@@ -366,7 +366,7 @@ func TestCSPRangeCorrectnessSerializationRoundTrip(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify deserialized proof
-			verifier := NewCSPRangeCorrectnessVerifier(
+			verifier := NewRangeCorrectnessVerifier(
 				pedersenParams,
 				leftGens,
 				rightGens,
@@ -391,13 +391,13 @@ func TestCSPRangeCorrectnessValidate(t *testing.T) {
 		t.Run(fmt.Sprintf("curveID=%d", curveID), func(t *testing.T) {
 			testCases := []struct {
 				name      string
-				rc        *CSPRangeCorrectness
+				rc        *RangeCorrectness
 				curveID   math.CurveID
 				expectErr bool
 			}{
 				{
 					name: "valid_empty",
-					rc: &CSPRangeCorrectness{
+					rc: &RangeCorrectness{
 						Proofs: []*RangeProof{},
 					},
 					curveID:   curveID,
@@ -405,7 +405,7 @@ func TestCSPRangeCorrectnessValidate(t *testing.T) {
 				},
 				{
 					name: "valid_single",
-					rc: &CSPRangeCorrectness{
+					rc: &RangeCorrectness{
 						Proofs: []*RangeProof{{}},
 					},
 					curveID:   curveID,
@@ -413,7 +413,7 @@ func TestCSPRangeCorrectnessValidate(t *testing.T) {
 				},
 				{
 					name: "nil_proof",
-					rc: &CSPRangeCorrectness{
+					rc: &RangeCorrectness{
 						Proofs: []*RangeProof{nil},
 					},
 					curveID:   curveID,
@@ -421,7 +421,7 @@ func TestCSPRangeCorrectnessValidate(t *testing.T) {
 				},
 				{
 					name: "mixed_nil",
-					rc: &CSPRangeCorrectness{
+					rc: &RangeCorrectness{
 						Proofs: []*RangeProof{{}, nil, {}},
 					},
 					curveID:   curveID,
@@ -484,7 +484,7 @@ func TestCSPRangeCorrectnessLargeSet(t *testing.T) {
 				commitments[i] = curve.MultiScalarMul(pedersenParams, []*math.Zr{v, blindingFactors[i]})
 			}
 
-			prover := NewCSPRangeCorrectnessProver(
+			prover := NewRangeCorrectnessProver(
 				commitments,
 				values,
 				blindingFactors,
@@ -499,7 +499,7 @@ func TestCSPRangeCorrectnessLargeSet(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, rc.Proofs, numCommitments)
 
-			verifier := NewCSPRangeCorrectnessVerifier(
+			verifier := NewRangeCorrectnessVerifier(
 				pedersenParams,
 				leftGens,
 				rightGens,
@@ -549,7 +549,7 @@ func TestCSPRangeCorrectnessBoundaryValues(t *testing.T) {
 				commitments[i] = curve.MultiScalarMul(pedersenParams, []*math.Zr{v, blindingFactors[i]})
 			}
 
-			prover := NewCSPRangeCorrectnessProver(
+			prover := NewRangeCorrectnessProver(
 				commitments,
 				boundaryValues,
 				blindingFactors,
@@ -563,7 +563,7 @@ func TestCSPRangeCorrectnessBoundaryValues(t *testing.T) {
 			rc, err := prover.Prove()
 			require.NoError(t, err)
 
-			verifier := NewCSPRangeCorrectnessVerifier(
+			verifier := NewRangeCorrectnessVerifier(
 				pedersenParams,
 				leftGens,
 				rightGens,
@@ -608,7 +608,7 @@ func TestCSPRangeCorrectnessWrongCommitment(t *testing.T) {
 			v := curve.NewZrFromUint64(value)
 			commitment := curve.MultiScalarMul(pedersenParams, []*math.Zr{v, blindingFactor})
 
-			prover := NewCSPRangeCorrectnessProver(
+			prover := NewRangeCorrectnessProver(
 				[]*math.G1{commitment},
 				[]uint64{value},
 				[]*math.Zr{blindingFactor},
@@ -625,7 +625,7 @@ func TestCSPRangeCorrectnessWrongCommitment(t *testing.T) {
 			// Use wrong commitment for verification
 			wrongCommitment := curve.GenG1.Mul(curve.NewRandomZr(rand))
 
-			verifier := NewCSPRangeCorrectnessVerifier(
+			verifier := NewRangeCorrectnessVerifier(
 				pedersenParams,
 				leftGens,
 				rightGens,
@@ -648,7 +648,7 @@ func TestCSPRangeCorrectnessDeserializeInvalid(t *testing.T) {
 	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
 	for _, curveID := range curves {
 		t.Run(fmt.Sprintf("curveID=%d", curveID), func(t *testing.T) {
-			rc := &CSPRangeCorrectness{}
+			rc := &RangeCorrectness{}
 
 			testCases := []struct {
 				name string

@@ -23,7 +23,7 @@ type CSPProof struct {
 	// SameType is the proof that all issued tokens have the same type.
 	SameType *SameType
 	// RangeCorrectness is the proof that issued tokens have values in the authorized range.
-	RangeCorrectness *csp.CSPRangeCorrectness
+	RangeCorrectness *csp.RangeCorrectness
 }
 
 // Serialize marshals the CSPProof into its byte representation.
@@ -34,7 +34,7 @@ func (p *CSPProof) Serialize() ([]byte, error) {
 // Deserialize unmarshals the CSPProof from its byte representation.
 func (p *CSPProof) Deserialize(bytes []byte) error {
 	p.SameType = &SameType{}
-	p.RangeCorrectness = &csp.CSPRangeCorrectness{}
+	p.RangeCorrectness = &csp.RangeCorrectness{}
 
 	if err := asn1.Unmarshal[asn1.Serializer](bytes, p.SameType, p.RangeCorrectness); err != nil {
 		return errors.Join(ErrDeserializeProofFailed, err)
@@ -48,7 +48,7 @@ type CSPBasedProver struct {
 	// SameType is the prover for the same-type property.
 	SameType *SameTypeProver
 	// RangeCorrectness is the prover for the range correctness property.
-	RangeCorrectness *csp.CSPRangeCorrectnessProver
+	RangeCorrectness *csp.RangeCorrectnessProver
 }
 
 // NewCSPBasedProver instantiates a CSPBasedProver for an issue action using the provided witnesses, tokens, and public parameters.
@@ -84,7 +84,7 @@ func NewCSPBasedProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicPar
 		coms[i].Sub(commitmentToType)
 	}
 	// The range prover takes commitments to values (tokens[i] / commitmentToType).
-	p.RangeCorrectness = csp.NewCSPRangeCorrectnessProver(
+	p.RangeCorrectness = csp.NewRangeCorrectnessProver(
 		coms,
 		values,
 		blindingFactors,
@@ -130,14 +130,14 @@ type CSPVerifier struct {
 	// SameType is the verifier for the same-type property.
 	SameType *SameTypeVerifier
 	// RangeCorrectness is the verifier for the range correctness property.
-	RangeCorrectness *csp.CSPRangeCorrectnessVerifier
+	RangeCorrectness *csp.RangeCorrectnessVerifier
 }
 
 // NewCSPVerifier instantiates a CSPVerifier for the given token commitments and public parameters.
 func NewCSPVerifier(tokens []*math.G1, pp *v1.PublicParams) *CSPVerifier {
 	v := &CSPVerifier{}
 	v.SameType = NewSameTypeVerifier(tokens, pp.PedersenGenerators, math.Curves[pp.Curve])
-	v.RangeCorrectness = csp.NewCSPRangeCorrectnessVerifier(
+	v.RangeCorrectness = csp.NewRangeCorrectnessVerifier(
 		pp.PedersenGenerators[1:],
 		pp.CSPRangeProofParams.LeftGenerators,
 		pp.CSPRangeProofParams.RightGenerators,

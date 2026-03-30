@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	fscprofile "github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/stretchr/testify/require"
 )
@@ -245,6 +246,11 @@ func TestRangeProofTamperedPoKZ(t *testing.T) {
 
 // BenchmarkRangeProofProve measures prover performance for n=30 and n=62.
 func BenchmarkBFProver(b *testing.B) {
+	p, err := fscprofile.New(fscprofile.WithAll(), fscprofile.WithPath("./profile"))
+	require.NoError(b, err)
+	require.NoError(b, p.Start())
+	defer p.Stop()
+
 	cases := []struct {
 		n     uint64
 		value int64

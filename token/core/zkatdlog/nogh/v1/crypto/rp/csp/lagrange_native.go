@@ -27,6 +27,8 @@ type gnarkFr[T any] interface {
 	Sub(*T, *T) *T
 	Mul(*T, *T) *T
 	SetInt64(int64) *T
+	SetOne() *T
+	SetZero() *T
 	Inverse(*T) *T
 }
 
@@ -37,7 +39,7 @@ func nativeElem[T any, E gnarkFr[T]]() E { return E(new(T)) }
 // Only one big.Int conversion happens here.
 func nativeFromZr[T any, E gnarkFr[T]](z *mathlib.Zr) E {
 	e := nativeElem[T, E]()
-	e.SetBigInt(new(big.Int).SetBytes(z.Bytes()))
+	e.SetBigInt(z.BigInt())
 
 	return e
 }
@@ -47,7 +49,7 @@ func nativeToZr[T any, E gnarkFr[T]](e E, curve *mathlib.Curve) *mathlib.Zr {
 	var bi big.Int
 	e.BigInt(&bi)
 
-	return curve.NewZrFromBytes(bi.Bytes())
+	return curve.NewZrFromBigInt(&bi)
 }
 
 // nativeBatchInverse computes the modular inverse of every element in elems
@@ -116,8 +118,8 @@ func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, 
 	}
 
 	for i := range m {
-		numersE[i].SetInt64(1)
-		denomsE[i].SetInt64(1)
+		numersE[i].SetOne()
+		denomsE[i].SetOne()
 		var diff T
 		diffE := E(&diff)
 		for j := range m {
@@ -176,8 +178,8 @@ func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathl
 	}
 
 	for k, i := range relevant {
-		numersE[k].SetInt64(1)
-		denomsE[k].SetInt64(1)
+		numersE[k].SetOne()
+		denomsE[k].SetOne()
 		var diff T
 		diffE := E(&diff)
 		for j := range total {
@@ -211,7 +213,16 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 	valsE := make([]E, m)
 	for i := range m {
 		valsE[i] = E(&vals[i])
-		valsE[i].SetBigInt(new(big.Int).SetBytes(valuesOverN[i].Bytes()))
+
+		v := valuesOverN[i]
+		switch {
+		case v.IsZero():
+			valsE[i].SetZero()
+		case v.IsOne():
+			valsE[i].SetOne()
+		default:
+			valsE[i].SetBigInt(valuesOverN[i].BigInt())
+		}
 	}
 
 	// d_i = ∏_{j≠i}(i-j)  for i = 0..n  (denominator of the i-th basis polynomial)
@@ -219,7 +230,7 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 	denomsE := make([]E, m)
 	for i := range denoms {
 		denomsE[i] = E(&denoms[i])
-		denomsE[i].SetInt64(1)
+		denomsE[i].SetOne()
 		var diff T
 		diffE := E(&diff)
 		for j := range m {
@@ -243,7 +254,7 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 		xMinusJE := make([]E, m)
 		var px T
 		pxE := E(&px)
-		pxE.SetInt64(1)
+		pxE.SetOne()
 		for j := range m {
 			xMinusJE[j] = E(&xMinusJ[j])
 			xMinusJE[j].SetInt64(int64(x - j)) // #nosec G115

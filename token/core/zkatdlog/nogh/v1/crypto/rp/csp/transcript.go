@@ -38,6 +38,14 @@ func (tr *Transcript) Absorb(hashBytes []byte) {
 	tr.fsState = newHash[:]
 }
 
+func (tr *Transcript) State() []byte {
+	return tr.fsState
+}
+
+func (tr *Transcript) SetState(state []byte) {
+	tr.fsState = state
+}
+
 // Squeeze out a challenge
 func (tr *Transcript) Squeeze() (*mathlib.Zr, error) {
 	raw, err := asn1.MarshalStd(tr.fsState)
