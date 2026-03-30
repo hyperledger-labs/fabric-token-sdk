@@ -60,7 +60,6 @@ func Topology(opts common.Opts) []api.Topology {
 	fscTopology.SetLogging(opts.FSCLogSpec, "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
-		fabric.WithDefaultIdentityByHSM(),
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		token.WithDefaultIssuerIdentity(opts.HSM),
@@ -68,6 +67,9 @@ func Topology(opts common.Opts) []api.Topology {
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
+	if opts.HSM {
+		issuer.AddOptions(fabric.WithDefaultIdentityByHSM())
+	}
 	issuer.AddOptions(opts.ReplicationOpts.For("issuer")...)
 
 	newIssuer := fscTopology.AddNodeByName("newIssuer").AddOptions(
