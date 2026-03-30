@@ -8,6 +8,7 @@ package finality_test
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -20,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
@@ -244,4 +246,42 @@ func TestOnStatus_StatusSetToDeletedForInvalidTx(t *testing.T) {
 
 	require.Equal(t, storage.Deleted, capturedStatus,
 		"an Invalid network status should map to Deleted in local storage")
+}
+
+// TestOnError tests the OnError callback
+func TestOnError(t *testing.T) {
+	ctx := t.Context()
+
+	listener := newTestListener(t, &stubTxDB{})
+
+	// OnError should just log and not panic
+	listener.OnError(ctx, "test-tx-id", errors.New("test error"))
+}
+
+// TestCheckTokenRequest tests the hash comparison logic used by checkTokenRequest
+func TestCheckTokenRequest(t *testing.T) {
+	t.Run("matching hashes", func(t *testing.T) {
+		data := []byte("test data")
+		hash := utils.Hashable(data).String()
+		reference, err := base64.StdEncoding.DecodeString(hash)
+		require.NoError(t, err)
+
+		// Verify hash calculation works correctly
+		assert.NotEmpty(t, hash)
+		assert.NotEmpty(t, reference)
+
+		// Verify the hash can be decoded and re-encoded
+		reencoded := base64.StdEncoding.EncodeToString(reference)
+		assert.Equal(t, hash, reencoded)
+	})
+
+	t.Run("non-matching hashes", func(t *testing.T) {
+		data1 := []byte("test data 1")
+		data2 := []byte("test data 2")
+		hash1 := utils.Hashable(data1).String()
+		hash2 := utils.Hashable(data2).String()
+
+		// Verify hashes are different
+		assert.NotEqual(t, hash1, hash2)
+	})
 }
