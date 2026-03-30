@@ -23,14 +23,14 @@ var logger = logging.MustGetLogger()
 type TypedVerifierDeserializer = driver2.TypedVerifierDeserializer
 
 type TypedVerifierDeserializerMultiplex struct {
-	deserializers map[string][]driver2.TypedVerifierDeserializer
+	deserializers map[driver2.IdentityType][]driver2.TypedVerifierDeserializer
 }
 
 func NewTypedVerifierDeserializerMultiplex() *TypedVerifierDeserializerMultiplex {
-	return &TypedVerifierDeserializerMultiplex{deserializers: map[string][]TypedVerifierDeserializer{}}
+	return &TypedVerifierDeserializerMultiplex{deserializers: map[driver2.IdentityType][]TypedVerifierDeserializer{}}
 }
 
-func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ string, d TypedVerifierDeserializer) {
+func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ driver2.IdentityType, d TypedVerifierDeserializer) {
 	_, ok := v.deserializers[typ]
 	if !ok {
 		v.deserializers[typ] = []TypedVerifierDeserializer{d}
@@ -109,7 +109,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfoMatcher(ctx context.Con
 	return &TypedAuditInfoMatcher{matcher: matcher}, nil
 }
 
-func (v *TypedVerifierDeserializerMultiplex) getMatcher(ctx context.Context, idType string, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (v *TypedVerifierDeserializerMultiplex) getMatcher(ctx context.Context, idType driver2.IdentityType, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	dess, ok := v.deserializers[idType]
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", idType)

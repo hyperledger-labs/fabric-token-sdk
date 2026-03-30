@@ -316,7 +316,7 @@ func (p *Provider) getSignerAndCache(ctx context.Context, identity driver.Identi
 			)
 		}
 
-		if typed.Type == "x509" {
+		if typed.Type == driver.X509IdentityType {
 			shouldCache = false
 		}
 

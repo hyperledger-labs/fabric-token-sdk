@@ -16,55 +16,53 @@ import (
 // Identity represents a generic identity
 type Identity = view.Identity
 
-// IdentityProvider provides services for managing identities, including signing, verification, and audit information.
-// It acts as a central registry for identities and their associated cryptographic materials.
+// IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
 //
 //go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
 type IdentityProvider interface {
-	// RegisterRecipientData stores information about a token recipient, including their identity and audit metadata.
+	// RegisterRecipientData stores the passed recipient data
 	RegisterRecipientData(ctx context.Context, data *RecipientData) error
 
-	// GetAuditInfo retrieves the audit data associated with a specific identity.
+	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
 	GetAuditInfo(ctx context.Context, identity Identity) ([]byte, error)
 
-	// GetSigner returns a cryptographic signer for a given identity, enabling signature generation.
+	// GetSigner returns a Signer for passed identity.
 	GetSigner(ctx context.Context, identity Identity) (Signer, error)
 
-	// RegisterSigner registers a pair of signer and verifier for a specific identity,
-	// along with additional identity information.
+	// RegisterSigner registers a Signer and a Verifier for passed identity.
 	RegisterSigner(ctx context.Context, identity Identity, signer Signer, verifier Verifier, signerInfo []byte, ephemeral bool) error
 
-	// AreMe checks a list of identities and returns those that have signers registered with this provider.
+	// AreMe returns the hashes of the passed identities that have a signer registered before
 	AreMe(ctx context.Context, identities ...Identity) []string
 
-	// IsMe returns true if a signer has been registered for the specified identity.
+	// IsMe returns true if a signer was ever registered for the passed identity
 	IsMe(ctx context.Context, party Identity) bool
 
-	// GetEnrollmentID extracts the enrollment identifier from the provided audit information for a specific identity.
+	// GetEnrollmentID extracts the enrollment ID from the passed audit info
 	GetEnrollmentID(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
-	// GetRevocationHandler extracts the revocation handler from the provided audit information for a specific identity.
+	// GetRevocationHandler extracts the revocation handler from the passed audit info
 	GetRevocationHandler(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
-	// GetEIDAndRH returns both the enrollment ID and the revocation handle associated with a specific identity and its audit data.
+	// GetEIDAndRH returns both enrollment ID and revocation handle
 	GetEIDAndRH(ctx context.Context, identity Identity, auditInfo []byte) (string, string, error)
 
-	// Bind associates a long-term identity with one or more ephemeral (short-term) identities.
+	// Bind binds longTerm to the passed ephemeral identities.
 	Bind(ctx context.Context, longTerm Identity, ephemeralIdentities ...Identity) error
 
-	// RegisterRecipientIdentity registers a third-party recipient's identity without requiring audit information initially.
+	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
 	RegisterRecipientIdentity(ctx context.Context, id Identity) error
 }
 
-// RecipientData captures details about a token's recipient, used for registration and tracking.
+// RecipientData contains information about the identity of a token owner
 type RecipientData struct {
-	// Identity is the owner's cryptographic identity.
+	// Identity is the identity of the token owner
 	Identity Identity
-	// AuditInfo contains private metadata used for auditing the owner's identity.
+	// AuditInfo contains private information Identity
 	AuditInfo []byte
-	// TokenMetadata contains public information about the token being assigned to this recipient.
+	// TokenMetadata contains public information related to the token to be assigned to this Recipient.
 	TokenMetadata []byte
-	// TokenMetadataAuditInfo contains private metadata used for auditing the token metadata.
+	// TokenMetadataAuditInfo contains private information TokenMetadata
 	TokenMetadataAuditInfo []byte
 }
 
@@ -175,19 +173,13 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (Identity, error)
 }
 
-// IdentityConfiguration contains configuration-related information of an identity.
-// It is used to describe how an identity should be loaded and managed by the SDK.
+// IdentityConfiguration contains configuration-related information of an identity
 type IdentityConfiguration struct {
-	// ID is the unique identifier for this identity configuration.
-	ID string
-	// Type is the type of the identity (e.g., "bccsp", "idemix").
-	Type string
-	// URL is the location of the identity's credential material (e.g., path to MSP folder).
-	URL string
-	// Config contains driver-specific configuration options in encoded format.
+	ID     string
+	Type   string
+	URL    string
 	Config []byte
-	// Raw contains the raw identity material if already loaded.
-	Raw []byte
+	Raw    []byte
 }
 
 // WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.
@@ -196,77 +188,83 @@ type IdentityConfiguration struct {
 type WalletLookupID = any
 
 // IdentityType identifies the type of identity
-type IdentityType = string
+type IdentityType = int32
 
-// Authorization checks the relationship between a token and different wallet types (owner, issuer, auditor).
-// It determines if a given wallet can perform specific actions on a token.
+const (
+	UnknownIdentityType IdentityType = 0 // _ = unused per Angelo
+	IdemixIdentityType  IdentityType = 1
+	X509IdentityType    IdentityType = 2
+)
+
+// Authorization defines method to check the relation between a token
+// and wallets (owner, auditor, etc.)
 //
 //go:generate counterfeiter -o mock/authorization.go -fake-name Authorization . Authorization
 type Authorization interface {
-	// IsMine determines if a given token belongs to a known owner wallet.
-	// It returns the ID of the wallet (if any) and additional identifiers that may indicate ownership,
-	// along with a boolean indicating if the token is indeed owned.
+	// IsMine returns true if the passed token is owned by an owner wallet.
+	// It returns the ID of the owner wallet (walletID) and any additional owner identifier (additionalOwners), if supported.
+	// It is possible that walletID is empty additionalOwners is not.
+	// If walletID is not empty, this means that the corresponding wallet can spend the token directly.
+	// If walletID is empty, then additionalOwners must cooperate in some way in order to spend the token.
 	IsMine(ctx context.Context, tok *token.Token) (walletID string, additionalOwners []string, mine bool)
-
-	// AmIAnAuditor checks if the service has auditor privileges based on its configuration and identities.
+	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
+	// defined in the public parameters of the passed TMS.
 	AmIAnAuditor() bool
-
-	// Issued checks if a specific issuer, identified by their identity, was the one that issued the token.
+	// Issued returns true if the passed issuer issued the passed token
 	Issued(ctx context.Context, issuer Identity, tok *token.Token) bool
-
-	// OwnerType determines the type of the token's owner and extracts the owner's raw identity.
+	// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
 	OwnerType(raw []byte) (IdentityType, []byte, error)
 }
 
-// WalletService manages different types of token wallets: issuer, owner, auditor, and certifier.
-// It provides methods for looking up wallets, registering identities, and extracting audit data.
-//
 //go:generate counterfeiter -o mock/ws.go -fake-name WalletService . WalletService
+
+// WalletService models the wallet service that handles issuer, owner, auditor, and certifier wallets
 type WalletService interface {
-	// RegisterRecipientIdentity registers a recipient identity and its audit data.
+	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
 	RegisterRecipientIdentity(ctx context.Context, data *RecipientData) error
 
-	// GetAuditInfo retrieves the audit data associated with a specific identity.
+	// GetAuditInfo retrieves the audit information for the passed identity
 	GetAuditInfo(ctx context.Context, id Identity) ([]byte, error)
 
-	// GetEnrollmentID extracts the enrollment identifier from audit data for a given identity.
+	// GetEnrollmentID extracts the enrollment id from the passed audit information
 	GetEnrollmentID(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
-	// GetRevocationHandle extracts the revocation handler from audit data for a given identity.
+	// GetRevocationHandle extracts the revocation handler from the passed audit information
 	GetRevocationHandle(ctx context.Context, identity Identity, auditInfo []byte) (string, error)
 
-	// GetEIDAndRH returns both the enrollment ID and the revocation handle for a given identity and audit data.
+	// GetEIDAndRH returns both enrollment ID and revocation handle
 	GetEIDAndRH(ctx context.Context, identity Identity, auditInfo []byte) (string, string, error)
 
-	// Wallet returns a generic wallet interface associated with the specified identity, if any.
+	// Wallet returns the wallet bound to the passed identity, if any is available
 	Wallet(ctx context.Context, identity Identity) Wallet
 
-	// RegisterOwnerIdentity registers a long-term owner identity using the provided configuration.
+	// RegisterOwnerIdentity registers an owner long-term identity
 	RegisterOwnerIdentity(ctx context.Context, config IdentityConfiguration) error
 
-	// RegisterIssuerIdentity registers a long-term issuer identity using the provided configuration.
+	// RegisterIssuerIdentity registers an issuer long-term wallet
 	RegisterIssuerIdentity(ctx context.Context, config IdentityConfiguration) error
 
-	// OwnerWalletIDs returns a list of identifiers for all known owner wallets.
+	// OwnerWalletIDs returns the list of owner wallet identifiers
 	OwnerWalletIDs(ctx context.Context) ([]string, error)
 
-	// OwnerWallet retrieves an OwnerWallet instance based on its identifier or an identity belonging to it.
+	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
+	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
 	OwnerWallet(ctx context.Context, id WalletLookupID) (OwnerWallet, error)
 
-	// IssuerWallet retrieves an IssuerWallet instance based on its identifier or an identity belonging to it.
+	// IssuerWallet returns an instance of the IssuerWallet interface bound to the passed id.
+	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
 	IssuerWallet(ctx context.Context, id WalletLookupID) (IssuerWallet, error)
 
-	// AuditorWallet retrieves an AuditorWallet instance based on its identifier or an identity belonging to it.
+	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
+	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
 	AuditorWallet(ctx context.Context, id WalletLookupID) (AuditorWallet, error)
 
-	// CertifierWallet retrieves a CertifierWallet instance based on its identifier or an identity belonging to it.
+	// CertifierWallet returns an instance of the CertifierWallet interface bound to the passed id.
+	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
 	CertifierWallet(ctx context.Context, id WalletLookupID) (CertifierWallet, error)
 
-	// SpendIDs returns unique identifiers representing the potential spending of the specified token IDs.
+	// SpendIDs returns the spend ids for the passed token ids
 	SpendIDs(ids ...*token.ID) ([]string, error)
-
-	// Done releases all the resources allocated by this service.
-	Done() error
 }
 
 //go:generate counterfeiter -o mock/wallet_service_factory.go -fake-name WalletServiceFactory . WalletServiceFactory
@@ -292,29 +290,24 @@ type AuditInfoProvider interface {
 	GetAuditInfo(ctx context.Context, identity Identity) ([]byte, error)
 }
 
-// Deserializer provides methods for converting serialized identities (owner, issuer, auditor)
-// into cryptographic signature verifiers, which are used to validate transaction signatures.
+// Deserializer models the deserializer of owner, issuer, and auditor identities to
+// get signature verifiers
 //
 //go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
 type Deserializer interface {
-	// GetOwnerVerifier returns a signature verifier for a given owner identity.
+	// GetOwnerVerifier returns the verifier associated to the passed owner identity
 	GetOwnerVerifier(ctx context.Context, id Identity) (Verifier, error)
-
-	// GetIssuerVerifier returns a signature verifier for a given issuer identity.
+	// GetIssuerVerifier returns the verifier associated to the passed issuer identity
 	GetIssuerVerifier(ctx context.Context, id Identity) (Verifier, error)
-
-	// GetAuditorVerifier returns a signature verifier for a given auditor identity.
+	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
 	GetAuditorVerifier(ctx context.Context, id Identity) (Verifier, error)
-
-	// Recipients extracts all recipient identities from a given serialized identity.
+	// Recipients returns the recipient identities from the given serialized representation
 	Recipients(raw Identity) ([]Identity, error)
-
-	// GetAuditInfoMatcher provides an identity matcher for a given identity and its audit metadata.
+	// GetAuditInfoMatcher returns an identity matcher for the passed identity and audit data
 	GetAuditInfoMatcher(ctx context.Context, owner Identity, auditInfo []byte) (Matcher, error)
-
-	// MatchIdentity checks if a specific identity corresponds to the provided audit data.
+	// MatchIdentity returns nil if the given identity matches the given audit information.
+	// An error otherwise.
 	MatchIdentity(ctx context.Context, id Identity, ai []byte) error
-
-	// GetAuditInfo retrieves the audit information for a specific identity using an AuditInfoProvider.
+	// GetAuditInfo returns the audit information for the passed identity
 	GetAuditInfo(ctx context.Context, id Identity, p AuditInfoProvider) ([]byte, error)
 }
