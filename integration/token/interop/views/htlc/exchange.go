@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -16,9 +17,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+var logger = logging.MustGetLogger()
 
 // FastExchange contains the input information to fast exchange tokens
 type FastExchange struct {
@@ -160,17 +164,17 @@ func (f *FastExchangeInitiatorViewFactory) NewView(in []byte) (view.View, error)
 
 type FastExchangeResponderView struct{}
 
-func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, error) {
+func (v *FastExchangeResponderView) Call(ctx view.Context) (interface{}, error) {
 	// Preliminary:
 	// 1. Exchange recipient identities
 	// 2. Agree on the terms
-	me1, sender, err := htlc.RespondExchangeRecipientIdentities(context)
+	me1, sender, err := htlc.RespondExchangeRecipientIdentities(ctx)
 	assert.NoError(err, "failed to respond to identity request in the first network")
 
-	me2, recipient, err := htlc.RespondExchangeRecipientIdentities(context)
+	me2, recipient, err := htlc.RespondExchangeRecipientIdentities(ctx)
 	assert.NoError(err, "failed to respond to identity request in the second network")
 
-	terms, err := htlc.ReceiveTerms(context)
+	terms, err := htlc.ReceiveTerms(ctx)
 	assert.NoError(err, "failed to receive the terms")
 
 	assert.NoError(terms.Validate(), "failed to validate the terms")
@@ -178,7 +182,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 	// Respond to Initiator's Leg
 	var script *htlc.Script
 	{
-		tx, err := htlc.ReceiveTransaction(context)
+		tx, err := htlc.ReceiveTransaction(ctx)
 		assert.NoError(err, "failed to receive tokens")
 
 		outputs, err := tx.Outputs()
@@ -191,29 +195,29 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		assert.True(me1.Equal(script.Recipient), "expected me as recipient of the script")
 		assert.True(sender.Equal(script.Sender), "expected sender as sender of the script")
 
-		_, err = context.RunView(htlc.NewAcceptView(tx))
+		_, err = ctx.RunView(htlc.NewAcceptView(tx))
 		assert.NoError(err, "failed to accept new tokens")
 
-		_, err = context.RunView(htlc.NewFinalityView(tx))
+		_, err = ctx.RunView(htlc.NewFinalityView(tx))
 		assert.NoError(err, "new tokens were not committed")
 	}
 
 	// Initiate Responder's Leg
-	idProvider, err := id.GetProvider(context)
+	idProvider, err := id.GetProvider(ctx)
 	assert.NoError(err, "failed getting id provider")
-	_, err = view2.AsInitiatorCall(context, v, func(context view.Context) (interface{}, error) {
+	_, err = view2.AsInitiatorCall(ctx, v, func(ctx view.Context) (interface{}, error) {
 		tx, err := htlc.NewAnonymousTransaction(
-			context,
+			ctx,
 			ttx.WithAuditor(idProvider.Identity("auditor")),
 			ttx.WithTMSID(terms.TMSID2),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
 
-		wallet := htlc.GetWallet(context, "", token.WithTMSID(terms.TMSID2))
+		wallet := htlc.GetWallet(ctx, "", token.WithTMSID(terms.TMSID2))
 		assert.NotNil(wallet, "wallet not found")
 
 		_, err = tx.Lock(
-			context.Context(),
+			ctx.Context(),
 			wallet,
 			me2,
 			terms.Type2,
@@ -224,26 +228,34 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		)
 		assert.NoError(err, "failed adding a lock action")
 
-		_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
+		_, err = ctx.RunView(htlc.NewCollectEndorsementsView(tx))
 		assert.NoError(err, "failed to collect endorsements on htlc transaction")
 
-		_, err = context.RunView(htlc.NewOrderingAndFinalityView(tx))
+		_, err = ctx.RunView(htlc.NewOrderingAndFinalityView(tx))
 		assert.NoError(err, "failed to commit htlc transaction")
 
-		assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
+		assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
 
 		return nil, nil
 	})
 	assert.NoError(err, "failed completing responder's leg (as initiator)")
 
-	assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
+	assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
 
-	time.Sleep(30 * time.Second)
+	d, ok := ctx.Context().Deadline()
+	logger.Infof("context deadline [%v:%v]", d, ok)
 
-	assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
+	select {
+	case <-ctx.Context().Done():
+		assert.Fail("context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
+	case <-time.After(30 * time.Second):
+		break
+	}
+
+	assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
 
 	// Claim initiator's script, we don't need any interaction with the initiator (FastExchangeInitiatorView)
-	_, err = view2.Initiate(context, &ClaimView{
+	_, err = view2.Initiate(ctx, &ClaimView{
 		&Claim{
 			TMSID:       terms.TMSID1,
 			Wallet:      "",
