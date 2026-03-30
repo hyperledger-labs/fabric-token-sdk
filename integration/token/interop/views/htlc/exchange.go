@@ -150,6 +150,8 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 	})
 	assert.NoError(err, "failed to complete responder's leg (as initiator)")
 
+	logger.Infof("context [%s], finished initiator...", context.ID())
+
 	return nil, nil
 }
 
@@ -248,7 +250,7 @@ func (v *FastExchangeResponderView) Call(ctx view.Context) (interface{}, error) 
 
 	select {
 	case <-ctx.Context().Done():
-		logger.Errorf("context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
+		logger.Errorf("[%s] context is invalid [%+v][%+v]", ctx.ID(), ctx.Context().Err(), context.Cause(ctx.Context()))
 
 		return nil, errors.Errorf("context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
 	case <-time.After(30 * time.Second):
