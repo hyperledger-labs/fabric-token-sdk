@@ -236,6 +236,8 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 
 	time.Sleep(30 * time.Second)
 
+	assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
+
 	// Claim initiator's script, we don't need any interaction with the initiator (FastExchangeInitiatorView)
 	_, err = view2.Initiate(context, &ClaimView{
 		&Claim{

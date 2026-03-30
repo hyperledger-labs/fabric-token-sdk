@@ -56,8 +56,11 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		}
 	}()
 
+	assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
+
 	preImage := r.PreImage
 	if len(preImage) == 0 && r.Script != nil {
+		assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
 		// Scan for the pre-image
 		var err error
 		preImage, err = htlc.ScanForPreImage(
@@ -69,6 +72,8 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 			token.WithTMSID(r.ScriptTMSID),
 		)
 		assert.NoError(err, "failed to receive the preImage")
+
+		assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
 
 		// double-check the value of the key
 		tms, err := token.GetManagementService(context, token.WithTMSID(r.ScriptTMSID))
@@ -83,6 +88,8 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		assert.NoError(err, "failed getting states")
 		assert.True(len(stateValues) == 1, "expected one state value")
 		assert.Equal(preImage, stateValues[0], "pre-image mismatch [%s] vs [%s]", utils.Hashable(preImage), utils.Hashable(stateValues[0]))
+
+		assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
 	}
 
 	claimWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
