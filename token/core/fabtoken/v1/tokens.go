@@ -95,7 +95,7 @@ func SupportedTokenFormat(precision uint64) (token.Format, error) {
 	hasher := utils.NewSHA256Hasher()
 	if err := errors.Join(
 		hasher.AddInt32(fabtoken.Type),
-		hasher.AddInt32(int32(x509.IdentityType)),
+		hasher.AddInt32(driver.X509IdentityType),
 		hasher.AddUInt64(precision),
 	); err != nil {
 		return "", errors.Wrapf(err, "failed to generator token type")
