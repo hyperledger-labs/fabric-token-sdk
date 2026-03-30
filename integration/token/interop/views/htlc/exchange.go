@@ -259,8 +259,11 @@ func (v *FastExchangeResponderView) Call(ctx view.Context) (interface{}, error) 
 
 	assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
 
-	// Claim initiator's script, we don't need any interaction with the initiator (FastExchangeInitiatorView)
-	_, err = view2.Initiate(ctx, &ClaimView{
+	// Claim initiator's script, we don't need any interaction with the initiator (FastExchangeInitiatorView).
+	// Indeed, the initiator can terminate.
+	// To avoid that the initiator termination cancel this operation (due to the termination of the communication channel),
+	// we initiate the ClaimView with the background context
+	_, err = view2.Initiate(context.Background(), &ClaimView{
 		&Claim{
 			TMSID:       terms.TMSID1,
 			Wallet:      "",
