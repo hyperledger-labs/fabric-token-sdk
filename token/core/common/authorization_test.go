@@ -145,7 +145,7 @@ func TestAuthorizationMultiplexer(t *testing.T) {
 	})
 
 	t.Run("OwnerType", func(t *testing.T) {
-		idType := "test-type"
+		idType := identity.Type(99) // test type
 		idRaw := []byte("test-identity")
 		raw, err := identity.WrapWithType(idType, idRaw)
 		require.NoError(t, err)

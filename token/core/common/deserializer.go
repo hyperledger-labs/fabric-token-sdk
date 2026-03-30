@@ -14,7 +14,7 @@ import (
 
 // Deserializer deserializes verifiers associated with issuers, owners, and auditors
 type Deserializer struct {
-	identityType         string
+	identityType         driver.IdentityType
 	auditorDeserializer  driver.VerifierDeserializer
 	ownerDeserializer    driver.VerifierDeserializer
 	issuerDeserializer   driver.VerifierDeserializer
@@ -24,7 +24,7 @@ type Deserializer struct {
 
 // NewDeserializer returns a new Deserializer for the passed arguments.
 func NewDeserializer(
-	identityType string,
+	identityType driver.IdentityType,
 	auditorDeserializer driver.VerifierDeserializer,
 	ownerDeserializer driver.VerifierDeserializer,
 	issuerDeserializer driver.VerifierDeserializer,
