@@ -115,7 +115,7 @@ func TestGetAuditInfo_InvalidType(t *testing.T) {
 
 	provider := &mock.AuditInfoProvider{}
 
-	auditInfo, err := deserializer.GetAuditInfo(context.Background(), id, identity.Type("InvalidType"), rawIdentity, provider)
+	auditInfo, err := deserializer.GetAuditInfo(context.Background(), id, identity.Type(99), rawIdentity, provider)
 	require.Error(t, err)
 	assert.Nil(t, auditInfo)
 

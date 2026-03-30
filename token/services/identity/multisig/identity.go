@@ -19,7 +19,7 @@ import (
 
 // Multisig is the type of a multisig identity.
 // It is used to identify a multisig identity in a typed identity (identity.TypedIdentity).
-const Multisig = "ms"
+const Multisig identity.Type = 3
 
 type MultiIdentity struct {
 	Identities []token.Identity
