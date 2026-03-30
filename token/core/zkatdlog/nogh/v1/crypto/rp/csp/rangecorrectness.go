@@ -16,7 +16,7 @@ import (
 // CSPRangeCorrectness contains a set of range proofs for multiple commitments.
 type CSPRangeCorrectness struct {
 	// Proofs is a slice of range proofs.
-	Proofs []*CspRangeProof
+	Proofs []*RangeProof
 }
 
 // Serialize marshals the CSPRangeCorrectness into a byte slice.
@@ -31,8 +31,8 @@ func (r *CSPRangeCorrectness) Serialize() ([]byte, error) {
 
 // Deserialize unmarshals a byte slice into the CSPRangeCorrectness.
 func (r *CSPRangeCorrectness) Deserialize(raw []byte) error {
-	proofs, err := asn1.NewArrayWithNew[*CspRangeProof](func() *CspRangeProof {
-		return &CspRangeProof{}
+	proofs, err := asn1.NewArrayWithNew[*RangeProof](func() *RangeProof {
+		return &RangeProof{}
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare proofs for unmarshalling")
@@ -105,9 +105,9 @@ func NewCSPRangeCorrectnessProver(
 // Prove generates a set of range proofs.
 func (p *CSPRangeCorrectnessProver) Prove() (*CSPRangeCorrectness, error) {
 	rc := &CSPRangeCorrectness{}
-	rc.Proofs = make([]*CspRangeProof, len(p.Commitments))
+	rc.Proofs = make([]*RangeProof, len(p.Commitments))
 	for i := range len(p.Commitments) {
-		bp := NewCspRangeProver(
+		bp := NewRangeProver(
 			p.Commitments[i],
 			math2.NewCachedZrFromInt(p.Curve, p.Values[i]),
 			p.BlindingFactors[i],
@@ -167,7 +167,7 @@ func (v *CSPRangeCorrectnessVerifier) Verify(rc *CSPRangeCorrectness) error {
 		if rc.Proofs[i] == nil {
 			return errors.Errorf("invalid range proof: nil proof at index %d", i)
 		}
-		bv := newCspRangeVerifier(
+		bv := NewRangeVerifier(
 			v.PedersenParameters,
 			v.LeftGenerators,
 			v.RightGenerators,

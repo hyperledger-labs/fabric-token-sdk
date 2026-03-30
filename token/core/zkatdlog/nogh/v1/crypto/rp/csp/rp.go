@@ -15,6 +15,530 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 )
 
+type pokCommitment struct {
+	A *mathlib.G1   // first message A = s[0].g[0] + s[1].g[1]
+	Z []*mathlib.Zr // last message
+}
+
+type RangeProof struct {
+	// commitment to a_0,a_1,...,a_n,b_0,b_{n+1},...,b_{2n}
+	pComm *mathlib.G1
+	// proof of knowledge of VCommitment over VGenerators
+	pokV pokCommitment
+	// prover evaluation a(c) for checking multiplication of polynomials
+	u *mathlib.Zr
+	// Commitment of vector to blind the CSP witness: a_0,a_1,..,a_n,b_0,b_{n+1},...,b_{2n},v,r
+	sComm *mathlib.G1 // commitment to blinding vector s_0...s_{2n+1}
+	sEval *mathlib.Zr // linear form on the blinding vector
+	// CSP proof for: Com(wit) = pExt + \epsilon\cdot sComm, L(wit) = L(x) + \epsilon\cdot sEval
+	cspProof Proof
+}
+
+func (p *RangeProof) Serialize() ([]byte, error) {
+	a1, err := asn1.NewElementArray[*mathlib.Zr](p.pokV.Z)
+	if err != nil {
+		return nil, err
+	}
+	left, err := asn1.NewElementArray(p.cspProof.Left)
+	if err != nil {
+		return nil, err
+	}
+	right, err := asn1.NewElementArray(p.cspProof.Right)
+	if err != nil {
+		return nil, err
+	}
+	vLeft, err := asn1.NewElementArray(p.cspProof.VLeft)
+	if err != nil {
+		return nil, err
+	}
+	vRight, err := asn1.NewElementArray(p.cspProof.VRight)
+	if err != nil {
+		return nil, err
+	}
+
+	return asn1.MarshalMath(
+		p.pComm,
+		p.pokV.A,
+		a1,
+		p.u,
+		p.sComm,
+		p.sEval,
+		left,
+		right,
+		vLeft,
+		vRight,
+	)
+}
+
+func (p *RangeProof) Deserialize(raw []byte) error {
+	unmarshaller, err := asn1.NewUnmarshaller(raw)
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize raw")
+	}
+	p.pComm, err = unmarshaller.NextG1()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize Left")
+	}
+	p.pokV.A, err = unmarshaller.NextG1()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize Right")
+	}
+	p.pokV.Z, err = unmarshaller.NextZrArray()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize L")
+	}
+	p.u, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize R")
+	}
+	p.sComm, err = unmarshaller.NextG1()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize R")
+	}
+	p.sEval, err = unmarshaller.NextZr()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize R")
+	}
+	p.cspProof.Left, err = unmarshaller.NextG1Array()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize R")
+	}
+	p.cspProof.Right, err = unmarshaller.NextG1Array()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize R")
+	}
+	p.cspProof.VLeft, err = unmarshaller.NextZrArray()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize R")
+	}
+	p.cspProof.VRight, err = unmarshaller.NextZrArray()
+	if err != nil {
+		return errors.Wrapf(err, "failed to deserialize R")
+	}
+
+	return nil
+}
+
+func (p *RangeProof) Validate(curve mathlib.CurveID) error {
+	// Restore the Curve field after deserialization
+	p.cspProof.Curve = mathlib.Curves[curve]
+
+	return nil
+}
+
+type rangeProver struct {
+	VCommitment *mathlib.G1 // commitment to value v
+	v           *mathlib.Zr // value
+	r           *mathlib.Zr // randomness to mask v
+
+	VGenerators  []*mathlib.G1  // two generators to commit to v
+	AGenerators  []*mathlib.G1  // generators to commit to bits encoded as polynomial a(X)
+	BGenerators  []*mathlib.G1  // generators to commit to b(X) by committing to b(n+1),...b(2n)
+	NumberOfBits uint64         // number of bits n; the value must lie in [0, 2^n - 1]
+	Curve        *mathlib.Curve // curve
+}
+
+func NewRangeProver(VCommitment *mathlib.G1, v *mathlib.Zr, r *mathlib.Zr, VGenerators []*mathlib.G1, AGenerators []*mathlib.G1, BGenerators []*mathlib.G1, numberOfBits uint64, curve *mathlib.Curve) *rangeProver {
+	return &rangeProver{
+		VCommitment:  VCommitment,
+		v:            v,
+		r:            r,
+		VGenerators:  VGenerators,
+		AGenerators:  AGenerators,
+		BGenerators:  BGenerators,
+		NumberOfBits: numberOfBits,
+		Curve:        curve,
+	}
+}
+
+func (rp *rangeProver) Prove() (*RangeProof, error) {
+	// Validate all inputs
+	if err := validateRangeProverInputs(rp.Curve, rp); err != nil {
+		return nil, errors.Wrap(err, "invalid range prover inputs")
+	}
+
+	tr := Transcript{Curve: rp.Curve}
+	tr.InitHasher()
+	n := rp.NumberOfBits
+	rand, err := rp.Curve.Rand()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize random number generator")
+	}
+
+	// Absorb the public statement: VCommitment || VGenerators || AGenerators || BGenerators || NumberOfBits.
+	tr.Absorb(rp.VCommitment.Bytes())
+	for _, g := range rp.VGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	for _, g := range rp.AGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	for _, g := range rp.BGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	tr.Absorb(new(big.Int).SetUint64(n).Bytes())
+
+	// Schnorr proof of knowledge for VCommitment = v·G_v + r·G_r.
+	// Prover samples blinding scalars, commits, then responds to the FS challenge.
+	pokTv := rp.Curve.NewRandomZr(rand)
+	pokTr := rp.Curve.NewRandomZr(rand)
+	pokA := rp.Curve.MultiScalarMul(rp.VGenerators, []*mathlib.Zr{pokTv, pokTr})
+	tr.Absorb(pokA.Bytes())
+	pokE, err := tr.Squeeze()
+	if err != nil {
+		return nil, errors.New("unable to obtain PoK challenge")
+	}
+	// z_v = t_v + e·v,  z_r = t_r + e·r
+	pokZv := rp.Curve.ModAdd(pokTv, rp.Curve.ModMul(pokE, rp.v, rp.Curve.GroupOrder), rp.Curve.GroupOrder)
+	pokZr := rp.Curve.ModAdd(pokTr, rp.Curve.ModMul(pokE, rp.r, rp.Curve.GroupOrder), rp.Curve.GroupOrder)
+
+	// Step 1: Compute witness p = aCoeffs || bCoeffs where
+	//   aCoeffs = [a_0, a_1, ..., a_n]:  a_1..a_n are bits of v, a_0 is random
+	//   bCoeffs = [b_0, b_{n+1}, ..., b_{2n}]:  b_i = a(i)*(a(i)-1)
+	a0 := rp.Curve.NewRandomZr(rand)
+	b0 := rp.Curve.ModSub(a0, math.One(rp.Curve), rp.Curve.GroupOrder)
+	bitsOfV, err := toBits(rp.v, n, rp.Curve)
+	if err != nil {
+		return nil, err
+	}
+
+	aCoeffs := make([]*mathlib.Zr, n+1)
+	bCoeffs := make([]*mathlib.Zr, n+1)
+	aCoeffs[0] = a0
+	copy(aCoeffs[1:], bitsOfV)
+
+	// Extend a(X) to all of {0,...,2n} and compute b(i) = a(i)*(a(i)-1).
+	aCoeffsExt, err := interpolate(n, aCoeffs, rp.Curve)
+	if err != nil {
+		return nil, errors.New("Error while extending a polynomial")
+	}
+	bCoeffs[0] = rp.Curve.ModMul(a0, b0, rp.Curve.GroupOrder)
+	for i := uint64(1); i <= n; i++ {
+		ai := aCoeffsExt[n+i]
+		aiMinus1 := rp.Curve.ModSub(ai, math.One(rp.Curve), rp.Curve.GroupOrder)
+		bCoeffs[i] = rp.Curve.ModMul(ai, aiMinus1, rp.Curve.GroupOrder)
+	}
+
+	p := make([]*mathlib.Zr, 2*n+2)
+	g := make([]*mathlib.G1, 2*n+2)
+	copy(p, aCoeffs)
+	copy(p[n+1:], bCoeffs)
+	copy(g, rp.AGenerators)
+	copy(g[n+1:], rp.BGenerators)
+
+	// First prover message: pComm = MSM(g, p). Absorb and squeeze eta, c.
+	pComm := rp.Curve.MultiScalarMul(g, p)
+	tr.Absorb(pComm.Bytes())
+	eta, err := tr.Squeeze()
+	if err != nil {
+		return nil, errors.New("Unable to obtain challenge eta")
+	}
+	c, err := tr.Squeeze()
+	if err != nil {
+		return nil, errors.New("Unable to obtain challenge c")
+	}
+
+	// Compute u = a(c) via Lagrange interpolation, absorb it, then squeeze gamma.
+	mu, err := getLagrangeMultipliers(n, c, rp.Curve)
+	if err != nil {
+		return nil, errors.New("Unable to obtain lagrange multipliers")
+	}
+	nu, err := getLagrangeMultipliersPartial(n, c, rp.Curve)
+	if err != nil {
+		return nil, errors.New("Unable to obtain partial lagrange multipliers")
+	}
+	u := math.InnerProduct(aCoeffs, mu, rp.Curve)
+
+	tr.Absorb(u.Bytes())
+	gamma, err := tr.Squeeze()
+	if err != nil {
+		return nil, errors.New("Unable to obtain challenge gamma")
+	}
+
+	// Extended commitment: pCommExt = pComm + eta * VCommitment.
+	pCommExt := pComm.Copy()
+	pCommExt.Add(rp.VCommitment.Copy().Mul(eta))
+
+	// Extended witness pExt = aCoeffs || bCoeffs || v || r
+	// over generators  gExt = AGenerators || BGenerators || VGenerators.
+	pExt := make([]*mathlib.Zr, 2*n+4)
+	gExt := make([]*mathlib.G1, 2*n+4)
+	copy(pExt, p)
+	pExt[2*n+2] = rp.v.Copy()
+	pExt[2*n+3] = rp.r.Copy()
+	copy(gExt, g)
+	gExt[2*n+2] = rp.VGenerators[0].Copy().Mul(eta)
+	gExt[2*n+3] = rp.VGenerators[1].Copy().Mul(eta)
+
+	// Build aggregated linear form lf = L1 + gamma*L2 + gamma^2*L3 over pExt.
+	//
+	// pExt layout  [0..n]=aCoeffs  [n+1..2n+1]=bCoeffs  [2n+2]=v  [2n+3]=r
+	//
+	// L1: eta*2^{i-1} at [1..n], -eta at [2n+2]          → checks eta*(Σ a_i·2^{i-1} - v) = 0
+	// L2: mu[i]       at [0..n]                            → checks a(c) = u
+	// L3: nu[k]       at [n+1..2n+1] (k=0..n)             → checks b(c) = u*(u-1)
+	gammaSquare := rp.Curve.ModMul(gamma, gamma, rp.Curve.GroupOrder)
+	lf := make([]*mathlib.Zr, len(pExt))
+	for i := range lf {
+		lf[i] = math.Zero(rp.Curve)
+	}
+	// L1 contribution1s.
+	for i := uint64(1); i <= n; i++ {
+		lf[i] = rp.Curve.ModMul(eta, math.PowerOfTwo(rp.Curve, i-1), rp.Curve.GroupOrder)
+	}
+	negEta := eta.Copy()
+	negEta.Neg()
+	lf[2*n+2] = negEta
+	// L2 contributions: add gamma*mu[i] at positions 0..n.
+	for i := uint64(0); i <= n; i++ {
+		lf[i] = rp.Curve.ModAdd(lf[i], rp.Curve.ModMul(gamma, mu[i], rp.Curve.GroupOrder), rp.Curve.GroupOrder)
+	}
+	// L3 contributions: gamma^2*nu[k] at positions n+1..2n+1.
+	for k := uint64(0); k <= n; k++ {
+		lf[n+1+k] = rp.Curve.ModMul(gammaSquare, nu[k], rp.Curve.GroupOrder)
+	}
+
+	// Claimed value: lVal = gamma*u + gamma^2*u*(u-1)  (L1(pExt)=0 for honest prover).
+	uMinus1 := rp.Curve.ModSub(u, math.One(rp.Curve), rp.Curve.GroupOrder)
+	lVal := rp.Curve.ModAdd(
+		rp.Curve.ModMul(gamma, u, rp.Curve.GroupOrder),
+		rp.Curve.ModMul(gammaSquare, rp.Curve.ModMul(u, uMinus1, rp.Curve.GroupOrder), rp.Curve.GroupOrder),
+		rp.Curve.GroupOrder,
+	)
+
+	// ZK blinding: random sBlind, commit it, evaluate L on it.
+	sBlind := make([]*mathlib.Zr, len(pExt))
+	for i := range sBlind {
+		sBlind[i] = rp.Curve.NewRandomZr(rand)
+	}
+	sComm := rp.Curve.MultiScalarMul(gExt, sBlind)
+	sVal := math.InnerProduct(lf, sBlind, rp.Curve)
+	tr.Absorb(sComm.Bytes())
+	tr.Absorb(sVal.Bytes())
+
+	rho, err := tr.Squeeze()
+	if err != nil {
+		return nil, errors.New("Unable to obtain challenge rho")
+	}
+
+	// Blinded witness: wit = pExt + rho*sBlind  so that
+	//   MSM(gExt, wit) = pCommExt + rho*sComm
+	//   L(wit)         = lVal + rho*sVal
+	wit := make([]*mathlib.Zr, len(pExt))
+	for i := range pExt {
+		wit[i] = rp.Curve.ModAdd(
+			pExt[i],
+			rp.Curve.ModMul(rho, sBlind[i], rp.Curve.GroupOrder),
+			rp.Curve.GroupOrder,
+		)
+	}
+	witComm := pCommExt.Copy()
+	witComm.Add(sComm.Mul(rho))
+	witVal := rp.Curve.ModAdd(lVal, rp.Curve.ModMul(rho, sVal, rp.Curve.GroupOrder), rp.Curve.GroupOrder)
+
+	// Pad witness / generators / linear form to the next power of 2 for CSP.
+	witSize := uint64(len(wit))
+	cspRounds := uint64(0)
+	paddedSize := uint64(1)
+	for paddedSize < witSize {
+		paddedSize <<= 1
+		cspRounds++
+	}
+	for uint64(len(wit)) < paddedSize {
+		wit = append(wit, math.Zero(rp.Curve))
+		gExt = append(gExt, rp.Curve.GenG1)
+		lf = append(lf, math.Zero(rp.Curve))
+	}
+
+	// Non-ZK CSP proof for the blinded statement.
+	cspP := &prover{
+		Commitment:     witComm,
+		Generators:     gExt,
+		LinearForm:     lf,
+		Value:          witVal,
+		NumberOfRounds: cspRounds,
+		Curve:          rp.Curve,
+		witness:        wit,
+	}
+	cspProof, err := cspP.Prove()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate CSP proof")
+	}
+
+	return &RangeProof{
+		pComm:    pComm,
+		pokV:     pokCommitment{A: pokA, Z: []*mathlib.Zr{pokZv, pokZr}},
+		u:        u,
+		sComm:    sComm,
+		sEval:    sVal,
+		cspProof: *cspProof,
+	}, nil
+}
+
+type rangeVerifier struct {
+	VGenerators  []*mathlib.G1 // generators for the value commitment
+	AGenerators  []*mathlib.G1 // generators for the bits polynomial a(X)
+	BGenerators  []*mathlib.G1 // generators for b(X) at points {0, n+1, ..., 2n}
+	VCommitment  *mathlib.G1   // commitment to value v
+	NumberOfBits uint64        // number of bits n; the value must lie in [0, 2^n - 1]
+	Curve        *mathlib.Curve
+}
+
+func NewRangeVerifier(VGenerators []*mathlib.G1, AGenerators []*mathlib.G1, BGenerators []*mathlib.G1, VCommitment *mathlib.G1, numberOfBits uint64, curve *mathlib.Curve) *rangeVerifier {
+	return &rangeVerifier{VGenerators: VGenerators, AGenerators: AGenerators, BGenerators: BGenerators, VCommitment: VCommitment, NumberOfBits: numberOfBits, Curve: curve}
+}
+
+// Verify checks that proof is a valid CSP range proof against the public statement.
+// It mirrors the prover transcript exactly, reconstructs all challenges, rebuilds
+// the aggregated linear form, and delegates the final check to cspVerifier.
+func (rv *rangeVerifier) Verify(proof *RangeProof) error {
+	// Validate all inputs
+	if err := validateRangeVerifierInputs(rv.Curve, rv); err != nil {
+		return errors.Wrap(err, "invalid range verifier inputs")
+	}
+
+	// Validate proof structure
+	if err := validateRangeProof(rv.Curve, proof); err != nil {
+		return errors.Wrap(err, "invalid range proof structure")
+	}
+
+	tr := Transcript{Curve: rv.Curve}
+	tr.InitHasher()
+	n := rv.NumberOfBits
+
+	// Replay transcript: absorb the same public statement as the prover.
+	tr.Absorb(rv.VCommitment.Bytes())
+	for _, g := range rv.VGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	for _, g := range rv.AGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	for _, g := range rv.BGenerators {
+		tr.Absorb(g.Bytes())
+	}
+	tr.Absorb(new(big.Int).SetUint64(n).Bytes())
+
+	// Verify Schnorr PoK for VCommitment = v·G_v + r·G_r.
+	// Check: z_v·G_v + z_r·G_r == pokA + e·V
+	tr.Absorb(proof.pokV.A.Bytes())
+	pokE, err := tr.Squeeze()
+	if err != nil {
+		return errors.New("unable to recompute PoK challenge")
+	}
+	pokLHS := rv.Curve.MultiScalarMul(rv.VGenerators, proof.pokV.Z)
+	pokRHS := proof.pokV.A.Copy()
+	pokRHS.Add(rv.VCommitment.Copy().Mul(pokE))
+	if !pokLHS.Equals(pokRHS) {
+		return errors.New("proof of knowledge for value commitment failed")
+	}
+
+	tr.Absorb(proof.pComm.Bytes())
+
+	eta, err := tr.Squeeze()
+	if err != nil {
+		return errors.New("unable to recompute challenge eta")
+	}
+	c, err := tr.Squeeze()
+	if err != nil {
+		return errors.New("unable to recompute challenge c")
+	}
+
+	// start := time.Now()
+	mu, err := getLagrangeMultipliers(n, c, rv.Curve)
+	if err != nil {
+		return errors.New("unable to obtain lagrange multipliers")
+	}
+	nu, err := getLagrangeMultipliersPartial(n, c, rv.Curve)
+	if err != nil {
+		return errors.New("unable to obtain partial lagrange multipliers")
+	}
+	// fmt.Printf("Tine taken for Lagrange multipliers: %d", time.Since(start).Milliseconds())
+
+	tr.Absorb(proof.u.Bytes())
+	gamma, err := tr.Squeeze()
+	if err != nil {
+		return errors.New("unable to recompute challenge gamma")
+	}
+
+	// pCommExt = pComm + eta * VCommitment
+	pCommExt := proof.pComm.Copy()
+	pCommExt.Add(rv.VCommitment.Copy().Mul(eta))
+
+	// Rebuild gExt = AGenerators || BGenerators || VGenerators (size 2n+4).
+	gExt := make([]*mathlib.G1, 2*n+4)
+	copy(gExt, rv.AGenerators)
+	copy(gExt[n+1:], rv.BGenerators)
+	gExt[2*n+2] = rv.VGenerators[0].Copy().Mul(eta)
+	gExt[2*n+3] = rv.VGenerators[1].Copy().Mul(eta)
+
+	// Rebuild lf = L1 + gamma*L2 + gamma^2*L3 — identical to the prover.
+	gammaSquare := rv.Curve.ModMul(gamma, gamma, rv.Curve.GroupOrder)
+	lf := make([]*mathlib.Zr, 2*n+4)
+	for i := range lf {
+		lf[i] = math.Zero(rv.Curve)
+	}
+	for i := uint64(1); i <= n; i++ {
+		lf[i] = rv.Curve.ModMul(eta, math.PowerOfTwo(rv.Curve, i-1), rv.Curve.GroupOrder)
+	}
+	negEta := eta.Copy()
+	negEta.Neg()
+	lf[2*n+2] = negEta
+	for i := uint64(0); i <= n; i++ {
+		lf[i] = rv.Curve.ModAdd(lf[i], rv.Curve.ModMul(gamma, mu[i], rv.Curve.GroupOrder), rv.Curve.GroupOrder)
+	}
+	for k := uint64(0); k <= n; k++ {
+		lf[n+1+k] = rv.Curve.ModMul(gammaSquare, nu[k], rv.Curve.GroupOrder)
+	}
+
+	// lVal = gamma*u + gamma^2*u*(u-1)
+	uMinus1 := rv.Curve.ModSub(proof.u, math.One(rv.Curve), rv.Curve.GroupOrder)
+	lVal := rv.Curve.ModAdd(
+		rv.Curve.ModMul(gamma, proof.u, rv.Curve.GroupOrder),
+		rv.Curve.ModMul(gammaSquare, rv.Curve.ModMul(proof.u, uMinus1, rv.Curve.GroupOrder), rv.Curve.GroupOrder),
+		rv.Curve.GroupOrder,
+	)
+
+	// Absorb sComm and sEval, squeeze rho.
+	tr.Absorb(proof.sComm.Bytes())
+	tr.Absorb(proof.sEval.Bytes())
+	rho, err := tr.Squeeze()
+	if err != nil {
+		return errors.New("unable to recompute challenge rho")
+	}
+
+	// witComm = pCommExt + rho*sComm
+	witComm := pCommExt.Copy()
+	witComm.Add(proof.sComm.Copy().Mul(rho))
+
+	// witVal = lVal + rho*sEval
+	witVal := rv.Curve.ModAdd(lVal, rv.Curve.ModMul(rho, proof.sEval, rv.Curve.GroupOrder), rv.Curve.GroupOrder)
+
+	// Pad gExt and lf to the next power of 2 (same logic as prover).
+	extSize := uint64(len(gExt))
+	cspRounds := uint64(0)
+	paddedSize := uint64(1)
+	for paddedSize < extSize {
+		paddedSize <<= 1
+		cspRounds++
+	}
+	for uint64(len(gExt)) < paddedSize {
+		gExt = append(gExt, rv.Curve.GenG1)
+		lf = append(lf, math.Zero(rv.Curve))
+	}
+
+	cspV := &verifier{
+		Commitment:     witComm,
+		Generators:     gExt,
+		LinearForm:     lf,
+		Value:          witVal,
+		NumberOfRounds: cspRounds,
+		Curve:          rv.Curve,
+	}
+
+	return cspV.Verify(&proof.cspProof)
+}
+
 // toBits returns the n-bit little-endian representation of v as field elements,
 // where bits[0] is the LSB and bits[n-1] is the MSB. Returns an error if v >= 2^n.
 // Here, one can check if v can be encoded correctly. If not, the verification will fail.
@@ -208,528 +732,4 @@ func interpolate(n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve) ([]*
 	}
 
 	return result, nil
-}
-
-type cspRangeProver struct {
-	VCommitment *mathlib.G1 // commitment to value v
-	v           *mathlib.Zr // value
-	r           *mathlib.Zr // randomness to mask v
-
-	VGenerators  []*mathlib.G1  // two generators to commit to v
-	AGenerators  []*mathlib.G1  // generators to commit to bits encoded as polynomial a(X)
-	BGenerators  []*mathlib.G1  // generators to commit to b(X) by committing to b(n+1),...b(2n)
-	NumberOfBits uint64         // number of bits n; the value must lie in [0, 2^n - 1]
-	Curve        *mathlib.Curve // curve
-}
-
-func NewCspRangeProver(VCommitment *mathlib.G1, v *mathlib.Zr, r *mathlib.Zr, VGenerators []*mathlib.G1, AGenerators []*mathlib.G1, BGenerators []*mathlib.G1, numberOfBits uint64, curve *mathlib.Curve) *cspRangeProver {
-	return &cspRangeProver{
-		VCommitment:  VCommitment,
-		v:            v,
-		r:            r,
-		VGenerators:  VGenerators,
-		AGenerators:  AGenerators,
-		BGenerators:  BGenerators,
-		NumberOfBits: numberOfBits,
-		Curve:        curve,
-	}
-}
-
-type pokCommitment struct {
-	A *mathlib.G1   // first message A = s[0].g[0] + s[1].g[1]
-	Z []*mathlib.Zr // last message
-}
-
-type CspRangeProof struct {
-	// commitment to a_0,a_1,...,a_n,b_0,b_{n+1},...,b_{2n}
-	pComm *mathlib.G1
-	// proof of knowledge of VCommitment over VGenerators
-	pokV pokCommitment
-	// prover evaluation a(c) for checking multiplication of polynomials
-	u *mathlib.Zr
-	// Commitment of vector to blind the CSP witness: a_0,a_1,..,a_n,b_0,b_{n+1},...,b_{2n},v,r
-	sComm *mathlib.G1 // commitment to blinding vector s_0...s_{2n+1}
-	sEval *mathlib.Zr // linear form on the blinding vector
-	// CSP proof for: Com(wit) = pExt + \epsilon\cdot sComm, L(wit) = L(x) + \epsilon\cdot sEval
-	cspProof CSPProof
-}
-
-func (p *CspRangeProof) Serialize() ([]byte, error) {
-	a1, err := asn1.NewElementArray[*mathlib.Zr](p.pokV.Z)
-	if err != nil {
-		return nil, err
-	}
-	left, err := asn1.NewElementArray(p.cspProof.Left)
-	if err != nil {
-		return nil, err
-	}
-	right, err := asn1.NewElementArray(p.cspProof.Right)
-	if err != nil {
-		return nil, err
-	}
-	vLeft, err := asn1.NewElementArray(p.cspProof.VLeft)
-	if err != nil {
-		return nil, err
-	}
-	vRight, err := asn1.NewElementArray(p.cspProof.VRight)
-	if err != nil {
-		return nil, err
-	}
-
-	return asn1.MarshalMath(
-		p.pComm,
-		p.pokV.A,
-		a1,
-		p.u,
-		p.sComm,
-		p.sEval,
-		left,
-		right,
-		vLeft,
-		vRight,
-	)
-}
-
-func (p *CspRangeProof) Deserialize(raw []byte) error {
-	unmarshaller, err := asn1.NewUnmarshaller(raw)
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize raw")
-	}
-	p.pComm, err = unmarshaller.NextG1()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize Left")
-	}
-	p.pokV.A, err = unmarshaller.NextG1()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize Right")
-	}
-	p.pokV.Z, err = unmarshaller.NextZrArray()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize L")
-	}
-	p.u, err = unmarshaller.NextZr()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize R")
-	}
-	p.sComm, err = unmarshaller.NextG1()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize R")
-	}
-	p.sEval, err = unmarshaller.NextZr()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize R")
-	}
-	p.cspProof.Left, err = unmarshaller.NextG1Array()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize R")
-	}
-	p.cspProof.Right, err = unmarshaller.NextG1Array()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize R")
-	}
-	p.cspProof.VLeft, err = unmarshaller.NextZrArray()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize R")
-	}
-	p.cspProof.VRight, err = unmarshaller.NextZrArray()
-	if err != nil {
-		return errors.Wrapf(err, "failed to deserialize R")
-	}
-
-	return nil
-}
-
-func (p *CspRangeProof) Validate(curve mathlib.CurveID) error {
-	// Restore the Curve field after deserialization
-	p.cspProof.Curve = mathlib.Curves[curve]
-
-	return nil
-}
-
-func (cspp *cspRangeProver) Prove() (*CspRangeProof, error) {
-	// Validate all inputs
-	if err := validateRangeProverInputs(cspp.Curve, cspp); err != nil {
-		return nil, errors.Wrap(err, "invalid range prover inputs")
-	}
-
-	tr := Transcript{Curve: cspp.Curve}
-	tr.InitHasher()
-	n := cspp.NumberOfBits
-	rand, err := cspp.Curve.Rand()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize random number generator")
-	}
-
-	// Absorb the public statement: VCommitment || VGenerators || AGenerators || BGenerators || NumberOfBits.
-	tr.Absorb(cspp.VCommitment.Bytes())
-	for _, g := range cspp.VGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	for _, g := range cspp.AGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	for _, g := range cspp.BGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	tr.Absorb(new(big.Int).SetUint64(n).Bytes())
-
-	// Schnorr proof of knowledge for VCommitment = v·G_v + r·G_r.
-	// Prover samples blinding scalars, commits, then responds to the FS challenge.
-	pokTv := cspp.Curve.NewRandomZr(rand)
-	pokTr := cspp.Curve.NewRandomZr(rand)
-	pokA := cspp.Curve.MultiScalarMul(cspp.VGenerators, []*mathlib.Zr{pokTv, pokTr})
-	tr.Absorb(pokA.Bytes())
-	pokE, err := tr.Squeeze()
-	if err != nil {
-		return nil, errors.New("unable to obtain PoK challenge")
-	}
-	// z_v = t_v + e·v,  z_r = t_r + e·r
-	pokZv := cspp.Curve.ModAdd(pokTv, cspp.Curve.ModMul(pokE, cspp.v, cspp.Curve.GroupOrder), cspp.Curve.GroupOrder)
-	pokZr := cspp.Curve.ModAdd(pokTr, cspp.Curve.ModMul(pokE, cspp.r, cspp.Curve.GroupOrder), cspp.Curve.GroupOrder)
-
-	// Step 1: Compute witness p = aCoeffs || bCoeffs where
-	//   aCoeffs = [a_0, a_1, ..., a_n]:  a_1..a_n are bits of v, a_0 is random
-	//   bCoeffs = [b_0, b_{n+1}, ..., b_{2n}]:  b_i = a(i)*(a(i)-1)
-	a0 := cspp.Curve.NewRandomZr(rand)
-	b0 := cspp.Curve.ModSub(a0, math.One(cspp.Curve), cspp.Curve.GroupOrder)
-	bitsOfV, err := toBits(cspp.v, n, cspp.Curve)
-	if err != nil {
-		return nil, err
-	}
-
-	aCoeffs := make([]*mathlib.Zr, n+1)
-	bCoeffs := make([]*mathlib.Zr, n+1)
-	aCoeffs[0] = a0
-	copy(aCoeffs[1:], bitsOfV)
-
-	// Extend a(X) to all of {0,...,2n} and compute b(i) = a(i)*(a(i)-1).
-	aCoeffsExt, err := interpolate(n, aCoeffs, cspp.Curve)
-	if err != nil {
-		return nil, errors.New("Error while extending a polynomial")
-	}
-	bCoeffs[0] = cspp.Curve.ModMul(a0, b0, cspp.Curve.GroupOrder)
-	for i := uint64(1); i <= n; i++ {
-		ai := aCoeffsExt[n+i]
-		aiMinus1 := cspp.Curve.ModSub(ai, math.One(cspp.Curve), cspp.Curve.GroupOrder)
-		bCoeffs[i] = cspp.Curve.ModMul(ai, aiMinus1, cspp.Curve.GroupOrder)
-	}
-
-	p := make([]*mathlib.Zr, 2*n+2)
-	g := make([]*mathlib.G1, 2*n+2)
-	copy(p, aCoeffs)
-	copy(p[n+1:], bCoeffs)
-	copy(g, cspp.AGenerators)
-	copy(g[n+1:], cspp.BGenerators)
-
-	// First prover message: pComm = MSM(g, p). Absorb and squeeze eta, c.
-	pComm := cspp.Curve.MultiScalarMul(g, p)
-	tr.Absorb(pComm.Bytes())
-	eta, err := tr.Squeeze()
-	if err != nil {
-		return nil, errors.New("Unable to obtain challenge eta")
-	}
-	c, err := tr.Squeeze()
-	if err != nil {
-		return nil, errors.New("Unable to obtain challenge c")
-	}
-
-	// Compute u = a(c) via Lagrange interpolation, absorb it, then squeeze gamma.
-	mu, err := getLagrangeMultipliers(n, c, cspp.Curve)
-	if err != nil {
-		return nil, errors.New("Unable to obtain lagrange multipliers")
-	}
-	nu, err := getLagrangeMultipliersPartial(n, c, cspp.Curve)
-	if err != nil {
-		return nil, errors.New("Unable to obtain partial lagrange multipliers")
-	}
-	u := math.InnerProduct(aCoeffs, mu, cspp.Curve)
-
-	tr.Absorb(u.Bytes())
-	gamma, err := tr.Squeeze()
-	if err != nil {
-		return nil, errors.New("Unable to obtain challenge gamma")
-	}
-
-	// Extended commitment: pCommExt = pComm + eta * VCommitment.
-	pCommExt := pComm.Copy()
-	pCommExt.Add(cspp.VCommitment.Copy().Mul(eta))
-
-	// Extended witness pExt = aCoeffs || bCoeffs || v || r
-	// over generators  gExt = AGenerators || BGenerators || VGenerators.
-	pExt := make([]*mathlib.Zr, 2*n+4)
-	gExt := make([]*mathlib.G1, 2*n+4)
-	copy(pExt, p)
-	pExt[2*n+2] = cspp.v.Copy()
-	pExt[2*n+3] = cspp.r.Copy()
-	copy(gExt, g)
-	gExt[2*n+2] = cspp.VGenerators[0].Copy().Mul(eta)
-	gExt[2*n+3] = cspp.VGenerators[1].Copy().Mul(eta)
-
-	// Build aggregated linear form lf = L1 + gamma*L2 + gamma^2*L3 over pExt.
-	//
-	// pExt layout  [0..n]=aCoeffs  [n+1..2n+1]=bCoeffs  [2n+2]=v  [2n+3]=r
-	//
-	// L1: eta*2^{i-1} at [1..n], -eta at [2n+2]          → checks eta*(Σ a_i·2^{i-1} - v) = 0
-	// L2: mu[i]       at [0..n]                            → checks a(c) = u
-	// L3: nu[k]       at [n+1..2n+1] (k=0..n)             → checks b(c) = u*(u-1)
-	gammaSquare := cspp.Curve.ModMul(gamma, gamma, cspp.Curve.GroupOrder)
-	lf := make([]*mathlib.Zr, len(pExt))
-	for i := range lf {
-		lf[i] = math.Zero(cspp.Curve)
-	}
-	// L1 contribution1s.
-	for i := uint64(1); i <= n; i++ {
-		lf[i] = cspp.Curve.ModMul(eta, math.PowerOfTwo(cspp.Curve, i-1), cspp.Curve.GroupOrder)
-	}
-	negEta := eta.Copy()
-	negEta.Neg()
-	lf[2*n+2] = negEta
-	// L2 contributions: add gamma*mu[i] at positions 0..n.
-	for i := uint64(0); i <= n; i++ {
-		lf[i] = cspp.Curve.ModAdd(lf[i], cspp.Curve.ModMul(gamma, mu[i], cspp.Curve.GroupOrder), cspp.Curve.GroupOrder)
-	}
-	// L3 contributions: gamma^2*nu[k] at positions n+1..2n+1.
-	for k := uint64(0); k <= n; k++ {
-		lf[n+1+k] = cspp.Curve.ModMul(gammaSquare, nu[k], cspp.Curve.GroupOrder)
-	}
-
-	// Claimed value: lVal = gamma*u + gamma^2*u*(u-1)  (L1(pExt)=0 for honest prover).
-	uMinus1 := cspp.Curve.ModSub(u, math.One(cspp.Curve), cspp.Curve.GroupOrder)
-	lVal := cspp.Curve.ModAdd(
-		cspp.Curve.ModMul(gamma, u, cspp.Curve.GroupOrder),
-		cspp.Curve.ModMul(gammaSquare, cspp.Curve.ModMul(u, uMinus1, cspp.Curve.GroupOrder), cspp.Curve.GroupOrder),
-		cspp.Curve.GroupOrder,
-	)
-
-	// ZK blinding: random sBlind, commit it, evaluate L on it.
-	sBlind := make([]*mathlib.Zr, len(pExt))
-	for i := range sBlind {
-		sBlind[i] = cspp.Curve.NewRandomZr(rand)
-	}
-	sComm := cspp.Curve.MultiScalarMul(gExt, sBlind)
-	sVal := math.InnerProduct(lf, sBlind, cspp.Curve)
-	tr.Absorb(sComm.Bytes())
-	tr.Absorb(sVal.Bytes())
-
-	rho, err := tr.Squeeze()
-	if err != nil {
-		return nil, errors.New("Unable to obtain challenge rho")
-	}
-
-	// Blinded witness: wit = pExt + rho*sBlind  so that
-	//   MSM(gExt, wit) = pCommExt + rho*sComm
-	//   L(wit)         = lVal + rho*sVal
-	wit := make([]*mathlib.Zr, len(pExt))
-	for i := range pExt {
-		wit[i] = cspp.Curve.ModAdd(
-			pExt[i],
-			cspp.Curve.ModMul(rho, sBlind[i], cspp.Curve.GroupOrder),
-			cspp.Curve.GroupOrder,
-		)
-	}
-	witComm := pCommExt.Copy()
-	witComm.Add(sComm.Mul(rho))
-	witVal := cspp.Curve.ModAdd(lVal, cspp.Curve.ModMul(rho, sVal, cspp.Curve.GroupOrder), cspp.Curve.GroupOrder)
-
-	// Pad witness / generators / linear form to the next power of 2 for CSP.
-	witSize := uint64(len(wit))
-	cspRounds := uint64(0)
-	paddedSize := uint64(1)
-	for paddedSize < witSize {
-		paddedSize <<= 1
-		cspRounds++
-	}
-	for uint64(len(wit)) < paddedSize {
-		wit = append(wit, math.Zero(cspp.Curve))
-		gExt = append(gExt, cspp.Curve.GenG1)
-		lf = append(lf, math.Zero(cspp.Curve))
-	}
-
-	// Non-ZK CSP proof for the blinded statement.
-	cspP := &cspProver{
-		Commitment:     witComm,
-		Generators:     gExt,
-		LinearForm:     lf,
-		Value:          witVal,
-		NumberOfRounds: cspRounds,
-		Curve:          cspp.Curve,
-		witness:        wit,
-	}
-	cspProof, err := cspP.Prove()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate CSP proof")
-	}
-
-	return &CspRangeProof{
-		pComm:    pComm,
-		pokV:     pokCommitment{A: pokA, Z: []*mathlib.Zr{pokZv, pokZr}},
-		u:        u,
-		sComm:    sComm,
-		sEval:    sVal,
-		cspProof: *cspProof,
-	}, nil
-}
-
-type cspRangeVerifier struct {
-	VGenerators  []*mathlib.G1 // generators for the value commitment
-	AGenerators  []*mathlib.G1 // generators for the bits polynomial a(X)
-	BGenerators  []*mathlib.G1 // generators for b(X) at points {0, n+1, ..., 2n}
-	VCommitment  *mathlib.G1   // commitment to value v
-	NumberOfBits uint64        // number of bits n; the value must lie in [0, 2^n - 1]
-	Curve        *mathlib.Curve
-}
-
-func newCspRangeVerifier(VGenerators []*mathlib.G1, AGenerators []*mathlib.G1, BGenerators []*mathlib.G1, VCommitment *mathlib.G1, numberOfBits uint64, curve *mathlib.Curve) *cspRangeVerifier {
-	return &cspRangeVerifier{VGenerators: VGenerators, AGenerators: AGenerators, BGenerators: BGenerators, VCommitment: VCommitment, NumberOfBits: numberOfBits, Curve: curve}
-}
-
-// Verify checks that proof is a valid CSP range proof against the public statement.
-// It mirrors the prover transcript exactly, reconstructs all challenges, rebuilds
-// the aggregated linear form, and delegates the final check to cspVerifier.
-func (rv *cspRangeVerifier) Verify(proof *CspRangeProof) error {
-	// Validate all inputs
-	if err := validateRangeVerifierInputs(rv.Curve, rv); err != nil {
-		return errors.Wrap(err, "invalid range verifier inputs")
-	}
-
-	// Validate proof structure
-	if err := validateRangeProof(rv.Curve, proof); err != nil {
-		return errors.Wrap(err, "invalid range proof structure")
-	}
-
-	tr := Transcript{Curve: rv.Curve}
-	tr.InitHasher()
-	n := rv.NumberOfBits
-
-	// Replay transcript: absorb the same public statement as the prover.
-	tr.Absorb(rv.VCommitment.Bytes())
-	for _, g := range rv.VGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	for _, g := range rv.AGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	for _, g := range rv.BGenerators {
-		tr.Absorb(g.Bytes())
-	}
-	tr.Absorb(new(big.Int).SetUint64(n).Bytes())
-
-	// Verify Schnorr PoK for VCommitment = v·G_v + r·G_r.
-	// Check: z_v·G_v + z_r·G_r == pokA + e·V
-	tr.Absorb(proof.pokV.A.Bytes())
-	pokE, err := tr.Squeeze()
-	if err != nil {
-		return errors.New("unable to recompute PoK challenge")
-	}
-	pokLHS := rv.Curve.MultiScalarMul(rv.VGenerators, proof.pokV.Z)
-	pokRHS := proof.pokV.A.Copy()
-	pokRHS.Add(rv.VCommitment.Copy().Mul(pokE))
-	if !pokLHS.Equals(pokRHS) {
-		return errors.New("proof of knowledge for value commitment failed")
-	}
-
-	tr.Absorb(proof.pComm.Bytes())
-
-	eta, err := tr.Squeeze()
-	if err != nil {
-		return errors.New("unable to recompute challenge eta")
-	}
-	c, err := tr.Squeeze()
-	if err != nil {
-		return errors.New("unable to recompute challenge c")
-	}
-
-	// start := time.Now()
-	mu, err := getLagrangeMultipliers(n, c, rv.Curve)
-	if err != nil {
-		return errors.New("unable to obtain lagrange multipliers")
-	}
-	nu, err := getLagrangeMultipliersPartial(n, c, rv.Curve)
-	if err != nil {
-		return errors.New("unable to obtain partial lagrange multipliers")
-	}
-	// fmt.Printf("Tine taken for Lagrange multipliers: %d", time.Since(start).Milliseconds())
-
-	tr.Absorb(proof.u.Bytes())
-	gamma, err := tr.Squeeze()
-	if err != nil {
-		return errors.New("unable to recompute challenge gamma")
-	}
-
-	// pCommExt = pComm + eta * VCommitment
-	pCommExt := proof.pComm.Copy()
-	pCommExt.Add(rv.VCommitment.Copy().Mul(eta))
-
-	// Rebuild gExt = AGenerators || BGenerators || VGenerators (size 2n+4).
-	gExt := make([]*mathlib.G1, 2*n+4)
-	copy(gExt, rv.AGenerators)
-	copy(gExt[n+1:], rv.BGenerators)
-	gExt[2*n+2] = rv.VGenerators[0].Copy().Mul(eta)
-	gExt[2*n+3] = rv.VGenerators[1].Copy().Mul(eta)
-
-	// Rebuild lf = L1 + gamma*L2 + gamma^2*L3 — identical to the prover.
-	gammaSquare := rv.Curve.ModMul(gamma, gamma, rv.Curve.GroupOrder)
-	lf := make([]*mathlib.Zr, 2*n+4)
-	for i := range lf {
-		lf[i] = math.Zero(rv.Curve)
-	}
-	for i := uint64(1); i <= n; i++ {
-		lf[i] = rv.Curve.ModMul(eta, math.PowerOfTwo(rv.Curve, i-1), rv.Curve.GroupOrder)
-	}
-	negEta := eta.Copy()
-	negEta.Neg()
-	lf[2*n+2] = negEta
-	for i := uint64(0); i <= n; i++ {
-		lf[i] = rv.Curve.ModAdd(lf[i], rv.Curve.ModMul(gamma, mu[i], rv.Curve.GroupOrder), rv.Curve.GroupOrder)
-	}
-	for k := uint64(0); k <= n; k++ {
-		lf[n+1+k] = rv.Curve.ModMul(gammaSquare, nu[k], rv.Curve.GroupOrder)
-	}
-
-	// lVal = gamma*u + gamma^2*u*(u-1)
-	uMinus1 := rv.Curve.ModSub(proof.u, math.One(rv.Curve), rv.Curve.GroupOrder)
-	lVal := rv.Curve.ModAdd(
-		rv.Curve.ModMul(gamma, proof.u, rv.Curve.GroupOrder),
-		rv.Curve.ModMul(gammaSquare, rv.Curve.ModMul(proof.u, uMinus1, rv.Curve.GroupOrder), rv.Curve.GroupOrder),
-		rv.Curve.GroupOrder,
-	)
-
-	// Absorb sComm and sEval, squeeze rho.
-	tr.Absorb(proof.sComm.Bytes())
-	tr.Absorb(proof.sEval.Bytes())
-	rho, err := tr.Squeeze()
-	if err != nil {
-		return errors.New("unable to recompute challenge rho")
-	}
-
-	// witComm = pCommExt + rho*sComm
-	witComm := pCommExt.Copy()
-	witComm.Add(proof.sComm.Copy().Mul(rho))
-
-	// witVal = lVal + rho*sEval
-	witVal := rv.Curve.ModAdd(lVal, rv.Curve.ModMul(rho, proof.sEval, rv.Curve.GroupOrder), rv.Curve.GroupOrder)
-
-	// Pad gExt and lf to the next power of 2 (same logic as prover).
-	extSize := uint64(len(gExt))
-	cspRounds := uint64(0)
-	paddedSize := uint64(1)
-	for paddedSize < extSize {
-		paddedSize <<= 1
-		cspRounds++
-	}
-	for uint64(len(gExt)) < paddedSize {
-		gExt = append(gExt, rv.Curve.GenG1)
-		lf = append(lf, math.Zero(rv.Curve))
-	}
-
-	cspV := &cspVerifier{
-		Commitment:     witComm,
-		Generators:     gExt,
-		LinearForm:     lf,
-		Value:          witVal,
-		NumberOfRounds: cspRounds,
-		Curve:          rv.Curve,
-	}
-
-	return cspV.Verify(&proof.cspProof)
 }

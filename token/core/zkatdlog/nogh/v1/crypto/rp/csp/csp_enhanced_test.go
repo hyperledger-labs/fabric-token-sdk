@@ -44,7 +44,7 @@ func TestCSPWithZeroWitness(t *testing.T) {
 			com := curve.MultiScalarMul(generators, witness)
 			value := math2.InnerProduct(linearForm, witness, curve)
 
-			prover := &cspProver{
+			prover := &prover{
 				Commitment:     com,
 				Generators:     generators,
 				LinearForm:     linearForm,
@@ -57,7 +57,7 @@ func TestCSPWithZeroWitness(t *testing.T) {
 			proof, err := prover.Prove()
 			require.NoError(t, err)
 
-			verifier := &cspVerifier{
+			verifier := &verifier{
 				Commitment:     com,
 				Generators:     generators,
 				LinearForm:     linearForm,
@@ -101,7 +101,7 @@ func TestCSPWithMaxFieldElements(t *testing.T) {
 			com := curve.MultiScalarMul(generators, witness)
 			value := math2.InnerProduct(linearForm, witness, curve)
 
-			prover := &cspProver{
+			prover := &prover{
 				Commitment:     com,
 				Generators:     generators,
 				LinearForm:     linearForm,
@@ -114,7 +114,7 @@ func TestCSPWithMaxFieldElements(t *testing.T) {
 			proof, err := prover.Prove()
 			require.NoError(t, err)
 
-			verifier := &cspVerifier{
+			verifier := &verifier{
 				Commitment:     com,
 				Generators:     generators,
 				LinearForm:     linearForm,
@@ -157,7 +157,7 @@ func TestCSPNonPowerOfTwoSize(t *testing.T) {
 			com := curve.MultiScalarMul(generators, witness)
 			value := math2.InnerProduct(linearForm, witness, curve)
 
-			prover := &cspProver{
+			prover := &prover{
 				Commitment:     com,
 				Generators:     generators,
 				LinearForm:     linearForm,
@@ -184,7 +184,7 @@ func TestCSPEmptyVectors(t *testing.T) {
 		t.Run(fmt.Sprintf("curveID=%d", curveID), func(t *testing.T) {
 			curve := math.Curves[curveID]
 
-			prover := &cspProver{
+			prover := &prover{
 				Commitment:     curve.GenG1,
 				Generators:     []*math.G1{},
 				LinearForm:     []*math.Zr{},
@@ -224,7 +224,7 @@ func TestCSPMismatchedGeneratorsWitness(t *testing.T) {
 				witness[i] = curve.NewRandomZr(rand)
 			}
 
-			prover := &cspProver{
+			prover := &prover{
 				Commitment:     curve.GenG1,
 				Generators:     generators,
 				LinearForm:     linearForm,
@@ -257,7 +257,7 @@ func TestCSPTamperedMultipleRounds(t *testing.T) {
 			// Test tampering each round
 			for round := range 3 {
 				t.Run("round_"+string(rune('0'+round)), func(t *testing.T) {
-					tamperedProof := &CSPProof{
+					tamperedProof := &Proof{
 						Left:   make([]*math.G1, len(proof.Left)),
 						Right:  make([]*math.G1, len(proof.Right)),
 						VLeft:  make([]*math.Zr, len(proof.VLeft)),
@@ -305,7 +305,7 @@ func TestCSPSVectorProperties(t *testing.T) {
 				challenges[i] = curve.NewRandomZr(rand)
 			}
 
-			s := cspSVector(n, challenges, curve)
+			s := sVector(n, challenges, curve)
 
 			// Property 1: s[0] should be 1
 			assert.True(t, s[0].Equals(curve.NewZrFromInt(1)), "s[0] should be 1")
@@ -346,8 +346,8 @@ func TestCSPSVectorDifferentChallenges(t *testing.T) {
 				challenges2[i] = curve.NewRandomZr(rand)
 			}
 
-			s1 := cspSVector(n, challenges1, curve)
-			s2 := cspSVector(n, challenges2, curve)
+			s1 := sVector(n, challenges1, curve)
+			s2 := sVector(n, challenges2, curve)
 
 			// Vectors should be different (except s[0] which is always 1)
 			differentCount := 0
@@ -377,29 +377,29 @@ func TestCSPVerifierRejectsWrongNumberOfRounds(t *testing.T) {
 
 			testCases := []struct {
 				name        string
-				modifyProof func(*CSPProof)
+				modifyProof func(*Proof)
 			}{
 				{
 					name: "extra_left",
-					modifyProof: func(p *CSPProof) {
+					modifyProof: func(p *Proof) {
 						p.Left = append(p.Left, curve.GenG1)
 					},
 				},
 				{
 					name: "missing_right",
-					modifyProof: func(p *CSPProof) {
+					modifyProof: func(p *Proof) {
 						p.Right = p.Right[:len(p.Right)-1]
 					},
 				},
 				{
 					name: "extra_vleft",
-					modifyProof: func(p *CSPProof) {
+					modifyProof: func(p *Proof) {
 						p.VLeft = append(p.VLeft, curve.NewZrFromInt(0))
 					},
 				},
 				{
 					name: "missing_vright",
-					modifyProof: func(p *CSPProof) {
+					modifyProof: func(p *Proof) {
 						p.VRight = p.VRight[:len(p.VRight)-1]
 					},
 				},
@@ -407,7 +407,7 @@ func TestCSPVerifierRejectsWrongNumberOfRounds(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					tamperedProof := &CSPProof{
+					tamperedProof := &Proof{
 						Left:   append([]*math.G1{}, proof.Left...),
 						Right:  append([]*math.G1{}, proof.Right...),
 						VLeft:  append([]*math.Zr{}, proof.VLeft...),
@@ -458,7 +458,7 @@ func TestCSPWithIdentityGenerator(t *testing.T) {
 			com := curve.MultiScalarMul(generators, witness)
 			value := math2.InnerProduct(linearForm, witness, curve)
 
-			prover := &cspProver{
+			prover := &prover{
 				Commitment:     com,
 				Generators:     generators,
 				LinearForm:     linearForm,
@@ -471,7 +471,7 @@ func TestCSPWithIdentityGenerator(t *testing.T) {
 			proof, err := prover.Prove()
 			require.NoError(t, err)
 
-			verifier := &cspVerifier{
+			verifier := &verifier{
 				Commitment:     com,
 				Generators:     generators,
 				LinearForm:     linearForm,

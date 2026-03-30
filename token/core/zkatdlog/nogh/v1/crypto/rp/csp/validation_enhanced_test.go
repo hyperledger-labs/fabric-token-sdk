@@ -63,7 +63,7 @@ func TestValidateCSPProverInputsEnhanced(t *testing.T) {
 	lf := []*mathlib.Zr{curve.NewRandomZr(rand), curve.NewRandomZr(rand)}
 	wit := []*mathlib.Zr{curve.NewRandomZr(rand), curve.NewRandomZr(rand)}
 
-	p := &cspProver{
+	p := &prover{
 		Commitment:     curve.GenG1,
 		Generators:     gens,
 		LinearForm:     lf,
@@ -108,7 +108,7 @@ func TestValidateCSPVerifierInputs(t *testing.T) {
 	gens := []*mathlib.G1{curve.GenG1, curve.GenG1}
 	lf := []*mathlib.Zr{curve.NewRandomZr(rand), curve.NewRandomZr(rand)}
 
-	v := &cspVerifier{
+	v := &verifier{
 		Commitment:     curve.GenG1,
 		Generators:     gens,
 		LinearForm:     lf,
@@ -167,7 +167,7 @@ func TestValidateCSPProof(t *testing.T) {
 	curve := mathlib.Curves[mathlib.BN254]
 	rounds := uint64(1)
 
-	proof := &CSPProof{
+	proof := &Proof{
 		Left:   []*mathlib.G1{curve.GenG1},
 		Right:  []*mathlib.G1{curve.GenG1},
 		VLeft:  []*mathlib.Zr{curve.NewZrFromInt(1)},
@@ -303,7 +303,7 @@ func TestValidateRangeProverInputsEnhanced(t *testing.T) {
 	aGens := []*mathlib.G1{curve.GenG1, curve.GenG1}
 	bGens := []*mathlib.G1{curve.GenG1, curve.GenG1}
 
-	p := &cspRangeProver{
+	p := &rangeProver{
 		VCommitment:  curve.GenG1,
 		v:            curve.NewRandomZr(rand),
 		r:            curve.NewRandomZr(rand),
@@ -370,7 +370,7 @@ func TestValidateRangeVerifierInputs(t *testing.T) {
 	aGens := []*mathlib.G1{curve.GenG1, curve.GenG1}
 	bGens := []*mathlib.G1{curve.GenG1, curve.GenG1}
 
-	v := &cspRangeVerifier{
+	v := &rangeVerifier{
 		VCommitment:  curve.GenG1,
 		VGenerators:  vGens,
 		AGenerators:  aGens,
@@ -445,7 +445,7 @@ func TestValidateRangeProofEnhanced(t *testing.T) {
 	curve := mathlib.Curves[mathlib.BN254]
 	curveBLS := mathlib.Curves[mathlib.BLS12_381_BBS_GURVY]
 
-	proof := &CspRangeProof{
+	proof := &RangeProof{
 		pComm: curve.GenG1,
 		pokV: pokCommitment{
 			A: curve.GenG1,
@@ -454,7 +454,7 @@ func TestValidateRangeProofEnhanced(t *testing.T) {
 		u:     curve.NewZrFromInt(1),
 		sComm: curve.GenG1,
 		sEval: curve.NewZrFromInt(1),
-		cspProof: CSPProof{
+		cspProof: Proof{
 			Curve:  curve,
 			Left:   []*mathlib.G1{curve.GenG1},
 			Right:  []*mathlib.G1{curve.GenG1},

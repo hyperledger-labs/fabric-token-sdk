@@ -67,7 +67,7 @@ func validateZrSlice(name string, elements []*mathlib.Zr, curve *mathlib.Curve, 
 }
 
 // validateCSPProverInputs validates all inputs for CSP prover.
-func validateCSPProverInputs(curve *mathlib.Curve, p *cspProver) error {
+func validateCSPProverInputs(curve *mathlib.Curve, p *prover) error {
 	if err := validateCurve(curve); err != nil {
 		return errors.Wrapf(err, "invalid curve")
 	}
@@ -93,7 +93,7 @@ func validateCSPProverInputs(curve *mathlib.Curve, p *cspProver) error {
 }
 
 // validateCSPVerifierInputs validates all inputs for CSP verifier.
-func validateCSPVerifierInputs(curve *mathlib.Curve, v *cspVerifier) error {
+func validateCSPVerifierInputs(curve *mathlib.Curve, v *verifier) error {
 	if err := validateCurve(curve); err != nil {
 		return errors.Wrapf(err, "invalid curve")
 	}
@@ -118,7 +118,7 @@ func validateCSPVerifierInputs(curve *mathlib.Curve, v *cspVerifier) error {
 // validateCSPProof validates the structure of a CSP proof.
 // Note: Proof elements (Left, Right) are NOT checked for infinity because
 // infinity points can legitimately appear in proofs for edge cases like zero witnesses.
-func validateCSPProof(curve *mathlib.Curve, proof *CSPProof, expectedRounds uint64) error {
+func validateCSPProof(curve *mathlib.Curve, proof *Proof, expectedRounds uint64) error {
 	if proof == nil {
 		return ErrNilProof
 	}
@@ -173,7 +173,7 @@ func validateCSPProof(curve *mathlib.Curve, proof *CSPProof, expectedRounds uint
 }
 
 // validateRangeProverInputs validates all inputs for range proof prover.
-func validateRangeProverInputs(curve *mathlib.Curve, p *cspRangeProver) error {
+func validateRangeProverInputs(curve *mathlib.Curve, p *rangeProver) error {
 	if err := validateCurve(curve); err != nil {
 		return errors.Wrapf(err, "invalid curve")
 	}
@@ -207,7 +207,7 @@ func validateRangeProverInputs(curve *mathlib.Curve, p *cspRangeProver) error {
 }
 
 // validateRangeVerifierInputs validates all inputs for range proof verifier.
-func validateRangeVerifierInputs(curve *mathlib.Curve, v *cspRangeVerifier) error {
+func validateRangeVerifierInputs(curve *mathlib.Curve, v *rangeVerifier) error {
 	if err := validateCurve(curve); err != nil {
 		return errors.Wrapf(err, "invalid curve")
 	}
@@ -235,7 +235,7 @@ func validateRangeVerifierInputs(curve *mathlib.Curve, v *cspRangeVerifier) erro
 }
 
 // validateRangeProof validates the structure of a range proof.
-func validateRangeProof(curve *mathlib.Curve, proof *CspRangeProof) error {
+func validateRangeProof(curve *mathlib.Curve, proof *RangeProof) error {
 	if proof == nil {
 		return ErrNilProof
 	}

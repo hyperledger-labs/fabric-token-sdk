@@ -96,7 +96,7 @@ func testCSPProveVerify(t *testing.T, curve *mathlib.Curve) {
 	}
 
 	// Create prover and generate proof
-	prover := &cspProver{
+	prover := &prover{
 		Commitment:     comm,
 		Generators:     gens,
 		LinearForm:     lf,
@@ -112,7 +112,7 @@ func testCSPProveVerify(t *testing.T, curve *mathlib.Curve) {
 	}
 
 	// Verify proof
-	verifier := &cspVerifier{
+	verifier := &verifier{
 		Commitment:     comm,
 		Generators:     gens,
 		LinearForm:     lf,
@@ -151,14 +151,14 @@ func testRangeProofBasic(t *testing.T, curve *mathlib.Curve) {
 	vComm := curve.MultiScalarMul(vGens, []*mathlib.Zr{v, r})
 
 	// Create prover and generate proof
-	prover := NewCspRangeProver(vComm, v, r, vGens, aGens, bGens, n, curve)
+	prover := NewRangeProver(vComm, v, r, vGens, aGens, bGens, n, curve)
 	proof, err := prover.Prove()
 	if err != nil {
 		t.Fatalf("Failed to generate range proof: %v", err)
 	}
 
 	// Verify proof
-	verifier := newCspRangeVerifier(vGens, aGens, bGens, vComm, n, curve)
+	verifier := NewRangeVerifier(vGens, aGens, bGens, vComm, n, curve)
 	err = verifier.Verify(proof)
 	if err != nil {
 		t.Fatalf("Failed to verify range proof: %v", err)
