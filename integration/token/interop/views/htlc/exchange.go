@@ -263,7 +263,7 @@ func (v *FastExchangeResponderView) Call(ctx view.Context) (interface{}, error) 
 	// Indeed, the initiator can terminate.
 	// To avoid that the initiator termination cancel this operation (due to the termination of the communication channel),
 	// we initiate the ClaimView with the background context
-	_, err = view2.Initiate(context.Background(), &ClaimView{
+	_, err = view2.InitiateWithContext(context.Background(), ctx, &ClaimView{
 		&Claim{
 			TMSID:       terms.TMSID1,
 			Wallet:      "",
