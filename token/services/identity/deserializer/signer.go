@@ -19,14 +19,14 @@ import (
 type TypedSignerDeserializer = driver2.TypedSignerDeserializer
 
 type TypedSignerDeserializerMultiplex struct {
-	deserializers map[driver2.IdentityType][]TypedSignerDeserializer
+	deserializers map[identity.Type][]TypedSignerDeserializer
 }
 
 func NewTypedSignerDeserializerMultiplex() *TypedSignerDeserializerMultiplex {
-	return &TypedSignerDeserializerMultiplex{deserializers: map[driver2.IdentityType][]TypedSignerDeserializer{}}
+	return &TypedSignerDeserializerMultiplex{deserializers: map[identity.Type][]TypedSignerDeserializer{}}
 }
 
-func (v *TypedSignerDeserializerMultiplex) AddTypedSignerDeserializer(typ driver2.IdentityType, d driver2.TypedSignerDeserializer) {
+func (v *TypedSignerDeserializerMultiplex) AddTypedSignerDeserializer(typ identity.Type, d driver2.TypedSignerDeserializer) {
 	_, ok := v.deserializers[typ]
 	if !ok {
 		v.deserializers[typ] = []TypedSignerDeserializer{d}

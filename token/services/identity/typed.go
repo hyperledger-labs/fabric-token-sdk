@@ -32,13 +32,24 @@ func (i TypedIdentity) Bytes() ([]byte, error) {
 }
 
 func UnmarshalTypedIdentity(id driver.Identity) (*TypedIdentity, error) {
-	si := &TypedIdentity{}
-	_, err := asn1.Unmarshal(id, si)
+	decoded, err := Decode(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
 
-	return si, nil
+	if decoded.IsInt {
+		si := &TypedIdentity{
+			Type:     decoded.Int32,
+			Identity: decoded.Data,
+		}
+		return si, nil
+	}
+
+	// convert string to integer for old formats
+	return &TypedIdentity{
+		Type:     0,
+		Identity: decoded.Data,
+	}, nil
 }
 
 func WrapWithType(idType Type, id driver.Identity) (driver.Identity, error) {

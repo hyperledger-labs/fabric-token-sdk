@@ -106,7 +106,7 @@ func TestProvider_GetSigner_TypedIdentityFallback(t *testing.T) {
 
 	// create a typed identity wrapping an inner identity
 	inner := driver.Identity("inner")
-	ti := identity.TypedIdentity{Type: "x-custom", Identity: inner}
+	ti := identity.TypedIdentity{Type: 12345, Identity: inner}
 	outerBytes, err := ti.Bytes()
 	require.NoError(t, err)
 	outer := driver.Identity(outerBytes)

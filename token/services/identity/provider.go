@@ -316,9 +316,7 @@ func (p *Provider) getSignerAndCache(ctx context.Context, identity driver.Identi
 			)
 		}
 
-		if typed.Type == driver.X509IdentityType {
-			shouldCache = false
-		}
+		shouldCache = p.shouldCacheIdentity(typed.Type)
 
 		// recursively resolve the inner identity
 		signer, shouldCache, err = p.getSignerAndCache(ctx, typed.Identity, typed.Identity.UniqueID(), shouldCache)
@@ -342,6 +340,10 @@ func (p *Provider) getSignerAndCache(ctx context.Context, identity driver.Identi
 	}
 
 	return signer, shouldCache, nil
+}
+
+func (p *Provider) shouldCacheIdentity(id Type) bool {
+	return false
 }
 
 func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias driver.Identity) {
