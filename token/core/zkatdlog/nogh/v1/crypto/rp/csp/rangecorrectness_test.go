@@ -233,7 +233,7 @@ func TestCSPRangeCorrectnessMismatchedProofCount(t *testing.T) {
 
 			// Create proof with only 1 proof
 			rc := &CSPRangeCorrectness{
-				Proofs: []*CspRangeProof{{}},
+				Proofs: []*RangeProof{{}},
 			}
 
 			verifier := NewCSPRangeCorrectnessVerifier(
@@ -280,7 +280,7 @@ func TestCSPRangeCorrectnessNilProof(t *testing.T) {
 			commitment := curve.GenG1.Mul(curve.NewRandomZr(rand))
 
 			rc := &CSPRangeCorrectness{
-				Proofs: []*CspRangeProof{nil},
+				Proofs: []*RangeProof{nil},
 			}
 
 			verifier := NewCSPRangeCorrectnessVerifier(
@@ -398,7 +398,7 @@ func TestCSPRangeCorrectnessValidate(t *testing.T) {
 				{
 					name: "valid_empty",
 					rc: &CSPRangeCorrectness{
-						Proofs: []*CspRangeProof{},
+						Proofs: []*RangeProof{},
 					},
 					curveID:   curveID,
 					expectErr: false,
@@ -406,7 +406,7 @@ func TestCSPRangeCorrectnessValidate(t *testing.T) {
 				{
 					name: "valid_single",
 					rc: &CSPRangeCorrectness{
-						Proofs: []*CspRangeProof{{}},
+						Proofs: []*RangeProof{{}},
 					},
 					curveID:   curveID,
 					expectErr: false,
@@ -414,7 +414,7 @@ func TestCSPRangeCorrectnessValidate(t *testing.T) {
 				{
 					name: "nil_proof",
 					rc: &CSPRangeCorrectness{
-						Proofs: []*CspRangeProof{nil},
+						Proofs: []*RangeProof{nil},
 					},
 					curveID:   curveID,
 					expectErr: true,
@@ -422,7 +422,7 @@ func TestCSPRangeCorrectnessValidate(t *testing.T) {
 				{
 					name: "mixed_nil",
 					rc: &CSPRangeCorrectness{
-						Proofs: []*CspRangeProof{{}, nil, {}},
+						Proofs: []*RangeProof{{}, nil, {}},
 					},
 					curveID:   curveID,
 					expectErr: true,

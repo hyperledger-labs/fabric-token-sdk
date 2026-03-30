@@ -19,8 +19,8 @@ import (
 
 // rpSetup holds a consistent prover/verifier pair for a range proof instance.
 type rpSetup struct {
-	prover   *cspRangeProver
-	verifier *cspRangeVerifier
+	prover   *rangeProver
+	verifier *rangeVerifier
 	curve    *math.Curve
 }
 
@@ -52,7 +52,7 @@ func newRPSetup(curve *math.Curve, n uint64, value int64) (*rpSetup, error) {
 	r := curve.NewRandomZr(rand)
 	vComm := curve.MultiScalarMul(vGens, []*math.Zr{v, r})
 
-	p := &cspRangeProver{
+	p := &rangeProver{
 		VGenerators:  vGens,
 		AGenerators:  aGens,
 		BGenerators:  bGens,
@@ -62,7 +62,7 @@ func newRPSetup(curve *math.Curve, n uint64, value int64) (*rpSetup, error) {
 		r:            r,
 		Curve:        curve,
 	}
-	v_ := &cspRangeVerifier{
+	v_ := &rangeVerifier{
 		VGenerators:  vGens,
 		AGenerators:  aGens,
 		BGenerators:  bGens,
@@ -147,7 +147,7 @@ func TestRangeProofOutOfRange(t *testing.T) {
 			r := curve.NewRandomZr(rand)
 			vComm := curve.MultiScalarMul(vGens, []*math.Zr{v, r})
 
-			prover := &cspRangeProver{
+			prover := &rangeProver{
 				VGenerators:  vGens,
 				AGenerators:  aGens,
 				BGenerators:  bGens,

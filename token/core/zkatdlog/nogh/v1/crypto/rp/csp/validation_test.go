@@ -184,7 +184,7 @@ func TestValidateCSPProverInputs(t *testing.T) {
 				wit[i] = curve.NewRandomZr(rand)
 			}
 
-			p := &cspProver{
+			p := &prover{
 				Commitment:     curve.GenG1,
 				Generators:     gens,
 				LinearForm:     lf,
@@ -262,7 +262,7 @@ func TestValidateRangeProverInputs(t *testing.T) {
 				bGens[i] = curve.GenG1
 			}
 
-			p := &cspRangeProver{
+			p := &rangeProver{
 				VCommitment:  curve.GenG1,
 				v:            curve.NewRandomZr(rand),
 				r:            curve.NewRandomZr(rand),
@@ -332,7 +332,7 @@ func TestValidateRangeProof(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", curveID), func(t *testing.T) {
 			curve := mathlib.Curves[curveID]
 
-			proof := &CspRangeProof{
+			proof := &RangeProof{
 				pComm: curve.GenG1,
 				pokV: pokCommitment{
 					A: curve.GenG1,
@@ -341,7 +341,7 @@ func TestValidateRangeProof(t *testing.T) {
 				u:     curve.NewZrFromInt(1),
 				sComm: curve.GenG1,
 				sEval: curve.NewZrFromInt(1),
-				cspProof: CSPProof{
+				cspProof: Proof{
 					Curve:  curve,
 					Left:   []*mathlib.G1{curve.GenG1},
 					Right:  []*mathlib.G1{curve.GenG1},

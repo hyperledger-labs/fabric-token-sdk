@@ -12,19 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 )
 
-// cspProver instantiates a CSP prover
-type cspProver struct {
-	Commitment     *mathlib.G1    // Commitment to the witness
-	Generators     []*mathlib.G1  // Generators for pedersen commitment
-	LinearForm     []*mathlib.Zr  // Linear function
-	Value          *mathlib.Zr    // Claimed value of linear function over witness
-	NumberOfRounds uint64         // log(length of vectors), assume power of 2
-	Curve          *mathlib.Curve // Curve identifier
-
-	witness []*mathlib.Zr // opening for the commitment
-}
-
-// CSPProof is the non-interactive compressed sigma-protocol proof for a linear
+// Proof is the non-interactive compressed sigma-protocol proof for a linear
 // form evaluation over a Pedersen commitment.
 //
 // At each of the NumberOfRounds folding steps the prover supplies:
@@ -43,13 +31,25 @@ type cspProver struct {
 // coefficient vector s (see cspSVector), and checks
 //
 //	com_f^{f_f} == gen_f^{val_f}
-type CSPProof struct {
+type Proof struct {
 	Left   []*mathlib.G1 // cross commitment MSM(gen_L, wit_R)
 	Right  []*mathlib.G1 // cross commitment MSM(gen_R, wit_L)
 	VLeft  []*mathlib.Zr // cross scalar <f_L, wit_R>
 	VRight []*mathlib.Zr // cross scalar <f_R, wit_L>
 
 	Curve *mathlib.Curve
+}
+
+// prover instantiates a CSP prover
+type prover struct {
+	Commitment     *mathlib.G1    // Commitment to the witness
+	Generators     []*mathlib.G1  // Generators for pedersen commitment
+	LinearForm     []*mathlib.Zr  // Linear function
+	Value          *mathlib.Zr    // Claimed value of linear function over witness
+	NumberOfRounds uint64         // log(length of vectors), assume power of 2
+	Curve          *mathlib.Curve // Curve identifier
+
+	witness []*mathlib.Zr // opening for the commitment
 }
 
 // Prove generates a CSP proof. Generators, LinearForm, and witness must all
@@ -60,7 +60,7 @@ type CSPProof struct {
 //	gen'_j = gen_L[j] + c · gen_R[j]
 //	f'_j   = f_L[j]   + c · f_R[j]
 //	w'_j   = c · w_L[j] + w_R[j]
-func (p *cspProver) Prove() (*CSPProof, error) {
+func (p *prover) Prove() (*Proof, error) {
 	// Validate all inputs
 	if err := validateCSPProverInputs(p.Curve, p); err != nil {
 		return nil, errors.Wrap(err, "invalid CSP prover inputs")
@@ -146,7 +146,7 @@ func (p *cspProver) Prove() (*CSPProof, error) {
 		witness = witness[:n]
 	}
 
-	return &CSPProof{
+	return &Proof{
 		Left:   left,
 		Right:  right,
 		VLeft:  vLeft,
@@ -155,8 +155,8 @@ func (p *cspProver) Prove() (*CSPProof, error) {
 	}, nil
 }
 
-// cspVerifier verifies a CSPProof against a public statement.
-type cspVerifier struct {
+// verifier verifies a Proof against a public statement.
+type verifier struct {
 	Commitment     *mathlib.G1   // Pedersen commitment C = MSM(gen, w)
 	Generators     []*mathlib.G1 // Commitment generators
 	LinearForm     []*mathlib.Zr // Coefficients of the linear form f
@@ -175,7 +175,7 @@ type cspVerifier struct {
 // This holds iff there exists w_f : com_f = MSM(gen_f, w_f) ∧ val_f = f_f · w_f.
 // This is similar to the optimisation used in Bulletproof verifier:
 // See: Page 17, Section 3, https://eprint.iacr.org/2017/1066.pdf
-func (v *cspVerifier) Verify(proof *CSPProof) error {
+func (v *verifier) Verify(proof *Proof) error {
 	// Validate verifier inputs
 	if err := validateCSPVerifierInputs(v.Curve, v); err != nil {
 		return errors.Wrap(err, "invalid CSP verifier inputs")
@@ -240,7 +240,7 @@ func (v *cspVerifier) Verify(proof *CSPProof) error {
 	//   gen_f = sum_i s[i] · gen[i]   and   f_f = sum_i s[i] · f[i]
 	// then evaluate both via a single MSM and a single inner product.
 	n := 1 << v.NumberOfRounds
-	s := cspSVector(n, challenges, v.Curve)
+	s := sVector(n, challenges, v.Curve)
 
 	// gen_f = MSM(Generators, s)
 	genF := v.Curve.MultiScalarMul(v.Generators, s)
@@ -258,7 +258,7 @@ func (v *cspVerifier) Verify(proof *CSPProof) error {
 	return nil
 }
 
-// cspSVector computes the length-n coefficient vector s such that the
+// sVector computes the length-n coefficient vector s such that the
 // final folded generator gen_f = sum_i s[i] · gen[i].
 //
 // Under the folding rule gen'_j = gen_L[j] + c_r · gen_R[j], after k=log₂(n)
@@ -268,7 +268,7 @@ func (v *cspVerifier) Verify(proof *CSPProof) error {
 //
 // where bit(i,m) is the m-th bit of i (0 = LSB). The vector is built in O(n)
 // multiplications using the recurrence: s[i + 2^r] = s[i] · c_{k-1-r}.
-func cspSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) []*mathlib.Zr {
+func sVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) []*mathlib.Zr {
 	k := len(challenges)
 	s := make([]*mathlib.Zr, n)
 	s[0] = math.One(curve)

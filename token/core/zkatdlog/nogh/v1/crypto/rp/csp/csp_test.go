@@ -19,8 +19,8 @@ import (
 
 // cspSetup holds a fully consistent CSP statement and witness.
 type cspSetup struct {
-	prover   *cspProver
-	verifier *cspVerifier
+	prover   *prover
+	verifier *verifier
 	curve    *math.Curve
 }
 
@@ -49,7 +49,7 @@ func newCSPSetup(t *testing.T, curve *math.Curve, rounds uint64) *cspSetup {
 	// Value = ⟨linearForm, witness⟩  (scalar-field MSM)
 	value := math2.InnerProduct(linearForm, witness, curve)
 
-	p := &cspProver{
+	p := &prover{
 		Commitment:     com,
 		Generators:     generators,
 		LinearForm:     linearForm,
@@ -59,7 +59,7 @@ func newCSPSetup(t *testing.T, curve *math.Curve, rounds uint64) *cspSetup {
 		witness:        witness,
 	}
 
-	v := &cspVerifier{
+	v := &verifier{
 		Commitment:     com,
 		Generators:     generators,
 		LinearForm:     linearForm,
@@ -273,7 +273,7 @@ func TestCSPSVector(t *testing.T) {
 				challenges[i] = curve.NewRandomZr(rand)
 			}
 
-			s := cspSVector(n, challenges, curve)
+			s := sVector(n, challenges, curve)
 			require.Len(t, s, n)
 
 			// Naive check: s[i] = prod_{r=0}^{k-1} c_r^{bit(i, k-1-r)}

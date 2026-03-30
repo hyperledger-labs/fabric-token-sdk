@@ -81,7 +81,7 @@ func TestTypedErrors(t *testing.T) {
 					wit[i] = curve.NewRandomZr(rand)
 				}
 
-				p := &cspProver{
+				p := &prover{
 					Commitment:     nil, // nil commitment
 					Generators:     gens,
 					LinearForm:     lf,
@@ -107,7 +107,7 @@ func TestTypedErrors(t *testing.T) {
 					bGens[i] = curve.GenG1
 				}
 
-				p := &cspRangeProver{
+				p := &rangeProver{
 					VCommitment:  curve.GenG1,
 					v:            nil, // nil value
 					r:            curve.NewZrFromInt(1),
@@ -127,7 +127,7 @@ func TestTypedErrors(t *testing.T) {
 				// Test range prover with invalid bit count
 				vGens := []*mathlib.G1{curve.GenG1, curve.GenG1}
 
-				p := &cspRangeProver{
+				p := &rangeProver{
 					VCommitment:  curve.GenG1,
 					v:            curve.NewZrFromInt(1),
 					r:            curve.NewZrFromInt(1),

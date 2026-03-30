@@ -322,7 +322,7 @@ func TestRangeProofSerializationRoundTrip(t *testing.T) {
 			require.NotEmpty(t, serialized)
 
 			// Deserialize
-			proof2 := &CspRangeProof{}
+			proof2 := &RangeProof{}
 			err = proof2.Deserialize(serialized)
 			require.NoError(t, err)
 
@@ -345,7 +345,7 @@ func TestRangeProofDeserializeInvalid(t *testing.T) {
 	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
 	for _, curveID := range curves {
 		t.Run(fmt.Sprintf("curveID=%d", curveID), func(t *testing.T) {
-			proof := &CspRangeProof{}
+			proof := &RangeProof{}
 
 			testCases := []struct {
 				name string
@@ -598,7 +598,7 @@ func TestRangeProofValidate(t *testing.T) {
 	curves := []math.CurveID{math.BN254, math.BLS12_381_BBS_GURVY}
 	for _, curveID := range curves {
 		t.Run(fmt.Sprintf("curveID=%d", curveID), func(t *testing.T) {
-			proof := &CspRangeProof{}
+			proof := &RangeProof{}
 			err := proof.Validate(curveID)
 			require.NoError(t, err)
 		})
