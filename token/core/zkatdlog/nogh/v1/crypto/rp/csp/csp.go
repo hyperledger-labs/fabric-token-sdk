@@ -49,7 +49,14 @@ type prover struct {
 	NumberOfRounds uint64         // log(length of vectors), assume power of 2
 	Curve          *mathlib.Curve // Curve identifier
 
-	witness []*mathlib.Zr // opening for the commitment
+	witness          []*mathlib.Zr // opening for the commitment
+	TranscriptHeader []byte
+}
+
+func (p *prover) WithTranscriptHeader(h []byte) *prover {
+	p.TranscriptHeader = h
+
+	return p
 }
 
 // Prove generates a CSP proof. Generators, LinearForm, and witness must all
@@ -68,13 +75,17 @@ func (p *prover) Prove() (*Proof, error) {
 
 	// Initialize transcript.
 	tr := Transcript{Curve: p.Curve}
-	tr.InitHasher()
-
-	// Absorb Commitment || Generators || LinearForm || Value into transcript.
-	tr.Absorb(p.Commitment.Bytes())
-	for _, g := range p.Generators {
-		tr.Absorb(g.Bytes())
+	if len(p.TranscriptHeader) != 0 {
+		tr.SetState(p.TranscriptHeader)
+	} else {
+		tr.InitHasher()
+		// Absorb Commitment || Generators || LinearForm || Value into transcript.
+		for _, g := range p.Generators {
+			tr.Absorb(g.Bytes())
+		}
 	}
+
+	tr.Absorb(p.Commitment.Bytes())
 	for _, f := range p.LinearForm {
 		tr.Absorb(f.Bytes())
 	}
@@ -128,15 +139,15 @@ func (p *prover) Prove() (*Proof, error) {
 		for j := range n {
 			generators[j].Add(generators[n+j].Mul(c))
 
-			linearForm[j] = p.Curve.ModAdd(
-				linearForm[j],
-				p.Curve.ModMul(c, linearForm[n+j], p.Curve.GroupOrder),
+			linearForm[j] = p.Curve.ModAddMul2(
+				linearForm[j], math.One(p.Curve),
+				c, linearForm[n+j],
 				p.Curve.GroupOrder,
 			)
 
-			witness[j] = p.Curve.ModAdd(
-				p.Curve.ModMul(c, witness[j], p.Curve.GroupOrder),
-				witness[n+j],
+			witness[j] = p.Curve.ModAddMul2(
+				c, witness[j],
+				witness[n+j], math.One(p.Curve),
 				p.Curve.GroupOrder,
 			)
 		}
@@ -157,12 +168,19 @@ func (p *prover) Prove() (*Proof, error) {
 
 // verifier verifies a Proof against a public statement.
 type verifier struct {
-	Commitment     *mathlib.G1   // Pedersen commitment C = MSM(gen, w)
-	Generators     []*mathlib.G1 // Commitment generators
-	LinearForm     []*mathlib.Zr // Coefficients of the linear form f
-	Value          *mathlib.Zr   // Claimed evaluation v = ⟨f, w⟩
-	NumberOfRounds uint64        // log₂(vector length)
-	Curve          *mathlib.Curve
+	Commitment       *mathlib.G1   // Pedersen commitment C = MSM(gen, w)
+	Generators       []*mathlib.G1 // Commitment generators
+	LinearForm       []*mathlib.Zr // Coefficients of the linear form f
+	Value            *mathlib.Zr   // Claimed evaluation v = ⟨f, w⟩
+	NumberOfRounds   uint64        // log₂(vector length)
+	Curve            *mathlib.Curve
+	TranscriptHeader []byte
+}
+
+func (v *verifier) WithTranscriptHeader(h []byte) *verifier {
+	v.TranscriptHeader = h
+
+	return v
 }
 
 // Verify checks that proof is a valid CSP proof for the statement
@@ -188,11 +206,15 @@ func (v *verifier) Verify(proof *Proof) error {
 
 	// Initialize transcript — must mirror Prove() exactly.
 	tr := Transcript{Curve: v.Curve}
-	tr.InitHasher()
-	tr.Absorb(v.Commitment.Bytes())
-	for _, g := range v.Generators {
-		tr.Absorb(g.Bytes())
+	if len(v.TranscriptHeader) != 0 {
+		tr.SetState(v.TranscriptHeader)
+	} else {
+		tr.InitHasher()
+		for _, g := range v.Generators {
+			tr.Absorb(g.Bytes())
+		}
 	}
+	tr.Absorb(v.Commitment.Bytes())
 	for _, f := range v.LinearForm {
 		tr.Absorb(f.Bytes())
 	}
@@ -225,13 +247,10 @@ func (v *verifier) Verify(proof *Proof) error {
 		com = newCom
 
 		// Update value: v' = c·v + VLeft[i] + c²·VRight[i]
-		val = v.Curve.ModAdd(
-			v.Curve.ModMul(c, val, v.Curve.GroupOrder),
-			v.Curve.ModAdd(
-				proof.VLeft[i],
-				v.Curve.ModMul(cSq, proof.VRight[i], v.Curve.GroupOrder),
-				v.Curve.GroupOrder,
-			),
+		val = v.Curve.ModAddMul3(
+			c, val,
+			proof.VLeft[i], math.One(v.Curve),
+			cSq, proof.VRight[i],
 			v.Curve.GroupOrder,
 		)
 	}

@@ -13,14 +13,14 @@ import (
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 )
 
-// CSPRangeCorrectness contains a set of range proofs for multiple commitments.
-type CSPRangeCorrectness struct {
+// RangeCorrectness contains a set of range proofs for multiple commitments.
+type RangeCorrectness struct {
 	// Proofs is a slice of range proofs.
 	Proofs []*RangeProof
 }
 
-// Serialize marshals the CSPRangeCorrectness into a byte slice.
-func (r *CSPRangeCorrectness) Serialize() ([]byte, error) {
+// Serialize marshals the RangeCorrectness into a byte slice.
+func (r *RangeCorrectness) Serialize() ([]byte, error) {
 	proofs, err := asn1.NewArray(r.Proofs)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal proofs")
@@ -29,8 +29,8 @@ func (r *CSPRangeCorrectness) Serialize() ([]byte, error) {
 	return asn1.Marshal(proofs)
 }
 
-// Deserialize unmarshals a byte slice into the CSPRangeCorrectness.
-func (r *CSPRangeCorrectness) Deserialize(raw []byte) error {
+// Deserialize unmarshals a byte slice into the RangeCorrectness.
+func (r *RangeCorrectness) Deserialize(raw []byte) error {
 	proofs, err := asn1.NewArrayWithNew[*RangeProof](func() *RangeProof {
 		return &RangeProof{}
 	})
@@ -47,7 +47,7 @@ func (r *CSPRangeCorrectness) Deserialize(raw []byte) error {
 }
 
 // Validate checks that all range proofs in the set are valid for the given curve.
-func (r *CSPRangeCorrectness) Validate(curve math.CurveID) error {
+func (r *RangeCorrectness) Validate(curve math.CurveID) error {
 	for i, proof := range r.Proofs {
 		if proof == nil {
 			return errors.Errorf("invalid range proof: nil proof at index %d", i)
@@ -61,8 +61,8 @@ func (r *CSPRangeCorrectness) Validate(curve math.CurveID) error {
 	return nil
 }
 
-// CSPRangeCorrectnessProver manages the generation of a set of range proofs.
-type CSPRangeCorrectnessProver struct {
+// RangeCorrectnessProver manages the generation of a set of range proofs.
+type RangeCorrectnessProver struct {
 	// Commitments is the set of Pedersen commitments for which range proofs are generated.
 	Commitments []*math.G1
 	// Values is the set of underlying values.
@@ -78,19 +78,20 @@ type CSPRangeCorrectnessProver struct {
 	// BitLength is the maximum bit length of the values.
 	BitLength uint64
 	// Curve is the mathematical curve.
-	Curve *math.Curve
+	Curve            *math.Curve
+	TranscriptHeader []byte
 }
 
-// NewCSPRangeCorrectnessProver returns a new CSPRangeCorrectnessProver instance.
-func NewCSPRangeCorrectnessProver(
+// NewRangeCorrectnessProver returns a new RangeCorrectnessProver instance.
+func NewRangeCorrectnessProver(
 	coms []*math.G1,
 	values []uint64,
 	blindingFactors []*math.Zr,
 	pedersenParameters, leftGenerators, rightGenerators []*math.G1,
 	bitLength uint64,
 	c *math.Curve,
-) *CSPRangeCorrectnessProver {
-	return &CSPRangeCorrectnessProver{
+) *RangeCorrectnessProver {
+	return &RangeCorrectnessProver{
 		Commitments:        coms,
 		Values:             values,
 		BlindingFactors:    blindingFactors,
@@ -103,8 +104,8 @@ func NewCSPRangeCorrectnessProver(
 }
 
 // Prove generates a set of range proofs.
-func (p *CSPRangeCorrectnessProver) Prove() (*CSPRangeCorrectness, error) {
-	rc := &CSPRangeCorrectness{}
+func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
+	rc := &RangeCorrectness{}
 	rc.Proofs = make([]*RangeProof, len(p.Commitments))
 	for i := range len(p.Commitments) {
 		bp := NewRangeProver(
@@ -116,7 +117,7 @@ func (p *CSPRangeCorrectnessProver) Prove() (*CSPRangeCorrectness, error) {
 			p.RightGenerators,
 			p.BitLength,
 			p.Curve,
-		)
+		).WithTranscriptHeader(p.TranscriptHeader)
 		proof, err := bp.Prove()
 		if err != nil {
 			return nil, err
@@ -127,8 +128,14 @@ func (p *CSPRangeCorrectnessProver) Prove() (*CSPRangeCorrectness, error) {
 	return rc, nil
 }
 
-// CSPRangeCorrectnessVerifier manages the verification of a set of range proofs.
-type CSPRangeCorrectnessVerifier struct {
+func (p *RangeCorrectnessProver) WithTranscriptHeader(header []byte) *RangeCorrectnessProver {
+	p.TranscriptHeader = header
+
+	return p
+}
+
+// RangeCorrectnessVerifier manages the verification of a set of range proofs.
+type RangeCorrectnessVerifier struct {
 	// Commitments is the set of Pedersen commitments being verified.
 	Commitments []*math.G1
 	// PedersenParameters are the generators (G, H).
@@ -141,15 +148,17 @@ type CSPRangeCorrectnessVerifier struct {
 	BitLength uint64
 	// Curve is the mathematical curve.
 	Curve *math.Curve
+
+	TranscriptHeader []byte
 }
 
-// NewCSPRangeCorrectnessVerifier returns a new CSPRangeCorrectnessVerifier instance.
-func NewCSPRangeCorrectnessVerifier(
+// NewRangeCorrectnessVerifier returns a new RangeCorrectnessVerifier instance.
+func NewRangeCorrectnessVerifier(
 	pedersenParameters, leftGenerators, rightGenerators []*math.G1,
 	bitLength uint64,
 	curve *math.Curve,
-) *CSPRangeCorrectnessVerifier {
-	return &CSPRangeCorrectnessVerifier{
+) *RangeCorrectnessVerifier {
+	return &RangeCorrectnessVerifier{
 		PedersenParameters: pedersenParameters,
 		LeftGenerators:     leftGenerators,
 		RightGenerators:    rightGenerators,
@@ -159,7 +168,7 @@ func NewCSPRangeCorrectnessVerifier(
 }
 
 // Verify checks if the provided set of range proofs is valid.
-func (v *CSPRangeCorrectnessVerifier) Verify(rc *CSPRangeCorrectness) error {
+func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	if len(rc.Proofs) != len(v.Commitments) {
 		return errors.New("invalid range proof")
 	}
@@ -174,7 +183,7 @@ func (v *CSPRangeCorrectnessVerifier) Verify(rc *CSPRangeCorrectness) error {
 			v.Commitments[i],
 			v.BitLength,
 			v.Curve,
-		)
+		).WithTranscriptHeader(v.TranscriptHeader)
 		err := bv.Verify(rc.Proofs[i])
 		if err != nil {
 			return errors.Wrapf(err, "invalid range proof at index %d", i)
@@ -182,4 +191,10 @@ func (v *CSPRangeCorrectnessVerifier) Verify(rc *CSPRangeCorrectness) error {
 	}
 
 	return nil
+}
+
+func (v *RangeCorrectnessVerifier) WithTranscriptHeader(header []byte) *RangeCorrectnessVerifier {
+	v.TranscriptHeader = header
+
+	return v
 }

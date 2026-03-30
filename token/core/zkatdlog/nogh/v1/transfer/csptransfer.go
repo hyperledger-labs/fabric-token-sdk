@@ -25,7 +25,7 @@ type CSPProof struct {
 	// TypeAndSum is a cSPProof that inputs and outputs have the same total value and token type.
 	TypeAndSum *TypeAndSumProof
 	// RangeCorrectness is a cSPProof that the outputs have values in the authorized range.
-	RangeCorrectness *csp.CSPRangeCorrectness
+	RangeCorrectness *csp.RangeCorrectness
 }
 
 // Serialize marshals the CSPProof to bytes.
@@ -36,7 +36,7 @@ func (p *CSPProof) Serialize() ([]byte, error) {
 // Deserialize unmarshals the CSPProof from bytes.
 func (p *CSPProof) Deserialize(bytes []byte) error {
 	p.TypeAndSum = &TypeAndSumProof{}
-	p.RangeCorrectness = &csp.CSPRangeCorrectness{}
+	p.RangeCorrectness = &csp.RangeCorrectness{}
 
 	return asn1.Unmarshal[asn1.Serializer](bytes, p.TypeAndSum, p.RangeCorrectness)
 }
@@ -63,7 +63,7 @@ func (p *CSPProof) Validate(curve math.CurveID) error {
 // CSPBasedProver produces a zero-knowledge proof that a Transfer Action is valid.
 type CSPBasedProver struct {
 	TypeAndSum       *TypeAndSumProver
-	RangeCorrectness *csp.CSPRangeCorrectnessProver
+	RangeCorrectness *csp.RangeCorrectnessProver
 }
 
 // NewCSPBasedProver returns a new CSPBasedProver instance.
@@ -112,7 +112,16 @@ func NewCSPBasedProver(inputWitness, outputWitness []*token.Metadata, inputs, ou
 			coms[i] = outputs[i].Copy()
 			coms[i].Sub(commitmentToType)
 		}
-		p.RangeCorrectness = csp.NewCSPRangeCorrectnessProver(coms, values, blindingFactors, pp.PedersenGenerators[1:], pp.CSPRangeProofParams.LeftGenerators, pp.CSPRangeProofParams.RightGenerators, pp.CSPRangeProofParams.BitLength, math.Curves[pp.Curve])
+		p.RangeCorrectness = csp.NewRangeCorrectnessProver(
+			coms,
+			values,
+			blindingFactors,
+			pp.PedersenGenerators[1:],
+			pp.CSPRangeProofParams.LeftGenerators,
+			pp.CSPRangeProofParams.RightGenerators,
+			pp.CSPRangeProofParams.BitLength,
+			math.Curves[pp.Curve],
+		).WithTranscriptHeader(pp.CSPRangeProofParams.RPTranscriptHeader)
 	}
 
 	return p, nil
@@ -121,7 +130,7 @@ func NewCSPBasedProver(inputWitness, outputWitness []*token.Metadata, inputs, ou
 // Prove produces a serialized zero-knowledge Proof.
 func (p *CSPBasedProver) Prove() ([]byte, error) {
 	var tsProof *TypeAndSumProof
-	var rangeProof *csp.CSPRangeCorrectness
+	var rangeProof *csp.RangeCorrectness
 	if p.RangeCorrectness != nil {
 		var err error
 		rangeProof, err = p.RangeCorrectness.Prove()
@@ -151,22 +160,22 @@ func (p *CSPBasedProver) RangeProofType() rp.ProofType {
 type CSPVerifier struct {
 	PP               *v1.PublicParams
 	TypeAndSum       *TypeAndSumVerifier
-	RangeCorrectness *csp.CSPRangeCorrectnessVerifier
+	RangeCorrectness *csp.RangeCorrectnessVerifier
 }
 
 // NewCSPVerifier returns a new CSPVerifier instance.
 func NewCSPVerifier(inputs, outputs []*math.G1, pp *v1.PublicParams) *CSPVerifier {
 	// check if this is an ownership transfer (1 input, 1 output)
 	// if so, skip range proof as well-formedness proof is sufficient.
-	var rangeCorrectness *csp.CSPRangeCorrectnessVerifier
+	var rangeCorrectness *csp.RangeCorrectnessVerifier
 	if len(inputs) != 1 || len(outputs) != 1 {
-		rangeCorrectness = csp.NewCSPRangeCorrectnessVerifier(
+		rangeCorrectness = csp.NewRangeCorrectnessVerifier(
 			pp.PedersenGenerators[1:],
 			pp.CSPRangeProofParams.LeftGenerators,
 			pp.CSPRangeProofParams.RightGenerators,
 			pp.CSPRangeProofParams.BitLength,
 			math.Curves[pp.Curve],
-		)
+		).WithTranscriptHeader(pp.CSPRangeProofParams.RPTranscriptHeader)
 	}
 
 	return &CSPVerifier{
