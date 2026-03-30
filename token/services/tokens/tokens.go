@@ -489,7 +489,7 @@ func (t *Service) parse(
 			tokenOnLedger:         output.LedgerOutput,
 			tokenOnLedgerFormat:   output.LedgerOutputFormat,
 			tokenOnLedgerMetadata: output.LedgerOutputMetadata,
-			ownerType:             ownerType,
+			ownerType:             identityTypeToString(ownerType),
 			ownerIdentity:         ownerIdentity,
 			ownerWalletID:         ownerWalletID,
 			owners:                ids,
@@ -509,4 +509,15 @@ func (t *Service) parse(
 	}
 
 	return toSpend, toAppend, err
+}
+
+func identityTypeToString(t driver.IdentityType) string {
+	switch t {
+	case driver.IdemixIdentityType:
+		return "idemix"
+	case driver.X509IdentityType:
+		return "x509"
+	default:
+		return "unknown"
+	}
 }

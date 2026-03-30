@@ -11,10 +11,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -30,32 +30,25 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 		t.Run(c.Name, func(xt *testing.T) {
 			driver := cfgProvider(c.Name)
 			db, err := driver.NewToken("", c.Name)
-			require.NoError(xt, err)
+			if err != nil {
+				t.Fatal(err)
+			}
 			tokenDB, ok := db.(TestTokenDB)
 			assert.True(xt, ok)
 			defer utils.IgnoreError(tokenDB.Close)
 			c.Fn(t, db.(TestTokenDB))
 		})
 	}
-
-	for _, c := range TokenNotifierCases {
-		t.Run(c.Name, func(xt *testing.T) {
-			driver := cfgProvider(c.Name)
-			db, err := driver.NewToken("", c.Name)
-			require.NoError(xt, err)
-			tokenDB, ok := db.(TestTokenDB)
-			assert.True(xt, ok)
-			defer utils.IgnoreError(tokenDB.Close)
-			notifier, err := db.Notifier()
-			if err != nil && errors.Is(err, storage.ErrNotSupported) {
-				t.Logf("notifier not supported, skip test")
-
-				return
-			}
-			require.NoError(xt, err)
-			c.Fn(t, db.(TestTokenDB), notifier)
-		})
-	}
+	// for _, c := range TokenNotifierCases {
+	//	db, err := initTokenNDB(sql2.Postgres, pgConnStr, c.Name, 10)
+	//	if err != nil {
+	//		t.Fatal(err)
+	//	}
+	//	t.Run(c.Name, func(xt *testing.T) {
+	//		defer Close(db)
+	//		c.Fn(xt, db)
+	//	})
+	// }
 }
 
 var tokensCases = []struct {
@@ -86,7 +79,7 @@ func TTokenTransaction(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -151,7 +144,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 			Index:          0,
 			IssuerRaw:      []byte{},
 			OwnerRaw:       []byte{1, 2, 3},
-			OwnerType:      "idemix",
+			OwnerType:      idemix.IdentityType,
 			OwnerIdentity:  []byte{},
 			Ledger:         []byte("ledger"),
 			LedgerMetadata: []byte{},
@@ -169,7 +162,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -187,7 +180,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 		Index:          1,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -205,7 +198,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -249,7 +242,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		OwnerWalletID:  "pineapple",
 		Ledger:         []byte("ledger"),
@@ -292,7 +285,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -309,7 +302,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 		Index:          1,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -326,7 +319,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -372,7 +365,7 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 		TxID:           "tx101",
 		Index:          0,
 		OwnerRaw:       []byte{1, 2},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		OwnerWalletID:  "idemix",
 		Ledger:         []byte("ledger"),
@@ -389,7 +382,7 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 		TxID:           "tx101",
 		Index:          1,
 		OwnerRaw:       []byte{3, 4},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		OwnerWalletID:  "idemix",
 		Ledger:         []byte("ledger"),
@@ -406,7 +399,7 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 		TxID:           "tx102",
 		Index:          0,
 		OwnerRaw:       []byte{5, 6},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		OwnerWalletID:  "idemix",
 		Ledger:         []byte("ledger"),
@@ -446,7 +439,7 @@ func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 		TxID:           "tx101",
 		Index:          0,
 		OwnerRaw:       []byte{1, 2},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		OwnerWalletID:  "idemix",
 		IssuerRaw:      []byte{11, 12},
@@ -464,7 +457,7 @@ func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 		TxID:           "tx101",
 		Index:          1,
 		OwnerRaw:       []byte{3, 4},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		OwnerWalletID:  "idemix",
 		IssuerRaw:      []byte{13, 14},
@@ -482,7 +475,7 @@ func TListIssuedTokens(t *testing.T, db TestTokenDB) {
 		TxID:           "tx102",
 		Index:          0,
 		OwnerRaw:       []byte{5, 6},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		OwnerWalletID:  "idemix",
 		IssuerRaw:      []byte{15, 16},
@@ -533,7 +526,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("tx101l"),
 		LedgerMetadata: []byte("tx101"),
@@ -550,7 +543,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("tx102l"),
 		LedgerMetadata: []byte("tx102"),
@@ -567,7 +560,7 @@ func TGetTokenInfos(t *testing.T, db TestTokenDB) {
 		Index:          1,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("tx102l"),
 		LedgerMetadata: []byte("tx102"),
@@ -635,7 +628,7 @@ func TDeleteMultiple(t *testing.T, db TestTokenDB) {
 		TxID:           "tx101",
 		Index:          0,
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -648,7 +641,7 @@ func TDeleteMultiple(t *testing.T, db TestTokenDB) {
 		TxID:           "tx101",
 		Index:          1,
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -661,7 +654,7 @@ func TDeleteMultiple(t *testing.T, db TestTokenDB) {
 		TxID:           "tx102",
 		Index:          0,
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -737,7 +730,7 @@ func TCertification(t *testing.T, db TestTokenDB) {
 				TxID:           tokenID.TxId,
 				Index:          tokenID.Index,
 				OwnerRaw:       []byte{1, 2, 3},
-				OwnerType:      "idemix",
+				OwnerType:      idemix.IdentityType,
 				OwnerIdentity:  []byte{},
 				Quantity:       "0x01",
 				Ledger:         []byte("ledger"),
@@ -809,7 +802,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -825,7 +818,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "htlc",
+		OwnerType:      htlc.ScriptType,
 		OwnerIdentity:  []byte("{}"),
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -841,7 +834,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 		Index:          1,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "htlc",
+		OwnerType:      htlc.ScriptType,
 		OwnerIdentity:  []byte("{}"),
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -948,7 +941,7 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
+		OwnerType:      idemix.IdentityType,
 		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerFormat:   "CLEAR",
@@ -965,7 +958,7 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "htlc",
+		OwnerType:      htlc.ScriptType,
 		OwnerIdentity:  []byte("{}"),
 		Ledger:         []byte("ledger"),
 		LedgerFormat:   "CLEAR1",

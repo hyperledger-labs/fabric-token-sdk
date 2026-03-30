@@ -73,7 +73,7 @@ func (e *EIDRHDeserializer) getAuditInfo(ctx context.Context, id driver.Identity
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
 	}
-	res, err := d.DeserializeAuditInfo(ctx, auditInfo)
+	res, err := d.DeserializeAuditInfo(ctx, id, auditInfo)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to deserialize audit info for identity type [%s]", si.Type)
 	}
