@@ -230,9 +230,13 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		_, err = context.RunView(htlc.NewOrderingAndFinalityView(tx))
 		assert.NoError(err, "failed to commit htlc transaction")
 
+		assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
+
 		return nil, nil
 	})
 	assert.NoError(err, "failed completing responder's leg (as initiator)")
+
+	assert.NoError(context.Context().Err(), "context is invalid [%+v]", context.Context().Err())
 
 	time.Sleep(30 * time.Second)
 
