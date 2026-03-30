@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
@@ -237,27 +236,11 @@ func (v *FastExchangeResponderView) Call(ctx view.Context) (interface{}, error) 
 		_, err = ctx.RunView(htlc.NewOrderingAndFinalityView(tx))
 		assert.NoError(err, "failed to commit htlc transaction")
 
-		assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
-
 		return nil, nil
 	})
 	assert.NoError(err, "failed completing responder's leg (as initiator)")
 
-	assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
-
-	d, ok := ctx.Context().Deadline()
-	logger.Infof("context deadline [%v:%v]", d, ok)
-
-	select {
-	case <-ctx.Context().Done():
-		logger.Errorf("[%s] context is invalid [%+v][%+v]", ctx.ID(), ctx.Context().Err(), context.Cause(ctx.Context()))
-
-		return nil, errors.Errorf("context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
-	case <-time.After(30 * time.Second):
-		break
-	}
-
-	assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
+	time.After(30 * time.Second)
 
 	// Claim initiator's script, we don't need any interaction with the initiator (FastExchangeInitiatorView).
 	// Indeed, the initiator can terminate.

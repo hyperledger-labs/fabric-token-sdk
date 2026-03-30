@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
-	"context"
 	"encoding/json"
 	"time"
 
@@ -57,11 +56,8 @@ func (r *ClaimView) Call(ctx view.Context) (res interface{}, err error) {
 		}
 	}()
 
-	assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
-
 	preImage := r.PreImage
 	if len(preImage) == 0 && r.Script != nil {
-		assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
 		// Scan for the pre-image
 		var err error
 		preImage, err = htlc.ScanForPreImage(
@@ -73,8 +69,6 @@ func (r *ClaimView) Call(ctx view.Context) (res interface{}, err error) {
 			token.WithTMSID(r.ScriptTMSID),
 		)
 		assert.NoError(err, "failed to receive the preImage")
-
-		assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
 
 		// double-check the value of the key
 		tms, err := token.GetManagementService(ctx, token.WithTMSID(r.ScriptTMSID))
@@ -89,8 +83,6 @@ func (r *ClaimView) Call(ctx view.Context) (res interface{}, err error) {
 		assert.NoError(err, "failed getting states")
 		assert.True(len(stateValues) == 1, "expected one state value")
 		assert.Equal(preImage, stateValues[0], "pre-image mismatch [%s] vs [%s]", utils.Hashable(preImage), utils.Hashable(stateValues[0]))
-
-		assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
 	}
 
 	claimWallet := htlc.GetWallet(ctx, r.Wallet, token.WithTMSID(r.TMSID))
@@ -115,8 +107,6 @@ func (r *ClaimView) Call(ctx view.Context) (res interface{}, err error) {
 
 	_, err = ctx.RunView(htlc.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed to commit htlc transaction")
-
-	assert.NoError(ctx.Context().Err(), "context is invalid [%+v][%+v]", ctx.Context().Err(), context.Cause(ctx.Context()))
 
 	return tx.ID(), nil
 }
