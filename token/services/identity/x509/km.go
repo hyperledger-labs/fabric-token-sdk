@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	IdentityType identity.Type = "x509"
+	IdentityType identity.Type = 2
 )
 
 var logger = logging.MustGetLogger()

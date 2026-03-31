@@ -191,9 +191,11 @@ type WalletLookupID = any
 type IdentityType = int32
 
 const (
-	UnknownIdentityType IdentityType = 0 // _ = unused per Angelo
-	IdemixIdentityType  IdentityType = 1
-	X509IdentityType    IdentityType = 2
+	UnknownIdentityType    IdentityType = 0 // _ = unused per Angelo
+	IdemixIdentityType     IdentityType = 1
+	X509IdentityType       IdentityType = 2
+	IdemixNymIdentityType  IdentityType = 4
+	HTLCScriptIdentityType IdentityType = 5
 )
 
 // Authorization defines method to check the relation between a token

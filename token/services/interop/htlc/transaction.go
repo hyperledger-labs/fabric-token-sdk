@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	ScriptType            = "htlc" // htlc script
-	defaultDeadlineOffset = time.Hour
+	ScriptType            identity.Type = 5 // htlc script
+	defaultDeadlineOffset               = time.Hour
 )
 
 // WithHash sets a hash attribute to be used to customize the transfer command

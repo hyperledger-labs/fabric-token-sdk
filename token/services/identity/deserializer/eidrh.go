@@ -80,3 +80,7 @@ func (e *EIDRHDeserializer) getAuditInfo(ctx context.Context, id driver.Identity
 
 	return res, nil
 }
+
+func (e *EIDRHDeserializer) DeserializeAuditInfo(ctx context.Context, id driver.Identity, raw []byte) (driver2.AuditInfo, error) {
+	return e.getAuditInfo(ctx, id, raw)
+}

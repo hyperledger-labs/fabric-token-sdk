@@ -849,7 +849,7 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (token.Id
 	ai := identityDescriptor.AuditInfo
 
 	typedIdentity := id
-	if len(i.IdentityType) != 0 {
+	if i.IdentityType != 0 {
 		logger.DebugfContext(ctx, "wrap and bind as [%s]", i.IdentityType)
 		typedIdentity, err = identity.WrapWithType(i.IdentityType, id)
 		if err != nil {

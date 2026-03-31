@@ -17,7 +17,7 @@ import (
 
 func TestTypedIdentity_Bytes(t *testing.T) {
 	ti := identity.TypedIdentity{
-		Type:     "testType",
+		Type:     identity.Type(5),
 		Identity: driver.Identity("testIdentity"),
 	}
 
@@ -28,7 +28,7 @@ func TestTypedIdentity_Bytes(t *testing.T) {
 
 func TestTypedIdentity_Bytes_Error(t *testing.T) {
 	ti := identity.TypedIdentity{
-		Type:     identity.Type([]byte{0xff, 0xfe, 0xfd}),
+		Type:     identity.Type(999),
 		Identity: driver.Identity("testIdentity"),
 	}
 
@@ -38,7 +38,7 @@ func TestTypedIdentity_Bytes_Error(t *testing.T) {
 
 func TestUnmarshalTypedIdentity(t *testing.T) {
 	ti := identity.TypedIdentity{
-		Type:     "testType",
+		Type:     identity.Type(5),
 		Identity: driver.Identity("testIdentity"),
 	}
 
@@ -58,7 +58,7 @@ func TestUnmarshalTypedIdentity_Error(t *testing.T) {
 }
 
 func TestWrapWithType(t *testing.T) {
-	idType := "testType"
+	idType := identity.Type(5)
 	id := driver.Identity("testIdentity")
 
 	wrappedID, err := identity.WrapWithType(idType, id)
@@ -72,7 +72,7 @@ func TestWrapWithType(t *testing.T) {
 }
 
 func TestWrapWithType_Error(t *testing.T) {
-	idType := string([]byte{0xff, 0xfe, 0xfd})
+	idType := identity.Type(999)
 	id := driver.Identity("testIdentity")
 
 	_, err := identity.WrapWithType(idType, id)

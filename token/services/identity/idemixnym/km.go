@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	IdentityType identity.Type = "idemixnym"
+	IdentityType identity.Type = 4
 )
 
 type IdentityStoreService interface {
