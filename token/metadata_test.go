@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token_test tests metadata.go which provides token transaction metadata filtering and matching functionality.
 package token_test
 
 import (

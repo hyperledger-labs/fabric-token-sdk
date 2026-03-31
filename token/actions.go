@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token provides wrappers for token actions (Issue and Transfer) that delegate to driver implementations.
 package token
 
 import (

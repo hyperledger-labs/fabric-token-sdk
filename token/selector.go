@@ -12,6 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+//go:generate sh -c "counterfeiter -o selector_mock.go -fake-name SelectorMock . Selector && sed -i '/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\"/d' selector_mock.go && sed -i 's/token\\.Selector/Selector/g' selector_mock.go && sed -i 's/token\\.OwnerFilter/OwnerFilter/g' selector_mock.go"
+
 var (
 	// SelectorInsufficientFunds is returned when funds are not sufficient to cover the request
 	SelectorInsufficientFunds = errors.New("insufficient funds")

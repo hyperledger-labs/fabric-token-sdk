@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token provides token certification functionality for creating, verifying, and managing token certifications.
 package token
 
 import (

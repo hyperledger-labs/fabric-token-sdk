@@ -4,6 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package token provides wallet management functionality for owners, issuers, auditors, and certifiers.
 package token
 
 import (
