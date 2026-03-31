@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	math3 "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,47 +29,96 @@ func testingHelper(t *testing.T) []byte {
 }
 
 func TestSerialization(t *testing.T) {
-	t.Run("extras is not empty", func(t *testing.T) {
-		issuerPK := testingHelper(t)
-		pp, err := Setup(32, issuerPK, math3.BN254)
-		require.NoError(t, err)
-		assert.NotNil(t, pp.Extras())
-		ser, err := pp.Serialize()
-		require.NoError(t, err)
-		pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
-		require.NoError(t, err)
-		assert.NotNil(t, pp2.Extras())
-	})
+	for _, curve := range []math3.CurveID{math3.BN254, math3.BLS12_381_GURVY} {
+		t.Run("extras is not empty", func(t *testing.T) {
+			issuerPK := testingHelper(t)
+			pp, err := Setup(32, issuerPK, curve)
+			require.NoError(t, err)
+			assert.NotNil(t, pp.Extras())
+			require.NoError(t, pp.Validate())
+			ser, err := pp.Serialize()
+			require.NoError(t, err)
+			pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
+			require.NoError(t, err)
+			assert.NotNil(t, pp2.Extras())
+			require.NoError(t, pp2.Validate())
+		})
 
-	t.Run("valid setup", func(t *testing.T) {
-		// Use test helper instead of direct file read
-		issuerPK := testingHelper(t)
-		pp, err := Setup(32, issuerPK, math3.BN254)
-		require.NoError(t, err)
-		assert.NotNil(t, pp.Extras())
-		pp.ExtraData = map[string][]byte{
-			"key1": []byte("value1"),
-			"key2": []byte("value2"),
-		}
-		require.NoError(t, err)
-		ser, err := pp.Serialize()
-		require.NoError(t, err)
+		t.Run("valid setup", func(t *testing.T) {
+			// Use test helper instead of direct file read
+			issuerPK := testingHelper(t)
+			pp, err := Setup(32, issuerPK, curve)
+			require.NoError(t, err)
+			assert.NotNil(t, pp.Extras())
+			pp.ExtraData = map[string][]byte{
+				"key1": []byte("value1"),
+				"key2": []byte("value2"),
+			}
+			require.NoError(t, err)
+			ser, err := pp.Serialize()
+			require.NoError(t, err)
 
-		pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
-		require.NoError(t, err)
-		assert.Equal(t, pp, pp2)
-		assert.NotNil(t, pp2.Extras())
+			pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
+			require.NoError(t, err)
+			assert.Equal(t, pp, pp2)
+			assert.NotNil(t, pp2.Extras())
+			require.NoError(t, pp.Validate())
 
-		_, err = pp2.Serialize()
-		require.NoError(t, err)
+			_, err = pp2.Serialize()
+			require.NoError(t, err)
 
-		// no issuers
-		require.NoError(t, pp.Validate())
+			// no issuers
+			require.NoError(t, pp.Validate())
 
-		// with issuers
-		pp.IssuerIDs = []driver.Identity{[]byte("issuer")}
-		require.NoError(t, pp.Validate())
-	})
+			// with issuers
+			pp.IssuerIDs = []driver.Identity{[]byte("issuer")}
+			require.NoError(t, pp.Validate())
+		})
+
+		t.Run("valid setup with CSPRangeProofType", func(t *testing.T) {
+			// Use test helper instead of direct file read
+			issuerPK := testingHelper(t)
+			pp, err := NewWith(SetupParams{
+				DriverName:     DLogNoGHDriverName,
+				DriverVersion:  ProtocolV1,
+				BitLength:      32,
+				IdemixIssuerPK: issuerPK,
+				CurveID:        curve,
+				ProofType:      rp.CSPRangeProofType,
+			})
+			require.NoError(t, err)
+			assert.NotNil(t, pp.Extras())
+			pp.ExtraData = map[string][]byte{
+				"key1": []byte("value1"),
+				"key2": []byte("value2"),
+			}
+			require.NoError(t, err)
+			header := pp.CSPRangeProofParams.RPTranscriptHeader
+			assert.NotEmpty(t, header)
+
+			ser, err := pp.Serialize()
+			require.NoError(t, err)
+
+			pp2, err := NewPublicParamsFromBytes(ser, DLogNoGHDriverName, ProtocolV1)
+			require.NoError(t, err)
+			require.NoError(t, pp2.Validate())
+			assert.Equal(t, pp, pp2)
+			assert.NotNil(t, pp2.Extras())
+			header2 := pp2.CSPRangeProofParams.RPTranscriptHeader
+			assert.NotEmpty(t, header)
+			assert.Equal(t, header, header2)
+
+			_, err = pp2.Serialize()
+			require.NoError(t, err)
+
+			// no issuers
+			require.NoError(t, pp.Validate())
+
+			// with issuers
+			pp.IssuerIDs = []driver.Identity{[]byte("issuer")}
+			require.NoError(t, pp.Validate())
+		})
+	}
 }
 
 func TestComputeMaxTokenValue(t *testing.T) {

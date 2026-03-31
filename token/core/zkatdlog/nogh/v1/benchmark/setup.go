@@ -145,8 +145,8 @@ func NewSetupConfigurationsWithParams(params SetupParams) (*SetupConfigurations,
 				pp, err = setup.Setup(bit, ipk, curveID)
 			case rp.CSPRangeProofType:
 				pp, err = setup.NewWith(setup.SetupParams{
-					DriverName:     "zkatdlog",
-					DriverVersion:  1,
+					DriverName:     setup.DLogNoGHDriverName,
+					DriverVersion:  setup.ProtocolV1,
 					BitLength:      bit,
 					IdemixIssuerPK: ipk,
 					ProofType:      rp.CSPRangeProofType,

@@ -93,7 +93,7 @@ func NewCSPBasedProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.PublicPar
 		pp.CSPRangeProofParams.RightGenerators,
 		pp.CSPRangeProofParams.BitLength,
 		math.Curves[pp.Curve],
-	)
+	).WithTranscriptHeader(pp.CSPRangeProofParams.RPTranscriptHeader)
 
 	return p, nil
 }
@@ -143,7 +143,7 @@ func NewCSPVerifier(tokens []*math.G1, pp *v1.PublicParams) *CSPVerifier {
 		pp.CSPRangeProofParams.RightGenerators,
 		pp.CSPRangeProofParams.BitLength,
 		math.Curves[pp.Curve],
-	)
+	).WithTranscriptHeader(pp.CSPRangeProofParams.RPTranscriptHeader)
 
 	return v
 }

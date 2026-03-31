@@ -6,8 +6,8 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/IBM/idemix v0.0.2-0.20250313153527-832db18b9478
 	github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478
-	github.com/IBM/mathlib v0.0.3-0.20260330120326-84c8835921bb
-	github.com/consensys/gnark-crypto v0.19.2
+	github.com/IBM/mathlib v0.0.3-0.20260331101615-b91f41df1fe3
+	github.com/consensys/gnark-crypto v0.20.1
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-co-op/gocron/v2 v2.19.1

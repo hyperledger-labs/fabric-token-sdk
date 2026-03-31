@@ -42,12 +42,13 @@ type Proof struct {
 
 // prover instantiates a CSP prover
 type prover struct {
-	Commitment     *mathlib.G1    // Commitment to the witness
-	Generators     []*mathlib.G1  // Generators for pedersen commitment
-	LinearForm     []*mathlib.Zr  // Linear function
-	Value          *mathlib.Zr    // Claimed value of linear function over witness
-	NumberOfRounds uint64         // log(length of vectors), assume power of 2
-	Curve          *mathlib.Curve // Curve identifier
+	Generators     []*mathlib.G1 // Generators for pedersen commitment
+	NumberOfRounds uint64        // log(length of vectors), assume power of 2
+
+	Commitment *mathlib.G1    // Commitment to the witness
+	LinearForm []*mathlib.Zr  // Linear function
+	Value      *mathlib.Zr    // Claimed value of linear function over witness
+	Curve      *mathlib.Curve // Curve identifier
 
 	witness          []*mathlib.Zr // opening for the commitment
 	TranscriptHeader []byte
