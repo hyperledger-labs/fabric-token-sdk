@@ -410,7 +410,7 @@ func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkT
 
 	entries := make([]singleProverEnv, n)
 	for i := range n {
-		intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, uint64(benchmarkCase.NumInputs), uint64(benchmarkCase.NumOutputs)) //nolint:gosec
+		intw, outtw, in, out, err := prepareInputsForZKTransfer(pp, uint64(benchmarkCase.NumInputs), uint64(benchmarkCase.NumOutputs))
 		if err != nil {
 			return nil, err
 		}

@@ -433,5 +433,5 @@ func concatenateIDs(keys []string) string {
 func createLockTag(m string) int64 {
 	h := sha256.Sum256([]byte(m))
 
-	return int64(binary.BigEndian.Uint64(h[:])) //nolint:gosec
+	return int64(binary.BigEndian.Uint64(h[:]))
 }

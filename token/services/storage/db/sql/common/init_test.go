@@ -18,7 +18,7 @@ import (
 func TestGetTableNames(t *testing.T) {
 	names, err := GetTableNames("")
 	require.NoError(t, err)
-	assert.Equal(t, TableNames{ //nolint:gosec
+	assert.Equal(t, TableNames{
 		Movements:              "fsc_movements",
 		Transactions:           "fsc_txs",
 		Requests:               "fsc_requests",
