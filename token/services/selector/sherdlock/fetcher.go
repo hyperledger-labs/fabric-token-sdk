@@ -85,7 +85,7 @@ func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, metrics
 
 	return &fetcherProvider{
 		tokenStoreServiceManager: storeServiceManager,
-		metrics:                  newMetrics(metricsProvider),
+		metrics:                  NewMetrics(metricsProvider),
 		fetch:                    fetcher,
 		cacheSize:                cacheSize,
 		freshnessInterval:        freshnessInterval,

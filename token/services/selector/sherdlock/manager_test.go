@@ -105,8 +105,9 @@ func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (tes
 		return nil, errors.Join(err, lockDB.Close())
 	}
 
-	fetcher := newMixedFetcher(tokenDB.(dbtest.TestTokenDB), newMetrics(&disabled.Provider{}), 0, 0, 0)
-	manager := NewManager(fetcher, lockDB, testutils.TokenQuantityPrecision, backoff, maxRetries, 0, 0)
+	m := NewMetrics(&disabled.Provider{})
+	fetcher := newMixedFetcher(tokenDB.(dbtest.TestTokenDB), m, 0, 0, 0)
+	manager := NewManager(fetcher, lockDB, testutils.TokenQuantityPrecision, backoff, maxRetries, 0, 0, m)
 
 	return testutils.NewEnhancedManager(manager, tokenDB.(dbtest.TestTokenDB)), nil
 }
@@ -139,6 +140,7 @@ func TestNewManager(t *testing.T) {
 			5,
 			10*time.Minute,
 			time.Minute,
+			NewMetrics(&disabled.Provider{}),
 		)
 
 		assert.NotNil(t, m)
@@ -159,6 +161,7 @@ func TestNewManager(t *testing.T) {
 			5,
 			0, // zero lease expiry
 			time.Minute,
+			NewMetrics(&disabled.Provider{}),
 		)
 
 		assert.NotNil(t, m)
@@ -177,6 +180,7 @@ func TestNewManager(t *testing.T) {
 			5,
 			10*time.Minute,
 			0, // zero cleanup tick period
+			NewMetrics(&disabled.Provider{}),
 		)
 
 		assert.NotNil(t, m)
@@ -196,6 +200,7 @@ func TestManager_NewSelector(t *testing.T) {
 		5,
 		0,
 		0,
+		NewMetrics(&disabled.Provider{}),
 	)
 
 	t.Run("creates new selector for transaction ID", func(t *testing.T) {
@@ -243,6 +248,7 @@ func TestManager_Unlock(t *testing.T) {
 		5,
 		0,
 		0,
+		NewMetrics(&disabled.Provider{}),
 	)
 
 	t.Run("calls locker UnlockByTxID", func(t *testing.T) {
@@ -290,6 +296,7 @@ func TestManager_Close(t *testing.T) {
 		5,
 		0,
 		0,
+		NewMetrics(&disabled.Provider{}),
 	)
 
 	t.Run("closes existing selector", func(t *testing.T) {
@@ -351,6 +358,7 @@ func TestManager_Cleaner(t *testing.T) {
 			5,
 			10*time.Minute,
 			50*time.Millisecond, // Short period for testing
+			NewMetrics(&disabled.Provider{}),
 		)
 
 		// Wait for at least 2 cleanup calls
@@ -389,6 +397,7 @@ func TestManager_Cleaner(t *testing.T) {
 			5,
 			10*time.Minute,
 			50*time.Millisecond,
+			NewMetrics(&disabled.Provider{}),
 		)
 
 		// Wait for cleanup call (should not panic despite error)
@@ -416,6 +425,7 @@ func TestManager_NewSelector_Concurrent(t *testing.T) {
 		5,
 		0,
 		0,
+		NewMetrics(&disabled.Provider{}),
 	)
 
 	t.Run("handles concurrent selector creation", func(t *testing.T) {
@@ -462,6 +472,7 @@ func TestManager_Close_Concurrent(t *testing.T) {
 		5,
 		0,
 		0,
+		NewMetrics(&disabled.Provider{}),
 	)
 
 	t.Run("handles concurrent close attempts", func(t *testing.T) {
@@ -510,6 +521,7 @@ func TestManager_Unlock_EdgeCases(t *testing.T) {
 		5,
 		0,
 		0,
+		NewMetrics(&disabled.Provider{}),
 	)
 
 	t.Run("handles empty transaction ID", func(t *testing.T) {
@@ -563,6 +575,7 @@ func TestManager_Cleaner_EdgeCases(t *testing.T) {
 			5,
 			10*time.Minute,
 			10*time.Millisecond,
+			NewMetrics(&disabled.Provider{}),
 		)
 
 		// Wait for a few cleanup cycles
@@ -599,6 +612,7 @@ func TestManager_Cleaner_EdgeCases(t *testing.T) {
 			5,
 			expectedExpiry,
 			10*time.Millisecond,
+			NewMetrics(&disabled.Provider{}),
 		)
 
 		// Wait for cleanup call
@@ -636,6 +650,7 @@ func TestManager_NewSelector_WithDifferentPrecisions(t *testing.T) {
 				5,
 				0,
 				0,
+				NewMetrics(&disabled.Provider{}),
 			)
 
 			selector, err := m.NewSelector("test-" + tc.name)
