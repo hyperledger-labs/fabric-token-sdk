@@ -2,6 +2,13 @@
 
 This file describe the changes that required the regeneration of the regression test data.
 
+## With respect to commit `aa254669`
+
+The token driver [`token/core/zkatdlog/nogh/v1`](../../) now support an additional range proof system that can be enable by properly setting the public parameters.
+The update token driver is retro-compatible with the existing testdata.
+
+A new testdata folder, `testdata3`, has been introduced. It contains token requests based on the new range proof.
+
 ## With respect to commit `d2e73db9`
 
 The token driver [`token/core/zkatdlog/nogh/v1`](../../) now uses **Idemix pseudonyms (nyms)** as the default identity format in the token's owner field, replacing the previous use of full Idemix identities. This change was introduced in commit `b315b6aaa` ("nym identity").
