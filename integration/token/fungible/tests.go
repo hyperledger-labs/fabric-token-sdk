@@ -34,6 +34,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/onsi/gomega"
+	"go.etcd.io/gofail/runtime"
 )
 
 const (
@@ -909,7 +910,10 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 		if updateWithAppend {
 			IssueCash(network, "", "USD", 110, alice, auditor, true, newIssuer)
 		} else {
-			IssueCashWithNoAuditorSigVerification(network, "", "USD", 110, alice, auditor, true, newIssuer, "is not in auditors")
+			// Enable gofail failpoint to skip auditor signature verification for this test
+			runtime.Enable("skipAuditorVerification", "return")
+			IssueCash(network, "", "USD", 110, alice, auditor, true, newIssuer, "is not in auditors")
+			runtime.Disable("skipAuditorVerification")
 		}
 	}
 

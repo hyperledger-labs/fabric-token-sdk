@@ -123,13 +123,12 @@ func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 }
 
 type AuditingViewInitiator struct {
-	tx                               *Transaction
-	local                            bool
-	skipAuditorSignatureVerification bool
+	tx    *Transaction
+	local bool
 }
 
-func newAuditingViewInitiator(tx *Transaction, local, skipAuditorSignatureVerification bool) *AuditingViewInitiator {
-	return &AuditingViewInitiator{tx: tx, local: local, skipAuditorSignatureVerification: skipAuditorSignatureVerification}
+func newAuditingViewInitiator(tx *Transaction, local bool) *AuditingViewInitiator {
+	return &AuditingViewInitiator{tx: tx, local: local}
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
@@ -237,9 +236,8 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, signature []byte) (token.Identity, error) {
 	logger.DebugfContext(context.Context(), "Validate auditing")
 
-	if a.skipAuditorSignatureVerification {
-		return a.tx.Opts.Auditor, nil
-	}
+	if vskipAuditorVerification, __fpErr := __fp_skipAuditorVerification.Acquire(); __fpErr == nil { _, __fpTypeOK := vskipAuditorVerification.(struct{}); if !__fpTypeOK { goto __badTypeskipAuditorVerification} 
+		 return a.tx.Opts.Auditor, nil; goto __nomockskipAuditorVerification; __badTypeskipAuditorVerification: __fp_skipAuditorVerification.BadType(vskipAuditorVerification, "struct{}"); __nomockskipAuditorVerification: };
 
 	// check the signature
 	signed, err := a.tx.MarshallToAudit()
