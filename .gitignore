@@ -3,4 +3,6 @@
 *.iml
 
 go.work
-go.work.sumfabric-samples/
+go.work.sum
+fabric-samples/
+fabric-smart-client/
