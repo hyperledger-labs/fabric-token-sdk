@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file provides generic slice utility functions.
+// Includes functions for getting elements and creating slices of pointers.
 package slices
 
 func GetUnique[V any](v []V) V {

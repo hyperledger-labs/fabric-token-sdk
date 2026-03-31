@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file implements a high-performance cache using Ristretto v2.
+// It provides thread-safe caching with singleflight to prevent duplicate loads.
 package cache
 
 import (

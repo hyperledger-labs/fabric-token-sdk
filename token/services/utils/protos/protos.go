@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file provides utilities for converting between domain objects and protobuf messages.
+// ToProtosSlice and FromProtosSlice handle batch conversions with nil handling.
 package protos
 
 import "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"

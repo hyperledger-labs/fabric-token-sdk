@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file provides utilities for running views with timeout support.
+// RunViewWithTimeout wraps view execution with context-based timeout handling.
 package view
 
 import (

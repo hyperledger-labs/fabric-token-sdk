@@ -4,6 +4,8 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file provides JSON unmarshaling with strict validation.
+// UnmarshalWithDisallowUnknownFields rejects JSON with unexpected fields.
 package json
 
 import (

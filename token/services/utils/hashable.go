@@ -4,6 +4,9 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// This file provides utilities for computing SHA256 hashes.
+// Hashable is a byte slice that can compute its own hash.
+// Hasher provides a builder pattern for incrementally constructing hashes from various data types.
 package utils
 
 import (
