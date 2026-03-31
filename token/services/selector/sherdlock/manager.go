@@ -38,6 +38,7 @@ type manager struct {
 	locker                 Locker
 	leaseExpiry            time.Duration
 	leaseCleanupTickPeriod time.Duration
+	metrics                *Metrics
 }
 
 //go:generate counterfeiter -o mock/iterator.go  -fake-name Iterator . iterator
@@ -54,20 +55,22 @@ func NewManager(
 	maxRetriesAfterBackOff int,
 	leaseExpiry time.Duration,
 	leaseCleanupTickPeriod time.Duration,
+	m *Metrics,
 ) *manager {
-	m := &manager{
+	mgr := &manager{
 		locker:                 locker,
 		leaseExpiry:            leaseExpiry,
 		leaseCleanupTickPeriod: leaseCleanupTickPeriod,
+		metrics:                m,
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
-			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff), nil
+			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, m), nil
 		}),
 	}
 	if leaseCleanupTickPeriod > 0 && leaseExpiry > 0 {
-		go m.cleaner(context.Background())
+		go mgr.cleaner(context.Background())
 	}
 
-	return m
+	return mgr
 }
 
 func (m *manager) NewSelector(id transaction.ID) (token.Selector, error) {

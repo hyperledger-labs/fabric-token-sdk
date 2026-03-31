@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokenlockdb"
 )
@@ -28,6 +29,7 @@ func NewService(
 	fetcherProvider FetcherProvider,
 	tokenLockStoreServiceManager tokenlockdb.StoreServiceManager,
 	c ConfigProvider,
+	metricsProvider metrics.Provider,
 ) *SelectorService {
 	cfg, err := config.New(c)
 	if err != nil {
@@ -41,6 +43,7 @@ func NewService(
 		numRetries:                   cfg.GetNumRetries(),
 		leaseExpiry:                  cfg.GetLeaseExpiry(),
 		leaseCleanupTickPeriod:       cfg.GetLeaseCleanupTickPeriod(),
+		metrics:                      newMetrics(metricsProvider),
 	}
 
 	return &SelectorService{
@@ -63,6 +66,7 @@ type loader struct {
 	retryInterval                time.Duration
 	leaseExpiry                  time.Duration
 	leaseCleanupTickPeriod       time.Duration
+	metrics                      *Metrics
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -87,6 +91,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		s.numRetries,
 		s.leaseExpiry,
 		s.leaseCleanupTickPeriod,
+		s.metrics,
 	), nil
 }
 

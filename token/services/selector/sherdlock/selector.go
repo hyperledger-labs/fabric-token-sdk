@@ -47,6 +47,7 @@ type selector struct {
 	fetcher   tokenFetcher
 	locker    tokenLocker
 	precision uint64
+	metrics   *Metrics
 	mu        sync.Mutex // protects cache field for concurrent Close() calls
 }
 
@@ -62,8 +63,18 @@ type stubbornSelector struct {
 }
 
 func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
+	start := time.Now()
 	for retriesAfterBackoff := 0; retriesAfterBackoff <= m.maxRetriesAfterBackoff; retriesAfterBackoff++ {
-		if tokens, quantity, err := m.selector.Select(ctx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
+		if tokens, quantity, err := m.selector.selectWithoutMetrics(ctx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
+			m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
+			if err == nil {
+				m.metrics.SelectionOutcome.With(outcomeLabel, "success").Add(1)
+			} else if errors.Is(err, token.SelectorInsufficientFunds) {
+				m.metrics.SelectionOutcome.With(outcomeLabel, "insufficient_funds").Add(1)
+			} else {
+				m.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
+			}
+
 			return tokens, quantity, err
 		}
 		var backoffDuration time.Duration
@@ -75,44 +86,73 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 		m.logger.DebugfContext(ctx, "Now it is our turn to retry...")
 	}
 
+	m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
+	m.metrics.SelectionOutcome.With(outcomeLabel, "locked_funds").Add(1)
+
 	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
 
-func NewStubbornSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration, retries int) *stubbornSelector {
+func NewStubbornSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration, retries int, m *Metrics) *stubbornSelector {
 	return &stubbornSelector{
-		selector:               NewSelector(logger, tokenDB, lockDB, precision),
+		selector:               NewSelector(logger, tokenDB, lockDB, precision, m),
 		backoffInterval:        backoff,
 		maxRetriesAfterBackoff: retries,
 	}
 }
 
-func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64) *selector {
+func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, m *Metrics) *selector {
 	return &selector{
 		logger:    logger,
 		cache:     collections.NewEmptyIterator[*token2.UnspentTokenInWallet](),
 		fetcher:   tokenDB,
 		locker:    lockDB,
 		precision: precision,
+		metrics:   m,
 	}
 }
 
 func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
+	start := time.Now()
+	ids, quantity, immediateRetries, err := s.selectInternal(ctx, owner, q, tokenType)
+	s.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
+	s.metrics.ImmediateRetries.Observe(float64(immediateRetries))
+	if err == nil {
+		s.metrics.SelectionOutcome.With(outcomeLabel, "success").Add(1)
+	} else if errors.Is(err, token.SelectorSufficientButLockedFunds) {
+		s.metrics.SelectionOutcome.With(outcomeLabel, "locked_funds").Add(1)
+	} else if errors.Is(err, token.SelectorInsufficientFunds) {
+		s.metrics.SelectionOutcome.With(outcomeLabel, "insufficient_funds").Add(1)
+	} else {
+		s.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
+	}
+
+	return ids, quantity, err
+}
+
+// selectWithoutMetrics is used by stubbornSelector to avoid double-counting metrics.
+func (s *selector) selectWithoutMetrics(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
+	ids, quantity, _, err := s.selectInternal(ctx, owner, q, tokenType)
+
+	return ids, quantity, err
+}
+
+func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, int, error) {
 	if s.isClosed() {
-		return nil, nil, errors.Errorf("selector is already closed")
+		return nil, nil, 0, errors.Errorf("selector is already closed")
 	}
 	quantity, err := token2.ToQuantity(q, s.precision)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to create quantity")
+		return nil, nil, 0, errors.Wrapf(err, "failed to create quantity")
 	}
 	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(s.precision), collections.NewSet[*token2.ID](), true, 0
 	for {
 		if t, err := s.cache.Next(); err != nil {
 			err2 := s.locker.UnlockAll(ctx)
 
-			return nil, nil, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), tokenType, err2)
+			return nil, nil, immediateRetries, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), tokenType, err2)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
-				return nil, nil, errors.Wrapf(
+				return nil, nil, immediateRetries, errors.Wrapf(
 					token.SelectorInsufficientFunds,
 					"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked",
 					sum.Decimal(),
@@ -124,7 +164,7 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 			if immediateRetries > maxImmediateRetries {
 				s.logger.Warnf("Exceeded max number of immediate retries. Unlock tokens and abort...")
 				if err := s.locker.UnlockAll(ctx); err != nil {
-					return nil, nil, errors.Wrapf(err, "exceeded number of retries: %d and unlock failed", maxImmediateRetries)
+					return nil, nil, immediateRetries, errors.Wrapf(err, "exceeded number of retries: %d and unlock failed", maxImmediateRetries)
 				}
 
 				// When we loop over the tokens, we check whether a token is already locked.
@@ -132,14 +172,14 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 				// we retry to fetch, in case the other process did not spend and unlocked the token meanwhile.
 				// We do not unlock our tokens, yet.
 				// After some retries, we unlock the tokens and return a token.SelectorInsufficientFunds error
-				return nil, nil, token.SelectorSufficientButLockedFunds
+				return nil, nil, immediateRetries, token.SelectorSufficientButLockedFunds
 			}
 
 			s.logger.DebugfContext(ctx, "Fetch all non-deleted tokens from the DB and refresh the token cache.")
 			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
 				err2 := s.locker.UnlockAll(ctx)
 
-				return nil, nil, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), tokenType, err2)
+				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), tokenType, err2)
 			}
 
 			immediateRetries++
@@ -151,14 +191,14 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 			s.logger.DebugfContext(ctx, "Got the lock on token [%v]", t)
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
-				return nil, nil, errors.Wrapf(err, "invalid token [%s] found", t.Id)
+				return nil, nil, immediateRetries, errors.Wrapf(err, "invalid token [%s] found", t.Id)
 			}
 			s.logger.DebugfContext(ctx, "Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
 			immediateRetries = 0
 			sum.Add(q)
 			selected.Add(&t.Id)
 			if sum.Cmp(quantity) >= 0 {
-				return selected.ToSlice(), sum, nil
+				return selected.ToSlice(), sum, immediateRetries, nil
 			}
 		}
 	}
@@ -210,12 +250,12 @@ func (l *locker) UnlockAll(ctx context.Context) error {
 	return l.UnlockByTxID(ctx, l.txID)
 }
 
-func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int) tokenSelectorUnlocker {
+func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int, m *Metrics) tokenSelectorUnlocker {
 	logger := logger.Named("selector-" + txID)
 	locker := &locker{txID: txID, Locker: lockDB}
 	if backoff < 0 {
-		return NewSelector(logger, fetcher, locker, precision)
+		return NewSelector(logger, fetcher, locker, precision, m)
 	} else {
-		return NewStubbornSelector(logger, fetcher, locker, precision, backoff, maxRetriesAfterBackoff)
+		return NewStubbornSelector(logger, fetcher, locker, precision, backoff, maxRetriesAfterBackoff, m)
 	}
 }
