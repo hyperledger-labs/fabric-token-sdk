@@ -394,7 +394,8 @@ func (t *Transaction) Release() {
 	if err != nil {
 		logger.Warnf("failed to get token selector [%s]", err)
 	} else {
-		if err := sm.Unlock(t.Context, t.ID()); err != nil {
+		// we need to unlock even if t.Context is canceled
+		if err := sm.Unlock(context.Background(), t.ID()); err != nil {
 			logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
 		}
 	}

@@ -155,7 +155,7 @@ func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
 func (q *BigQuantity) Add(b Quantity) Quantity {
 	bq, ok := b.(*BigQuantity)
 	if !ok {
-		panic(fmt.Sprintf("expected BigQuantity, got '%t", b))
+		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
 	}
 
 	// Check overflow
@@ -175,7 +175,7 @@ func (q *BigQuantity) Add(b Quantity) Quantity {
 func (q *BigQuantity) Sub(b Quantity) Quantity {
 	bq, ok := b.(*BigQuantity)
 	if !ok {
-		panic(fmt.Sprintf("expected BigQuantity, got '%t", b))
+		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
 	}
 
 	// Check overflow
@@ -198,7 +198,7 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 func (q *BigQuantity) Cmp(b Quantity) int {
 	bq, ok := b.(*BigQuantity)
 	if !ok {
-		panic(fmt.Sprintf("expected BigQuantity, got '%t", b))
+		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
 	}
 
 	return q.Int.Cmp(bq.Int)
@@ -231,7 +231,7 @@ func NewQuantityFromUInt64(q uint64) Quantity {
 func (q *UInt64Quantity) Add(b Quantity) Quantity {
 	bq, ok := b.(*UInt64Quantity)
 	if !ok {
-		panic(fmt.Sprintf("expected UInt64Quantity, got '%t", b))
+		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
 	}
 
 	// Check overflow
@@ -249,7 +249,7 @@ func (q *UInt64Quantity) Add(b Quantity) Quantity {
 func (q *UInt64Quantity) Sub(b Quantity) Quantity {
 	bq, ok := b.(*UInt64Quantity)
 	if !ok {
-		panic(fmt.Sprintf("expected UInt64Quantity, got '%t", b))
+		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
 	}
 
 	// Check overflow
@@ -266,7 +266,7 @@ func (q *UInt64Quantity) Sub(b Quantity) Quantity {
 func (q *UInt64Quantity) Cmp(b Quantity) int {
 	bq, ok := b.(*UInt64Quantity)
 	if !ok {
-		panic(fmt.Sprintf("expected UInt64Quantity, got '%t", b))
+		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
 	}
 
 	if q.Value < bq.Value {
