@@ -43,7 +43,7 @@ func NewService(
 		numRetries:                   cfg.GetNumRetries(),
 		leaseExpiry:                  cfg.GetLeaseExpiry(),
 		leaseCleanupTickPeriod:       cfg.GetLeaseCleanupTickPeriod(),
-		metrics:                      newMetrics(metricsProvider),
+		metrics:                      NewMetrics(metricsProvider),
 	}
 
 	return &SelectorService{

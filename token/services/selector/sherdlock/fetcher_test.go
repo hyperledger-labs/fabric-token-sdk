@@ -486,7 +486,7 @@ func TestLazyFetcher_UnspentTokensIteratorBy_ErrorHandling(t *testing.T) {
 
 func TestMixedFetcher_FallbackBehavior(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newMixedFetcher(mockDB, newMetrics(&disabled.Provider{}), 0, 10*time.Second, 100)
+	fetcher := newMixedFetcher(mockDB, NewMetrics(&disabled.Provider{}), 0, 10*time.Second, 100)
 
 	t.Run("uses lazy fetcher when eager returns error", func(t *testing.T) {
 		// Setup: eager fetcher will fail to update
@@ -928,7 +928,7 @@ func TestTokenKey_EdgeCases(t *testing.T) {
 // TestMixedFetcher_MetricsTracking verifies metrics track eager vs lazy fetcher usage.
 func TestMixedFetcher_MetricsTracking(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	metrics := newMetrics(&disabled.Provider{})
+	metrics := NewMetrics(&disabled.Provider{})
 	fetcher := newMixedFetcher(mockDB, metrics, 0, 10*time.Second, 100)
 
 	t.Run("tracks eager fetcher usage", func(t *testing.T) {

@@ -30,7 +30,7 @@ type Metrics struct {
 	ImmediateRetries metrics.Histogram
 }
 
-func newMetrics(p metrics.Provider) *Metrics {
+func NewMetrics(p metrics.Provider) *Metrics {
 	return &Metrics{
 		UnspentTokensInvocations: p.NewCounter(metrics.CounterOpts{
 			Name:       "unspent_tokens_invocations",
