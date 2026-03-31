@@ -105,6 +105,9 @@ func NewRangeCorrectnessProver(
 
 // Prove generates a set of range proofs.
 func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
+	if len(p.TranscriptHeader) == 0 {
+		return nil, errors.New("transcript header is empty")
+	}
 	rc := &RangeCorrectness{}
 	rc.Proofs = make([]*RangeProof, len(p.Commitments))
 	for i := range len(p.Commitments) {
@@ -171,6 +174,9 @@ func NewRangeCorrectnessVerifier(
 func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	if len(rc.Proofs) != len(v.Commitments) {
 		return errors.New("invalid range proof")
+	}
+	if len(v.TranscriptHeader) == 0 {
+		return errors.New("transcript header is empty")
 	}
 	for i := range len(rc.Proofs) {
 		if rc.Proofs[i] == nil {

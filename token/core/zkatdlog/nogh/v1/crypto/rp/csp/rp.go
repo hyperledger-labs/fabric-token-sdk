@@ -180,7 +180,7 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 		tr.SetState(rp.TranscriptHeader)
 	} else {
 		tr.InitHasher()
-		// Absorb the public statement: VCommitment || VGenerators || AGenerators || BGenerators || NumberOfBits.
+		// Absorb the public statement: VGenerators || AGenerators || BGenerators || NumberOfBits.
 		for _, g := range rp.VGenerators {
 			tr.Absorb(g.Bytes())
 		}
@@ -192,6 +192,7 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 		}
 		tr.Absorb(new(big.Int).SetUint64(n).Bytes())
 	}
+	// Absorb VCommitment
 	tr.Absorb(rp.VCommitment.Bytes())
 
 	// Schnorr proof of knowledge for VCommitment = v·G_v + r·G_r.

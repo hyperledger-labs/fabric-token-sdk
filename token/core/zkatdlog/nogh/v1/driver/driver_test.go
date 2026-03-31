@@ -316,6 +316,7 @@ func TestDeserializers(t *testing.T) {
 	res, err := ppd.DeserializePublicParams(ppBytes, setup.DLogNoGHDriverName, setup.ProtocolV1)
 	require.NoError(t, err)
 	assert.NotNil(t, res)
+	require.NoError(t, res.Validate())
 
 	eidrh := driver.NewEIDRHDeserializer()
 	assert.NotNil(t, eidrh)

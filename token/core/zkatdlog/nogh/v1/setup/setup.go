@@ -267,6 +267,9 @@ type PublicParams struct {
 	CSPRangeProofParams *CSPRangeProofParams
 }
 
+// NewPublicParamsFromBytes unmarshal the given serialized version of the public parameters
+// for the given driver name and version.
+// It is responsibility of the caller to validate the public parameters before using them.
 func NewPublicParamsFromBytes(
 	raw []byte,
 	driverName driver.TokenDriverName,
@@ -523,9 +526,11 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		return errors.Wrapf(err, "failed to deserialize idemix issuer public keys")
 	}
 
-	p.RangeProofParams = &RangeProofParams{}
-	if err := p.RangeProofParams.FromProto(publicParams.GetRangeProofParams()); err != nil {
-		return errors.Wrapf(err, "failed to deserialize range proof parameters")
+	if publicParams.GetRangeProofParams() != nil {
+		p.RangeProofParams = &RangeProofParams{}
+		if err := p.RangeProofParams.FromProto(publicParams.GetRangeProofParams()); err != nil {
+			return errors.Wrapf(err, "failed to deserialize range proof parameters")
+		}
 	}
 
 	if publicParams.GetCspRangeProofParams() != nil {
@@ -637,10 +642,11 @@ func (p *PublicParams) ComputeMaxTokenValue() uint64 {
 	if p.CSPRangeProofParams != nil {
 		tr := csp.Transcript{Curve: mathlib.Curves[p.Curve]}
 		tr.InitHasher()
-		// Absorb the public statement: VCommitment || VGenerators || AGenerators || BGenerators || NumberOfBits.
+		// Absorb the public statement: PedersenGenerators || LeftGenerators || RightGenerators || NumberOfBits.
 		for _, g := range p.PedersenGenerators {
 			tr.Absorb(g.Bytes())
 		}
+		// p.CSPRangeProofParams.RPTranscriptHeader = tr.State()
 		for _, g := range p.CSPRangeProofParams.LeftGenerators {
 			tr.Absorb(g.Bytes())
 		}
