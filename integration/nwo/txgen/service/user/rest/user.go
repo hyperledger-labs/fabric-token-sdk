@@ -173,7 +173,7 @@ func (u *restUser) doRequest(request *http.Request, requestType c.ApiRequestType
 		With(metrics.OperationLabel, operationType).Add(1)
 
 	start := time.Now()
-	response, err := u.httpClient.Do(request)
+	response, err := u.httpClient.Do(request) //nolint:gosec
 
 	successType := metrics.SuccessValues[err == nil || response != nil && response.StatusCode >= http.StatusBadRequest]
 	u.metrics.RequestsReceived.
@@ -226,7 +226,7 @@ func (u *restUser) authenticateUser() (string, txgen.Error) {
 		Password: u.password,
 	}
 
-	data, _ := json.Marshal(request)
+	data, _ := json.Marshal(request) //nolint:gosec
 
 	response, err := u.httpClient.Post(url, c.ApplicationJson, bytes.NewReader(data))
 

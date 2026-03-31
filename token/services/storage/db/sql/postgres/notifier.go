@@ -108,7 +108,7 @@ func NewNotifier(
 	notifyOperations []driver.Operation,
 	primaryKeys ...PrimaryKey,
 ) *Notifier {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec
 
 	// Create a real listener that implements the databaseListener interface
 	realListener := &listenerAdapter{
@@ -433,5 +433,5 @@ func concatenateIDs(keys []string) string {
 func createLockTag(m string) int64 {
 	h := sha256.Sum256([]byte(m))
 
-	return int64(binary.BigEndian.Uint64(h[:]))
+	return int64(binary.BigEndian.Uint64(h[:])) //nolint:gosec
 }

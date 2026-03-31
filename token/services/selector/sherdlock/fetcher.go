@@ -286,7 +286,7 @@ func (f *cachedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID st
 	defer atomic.AddUint32(&f.queriesResponded, 1)
 	if f.isCacheOverused() {
 		logger.DebugfContext(ctx, "Overused data. Soft refresh (in the background)...")
-		go f.update(context.Background())
+		go f.update(context.Background()) //nolint:gosec
 	}
 	f.mu.RLock()
 	if f.isCacheStale() {

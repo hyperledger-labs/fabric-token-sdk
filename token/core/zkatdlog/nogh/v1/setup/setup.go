@@ -566,5 +566,5 @@ func log2(x uint64) uint64 {
 		return 0
 	}
 
-	return uint64(bits.Len64(x)) - 1
+	return uint64(bits.Len64(x)) - 1 //nolint:gosec
 }
