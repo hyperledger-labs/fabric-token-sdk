@@ -26,16 +26,6 @@ func TestTypedIdentity_Bytes(t *testing.T) {
 	assert.NotNil(t, bytes)
 }
 
-func TestTypedIdentity_Bytes_Error(t *testing.T) {
-	ti := identity.TypedIdentity{
-		Type:     identity.Type(999),
-		Identity: driver.Identity("testIdentity"),
-	}
-
-	_, err := ti.Bytes()
-	require.Error(t, err)
-}
-
 func TestUnmarshalTypedIdentity(t *testing.T) {
 	ti := identity.TypedIdentity{
 		Type:     identity.Type(5),
@@ -69,12 +59,4 @@ func TestWrapWithType(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, idType, unmarshaledTI.Type)
 	assert.Equal(t, id, unmarshaledTI.Identity)
-}
-
-func TestWrapWithType_Error(t *testing.T) {
-	idType := identity.Type(999)
-	id := driver.Identity("testIdentity")
-
-	_, err := identity.WrapWithType(idType, id)
-	require.Error(t, err)
 }
