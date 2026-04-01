@@ -1,6 +1,7 @@
 /.idea/
 .DS_Store
 *.iml
+/.bob/
 
 go.work
 go.work.sum

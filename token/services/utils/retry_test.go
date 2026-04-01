@@ -271,9 +271,12 @@ func TestRunWithErrors_ExponentialBackoff(t *testing.T) {
 		return false, errors.New("always fail")
 	})
 
+	// Skip first interval (no sleep before first call)
+	intervals = intervals[1:]
+
 	// Verify exponential growth: each interval should be roughly 2x the previous
 	// (with generous tolerance for scheduling jitter in CI environments)
-	for i := 2; i < len(intervals); i++ {
+	for i := 1; i < len(intervals); i++ {
 		ratio := float64(intervals[i]) / float64(intervals[i-1])
 		assert.InDelta(t, 2.0, ratio, 1.0, "interval %d should be ~2x interval %d", i, i-1)
 	}
