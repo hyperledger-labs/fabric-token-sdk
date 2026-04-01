@@ -13,7 +13,12 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/marshal"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // ---------------------------------------------------------------------------
@@ -381,7 +386,7 @@ func TestDecodeErrors(t *testing.T) {
 
 				return b
 			}(),
-			marshal.ErrUnexpectedTag,
+			marshal.ErrTruncated,
 		},
 		{
 			"integer body truncated",
@@ -400,6 +405,92 @@ func TestDecodeErrors(t *testing.T) {
 			}(),
 			marshal.ErrUnexpectedTag,
 		},
+		{
+			"zero-length integer",
+			// SEQUENCE { INTEGER (len 0), OCTET STRING }
+			[]byte{seqByte, 0x05, byte(asn1.TagInteger), 0x00, byte(asn1.TagOctetString), 0x01, 0x00},
+			marshal.ErrIntOverflow,
+		},
+		{
+			"integer too large (6 bytes)",
+			[]byte{seqByte, 0x0B, byte(asn1.TagInteger), 0x06, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, byte(asn1.TagOctetString), 0x01, 0x00},
+			marshal.ErrIntOverflow,
+		},
+		{
+			"integer overflow (max int32 exceeded)",
+			// 0x00 0x80 0x00 0x00 0x00 is 2^31 (positive but requires 5 bytes or just slightly too large for int32)
+			// math.MaxInt32 = 0x7FFFFFFF
+			// 0x00 0x80 0x00 0x00 0x00 = 0x80000000 = 2147483648
+			[]byte{seqByte, 0x0A, byte(asn1.TagInteger), 0x05, 0x00, 0x80, 0x00, 0x00, 0x00, byte(asn1.TagOctetString), 0x01, 0x00},
+			marshal.ErrIntOverflow,
+		},
+		{
+			"integer underflow (min int32 exceeded)",
+			// 0x80 0x00 0x00 0x00 0x00 is -2^32 or something like that.
+			// 0xFF 0x7F 0xFF 0xFF 0xFF = -0x80000001 = -2147483649
+			[]byte{seqByte, 0x0A, byte(asn1.TagInteger), 0x05, 0xFF, 0x7F, 0xFF, 0xFF, 0xFF, byte(asn1.TagOctetString), 0x01, 0x00},
+			marshal.ErrIntOverflow,
+		},
+		{
+			"readLen truncated (n=2 but only 1 byte left)",
+			[]byte{seqByte, 0x02, byte(asn1.TagInteger), 0x82, 0x01},
+			marshal.ErrInvalidLen,
+		},
+		{
+			"readLen n > 4",
+			[]byte{seqByte, 0x07, byte(asn1.TagInteger), 0x85, 0x01, 0x02, 0x03, 0x04, 0x05},
+			marshal.ErrInvalidLen,
+		},
+		{
+			"readLen n=0 (0x80)",
+			[]byte{seqByte, 0x02, byte(asn1.TagInteger), 0x80},
+			marshal.ErrInvalidLen,
+		},
+		{
+			"truncated OCTET STRING tag",
+			[]byte{seqByte, 0x03, byte(asn1.TagInteger), 0x01, 0x00},
+			marshal.ErrTruncated,
+		},
+		{
+			"wrong tag for OCTET STRING",
+			[]byte{seqByte, 0x05, byte(asn1.TagInteger), 0x01, 0x00, byte(asn1.TagInteger), 0x01, 0x00},
+			marshal.ErrUnexpectedTag,
+		},
+		{
+			"truncated OCTET STRING length",
+			[]byte{seqByte, 0x04, byte(asn1.TagInteger), 0x01, 0x00, byte(asn1.TagOctetString)},
+			marshal.ErrTruncated,
+		},
+		{
+			"truncated OCTET STRING data",
+			[]byte{seqByte, 0x06, byte(asn1.TagInteger), 0x01, 0x00, byte(asn1.TagOctetString), 0x02, 0x01},
+			marshal.ErrTruncated,
+		},
+		{
+			"truncated UTF8String data",
+			[]byte{seqByte, 0x03, byte(asn1.TagUTF8String), 0x02, 0x01},
+			marshal.ErrTruncated,
+		},
+		{
+			"truncated after SEQUENCE tag",
+			[]byte{seqByte, 0x01},
+			marshal.ErrTruncated,
+		},
+		{
+			"outer readLen failed",
+			[]byte{seqByte, 0x81},
+			marshal.ErrInvalidLen,
+		},
+		{
+			"empty SEQUENCE",
+			[]byte{seqByte, 0x00},
+			marshal.ErrTruncated,
+		},
+		{
+			"readLen failure inside UTF8String",
+			[]byte{seqByte, 0x02, byte(asn1.TagUTF8String), 0x81},
+			marshal.ErrInvalidLen,
+		},
 	}
 
 	for _, tt := range tests {
@@ -410,6 +501,86 @@ func TestDecodeErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ---------------------------------------------------------------------------
+// String compatibility
+// ---------------------------------------------------------------------------
+
+func TestStringCompatibility(t *testing.T) {
+	tests := []struct {
+		name         string
+		str          string
+		identityType int32
+	}{
+		{
+			name:         "x509",
+			str:          x509.IdentityTypeString,
+			identityType: x509.IdentityType,
+		},
+		{
+			name:         "idemix",
+			str:          idemix.IdentityTypeString,
+			identityType: idemix.IdentityType,
+		},
+		{
+			name:         "idemixnym",
+			str:          idemixnym.IdentityTypeString,
+			identityType: idemixnym.IdentityType,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw := marshal.Encode(marshal.Result{
+				Str:  tt.str,
+				Data: []byte("an_identity"),
+			})
+			res, err := marshal.DecodeIdentity(raw)
+			require.NoError(t, err)
+			assert.True(t, res.IsInt)
+			assert.Equal(t, tt.str, res.Str)
+			assert.Equal(t, []byte("an_identity"), res.Data)
+			assert.Equal(t, tt.identityType, res.Int32)
+		})
+	}
+}
+
+func TestEncodeIdentity(t *testing.T) {
+	data := []byte("some-data")
+	enc := marshal.EncodeIdentity(1, data)
+	res, err := marshal.DecodeIdentity(enc)
+	require.NoError(t, err)
+	assert.True(t, res.IsInt)
+	assert.Equal(t, int32(1), res.Int32)
+	assert.Equal(t, data, res.Data)
+}
+
+func TestAppendTLVVariations(t *testing.T) {
+	// Case l < 0x80 already covered by other tests, but let's be explicit
+	r1 := marshal.Result{IsInt: true, Int32: 1, Data: bytes.Repeat([]byte{0x01}, 10)}
+	enc1 := marshal.Encode(r1)
+	res1, err := marshal.DecodeIdentity(enc1)
+	require.NoError(t, err)
+	assert.Equal(t, r1.Data, res1.Data)
+
+	// Case 0x80 <= l < 0x100 (tag 0x81)
+	r2 := marshal.Result{IsInt: true, Int32: 1, Data: bytes.Repeat([]byte{0x02}, 150)}
+	enc2 := marshal.Encode(r2)
+	assert.Equal(t, byte(0x81), enc2[len(enc2)-150-2]) // tag for long form (1 byte length)
+	assert.Equal(t, byte(150), enc2[len(enc2)-150-1])  // length byte for OCTET STRING
+	res2, err := marshal.DecodeIdentity(enc2)
+	require.NoError(t, err)
+	assert.Equal(t, r2.Data, res2.Data)
+
+	// Case l >= 0x100 (tag 0x82)
+	r3 := marshal.Result{IsInt: true, Int32: 1, Data: bytes.Repeat([]byte{0x03}, 300)}
+	enc3 := marshal.Encode(r3)
+	assert.Equal(t, byte(0x82), enc3[len(enc3)-300-3]) // tag for long form (2 byte length)
+	assert.Equal(t, byte(300>>8), enc3[len(enc3)-300-2])
+	assert.Equal(t, byte(300&0xFF), enc3[len(enc3)-300-1])
+	res3, err := marshal.DecodeIdentity(enc3)
+	require.NoError(t, err)
+	assert.Equal(t, r3.Data, res3.Data)
 }
 
 // ---------------------------------------------------------------------------

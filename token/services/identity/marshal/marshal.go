@@ -95,7 +95,10 @@ func DecodeIdentity(b []byte) (Result, error) {
 	}
 
 	// OCTET STRING
-	if pos >= len(b) || b[pos] != tagOctetString {
+	if pos >= len(b) {
+		return r, ErrTruncated
+	}
+	if b[pos] != tagOctetString {
 		return r, ErrUnexpectedTag
 	}
 	pos++
