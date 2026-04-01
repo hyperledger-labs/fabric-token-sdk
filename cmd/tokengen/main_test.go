@@ -238,7 +238,7 @@ func TestPartialUpdateWithVersion(t *testing.T) {
 		"./testdata/auditors/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
 		driver.TokenDriverVersion(2),
-		false,
+		true,
 	)
 }
 
