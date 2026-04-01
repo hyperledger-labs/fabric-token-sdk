@@ -316,8 +316,8 @@ func (p *Provider) getSignerAndCache(ctx context.Context, identity driver.Identi
 			)
 		}
 
-		if typed.Type == driver.X509IdentityType {
-			shouldCache = false
+		if typed.Type != driver.X509IdentityType {
+			shouldCache = true
 		}
 
 		// recursively resolve the inner identity

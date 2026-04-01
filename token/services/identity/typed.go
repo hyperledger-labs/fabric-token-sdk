@@ -7,7 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package identity
 
 import (
+	"fmt"
+
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/marshal"
 )
@@ -54,4 +57,23 @@ func WrapWithType(idType Type, id Identity) (Identity, error) {
 	}
 
 	return raw, nil
+}
+
+// TypeToString return a string identifier for the given identity type.
+// If the type is unknown, it returns the string "Type (<t>)".
+func TypeToString(t driver.IdentityType) string {
+	switch t {
+	case tdriver.IdemixIdentityType:
+		return tdriver.IdemixIdentityTypeString
+	case tdriver.IdemixNymIdentityType:
+		return tdriver.IdemixNymIdentityTypeString
+	case tdriver.X509IdentityType:
+		return tdriver.X509IdentityTypeString
+	case tdriver.MultiSigIdentityType:
+		return tdriver.MultiSigIdentityTypeString
+	case tdriver.HTLCScriptIdentityType:
+		return tdriver.HTLCScriptIdentityTypeString
+	default:
+		return fmt.Sprintf("Type (%d)", t)
+	}
 }

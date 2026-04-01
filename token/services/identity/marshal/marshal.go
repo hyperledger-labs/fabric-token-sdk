@@ -11,6 +11,8 @@ import (
 	"errors"
 	"math"
 	"unsafe"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 // DER tag bytes — derived from encoding/asn1 constants.
@@ -114,14 +116,20 @@ func DecodeIdentity(b []byte) (Result, error) {
 	if !r.IsInt {
 		// convert string to int for legacy reasons
 		switch r.Str {
-		case "x509":
-			r.Int32 = 2
+		case driver.X509IdentityTypeString:
+			r.Int32 = driver.X509IdentityType
 			r.IsInt = true
-		case "idemix":
-			r.Int32 = 1
+		case driver.IdemixIdentityTypeString:
+			r.Int32 = driver.IdemixIdentityType
 			r.IsInt = true
-		case "idemixnym":
-			r.Int32 = 4
+		case driver.IdemixNymIdentityTypeString:
+			r.Int32 = driver.IdemixNymIdentityType
+			r.IsInt = true
+		case driver.MultiSigIdentityTypeString:
+			r.Int32 = driver.MultiSigIdentityType
+			r.IsInt = true
+		case driver.HTLCScriptIdentityTypeString:
+			r.Int32 = driver.HTLCScriptIdentityType
 			r.IsInt = true
 		}
 	}

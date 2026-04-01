@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -25,8 +26,9 @@ import (
 )
 
 const (
-	ScriptType            identity.Type = 5 // htlc script
-	defaultDeadlineOffset               = time.Hour
+	ScriptType            = driver.HTLCScriptIdentityType
+	ScriptTypeString      = driver.HTLCScriptIdentityTypeString // htlc script
+	defaultDeadlineOffset = time.Hour
 )
 
 // WithHash sets a hash attribute to be used to customize the transfer command

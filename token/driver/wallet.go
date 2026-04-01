@@ -190,12 +190,25 @@ type WalletLookupID = any
 // IdentityType identifies the type of identity
 type IdentityType = int32
 
+// This is a list of reserved identities
 const (
-	UnknownIdentityType    IdentityType = 0 // _ = unused per Angelo
+	_                      IdentityType = 0 //
 	IdemixIdentityType     IdentityType = 1
 	X509IdentityType       IdentityType = 2
-	IdemixNymIdentityType  IdentityType = 4
-	HTLCScriptIdentityType IdentityType = 5
+	IdemixNymIdentityType  IdentityType = 3
+	HTLCScriptIdentityType IdentityType = 4
+	MultiSigIdentityType   IdentityType = 5
+)
+
+// IdentityTypeString identifies the type of identity as a string
+type IdentityTypeString = string
+
+const (
+	IdemixIdentityTypeString     IdentityTypeString = "idemix"
+	X509IdentityTypeString       IdentityTypeString = "x509"
+	IdemixNymIdentityTypeString  IdentityTypeString = "idemixnym"
+	HTLCScriptIdentityTypeString IdentityTypeString = "htlc"
+	MultiSigIdentityTypeString   IdentityTypeString = "multisig"
 )
 
 // Authorization defines method to check the relation between a token

@@ -13,13 +13,16 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 )
 
-// Multisig is the type of a multisig identity.
-// It is used to identify a multisig identity in a typed identity (identity.TypedIdentity).
-const Multisig identity.Type = 3
+const (
+	// Multisig is the type of a multisig identity.
+	// It is used to identify a multisig identity in a typed identity (identity.TypedIdentity).
+	Multisig       = tdriver.MultiSigIdentityType
+	MultisigString = tdriver.MultiSigIdentityTypeString
+)
 
 type MultiIdentity struct {
 	Identities []token.Identity
@@ -79,7 +82,7 @@ func Unwrap(raw []byte) ([]token.Identity, bool, error) {
 // InfoMatcher matches a multisig identity to its own audit info.
 // It is composed of a list of matchers, one for each identity in the multisig identity.
 type InfoMatcher struct {
-	AuditInfoMatcher []driver.Matcher
+	AuditInfoMatcher []tdriver.Matcher
 }
 
 func (e *InfoMatcher) Match(ctx context.Context, raw []byte) error {

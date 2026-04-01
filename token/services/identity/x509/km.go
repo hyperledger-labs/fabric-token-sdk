@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -19,18 +19,18 @@ import (
 )
 
 const (
-	IdentityType       idriver.IdentityType       = 2
-	IdentityTypeString idriver.IdentityTypeString = "x509"
+	IdentityType       = tdriver.X509IdentityType
+	IdentityTypeString = tdriver.X509IdentityTypeString
 )
 
 var logger = logging.MustGetLogger()
 
 type SignerService interface {
-	RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
+	RegisterSigner(ctx context.Context, identity tdriver.Identity, signer tdriver.Signer, verifier tdriver.Verifier, signerInfo []byte) error
 }
 
 type KeyManager struct {
-	sID                driver.SigningIdentity
+	sID                tdriver.SigningIdentity
 	id                 []byte
 	enrollmentID       string
 	identityDescriptor *idriver.IdentityDescriptor
@@ -124,7 +124,7 @@ func newVerifyingKeyManager(conf *crypto.Config, bccspConfig *crypto.BCCSP) (*Ke
 	return p, conf, nil
 }
 
-func newKeyManager(sID driver.SigningIdentity, id []byte, bccspConfig *crypto.BCCSP, keyStore bccsp.KeyStore) (*KeyManager, error) {
+func newKeyManager(sID tdriver.SigningIdentity, id []byte, bccspConfig *crypto.BCCSP, keyStore bccsp.KeyStore) (*KeyManager, error) {
 	enrollmentID, err := crypto.GetEnrollmentID(id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get enrollment id")
@@ -169,11 +169,11 @@ func (p *KeyManager) EnrollmentID() string {
 	return p.enrollmentID
 }
 
-func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (driver.Verifier, error) {
+func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (tdriver.Verifier, error) {
 	return crypto.DeserializeVerifier(raw)
 }
 
-func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
+func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (tdriver.Signer, error) {
 	return crypto.DeserializeIdentity(raw, p.bccspConfig, p.keyStore)
 }
 
@@ -193,6 +193,6 @@ func (p *KeyManager) IdentityType() idriver.IdentityType {
 	return IdentityType
 }
 
-func (p *KeyManager) SigningIdentity() driver.SigningIdentity {
+func (p *KeyManager) SigningIdentity() tdriver.SigningIdentity {
 	return p.sID
 }

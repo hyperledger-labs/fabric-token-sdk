@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -489,7 +490,7 @@ func (t *Service) parse(
 			tokenOnLedger:         output.LedgerOutput,
 			tokenOnLedgerFormat:   output.LedgerOutputFormat,
 			tokenOnLedgerMetadata: output.LedgerOutputMetadata,
-			ownerType:             identityTypeToString(ownerType),
+			ownerType:             identity.TypeToString(ownerType),
 			ownerIdentity:         ownerIdentity,
 			ownerWalletID:         ownerWalletID,
 			owners:                ids,
@@ -509,15 +510,4 @@ func (t *Service) parse(
 	}
 
 	return toSpend, toAppend, err
-}
-
-func identityTypeToString(t driver.IdentityType) string {
-	switch t {
-	case driver.IdemixIdentityType:
-		return "idemix"
-	case driver.X509IdentityType:
-		return "x509"
-	default:
-		return "unknown"
-	}
 }
