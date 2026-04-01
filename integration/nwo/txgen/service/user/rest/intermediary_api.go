@@ -8,6 +8,7 @@ package rest
 
 type LoginRequest struct {
 	Username string `json:"username"`
+	//nolint:gosec // this is a login request struct for tests
 	Password string `json:"password"`
 }
 

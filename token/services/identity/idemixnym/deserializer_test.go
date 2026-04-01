@@ -197,5 +197,3 @@ func TestDeserializeAuditInfoEdgeCases(t *testing.T) {
 	_, err = d.DeserializeAuditInfo(context.Background(), nil, []byte("invalid json"))
 	require.Error(t, err)
 }
-
-// Made with Bob

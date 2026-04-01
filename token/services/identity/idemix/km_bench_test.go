@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package idemix
+package idemix_test
 
 import (
 	"math/rand"
@@ -15,6 +15,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/stretchr/testify/require"
 )
 
@@ -64,10 +65,10 @@ func TestParallelBenchmarkIdemixKMIdentity(t *testing.T) {
 		benchmark2.NewConfig(workers[0],
 			benchmark2.Duration(),
 			3*time.Second),
-		func() *KeyManager {
+		func() *idemix.KeyManager {
 			return keyManager
 		},
-		func(km *KeyManager) error {
+		func(km *idemix.KeyManager) error {
 			_, err := keyManager.Identity(t.Context(), nil)
 
 			return err

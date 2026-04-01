@@ -226,7 +226,7 @@ func (u *restUser) authenticateUser() (string, txgen.Error) {
 		Password: u.password,
 	}
 
-	data, _ := json.Marshal(request) //nolint:gosec
+	data, _ := json.Marshal(request)
 
 	response, err := u.httpClient.Post(url, c.ApplicationJson, bytes.NewReader(data))
 

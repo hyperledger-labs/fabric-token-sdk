@@ -8,7 +8,6 @@ package config
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
@@ -61,7 +60,7 @@ func (i *IdentityConfig) TranslatePath(path string) string {
 	return i.Config.TranslatePath(path)
 }
 
-func (i *IdentityConfig) IdentitiesForRole(role identity.RoleType) ([]driver.ConfiguredIdentity, error) {
+func (i *IdentityConfig) IdentitiesForRole(role driver.IdentityRoleType) ([]driver.ConfiguredIdentity, error) {
 	switch role {
 	case driver.IssuerRole:
 		return i.Wallets.Issuers, nil

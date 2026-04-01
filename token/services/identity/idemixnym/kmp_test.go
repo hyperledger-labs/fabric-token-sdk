@@ -58,5 +58,3 @@ func (m mockConfig) CacheSizeForOwnerID(string) int {
 func (m mockConfig) TranslatePath(path string) string {
 	return path
 }
-
-// Made with Bob

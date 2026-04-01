@@ -414,7 +414,7 @@ func (fake *KeyManager) IdentityReturnsOnCall(i int, result1 *drivera.IdentityDe
 	}{result1, result2}
 }
 
-func (fake *KeyManager) IdentityType() identity.Type {
+func (fake *KeyManager) IdentityType() drivera.IdentityType {
 	fake.identityTypeMutex.Lock()
 	ret, specificReturn := fake.identityTypeReturnsOnCall[len(fake.identityTypeArgsForCall)]
 	fake.identityTypeArgsForCall = append(fake.identityTypeArgsForCall, struct {

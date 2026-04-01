@@ -193,5 +193,3 @@ type testDriver struct {
 func (d *testDriver) Name() string {
 	return d.name
 }
-
-// Made with Bob

@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package idemix
+package idemix_test
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/schema"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -52,33 +53,33 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 
 	// check that version is enforced
 	config.Version = 0
-	_, err = NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	_, err = idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.Error(t, err)
 	require.EqualError(t, err, "unsupported protocol version [0]")
 	config.Version = crypto.ProtobufProtocolVersionV1
 
 	// new key manager loaded from file
 	assert.Empty(t, config.Signer.Ski)
-	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
-	assert.Equal(t, IdentityType, keyManager.IdentityType())
+	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
 	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, 1, tracker.PutCounter)
 	assert.Equal(t, 0, tracker.GetCounter)
 
 	// the config has been updated, load a new key manager
 	assert.NotEmpty(t, config.Signer.Ski)
-	keyManager, err = NewKeyManager(config, types.Standard, cryptoProvider)
+	keyManager, err = idemix.NewKeyManager(config, types.Standard, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
-	assert.Equal(t, IdentityType, keyManager.IdentityType())
+	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
 	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, 1, tracker.PutCounter) // this is still 1 because the key is loaded using the SKI
 	assert.Equal(t, 1, tracker.GetCounter) // one get for the user key
@@ -86,20 +87,20 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 
 	// load a new key manager again
 	assert.NotEmpty(t, config.Signer.Ski)
-	keyManager, err = NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager, err = idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
-	assert.Equal(t, IdentityType, keyManager.IdentityType())
+	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
 	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, 1, tracker.PutCounter) // this is still 1 because the key is loaded using the SKI
 	assert.Equal(t, 2, tracker.GetCounter) // another get for the user key
 	assert.Equal(t, tracker.GetHistory[1].Key, hex.EncodeToString(config.Signer.Ski))
 
 	// invalid sig type
-	_, err = NewKeyManager(config, -1, cryptoProvider)
+	_, err = idemix.NewKeyManager(config, -1, cryptoProvider)
 	require.Error(t, err)
 	require.EqualError(t, err, "unsupported signature type -1")
 
@@ -108,13 +109,13 @@ func testNewKeyManager(t *testing.T, configPath string, curveID math.CurveID) {
 	assert.Equal(t, tracker.GetHistory[2].Key, hex.EncodeToString(config.Signer.Ski))
 
 	// no config
-	_, err = NewKeyManager(nil, types.EidNymRhNym, cryptoProvider)
+	_, err = idemix.NewKeyManager(nil, types.EidNymRhNym, cryptoProvider)
 	require.Error(t, err)
 	require.EqualError(t, err, "no idemix config provided")
 
 	// no signer in config
 	config.Signer = nil
-	_, err = NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	_, err = idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.Error(t, err)
 	require.EqualError(t, err, "no signer information found")
 
@@ -147,11 +148,11 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 
 	// init key manager
 	// with invalid sig type
-	_, err = NewKeyManager(config, -1, cryptoProvider)
+	_, err = idemix.NewKeyManager(config, -1, cryptoProvider)
 	require.Error(t, err)
 	require.EqualError(t, err, "unsupported signature type -1")
 	// correctly
-	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
@@ -203,7 +204,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	signer, err := keyManager.DeserializeSigner(t.Context(), id)
 	require.NoError(t, err)
 	assert.Equal(t, 5, tracker.GetCounter) // this is due the call to Sign used to test if the signer belong to this key manager
-	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[4].Key)
+	assert.Equal(t, hex.EncodeToString(keyManager.UserKeySKI), tracker.GetHistory[4].Key)
 
 	// deserialize an invalid verifier
 	_, err = keyManager.DeserializeVerifier(t.Context(), nil)
@@ -223,7 +224,7 @@ func testIdentityWithEidRhNymPolicy(t *testing.T, configPath string, curveID mat
 	assert.Equal(t, 7, tracker.GetCounter)
 	assert.Equal(t, tracker.GetHistory[3].Key, tracker.GetHistory[5].Key)
 	assert.Equal(t, tracker.GetHistory[3].Value, tracker.GetHistory[5].Value)
-	assert.Equal(t, hex.EncodeToString(keyManager.userKeySKI), tracker.GetHistory[6].Key)
+	assert.Equal(t, hex.EncodeToString(keyManager.UserKeySKI), tracker.GetHistory[6].Key)
 	assert.Equal(t, tracker.GetHistory[4].Value, tracker.GetHistory[6].Value)
 }
 
@@ -247,7 +248,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID)
 	require.NoError(t, err)
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
-	p, err := NewKeyManager(config, types.Standard, cryptoProvider)
+	p, err := idemix.NewKeyManager(config, types.Standard, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -271,7 +272,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID)
 	require.NoError(t, err)
 	cryptoProvider, err = crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
-	p, err = NewKeyManager(config, types.Standard, cryptoProvider)
+	p, err = idemix.NewKeyManager(config, types.Standard, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -293,7 +294,7 @@ func testIdentityStandard(t *testing.T, configPath string, curveID math.CurveID)
 	require.NoError(t, err)
 	cryptoProvider, err = crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
-	p, err = NewKeyManager(config, Any, cryptoProvider)
+	p, err = idemix.NewKeyManager(config, idemix.Any, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -331,7 +332,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	require.NoError(t, err)
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
-	p, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -341,7 +342,7 @@ func testAuditWithEidRhNymPolicy(t *testing.T, configPath string, curveID math.C
 	require.NoError(t, err)
 	cryptoProvider, err = crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
-	p2, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	p2, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p2)
 
@@ -390,14 +391,14 @@ func testKeyManager_DeserializeSigner(t *testing.T, configPath string, curveID m
 	// first key manager
 	config, err := crypto.NewConfig(configPath)
 	require.NoError(t, err)
-	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, keyManager)
 
 	// second key manager
 	config, err = crypto.NewConfig(configPath + "2")
 	require.NoError(t, err)
-	keyManager2, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager2, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, keyManager2)
 
@@ -452,7 +453,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	require.NoError(t, err)
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
-	p, err := NewKeyManager(config, types.Standard, cryptoProvider)
+	p, err := idemix.NewKeyManager(config, types.Standard, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -476,7 +477,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	require.NoError(t, err)
 	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
-	p, err = NewKeyManager(config, types.Standard, cryptoProvider)
+	p, err = idemix.NewKeyManager(config, types.Standard, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -498,7 +499,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	require.NoError(t, err)
 	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
-	p, err = NewKeyManager(config, Any, cryptoProvider)
+	p, err = idemix.NewKeyManager(config, idemix.Any, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -532,7 +533,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	require.NoError(t, err)
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
-	p, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	p, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -565,7 +566,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	require.NoError(t, err)
 	cryptoProvider, err = crypto.NewBCCSP(keyStore, math.BN254)
 	require.NoError(t, err)
-	p, err = NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	p, err = idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -611,7 +612,7 @@ func TestKeyManagerForRace(t *testing.T) {
 	})
 }
 
-func setupKeyManager(t require.TestingT, configPath string, curveID math.CurveID) (*KeyManager, func()) {
+func setupKeyManager(t require.TestingT, configPath string, curveID math.CurveID) (*idemix.KeyManager, func()) {
 	kvs, err := kvs2.NewInMemory()
 	require.NoError(t, err)
 	config, err := crypto.NewConfig(configPath)
@@ -624,20 +625,20 @@ func setupKeyManager(t require.TestingT, configPath string, curveID math.CurveID
 
 	// check that version is enforced
 	config.Version = 0
-	_, err = NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	_, err = idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.Error(t, err)
 	require.EqualError(t, err, "unsupported protocol version [0]")
 	config.Version = crypto.ProtobufProtocolVersionV1
 
 	// new key manager loaded from file
 	assert.Empty(t, config.Signer.Ski)
-	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 	assert.NotNil(t, keyManager)
 	assert.False(t, keyManager.IsRemote())
 	assert.True(t, keyManager.Anonymous())
 	assert.Equal(t, "alice", keyManager.EnrollmentID())
-	assert.Equal(t, IdentityType, keyManager.IdentityType())
+	assert.Equal(t, idemix.IdentityType, keyManager.IdentityType())
 	assert.Equal(t, fmt.Sprintf("Idemix KeyManager [%s]", utils.Hashable(keyManager.Ipk).String()), keyManager.String())
 	assert.Equal(t, 1, tracker.PutCounter)
 	assert.Equal(t, 0, tracker.GetCounter)
@@ -647,7 +648,7 @@ func setupKeyManager(t require.TestingT, configPath string, curveID math.CurveID
 	}
 }
 
-func runIdentityConcurrently(t require.TestingT, ctx context.Context, keyManager *KeyManager) {
+func runIdentityConcurrently(t require.TestingT, ctx context.Context, keyManager *idemix.KeyManager) {
 	numRoutines := 4
 	var wg sync.WaitGroup
 	wg.Add(numRoutines)
@@ -685,7 +686,7 @@ func testKeyManagerErrorPaths(t *testing.T, configPath string, curveID math.Curv
 	require.NoError(t, err)
 
 	// Test NewKeyManagerWithSchema with an invalid schema
-	_, err = NewKeyManagerWithSchema(
+	_, err = idemix.NewKeyManagerWithSchema(
 		config,
 		types.EidNymRhNym,
 		cryptoProvider,
@@ -696,7 +697,7 @@ func testKeyManagerErrorPaths(t *testing.T, configPath string, curveID math.Curv
 	assert.Contains(t, err.Error(), "could not obtain PublicKeyImportOpts")
 
 	// Create a valid key manager
-	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 
 	// Test Identity descriptor construction with invalid raw audit info
@@ -714,7 +715,7 @@ func testKeyManagerErrorPaths(t *testing.T, configPath string, curveID math.Curv
 	require.NoError(t, err)
 	cryptoProvider2, err := crypto.NewBCCSP(keyStore2, curveID)
 	require.NoError(t, err)
-	keyManager2, err := NewKeyManager(config2, types.EidNymRhNym, cryptoProvider2)
+	keyManager2, err := idemix.NewKeyManager(config2, types.EidNymRhNym, cryptoProvider2)
 	require.NoError(t, err)
 
 	// create a valid identity descriptor using keyManager2
@@ -745,7 +746,7 @@ func testKeyManagerInfoErrorCases(t *testing.T, configPath string, curveID math.
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
 	require.NoError(t, err)
 
-	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 
 	// Get a valid identity
@@ -770,7 +771,7 @@ func testKeyManagerInfoErrorCases(t *testing.T, configPath string, curveID math.
 	require.NoError(t, err)
 	cryptoProvider2, err := crypto.NewBCCSP(keyStore2, curveID)
 	require.NoError(t, err)
-	keyManager2, err := NewKeyManager(config2, types.EidNymRhNym, cryptoProvider2)
+	keyManager2, err := idemix.NewKeyManager(config2, types.EidNymRhNym, cryptoProvider2)
 	require.NoError(t, err)
 
 	identityDescriptor3, err := keyManager2.Identity(context.Background(), nil)
@@ -794,7 +795,7 @@ func TestDeserializeSigningIdentityErrorPath(t *testing.T) {
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL)
 	require.NoError(t, err)
 
-	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 
 	// Test with invalid identity bytes
@@ -814,7 +815,7 @@ func TestIdentityWithDifferentAuditInfo(t *testing.T) {
 	cryptoProvider, err := crypto.NewBCCSP(keyStore, math.FP256BN_AMCL)
 	require.NoError(t, err)
 
-	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	keyManager, err := idemix.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	require.NoError(t, err)
 
 	// Get first identity

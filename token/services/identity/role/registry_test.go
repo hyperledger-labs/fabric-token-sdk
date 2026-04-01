@@ -16,7 +16,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	imock "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role/mock"
@@ -216,7 +216,7 @@ func TestWalletByID_ConcurrentCreation(t *testing.T) {
 	start := make(chan struct{})
 	created := &mock2.Wallet{}
 	created.IDReturns("wc")
-	wf.NewWalletStub = func(ctx context.Context, id string, role identity.RoleType, wr role.IdentitySupport, info identity.Info) (driver.Wallet, error) {
+	wf.NewWalletStub = func(ctx context.Context, id string, role idriver.IdentityRoleType, wr role.IdentitySupport, info idriver.IdentityInfo) (driver.Wallet, error) {
 		<-start
 
 		return created, nil

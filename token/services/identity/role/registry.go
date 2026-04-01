@@ -13,14 +13,13 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 //go:generate counterfeiter -o mock/wf.go -fake-name WalletFactory . WalletFactory
 type WalletFactory interface {
-	NewWallet(ctx context.Context, id idriver.WalletID, role identity.RoleType, is IdentitySupport, info identity.Info) (driver.Wallet, error)
+	NewWallet(ctx context.Context, id idriver.WalletID, role idriver.IdentityRoleType, is IdentitySupport, info idriver.IdentityInfo) (driver.Wallet, error)
 }
 
 // Registry manages wallets whose long-term identities have a given role.
@@ -34,7 +33,7 @@ type WalletFactory interface {
 //     potential deadlocks.
 type Registry struct {
 	Logger  logging.Logger
-	Role    identity.Role
+	Role    idriver.Role
 	Storage idriver.WalletStoreService
 
 	WalletFactory WalletFactory
@@ -44,7 +43,7 @@ type Registry struct {
 
 // NewRegistry returns a new registry for the passed parameters.
 // A registry is bound to a given role, and it is persistent.
-func NewRegistry(logger logging.Logger, role identity.Role, storage idriver.WalletStoreService, walletFactory WalletFactory) *Registry {
+func NewRegistry(logger logging.Logger, role idriver.Role, storage idriver.WalletStoreService, walletFactory WalletFactory) *Registry {
 	return &Registry{
 		Logger:        logger,
 		Role:          role,
@@ -70,7 +69,7 @@ func (r *Registry) RegisterIdentity(ctx context.Context, config driver.IdentityC
 // 3. If cache misses, try to resolve identity -> wallet id using storage/role and finally call role.GetIdentityInfo for any discovered wallet identifiers.
 //
 // Note: Lookup only takes short RLocks for map reads and does not hold the lock while calling external services.
-func (r *Registry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, identity.Info, idriver.WalletID, error) {
+func (r *Registry) Lookup(ctx context.Context, id driver.WalletLookupID) (driver.Wallet, idriver.IdentityInfo, idriver.WalletID, error) {
 	r.Logger.DebugfContext(ctx, "lookup wallet by [%T]", id)
 	var walletIdentifiers []string
 
@@ -244,7 +243,7 @@ func (r *Registry) GetWalletID(ctx context.Context, identity driver.Identity) (s
 	return wID, nil
 }
 
-func (r *Registry) WalletByID(ctx context.Context, role identity.RoleType, id driver.WalletLookupID) (driver.Wallet, error) {
+func (r *Registry) WalletByID(ctx context.Context, role idriver.IdentityRoleType, id driver.WalletLookupID) (driver.Wallet, error) {
 	r.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T]", role, id)
 	defer r.Logger.DebugfContext(ctx, "role [%d] lookup wallet by [%T] done", role, id)
 

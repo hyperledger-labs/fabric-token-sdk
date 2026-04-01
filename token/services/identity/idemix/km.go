@@ -13,7 +13,6 @@ import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
@@ -22,8 +21,9 @@ import (
 )
 
 const (
-	Any          bccsp.SignatureType = 100
-	IdentityType identity.Type       = 1
+	Any                bccsp.SignatureType        = 100
+	IdentityType       idriver.IdentityType       = 1
+	IdentityTypeString idriver.IdentityTypeString = "idemix"
 )
 
 // SKI implies Subject Key Identifier
@@ -56,7 +56,7 @@ type SignerService interface {
 // KeyManager manages Idemix keys and deserializers
 type KeyManager struct {
 	*crypto.Deserializer
-	userKeySKI SKI
+	UserKeySKI SKI
 	conf       *config.IdemixConfig
 
 	sigType bccsp.SignatureType
@@ -202,7 +202,7 @@ func NewKeyManagerWithSchema(
 			SchemaManager:   sm,
 			Schema:          schemaName,
 		},
-		userKeySKI:    userKeySKI,
+		UserKeySKI:    userKeySKI,
 		conf:          conf,
 		sigType:       sigType,
 		verType:       verType,
@@ -215,9 +215,9 @@ func NewKeyManagerWithSchema(
 func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	logger.DebugfContext(ctx, "get user secret key")
 	// Load the user key
-	userKey, err := p.Csp.GetKey(p.userKeySKI)
+	userKey, err := p.Csp.GetKey(p.UserKeySKI)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.userKeySKI)
+		return nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.UserKeySKI)
 	}
 
 	// Derive nymPublicKey
@@ -281,7 +281,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 		CSP:          p.Csp,
 		Identity:     id,
 		NymKeySKI:    nymPublicKey.SKI(),
-		UserKeySKI:   p.userKeySKI,
+		UserKeySKI:   p.UserKeySKI,
 		EnrollmentId: enrollmentID,
 	}
 	serializedIdentity, err := sID.Serialize()
@@ -329,7 +329,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 
 // IsRemote returns true if the user key is not available locally
 func (p *KeyManager) IsRemote() bool {
-	return len(p.userKeySKI) == 0
+	return len(p.UserKeySKI) == 0
 }
 
 // DeserializeVerifier deserializes a verifier from the given raw bytes
@@ -387,7 +387,7 @@ func (p *KeyManager) Anonymous() bool {
 }
 
 // IdentityType returns the type of the identity
-func (p *KeyManager) IdentityType() identity.Type {
+func (p *KeyManager) IdentityType() idriver.IdentityType {
 	return IdentityType
 }
 
@@ -401,7 +401,7 @@ func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte)
 	si := &crypto.SigningIdentity{
 		CSP:          p.Csp,
 		Identity:     id.Identity,
-		UserKeySKI:   p.userKeySKI,
+		UserKeySKI:   p.UserKeySKI,
 		NymKeySKI:    id.NymPublicKey.SKI(),
 		EnrollmentId: p.conf.Signer.EnrollmentId,
 	}

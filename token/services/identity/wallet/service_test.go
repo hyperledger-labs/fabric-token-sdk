@@ -13,7 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	dmock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	wmock "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -42,14 +42,14 @@ func TestRegisterIdentityDelegation(t *testing.T) {
 
 		return nil
 	})
-	s := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[identity.RoleType]wallet.RoleRegistry{identity.OwnerRole: reg, identity.IssuerRole: reg})
+	s := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[idriver.IdentityRoleType]wallet.RoleRegistry{idriver.OwnerRole: reg, idriver.IssuerRole: reg})
 	require.NoError(t, s.RegisterOwnerIdentity(ctx, driver.IdentityConfiguration{}))
 	require.True(t, called)
 
 	// test error propagation
 	errReg := &wmock.RoleRegistry{}
 	errReg.RegisterIdentityReturns(errors.New("boom"))
-	s2 := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[identity.RoleType]wallet.RoleRegistry{identity.OwnerRole: errReg})
+	s2 := wallet.NewService(&logging.MockLogger{}, &dmock.IdentityProvider{}, &dmock.Deserializer{}, map[idriver.IdentityRoleType]wallet.RoleRegistry{idriver.OwnerRole: errReg})
 	reqErr := s2.RegisterOwnerIdentity(ctx, driver.IdentityConfiguration{})
 	require.Error(t, reqErr)
 }
@@ -126,11 +126,11 @@ func TestWalletAndLookupFunctions(t *testing.T) {
 		&logging.MockLogger{},
 		&dmock.IdentityProvider{},
 		&dmock.Deserializer{},
-		map[identity.RoleType]wallet.RoleRegistry{
-			identity.OwnerRole:     ownerReg,
-			identity.IssuerRole:    issuerReg,
-			identity.AuditorRole:   auditorReg,
-			identity.CertifierRole: certifierReg,
+		map[idriver.IdentityRoleType]wallet.RoleRegistry{
+			idriver.OwnerRole:     ownerReg,
+			idriver.IssuerRole:    issuerReg,
+			idriver.AuditorRole:   auditorReg,
+			idriver.CertifierRole: certifierReg,
 		},
 	)
 
@@ -189,10 +189,10 @@ func TestSpendIDsAndConvert(t *testing.T) {
 	require.Equal(t, []string{"[tx1:1]"}, res)
 
 	// Convert map
-	in := map[identity.RoleType]*wmock.RoleRegistry{identity.OwnerRole: {}}
+	in := map[idriver.IdentityRoleType]*wmock.RoleRegistry{idriver.OwnerRole: {}}
 	out := wallet.Convert[*wmock.RoleRegistry](in)
 	require.Len(t, out, 1)
-	_, ok := out[identity.OwnerRole]
+	_, ok := out[idriver.OwnerRole]
 	require.True(t, ok)
 	// ensure input not mutated
 	require.NotNil(t, in)

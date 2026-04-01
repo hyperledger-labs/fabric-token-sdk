@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -68,9 +67,9 @@ func NewDefaultFactory(
 	}
 }
 
-func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, role identity.RoleType, wr IdentitySupport, info identity.Info) (driver.Wallet, error) {
+func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, role idriver.IdentityRoleType, wr IdentitySupport, info idriver.IdentityInfo) (driver.Wallet, error) {
 	switch role {
-	case identity.OwnerRole:
+	case idriver.OwnerRole:
 		if info.Anonymous() {
 			newWallet, err := NewAnonymousOwnerWallet(
 				w.Logger,
@@ -105,7 +104,7 @@ func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, rol
 		}
 
 		return newWallet, nil
-	case identity.IssuerRole:
+	case idriver.IssuerRole:
 		idInfoIdentity, _, err := info.Get(ctx)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to get issuer wallet identity for [%s]", id)
@@ -122,7 +121,7 @@ func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, rol
 		w.Logger.DebugfContext(ctx, "created issuer wallet [%s]", id)
 
 		return newWallet, nil
-	case identity.AuditorRole:
+	case idriver.AuditorRole:
 		w.Logger.DebugfContext(ctx, "no wallet found, create it [%s]", id)
 		idInfoIdentity, _, err := info.Get(ctx)
 		if err != nil {
@@ -140,7 +139,7 @@ func (w *DefaultFactory) NewWallet(ctx context.Context, id idriver.WalletID, rol
 		w.Logger.DebugfContext(ctx, "created auditor wallet [%s]", id)
 
 		return newWallet, nil
-	case identity.CertifierRole:
+	case idriver.CertifierRole:
 		return nil, errors.Errorf("certifiers are not supported by this driver")
 	default:
 		return nil, errors.Errorf("role [%d] not supported", role)

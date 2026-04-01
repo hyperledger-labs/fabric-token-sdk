@@ -12,7 +12,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
@@ -85,7 +84,7 @@ func TestRoleFactory_NewRole(t *testing.T) {
 		}, nil)
 		identityStore.IteratorConfigurationsReturns(&mock.IdentityConfigurationIterator{}, nil)
 
-		role, err := factory.NewRole(identity.OwnerRole, true, nil)
+		role, err := factory.NewRole(idriver.OwnerRole, true, nil)
 		require.NoError(t, err)
 		assert.NotNil(t, role)
 		assert.Equal(t, idriver.OwnerRole, role.ID())
@@ -94,7 +93,7 @@ func TestRoleFactory_NewRole(t *testing.T) {
 	t.Run("StorageProviderError", func(t *testing.T) {
 		storageProvider.IdentityStoreReturns(nil, errors.New("storage error"))
 
-		role, err := factory.NewRole(identity.OwnerRole, true, nil)
+		role, err := factory.NewRole(idriver.OwnerRole, true, nil)
 		require.Error(t, err)
 		assert.Nil(t, role)
 		assert.Contains(t, err.Error(), "failed to get wallet path storage")
@@ -104,7 +103,7 @@ func TestRoleFactory_NewRole(t *testing.T) {
 		storageProvider.IdentityStoreReturns(identityStore, nil)
 		config.IdentitiesForRoleReturns(nil, errors.New("config error"))
 
-		role, err := factory.NewRole(identity.OwnerRole, true, nil)
+		role, err := factory.NewRole(idriver.OwnerRole, true, nil)
 		require.Error(t, err)
 		assert.Nil(t, role)
 		assert.Contains(t, err.Error(), "failed to get identities for role")
@@ -118,7 +117,7 @@ func TestRoleFactory_NewRole(t *testing.T) {
 		// Simulate Load error by making IteratorConfigurations fail
 		identityStore.IteratorConfigurationsReturns(nil, errors.New("iterator error"))
 
-		role, err := factory.NewRole(identity.OwnerRole, true, nil)
+		role, err := factory.NewRole(idriver.OwnerRole, true, nil)
 		require.Error(t, err)
 		assert.Nil(t, role)
 		assert.Contains(t, err.Error(), "failed to load identities")

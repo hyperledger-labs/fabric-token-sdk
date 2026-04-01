@@ -689,6 +689,7 @@ func (r Result) printAnalysis(w *tabwriter.Writer, cvPct float64, tailRatio floa
 // --- HELPER FUNCTIONS ---
 
 func writef(w *tabwriter.Writer, format string, a ...interface{}) {
+	//nolint:gosec // w is a tabwriter.Writer for CLI output
 	_, _ = fmt.Fprintf(w, format, a...)
 }
 

@@ -121,5 +121,3 @@ func (fake *IdentityStoreService) recordInvocation(key string, args []interface{
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
-
-// Made with Bob

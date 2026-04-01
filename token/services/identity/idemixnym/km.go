@@ -12,14 +12,14 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym/nym"
 )
 
 const (
-	IdentityType identity.Type = 4
+	IdentityType       idriver.IdentityType       = 4
+	IdentityTypeString idriver.IdentityTypeString = "idemixnym"
 )
 
 type IdentityStoreService interface {
@@ -79,7 +79,7 @@ func (k *KeyManager) Anonymous() bool {
 	return k.backend.Anonymous()
 }
 
-func (k *KeyManager) IdentityType() identity.Type {
+func (k *KeyManager) IdentityType() idriver.IdentityType {
 	return IdentityType
 }
 

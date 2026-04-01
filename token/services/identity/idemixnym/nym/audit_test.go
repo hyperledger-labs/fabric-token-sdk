@@ -221,5 +221,3 @@ func testAuditInfoMatchErrorPaths(t *testing.T, configPath string, curveID math.
 	err = nymAuditInfo.Match(context.Background(), nymEID2)
 	require.Error(t, err)
 }
-
-// Made with Bob

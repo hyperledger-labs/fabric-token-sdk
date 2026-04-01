@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	drivera "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 )
 
@@ -33,11 +33,11 @@ type RoleRegistry struct {
 	registerIdentityReturnsOnCall map[int]struct {
 		result1 error
 	}
-	WalletByIDStub        func(context.Context, identity.RoleType, driver.WalletLookupID) (driver.Wallet, error)
+	WalletByIDStub        func(context.Context, drivera.IdentityRoleType, driver.WalletLookupID) (driver.Wallet, error)
 	walletByIDMutex       sync.RWMutex
 	walletByIDArgsForCall []struct {
 		arg1 context.Context
-		arg2 identity.RoleType
+		arg2 drivera.IdentityRoleType
 		arg3 driver.WalletLookupID
 	}
 	walletByIDReturns struct {
@@ -180,12 +180,12 @@ func (fake *RoleRegistry) RegisterIdentityReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *RoleRegistry) WalletByID(arg1 context.Context, arg2 identity.RoleType, arg3 driver.WalletLookupID) (driver.Wallet, error) {
+func (fake *RoleRegistry) WalletByID(arg1 context.Context, arg2 drivera.IdentityRoleType, arg3 driver.WalletLookupID) (driver.Wallet, error) {
 	fake.walletByIDMutex.Lock()
 	ret, specificReturn := fake.walletByIDReturnsOnCall[len(fake.walletByIDArgsForCall)]
 	fake.walletByIDArgsForCall = append(fake.walletByIDArgsForCall, struct {
 		arg1 context.Context
-		arg2 identity.RoleType
+		arg2 drivera.IdentityRoleType
 		arg3 driver.WalletLookupID
 	}{arg1, arg2, arg3})
 	stub := fake.WalletByIDStub
@@ -207,13 +207,13 @@ func (fake *RoleRegistry) WalletByIDCallCount() int {
 	return len(fake.walletByIDArgsForCall)
 }
 
-func (fake *RoleRegistry) WalletByIDCalls(stub func(context.Context, identity.RoleType, driver.WalletLookupID) (driver.Wallet, error)) {
+func (fake *RoleRegistry) WalletByIDCalls(stub func(context.Context, drivera.IdentityRoleType, driver.WalletLookupID) (driver.Wallet, error)) {
 	fake.walletByIDMutex.Lock()
 	defer fake.walletByIDMutex.Unlock()
 	fake.WalletByIDStub = stub
 }
 
-func (fake *RoleRegistry) WalletByIDArgsForCall(i int) (context.Context, identity.RoleType, driver.WalletLookupID) {
+func (fake *RoleRegistry) WalletByIDArgsForCall(i int) (context.Context, drivera.IdentityRoleType, driver.WalletLookupID) {
 	fake.walletByIDMutex.RLock()
 	defer fake.walletByIDMutex.RUnlock()
 	argsForCall := fake.walletByIDArgsForCall[i]

@@ -12,7 +12,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -20,7 +19,8 @@ import (
 )
 
 const (
-	IdentityType identity.Type = 2
+	IdentityType       idriver.IdentityType       = 2
+	IdentityTypeString idriver.IdentityTypeString = "x509"
 )
 
 var logger = logging.MustGetLogger()
@@ -189,7 +189,7 @@ func (p *KeyManager) String() string {
 	return fmt.Sprintf("X509 KeyManager for EID [%s]", p.enrollmentID)
 }
 
-func (p *KeyManager) IdentityType() identity.Type {
+func (p *KeyManager) IdentityType() idriver.IdentityType {
 	return IdentityType
 }
 

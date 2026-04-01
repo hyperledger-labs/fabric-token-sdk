@@ -22,6 +22,7 @@ const (
 )
 
 func pathExists(path string) bool {
+	//nolint:gosec // this is an integration test utility
 	if _, err := os.Stat(filepath.Clean(path)); os.IsNotExist(err) {
 		return false
 	}

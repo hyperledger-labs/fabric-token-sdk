@@ -249,5 +249,3 @@ func TestFromProtosSliceFunc2(t *testing.T) {
 		assert.Nil(t, result)
 	})
 }
-
-// Made with Bob

@@ -7,15 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package identity
 
 import (
-	"encoding/asn1"
-
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/marshal"
 )
 
 type (
-	Type     = driver2.IdentityType
+	Type     = driver.IdentityType
 	Identity = driver.Identity
 )
 
@@ -28,20 +26,28 @@ type TypedIdentity struct {
 }
 
 func (i TypedIdentity) Bytes() ([]byte, error) {
-	return asn1.Marshal(i)
+	return marshal.EncodeIdentity(i.Type, i.Identity), nil
 }
 
-func UnmarshalTypedIdentity(id driver.Identity) (*TypedIdentity, error) {
-	si := &TypedIdentity{}
-	_, err := asn1.Unmarshal(id, si)
+func UnmarshalTypedIdentity(id Identity) (*TypedIdentity, error) {
+	res, err := marshal.DecodeIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
 
-	return si, nil
+	if res.IsInt {
+		si := &TypedIdentity{
+			Type:     res.Int32,
+			Identity: res.Data,
+		}
+
+		return si, nil
+	}
+
+	return nil, errors.New("invalid identity, type not recognized")
 }
 
-func WrapWithType(idType Type, id driver.Identity) (driver.Identity, error) {
+func WrapWithType(idType Type, id Identity) (Identity, error) {
 	raw, err := (&TypedIdentity{Type: idType, Identity: id}).Bytes()
 	if err != nil {
 		return nil, err

@@ -574,7 +574,7 @@ func TestKeyManagerProvider_RegisterProvider(t *testing.T) {
 		// Copy a certificate
 		certData, err := os.ReadFile("./testdata/msp/signcerts/auditor.org1.example.com-cert.pem")
 		require.NoError(t, err)
-		err = os.WriteFile(filepath.Join(mspDir, "signcerts", "cert.pem"), certData, 0644) //nolint:gosec
+		err = os.WriteFile(filepath.Join(mspDir, "signcerts", "cert.pem"), certData, 0644)
 		require.NoError(t, err)
 
 		configedId := &idriver.ConfiguredIdentity{

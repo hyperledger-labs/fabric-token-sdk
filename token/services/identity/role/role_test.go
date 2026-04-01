@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role/mock"
@@ -29,14 +28,14 @@ func setup(t *testing.T) (context.Context, *role.Role, *mock.LocalMembership) {
 	m.DefaultNetworkIdentityReturns(driver.Identity("defaultNet"))
 	m.GetDefaultIdentifierReturns("defaultID")
 
-	r := role.NewRole(logger, identity.IssuerRole, "net1", driver.Identity("nodeID"), m)
+	r := role.NewRole(logger, idriver.IssuerRole, "net1", driver.Identity("nodeID"), m)
 
 	return ctx, r, m
 }
 
 func TestRole_ID_returns_roleID(t *testing.T) {
 	_, r, _ := setup(t)
-	require.Equal(t, identity.IssuerRole, r.ID())
+	require.Equal(t, idriver.IssuerRole, r.ID())
 }
 
 func TestRole_GetIdentityInfo_success_and_error(t *testing.T) {

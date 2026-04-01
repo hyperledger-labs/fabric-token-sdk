@@ -230,7 +230,7 @@ func (d *locker) scan(ctx context.Context) {
 			d.lock.RUnlock()
 			if l > 0 {
 				// time to do some token collection
-				logger.DebugfContext(ctx, "token collector: time to do some token collection, [%d] locked", l) //nolint:gosec
+				logger.DebugfContext(ctx, "token collector: time to do some token collection, [%d] locked", l)
 
 				break
 			}
