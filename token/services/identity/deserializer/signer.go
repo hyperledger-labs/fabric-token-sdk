@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 type TypedSignerDeserializer = driver2.TypedSignerDeserializer
@@ -43,9 +44,9 @@ func (v *TypedSignerDeserializerMultiplex) DeserializeSigner(ctx context.Context
 	}
 	dess, ok := v.deserializers[si.Type]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+		return nil, errors.Errorf("no deserializer found for [%v]", si.Type)
 	}
-	logger.DebugfContext(ctx, "deserializing [%s] with type [%s]", id, si.Type)
+	logger.DebugfContext(ctx, "deserializing [%s] with type [%v]", logging.Base64(id), si.Type)
 	var errs []error
 	for _, deserializer := range dess {
 		signer, err := deserializer.DeserializeSigner(ctx, si.Type, si.Identity)
@@ -58,5 +59,5 @@ func (v *TypedSignerDeserializerMultiplex) DeserializeSigner(ctx context.Context
 		return signer, nil
 	}
 
-	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%s]", si.Type)
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%v]", si.Type)
 }

@@ -47,9 +47,9 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(ctx context.Con
 	}
 	dess, ok := v.deserializers[si.Type]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+		return nil, errors.Errorf("no deserializer found for [%v]", si.Type)
 	}
-	logger.DebugfContext(ctx, "deserializing [%s] with type [%s]", id, si.Type)
+	logger.DebugfContext(ctx, "deserializing [%s] with type [%v]", id, si.Type)
 	var errs []error
 	for _, deserializer := range dess {
 		verifier, err := deserializer.DeserializeVerifier(ctx, si.Type, si.Identity)
@@ -62,7 +62,7 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(ctx context.Con
 		return verifier, nil
 	}
 
-	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%s]", si.Type)
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%v]", si.Type)
 }
 
 func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]driver.Identity, error) {
@@ -75,7 +75,7 @@ func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]d
 	}
 	dess, ok := v.deserializers[si.Type]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+		return nil, errors.Errorf("no deserializer found for [%v]", si.Type)
 	}
 
 	var errs []error
@@ -112,7 +112,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfoMatcher(ctx context.Con
 func (v *TypedVerifierDeserializerMultiplex) getMatcher(ctx context.Context, idType driver2.IdentityType, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	dess, ok := v.deserializers[idType]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", idType)
+		return nil, errors.Errorf("no deserializer found for [%v]", idType)
 	}
 
 	var errs []error
@@ -155,7 +155,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfo(ctx context.Context, i
 	}
 	dess, ok := v.deserializers[si.Type]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+		return nil, errors.Errorf("no deserializer found for [%v]", si.Type)
 	}
 	var errs []error
 	for _, deserializer := range dess {
