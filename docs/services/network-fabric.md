@@ -78,17 +78,17 @@ sequenceDiagram
 
 ### Chaincode Initialization
 
-At initialization time, the chaincode loads public parameters and persists them to the setup key on the ledger. The implementation in [`tcc.TokenChaincode.Init()`](token/services/network/fabric/tcc/tcc.go:75) calls [`tcc.TokenChaincode.Params()`](token/services/network/fabric/tcc/tcc.go:154), which resolves the parameters using the following precedence:
+At initialization time, the chaincode loads public parameters and persists them to the setup key on the ledger. The implementation in [`tcc.TokenChaincode.Init()`](../../token/services/network/fabric/tcc/tcc.go) calls [`tcc.TokenChaincode.Params()`](../../token/services/network/fabric/tcc/tcc.go), which resolves the parameters using the following precedence:
 
-1. **File-based override**: if the `PUBLIC_PARAMS_FILE_PATH` environment variable is set, [`tcc.TokenChaincode.ReadParamsFromFile()`](token/services/network/fabric/tcc/tcc.go:207) reads the raw public-parameter bytes from that file and feeds them back as a base64 string.
-2. **Built-in parameters**: if no file is provided, [`tcc.Params`](token/services/network/fabric/tcc/params.go) is used. In the source tree this variable is empty by default, but packaging tools replace [`tcc/params.go`](token/services/network/fabric/tcc/params.go) with generated content that embeds a base64-encoded blob of the public parameters into the chaincode package itself.
+1. **File-based override**: if the `PUBLIC_PARAMS_FILE_PATH` environment variable is set, [`tcc.TokenChaincode.ReadParamsFromFile()`](../../token/services/network/fabric/tcc/tcc.go) reads the raw public-parameter bytes from that file and feeds them back as a base64 string.
+2. **Built-in parameters**: if no file is provided, [`tcc.Params`](../../token/services/network/fabric/tcc/params.go) is used. In the source tree this variable is empty by default, but packaging tools replace [`tcc/params.go`](../../token/services/network/fabric/tcc/params.go) with generated content that embeds a base64-encoded blob of the public parameters into the chaincode package itself.
 3. **Failure**: if neither source is available, initialization fails.
 
 This means the token chaincode supports both models:
-- **Burned into the chaincode package**: the usual deployment path, where packaging injects the public parameters into [`tcc.Params`](token/services/network/fabric/tcc/params.go)
+- **Burned into the chaincode package**: the usual deployment path, where packaging injects the public parameters into [`tcc.Params`](../../token/services/network/fabric/tcc/params.go)
 - **Loaded from file at runtime**: an override path controlled by `PUBLIC_PARAMS_FILE_PATH`
 
-`tokengen` can also generate the token-chaincode package with the public parameters already embedded, by generating a replacement for [`tcc/params.go`](token/services/network/fabric/tcc/params.go) from the template in [`cc.DefaultParams`](cmd/tokengen/cobra/pp/cc/params.go:11) as part of [`cc.GeneratePackage()`](cmd/tokengen/cobra/pp/cc/cc.go:22).
+`tokengen` can also generate the token-chaincode package with the public parameters already embedded, by generating a replacement for [`tcc/params.go`](../../token/services/network/fabric/tcc/params.go) from the template in [`cc.DefaultParams`](../../cmd/tokengen/cobra/pp/cc/params.go) as part of [`cc.GeneratePackage()`](../../cmd/tokengen/cobra/pp/cc/cc.go).
 
 ```go
 // Simplified initialization flow
