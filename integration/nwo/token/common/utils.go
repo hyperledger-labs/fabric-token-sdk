@@ -22,8 +22,7 @@ const (
 )
 
 func pathExists(path string) bool {
-	//nolint:gosec // this is an integration test utility
-	if _, err := os.Stat(filepath.Clean(path)); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Clean(path)); os.IsNotExist(err) { //nolint:gosec // G703: path is caller-controlled
 		return false
 	}
 
