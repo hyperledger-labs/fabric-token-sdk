@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	auditor3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/auditor"
 	issuer3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/issuer"
@@ -47,7 +48,7 @@ func Topology(opts common.Opts) []api.Topology {
 	// FSC
 	fscTopology := fsc.NewTopology()
 	fscTopology.P2PCommunicationType = opts.CommType
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.SetLogging(token2.RunnerDebug(opts.FSCLogSpec), "")
 
 	issuer := fscTopology.NewTemplate("issuer")
 	issuer1 := fscTopology.AddNodeFromTemplate("issuer1", issuer).
