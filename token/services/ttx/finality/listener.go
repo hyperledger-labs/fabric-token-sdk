@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
@@ -36,10 +37,11 @@ type Listener struct {
 	ttxDB       transactionDB
 	tokens      *tokens.Service
 	tracer      trace.Tracer
+	metrics     *Metrics
 	retryRunner utils.RetryRunner
 }
 
-func NewListener(logger logging.Logger, net dep.Network, namespace string, tmsProvider dep.TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Service, tracer trace.Tracer) *Listener {
+func NewListener(logger logging.Logger, net dep.Network, namespace string, tmsProvider dep.TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Service, tracer trace.Tracer, metricsProvider metrics.Provider) *Listener {
 	return &Listener{
 		logger:      logger,
 		net:         net,
@@ -49,16 +51,19 @@ func NewListener(logger logging.Logger, net dep.Network, namespace string, tmsPr
 		ttxDB:       ttxDB,
 		tokens:      tokens,
 		tracer:      tracer,
+		metrics:     newMetrics(metricsProvider),
 		retryRunner: utils.NewRetryRunner(logger, utils.Infinitely, time.Second, true),
 	}
 }
 
 // OnError is called when a finality event for txID could not be delivered after all retries.
 func (t *Listener) OnError(ctx context.Context, txID string, err error) {
+	t.metrics.RetryExhausted.Add(1)
 	t.logger.Errorf("finality listener: all retries exhausted for tx [%s]: %v", txID, err)
 }
 
 func (t *Listener) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
+	start := time.Now()
 	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()
 	if err := t.retryRunner.RunWithContext(newCtx, func() error {
@@ -71,6 +76,7 @@ func (t *Listener) OnStatus(ctx context.Context, txID string, status int, messag
 	}); err != nil {
 		t.logger.Errorf("finality listener on [%s] failed with error: [%+v], stop.", txID, err)
 	}
+	t.metrics.OnStatusDuration.Observe(time.Since(start).Seconds())
 }
 
 func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) error {
@@ -107,6 +113,7 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 		t.logger.DebugfContext(ctx, "Check token request")
 		if err := t.checkTokenRequest(txID, msgToSign, tokenRequestHash); err != nil {
 			t.logger.ErrorfContext(ctx, "tx [%s], %s", txID, err)
+			t.metrics.HashMismatches.Add(1)
 			txStatus = storage.Deleted
 			message = err.Error()
 		} else {
@@ -137,6 +144,11 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 		t.logger.ErrorfContext(ctx, "<message> [%s]: [%s]", txID, err)
 
 		return errors.Errorf("<message> [%s]: [%w]", txID, err)
+	}
+	if txStatus == storage.Confirmed {
+		t.metrics.ConfirmedTransactions.Add(1)
+	} else {
+		t.metrics.DeletedTransactions.Add(1)
 	}
 	t.logger.DebugfContext(ctx, "tx status changed for tx [%s]: [%s] done", txID, status)
 

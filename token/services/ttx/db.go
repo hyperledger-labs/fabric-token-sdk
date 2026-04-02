@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -45,6 +46,7 @@ type Service struct {
 	tokensService   *tokens.Service
 	tmsProvider     dep.TokenManagementServiceProvider
 	finalityTracer  trace.Tracer
+	metricsProvider metrics.Provider
 	checkService    CheckService
 }
 
@@ -74,6 +76,7 @@ func (a *Service) Append(ctx context.Context, tx *Transaction) error {
 			a.ttxStoreService,
 			a.tokensService,
 			a.finalityTracer,
+			a.metricsProvider,
 		),
 	); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())

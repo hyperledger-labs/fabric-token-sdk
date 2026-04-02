@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
@@ -52,6 +53,7 @@ func NewServiceManager(
 	tokensServiceManager TokensServiceManager,
 	tmsProvider dep.TokenManagementServiceProvider,
 	tracerProvider trace.TracerProvider,
+	metricsProvider metrics.Provider,
 	checkServiceProvider CheckServiceProvider,
 ) *ServiceManager {
 	return &ServiceManager{
@@ -82,7 +84,8 @@ func NewServiceManager(
 				finalityTracer: tracerProvider.Tracer("auditor", tracing.WithMetricsOpts(tracing.MetricsOpts{
 					LabelNames: []tracing.LabelName{txIdLabel},
 				})),
-				checkService: checkService,
+				metricsProvider: metricsProvider,
+				checkService:    checkService,
 			}
 
 			return auditor, nil
@@ -134,6 +137,7 @@ func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
 				auditor.auditDB,
 				tokenDB,
 				auditor.finalityTracer,
+				auditor.metricsProvider,
 			),
 		)
 	})
