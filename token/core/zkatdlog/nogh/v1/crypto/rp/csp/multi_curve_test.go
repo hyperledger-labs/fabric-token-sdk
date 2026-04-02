@@ -95,6 +95,7 @@ func testCSPProveVerify(t *testing.T, curve *mathlib.Curve) {
 		val = curve.ModAdd(val, curve.ModMul(lf[i], wit[i], curve.GroupOrder), curve.GroupOrder)
 	}
 
+	transcriptHeader := []byte("transcriptHeader")
 	// Create prover and generate proof
 	prover := &prover{
 		Commitment:     comm,
@@ -105,6 +106,7 @@ func testCSPProveVerify(t *testing.T, curve *mathlib.Curve) {
 		Curve:          curve,
 		witness:        wit,
 	}
+	prover.WithTranscriptHeader(transcriptHeader)
 
 	proof, err := prover.Prove()
 	if err != nil {
@@ -120,6 +122,7 @@ func testCSPProveVerify(t *testing.T, curve *mathlib.Curve) {
 		NumberOfRounds: rounds,
 		Curve:          curve,
 	}
+	verifier.WithTranscriptHeader(transcriptHeader)
 
 	err = verifier.Verify(proof)
 	if err != nil {
@@ -151,7 +154,9 @@ func testRangeProofBasic(t *testing.T, curve *mathlib.Curve) {
 	vComm := curve.MultiScalarMul(vGens, []*mathlib.Zr{v, r})
 
 	// Create prover and generate proof
+	transcriptHeader := []byte("transcriptHeader")
 	prover := NewRangeProver(vComm, v, r, vGens, aGens, bGens, n, curve)
+	prover.WithTranscriptHeader(transcriptHeader)
 	proof, err := prover.Prove()
 	if err != nil {
 		t.Fatalf("Failed to generate range proof: %v", err)
@@ -159,6 +164,7 @@ func testRangeProofBasic(t *testing.T, curve *mathlib.Curve) {
 
 	// Verify proof
 	verifier := NewRangeVerifier(vGens, aGens, bGens, vComm, n, curve)
+	verifier.WithTranscriptHeader(transcriptHeader)
 	err = verifier.Verify(proof)
 	if err != nil {
 		t.Fatalf("Failed to verify range proof: %v", err)

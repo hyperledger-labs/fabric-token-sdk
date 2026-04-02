@@ -49,6 +49,8 @@ func newCSPSetup(t *testing.T, curve *math.Curve, rounds uint64) *cspSetup {
 	// Value = ⟨linearForm, witness⟩  (scalar-field MSM)
 	value := math2.InnerProduct(linearForm, witness, curve)
 
+	transcriptHeader := []byte("transcriptHeader")
+
 	p := &prover{
 		Commitment:     com,
 		Generators:     generators,
@@ -58,6 +60,7 @@ func newCSPSetup(t *testing.T, curve *math.Curve, rounds uint64) *cspSetup {
 		Curve:          curve,
 		witness:        witness,
 	}
+	p.WithTranscriptHeader(transcriptHeader)
 
 	v := &verifier{
 		Commitment:     com,
@@ -67,6 +70,7 @@ func newCSPSetup(t *testing.T, curve *math.Curve, rounds uint64) *cspSetup {
 		NumberOfRounds: rounds,
 		Curve:          curve,
 	}
+	v.WithTranscriptHeader(transcriptHeader)
 
 	return &cspSetup{prover: p, verifier: v, curve: curve}
 }

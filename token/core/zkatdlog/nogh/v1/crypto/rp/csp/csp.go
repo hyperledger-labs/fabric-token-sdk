@@ -75,16 +75,11 @@ func (p *prover) Prove() (*Proof, error) {
 	}
 
 	// Initialize transcript.
-	tr := Transcript{Curve: p.Curve}
-	if len(p.TranscriptHeader) != 0 {
-		tr.SetState(p.TranscriptHeader)
-	} else {
-		tr.InitHasher()
-		// Absorb Commitment || Generators || LinearForm || Value into transcript.
-		for _, g := range p.Generators {
-			tr.Absorb(g.Bytes())
-		}
+	if len(p.TranscriptHeader) == 0 {
+		return nil, errors.New("invalid transcript header")
 	}
+	tr := Transcript{Curve: p.Curve}
+	tr.SetState(p.TranscriptHeader)
 
 	tr.Absorb(p.Commitment.Bytes())
 	for _, f := range p.LinearForm {
@@ -206,15 +201,12 @@ func (v *verifier) Verify(proof *Proof) error {
 	}
 
 	// Initialize transcript — must mirror Prove() exactly.
-	tr := Transcript{Curve: v.Curve}
-	if len(v.TranscriptHeader) != 0 {
-		tr.SetState(v.TranscriptHeader)
-	} else {
-		tr.InitHasher()
-		for _, g := range v.Generators {
-			tr.Absorb(g.Bytes())
-		}
+	if len(v.TranscriptHeader) == 0 {
+		return errors.New("invalid transcript header")
 	}
+	tr := Transcript{Curve: v.Curve}
+	tr.SetState(v.TranscriptHeader)
+
 	tr.Absorb(v.Commitment.Bytes())
 	for _, f := range v.LinearForm {
 		tr.Absorb(f.Bytes())

@@ -53,6 +53,7 @@ func newRPSetup(curve *math.Curve, n uint64, value int64) (*rpSetup, error) {
 	r := curve.NewRandomZr(rand)
 	vComm := curve.MultiScalarMul(vGens, []*math.Zr{v, r})
 
+	transcriptHeader := []byte("transcript-header")
 	p := &rangeProver{
 		VGenerators:  vGens,
 		AGenerators:  aGens,
@@ -63,7 +64,8 @@ func newRPSetup(curve *math.Curve, n uint64, value int64) (*rpSetup, error) {
 		r:            r,
 		Curve:        curve,
 	}
-	v_ := &rangeVerifier{
+	p.WithTranscriptHeader(transcriptHeader)
+	ver := &rangeVerifier{
 		VGenerators:  vGens,
 		AGenerators:  aGens,
 		BGenerators:  bGens,
@@ -71,8 +73,9 @@ func newRPSetup(curve *math.Curve, n uint64, value int64) (*rpSetup, error) {
 		NumberOfBits: n,
 		Curve:        curve,
 	}
+	ver.WithTranscriptHeader(transcriptHeader)
 
-	return &rpSetup{prover: p, verifier: v_, curve: curve}, nil
+	return &rpSetup{prover: p, verifier: ver, curve: curve}, nil
 }
 
 // TestRangeProofProveVerify checks that an honest proof always verifies.
@@ -158,6 +161,7 @@ func TestRangeProofOutOfRange(t *testing.T) {
 				r:            r,
 				Curve:        curve,
 			}
+			prover.WithTranscriptHeader([]byte("transcript-header"))
 
 			// the proof is still generated, the verification will fail though
 			_, err = prover.Prove()
