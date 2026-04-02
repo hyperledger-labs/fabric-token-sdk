@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 
@@ -79,10 +80,25 @@ func (r *ClaimView) Call(ctx view.Context) (res interface{}, err error) {
 		assert.NoError(err, "failed getting ledger")
 		transferMetadataKey, err := ledger.TransferMetadataKey(htlc.ClaimKey(r.Script.HashInfo.Hash))
 		assert.NoError(err, "failed getting transfer metadata key")
-		stateValues, err := ledger.GetStates(ctx.Context(), tms.Namespace(), transferMetadataKey)
-		assert.NoError(err, "failed getting states")
-		assert.True(len(stateValues) == 1, "expected one state value")
-		assert.Equal(preImage, stateValues[0], "pre-image mismatch [%s] vs [%s]", utils.Hashable(preImage), utils.Hashable(stateValues[0]))
+
+		// double-check the content of the ledger, retry a few time to give time to the committer
+		runner := utils.NewRetryRunner(logger, 3, 1*time.Second, true)
+		assert.NoError(err, runner.RunWithContext(ctx.Context(), func() error {
+			logger.Debugf("check transfer metadata key [%s]...", transferMetadataKey)
+			stateValues, err := ledger.GetStates(ctx.Context(), tms.Namespace(), transferMetadataKey)
+			if err != nil {
+				return err
+			}
+			logger.Debugf("check transfer metadata key [%s], got [%v]", transferMetadataKey, stateValues)
+			if len(stateValues) != 1 {
+				return errors.Errorf("expected 1 state, found %d", len(stateValues))
+			}
+			if !bytes.Equal(stateValues[0], r.PreImage) {
+				return errors.Errorf("pre-image mismatch [%s] vs [%s]", utils.Hashable(preImage), utils.Hashable(stateValues[0]))
+			}
+
+			return nil
+		}))
 	}
 
 	claimWallet := htlc.GetWallet(ctx, r.Wallet, token.WithTMSID(r.TMSID))
