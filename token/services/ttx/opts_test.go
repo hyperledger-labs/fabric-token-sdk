@@ -94,7 +94,7 @@ func TestCompileServiceOptions(t *testing.T) {
 
 	// Test helper getRecipientWalletID
 	assert.Equal(t, walletID, getRecipientWalletID(opts))
-	assert.Equal(t, "", getRecipientWalletID(&token.ServiceOptions{}))
+	assert.Empty(t, getRecipientWalletID(&token.ServiceOptions{}))
 
 	// Empty wallet ID should not add anything
 	opts, err = CompileServiceOptions(WithRecipientWalletID(""))

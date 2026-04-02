@@ -41,7 +41,7 @@ func TestLocalBidirectionalChannel(t *testing.T) {
 	// Test Send and Receive (Left to Right)
 	payload := []byte("hello from left")
 	err = left.Send(payload)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	msg := <-right.Receive()
 	assert.NotNil(t, msg)
@@ -54,7 +54,7 @@ func TestLocalBidirectionalChannel(t *testing.T) {
 	// Test Send and Receive (Right to Left)
 	payloadRL := []byte("hello from right")
 	err = right.Send(payloadRL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	msgRL := <-left.Receive()
 	assert.NotNil(t, msgRL)
@@ -64,7 +64,7 @@ func TestLocalBidirectionalChannel(t *testing.T) {
 	// Test SendError
 	errPayload := []byte("error from left")
 	err = left.SendError(errPayload)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	errMsg := <-right.Receive()
 	assert.NotNil(t, errMsg)
@@ -72,33 +72,34 @@ func TestLocalBidirectionalChannel(t *testing.T) {
 	assert.Equal(t, int32(view.ERROR), errMsg.Status)
 
 	// Test SendWithContext
-	ctx2 := context.WithValue(ctx, "key", "value")
 	payloadCtx := []byte("hello with context")
-	err = left.SendWithContext(ctx2, payloadCtx)
-	assert.NoError(t, err)
+	type ctxKey struct{}
+
+	err = left.SendWithContext(context.WithValue(ctx, ctxKey{}, "value"), payloadCtx)
+	require.NoError(t, err)
 
 	msgCtx := <-right.Receive()
 	assert.NotNil(t, msgCtx)
 	assert.Equal(t, payloadCtx, msgCtx.Payload)
-	assert.Equal(t, ctx2, msgCtx.Ctx)
+	assert.Equal(t, context.WithValue(ctx, ctxKey{}, "value"), msgCtx.Ctx)
 
 	// Test SendErrorWithContext
 	errPayloadCtx := []byte("error with context")
-	err = left.SendErrorWithContext(ctx2, errPayloadCtx)
-	assert.NoError(t, err)
+	err = left.SendErrorWithContext(context.WithValue(ctx, ctxKey{}, "value"), errPayloadCtx)
+	require.NoError(t, err)
 
 	errMsgCtx := <-right.Receive()
 	assert.NotNil(t, errMsgCtx)
 	assert.Equal(t, errPayloadCtx, errMsgCtx.Payload)
 	assert.Equal(t, int32(view.ERROR), errMsgCtx.Status)
-	assert.Equal(t, ctx2, errMsgCtx.Ctx)
+	assert.Equal(t, context.WithValue(ctx, ctxKey{}, "value"), errMsgCtx.Ctx)
 
 	// Test multiple messages to check buffer
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		err = left.Send([]byte{byte(i)})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		msg := <-right.Receive()
 		assert.Equal(t, []byte{byte(i)}, msg.Payload)
 	}
@@ -109,17 +110,17 @@ func TestLocalBidirectionalChannel(t *testing.T) {
 	assert.Nil(t, left.Receive())
 
 	err = left.Send([]byte("after close"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "session is closed")
 
 	err = left.SendError([]byte("after close"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "session is closed")
 
 	// Right should still be open
 	assert.False(t, right.Info().Closed)
 	err = right.Send([]byte("to closed left"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	right.Close()
 	assert.True(t, right.Info().Closed)
