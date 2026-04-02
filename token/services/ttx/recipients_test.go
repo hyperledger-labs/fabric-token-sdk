@@ -153,7 +153,7 @@ func TestGetRecipientData(t *testing.T) {
 func TestGetRecipientWalletID(t *testing.T) {
 	t.Run("nil params map returns empty string", func(t *testing.T) {
 		opts := &token.ServiceOptions{}
-		assert.Equal(t, "", getRecipientWalletID(opts))
+		assert.Empty(t, getRecipientWalletID(opts))
 	})
 
 	t.Run("missing key returns empty string", func(t *testing.T) {
@@ -162,7 +162,7 @@ func TestGetRecipientWalletID(t *testing.T) {
 				"SomeOtherKey": "value",
 			},
 		}
-		assert.Equal(t, "", getRecipientWalletID(opts))
+		assert.Empty(t, getRecipientWalletID(opts))
 	})
 
 	t.Run("key present returns wallet id", func(t *testing.T) {
@@ -174,4 +174,3 @@ func TestGetRecipientWalletID(t *testing.T) {
 		assert.Equal(t, "my-wallet-id", getRecipientWalletID(opts))
 	})
 }
-
