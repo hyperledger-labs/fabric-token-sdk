@@ -8,6 +8,7 @@ package sherdlock
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -39,6 +40,9 @@ type manager struct {
 	leaseExpiry            time.Duration
 	leaseCleanupTickPeriod time.Duration
 	metrics                *Metrics
+	cancel                 context.CancelFunc
+	cleanerDone            chan struct{}
+	stopOnce               sync.Once
 }
 
 //go:generate counterfeiter -o mock/iterator.go  -fake-name Iterator . iterator
@@ -57,17 +61,22 @@ func NewManager(
 	leaseCleanupTickPeriod time.Duration,
 	m *Metrics,
 ) *manager {
+	ctx, cancel := context.WithCancel(context.Background())
 	mgr := &manager{
 		locker:                 locker,
 		leaseExpiry:            leaseExpiry,
 		leaseCleanupTickPeriod: leaseCleanupTickPeriod,
 		metrics:                m,
+		cancel:                 cancel,
+		cleanerDone:            make(chan struct{}),
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, m), nil
 		}),
 	}
 	if leaseCleanupTickPeriod > 0 && leaseExpiry > 0 {
-		go mgr.cleaner(context.Background())
+		go mgr.cleaner(ctx)
+	} else {
+		close(mgr.cleanerDone)
 	}
 
 	return mgr
@@ -90,13 +99,29 @@ func (m *manager) Close(id transaction.ID) error {
 }
 
 func (m *manager) cleaner(ctx context.Context) {
+	defer close(m.cleanerDone)
 	ticker := time.NewTicker(m.leaseCleanupTickPeriod)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		logger.DebugfContext(ctx, "release token locks older than [%s]", m.leaseExpiry)
-		if err := m.locker.Cleanup(ctx, m.leaseExpiry); err != nil {
-			logger.Errorf("failed to release token locks: [%s]", err)
+	for {
+		select {
+		case <-ticker.C:
+			logger.DebugfContext(ctx, "release token locks older than [%s]", m.leaseExpiry)
+			if err := m.locker.Cleanup(ctx, m.leaseExpiry); err != nil {
+				logger.Errorf("failed to release token locks: [%s]", err)
+			}
+		case <-ctx.Done():
+			logger.Debugf("cleaner stopping")
+
+			return
 		}
 	}
+}
+
+// Stop cancels the cleaner goroutine and waits for it to exit.
+func (m *manager) Stop() {
+	m.stopOnce.Do(func() {
+		m.cancel()
+		<-m.cleanerDone
+	})
 }

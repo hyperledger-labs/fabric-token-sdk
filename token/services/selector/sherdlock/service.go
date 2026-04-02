@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock
 
 import (
+	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -23,6 +24,8 @@ type ConfigProvider interface {
 
 type SelectorService struct {
 	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
+	mu               sync.Mutex
+	managers         []*manager
 }
 
 func NewService(
@@ -36,6 +39,7 @@ func NewService(
 		logger.Errorf("error getting selector config, using defaults. %s", err.Error())
 	}
 
+	svc := &SelectorService{}
 	loader := &loader{
 		tokenLockStoreServiceManager: tokenLockStoreServiceManager,
 		fetcherProvider:              fetcherProvider,
@@ -44,11 +48,11 @@ func NewService(
 		leaseExpiry:                  cfg.GetLeaseExpiry(),
 		leaseCleanupTickPeriod:       cfg.GetLeaseCleanupTickPeriod(),
 		metrics:                      NewMetrics(metricsProvider),
+		onCreate:                     svc.trackManager,
 	}
+	svc.managerLazyCache = lazy2.NewProviderWithKeyMapper(key, loader.load)
 
-	return &SelectorService{
-		managerLazyCache: lazy2.NewProviderWithKeyMapper(key, loader.load),
-	}
+	return svc
 }
 
 func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -59,6 +63,24 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 	return s.managerLazyCache.Get(tms)
 }
 
+// Shutdown stops all background goroutines for every manager created by this service.
+func (s *SelectorService) Shutdown() {
+	s.mu.Lock()
+	managers := s.managers
+	s.managers = nil
+	s.mu.Unlock()
+
+	for _, m := range managers {
+		m.Stop()
+	}
+}
+
+func (s *SelectorService) trackManager(m *manager) {
+	s.mu.Lock()
+	s.managers = append(s.managers, m)
+	s.mu.Unlock()
+}
+
 type loader struct {
 	tokenLockStoreServiceManager tokenlockdb.StoreServiceManager
 	fetcherProvider              FetcherProvider
@@ -67,6 +89,7 @@ type loader struct {
 	leaseExpiry                  time.Duration
 	leaseCleanupTickPeriod       time.Duration
 	metrics                      *Metrics
+	onCreate                     func(*manager)
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -83,7 +106,7 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		return nil, errors.Errorf("failed to create token fetcher: %v", err)
 	}
 
-	return NewManager(
+	mgr := NewManager(
 		fetcher,
 		tokenLockStoreService,
 		pp.Precision(),
@@ -92,7 +115,12 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		s.leaseExpiry,
 		s.leaseCleanupTickPeriod,
 		s.metrics,
-	), nil
+	)
+	if s.onCreate != nil {
+		s.onCreate(mgr)
+	}
+
+	return mgr, nil
 }
 
 func key(tms *token.ManagementService) string {

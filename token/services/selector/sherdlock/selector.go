@@ -82,7 +82,17 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 			backoffDuration = time.Duration(rand.Int64N(int64(m.backoffInterval)))
 		}
 		m.logger.DebugfContext(ctx, "Token selection aborted, so that other procs can retry. Release tokens and backoff for %v before retrying to select. In the meantime maybe some other process releases token locks or adds tokens.", backoffDuration)
-		time.Sleep(backoffDuration)
+		select {
+		case <-time.After(backoffDuration):
+		case <-ctx.Done():
+			if err := m.locker.UnlockAll(ctx); err != nil {
+				m.logger.Errorf("failed to unlock tokens on context cancellation: %s", err)
+			}
+			m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
+			m.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
+
+			return nil, nil, ctx.Err()
+		}
 		m.logger.DebugfContext(ctx, "Now it is our turn to retry...")
 	}
 
