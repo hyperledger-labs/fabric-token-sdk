@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
@@ -47,6 +48,7 @@ func NewServiceManager(
 	ttxStoreServiceManager StoreServiceManager,
 	tokensServiceManager TokensServiceManager,
 	tracerProvider trace.TracerProvider,
+	metricsProvider metrics.Provider,
 	checkServiceProvider CheckServiceProvider,
 ) *ServiceManager {
 	return &ServiceManager{
@@ -72,7 +74,8 @@ func NewServiceManager(
 				finalityTracer: tracerProvider.Tracer("db", tracing.WithMetricsOpts(tracing.MetricsOpts{
 					LabelNames: []tracing.LabelName{txIdLabel},
 				})),
-				checkService: checkService,
+				metricsProvider: metricsProvider,
+				checkService:    checkService,
 			}
 			_, err = networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 			if err != nil {
@@ -123,6 +126,7 @@ func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) erro
 				db.ttxStoreService,
 				db.tokensService,
 				db.finalityTracer,
+				db.metricsProvider,
 			),
 		)
 	})

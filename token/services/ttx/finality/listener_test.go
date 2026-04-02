@@ -70,6 +70,7 @@ func newTestListener(t *testing.T, db *stubTxDB) *finality.Listener {
 		db,
 		nil, // tokens.Service — not accessed for network.Invalid status
 		noopTracer(),
+		nil, // metricsProvider — noop fallback
 	)
 }
 
