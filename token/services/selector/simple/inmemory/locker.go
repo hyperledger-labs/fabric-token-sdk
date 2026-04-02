@@ -45,19 +45,33 @@ type locker struct {
 	locked                 map[token2.ID]*lockEntry
 	sleepTimeout           time.Duration
 	validTxEvictionTimeout time.Duration
+	cancel                 context.CancelFunc
+	scanDone               chan struct{}
+	stopOnce               sync.Once
 }
 
 func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTimeout time.Duration) simple.Locker {
+	ctx, cancel := context.WithCancel(context.Background())
 	r := &locker{
 		ttxdb:                  ttxdb,
 		sleepTimeout:           timeout,
 		lock:                   &sync.RWMutex{},
 		locked:                 map[token2.ID]*lockEntry{},
 		validTxEvictionTimeout: validTxEvictionTimeout,
+		cancel:                 cancel,
+		scanDone:               make(chan struct{}),
 	}
-	r.Start()
+	r.start(ctx)
 
 	return r
+}
+
+// Stop cancels the scan goroutine and waits for it to exit.
+func (d *locker) Stop() {
+	d.stopOnce.Do(func() {
+		d.cancel()
+		<-d.scanDone
+	})
 }
 
 func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim bool) (string, error) {
@@ -170,12 +184,21 @@ func (d *locker) reclaim(ctx context.Context, id *token2.ID, txID string) (bool,
 	}
 }
 
-func (d *locker) Start() {
-	go d.scan(context.Background())
+func (d *locker) start(ctx context.Context) {
+	go d.scan(ctx)
 }
 
 func (d *locker) scan(ctx context.Context) {
+	defer close(d.scanDone)
 	for {
+		// Check for shutdown before starting a new scan cycle.
+		select {
+		case <-ctx.Done():
+			logger.Debugf("token collector: stopping")
+
+			return
+		default:
+		}
 		logger.DebugfContext(ctx, "token collector: scan locked tokens")
 		// Track both token ID and the txID that was observed during the scan,
 		// so we can re-validate before deleting (prevents TOCTOU race with Lock/reclaim).
@@ -224,7 +247,13 @@ func (d *locker) scan(ctx context.Context) {
 
 		for {
 			logger.DebugfContext(ctx, "token collector: sleep for some time...")
-			time.Sleep(d.sleepTimeout)
+			select {
+			case <-time.After(d.sleepTimeout):
+			case <-ctx.Done():
+				logger.Debugf("token collector: stopping during sleep")
+
+				return
+			}
 			d.lock.RLock()
 			l := len(d.locked)
 			d.lock.RUnlock()

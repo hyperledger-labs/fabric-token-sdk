@@ -51,6 +51,12 @@ type SelectorManagerProvider interface {
 	SelectorManager(tms *ManagementService) (SelectorManager, error)
 }
 
+// Shutdownable is optionally implemented by SelectorManagerProvider instances
+// that manage background goroutines and need to be stopped when a TMS is evicted.
+type Shutdownable interface {
+	Shutdown()
+}
+
 // CertificationClientProvider provides instances of CertificationClient
 type CertificationClientProvider interface {
 	// New returns a new CertificationClient instance for the passed inputs
@@ -123,6 +129,11 @@ func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed updating tms [%s]", tmsID)
+	}
+
+	// Shut down background goroutines for the evicted TMS before clearing the cache.
+	if s, ok := p.selectorManagerProvider.(Shutdownable); ok {
+		s.Shutdown()
 	}
 
 	// clear cache

@@ -8,6 +8,7 @@ package simple
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -29,8 +30,15 @@ type LockerProvider interface {
 	New(network, channel, namespace string) (Locker, error)
 }
 
+// stoppable is implemented by lockers that have a lifecycle (e.g. inmemory.locker).
+type stoppable interface {
+	Stop()
+}
+
 type SelectorService struct {
 	managerLazyCache lazy.Provider[*token.ManagementService, token.SelectorManager]
+	mu               sync.Mutex
+	lockers          []stoppable
 }
 
 func NewService(lockerProvider LockerProvider, c ConfigProvider) *SelectorService {
@@ -39,16 +47,17 @@ func NewService(lockerProvider LockerProvider, c ConfigProvider) *SelectorServic
 		logger.Errorf("error getting selector config, using defaults. %s", err.Error())
 	}
 
+	svc := &SelectorService{}
 	loader := &loader{
 		lockerProvider:       lockerProvider,
 		numRetries:           cfg.GetNumRetries(),
 		retryInterval:        cfg.GetRetryInterval(),
 		requestCertification: true,
+		onLockerCreated:      svc.trackLocker,
 	}
+	svc.managerLazyCache = lazy.NewProviderWithKeyMapper(key, loader.load)
 
-	return &SelectorService{
-		managerLazyCache: lazy.NewProviderWithKeyMapper(key, loader.load),
-	}
+	return svc
 }
 
 func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -57,6 +66,26 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 	}
 
 	return s.managerLazyCache.Get(tms)
+}
+
+// Shutdown stops all background goroutines for every locker created by this service.
+func (s *SelectorService) Shutdown() {
+	s.mu.Lock()
+	lockers := s.lockers
+	s.lockers = nil
+	s.mu.Unlock()
+
+	for _, l := range lockers {
+		l.Stop()
+	}
+}
+
+func (s *SelectorService) trackLocker(l Locker) {
+	if st, ok := l.(stoppable); ok {
+		s.mu.Lock()
+		s.lockers = append(s.lockers, st)
+		s.mu.Unlock()
+	}
 }
 
 type Cache interface {
@@ -86,6 +115,7 @@ type loader struct {
 	numRetries           int
 	retryInterval        time.Duration
 	requestCertification bool
+	onLockerCreated      func(Locker)
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -94,6 +124,9 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	locker, err := s.lockerProvider.New(tms.Network(), tms.Channel(), tms.Namespace())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting locker")
+	}
+	if s.onLockerCreated != nil {
+		s.onLockerCreated(locker)
 	}
 	qe := &queryService{
 		qe:     tms.Vault().NewQueryEngine(),

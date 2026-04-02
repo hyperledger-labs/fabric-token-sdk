@@ -42,9 +42,8 @@ type UserAlias = string
 type UserConfig struct {
 	Name     UserAlias `json:"name"     yaml:"name"`
 	Username Username  `json:"username" yaml:"username"`
-	//nolint:gosec // this is a test model
-	Password string `json:"password" yaml:"password"`
-	Endpoint string `json:"endpoint" yaml:"endpoint"`
+	Password string    `json:"password" yaml:"password"` //nolint:gosec // G117: test model, not a real credential
+	Endpoint string    `json:"endpoint" yaml:"endpoint"`
 }
 
 type SuiteConfig struct {
