@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
@@ -30,7 +31,7 @@ func HTLCSingleFabricNetworkTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.SetLogging(token2.RunnerDebug(opts.FSCLogSpec), "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -76,7 +77,7 @@ func HTLCTwoFabricNetworksTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.SetLogging(token2.RunnerDebug(opts.FSCLogSpec), "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
@@ -141,7 +142,7 @@ func HTLCNoCrossClaimTopology(opts common.Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.SetLogging(token2.RunnerDebug(opts.FSCLogSpec), "")
 	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).

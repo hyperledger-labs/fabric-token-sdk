@@ -118,7 +118,7 @@ func (l *ledger) TransferMetadataKey(k string) (string, error) {
 
 // ViewManager models the interface for initiating FSC views.
 type ViewManager interface {
-	InitiateView(view view.View, ctx context.Context) (interface{}, error)
+	InitiateView(ctx context.Context, view view.View) (interface{}, error)
 }
 
 // ViewRegistry models the interface for registering view responders.

@@ -1385,7 +1385,7 @@ func (r *Request) parseInputIDs(ctx context.Context, inputs []*token.ID) ([]*tok
 	var typ token.Type
 	pp := r.TokenService.tms.PublicParamsManager().PublicParameters()
 	if pp == nil {
-		return nil, nil, "", errors.Errorf("public paramenters not set")
+		return nil, nil, "", errors.Errorf("public parameters not set")
 	}
 	precision := pp.Precision()
 	sum := token.NewZeroQuantity(precision)

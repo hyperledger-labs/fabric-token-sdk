@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 
@@ -40,7 +41,7 @@ type ClaimView struct {
 	*Claim
 }
 
-func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
+func (r *ClaimView) Call(ctx view.Context) (res interface{}, err error) {
 	var tx *htlc.Transaction
 	defer func() {
 		if e := recover(); e != nil {
@@ -61,7 +62,7 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		// Scan for the pre-image
 		var err error
 		preImage, err = htlc.ScanForPreImage(
-			context,
+			ctx,
 			r.Script.HashInfo.Hash,
 			r.Script.HashInfo.HashFunc,
 			r.Script.HashInfo.HashEncoding,
@@ -71,41 +72,56 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 		assert.NoError(err, "failed to receive the preImage")
 
 		// double-check the value of the key
-		tms, err := token.GetManagementService(context, token.WithTMSID(r.ScriptTMSID))
+		tms, err := token.GetManagementService(ctx, token.WithTMSID(r.ScriptTMSID))
 		assert.NoError(err, "failed getting management service")
-		network := network.GetInstance(context, tms.Network(), tms.Channel())
+		network := network.GetInstance(ctx, tms.Network(), tms.Channel())
 		assert.NotNil(network, "failed getting network")
 		ledger, err := network.Ledger()
 		assert.NoError(err, "failed getting ledger")
 		transferMetadataKey, err := ledger.TransferMetadataKey(htlc.ClaimKey(r.Script.HashInfo.Hash))
 		assert.NoError(err, "failed getting transfer metadata key")
-		stateValues, err := ledger.GetStates(context.Context(), tms.Namespace(), transferMetadataKey)
-		assert.NoError(err, "failed getting states")
-		assert.True(len(stateValues) == 1, "expected one state value")
-		assert.Equal(preImage, stateValues[0], "pre-image mismatch [%s] vs [%s]", utils.Hashable(preImage), utils.Hashable(stateValues[0]))
+
+		// double-check the content of the ledger, retry a few time to give time to the committer
+		runner := utils.NewRetryRunner(logger, 3, 1*time.Second, true)
+		assert.NoError(err, runner.RunWithContext(ctx.Context(), func() error {
+			logger.Debugf("check transfer metadata key [%s]...", transferMetadataKey)
+			stateValues, err := ledger.GetStates(ctx.Context(), tms.Namespace(), transferMetadataKey)
+			if err != nil {
+				return err
+			}
+			logger.Debugf("check transfer metadata key [%s], got [%v]", transferMetadataKey, stateValues)
+			if len(stateValues) != 1 {
+				return errors.Errorf("expected 1 state, found %d", len(stateValues))
+			}
+			if !bytes.Equal(stateValues[0], r.PreImage) {
+				return errors.Errorf("pre-image mismatch [%s] vs [%s]", utils.Hashable(preImage), utils.Hashable(stateValues[0]))
+			}
+
+			return nil
+		}))
 	}
 
-	claimWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
+	claimWallet := htlc.GetWallet(ctx, r.Wallet, token.WithTMSID(r.TMSID))
 	assert.NotNil(claimWallet, "wallet [%s] not found", r.Wallet)
 
-	matched, err := htlc.Wallet(context, claimWallet).ListByPreImage(context.Context(), preImage)
+	matched, err := htlc.Wallet(ctx, claimWallet).ListByPreImage(ctx.Context(), preImage)
 	assert.NoError(err, "htlc script has expired")
 	assert.True(matched.Count() == 1, "expected only one htlc script to match [%s], got [%d]", view.Identity(preImage), matched.Count())
 
-	idProvider, err := id.GetProvider(context)
+	idProvider, err := id.GetProvider(ctx)
 	assert.NoError(err, "failed getting id provider")
 	tx, err = htlc.NewAnonymousTransaction(
-		context,
+		ctx,
 		ttx.WithAuditor(idProvider.Identity("auditor")),
 		ttx.WithTMSID(r.TMSID),
 	)
 	assert.NoError(err, "failed to create an htlc transaction")
 	assert.NoError(tx.Claim(claimWallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
-	_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
+	_, err = ctx.RunView(htlc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to collect endorsements on htlc transaction")
 
-	_, err = context.RunView(htlc.NewOrderingAndFinalityView(tx))
+	_, err = ctx.RunView(htlc.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed to commit htlc transaction")
 
 	return tx.ID(), nil

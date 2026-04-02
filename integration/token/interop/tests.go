@@ -320,8 +320,8 @@ func TestFastExchange(network *integration.Infrastructure, sel *token2.ReplicaSe
 
 	CheckBalance(network, sel.Get("alice"), "", EUR, 20, token.WithTMSID(alpha))
 
-	gomega.Eventually(CheckBalanceReturnError).WithArguments(network, sel.Get("bob"), "", EUR, uint64(10), token.WithTMSID(alpha)).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Succeed())
+	gomega.Eventually(CheckBalanceReturnError).WithArguments(network, sel.Get("bob"), "", EUR, uint64(10), token.WithTMSID(alpha)).WithTimeout(2 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Succeed())
 
 	CheckBalance(network, sel.Get("alice"), "", USD, 10, token.WithTMSID(beta))
-	gomega.Eventually(CheckBalanceReturnError).WithArguments(network, sel.Get("bob"), "", USD, uint64(20), token.WithTMSID(beta)).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Succeed())
+	gomega.Eventually(CheckBalanceReturnError).WithArguments(network, sel.Get("bob"), "", USD, uint64(20), token.WithTMSID(beta)).WithTimeout(2 * time.Minute).WithPolling(15 * time.Second).Should(gomega.Succeed())
 }

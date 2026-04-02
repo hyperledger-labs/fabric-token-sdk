@@ -65,10 +65,10 @@ func (w *RWSetWrapper) StateMustNotExist(key translator.Key) error {
 func (w *RWSetWrapper) StateMustExist(key translator.Key, version translator.KeyVersion) error {
 	switch version {
 	case translator.VersionZero:
-		return w.RWSet.AddReadAt(w.Namespace, key, vault.Marshal(0))
+		return w.RWSet.AddReadAt(w.Namespace, key, vault.MarshalVersion(0))
 	case translator.Latest:
 		// TODO: AF
-		return w.RWSet.AddReadAt(w.Namespace, key, vault.Marshal(w.ppVersion))
+		return w.RWSet.AddReadAt(w.Namespace, key, vault.MarshalVersion(w.ppVersion))
 		// // When StateMustExist is called on VersionZero, Latest behaviour is used instead.
 		// // This works under the assumption that keys are used only once.
 		// h, err := w.RWSet.GetState(w.Namespace, key)

@@ -8,6 +8,7 @@ package token
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
@@ -131,6 +132,15 @@ func NewLocalTestSuite(startPort func() int, topologies []api.Topology) *TestSui
 			return i, err
 		},
 	}
+}
+
+// RunnerDebug returns the passed string if RUNNER_DEBUG is not set to "1", otherwise it returns "debug"
+func RunnerDebug(current string) string {
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		return "debug"
+	}
+
+	return current
 }
 
 type TestSuite struct {
