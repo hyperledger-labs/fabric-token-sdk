@@ -53,6 +53,7 @@ func TestCSPWithZeroWitness(t *testing.T) {
 				Curve:          curve,
 				witness:        witness,
 			}
+			prover.WithTranscriptHeader([]byte("transcript-header"))
 
 			proof, err := prover.Prove()
 			require.NoError(t, err)
@@ -65,6 +66,7 @@ func TestCSPWithZeroWitness(t *testing.T) {
 				NumberOfRounds: rounds,
 				Curve:          curve,
 			}
+			verifier.WithTranscriptHeader([]byte("transcript-header"))
 
 			err = verifier.Verify(proof)
 			require.NoError(t, err)
@@ -110,6 +112,7 @@ func TestCSPWithMaxFieldElements(t *testing.T) {
 				Curve:          curve,
 				witness:        witness,
 			}
+			prover.WithTranscriptHeader([]byte("transcript-header"))
 
 			proof, err := prover.Prove()
 			require.NoError(t, err)
@@ -122,6 +125,7 @@ func TestCSPWithMaxFieldElements(t *testing.T) {
 				NumberOfRounds: rounds,
 				Curve:          curve,
 			}
+			verifier.WithTranscriptHeader([]byte("transcript-header"))
 
 			err = verifier.Verify(proof)
 			require.NoError(t, err)
@@ -467,6 +471,7 @@ func TestCSPWithIdentityGenerator(t *testing.T) {
 				Curve:          curve,
 				witness:        witness,
 			}
+			prover.WithTranscriptHeader([]byte("transcript-header"))
 
 			proof, err := prover.Prove()
 			require.NoError(t, err)
@@ -479,6 +484,7 @@ func TestCSPWithIdentityGenerator(t *testing.T) {
 				NumberOfRounds: rounds,
 				Curve:          curve,
 			}
+			verifier.WithTranscriptHeader([]byte("transcript-header"))
 
 			err = verifier.Verify(proof)
 			require.NoError(t, err)
