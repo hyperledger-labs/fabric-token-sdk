@@ -87,7 +87,12 @@ type MSPManager interface {
 	GetVerifier(identity view.Identity) (driver.Verifier, error)
 }
 
+// ACLProvider offers ACL-related services
+//
+//go:generate counterfeiter -o mock/acl_provider.go -fake-name ACLProvider . ACLProvider
 type ACLProvider interface {
+	// CheckACL checks the ACL for the resource for the Channel using the
+	// SignedProposal from which an id can be extracted for testing against a policy
 	CheckACL(signedProp *fabric.SignedProposal) error
 }
 

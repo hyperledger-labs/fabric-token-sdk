@@ -46,8 +46,10 @@ type mockProposal struct {
 func (m *mockProposal) Header() []byte  { return m.header }
 func (m *mockProposal) Payload() []byte { return m.payload }
 
-var _ fabricdriver.SignedProposal = &mockSignedProposal{}
-var _ fabricdriver.Proposal = &mockProposal{}
+var (
+	_ fabricdriver.SignedProposal = &mockSignedProposal{}
+	_ fabricdriver.Proposal       = &mockProposal{}
+)
 
 // alwaysValidVerifier is a test verifier that always returns nil (valid)
 type alwaysValidVerifier struct{}
@@ -131,8 +133,12 @@ func mockNewRequestApprovalResponderView(t *testing.T, overrideTMSID *token.TMSI
 	mspManager.IsValidReturns(nil)
 	mspManager.GetVerifierReturns(&alwaysValidVerifier{}, nil)
 
+	aclProvider := &mock.ACLProvider{}
+	aclProvider.CheckACLReturns(nil)
+
 	channelProvider := &mock.ChannelProvider{}
 	channelProvider.GetMSPManagerReturns(mspManager, nil)
+	channelProvider.GetACLProviderReturns(aclProvider, nil)
 
 	view := fsc.NewRequestApprovalResponderView(
 		nil,
@@ -474,6 +480,128 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			expectError:      true,
 			expectErrorType:  fsc.ErrValidateProposal,
 			expectErrContain: "pineapple",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "failed to get ACL provider",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.channelProvider.GetACLProviderReturns(nil, errors.New("no ACL provider available"))
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "failed to get ACL provider",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "ACL check failed",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				aclProvider := &mock.ACLProvider{}
+				aclProvider.CheckACLReturns(errors.New("ACL check failed"))
+				m.channelProvider.GetACLProviderReturns(aclProvider, nil)
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrValidateProposal,
+			expectErrContain: "failed to check ACL",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "failed to get RWSet",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.GetRWSetReturns(nil, errors.New("failed to get rwset"))
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrReceivedProposal,
+			expectErrContain: "failed to get rws",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 0, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "invalid chaincode name",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.ChaincodeReturns("wrong_namespace")
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrInvalidProposal,
+			expectErrContain: "invalid chaincode",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "invalid chaincode version",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.ChaincodeVersionReturns("2.0")
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrInvalidProposal,
+			expectErrContain: "invalid chaincode",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "invalid function parameters",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.ParametersReturns([][]byte{[]byte("param1")})
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrInvalidProposal,
+			expectErrContain: "invalid parameters",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "failed to get endorser ID",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.es.EndorserIDReturns(nil, errors.New("no endorser ID"))
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrEndorseProposal,
+			expectErrContain: "no endorser ID",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "failed to endorse",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.es.EndorseReturns(nil, errors.New("endorse failed"))
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrEndorseProposal,
+			expectErrContain: "endorse failed",
 			verify: func(m *MockNewRequestApprovalResponderView, res any) {
 				assert.Equal(t, 1, m.rws.DoneCallCount())
 			},
