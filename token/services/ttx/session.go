@@ -17,8 +17,8 @@ import (
 // LocalBidirectionalChannel is a bidirectional channel that is used to simulate
 // a session between two views (let's call them L and R) running in the same process.
 type LocalBidirectionalChannel struct {
-	left  view.Session
-	right view.Session
+	left  Session
+	right Session
 }
 
 // NewLocalBidirectionalChannel creates a new bidirectional channel

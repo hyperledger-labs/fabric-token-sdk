@@ -115,6 +115,10 @@ type Envelope struct {
 	e driver.Envelope
 }
 
+func NewEnvelope(e driver.Envelope) *Envelope {
+	return &Envelope{e: e}
+}
+
 // Bytes serializes the envelope into bytes.
 func (e *Envelope) Bytes() ([]byte, error) {
 	return e.e.Bytes()

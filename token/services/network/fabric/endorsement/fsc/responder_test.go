@@ -19,7 +19,7 @@ import (
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/tokenapi"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/mock/tokenapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

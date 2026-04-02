@@ -41,7 +41,12 @@ func GetStorageProvider(sp token.ServiceProvider) (StorageProvider, error) {
 		return nil, err
 	}
 
-	return s.(StorageProvider), nil
+	provider, ok := s.(StorageProvider)
+	if !ok {
+		panic("implementation error, type must be StorageProvider")
+	}
+
+	return provider, nil
 }
 
 // StoreTransactionRecords stores the transaction records extracted from the passed transaction to the

@@ -10,12 +10,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 )
 
-//go:generate counterfeiter -o deps/mock/context.go -fake-name Context . Context
-
 // Context is an alias of view.Context
+//
+//go:generate counterfeiter -o deps/mock/context.go -fake-name Context . Context
 type Context = view.Context
 
-//go:generate counterfeiter -o deps/mock/session.go -fake-name Session . Session
-
 // Session is an alias of view.Session
+//
+//go:generate counterfeiter -o deps/mock/session.go -fake-name Session . Session
 type Session = view.Session

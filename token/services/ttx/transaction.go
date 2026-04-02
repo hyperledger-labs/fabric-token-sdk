@@ -85,12 +85,9 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 		return nil, errors.WithMessagef(err, "failed compiling tx options")
 	}
 
-	tms, err := dep.GetManagementService(
-		context,
-		token.WithTMSID(txOpts.TMSID),
-	)
+	tms, err := dep.GetManagementService(context, token.WithTMSID(txOpts.TMSID))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get token management service")
+		return nil, errors.Join(err, ErrDepNotAvailableInContext)
 	}
 
 	networkProvider, err := dep.GetNetworkProvider(context)
@@ -167,7 +164,7 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	// check there exists a tms for this payload
 	tms, err := dep.GetManagementService(context, token.WithTMSID(payload.tmsID))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get token management service")
+		return nil, errors.Join(err, ErrDepNotAvailableInContext)
 	}
 	if !tms.ID().Equal(payload.tmsID) {
 		return nil, errors.Errorf("failed to find tms for tmsID [%s], got [%s]", payload.tmsID, tms.ID())
