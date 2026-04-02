@@ -23,7 +23,7 @@ gofmt:
 goimports:
 	@echo Running goimports
 	@{ \
-	OUTPUT="$$(goimports -l . | grep -v 'fabric-smart-client/')"; \
+	OUTPUT="$$(goimports -l .)"; \
 	if [ -n "$$OUTPUT" ]; then \
     	echo "The following files contain goimports errors"; \
     	echo "$$OUTPUT"; \

@@ -29,7 +29,7 @@ func NewDeserializer() *Deserializer {
 	des.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(des))
 	des.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(des, des))
 
-	return &Deserializer{Deserializer: common.NewDeserializer(x509.IdentityType, des, des, des, des, des)}
+	return &Deserializer{Deserializer: common.NewDeserializer(des, des, des, des, des)}
 }
 
 // PublicParamsDeserializer deserializes fabtoken public parameters.

@@ -13,24 +13,24 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 var logger = logging.MustGetLogger()
 
-type TypedVerifierDeserializer = driver2.TypedVerifierDeserializer
+type TypedVerifierDeserializer = idriver.TypedVerifierDeserializer
 
 type TypedVerifierDeserializerMultiplex struct {
-	deserializers map[driver2.IdentityType][]driver2.TypedVerifierDeserializer
+	deserializers map[idriver.IdentityType][]idriver.TypedVerifierDeserializer
 }
 
 func NewTypedVerifierDeserializerMultiplex() *TypedVerifierDeserializerMultiplex {
-	return &TypedVerifierDeserializerMultiplex{deserializers: map[driver2.IdentityType][]TypedVerifierDeserializer{}}
+	return &TypedVerifierDeserializerMultiplex{deserializers: map[idriver.IdentityType][]TypedVerifierDeserializer{}}
 }
 
-func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ driver2.IdentityType, d TypedVerifierDeserializer) {
+func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ idriver.IdentityType, d TypedVerifierDeserializer) {
 	_, ok := v.deserializers[typ]
 	if !ok {
 		v.deserializers[typ] = []TypedVerifierDeserializer{d}
@@ -109,7 +109,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfoMatcher(ctx context.Con
 	return &TypedAuditInfoMatcher{matcher: matcher}, nil
 }
 
-func (v *TypedVerifierDeserializerMultiplex) getMatcher(ctx context.Context, idType driver2.IdentityType, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (v *TypedVerifierDeserializerMultiplex) getMatcher(ctx context.Context, idType idriver.IdentityType, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	dess, ok := v.deserializers[idType]
 	if !ok {
 		return nil, errors.Errorf("no deserializer found for [%v]", idType)

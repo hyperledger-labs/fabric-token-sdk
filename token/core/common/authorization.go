@@ -130,7 +130,7 @@ func (o *AuthorizationMultiplexer) Issued(ctx context.Context, issuer token.Iden
 func (o *AuthorizationMultiplexer) OwnerType(raw []byte) (driver.IdentityType, []byte, error) {
 	owner, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
-		return driver.IdentityType(0), nil, err
+		return driver.ZeroIdentityType, nil, err
 	}
 
 	return owner.Type, owner.Identity, nil

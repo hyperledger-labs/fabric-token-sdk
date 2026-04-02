@@ -13,21 +13,21 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-type TypedSignerDeserializer = driver2.TypedSignerDeserializer
+type TypedSignerDeserializer = idriver.TypedSignerDeserializer
 
 type TypedSignerDeserializerMultiplex struct {
-	deserializers map[driver2.IdentityType][]TypedSignerDeserializer
+	deserializers map[idriver.IdentityType][]TypedSignerDeserializer
 }
 
 func NewTypedSignerDeserializerMultiplex() *TypedSignerDeserializerMultiplex {
-	return &TypedSignerDeserializerMultiplex{deserializers: map[driver2.IdentityType][]TypedSignerDeserializer{}}
+	return &TypedSignerDeserializerMultiplex{deserializers: map[idriver.IdentityType][]TypedSignerDeserializer{}}
 }
 
-func (v *TypedSignerDeserializerMultiplex) AddTypedSignerDeserializer(typ driver2.IdentityType, d driver2.TypedSignerDeserializer) {
+func (v *TypedSignerDeserializerMultiplex) AddTypedSignerDeserializer(typ idriver.IdentityType, d idriver.TypedSignerDeserializer) {
 	_, ok := v.deserializers[typ]
 	if !ok {
 		v.deserializers[typ] = []TypedSignerDeserializer{d}

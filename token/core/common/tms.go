@@ -144,8 +144,7 @@ func (s *Service[T]) Validator() (driver.Validator, error) {
 func (s *Service[T]) Done() error {
 	// call done on all the services that support it
 	if s.walletService != nil {
-		// walletService.Done() removed: not in WalletService interface
-		return nil
+		return s.walletService.Done()
 	}
 
 	return nil

@@ -56,7 +56,7 @@ type SignerService interface {
 // KeyManager manages Idemix keys and deserializers
 type KeyManager struct {
 	*crypto.Deserializer
-	UserKeySKI SKI
+	userKeySKI SKI
 	conf       *config.IdemixConfig
 
 	sigType bccsp.SignatureType
@@ -202,7 +202,7 @@ func NewKeyManagerWithSchema(
 			SchemaManager:   sm,
 			Schema:          schemaName,
 		},
-		UserKeySKI:    userKeySKI,
+		userKeySKI:    userKeySKI,
 		conf:          conf,
 		sigType:       sigType,
 		verType:       verType,
@@ -215,9 +215,9 @@ func NewKeyManagerWithSchema(
 func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
 	logger.DebugfContext(ctx, "get user secret key")
 	// Load the user key
-	userKey, err := p.Csp.GetKey(p.UserKeySKI)
+	userKey, err := p.Csp.GetKey(p.userKeySKI)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.UserKeySKI)
+		return nil, errors.Wrapf(err, "failed to retrieve user key with ski [%s]", p.userKeySKI)
 	}
 
 	// Derive nymPublicKey
@@ -281,7 +281,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 		CSP:          p.Csp,
 		Identity:     id,
 		NymKeySKI:    nymPublicKey.SKI(),
-		UserKeySKI:   p.UserKeySKI,
+		UserKeySKI:   p.userKeySKI,
 		EnrollmentId: enrollmentID,
 	}
 	serializedIdentity, err := sID.Serialize()
@@ -329,7 +329,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 
 // IsRemote returns true if the user key is not available locally
 func (p *KeyManager) IsRemote() bool {
-	return len(p.UserKeySKI) == 0
+	return len(p.userKeySKI) == 0
 }
 
 // DeserializeVerifier deserializes a verifier from the given raw bytes
@@ -401,7 +401,7 @@ func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte)
 	si := &crypto.SigningIdentity{
 		CSP:          p.Csp,
 		Identity:     id.Identity,
-		UserKeySKI:   p.UserKeySKI,
+		UserKeySKI:   p.userKeySKI,
 		NymKeySKI:    id.NymPublicKey.SKI(),
 		EnrollmentId: p.conf.Signer.EnrollmentId,
 	}
