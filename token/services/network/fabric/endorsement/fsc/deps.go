@@ -87,10 +87,15 @@ type MSPManager interface {
 	GetVerifier(identity view.Identity) (driver.Verifier, error)
 }
 
+type ACLProvider interface {
+	CheckACL(signedProp *fabric.SignedProposal) error
+}
+
 // ChannelProvider provides access to the MSP manager for a given Fabric network and channel.
 //
 //go:generate counterfeiter -o mock/channel_provider.go -fake-name ChannelProvider . ChannelProvider
 type ChannelProvider interface {
 	// GetMSPManager returns the MSP manager for the given network and channel
 	GetMSPManager(network, channel string) (MSPManager, error)
+	GetACLProvider(network, channel string) (ACLProvider, error)
 }

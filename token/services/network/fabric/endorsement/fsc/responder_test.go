@@ -35,6 +35,7 @@ func (m *mockSignedProposal) Signature() []byte        { return m.signature }
 func (m *mockSignedProposal) ProposalHash() []byte     { return nil }
 func (m *mockSignedProposal) ChaincodeName() string    { return "" }
 func (m *mockSignedProposal) ChaincodeVersion() string { return "" }
+func (m *mockSignedProposal) Internal() any            { return nil }
 
 // mockProposal implements driver.Proposal for testing
 type mockProposal struct {
