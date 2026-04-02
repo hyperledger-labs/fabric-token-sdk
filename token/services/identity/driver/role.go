@@ -8,6 +8,7 @@ package driver
 
 import (
 	"context"
+	"fmt"
 
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -35,6 +36,15 @@ var (
 	}
 )
 
+func RoleToString(r IdentityRoleType) string {
+	s, ok := IdentityRoleStrings[r]
+	if ok {
+		return s
+	}
+
+	return fmt.Sprintf("role%d", r)
+}
+
 // IdentityInfo models a long-term identity inside the Identity Provider.
 // An identity has an identifier (ID) and an Enrollment ID, unique identifier.
 // An identity can be remote, meaning that the corresponding secret key is remotely available.
@@ -57,8 +67,6 @@ type (
 	// It can be a string, as the name of the wallet, or an identity contained in that wallet.
 	// Ultimately, it is the token tdriver to decide which types are allowed.
 	WalletLookupID = tdriver.WalletLookupID
-	// Identity represents a generic identity
-	Identity = tdriver.Identity
 	// IdentityConfiguration contains configuration-related information of an identity
 	IdentityConfiguration = tdriver.IdentityConfiguration
 )

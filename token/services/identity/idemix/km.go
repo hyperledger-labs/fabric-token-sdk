@@ -12,8 +12,7 @@ import (
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
@@ -22,8 +21,9 @@ import (
 )
 
 const (
-	Any          bccsp.SignatureType = 100
-	IdentityType identity.Type       = "idemix"
+	Any                bccsp.SignatureType = 100
+	IdentityType                           = tdriver.IdemixIdentityType
+	IdentityTypeString                     = tdriver.IdemixIdentityTypeString
 )
 
 // SKI implies Subject Key Identifier
@@ -50,7 +50,7 @@ type SchemaManager interface {
 
 // SignerService defines the interface for registering a signer
 type SignerService interface {
-	RegisterSigner(ctx context.Context, identity driver.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
+	RegisterSigner(ctx context.Context, identity tdriver.Identity, signer tdriver.Signer, verifier tdriver.Verifier, info []byte) error
 }
 
 // KeyManager manages Idemix keys and deserializers
@@ -333,7 +333,7 @@ func (p *KeyManager) IsRemote() bool {
 }
 
 // DeserializeVerifier deserializes a verifier from the given raw bytes
-func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (driver.Verifier, error) {
+func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (tdriver.Verifier, error) {
 	r, err := p.Deserialize(ctx, raw)
 	if err != nil {
 		return nil, err
@@ -343,7 +343,7 @@ func (p *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (drive
 }
 
 // DeserializeSigner deserializes a signer from the given raw bytes
-func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
+func (p *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (tdriver.Signer, error) {
 	return p.DeserializeSigningIdentity(ctx, raw)
 }
 
@@ -368,7 +368,7 @@ func (p *KeyManager) Info(ctx context.Context, raw []byte, auditInfo []byte) (st
 		eid = ai.EnrollmentID()
 	}
 
-	return fmt.Sprintf("Idemix: [%s][%s]", eid, driver.Identity(raw).UniqueID()), nil
+	return fmt.Sprintf("Idemix: [%s][%s]", eid, tdriver.Identity(raw).UniqueID()), nil
 }
 
 // String returns a string representation of the KeyManager including the issuer PK
@@ -387,12 +387,12 @@ func (p *KeyManager) Anonymous() bool {
 }
 
 // IdentityType returns the type of the identity
-func (p *KeyManager) IdentityType() identity.Type {
+func (p *KeyManager) IdentityType() idriver.IdentityType {
 	return IdentityType
 }
 
 // DeserializeSigningIdentity deserializes a signing identity from the given raw bytes
-func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (driver.SigningIdentity, error) {
+func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (tdriver.SigningIdentity, error) {
 	id, err := p.Deserialize(ctx, raw)
 	if err != nil {
 		return nil, err

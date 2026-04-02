@@ -47,7 +47,7 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 	des.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(des))
 	des.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(des, des))
 
-	return &Deserializer{Deserializer: common.NewDeserializer(idemix.IdentityType, des, des, des, des, des)}, nil
+	return &Deserializer{Deserializer: common.NewDeserializer(des, des, des, des, des)}, nil
 }
 
 // TokenDeserializer deserializes zkatdlog tokens and metadata.

@@ -17,10 +17,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
-// ScriptType is the identity type used for HTLC scripts. It mirrors the
-// ScriptType defined in the interop/htlc package and is used to check the
-// identity type encoded in a TypedIdentity.
-const ScriptType = htlc.ScriptType
+const (
+	// ScriptType is the identity type used for HTLC scripts. It mirrors the
+	// ScriptType defined in the interop/htlc package and is used to check the
+	// identity type encoded in a TypedIdentity.
+	ScriptType       = htlc.ScriptType
+	ScriptTypeString = "htlc"
+)
 
 // Deserializer defines the minimal interface required by the HTLC
 // typed-identity deserializer. It delegates deserialization of the inner

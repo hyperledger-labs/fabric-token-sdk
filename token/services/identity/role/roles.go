@@ -10,13 +10,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 // Roles is a map of Role, one for each identity role
-type Roles map[identity.RoleType]identity.Role
+type Roles map[driver.IdentityRoleType]driver.Role
 
 // NewRoles returns a new Roles maps
 func NewRoles() Roles {
@@ -24,14 +23,14 @@ func NewRoles() Roles {
 }
 
 // Register associates an instance of Role to a given identifier
-func (m Roles) Register(usage identity.RoleType, role identity.Role) {
+func (m Roles) Register(usage driver.IdentityRoleType, role driver.Role) {
 	m[usage] = role
 }
 
-func (m Roles) Registries(logger logging.Logger, storage driver.WalletStoreService, walletFactory WalletFactory) map[identity.RoleType]*Registry {
-	res := make(map[identity.RoleType]*Registry, len(m))
+func (m Roles) Registries(logger logging.Logger, storage driver.WalletStoreService, walletFactory WalletFactory) map[driver.IdentityRoleType]*Registry {
+	res := make(map[driver.IdentityRoleType]*Registry, len(m))
 	for roleType, role := range m {
-		roleAsString, ok := identity.RoleTypeStrings[roleType]
+		roleAsString, ok := driver.IdentityRoleStrings[roleType]
 		if !ok {
 			roleAsString = strconv.Itoa(int(roleType))
 		}

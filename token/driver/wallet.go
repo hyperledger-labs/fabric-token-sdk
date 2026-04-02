@@ -196,7 +196,28 @@ type IdentityConfiguration struct {
 type WalletLookupID = any
 
 // IdentityType identifies the type of identity
-type IdentityType = string
+type IdentityType = int32
+
+// This is a list of reserved identities
+const (
+	ZeroIdentityType       IdentityType = 0 //
+	IdemixIdentityType     IdentityType = 1
+	X509IdentityType       IdentityType = 2
+	IdemixNymIdentityType  IdentityType = 3
+	HTLCScriptIdentityType IdentityType = 4
+	MultiSigIdentityType   IdentityType = 5
+)
+
+// IdentityTypeString identifies the type of identity as a string
+type IdentityTypeString = string
+
+const (
+	IdemixIdentityTypeString     IdentityTypeString = "idemix"
+	X509IdentityTypeString       IdentityTypeString = "x509"
+	IdemixNymIdentityTypeString  IdentityTypeString = "idemixnym"
+	HTLCScriptIdentityTypeString IdentityTypeString = "htlc"
+	MultiSigIdentityTypeString   IdentityTypeString = "multisig"
+)
 
 // Authorization checks the relationship between a token and different wallet types (owner, issuer, auditor).
 // It determines if a given wallet can perform specific actions on a token.

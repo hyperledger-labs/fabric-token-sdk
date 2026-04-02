@@ -187,7 +187,7 @@ func identities(t *testing.T, names ...string) []token.Identity {
 
 func wrapIdentity(t *testing.T, name string) token.Identity {
 	t.Helper()
-	id, err := identity.WrapWithType("name", []byte(name))
+	id, err := identity.WrapWithType(identity.Type(4), []byte(name))
 	require.NoError(t, err)
 
 	return id
@@ -256,7 +256,7 @@ func TestMultiIdentity_Bytes(t *testing.T) {
 // Test wrapping a multi-sig of a given type and then unwrapping the result
 func TestUnwrap_NotMultisig(t *testing.T) {
 	// Create a non-multisig typed identity
-	nonMultisigID, err := identity.WrapWithType("other", []byte("data"))
+	nonMultisigID, err := identity.WrapWithType(identity.Type(4), []byte("data"))
 	require.NoError(t, err)
 
 	unwrapped, isMultisig, err := Unwrap(nonMultisigID)

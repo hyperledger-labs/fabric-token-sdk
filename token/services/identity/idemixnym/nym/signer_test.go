@@ -370,5 +370,3 @@ func testVerifierWithDifferentNyms(t *testing.T, configPath string, curveID math
 	err = verifier1.Verify(msg, sigma2)
 	require.Error(t, err)
 }
-
-// Made with Bob

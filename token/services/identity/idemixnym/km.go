@@ -11,15 +11,15 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym/nym"
 )
 
 const (
-	IdentityType identity.Type = "idemixnym"
+	IdentityType       = tdriver.IdemixNymIdentityType
+	IdentityTypeString = tdriver.IdemixNymIdentityTypeString
 )
 
 type IdentityStoreService interface {
@@ -39,14 +39,14 @@ func NewKeyManager(backend *idemix.KeyManager, identityStoreService IdentityStor
 	}
 }
 
-func (k *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (driver.Verifier, error) {
+func (k *KeyManager) DeserializeVerifier(ctx context.Context, raw []byte) (tdriver.Verifier, error) {
 	return &nym.Verifier{
 		NymEID: raw,
 		Backed: k.backend.Deserializer,
 	}, nil
 }
 
-func (k *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (driver.Signer, error) {
+func (k *KeyManager) DeserializeSigner(ctx context.Context, raw []byte) (tdriver.Signer, error) {
 	signerInfoRaw, err := k.identityStoreService.GetSignerInfo(ctx, raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to retrieve signer info")
@@ -79,7 +79,7 @@ func (k *KeyManager) Anonymous() bool {
 	return k.backend.Anonymous()
 }
 
-func (k *KeyManager) IdentityType() identity.Type {
+func (k *KeyManager) IdentityType() idriver.IdentityType {
 	return IdentityType
 }
 
@@ -148,7 +148,7 @@ func (k *KeyManager) DeserializeAuditInfo(ctx context.Context, raw []byte) (*nym
 }
 
 // DeserializeSigningIdentity deserializes a signing identity from the given raw bytes
-func (k *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (driver.SigningIdentity, error) {
+func (k *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (tdriver.SigningIdentity, error) {
 	signer, err := k.DeserializeSigner(ctx, raw)
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (k *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte)
 
 type signerIdentity struct {
 	id     []byte
-	signer driver.Signer
+	signer tdriver.Signer
 }
 
 func (s *signerIdentity) Sign(raw []byte) ([]byte, error) {

@@ -81,5 +81,3 @@ func TestIgnoreErrorWithOneArg_NoError(t *testing.T) {
 	assert.True(t, called, "function should have been called")
 	assert.Equal(t, 42, receivedArg, "function should receive the argument")
 }
-
-// Made with Bob

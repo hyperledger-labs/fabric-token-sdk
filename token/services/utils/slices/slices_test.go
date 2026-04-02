@@ -126,5 +126,3 @@ func TestGenericSliceOfPointers(t *testing.T) {
 		assert.Equal(t, 30, *slice[2])
 	})
 }
-
-// Made with Bob

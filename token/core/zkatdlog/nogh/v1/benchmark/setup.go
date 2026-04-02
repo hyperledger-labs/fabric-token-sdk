@@ -258,7 +258,7 @@ func loadOwnerIdentityByType(ctx context.Context, dir string, curveID math.Curve
 	}
 }
 
-// loadIdemixOwnerIdentity loads an idemix owner identity using types.Standard signature type.
+// loadIdemixOwnerIdentity loads an idemix owner identity using types.EidNymRhNym signature type.
 func loadIdemixOwnerIdentity(ctx context.Context, dir string, curveID math.CurveID) (*OwnerIdentity, error) {
 	backend, err := kvs.NewInMemory()
 	if err != nil {
@@ -276,7 +276,7 @@ func loadIdemixOwnerIdentity(ctx context.Context, dir string, curveID math.Curve
 	if err != nil {
 		return nil, err
 	}
-	idemixKM, err := idemix2.NewKeyManager(config, types.Standard, cryptoProvider)
+	idemixKM, err := idemix2.NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
 	if err != nil {
 		return nil, err
 	}

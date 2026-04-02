@@ -268,5 +268,3 @@ func TestHasher_OrderMatters(t *testing.T) {
 
 	assert.NotEqual(t, h1.Digest(), h2.Digest(), "different order should produce different hash")
 }
-
-// Made with Bob

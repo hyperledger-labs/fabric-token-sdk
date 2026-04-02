@@ -12,11 +12,6 @@ import (
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-// IdentityType identifies the type of identity.
-// It is an alias for tdriver.IdentityType and is used by deserializers to choose the correct
-// decoding logic for different identity representations.
-type IdentityType = tdriver.IdentityType
-
 // TypedSignerDeserializer converts a raw byte representation into a concrete
 // Signer for a given IdentityType.
 // Implementations should validate the raw data and return an error on invalid input or decoding failure.

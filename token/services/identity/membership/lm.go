@@ -121,7 +121,7 @@ type KeyManager interface {
 	EnrollmentID() string
 	IsRemote() bool
 	Anonymous() bool
-	IdentityType() identity.Type
+	IdentityType() idriver.IdentityType
 	Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error)
 }
 
@@ -830,7 +830,7 @@ type TypedIdentityInfo struct {
 	// the KeyManager. It accepts auditInfo bytes that may be used by remote
 	// key managers to produce a specific identity variant.
 	GetIdentity  func(context.Context, []byte) (*idriver.IdentityDescriptor, error)
-	IdentityType identity.Type
+	IdentityType idriver.IdentityType
 
 	EnrollmentID     string
 	RootIdentity     token.Identity
@@ -849,7 +849,7 @@ func (i *TypedIdentityInfo) Get(ctx context.Context, auditInfo []byte) (token.Id
 	ai := identityDescriptor.AuditInfo
 
 	typedIdentity := id
-	if len(i.IdentityType) != 0 {
+	if i.IdentityType != 0 {
 		logger.DebugfContext(ctx, "wrap and bind as [%s]", i.IdentityType)
 		typedIdentity, err = identity.WrapWithType(i.IdentityType, id)
 		if err != nil {
@@ -878,7 +878,7 @@ type TypedSignerDeserializer struct {
 	KeyManager
 }
 
-func (t *TypedSignerDeserializer) DeserializeSigner(ctx context.Context, _ identity.Type, raw []byte) (tdriver.Signer, error) {
+func (t *TypedSignerDeserializer) DeserializeSigner(ctx context.Context, _ idriver.IdentityType, raw []byte) (tdriver.Signer, error) {
 	return t.KeyManager.DeserializeSigner(ctx, raw)
 }
 

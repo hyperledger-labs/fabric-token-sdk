@@ -11,17 +11,16 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	role2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-var toString = map[identity.RoleType]string{
-	identity.OwnerRole:     "Owner",
-	identity.IssuerRole:    "Issuer",
-	identity.AuditorRole:   "Auditor",
-	identity.CertifierRole: "Certifier",
+var toString = map[driver.IdentityRoleType]string{
+	driver.OwnerRole:     "Owner",
+	driver.IssuerRole:    "Issuer",
+	driver.AuditorRole:   "Auditor",
+	driver.CertifierRole: "Certifier",
 }
 
 //go:generate counterfeiter -o mock/sp.go -fake-name StorageProvider . StorageProvider
@@ -64,13 +63,13 @@ func NewRoleFactory(
 	}
 }
 
-func (f *RoleFactory) NewRole(role identity.RoleType, defaultAnon bool, targets []driver.Identity, kmps ...KeyManagerProvider) (identity.Role, error) {
+func (f *RoleFactory) NewRole(role driver.IdentityRoleType, defaultAnon bool, targets []driver.Identity, kmps ...KeyManagerProvider) (driver.Role, error) {
 	identityDB, err := f.StorageProvider.IdentityStore(f.TMSID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
 	lm := NewLocalMembership(
-		f.Logger.Named("membership.role."+identity.RoleToString(role)),
+		f.Logger.Named("membership.role."+driver.RoleToString(role)),
 		f.Config,
 		f.NetworkDefaultIdentity,
 		f.DeserializerManager,

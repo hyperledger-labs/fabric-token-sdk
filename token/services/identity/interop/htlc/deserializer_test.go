@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -64,11 +65,11 @@ func TestTypedIdentityDeserializer_DeserializeVerifier_Errors(t *testing.T) {
 	ctx := t.Context()
 
 	// wrong type
-	_, err := d.DeserializeVerifier(ctx, "foo", []byte{})
+	_, err := d.DeserializeVerifier(ctx, identity.Type(99), []byte{})
 	require.Error(t, err)
 
 	// invalid script
-	_, err = d.DeserializeVerifier(ctx, "htlc", []byte("invalid"))
+	_, err = d.DeserializeVerifier(ctx, identity.Type(5), []byte("invalid"))
 	require.Error(t, err)
 
 	// sender error: configure mock to return error on first DeserializeVerifier call
@@ -83,7 +84,7 @@ func TestTypedIdentityDeserializer_Recipients(t *testing.T) {
 	d := htlc.NewTypedIdentityDeserializer(fake)
 
 	// wrong type
-	_, err := d.Recipients(nil, "foo", []byte{})
+	_, err := d.Recipients(nil, identity.Type(99), []byte{})
 	require.Error(t, err)
 
 	// invalid script
@@ -104,7 +105,7 @@ func TestTypedIdentityDeserializer_GetAuditInfo(t *testing.T) {
 	ctx := t.Context()
 
 	// wrong type
-	_, err := d.GetAuditInfo(ctx, []byte("id"), "foo", []byte{}, &mockDriver.AuditInfoProvider{})
+	_, err := d.GetAuditInfo(context.TODO(), []byte("id"), identity.Type(99), []byte{}, &mockDriver.AuditInfoProvider{})
 	require.Error(t, err)
 
 	// invalid script

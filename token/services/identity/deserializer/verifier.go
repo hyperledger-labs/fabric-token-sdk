@@ -13,24 +13,24 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 var logger = logging.MustGetLogger()
 
-type TypedVerifierDeserializer = driver2.TypedVerifierDeserializer
+type TypedVerifierDeserializer = idriver.TypedVerifierDeserializer
 
 type TypedVerifierDeserializerMultiplex struct {
-	deserializers map[string][]driver2.TypedVerifierDeserializer
+	deserializers map[idriver.IdentityType][]idriver.TypedVerifierDeserializer
 }
 
 func NewTypedVerifierDeserializerMultiplex() *TypedVerifierDeserializerMultiplex {
-	return &TypedVerifierDeserializerMultiplex{deserializers: map[string][]TypedVerifierDeserializer{}}
+	return &TypedVerifierDeserializerMultiplex{deserializers: map[idriver.IdentityType][]TypedVerifierDeserializer{}}
 }
 
-func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ string, d TypedVerifierDeserializer) {
+func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ idriver.IdentityType, d TypedVerifierDeserializer) {
 	_, ok := v.deserializers[typ]
 	if !ok {
 		v.deserializers[typ] = []TypedVerifierDeserializer{d}
@@ -47,9 +47,9 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(ctx context.Con
 	}
 	dess, ok := v.deserializers[si.Type]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+		return nil, errors.Errorf("no deserializer found for [%v]", si.Type)
 	}
-	logger.DebugfContext(ctx, "deserializing [%s] with type [%s]", id, si.Type)
+	logger.DebugfContext(ctx, "deserializing [%s] with type [%v]", id, si.Type)
 	var errs []error
 	for _, deserializer := range dess {
 		verifier, err := deserializer.DeserializeVerifier(ctx, si.Type, si.Identity)
@@ -62,7 +62,7 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(ctx context.Con
 		return verifier, nil
 	}
 
-	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%s]", si.Type)
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%v]", si.Type)
 }
 
 func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]driver.Identity, error) {
@@ -75,7 +75,7 @@ func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]d
 	}
 	dess, ok := v.deserializers[si.Type]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+		return nil, errors.Errorf("no deserializer found for [%v]", si.Type)
 	}
 
 	var errs []error
@@ -109,10 +109,10 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfoMatcher(ctx context.Con
 	return &TypedAuditInfoMatcher{matcher: matcher}, nil
 }
 
-func (v *TypedVerifierDeserializerMultiplex) getMatcher(ctx context.Context, idType string, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+func (v *TypedVerifierDeserializerMultiplex) getMatcher(ctx context.Context, idType idriver.IdentityType, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
 	dess, ok := v.deserializers[idType]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", idType)
+		return nil, errors.Errorf("no deserializer found for [%v]", idType)
 	}
 
 	var errs []error
@@ -155,7 +155,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetAuditInfo(ctx context.Context, i
 	}
 	dess, ok := v.deserializers[si.Type]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+		return nil, errors.Errorf("no deserializer found for [%v]", si.Type)
 	}
 	var errs []error
 	for _, deserializer := range dess {

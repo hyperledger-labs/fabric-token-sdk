@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership/mock"
@@ -41,7 +42,7 @@ func TestLocalMembership_Discovery(t *testing.T) {
 	km1.IsRemoteReturns(false)
 	idDesc1 := &idriver.IdentityDescriptor{Identity: []byte("id1"), AuditInfo: []byte("ai1")}
 	km1.IdentityReturns(idDesc1, nil)
-	km1.IdentityTypeReturns("typ")
+	km1.IdentityTypeReturns(identity.Type(99))
 
 	km2 := &mock.KeyManager{}
 	km2.EnrollmentIDReturns("e2")
@@ -49,7 +50,7 @@ func TestLocalMembership_Discovery(t *testing.T) {
 	km2.IsRemoteReturns(false)
 	idDesc2 := &idriver.IdentityDescriptor{Identity: []byte("id2"), AuditInfo: []byte("ai2")}
 	km2.IdentityReturns(idDesc2, nil)
-	km2.IdentityTypeReturns("typ")
+	km2.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturnsOnCall(0, km1, nil)
@@ -108,12 +109,12 @@ func TestLocalMembership_DefaultOverride(t *testing.T) {
 	km1 := &mock.KeyManager{}
 	km1.EnrollmentIDReturns("e1")
 	km1.IdentityReturns(&idriver.IdentityDescriptor{Identity: []byte("id1")}, nil)
-	km1.IdentityTypeReturns("typ")
+	km1.IdentityTypeReturns(identity.Type(99))
 
 	km2 := &mock.KeyManager{}
 	km2.EnrollmentIDReturns("e2")
 	km2.IdentityReturns(&idriver.IdentityDescriptor{Identity: []byte("id2")}, nil)
-	km2.IdentityTypeReturns("typ")
+	km2.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturnsOnCall(0, km1, nil)
@@ -164,7 +165,7 @@ func TestLocalMembership_DoubleCheckedLocking(t *testing.T) {
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("e1")
 	km.IdentityReturns(&idriver.IdentityDescriptor{Identity: []byte("id1")}, nil)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturns(km, nil)
@@ -225,7 +226,7 @@ func TestLocalMembership_Notifier(t *testing.T) {
 	km := &mock.KeyManager{}
 	km.EnrollmentIDReturns("e1")
 	km.IdentityReturns(&idriver.IdentityDescriptor{Identity: []byte("id1")}, nil)
-	km.IdentityTypeReturns("typ")
+	km.IdentityTypeReturns(identity.Type(99))
 
 	kmp := &mock.KeyManagerProvider{}
 	kmp.GetReturns(km, nil)

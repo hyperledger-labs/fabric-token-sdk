@@ -124,5 +124,3 @@ func TestIsNil(t *testing.T) {
 		assert.False(t, IsNil(struct{}{}))
 	})
 }
-
-// Made with Bob

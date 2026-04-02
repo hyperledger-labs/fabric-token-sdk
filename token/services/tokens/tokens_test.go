@@ -35,7 +35,7 @@ func (a authMock) AmIAnAuditor() bool {
 	return false
 }
 func (a authMock) OwnerType(raw []byte) (driver.IdentityType, []byte, error) {
-	return "idemix", raw, nil
+	return driver.IdemixIdentityType, raw, nil
 }
 
 type mdMock struct{}

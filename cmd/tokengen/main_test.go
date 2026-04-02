@@ -42,9 +42,9 @@ func TestGenFullSuccess(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	defer gexec.CleanupBuildArtifacts()
 
-	tempOutput := t.TempDir()
-	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
-
+	// tempOutput := t.TempDir()
+	// defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
+	tempOutput := "./testdata"
 	testGenRun(
 		gt,
 		tokengen,
@@ -198,7 +198,7 @@ func TestPartialUpdate(t *testing.T) {
 		"./testdata/auditors/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
 		v1.ProtocolV1,
-		false,
+		true,
 	)
 }
 
@@ -238,7 +238,7 @@ func TestPartialUpdateWithVersion(t *testing.T) {
 		"./testdata/auditors/msp",
 		"./testdata/idemix/msp/IssuerPublicKey",
 		driver.TokenDriverVersion(2),
-		false,
+		true,
 	)
 }
 

@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -274,7 +273,7 @@ type LongTermOwnerWallet struct {
 	IdentityProvider  IdentityProvider
 	TokenVault        OwnerTokenVault
 	WalletID          idriver.WalletID
-	OwnerIdentityInfo identity.Info
+	OwnerIdentityInfo idriver.IdentityInfo
 	OwnerIdentity     Identity
 	OwnerAuditInfo    []byte
 }
@@ -286,7 +285,7 @@ func NewLongTermOwnerWallet(
 	IdentityProvider IdentityProvider,
 	TokenVault OwnerTokenVault,
 	id idriver.WalletID,
-	identityInfo identity.Info,
+	identityInfo idriver.IdentityInfo,
 ) (*LongTermOwnerWallet, error) {
 	identity, auditInfo, err := identityInfo.Get(ctx)
 	if err != nil {
@@ -442,7 +441,7 @@ func NewAnonymousOwnerWallet(
 	Deserializer Deserializer,
 	identitySupport IdentitySupport,
 	id idriver.WalletID,
-	identityInfo identity.Info,
+	identityInfo idriver.IdentityInfo,
 	cacheSize int,
 	metricsProvider metrics.Provider,
 ) (*AnonymousOwnerWallet, error) {

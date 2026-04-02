@@ -13,20 +13,21 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-type TypedSignerDeserializer = driver2.TypedSignerDeserializer
+type TypedSignerDeserializer = idriver.TypedSignerDeserializer
 
 type TypedSignerDeserializerMultiplex struct {
-	deserializers map[string][]TypedSignerDeserializer
+	deserializers map[idriver.IdentityType][]TypedSignerDeserializer
 }
 
 func NewTypedSignerDeserializerMultiplex() *TypedSignerDeserializerMultiplex {
-	return &TypedSignerDeserializerMultiplex{deserializers: map[string][]TypedSignerDeserializer{}}
+	return &TypedSignerDeserializerMultiplex{deserializers: map[idriver.IdentityType][]TypedSignerDeserializer{}}
 }
 
-func (v *TypedSignerDeserializerMultiplex) AddTypedSignerDeserializer(typ driver2.IdentityType, d driver2.TypedSignerDeserializer) {
+func (v *TypedSignerDeserializerMultiplex) AddTypedSignerDeserializer(typ idriver.IdentityType, d idriver.TypedSignerDeserializer) {
 	_, ok := v.deserializers[typ]
 	if !ok {
 		v.deserializers[typ] = []TypedSignerDeserializer{d}
@@ -43,9 +44,9 @@ func (v *TypedSignerDeserializerMultiplex) DeserializeSigner(ctx context.Context
 	}
 	dess, ok := v.deserializers[si.Type]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+		return nil, errors.Errorf("no deserializer found for [%v]", si.Type)
 	}
-	logger.DebugfContext(ctx, "deserializing [%s] with type [%s]", id, si.Type)
+	logger.DebugfContext(ctx, "deserializing [%s] with type [%v]", logging.Base64(id), si.Type)
 	var errs []error
 	for _, deserializer := range dess {
 		signer, err := deserializer.DeserializeSigner(ctx, si.Type, si.Identity)
@@ -58,5 +59,5 @@ func (v *TypedSignerDeserializerMultiplex) DeserializeSigner(ctx context.Context
 		return signer, nil
 	}
 
-	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%s]", si.Type)
+	return nil, errors.Wrapf(errors2.Join(errs...), "failed to deserialize verifier for [%v]", si.Type)
 }

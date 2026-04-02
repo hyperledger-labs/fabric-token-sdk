@@ -13,7 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -45,7 +45,7 @@ func TestDefaultFactory(t *testing.T) {
 		wc.CacheSizeForOwnerIDReturns(5)
 		is.ContainsIdentityReturns(true) // For NewAnonymousOwnerWallet check
 
-		w, err := f.NewWallet(t.Context(), id, identity.OwnerRole, is, info)
+		w, err := f.NewWallet(t.Context(), id, idriver.OwnerRole, is, info)
 		require.NoError(t, err)
 		require.NotNil(t, w)
 		assert.Equal(t, id, w.ID())
@@ -57,7 +57,7 @@ func TestDefaultFactory(t *testing.T) {
 		id := "owner-wallet-lt"
 		info := &mockIdentityInfo{id: id, anonymous: false}
 
-		w, err := f.NewWallet(t.Context(), id, identity.OwnerRole, reg, info)
+		w, err := f.NewWallet(t.Context(), id, idriver.OwnerRole, reg, info)
 		require.NoError(t, err)
 		require.NotNil(t, w)
 		assert.Equal(t, id, w.ID())
@@ -71,7 +71,7 @@ func TestDefaultFactory(t *testing.T) {
 		signer := &mock.Signer{}
 		ip.GetSignerReturns(signer, nil)
 
-		w, err := f.NewWallet(t.Context(), id, identity.IssuerRole, reg, info)
+		w, err := f.NewWallet(t.Context(), id, idriver.IssuerRole, reg, info)
 		require.NoError(t, err)
 		require.NotNil(t, w)
 		assert.Equal(t, id, w.ID())
@@ -89,21 +89,21 @@ func TestDefaultFactory(t *testing.T) {
 
 		// Case 1: Info Get fails
 		infoErr := &mockIdentityInfo{err: errors.New("info error")}
-		_, err := f.NewWallet(t.Context(), id, identity.IssuerRole, reg, infoErr)
+		_, err := f.NewWallet(t.Context(), id, idriver.IssuerRole, reg, infoErr)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to get issuer wallet identity")
 
 		// Case 2: GetSigner fails
 		info := &mockIdentityInfo{id: "issuer-id"}
 		ip.GetSignerReturns(nil, errors.New("signer error"))
-		_, err = f.NewWallet(t.Context(), id, identity.IssuerRole, reg, info)
+		_, err = f.NewWallet(t.Context(), id, idriver.IssuerRole, reg, info)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to get issuer signer")
 
 		// Case 3: BindIdentity fails
 		ip.GetSignerReturns(&mock.Signer{}, nil)
 		reg.BindIdentityReturns(errors.New("bind error"))
-		_, err = f.NewWallet(t.Context(), id, identity.IssuerRole, reg, info)
+		_, err = f.NewWallet(t.Context(), id, idriver.IssuerRole, reg, info)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to register recipient identity")
 	})
@@ -116,7 +116,7 @@ func TestDefaultFactory(t *testing.T) {
 		signer := &mock.Signer{}
 		ip.GetSignerReturns(signer, nil)
 
-		w, err := f.NewWallet(t.Context(), id, identity.AuditorRole, reg, info)
+		w, err := f.NewWallet(t.Context(), id, idriver.AuditorRole, reg, info)
 		require.NoError(t, err)
 		require.NotNil(t, w)
 		assert.Equal(t, id, w.ID())
@@ -131,21 +131,21 @@ func TestDefaultFactory(t *testing.T) {
 
 		// Case 1: Info Get fails
 		infoErr := &mockIdentityInfo{err: errors.New("info error")}
-		_, err := f.NewWallet(t.Context(), id, identity.AuditorRole, reg, infoErr)
+		_, err := f.NewWallet(t.Context(), id, idriver.AuditorRole, reg, infoErr)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to get auditor wallet identity")
 
 		// Case 2: GetSigner fails
 		info := &mockIdentityInfo{id: "auditor-id"}
 		ip.GetSignerReturns(nil, errors.New("signer error"))
-		_, err = f.NewWallet(t.Context(), id, identity.AuditorRole, reg, info)
+		_, err = f.NewWallet(t.Context(), id, idriver.AuditorRole, reg, info)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to get auditor signer")
 
 		// Case 3: BindIdentity fails
 		ip.GetSignerReturns(&mock.Signer{}, nil)
 		reg.BindIdentityReturns(errors.New("bind error"))
-		_, err = f.NewWallet(t.Context(), id, identity.AuditorRole, reg, info)
+		_, err = f.NewWallet(t.Context(), id, idriver.AuditorRole, reg, info)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to register recipient identity")
 	})
@@ -155,7 +155,7 @@ func TestDefaultFactory(t *testing.T) {
 		id := "certifier-wallet"
 		info := &mockIdentityInfo{id: "cert-id"}
 
-		_, err := f.NewWallet(t.Context(), id, identity.CertifierRole, reg, info)
+		_, err := f.NewWallet(t.Context(), id, idriver.CertifierRole, reg, info)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "certifiers are not supported")
 	})
@@ -165,7 +165,7 @@ func TestDefaultFactory(t *testing.T) {
 		id := "unknown-wallet"
 		info := &mockIdentityInfo{id: "unk-id"}
 
-		_, err := f.NewWallet(t.Context(), id, identity.RoleType(999), reg, info)
+		_, err := f.NewWallet(t.Context(), id, idriver.IdentityRoleType(999), reg, info)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "role [999] not supported")
 	})

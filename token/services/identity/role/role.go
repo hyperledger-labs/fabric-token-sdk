@@ -12,7 +12,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -43,7 +42,7 @@ type LocalMembership interface {
 // an identifier string used by the token subsystem.
 type Role struct {
 	logger          logging.Logger
-	roleID          identity.RoleType
+	roleID          idriver.IdentityRoleType
 	networkID       string
 	localMembership LocalMembership
 	nodeIdentity    driver.Identity
@@ -51,7 +50,7 @@ type Role struct {
 
 func NewRole(
 	logger logging.Logger,
-	roleID identity.RoleType,
+	roleID idriver.IdentityRoleType,
 	networkID string,
 	nodeIdentity driver.Identity,
 	localMembership LocalMembership,
@@ -66,7 +65,7 @@ func NewRole(
 }
 
 // ID returns the role identifier (RoleType) for this Role instance.
-func (r *Role) ID() identity.RoleType {
+func (r *Role) ID() idriver.IdentityRoleType {
 	return r.roleID
 }
 

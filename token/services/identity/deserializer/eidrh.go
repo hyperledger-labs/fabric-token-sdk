@@ -23,11 +23,11 @@ type EIDRHDeserializer struct {
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
 	return &EIDRHDeserializer{
-		deserializers: map[string]driver2.AuditInfoDeserializer{},
+		deserializers: map[identity.Type]driver2.AuditInfoDeserializer{},
 	}
 }
 
-func (e *EIDRHDeserializer) AddDeserializer(typ string, d driver2.AuditInfoDeserializer) {
+func (e *EIDRHDeserializer) AddDeserializer(typ identity.Type, d driver2.AuditInfoDeserializer) {
 	e.deserializers[typ] = d
 }
 
@@ -71,11 +71,11 @@ func (e *EIDRHDeserializer) DeserializeAuditInfo(ctx context.Context, id driver.
 	}
 	d, ok := e.deserializers[si.Type]
 	if !ok {
-		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+		return nil, errors.Errorf("no deserializer found for [%v]", si.Type)
 	}
 	res, err := d.DeserializeAuditInfo(ctx, si.Identity, auditInfo)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize audit info for identity type [%s]", si.Type)
+		return nil, errors.Wrapf(err, "failed to deserialize audit info for identity type [%v]", si.Type)
 	}
 
 	return res, nil

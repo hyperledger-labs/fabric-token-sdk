@@ -10,12 +10,11 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"go.opentelemetry.io/otel/trace"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"go.opentelemetry.io/otel/trace"
 )
 
 //go:generate counterfeiter -o mock/metrics_provider.go -fake-name MetricsProvider github.com/hyperledger-labs/fabric-token-sdk/token/core/common/driver.MetricsProvider

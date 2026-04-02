@@ -29,9 +29,8 @@ func TestDeserializerWithCounterfeiter(t *testing.T) {
 	mAMP := &dmock.AuditMatcherProvider{}
 	mRE := &dmock.RecipientExtractor{}
 
-	d := NewDeserializer("test-type", mvAuditor, mvOwner, mvIssuer, mAMP, mRE)
+	d := NewDeserializer(mvAuditor, mvOwner, mvIssuer, mAMP, mRE)
 	assert.NotNil(t, d)
-	assert.Equal(t, "test-type", d.identityType)
 
 	t.Run("GetOwnerVerifier", func(t *testing.T) {
 		verifier := &dmock.Verifier{}

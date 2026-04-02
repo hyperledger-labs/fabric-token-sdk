@@ -341,5 +341,3 @@ func testKeyManagerIdentityWithAuditInfo(t *testing.T, configPath string, curveI
 	assert.Equal(t, ai1.AuditInfo, ai2.AuditInfo)
 	assert.NotEqual(t, ai1.IdemixSignature, ai2.IdemixSignature)
 }
-
-// Made with Bob
