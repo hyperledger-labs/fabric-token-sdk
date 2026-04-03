@@ -77,6 +77,8 @@ The [Config Service](./services/config.md) manages configuration settings for th
 ### Network Service
 The [Network Service](./services/network.md) acts as a bridge layer. It translates generic token requests into backend-specific formats (such as Fabric or FabricX) and manages communication with the underlying ledger. It is also responsible for tracking transaction finality and triggering listeners when transactions are committed.
 
+The Network Service also includes [Transaction Recovery](./services/transaction-recovery.md) capabilities for multi-replica deployments, ensuring that transactions can be recovered and completed even if a replica crashes after submitting a transaction but before receiving the finality event.
+
 ### Storage Service
 The [Storage Service](./services/storage.md) encapsulates all data persistence mechanisms required by the SDK. It manages specialized databases for different types of information, including:
 *   **TTXDB**: Stores transaction history and status.
