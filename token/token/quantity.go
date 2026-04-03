@@ -196,12 +196,16 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 //	 0 if x == y
 //	+1 if x >  y
 func (q *BigQuantity) Cmp(b Quantity) int {
-	bq, ok := b.(*BigQuantity)
-	if !ok {
-		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
-	}
+	switch b := b.(type) {
+	case *BigQuantity:
+		return q.Int.Cmp(b.Int)
+	case *UInt64Quantity:
+		bBig := big.NewInt(0).SetUint64(b.Value)
 
-	return q.Int.Cmp(bq.Int)
+		return q.Int.Cmp(bBig)
+	default:
+		panic(fmt.Sprintf("expected BigQuantity or UInt64Quantity, got [%T]", b))
+	}
 }
 
 func (q *BigQuantity) Hex() string {
@@ -264,18 +268,22 @@ func (q *UInt64Quantity) Sub(b Quantity) Quantity {
 }
 
 func (q *UInt64Quantity) Cmp(b Quantity) int {
-	bq, ok := b.(*UInt64Quantity)
-	if !ok {
-		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
-	}
+	switch b := b.(type) {
+	case *UInt64Quantity:
+		if q.Value < b.Value {
+			return -1
+		} else if q.Value > b.Value {
+			return 1
+		}
 
-	if q.Value < bq.Value {
-		return -1
-	} else if q.Value > bq.Value {
-		return 1
-	}
+		return 0
+	case *BigQuantity:
+		qBig := big.NewInt(0).SetUint64(q.Value)
 
-	return 0
+		return qBig.Cmp(b.Int)
+	default:
+		panic(fmt.Sprintf("expected UInt64Quantity or BigQuantity, got [%T]", b))
+	}
 }
 
 func (q *UInt64Quantity) Hex() string {

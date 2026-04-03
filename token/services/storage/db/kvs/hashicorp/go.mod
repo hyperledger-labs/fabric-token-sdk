@@ -6,7 +6,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/hashicorp/vault/api v1.16.0
-	github.com/hyperledger-labs/fabric-smart-client v0.9.1-0.20260402153210-cc372e01ed33
+	github.com/hyperledger-labs/fabric-smart-client v0.10.0
 	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250528165839-032fb9265504
 	github.com/stretchr/testify v1.11.1
 	github.com/test-go/testify v1.1.4
@@ -16,7 +16,7 @@ replace github.com/hyperledger-labs/fabric-token-sdk => ./../../../../../../
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
-	github.com/IBM/idemix v0.0.2-0.20250313153527-832db18b9478 // indirect
+	github.com/IBM/idemix v0.0.2 // indirect
 	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478 // indirect
 	github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478 // indirect
 	github.com/IBM/mathlib v0.0.3-0.20260204160318-5a4d1a385dfa // indirect
@@ -136,5 +136,5 @@ require (
 	modernc.org/libc v1.70.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.47.0 // indirect
+	modernc.org/sqlite v1.48.0 // indirect
 )

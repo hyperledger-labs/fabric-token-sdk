@@ -218,6 +218,37 @@ func TestUInt64Quantity_Decimal(t *testing.T) {
 	assert.Equal(t, "123", q.Decimal())
 }
 
+func TestCrossTypeComparisons(t *testing.T) {
+	// Test UInt64Quantity vs BigQuantity
+	u64One := token.NewOneQuantity(64).(*token.UInt64Quantity)
+	bgOne := token.NewOneQuantity(128)
+	assert.Equal(t, 0, u64One.Cmp(bgOne))
+
+	u64Two := token.NewQuantityFromUInt64(2).(*token.UInt64Quantity)
+	assert.Equal(t, 1, u64Two.Cmp(bgOne))
+
+	u64Zero := token.NewZeroQuantity(64).(*token.UInt64Quantity)
+	assert.Equal(t, -1, u64Zero.Cmp(bgOne)) // 0 < 1, so -1
+
+	// Test BigQuantity vs UInt64Quantity
+	bgOnePtr := token.NewOneQuantity(128).(*token.BigQuantity)
+	u64TwoPtr := token.NewQuantityFromUInt64(2)
+	assert.Equal(t, -1, bgOnePtr.Cmp(u64TwoPtr)) // 1 < 2, so -1
+
+	u64OnePtr := token.NewQuantityFromUInt64(1)
+	assert.Equal(t, 0, bgOnePtr.Cmp(u64OnePtr)) // 1 == 1, so 0
+
+	u64ZeroPtr := token.NewZeroQuantity(64)
+	assert.Equal(t, 1, bgOnePtr.Cmp(u64ZeroPtr)) // 1 > 0
+
+	// Test equality cases
+	u64Eq := token.NewQuantityFromUInt64(100).(*token.UInt64Quantity)
+	bg, err := token.NewUBigQuantity("100", 128)
+	require.NoError(t, err)
+	assert.Equal(t, 0, u64Eq.Cmp(bg))
+	assert.Equal(t, 0, bg.Cmp(u64Eq))
+}
+
 func TestBigQuantity_Add_Panic(t *testing.T) {
 	q := token.NewZeroQuantity(2).(*token.BigQuantity) // Precision set to 2 bits
 	b := token.NewOneQuantity(64)                      // Precision set to 64 bits
