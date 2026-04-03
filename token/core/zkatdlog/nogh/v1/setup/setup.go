@@ -9,6 +9,7 @@ package setup
 import (
 	"crypto/sha256"
 	math3 "math"
+	"math/big"
 	"math/bits"
 	"strconv"
 
@@ -23,6 +24,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	utils2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/csp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
@@ -37,6 +40,76 @@ const (
 var (
 	SupportedPrecisions = []uint64{16, 32, 64}
 )
+
+// SetupParams contains all parameters needed to setup public parameters
+type SetupParams struct {
+	DriverName     driver.TokenDriverName
+	DriverVersion  driver.TokenDriverVersion
+	BitLength      uint64
+	IdemixIssuerPK []byte
+	CurveID        mathlib.CurveID
+	ProofType      rp.ProofType
+}
+
+type CSPRangeProofParams struct {
+	LeftGenerators     []*mathlib.G1
+	RightGenerators    []*mathlib.G1
+	BitLength          uint64
+	RPTranscriptHeader []byte
+}
+
+func (rpp *CSPRangeProofParams) Validate(curveID mathlib.CurveID) error {
+	if rpp.BitLength == 0 {
+		return errors.New("invalid range proof parameters: bit length is zero")
+	}
+	if len(rpp.LeftGenerators) != len(rpp.RightGenerators) {
+		return errors.Errorf("invalid range proof parameters: the size of the left generators does not match the size of the right generators [%d vs, %d]", len(rpp.LeftGenerators), len(rpp.RightGenerators))
+	}
+	if err := math.CheckElements(rpp.LeftGenerators, curveID, rpp.BitLength+1); err != nil {
+		return errors.Wrap(err, "invalid range proof parameters, left generators is invalid")
+	}
+	if err := math.CheckElements(rpp.RightGenerators, curveID, rpp.BitLength+1); err != nil {
+		return errors.Wrap(err, "invalid range proof parameters, right generators is invalid")
+	}
+
+	return nil
+}
+
+func (rpp *CSPRangeProofParams) ToProtos() (*pp.CSPRangeProofParams, error) {
+	lefGenerators, err := utils2.ToProtoG1Slice(rpp.LeftGenerators)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to convert left generators to protos")
+	}
+	rightGenerators, err := utils2.ToProtoG1Slice(rpp.RightGenerators)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to convert right generators to protos")
+	}
+	rangeProofParams := &pp.CSPRangeProofParams{
+		LeftGenerators:  lefGenerators,
+		RightGenerators: rightGenerators,
+		BitLength:       rpp.BitLength,
+	}
+
+	return rangeProofParams, nil
+}
+
+func (rpp *CSPRangeProofParams) FromProto(params *pp.CSPRangeProofParams) error {
+	if params == nil {
+		return nil
+	}
+	rpp.BitLength = params.BitLength
+	var err error
+	rpp.LeftGenerators, err = utils2.FromG1ProtoSlice(params.LeftGenerators)
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert left generators to protos")
+	}
+	rpp.RightGenerators, err = utils2.FromG1ProtoSlice(params.RightGenerators)
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert right generators to protos")
+	}
+
+	return nil
+}
 
 type RangeProofParams struct {
 	LeftGenerators  []*mathlib.G1
@@ -190,9 +263,13 @@ type PublicParams struct {
 	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
 	// ExtraData contains any extra custom data
-	ExtraData driver.Extras
+	ExtraData           driver.Extras
+	CSPRangeProofParams *CSPRangeProofParams
 }
 
+// NewPublicParamsFromBytes unmarshal the given serialized version of the public parameters
+// for the given driver name and version.
+// It is responsibility of the caller to validate the public parameters before using them.
 func NewPublicParamsFromBytes(
 	raw []byte,
 	driverName driver.TokenDriverName,
@@ -209,42 +286,66 @@ func NewPublicParamsFromBytes(
 }
 
 func Setup(bitLength uint64, idemixIssuerPK []byte, curveID mathlib.CurveID) (*PublicParams, error) {
-	return NewWith(DLogNoGHDriverName, ProtocolV1, bitLength, idemixIssuerPK, curveID)
+	return NewWith(SetupParams{
+		DriverName:     DLogNoGHDriverName,
+		DriverVersion:  ProtocolV1,
+		BitLength:      bitLength,
+		IdemixIssuerPK: idemixIssuerPK,
+		CurveID:        curveID,
+		ProofType:      rp.RangeProofType,
+	})
 }
 
 // WithVersion is like Setup with the additional possibility to specify the version number
 func WithVersion(bitLength uint64, idemixIssuerPK []byte, curveID mathlib.CurveID, version driver.TokenDriverVersion) (*PublicParams, error) {
-	return NewWith(DLogNoGHDriverName, version, bitLength, idemixIssuerPK, curveID)
+	return NewWith(SetupParams{
+		DriverName:     DLogNoGHDriverName,
+		DriverVersion:  version,
+		BitLength:      bitLength,
+		IdemixIssuerPK: idemixIssuerPK,
+		CurveID:        curveID,
+		ProofType:      rp.RangeProofType,
+	})
 }
 
-func NewWith(driverName driver.TokenDriverName, driverVersion driver.TokenDriverVersion, bitLength uint64, idemixIssuerPK []byte, curveID mathlib.CurveID) (*PublicParams, error) {
-	if bitLength > 64 {
-		return nil, errors.Errorf("invalid bit length [%d], should be smaller than 64", bitLength)
+func NewWith(params SetupParams) (*PublicParams, error) {
+	if params.BitLength > 64 {
+		return nil, errors.Errorf("invalid bit length [%d], should be smaller than 64", params.BitLength)
 	}
-	if bitLength == 0 {
+	if params.BitLength == 0 {
 		return nil, errors.New("invalid bit length, should be greater than 0")
 	}
 	pp := &PublicParams{
-		DriverName:    driverName,
-		DriverVersion: driverVersion,
-		Curve:         curveID,
+		DriverName:    params.DriverName,
+		DriverVersion: params.DriverVersion,
+		Curve:         params.CurveID,
 		IdemixIssuerPublicKeys: []*IdemixIssuerPublicKey{
 			{
-				PublicKey: idemixIssuerPK,
-				Curve:     curveID,
+				PublicKey: params.IdemixIssuerPK,
+				Curve:     params.CurveID,
 			},
 		},
-		QuantityPrecision: bitLength,
+		QuantityPrecision: params.BitLength,
 		ExtraData:         driver.Extras{},
 	}
 	if err := pp.GeneratePedersenParameters(); err != nil {
 		return nil, errors.Wrapf(err, "failed to generated pedersen parameters")
 	}
-	if err := pp.GenerateRangeProofParameters(bitLength); err != nil {
-		return nil, errors.Wrapf(err, "failed to generated range-proof parameters")
+
+	// Generate range proof parameters based on proof type
+	switch params.ProofType {
+	case rp.RangeProofType:
+		if err := pp.GenerateRangeProofParameters(params.BitLength); err != nil {
+			return nil, errors.Wrapf(err, "failed to generated range-proof parameters")
+		}
+	case rp.CSPRangeProofType:
+		if err := pp.GenerateCSPRangeProofParameters(params.BitLength); err != nil {
+			return nil, errors.Wrapf(err, "failed to generated CSP range-proof parameters")
+		}
+	default:
+		return nil, errors.Errorf("unrecognized range proof type: %d", params.ProofType)
 	}
-	pp.RangeProofParams.BitLength = bitLength
-	pp.RangeProofParams.NumberOfRounds = log2(bitLength)
+
 	pp.MaxToken = pp.ComputeMaxTokenValue()
 
 	return pp, nil
@@ -299,9 +400,19 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize public parameters")
 	}
-	rpp, err := p.RangeProofParams.ToProtos()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to serialize range proof parameters")
+	var rpp *pp.RangeProofParams
+	if p.RangeProofParams != nil {
+		rpp, err = p.RangeProofParams.ToProtos()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to serialize range proof parameters")
+		}
+	}
+	var cspRPP *pp.CSPRangeProofParams
+	if p.CSPRangeProofParams != nil {
+		cspRPP, err = p.CSPRangeProofParams.ToProtos()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to serialize csp-based range proof parameters")
+		}
 	}
 	issuers, err := protos.ToProtosSliceFunc(p.IssuerIDs, func(id driver.Identity) (*pp.Identity, error) {
 		return &pp.Identity{
@@ -332,6 +443,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 		},
 		PedersenGenerators:     pg,
 		RangeProofParams:       rpp,
+		CspRangeProofParams:    cspRPP,
 		IdemixIssuerPublicKeys: idemixIssuerPublicKeys,
 		Auditors:               auditors,
 		Issuers:                issuers,
@@ -414,9 +526,18 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		return errors.Wrapf(err, "failed to deserialize idemix issuer public keys")
 	}
 
-	p.RangeProofParams = &RangeProofParams{}
-	if err := p.RangeProofParams.FromProto(publicParams.RangeProofParams); err != nil {
-		return errors.Wrapf(err, "failed to deserialize range proof parameters")
+	if publicParams.GetRangeProofParams() != nil {
+		p.RangeProofParams = &RangeProofParams{}
+		if err := p.RangeProofParams.FromProto(publicParams.GetRangeProofParams()); err != nil {
+			return errors.Wrapf(err, "failed to deserialize range proof parameters")
+		}
+	}
+
+	if publicParams.GetCspRangeProofParams() != nil {
+		p.CSPRangeProofParams = &CSPRangeProofParams{}
+		if err := p.CSPRangeProofParams.FromProto(publicParams.GetCspRangeProofParams()); err != nil {
+			return errors.Wrapf(err, "failed to deserialize csp range proof parameters")
+		}
 	}
 
 	p.ExtraData = publicParams.ExtraData
@@ -462,6 +583,23 @@ func (p *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
 	return nil
 }
 
+func (p *PublicParams) GenerateCSPRangeProofParameters(bitLength uint64) error {
+	curve := mathlib.Curves[p.Curve]
+
+	p.CSPRangeProofParams = &CSPRangeProofParams{
+		BitLength: bitLength,
+	}
+	p.CSPRangeProofParams.LeftGenerators = make([]*mathlib.G1, bitLength+1)
+	p.CSPRangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength+1)
+
+	for i := range bitLength + 1 {
+		p.CSPRangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("CSPRangeProof." + strconv.FormatUint(2*(i+1), 10)))
+		p.CSPRangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("CSPRangeProof." + strconv.FormatUint(2*(i+1)+1, 10)))
+	}
+
+	return nil
+}
+
 func (p *PublicParams) AddAuditor(auditor driver.Identity) {
 	p.AuditorIDs = append(p.AuditorIDs, auditor)
 }
@@ -498,7 +636,31 @@ func (p *PublicParams) ComputeHash() ([]byte, error) {
 }
 
 func (p *PublicParams) ComputeMaxTokenValue() uint64 {
-	return 1<<p.RangeProofParams.BitLength - 1
+	if p.RangeProofParams != nil {
+		return 1<<p.RangeProofParams.BitLength - 1
+	}
+	if p.CSPRangeProofParams != nil {
+		tr := csp.Transcript{Curve: mathlib.Curves[p.Curve]}
+		tr.InitHasher()
+		// Absorb the public statement: PedersenGenerators || LeftGenerators || RightGenerators || NumberOfBits.
+		for _, g := range p.PedersenGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		// p.CSPRangeProofParams.RPTranscriptHeader = tr.State()
+		for _, g := range p.CSPRangeProofParams.LeftGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		for _, g := range p.CSPRangeProofParams.RightGenerators {
+			tr.Absorb(g.Bytes())
+		}
+		n := p.CSPRangeProofParams.BitLength
+		tr.Absorb(new(big.Int).SetUint64(n).Bytes())
+		p.CSPRangeProofParams.RPTranscriptHeader = tr.State()
+
+		return 1<<p.CSPRangeProofParams.BitLength - 1
+	}
+
+	return 0
 }
 
 func (p *PublicParams) String() string {
@@ -534,24 +696,44 @@ func (p *PublicParams) Validate() error {
 	if err := math.CheckElements(p.PedersenGenerators, p.Curve, 3); err != nil {
 		return errors.Wrapf(err, "invalid pedersen generators")
 	}
-	if p.RangeProofParams == nil {
+
+	if p.RangeProofParams == nil && p.CSPRangeProofParams == nil {
 		return errors.New("invalid public parameters: nil range proof parameters")
 	}
-	bitLength := p.RangeProofParams.BitLength
-	supportedPrecisions := collections.NewSet(SupportedPrecisions...)
-	if !supportedPrecisions.Contains(bitLength) {
-		return errors.Errorf("invalid bit length [%d], should be one of [%v]", bitLength, supportedPrecisions.ToSlice())
+
+	if p.RangeProofParams != nil {
+		bitLength := p.RangeProofParams.BitLength
+		supportedPrecisions := collections.NewSet(SupportedPrecisions...)
+		if !supportedPrecisions.Contains(bitLength) {
+			return errors.Errorf("invalid bit length [%d], should be one of [%v]", bitLength, supportedPrecisions.ToSlice())
+		}
+		err := p.RangeProofParams.Validate(p.Curve)
+		if err != nil {
+			return errors.Wrap(err, "invalid public parameters")
+		}
+		if p.QuantityPrecision != p.RangeProofParams.BitLength {
+			return errors.Errorf("invalid public parameters: quantity precision should be [%d] instead it is [%d]", p.RangeProofParams.BitLength, p.QuantityPrecision)
+		}
 	}
-	err := p.RangeProofParams.Validate(p.Curve)
-	if err != nil {
-		return errors.Wrap(err, "invalid public parameters")
+
+	if p.CSPRangeProofParams != nil {
+		bitLength := p.CSPRangeProofParams.BitLength
+		supportedPrecisions := collections.NewSet(SupportedPrecisions...)
+		if !supportedPrecisions.Contains(bitLength) {
+			return errors.Errorf("invalid bit length [%d], should be one of [%v]", bitLength, supportedPrecisions.ToSlice())
+		}
+		err := p.CSPRangeProofParams.Validate(p.Curve)
+		if err != nil {
+			return errors.Wrap(err, "invalid public parameters")
+		}
+		if p.QuantityPrecision != p.CSPRangeProofParams.BitLength {
+			return errors.Errorf("invalid public parameters: quantity precision should be [%d] instead it is [%d]", p.RangeProofParams.BitLength, p.QuantityPrecision)
+		}
 	}
-	if p.QuantityPrecision != p.RangeProofParams.BitLength {
-		return errors.Errorf("invalid public parameters: quantity precision should be [%d] instead it is [%d]", p.RangeProofParams.BitLength, p.QuantityPrecision)
-	}
+
 	maxToken := p.ComputeMaxTokenValue()
 	if maxToken != p.MaxToken {
-		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, p.MaxToken)
+		return errors.Errorf("invalid max token, [%d]!=[%d]", maxToken, p.MaxToken)
 	}
 
 	return nil
@@ -559,6 +741,14 @@ func (p *PublicParams) Validate() error {
 
 func (p *PublicParams) Extras() driver.Extras {
 	return p.ExtraData
+}
+
+func (p *PublicParams) BitLength() uint64 {
+	if p.RangeProofParams != nil {
+		return p.RangeProofParams.BitLength
+	}
+
+	return p.CSPRangeProofParams.BitLength
 }
 
 func log2(x uint64) uint64 {

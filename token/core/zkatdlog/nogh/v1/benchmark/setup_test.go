@@ -66,6 +66,7 @@ func TestSaveTo(t *testing.T) {
 	require.Equal(ppB64, string(paramsData), "params.txt content mismatch")
 
 	// try deserializing the stored public params to ensure it's valid
-	_, err = setup.NewPublicParamsFromBytes(decoded, pp.DriverName, pp.DriverVersion)
+	pp, err = setup.NewPublicParamsFromBytes(decoded, pp.DriverName, pp.DriverVersion)
 	require.NoError(err, "failed to deserialize stored public params")
+	require.NoError(pp.Validate(), "invalid public params")
 }

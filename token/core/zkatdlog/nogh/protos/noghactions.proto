@@ -47,7 +47,10 @@ message TransferActionOutput {
 }
 
 message Proof {
-  bytes proof = 1;
+  oneof proof_type {
+    bytes proof  = 1;
+    bytes csp_based_proof = 2;
+  }
 }
 
 message TransferAction {
