@@ -111,8 +111,8 @@ func newTestStoreService(t *testing.T, store dbdriver.AuditTransactionStore) *au
 // newFakeStore returns a counterfeiter AuditTransactionStore with default no-op behaviour.
 func newFakeStore() *auditmock.AuditTransactionStore {
 	fakeStore := &auditmock.AuditTransactionStore{}
-	fakeAtomicWrite := &auditmock.AtomicWrite{}
-	fakeStore.BeginAtomicWriteReturns(fakeAtomicWrite, nil)
+	fakeTransactionStoreTransaction := &auditmock.TransactionStoreTransaction{}
+	fakeStore.NewTransactionStoreTransactionReturns(fakeTransactionStoreTransaction, nil)
 	fakeStore.QueryTokenRequestsStub = func(_ context.Context, _ dbdriver.QueryTokenRequestsParams) (dbdriver.TokenRequestIterator, error) {
 		return &stubTokenRequestIterator{count: 1}, nil
 	}
@@ -447,8 +447,8 @@ func TestService_Append_AddFinalityListenerError(t *testing.T) {
 
 func TestService_Append_AuditError(t *testing.T) {
 	fakeStore := newFakeStore()
-	fakeStore.BeginAtomicWriteStub = func() (dbdriver.AtomicWrite, error) {
-		fakeAW := &auditmock.AtomicWrite{}
+	fakeStore.NewTransactionStoreTransactionStub = func() (dbdriver.TransactionStoreTransaction, error) {
+		fakeAW := &auditmock.TransactionStoreTransaction{}
 		fakeAW.CommitReturns(errors.New("db append err"))
 
 		return fakeAW, nil
@@ -511,118 +511,6 @@ func TestServiceManager_Auditor(t *testing.T) {
 	a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
 	require.Error(t, err)
 	assert.Nil(t, a)
-}
-
-func TestServiceManager_RestoreTMS(t *testing.T) {
-	// 1. Network error
-	netProv := &auditmock.NetworkProvider{}
-	netProv.GetNetworkReturns(nil, errors.New("net err"))
-
-	sm := auditor.NewServiceManager(
-		netProv,
-		&auditdbmock.AuditStoreServiceManager{},
-		&auditmock.TokensServiceManager{},
-		&depmock.TokenManagementServiceProvider{},
-		noop.NewTracerProvider(),
-		nil,
-		&auditmock.CheckServiceProvider{},
-	)
-	err := sm.RestoreTMS(token.TMSID{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get network instance")
-
-	// 2. Token service error (GetNetwork succeeds, ServiceByTMSId fails)
-	tsm := &auditmock.TokensServiceManager{}
-	tsm.ServiceByTMSIdReturns(nil, errors.New("tok err"))
-
-	sm2 := auditor.NewServiceManager(
-		&auditmock.NetworkProvider{},
-		&auditdbmock.AuditStoreServiceManager{},
-		tsm,
-		&depmock.TokenManagementServiceProvider{},
-		noop.NewTracerProvider(),
-		nil,
-		&auditmock.CheckServiceProvider{},
-	)
-	err = sm2.RestoreTMS(token.TMSID{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get auditdb")
-}
-
-func TestServiceManager_RestoreTMS_GetAuditorError(t *testing.T) {
-	// GetNetwork and ServiceByTMSId succeed at the outer level, but the lazy
-	// factory fails because CheckService returns an error — so p.Get returns an error.
-	netProv := &auditmock.NetworkProvider{}
-	netProv.GetNetworkReturns(&network.Network{}, nil)
-
-	ssm := &auditdbmock.AuditStoreServiceManager{}
-	ssm.StoreServiceByTMSIdReturns(newTestStoreService(t, newFakeStore()), nil)
-
-	tsm := &auditmock.TokensServiceManager{}
-	tsm.ServiceByTMSIdReturns(&tokens.Service{}, nil)
-
-	csp := &auditmock.CheckServiceProvider{}
-	csp.CheckServiceReturns(nil, errors.New("checkservice err"))
-
-	sm := auditor.NewServiceManager(
-		netProv, ssm, tsm,
-		&depmock.TokenManagementServiceProvider{},
-		noop.NewTracerProvider(),
-		nil,
-		csp,
-	)
-	err := sm.RestoreTMS(token.TMSID{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get auditor for")
-}
-
-func TestServiceManager_RestoreTMS_TokenRequestsError(t *testing.T) {
-	// p.Get succeeds but the underlying store returns an error from QueryTokenRequests.
-	netProv := &auditmock.NetworkProvider{}
-	netProv.GetNetworkReturns(&network.Network{}, nil)
-
-	errStore := newFakeStore()
-	errStore.QueryTokenRequestsStub = func(_ context.Context, _ dbdriver.QueryTokenRequestsParams) (dbdriver.TokenRequestIterator, error) {
-		return nil, errors.New("token requests err")
-	}
-
-	ssm := &auditdbmock.AuditStoreServiceManager{}
-	ssm.StoreServiceByTMSIdReturns(newTestStoreService(t, errStore), nil)
-
-	tsm := &auditmock.TokensServiceManager{}
-	tsm.ServiceByTMSIdReturns(&tokens.Service{}, nil)
-
-	sm := auditor.NewServiceManager(
-		netProv, ssm, tsm,
-		&depmock.TokenManagementServiceProvider{},
-		noop.NewTracerProvider(),
-		nil,
-		&auditmock.CheckServiceProvider{},
-	)
-	err := sm.RestoreTMS(token.TMSID{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get tx iterator")
-}
-
-func TestServiceManager_RestoreTMS_Success(t *testing.T) {
-	netProv := &auditmock.NetworkProvider{}
-	netProv.GetNetworkReturns(&network.Network{}, nil) // empty Network will panic in loop
-
-	ssm := &auditdbmock.AuditStoreServiceManager{}
-	ssm.StoreServiceByTMSIdReturns(newTestStoreService(t, newFakeStore()), nil)
-
-	assert.Panics(t, func() {
-		smSuccess := auditor.NewServiceManager(
-			netProv,
-			ssm,
-			&auditmock.TokensServiceManager{},
-			&depmock.TokenManagementServiceProvider{},
-			noop.NewTracerProvider(),
-			nil,
-			&auditmock.CheckServiceProvider{},
-		)
-		_ = smSuccess.RestoreTMS(token.TMSID{})
-	})
 }
 
 func TestServiceManager_Auditor_InitSuccess(t *testing.T) {

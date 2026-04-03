@@ -21,14 +21,17 @@ import (
 )
 
 type (
+	Namespace = driver.Namespace
 	TokenData = []byte
 	Data      = []byte
 )
 
 // QueryStatesExecutor models an executor for querying states.
 type QueryStatesExecutor interface {
+	// QueryState retrieves the raw value for the provided key from the specified namespace.
+	QueryState(ctx context.Context, namespace Namespace, key string) (Data, error)
 	// QueryStates returns the values of the given keys in the given namespace.
-	QueryStates(_ context.Context, namespace driver.Namespace, keys []string) ([]Data, error)
+	QueryStates(_ context.Context, namespace Namespace, keys []string) ([]Data, error)
 }
 
 type in struct {
@@ -228,4 +231,18 @@ func (e *Executor) QueryStates(_ context.Context, namespace driver.Namespace, ke
 	}
 
 	return tokens, nil
+}
+
+// QueryState retrieves the raw value for the provided key from the specified namespace.
+// It triggers a batch query to the query service.
+func (e *Executor) QueryState(ctx context.Context, namespace driver.Namespace, key string) (Data, error) {
+	data, err := e.QueryStates(ctx, namespace, []string{key})
+	if err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, nil
+	}
+
+	return data[0], nil
 }

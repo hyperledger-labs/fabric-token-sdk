@@ -14,40 +14,65 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"go.opentelemetry.io/otel/trace"
 )
 
+//go:generate counterfeiter -o mock/transaction_db.go -fake-name TransactionDB . transactionDB
 type transactionDB interface {
+	NewTransaction() (dbdriver.TransactionStoreTransaction, error)
 	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
 	SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error
+}
+
+// tokenRequestHasher defines the interface for processing token requests from raw bytes
+//
+//go:generate counterfeiter -o mock/token_request_hasher.go -fake-name TokenRequestHasher . tokenRequestHasher
+type tokenRequestHasher interface {
+	ProcessTokenRequest(ctx context.Context, tokenRequestRaw []byte) (tr *token.Request, msgToSign []byte, err error)
+}
+
+// tokensService defines the interface for token service operations needed by the listener
+//
+//go:generate counterfeiter -o mock/tokens_service.go -fake-name TokensService . tokensService
+type tokensService interface {
+	GetCachedTokenRequest(txID string) (*token.Request, []byte)
+	AppendValid(ctx context.Context, tx dbdriver.Transaction, anchor token.RequestAnchor, tr *token.Request) error
 }
 
 type Listener struct {
 	logger      logging.Logger
 	net         dep.Network
 	namespace   string
-	tmsProvider dep.TokenManagementServiceProvider
-	tmsID       token.TMSID
+	hasher      tokenRequestHasher
 	ttxDB       transactionDB
-	tokens      *tokens.Service
+	tokens      tokensService
 	tracer      trace.Tracer
 	metrics     *Metrics
 	retryRunner utils.RetryRunner
 }
 
-func NewListener(logger logging.Logger, net dep.Network, namespace string, tmsProvider dep.TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Service, tracer trace.Tracer, metricsProvider metrics.Provider) *Listener {
+func NewListener(
+	logger logging.Logger,
+	net dep.Network,
+	namespace string,
+	hasher tokenRequestHasher,
+	ttxDB transactionDB,
+	tokens tokensService,
+	tracer trace.Tracer,
+	metricsProvider metrics.Provider,
+) *Listener {
 	return &Listener{
 		logger:      logger,
 		net:         net,
 		namespace:   namespace,
-		tmsProvider: tmsProvider,
-		tmsID:       tmsID,
+		hasher:      hasher,
 		ttxDB:       ttxDB,
 		tokens:      tokens,
 		tracer:      tracer,
@@ -97,17 +122,11 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 				return errors.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
 			}
 			t.logger.DebugfContext(ctx, "Read token request")
-			tms, err := t.tmsProvider.TokenManagementService(token.WithTMSID(t.tmsID))
+
+			// Process token request using the hasher
+			tr, msgToSign, err = t.hasher.ProcessTokenRequest(ctx, tokenRequestRaw)
 			if err != nil {
-				return errors.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
-			}
-			tr, err = tms.NewFullRequestFromBytes(tokenRequestRaw)
-			if err != nil {
-				return errors.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
-			}
-			msgToSign, err = tr.MarshalToSign()
-			if err != nil {
-				return errors.Errorf("failed retrieving token request [%s]: [%w]", txID, err)
+				return errors.Errorf("failed to process token request [%s]: [%w]", txID, err)
 			}
 		}
 		t.logger.DebugfContext(ctx, "Check token request")
@@ -117,14 +136,11 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 			txStatus = storage.Deleted
 			message = err.Error()
 		} else {
-			t.logger.DebugfContext(ctx, "append token request for [%s]", txID)
-			if err := t.tokens.Append(ctx, t.tmsID, token.RequestAnchor(txID), tr); err != nil {
-				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
-				t.logger.ErrorfContext(ctx, "failed to append token request to token db [%s]: [%s]", txID, err)
+			if err := Commit(ctx, t.logger, t.tokens, t.ttxDB, txID, tr); err != nil {
+				t.logger.ErrorfContext(ctx, "tx [%s], %s", txID, err)
 
-				return errors.Errorf("failed to append token request to token db [%s]: [%w]", txID, err)
+				return err
 			}
-			t.logger.DebugfContext(ctx, "append token request for [%s], done", txID)
 		}
 	case network.Invalid:
 		txStatus = storage.Deleted
@@ -139,12 +155,15 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 		return nil
 	}
 
-	// update the status, if here, either txStatus is Confirmed or Deleted
-	if err := t.ttxDB.SetStatus(ctx, txID, txStatus, message); err != nil {
-		t.logger.ErrorfContext(ctx, "<message> [%s]: [%s]", txID, err)
+	// update the status, if here, either txStatus is not Confirmed
+	if txStatus != storage.Confirmed {
+		if err := t.ttxDB.SetStatus(ctx, txID, txStatus, message); err != nil {
+			t.logger.ErrorfContext(ctx, "<message> [%s]: [%s]", txID, err)
 
-		return errors.Errorf("<message> [%s]: [%w]", txID, err)
+			return errors.Errorf("<message> [%s]: [%w]", txID, err)
+		}
 	}
+
 	if txStatus == storage.Confirmed {
 		t.metrics.ConfirmedTransactions.Add(1)
 	} else {
@@ -165,6 +184,49 @@ func (t *Listener) checkTokenRequest(txID string, trToSign []byte, reference []b
 			utils.Hashable(trToSign),
 		)
 	}
+
+	return nil
+}
+
+func Commit(
+	ctx context.Context,
+	logger logging.Logger,
+	tokens tokensService,
+	ttxDB transactionDB,
+	txID string,
+	tr *token.Request,
+) error {
+	logger.DebugfContext(ctx, "append valid token request for [%s]", txID)
+	tx, err := ttxDB.NewTransaction()
+	if err != nil {
+		logger.ErrorfContext(ctx, "failed creating new transaction [%s]: [%s]", txID, err)
+
+		return errors.Wrapf(err, "failed creating new transaction [%s]", txID)
+	}
+	defer func() {
+		if tx != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tokens.AppendValid(ctx, tx, token.RequestAnchor(txID), tr); err != nil {
+		logger.ErrorfContext(ctx, "failed to append valid token request to token db [%s]: [%s]", txID, err)
+
+		return errors.Wrapf(err, "failed to append valid token request to token db [%s]", txID)
+	}
+	logger.DebugfContext(ctx, "successfully appended valid token request for [%s]", txID)
+
+	if err := tx.SetStatus(ctx, txID, driver.Confirmed, ""); err != nil {
+		logger.ErrorfContext(ctx, "failed to set status [%s]: [%s]", txID, err)
+
+		return errors.Wrapf(err, "failed to set status [%s]", txID)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return errors.Wrapf(err, "failed commit [%s]", txID)
+	}
+
+	tx = nil
 
 	return nil
 }

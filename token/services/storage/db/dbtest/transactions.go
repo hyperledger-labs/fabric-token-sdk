@@ -76,19 +76,19 @@ func TFailsIfRequestDoesNotExist(t *testing.T, db driver3.TokenTransactionStore)
 		Amount:       big.NewInt(-10),
 		Status:       driver3.Pending,
 	}
-	w, _ := db.BeginAtomicWrite()
+	w, _ := db.NewTransactionStoreTransaction()
 	err := w.AddTransaction(ctx, tx)
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, driver3.ErrTokenRequestDoesNotExist))
 	w.Rollback()
 
-	w, _ = db.BeginAtomicWrite()
+	w, _ = db.NewTransactionStoreTransaction()
 	err = w.AddValidationRecord(ctx, "tx1", nil)
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, driver3.ErrTokenRequestDoesNotExist))
 	w.Rollback()
 
-	w, _ = db.BeginAtomicWrite()
+	w, _ = db.NewTransactionStoreTransaction()
 	err = w.AddMovement(ctx, mv)
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, driver3.ErrTokenRequestDoesNotExist))
@@ -116,7 +116,7 @@ func TStatus(t *testing.T, db driver3.TokenTransactionStore) {
 		Status:       driver3.Pending,
 	}
 
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err, "begin")
 	require.NoError(t, w.AddTokenRequest(ctx, "tx1", []byte("request"), map[string][]byte{}, nil, driver2.PPHash("tr")), "add token request")
 	require.NoError(t, w.AddTransaction(ctx, tx))
@@ -157,7 +157,7 @@ func TStatus(t *testing.T, db driver3.TokenTransactionStore) {
 func TStoresTimestamp(t *testing.T, db driver3.TokenTransactionStore) {
 	t.Helper()
 	ctx := t.Context()
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	require.NoError(t, w.AddTokenRequest(ctx, "tx1", []byte(""), map[string][]byte{}, nil, driver2.PPHash("tr")))
 	require.NoError(t, w.AddTransaction(ctx, driver3.TransactionRecord{
@@ -189,7 +189,7 @@ func TStoresTimestamp(t *testing.T, db driver3.TokenTransactionStore) {
 func TMovements(t *testing.T, db driver3.TokenTransactionStore) {
 	t.Helper()
 	ctx := t.Context()
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	require.NoError(t, w.AddTokenRequest(ctx, "0", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
 	require.NoError(t, w.AddTokenRequest(ctx, "1", []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
@@ -261,7 +261,7 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 	t0 := time.Now()
 	lastYear := t0.AddDate(-1, 0, 0)
 
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	tr1 := driver3.TransactionRecord{
 		TxID:                fmt.Sprintf("tx%d", 99),
@@ -353,7 +353,7 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 	assert.Equal(t, driver3.Unknown, status)
 
 	// exclude to self
-	w, err = db.BeginAtomicWrite()
+	w, err = db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	tr1 = driver3.TransactionRecord{
 		TxID:                "1234",
@@ -407,7 +407,7 @@ func assertTxEqual(t *testing.T, exp *driver3.TransactionRecord, act *driver3.Tr
 func TTokenRequest(t *testing.T, db driver3.TokenTransactionStore) {
 	t.Helper()
 	ctx := t.Context()
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	tr1 := []byte("arbitrary bytes")
 	err = w.AddTokenRequest(ctx, "id1", tr1, map[string][]byte{}, nil, []byte("tr"))
@@ -540,7 +540,7 @@ func TAllowsSameTxID(t *testing.T, db driver3.TokenTransactionStore) {
 		Amount:              big.NewInt(1),
 		Timestamp:           time.Now(),
 	}
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	require.NoError(t, w.AddTokenRequest(ctx, tr1.TxID, []byte{}, map[string][]byte{}, nil, driver2.PPHash("tr")))
 	require.NoError(t, w.AddTransaction(ctx, tr1))
@@ -557,7 +557,7 @@ func TAllowsSameTxID(t *testing.T, db driver3.TokenTransactionStore) {
 func TRollback(t *testing.T, db driver3.TokenTransactionStore) {
 	t.Helper()
 	ctx := t.Context()
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	require.NoError(t, w.AddTokenRequest(ctx, "1", []byte("arbitrary bytes"), map[string][]byte{}, nil, driver2.PPHash("tr")))
 
@@ -800,7 +800,7 @@ func TTransactionQueries(t *testing.T, db driver3.TokenTransactionStore) {
 		},
 	}
 
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	var previous string
 	for _, r := range tr {
@@ -893,7 +893,7 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 			Status: driver3.Confirmed,
 		},
 	}
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	for _, e := range exp {
 		require.NoError(t, w.AddTokenRequest(ctx, e.TxID, e.TokenRequest, map[string][]byte{}, nil, driver2.PPHash("tr")))
@@ -980,7 +980,7 @@ func TEndorserAcks(t *testing.T, db driver3.TokenTransactionStore) {
 
 func createTestTransaction(t *testing.T, db driver3.TokenTransactionStore, txID string) {
 	t.Helper()
-	w, err := db.BeginAtomicWrite()
+	w, err := db.NewTransactionStoreTransaction()
 	if err != nil {
 		t.Fatalf("error creating transaction while trying to test something else: %s", err)
 	}

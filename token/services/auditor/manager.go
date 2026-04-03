@@ -7,21 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
-	"context"
 	"reflect"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -105,51 +101,7 @@ func (cm *ServiceManager) Auditor(tmsID token.TMSID) (*Service, error) {
 	return cm.p.Get(tmsID)
 }
 
-// RestoreTMS restores the auditdb corresponding to the passed TMS ID.
-func (cm *ServiceManager) RestoreTMS(tmsID token.TMSID) error {
-	logger.Infof("restore audit dbs for entry [%s]...", tmsID)
-	net, err := cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
-	}
-	tokenDB, err := cm.tokenServiceManager.ServiceByTMSId(tmsID)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
-	}
-	auditor, err := cm.p.Get(tmsID)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get auditor for [%s]", tmsID)
-	}
-	it, err := auditor.auditDB.TokenRequests(context.Background(), auditdb.QueryTokenRequestsParams{Statuses: []TxStatus{auditdb.Pending}})
-	if err != nil {
-		return errors.Errorf("failed to get tx iterator for [%s]", tmsID)
-	}
-	defer logger.Infof("restore audit dbs for entry [%s]...done", tmsID)
-
-	return iterators.ForEach(it, func(record *storage.TokenRequestRecord) error {
-		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-
-		return net.AddFinalityListener(
-			tmsID.Namespace,
-			record.TxID,
-			finality.NewListener(
-				logger,
-				net,
-				tmsID.Namespace,
-				cm.tmsProvider,
-				tmsID,
-				auditor.auditDB,
-				tokenDB,
-				auditor.finalityTracer,
-				auditor.metricsProvider,
-			),
-		)
-	})
-}
-
-var (
-	managerType = reflect.TypeOf((*ServiceManager)(nil))
-)
+var managerType = reflect.TypeOf((*ServiceManager)(nil))
 
 // Get returns the Service instance for the passed auditor wallet
 func Get(sp token.ServiceProvider, w *token.AuditorWallet) *Service {

@@ -29,7 +29,7 @@ func TokensTest(t *testing.T, cfgProvider cfgProvider) {
 	for _, c := range tokensCases {
 		t.Run(c.Name, func(xt *testing.T) {
 			driver := cfgProvider(c.Name)
-			db, err := driver.NewToken("", c.Name)
+			db, err := driver.NewToken("")
 			require.NoError(xt, err)
 			tokenDB, ok := db.(TestTokenDB)
 			assert.True(xt, ok)

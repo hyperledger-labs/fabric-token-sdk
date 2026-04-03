@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
@@ -60,24 +60,24 @@ func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, err
 }
 
 // TxStatus is the status of a transaction
-type TxStatus = driver2.TxStatus
+type TxStatus = dbdriver.TxStatus
 
 const (
 	// Unknown is the status of a transaction that is unknown
-	Unknown = driver2.Unknown
+	Unknown = dbdriver.Unknown
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending = driver2.Pending
+	Pending = dbdriver.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed = driver2.Confirmed
+	Confirmed = dbdriver.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted = driver2.Deleted
+	Deleted = dbdriver.Deleted
 )
 
 // TxStatusMessage maps TxStatus to string
-var TxStatusMessage = driver2.TxStatusMessage
+var TxStatusMessage = dbdriver.TxStatusMessage
 
 // ActionType is the type of action performed by a transaction.
-type ActionType = driver2.ActionType
+type ActionType = dbdriver.ActionType
 
 const (
 	// Issue is the action type for issuing tokens.
@@ -93,20 +93,20 @@ const (
 // and each token type that was transferred.
 // The movement record contains the total amount of the token type that was transferred to/from the enrollment ID
 // in a given token transaction.
-type MovementRecord = driver2.MovementRecord
+type MovementRecord = dbdriver.MovementRecord
 
 // TransactionRecord is a more finer-grained version of a movement record.
 // Given a Token Transaction, for each token action in the Token Request,
 // a transaction record is created for each unique enrollment ID found in the outputs.
 // The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
 // in that action.
-type TransactionRecord = driver2.TransactionRecord
+type TransactionRecord = dbdriver.TransactionRecord
 
 // QueryTransactionsParams defines the parameters for querying movements
-type QueryTransactionsParams = driver2.QueryTransactionsParams
+type QueryTransactionsParams = dbdriver.QueryTransactionsParams
 
 // QueryTokenRequestsParams defines the parameters for querying token requests
-type QueryTokenRequestsParams = driver2.QueryTokenRequestsParams
+type QueryTokenRequestsParams = dbdriver.QueryTokenRequestsParams
 
 // Pagination defines the pagination for querying movements
 type Pagination = cdriver.Pagination
@@ -125,20 +125,24 @@ type Wallet interface {
 // StoreService is a database that stores token transactions related information
 type StoreService struct {
 	*common.StatusSupport
-	db        driver2.AuditTransactionStore
+	db        dbdriver.AuditTransactionStore
 	eIDsLocks sync.Map
 
 	// status related fields
 	pendingTXs []string
 }
 
-func NewStoreService(p driver2.AuditTransactionStore) (*StoreService, error) {
+func NewStoreService(p dbdriver.AuditTransactionStore) (*StoreService, error) {
 	return &StoreService{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,
 		eIDsLocks:     sync.Map{},
 		pendingTXs:    make([]string, 0, 10000),
 	}, nil
+}
+
+func (d *StoreService) NewTransaction() (dbdriver.TransactionStoreTransaction, error) {
+	return d.db.NewTransactionStoreTransaction()
 }
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request
@@ -166,7 +170,7 @@ func (d *StoreService) Append(ctx context.Context, req tokenRequest) error {
 	}
 
 	logger.DebugfContext(ctx, "storing new records... [%d,%d,%d]", len(raw), len(mov), len(txs))
-	w, err := d.db.BeginAtomicWrite()
+	w, err := d.db.NewTransactionStoreTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
@@ -208,7 +212,7 @@ func (d *StoreService) Transactions(ctx context.Context, params QueryTransaction
 }
 
 // TokenRequests returns an iterator over the token requests matching the passed params
-func (d *StoreService) TokenRequests(ctx context.Context, params QueryTokenRequestsParams) (driver2.TokenRequestIterator, error) {
+func (d *StoreService) TokenRequests(ctx context.Context, params QueryTokenRequestsParams) (dbdriver.TokenRequestIterator, error) {
 	return d.db.QueryTokenRequests(ctx, params)
 }
 
@@ -227,10 +231,10 @@ func (d *StoreService) NewHoldingsFilter() *HoldingsFilter {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver2.TxStatus, message string) error {
+func (d *StoreService) SetStatus(ctx context.Context, txID string, status dbdriver.TxStatus, message string) error {
 	logger.DebugfContext(ctx, "set status [%s][%s]...", txID, status)
 	if err := d.db.SetStatus(ctx, txID, status, message); err != nil {
-		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver2.TxStatusMessage[status])
+		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, dbdriver.TxStatusMessage[status])
 	}
 
 	// notify the listeners
@@ -239,7 +243,7 @@ func (d *StoreService) SetStatus(ctx context.Context, txID string, status driver
 		TxID:           txID,
 		ValidationCode: status,
 	})
-	logger.DebugfContext(ctx, "set status [%s][%s]...done without errors", txID, driver2.TxStatusMessage[status])
+	logger.DebugfContext(ctx, "set status [%s][%s]...done without errors", txID, dbdriver.TxStatusMessage[status])
 
 	return nil
 }
@@ -299,7 +303,7 @@ func (d *StoreService) ReleaseLocks(ctx context.Context, anchor string) {
 	for _, id := range dedup {
 		lock, ok := d.eIDsLocks.Load(id)
 		if !ok {
-			logger.Warnf("unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
+			logger.Warnf("unlock for enrollment id [%s:%s] not possible, lock never acquired", anchor, id)
 
 			continue
 		}
@@ -309,10 +313,51 @@ func (d *StoreService) ReleaseLocks(ctx context.Context, anchor string) {
 	logger.DebugfContext(ctx, "Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
 }
 
+// AcquireRecoveryLeadership tries to acquire the DB-backed recovery leadership lease.
+func (d *StoreService) AcquireRecoveryLeadership(ctx context.Context, lockID int64) (dbdriver.RecoveryLeadership, bool, error) {
+	leadership, acquired, err := d.db.AcquireRecoveryLeadership(ctx, lockID)
+	if err != nil {
+		return nil, false, errors.Wrapf(err, "failed to acquire recovery leadership")
+	}
+
+	return leadership, acquired, nil
+}
+
+// ClaimPendingTransactions returns a claimed batch of Pending transactions older than the given duration.
+func (d *StoreService) ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*TransactionRecord, error) {
+	storedBefore := time.Now().UTC().Add(-olderThan)
+	logger.DebugfContext(ctx, "claiming pending transactions stored before %s (older than %s), lease duration [%s], limit [%d], owner [%s]",
+		storedBefore, olderThan, leaseDuration, limit, owner)
+
+	records, err := d.db.ClaimPendingTransactions(ctx, dbdriver.RecoveryClaimParams{
+		OlderThan:     storedBefore,
+		LeaseDuration: leaseDuration,
+		Limit:         limit,
+		Owner:         owner,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to claim pending transactions")
+	}
+
+	logger.DebugfContext(ctx, "claimed %d pending transactions older than %s for owner [%s]", len(records), olderThan, owner)
+
+	return records, nil
+}
+
+// ReleaseRecoveryClaim clears the recovery claim for the passed transaction if owned by owner.
+// The message parameter is stored for audit/debugging purposes.
+func (d *StoreService) ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error {
+	if err := d.db.ReleaseRecoveryClaim(ctx, txID, owner, message); err != nil {
+		return errors.Wrapf(err, "failed to release recovery claim for tx [%s]", txID)
+	}
+
+	return nil
+}
+
 // deduplicateAndSort removes duplicate entries from a slice and sort it
 func deduplicateAndSort(source []string) []string {
-	slide := collections.NewSet(source...).ToSlice()
-	slices.Sort(slide)
+	slice := collections.NewSet(source...).ToSlice()
+	slices.Sort(slice)
 
-	return slide
+	return slice
 }

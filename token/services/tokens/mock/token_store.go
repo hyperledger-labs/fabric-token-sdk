@@ -36,6 +36,19 @@ type FakeTokenStore struct {
 	closeReturnsOnCall map[int]struct {
 		result1 error
 	}
+	ContinueTokenDBTransactionStub        func(driver.Transaction) (driver.TokenStoreTransaction, error)
+	continueTokenDBTransactionMutex       sync.RWMutex
+	continueTokenDBTransactionArgsForCall []struct {
+		arg1 driver.Transaction
+	}
+	continueTokenDBTransactionReturns struct {
+		result1 driver.TokenStoreTransaction
+		result2 error
+	}
+	continueTokenDBTransactionReturnsOnCall map[int]struct {
+		result1 driver.TokenStoreTransaction
+		result2 error
+	}
 	DeleteTokensStub        func(context.Context, string, ...*token.ID) error
 	deleteTokensMutex       sync.RWMutex
 	deleteTokensArgsForCall []struct {
@@ -526,6 +539,70 @@ func (fake *FakeTokenStore) CloseReturnsOnCall(i int, result1 error) {
 	fake.closeReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeTokenStore) ContinueTokenDBTransaction(arg1 driver.Transaction) (driver.TokenStoreTransaction, error) {
+	fake.continueTokenDBTransactionMutex.Lock()
+	ret, specificReturn := fake.continueTokenDBTransactionReturnsOnCall[len(fake.continueTokenDBTransactionArgsForCall)]
+	fake.continueTokenDBTransactionArgsForCall = append(fake.continueTokenDBTransactionArgsForCall, struct {
+		arg1 driver.Transaction
+	}{arg1})
+	stub := fake.ContinueTokenDBTransactionStub
+	fakeReturns := fake.continueTokenDBTransactionReturns
+	fake.recordInvocation("ContinueTokenDBTransaction", []interface{}{arg1})
+	fake.continueTokenDBTransactionMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeTokenStore) ContinueTokenDBTransactionCallCount() int {
+	fake.continueTokenDBTransactionMutex.RLock()
+	defer fake.continueTokenDBTransactionMutex.RUnlock()
+	return len(fake.continueTokenDBTransactionArgsForCall)
+}
+
+func (fake *FakeTokenStore) ContinueTokenDBTransactionCalls(stub func(driver.Transaction) (driver.TokenStoreTransaction, error)) {
+	fake.continueTokenDBTransactionMutex.Lock()
+	defer fake.continueTokenDBTransactionMutex.Unlock()
+	fake.ContinueTokenDBTransactionStub = stub
+}
+
+func (fake *FakeTokenStore) ContinueTokenDBTransactionArgsForCall(i int) driver.Transaction {
+	fake.continueTokenDBTransactionMutex.RLock()
+	defer fake.continueTokenDBTransactionMutex.RUnlock()
+	argsForCall := fake.continueTokenDBTransactionArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeTokenStore) ContinueTokenDBTransactionReturns(result1 driver.TokenStoreTransaction, result2 error) {
+	fake.continueTokenDBTransactionMutex.Lock()
+	defer fake.continueTokenDBTransactionMutex.Unlock()
+	fake.ContinueTokenDBTransactionStub = nil
+	fake.continueTokenDBTransactionReturns = struct {
+		result1 driver.TokenStoreTransaction
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeTokenStore) ContinueTokenDBTransactionReturnsOnCall(i int, result1 driver.TokenStoreTransaction, result2 error) {
+	fake.continueTokenDBTransactionMutex.Lock()
+	defer fake.continueTokenDBTransactionMutex.Unlock()
+	fake.ContinueTokenDBTransactionStub = nil
+	if fake.continueTokenDBTransactionReturnsOnCall == nil {
+		fake.continueTokenDBTransactionReturnsOnCall = make(map[int]struct {
+			result1 driver.TokenStoreTransaction
+			result2 error
+		})
+	}
+	fake.continueTokenDBTransactionReturnsOnCall[i] = struct {
+		result1 driver.TokenStoreTransaction
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeTokenStore) DeleteTokens(arg1 context.Context, arg2 string, arg3 ...*token.ID) error {
