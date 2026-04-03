@@ -10,16 +10,34 @@ import (
 )
 
 type AuditTransactionStore struct {
-	BeginAtomicWriteStub        func() (driver.AtomicWrite, error)
-	beginAtomicWriteMutex       sync.RWMutex
-	beginAtomicWriteArgsForCall []struct {
+	AcquireRecoveryLeadershipStub        func(context.Context, int64) (driver.RecoveryLeadership, bool, error)
+	acquireRecoveryLeadershipMutex       sync.RWMutex
+	acquireRecoveryLeadershipArgsForCall []struct {
+		arg1 context.Context
+		arg2 int64
 	}
-	beginAtomicWriteReturns struct {
-		result1 driver.AtomicWrite
+	acquireRecoveryLeadershipReturns struct {
+		result1 driver.RecoveryLeadership
+		result2 bool
+		result3 error
+	}
+	acquireRecoveryLeadershipReturnsOnCall map[int]struct {
+		result1 driver.RecoveryLeadership
+		result2 bool
+		result3 error
+	}
+	ClaimPendingTransactionsStub        func(context.Context, driver.RecoveryClaimParams) ([]*driver.TransactionRecord, error)
+	claimPendingTransactionsMutex       sync.RWMutex
+	claimPendingTransactionsArgsForCall []struct {
+		arg1 context.Context
+		arg2 driver.RecoveryClaimParams
+	}
+	claimPendingTransactionsReturns struct {
+		result1 []*driver.TransactionRecord
 		result2 error
 	}
-	beginAtomicWriteReturnsOnCall map[int]struct {
-		result1 driver.AtomicWrite
+	claimPendingTransactionsReturnsOnCall map[int]struct {
+		result1 []*driver.TransactionRecord
 		result2 error
 	}
 	CloseStub        func() error
@@ -60,6 +78,18 @@ type AuditTransactionStore struct {
 	}
 	getTokenRequestReturnsOnCall map[int]struct {
 		result1 []byte
+		result2 error
+	}
+	NewTransactionStoreTransactionStub        func() (driver.TransactionStoreTransaction, error)
+	newTransactionStoreTransactionMutex       sync.RWMutex
+	newTransactionStoreTransactionArgsForCall []struct {
+	}
+	newTransactionStoreTransactionReturns struct {
+		result1 driver.TransactionStoreTransaction
+		result2 error
+	}
+	newTransactionStoreTransactionReturnsOnCall map[int]struct {
+		result1 driver.TransactionStoreTransaction
 		result2 error
 	}
 	QueryMovementsStub        func(context.Context, driver.QueryMovementsParams) ([]*driver.MovementRecord, error)
@@ -119,6 +149,20 @@ type AuditTransactionStore struct {
 		result1 driver.ValidationRecordsIterator
 		result2 error
 	}
+	ReleaseRecoveryClaimStub        func(context.Context, string, string, string) error
+	releaseRecoveryClaimMutex       sync.RWMutex
+	releaseRecoveryClaimArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+		arg4 string
+	}
+	releaseRecoveryClaimReturns struct {
+		result1 error
+	}
+	releaseRecoveryClaimReturnsOnCall map[int]struct {
+		result1 error
+	}
 	SetStatusStub        func(context.Context, string, driver.TxStatus, string) error
 	setStatusMutex       sync.RWMutex
 	setStatusArgsForCall []struct {
@@ -137,17 +181,87 @@ type AuditTransactionStore struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *AuditTransactionStore) BeginAtomicWrite() (driver.AtomicWrite, error) {
-	fake.beginAtomicWriteMutex.Lock()
-	ret, specificReturn := fake.beginAtomicWriteReturnsOnCall[len(fake.beginAtomicWriteArgsForCall)]
-	fake.beginAtomicWriteArgsForCall = append(fake.beginAtomicWriteArgsForCall, struct {
-	}{})
-	stub := fake.BeginAtomicWriteStub
-	fakeReturns := fake.beginAtomicWriteReturns
-	fake.recordInvocation("BeginAtomicWrite", []interface{}{})
-	fake.beginAtomicWriteMutex.Unlock()
+func (fake *AuditTransactionStore) AcquireRecoveryLeadership(arg1 context.Context, arg2 int64) (driver.RecoveryLeadership, bool, error) {
+	fake.acquireRecoveryLeadershipMutex.Lock()
+	ret, specificReturn := fake.acquireRecoveryLeadershipReturnsOnCall[len(fake.acquireRecoveryLeadershipArgsForCall)]
+	fake.acquireRecoveryLeadershipArgsForCall = append(fake.acquireRecoveryLeadershipArgsForCall, struct {
+		arg1 context.Context
+		arg2 int64
+	}{arg1, arg2})
+	stub := fake.AcquireRecoveryLeadershipStub
+	fakeReturns := fake.acquireRecoveryLeadershipReturns
+	fake.recordInvocation("AcquireRecoveryLeadership", []interface{}{arg1, arg2})
+	fake.acquireRecoveryLeadershipMutex.Unlock()
 	if stub != nil {
-		return stub()
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *AuditTransactionStore) AcquireRecoveryLeadershipCallCount() int {
+	fake.acquireRecoveryLeadershipMutex.RLock()
+	defer fake.acquireRecoveryLeadershipMutex.RUnlock()
+	return len(fake.acquireRecoveryLeadershipArgsForCall)
+}
+
+func (fake *AuditTransactionStore) AcquireRecoveryLeadershipCalls(stub func(context.Context, int64) (driver.RecoveryLeadership, bool, error)) {
+	fake.acquireRecoveryLeadershipMutex.Lock()
+	defer fake.acquireRecoveryLeadershipMutex.Unlock()
+	fake.AcquireRecoveryLeadershipStub = stub
+}
+
+func (fake *AuditTransactionStore) AcquireRecoveryLeadershipArgsForCall(i int) (context.Context, int64) {
+	fake.acquireRecoveryLeadershipMutex.RLock()
+	defer fake.acquireRecoveryLeadershipMutex.RUnlock()
+	argsForCall := fake.acquireRecoveryLeadershipArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *AuditTransactionStore) AcquireRecoveryLeadershipReturns(result1 driver.RecoveryLeadership, result2 bool, result3 error) {
+	fake.acquireRecoveryLeadershipMutex.Lock()
+	defer fake.acquireRecoveryLeadershipMutex.Unlock()
+	fake.AcquireRecoveryLeadershipStub = nil
+	fake.acquireRecoveryLeadershipReturns = struct {
+		result1 driver.RecoveryLeadership
+		result2 bool
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *AuditTransactionStore) AcquireRecoveryLeadershipReturnsOnCall(i int, result1 driver.RecoveryLeadership, result2 bool, result3 error) {
+	fake.acquireRecoveryLeadershipMutex.Lock()
+	defer fake.acquireRecoveryLeadershipMutex.Unlock()
+	fake.AcquireRecoveryLeadershipStub = nil
+	if fake.acquireRecoveryLeadershipReturnsOnCall == nil {
+		fake.acquireRecoveryLeadershipReturnsOnCall = make(map[int]struct {
+			result1 driver.RecoveryLeadership
+			result2 bool
+			result3 error
+		})
+	}
+	fake.acquireRecoveryLeadershipReturnsOnCall[i] = struct {
+		result1 driver.RecoveryLeadership
+		result2 bool
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *AuditTransactionStore) ClaimPendingTransactions(arg1 context.Context, arg2 driver.RecoveryClaimParams) ([]*driver.TransactionRecord, error) {
+	fake.claimPendingTransactionsMutex.Lock()
+	ret, specificReturn := fake.claimPendingTransactionsReturnsOnCall[len(fake.claimPendingTransactionsArgsForCall)]
+	fake.claimPendingTransactionsArgsForCall = append(fake.claimPendingTransactionsArgsForCall, struct {
+		arg1 context.Context
+		arg2 driver.RecoveryClaimParams
+	}{arg1, arg2})
+	stub := fake.ClaimPendingTransactionsStub
+	fakeReturns := fake.claimPendingTransactionsReturns
+	fake.recordInvocation("ClaimPendingTransactions", []interface{}{arg1, arg2})
+	fake.claimPendingTransactionsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -155,40 +269,47 @@ func (fake *AuditTransactionStore) BeginAtomicWrite() (driver.AtomicWrite, error
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *AuditTransactionStore) BeginAtomicWriteCallCount() int {
-	fake.beginAtomicWriteMutex.RLock()
-	defer fake.beginAtomicWriteMutex.RUnlock()
-	return len(fake.beginAtomicWriteArgsForCall)
+func (fake *AuditTransactionStore) ClaimPendingTransactionsCallCount() int {
+	fake.claimPendingTransactionsMutex.RLock()
+	defer fake.claimPendingTransactionsMutex.RUnlock()
+	return len(fake.claimPendingTransactionsArgsForCall)
 }
 
-func (fake *AuditTransactionStore) BeginAtomicWriteCalls(stub func() (driver.AtomicWrite, error)) {
-	fake.beginAtomicWriteMutex.Lock()
-	defer fake.beginAtomicWriteMutex.Unlock()
-	fake.BeginAtomicWriteStub = stub
+func (fake *AuditTransactionStore) ClaimPendingTransactionsCalls(stub func(context.Context, driver.RecoveryClaimParams) ([]*driver.TransactionRecord, error)) {
+	fake.claimPendingTransactionsMutex.Lock()
+	defer fake.claimPendingTransactionsMutex.Unlock()
+	fake.ClaimPendingTransactionsStub = stub
 }
 
-func (fake *AuditTransactionStore) BeginAtomicWriteReturns(result1 driver.AtomicWrite, result2 error) {
-	fake.beginAtomicWriteMutex.Lock()
-	defer fake.beginAtomicWriteMutex.Unlock()
-	fake.BeginAtomicWriteStub = nil
-	fake.beginAtomicWriteReturns = struct {
-		result1 driver.AtomicWrite
+func (fake *AuditTransactionStore) ClaimPendingTransactionsArgsForCall(i int) (context.Context, driver.RecoveryClaimParams) {
+	fake.claimPendingTransactionsMutex.RLock()
+	defer fake.claimPendingTransactionsMutex.RUnlock()
+	argsForCall := fake.claimPendingTransactionsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *AuditTransactionStore) ClaimPendingTransactionsReturns(result1 []*driver.TransactionRecord, result2 error) {
+	fake.claimPendingTransactionsMutex.Lock()
+	defer fake.claimPendingTransactionsMutex.Unlock()
+	fake.ClaimPendingTransactionsStub = nil
+	fake.claimPendingTransactionsReturns = struct {
+		result1 []*driver.TransactionRecord
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *AuditTransactionStore) BeginAtomicWriteReturnsOnCall(i int, result1 driver.AtomicWrite, result2 error) {
-	fake.beginAtomicWriteMutex.Lock()
-	defer fake.beginAtomicWriteMutex.Unlock()
-	fake.BeginAtomicWriteStub = nil
-	if fake.beginAtomicWriteReturnsOnCall == nil {
-		fake.beginAtomicWriteReturnsOnCall = make(map[int]struct {
-			result1 driver.AtomicWrite
+func (fake *AuditTransactionStore) ClaimPendingTransactionsReturnsOnCall(i int, result1 []*driver.TransactionRecord, result2 error) {
+	fake.claimPendingTransactionsMutex.Lock()
+	defer fake.claimPendingTransactionsMutex.Unlock()
+	fake.ClaimPendingTransactionsStub = nil
+	if fake.claimPendingTransactionsReturnsOnCall == nil {
+		fake.claimPendingTransactionsReturnsOnCall = make(map[int]struct {
+			result1 []*driver.TransactionRecord
 			result2 error
 		})
 	}
-	fake.beginAtomicWriteReturnsOnCall[i] = struct {
-		result1 driver.AtomicWrite
+	fake.claimPendingTransactionsReturnsOnCall[i] = struct {
+		result1 []*driver.TransactionRecord
 		result2 error
 	}{result1, result2}
 }
@@ -375,6 +496,62 @@ func (fake *AuditTransactionStore) GetTokenRequestReturnsOnCall(i int, result1 [
 	}
 	fake.getTokenRequestReturnsOnCall[i] = struct {
 		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *AuditTransactionStore) NewTransactionStoreTransaction() (driver.TransactionStoreTransaction, error) {
+	fake.newTransactionStoreTransactionMutex.Lock()
+	ret, specificReturn := fake.newTransactionStoreTransactionReturnsOnCall[len(fake.newTransactionStoreTransactionArgsForCall)]
+	fake.newTransactionStoreTransactionArgsForCall = append(fake.newTransactionStoreTransactionArgsForCall, struct {
+	}{})
+	stub := fake.NewTransactionStoreTransactionStub
+	fakeReturns := fake.newTransactionStoreTransactionReturns
+	fake.recordInvocation("NewTransactionStoreTransaction", []interface{}{})
+	fake.newTransactionStoreTransactionMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *AuditTransactionStore) NewTransactionStoreTransactionCallCount() int {
+	fake.newTransactionStoreTransactionMutex.RLock()
+	defer fake.newTransactionStoreTransactionMutex.RUnlock()
+	return len(fake.newTransactionStoreTransactionArgsForCall)
+}
+
+func (fake *AuditTransactionStore) NewTransactionStoreTransactionCalls(stub func() (driver.TransactionStoreTransaction, error)) {
+	fake.newTransactionStoreTransactionMutex.Lock()
+	defer fake.newTransactionStoreTransactionMutex.Unlock()
+	fake.NewTransactionStoreTransactionStub = stub
+}
+
+func (fake *AuditTransactionStore) NewTransactionStoreTransactionReturns(result1 driver.TransactionStoreTransaction, result2 error) {
+	fake.newTransactionStoreTransactionMutex.Lock()
+	defer fake.newTransactionStoreTransactionMutex.Unlock()
+	fake.NewTransactionStoreTransactionStub = nil
+	fake.newTransactionStoreTransactionReturns = struct {
+		result1 driver.TransactionStoreTransaction
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *AuditTransactionStore) NewTransactionStoreTransactionReturnsOnCall(i int, result1 driver.TransactionStoreTransaction, result2 error) {
+	fake.newTransactionStoreTransactionMutex.Lock()
+	defer fake.newTransactionStoreTransactionMutex.Unlock()
+	fake.NewTransactionStoreTransactionStub = nil
+	if fake.newTransactionStoreTransactionReturnsOnCall == nil {
+		fake.newTransactionStoreTransactionReturnsOnCall = make(map[int]struct {
+			result1 driver.TransactionStoreTransaction
+			result2 error
+		})
+	}
+	fake.newTransactionStoreTransactionReturnsOnCall[i] = struct {
+		result1 driver.TransactionStoreTransaction
 		result2 error
 	}{result1, result2}
 }
@@ -638,6 +815,70 @@ func (fake *AuditTransactionStore) QueryValidationsReturnsOnCall(i int, result1 
 		result1 driver.ValidationRecordsIterator
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *AuditTransactionStore) ReleaseRecoveryClaim(arg1 context.Context, arg2 string, arg3 string, arg4 string) error {
+	fake.releaseRecoveryClaimMutex.Lock()
+	ret, specificReturn := fake.releaseRecoveryClaimReturnsOnCall[len(fake.releaseRecoveryClaimArgsForCall)]
+	fake.releaseRecoveryClaimArgsForCall = append(fake.releaseRecoveryClaimArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+		arg4 string
+	}{arg1, arg2, arg3, arg4})
+	stub := fake.ReleaseRecoveryClaimStub
+	fakeReturns := fake.releaseRecoveryClaimReturns
+	fake.recordInvocation("ReleaseRecoveryClaim", []interface{}{arg1, arg2, arg3, arg4})
+	fake.releaseRecoveryClaimMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *AuditTransactionStore) ReleaseRecoveryClaimCallCount() int {
+	fake.releaseRecoveryClaimMutex.RLock()
+	defer fake.releaseRecoveryClaimMutex.RUnlock()
+	return len(fake.releaseRecoveryClaimArgsForCall)
+}
+
+func (fake *AuditTransactionStore) ReleaseRecoveryClaimCalls(stub func(context.Context, string, string, string) error) {
+	fake.releaseRecoveryClaimMutex.Lock()
+	defer fake.releaseRecoveryClaimMutex.Unlock()
+	fake.ReleaseRecoveryClaimStub = stub
+}
+
+func (fake *AuditTransactionStore) ReleaseRecoveryClaimArgsForCall(i int) (context.Context, string, string, string) {
+	fake.releaseRecoveryClaimMutex.RLock()
+	defer fake.releaseRecoveryClaimMutex.RUnlock()
+	argsForCall := fake.releaseRecoveryClaimArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *AuditTransactionStore) ReleaseRecoveryClaimReturns(result1 error) {
+	fake.releaseRecoveryClaimMutex.Lock()
+	defer fake.releaseRecoveryClaimMutex.Unlock()
+	fake.ReleaseRecoveryClaimStub = nil
+	fake.releaseRecoveryClaimReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *AuditTransactionStore) ReleaseRecoveryClaimReturnsOnCall(i int, result1 error) {
+	fake.releaseRecoveryClaimMutex.Lock()
+	defer fake.releaseRecoveryClaimMutex.Unlock()
+	fake.ReleaseRecoveryClaimStub = nil
+	if fake.releaseRecoveryClaimReturnsOnCall == nil {
+		fake.releaseRecoveryClaimReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.releaseRecoveryClaimReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *AuditTransactionStore) SetStatus(arg1 context.Context, arg2 string, arg3 driver.TxStatus, arg4 string) error {

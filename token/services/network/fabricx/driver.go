@@ -35,6 +35,7 @@ import (
 	lookup2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/lookup"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/qe"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"go.opentelemetry.io/otel/trace"
@@ -56,7 +57,8 @@ func NewDriver(
 	ppFetcher *pp2.PublicParametersService,
 	configService cdriver.ConfigService,
 	qsProvider queryservice.Provider,
-	storeServiceManager ttxdb.StoreServiceManager,
+	ttxStoreServiceManager ttxdb.StoreServiceManager,
+	auditStoreServiceManager auditdb.StoreServiceManager,
 	queryServiceProvider queryservice.Provider,
 	finalityProvider *finalityx.Provider,
 	metricsProvider metrics.Provider,
@@ -84,6 +86,8 @@ func NewDriver(
 	}
 
 	d := &Driver{
+		ttxStoreServiceManager:     ttxStoreServiceManager,
+		auditStoreServiceManager:   auditStoreServiceManager,
 		fnsProvider:                fnsProvider,
 		tokensManager:              tokensManager,
 		configService:              configs,
@@ -112,7 +116,7 @@ func NewDriver(
 			kt,
 			vkp,
 			tmsProvider,
-			endorsement2.NewStorageProvider(storeServiceManager),
+			endorsement2.NewStorageProvider(ttxStoreServiceManager),
 			fnsProvider,
 		),
 		setupListenerProvider: lookup2.NewSetupListenerProvider(
@@ -121,6 +125,7 @@ func NewDriver(
 			vkp,
 		),
 		supportedDrivers: []string{fabricx.DriverName},
+		metricsProvider:  metricsProvider,
 	}
 
 	return d, nil
@@ -128,6 +133,8 @@ func NewDriver(
 
 // Driver models the FabricX network driver.
 type Driver struct {
+	ttxStoreServiceManager     ttxdb.StoreServiceManager
+	auditStoreServiceManager   auditdb.StoreServiceManager
 	fnsProvider                *fabric2.NetworkServiceProvider
 	tokensManager              *tokens.ServiceManager
 	configService              *config.Service
@@ -144,6 +151,7 @@ type Driver struct {
 	EndorsementServiceProvider fabric.EndorsementServiceProvider
 	setupListenerProvider      fabric.SetupListenerProvider
 	queryExecutorProvider      *qe.ExecutorProvider
+	metricsProvider            metrics.Provider
 }
 
 // New returns a new Network instance for the specified network and channel.
@@ -187,6 +195,8 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 	logger.Debugf("fabricx network [%s:%s] with driver [%s] ready to be created...", network, channel, fns.ConfigService().DriverName())
 
 	return NewNetwork(
+		d.ttxStoreServiceManager,
+		d.auditStoreServiceManager,
 		fns,
 		ch,
 		d.configService,
@@ -204,5 +214,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		flm,
 		llm,
 		d.setupListenerProvider,
+		d.metricsProvider,
 	), nil
 }

@@ -147,6 +147,29 @@ token:
               - endorser2
               - endorser2
 
+            # recovery config controls background re-registration of finality listeners
+            # for pending transactions that may have lost their listeners.
+            # If omitted, the recovery manager uses its built-in defaults.
+            recovery:
+              # enabled determines whether transaction recovery runs. Default: true.
+              enabled: true
+              # ttl is the minimum age of a pending transaction before it is eligible for recovery. Default: 30s.
+              ttl: 30s
+              # scanInterval is how often the recovery manager scans for pending transactions. Default: 5s.
+              scanInterval: 5s
+              # batchSize is the maximum number of pending transactions claimed per scan. Default: 100.
+              batchSize: 100
+              # workerCount is the number of local workers that process claimed transactions in parallel. Default: 4.
+              workerCount: 4
+              # leaseDuration is how long a claimed transaction remains leased to this instance before it can be reclaimed. Default: 30s.
+              leaseDuration: 30s
+              # advisoryLockID is the PostgreSQL advisory lock identifier used for recovery leader election.
+              # Default: 8389190333894887286 (0x74746b7265636f76).
+              advisoryLockID: 8389190333894887286
+              # instanceID identifies this replica as the owner of recovery claims.
+              # If empty, a process-local identifier is generated automatically at startup.
+              instanceID:
+
       # sections dedicated to the definition of the wallets
       wallets:
         # Default cache size reference that can be used by any wallet that supports caching.
@@ -290,3 +313,46 @@ Default values:
 - permanent.interval: 1m
 - once.deadline: 5m
 - once.interval: 2s
+
+---
+
+### Optional: token.tms.<name>.services.network.fabric.recovery
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  tms:
+    <name>:
+      services:
+        network:
+          fabric:
+            recovery:
+              enabled: true
+              ttl: 30s
+              scanInterval: 5s
+              batchSize: 100
+              workerCount: 4
+              leaseDuration: 30s
+              advisoryLockID: 8389190333894887286
+              instanceID:
+```
+
+Default values:
+
+- enabled: true
+- ttl: 30s
+- scanInterval: 5s
+- batchSize: 100
+- workerCount: 4
+- leaseDuration: 30s
+- advisoryLockID: 8389190333894887286 (`0x74746b7265636f76`)
+- instanceID: empty, auto-generated when the recovery manager starts
+
+Notes:
+
+- Recovery is enabled by default.
+- Only pending transactions older than `ttl` are considered for recovery.
+- The manager validates that `ttl`, `scanInterval`, `batchSize`, `workerCount`, and `leaseDuration` are all greater than zero.
+- `advisoryLockID` is used to acquire PostgreSQL advisory-lock leadership so that only one replica performs a recovery sweep at a time.
+- `instanceID` is used as the lease owner identifier for claimed transactions; if omitted, the manager generates a unique value automatically.

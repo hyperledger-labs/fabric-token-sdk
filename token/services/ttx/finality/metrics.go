@@ -65,6 +65,12 @@ func newMetrics(p metrics.Provider) *Metrics {
 	}
 }
 
+// NewMetrics creates a new Metrics instance with the given provider.
+// This is exported for use by other packages that need finality metrics.
+func NewMetrics(p metrics.Provider) *Metrics {
+	return newMetrics(p)
+}
+
 // noopProvider discards all observations. Used when no provider is configured.
 type noopProvider struct{}
 
