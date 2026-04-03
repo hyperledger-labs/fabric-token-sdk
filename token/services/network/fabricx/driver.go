@@ -84,6 +84,7 @@ func NewDriver(
 	}
 
 	d := &Driver{
+		storeServiceManager:        storeServiceManager,
 		fnsProvider:                fnsProvider,
 		tokensManager:              tokensManager,
 		configService:              configs,
@@ -128,6 +129,7 @@ func NewDriver(
 
 // Driver models the FabricX network driver.
 type Driver struct {
+	storeServiceManager        ttxdb.StoreServiceManager
 	fnsProvider                *fabric2.NetworkServiceProvider
 	tokensManager              *tokens.ServiceManager
 	configService              *config.Service
@@ -187,6 +189,7 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 	logger.Debugf("fabricx network [%s:%s] with driver [%s] ready to be created...", network, channel, fns.ConfigService().DriverName())
 
 	return NewNetwork(
+		d.storeServiceManager,
 		fns,
 		ch,
 		d.configService,
