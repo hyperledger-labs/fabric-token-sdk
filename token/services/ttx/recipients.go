@@ -504,7 +504,11 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			return nil, err
 		}
 
-		me, err := ts.WalletManager().OwnerWallet(context.Context(), f.Wallet).GetRecipientIdentity(context.Context())
+		meWallet := ts.WalletManager().OwnerWallet(context.Context(), f.Wallet)
+		if meWallet == nil {
+			return nil, errors.Errorf("wallet [%s:%s] not found", f.Wallet, f.TMSID)
+		}
+		me, err := meWallet.GetRecipientIdentity(context.Context())
 		if err != nil {
 			return nil, err
 		}
