@@ -323,7 +323,7 @@ func TestBigQuantity_Clone(t *testing.T) {
 	cloneBig := clone.(*token.BigQuantity)
 	assert.NotSame(t, originalBig.Int, cloneBig.Int)
 
-	originalBig.Int.SetInt64(999)
+	originalBig.SetInt64(999)
 	assert.Equal(t, "100", clone.Decimal())
 }
 
