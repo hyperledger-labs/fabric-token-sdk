@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package rp
 
 import (
+	"sync"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
@@ -113,27 +115,42 @@ func NewRangeCorrectnessProver(
 
 // Prove generates a set of range proofs.
 func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
-	rc := &RangeCorrectness{}
-	rc.Proofs = make([]*RangeProof, len(p.Commitments))
-	for i := range len(p.Commitments) {
-		bp := NewRangeProver(
-			p.Commitments[i],
-			p.Values[i],
-			p.PedersenParameters,
-			p.BlindingFactors[i],
-			p.LeftGenerators,
-			p.RightGenerators,
-			p.P,
-			p.Q,
-			p.NumberOfRounds,
-			p.BitLength,
-			p.Curve,
-		)
-		proof, err := bp.Prove()
+	n := len(p.Commitments)
+	rc := &RangeCorrectness{
+		Proofs: make([]*RangeProof, n),
+	}
+	// Each range proof depends only on Commitments[i], Values[i], and
+	// BlindingFactors[i]. The shared parameters PedersenParameters,
+	// LeftGenerators, RightGenerators, P, Q, Curve are only read,
+	// never written. We can therefore generate all proofs concurrently.
+	errs := make([]error, n)
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i := range n {
+		i := i // capture loop variable before the goroutine closes over it
+		go func() {
+			defer wg.Done()
+			bp := NewRangeProver(
+				p.Commitments[i],
+				p.Values[i],
+				p.PedersenParameters,
+				p.BlindingFactors[i],
+				p.LeftGenerators,
+				p.RightGenerators,
+				p.P,
+				p.Q,
+				p.NumberOfRounds,
+				p.BitLength,
+				p.Curve,
+			)
+			rc.Proofs[i], errs[i] = bp.Prove()
+		}()
+	}
+	wg.Wait()
+	for _, err := range errs {
 		if err != nil {
 			return nil, err
 		}
-		rc.Proofs[i] = proof
 	}
 
 	return rc, nil
@@ -185,22 +202,35 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	if len(rc.Proofs) != len(v.Commitments) {
 		return errors.New("invalid range proof")
 	}
-	for i := range len(rc.Proofs) {
-		if rc.Proofs[i] == nil {
-			return errors.Errorf("invalid range proof: nil proof at index %d", i)
-		}
-		bv := NewRangeVerifier(
-			v.Commitments[i],
-			v.PedersenParameters,
-			v.LeftGenerators,
-			v.RightGenerators,
-			v.P,
-			v.Q,
-			v.NumberOfRounds,
-			v.BitLength,
-			v.Curve,
-		)
-		err := bv.Verify(rc.Proofs[i])
+	n := len(rc.Proofs)
+	errs := make([]error, n)
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i := range n {
+		i := i // capture loop variable before the goroutine closes over it
+		go func() {
+			defer wg.Done()
+			if rc.Proofs[i] == nil {
+				errs[i] = errors.Errorf("invalid range proof: nil proof at index %d", i)
+
+				return
+			}
+			bv := NewRangeVerifier(
+				v.Commitments[i],
+				v.PedersenParameters,
+				v.LeftGenerators,
+				v.RightGenerators,
+				v.P,
+				v.Q,
+				v.NumberOfRounds,
+				v.BitLength,
+				v.Curve,
+			)
+			errs[i] = bv.Verify(rc.Proofs[i])
+		}()
+	}
+	wg.Wait()
+	for i, err := range errs {
 		if err != nil {
 			return errors.Wrapf(err, "invalid range proof at index %d", i)
 		}
