@@ -405,6 +405,66 @@ func TestUInt64Quantity_Clone(t *testing.T) {
 	assert.Equal(t, "100", clone.Decimal())
 }
 
+var benchResult token.Quantity
+
+func BenchmarkBigQuantity_Add(b *testing.B) {
+	for b.Loop() {
+		q := token.NewZeroQuantity(128)
+		one := token.NewOneQuantity(128)
+		benchResult, _ = q.Add(one)
+	}
+}
+
+func BenchmarkBigQuantity_Sub(b *testing.B) {
+	for b.Loop() {
+		q, _ := token.ToQuantity("1000000000", 128)
+		one := token.NewOneQuantity(128)
+		benchResult, _ = q.Sub(one)
+	}
+}
+
+func BenchmarkBigQuantity_Cmp(b *testing.B) {
+	q := token.NewZeroQuantity(128)
+	one := token.NewOneQuantity(128)
+	var r int
+	for b.Loop() {
+		r = q.Cmp(one)
+	}
+	_ = r
+}
+
+func BenchmarkUInt64Quantity_Add(b *testing.B) {
+	for b.Loop() {
+		q := token.NewZeroQuantity(64)
+		one := token.NewOneQuantity(64)
+		benchResult, _ = q.Add(one)
+	}
+}
+
+func BenchmarkUInt64Quantity_Sub(b *testing.B) {
+	for b.Loop() {
+		q, _ := token.ToQuantity("1000000000", 64)
+		one := token.NewOneQuantity(64)
+		benchResult, _ = q.Sub(one)
+	}
+}
+
+func BenchmarkUInt64Quantity_Cmp(b *testing.B) {
+	q := token.NewZeroQuantity(64)
+	one := token.NewOneQuantity(64)
+	var r int
+	for b.Loop() {
+		r = q.Cmp(one)
+	}
+	_ = r
+}
+
+func BenchmarkToQuantity(b *testing.B) {
+	for b.Loop() {
+		benchResult, _ = token.ToQuantity("0x1234567890abcdef", 64)
+	}
+}
+
 func ToHex(q uint64) string {
 	return "0x" + strconv.FormatUint(q, 16)
 }
