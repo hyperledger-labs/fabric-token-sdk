@@ -226,6 +226,7 @@ func (p *DoesWalletExistView) Call(context view.Context) (interface{}, error) {
 	switch p.WalletType {
 	case OwnerWallet:
 		_, err = tms.WalletManager().OwnerWallet(context.Context(), p.Wallet)
+
 		return err == nil, nil
 	case IssuerWallet:
 		return tms.WalletManager().IssuerWallet(context.Context(), p.Wallet) != nil, nil
@@ -233,6 +234,7 @@ func (p *DoesWalletExistView) Call(context view.Context) (interface{}, error) {
 		return tms.WalletManager().AuditorWallet(context.Context(), p.Wallet) != nil, nil
 	default:
 		_, err = tms.WalletManager().OwnerWallet(context.Context(), p.Wallet)
+
 		return err == nil, nil
 	}
 }
