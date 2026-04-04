@@ -56,7 +56,7 @@ func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
 	}
 
 	for _, actionTransfer := range c.actions.Transfers {
-		if w := ts.WalletManager().OwnerWallet(context.Context(), actionTransfer.From); w != nil {
+		if w, err := ts.WalletManager().OwnerWallet(context.Context(), actionTransfer.From); err == nil {
 			if err := c.collectLocal(context, actionTransfer, w); err != nil {
 				return nil, err
 			}
