@@ -152,7 +152,7 @@ func TestWalletManager_OwnerWallet(t *testing.T) {
 	ctx := context.Background()
 	wallet, err := wm.OwnerWallet(ctx, "alice")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, wallet)
 	assert.Equal(t, mockOW, wallet.w)
 }
@@ -170,7 +170,7 @@ func TestWalletManager_OwnerWallet_Error(t *testing.T) {
 	ctx := context.Background()
 	wallet, err := wm.OwnerWallet(ctx, "unknown")
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, wallet)
 }
 
