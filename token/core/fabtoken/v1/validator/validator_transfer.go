@@ -106,7 +106,10 @@ func TransferBalanceValidate(c context.Context, ctx *Context) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", input.Quantity)
 		}
-		inputSum.Add(q)
+		inputSum, err = inputSum.Add(q)
+		if err != nil {
+			return errors.Wrapf(err, "failed adding input quantity [%s]", input.Quantity)
+		}
 		// check that all inputs have the same type
 		if input.Type != typ {
 			return errors.Errorf("input type %s does not match type %s", input.Type, typ)
@@ -118,7 +121,10 @@ func TransferBalanceValidate(c context.Context, ctx *Context) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
 		}
-		outputSum.Add(q)
+		outputSum, err = outputSum.Add(q)
+		if err != nil {
+			return errors.Wrapf(err, "failed adding output quantity [%s]", out.Quantity)
+		}
 		// check that all outputs have the same type, and it is the same type as inputs
 		if out.Type != typ {
 			return errors.Errorf("output type %s does not match type %s", out.Type, typ)

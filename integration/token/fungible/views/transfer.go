@@ -319,7 +319,8 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 			// Add the quantity to the total
 			q, err := token.ToQuantity(tok.Quantity, precision)
 			assert.NoError(err, "failed converting quantity")
-			recomputedSum = recomputedSum.Add(q)
+			recomputedSum, err = recomputedSum.Add(q)
+			assert.NoError(err, "failed adding quantity")
 		}
 		// Is the recomputed sum correct?
 		assert.True(sum.Cmp(recomputedSum) == 0, "sums do not match")

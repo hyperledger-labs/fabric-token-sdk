@@ -1400,7 +1400,10 @@ func (r *Request) parseInputIDs(ctx context.Context, inputs []*token.ID) ([]*tok
 		if err != nil {
 			return nil, nil, "", errors.WithMessagef(err, "failed unmarshalling token quantity [%s]", tok.Quantity)
 		}
-		sum = sum.Add(q)
+		sum, err = sum.Add(q)
+		if err != nil {
+			return nil, nil, "", errors.WithMessagef(err, "failed adding token quantity [%s]", tok.Quantity)
+		}
 	}
 
 	return inputs, sum, typ, nil
@@ -1467,7 +1470,10 @@ func (r *Request) prepareTransfer(ctx context.Context, redeem bool, wallet *Owne
 	cmp := inputSum.Cmp(outputSum)
 	switch cmp {
 	case 1:
-		diff := inputSum.Sub(outputSum)
+		diff, err := inputSum.Sub(outputSum)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed computing rest")
+		}
 		r.TokenService.logger.DebugfContext(ctx, "reassign rest [%s] to sender", diff.Decimal())
 
 		var restIdentity []byte
@@ -1526,7 +1532,10 @@ func (r *Request) genOutputs(values []uint64, owners []Identity, tokenType token
 		if q.Cmp(maxTokenValueQ) == 1 {
 			return nil, nil, errors.Errorf("cannot create output with value [%s], max [%s]", q.Decimal(), maxTokenValueQ.Decimal())
 		}
-		outputSum = outputSum.Add(q)
+		outputSum, err = outputSum.Add(q)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to add quantity for output %d", i)
+		}
 
 		// single output is fine
 		outputTokens = append(outputTokens, &token.Token{
