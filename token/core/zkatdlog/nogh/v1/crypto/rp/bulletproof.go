@@ -549,36 +549,68 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 
 // verifyIPA checks if the IPA within the range proof is valid
 func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z, zSquare *math.Zr) error {
-	// compute com the non-hiding commitment to the vectors for which the inner product is computed
-	// C commits to vectors L and R whereas D commits to vectors U and V
-	// with generators (G_0, ..., G_{BitLength}, H_0, ..., H_{BitLength}, P)
+	n := len(v.LeftGenerators)
 
-	// com commits to vector L' composed of elements L'_i = (L_i-z) + xU_i and
-	// vector R' composed of elements R'i = y^i((R_i+z)+xV_i)+2^iz^2
-	// with generators  (G_0, ..., G_{BitLength}, H'_0, ..., H'_{BitLength})
-	com := rp.Data.D.Mul(x)
-	com.Add(rp.Data.C)
-	rightGeneratorsPrime := make([]*math.G1, len(v.RightGenerators))
-	for i := range len(v.LeftGenerators) {
-		com.Sub(v.LeftGenerators[i].Mul(z))
-		// 1/y^i
-		yInv2i := yPow[i].Copy()
-		yInv2i.InvModOrder()
-		// zy^i + z^2
-		zi := v.Curve.ModAddMul2(
+	// Replace 64 individual InvModOrder() calls with one BatchInverse call
+	// 1 inversion + O(n) multiplications
+	yInv := BatchInverse(yPow, v.Curve)
+
+	// Pre-compute the scalar zi = z·y^i + z²·2^i for each i.
+	ziScalars := make([]*math.Zr, n)
+	for i := range n {
+		ziScalars[i] = v.Curve.ModAddMul2(
 			z,
 			yPow[i],
 			zSquare,
 			math2.PowerOfTwo(v.Curve, uint64(i)), // #nosec G115
 			v.Curve.GroupOrder,
 		)
-		// recompute the generators H'_i = H_i^{1/y_i}
-		rightGeneratorsPrime[i] = v.RightGenerators[i].Mul(yInv2i)
-		com.Add(rightGeneratorsPrime[i].Mul(zi))
 	}
-	com.Sub(v.P.Mul(rp.Data.Delta))
 
-	// run the IPA verifier
+	// Compute rightGeneratorsPrime[i] = RightGenerators[i]^{1/y^i}.
+	rightGeneratorsPrime := make([]*math.G1, n)
+	for i := range n {
+		rightGeneratorsPrime[i] = v.RightGenerators[i].Mul(yInv[i])
+	}
+
+	// This is a linear combination of points with known scalars, exactly what
+	// MultiScalarMul computes. Negate subtracted scalars instead of subtracting.
+	zNeg := v.Curve.ModSub(v.Curve.NewZrFromInt(0), z, v.Curve.GroupOrder)
+	deltaNeg := v.Curve.ModSub(v.Curve.NewZrFromInt(0), rp.Data.Delta, v.Curve.GroupOrder)
+
+	// Collect all (point, scalar) pairs into flat slices.
+	// Total terms: D, C, n×LeftGen, n×rightGenPrime, P = 2 + 2n + 1 = 2n+3
+	allPoints := make([]*math.G1, 0, 2*n+3)
+	allScalars := make([]*math.Zr, 0, 2*n+3)
+
+	// D·x
+	allPoints = append(allPoints, rp.Data.D)
+	allScalars = append(allScalars, x)
+
+	// C·1
+	allPoints = append(allPoints, rp.Data.C)
+	allScalars = append(allScalars, v.Curve.NewZrFromInt(1))
+
+	// LeftGen[i]·(-z)
+	for i := range n {
+		allPoints = append(allPoints, v.LeftGenerators[i])
+		allScalars = append(allScalars, zNeg)
+	}
+
+	// rightGenPrime[i]·zi
+	for i := range n {
+		allPoints = append(allPoints, rightGeneratorsPrime[i])
+		allScalars = append(allScalars, ziScalars[i])
+	}
+
+	// P·(-Delta)
+	allPoints = append(allPoints, v.P)
+	allScalars = append(allScalars, deltaNeg)
+
+	// Single MultiScalarMul call replacing the entire serial loop
+	com := v.Curve.MultiScalarMul(allPoints, allScalars)
+
+	// Run the IPA verifier with the reconstructed basis and commitment
 	ipv := NewIPAVerifier(
 		rp.Data.InnerProduct,
 		v.Q,
@@ -588,10 +620,6 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 		v.NumberOfRounds,
 		v.Curve,
 	)
-	err := ipv.Verify(rp.IPA)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return ipv.Verify(rp.IPA)
 }
