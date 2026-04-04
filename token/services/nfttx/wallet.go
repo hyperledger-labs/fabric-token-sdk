@@ -46,8 +46,8 @@ func MyWallet(context view.Context, opts ...token.ServiceOption) *OwnerWallet {
 	if err != nil {
 		return nil
 	}
-	w := tms.WalletManager().OwnerWallet(context.Context(), "")
-	if w == nil {
+	w, err := tms.WalletManager().OwnerWallet(context.Context(), "")
+	if err != nil {
 		return nil
 	}
 
@@ -66,8 +66,8 @@ func MyWalletFromTx(context view.Context, tx *Transaction) *OwnerWallet {
 	if err != nil {
 		return nil
 	}
-	w := tms.WalletManager().OwnerWallet(context.Context(), "")
-	if w == nil {
+	w, err := tms.WalletManager().OwnerWallet(context.Context(), "")
+	if err != nil {
 		return nil
 	}
 
@@ -82,8 +82,8 @@ func GetWallet(context view.Context, id string, opts ...token.ServiceOption) *Ow
 	if err != nil {
 		return nil
 	}
-	w := tms.WalletManager().OwnerWallet(context.Context(), id)
-	if w == nil {
+	w, err := tms.WalletManager().OwnerWallet(context.Context(), id)
+	if err != nil {
 		return nil
 	}
 
@@ -98,8 +98,8 @@ func GetWalletForChannel(context view.Context, channel, id string, opts ...token
 	if err != nil {
 		return nil
 	}
-	w := tms.WalletManager().OwnerWallet(context.Context(), id)
-	if w == nil {
+	w, err := tms.WalletManager().OwnerWallet(context.Context(), id)
+	if err != nil {
 		return nil
 	}
 
