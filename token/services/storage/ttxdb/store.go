@@ -340,6 +340,22 @@ func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, 
 	return nil
 }
 
+// QueryPendingTransactions returns transactions in Pending status older than the given duration.
+// This is used by the recovery mechanism to find transactions that may need finality listener re-registration.
+func (d *StoreService) QueryPendingTransactions(ctx context.Context, olderThan time.Duration) ([]*TransactionRecord, error) {
+	storedBefore := time.Now().UTC().Add(-olderThan)
+	logger.DebugfContext(ctx, "querying pending transactions stored before %s (older than %s)", storedBefore, olderThan)
+
+	records, err := d.db.QueryPendingTransactions(ctx, storedBefore)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to query pending transactions")
+	}
+
+	logger.DebugfContext(ctx, "found %d pending transactions older than %s", len(records), olderThan)
+
+	return records, nil
+}
+
 // TransactionRecords is a pure function that converts an AuditRecord for storage in the database.
 func TransactionRecords(ctx context.Context, record *token.AuditRecord, timestamp time.Time) (txs []TransactionRecord, err error) {
 	inputs := record.Inputs

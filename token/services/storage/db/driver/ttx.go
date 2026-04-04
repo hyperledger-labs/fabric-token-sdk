@@ -9,6 +9,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"time"
 
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -78,6 +79,13 @@ type TransactionStore interface {
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.
 	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
+
+	// QueryPendingTransactions returns transactions in Pending status that were stored before the given time.
+	// This is used by the recovery mechanism to find transactions that may need finality listener re-registration.
+	QueryPendingTransactions(ctx context.Context, storedBefore time.Time) ([]*TransactionRecord, error)
+
+	// Notifier returns a TransactionNotifier for this store to subscribe to transaction status changes.
+	Notifier() (TransactionNotifier, error)
 }
 
 type TransactionEndorsementAckStore interface {
@@ -88,6 +96,18 @@ type TransactionEndorsementAckStore interface {
 	GetTransactionEndorsementAcks(ctx context.Context, txID string) (map[string][]byte, error)
 }
 
-var (
-	ErrTokenRequestDoesNotExist = errors.New("token request does not exist")
-)
+// TransactionRecordReference contains the primary key fields of a transaction request record.
+type TransactionRecordReference struct {
+	// TxID is the unique identifier of the transaction request.
+	TxID string
+}
+
+// TransactionNotifier is used to subscribe to transaction status changes in the storage.
+type TransactionNotifier interface {
+	// Subscribe registers a callback function to be called when a transaction request status is updated.
+	Subscribe(callback func(Operation, TransactionRecordReference)) error
+	// UnsubscribeAll unregisters all callbacks.
+	UnsubscribeAll() error
+}
+
+var ErrTokenRequestDoesNotExist = errors.New("token request does not exist")

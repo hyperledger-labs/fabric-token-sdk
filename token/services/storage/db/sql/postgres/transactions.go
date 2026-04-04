@@ -7,24 +7,74 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
+	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/pagination"
-	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
+	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
-// AuditTransactionStore is an alias for common.TransactionStore.
-type AuditTransactionStore = common3.TransactionStore
-
 // TransactionStore is an alias for common.TransactionStore.
-type TransactionStore = common3.TransactionStore
+type TransactionStore = sqlcommon.TransactionStore
 
-// NewAuditTransactionStore returns a new AuditTransactionStore for the given RWDB and table names.
-func NewAuditTransactionStore(dbs *common2.RWDB, tableNames common3.TableNames) (*AuditTransactionStore, error) {
-	return common3.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
+// AuditTransactionStore is an alias for common.TransactionStore.
+type AuditTransactionStore = sqlcommon.TransactionStore
+
+// TransactionNotifier handles notifications for transaction status changes.
+type TransactionNotifier struct {
+	*Notifier
 }
 
-// NewTransactionStore returns a new TransactionStore for the given RWDB and table names.
-func NewTransactionStore(dbs *common2.RWDB, tableNames common3.TableNames) (*TransactionStore, error) {
-	return common3.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
+// NewTransactionNotifier returns a new TransactionNotifier for the given RWDB and table names.
+func NewTransactionNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, dataSource string) (*TransactionNotifier, error) {
+	return &TransactionNotifier{
+		Notifier: NewNotifier(
+			dbs.WriteDB,
+			tableNames.Requests,
+			dataSource,
+			[]tokensdriver.Operation{tokensdriver.Update}, // Only listen to UPDATE operations for status changes
+			*NewSimplePrimaryKey("tx_id"),
+		)}, nil
+}
+
+// Subscribe registers a callback function to be called when a transaction request status is updated.
+func (n *TransactionNotifier) Subscribe(callback func(tokensdriver.Operation, tokensdriver.TransactionRecordReference)) error {
+	return n.Notifier.Subscribe(func(operation tokensdriver.Operation, m map[tokensdriver.ColumnKey]string) {
+		callback(operation, tokensdriver.TransactionRecordReference{
+			TxID: m["tx_id"],
+		})
+	})
+}
+
+// NewTransactionStoreWithNotifier creates a new TransactionStore with the provided notifier.
+func NewTransactionStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, notifier *TransactionNotifier) (*TransactionStore, error) {
+	return sqlcommon.NewTransactionStoreWithNotifier(
+		dbs.ReadDB,
+		dbs.WriteDB,
+		tableNames,
+		postgres.NewConditionInterpreter(),
+		postgres.NewPaginationInterpreter(),
+		notifier,
+	)
+}
+
+// NewAuditTransactionStore creates a new AuditTransactionStore.
+func NewAuditTransactionStore(dbs *scommon.RWDB, tableNames sqlcommon.TableNames) (*AuditTransactionStore, error) {
+	return sqlcommon.NewAuditTransactionStore(
+		dbs.ReadDB,
+		dbs.WriteDB,
+		tableNames,
+		postgres.NewConditionInterpreter(),
+		postgres.NewPaginationInterpreter(),
+	)
+}
+
+// NewTransactionStore creates a new TransactionStore without notifier support.
+func NewTransactionStore(dbs *scommon.RWDB, tableNames sqlcommon.TableNames) (*TransactionStore, error) {
+	return sqlcommon.NewOwnerTransactionStore(
+		dbs.ReadDB,
+		dbs.WriteDB,
+		tableNames,
+		postgres.NewConditionInterpreter(),
+		postgres.NewPaginationInterpreter(),
+	)
 }

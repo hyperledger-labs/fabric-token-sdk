@@ -1,0 +1,35 @@
+# Example configuration for Transaction Recovery feature
+# This shows how to configure transaction recovery for multi-replica deployments
+
+token:
+  tms:
+    # Configuration for the default TMS
+    default:
+      network:
+        # Transaction recovery configuration
+        recovery:
+          # Enable transaction recovery (required for multi-replica deployments)
+          enabled: true
+          
+          # Time-to-live: how long to wait before considering a pending transaction for recovery
+          # Should be longer than your typical transaction finality time
+          # Default: 30s
+          ttl: 30s
+          
+          # Scan interval: how often to check for pending transactions
+          # Lower values = faster recovery but more database load
+          # Default: 30s
+          scanInterval: 30s
+
+    # Configuration for a custom TMS
+    mytms:
+      network:
+        recovery:
+          enabled: true
+          ttl: 45s
+          scanInterval: 45s
+
+# Note: Recovery is disabled by default for backward compatibility
+# You must explicitly set enabled: true to activate it
+
+# Made with Bob

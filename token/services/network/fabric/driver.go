@@ -53,6 +53,7 @@ type Driver struct {
 	llmProvider                     lookup.ListenerManagerProvider
 	EndorsementServiceProvider      EndorsementServiceProvider
 	setupListenerProvider           SetupListenerProvider
+	storeServiceManager             ttxdb.StoreServiceManager
 }
 
 func NewGenericDriver(
@@ -67,6 +68,7 @@ func NewGenericDriver(
 	identityProvider view.IdentityProvider,
 	configService cdriver.ConfigService,
 	storeServiceManager ttxdb.StoreServiceManager,
+	sp token.ServiceProvider,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
 
@@ -96,6 +98,7 @@ func NewGenericDriver(
 			storeServiceManager,
 		),
 		NewSetupListenerProvider(tmsProvider, tokensManager),
+		storeServiceManager,
 		config2.GenericDriver,
 	)
 }
@@ -117,6 +120,7 @@ func NewDriver(
 	llmProvider lookup.ListenerManagerProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
 	setupListenerProvider SetupListenerProvider,
+	storeServiceManager ttxdb.StoreServiceManager,
 	supportedDrivers ...string,
 ) *Driver {
 	return &Driver{
@@ -137,6 +141,7 @@ func NewDriver(
 		llmProvider:                     llmProvider,
 		EndorsementServiceProvider:      endorsementServiceProvider,
 		setupListenerProvider:           setupListenerProvider,
+		storeServiceManager:             storeServiceManager,
 	}
 }
 
@@ -170,5 +175,5 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		return nil, errors.Wrapf(err, "failed to create a new llm")
 	}
 
-	return NewNetwork(fns, ch, d.configService, d.filterProvider, d.tokensManager, d.viewManager, d.tmsProvider, d.EndorsementServiceProvider, tokenQueryExecutor, d.tracerProvider, d.defaultPublicParamsFetcher, spentTokenQueryExecutor, d.keyTranslator, flm, llm, d.setupListenerProvider), nil
+	return NewNetwork(fns, ch, d.configService, d.filterProvider, d.tokensManager, d.viewManager, d.tmsProvider, d.EndorsementServiceProvider, tokenQueryExecutor, d.tracerProvider, d.defaultPublicParamsFetcher, spentTokenQueryExecutor, d.keyTranslator, flm, llm, d.setupListenerProvider, d.storeServiceManager), nil
 }

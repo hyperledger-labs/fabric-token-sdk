@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	driver4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
 
@@ -45,20 +46,22 @@ type transactionTables struct {
 }
 
 type TransactionStore struct {
-	readDB  *sql.DB
-	writeDB *sql.DB
-	table   transactionTables
-	ci      common3.CondInterpreter
-	pi      common3.PagInterpreter
+	readDB   *sql.DB
+	writeDB  *sql.DB
+	table    transactionTables
+	ci       common3.CondInterpreter
+	pi       common3.PagInterpreter
+	notifier driver4.TransactionNotifier
 }
 
-func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci common3.CondInterpreter, pi common3.PagInterpreter) *TransactionStore {
+func newTransactionStore(readDB, writeDB *sql.DB, tables transactionTables, ci common3.CondInterpreter, pi common3.PagInterpreter, notifier driver4.TransactionNotifier) *TransactionStore {
 	return &TransactionStore{
-		readDB:  readDB,
-		writeDB: writeDB,
-		table:   tables,
-		ci:      ci,
-		pi:      pi,
+		readDB:   readDB,
+		writeDB:  writeDB,
+		table:    tables,
+		ci:       ci,
+		pi:       pi,
+		notifier: notifier,
 	}
 }
 
@@ -73,7 +76,17 @@ func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci com
 		Requests:              tables.Requests,
 		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
-	}, ci, pi), nil
+	}, ci, pi, nil), nil
+}
+
+func NewTransactionStoreWithNotifier(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter, notifier driver4.TransactionNotifier) (*TransactionStore, error) {
+	return newTransactionStore(readDB, writeDB, transactionTables{
+		Movements:             tables.Movements,
+		Transactions:          tables.Transactions,
+		Requests:              tables.Requests,
+		Validations:           tables.Validations,
+		TransactionEndorseAck: tables.TransactionEndorseAck,
+	}, ci, pi, notifier), nil
 }
 
 func (db *TransactionStore) CreateSchema() error {
@@ -235,6 +248,14 @@ func (db *TransactionStore) QueryValidations(ctx context.Context, params driver4
 	return iterators.Filter(it, params.Filter), nil
 }
 
+func (db *TransactionStore) Notifier() (driver4.TransactionNotifier, error) {
+	if db.notifier == nil {
+		return nil, storage.ErrNotSupported
+	}
+
+	return db.notifier, nil
+}
+
 // QueryTokenRequests returns an iterator over the token requests matching the passed params
 func (db *TransactionStore) QueryTokenRequests(ctx context.Context, params driver4.QueryTokenRequestsParams) (driver4.TokenRequestIterator, error) {
 	query, args := q.Select().
@@ -250,6 +271,51 @@ func (db *TransactionStore) QueryTokenRequests(ctx context.Context, params drive
 	}
 	// TODO: AF remove r.TokenRequest. Not used
 	return common.NewIterator(rows, func(r *driver4.TokenRequestRecord) error { return rows.Scan(&r.TxID, &r.TokenRequest, &r.Status) }), nil
+}
+
+// QueryPendingTransactions returns transactions in Pending status that were stored before the given time.
+// This is used by the recovery mechanism to find transactions that may need finality listener re-registration.
+func (db *TransactionStore) QueryPendingTransactions(ctx context.Context, storedBefore time.Time) ([]*driver4.TransactionRecord, error) {
+	transactionsTable, requestsTable := q.Table(db.table.Transactions), q.Table(db.table.Requests)
+	query, args := q.Select().
+		Fields(
+			transactionsTable.Field("tx_id"), common3.FieldName("action_type"), common3.FieldName("sender_eid"),
+			common3.FieldName("recipient_eid"), common3.FieldName("token_type"), common3.FieldName("amount"),
+			requestsTable.Field("status"), requestsTable.Field("application_metadata"),
+			requestsTable.Field("public_metadata"), requestsTable.Field("stored_at"),
+		).
+		From(transactionsTable.Join(requestsTable,
+			cond.Cmp(transactionsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
+		).
+		Where(cond.And(
+			cond.Eq("status", driver4.Pending),
+			cond.Lt("stored_at", storedBefore),
+		)).
+		OrderBy(q.Asc(common3.FieldName("stored_at"))).
+		Format(db.ci)
+
+	logging.Debug(logger, query, args)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	results := common.NewIterator(rows, func(r *driver4.TransactionRecord) error {
+		var amount BigInt
+		var appMeta []byte
+		var pubMeta []byte
+		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amount, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
+			return err
+		}
+		r.Amount = amount.Int
+
+		return errors2.Join(
+			unmarshal(appMeta, &r.ApplicationMetadata),
+			unmarshal(pubMeta, &r.PublicMetadata),
+		)
+	})
+
+	return iterators.ReadAllPointers(results)
 }
 
 func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, txID string, endorser token.Identity, sigma []byte) (err error) {

@@ -63,7 +63,7 @@ func NewDriverWithDbProvider(config driver3.Config, dbProvider postgres.DbProvid
 	d.Identity = newIdentityStoreProvider(dbProvider)
 	d.Token = newTokenStoreProvider(dbProvider)
 	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore)
-	d.OwnerTx = newProviderWithKeyMapper(dbProvider, NewTransactionStore)
+	d.OwnerTx = newTransactionStoreProvider(dbProvider)
 	d.KeyStore = newProviderWithKeyMapper(dbProvider, NewKeystoreStore)
 
 	return d
@@ -152,6 +152,51 @@ func newIdentityStoreProvider(dbProvider postgres.DbProvider) lazy.Provider[post
 			&postgres.ErrorMapper{},
 			notifier,
 		)
+		if err != nil {
+			return nil, err
+		}
+		if !o.SkipCreateTable {
+			if err := p.CreateSchema(); err != nil {
+				return nil, err
+			}
+			if err := notifier.CreateSchema(); err != nil {
+				return nil, err
+			}
+		}
+
+		return p, nil
+	})
+}
+
+// newTransactionStoreProvider returns a lazy provider for TransactionStore with notifier support.
+func newTransactionStoreProvider(dbProvider postgres.DbProvider) lazy.Provider[postgres.Config, *TransactionStore] {
+	return lazy.NewProviderWithKeyMapper(key, func(o postgres.Config) (*TransactionStore, error) {
+		opts := postgres.Opts{
+			DataSource:      o.DataSource,
+			MaxOpenConns:    o.MaxOpenConns,
+			MaxIdleConns:    *o.MaxIdleConns,
+			MaxIdleTime:     *o.MaxIdleTime,
+			TablePrefix:     o.TablePrefix,
+			TableNameParams: o.TableNameParams,
+			Tracing:         o.Tracing,
+		}
+		dbs, err := dbProvider.Get(opts)
+		if err != nil {
+			return nil, err
+		}
+		tableNames, err := common3.GetTableNames(o.TablePrefix, o.TableNameParams...)
+		if err != nil {
+			return nil, err
+		}
+
+		// notifier
+		notifier, err := NewTransactionNotifier(dbs, tableNames, o.DataSource)
+		if err != nil {
+			return nil, err
+		}
+
+		// db
+		p, err := NewTransactionStoreWithNotifier(dbs, tableNames, notifier)
 		if err != nil {
 			return nil, err
 		}
