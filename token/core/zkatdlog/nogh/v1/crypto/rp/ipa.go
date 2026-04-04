@@ -7,6 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package rp
 
 import (
+	"runtime"
+	"sync"
+
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
@@ -381,17 +384,62 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 	return leftPrime, rightPrime
 }
 
-// reduceGenerators reduces the number of generators passed in the parameters by 1/2,
-// as a function of the old generators,  x and 1/x
+// minParallelWork is the minimum number of generator pairs per side required to justify launching a goroutine pool.
+// Below this threshold the goroutine scheduling overhead exceeds the compute gain.
+// IPA rounds 4-6 produce l=4, 2, 1 for a 64-bit proof, all below this threshold and handled serially.
+const minParallelWork = 8
+
+// reduceGenerators reduces the number of generators by half each IPA round.
+// For l >= minParallelWork it uses a bounded goroutine pool of size min(runtime.NumCPU(), l)
+// to compute outputs concurrently, with each goroutine processing a contiguous chunk of indices
+// to preserve cache locality. For l < minParallelWork it runs serially to avoid goroutine
+// scheduling overhead dominating small workloads.
 func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*mathlib.G1, []*mathlib.G1) {
 	l := len(leftGen) / 2
-	for i := range l {
-		// G_i = G_i^{x_inv}*G_{i+len(left)/2}^x
-		leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
-		// H_i = H_i^{x}*H_{i+len(right)/2}^{x_inv}
-		rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
+
+	// Serial path: last few IPA rounds have tiny l where goroutine overhead
+	// costs more than it saves.
+	if l < minParallelWork {
+		for i := range l {
+			leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
+			rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
+		}
+		return leftGen[:l], rightGen[:l]
 	}
 
+	// Bounded pool: cap concurrency at NumCPU so we never create more
+	// goroutines than the scheduler can run without contention.
+	numWorkers := runtime.GOMAXPROCS(0)
+	if numWorkers > l {
+		numWorkers = l
+	}
+
+	// Divide l indices into numWorkers contiguous chunks.
+	// Contiguous chunks preserve cache locality — each goroutine
+	// works on a sequential region of the generator slice.
+	chunkSize := (l + numWorkers - 1) / numWorkers // ceiling division
+
+	var wg sync.WaitGroup
+	wg.Add(numWorkers)
+
+	for w := range numWorkers {
+		start := w * chunkSize
+		end := start + chunkSize
+		if end > l {
+			end = l
+		}
+		go func(start, end int) {
+			defer wg.Done()
+			for i := start; i < end; i++ {
+				// G_i = G_i^{x_inv} * G_{i+l}^x
+				leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
+				// H_i = H_i^x * H_{i+l}^{x_inv}
+				rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
+			}
+		}(start, end)
+	}
+
+	wg.Wait()
 	return leftGen[:l], rightGen[:l]
 }
 
