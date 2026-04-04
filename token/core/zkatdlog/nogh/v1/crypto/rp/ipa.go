@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package rp
 
 import (
+	"sync"
+
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
@@ -385,12 +387,22 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 // as a function of the old generators,  x and 1/x
 func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*mathlib.G1, []*mathlib.G1) {
 	l := len(leftGen) / 2
+	// Each output index i depends only on leftGen[i], leftGen[i+l], rightGen[i], rightGen[i+l] is fully independent of
+	// every other index.
+	// therefore launching one goroutine per index so all l outputs are computed concurrently instead of sequentially.
+	var wg sync.WaitGroup
+	wg.Add(l)
 	for i := range l {
-		// G_i = G_i^{x_inv}*G_{i+len(left)/2}^x
-		leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
-		// H_i = H_i^{x}*H_{i+len(right)/2}^{x_inv}
-		rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
+		i := i // capture loop variable before the goroutine closes over it
+		go func() {
+			defer wg.Done()
+			// G_i = G_i^{x_inv}*G_{i+l}^x
+			leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
+			// H_i = H_i^{x}*H_{i+l}^{x_inv}
+			rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
+		}()
 	}
+	wg.Wait()
 
 	return leftGen[:l], rightGen[:l]
 }
