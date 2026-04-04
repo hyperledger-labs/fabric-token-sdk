@@ -217,7 +217,7 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 				} else {
 					assert.NotNil(t, sum)
 					change, subErr := sum.Sub(quantity)
-					assert.NoError(t, subErr)
+					require.NoError(t, subErr)
 					assert.GreaterOrEqual(t, change.ToBigInt().Int64(), int64(0))
 					assert.NotEmpty(t, tokens)
 					require.NoError(t, deleteTokensAndStoreChange(replica, tokens, change))
