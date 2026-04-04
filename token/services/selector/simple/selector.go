@@ -114,15 +114,16 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			}
 
 			// lock the token
-			if _, err := s.locker.Lock(ctx, &t.Id, s.txID, reclaim); err != nil {
-				potentialSumWithLocked, err = potentialSumWithLocked.Add(q)
-				if err != nil {
+			if _, lockErr := s.locker.Lock(ctx, &t.Id, s.txID, reclaim); lockErr != nil {
+				var addErr error
+				potentialSumWithLocked, addErr = potentialSumWithLocked.Add(q)
+				if addErr != nil {
 					s.locker.UnlockIDs(ctx, toBeSpent...)
 					s.locker.UnlockIDs(ctx, toBeCertified...)
-					return nil, nil, errors.Wrap(err, "failed to add locked quantity")
+					return nil, nil, errors.Wrap(addErr, "failed to add locked quantity")
 				}
 
-				logger.DebugfContext(ctx, "token [%s,%v] cannot be locked [%s]", q, tokenType, err)
+				logger.DebugfContext(ctx, "token [%s,%v] cannot be locked [%s]", q, tokenType, lockErr)
 
 				continue
 			}
