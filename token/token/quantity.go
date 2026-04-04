@@ -18,13 +18,13 @@ import (
 // Quantity models an immutable token quantity and its basic operations.
 type Quantity interface {
 
-	// Add returns this + b modifying this.
-	// If an overflow occurs, it returns an error.
-	Add(b Quantity) Quantity
+	// Add returns a new Quantity whose value is this + b.
+	// It returns an error on type mismatch or overflow.
+	Add(b Quantity) (Quantity, error)
 
-	// Sub returns this - b modifying this.
-	// If an overflow occurs, it returns an error.
-	Sub(b Quantity) Quantity
+	// Sub returns a new Quantity whose value is this - b.
+	// It returns an error on type mismatch or underflow.
+	Sub(b Quantity) (Quantity, error)
 
 	// Cmp compares this and b and returns:
 	//
@@ -79,7 +79,7 @@ func ToQuantitySum(precision uint64) iterators.Reducer[*UnspentToken, Quantity] 
 			return nil, err
 		}
 
-		return sum.Add(q), nil
+		return sum.Add(q)
 	})
 }
 
@@ -152,42 +152,34 @@ func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
 	return &BigQuantity{Int: v, Precision: precision}, nil
 }
 
-func (q *BigQuantity) Add(b Quantity) Quantity {
+func (q *BigQuantity) Add(b Quantity) (Quantity, error) {
 	bq, ok := b.(*BigQuantity)
 	if !ok {
-		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
+		return nil, errors.Errorf("expected BigQuantity, got [%T]", b)
 	}
 
-	// Check overflow
-	sum := big.NewInt(0)
-	sum = sum.Add(q.Int, bq.Int)
+	sum := new(big.Int).Add(q.Int, bq.Int)
 
 	// #nosec G115
 	if sum.BitLen() > int(q.Precision) {
-		panic(fmt.Sprintf("%s < %s", q.Text(10), b.Decimal()))
+		return nil, errors.Errorf("overflow: %s + %s exceeds precision %d", q.Text(10), b.Decimal(), q.Precision)
 	}
 
-	q.Int = sum
-
-	return q
+	return &BigQuantity{Int: sum, Precision: q.Precision}, nil
 }
 
-func (q *BigQuantity) Sub(b Quantity) Quantity {
+func (q *BigQuantity) Sub(b Quantity) (Quantity, error) {
 	bq, ok := b.(*BigQuantity)
 	if !ok {
-		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
+		return nil, errors.Errorf("expected BigQuantity, got [%T]", b)
 	}
 
-	// Check overflow
-	if q.Cmp(bq) < 0 {
-		panic(fmt.Sprintf("%s < %s", q.Text(10), b.Decimal()))
+	if q.Int.Cmp(bq.Int) < 0 {
+		return nil, errors.Errorf("underflow: %s < %s", q.Text(10), b.Decimal())
 	}
-	diff := big.NewInt(0)
-	diff.Sub(q.Int, b.(*BigQuantity).Int)
 
-	q.Int = diff
-
-	return q
+	diff := new(big.Int).Sub(q.Int, bq.Int)
+	return &BigQuantity{Int: diff, Precision: q.Precision}, nil
 }
 
 // Cmp compares x and y and returns:
@@ -228,39 +220,31 @@ func NewQuantityFromUInt64(q uint64) Quantity {
 	return &UInt64Quantity{Value: q}
 }
 
-func (q *UInt64Quantity) Add(b Quantity) Quantity {
+func (q *UInt64Quantity) Add(b Quantity) (Quantity, error) {
 	bq, ok := b.(*UInt64Quantity)
 	if !ok {
-		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
+		return nil, errors.Errorf("expected UInt64Quantity, got [%T]", b)
 	}
 
-	// Check overflow
-	var sum = q.Value + bq.Value
-
+	sum := q.Value + bq.Value
 	if sum < q.Value {
-		panic(fmt.Sprintf("%d < %d", q.Value, bq.Value))
+		return nil, errors.Errorf("overflow: %d + %d exceeds uint64", q.Value, bq.Value)
 	}
 
-	q.Value = sum
-
-	return q
+	return &UInt64Quantity{Value: sum}, nil
 }
 
-func (q *UInt64Quantity) Sub(b Quantity) Quantity {
+func (q *UInt64Quantity) Sub(b Quantity) (Quantity, error) {
 	bq, ok := b.(*UInt64Quantity)
 	if !ok {
-		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
+		return nil, errors.Errorf("expected UInt64Quantity, got [%T]", b)
 	}
 
-	// Check overflow
 	if bq.Value > q.Value {
-		panic(fmt.Sprintf("%d < %d", q.Value, bq.Value))
+		return nil, errors.Errorf("underflow: %d < %d", q.Value, bq.Value)
 	}
-	diff := q.Value - bq.Value
 
-	q.Value = diff
-
-	return q
+	return &UInt64Quantity{Value: q.Value - bq.Value}, nil
 }
 
 func (q *UInt64Quantity) Cmp(b Quantity) int {
