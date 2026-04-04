@@ -205,7 +205,10 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			}
 			s.logger.DebugfContext(ctx, "Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
 			immediateRetries = 0
-			sum.Add(q)
+			sum, err = sum.Add(q)
+			if err != nil {
+				return nil, nil, immediateRetries, errors.Wrap(err, "failed to add quantity")
+			}
 			selected.Add(&t.Id)
 			if sum.Cmp(quantity) >= 0 {
 				return selected.ToSlice(), sum, immediateRetries, nil

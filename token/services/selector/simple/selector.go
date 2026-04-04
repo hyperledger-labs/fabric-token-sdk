@@ -115,7 +115,12 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 
 			// lock the token
 			if _, err := s.locker.Lock(ctx, &t.Id, s.txID, reclaim); err != nil {
-				potentialSumWithLocked = potentialSumWithLocked.Add(q)
+				potentialSumWithLocked, err = potentialSumWithLocked.Add(q)
+				if err != nil {
+					s.locker.UnlockIDs(ctx, toBeSpent...)
+					s.locker.UnlockIDs(ctx, toBeCertified...)
+					return nil, nil, errors.Wrap(err, "failed to add locked quantity")
+				}
 
 				logger.DebugfContext(ctx, "token [%s,%v] cannot be locked [%s]", q, tokenType, err)
 
@@ -125,8 +130,18 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			// Append token
 			logger.DebugfContext(ctx, "adding quantity [%s]", q.Decimal())
 			toBeSpent = append(toBeSpent, &t.Id)
-			sum = sum.Add(q)
-			potentialSumWithLocked = potentialSumWithLocked.Add(q)
+			sum, err = sum.Add(q)
+			if err != nil {
+				s.locker.UnlockIDs(ctx, toBeSpent...)
+				s.locker.UnlockIDs(ctx, toBeCertified...)
+				return nil, nil, errors.Wrap(err, "failed to add quantity")
+			}
+			potentialSumWithLocked, err = potentialSumWithLocked.Add(q)
+			if err != nil {
+				s.locker.UnlockIDs(ctx, toBeSpent...)
+				s.locker.UnlockIDs(ctx, toBeCertified...)
+				return nil, nil, errors.Wrap(err, "failed to add quantity")
+			}
 
 			if target.Cmp(sum) <= 0 {
 				break

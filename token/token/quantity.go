@@ -15,17 +15,16 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 )
 
-// Quantity models a token quantity and its basic operations.
-// Note: Operations mutate the receiver and are NOT thread-safe.
-// Do not share Quantity instances across goroutines without synchronization.
+// Quantity models an immutable token quantity and its basic operations.
 type Quantity interface {
-	// Add returns this + b, modifying this in place.
-	// Panics if an overflow occurs or if b is not the same concrete type.
-	Add(b Quantity) Quantity
 
-	// Sub returns this - b, modifying this in place.
-	// Panics if the result would be negative or if b is not the same concrete type.
-	Sub(b Quantity) Quantity
+	// Add returns a new Quantity whose value is this + b.
+	// It returns an error on type mismatch or overflow.
+	Add(b Quantity) (Quantity, error)
+
+	// Sub returns a new Quantity whose value is this - b.
+	// It returns an error on type mismatch or underflow.
+	Sub(b Quantity) (Quantity, error)
 
 	// Cmp compares this and b and returns:
 	//
@@ -92,14 +91,8 @@ func ToQuantitySum(precision uint64) iterators.Reducer[*UnspentToken, Quantity] 
 		if err != nil {
 			return nil, err
 		}
-		// Recover from panic and convert to error
-		defer func() {
-			if r := recover(); r != nil {
-				err = errors.Errorf("overflow in quantity sum: %v", r)
-			}
-		}()
 
-		return sum.Add(q), err
+		return sum.Add(q)
 	})
 }
 
@@ -165,50 +158,35 @@ func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
 	return &BigQuantity{Int: v, Precision: precision}, nil
 }
 
-func (q *BigQuantity) Add(b Quantity) Quantity {
+func (q *BigQuantity) Add(b Quantity) (Quantity, error) {
 	bq, ok := b.(*BigQuantity)
 	if !ok {
-		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
+		return nil, errors.Errorf("expected BigQuantity, got [%T]", b)
 	}
 
-	if q.Precision != bq.Precision {
-		panic(fmt.Sprintf("precision mismatch: %d != %d", q.Precision, bq.Precision))
-	}
-
-	// Check overflow
-	sum := big.NewInt(0)
-	sum = sum.Add(q.Int, bq.Int)
+	sum := new(big.Int).Add(q.Int, bq.Int)
 
 	// #nosec G115
 	if sum.BitLen() > int(q.Precision) {
-		panic("addition overflow: result exceeds precision")
+		return nil, errors.Errorf("overflow: %s + %s exceeds precision %d", q.Text(10), b.Decimal(), q.Precision)
 	}
 
-	q.Int = sum
-
-	return q
+	return &BigQuantity{Int: sum, Precision: q.Precision}, nil
 }
 
-func (q *BigQuantity) Sub(b Quantity) Quantity {
+func (q *BigQuantity) Sub(b Quantity) (Quantity, error) {
 	bq, ok := b.(*BigQuantity)
 	if !ok {
-		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
+		return nil, errors.Errorf("expected BigQuantity, got [%T]", b)
 	}
 
-	if q.Precision != bq.Precision {
-		panic(fmt.Sprintf("precision mismatch: %d != %d", q.Precision, bq.Precision))
+	if q.Int.Cmp(bq.Int) < 0 {
+		return nil, errors.Errorf("underflow: %s < %s", q.Text(10), b.Decimal())
 	}
 
-	// Check underflow
-	if q.Cmp(bq) < 0 {
-		panic("subtraction underflow: result would be negative")
-	}
-	diff := big.NewInt(0)
-	diff.Sub(q.Int, bq.Int)
+	diff := new(big.Int).Sub(q.Int, bq.Int)
 
-	q.Int = diff
-
-	return q
+	return &BigQuantity{Int: diff, Precision: q.Precision}, nil
 }
 
 // Cmp compares x and y and returns:
@@ -268,39 +246,31 @@ func NewQuantityFromUInt64(q uint64) Quantity {
 	return &UInt64Quantity{Value: q}
 }
 
-func (q *UInt64Quantity) Add(b Quantity) Quantity {
+func (q *UInt64Quantity) Add(b Quantity) (Quantity, error) {
 	bq, ok := b.(*UInt64Quantity)
 	if !ok {
-		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
+		return nil, errors.Errorf("expected UInt64Quantity, got [%T]", b)
 	}
 
-	// Check overflow
 	sum := q.Value + bq.Value
-
 	if sum < q.Value {
-		panic("addition overflow: result exceeds uint64 max")
+		return nil, errors.Errorf("overflow: %d + %d exceeds uint64", q.Value, bq.Value)
 	}
 
-	q.Value = sum
-
-	return q
+	return &UInt64Quantity{Value: sum}, nil
 }
 
-func (q *UInt64Quantity) Sub(b Quantity) Quantity {
+func (q *UInt64Quantity) Sub(b Quantity) (Quantity, error) {
 	bq, ok := b.(*UInt64Quantity)
 	if !ok {
-		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
+		return nil, errors.Errorf("expected UInt64Quantity, got [%T]", b)
 	}
 
-	// Check underflow
 	if bq.Value > q.Value {
-		panic("subtraction underflow: result would be negative")
+		return nil, errors.Errorf("underflow: %d < %d", q.Value, bq.Value)
 	}
-	diff := q.Value - bq.Value
 
-	q.Value = diff
-
-	return q
+	return &UInt64Quantity{Value: q.Value - bq.Value}, nil
 }
 
 func (q *UInt64Quantity) Cmp(b Quantity) int {
