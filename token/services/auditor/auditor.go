@@ -97,6 +97,7 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks", tx.ID())
 	if err := a.auditDB.AcquireLocks(ctx, string(request.Anchor), eids...); err != nil {
 		a.metrics.AuditLockConflicts.Add(1)
+
 		return nil, nil, err
 	}
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks done", tx.ID())
@@ -119,6 +120,7 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 	// append request to audit db
 	if err := a.auditDB.Append(ctx, newRequestWrapper(tx.Request(), tms)); err != nil {
 		a.metrics.AppendErrors.Add(1)
+
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
