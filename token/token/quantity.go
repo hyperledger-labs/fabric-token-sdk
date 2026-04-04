@@ -42,6 +42,9 @@ type Quantity interface {
 
 	// ToBigInt returns the big int representation of this quantity
 	ToBigInt() *big.Int
+
+	// Clone returns a deep copy of this quantity
+	Clone() Quantity
 }
 
 // ToQuantity converts a string q to a Quantity of a given precision.
@@ -220,6 +223,10 @@ func (q *BigQuantity) ToBigInt() *big.Int {
 	return (&big.Int{}).Set(q.Int)
 }
 
+func (q *BigQuantity) Clone() Quantity {
+	return &BigQuantity{Int: new(big.Int).Set(q.Int), Precision: q.Precision}
+}
+
 type UInt64Quantity struct {
 	Value uint64
 }
@@ -288,4 +295,8 @@ func (q *UInt64Quantity) Decimal() string {
 
 func (q *UInt64Quantity) ToBigInt() *big.Int {
 	return big.NewInt(0).SetUint64(q.Value)
+}
+
+func (q *UInt64Quantity) Clone() Quantity {
+	return &UInt64Quantity{Value: q.Value}
 }
