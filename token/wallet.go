@@ -104,16 +104,14 @@ func (wm *WalletManager) OwnerWalletIDs(ctx context.Context) ([]string, error) {
 
 // OwnerWallet returns the owner wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
-// If no wallet is found, it returns nil.
-func (wm *WalletManager) OwnerWallet(ctx context.Context, id WalletLookupID) *OwnerWallet {
+// If no wallet is found, it returns an error.
+func (wm *WalletManager) OwnerWallet(ctx context.Context, id WalletLookupID) (*OwnerWallet, error) {
 	w, err := wm.walletService.OwnerWallet(ctx, id)
 	if err != nil {
-		wm.managementService.logger.DebugfContext(ctx, "failed to get owner wallet for id [%s]: [%s]", id, err)
-
-		return nil
+		return nil, err
 	}
 
-	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
+	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}, nil
 }
 
 // IssuerWallet returns the issuer wallet bound to the passed identifier, if any is available.

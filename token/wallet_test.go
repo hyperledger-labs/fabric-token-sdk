@@ -150,8 +150,9 @@ func TestWalletManager_OwnerWallet(t *testing.T) {
 	mockWS.OwnerWalletReturns(mockOW, nil)
 
 	ctx := context.Background()
-	wallet := wm.OwnerWallet(ctx, "alice")
+	wallet, err := wm.OwnerWallet(ctx, "alice")
 
+	assert.NoError(t, err)
 	assert.NotNil(t, wallet)
 	assert.Equal(t, mockOW, wallet.w)
 }
@@ -167,8 +168,9 @@ func TestWalletManager_OwnerWallet_Error(t *testing.T) {
 	mockWS.OwnerWalletReturns(nil, errors.New("wallet not found"))
 
 	ctx := context.Background()
-	wallet := wm.OwnerWallet(ctx, "unknown")
+	wallet, err := wm.OwnerWallet(ctx, "unknown")
 
+	assert.Error(t, err)
 	assert.Nil(t, wallet)
 }
 

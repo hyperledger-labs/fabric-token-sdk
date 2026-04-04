@@ -35,9 +35,9 @@ type BalanceView struct {
 func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(b.TMSID))
 	assert.NoError(err)
-	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
-	if wallet == nil {
-		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
+	wallet, err := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
+	if err != nil {
+		return nil, fmt.Errorf("wallet %s not found: %w", b.Wallet, err)
 	}
 
 	balance, err := wallet.Balance(context.Context(), token.WithType(b.Type))
