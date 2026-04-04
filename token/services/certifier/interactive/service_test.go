@@ -21,7 +21,7 @@ import (
 // This avoids import cycles that would occur if mocks were in interactive/mock, since the
 // Backend interface references *CertificationRequest from the interactive package.
 
-// Test construction of a new CertificationService
+// TestNewCertificationService verifies construction of a new CertificationService.
 func TestNewCertificationService(t *testing.T) {
 	responderRegistry := &ResponderRegistryMock{}
 	backend := &BackendMock{}
@@ -37,7 +37,8 @@ func TestNewCertificationService(t *testing.T) {
 	assert.Empty(t, service.wallets)
 }
 
-// Test calling Start() for a new CertificationService
+// TestCertificationService_Start_Success verifies that Start succeeds when
+// RegisterResponder succeeds.
 func TestCertificationService_Start_Success(t *testing.T) {
 	responderRegistry := &ResponderRegistryMock{}
 	backend := &BackendMock{}
@@ -46,14 +47,12 @@ func TestCertificationService_Start_Success(t *testing.T) {
 	service := NewCertificationService(responderRegistry, mp, backend)
 
 	err := service.Start()
-	require.NoError(t, err, "Start should succeed when RegisterResponder succeeds")
-
-	// Verify RegisterResponder was called once
+	require.NoError(t, err)
 	assert.Equal(t, 1, responderRegistry.RegisterResponderCallCount())
 }
 
-// Test that calling Start() for a new CertificationService
-// doesn't fail even when the RegisterResponder fails
+// TestCertificationService_Start_RegistrationError verifies that Start propagates
+// errors returned by RegisterResponder.
 func TestCertificationService_Start_RegistrationError(t *testing.T) {
 	expectedErr := errors.New("registration failed")
 	responderRegistry := &ResponderRegistryMock{}
@@ -65,15 +64,28 @@ func TestCertificationService_Start_RegistrationError(t *testing.T) {
 	service := NewCertificationService(responderRegistry, mp, backend)
 
 	err := service.Start()
-	// Note: The Start() method returns nil even if RegisterResponder fails
-	// This appears to be intentional behavior (logs error but doesn't fail)
-	require.NoError(t, err)
-
-	// Verify RegisterResponder was called once
+	require.ErrorIs(t, err, expectedErr)
 	assert.Equal(t, 1, responderRegistry.RegisterResponderCallCount())
 }
 
-// Test that the String summary of a CertificationRequest is as expected
+// TestCertificationService_Start_OnlyOnce verifies that repeated Start calls only
+// register the responder once.
+func TestCertificationService_Start_OnlyOnce(t *testing.T) {
+	responderRegistry := &ResponderRegistryMock{}
+	backend := &BackendMock{}
+	mp := &disabled.Provider{}
+
+	service := NewCertificationService(responderRegistry, mp, backend)
+
+	require.NoError(t, service.Start())
+	require.NoError(t, service.Start())
+	require.NoError(t, service.Start())
+
+	// RegisterResponder must have been called exactly once.
+	assert.Equal(t, 1, responderRegistry.RegisterResponderCallCount())
+}
+
+// TestCertificationRequest_String verifies the String summary.
 func TestCertificationRequest_String(t *testing.T) {
 	cr := &CertificationRequest{
 		Network:   "test-network",
@@ -90,7 +102,7 @@ func TestCertificationRequest_String(t *testing.T) {
 	assert.Contains(t, str, "test-namespace")
 }
 
-// Test the construction of a new CertificationRequestView
+// TestNewCertificationRequestView verifies construction of a CertificationRequestView.
 func TestNewCertificationRequestView(t *testing.T) {
 	channel := "test-channel"
 	namespace := "test-namespace"
