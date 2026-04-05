@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package rp
 
 import (
-	"sync"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
@@ -119,17 +117,16 @@ func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 	rc := &RangeCorrectness{
 		Proofs: make([]*RangeProof, n),
 	}
-	// Each range proof depends only on Commitments[i], Values[i], and
-	// BlindingFactors[i]. The shared parameters PedersenParameters,
-	// LeftGenerators, RightGenerators, P, Q, Curve are only read,
-	// never written. We can therefore generate all proofs concurrently.
 	errs := make([]error, n)
-	var wg sync.WaitGroup
-	wg.Add(n)
-	for i := range n {
-		i := i // capture loop variable before the goroutine closes over it
-		go func() {
-			defer wg.Done()
+
+	// The Executor abstraction enables flexible execution strategies:
+	// serial execution for small batches (avoids overhead)
+	// bounded parallel execution for larger batches (improves throughput)
+	executor := NewExecutor(n)
+
+	for i := 0; i < n; i++ {
+		i := i
+		executor.Submit(func() {
 			bp := NewRangeProver(
 				p.Commitments[i],
 				p.Values[i],
@@ -144,9 +141,10 @@ func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 				p.Curve,
 			)
 			rc.Proofs[i], errs[i] = bp.Prove()
-		}()
+		})
 	}
-	wg.Wait()
+
+	executor.Wait()
 	for _, err := range errs {
 		if err != nil {
 			return nil, err
@@ -204,17 +202,21 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	}
 	n := len(rc.Proofs)
 	errs := make([]error, n)
-	var wg sync.WaitGroup
-	wg.Add(n)
-	for i := range n {
-		i := i // capture loop variable before the goroutine closes over it
-		go func() {
-			defer wg.Done()
+
+	// The Executor abstraction allows switching between:
+	// serial execution (lower latency, no goroutine overhead)
+	// parallel execution (higher throughput with bounded concurrency)
+	executor := NewExecutor(n)
+
+	for i := 0; i < n; i++ {
+		i := i
+		executor.Submit(func() {
 			if rc.Proofs[i] == nil {
 				errs[i] = errors.Errorf("invalid range proof: nil proof at index %d", i)
 
 				return
 			}
+
 			bv := NewRangeVerifier(
 				v.Commitments[i],
 				v.PedersenParameters,
@@ -226,10 +228,12 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 				v.BitLength,
 				v.Curve,
 			)
+
 			errs[i] = bv.Verify(rc.Proofs[i])
-		}()
+		})
 	}
-	wg.Wait()
+
+	executor.Wait()
 	for i, err := range errs {
 		if err != nil {
 			return errors.Wrapf(err, "invalid range proof at index %d", i)
