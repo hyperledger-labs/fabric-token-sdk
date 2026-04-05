@@ -236,16 +236,6 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, signature []byte) (token.Identity, error) {
 	logger.DebugfContext(context.Context(), "Validate auditing")
 
-	if vskipAuditorVerification, __fpErr := __fp_skipAuditorVerification.Acquire(); __fpErr == nil {
-		_, __fpTypeOK := vskipAuditorVerification.(struct{})
-		if !__fpTypeOK {
-			goto __badTypeskipAuditorVerification
-		}
-		return a.tx.Opts.Auditor, nil
-	__badTypeskipAuditorVerification:
-		__fp_skipAuditorVerification.BadType(vskipAuditorVerification, "struct{}")
-	}
-
 	// check the signature
 	signed, err := a.tx.MarshallToAudit()
 	if err != nil {
