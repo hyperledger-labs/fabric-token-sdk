@@ -44,6 +44,12 @@ func (s *extendedSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 func (s *extendedSelector) Close() error { return s.Selector.Close() }
 
 func (s *extendedSelector) Unselect(id ...*token2.ID) {
+	if unlocker, ok := s.Selector.(interface{ UnlockAll(context.Context) error }); ok {
+		_ = unlocker.UnlockAll(context.Background())
+
+		return
+	}
+
 	if s.Lock != nil {
 		s.Lock.UnlockIDs(context.Background(), id...)
 	}

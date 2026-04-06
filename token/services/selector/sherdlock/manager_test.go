@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/multiplexed"
@@ -234,6 +235,53 @@ func TestManager_NewSelector(t *testing.T) {
 		require.NoError(t, err2)
 		assert.NotEqual(t, selector1, selector2)
 	})
+}
+
+func TestManager_NewSelector_SharesLocalLocksAcrossSelectors(t *testing.T) {
+	tok := &token2.UnspentTokenInWallet{
+		Id:       token2.ID{TxId: "tx-shared", Index: 0},
+		Type:     "USD",
+		Quantity: "1",
+	}
+
+	var lockCalls atomic.Int32
+	mockFetcher := &mockTokenFetcher{
+		unspentTokensIteratorByFunc: func(_ context.Context, _ string, _ token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+			return collections.NewSliceIterator([]*token2.UnspentTokenInWallet{tok}), nil
+		},
+	}
+	mockLocker := &mockLocker{
+		lockFunc: func(_ context.Context, _ *token2.ID, _ transaction.ID) error {
+			lockCalls.Add(1)
+
+			return nil
+		},
+	}
+
+	m := NewManager(
+		mockFetcher,
+		mockLocker,
+		100,
+		NoBackoff,
+		0,
+		0,
+		0,
+		NewMetrics(&disabled.Provider{}),
+	)
+
+	selector1, err := m.NewSelector("tx-1")
+	require.NoError(t, err)
+
+	_, _, err = selector1.Select(t.Context(), &ownerFilter{id: "wallet1"}, "1", "USD")
+	require.NoError(t, err)
+
+	selector2, err := m.NewSelector("tx-2")
+	require.NoError(t, err)
+
+	_, _, err = selector2.Select(t.Context(), &ownerFilter{id: "wallet1"}, "1", "USD")
+	require.Error(t, err)
+	require.ErrorIs(t, err, token.SelectorSufficientButLockedFunds)
+	assert.Equal(t, int32(1), lockCalls.Load(), "second selector should skip DB lock attempt for locally known locked token")
 }
 
 func TestManager_Unlock(t *testing.T) {

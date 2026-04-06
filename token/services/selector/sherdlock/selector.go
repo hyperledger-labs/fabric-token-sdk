@@ -46,9 +46,69 @@ type selector struct {
 	cache     iterator[*token2.UnspentTokenInWallet]
 	fetcher   tokenFetcher
 	locker    tokenLocker
+	txID      transaction.ID
 	precision uint64
 	metrics   *Metrics
 	mu        sync.Mutex // protects cache field for concurrent Close() calls
+	sharedOn  bool
+	shared    *localTokenLockTracker
+}
+
+type localTokenLockTracker struct {
+	mu      sync.RWMutex
+	locked  map[token2.ID]transaction.ID
+	byOwner map[transaction.ID]map[token2.ID]struct{}
+}
+
+func newLocalTokenLockTracker() *localTokenLockTracker {
+	return &localTokenLockTracker{
+		locked:  make(map[token2.ID]transaction.ID),
+		byOwner: make(map[transaction.ID]map[token2.ID]struct{}),
+	}
+}
+
+func (l *localTokenLockTracker) txIDFor(tokenID token2.ID) (transaction.ID, bool) {
+	l.mu.RLock()
+	txID, ok := l.locked[tokenID]
+	l.mu.RUnlock()
+
+	return txID, ok
+}
+
+func (l *localTokenLockTracker) lock(tokenID token2.ID, txID transaction.ID) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	current, ok := l.locked[tokenID]
+	if ok {
+		return current == txID
+	}
+
+	l.locked[tokenID] = txID
+	if _, ok := l.byOwner[txID]; !ok {
+		l.byOwner[txID] = make(map[token2.ID]struct{})
+	}
+	l.byOwner[txID][tokenID] = struct{}{}
+
+	return true
+}
+
+func (l *localTokenLockTracker) unlockAllOwned(txID transaction.ID) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	tokens, ok := l.byOwner[txID]
+	if !ok {
+		return
+	}
+
+	for tokenID := range tokens {
+		current, exists := l.locked[tokenID]
+		if exists && current == txID {
+			delete(l.locked, tokenID)
+		}
+	}
+	delete(l.byOwner, txID)
 }
 
 type stubbornSelector struct {
@@ -85,7 +145,7 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 		select {
 		case <-time.After(backoffDuration):
 		case <-ctx.Done():
-			if err := m.locker.UnlockAll(ctx); err != nil {
+			if err := m.UnlockAll(ctx); err != nil {
 				m.logger.Errorf("failed to unlock tokens on context cancellation: %s", err)
 			}
 			m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
@@ -103,21 +163,36 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 }
 
 func NewStubbornSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration, retries int, m *Metrics) *stubbornSelector {
+	return newStubbornSelector(logger, tokenDB, lockDB, "", precision, backoff, retries, newLocalTokenLockTracker(), false, m)
+}
+
+func newStubbornSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, txID transaction.ID, precision uint64, backoff time.Duration, retries int, shared *localTokenLockTracker, sharedOn bool, m *Metrics) *stubbornSelector {
 	return &stubbornSelector{
-		selector:               NewSelector(logger, tokenDB, lockDB, precision, m),
+		selector:               newSelector(logger, tokenDB, lockDB, txID, precision, shared, sharedOn, m),
 		backoffInterval:        backoff,
 		maxRetriesAfterBackoff: retries,
 	}
 }
 
 func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, m *Metrics) *selector {
+	return newSelector(logger, tokenDB, lockDB, "", precision, newLocalTokenLockTracker(), false, m)
+}
+
+func newSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, txID transaction.ID, precision uint64, shared *localTokenLockTracker, sharedOn bool, m *Metrics) *selector {
+	if shared == nil {
+		shared = newLocalTokenLockTracker()
+	}
+
 	return &selector{
 		logger:    logger,
 		cache:     collections.NewEmptyIterator[*token2.UnspentTokenInWallet](),
 		fetcher:   tokenDB,
 		locker:    lockDB,
+		txID:      txID,
 		precision: precision,
 		metrics:   m,
+		sharedOn:  sharedOn,
+		shared:    shared,
 	}
 }
 
@@ -155,9 +230,10 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 		return nil, nil, 0, errors.Wrapf(err, "failed to create quantity")
 	}
 	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(s.precision), collections.NewSet[*token2.ID](), true, 0
+	ownedLocally := make(map[token2.ID]struct{})
 	for {
 		if t, err := s.cache.Next(); err != nil {
-			err2 := s.locker.UnlockAll(ctx)
+			err2 := s.UnlockAll(ctx)
 
 			return nil, nil, immediateRetries, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), tokenType, err2)
 		} else if t == nil {
@@ -173,7 +249,7 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 
 			if immediateRetries > maxImmediateRetries {
 				s.logger.Warnf("Exceeded max number of immediate retries. Unlock tokens and abort...")
-				if err := s.locker.UnlockAll(ctx); err != nil {
+				if err := s.UnlockAll(ctx); err != nil {
 					return nil, nil, immediateRetries, errors.Wrapf(err, "exceeded number of retries: %d and unlock failed", maxImmediateRetries)
 				}
 
@@ -187,18 +263,54 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 
 			s.logger.DebugfContext(ctx, "Fetch all non-deleted tokens from the DB and refresh the token cache.")
 			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
-				err2 := s.locker.UnlockAll(ctx)
+				err2 := s.UnlockAll(ctx)
 
 				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), tokenType, err2)
 			}
 
 			immediateRetries++
 			tokensLockedByOthersExist = false
+		} else if _, ok := ownedLocally[t.Id]; ok {
+			s.logger.DebugfContext(ctx, "Token [%v] already locked locally, skipping lock attempt", t.Id)
+		} else if s.sharedOn {
+			if txID, locked := s.shared.txIDFor(t.Id); locked {
+				s.logger.DebugfContext(ctx, "Token [%v] already locked by selector [%s], skipping lock attempt", t.Id, txID)
+				if txID == s.txID {
+					ownedLocally[t.Id] = struct{}{}
+				}
+				if txID != s.txID {
+					tokensLockedByOthersExist = true
+				}
+
+				continue
+			}
+
+			if locked := s.locker.TryLock(ctx, &t.Id); !locked {
+				s.logger.DebugfContext(ctx, "Tried to lock token [%v], but it was already locked by another process", t)
+				tokensLockedByOthersExist = true
+			} else {
+				s.logger.DebugfContext(ctx, "Got the lock on token [%v]", t)
+				ownedLocally[t.Id] = struct{}{}
+				s.recordLock(t.Id)
+				q, err := token2.ToQuantity(t.Quantity, s.precision)
+				if err != nil {
+					return nil, nil, immediateRetries, errors.Wrapf(err, "invalid token [%s] found", t.Id)
+				}
+				s.logger.DebugfContext(ctx, "Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
+				immediateRetries = 0
+				sum.Add(q)
+				selected.Add(&t.Id)
+				if sum.Cmp(quantity) >= 0 {
+					return selected.ToSlice(), sum, immediateRetries, nil
+				}
+			}
 		} else if locked := s.locker.TryLock(ctx, &t.Id); !locked {
 			s.logger.DebugfContext(ctx, "Tried to lock token [%v], but it was already locked by another process", t)
 			tokensLockedByOthersExist = true
 		} else {
 			s.logger.DebugfContext(ctx, "Got the lock on token [%v]", t)
+			ownedLocally[t.Id] = struct{}{}
+			s.recordLock(t.Id)
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
 				return nil, nil, immediateRetries, errors.Wrapf(err, "invalid token [%s] found", t.Id)
@@ -235,7 +347,26 @@ func (s *selector) isClosed() bool {
 }
 
 func (s *selector) UnlockAll(ctx context.Context) error {
-	return s.locker.UnlockAll(ctx)
+	if err := s.locker.UnlockAll(ctx); err != nil {
+		return err
+	}
+	s.clearLocks()
+
+	return nil
+}
+
+func (s *selector) recordLock(tokenID token2.ID) {
+	if s.sharedOn {
+		if ok := s.shared.lock(tokenID, s.txID); !ok {
+			s.logger.Warnf("token [%v] was locked in DB but shared local tracker already assigned to another selector", tokenID)
+		}
+	}
+}
+
+func (s *selector) clearLocks() {
+	if s.sharedOn {
+		s.shared.unlockAllOwned(s.txID)
+	}
 }
 
 func tokenKey(walletID string, typ token2.Type) string {
@@ -261,11 +392,15 @@ func (l *locker) UnlockAll(ctx context.Context) error {
 }
 
 func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int, m *Metrics) tokenSelectorUnlocker {
+	return newSherdSelector(txID, fetcher, lockDB, precision, backoff, maxRetriesAfterBackoff, newLocalTokenLockTracker(), false, m)
+}
+
+func newSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int, shared *localTokenLockTracker, sharedOn bool, m *Metrics) tokenSelectorUnlocker {
 	logger := logger.Named("selector-" + txID)
 	locker := &locker{txID: txID, Locker: lockDB}
 	if backoff < 0 {
-		return NewSelector(logger, fetcher, locker, precision, m)
+		return newSelector(logger, fetcher, locker, txID, precision, shared, sharedOn, m)
 	} else {
-		return NewStubbornSelector(logger, fetcher, locker, precision, backoff, maxRetriesAfterBackoff, m)
+		return newStubbornSelector(logger, fetcher, locker, txID, precision, backoff, maxRetriesAfterBackoff, shared, sharedOn, m)
 	}
 }
