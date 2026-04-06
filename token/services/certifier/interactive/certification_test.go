@@ -38,12 +38,14 @@ func (f *alwaysFailViewManager) InitiateView(_ view.View) (interface{}, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.seen++
+
 	return nil, f.err
 }
 
 func (f *alwaysFailViewManager) callCount() int {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
 	return f.seen
 }
 
@@ -109,14 +111,16 @@ func (p *populatedQueryEngine) UnspentTokensIterator(_ context.Context) (*token2
 // OnReceive hits the "not subscribed" early-return path.
 type unknownTopicEvent struct{}
 
-func (e *unknownTopicEvent) Topic() string       { return "unregistered-topic" }
-func (e *unknownTopicEvent) Message() interface{} { return tokens.TokenMessage{TxID: "tx-unk", Index: 0} }
+func (e *unknownTopicEvent) Topic() string { return "unregistered-topic" }
+func (e *unknownTopicEvent) Message() interface{} {
+	return tokens.TokenMessage{TxID: "tx-unk", Index: 0}
+}
 
 // wrongMsgTypeEvent has the right topic but a payload that cannot be cast to
 // tokens.TokenMessage, exercising the first early-return path in OnReceive.
 type wrongMsgTypeEvent struct{}
 
-func (e *wrongMsgTypeEvent) Topic() string       { return tokens.AddToken }
+func (e *wrongMsgTypeEvent) Topic() string        { return tokens.AddToken }
 func (e *wrongMsgTypeEvent) Message() interface{} { return 42 }
 
 // ---------------------------------------------------------------------------
@@ -207,7 +211,7 @@ func TestRequestCertification_RetriesExhausted(t *testing.T) {
 		vm,
 		[]view.Identity{view.Identity([]byte("c"))},
 		nil,
-		2,               // maxAttempts=2
+		2,                  // maxAttempts=2
 		1*time.Millisecond, // short retry gap
 		10, 1000, 1*time.Second, 1,
 		&disabled.Provider{},
@@ -324,7 +328,7 @@ func TestRequestCertification_RetryThenSuccess(t *testing.T) {
 		vm,
 		[]view.Identity{view.Identity([]byte("c"))},
 		nil,
-		3,               // 3 attempts available
+		3, // 3 attempts available
 		1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
 		&disabled.Provider{},
@@ -352,7 +356,7 @@ func TestOnReceive_WrongMessageType(t *testing.T) {
 	assert.NotPanics(t, func() {
 		cc.OnReceive(&wrongMsgTypeEvent{})
 	})
-	assert.Equal(t, 0, len(cc.tokens), "wrong-type event must not enqueue a token")
+	assert.Empty(t, cc.tokens, "wrong-type event must not enqueue a token")
 }
 
 // TestOnReceive_UnknownTopic verifies that an event with an unregistered topic
@@ -365,7 +369,7 @@ func TestOnReceive_UnknownTopic(t *testing.T) {
 	assert.NotPanics(t, func() {
 		cc.OnReceive(&unknownTopicEvent{})
 	})
-	assert.Equal(t, 0, len(cc.tokens), "unknown-topic event must not enqueue a token")
+	assert.Empty(t, cc.tokens, "unknown-topic event must not enqueue a token")
 }
 
 // ---------------------------------------------------------------------------
@@ -501,10 +505,10 @@ func TestProcessBatch_CertificationFailure_PushesBackToBuffer(t *testing.T) {
 		vm,
 		[]view.Identity{view.Identity([]byte("c"))},
 		nil,
-		1,              // maxAttempts=1 — fail immediately, no retry loop
+		1, // maxAttempts=1 — fail immediately, no retry loop
 		1*time.Millisecond,
 		10,
-		100,            // bufferSize=100, enough room for push-back
+		100, // bufferSize=100, enough room for push-back
 		1*time.Second, 1,
 		&disabled.Provider{},
 	)
@@ -514,7 +518,7 @@ func TestProcessBatch_CertificationFailure_PushesBackToBuffer(t *testing.T) {
 	id := &token.ID{TxId: "pushback-tx", Index: 0}
 	cc.processBatch([]*token.ID{id})
 
-	assert.Equal(t, 1, len(cc.tokens), "failed token should be pushed back to the tokens channel")
+	assert.Len(t, cc.tokens, 1, "failed token should be pushed back to the tokens channel")
 }
 
 // ---------------------------------------------------------------------------

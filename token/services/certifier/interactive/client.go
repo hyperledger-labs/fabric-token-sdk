@@ -189,6 +189,7 @@ func (cc *CertificationClient) Scan() error {
 		if t == nil {
 			return nil, nil
 		}
+
 		return &t.Id, nil
 	})
 	uncertifiedTokenIds := iterators.Filter(tokenIds, func(t *token.ID) bool { return !cc.certificationStorage.Exists(cc.ctx, t) })
