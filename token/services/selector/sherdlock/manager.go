@@ -37,6 +37,7 @@ type tokenSelectorUnlocker interface {
 type manager struct {
 	selectorCache          lazy2.Provider[transaction.ID, tokenSelectorUnlocker]
 	locker                 Locker
+	localLocks             *localTokenLockTracker
 	leaseExpiry            time.Duration
 	leaseCleanupTickPeriod time.Duration
 	metrics                *Metrics
@@ -62,15 +63,17 @@ func NewManager(
 	m *Metrics,
 ) *manager {
 	ctx, cancel := context.WithCancel(context.Background())
+	sharedLocalLocks := newLocalTokenLockTracker()
 	mgr := &manager{
 		locker:                 locker,
+		localLocks:             sharedLocalLocks,
 		leaseExpiry:            leaseExpiry,
 		leaseCleanupTickPeriod: leaseCleanupTickPeriod,
 		metrics:                m,
 		cancel:                 cancel,
 		cleanerDone:            make(chan struct{}),
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
-			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, m), nil
+			return newSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, sharedLocalLocks, m), nil
 		}),
 	}
 	if leaseCleanupTickPeriod > 0 && leaseExpiry > 0 {
