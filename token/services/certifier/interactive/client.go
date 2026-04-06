@@ -185,7 +185,12 @@ func (cc *CertificationClient) Scan() error {
 		return errors.WithMessagef(err, "failed to get an iterator over unspent tokens")
 	}
 
-	tokenIds := iterators.Map(allTokens.UnspentTokensIterator, func(t *token.UnspentToken) (*token.ID, error) { return &t.Id, nil })
+	tokenIds := iterators.Map(allTokens.UnspentTokensIterator, func(t *token.UnspentToken) (*token.ID, error) {
+		if t == nil {
+			return nil, nil
+		}
+		return &t.Id, nil
+	})
 	uncertifiedTokenIds := iterators.Filter(tokenIds, func(t *token.ID) bool { return !cc.certificationStorage.Exists(cc.ctx, t) })
 	toBeCertified, err := iterators.ReadAllPointers(uncertifiedTokenIds)
 	if err != nil {
