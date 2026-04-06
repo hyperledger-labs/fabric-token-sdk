@@ -385,20 +385,19 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 // as a function of the old generators,  x and 1/x
 func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*mathlib.G1, []*mathlib.G1) {
 	l := len(leftGen) / 2
+	// Use the Executor abstraction so that the execution strategy can be
+	// swapped without changing this function. SerialExecutor runs each task
+	// immediately with no locks or goroutine overhead.
+	executor := NewSerialExecutor()
 
-	// We use an Executor abstraction to decouple the execution strategy:
-	// SerialExecutor for small workloads (low latency, no scheduling overhead)
-	// WorkerPoolExecutor for larger workloads (bounded parallelism)
-	executor := NewExecutor(l)
-
-	for i := 0; i < l; i++ {
-		i := i
+	for i := range l {
 		executor.Submit(func() {
+			// G_i = G_i^{x_inv} * G_{i+l}^x
 			leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
+			// H_i = H_i^x * H_{i+l}^{x_inv}
 			rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
 		})
 	}
-
 	executor.Wait()
 
 	return leftGen[:l], rightGen[:l]

@@ -114,18 +114,16 @@ func NewRangeCorrectnessProver(
 // Prove generates a set of range proofs.
 func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 	n := len(p.Commitments)
+
 	rc := &RangeCorrectness{
 		Proofs: make([]*RangeProof, n),
 	}
+
+	// SerialExecutor runs tasks immediately with no overhead
+	executor := NewSerialExecutor()
 	errs := make([]error, n)
 
-	// The Executor abstraction enables flexible execution strategies:
-	// serial execution for small batches (avoids overhead)
-	// bounded parallel execution for larger batches (improves throughput)
-	executor := NewExecutor(n)
-
-	for i := 0; i < n; i++ {
-		i := i
+	for i := range n {
 		executor.Submit(func() {
 			bp := NewRangeProver(
 				p.Commitments[i],
@@ -145,6 +143,7 @@ func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 	}
 
 	executor.Wait()
+
 	for _, err := range errs {
 		if err != nil {
 			return nil, err
@@ -200,16 +199,12 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	if len(rc.Proofs) != len(v.Commitments) {
 		return errors.New("invalid range proof")
 	}
+
 	n := len(rc.Proofs)
+	executor := NewSerialExecutor()
 	errs := make([]error, n)
 
-	// The Executor abstraction allows switching between:
-	// serial execution (lower latency, no goroutine overhead)
-	// parallel execution (higher throughput with bounded concurrency)
-	executor := NewExecutor(n)
-
-	for i := 0; i < n; i++ {
-		i := i
+	for i := range n {
 		executor.Submit(func() {
 			if rc.Proofs[i] == nil {
 				errs[i] = errors.Errorf("invalid range proof: nil proof at index %d", i)
@@ -234,6 +229,7 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	}
 
 	executor.Wait()
+
 	for i, err := range errs {
 		if err != nil {
 			return errors.Wrapf(err, "invalid range proof at index %d", i)
