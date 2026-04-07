@@ -10,11 +10,11 @@ import (
 	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/committer/queryservice"
 	finalityx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/finality"
-	fabricx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -54,7 +54,7 @@ func NewDriver(
 	tracerProvider trace.TracerProvider,
 	identityProvider view.IdentityProvider,
 	ppFetcher *pp2.PublicParametersService,
-	configService driver2.ConfigService,
+	configService cdriver.ConfigService,
 	qsProvider queryservice.Provider,
 	storeServiceManager ttxdb.StoreServiceManager,
 	queryServiceProvider queryservice.Provider,
@@ -120,7 +120,7 @@ func NewDriver(
 			tokensManager,
 			vkp,
 		),
-		supportedDrivers: []string{fabricx.FabricxDriverName},
+		supportedDrivers: []string{fabricx.DriverName},
 	}
 
 	return d, nil

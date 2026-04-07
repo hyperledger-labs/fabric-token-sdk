@@ -15,15 +15,16 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 )
 
-// Quantity models an immutable token quantity and its basic operations.
+// Quantity models a token quantity and its basic operations.
+// Note: Operations mutate the receiver and are NOT thread-safe.
+// Do not share Quantity instances across goroutines without synchronization.
 type Quantity interface {
-
-	// Add returns this + b modifying this.
-	// If an overflow occurs, it returns an error.
+	// Add returns this + b, modifying this in place.
+	// Panics if an overflow occurs or if b is not the same concrete type.
 	Add(b Quantity) Quantity
 
-	// Sub returns this - b modifying this.
-	// If an overflow occurs, it returns an error.
+	// Sub returns this - b, modifying this in place.
+	// Panics if the result would be negative or if b is not the same concrete type.
 	Sub(b Quantity) Quantity
 
 	// Cmp compares this and b and returns:
@@ -44,6 +45,20 @@ type Quantity interface {
 	ToBigInt() *big.Int
 }
 
+// validateBigIntForQuantity validates a big.Int for use as a Quantity.
+// Returns an error if the value is negative or exceeds the given precision.
+func validateBigIntForQuantity(v *big.Int, precision uint64, inputDesc string) error {
+	if v.Cmp(big.NewInt(0)) < 0 {
+		return errors.New("quantity must be larger than 0")
+	}
+	// #nosec G115
+	if v.BitLen() > int(precision) {
+		return errors.Errorf("%s has precision %d > %d", inputDesc, v.BitLen(), precision)
+	}
+
+	return nil
+}
+
 // ToQuantity converts a string q to a Quantity of a given precision.
 // Argument q is supposed to be formatted following big#scan specification.
 // The precision is expressed in bits.
@@ -55,12 +70,8 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 	if !success {
 		return nil, errors.Errorf("invalid input [%s,%d]", q, precision)
 	}
-	if v.Cmp(big.NewInt(0)) < 0 {
-		return nil, errors.New("quantity must be larger than 0")
-	}
-	// #nosec G115
-	if v.BitLen() > int(precision) {
-		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
+	if err := validateBigIntForQuantity(v, precision, q); err != nil {
+		return nil, err
 	}
 
 	switch precision {
@@ -78,34 +89,37 @@ func ToQuantitySum(precision uint64) iterators.Reducer[*UnspentToken, Quantity] 
 		if err != nil {
 			return nil, err
 		}
+		// Recover from panic and convert to error
+		defer func() {
+			if r := recover(); r != nil {
+				err = errors.Errorf("overflow in quantity sum: %v", r)
+			}
+		}()
 
-		return sum.Add(q), nil
+		return sum.Add(q), err
 	})
 }
 
 // UInt64ToQuantity converts an uint64 q to a Quantity of a given precision.
-// Argument q is supposed to be formatted following big#scan specification.
 // The precision is expressed in bits.
 func UInt64ToQuantity(u uint64, precision uint64) (Quantity, error) {
 	if precision == 0 {
 		return nil, errors.New("precision must be larger than 0")
 	}
-	v := big.NewInt(0).SetUint64(u)
-	if v.Cmp(big.NewInt(0)) < 0 {
-		return nil, errors.New("quantity must be larger than 0")
+
+	// Fast path for 64-bit precision
+	if precision == 64 {
+		return &UInt64Quantity{Value: u}, nil
 	}
 
+	// For other precisions, check if value fits
+	v := big.NewInt(0).SetUint64(u)
 	// #nosec G115
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%d has precision %d > %d", u, v.BitLen(), precision)
 	}
 
-	switch precision {
-	case 64:
-		return &UInt64Quantity{Value: v.Uint64()}, nil
-	default:
-		return &BigQuantity{Int: v, Precision: precision}, nil
-	}
+	return &BigQuantity{Int: v, Precision: precision}, nil
 }
 
 // NewZeroQuantity returns to zero quantity at the passed precision/
@@ -141,12 +155,8 @@ func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
 	if !success {
 		return nil, errors.Errorf("invalid input [%s,%d]", q, precision)
 	}
-	if v.Cmp(big.NewInt(0)) < 0 {
-		return nil, errors.New("quantity must be larger than 0")
-	}
-	// #nosec G115
-	if v.BitLen() > int(precision) {
-		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
+	if err := validateBigIntForQuantity(v, precision, q); err != nil {
+		return nil, err
 	}
 
 	return &BigQuantity{Int: v, Precision: precision}, nil
@@ -158,13 +168,17 @@ func (q *BigQuantity) Add(b Quantity) Quantity {
 		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
 	}
 
+	if q.Precision != bq.Precision {
+		panic(fmt.Sprintf("precision mismatch: %d != %d", q.Precision, bq.Precision))
+	}
+
 	// Check overflow
 	sum := big.NewInt(0)
 	sum = sum.Add(q.Int, bq.Int)
 
 	// #nosec G115
 	if sum.BitLen() > int(q.Precision) {
-		panic(fmt.Sprintf("%s < %s", q.Text(10), b.Decimal()))
+		panic("addition overflow: result exceeds precision")
 	}
 
 	q.Int = sum
@@ -178,12 +192,16 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
 	}
 
-	// Check overflow
+	if q.Precision != bq.Precision {
+		panic(fmt.Sprintf("precision mismatch: %d != %d", q.Precision, bq.Precision))
+	}
+
+	// Check underflow
 	if q.Cmp(bq) < 0 {
-		panic(fmt.Sprintf("%s < %s", q.Text(10), b.Decimal()))
+		panic("subtraction underflow: result would be negative")
 	}
 	diff := big.NewInt(0)
-	diff.Sub(q.Int, b.(*BigQuantity).Int)
+	diff.Sub(q.Int, bq.Int)
 
 	q.Int = diff
 
@@ -196,12 +214,27 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 //	 0 if x == y
 //	+1 if x >  y
 func (q *BigQuantity) Cmp(b Quantity) int {
-	bq, ok := b.(*BigQuantity)
-	if !ok {
-		panic(fmt.Sprintf("expected BigQuantity, got [%T]", b))
-	}
+	switch b := b.(type) {
+	case *BigQuantity:
+		return q.Int.Cmp(b.Int)
+	case *UInt64Quantity:
+		// Optimize: check bit length first to avoid allocation in obvious cases
+		qBits := q.BitLen()
+		if qBits > 64 {
+			return 1 // q is definitely larger
+		}
+		if qBits < 64 && b.Value > 0 {
+			// q might be smaller, need to compare
+			if q.Sign() == 0 && b.Value > 0 {
+				return -1
+			}
+		}
+		bBig := big.NewInt(0).SetUint64(b.Value)
 
-	return q.Int.Cmp(bq.Int)
+		return q.Int.Cmp(bBig)
+	default:
+		panic(fmt.Sprintf("expected BigQuantity or UInt64Quantity, got [%T]", b))
+	}
 }
 
 func (q *BigQuantity) Hex() string {
@@ -235,10 +268,10 @@ func (q *UInt64Quantity) Add(b Quantity) Quantity {
 	}
 
 	// Check overflow
-	var sum = q.Value + bq.Value
+	sum := q.Value + bq.Value
 
 	if sum < q.Value {
-		panic(fmt.Sprintf("%d < %d", q.Value, bq.Value))
+		panic("addition overflow: result exceeds uint64 max")
 	}
 
 	q.Value = sum
@@ -252,9 +285,9 @@ func (q *UInt64Quantity) Sub(b Quantity) Quantity {
 		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
 	}
 
-	// Check overflow
+	// Check underflow
 	if bq.Value > q.Value {
-		panic(fmt.Sprintf("%d < %d", q.Value, bq.Value))
+		panic("subtraction underflow: result would be negative")
 	}
 	diff := q.Value - bq.Value
 
@@ -264,18 +297,33 @@ func (q *UInt64Quantity) Sub(b Quantity) Quantity {
 }
 
 func (q *UInt64Quantity) Cmp(b Quantity) int {
-	bq, ok := b.(*UInt64Quantity)
-	if !ok {
-		panic(fmt.Sprintf("expected UInt64Quantity, got [%T]", b))
-	}
+	switch b := b.(type) {
+	case *UInt64Quantity:
+		if q.Value < b.Value {
+			return -1
+		} else if q.Value > b.Value {
+			return 1
+		}
 
-	if q.Value < bq.Value {
-		return -1
-	} else if q.Value > bq.Value {
-		return 1
-	}
+		return 0
+	case *BigQuantity:
+		// Optimize: check bit length first to avoid allocation in obvious cases
+		bBits := b.BitLen()
+		if bBits > 64 {
+			return -1 // b is definitely larger
+		}
+		if bBits < 64 && q.Value > 0 {
+			// b might be smaller
+			if b.Sign() == 0 && q.Value > 0 {
+				return 1
+			}
+		}
+		qBig := big.NewInt(0).SetUint64(q.Value)
 
-	return 0
+		return qBig.Cmp(b.Int)
+	default:
+		panic(fmt.Sprintf("expected UInt64Quantity or BigQuantity, got [%T]", b))
+	}
 }
 
 func (q *UInt64Quantity) Hex() string {
