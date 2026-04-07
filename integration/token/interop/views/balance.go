@@ -43,8 +43,8 @@ type BalanceView struct {
 func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(b.TMSID))
 	assert.NoError(err, "failed getting management service")
-	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
-	assert.NotNil(wallet, "failed to get wallet [%s]", b.Wallet)
+	wallet, err := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
+	assert.NoError(err, "failed to get wallet [%s]", b.Wallet)
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
 
 	// owned

@@ -90,7 +90,9 @@ func (r *RegisterRecipientDataView) Call(context view.Context) (interface{}, err
 	tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	err = tms.WalletManager().OwnerWallet(context.Context(), r.WalletID).RegisterRecipient(context.Context(), &r.RecipientData)
+	w, err := tms.WalletManager().OwnerWallet(context.Context(), r.WalletID)
+	assert.NoError(err, "wallet not found [%s:%s]", r.WalletID, r.TMSID)
+	err = w.RegisterRecipient(context.Context(), &r.RecipientData)
 	assert.NoError(err, "failed to register recipient data [%s:%s]", r.WalletID, r.TMSID)
 
 	return nil, nil
