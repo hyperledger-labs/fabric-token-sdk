@@ -93,6 +93,7 @@ func (s *sliceUnspentIterator) Next() (*token.UnspentToken, error) {
 	}
 	item := s.items[s.pos]
 	s.pos++
+
 	return item, nil
 }
 
