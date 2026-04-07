@@ -553,7 +553,7 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 
 	// Replace 64 individual InvModOrder() calls with one BatchInverse call
 	// 1 inversion + O(n) multiplications
-	yInv := BatchInverse(yPow, v.Curve)
+	yInv := math2.BatchInverse(yPow, v.Curve)
 
 	// Pre-compute the scalar zi = z·y^i + z²·2^i for each i.
 	ziScalars := make([]*math.Zr, n)

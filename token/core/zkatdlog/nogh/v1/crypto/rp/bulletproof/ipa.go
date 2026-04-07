@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 )
 
 // IPA contains the proof for the inner product argument.
@@ -388,7 +389,7 @@ func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*
 	// Use the Executor abstraction so that the execution strategy can be
 	// swapped without changing this function. SerialExecutor runs each task
 	// immediately with no locks or goroutine overhead.
-	executor := NewSerialExecutor()
+	executor := rp.NewSerialExecutor()
 
 	for i := range l {
 		executor.Submit(func() {

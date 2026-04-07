@@ -10,6 +10,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 )
 
 // RangeCorrectness contains a set of range proofs for multiple commitments.
@@ -120,7 +121,7 @@ func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 	}
 
 	// SerialExecutor runs tasks immediately with no overhead
-	executor := NewSerialExecutor()
+	executor := rp.NewSerialExecutor()
 	errs := make([]error, n)
 
 	for i := range n {
@@ -201,7 +202,7 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	}
 
 	n := len(rc.Proofs)
-	executor := NewSerialExecutor()
+	executor := rp.NewSerialExecutor()
 	errs := make([]error, n)
 
 	for i := range n {
