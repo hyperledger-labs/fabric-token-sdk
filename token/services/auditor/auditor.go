@@ -8,6 +8,7 @@ package auditor
 
 import (
 	"context"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
@@ -69,6 +70,7 @@ type Service struct {
 	tmsProvider     dep.TokenManagementServiceProvider
 	finalityTracer  trace.Tracer
 	metricsProvider metrics.Provider
+	metrics         *Metrics
 	checkService    CheckService
 }
 
@@ -81,6 +83,7 @@ func (a *Service) Validate(ctx context.Context, request *token.Request) error {
 // In addition, the Audit locks the enrollment named ids.
 // Release must be invoked in case
 func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream, *token.OutputStream, error) {
+	start := time.Now()
 	logger.DebugfContext(ctx, "audit transaction [%s]....", tx.ID())
 	request := tx.Request()
 	record, err := request.AuditRecord(ctx)
@@ -93,9 +96,12 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 	eids = append(eids, record.Outputs.EnrollmentIDs()...)
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks", tx.ID())
 	if err := a.auditDB.AcquireLocks(ctx, string(request.Anchor), eids...); err != nil {
+		a.metrics.AuditLockConflicts.Add(1)
+
 		return nil, nil, err
 	}
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks done", tx.ID())
+	a.metrics.AuditDuration.Observe(time.Since(start).Seconds())
 
 	return record.Inputs, record.Outputs, nil
 }
@@ -103,6 +109,8 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 // Append adds the passed transaction to the auditor database.
 // It also releases the locks acquired by Audit.
 func (a *Service) Append(ctx context.Context, tx Transaction) error {
+	start := time.Now()
+	defer func() { a.metrics.AppendDuration.Observe(time.Since(start).Seconds()) }()
 	defer a.Release(ctx, tx)
 
 	tms, err := a.tmsProvider.TokenManagementService(token.WithTMSID(a.tmsID))
@@ -111,6 +119,8 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 	}
 	// append request to audit db
 	if err := a.auditDB.Append(ctx, newRequestWrapper(tx.Request(), tms)); err != nil {
+		a.metrics.AppendErrors.Add(1)
+
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
@@ -141,6 +151,7 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 
 // Release releases the lock acquired of the passed transaction.
 func (a *Service) Release(ctx context.Context, tx Transaction) {
+	a.metrics.ReleasesTotal.Add(1)
 	a.auditDB.ReleaseLocks(ctx, string(tx.Request().Anchor))
 }
 
