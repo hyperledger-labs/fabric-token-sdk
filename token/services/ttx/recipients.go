@@ -147,7 +147,10 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 	multiSig := len(f.Recipients) > 1
 	for i, recipient := range f.Recipients {
 		local[i] = true
-		w := tms.WalletManager().OwnerWallet(context.Context(), recipient.Identity)
+		w, err := tms.WalletManager().OwnerWallet(context.Context(), recipient.Identity)
+		if err != nil {
+			w = nil
+		}
 
 		if isSameNode := w != nil; !isSameNode {
 			results[i], err = f.callWithRecipientData(context, &recipient, multiSig)
@@ -329,9 +332,9 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting token management service [%s]", recipientRequest.TMSID)
 	}
-	w := tms.WalletManager().OwnerWallet(context.Context(), wallet)
-	if w == nil {
-		return nil, errors.Errorf("wallet [%s:%s] not found", wallet, recipientRequest.TMSID)
+	w, err := tms.WalletManager().OwnerWallet(context.Context(), wallet)
+	if err != nil {
+		return nil, errors.Wrapf(err, "wallet [%s:%s] not found", wallet, recipientRequest.TMSID)
 	}
 
 	var recipientData *RecipientData
@@ -498,13 +501,18 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
 
-	if w := ts.WalletManager().OwnerWallet(context.Context(), f.Other); w != nil {
-		other, err := w.GetRecipientIdentity(context.Context())
+	if otherWallet, err := ts.WalletManager().OwnerWallet(context.Context(), f.Other); err == nil {
+		other, err := otherWallet.GetRecipientIdentity(context.Context())
 		if err != nil {
 			return nil, err
 		}
 
-		me, err := ts.WalletManager().OwnerWallet(context.Context(), f.Wallet).GetRecipientIdentity(context.Context())
+		meWallet, err := ts.WalletManager().OwnerWallet(context.Context(), f.Wallet)
+		if err != nil {
+			return nil, errors.Wrapf(err, "wallet [%s:%s] not found", f.Wallet, f.TMSID)
+		}
+		me, err := meWallet.GetRecipientIdentity(context.Context())
+
 		if err != nil {
 			return nil, err
 		}
@@ -516,9 +524,9 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			return nil, err
 		}
 
-		w := ts.WalletManager().OwnerWallet(context.Context(), f.Wallet)
-		if w == nil {
-			return nil, errors.Errorf("wallet [%s:%s] not found", f.Wallet, f.TMSID)
+		w, err := ts.WalletManager().OwnerWallet(context.Context(), f.Wallet)
+		if err != nil {
+			return nil, errors.Wrapf(err, "wallet [%s:%s] not found", f.Wallet, f.TMSID)
 		}
 		localRecipientData, err := w.GetRecipientData(context.Context())
 		if err != nil {
@@ -604,9 +612,9 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	if len(wallet) == 0 && len(request.WalletID) != 0 {
 		wallet = string(request.WalletID)
 	}
-	w := ts.WalletManager().OwnerWallet(context.Context(), wallet)
-	if w == nil {
-		return nil, errors.Errorf("wallet [%s] not found", wallet)
+	w, err := ts.WalletManager().OwnerWallet(context.Context(), wallet)
+	if err != nil {
+		return nil, errors.Wrapf(err, "wallet [%s] not found", wallet)
 	}
 
 	recipientData, err := w.GetRecipientData(context.Context())

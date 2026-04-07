@@ -238,7 +238,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 		}
 
 		// Case: there is a wallet bound to the party but the signer is not local, the signature is generated externally
-		if w := c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), signerIdentity); w != nil {
+		if w, err := c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), signerIdentity); err == nil {
 			logger.DebugfContext(context.Context(), "found wallet for party [%s], request external signature", signerIdentity)
 			ews := c.Opts.ExternalWalletSigner(w.ID())
 			if ews == nil {
@@ -566,7 +566,8 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		isMe := mine.Contains(party.UniqueID())
 		if !isMe {
 			// check if there is a wallet that contains that identity
-			isMe = c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), party) != nil
+			_, err = c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), party)
+			isMe = err == nil
 		}
 		logger.DebugfContext(context.Context(), "distribute tx to [%s], it is me [%v].", party, isMe)
 		var longTermIdentity view.Identity
