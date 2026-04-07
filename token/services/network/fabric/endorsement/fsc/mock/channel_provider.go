@@ -8,6 +8,20 @@ import (
 )
 
 type ChannelProvider struct {
+	GetACLProviderStub        func(string, string) (fsc.ACLProvider, error)
+	getACLProviderMutex       sync.RWMutex
+	getACLProviderArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	getACLProviderReturns struct {
+		result1 fsc.ACLProvider
+		result2 error
+	}
+	getACLProviderReturnsOnCall map[int]struct {
+		result1 fsc.ACLProvider
+		result2 error
+	}
 	GetMSPManagerStub        func(string, string) (fsc.MSPManager, error)
 	getMSPManagerMutex       sync.RWMutex
 	getMSPManagerArgsForCall []struct {
@@ -24,6 +38,71 @@ type ChannelProvider struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *ChannelProvider) GetACLProvider(arg1 string, arg2 string) (fsc.ACLProvider, error) {
+	fake.getACLProviderMutex.Lock()
+	ret, specificReturn := fake.getACLProviderReturnsOnCall[len(fake.getACLProviderArgsForCall)]
+	fake.getACLProviderArgsForCall = append(fake.getACLProviderArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetACLProviderStub
+	fakeReturns := fake.getACLProviderReturns
+	fake.recordInvocation("GetACLProvider", []interface{}{arg1, arg2})
+	fake.getACLProviderMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChannelProvider) GetACLProviderCallCount() int {
+	fake.getACLProviderMutex.RLock()
+	defer fake.getACLProviderMutex.RUnlock()
+	return len(fake.getACLProviderArgsForCall)
+}
+
+func (fake *ChannelProvider) GetACLProviderCalls(stub func(string, string) (fsc.ACLProvider, error)) {
+	fake.getACLProviderMutex.Lock()
+	defer fake.getACLProviderMutex.Unlock()
+	fake.GetACLProviderStub = stub
+}
+
+func (fake *ChannelProvider) GetACLProviderArgsForCall(i int) (string, string) {
+	fake.getACLProviderMutex.RLock()
+	defer fake.getACLProviderMutex.RUnlock()
+	argsForCall := fake.getACLProviderArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChannelProvider) GetACLProviderReturns(result1 fsc.ACLProvider, result2 error) {
+	fake.getACLProviderMutex.Lock()
+	defer fake.getACLProviderMutex.Unlock()
+	fake.GetACLProviderStub = nil
+	fake.getACLProviderReturns = struct {
+		result1 fsc.ACLProvider
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChannelProvider) GetACLProviderReturnsOnCall(i int, result1 fsc.ACLProvider, result2 error) {
+	fake.getACLProviderMutex.Lock()
+	defer fake.getACLProviderMutex.Unlock()
+	fake.GetACLProviderStub = nil
+	if fake.getACLProviderReturnsOnCall == nil {
+		fake.getACLProviderReturnsOnCall = make(map[int]struct {
+			result1 fsc.ACLProvider
+			result2 error
+		})
+	}
+	fake.getACLProviderReturnsOnCall[i] = struct {
+		result1 fsc.ACLProvider
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *ChannelProvider) GetMSPManager(arg1 string, arg2 string) (fsc.MSPManager, error) {
@@ -94,8 +173,6 @@ func (fake *ChannelProvider) GetMSPManagerReturnsOnCall(i int, result1 fsc.MSPMa
 func (fake *ChannelProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getMSPManagerMutex.RLock()
-	defer fake.getMSPManagerMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
