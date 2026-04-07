@@ -745,6 +745,7 @@ func (InvalidQuantity) Cmp(b token.Quantity) int            { return 0 }
 func (InvalidQuantity) Hex() string                         { return "" }
 func (InvalidQuantity) Decimal() string                     { return "" }
 func (InvalidQuantity) ToBigInt() *big.Int                  { return nil }
+func (InvalidQuantity) Clone() token.Quantity               { return InvalidQuantity{} }
 
 func TestCmpPanicOnInvalidType(t *testing.T) {
 	t.Run("BigQuantity Cmp with invalid type", func(t *testing.T) {
