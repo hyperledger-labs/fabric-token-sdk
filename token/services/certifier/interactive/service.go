@@ -107,8 +107,8 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 
 	logger.Debugf("certify with wallet [%s]", walletID)
 
-	w := tms.WalletManager().CertifierWallet(context.Context(), walletID)
-	if w == nil {
+	w, err := tms.WalletManager().CertifierWallet(context.Context(), walletID)
+	if err != nil {
 		return nil, errors.Errorf("failed getting certifier wallet, wallet [%s] not found [%s:%s][%v]", walletID, cr.Channel, cr.Namespace, cr.IDs)
 	}
 

@@ -125,8 +125,8 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		// No check is performed for other types.
 		tms, err := token.GetManagementService(context, token.WithTMSID(issueRequest.TMSID))
 		assert.NoError(err, "failed getting management service")
-		wallet := tms.WalletManager().IssuerWallet(context.Context(), "")
-		assert.NotNil(wallet, "issuer wallet not found")
+		wallet, err := tms.WalletManager().IssuerWallet(context.Context(), "")
+		assert.NoError(err, "issuer wallet not found")
 
 		// At this point, the issuer is ready to prepare the token transaction.
 		// The issuer creates a new token transaction and specifies the auditor that must be contacted to approve the operation.

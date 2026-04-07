@@ -183,8 +183,9 @@ func TestWalletManager_IssuerWallet(t *testing.T) {
 	mockWS.IssuerWalletReturns(mockIW, nil)
 
 	ctx := context.Background()
-	wallet := wm.IssuerWallet(ctx, "issuer1")
+	wallet, err := wm.IssuerWallet(ctx, "issuer1")
 
+	assert.NoError(t, err)
 	assert.NotNil(t, wallet)
 	assert.Equal(t, mockIW, wallet.w)
 }
@@ -198,8 +199,9 @@ func TestWalletManager_AuditorWallet(t *testing.T) {
 	mockWS.AuditorWalletReturns(mockAW, nil)
 
 	ctx := context.Background()
-	wallet := wm.AuditorWallet(ctx, "auditor1")
+	wallet, err := wm.AuditorWallet(ctx, "auditor1")
 
+	assert.NoError(t, err)
 	assert.NotNil(t, wallet)
 	assert.Equal(t, mockAW, wallet.w)
 }
@@ -213,8 +215,9 @@ func TestWalletManager_CertifierWallet(t *testing.T) {
 	mockWS.CertifierWalletReturns(mockCW, nil)
 
 	ctx := context.Background()
-	wallet := wm.CertifierWallet(ctx, "certifier1")
+	wallet, err := wm.CertifierWallet(ctx, "certifier1")
 
+	assert.NoError(t, err)
 	assert.NotNil(t, wallet)
 	assert.Equal(t, mockCW, wallet.w)
 }
@@ -647,8 +650,9 @@ func TestWalletManager_IssuerWallet_Nil(t *testing.T) {
 	mockWS.IssuerWalletReturns(nil, errors.New("wallet not found"))
 
 	ctx := context.Background()
-	wallet := wm.IssuerWallet(ctx, "unknown")
+	wallet, err := wm.IssuerWallet(ctx, "unknown")
 
+	assert.Error(t, err)
 	assert.Nil(t, wallet)
 }
 
@@ -663,8 +667,9 @@ func TestWalletManager_AuditorWallet_Nil(t *testing.T) {
 	mockWS.AuditorWalletReturns(nil, errors.New("wallet not found"))
 
 	ctx := context.Background()
-	wallet := wm.AuditorWallet(ctx, "unknown")
+	wallet, err := wm.AuditorWallet(ctx, "unknown")
 
+	assert.Error(t, err)
 	assert.Nil(t, wallet)
 }
 
@@ -679,8 +684,9 @@ func TestWalletManager_CertifierWallet_Nil(t *testing.T) {
 	mockWS.CertifierWalletReturns(nil, errors.New("wallet not found"))
 
 	ctx := context.Background()
-	wallet := wm.CertifierWallet(ctx, "unknown")
+	wallet, err := wm.CertifierWallet(ctx, "unknown")
 
+	assert.Error(t, err)
 	assert.Nil(t, wallet)
 }
 
