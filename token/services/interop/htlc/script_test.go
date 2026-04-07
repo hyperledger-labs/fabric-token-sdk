@@ -238,6 +238,7 @@ func TestScriptAuthOwnerTypeInvalidBytes(t *testing.T) {
 // makeHTLCToken builds a token whose owner field is a serialized HTLC script
 // with the given sender and recipient identities.
 func makeHTLCToken(t *testing.T, sender, recipient []byte) *token3.Token {
+	t.Helper()
 	scriptBytes, err := json.Marshal(htlc.Script{Sender: sender, Recipient: recipient})
 	require.NoError(t, err)
 
@@ -263,17 +264,21 @@ func stubWalletService(senderID, recipientID string) *mock.WalletService {
 			if senderID != "" {
 				ow := &mock.OwnerWallet{}
 				ow.IDReturns(senderID)
+
 				return ow, nil
 			}
 		case "recipient":
 			if recipientID != "" {
 				ow := &mock.OwnerWallet{}
 				ow.IDReturns(recipientID)
+
 				return ow, nil
 			}
 		}
+
 		return nil, errors.New("wallet not found")
 	}
+
 	return ws
 }
 
