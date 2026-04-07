@@ -289,7 +289,7 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 	pCommExt.Add(rp.VCommitment.Mul(eta))
 
 	// Extended witness pExt = aCoeffs || bCoeffs || v || r
-	// over generators  gExt = AGenerators || BGenerators || VGenerators.
+	// over generators  gExt = AGenerators || BGenerators || \eta * VGenerators.
 	pExt := make([]*mathlib.Zr, 2*n+4)
 	gExt := make([]*mathlib.G1, 2*n+4)
 	copy(pExt, p)
@@ -636,7 +636,7 @@ func fieldDiffInt(a, b int, curve *mathlib.Curve) *mathlib.Zr {
 //	x_i = ∏_{j=0, j≠i}^{n} (c-j) / (i-j)
 
 // Note that this is O(n^2) algorithm but field operations are significantly faster.
-// We can revisit it if it ever becomes a bottle-neck to have FFT based implementation.
+// We can revisit it if it ever becomes a bottleneck to have FFT based implementation.
 func getLagrangeMultipliers(n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
 	// For BN254 and BLS12 curves, we perform arithmetic over gnark crypto native type
 	// instead of mathlib wrapper, which uses slower big.Int conversion.

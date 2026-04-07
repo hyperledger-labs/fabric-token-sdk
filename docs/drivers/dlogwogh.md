@@ -278,7 +278,7 @@ type RangeProofParams struct {
     RightGenerators []*mathlib.G1  // Length = BitLength
     P               *mathlib.G1    // Base point for IPA
     Q               *mathlib.G1    // Base point for IPA
-    BitLength       uint64         // 16, 32, or 64
+    BitLength       uint64         // Arbitrary number between 1 and 64 (included)
     NumberOfRounds  uint64         // log2(BitLength)
 }
 ```
@@ -289,7 +289,7 @@ type RangeProofParams struct {
 type CSPRangeProofParams struct {
     LeftGenerators  []*mathlib.G1  // Length = BitLength + 1
     RightGenerators []*mathlib.G1  // Length = BitLength + 1
-    BitLength       uint64         // 16, 32, or 64
+    BitLength       uint64         // Arbitrary number between 1 and 64 (included)
 }
 ```
 
@@ -300,12 +300,15 @@ type CSPRangeProofParams struct {
 
 **Selection**: The appropriate parameter structure is populated based on the `ProofType` specified during setup. Only one set of parameters is included in the serialized `PublicParams`.
 
-**Supported Precisions**: The driver supports three precision levels, defined in [`setup.go`](../../token/core/zkatdlog/nogh/v1/setup/setup.go):
-- **16-bit**: Maximum value 65,535 (2^16 - 1)
-- **32-bit**: Maximum value 4,294,967,295 (2^32 - 1)
-- **64-bit**: Maximum value 18,446,744,073,709,551,615 (2^64 - 1)
+**Supported Precisions**: Any number between 1 and 64 is accepted. 
+For the CSP-based range proof, since CSP inner product argument is over 2n+4 sized vector, 
+bit lengths of 30 or 62 are ideal because it makes 2n+4 a power of 2, i.e, 64 and 128 respectively. 
+This avoids performance hit from overflowing to next power of two. 
+Sacrificing 2 bits from the range is perhaps worth the performance.
+This is ultimately a decision that must be driven by the requirements of the specific use-case.
 
-The precision determines both the maximum token value and the size of the range proofs. Higher precision allows larger token values but results in larger proofs and slower verification.
+The precision determines both the maximum token value and the size of the range proofs. 
+Higher precision allows larger token values but results in larger proofs and slower verification.
 
 ### 4.3 TMS Instantiation
 
