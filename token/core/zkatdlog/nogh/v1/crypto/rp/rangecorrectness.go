@@ -113,27 +113,41 @@ func NewRangeCorrectnessProver(
 
 // Prove generates a set of range proofs.
 func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
-	rc := &RangeCorrectness{}
-	rc.Proofs = make([]*RangeProof, len(p.Commitments))
-	for i := range len(p.Commitments) {
-		bp := NewRangeProver(
-			p.Commitments[i],
-			p.Values[i],
-			p.PedersenParameters,
-			p.BlindingFactors[i],
-			p.LeftGenerators,
-			p.RightGenerators,
-			p.P,
-			p.Q,
-			p.NumberOfRounds,
-			p.BitLength,
-			p.Curve,
-		)
-		proof, err := bp.Prove()
+	n := len(p.Commitments)
+
+	rc := &RangeCorrectness{
+		Proofs: make([]*RangeProof, n),
+	}
+
+	// SerialExecutor runs tasks immediately with no overhead
+	executor := NewSerialExecutor()
+	errs := make([]error, n)
+
+	for i := range n {
+		executor.Submit(func() {
+			bp := NewRangeProver(
+				p.Commitments[i],
+				p.Values[i],
+				p.PedersenParameters,
+				p.BlindingFactors[i],
+				p.LeftGenerators,
+				p.RightGenerators,
+				p.P,
+				p.Q,
+				p.NumberOfRounds,
+				p.BitLength,
+				p.Curve,
+			)
+			rc.Proofs[i], errs[i] = bp.Prove()
+		})
+	}
+
+	executor.Wait()
+
+	for _, err := range errs {
 		if err != nil {
 			return nil, err
 		}
-		rc.Proofs[i] = proof
 	}
 
 	return rc, nil
@@ -185,22 +199,38 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	if len(rc.Proofs) != len(v.Commitments) {
 		return errors.New("invalid range proof")
 	}
-	for i := range len(rc.Proofs) {
-		if rc.Proofs[i] == nil {
-			return errors.Errorf("invalid range proof: nil proof at index %d", i)
-		}
-		bv := NewRangeVerifier(
-			v.Commitments[i],
-			v.PedersenParameters,
-			v.LeftGenerators,
-			v.RightGenerators,
-			v.P,
-			v.Q,
-			v.NumberOfRounds,
-			v.BitLength,
-			v.Curve,
-		)
-		err := bv.Verify(rc.Proofs[i])
+
+	n := len(rc.Proofs)
+	executor := NewSerialExecutor()
+	errs := make([]error, n)
+
+	for i := range n {
+		executor.Submit(func() {
+			if rc.Proofs[i] == nil {
+				errs[i] = errors.Errorf("invalid range proof: nil proof at index %d", i)
+
+				return
+			}
+
+			bv := NewRangeVerifier(
+				v.Commitments[i],
+				v.PedersenParameters,
+				v.LeftGenerators,
+				v.RightGenerators,
+				v.P,
+				v.Q,
+				v.NumberOfRounds,
+				v.BitLength,
+				v.Curve,
+			)
+
+			errs[i] = bv.Verify(rc.Proofs[i])
+		})
+	}
+
+	executor.Wait()
+
+	for i, err := range errs {
 		if err != nil {
 			return errors.Wrapf(err, "invalid range proof at index %d", i)
 		}
