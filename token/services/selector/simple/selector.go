@@ -120,6 +120,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 				if addErr != nil {
 					s.locker.UnlockIDs(ctx, toBeSpent...)
 					s.locker.UnlockIDs(ctx, toBeCertified...)
+
 					return nil, nil, errors.Wrap(addErr, "failed to add locked quantity")
 				}
 
@@ -135,12 +136,14 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			if err != nil {
 				s.locker.UnlockIDs(ctx, toBeSpent...)
 				s.locker.UnlockIDs(ctx, toBeCertified...)
+
 				return nil, nil, errors.Wrap(err, "failed to add quantity")
 			}
 			potentialSumWithLocked, err = potentialSumWithLocked.Add(q)
 			if err != nil {
 				s.locker.UnlockIDs(ctx, toBeSpent...)
 				s.locker.UnlockIDs(ctx, toBeCertified...)
+
 				return nil, nil, errors.Wrap(err, "failed to add quantity")
 			}
 
