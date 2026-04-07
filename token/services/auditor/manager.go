@@ -85,6 +85,7 @@ func NewServiceManager(
 					LabelNames: []tracing.LabelName{txIdLabel},
 				})),
 				metricsProvider: metricsProvider,
+				metrics:         newMetrics(metricsProvider),
 				checkService:    checkService,
 			}
 
