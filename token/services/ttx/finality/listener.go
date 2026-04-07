@@ -41,7 +41,17 @@ type Listener struct {
 	retryRunner utils.RetryRunner
 }
 
-func NewListener(logger logging.Logger, net dep.Network, namespace string, tmsProvider dep.TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Service, tracer trace.Tracer, metricsProvider metrics.Provider) *Listener {
+func NewListener(
+	logger logging.Logger,
+	net dep.Network,
+	namespace string,
+	tmsProvider dep.TokenManagementServiceProvider,
+	tmsID token.TMSID,
+	ttxDB transactionDB,
+	tokens *tokens.Service,
+	tracer trace.Tracer,
+	metricsProvider metrics.Provider,
+) *Listener {
 	return &Listener{
 		logger:      logger,
 		net:         net,

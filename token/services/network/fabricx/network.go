@@ -9,6 +9,7 @@ package fabricx
 import (
 	ffabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -51,6 +52,7 @@ func NewNetwork(
 	flm finality.ListenerManager,
 	llm lookup.ListenerManager,
 	setupListenerProvider fabric.SetupListenerProvider,
+	metricsProvider metrics.Provider,
 ) *Network {
 	// first create a fabric network
 	tn := fabric.NewNetwork(
@@ -71,6 +73,7 @@ func NewNetwork(
 		llm,
 		setupListenerProvider,
 		storeServiceManager,
+		metricsProvider,
 	)
 
 	// we override the ledger created by fabric.NewNetwork with our fabricx specific impl

@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -156,6 +157,7 @@ type Network struct {
 	finalityTracer      trace.Tracer
 	localMembership     *lm
 	storeServiceManager ttxdb.StoreServiceManager
+	metricsProvider     metrics.Provider
 
 	setupListenerProvider      SetupListenerProvider
 	flm                        finality.ListenerManager
@@ -189,6 +191,7 @@ func NewNetwork(
 	llm lookup.ListenerManager,
 	setupListenerProvider SetupListenerProvider,
 	storeServiceManager ttxdb.StoreServiceManager,
+	metricsProvider metrics.Provider,
 ) *Network {
 	network := &Network{
 		n:                          n,
@@ -212,6 +215,7 @@ func NewNetwork(
 		setupListenerProvider: setupListenerProvider,
 		localMembership:       &lm{lm: n.LocalMembership()},
 		storeServiceManager:   storeServiceManager,
+		metricsProvider:       metricsProvider,
 	}
 	network.connectedNamespaces = lazy.NewProviderWithKeyMapper(func(s string) string {
 		return s
@@ -390,12 +394,13 @@ func (n *Network) connect(ns string) ([]token2.ServiceOption, error) {
 
 // finalityListenerFactory creates finality listeners for transaction recovery
 type finalityListenerFactory struct {
-	networkAdapter *networkAdapter
-	tmsProvider    *token2.ManagementServiceProvider
-	tmsID          token2.TMSID
-	ttxDB          *ttxdb.StoreService
-	tokensService  *tokens.Service
-	finalityTracer trace.Tracer
+	networkAdapter  *networkAdapter
+	tmsProvider     *token2.ManagementServiceProvider
+	tmsID           token2.TMSID
+	ttxDB           *ttxdb.StoreService
+	tokensService   *tokens.Service
+	finalityTracer  trace.Tracer
+	metricsProvider metrics.Provider
 }
 
 // NewFinalityListener creates a new finality listener for the given transaction ID
@@ -413,6 +418,7 @@ func (f *finalityListenerFactory) NewFinalityListener(txID string) (network.Fina
 		f.ttxDB,
 		f.tokensService,
 		f.finalityTracer,
+		f.metricsProvider,
 	), nil
 }
 
@@ -504,12 +510,13 @@ func (n *Network) createRecoveryManager(ns string) (*recovery.Manager, error) {
 
 	// Create finality listener factory
 	listenerFactory := &finalityListenerFactory{
-		networkAdapter: networkAdapter,
-		tmsProvider:    n.tmsProvider,
-		tmsID:          tmsID,
-		ttxDB:          ttxDB,
-		tokensService:  tokensService,
-		finalityTracer: n.finalityTracer,
+		networkAdapter:  networkAdapter,
+		tmsProvider:     n.tmsProvider,
+		tmsID:           tmsID,
+		ttxDB:           ttxDB,
+		tokensService:   tokensService,
+		finalityTracer:  n.finalityTracer,
+		metricsProvider: n.metricsProvider,
 	}
 
 	manager := recovery.NewManager(

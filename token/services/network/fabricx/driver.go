@@ -122,6 +122,7 @@ func NewDriver(
 			vkp,
 		),
 		supportedDrivers: []string{fabricx.DriverName},
+		metricsProvider:  metricsProvider,
 	}
 
 	return d, nil
@@ -146,6 +147,7 @@ type Driver struct {
 	EndorsementServiceProvider fabric.EndorsementServiceProvider
 	setupListenerProvider      fabric.SetupListenerProvider
 	queryExecutorProvider      *qe.ExecutorProvider
+	metricsProvider            metrics.Provider
 }
 
 // New returns a new Network instance for the specified network and channel.
@@ -207,5 +209,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		flm,
 		llm,
 		d.setupListenerProvider,
+		d.metricsProvider,
 	), nil
 }
