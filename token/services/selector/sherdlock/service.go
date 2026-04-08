@@ -23,7 +23,7 @@ type ConfigProvider interface {
 }
 
 type SelectorService struct {
-	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
+	managerLazyCache lazy2.Provider[TMS, token.SelectorManager]
 	mu               sync.Mutex
 	managers         []*manager
 }
@@ -81,6 +81,11 @@ func (s *SelectorService) trackManager(m *manager) {
 	s.mu.Unlock()
 }
 
+type TMS interface {
+	ID() token.TMSID
+	PublicParametersManager() *token.PublicParametersManager
+}
+
 type loader struct {
 	tokenLockStoreServiceManager tokenlockdb.StoreServiceManager
 	fetcherProvider              FetcherProvider
@@ -92,7 +97,7 @@ type loader struct {
 	onCreate                     func(*manager)
 }
 
-func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
+func (s *loader) load(tms TMS) (token.SelectorManager, error) {
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
@@ -123,6 +128,6 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	return mgr, nil
 }
 
-func key(tms *token.ManagementService) string {
+func key(tms TMS) string {
 	return tms.ID().String()
 }
