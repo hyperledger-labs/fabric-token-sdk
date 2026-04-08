@@ -345,6 +345,32 @@ func TestUInt64ToQuantity_Precision_InsufficientError(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestBigQuantity_Clone(t *testing.T) {
+	original, err := token.ToQuantity("100", 128)
+	require.NoError(t, err)
+
+	clone := original.Clone()
+	assert.Equal(t, "100", clone.Decimal())
+
+	originalBig := original.(*token.BigQuantity)
+	cloneBig := clone.(*token.BigQuantity)
+	assert.NotSame(t, originalBig.Int, cloneBig.Int)
+
+	originalBig.SetInt64(999)
+	assert.Equal(t, "100", clone.Decimal())
+}
+
+func TestUInt64Quantity_Clone(t *testing.T) {
+	original, err := token.ToQuantity("100", 64)
+	require.NoError(t, err)
+
+	clone := original.Clone()
+	assert.Equal(t, "100", clone.Decimal())
+
+	original.Add(token.NewOneQuantity(64))
+	assert.Equal(t, "100", clone.Decimal())
+}
+
 func ToHex(q uint64) string {
 	return "0x" + strconv.FormatUint(q, 16)
 }
@@ -719,6 +745,7 @@ func (InvalidQuantity) Cmp(b token.Quantity) int            { return 0 }
 func (InvalidQuantity) Hex() string                         { return "" }
 func (InvalidQuantity) Decimal() string                     { return "" }
 func (InvalidQuantity) ToBigInt() *big.Int                  { return nil }
+func (InvalidQuantity) Clone() token.Quantity               { return InvalidQuantity{} }
 
 func TestCmpPanicOnInvalidType(t *testing.T) {
 	t.Run("BigQuantity Cmp with invalid type", func(t *testing.T) {
