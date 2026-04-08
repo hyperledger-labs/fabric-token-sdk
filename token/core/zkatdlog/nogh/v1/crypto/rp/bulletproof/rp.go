@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
+	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
 )
 
 // RangeProofData contains the elements of a Bulletproof-style range proof.
@@ -199,6 +200,9 @@ type rangeProver struct {
 	BitLength uint64
 	// Curve is the mathematical curve.
 	Curve *math.Curve
+	// Provider creates a fresh Executor for each Prove call.
+	// If nil, DefaultProvider (SerialProvider) is used.
+	Provider rp.ExecutorProvider
 }
 
 // NewRangeProver returns a rangeProver based on  the passed arguments
@@ -212,6 +216,7 @@ func NewRangeProver(
 	P, Q *math.G1,
 	numberOfRounds, bitLength uint64,
 	curve *math.Curve,
+	provider rp.ExecutorProvider,
 ) *rangeProver {
 	return &rangeProver{
 		Commitment:           com,
@@ -225,6 +230,7 @@ func NewRangeProver(
 		NumberOfRounds:       numberOfRounds,
 		BitLength:            bitLength,
 		Curve:                curve,
+		Provider:             provider,
 	}
 }
 
@@ -263,6 +269,7 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 		com,
 		p.NumberOfRounds,
 		p.Curve,
+		p.Provider,
 	)
 	rp.IPA, err = ipp.Prove()
 	if err != nil {
@@ -442,6 +449,9 @@ type rangeVerifier struct {
 	BitLength uint64
 	// Curve is the mathematical curve.
 	Curve *math.Curve
+	// Provider creates a fresh Executor for each Prove call.
+	// If nil, DefaultProvider (SerialProvider) is used.
+	Provider rp.ExecutorProvider
 }
 
 // NewRangeVerifier returns a rangeVerifier based on the passed arguments
@@ -453,6 +463,7 @@ func NewRangeVerifier(
 	P, Q *math.G1,
 	numberOfRounds, bitLength uint64,
 	curve *math.Curve,
+	provider rp.ExecutorProvider,
 ) *rangeVerifier {
 	return &rangeVerifier{
 		Commitment:           com,
@@ -464,6 +475,7 @@ func NewRangeVerifier(
 		NumberOfRounds:       numberOfRounds,
 		BitLength:            bitLength,
 		Curve:                curve,
+		Provider:             provider,
 	}
 }
 
@@ -619,6 +631,7 @@ func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, yPow []*math.Zr, z
 		com,
 		v.NumberOfRounds,
 		v.Curve,
+		v.Provider,
 	)
 
 	return ipv.Verify(rp.IPA)

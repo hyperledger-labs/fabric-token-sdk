@@ -196,7 +196,7 @@ func TestRangeProofDeserializeError(t *testing.T) {
 
 func TestRangeVerifier_VerifyError(t *testing.T) {
 	curve := math.Curves[math.BN254]
-	verifier := NewRangeVerifier(curve.GenG1, []*math.G1{curve.GenG1}, nil, nil, curve.GenG1, curve.GenG1, 1, 1, curve)
+	verifier := NewRangeVerifier(curve.GenG1, []*math.G1{curve.GenG1}, nil, nil, curve.GenG1, curve.GenG1, 1, 1, curve, nil)
 
 	proof := &RangeProof{
 		Data: &RangeProofData{},

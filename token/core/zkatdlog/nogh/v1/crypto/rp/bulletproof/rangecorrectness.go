@@ -10,7 +10,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
 )
 
 // RangeCorrectness contains a set of range proofs for multiple commitments.
@@ -85,9 +85,14 @@ type RangeCorrectnessProver struct {
 	Q *math.G1
 	// Curve is the mathematical curve.
 	Curve *math.Curve
+	// Provider creates a fresh Executor for each Prove call.
+	// If nil, DefaultProvider (SerialProvider) is used.
+	Provider rp.ExecutorProvider
 }
 
-// NewRangeCorrectnessProver returns a new RangeCorrectnessProver instance.
+// NewRangeCorrectnessProver returns a new RangeCorrectnessProver.
+// exec controls how independent range proofs are executed; pass nil
+// to use SerialExecutor (equivalent to the previous behaviour).
 func NewRangeCorrectnessProver(
 	coms []*math.G1,
 	values []uint64,
@@ -96,7 +101,12 @@ func NewRangeCorrectnessProver(
 	P, Q *math.G1,
 	bitLength, rounds uint64,
 	c *math.Curve,
+	provider rp.ExecutorProvider,
 ) *RangeCorrectnessProver {
+	if provider == nil {
+		provider = rp.DefaultProvider
+	}
+
 	return &RangeCorrectnessProver{
 		Commitments:        coms,
 		Values:             values,
@@ -109,6 +119,7 @@ func NewRangeCorrectnessProver(
 		BitLength:          bitLength,
 		NumberOfRounds:     rounds,
 		Curve:              c,
+		Provider:           provider,
 	}
 }
 
@@ -120,8 +131,8 @@ func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 		Proofs: make([]*RangeProof, n),
 	}
 
-	// SerialExecutor runs tasks immediately with no overhead
-	executor := rp.NewSerialExecutor()
+	// Executor controls execution strategy (serial or parallel)
+	executor := p.Provider.New()
 	errs := make([]error, n)
 
 	for i := range n {
@@ -138,6 +149,7 @@ func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 				p.NumberOfRounds,
 				p.BitLength,
 				p.Curve,
+				p.Provider,
 			)
 			rc.Proofs[i], errs[i] = bp.Prove()
 		})
@@ -174,15 +186,25 @@ type RangeCorrectnessVerifier struct {
 	Q *math.G1
 	// Curve is the mathematical curve.
 	Curve *math.Curve
+	// Provider creates a fresh Executor for each Prove call.
+	// If nil, DefaultProvider (SerialProvider) is used.
+	Provider rp.ExecutorProvider
 }
 
-// NewRangeCorrectnessVerifier returns a new RangeCorrectnessVerifier instance.
+// NewRangeCorrectnessVerifier returns a new RangeCorrectnessVerifier.
+// exec controls how independent range proofs are verified; pass nil
+// to use SerialExecutor (equivalent to the previous behaviour).
 func NewRangeCorrectnessVerifier(
 	pedersenParameters, leftGenerators, rightGenerators []*math.G1,
 	P, Q *math.G1,
 	bitLength, rounds uint64,
 	curve *math.Curve,
+	provider rp.ExecutorProvider,
 ) *RangeCorrectnessVerifier {
+	if provider == nil {
+		provider = rp.DefaultProvider
+	}
+
 	return &RangeCorrectnessVerifier{
 		PedersenParameters: pedersenParameters,
 		LeftGenerators:     leftGenerators,
@@ -192,6 +214,7 @@ func NewRangeCorrectnessVerifier(
 		BitLength:          bitLength,
 		NumberOfRounds:     rounds,
 		Curve:              curve,
+		Provider:           provider,
 	}
 }
 
@@ -202,7 +225,7 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 	}
 
 	n := len(rc.Proofs)
-	executor := rp.NewSerialExecutor()
+	executor := v.Provider.New()
 	errs := make([]error, n)
 
 	for i := range n {
@@ -223,6 +246,7 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 				v.NumberOfRounds,
 				v.BitLength,
 				v.Curve,
+				v.Provider,
 			)
 
 			errs[i] = bv.Verify(rc.Proofs[i])
