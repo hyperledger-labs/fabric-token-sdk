@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	noghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -150,7 +151,7 @@ func GetTokensWithWitnessAndBF(values []uint64, bfs []*math.Zr, tokenType token.
 	for i, v := range values {
 		tw[i] = &Metadata{
 			BlindingFactor: bfs[i],
-			Value:          c.NewZrFromUint64(v),
+			Value:          math2.NewCachedZrFromInt(c, v),
 			Type:           tokenType,
 		}
 	}
@@ -169,7 +170,10 @@ type Metadata comm.Metadata
 func NewMetadata(curve math.CurveID, tokenType token.Type, values []uint64, bfs []*math.Zr) []*Metadata {
 	witness := make([]*Metadata, len(values))
 	for i, v := range values {
-		witness[i] = &Metadata{Value: math.Curves[curve].NewZrFromUint64(v), BlindingFactor: bfs[i]}
+		witness[i] = &Metadata{
+			Value:          math2.NewCachedZrFromInt(math.Curves[curve], v),
+			BlindingFactor: bfs[i],
+		}
 		witness[i].Type = tokenType
 	}
 

@@ -53,6 +53,10 @@ type Certification struct {
 	// Workers is the number of concurrent goroutines that process certification
 	// batches. Zero uses DefaultWorkers.
 	Workers int `yaml:"workers,omitempty"`
+
+	// ResponseTimeout is the maximum time the client waits for the certifier to
+	// respond before treating the request as failed. Zero uses DefaultResponseTimeout.
+	ResponseTimeout time.Duration `yaml:"responseTimeout,omitempty"`
 }
 
 type BackendFactory func(tms *token.ManagementService, wallet string) (Backend, error)
@@ -140,8 +144,14 @@ func (d *Driver) NewCertificationClient(ctx context.Context, tms *token.Manageme
 			workers = DefaultWorkers
 		}
 
+		responseTimeout := certification.ResponseTimeout
+		if responseTimeout <= 0 {
+			responseTimeout = DefaultResponseTimeout
+		}
+
 		certificationClient := NewCertificationClient(
 			ctx,
+			tms.Network(),
 			tms.Channel(),
 			tms.Namespace(),
 			tms.Vault().NewQueryEngine(),
@@ -155,6 +165,7 @@ func (d *Driver) NewCertificationClient(ctx context.Context, tms *token.Manageme
 			bufferSize,
 			flushInterval,
 			workers,
+			responseTimeout,
 			d.MetricsProvider,
 		)
 		if err := certificationClient.Scan(); err != nil {
