@@ -62,7 +62,7 @@ func (s *factoryDirectory[T]) PublicParametersFromBytes(params []byte) (driver.P
 		return f.PublicParametersFromBytes(params)
 	}
 
-	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier)
+	return nil, errors.Errorf("cannot load public parameters, driver [%s] not found", pp.Identifier)
 }
 
 // serializedPublicParametersFromBytes returns a driver.SerializedPublicParameters instance from the passed bytes.
@@ -95,15 +95,14 @@ func (s *PPManagerFactoryService) NewPublicParametersManager(pp driver.PublicPar
 	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", DriverIdentifierFromPP(pp))
 }
 
-// DefaultValidator returns a new instance of driver.Validator for the passed public parameters.
+// NewValidator returns a new instance of driver.Validator for the passed public parameters.
 // If no driver is registered for the public params' identifier, it returns an error.
-func (s *PPManagerFactoryService) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+func (s *PPManagerFactoryService) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	if err := pp.Validate(); err != nil {
 		return nil, errors.Wrapf(err, "failed validating public parameters")
 	}
-
 	if instantiator, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
-		return instantiator.DefaultValidator(pp)
+		return instantiator.NewValidator(pp)
 	}
 
 	return nil, errors.Errorf("cannot load default validator, driver [%s] not found", DriverIdentifierFromPP(pp))
@@ -170,11 +169,11 @@ func NewValidatorDriverService(factories []NamedFactory[driver.ValidatorDriver])
 	return &ValidatorDriverService{factoryDirectory: newFactoryDirectory(factories...)}
 }
 
-// NewDefaultValidator returns a new instance of driver.Validator for the passed public parameters.
+// NewValidator returns a new instance of driver.Validator for the passed public parameters.
 // If no driver is registered for the public params' identifier, it returns an error.
-func (s *ValidatorDriverService) NewDefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+func (s *ValidatorDriverService) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	if driver, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
-		return driver.NewDefaultValidator(pp)
+		return driver.NewValidator(pp)
 	}
 
 	return nil, errors.Errorf("no validator found for token driver [%s]", DriverIdentifierFromPP(pp))

@@ -71,7 +71,7 @@ func main() {
 					if err != nil {
 						return nil, nil, err
 					}
-					v, err := is.DefaultValidator(ppm)
+					v, err := is.NewValidator(ppm)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -116,7 +116,7 @@ func main() {
 					if err != nil {
 						return nil, nil, err
 					}
-					v, err := is.DefaultValidator(ppm)
+					v, err := is.NewValidator(ppm)
 					if err != nil {
 						return nil, nil, err
 					}

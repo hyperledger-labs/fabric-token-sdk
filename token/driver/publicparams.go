@@ -25,11 +25,9 @@ type PPReader interface {
 //
 //go:generate counterfeiter -o mock/ppm_factory.go -fake-name PPMFactory . PPMFactory
 type PPMFactory interface {
-	PPReader
+	ValidatorDriver
 	// NewPublicParametersManager returns a new PublicParametersManager instance from the passed public parameters
 	NewPublicParametersManager(pp PublicParameters) (PublicParamsManager, error)
-	// DefaultValidator returns a new Validator instance from the passed public parameters
-	DefaultValidator(pp PublicParameters) (Validator, error)
 }
 
 // PublicParamsFetcher models a public parameters fetcher.

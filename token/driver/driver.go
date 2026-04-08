@@ -20,6 +20,6 @@ type Driver interface {
 //go:generate counterfeiter -o mock/validator_driver.go -fake-name ValidatorDriver . ValidatorDriver
 type ValidatorDriver interface {
 	PPReader
-	// NewDefaultValidator returns a new Validator instance from the passed public parameters
-	NewDefaultValidator(pp PublicParameters) (Validator, error)
+	// NewValidator returns a new Validator instance from the passed public parameters
+	NewValidator(pp PublicParameters) (Validator, error)
 }

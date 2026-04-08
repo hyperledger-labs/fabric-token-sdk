@@ -35,8 +35,8 @@ type Driver struct {
 	vaultProvider    cdriver.VaultProvider
 }
 
-// NewDriver returns a new factory for the fabtoken driver.
-func NewDriver(
+// NewTokenDriver returns a new factory for the fabtoken driver.
+func NewTokenDriver(
 	metricsProvider cdriver.MetricsProvider,
 	tracerProvider cdriver.TracerProvider,
 	configService cdriver.ConfigService,
@@ -48,7 +48,7 @@ func NewDriver(
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
 		Name: core.DriverIdentifier(v1setup.FabTokenDriverName, 1),
-		Driver: newDriver(
+		Driver: newTokenDriver(
 			metricsProvider,
 			tracerProvider,
 			configService,
@@ -61,7 +61,7 @@ func NewDriver(
 	}
 }
 
-func newDriver(
+func newTokenDriver(
 	metricsProvider cdriver.MetricsProvider,
 	tracerProvider cdriver.TracerProvider,
 	configService cdriver.ConfigService,

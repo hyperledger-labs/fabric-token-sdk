@@ -8,16 +8,16 @@ import (
 )
 
 type ValidatorDriver struct {
-	NewDefaultValidatorStub        func(driver.PublicParameters) (driver.Validator, error)
-	newDefaultValidatorMutex       sync.RWMutex
-	newDefaultValidatorArgsForCall []struct {
+	NewValidatorStub        func(driver.PublicParameters) (driver.Validator, error)
+	newValidatorMutex       sync.RWMutex
+	newValidatorArgsForCall []struct {
 		arg1 driver.PublicParameters
 	}
-	newDefaultValidatorReturns struct {
+	newValidatorReturns struct {
 		result1 driver.Validator
 		result2 error
 	}
-	newDefaultValidatorReturnsOnCall map[int]struct {
+	newValidatorReturnsOnCall map[int]struct {
 		result1 driver.Validator
 		result2 error
 	}
@@ -38,16 +38,16 @@ type ValidatorDriver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ValidatorDriver) NewDefaultValidator(arg1 driver.PublicParameters) (driver.Validator, error) {
-	fake.newDefaultValidatorMutex.Lock()
-	ret, specificReturn := fake.newDefaultValidatorReturnsOnCall[len(fake.newDefaultValidatorArgsForCall)]
-	fake.newDefaultValidatorArgsForCall = append(fake.newDefaultValidatorArgsForCall, struct {
+func (fake *ValidatorDriver) NewValidator(arg1 driver.PublicParameters) (driver.Validator, error) {
+	fake.newValidatorMutex.Lock()
+	ret, specificReturn := fake.newValidatorReturnsOnCall[len(fake.newValidatorArgsForCall)]
+	fake.newValidatorArgsForCall = append(fake.newValidatorArgsForCall, struct {
 		arg1 driver.PublicParameters
 	}{arg1})
-	stub := fake.NewDefaultValidatorStub
-	fakeReturns := fake.newDefaultValidatorReturns
-	fake.recordInvocation("NewDefaultValidator", []interface{}{arg1})
-	fake.newDefaultValidatorMutex.Unlock()
+	stub := fake.NewValidatorStub
+	fakeReturns := fake.newValidatorReturns
+	fake.recordInvocation("NewValidator", []interface{}{arg1})
+	fake.newValidatorMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -57,46 +57,46 @@ func (fake *ValidatorDriver) NewDefaultValidator(arg1 driver.PublicParameters) (
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *ValidatorDriver) NewDefaultValidatorCallCount() int {
-	fake.newDefaultValidatorMutex.RLock()
-	defer fake.newDefaultValidatorMutex.RUnlock()
-	return len(fake.newDefaultValidatorArgsForCall)
+func (fake *ValidatorDriver) NewValidatorCallCount() int {
+	fake.newValidatorMutex.RLock()
+	defer fake.newValidatorMutex.RUnlock()
+	return len(fake.newValidatorArgsForCall)
 }
 
-func (fake *ValidatorDriver) NewDefaultValidatorCalls(stub func(driver.PublicParameters) (driver.Validator, error)) {
-	fake.newDefaultValidatorMutex.Lock()
-	defer fake.newDefaultValidatorMutex.Unlock()
-	fake.NewDefaultValidatorStub = stub
+func (fake *ValidatorDriver) NewValidatorCalls(stub func(driver.PublicParameters) (driver.Validator, error)) {
+	fake.newValidatorMutex.Lock()
+	defer fake.newValidatorMutex.Unlock()
+	fake.NewValidatorStub = stub
 }
 
-func (fake *ValidatorDriver) NewDefaultValidatorArgsForCall(i int) driver.PublicParameters {
-	fake.newDefaultValidatorMutex.RLock()
-	defer fake.newDefaultValidatorMutex.RUnlock()
-	argsForCall := fake.newDefaultValidatorArgsForCall[i]
+func (fake *ValidatorDriver) NewValidatorArgsForCall(i int) driver.PublicParameters {
+	fake.newValidatorMutex.RLock()
+	defer fake.newValidatorMutex.RUnlock()
+	argsForCall := fake.newValidatorArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *ValidatorDriver) NewDefaultValidatorReturns(result1 driver.Validator, result2 error) {
-	fake.newDefaultValidatorMutex.Lock()
-	defer fake.newDefaultValidatorMutex.Unlock()
-	fake.NewDefaultValidatorStub = nil
-	fake.newDefaultValidatorReturns = struct {
+func (fake *ValidatorDriver) NewValidatorReturns(result1 driver.Validator, result2 error) {
+	fake.newValidatorMutex.Lock()
+	defer fake.newValidatorMutex.Unlock()
+	fake.NewValidatorStub = nil
+	fake.newValidatorReturns = struct {
 		result1 driver.Validator
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ValidatorDriver) NewDefaultValidatorReturnsOnCall(i int, result1 driver.Validator, result2 error) {
-	fake.newDefaultValidatorMutex.Lock()
-	defer fake.newDefaultValidatorMutex.Unlock()
-	fake.NewDefaultValidatorStub = nil
-	if fake.newDefaultValidatorReturnsOnCall == nil {
-		fake.newDefaultValidatorReturnsOnCall = make(map[int]struct {
+func (fake *ValidatorDriver) NewValidatorReturnsOnCall(i int, result1 driver.Validator, result2 error) {
+	fake.newValidatorMutex.Lock()
+	defer fake.newValidatorMutex.Unlock()
+	fake.NewValidatorStub = nil
+	if fake.newValidatorReturnsOnCall == nil {
+		fake.newValidatorReturnsOnCall = make(map[int]struct {
 			result1 driver.Validator
 			result2 error
 		})
 	}
-	fake.newDefaultValidatorReturnsOnCall[i] = struct {
+	fake.newValidatorReturnsOnCall[i] = struct {
 		result1 driver.Validator
 		result2 error
 	}{result1, result2}

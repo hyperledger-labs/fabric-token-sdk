@@ -47,7 +47,7 @@ func (p *SDK) Install() error {
 	err := errors.Join(
 		// token driver
 		sdk.RegisterTokenDriverDependencies(p.Container()),
-		p.Container().Provide(dlog.NewDriver, dig.Group("token-drivers")),
+		p.Container().Provide(dlog.NewTokenDriver, dig.Group("token-drivers")),
 		p.Container().Provide(dlog.NewValidatorDriver, dig.Group("validator-drivers")),
 
 		// fabricx

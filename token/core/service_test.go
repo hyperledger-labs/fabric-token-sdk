@@ -119,7 +119,7 @@ func TestPPManagerFactoryService_DefaultValidator(t *testing.T) {
 	expectedValidator := &mock.Validator{}
 	ppmFactory.DefaultValidatorReturns(expectedValidator, nil)
 
-	res, err := service.DefaultValidator(pp)
+	res, err := service.NewValidator(pp)
 	require.NoError(t, err)
 	assert.Equal(t, expectedValidator, res)
 
@@ -128,7 +128,7 @@ func TestPPManagerFactoryService_DefaultValidator(t *testing.T) {
 	ppUnknown.TokenDriverNameReturns("unknown")
 	ppUnknown.TokenDriverVersionReturns(1)
 
-	res, err = service.DefaultValidator(ppUnknown)
+	res, err = service.NewValidator(ppUnknown)
 	require.Error(t, err)
 	assert.Nil(t, res)
 	assert.Contains(t, err.Error(), "cannot load default validator, driver [unknown.v1] not found")
@@ -265,7 +265,7 @@ func TestValidatorDriverService_NewDefaultValidator(t *testing.T) {
 	expectedValidator := &mock.Validator{}
 	driverMock.NewDefaultValidatorReturns(expectedValidator, nil)
 
-	res, err := service.NewDefaultValidator(pp)
+	res, err := service.NewValidator(pp)
 	require.NoError(t, err)
 	assert.Equal(t, expectedValidator, res)
 
@@ -274,7 +274,7 @@ func TestValidatorDriverService_NewDefaultValidator(t *testing.T) {
 	ppUnknown.TokenDriverNameReturns("unknown")
 	ppUnknown.TokenDriverVersionReturns(1)
 
-	res, err = service.NewDefaultValidator(ppUnknown)
+	res, err = service.NewValidator(ppUnknown)
 	require.Error(t, err)
 	assert.Nil(t, res)
 	assert.Contains(t, err.Error(), "no validator found for token driver [unknown.v1]")

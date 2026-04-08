@@ -122,7 +122,7 @@ func tokenServicesFactory(bytes []byte) (tcc.PublicParameters, tcc.Validator, er
 	if err := ppm.Validate(); err != nil {
 		return nil, nil, err
 	}
-	v, err := is.DefaultValidator(ppm)
+	v, err := is.NewValidator(ppm)
 	if err != nil {
 		return nil, nil, err
 	}

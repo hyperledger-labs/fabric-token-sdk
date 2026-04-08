@@ -42,8 +42,8 @@ func (d *Base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 	return pp, nil
 }
 
-// DefaultValidator returns a new zkatdlog validator for the passed public parameters.
-func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+// NewValidator returns a new zkatdlog validator for the passed public parameters.
+func (d *Base) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	if err := pp.Validate(); err != nil {
 		return nil, errors.Wrapf(err, "failed validating public parameters")
 	}
@@ -68,13 +68,12 @@ func (d *Base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, e
 	), nil
 }
 
-// NewDefaultValidator returns a new zkatdlog validator for the passed public parameters.
-func (d *Base) NewDefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	return d.DefaultValidator(pp)
+type TokenDriverBase struct{
+	*Base
 }
 
 // NewWalletService returns a new zkatdlog wallet service.
-func (d *Base) NewWalletService(
+func (d *TokenDriverBase) NewWalletService(
 	tmsConfig core.Config,
 	binder identity.NetworkBinderService,
 	storageProvider identity.StorageProvider,
