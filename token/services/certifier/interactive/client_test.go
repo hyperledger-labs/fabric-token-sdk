@@ -130,6 +130,7 @@ func newTestClient(
 
 	return NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"test-channel",
 		"test-ns",
 		&fakeQueryEngine{},
@@ -143,6 +144,7 @@ func newTestClient(
 		1000,
 		flushInterval,
 		workers,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 }
@@ -236,7 +238,7 @@ func TestCertificationClient_OnReceive_BufferFull_DoesNotBlock(t *testing.T) {
 	// batchSize=1000 and flushInterval=10min so tokens accumulate but are never batched.
 	cc := NewCertificationClient(
 		context.Background(),
-		"ch", "ns",
+		"net", "ch", "ns",
 		&fakeQueryEngine{},
 		storage,
 		vm,
@@ -247,6 +249,7 @@ func TestCertificationClient_OnReceive_BufferFull_DoesNotBlock(t *testing.T) {
 		2, // tiny buffer — fills immediately
 		10*time.Minute,
 		1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 	cc.Start()
@@ -279,7 +282,7 @@ func TestCertificationClient_PushbackNonBlocking(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
-		"ch", "ns",
+		"net", "ch", "ns",
 		&fakeQueryEngine{},
 		storage,
 		vm,
@@ -291,6 +294,7 @@ func TestCertificationClient_PushbackNonBlocking(t *testing.T) {
 		1, // bufferSize=1 — push-back will overflow
 		20*time.Millisecond,
 		1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 	cc.Start()
@@ -325,7 +329,7 @@ func TestCertificationClient_MultipleWorkers(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
-		"ch", "ns",
+		"net", "ch", "ns",
 		&fakeQueryEngine{},
 		storage,
 		countingVM,
@@ -336,6 +340,7 @@ func TestCertificationClient_MultipleWorkers(t *testing.T) {
 		1000,
 		5*time.Millisecond,
 		workers,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 	cc.Start()

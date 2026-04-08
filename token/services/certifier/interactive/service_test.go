@@ -112,9 +112,11 @@ func TestNewCertificationRequestView(t *testing.T) {
 		{TxId: "tx2", Index: 1},
 	}
 
-	v := NewCertificationRequestView(channel, namespace, certifier, ids...)
+	network := "test-network"
+	v := NewCertificationRequestView(network, channel, namespace, certifier, ids...)
 
 	assert.NotNil(t, v)
+	assert.Equal(t, network, v.network)
 	assert.Equal(t, channel, v.channel)
 	assert.Equal(t, namespace, v.ns)
 	assert.Equal(t, certifier, v.certifier)

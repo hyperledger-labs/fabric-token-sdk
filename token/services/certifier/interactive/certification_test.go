@@ -136,6 +136,7 @@ func TestNewCertificationClient_WithNotifier(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&fakeQueryEngine{},
 		storage,
@@ -145,6 +146,7 @@ func TestNewCertificationClient_WithNotifier(t *testing.T) {
 		DefaultMaxAttempts, DefaultWaitTime,
 		DefaultBatchSize, DefaultBufferSize,
 		DefaultFlushInterval, DefaultWorkers,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -206,6 +208,7 @@ func TestRequestCertification_RetriesExhausted(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&fakeQueryEngine{},
 		storage,
@@ -215,6 +218,7 @@ func TestRequestCertification_RetriesExhausted(t *testing.T) {
 		2,                  // maxAttempts=2
 		1*time.Millisecond, // short retry gap
 		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -235,6 +239,7 @@ func TestRequestCertification_ContextCancelled(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&fakeQueryEngine{},
 		storage,
@@ -244,6 +249,7 @@ func TestRequestCertification_ContextCancelled(t *testing.T) {
 		10,             // many attempts — context must cancel first
 		10*time.Second, // long wait between retries
 		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -264,6 +270,7 @@ func TestRequestCertification_InvalidReturnType(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&fakeQueryEngine{},
 		storage,
@@ -272,6 +279,7 @@ func TestRequestCertification_InvalidReturnType(t *testing.T) {
 		nil,
 		1, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -294,6 +302,7 @@ func TestRequestCertification_StoreError(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&fakeQueryEngine{},
 		storage,
@@ -302,6 +311,7 @@ func TestRequestCertification_StoreError(t *testing.T) {
 		nil,
 		1, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -323,6 +333,7 @@ func TestRequestCertification_RetryThenSuccess(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&fakeQueryEngine{},
 		storage,
@@ -332,6 +343,7 @@ func TestRequestCertification_RetryThenSuccess(t *testing.T) {
 		3, // 3 attempts available
 		1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -403,6 +415,7 @@ func TestScan_UncertifiedTokens(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&populatedQueryEngine{items: unspent},
 		storage,
@@ -411,6 +424,7 @@ func TestScan_UncertifiedTokens(t *testing.T) {
 		nil,
 		2, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -438,6 +452,7 @@ func TestScan_AlreadyCertified(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&populatedQueryEngine{items: unspent},
 		storage,
@@ -446,6 +461,7 @@ func TestScan_AlreadyCertified(t *testing.T) {
 		nil,
 		2, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -471,6 +487,7 @@ func TestProcessBatch_EmptyBatch_TriggersVaultScan(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&populatedQueryEngine{items: unspent},
 		storage,
@@ -479,6 +496,7 @@ func TestProcessBatch_EmptyBatch_TriggersVaultScan(t *testing.T) {
 		nil,
 		2, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -500,6 +518,7 @@ func TestProcessBatch_CertificationFailure_PushesBackToBuffer(t *testing.T) {
 
 	cc := NewCertificationClient(
 		context.Background(),
+		"test-network",
 		"ch", "ns",
 		&fakeQueryEngine{},
 		storage,
@@ -511,6 +530,7 @@ func TestProcessBatch_CertificationFailure_PushesBackToBuffer(t *testing.T) {
 		10,
 		100, // bufferSize=100, enough room for push-back
 		1*time.Second, 1,
+		DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 	// Do NOT Start() — we call processBatch directly so the tokens channel

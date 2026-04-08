@@ -51,18 +51,19 @@ type CertificationClient struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
-	channel, namespace   string
-	queryEngine          QueryEngine
-	certificationStorage CertificationStorage
-	viewManager          ViewManager
-	certifiers           []view.Identity
-	eventOperationMap    map[string]Op
+	network, channel, namespace string
+	queryEngine                 QueryEngine
+	certificationStorage        CertificationStorage
+	viewManager                 ViewManager
+	certifiers                  []view.Identity
+	eventOperationMap           map[string]Op
 
-	waitTime      time.Duration
-	maxAttempts   int
-	batchSize     int
-	flushInterval time.Duration
-	workers       int
+	waitTime        time.Duration
+	maxAttempts     int
+	batchSize       int
+	flushInterval   time.Duration
+	workers         int
+	responseTimeout time.Duration
 
 	// tokens receives individual token IDs from OnReceive and Scan.
 	tokens chan *token.ID
@@ -74,6 +75,7 @@ type CertificationClient struct {
 
 func NewCertificationClient(
 	ctx context.Context,
+	network string,
 	channel string,
 	namespace string,
 	qe QueryEngine,
@@ -87,6 +89,7 @@ func NewCertificationClient(
 	bufferSize int,
 	flushInterval time.Duration,
 	workers int,
+	responseTimeout time.Duration,
 	metricsProvider metrics.Provider,
 ) *CertificationClient {
 	derivedCtx, cancel := context.WithCancel(ctx)
@@ -94,6 +97,7 @@ func NewCertificationClient(
 	cc := &CertificationClient{
 		ctx:                  derivedCtx,
 		cancel:               cancel,
+		network:              network,
 		channel:              channel,
 		namespace:            namespace,
 		queryEngine:          qe,
@@ -107,6 +111,7 @@ func NewCertificationClient(
 		flushInterval:        flushInterval,
 		workers:              workers,
 		maxAttempts:          maxAttempts,
+		responseTimeout:      responseTimeout,
 		metrics:              newClientMetrics(metricsProvider),
 	}
 
@@ -145,7 +150,9 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 
 	start := time.Now()
 	for i := range cc.maxAttempts {
-		resultBoxed, err = cc.viewManager.InitiateView(NewCertificationRequestView(cc.channel, cc.namespace, cc.certifiers[0], toBeCertified...))
+		view := NewCertificationRequestView(cc.network, cc.channel, cc.namespace, cc.certifiers[0], toBeCertified...)
+		view.responseTimeout = cc.responseTimeout
+		resultBoxed, err = cc.viewManager.InitiateView(view)
 		if err == nil {
 			break
 		}
