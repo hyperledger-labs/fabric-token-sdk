@@ -54,8 +54,8 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "failed to get default tms")
 	if m.Auditor {
-		auditorWallet := tms.WalletManager().AuditorWallet(context.Context(), m.AuditorWalletID)
-		assert.NotNil(auditorWallet, "cannot find auditor wallet [%s]", m.AuditorWalletID)
+		auditorWallet, err := tms.WalletManager().AuditorWallet(context.Context(), m.AuditorWalletID)
+		assert.NoError(err, "cannot find auditor wallet [%s]", m.AuditorWalletID)
 		db, err := ttx.NewAuditor(context, auditorWallet)
 		assert.NoError(err, "failed to get auditor instance")
 
