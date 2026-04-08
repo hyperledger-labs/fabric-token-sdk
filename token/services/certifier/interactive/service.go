@@ -89,12 +89,27 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("invalid certification request: no token IDs provided [%s]", cr)
 	}
 
+	if len(cr.IDs) > MaxTokensPerRequest {
+		return nil, errors.Errorf("invalid certification request: too many token IDs (%d > %d) [%s]", len(cr.IDs), MaxTokensPerRequest, cr)
+	}
+
+	if len(cr.Request) > MaxRequestBytes {
+		return nil, errors.Errorf("invalid certification request: request payload too large (%d > %d bytes) [%s]", len(cr.Request), MaxRequestBytes, cr)
+	}
+
 	logger.Debugf("received certification request [%v]", cr)
 
 	// 3. load token outputs
 	tokenOutputs, err := c.backend.Load(context, cr)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting tokens [%s:%s][%v]", cr.Channel, cr.Namespace, cr.IDs)
+	}
+
+	if len(tokenOutputs) != len(cr.IDs) {
+		return nil, errors.Errorf(
+			"token output count mismatch: backend returned %d outputs for %d IDs [%s]",
+			len(tokenOutputs), len(cr.IDs), cr,
+		)
 	}
 
 	// 4. certify token output
@@ -160,7 +175,7 @@ type CertificationRequest struct {
 }
 
 func (cr *CertificationRequest) String() string {
-	return fmt.Sprintf("CertificationRequest[%s,%s,%s][%v]", cr.Request, cr.Channel, cr.Namespace, cr.IDs)
+	return fmt.Sprintf("CertificationRequest[%s:%s:%s][ids=%d,req=%d bytes]", cr.Network, cr.Channel, cr.Namespace, len(cr.IDs), len(cr.Request))
 }
 
 type CertificationRequestView struct {
@@ -250,6 +265,13 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 		logger.Errorf("failed verifying certifications of [%v] from [%s] with err [%s]", i.ids, i.certifier, err)
 
 		return nil, errors.WithMessagef(err, "failed verifying certifications of [%v] from [%s]", i.ids, i.certifier)
+	}
+
+	if len(processedCertifications) != len(i.ids) {
+		return nil, errors.Errorf(
+			"certification manager returned %d processed certifications for %d token IDs from [%s]",
+			len(processedCertifications), len(i.ids), i.certifier,
+		)
 	}
 
 	logger.Debugf("certifications of [%v] from [%s] are valid", i.ids, i.certifier)
