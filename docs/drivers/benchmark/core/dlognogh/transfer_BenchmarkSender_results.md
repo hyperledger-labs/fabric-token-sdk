@@ -1,5 +1,7 @@
 ## Benchmark Results: `token/core/zkatdlog/nogh/v1/transfer#BenchmarkSender`
 
+> **Note**: These results are based on **Bulletproof** range proofs (the original implementation). As of commit 586d4f58, the driver also supports **CSP (Compressed Sigma Protocol)** range proofs, which may show different performance characteristics. To benchmark CSP proofs, use the `-proof_type=csp` flag.
+
 The output of `go test` can be found [here](transfer_results.txt).
 
 Here is the summary produced by `benchstat`.

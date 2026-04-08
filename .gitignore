@@ -7,3 +7,4 @@ go.work
 go.work.sum
 fabric-samples/
 fabric-smart-client/
+/.bob/

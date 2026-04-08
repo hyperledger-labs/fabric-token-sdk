@@ -744,7 +744,7 @@ func TestTokensService_getOutput_Extra(t *testing.T) {
 	_, err = s.getOutput(context.Background(), raw, false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "data is invalid in output")
-	assert.Contains(t, err.Error(), "elememt is nil")
+	assert.Contains(t, err.Error(), "element is nil")
 
 	// data is invalid (wrong curve)
 	tok = &Token{Owner: []byte("owner"), Data: math.Curves[math.BLS12_381_GURVY].GenG1}

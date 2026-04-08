@@ -38,6 +38,9 @@ func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 
 // DefaultValidator returns a new fabtoken validator for the passed public parameters.
 func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed validating public parameters")
+	}
 	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
 	deserializer := NewDeserializer()
 

@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
@@ -125,6 +126,8 @@ type Action struct {
 	Inputs []*ActionInput
 	// Outputs are the new tokens resulting from the transfer
 	Outputs []*token.Token
+	// ProofType is the type of proof used by this action
+	ProofType rp.ProofType
 	// ZK Proof that shows that the transfer is correct
 	Proof []byte
 	// Metadata contains the transfer action's metadata
@@ -134,7 +137,14 @@ type Action struct {
 }
 
 // NewAction returns the Action that matches the passed arguments
-func NewAction(tokenIDs []*token2.ID, inputToken []*token.Token, commitments []*math.G1, owners [][]byte, proof []byte) (*Action, error) {
+func NewAction(
+	tokenIDs []*token2.ID,
+	inputToken []*token.Token,
+	commitments []*math.G1,
+	owners [][]byte,
+	proof []byte,
+	proofType rp.ProofType,
+) (*Action, error) {
 	if len(commitments) != len(owners) {
 		return nil, errors.Wrapf(ErrMismatchedRecipientsOutputs, "number of recipients [%d] does not match number of outputs [%d]", len(commitments), len(owners))
 	}
@@ -156,11 +166,12 @@ func NewAction(tokenIDs []*token2.ID, inputToken []*token.Token, commitments []*
 	}
 
 	return &Action{
-		Inputs:   inputs,
-		Outputs:  tokens,
-		Proof:    proof,
-		Metadata: map[string][]byte{},
-		Issuer:   nil,
+		Inputs:    inputs,
+		Outputs:   tokens,
+		Proof:     proof,
+		Metadata:  map[string][]byte{},
+		Issuer:    nil,
+		ProofType: proofType,
 	}, nil
 }
 
@@ -330,6 +341,12 @@ func (t *Action) Validate() error {
 	if t.IsRedeem() && (t.Issuer == nil) {
 		return ErrMissingIssuer
 	}
+	if t.ProofType != rp.RangeProofType && t.ProofType != rp.CSPRangeProofType {
+		return ErrInvalidProofType
+	}
+	if len(t.Proof) == 0 {
+		return ErrEmptyProof
+	}
 
 	return nil
 }
@@ -372,13 +389,29 @@ func (t *Action) Serialize() ([]byte, error) {
 		}
 	}
 
+	var proof *actions.Proof
+	switch t.ProofType {
+	case rp.RangeProofType:
+		proof = &actions.Proof{
+			ProofType: &actions.Proof_Proof{
+				Proof: t.Proof,
+			},
+		}
+	case rp.CSPRangeProofType:
+		proof = &actions.Proof{
+			ProofType: &actions.Proof_CspBasedProof{
+				CspBasedProof: t.Proof,
+			},
+		}
+	default:
+		return nil, ErrInvalidProofType
+	}
+
 	action := &actions.TransferAction{
-		Version: ProtocolV1,
-		Inputs:  inputs,
-		Outputs: outputs,
-		Proof: &actions.Proof{
-			Proof: t.Proof,
-		},
+		Version:  ProtocolV1,
+		Inputs:   inputs,
+		Outputs:  outputs,
+		Proof:    proof,
 		Metadata: t.Metadata,
 		Issuer:   issuer,
 	}
@@ -423,7 +456,16 @@ func (t *Action) Deserialize(raw []byte) error {
 	}
 
 	if action.Proof != nil {
-		t.Proof = action.Proof.Proof
+		switch action.Proof.GetProofType().(type) {
+		case *actions.Proof_CspBasedProof:
+			t.ProofType = rp.CSPRangeProofType
+			t.Proof = action.Proof.GetCspBasedProof()
+		case *actions.Proof_Proof:
+			t.ProofType = rp.RangeProofType
+			t.Proof = action.Proof.GetProof()
+		default:
+			return ErrInvalidProofType
+		}
 	}
 	t.Metadata = action.Metadata
 

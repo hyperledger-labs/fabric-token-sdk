@@ -50,7 +50,7 @@ type TokensService struct {
 func NewTokensService(logger logging.Logger, publicParametersManager common.PublicParametersManager[*setup.PublicParams], identityDeserializer driver.Deserializer) (*TokensService, error) {
 	// compute supported tokens
 	pp := publicParametersManager.PublicParams()
-	maxPrecision := pp.RangeProofParams.BitLength
+	maxPrecision := pp.BitLength()
 
 	// dlog without graph hiding
 	outputTokenFormat, err := SupportedTokenFormat(pp, maxPrecision)
@@ -208,7 +208,7 @@ func (s *TokensService) DeserializeToken(ctx context.Context, outputFormat token
 			Data:  tokens[0],
 		}, &Metadata{
 			Type:           fabToken.Type,
-			Value:          curve.NewZrFromUint64(value),
+			Value:          math.NewCachedZrFromInt(curve, value),
 			BlindingFactor: meta[0].BlindingFactor,
 		}, &UpgradeWitness{
 			FabToken:       fabToken,
