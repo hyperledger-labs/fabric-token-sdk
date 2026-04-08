@@ -71,6 +71,10 @@ func keyPairGen() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters loaded from [%s], len [%d]", ppPath, len(ppRaw))
 	}
+	err = pp.Validate()
+	if err != nil {
+		return errors.Wrapf(err, "failed validating public parameters loaded from [%s]", ppPath)
+	}
 	ppm, err := s.NewPublicParametersManager(pp)
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating public parameters manager")

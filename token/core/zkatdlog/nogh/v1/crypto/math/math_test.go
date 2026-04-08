@@ -17,7 +17,7 @@ func TestCheckElement(t *testing.T) {
 	var g1 *math.G1
 	err := CheckElement(g1, math.BN254)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "elememt is nil")
+	require.Contains(t, err.Error(), "element is nil")
 
 	g1 = &math.G1{}
 	err = CheckElement(g1, math.BN254)
@@ -44,7 +44,7 @@ func TestCheckBaseElement(t *testing.T) {
 	var zr *math.Zr
 	err := CheckBaseElement(zr, math.BN254)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "elememt is nil")
+	require.Contains(t, err.Error(), "element is nil")
 
 	curve := math.Curves[math.BN254]
 	zr = curve.NewZrFromUint64(1)
@@ -70,7 +70,7 @@ func TestCheckElements(t *testing.T) {
 
 	err = CheckElements([]*math.G1{g1, nil}, math.BN254, 2)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "elememt is nil")
+	require.Contains(t, err.Error(), "element is nil")
 }
 
 func TestCheckZrElements(t *testing.T) {
@@ -87,7 +87,7 @@ func TestCheckZrElements(t *testing.T) {
 
 	err = CheckZrElements([]*math.Zr{zr1, nil}, math.BN254, 2)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "elememt is nil")
+	require.Contains(t, err.Error(), "element is nil")
 }
 
 func TestIsNilInterface(t *testing.T) {
