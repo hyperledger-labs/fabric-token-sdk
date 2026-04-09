@@ -18,15 +18,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokenlockdb"
 )
 
-//go:generate counterfeiter -o config_provider_fake_test.go -fake-name FakeConfigProvider . ConfigProvider
-type ConfigProvider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
-}
-
 type SelectorService struct {
-	managerLazyCache lazy2.Provider[TMS, token.SelectorManager]
+	managerLazyCache lazy2.Provider[token.ManagementService, token.SelectorManager]
 	mu               sync.Mutex
-	managers         []*manager
+	managers         []*Manager
 }
 
 func NewService(
@@ -61,7 +56,7 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 		return nil, errors.Errorf("invalid tms, nil reference")
 	}
 
-	return s.managerLazyCache.Get(tms)
+	return s.managerLazyCache.Get(*tms)
 }
 
 // Shutdown stops all background goroutines for every manager created by this service.
@@ -76,16 +71,17 @@ func (s *SelectorService) Shutdown() {
 	}
 }
 
-func (s *SelectorService) trackManager(m *manager) {
+func (s *SelectorService) trackManager(m *Manager) {
 	s.mu.Lock()
 	s.managers = append(s.managers, m)
 	s.mu.Unlock()
 }
 
-//go:generate counterfeiter -o tms_fake_test.go -fake-name FakeTMS . TMS
-type TMS interface {
-	ID() token.TMSID
-	PublicParametersManager() *token.PublicParametersManager
+func (s *SelectorService) ManagersCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.managers)
 }
 
 type loader struct {
@@ -96,10 +92,10 @@ type loader struct {
 	leaseExpiry                  time.Duration
 	leaseCleanupTickPeriod       time.Duration
 	metrics                      *Metrics
-	onCreate                     func(*manager)
+	onCreate                     func(*Manager)
 }
 
-func (s *loader) load(tms TMS) (token.SelectorManager, error) {
+func (s *loader) load(tms token.ManagementService) (token.SelectorManager, error) {
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
@@ -130,6 +126,6 @@ func (s *loader) load(tms TMS) (token.SelectorManager, error) {
 	return mgr, nil
 }
 
-func key(tms TMS) string {
+func key(tms token.ManagementService) string {
 	return tms.ID().String()
 }

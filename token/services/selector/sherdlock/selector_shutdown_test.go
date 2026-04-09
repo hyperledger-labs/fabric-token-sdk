@@ -25,7 +25,7 @@ func TestStubbornSelector_ContextCancellation(t *testing.T) {
 		unlockAllCalled := false
 
 		mockFetcher := &mockTokenFetcher{
-			unspentTokensIteratorByFunc: func(_ context.Context, _ string, _ token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+			unspentTokensIteratorByFunc: func(_ context.Context, _ string, _ token2.Type) (Iterator[*token2.UnspentTokenInWallet], error) {
 				tok := &token2.UnspentTokenInWallet{
 					Id:       token2.ID{TxId: "tx1", Index: 0},
 					Type:     "USD",
