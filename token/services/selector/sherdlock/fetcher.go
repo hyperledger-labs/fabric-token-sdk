@@ -27,11 +27,12 @@ const (
 	defaultCacheMaxQueries        = maxImmediateRetries
 )
 
+//go:generate counterfeiter -o token_fetcher_fake_test.go -fake-name FakeTokenFetcher . tokenFetcher
 type tokenFetcher interface {
 	UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error)
 }
 
-//go:generate counterfeiter -o mock/tokendb.go -fake-name TokenDB . TokenDB
+//go:generate counterfeiter -o tokendb_fake_test.go -fake-name FakeTokenDB . TokenDB
 type TokenDB interface {
 	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.SpendableTokensIterator, error)
 }
@@ -55,6 +56,7 @@ const (
 	Cached   = "cached"
 )
 
+//go:generate counterfeiter -o fetcher_provider_fake_test.go -fake-name FakeFetcherProvider . FetcherProvider
 type FetcherProvider interface {
 	GetFetcher(tmsID token.TMSID) (tokenFetcher, error)
 }

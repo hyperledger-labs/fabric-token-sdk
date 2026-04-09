@@ -18,6 +18,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+//go:generate counterfeiter -o locker_fake_test.go -fake-name FakeLocker . Locker
 type Locker interface {
 	// Lock locks a specific token for the consumer TX
 	Lock(ctx context.Context, tokenID *token2.ID, consumerTxID transaction.ID) error
@@ -45,7 +46,7 @@ type manager struct {
 	stopOnce               sync.Once
 }
 
-//go:generate counterfeiter -o mock/iterator.go  -fake-name Iterator . iterator
+//go:generate counterfeiter -o iterator_fake_test.go -fake-name FakeIterator . iterator
 type iterator[k any] interface {
 	Next() (k, error)
 	Close()
