@@ -188,6 +188,7 @@ func TestStubbornSelectorUnit(t *testing.T) {
 				Quantity: "100",
 			}, nil)
 			it.NextReturnsOnCall(1, nil, nil)
+
 			return it, nil
 		}
 		mockLocker.TryLockReturns(false)
@@ -293,5 +294,6 @@ func setupMetricsMocks() (*FakeProvider, *Metrics) {
 	metricsProvider := &FakeProvider{}
 	metricsProvider.NewCounterReturns(mockCounter)
 	metricsProvider.NewHistogramReturns(mockHistogram)
+
 	return metricsProvider, NewMetrics(metricsProvider)
 }
