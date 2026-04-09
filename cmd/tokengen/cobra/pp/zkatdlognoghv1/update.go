@@ -136,7 +136,7 @@ func Update(args *UpdateArgs) error {
 	if _, err := os.Stat(path); err == nil {
 		return errors.Errorf("%s exists in current directory. Specify another output folder with -o", fileName)
 	}
-	if err := os.WriteFile(path, raw, 0755); err != nil {
+	if err := os.WriteFile(path, raw, 0755); err != nil { //nolint:gosec
 		return errors.Wrap(err, "failed writing public parameters to file")
 	}
 
