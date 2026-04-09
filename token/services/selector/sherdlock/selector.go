@@ -32,28 +32,22 @@ const (
 
 var logger = logging.MustGetLogger()
 
-type Iterator[V any] interface {
-	Next() V
+func Logger() logging.Logger {
+	return logger
 }
 
-//go:generate counterfeiter -o token_locker_fake_test.go -fake-name FakeTokenLocker . tokenLocker
-type tokenLocker interface {
-	TryLock(context.Context, *token2.ID) bool
-	UnlockAll(ctx context.Context) error
-}
-
-type selector struct {
+type Selector struct {
 	logger    logging.Logger
-	cache     iterator[*token2.UnspentTokenInWallet]
-	fetcher   tokenFetcher
-	locker    tokenLocker
+	cache     Iterator[*token2.UnspentTokenInWallet]
+	fetcher   TokenFetcher
+	locker    TokenLocker
 	precision uint64
 	metrics   *Metrics
 	mu        sync.Mutex // protects cache field for concurrent Close() calls
 }
 
-type stubbornSelector struct {
-	*selector
+type StubbornSelector struct {
+	*Selector
 	// After maxImmediateRetries attempts, the procs will roll back and unlock the tokens.
 	// If two procs unlock at the same time, we have a livelock.
 	// To avoid it, we back off (wait) for a random interval within some limits and retry
@@ -63,7 +57,7 @@ type stubbornSelector struct {
 	maxRetriesAfterBackoff int
 }
 
-func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
+func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	start := time.Now()
 	for retriesAfterBackoff := 0; retriesAfterBackoff <= m.maxRetriesAfterBackoff; retriesAfterBackoff++ {
 		if tokens, quantity, err := m.selectWithoutMetrics(ctx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
@@ -103,16 +97,16 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
 
-func NewStubbornSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, backoff time.Duration, retries int, m *Metrics) *stubbornSelector {
-	return &stubbornSelector{
-		selector:               NewSelector(logger, tokenDB, lockDB, precision, m),
+func NewStubbornSelector(logger logging.Logger, tokenDB TokenFetcher, lockDB TokenLocker, precision uint64, backoff time.Duration, retries int, m *Metrics) *StubbornSelector {
+	return &StubbornSelector{
+		Selector:               NewSelector(logger, tokenDB, lockDB, precision, m),
 		backoffInterval:        backoff,
 		maxRetriesAfterBackoff: retries,
 	}
 }
 
-func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker, precision uint64, m *Metrics) *selector {
-	return &selector{
+func NewSelector(logger logging.Logger, tokenDB TokenFetcher, lockDB TokenLocker, precision uint64, m *Metrics) *Selector {
+	return &Selector{
 		logger:    logger,
 		cache:     collections.NewEmptyIterator[*token2.UnspentTokenInWallet](),
 		fetcher:   tokenDB,
@@ -122,7 +116,7 @@ func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker
 	}
 }
 
-func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
+func (s *Selector) Select(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	start := time.Now()
 	ids, quantity, immediateRetries, err := s.selectInternal(ctx, owner, q, tokenType)
 	if err != nil {
@@ -145,8 +139,8 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 	return ids, quantity, err
 }
 
-// selectWithoutMetrics is used by stubbornSelector to avoid double-counting metrics.
-func (s *selector) selectWithoutMetrics(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
+// selectWithoutMetrics is used by StubbornSelector to avoid double-counting metrics.
+func (s *Selector) selectWithoutMetrics(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	ids, quantity, _, err := s.selectInternal(ctx, owner, q, tokenType)
 	if err != nil {
 		if err2 := s.locker.UnlockAll(ctx); err2 != nil {
@@ -157,7 +151,7 @@ func (s *selector) selectWithoutMetrics(ctx context.Context, owner token.OwnerFi
 	return ids, quantity, err
 }
 
-func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, int, error) {
+func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, int, error) {
 	if s.isClosed() {
 		return nil, nil, 0, errors.Errorf("selector is already closed")
 	}
@@ -221,7 +215,7 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 	}
 }
 
-func (s *selector) Close() error {
+func (s *Selector) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -234,14 +228,14 @@ func (s *selector) Close() error {
 	return nil
 }
 
-func (s *selector) isClosed() bool {
+func (s *Selector) isClosed() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	return s.cache == nil
 }
 
-func (s *selector) UnlockAll(ctx context.Context) error {
+func (s *Selector) UnlockAll(ctx context.Context) error {
 	return s.locker.UnlockAll(ctx)
 }
 
@@ -267,7 +261,7 @@ func (l *locker) UnlockAll(ctx context.Context) error {
 	return l.UnlockByTxID(ctx, l.txID)
 }
 
-func NewSherdSelector(txID transaction.ID, fetcher tokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int, m *Metrics) tokenSelectorUnlocker {
+func NewSherdSelector(txID transaction.ID, fetcher TokenFetcher, lockDB Locker, precision uint64, backoff time.Duration, maxRetriesAfterBackoff int, m *Metrics) TokenSelectorUnlocker {
 	logger := logger.Named("selector-" + txID)
 	locker := &locker{txID: txID, Locker: lockDB}
 	if backoff < 0 {
