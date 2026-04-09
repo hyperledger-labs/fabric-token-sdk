@@ -101,7 +101,7 @@ func TestServiceManager_Auditor(t *testing.T) {
 func TestServiceManager_RestoreTMS(t *testing.T) {
 	netProv := &mockNetworkProvider{err: errors.New("net err")}
 	sm := &ServiceManager{
-		p:               nil, 
+		p:               nil,
 		networkProvider: netProv,
 	}
 	err := sm.RestoreTMS(token.TMSID{})
@@ -124,38 +124,37 @@ func TestServiceManager_RestoreTMS_Success(t *testing.T) {
 	netProv := &mockNetworkProvider{
 		net: &network.Network{}, // this will panic
 	}
-	
+
 	// Force it to panic in the loop due to empty Network
 	assert.Panics(t, func() {
 		// we need auditor to exist
 		smSuccess := NewServiceManager(
-			netProv, 
-			&mockStoreServiceManager{db: newTestStoreService(t, auditStub)}, 
-			&mockTokensServiceManager{db: &tokens.Service{}}, 
-			&mockTokenManagementServiceProvider{}, 
-			noop.NewTracerProvider(), 
-			&noopProvider{}, 
+			netProv,
+			&mockStoreServiceManager{db: newTestStoreService(t, auditStub)},
+			&mockTokensServiceManager{db: &tokens.Service{}},
+			&mockTokenManagementServiceProvider{},
+			noop.NewTracerProvider(),
+			&noopProvider{},
 			&mockCheckServiceProvider{})
 		_ = smSuccess.RestoreTMS(token.TMSID{})
 	})
 }
 
-
 func TestServiceManager_Auditor_InitSuccess(t *testing.T) {
-netProv := &mockNetworkProvider{}
-ssm := &mockStoreServiceManager{db: newTestStoreService(t, &stubAuditTransactionStore{})}
-tsm := &mockTokensServiceManager{db: &tokens.Service{}}
-tmsProv := &mockTokenManagementServiceProvider{}
-tp := noop.NewTracerProvider()
-mp := &noopProvider{}
-csp := &mockCheckServiceProvider{}
+	netProv := &mockNetworkProvider{}
+	ssm := &mockStoreServiceManager{db: newTestStoreService(t, &stubAuditTransactionStore{})}
+	tsm := &mockTokensServiceManager{db: &tokens.Service{}}
+	tmsProv := &mockTokenManagementServiceProvider{}
+	tp := noop.NewTracerProvider()
+	mp := &noopProvider{}
+	csp := &mockCheckServiceProvider{}
 
-sm := NewServiceManager(netProv, ssm, tsm, tmsProv, tp, mp, csp)
-a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
+	sm := NewServiceManager(netProv, ssm, tsm, tmsProv, tp, mp, csp)
+	a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
 	require.NoError(t, err)
-assert.NotNil(t, a)
+	assert.NotNil(t, a)
 }
 
 func TestGet_WithWallet(t *testing.T) {
-// No good way to mock token.AuditorWallet but we can test nil
+	// No good way to mock token.AuditorWallet but we can test nil
 }

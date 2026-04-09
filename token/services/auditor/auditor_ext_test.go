@@ -132,13 +132,13 @@ func TestService_Audit_Success(t *testing.T) {
 
 func TestService_Append_Error_TMSProvider(t *testing.T) {
 	svc := &Service{
-		metrics: newMetrics(nil),
+		metrics:     newMetrics(nil),
 		tmsProvider: &mockTokenManagementServiceProvider{err: errors.New("tms err")},
 	}
 	tx := &mockTransaction{anchor: "tx-app", tms: newTestManagementService(t)}
-	
+
 	svc.auditDB = newTestStoreService(t, &stubAuditTransactionStore{})
-	
+
 	err := svc.Append(context.Background(), tx)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "tms err")
@@ -240,7 +240,6 @@ func TestRequestWrapper_AuditRecord(t *testing.T) {
 	assert.NotNil(t, record)
 }
 
-
 func TestService_Append_AuditError(t *testing.T) {
 	svc := &Service{
 		metrics:         newMetrics(nil),
@@ -271,8 +270,8 @@ func TestService_Audit_DBCleanSuccess(t *testing.T) {
 
 func TestService_Audit_NotUnknown(t *testing.T) {
 	svc := &Service{
-		metrics:     newMetrics(nil),
-		auditDB:     newTestStoreService(t, &stubAuditTransactionStore{getStatusResult: dbdriver.Pending}),
+		metrics: newMetrics(nil),
+		auditDB: newTestStoreService(t, &stubAuditTransactionStore{getStatusResult: dbdriver.Pending}),
 	}
 	tx := &mockTransaction{anchor: "tx-aud-not-unknown", tms: newTestManagementService(t)}
 

@@ -208,7 +208,7 @@ func (s *stubAuditTransactionStore) GetTokenRequest(_ context.Context, _ string)
 }
 
 // stubAtomicWrite is a no-op AtomicWrite (used in stubAuditTransactionStore.BeginAtomicWrite).
-type stubAtomicWrite struct{
+type stubAtomicWrite struct {
 	err error
 }
 
@@ -242,10 +242,10 @@ type mockTransaction struct {
 	tms    *token.ManagementService
 }
 
-func (m *mockTransaction) ID() string            { return m.anchor }
-func (m *mockTransaction) Network() string        { return "testnet" }
-func (m *mockTransaction) Channel() string        { return "testch" }
-func (m *mockTransaction) Namespace() string      { return "testns" }
+func (m *mockTransaction) ID() string        { return m.anchor }
+func (m *mockTransaction) Network() string   { return "testnet" }
+func (m *mockTransaction) Channel() string   { return "testch" }
+func (m *mockTransaction) Namespace() string { return "testns" }
 func (m *mockTransaction) Request() *token.Request {
 	if m.tms != nil {
 		return token.NewRequest(m.tms, token.RequestAnchor(m.anchor))
