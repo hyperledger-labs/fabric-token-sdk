@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokenlockdb"
 )
 
+//go:generate counterfeiter -o config_provider_fake_test.go -fake-name FakeConfigProvider . ConfigProvider
 type ConfigProvider interface {
 	UnmarshalKey(key string, rawVal interface{}) error
 }
@@ -81,6 +82,7 @@ func (s *SelectorService) trackManager(m *manager) {
 	s.mu.Unlock()
 }
 
+//go:generate counterfeiter -o tms_fake_test.go -fake-name FakeTMS . TMS
 type TMS interface {
 	ID() token.TMSID
 	PublicParametersManager() *token.PublicParametersManager
