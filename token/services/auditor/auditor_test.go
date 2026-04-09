@@ -30,6 +30,7 @@ import (
 // Helpers / stubs
 
 func newTestManagementService(t *testing.T) *token.ManagementService {
+	t.Helper()
 	mockTMS := &drivermock.TokenManagerService{}
 	mockVP := &tokenmock.VaultProvider{}
 
@@ -68,12 +69,14 @@ func newTestManagementService(t *testing.T) *token.ManagementService {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, tms)
+
 	return tms
 }
 
 // newTestManagementServiceWithTokens is like newTestManagementService but
 // configures ListAuditTokens to return the specified tokens.
 func newTestManagementServiceWithTokens(t *testing.T, tokens []*token2.Token) *token.ManagementService {
+	t.Helper()
 	mockTMS := &drivermock.TokenManagerService{}
 	mockVP := &tokenmock.VaultProvider{}
 
@@ -107,8 +110,10 @@ func newTestManagementServiceWithTokens(t *testing.T, tokens []*token2.Token) *t
 	)
 	require.NoError(t, err)
 	require.NotNil(t, tms)
+
 	return tms
 }
+
 // ---------------------------------------------------------------------------
 
 // stubMetricsProvider records how many times each factory method is called.
@@ -119,11 +124,13 @@ type stubMetricsProvider struct {
 
 func (s *stubMetricsProvider) NewCounter(_ metrics.CounterOpts) metrics.Counter {
 	s.counterCalls++
+
 	return &noopCounter{}
 }
 func (s *stubMetricsProvider) NewGauge(_ metrics.GaugeOpts) metrics.Gauge { return &noopGauge{} }
 func (s *stubMetricsProvider) NewHistogram(_ metrics.HistogramOpts) metrics.Histogram {
 	s.histogramCalls++
+
 	return &noopHistogram{}
 }
 
@@ -187,6 +194,7 @@ type stubTokenRequestIterator struct {
 func (s *stubTokenRequestIterator) Next() (*dbdriver.TokenRequestRecord, error) {
 	if s.count > 0 {
 		s.count--
+
 		return &dbdriver.TokenRequestRecord{TxID: "txid-123"}, nil
 	}
 	// Return io.EOF
@@ -224,6 +232,7 @@ func newTestStoreService(t *testing.T, stub dbdriver.AuditTransactionStore) *aud
 	t.Helper()
 	ss, err := auditdb.NewStoreServiceForTest(stub)
 	require.NoError(t, err)
+
 	return ss
 }
 
@@ -241,6 +250,7 @@ func (m *mockTransaction) Request() *token.Request {
 	if m.tms != nil {
 		return token.NewRequest(m.tms, token.RequestAnchor(m.anchor))
 	}
+
 	return &token.Request{Anchor: token.RequestAnchor(m.anchor)}
 }
 
@@ -436,6 +446,7 @@ func TestGetByTMSID_GetServiceError_ReturnsNil(t *testing.T) {
 
 func newServiceWithAuditDB(t *testing.T, stub dbdriver.AuditTransactionStore) *Service {
 	t.Helper()
+
 	return &Service{
 		metrics: newMetrics(nil),
 		auditDB: newTestStoreService(t, stub),

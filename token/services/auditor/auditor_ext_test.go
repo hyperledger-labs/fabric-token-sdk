@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package auditor
 
 import (
@@ -104,7 +110,7 @@ func TestService_Audit_AuditRecordError(t *testing.T) {
 	tx := &mockTransaction{anchor: "tx-err", tms: badTMS}
 
 	_, _, err = svc.Audit(context.Background(), tx)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed getting transaction audit record")
 }
 
@@ -119,7 +125,7 @@ func TestService_Audit_Success(t *testing.T) {
 	}
 
 	inputs, outputs, err := svc.Audit(context.Background(), tx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, inputs)
 	assert.NotNil(t, outputs)
 }
@@ -134,7 +140,7 @@ func TestService_Append_Error_TMSProvider(t *testing.T) {
 	svc.auditDB = newTestStoreService(t, &stubAuditTransactionStore{})
 	
 	err := svc.Append(context.Background(), tx)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "tms err")
 }
 
@@ -158,7 +164,7 @@ func TestService_Append_Success(t *testing.T) {
 	}
 
 	err := svc.Append(context.Background(), tx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestService_Append_GetNetworkError(t *testing.T) {
@@ -174,7 +180,7 @@ func TestService_Append_GetNetworkError(t *testing.T) {
 	}
 
 	err := svc.Append(context.Background(), tx)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed getting network instance")
 }
 
@@ -193,7 +199,7 @@ func TestService_Append_AddFinalityListenerError(t *testing.T) {
 	}
 
 	err := svc.Append(context.Background(), tx)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed listening to network")
 }
 func TestRequestWrapper_CompleteInputsWithEmptyEID_Shortcut(t *testing.T) {
@@ -230,7 +236,7 @@ func TestRequestWrapper_AuditRecord(t *testing.T) {
 	tx := &mockTransaction{anchor: "tx-ar", tms: newTestManagementService(t)}
 	rw := newRequestWrapper(tx.Request(), newTestManagementService(t))
 	record, err := rw.AuditRecord(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, record)
 }
 
@@ -245,7 +251,7 @@ func TestService_Append_AuditError(t *testing.T) {
 	tx := &mockTransaction{anchor: "tx-app-err", tms: newTestManagementService(t)}
 
 	err := svc.Append(context.Background(), tx)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed appending request")
 }
 
@@ -258,7 +264,7 @@ func TestService_Audit_DBCleanSuccess(t *testing.T) {
 	tx := &mockTransaction{anchor: "tx-aud-err", tms: newTestManagementService(t)}
 
 	inputs, outputs, err := svc.Audit(context.Background(), tx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, inputs)
 	assert.NotNil(t, outputs)
 }
@@ -272,7 +278,7 @@ func TestService_Audit_NotUnknown(t *testing.T) {
 
 	// Audit succeeds because AcquireLocks doesn't check transaction status.
 	inputs, outputs, err := svc.Audit(context.Background(), tx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, inputs)
 	assert.NotNil(t, outputs)
 }
@@ -287,7 +293,7 @@ func TestService_Audit_TMSProviderIrrelevant(t *testing.T) {
 	tx := &mockTransaction{anchor: "tx-aud-tms-err", tms: newTestManagementService(t)}
 
 	inputs, outputs, err := svc.Audit(context.Background(), tx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, inputs)
 	assert.NotNil(t, outputs)
 }

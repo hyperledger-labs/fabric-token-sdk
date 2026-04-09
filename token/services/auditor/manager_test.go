@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package auditor
 
 import (
@@ -10,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
@@ -87,7 +94,7 @@ func TestServiceManager_Auditor(t *testing.T) {
 
 	sm := NewServiceManager(netProv, ssm, tsm, tmsProv, tp, mp, csp)
 	a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, a)
 }
 
@@ -98,7 +105,7 @@ func TestServiceManager_RestoreTMS(t *testing.T) {
 		networkProvider: netProv,
 	}
 	err := sm.RestoreTMS(token.TMSID{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get network instance")
 
 	// Missing tokens error
@@ -107,7 +114,7 @@ func TestServiceManager_RestoreTMS(t *testing.T) {
 	sm.networkProvider = netProv2
 	sm.tokenServiceManager = tsm
 	err = sm.RestoreTMS(token.TMSID{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get auditdb")
 }
 
@@ -145,7 +152,7 @@ csp := &mockCheckServiceProvider{}
 
 sm := NewServiceManager(netProv, ssm, tsm, tmsProv, tp, mp, csp)
 a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
-assert.NoError(t, err)
+	require.NoError(t, err)
 assert.NotNil(t, a)
 }
 
