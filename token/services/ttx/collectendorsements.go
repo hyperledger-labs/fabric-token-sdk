@@ -436,7 +436,7 @@ func (c *CollectEndorsementsView) distributeTxToParties(context view.Context, di
 			logger.DebugfContext(context.Context(), "tx [%d] is not me [%s:%s], ask endorse", i, entry.ID, entry.EID)
 		}
 
-		// The party is not mex, open a connection to the party.
+		// The party is not me, open a connection to the party.
 		// If the party is an auditor, then send the full set of metadata.
 		// Otherwise, filter the metadata by Enrollment ID.
 		var txRaw []byte
