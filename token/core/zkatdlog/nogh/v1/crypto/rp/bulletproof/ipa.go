@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
 )
 
 // IPA contains the proof for the inner product argument.
@@ -111,9 +111,14 @@ type ipaProver struct {
 	NumberOfRounds uint64
 	// Curve is the mathematical curve.
 	Curve *mathlib.Curve
+	// Provider creates a fresh Executor for each Prove call.
+	// If nil, DefaultProvider (SerialProvider) is used.
+	Provider rp.ExecutorProvider
 }
 
 // NewIPAProver returns a new ipaProver instance.
+// exec controls how generator reduction is parallelised; pass nil
+// to use SerialExecutor (equivalent to the previous behaviour).
 func NewIPAProver(
 	innerProduct *mathlib.Zr,
 	leftVector, rightVector []*mathlib.Zr,
@@ -122,7 +127,12 @@ func NewIPAProver(
 	Commitment *mathlib.G1,
 	rounds uint64,
 	c *mathlib.Curve,
+	provider rp.ExecutorProvider,
 ) *ipaProver {
+	if provider == nil {
+		provider = rp.DefaultProvider
+	}
+
 	return &ipaProver{
 		InnerProduct:    innerProduct,
 		rightVector:     rightVector,
@@ -133,6 +143,7 @@ func NewIPAProver(
 		NumberOfRounds:  rounds,
 		Commitment:      Commitment,
 		Q:               Q,
+		Provider:        provider,
 	}
 }
 
@@ -206,7 +217,7 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 		xInv.InvModOrder()
 
 		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
-		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv)
+		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv, p.Provider)
 
 		// reduce the vectors by 1/2, a function of the old vectors and x and 1/x
 		left, right = reduceVectors(left, right, x, xInv, p.Curve)
@@ -241,9 +252,14 @@ type ipaVerifier struct {
 	NumberOfRounds uint64
 	// Curve is the mathematical curve.
 	Curve *mathlib.Curve
+	// Provider creates a fresh Executor for each Prove call.
+	// If nil, DefaultProvider (SerialProvider) is used.
+	Provider rp.ExecutorProvider
 }
 
 // NewIPAVerifier returns an ipaVerifier instance.
+// exec controls how generator reduction is parallelised; pass nil
+// to use SerialExecutor (equivalent to the previous behaviour).
 func NewIPAVerifier(
 	innerProduct *mathlib.Zr,
 	Q *mathlib.G1,
@@ -251,7 +267,12 @@ func NewIPAVerifier(
 	Commitment *mathlib.G1,
 	rounds uint64,
 	c *mathlib.Curve,
+	provider rp.ExecutorProvider,
 ) *ipaVerifier {
+	if provider == nil {
+		provider = rp.DefaultProvider
+	}
+
 	return &ipaVerifier{
 		InnerProduct:    innerProduct,
 		RightGenerators: rightGens,
@@ -260,6 +281,7 @@ func NewIPAVerifier(
 		NumberOfRounds:  rounds,
 		Commitment:      Commitment,
 		Q:               Q,
+		Provider:        provider,
 	}
 }
 
@@ -384,22 +406,21 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 
 // reduceGenerators reduces the number of generators passed in the parameters by 1/2,
 // as a function of the old generators,  x and 1/x
-func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr) ([]*mathlib.G1, []*mathlib.G1) {
+func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr, provider rp.ExecutorProvider) ([]*mathlib.G1, []*mathlib.G1) {
 	l := len(leftGen) / 2
 	// Use the Executor abstraction so that the execution strategy can be
 	// swapped without changing this function. SerialExecutor runs each task
 	// immediately with no locks or goroutine overhead.
-	executor := rp.NewSerialExecutor()
-
+	exec := provider.New()
 	for i := range l {
-		executor.Submit(func() {
+		exec.Submit(func() {
 			// G_i = G_i^{x_inv} * G_{i+l}^x
 			leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
 			// H_i = H_i^x * H_{i+l}^{x_inv}
 			rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
 		})
 	}
-	executor.Wait()
+	exec.Wait()
 
 	return leftGen[:l], rightGen[:l]
 }

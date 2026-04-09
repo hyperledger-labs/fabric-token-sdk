@@ -51,6 +51,7 @@ func TestRangeCorrectness(t *testing.T) {
 		bitLength,
 		rounds,
 		curve,
+		nil,
 	)
 
 	rc, err := prover.Prove()
@@ -80,6 +81,7 @@ func TestRangeCorrectness(t *testing.T) {
 		bitLength,
 		rounds,
 		curve,
+		nil,
 	)
 	// We need to manually set commitments because NewRangeCorrectnessVerifier doesn't take them
 	verifier.Commitments = commitments
