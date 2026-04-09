@@ -22,7 +22,7 @@ const (
 )
 
 func pathExists(path string) bool {
-	if _, err := os.Stat(filepath.Clean(path)); os.IsNotExist(err) { //nolint:gosec // G703: path is caller-controlled
+	if _, err := os.Stat(filepath.Clean(path)); os.IsNotExist(err) {
 		return false
 	}
 
