@@ -27,6 +27,15 @@ import (
 // Additional fakes used only in this file
 // ---------------------------------------------------------------------------
 
+// errorQueryEngine returns an error from UnspentTokensIterator.
+type errorQueryEngine struct {
+	err error
+}
+
+func (e *errorQueryEngine) UnspentTokensIterator(_ context.Context) (*token2.UnspentTokensIterator, error) {
+	return nil, e.err
+}
+
 // alwaysFailViewManager returns the same error on every InitiateView call.
 type alwaysFailViewManager struct {
 	mu   sync.Mutex
@@ -558,4 +567,134 @@ func TestNewDriver_Construction(t *testing.T) {
 	assert.Empty(t, d.CertificationClients, "no clients should exist before any TMS is registered")
 	assert.Nil(t, d.CertificationService, "CertificationService should be nil until first use")
 	assert.Equal(t, mp, d.MetricsProvider)
+}
+
+// ---------------------------------------------------------------------------
+// Scan — error paths
+// ---------------------------------------------------------------------------
+
+// TestScan_QueryEngineError verifies that an error from UnspentTokensIterator
+// is propagated back to the caller.
+func TestScan_QueryEngineError(t *testing.T) {
+	queryErr := errors.New("vault iterator failure")
+	vm := &fakeViewManager{}
+	storage := newFakeCertificationStorage()
+
+	cc := NewCertificationClient(
+		context.Background(),
+		"net", "ch", "ns",
+		&errorQueryEngine{err: queryErr},
+		storage,
+		vm,
+		[]view.Identity{view.Identity([]byte("c"))},
+		nil,
+		1, 1*time.Millisecond,
+		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
+		&disabled.Provider{},
+	)
+
+	err := cc.Scan()
+	require.Error(t, err)
+	require.ErrorIs(t, err, queryErr)
+}
+
+// TestScan_RequestCertificationError verifies that when RequestCertification
+// fails for uncertified vault tokens, Scan propagates the error.
+func TestScan_RequestCertificationError(t *testing.T) {
+	certErr := errors.New("certification service down")
+	vm := &alwaysFailViewManager{err: certErr}
+	storage := newFakeCertificationStorage()
+
+	unspent := []*token.UnspentToken{
+		{Id: token.ID{TxId: "scan-fail-tx", Index: 0}},
+	}
+
+	cc := NewCertificationClient(
+		context.Background(),
+		"net", "ch", "ns",
+		&populatedQueryEngine{items: unspent},
+		storage,
+		vm,
+		[]view.Identity{view.Identity([]byte("c"))},
+		nil,
+		1, 1*time.Millisecond,
+		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
+		&disabled.Provider{},
+	)
+
+	err := cc.Scan()
+	require.Error(t, err)
+	require.ErrorIs(t, err, certErr)
+}
+
+// ---------------------------------------------------------------------------
+// processBatch — remaining edge cases
+// ---------------------------------------------------------------------------
+
+// TestProcessBatch_EmptyBatch_ScanError verifies that when the vault scan
+// triggered by an empty batch returns an error, processBatch logs and returns
+// without panicking.
+func TestProcessBatch_EmptyBatch_ScanError(t *testing.T) {
+	vm := &fakeViewManager{}
+	storage := newFakeCertificationStorage()
+
+	cc := NewCertificationClient(
+		context.Background(),
+		"net", "ch", "ns",
+		&errorQueryEngine{err: errors.New("vault error")},
+		storage,
+		vm,
+		[]view.Identity{view.Identity([]byte("c"))},
+		nil,
+		1, 1*time.Millisecond,
+		10, 1000, 1*time.Second, 1,
+		DefaultResponseTimeout,
+		&disabled.Provider{},
+	)
+
+	require.NotPanics(t, func() {
+		cc.processBatch([]*token.ID{})
+	})
+}
+
+// TestProcessBatch_FailureBufferFull_DropsTokens verifies that when the
+// push-back buffer is already full after a certification failure, the token
+// is dropped rather than causing a deadlock.
+func TestProcessBatch_FailureBufferFull_DropsTokens(t *testing.T) {
+	certErr := errors.New("certifier unavailable")
+	vm := &alwaysFailViewManager{err: certErr}
+	storage := newFakeCertificationStorage()
+
+	cc := NewCertificationClient(
+		context.Background(),
+		"net", "ch", "ns",
+		&fakeQueryEngine{},
+		storage,
+		vm,
+		[]view.Identity{view.Identity([]byte("c"))},
+		nil,
+		1, 1*time.Millisecond,
+		1,
+		1, // bufferSize=1 — filled below so push-back overflows
+		1*time.Second, 1,
+		DefaultResponseTimeout,
+		&disabled.Provider{},
+	)
+
+	// Fill the buffer to capacity so push-back hits the default (drop) branch.
+	cc.tokens <- &token.ID{TxId: "pre-fill", Index: 0}
+
+	done := make(chan struct{})
+	go func() {
+		cc.processBatch([]*token.ID{{TxId: "fail-tx", Index: 0}})
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("processBatch deadlocked when buffer was full after failure")
+	}
 }
