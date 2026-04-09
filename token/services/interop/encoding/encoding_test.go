@@ -37,3 +37,36 @@ func TestEncodingHex(t *testing.T) {
 	o2 := hex.EncodeToString(msg)
 	assert.Equal(t, o1, o2)
 }
+
+func TestEncodingString(t *testing.T) {
+	assert.Equal(t, "None", encoding.None.String())
+	assert.Equal(t, "Base64", encoding.Base64.String())
+	assert.Equal(t, "Hex", encoding.Hex.String())
+	assert.Contains(t, encoding.Encoding(99).String(), "unknown")
+}
+
+func TestEncodingAvailable(t *testing.T) {
+	assert.True(t, encoding.None.Available())
+	assert.True(t, encoding.Base64.Available())
+	assert.True(t, encoding.Hex.Available())
+	assert.False(t, encoding.Encoding(99).Available())
+}
+
+func TestRegisterEncoding_UnknownEncoding(t *testing.T) {
+	err := encoding.RegisterEncoding(encoding.Encoding(99), func() encoding.EncodingFunc {
+		return nil
+	})
+	assert.Error(t, err)
+}
+
+func TestEncodingFunc(t *testing.T) {
+	assert.Equal(t, encoding.None, encoding.None.EncodingFunc())
+	assert.Equal(t, encoding.Base64, encoding.Base64.EncodingFunc())
+	assert.Equal(t, encoding.Hex, encoding.Hex.EncodingFunc())
+}
+
+func TestEncodingNew_Unavailable(t *testing.T) {
+	e := encoding.Encoding(99)
+	result := e.New()
+	assert.Nil(t, result)
+}
