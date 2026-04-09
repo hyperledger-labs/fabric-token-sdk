@@ -46,6 +46,12 @@ func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) Sto
 	return db.NewStoreServiceManager(cp, "auditdb.persistence", drivers.NewAuditTransaction, newStoreService)
 }
 
+// NewStoreServiceForTest creates a StoreService backed by the given AuditTransactionStore.
+// Intended for unit testing only.
+func NewStoreServiceForTest(db driver2.AuditTransactionStore) (*StoreService, error) {
+	return newStoreService(db)
+}
+
 func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
