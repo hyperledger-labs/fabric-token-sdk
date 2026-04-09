@@ -153,6 +153,7 @@ func TestBackendMock_LoadHelpers(t *testing.T) {
 	stubCalled := false
 	backend2.LoadCalls(func(_ view.Context, _ *CertificationRequest) ([][]byte, error) {
 		stubCalled = true
+
 		return [][]byte{[]byte("from-stub")}, nil
 	})
 	res, err2 := backend2.Load(nil, cr)
@@ -187,6 +188,7 @@ func TestResponderRegistryMock_HelperMethods(t *testing.T) {
 	stubCalled := false
 	mock.RegisterResponderCalls(func(_ view.View, _ interface{}) error {
 		stubCalled = true
+
 		return nil
 	})
 	err := mock.RegisterResponder(nil, nil)
