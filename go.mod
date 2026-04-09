@@ -13,7 +13,7 @@ require (
 	github.com/go-co-op/gocron/v2 v2.19.1
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hyperledger-labs/fabric-smart-client v0.10.0
+	github.com/hyperledger-labs/fabric-smart-client v0.10.1-0.20260409133531-507703174f78
 	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.0
 	github.com/hyperledger/fabric-lib-go v1.1.3-0.20240523144151-25edd1eaf5f5
 	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.7
@@ -63,6 +63,7 @@ require (
 	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
+	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/alecthomas/kingpin/v2 v2.4.0 // indirect
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect
@@ -160,6 +161,8 @@ require (
 	github.com/koron/go-ssdp v0.0.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
+	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-cidranger v1.1.0 // indirect

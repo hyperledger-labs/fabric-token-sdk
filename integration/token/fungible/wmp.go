@@ -105,7 +105,7 @@ type walletManagerLoader struct {
 }
 
 func (l *walletManagerLoader) Load(user string) *token.WalletManager {
-	ctx := l.II.Ctx
+	ctx := l.II.NWOCtx
 	tp := ctx.PlatformByName("token").(TMSTopology)
 	tms := tp.GetTopology().TMSs[0]
 	ppRaw := tp.PublicParameters(tms)
