@@ -1,0 +1,102 @@
+name: Bug Report
+description: Create a report to help us improve.
+title: "[BUG]: <short-description>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thanks for submitting a bug report! 😊
+
+        Before submitting, please:
+        1. **Search existing issues** to see if your issue has already been reported.
+        2. **Consult the Resources**:
+           - [Documentation Overview](https://github.com/hyperledger-labs/fabric-token-sdk/blob/main/docs/README.md)
+           - [Development Guidelines](https://github.com/hyperledger-labs/fabric-token-sdk/blob/main/docs/development/development.md)
+           - [Testing Guide](https://github.com/hyperledger-labs/fabric-token-sdk/blob/main/docs/development/testing.md)
+        3. **Join [Hyperledger Discord](https://discord.gg/hyperledger)** and ask in the `#fabric-token-sdk` channel if you're unsure.
+
+        ---
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 👾 Description
+      description: What happened and what did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 🛠️ Steps to reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Setup the network with `make ...`
+        2. Run the command `tokengen ...`
+        3. See error: `...`
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 📋 Logs and Screenshots
+      description: Attach any logs or screenshots relevant to the problem.
+      placeholder: |
+        ```bash
+        # Paste relevant logs here
+        ```
+    validations:
+      required: false
+
+  - type: dropdown
+    id: network
+    attributes:
+      label: 🌐 Network Environment
+      description: Which network environment did the issue occur on?
+      options:
+        - Local (NWO / Integration Test)
+        - Fabric
+        - FabricX
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: sdk-version
+    attributes:
+      label: 📦 Fabric Token SDK Version
+      description: Which version or commit hash are you using?
+      placeholder: e.g. v1.0.0 or 5a3f2b1
+    validations:
+      required: true
+
+  - type: input
+    id: go-version
+    attributes:
+      label: 🐹 Go Version
+      description: Output of `go version`.
+      placeholder: e.g. go1.22.2 darwin/arm64
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 💻 Operating System
+      description: Which OS did the issue occur on?
+      options:
+        - Linux (Ubuntu/Debian)
+        - Linux (Other)
+        - macOS
+        - Windows (WSL2)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: ➕ Additional context
+      description: Add any other context about the problem here.
