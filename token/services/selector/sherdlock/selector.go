@@ -36,6 +36,7 @@ type Iterator[V any] interface {
 	Next() V
 }
 
+//go:generate counterfeiter -o token_locker_fake_test.go -fake-name FakeTokenLocker . tokenLocker
 type tokenLocker interface {
 	TryLock(context.Context, *token2.ID) bool
 	UnlockAll(ctx context.Context) error
