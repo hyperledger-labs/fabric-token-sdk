@@ -29,6 +29,42 @@ type StoreServiceManager = ttxdb.StoreServiceManager
 
 type TokensServiceManager services.ServiceManager[*tokens.Service]
 
+// tokenExistenceChecker can tell whether a given txID was already committed to tokenDB.
+// Satisfied by *tokens.DBStorage.
+type tokenExistenceChecker interface {
+	TransactionExists(ctx context.Context, id string) (bool, error)
+}
+
+// pendingStatusSetter can promote a ttxDB record from Pending to Confirmed.
+// Satisfied by *ttxdb.StoreService.
+type pendingStatusSetter interface {
+	SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error
+}
+
+// recoverCommittedPending heals the split-brain state that arises when the node crashes
+// after tokens.Append (tokenDB write) succeeds but before ttxDB.SetStatus(Confirmed) runs.
+//
+// Returns true if the record was healed — the caller should then skip AddFinalityListener
+// because the transaction is already fully committed.
+// Returns false (and logs a warning) on any error so the caller can fall back to the
+// normal finality-listener path.
+func recoverCommittedPending(ctx context.Context, txID string, checker tokenExistenceChecker, setter pendingStatusSetter) bool {
+	committed, err := checker.TransactionExists(ctx, txID)
+	if err != nil {
+		logger.Warnf("recover tx [%s]: failed to check token existence, falling back to finality listener: %v", txID, err)
+		return false
+	}
+	if !committed {
+		return false
+	}
+	logger.Infof("recover tx [%s]: tokens committed to tokenDB but ttxDB still Pending; setting Confirmed directly", txID)
+	if err := setter.SetStatus(ctx, txID, storage.Confirmed, "recovered on restart: tokenDB committed before ttxDB status update"); err != nil {
+		logger.Errorf("recover tx [%s]: failed to set Confirmed: %v; falling back to finality listener", txID, err)
+		return false
+	}
+	return true
+}
+
 type CheckServiceProvider interface {
 	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Service) (CheckService, error)
 }
@@ -113,6 +149,12 @@ func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) erro
 
 	return iterators.ForEach(it, func(record *storage.TokenRequestRecord) error {
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
+
+		// Crash-recovery: heal the split-brain state that arises when the node crashes
+		// after tokens.Append (tokenDB write) succeeds but before ttxDB.SetStatus runs.
+		if recoverCommittedPending(ctx, record.TxID, db.tokensService.Storage, db.ttxStoreService) {
+			return nil
+		}
 
 		return net.AddFinalityListener(
 			tmsID.Namespace,
