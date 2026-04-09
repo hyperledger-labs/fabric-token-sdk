@@ -65,6 +65,7 @@ type Resolver interface {
 	ResolveIdentities(endpoints ...string) ([]view.Identity, error)
 }
 
+//go:generate sh -c "counterfeiter -o subscriber_mock.go -fake-name SubscriberMock . Subscriber && sed -i '/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\\/services\\/certifier\\/interactive\"/d' subscriber_mock.go && sed -i 's/interactive\\.Subscriber/Subscriber/g' subscriber_mock.go"
 type Subscriber = events.Subscriber
 
 type Driver struct {
