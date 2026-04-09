@@ -875,6 +875,7 @@ func (db *TokenStore) GetSchema() string {
 		);
 		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_deleted, owner );
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+		CREATE INDEX IF NOT EXISTS idx_owner_wallet_id_%s ON %s ( owner_wallet_id );
 
 		-- Ownership
 		CREATE TABLE IF NOT EXISTS %s (
@@ -904,6 +905,7 @@ func (db *TokenStore) GetSchema() string {
 		);
 		`,
 		db.table.Tokens,
+		db.table.Tokens, db.table.Tokens,
 		db.table.Tokens, db.table.Tokens,
 		db.table.Tokens, db.table.Tokens,
 		db.table.Ownership, db.table.Tokens,
