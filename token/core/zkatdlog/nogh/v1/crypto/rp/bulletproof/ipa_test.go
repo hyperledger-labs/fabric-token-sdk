@@ -83,6 +83,7 @@ func TestIPAProofVerify(t *testing.T) {
 		setup.com,
 		setup.nr,
 		setup.curve,
+		nil,
 	)
 	proof, err := prover.Prove()
 	require.NoError(t, err)
@@ -96,6 +97,7 @@ func TestIPAProofVerify(t *testing.T) {
 		setup.com,
 		setup.nr,
 		setup.curve,
+		nil,
 	)
 	err = verifier.Verify(proof)
 	require.NoError(t, err)
@@ -126,6 +128,7 @@ func BenchmarkIPAProver(b *testing.B) {
 				setup.com,
 				setup.nr,
 				setup.curve,
+				nil,
 			)
 			proof, err := prover.Prove()
 			require.NoError(b, err)
@@ -154,6 +157,7 @@ func TestParallelIPAProver(t *testing.T) {
 				setup.com,
 				setup.nr,
 				setup.curve,
+				nil,
 			)
 			_, err := prover.Prove()
 

@@ -90,6 +90,7 @@ func TestBFProofVerify(t *testing.T) {
 		setup.nr,
 		setup.l,
 		setup.curve,
+		nil,
 	)
 	proof, err := prover.Prove()
 	require.NoError(t, err)
@@ -105,6 +106,7 @@ func TestBFProofVerify(t *testing.T) {
 		setup.nr,
 		setup.l,
 		setup.curve,
+		nil,
 	)
 	err = verifier.Verify(proof)
 	require.NoError(t, err)
@@ -138,6 +140,7 @@ func BenchmarkBFProver(b *testing.B) {
 				setup.nr,
 				setup.l,
 				setup.curve,
+				nil,
 			)
 			proof, err := prover.Prove()
 			require.NoError(b, err)
@@ -162,6 +165,7 @@ func BenchmarkBFVerifier(b *testing.B) {
 		setup.nr,
 		setup.l,
 		setup.curve,
+		nil,
 	)
 	proof, err := prover.Prove()
 	require.NoError(b, err)
@@ -176,6 +180,7 @@ func BenchmarkBFVerifier(b *testing.B) {
 		setup.nr,
 		setup.l,
 		setup.curve,
+		nil,
 	)
 
 	b.Run("bench", func(b *testing.B) {
@@ -208,6 +213,7 @@ func TestParallelBFProver(t *testing.T) {
 				setup.nr,
 				setup.l,
 				setup.curve,
+				nil,
 			)
 			_, err := prover.Prove()
 
