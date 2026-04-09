@@ -127,9 +127,12 @@ func NewLocalTestSuite(startPort func() int, topologies []api.Topology) *TestSui
 	return &TestSuite{
 		generator: func() (*integration.Infrastructure, error) {
 			i, err := integration.New(startPort(), "./testdata", topologies...)
+			if err != nil {
+				return i, err
+			}
 			i.DeleteOnStop = false
 
-			return i, err
+			return i, nil
 		},
 	}
 }
