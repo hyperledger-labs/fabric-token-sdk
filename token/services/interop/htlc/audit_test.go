@@ -75,7 +75,7 @@ func TestInputScriptInvalidJSON(t *testing.T) {
 
 	_, err = result.Script()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to unmrshal HTLC script")
+	require.Contains(t, err.Error(), "failed to unmarshal HTLC script")
 }
 
 // ---- Output tests ----
@@ -128,5 +128,5 @@ func TestOutputScriptInvalidJSON(t *testing.T) {
 
 	_, err = result.Script()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to unmrshal HTLC script")
+	require.Contains(t, err.Error(), "failed to unmarshal HTLC script")
 }
