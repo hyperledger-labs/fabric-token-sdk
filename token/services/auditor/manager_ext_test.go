@@ -7,10 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
+	"testing"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace/noop"
-	"testing"
 )
 
 // mockServiceProviderGet overrides GetService
