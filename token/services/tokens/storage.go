@@ -35,100 +35,100 @@ type Flags struct {
 // DBStorage provides a high-level wrapper over TokenDB for managing token persistence.
 // It handles transaction orchestration and event notification.
 type DBStorage struct {
-	// notifier is used to publish events when tokens are added or deleted.
-	notifier events.Publisher
-	// tokenDB is the underlying persistent store for tokens.
-	tokenDB *tokendb.StoreService
-	// tmsID is the identifier for the TMS this storage belongs to.
-	tmsID token.TMSID
+	// Notifier is used to publish events when tokens are added or deleted.
+	Notifier events.Publisher
+	// TokenDB is the underlying persistent store for tokens.
+	TokenDB *tokendb.StoreService
+	// TMSID is the identifier for the TMS this storage belongs to.
+	TMSID token.TMSID
 }
 
 // NewDBStorage creates a new DBStorage instance.
 func NewDBStorage(notifier events.Publisher, tokenDB *tokendb.StoreService, tmsID token.TMSID) (*DBStorage, error) {
 	return &DBStorage{
-		notifier: notifier,
-		tokenDB:  tokenDB,
-		tmsID:    tmsID,
+		Notifier: notifier,
+		TokenDB:  tokenDB,
+		TMSID:    tmsID,
 	}, nil
 }
 
 // NewTransaction starts a new transaction for local storage operations.
-func (d *DBStorage) NewTransaction() (*transaction, error) {
-	tx, err := d.tokenDB.NewTransaction()
+func (d *DBStorage) NewTransaction() (*DBTransaction, error) {
+	tx, err := d.TokenDB.NewTransaction()
 	if err != nil {
 		return nil, err
 	}
 
-	return NewTransaction(d.notifier, tx, d.tmsID)
+	return NewTransaction(d.Notifier, tx, d.TMSID)
 }
 
 // TransactionExists checks if a transaction with the given ID has already been recorded in local storage.
 func (d *DBStorage) TransactionExists(ctx context.Context, id string) (bool, error) {
-	return d.tokenDB.TransactionExists(ctx, id)
+	return d.TokenDB.TransactionExists(ctx, id)
 }
 
 // StorePublicParams persists the public parameters associated with the TMS.
 func (d *DBStorage) StorePublicParams(ctx context.Context, raw []byte) error {
-	return d.tokenDB.StorePublicParams(ctx, raw)
+	return d.TokenDB.StorePublicParams(ctx, raw)
 }
 
 // TokenToAppend contains the detailed information required to store a new token in the database.
 type TokenToAppend struct {
-	// txID is the transaction ID that created this token.
-	txID string
-	// index is the output index of the token within the transaction.
-	index uint64
-	// tok is the de-obfuscated token information.
-	tok *token2.Token
-	// tokenOnLedgerFormat is the format of the token as it appears on the ledger.
-	tokenOnLedgerFormat token2.Format
-	// tokenOnLedger is the raw byte representation of the token output on the ledger.
-	tokenOnLedger []byte
-	// tokenOnLedgerMetadata is the metadata associated with the token output on the ledger.
-	tokenOnLedgerMetadata []byte
-	// ownerType is the type of the token owner's identity.
-	ownerType string
-	// ownerIdentity is the de-obfuscated identity of the owner.
-	ownerIdentity token.Identity
-	// ownerWalletID is the local wallet identifier if the owner is mine.
-	ownerWalletID string
-	// owners is the list of unique identifiers for all recipients/owners.
-	owners []string
-	// issuer is the identity of the token issuer.
-	issuer token.Identity
-	// precision is the number of decimal places for quantity calculations.
-	precision uint64
-	// flags indicates my relationship with this token.
-	flags Flags
+	// TxID is the transaction ID that created this token.
+	TxID string
+	// Index is the output index of the token within the transaction.
+	Index uint64
+	// Tok is the de-obfuscated token information.
+	Tok *token2.Token
+	// TokenOnLedgerFormat is the format of the token as it appears on the ledger.
+	TokenOnLedgerFormat token2.Format
+	// TokenOnLedger is the raw byte representation of the token output on the ledger.
+	TokenOnLedger []byte
+	// TokenOnLedgerMetadata is the metadata associated with the token output on the ledger.
+	TokenOnLedgerMetadata []byte
+	// OwnerType is the type of the token owner's identity.
+	OwnerType string
+	// OwnerIdentity is the de-obfuscated identity of the owner.
+	OwnerIdentity token.Identity
+	// OwnerWalletID is the local wallet identifier if the owner is mine.
+	OwnerWalletID string
+	// Owners is the list of unique identifiers for all recipients/owners.
+	Owners []string
+	// Issuer is the identity of the token issuer.
+	Issuer token.Identity
+	// Precision is the number of decimal places for quantity calculations.
+	Precision uint64
+	// Flags indicates my relationship with this token.
+	Flags Flags
 }
 
-// transaction encapsulates a single atomic update to the token database.
-type transaction struct {
-	// notifier is used to publish events upon successful deletion or addition.
-	notifier events.Publisher
-	// tx is the underlying database transaction.
-	tx *tokendb.Transaction
-	// tmsID is the TMS identifier for the transaction.
-	tmsID token.TMSID
+// DBTransaction encapsulates a single atomic update to the token database.
+type DBTransaction struct {
+	// Notifier is used to publish events upon successful deletion or addition.
+	Notifier events.Publisher
+	// Tx is the underlying database transaction.
+	Tx *tokendb.Transaction
+	// TMSID is the TMS identifier for the transaction.
+	TMSID token.TMSID
 }
 
 // NewTransaction creates a new transaction wrapper.
-func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
-	return &transaction{
-		notifier: notifier,
-		tx:       tx,
-		tmsID:    tmsID,
+func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*DBTransaction, error) {
+	return &DBTransaction{
+		Notifier: notifier,
+		Tx:       tx,
+		TMSID:    tmsID,
 	}, nil
 }
 
 // DeleteToken removes a single token from the database and notifies listeners.
-func (t *transaction) DeleteToken(ctx context.Context, tokenID token2.ID, deletedBy string) error {
-	tok, owners, err := t.tx.GetToken(ctx, tokenID, true)
+func (t *DBTransaction) DeleteToken(ctx context.Context, tokenID token2.ID, deletedBy string) error {
+	tok, owners, err := t.Tx.GetToken(ctx, tokenID, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s]", tokenID)
 	}
 
-	err = t.tx.Delete(ctx, tokenID, deletedBy)
+	err = t.Tx.Delete(ctx, tokenID, deletedBy)
 	if err != nil {
 		if tok == nil {
 			logger.DebugfContext(ctx, "nothing further to delete for [%s]", tokenID)
@@ -146,14 +146,14 @@ func (t *transaction) DeleteToken(ctx context.Context, tokenID token2.ID, delete
 	logger.DebugfContext(ctx, "Notify owners")
 	for _, owner := range owners {
 		logger.DebugfContext(ctx, "post new delete-token event [%s:%s]", tokenID, owner)
-		t.Notify(ctx, DeleteToken, t.tmsID, owner, tok.Type, tokenID.TxId, tokenID.Index)
+		t.Notify(ctx, DeleteToken, t.TMSID, owner, tok.Type, tokenID.TxId, tokenID.Index)
 	}
 
 	return nil
 }
 
 // DeleteTokens removes multiple tokens from the database.
-func (t *transaction) DeleteTokens(ctx context.Context, deletedBy string, ids []*token2.ID) error {
+func (t *DBTransaction) DeleteTokens(ctx context.Context, deletedBy string, ids []*token2.ID) error {
 	for _, id := range ids {
 		if err := t.DeleteToken(ctx, *id, deletedBy); err != nil {
 			return err
@@ -164,48 +164,48 @@ func (t *transaction) DeleteTokens(ctx context.Context, deletedBy string, ids []
 }
 
 // AppendToken records a new token in the database and notifies listeners.
-func (t *transaction) AppendToken(ctx context.Context, tta TokenToAppend) error {
-	q, err := token2.ToQuantity(tta.tok.Quantity, tta.precision)
+func (t *DBTransaction) AppendToken(ctx context.Context, tta TokenToAppend) error {
+	q, err := token2.ToQuantity(tta.Tok.Quantity, tta.Precision)
 	if err != nil {
-		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tta.tok.Quantity, tta.precision)
+		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tta.Tok.Quantity, tta.Precision)
 	}
 
-	err = t.tx.StoreToken(ctx, tokendb.TokenRecord{
-		TxID:           tta.txID,
-		Index:          tta.index,
-		IssuerRaw:      tta.issuer,
-		OwnerRaw:       tta.tok.Owner,
-		OwnerType:      tta.ownerType,
-		OwnerIdentity:  tta.ownerIdentity,
-		OwnerWalletID:  tta.ownerWalletID,
-		Ledger:         tta.tokenOnLedger,
-		LedgerFormat:   tta.tokenOnLedgerFormat,
-		LedgerMetadata: tta.tokenOnLedgerMetadata,
-		Quantity:       tta.tok.Quantity,
-		Type:           tta.tok.Type,
+	err = t.Tx.StoreToken(ctx, tokendb.TokenRecord{
+		TxID:           tta.TxID,
+		Index:          tta.Index,
+		IssuerRaw:      tta.Issuer,
+		OwnerRaw:       tta.Tok.Owner,
+		OwnerType:      tta.OwnerType,
+		OwnerIdentity:  tta.OwnerIdentity,
+		OwnerWalletID:  tta.OwnerWalletID,
+		Ledger:         tta.TokenOnLedger,
+		LedgerFormat:   tta.TokenOnLedgerFormat,
+		LedgerMetadata: tta.TokenOnLedgerMetadata,
+		Quantity:       tta.Tok.Quantity,
+		Type:           tta.Tok.Type,
 		Amount:         q.ToBigInt().Uint64(),
-		Owner:          tta.flags.Mine,
-		Auditor:        tta.flags.Auditor,
-		Issuer:         tta.flags.Issuer,
-	}, tta.owners)
+		Owner:          tta.Flags.Mine,
+		Auditor:        tta.Flags.Auditor,
+		Issuer:         tta.Flags.Issuer,
+	}, tta.Owners)
 	if err != nil && !errors.HasCause(err, driver.UniqueKeyViolation) {
 		return errors.Wrapf(err, "cannot store token in db")
 	}
 
 	logger.DebugfContext(ctx, "Notify owners")
-	for _, id := range tta.owners {
+	for _, id := range tta.Owners {
 		if len(id) == 0 {
 			continue
 		}
-		t.Notify(ctx, AddToken, t.tmsID, id, tta.tok.Type, tta.txID, tta.index)
+		t.Notify(ctx, AddToken, t.TMSID, id, tta.Tok.Type, tta.TxID, tta.Index)
 	}
 
 	return nil
 }
 
 // Notify publishes a token-related event to the system's notification bus.
-func (t *transaction) Notify(ctx context.Context, topic string, tmsID token.TMSID, walletID string, tokenType token2.Type, txID string, index uint64) {
-	if t.notifier == nil {
+func (t *DBTransaction) Notify(ctx context.Context, topic string, tmsID token.TMSID, walletID string, tokenType token2.Type, txID string, index uint64) {
+	if t.Notifier == nil {
 		logger.WarnfContext(ctx, "cannot notify others!")
 
 		return
@@ -220,24 +220,24 @@ func (t *transaction) Notify(ctx context.Context, topic string, tmsID token.TMSI
 	})
 
 	logger.DebugfContext(ctx, "publish new event %v", e)
-	t.notifier.Publish(e)
+	t.Notifier.Publish(e)
 }
 
 // Rollback cancels all changes made in the transaction.
-func (t *transaction) Rollback() error {
-	return t.tx.Rollback()
+func (t *DBTransaction) Rollback() error {
+	return t.Tx.Rollback()
 }
 
 // Commit persists all changes made in the transaction.
-func (t *transaction) Commit() error {
-	return t.tx.Commit()
+func (t *DBTransaction) Commit() error {
+	return t.Tx.Commit()
 }
 
 // SetSpendableFlag updates the spendable status for the given tokens in the database.
-func (t *transaction) SetSpendableFlag(ctx context.Context, value bool, ids []*token2.ID) error {
+func (t *DBTransaction) SetSpendableFlag(ctx context.Context, value bool, ids []*token2.ID) error {
 	var err error
 	for _, id := range ids {
-		err = t.tx.SetSpendable(ctx, *id, value)
+		err = t.Tx.SetSpendable(ctx, *id, value)
 		if err != nil {
 			return err
 		}
@@ -247,8 +247,8 @@ func (t *transaction) SetSpendableFlag(ctx context.Context, value bool, ids []*t
 }
 
 // SetSpendableBySupportedTokenTypes marks all tokens matching the given formats as spendable.
-func (t *transaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokens []token2.Format) error {
-	return t.tx.SetSpendableBySupportedTokenFormats(ctx, supportedTokens)
+func (t *DBTransaction) SetSpendableBySupportedTokenTypes(ctx context.Context, supportedTokens []token2.Format) error {
+	return t.Tx.SetSpendableBySupportedTokenFormats(ctx, supportedTokens)
 }
 
 // TokenProcessorEvent encapsulates a message published by the Tokens Service.
