@@ -226,7 +226,7 @@ func (u *restUser) authenticateUser() (string, txgen.Error) {
 		Password: u.password,
 	}
 
-	data, _ := json.Marshal(request)
+	data, _ := json.Marshal(request) //nolint:gosec // G117: Password must be marshaled for authentication request
 
 	response, err := u.httpClient.Post(url, c.ApplicationJson, bytes.NewReader(data))
 

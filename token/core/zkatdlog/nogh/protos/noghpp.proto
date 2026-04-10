@@ -30,6 +30,13 @@ message RangeProofParams {
   uint64 number_of_rounds = 6;
 }
 
+message CSPRangeProofParams {
+  repeated G1 left_generators = 1;
+  repeated G1 right_generators = 2;
+  uint64 bit_length = 5;
+  uint64 number_of_rounds = 6;
+}
+
 // PublicParameters describes typed public parameters
 message PublicParameters {
   string token_driver_name = 1; // the identifier of the token driver
@@ -43,4 +50,5 @@ message PublicParameters {
   uint64 max_token = 9; // is the maximum quantity a token can hold
   uint64 quantity_precision = 10; // is the precision used to represent quantities
   map<string, bytes> extra_data = 11; // extra_data allows to store arbitrary data in the public parameters
+  CSPRangeProofParams csp_range_proof_params = 12;       // csp-based range proof params
 }

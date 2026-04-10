@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
@@ -158,6 +159,7 @@ func TestFields(t *testing.T) {
 	assert.True(t, action.Outputs[0].Data.Equals(commitments[0]))
 	assert.True(t, action.Outputs[1].Data.Equals(commitments[1]))
 
+	assert.Equal(t, rp.RangeProofType, action.ProofType)
 	assert.Equal(t, action.Proof, action.GetProof())
 
 	// Test nil inputs in GetInputs and GetSerializedInputs
@@ -224,4 +226,14 @@ func TestValidate(t *testing.T) {
 	err = action.Validate()
 	require.ErrorIs(t, err, ErrNilOutput)
 	action.Outputs = oldOutputs
+
+	// Empty proof
+	oldProof := action.Proof
+	action.Proof = []byte{}
+	err = action.Validate()
+	require.ErrorIs(t, err, ErrEmptyProof)
+	action.Proof = oldProof
+
+	// Valid action again
+	require.NoError(t, action.Validate())
 }

@@ -232,6 +232,14 @@ func (r *RequestApprovalResponderView) validateProposal(ctx view.Context, reques
 		return errors.Wrapf(err, "creator identity is not valid for tx [%s]", request.Anchor)
 	}
 
+	acl, err := r.channelProvider.GetACLProvider(request.TMSID.Network, request.TMSID.Channel)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get ACL provider for tx [%s]", request.Anchor)
+	}
+	if err := acl.CheckACL(request.Tx.SignedProposal()); err != nil {
+		return errors.Wrapf(err, "failed to check ACL for tx [%s]", request.Anchor)
+	}
+
 	// Verify the proposal signature using the creator's verifier.
 	// This ensures the proposal was indeed signed by the claimed creator.
 	verifier, err := mspManager.GetVerifier(creator)

@@ -62,9 +62,14 @@ Each layer represents a different **code abstraction level**.
 ┌─────────────────────────────────────────────────────────────────┐
 │ Layer 1: Core Cryptographic Operations (Lowest Abstraction)     │
 │ Location: token/core/zkatdlog/nogh/v1/transfer/                 │
+│          token/core/zkatdlog/nogh/v1/crypto/rp/                 │
 │ Tests: - BenchmarkTransferProofGeneration                       │
 │        - TestParallelBenchmarkTransferProofGeneration           │
 │ Purpose: Pure transfer ZK proof generation and serialization    │
+│                                                                  │
+│ Range Proof Systems (as of commit 586d4f58):                    │
+│ • Bulletproofs: crypto/rp/bulletproof/ (IPA-based)              │
+│ • CSP: crypto/rp/csp/ (Compressed Sigma Protocols)              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -72,7 +77,11 @@ Each layer represents a different **code abstraction level**.
 
 ## Layer 1: Core Cryptographic Operations
 
-**Location:** `token/core/zkatdlog/nogh/v1/transfer/`
+**Location:** `token/core/zkatdlog/nogh/v1/transfer/` and `token/core/zkatdlog/nogh/v1/crypto/rp/`
+
+**Range Proof Systems**: As of commit 586d4f58, two range proof implementations are available:
+- **Bulletproofs** (`crypto/rp/bulletproof/`): IPA-based range proofs
+- **CSP** (`crypto/rp/csp/`): Compressed Sigma Protocol range proofs with optimized verification
 
 ### Tests
 - `BenchmarkTransferProofGeneration`

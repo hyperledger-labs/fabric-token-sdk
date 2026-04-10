@@ -28,7 +28,6 @@ type IssueService struct {
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
-	TokensService           *token2.TokensService
 	TokensUpgradeService    *upgrade.Service
 }
 
@@ -38,7 +37,6 @@ func NewIssueService(
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
-	tokensService *token2.TokensService,
 	tokensUpgradeService *upgrade.Service,
 ) *IssueService {
 	return &IssueService{
@@ -47,7 +45,6 @@ func NewIssueService(
 		WalletService:           walletService,
 		Deserializer:            deserializer,
 		Metrics:                 metrics,
-		TokensService:           tokensService,
 		TokensUpgradeService:    tokensUpgradeService,
 	}
 }

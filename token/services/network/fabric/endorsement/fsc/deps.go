@@ -87,10 +87,20 @@ type MSPManager interface {
 	GetVerifier(identity view.Identity) (driver.Verifier, error)
 }
 
+// ACLProvider offers ACL-related services
+//
+//go:generate counterfeiter -o mock/acl_provider.go -fake-name ACLProvider . ACLProvider
+type ACLProvider interface {
+	// CheckACL checks the ACL for the resource for the Channel using the
+	// SignedProposal from which an id can be extracted for testing against a policy
+	CheckACL(signedProp *fabric.SignedProposal) error
+}
+
 // ChannelProvider provides access to the MSP manager for a given Fabric network and channel.
 //
 //go:generate counterfeiter -o mock/channel_provider.go -fake-name ChannelProvider . ChannelProvider
 type ChannelProvider interface {
 	// GetMSPManager returns the MSP manager for the given network and channel
 	GetMSPManager(network, channel string) (MSPManager, error)
+	GetACLProvider(network, channel string) (ACLProvider, error)
 }

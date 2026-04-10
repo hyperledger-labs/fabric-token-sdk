@@ -24,8 +24,39 @@ const (
 	ConfigurationKey = "certification.interactive"
 )
 
+// Certification holds the configuration for the interactive certifier, parsed
+// from the TMS configuration under the "certification.interactive" key.
 type Certification struct {
+	// IDs lists the endpoint identifiers of the remote certifier nodes.
 	IDs []string `yaml:"ids,omitempty"`
+
+	// MaxAttempts is the maximum number of times a certification request is
+	// retried before the batch is discarded. Zero uses DefaultMaxAttempts.
+	MaxAttempts int `yaml:"maxAttempts,omitempty"`
+
+	// WaitTime is the backoff duration between retry attempts.
+	// Zero uses DefaultWaitTime.
+	WaitTime time.Duration `yaml:"waitTime,omitempty"`
+
+	// BatchSize is the maximum number of tokens assembled into a single
+	// certification request. Zero uses DefaultBatchSize.
+	BatchSize int `yaml:"batchSize,omitempty"`
+
+	// BufferSize is the capacity of the incoming token channel. Tokens are
+	// dropped (and counted) when the buffer is full. Zero uses DefaultBufferSize.
+	BufferSize int `yaml:"bufferSize,omitempty"`
+
+	// FlushInterval is the maximum time a partial batch waits before being
+	// dispatched to the worker pool. Zero uses DefaultFlushInterval.
+	FlushInterval time.Duration `yaml:"flushInterval,omitempty"`
+
+	// Workers is the number of concurrent goroutines that process certification
+	// batches. Zero uses DefaultWorkers.
+	Workers int `yaml:"workers,omitempty"`
+
+	// ResponseTimeout is the maximum time the client waits for the certifier to
+	// respond before treating the request as failed. Zero uses DefaultResponseTimeout.
+	ResponseTimeout time.Duration `yaml:"responseTimeout,omitempty"`
 }
 
 type BackendFactory func(tms *token.ManagementService, wallet string) (Backend, error)
@@ -66,6 +97,7 @@ func (d *Driver) NewCertificationClient(ctx context.Context, tms *token.Manageme
 	defer d.Sync.Unlock()
 
 	k := tms.Channel() + ":" + tms.Namespace()
+
 	cm, ok := d.CertificationClients[k]
 	if !ok {
 		certification := &Certification{}
@@ -77,12 +109,49 @@ func (d *Driver) NewCertificationClient(ctx context.Context, tms *token.Manageme
 		if err != nil {
 			return nil, errors.WithMessagef(err, "cannot resolve certifier identities")
 		}
+
 		if len(certifiers) == 0 {
 			return nil, errors.Errorf("no certifier id configured")
 		}
 
-		var certificationClient = NewCertificationClient(
+		maxAttempts := certification.MaxAttempts
+		if maxAttempts <= 0 {
+			maxAttempts = DefaultMaxAttempts
+		}
+
+		waitTime := certification.WaitTime
+		if waitTime <= 0 {
+			waitTime = DefaultWaitTime
+		}
+
+		batchSize := certification.BatchSize
+		if batchSize <= 0 {
+			batchSize = DefaultBatchSize
+		}
+
+		bufferSize := certification.BufferSize
+		if bufferSize <= 0 {
+			bufferSize = DefaultBufferSize
+		}
+
+		flushInterval := certification.FlushInterval
+		if flushInterval <= 0 {
+			flushInterval = DefaultFlushInterval
+		}
+
+		workers := certification.Workers
+		if workers <= 0 {
+			workers = DefaultWorkers
+		}
+
+		responseTimeout := certification.ResponseTimeout
+		if responseTimeout <= 0 {
+			responseTimeout = DefaultResponseTimeout
+		}
+
+		certificationClient := NewCertificationClient(
 			ctx,
+			tms.Network(),
 			tms.Channel(),
 			tms.Namespace(),
 			tms.Vault().NewQueryEngine(),
@@ -90,12 +159,19 @@ func (d *Driver) NewCertificationClient(ctx context.Context, tms *token.Manageme
 			d.ViewManager,
 			certifiers,
 			d.Subscriber,
-			3,
-			10*time.Second,
+			maxAttempts,
+			waitTime,
+			batchSize,
+			bufferSize,
+			flushInterval,
+			workers,
+			responseTimeout,
+			d.MetricsProvider,
 		)
 		if err := certificationClient.Scan(); err != nil {
 			logger.Warnf("failed to scan the vault for tokens to be certified [%s]", err)
 		}
+
 		certificationClient.Start()
 
 		d.CertificationClients[k] = certificationClient
@@ -114,8 +190,10 @@ func (d *Driver) NewCertificationService(tms *token.ManagementService, wallet st
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create backend")
 		}
+
 		d.CertificationService = NewCertificationService(d.ResponderRegistry, d.MetricsProvider, backend)
 	}
+
 	d.CertificationService.SetWallet(tms, wallet)
 
 	return d.CertificationService, nil
@@ -131,10 +209,10 @@ func (c *ChaincodeBackend) Load(context view.Context, cr *CertificationRequest) 
 		return nil, errors.WithMessagef(err, "failed getting tokens [%s:%s][%v]", cr.Channel, cr.Namespace, cr.IDs)
 	}
 
-	tokens, ok := tokensBoxed.([][]byte)
+	tokenOutputs, ok := tokensBoxed.([][]byte)
 	if !ok {
-		return nil, errors.Errorf("expected [][]byte, got [%T]", tokens)
+		return nil, errors.Errorf("expected [][]byte, got [%T]", tokensBoxed)
 	}
 
-	return tokens, nil
+	return tokenOutputs, nil
 }
