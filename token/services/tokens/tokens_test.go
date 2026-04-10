@@ -323,8 +323,6 @@ func TestAppend_NewTransactionError(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to start db transaction")
 }
 
-
-
 func TestAppendTransaction(t *testing.T) {
 	ctx := context.Background()
 	tokens := &Service{

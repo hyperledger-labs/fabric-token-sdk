@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package tokens
 
 import (
@@ -24,6 +30,7 @@ func (m *mockWalletService) SpendIDs(ids ...*token2.ID) ([]string, error) {
 	for i, id := range ids {
 		result[i] = id.TxId
 	}
+
 	return result, nil
 }
 
@@ -46,6 +53,7 @@ func buildTestTMS(t *testing.T, tmsID token.TMSID, mockVaultInst *mockVault, moc
 		&mockSelectorManagerProvider{},
 	)
 	require.NoError(t, err)
+
 	return tms
 }
 
@@ -86,6 +94,7 @@ func (m *mockUnspentTokensIterator) Next() (*token2.UnspentToken, error) {
 	}
 	res := m.NextReturnsTokens[m.NextCalls]
 	m.NextCalls++
+
 	return res, m.NextError
 }
 
@@ -176,8 +185,6 @@ func (m *mockNetwork) AreTokensSpent(ctx context.Context, namespace string, toke
 func (m *mockNetwork) LocalMembership() netdriver.LocalMembership {
 	return nil
 }
-
-
 
 type mockStoreServiceManager struct {
 	StoreServiceByTMSIdReturns *tokendb.StoreService
