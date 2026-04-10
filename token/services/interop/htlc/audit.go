@@ -50,7 +50,7 @@ func (i *Input) Script() (*Script, error) {
 	script := &Script{}
 	err = json.Unmarshal(owner.Identity, script)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmrshal HTLC script")
+		return nil, errors.Wrapf(err, "failed to unmarshal HTLC script")
 	}
 
 	return script, nil
@@ -92,7 +92,7 @@ func (o *Output) Script() (*Script, error) {
 	script := &Script{}
 	err = json.Unmarshal(owner.Identity, script)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmrshal HTLC script")
+		return nil, errors.Wrapf(err, "failed to unmarshal HTLC script")
 	}
 
 	return script, nil
