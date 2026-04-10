@@ -10,6 +10,7 @@ package interactive
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -42,3 +43,9 @@ func CRVCertifier(v *CertificationRequestView) view.Identity { return v.certifie
 
 // CRVIDs returns the ids field of a CertificationRequestView.
 func CRVIDs(v *CertificationRequestView) []*token.ID { return v.ids }
+
+// SetSessionFactory replaces the sessionFactory of s with f.
+// For testing only — lets external test packages inject a fake session.
+func SetSessionFactory(s *CertificationService, f func(view.Context) session.JsonSession) {
+	s.sessionFactory = f
+}

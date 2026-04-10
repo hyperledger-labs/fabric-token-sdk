@@ -37,4 +37,12 @@ const (
 	// in a CertificationRequest. Requests exceeding this limit are rejected to prevent
 	// memory exhaustion on the certifier node.
 	MaxRequestBytes = 1 << 20 // 1 MiB
+
+	// MaxWireMessageBytes is the maximum byte-length of the entire JSON-encoded
+	// certification request as received from the wire. This guard fires before
+	// JSON deserialisation so that an oversized message is dropped without ever
+	// allocating the decoded struct — preventing memory exhaustion from large
+	// payloads. It is set to 2 MiB to accommodate the base64 overhead of
+	// MaxRequestBytes plus the JSON-encoded IDs and header fields.
+	MaxWireMessageBytes = MaxRequestBytes * 2 // 2 MiB
 )
