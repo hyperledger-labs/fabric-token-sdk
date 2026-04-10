@@ -162,12 +162,14 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			return nil, nil, immediateRetries, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), tokenType, err2)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
+				err2 := s.locker.UnlockAll(ctx)
 				return nil, nil, immediateRetries, errors.Wrapf(
 					token.SelectorInsufficientFunds,
-					"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked",
+					"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked - unlock: %v",
 					sum.Decimal(),
 					tokenType,
 					quantity.Decimal(),
+					err2,
 				)
 			}
 

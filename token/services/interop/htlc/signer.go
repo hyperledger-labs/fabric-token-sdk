@@ -93,12 +93,25 @@ type Verifier struct {
 	Sender    driver.Verifier
 	Deadline  time.Time
 	HashInfo  HashInfo
+	// ClockFunc returns the current time used to evaluate the deadline.
+	// It defaults to time.Now when nil.
+	// Callers that have access to the Fabric block timestamp should inject it
+	// here to ensure deterministic, clock-skew-safe deadline enforcement.
+	ClockFunc func() time.Time
+}
+
+func (v *Verifier) now() time.Time {
+	if v.ClockFunc != nil {
+		return v.ClockFunc()
+	}
+
+	return time.Now()
 }
 
 // Verify verifies the claim or reclaim signature
 func (v *Verifier) Verify(msg []byte, sigma []byte) error {
 	// if timeout has not elapsed, only claim is allowed
-	if time.Now().Before(v.Deadline) {
+	if v.now().Before(v.Deadline) {
 		cv := &ClaimVerifier{
 			Recipient: v.Recipient,
 			HashInfo: HashInfo{
