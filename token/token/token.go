@@ -75,7 +75,10 @@ func (it *IssuedTokens) Sum(precision uint64) Quantity {
 		if err != nil {
 			panic(err)
 		}
-		sum = sum.Add(q)
+		sum, err = sum.Add(q)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return sum
@@ -156,7 +159,10 @@ func (it *UnspentTokens) Sum(precision uint64) Quantity {
 		if err != nil {
 			panic(err)
 		}
-		sum = sum.Add(q)
+		sum, err = sum.Add(q)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return sum
