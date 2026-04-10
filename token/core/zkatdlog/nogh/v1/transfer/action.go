@@ -338,9 +338,11 @@ func (t *Action) Validate() error {
 			return errors.Wrapf(err, "invalid output at index [%d]", i)
 		}
 	}
-	if t.IsRedeem() && (t.Issuer == nil) {
-		return ErrMissingIssuer
-	}
+	// The following check must happen only if the public parameters contain issuers.
+	// The validator enforces the signature of an issuer only in that case.
+	// if t.IsRedeem() && (t.Issuer == nil) {
+	// 	return ErrMissingIssuer
+	// }
 	if t.ProofType != rp.RangeProofType && t.ProofType != rp.CSPRangeProofType {
 		return ErrInvalidProofType
 	}

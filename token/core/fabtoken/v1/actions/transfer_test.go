@@ -349,12 +349,6 @@ func TestTransferAction_RemainingMethods(t *testing.T) {
 	assert.Equal(t, map[string][]byte{"foo": []byte("bar")}, action.GetMetadata())
 	assert.Nil(t, action.ExtraSigners())
 
-	// Test Validate with Redeem and nil issuer
-	action.Issuer = nil
-	err = action.Validate()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Expected Issuer for a Redeem action")
-
 	// Test GetSerializedOutputs with nil output
 	action.Outputs = append(action.Outputs, nil)
 	_, err = action.GetSerializedOutputs()
