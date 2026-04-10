@@ -242,6 +242,7 @@ func TestParallelBenchmarkIssueServiceIssue(t *testing.T) {
 				return err
 			}
 			_, err = action.Serialize()
+
 			return err
 		},
 	)
@@ -298,5 +299,6 @@ func newBenchmarkIssueEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkIssu
 		}
 		envs[i] = env
 	}
+
 	return &benchmarkIssueEnv{Envs: envs}, nil
 }

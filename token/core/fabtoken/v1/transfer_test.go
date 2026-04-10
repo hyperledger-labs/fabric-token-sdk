@@ -365,6 +365,7 @@ func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 				return err
 			}
 			_, err = action.Serialize()
+
 			return err
 		},
 	)
@@ -436,5 +437,6 @@ func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkT
 		}
 		envs[i] = env
 	}
+
 	return &benchmarkTransferEnv{Envs: envs}, nil
 }

@@ -1075,6 +1075,7 @@ func newBenchmarkValidatorEnv(n int, benchmarkCase *benchmark2.Case, isIssue boo
 		}
 		envs[i] = env
 	}
+
 	return &benchmarkValidatorEnv{Envs: envs}, nil
 }
 
