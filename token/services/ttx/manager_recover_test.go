@@ -40,6 +40,7 @@ type setStatusCall struct {
 
 func (s *stubStatusSetter) SetStatus(_ context.Context, txID string, status storage.TxStatus, message string) error {
 	s.calls = append(s.calls, setStatusCall{txID: txID, status: status, message: message})
+
 	return s.returnErr
 }
 
@@ -55,7 +56,7 @@ func TestRecoverCommittedPending_TokensAlreadyCommitted(t *testing.T) {
 	checker := &stubExistenceChecker{exists: true}
 	setter := &stubStatusSetter{}
 
-	recovered := recoverCommittedPending(context.Background(), "tx-abc", checker, setter)
+	recovered := recoverCommittedPending(t.Context(), "tx-abc", checker, setter)
 
 	require.True(t, recovered, "should report recovery when tokens are already committed")
 	require.Len(t, setter.calls, 1)
@@ -71,7 +72,7 @@ func TestRecoverCommittedPending_TokensNotYetCommitted(t *testing.T) {
 	checker := &stubExistenceChecker{exists: false}
 	setter := &stubStatusSetter{}
 
-	recovered := recoverCommittedPending(context.Background(), "tx-xyz", checker, setter)
+	recovered := recoverCommittedPending(t.Context(), "tx-xyz", checker, setter)
 
 	assert.False(t, recovered, "should not recover when tokens are not yet in tokenDB")
 	assert.Empty(t, setter.calls, "SetStatus must not be called when tokens are absent")
@@ -84,7 +85,7 @@ func TestRecoverCommittedPending_ExistenceCheckError(t *testing.T) {
 	checker := &stubExistenceChecker{err: errors.New("db unavailable")}
 	setter := &stubStatusSetter{}
 
-	recovered := recoverCommittedPending(context.Background(), "tx-err", checker, setter)
+	recovered := recoverCommittedPending(t.Context(), "tx-err", checker, setter)
 
 	assert.False(t, recovered, "error in existence check must not be treated as recovery")
 	assert.Empty(t, setter.calls)
@@ -97,7 +98,7 @@ func TestRecoverCommittedPending_SetStatusError(t *testing.T) {
 	checker := &stubExistenceChecker{exists: true}
 	setter := &stubStatusSetter{returnErr: errors.New("write failed")}
 
-	recovered := recoverCommittedPending(context.Background(), "tx-fail", checker, setter)
+	recovered := recoverCommittedPending(t.Context(), "tx-fail", checker, setter)
 
 	assert.False(t, recovered, "SetStatus failure must cause fallback, not silent recovery")
 	require.Len(t, setter.calls, 1, "SetStatus should have been attempted once")
@@ -110,8 +111,8 @@ func TestRecoverCommittedPending_Idempotent(t *testing.T) {
 	checker := &stubExistenceChecker{exists: true}
 	setter := &stubStatusSetter{}
 
-	first := recoverCommittedPending(context.Background(), "tx-dup", checker, setter)
-	second := recoverCommittedPending(context.Background(), "tx-dup", checker, setter)
+	first := recoverCommittedPending(t.Context(), "tx-dup", checker, setter)
+	second := recoverCommittedPending(t.Context(), "tx-dup", checker, setter)
 
 	assert.True(t, first)
 	assert.True(t, second)

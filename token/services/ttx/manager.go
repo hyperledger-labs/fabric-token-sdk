@@ -52,6 +52,7 @@ func recoverCommittedPending(ctx context.Context, txID string, checker tokenExis
 	committed, err := checker.TransactionExists(ctx, txID)
 	if err != nil {
 		logger.Warnf("recover tx [%s]: failed to check token existence, falling back to finality listener: %v", txID, err)
+
 		return false
 	}
 	if !committed {
@@ -60,8 +61,10 @@ func recoverCommittedPending(ctx context.Context, txID string, checker tokenExis
 	logger.Infof("recover tx [%s]: tokens committed to tokenDB but ttxDB still Pending; setting Confirmed directly", txID)
 	if err := setter.SetStatus(ctx, txID, storage.Confirmed, "recovered on restart: tokenDB committed before ttxDB status update"); err != nil {
 		logger.Errorf("recover tx [%s]: failed to set Confirmed: %v; falling back to finality listener", txID, err)
+
 		return false
 	}
+
 	return true
 }
 
