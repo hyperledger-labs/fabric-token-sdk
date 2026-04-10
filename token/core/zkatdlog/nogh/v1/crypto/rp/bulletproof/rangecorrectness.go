@@ -10,7 +10,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
-	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
+	executor "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
 )
 
 // RangeCorrectness contains a set of range proofs for multiple commitments.
@@ -87,7 +87,7 @@ type RangeCorrectnessProver struct {
 	Curve *math.Curve
 	// Provider creates a fresh Executor for each Prove call.
 	// If nil, DefaultProvider (SerialProvider) is used.
-	Provider rp.ExecutorProvider
+	Provider executor.ExecutorProvider
 }
 
 // NewRangeCorrectnessProver returns a new RangeCorrectnessProver.
@@ -101,10 +101,10 @@ func NewRangeCorrectnessProver(
 	P, Q *math.G1,
 	bitLength, rounds uint64,
 	c *math.Curve,
-	provider rp.ExecutorProvider,
+	provider executor.ExecutorProvider,
 ) *RangeCorrectnessProver {
 	if provider == nil {
-		provider = rp.DefaultProvider
+		provider = executor.DefaultProvider
 	}
 
 	return &RangeCorrectnessProver{
@@ -188,7 +188,7 @@ type RangeCorrectnessVerifier struct {
 	Curve *math.Curve
 	// Provider creates a fresh Executor for each Prove call.
 	// If nil, DefaultProvider (SerialProvider) is used.
-	Provider rp.ExecutorProvider
+	Provider executor.ExecutorProvider
 }
 
 // NewRangeCorrectnessVerifier returns a new RangeCorrectnessVerifier.
@@ -199,10 +199,10 @@ func NewRangeCorrectnessVerifier(
 	P, Q *math.G1,
 	bitLength, rounds uint64,
 	curve *math.Curve,
-	provider rp.ExecutorProvider,
+	provider executor.ExecutorProvider,
 ) *RangeCorrectnessVerifier {
 	if provider == nil {
-		provider = rp.DefaultProvider
+		provider = executor.DefaultProvider
 	}
 
 	return &RangeCorrectnessVerifier{
