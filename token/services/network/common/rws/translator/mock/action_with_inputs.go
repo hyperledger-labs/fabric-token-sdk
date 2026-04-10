@@ -210,12 +210,6 @@ func (fake *ActionWithInputs) GetSerializedInputsReturnsOnCall(i int, result1 []
 func (fake *ActionWithInputs) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getInputsMutex.RLock()
-	defer fake.getInputsMutex.RUnlock()
-	fake.getSerialNumbersMutex.RLock()
-	defer fake.getSerialNumbersMutex.RUnlock()
-	fake.getSerializedInputsMutex.RLock()
-	defer fake.getSerializedInputsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

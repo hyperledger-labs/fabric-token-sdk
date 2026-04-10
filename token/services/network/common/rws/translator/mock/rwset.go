@@ -20,18 +20,6 @@ type RWSet struct {
 	deleteStateReturnsOnCall map[int]struct {
 		result1 error
 	}
-	EqualsStub        func(interface{}, string) error
-	equalsMutex       sync.RWMutex
-	equalsArgsForCall []struct {
-		arg1 interface{}
-		arg2 string
-	}
-	equalsReturns struct {
-		result1 error
-	}
-	equalsReturnsOnCall map[int]struct {
-		result1 error
-	}
 	GetStateStub        func(string, string) ([]byte, error)
 	getStateMutex       sync.RWMutex
 	getStateArgsForCall []struct {
@@ -121,68 +109,6 @@ func (fake *RWSet) DeleteStateReturnsOnCall(i int, result1 error) {
 		})
 	}
 	fake.deleteStateReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *RWSet) Equals(arg1 interface{}, arg2 string) error {
-	fake.equalsMutex.Lock()
-	ret, specificReturn := fake.equalsReturnsOnCall[len(fake.equalsArgsForCall)]
-	fake.equalsArgsForCall = append(fake.equalsArgsForCall, struct {
-		arg1 interface{}
-		arg2 string
-	}{arg1, arg2})
-	stub := fake.EqualsStub
-	fakeReturns := fake.equalsReturns
-	fake.recordInvocation("Equals", []interface{}{arg1, arg2})
-	fake.equalsMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *RWSet) EqualsCallCount() int {
-	fake.equalsMutex.RLock()
-	defer fake.equalsMutex.RUnlock()
-	return len(fake.equalsArgsForCall)
-}
-
-func (fake *RWSet) EqualsCalls(stub func(interface{}, string) error) {
-	fake.equalsMutex.Lock()
-	defer fake.equalsMutex.Unlock()
-	fake.EqualsStub = stub
-}
-
-func (fake *RWSet) EqualsArgsForCall(i int) (interface{}, string) {
-	fake.equalsMutex.RLock()
-	defer fake.equalsMutex.RUnlock()
-	argsForCall := fake.equalsArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *RWSet) EqualsReturns(result1 error) {
-	fake.equalsMutex.Lock()
-	defer fake.equalsMutex.Unlock()
-	fake.EqualsStub = nil
-	fake.equalsReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *RWSet) EqualsReturnsOnCall(i int, result1 error) {
-	fake.equalsMutex.Lock()
-	defer fake.equalsMutex.Unlock()
-	fake.EqualsStub = nil
-	if fake.equalsReturnsOnCall == nil {
-		fake.equalsReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.equalsReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -323,14 +249,6 @@ func (fake *RWSet) SetStateReturnsOnCall(i int, result1 error) {
 func (fake *RWSet) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.deleteStateMutex.RLock()
-	defer fake.deleteStateMutex.RUnlock()
-	fake.equalsMutex.RLock()
-	defer fake.equalsMutex.RUnlock()
-	fake.getStateMutex.RLock()
-	defer fake.getStateMutex.RUnlock()
-	fake.setStateMutex.RLock()
-	defer fake.setStateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
