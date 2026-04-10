@@ -56,7 +56,7 @@ func TestStubbornSelector_ContextCancellation(t *testing.T) {
 		)
 
 		// 50 ms is far shorter than time.Hour backoff — ctx.Done() fires first.
-		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
 		defer cancel()
 
 		_, _, err := sel.Select(ctx, &ownerFilter{id: "wallet1"}, "100", "USD")
