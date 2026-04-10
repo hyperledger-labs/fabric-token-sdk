@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
-	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
@@ -222,9 +222,11 @@ func (t *TransferAction) Validate() error {
 			return errors.Errorf("invalid output's quantity at index [%d], output quantity is empty", i)
 		}
 	}
-	if t.IsRedeem() && (t.Issuer == nil) {
-		return errors.Errorf("Expected Issuer for a Redeem action (to validate)")
-	}
+	// The following check must happen only if the public parameters contain issuers.
+	// The validator enforces the signature of an issuer only in that case.
+	// if t.IsRedeem() && (t.Issuer == nil) {
+	// 	return ErrMissingIssuer
+	// }
 
 	return nil
 }
