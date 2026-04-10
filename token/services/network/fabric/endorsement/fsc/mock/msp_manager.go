@@ -166,10 +166,6 @@ func (fake *MSPManager) IsValidReturnsOnCall(i int, result1 error) {
 func (fake *MSPManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getVerifierMutex.RLock()
-	defer fake.getVerifierMutex.RUnlock()
-	fake.isValidMutex.RLock()
-	defer fake.isValidMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
