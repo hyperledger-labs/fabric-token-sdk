@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package auditor
+package auditor_test
 
 import (
 	"context"
@@ -12,22 +12,27 @@ import (
 	"io"
 	"testing"
 
-	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	drivermock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	tokenmock "github.com/hyperledger-labs/fabric-token-sdk/token/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
+	auditmock "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	auditdbmock "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/mock"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	depmock "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/mock"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 // ---------------------------------------------------------------------------
-// Helpers / stubs
+// Shared test helpers
+// ---------------------------------------------------------------------------
 
 func newTestManagementService(t *testing.T) *token.ManagementService {
 	t.Helper()
@@ -42,30 +47,24 @@ func newTestManagementService(t *testing.T) *token.ManagementService {
 	mockPPM.PublicParametersReturns(mockPP)
 
 	mockTMS.PublicParamsManagerReturns(mockPPM)
-
-	// Provide TokensService, WalletService, IssueService, TransferService
-	// so that GetMetadata() and inputsAndOutputs() work without panics.
 	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
 	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
 	mockTMS.IssueServiceReturns(&drivermock.IssueService{})
 	mockTMS.TransferServiceReturns(&drivermock.TransferService{})
 
 	mockQE := &drivermock.QueryEngine{}
-	// Return empty tokens by default (matches empty inputs from a request with no actions).
 	mockQE.ListAuditTokensReturns([]*token2.Token{}, nil)
 	mockV := &drivermock.Vault{}
 	mockV.QueryEngineReturns(mockQE)
 	mockVP.VaultReturns(mockV, nil)
 
-	logger := logging.MustGetLogger("test")
-
 	tms, err := token.NewManagementService(
 		token.TMSID{},
 		mockTMS,
-		logger,
+		logging.MustGetLogger("test"),
 		mockVP,
-		nil, // CertificationClientProvider
-		nil, // SelectorManagerProvider
+		nil,
+		nil,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, tms)
@@ -73,9 +72,7 @@ func newTestManagementService(t *testing.T) *token.ManagementService {
 	return tms
 }
 
-// newTestManagementServiceWithTokens is like newTestManagementService but
-// configures ListAuditTokens to return the specified tokens.
-func newTestManagementServiceWithTokens(t *testing.T, tokens []*token2.Token) *token.ManagementService {
+func newTestManagementServiceWithTokens(t *testing.T, toks []*token2.Token) *token.ManagementService {
 	t.Helper()
 	mockTMS := &drivermock.TokenManagerService{}
 	mockVP := &tokenmock.VaultProvider{}
@@ -94,16 +91,15 @@ func newTestManagementServiceWithTokens(t *testing.T, tokens []*token2.Token) *t
 	mockTMS.TransferServiceReturns(&drivermock.TransferService{})
 
 	mockQE := &drivermock.QueryEngine{}
-	mockQE.ListAuditTokensReturns(tokens, nil)
+	mockQE.ListAuditTokensReturns(toks, nil)
 	mockV := &drivermock.Vault{}
 	mockV.QueryEngineReturns(mockQE)
 	mockVP.VaultReturns(mockV, nil)
 
-	logger := logging.MustGetLogger("test")
 	tms, err := token.NewManagementService(
 		token.TMSID{},
 		mockTMS,
-		logger,
+		logging.MustGetLogger("test"),
 		mockVP,
 		nil,
 		nil,
@@ -114,79 +110,7 @@ func newTestManagementServiceWithTokens(t *testing.T, tokens []*token2.Token) *t
 	return tms
 }
 
-// ---------------------------------------------------------------------------
-
-// stubMetricsProvider records how many times each factory method is called.
-type stubMetricsProvider struct {
-	counterCalls   int
-	histogramCalls int
-}
-
-func (s *stubMetricsProvider) NewCounter(_ metrics.CounterOpts) metrics.Counter {
-	s.counterCalls++
-
-	return &noopCounter{}
-}
-func (s *stubMetricsProvider) NewGauge(_ metrics.GaugeOpts) metrics.Gauge { return &noopGauge{} }
-func (s *stubMetricsProvider) NewHistogram(_ metrics.HistogramOpts) metrics.Histogram {
-	s.histogramCalls++
-
-	return &noopHistogram{}
-}
-
-// mockCheckService is an in-package mock for the CheckService interface.
-type mockCheckService struct {
-	issues []string
-	err    error
-}
-
-func (m *mockCheckService) Check(_ context.Context) ([]string, error) {
-	return m.issues, m.err
-}
-
-// mockServiceProvider implements token.ServiceProvider for GetByTMSID tests.
-type mockServiceProvider struct {
-	service interface{}
-	err     error
-}
-
-func (m *mockServiceProvider) GetService(_ interface{}) (interface{}, error) {
-	return m.service, m.err
-}
-
-type stubAuditTransactionStore struct {
-	getStatusResult dbdriver.TxStatus
-	getStatusMsg    string
-	getStatusErr    error
-	getTokenReqData []byte
-	getTokenReqErr  error
-	setStatusErr    error
-	appendErr       error
-}
-
-func (s *stubAuditTransactionStore) Close() error { return nil }
-func (s *stubAuditTransactionStore) BeginAtomicWrite() (dbdriver.AtomicWrite, error) {
-	return &stubAtomicWrite{err: s.appendErr}, nil
-}
-func (s *stubAuditTransactionStore) SetStatus(_ context.Context, _ string, _ dbdriver.TxStatus, _ string) error {
-	return s.setStatusErr
-}
-func (s *stubAuditTransactionStore) GetStatus(_ context.Context, _ string) (dbdriver.TxStatus, string, error) {
-	return s.getStatusResult, s.getStatusMsg, s.getStatusErr
-}
-func (s *stubAuditTransactionStore) QueryTransactions(_ context.Context, _ dbdriver.QueryTransactionsParams, _ cdriver.Pagination) (*cdriver.PageIterator[*dbdriver.TransactionRecord], error) {
-	return nil, nil
-}
-func (s *stubAuditTransactionStore) QueryMovements(_ context.Context, _ dbdriver.QueryMovementsParams) ([]*dbdriver.MovementRecord, error) {
-	return nil, nil
-}
-func (s *stubAuditTransactionStore) QueryValidations(_ context.Context, _ dbdriver.QueryValidationRecordsParams) (dbdriver.ValidationRecordsIterator, error) {
-	return nil, nil
-}
-func (s *stubAuditTransactionStore) QueryTokenRequests(_ context.Context, _ dbdriver.QueryTokenRequestsParams) (dbdriver.TokenRequestIterator, error) {
-	return &stubTokenRequestIterator{count: 1}, nil
-}
-
+// stubTokenRequestIterator is a minimal test helper for returning token request records.
 type stubTokenRequestIterator struct {
 	count int
 }
@@ -194,216 +118,59 @@ type stubTokenRequestIterator struct {
 func (s *stubTokenRequestIterator) Next() (*dbdriver.TokenRequestRecord, error) {
 	if s.count > 0 {
 		s.count--
-
 		return &dbdriver.TokenRequestRecord{TxID: "txid-123"}, nil
 	}
-	// Return io.EOF
 	return nil, io.EOF
 }
 
 func (s *stubTokenRequestIterator) Close() {}
 
-func (s *stubAuditTransactionStore) GetTokenRequest(_ context.Context, _ string) ([]byte, error) {
-	return s.getTokenReqData, s.getTokenReqErr
-}
-
-// stubAtomicWrite is a no-op AtomicWrite (used in stubAuditTransactionStore.BeginAtomicWrite).
-type stubAtomicWrite struct {
-	err error
-}
-
-func (a *stubAtomicWrite) Commit() error { return a.err }
-func (a *stubAtomicWrite) Rollback()     {}
-func (a *stubAtomicWrite) AddTokenRequest(_ context.Context, _ string, _ []byte, _, _ map[string][]byte, _ driver.PPHash) error {
-	return nil
-}
-func (a *stubAtomicWrite) AddMovement(_ context.Context, _ ...dbdriver.MovementRecord) error {
-	return nil
-}
-func (a *stubAtomicWrite) AddTransaction(_ context.Context, _ ...dbdriver.TransactionRecord) error {
-	return nil
-}
-func (a *stubAtomicWrite) AddValidationRecord(_ context.Context, _ string, _ map[string][]byte) error {
-	return nil
-}
-
-// newTestStoreService builds a *auditdb.StoreService backed by the given stub.
-func newTestStoreService(t *testing.T, stub dbdriver.AuditTransactionStore) *auditdb.StoreService {
+// newTestStoreService builds a *auditdb.StoreService backed by the given store mock.
+func newTestStoreService(t *testing.T, store dbdriver.AuditTransactionStore) *auditdb.StoreService {
 	t.Helper()
-	ss, err := auditdb.NewStoreServiceForTest(stub)
+	ss, err := auditdb.NewStoreServiceForTest(store)
 	require.NoError(t, err)
-
 	return ss
 }
 
-// mockTransaction is a minimal Transaction for Release tests.
-type mockTransaction struct {
-	anchor string
-	tms    *token.ManagementService
-}
-
-func (m *mockTransaction) ID() string        { return m.anchor }
-func (m *mockTransaction) Network() string   { return "testnet" }
-func (m *mockTransaction) Channel() string   { return "testch" }
-func (m *mockTransaction) Namespace() string { return "testns" }
-func (m *mockTransaction) Request() *token.Request {
-	if m.tms != nil {
-		return token.NewRequest(m.tms, token.RequestAnchor(m.anchor))
+// newFakeStore returns a counterfeiter AuditTransactionStore with default no-op behaviour.
+func newFakeStore() *auditmock.AuditTransactionStore {
+	fakeStore := &auditmock.AuditTransactionStore{}
+	fakeAtomicWrite := &auditmock.AtomicWrite{}
+	fakeStore.BeginAtomicWriteReturns(fakeAtomicWrite, nil)
+	fakeStore.QueryTokenRequestsStub = func(_ context.Context, _ dbdriver.QueryTokenRequestsParams) (dbdriver.TokenRequestIterator, error) {
+		return &stubTokenRequestIterator{count: 1}, nil
 	}
+	return fakeStore
+}
 
-	return &token.Request{Anchor: token.RequestAnchor(m.anchor)}
+// newTestService is a convenience wrapper that creates a Service with nil-metrics and the given fields.
+func newTestService(auditDB *auditdb.StoreService, checkService auditor.CheckService) *auditor.Service {
+	return auditor.NewTestService(
+		token.TMSID{},
+		nil,  // networkProvider
+		auditDB,
+		nil,  // tokenDB
+		nil,  // tmsProvider
+		nil,  // finalityTracer
+		nil,  // metricsProvider (→ noopProvider inside)
+		checkService,
+	)
+}
+
+// newStubNetwork creates a *network.Network backed by a no-op counterfeiter Network fake.
+func newStubNetwork() *network.Network {
+	return network.NewNetwork(&auditmock.Network{}, nil)
 }
 
 // ---------------------------------------------------------------------------
-// metrics.go tests
+// Service.Check tests
 // ---------------------------------------------------------------------------
-
-func TestNewMetrics_NilProvider(t *testing.T) {
-	m := newMetrics(nil)
-	require.NotNil(t, m)
-	assert.NotNil(t, m.AuditDuration)
-	assert.NotNil(t, m.AuditLockConflicts)
-	assert.NotNil(t, m.AppendDuration)
-	assert.NotNil(t, m.AppendErrors)
-	assert.NotNil(t, m.ReleasesTotal)
-}
-
-func TestNewMetrics_WithProvider(t *testing.T) {
-	p := &stubMetricsProvider{}
-	m := newMetrics(p)
-	require.NotNil(t, m)
-	// AuditLockConflicts, AppendErrors, ReleasesTotal = 3 counters
-	assert.Equal(t, 3, p.counterCalls)
-	// AuditDuration, AppendDuration = 2 histograms
-	assert.Equal(t, 2, p.histogramCalls)
-}
-
-func TestNoopCounter_With_ReturnsSelf(t *testing.T) {
-	c := &noopCounter{}
-	c2 := c.With("key", "val")
-	assert.Equal(t, c, c2)
-}
-
-func TestNoopCounter_Add_NoPanic(t *testing.T) {
-	c := &noopCounter{}
-	assert.NotPanics(t, func() { c.Add(3.14) })
-}
-
-func TestNoopGauge_With_ReturnsSelf(t *testing.T) {
-	g := &noopGauge{}
-	g2 := g.With("key", "val")
-	assert.Equal(t, g, g2)
-}
-
-func TestNoopGauge_Add_NoPanic(t *testing.T) {
-	g := &noopGauge{}
-	assert.NotPanics(t, func() { g.Add(1.5) })
-}
-
-func TestNoopGauge_Set_NoPanic(t *testing.T) {
-	g := &noopGauge{}
-	assert.NotPanics(t, func() { g.Set(42.0) })
-}
-
-func TestNoopHistogram_With_ReturnsSelf(t *testing.T) {
-	h := &noopHistogram{}
-	h2 := h.With("key", "val")
-	assert.Equal(t, h, h2)
-}
-
-func TestNoopHistogram_Observe_NoPanic(t *testing.T) {
-	h := &noopHistogram{}
-	assert.NotPanics(t, func() { h.Observe(0.001) })
-}
-
-func TestNoopProvider_NewCounter_ReturnsNoopCounter(t *testing.T) {
-	p := &noopProvider{}
-	c := p.NewCounter(metrics.CounterOpts{Name: "x"})
-	require.NotNil(t, c)
-	_, ok := c.(*noopCounter)
-	assert.True(t, ok)
-}
-
-func TestNoopProvider_NewGauge_ReturnsNoopGauge(t *testing.T) {
-	p := &noopProvider{}
-	g := p.NewGauge(metrics.GaugeOpts{Name: "y"})
-	require.NotNil(t, g)
-	_, ok := g.(*noopGauge)
-	assert.True(t, ok)
-}
-
-func TestNoopProvider_NewHistogram_ReturnsNoopHistogram(t *testing.T) {
-	p := &noopProvider{}
-	h := p.NewHistogram(metrics.HistogramOpts{Name: "z", Buckets: []float64{1}})
-	require.NotNil(t, h)
-	_, ok := h.(*noopHistogram)
-	assert.True(t, ok)
-}
-
-// ---------------------------------------------------------------------------
-// requestWrapper tests (auditor.go)
-// ---------------------------------------------------------------------------
-
-func minimalRequest(anchor string) *token.Request {
-	return &token.Request{
-		Anchor:   token.RequestAnchor(anchor),
-		Actions:  &driver.TokenRequest{},
-		Metadata: &driver.TokenRequestMetadata{},
-	}
-}
-
-func TestRequestWrapper_ID(t *testing.T) {
-	rw := newRequestWrapper(minimalRequest("tx-001"), nil)
-	assert.Equal(t, token.RequestAnchor("tx-001"), rw.ID())
-}
-
-func TestRequestWrapper_String(t *testing.T) {
-	rw := newRequestWrapper(minimalRequest("tx-hello"), nil)
-	assert.Equal(t, "tx-hello", rw.String())
-}
-
-func TestRequestWrapper_Bytes_ValidRequest(t *testing.T) {
-	rw := newRequestWrapper(minimalRequest("tx-002"), nil)
-	b, err := rw.Bytes()
-	require.NoError(t, err)
-	assert.NotEmpty(t, b)
-}
-
-func TestRequestWrapper_AllApplicationMetadata_Nil(t *testing.T) {
-	req := &token.Request{
-		Anchor:   "tx-003",
-		Metadata: &driver.TokenRequestMetadata{Application: nil},
-	}
-	rw := newRequestWrapper(req, nil)
-	assert.Nil(t, rw.AllApplicationMetadata())
-}
-
-func TestRequestWrapper_AllApplicationMetadata_Populated(t *testing.T) {
-	req := &token.Request{
-		Anchor: "tx-004",
-		Metadata: &driver.TokenRequestMetadata{
-			Application: map[string][]byte{"k": []byte("v")},
-		},
-	}
-	rw := newRequestWrapper(req, nil)
-	m := rw.AllApplicationMetadata()
-	require.NotNil(t, m)
-	assert.Equal(t, []byte("v"), m["k"])
-}
-
-// ---------------------------------------------------------------------------
-// Service.Check tests (auditor.go)
-// ---------------------------------------------------------------------------
-
-func newServiceWithCheckService(cs CheckService) *Service {
-	return &Service{
-		metrics:      newMetrics(nil),
-		checkService: cs,
-	}
-}
 
 func TestService_Check_ReturnsIssues(t *testing.T) {
-	svc := newServiceWithCheckService(&mockCheckService{issues: []string{"tx-aaa", "tx-bbb"}})
+	cs := &auditmock.CheckService{}
+	cs.CheckReturns([]string{"tx-aaa", "tx-bbb"}, nil)
+	svc := newTestService(newTestStoreService(t, newFakeStore()), cs)
 	got, err := svc.Check(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, []string{"tx-aaa", "tx-bbb"}, got)
@@ -411,13 +178,17 @@ func TestService_Check_ReturnsIssues(t *testing.T) {
 
 func TestService_Check_ReturnsError(t *testing.T) {
 	expectedErr := errors.New("check failed")
-	svc := newServiceWithCheckService(&mockCheckService{err: expectedErr})
+	cs := &auditmock.CheckService{}
+	cs.CheckReturns(nil, expectedErr)
+	svc := newTestService(newTestStoreService(t, newFakeStore()), cs)
 	_, err := svc.Check(context.Background())
 	assert.ErrorIs(t, err, expectedErr)
 }
 
 func TestService_Check_EmptyIssues(t *testing.T) {
-	svc := newServiceWithCheckService(&mockCheckService{issues: []string{}})
+	cs := &auditmock.CheckService{}
+	cs.CheckReturns([]string{}, nil)
+	svc := newTestService(newTestStoreService(t, newFakeStore()), cs)
 	got, err := svc.Check(context.Background())
 	require.NoError(t, err)
 	assert.Empty(t, got)
@@ -428,15 +199,15 @@ func TestService_Check_EmptyIssues(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestGet_NilWallet_ReturnsNil(t *testing.T) {
-	// w == nil → early return, sp is never accessed
-	got := Get(nil, nil)
+	got := auditor.Get(nil, nil)
 	assert.Nil(t, got)
 }
 
 func TestGetByTMSID_GetServiceError_ReturnsNil(t *testing.T) {
-	sp := &mockServiceProvider{err: errors.New("registry lookup failed")}
+	sp := &tokenmock.ServiceProvider{}
+	sp.GetServiceReturns(nil, errors.New("registry lookup failed"))
 	tmsID := token.TMSID{Network: "net", Channel: "ch", Namespace: "ns"}
-	got := GetByTMSID(sp, tmsID)
+	got := auditor.GetByTMSID(sp, tmsID)
 	assert.Nil(t, got)
 }
 
@@ -444,43 +215,35 @@ func TestGetByTMSID_GetServiceError_ReturnsNil(t *testing.T) {
 // Service.Release / SetStatus / GetStatus / GetTokenRequest
 // ---------------------------------------------------------------------------
 
-func newServiceWithAuditDB(t *testing.T, stub dbdriver.AuditTransactionStore) *Service {
-	t.Helper()
-
-	return &Service{
-		metrics: newMetrics(nil),
-		auditDB: newTestStoreService(t, stub),
-	}
-}
-
 func TestService_Release_IncrementsCounter(t *testing.T) {
-	// counters are noops; we verify Release doesn't panic and completes cleanly
-	svc := newServiceWithAuditDB(t, &stubAuditTransactionStore{})
-	tx := &mockTransaction{anchor: "tx-release"}
+	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-release")
+	tx.RequestReturns(&token.Request{Anchor: "tx-release"})
 	assert.NotPanics(t, func() {
 		svc.Release(context.Background(), tx)
 	})
 }
 
 func TestService_SetStatus_Success(t *testing.T) {
-	svc := newServiceWithAuditDB(t, &stubAuditTransactionStore{})
+	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
 	err := svc.SetStatus(context.Background(), "tx-set", auditdb.Confirmed, "ok")
 	assert.NoError(t, err)
 }
 
 func TestService_SetStatus_Error(t *testing.T) {
 	expectedErr := errors.New("db write error")
-	svc := newServiceWithAuditDB(t, &stubAuditTransactionStore{setStatusErr: expectedErr})
+	fakeStore := newFakeStore()
+	fakeStore.SetStatusReturns(expectedErr)
+	svc := newTestService(newTestStoreService(t, fakeStore), nil)
 	err := svc.SetStatus(context.Background(), "tx-set", auditdb.Confirmed, "ok")
 	assert.ErrorIs(t, err, expectedErr)
 }
 
 func TestService_GetStatus_Success(t *testing.T) {
-	stub := &stubAuditTransactionStore{
-		getStatusResult: auditdb.Confirmed,
-		getStatusMsg:    "done",
-	}
-	svc := newServiceWithAuditDB(t, stub)
+	fakeStore := newFakeStore()
+	fakeStore.GetStatusReturns(auditdb.Confirmed, "done", nil)
+	svc := newTestService(newTestStoreService(t, fakeStore), nil)
 	status, msg, err := svc.GetStatus(context.Background(), "tx-get")
 	require.NoError(t, err)
 	assert.Equal(t, auditdb.Confirmed, status)
@@ -489,14 +252,18 @@ func TestService_GetStatus_Success(t *testing.T) {
 
 func TestService_GetStatus_Error(t *testing.T) {
 	expectedErr := errors.New("db read error")
-	svc := newServiceWithAuditDB(t, &stubAuditTransactionStore{getStatusErr: expectedErr})
+	fakeStore := newFakeStore()
+	fakeStore.GetStatusReturns(0, "", expectedErr)
+	svc := newTestService(newTestStoreService(t, fakeStore), nil)
 	_, _, err := svc.GetStatus(context.Background(), "tx-get")
 	assert.ErrorIs(t, err, expectedErr)
 }
 
 func TestService_GetTokenRequest_Success(t *testing.T) {
 	data := []byte("raw-token-request")
-	svc := newServiceWithAuditDB(t, &stubAuditTransactionStore{getTokenReqData: data})
+	fakeStore := newFakeStore()
+	fakeStore.GetTokenRequestReturns(data, nil)
+	svc := newTestService(newTestStoreService(t, fakeStore), nil)
 	got, err := svc.GetTokenRequest(context.Background(), "tx-tok")
 	require.NoError(t, err)
 	assert.Equal(t, data, got)
@@ -504,7 +271,520 @@ func TestService_GetTokenRequest_Success(t *testing.T) {
 
 func TestService_GetTokenRequest_Error(t *testing.T) {
 	expectedErr := errors.New("not found")
-	svc := newServiceWithAuditDB(t, &stubAuditTransactionStore{getTokenReqErr: expectedErr})
+	fakeStore := newFakeStore()
+	fakeStore.GetTokenRequestReturns(nil, expectedErr)
+	svc := newTestService(newTestStoreService(t, fakeStore), nil)
 	_, err := svc.GetTokenRequest(context.Background(), "tx-tok")
 	assert.ErrorIs(t, err, expectedErr)
+}
+
+// ---------------------------------------------------------------------------
+// Service.Validate tests
+// ---------------------------------------------------------------------------
+
+func TestService_Validate(t *testing.T) {
+	svc := newTestService(nil, nil)
+	assert.Panics(t, func() {
+		_ = svc.Validate(context.Background(), &token.Request{})
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Service.Audit tests
+// ---------------------------------------------------------------------------
+
+func TestService_Audit_AuditRecordError(t *testing.T) {
+	mockTMS := &drivermock.TokenManagerService{}
+	mockPPM := &drivermock.PublicParamsManager{}
+	mockPPM.PublicParametersReturns(nil)
+	mockTMS.PublicParamsManagerReturns(mockPPM)
+	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
+	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
+	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
+
+	mockVP := &tokenmock.VaultProvider{}
+	mockV := &drivermock.Vault{}
+	mockV.QueryEngineReturns(&drivermock.QueryEngine{})
+	mockVP.VaultReturns(mockV, nil)
+
+	badTMS, err := token.NewManagementService(
+		token.TMSID{}, mockTMS, logging.MustGetLogger("test"), mockVP, nil, nil,
+	)
+	require.NoError(t, err)
+
+	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-err")
+	tx.RequestReturns(token.NewRequest(badTMS, token.RequestAnchor("tx-err")))
+
+	_, _, err = svc.Audit(context.Background(), tx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed getting transaction audit record")
+}
+
+func TestService_Audit_Success(t *testing.T) {
+	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-audit-ok")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-audit-ok")))
+
+	inputs, outputs, err := svc.Audit(context.Background(), tx)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs)
+	assert.NotNil(t, outputs)
+}
+
+func TestService_Audit_DBCleanSuccess(t *testing.T) {
+	fakeStore := newFakeStore()
+	fakeStore.GetStatusReturns(0, "", errors.New("db status err"))
+
+	svc := newTestService(newTestStoreService(t, fakeStore), nil)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-aud-err")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-aud-err")))
+
+	inputs, outputs, err := svc.Audit(context.Background(), tx)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs)
+	assert.NotNil(t, outputs)
+}
+
+func TestService_Audit_NotUnknown(t *testing.T) {
+	fakeStore := newFakeStore()
+	fakeStore.GetStatusReturns(dbdriver.Pending, "", nil)
+
+	svc := newTestService(newTestStoreService(t, fakeStore), nil)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-aud-not-unknown")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-aud-not-unknown")))
+
+	inputs, outputs, err := svc.Audit(context.Background(), tx)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs)
+	assert.NotNil(t, outputs)
+}
+
+func TestService_Audit_TMSProviderIrrelevant(t *testing.T) {
+	tmsProv := &depmock.TokenManagementServiceProvider{}
+	tmsProv.TokenManagementServiceReturns(nil, errors.New("tms err"))
+
+	svc := auditor.NewTestService(
+		token.TMSID{}, nil,
+		newTestStoreService(t, newFakeStore()),
+		nil, tmsProv, nil, nil, nil,
+	)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-aud-tms-err")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-aud-tms-err")))
+
+	inputs, outputs, err := svc.Audit(context.Background(), tx)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs)
+	assert.NotNil(t, outputs)
+}
+
+// ---------------------------------------------------------------------------
+// Service.Append tests
+// ---------------------------------------------------------------------------
+
+func TestService_Append_Error_TMSProvider(t *testing.T) {
+	tmsProv := &depmock.TokenManagementServiceProvider{}
+	tmsProv.TokenManagementServiceReturns(nil, errors.New("tms err"))
+
+	svc := auditor.NewTestService(
+		token.TMSID{}, nil,
+		newTestStoreService(t, newFakeStore()),
+		nil, tmsProv, nil, nil, nil,
+	)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-app")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-app")))
+
+	err := svc.Append(context.Background(), tx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "tms err")
+}
+
+func TestService_Append_GetNetworkError(t *testing.T) {
+	netProvider := &auditmock.NetworkProvider{}
+	netProvider.GetNetworkReturns(nil, errors.New("network unavailable"))
+
+	svc := auditor.NewTestService(
+		token.TMSID{}, netProvider,
+		newTestStoreService(t, newFakeStore()),
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+	)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-net-err")
+	tx.NetworkReturns("testnet")
+	tx.ChannelReturns("testch")
+	tx.NamespaceReturns("testns")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-net-err")))
+
+	err := svc.Append(context.Background(), tx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed getting network instance")
+}
+
+func TestService_Append_Success(t *testing.T) {
+	netProvider := &auditmock.NetworkProvider{}
+	netProvider.GetNetworkReturns(newStubNetwork(), nil)
+
+	svc := auditor.NewTestService(
+		token.TMSID{}, netProvider,
+		newTestStoreService(t, newFakeStore()),
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+	)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-app-success")
+	tx.NetworkReturns("testnet")
+	tx.ChannelReturns("testch")
+	tx.NamespaceReturns("testns")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-app-success")))
+
+	err := svc.Append(context.Background(), tx)
+	require.NoError(t, err)
+}
+
+func TestService_Append_AddFinalityListenerError(t *testing.T) {
+	fakeNet := &auditmock.Network{}
+	fakeNet.AddFinalityListenerReturns(errors.New("listener fail"))
+
+	netProvider := &auditmock.NetworkProvider{}
+	netProvider.GetNetworkReturns(network.NewNetwork(fakeNet, nil), nil)
+
+	svc := auditor.NewTestService(
+		token.TMSID{}, netProvider,
+		newTestStoreService(t, newFakeStore()),
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+	)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-listener-err")
+	tx.NetworkReturns("testnet")
+	tx.ChannelReturns("testch")
+	tx.NamespaceReturns("testns")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-listener-err")))
+
+	err := svc.Append(context.Background(), tx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed listening to network")
+}
+
+func TestService_Append_AuditError(t *testing.T) {
+	fakeStore := newFakeStore()
+	fakeStore.BeginAtomicWriteStub = func() (dbdriver.AtomicWrite, error) {
+		fakeAW := &auditmock.AtomicWrite{}
+		fakeAW.CommitReturns(errors.New("db append err"))
+		return fakeAW, nil
+	}
+
+	netProvider := &auditmock.NetworkProvider{}
+	netProvider.GetNetworkReturns(newStubNetwork(), nil)
+
+	svc := auditor.NewTestService(
+		token.TMSID{}, netProvider,
+		newTestStoreService(t, fakeStore),
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+	)
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-app-err")
+	tx.NetworkReturns("testnet")
+	tx.ChannelReturns("testch")
+	tx.NamespaceReturns("testns")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-app-err")))
+
+	err := svc.Append(context.Background(), tx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed appending request")
+}
+
+// ---------------------------------------------------------------------------
+// requestWrapper tests (via export_test.go helpers)
+// ---------------------------------------------------------------------------
+
+func TestRequestWrapper_PublicParamsHash(t *testing.T) {
+	rw := auditor.NewTestRequestWrapper(auditor.MinimalRequestForTest("tx-pph"), nil)
+	assert.Panics(t, func() {
+		rw.PublicParamsHash()
+	})
+}
+
+func TestRequestWrapper_CompleteInputsWithEmptyEID_Shortcut(t *testing.T) {
+	tms := newTestManagementService(t)
+	rw := auditor.NewTestRequestWrapper(
+		token.NewRequest(tms, token.RequestAnchor("tx-cid")), tms,
+	)
+	record := &token.AuditRecord{
+		Inputs: token.NewInputStream(nil, []*token.Input{}, 0),
+	}
+	err := auditor.CompleteInputsWithEmptyEIDForTest(rw, context.Background(), record)
+	assert.NoError(t, err)
+}
+
+func TestRequestWrapper_CompleteInputsWithEmptyEID_WithInputs(t *testing.T) {
+	tmsWithToken := newTestManagementServiceWithTokens(t, []*token2.Token{
+		{Type: "USD", Quantity: "100", Owner: []byte("owner1")},
+	})
+	rw := auditor.NewTestRequestWrapper(
+		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-cid2")), tmsWithToken,
+	)
+	recordWithInputs := &token.AuditRecord{
+		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
+	}
+	err := auditor.CompleteInputsWithEmptyEIDForTest(rw, context.Background(), recordWithInputs)
+	assert.NoError(t, err)
+}
+
+func TestRequestWrapper_AuditRecord(t *testing.T) {
+	tms := newTestManagementService(t)
+	rw := auditor.NewTestRequestWrapper(
+		token.NewRequest(tms, token.RequestAnchor("tx-ar")), tms,
+	)
+	record, err := rw.AuditRecord(context.Background())
+	require.NoError(t, err)
+	assert.NotNil(t, record)
+}
+
+// ---------------------------------------------------------------------------
+// ServiceManager tests
+// ---------------------------------------------------------------------------
+
+func TestNewServiceManager(t *testing.T) {
+	sm := auditor.NewServiceManager(
+		&auditmock.NetworkProvider{},
+		&auditdbmock.AuditStoreServiceManager{},
+		&auditmock.TokensServiceManager{},
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	assert.NotNil(t, sm)
+}
+
+func TestServiceManager_Auditor(t *testing.T) {
+	netProv := &auditmock.NetworkProvider{}
+	netProv.GetNetworkReturns(nil, errors.New("net err"))
+
+	ssm := &auditdbmock.AuditStoreServiceManager{}
+	ssm.StoreServiceByTMSIdReturns(nil, errors.New("db err"))
+
+	tsm := &auditmock.TokensServiceManager{}
+	tsm.ServiceByTMSIdReturns(nil, errors.New("tok err"))
+
+	sm := auditor.NewServiceManager(
+		netProv, ssm, tsm,
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
+	require.Error(t, err)
+	assert.Nil(t, a)
+}
+
+func TestServiceManager_RestoreTMS(t *testing.T) {
+	// 1. Network error
+	netProv := &auditmock.NetworkProvider{}
+	netProv.GetNetworkReturns(nil, errors.New("net err"))
+
+	sm := auditor.NewServiceManager(
+		netProv,
+		&auditdbmock.AuditStoreServiceManager{},
+		&auditmock.TokensServiceManager{},
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	err := sm.RestoreTMS(token.TMSID{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get network instance")
+
+	// 2. Token service error (GetNetwork succeeds, ServiceByTMSId fails)
+	tsm := &auditmock.TokensServiceManager{}
+	tsm.ServiceByTMSIdReturns(nil, errors.New("tok err"))
+
+	sm2 := auditor.NewServiceManager(
+		&auditmock.NetworkProvider{},
+		&auditdbmock.AuditStoreServiceManager{},
+		tsm,
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	err = sm2.RestoreTMS(token.TMSID{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get auditdb")
+}
+
+func TestServiceManager_RestoreTMS_Success(t *testing.T) {
+	netProv := &auditmock.NetworkProvider{}
+	netProv.GetNetworkReturns(&network.Network{}, nil) // empty Network will panic in loop
+
+	ssm := &auditdbmock.AuditStoreServiceManager{}
+	ssm.StoreServiceByTMSIdReturns(newTestStoreService(t, newFakeStore()), nil)
+
+	assert.Panics(t, func() {
+		smSuccess := auditor.NewServiceManager(
+			netProv,
+			ssm,
+			&auditmock.TokensServiceManager{},
+			&depmock.TokenManagementServiceProvider{},
+			noop.NewTracerProvider(),
+			nil,
+			&auditmock.CheckServiceProvider{},
+		)
+		_ = smSuccess.RestoreTMS(token.TMSID{})
+	})
+}
+
+func TestServiceManager_Auditor_InitSuccess(t *testing.T) {
+	ssm := &auditdbmock.AuditStoreServiceManager{}
+	ssm.StoreServiceByTMSIdReturns(newTestStoreService(t, newFakeStore()), nil)
+
+	tsm := &auditmock.TokensServiceManager{}
+	tsm.ServiceByTMSIdReturns(&tokens.Service{}, nil)
+
+	sm := auditor.NewServiceManager(
+		&auditmock.NetworkProvider{},
+		ssm, tsm,
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
+	require.NoError(t, err)
+	assert.NotNil(t, a)
+}
+
+// ---------------------------------------------------------------------------
+// GetByTMSID closure error tests
+// ---------------------------------------------------------------------------
+
+func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
+	sp := &tokenmock.ServiceProvider{}
+
+	// 1. StoreServiceByTMSId error
+	ssm := &auditdbmock.AuditStoreServiceManager{}
+	ssm.StoreServiceByTMSIdReturns(nil, assert.AnError)
+
+	smStoreErr := auditor.NewServiceManager(
+		&auditmock.NetworkProvider{},
+		ssm,
+		&auditmock.TokensServiceManager{},
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	sp.GetServiceReturns(smStoreErr, nil)
+	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
+
+	// 2. ServiceByTMSId error
+	tsm := &auditmock.TokensServiceManager{}
+	tsm.ServiceByTMSIdReturns(nil, assert.AnError)
+
+	smTokensErr := auditor.NewServiceManager(
+		&auditmock.NetworkProvider{},
+		&auditdbmock.AuditStoreServiceManager{},
+		tsm,
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	sp.GetServiceReturns(smTokensErr, nil)
+	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
+
+	// 3. GetNetwork error
+	netProv := &auditmock.NetworkProvider{}
+	netProv.GetNetworkReturns(nil, assert.AnError)
+
+	smNetworkErr := auditor.NewServiceManager(
+		netProv,
+		&auditdbmock.AuditStoreServiceManager{},
+		&auditmock.TokensServiceManager{},
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	sp.GetServiceReturns(smNetworkErr, nil)
+	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
+
+	// 4. CheckService error
+	csp := &auditmock.CheckServiceProvider{}
+	csp.CheckServiceReturns(nil, assert.AnError)
+
+	smCheckErr := auditor.NewServiceManager(
+		&auditmock.NetworkProvider{},
+		&auditdbmock.AuditStoreServiceManager{},
+		&auditmock.TokensServiceManager{},
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		csp,
+	)
+	sp.GetServiceReturns(smCheckErr, nil)
+	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
+}
+
+func TestManager_GetByTMSID(t *testing.T) {
+	sp := &tokenmock.ServiceProvider{}
+
+	// Error getting manager service
+	sp.GetServiceReturns(nil, assert.AnError)
+	a := auditor.GetByTMSID(sp, token.TMSID{})
+	assert.Nil(t, a)
+
+	// Success getting manager but Auditor returns error (network error)
+	netProvErr := &auditmock.NetworkProvider{}
+	netProvErr.GetNetworkReturns(nil, assert.AnError)
+
+	sm := auditor.NewServiceManager(
+		netProvErr,
+		&auditdbmock.AuditStoreServiceManager{},
+		&auditmock.TokensServiceManager{},
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	sp.GetServiceReturns(sm, nil)
+	a = auditor.GetByTMSID(sp, token.TMSID{})
+	assert.Nil(t, a)
+
+	// Success Auditor
+	ssm := &auditdbmock.AuditStoreServiceManager{}
+	ssm.StoreServiceByTMSIdReturns(newTestStoreService(t, newFakeStore()), nil)
+
+	tsm := &auditmock.TokensServiceManager{}
+	tsm.ServiceByTMSIdReturns(&tokens.Service{}, nil)
+
+	smSuccess := auditor.NewServiceManager(
+		&auditmock.NetworkProvider{},
+		ssm, tsm,
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	sp.GetServiceReturns(smSuccess, nil)
+	a = auditor.GetByTMSID(sp, token.TMSID{})
+	assert.NotNil(t, a)
+
+	// Test Get: nil wallet
+	a2 := auditor.Get(sp, nil)
+	assert.Nil(t, a2)
+
+	// non-nil wallet panics due to being empty
+	w := &token.AuditorWallet{}
+	assert.Panics(t, func() {
+		auditor.Get(sp, w)
+	})
 }

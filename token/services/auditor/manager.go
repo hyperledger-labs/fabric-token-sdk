@@ -25,6 +25,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+//go:generate counterfeiter -o mock/check_service_provider.go -fake-name CheckServiceProvider . CheckServiceProvider
+//go:generate counterfeiter -o mock/tokens_service_manager.go -fake-name TokensServiceManager . TokensServiceManager
+
 type TokenManagementServiceProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
