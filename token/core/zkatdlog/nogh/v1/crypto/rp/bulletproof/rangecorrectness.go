@@ -10,7 +10,11 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
+  unit-test-token-package-1348
+	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
+
 	executor "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
+ main
 )
 
 // RangeCorrectness contains a set of range proofs for multiple commitments.
@@ -87,7 +91,11 @@ type RangeCorrectnessProver struct {
 	Curve *math.Curve
 	// Provider creates a fresh Executor for each Prove call.
 	// If nil, DefaultProvider (SerialProvider) is used.
+ unit-test-token-package-1348
+	Provider rp.ExecutorProvider
+
 	Provider executor.ExecutorProvider
+ main
 }
 
 // NewRangeCorrectnessProver returns a new RangeCorrectnessProver.
@@ -101,10 +109,17 @@ func NewRangeCorrectnessProver(
 	P, Q *math.G1,
 	bitLength, rounds uint64,
 	c *math.Curve,
+  unit-test-token-package-1348
+	provider rp.ExecutorProvider,
+) *RangeCorrectnessProver {
+	if provider == nil {
+		provider = rp.DefaultProvider
+
 	provider executor.ExecutorProvider,
 ) *RangeCorrectnessProver {
 	if provider == nil {
 		provider = executor.DefaultProvider
+  main
 	}
 
 	return &RangeCorrectnessProver{
@@ -188,7 +203,11 @@ type RangeCorrectnessVerifier struct {
 	Curve *math.Curve
 	// Provider creates a fresh Executor for each Prove call.
 	// If nil, DefaultProvider (SerialProvider) is used.
+  unit-test-token-package-1348
+	Provider rp.ExecutorProvider
+  
 	Provider executor.ExecutorProvider
+  main
 }
 
 // NewRangeCorrectnessVerifier returns a new RangeCorrectnessVerifier.
@@ -199,10 +218,17 @@ func NewRangeCorrectnessVerifier(
 	P, Q *math.G1,
 	bitLength, rounds uint64,
 	curve *math.Curve,
+unit-test-token-package-1348
+	provider rp.ExecutorProvider,
+) *RangeCorrectnessVerifier {
+	if provider == nil {
+		provider = rp.DefaultProvider
+
 	provider executor.ExecutorProvider,
 ) *RangeCorrectnessVerifier {
 	if provider == nil {
 		provider = executor.DefaultProvider
+    main
 	}
 
 	return &RangeCorrectnessVerifier{
