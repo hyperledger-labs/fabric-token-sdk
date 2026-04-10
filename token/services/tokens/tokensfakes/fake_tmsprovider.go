@@ -119,4 +119,3 @@ func (fake *FakeTMSProvider) recordInvocation(key string, args []interface{}) {
 }
 
 var _ tokens.TMSProvider = new(FakeTMSProvider)
-

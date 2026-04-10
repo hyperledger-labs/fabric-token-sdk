@@ -567,4 +567,3 @@ func (fake *FakeTokenStoreTransaction) recordInvocation(key string, args []inter
 }
 
 var _ drivera.TokenStoreTransaction = new(FakeTokenStoreTransaction)
-

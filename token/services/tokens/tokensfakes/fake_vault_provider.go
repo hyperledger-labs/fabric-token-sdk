@@ -123,4 +123,3 @@ func (fake *FakeVaultProvider) recordInvocation(key string, args []interface{}) 
 }
 
 var _ token.VaultProvider = new(FakeVaultProvider)
-

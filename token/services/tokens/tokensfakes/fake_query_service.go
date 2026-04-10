@@ -122,4 +122,3 @@ func (fake *FakeQueryService) recordInvocation(key string, args []interface{}) {
 }
 
 var _ token.QueryService = new(FakeQueryService)
-

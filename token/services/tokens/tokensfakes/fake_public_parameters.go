@@ -865,4 +865,3 @@ func (fake *FakePublicParameters) recordInvocation(key string, args []interface{
 }
 
 var _ driver.PublicParameters = new(FakePublicParameters)
-

@@ -240,4 +240,3 @@ func (fake *FakePublicParamsManager) recordInvocation(key string, args []interfa
 }
 
 var _ driver.PublicParamsManager = new(FakePublicParamsManager)
-

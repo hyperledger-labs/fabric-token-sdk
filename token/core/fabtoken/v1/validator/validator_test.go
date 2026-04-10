@@ -1007,6 +1007,7 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 				"an_anchor",
 				env.Envs[0].raw,
 			)
+
 			return err
 		},
 	)
@@ -1056,6 +1057,7 @@ func TestParallelBenchmarkValidatorIssue(t *testing.T) {
 				"an_anchor",
 				env.Envs[0].raw,
 			)
+
 			return err
 		},
 	)

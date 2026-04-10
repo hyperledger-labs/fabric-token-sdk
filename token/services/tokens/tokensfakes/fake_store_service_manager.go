@@ -120,4 +120,3 @@ func (fake *FakeStoreServiceManager) recordInvocation(key string, args []interfa
 }
 
 var _ tokens.StoreServiceManager = new(FakeStoreServiceManager)
-

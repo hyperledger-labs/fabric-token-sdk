@@ -194,4 +194,3 @@ func (fake *FakeCache) recordInvocation(key string, args []interface{}) {
 }
 
 var _ tokens.Cache = new(FakeCache)
-

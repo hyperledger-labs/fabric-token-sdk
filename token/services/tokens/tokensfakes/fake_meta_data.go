@@ -105,4 +105,3 @@ func (fake *FakeMetaData) recordInvocation(key string, args []interface{}) {
 }
 
 var _ tokens.MetaData = new(FakeMetaData)
-

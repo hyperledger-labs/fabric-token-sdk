@@ -121,4 +121,3 @@ func (fake *FakeNetworkProvider) recordInvocation(key string, args []interface{}
 }
 
 var _ tokens.NetworkProvider = new(FakeNetworkProvider)
-

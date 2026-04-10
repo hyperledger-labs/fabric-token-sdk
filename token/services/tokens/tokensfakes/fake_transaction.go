@@ -357,4 +357,3 @@ func (fake *FakeTransaction) recordInvocation(key string, args []interface{}) {
 }
 
 var _ tokens.Transaction = new(FakeTransaction)
-

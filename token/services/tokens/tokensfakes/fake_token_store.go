@@ -2316,4 +2316,3 @@ func (fake *FakeTokenStore) recordInvocation(key string, args []interface{}) {
 }
 
 var _ drivera.TokenStore = new(FakeTokenStore)
-

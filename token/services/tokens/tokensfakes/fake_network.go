@@ -1169,4 +1169,3 @@ func (fake *FakeNetwork) recordInvocation(key string, args []interface{}) {
 }
 
 var _ driver.Network = new(FakeNetwork)
-

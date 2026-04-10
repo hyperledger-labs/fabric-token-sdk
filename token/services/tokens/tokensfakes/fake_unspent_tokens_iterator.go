@@ -138,4 +138,3 @@ func (fake *FakeUnspentTokensIterator) recordInvocation(key string, args []inter
 }
 
 var _ driver.UnspentTokensIterator = new(FakeUnspentTokensIterator)
-

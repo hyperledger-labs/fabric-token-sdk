@@ -78,4 +78,3 @@ func (fake *FakePublisher) recordInvocation(key string, args []interface{}) {
 }
 
 var _ events.Publisher = new(FakePublisher)
-

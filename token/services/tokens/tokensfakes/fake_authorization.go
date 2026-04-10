@@ -353,4 +353,3 @@ func (fake *FakeAuthorization) recordInvocation(key string, args []interface{}) 
 }
 
 var _ driver.Authorization = new(FakeAuthorization)
-

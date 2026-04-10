@@ -167,4 +167,3 @@ func (fake *FakeVault) recordInvocation(key string, args []interface{}) {
 }
 
 var _ driver.Vault = new(FakeVault)
-
