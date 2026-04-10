@@ -12,101 +12,17 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	commondrivermock "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	drivermock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
-	tokenmock "github.com/hyperledger-labs/fabric-token-sdk/token/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
 
 // ---------------------------------------------------------------------------
 // Shared test helpers (used across internal and external test files via
 // export_test.go wrappers).
 // ---------------------------------------------------------------------------
-
-func newTestManagementService(t *testing.T) *token.ManagementService {
-	t.Helper()
-	mockTMS := &drivermock.TokenManagerService{}
-	mockVP := &tokenmock.VaultProvider{}
-
-	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
-
-	mockPPM := &drivermock.PublicParamsManager{}
-	mockPP := &drivermock.PublicParameters{}
-	mockPP.PrecisionReturns(64)
-	mockPPM.PublicParametersReturns(mockPP)
-
-	mockTMS.PublicParamsManagerReturns(mockPPM)
-	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
-	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
-	mockTMS.IssueServiceReturns(&drivermock.IssueService{})
-	mockTMS.TransferServiceReturns(&drivermock.TransferService{})
-
-	mockQE := &drivermock.QueryEngine{}
-	mockQE.ListAuditTokensReturns([]*token2.Token{}, nil)
-	mockV := &drivermock.Vault{}
-	mockV.QueryEngineReturns(mockQE)
-	mockVP.VaultReturns(mockV, nil)
-
-	logger := logging.MustGetLogger("test")
-
-	tms, err := token.NewManagementService(
-		token.TMSID{},
-		mockTMS,
-		logger,
-		mockVP,
-		nil,
-		nil,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, tms)
-
-	return tms
-}
-
-func newTestManagementServiceWithTokens(t *testing.T, tokens []*token2.Token) *token.ManagementService {
-	t.Helper()
-	mockTMS := &drivermock.TokenManagerService{}
-	mockVP := &tokenmock.VaultProvider{}
-
-	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
-
-	mockPPM := &drivermock.PublicParamsManager{}
-	mockPP := &drivermock.PublicParameters{}
-	mockPP.PrecisionReturns(64)
-	mockPPM.PublicParametersReturns(mockPP)
-
-	mockTMS.PublicParamsManagerReturns(mockPPM)
-	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
-	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
-	mockTMS.IssueServiceReturns(&drivermock.IssueService{})
-	mockTMS.TransferServiceReturns(&drivermock.TransferService{})
-
-	mockQE := &drivermock.QueryEngine{}
-	mockQE.ListAuditTokensReturns(tokens, nil)
-	mockV := &drivermock.Vault{}
-	mockV.QueryEngineReturns(mockQE)
-	mockVP.VaultReturns(mockV, nil)
-
-	logger := logging.MustGetLogger("test")
-	tms, err := token.NewManagementService(
-		token.TMSID{},
-		mockTMS,
-		logger,
-		mockVP,
-		nil,
-		nil,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, tms)
-
-	return tms
-}
 
 // minimalRequest builds a minimal token.Request suitable for requestWrapper tests.
 func minimalRequest(anchor string) *token.Request {

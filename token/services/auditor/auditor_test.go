@@ -30,6 +30,16 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
+// fakeServiceProvider is a simple test stub implementing token.ServiceProvider.
+type fakeServiceProvider struct {
+	service interface{}
+	err     error
+}
+
+func (f *fakeServiceProvider) GetService(_ interface{}) (interface{}, error) {
+	return f.service, f.err
+}
+
 // ---------------------------------------------------------------------------
 // Shared test helpers
 // ---------------------------------------------------------------------------
@@ -118,8 +128,10 @@ type stubTokenRequestIterator struct {
 func (s *stubTokenRequestIterator) Next() (*dbdriver.TokenRequestRecord, error) {
 	if s.count > 0 {
 		s.count--
+
 		return &dbdriver.TokenRequestRecord{TxID: "txid-123"}, nil
 	}
+
 	return nil, io.EOF
 }
 
@@ -130,6 +142,7 @@ func newTestStoreService(t *testing.T, store dbdriver.AuditTransactionStore) *au
 	t.Helper()
 	ss, err := auditdb.NewStoreServiceForTest(store)
 	require.NoError(t, err)
+
 	return ss
 }
 
@@ -141,6 +154,7 @@ func newFakeStore() *auditmock.AuditTransactionStore {
 	fakeStore.QueryTokenRequestsStub = func(_ context.Context, _ dbdriver.QueryTokenRequestsParams) (dbdriver.TokenRequestIterator, error) {
 		return &stubTokenRequestIterator{count: 1}, nil
 	}
+
 	return fakeStore
 }
 
@@ -148,12 +162,12 @@ func newFakeStore() *auditmock.AuditTransactionStore {
 func newTestService(auditDB *auditdb.StoreService, checkService auditor.CheckService) *auditor.Service {
 	return auditor.NewTestService(
 		token.TMSID{},
-		nil,  // networkProvider
+		nil, // networkProvider
 		auditDB,
-		nil,  // tokenDB
-		nil,  // tmsProvider
-		nil,  // finalityTracer
-		nil,  // metricsProvider (→ noopProvider inside)
+		nil, // tokenDB
+		nil, // tmsProvider
+		nil, // finalityTracer
+		nil, // metricsProvider (→ noopProvider inside)
 		checkService,
 	)
 }
@@ -204,8 +218,7 @@ func TestGet_NilWallet_ReturnsNil(t *testing.T) {
 }
 
 func TestGetByTMSID_GetServiceError_ReturnsNil(t *testing.T) {
-	sp := &tokenmock.ServiceProvider{}
-	sp.GetServiceReturns(nil, errors.New("registry lookup failed"))
+	sp := &fakeServiceProvider{err: errors.New("registry lookup failed")}
 	tmsID := token.TMSID{Network: "net", Channel: "ch", Namespace: "ns"}
 	got := auditor.GetByTMSID(sp, tmsID)
 	assert.Nil(t, got)
@@ -475,6 +488,7 @@ func TestService_Append_AuditError(t *testing.T) {
 	fakeStore.BeginAtomicWriteStub = func() (dbdriver.AtomicWrite, error) {
 		fakeAW := &auditmock.AtomicWrite{}
 		fakeAW.CommitReturns(errors.New("db append err"))
+
 		return fakeAW, nil
 	}
 
@@ -667,7 +681,7 @@ func TestServiceManager_Auditor_InitSuccess(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
-	sp := &tokenmock.ServiceProvider{}
+	sp := &fakeServiceProvider{}
 
 	// 1. StoreServiceByTMSId error
 	ssm := &auditdbmock.AuditStoreServiceManager{}
@@ -682,7 +696,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		nil,
 		&auditmock.CheckServiceProvider{},
 	)
-	sp.GetServiceReturns(smStoreErr, nil)
+	sp.service = smStoreErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
 
 	// 2. ServiceByTMSId error
@@ -698,7 +712,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		nil,
 		&auditmock.CheckServiceProvider{},
 	)
-	sp.GetServiceReturns(smTokensErr, nil)
+	sp.service = smTokensErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
 
 	// 3. GetNetwork error
@@ -714,7 +728,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		nil,
 		&auditmock.CheckServiceProvider{},
 	)
-	sp.GetServiceReturns(smNetworkErr, nil)
+	sp.service = smNetworkErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
 
 	// 4. CheckService error
@@ -730,15 +744,16 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		nil,
 		csp,
 	)
-	sp.GetServiceReturns(smCheckErr, nil)
+	sp.service = smCheckErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
 }
 
 func TestManager_GetByTMSID(t *testing.T) {
-	sp := &tokenmock.ServiceProvider{}
+	sp := &fakeServiceProvider{}
 
 	// Error getting manager service
-	sp.GetServiceReturns(nil, assert.AnError)
+	sp.service = nil
+	sp.err = assert.AnError
 	a := auditor.GetByTMSID(sp, token.TMSID{})
 	assert.Nil(t, a)
 
@@ -755,7 +770,8 @@ func TestManager_GetByTMSID(t *testing.T) {
 		nil,
 		&auditmock.CheckServiceProvider{},
 	)
-	sp.GetServiceReturns(sm, nil)
+	sp.service = sm
+	sp.err = nil
 	a = auditor.GetByTMSID(sp, token.TMSID{})
 	assert.Nil(t, a)
 
@@ -774,7 +790,8 @@ func TestManager_GetByTMSID(t *testing.T) {
 		nil,
 		&auditmock.CheckServiceProvider{},
 	)
-	sp.GetServiceReturns(smSuccess, nil)
+	sp.service = smSuccess
+	sp.err = nil
 	a = auditor.GetByTMSID(sp, token.TMSID{})
 	assert.NotNil(t, a)
 
