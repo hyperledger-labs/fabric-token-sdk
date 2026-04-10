@@ -105,7 +105,7 @@ func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID str
 	logger.DebugfContext(ctx, "call unspent tokens iterator")
 	it, err := f.eagerFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
 	logger.DebugfContext(ctx, "fetched eager iterator")
-	if err == nil && it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext() {
+	if err == nil && it.(interface{ HasNext() bool }).HasNext() {
 		logger.DebugfContext(ctx, "eager iterator had tokens. Returning iterator")
 		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
 
@@ -116,12 +116,6 @@ func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID str
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
 
 	return f.lazyFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
-}
-
-// newCachedFetcher is an internal alias for NewCachedFetcher to maintain compatibility within the package if needed,
-// though we usually just use the exported version now.
-func newCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
-	return NewCachedFetcher(tokenDB, cacheSize, freshnessInterval, maxQueriesBeforeRefresh)
 }
 
 // newMixedFetcher is an internal alias for NewMixedFetcher.
@@ -150,11 +144,6 @@ func (f *lazyFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	return collections.NewPermutatedIterator[token2.UnspentTokenInWallet](it)
 }
 
-type enhancedIterator[T any] interface {
-	iterators.Iterator[T]
-	HasNext() bool
-}
-
 type permutatableIterator[T any] interface {
 	iterators.Iterator[T]
 	NewPermutation() iterators.Iterator[T]
@@ -177,7 +166,7 @@ type cachedFetcher struct {
 	maxQueriesBeforeRefresh uint32
 
 	// TODO: A better strategy is to keep following variables per cache key (type/owner combination) and lock/fetch only the 'expired' entry
-	lastFetched      time.Time
+	lastFetched      int64
 	queriesResponded uint32
 	// prevKeys tracks cache keys from the previous update cycle to identify stale entries that need removal.
 	prevKeys map[string]struct{}
@@ -218,7 +207,6 @@ func NewCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 	}
 }
 
-// update refreshes the token cache from the database, adding new entries before removing stale ones to prevent race conditions.
 func (f *cachedFetcher) update(ctx context.Context) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -238,7 +226,7 @@ func (f *cachedFetcher) update(ctx context.Context) {
 
 	m := f.groupTokensByKey(ctx, it)
 	f.updateCache(ctx, m)
-	f.lastFetched = time.Now()
+	atomic.StoreInt64(&f.lastFetched, time.Now().UnixNano())
 	atomic.StoreUint32(&f.queriesResponded, 0)
 }
 
@@ -312,5 +300,10 @@ func (f *cachedFetcher) isCacheOverused() bool {
 
 // isCacheStale checks if the cache has exceeded its freshness interval.
 func (f *cachedFetcher) isCacheStale() bool {
-	return time.Since(f.lastFetched) > f.freshnessInterval
+	lastFetched := atomic.LoadInt64(&f.lastFetched)
+	if lastFetched == 0 {
+		return true
+	}
+
+	return time.Since(time.Unix(0, lastFetched)) > f.freshnessInterval
 }

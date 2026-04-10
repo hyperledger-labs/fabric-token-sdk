@@ -75,7 +75,7 @@ func TestSelector_UnlockAllOnQuantityParseError(t *testing.T) {
 		unlockAllCalled := false
 
 		mockFetcher := &mockTokenFetcher{
-			unspentTokensIteratorByFunc: func(_ context.Context, _ string, _ token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+			unspentTokensIteratorByFunc: func(_ context.Context, _ string, _ token2.Type) (Iterator[*token2.UnspentTokenInWallet], error) {
 				// quantity "not-a-number" will fail token2.ToQuantity for any precision
 				tok := &token2.UnspentTokenInWallet{
 					Id:       token2.ID{TxId: "tx1", Index: 0},

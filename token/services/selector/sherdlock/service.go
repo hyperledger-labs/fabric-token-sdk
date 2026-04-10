@@ -19,7 +19,7 @@ import (
 )
 
 type SelectorService struct {
-	managerLazyCache lazy2.Provider[token.ManagementService, token.SelectorManager]
+	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
 	mu               sync.Mutex
 	managers         []*Manager
 }
@@ -56,7 +56,7 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 		return nil, errors.Errorf("invalid tms, nil reference")
 	}
 
-	return s.managerLazyCache.Get(*tms)
+	return s.managerLazyCache.Get(tms)
 }
 
 // Shutdown stops all background goroutines for every manager created by this service.
@@ -95,7 +95,7 @@ type loader struct {
 	onCreate                     func(*Manager)
 }
 
-func (s *loader) load(tms token.ManagementService) (token.SelectorManager, error) {
+func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
@@ -126,6 +126,6 @@ func (s *loader) load(tms token.ManagementService) (token.SelectorManager, error
 	return mgr, nil
 }
 
-func key(tms token.ManagementService) string {
+func key(tms *token.ManagementService) string {
 	return tms.ID().String()
 }
