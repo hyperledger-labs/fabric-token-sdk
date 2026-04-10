@@ -35,17 +35,19 @@ type fakeJsonSession struct {
 	rawErr error  // error returned by ReceiveRaw
 }
 
-func (f *fakeJsonSession) ReceiveRaw() ([]byte, error)                            { return f.raw, f.rawErr }
-func (f *fakeJsonSession) ReceiveRawWithTimeout(_ time.Duration) ([]byte, error)  { return f.raw, f.rawErr }
-func (f *fakeJsonSession) Receive(_ interface{}) error                            { return nil }
+func (f *fakeJsonSession) ReceiveRaw() ([]byte, error) { return f.raw, f.rawErr }
+func (f *fakeJsonSession) ReceiveRawWithTimeout(_ time.Duration) ([]byte, error) {
+	return f.raw, f.rawErr
+}
+func (f *fakeJsonSession) Receive(_ interface{}) error                             { return nil }
 func (f *fakeJsonSession) ReceiveWithTimeout(_ interface{}, _ time.Duration) error { return nil }
-func (f *fakeJsonSession) Send(_ interface{}) error                               { return nil }
-func (f *fakeJsonSession) SendRaw(_ context.Context, _ []byte) error              { return nil }
-func (f *fakeJsonSession) SendWithContext(_ context.Context, _ interface{}) error { return nil }
-func (f *fakeJsonSession) SendError(_ string) error                               { return nil }
-func (f *fakeJsonSession) SendErrorWithContext(_ context.Context, _ string) error { return nil }
-func (f *fakeJsonSession) Info() view.SessionInfo                                 { return view.SessionInfo{} }
-func (f *fakeJsonSession) Session() view.Session                                  { return nil }
+func (f *fakeJsonSession) Send(_ interface{}) error                                { return nil }
+func (f *fakeJsonSession) SendRaw(_ context.Context, _ []byte) error               { return nil }
+func (f *fakeJsonSession) SendWithContext(_ context.Context, _ interface{}) error  { return nil }
+func (f *fakeJsonSession) SendError(_ string) error                                { return nil }
+func (f *fakeJsonSession) SendErrorWithContext(_ context.Context, _ string) error  { return nil }
+func (f *fakeJsonSession) Info() view.SessionInfo                                  { return view.SessionInfo{} }
+func (f *fakeJsonSession) Session() view.Session                                   { return nil }
 
 var _ session.JsonSession = (*fakeJsonSession)(nil)
 
@@ -67,7 +69,7 @@ func (f *fakeViewContext) RunView(_ view.View, _ ...view.RunViewOption) (interfa
 }
 func (f *fakeViewContext) Me() view.Identity         { return nil }
 func (f *fakeViewContext) IsMe(_ view.Identity) bool { return false }
-func (f *fakeViewContext) Initiator() view.View       { return nil }
+func (f *fakeViewContext) Initiator() view.View { return nil }
 func (f *fakeViewContext) GetSession(_ view.View, _ view.Identity, _ ...view.View) (view.Session, error) {
 	return nil, nil
 }
