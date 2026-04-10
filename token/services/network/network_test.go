@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package network_test
 
 import (
@@ -11,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/networkfakes"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/mocks"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/require"
 )
@@ -76,8 +82,8 @@ func TestTransientMap(t *testing.T) {
 }
 
 func TestEnvelope(t *testing.T) {
-	dn := &networkfakes.Network{}
-	driverEnv := &networkfakes.Envelope{}
+	dn := &mocks.Network{}
+	driverEnv := &mocks.Envelope{}
 	dn.NewEnvelopeReturns(driverEnv)
 
 	driverEnv.BytesReturns([]byte("bytes"), nil)
@@ -122,7 +128,7 @@ func TestEnvelope(t *testing.T) {
 }
 
 func TestLocalMembership(t *testing.T) {
-	dlm := &networkfakes.LocalMembership{}
+	dlm := &mocks.LocalMembership{}
 	dlm.DefaultIdentityReturns(view.Identity("default"))
 	dlm.AnonymousIdentityReturns(view.Identity("anon"), nil)
 
@@ -137,8 +143,8 @@ func TestLocalMembership(t *testing.T) {
 }
 
 func TestLedger(t *testing.T) {
-	dn := &networkfakes.Network{}
-	dl := &networkfakes.Ledger{}
+	dn := &mocks.Network{}
+	dl := &mocks.Ledger{}
 	dn.LedgerReturns(dl, nil)
 
 	dl.StatusReturns(network.Valid, nil)
@@ -168,15 +174,15 @@ func TestLedger(t *testing.T) {
 }
 
 func TestNetwork(t *testing.T) {
-	dn := &networkfakes.Network{}
-	dlm := &networkfakes.LocalMembership{}
+	dn := &mocks.Network{}
+	dlm := &mocks.LocalMembership{}
 
 	dn.NameReturns("my_network")
 	dn.ChannelReturns("my_channel")
 	dn.LocalMembershipReturns(dlm)
 	dlm.AnonymousIdentityReturns(view.Identity("anon"), nil)
 
-	denv := &networkfakes.Envelope{}
+	denv := &mocks.Envelope{}
 	dn.NewEnvelopeReturns(denv)
 
 	dn.BroadcastReturns(nil)
@@ -188,7 +194,7 @@ func TestNetwork(t *testing.T) {
 	dn.AddFinalityListenerReturns(nil)
 	dn.LookupTransferMetadataKeyReturns([]byte("mkey"), nil)
 
-	dl := &networkfakes.Ledger{}
+	dl := &mocks.Ledger{}
 	dn.LedgerReturns(dl, nil)
 
 	opts := &token.ServiceOptions{Network: "foo"}
@@ -263,9 +269,9 @@ func TestNetwork(t *testing.T) {
 }
 
 func TestProvider(t *testing.T) {
-	dp := &networkfakes.Driver{}
-	dn := &networkfakes.Network{}
-	dlm := &networkfakes.LocalMembership{}
+	dp := &mocks.Driver{}
+	dn := &mocks.Network{}
+	dlm := &mocks.LocalMembership{}
 	dn.LocalMembershipReturns(dlm)
 
 	dp.NewReturns(dn, nil)
@@ -301,11 +307,11 @@ func TestProvider(t *testing.T) {
 }
 
 func TestGetInstance(t *testing.T) {
-	sp := &networkfakes.ServiceProvider{}
-	dn := &networkfakes.Network{}
-	dlm := &networkfakes.LocalMembership{}
+	sp := &mocks.ServiceProvider{}
+	dn := &mocks.Network{}
+	dlm := &mocks.LocalMembership{}
 	dn.LocalMembershipReturns(dlm)
-	dr := &networkfakes.Driver{}
+	dr := &mocks.Driver{}
 	dr.NewReturns(dn, nil)
 
 	p := network.NewProvider(nil)
