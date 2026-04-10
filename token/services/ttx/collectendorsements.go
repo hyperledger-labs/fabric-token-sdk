@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"go.uber.org/zap/zapcore"
 )
 
 type distributionListEntry struct {
@@ -402,10 +403,11 @@ func (c *CollectEndorsementsView) distributeTxToParties(context view.Context, di
 		return nil
 	}
 
-	// TODO: double check that the transaction is valid
-	// if err := c.tx.IsValid(); err != nil {
-	// 	return errors.Wrap(err, "failed verifying transaction content before distributing it")
-	// }
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		if err := c.tx.IsValid(context.Context()); err != nil {
+			return errors.Wrap(err, "failed verifying transaction content before distributing it")
+		}
+	}
 
 	// Distribute the transaction to all parties in the distribution list.
 	// Filter the metadata by Enrollment ID.
@@ -434,7 +436,7 @@ func (c *CollectEndorsementsView) distributeTxToParties(context view.Context, di
 			logger.DebugfContext(context.Context(), "tx [%d] is not me [%s:%s], ask endorse", i, entry.ID, entry.EID)
 		}
 
-		// The party is not mex, open a connection to the party.
+		// The party is not me, open a connection to the party.
 		// If the party is an auditor, then send the full set of metadata.
 		// Otherwise, filter the metadata by Enrollment ID.
 		var txRaw []byte
@@ -631,7 +633,7 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		} else {
 			longTermIdentity, _, _, err = endpoint.GetService(context).Resolve(context.Context(), party)
 			if err != nil {
-				return nil, errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
+				return nil, errors.Wrapf(err, "cannot resolve long term auditor identity for [%s]", party.UniqueID())
 			}
 		}
 		distributionListCompressed = append(distributionListCompressed, distributionListEntry{

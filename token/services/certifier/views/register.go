@@ -38,7 +38,7 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 		token.WithNamespace(r.Namespace),
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "tms not found [%s:%s:%s]", r.Namespace, r.Channel, r.Namespace)
+		return nil, errors.Wrapf(err, "tms not found [%s:%s:%s]", r.Network, r.Channel, r.Namespace)
 	}
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {

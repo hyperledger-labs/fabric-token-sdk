@@ -78,7 +78,7 @@ func NewEventQueue(cfg Config) (*EventQueue, error) {
 		return nil, errors.New("queue size must be greater than 0")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // G118: cancel is stored and called in Stop
 	eq := &EventQueue{
 		workers: cfg.Workers,
 		events:  make(chan Event, cfg.QueueSize),

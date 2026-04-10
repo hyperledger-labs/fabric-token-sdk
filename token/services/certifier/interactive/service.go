@@ -33,6 +33,7 @@ type CertificationService struct {
 	ResponderRegistry ResponderRegistry
 
 	startOnce sync.Once
+	mu        sync.RWMutex
 	wallets   map[string]string
 	backend   Backend
 	metrics   *Metrics
@@ -60,6 +61,8 @@ func (c *CertificationService) Start() error {
 }
 
 func (c *CertificationService) SetWallet(tms *token2.ManagementService, wallet string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.wallets[tms.Network()+":"+tms.Channel()+":"+tms.Namespace()] = wallet
 }
 
@@ -73,14 +76,40 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed receiving certification request")
 	}
 
-	logger.Debugf("received certification request [%v]", cr)
+	if cr == nil {
+		return nil, errors.Errorf("received nil certification request")
+	}
 
-	// TODO: 2. validate request, if needed
+	// 2. validate request
+	if cr.Channel == "" || cr.Namespace == "" {
+		return nil, errors.Errorf("invalid certification request: channel and namespace must not be empty [%s]", cr)
+	}
+
+	if len(cr.IDs) == 0 {
+		return nil, errors.Errorf("invalid certification request: no token IDs provided [%s]", cr)
+	}
+
+	if len(cr.IDs) > MaxTokensPerRequest {
+		return nil, errors.Errorf("invalid certification request: too many token IDs (%d > %d) [%s]", len(cr.IDs), MaxTokensPerRequest, cr)
+	}
+
+	if len(cr.Request) > MaxRequestBytes {
+		return nil, errors.Errorf("invalid certification request: request payload too large (%d > %d bytes) [%s]", len(cr.Request), MaxRequestBytes, cr)
+	}
+
+	logger.Debugf("received certification request [%v]", cr)
 
 	// 3. load token outputs
 	tokenOutputs, err := c.backend.Load(context, cr)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting tokens [%s:%s][%v]", cr.Channel, cr.Namespace, cr.IDs)
+	}
+
+	if len(tokenOutputs) != len(cr.IDs) {
+		return nil, errors.Errorf(
+			"token output count mismatch: backend returned %d outputs for %d IDs [%s]",
+			len(tokenOutputs), len(cr.IDs), cr,
+		)
 	}
 
 	// 4. certify token output
@@ -98,17 +127,20 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 	walletKey := tms.Network() + ":" + tms.Channel() + ":" + tms.Namespace()
 	logger.Debugf("lookup wallet ID with key [%s]", walletKey)
 
+	c.mu.RLock()
 	walletID, ok := c.wallets[walletKey]
+	c.mu.RUnlock()
+
 	if !ok {
-		logger.Errorf("failed getting certifier wallet, namespace not registered [%s]: [%s]", cr, err)
+		logger.Errorf("failed getting certifier wallet, namespace not registered [%s]", cr)
 
 		return nil, errors.Errorf("failed getting certifier wallet, namespace not registered [%s]", cr)
 	}
 
 	logger.Debugf("certify with wallet [%s]", walletID)
 
-	w := tms.WalletManager().CertifierWallet(context.Context(), walletID)
-	if w == nil {
+	w, err := tms.WalletManager().CertifierWallet(context.Context(), walletID)
+	if err != nil {
 		return nil, errors.Errorf("failed getting certifier wallet, wallet [%s] not found [%s:%s][%v]", walletID, cr.Channel, cr.Namespace, cr.IDs)
 	}
 
@@ -143,25 +175,36 @@ type CertificationRequest struct {
 }
 
 func (cr *CertificationRequest) String() string {
-	return fmt.Sprintf("CertificationRequest[%s,%s,%s][%v]", cr.Request, cr.Channel, cr.Namespace, cr.IDs)
+	return fmt.Sprintf("CertificationRequest[%s:%s:%s][ids=%d,req=%d bytes]", cr.Network, cr.Channel, cr.Namespace, len(cr.IDs), len(cr.Request))
 }
 
 type CertificationRequestView struct {
 	network, channel, ns string
 	ids                  []*token.ID
 	certifier            view.Identity
+	responseTimeout      time.Duration
 }
 
-func NewCertificationRequestView(channel, ns string, certifier view.Identity, ids ...*token.ID) *CertificationRequestView {
+func NewCertificationRequestView(network, channel, ns string, certifier view.Identity, ids ...*token.ID) *CertificationRequestView {
 	return &CertificationRequestView{
-		channel:   channel,
-		certifier: certifier,
-		ns:        ns,
-		ids:       ids,
+		network:         network,
+		channel:         channel,
+		certifier:       certifier,
+		ns:              ns,
+		ids:             ids,
+		responseTimeout: DefaultResponseTimeout,
 	}
 }
 
 func (i *CertificationRequestView) Call(context view.Context) (interface{}, error) {
+	if len(i.ids) == 0 {
+		return nil, errors.Errorf("certification request has no token IDs")
+	}
+
+	if i.certifier.IsNone() {
+		return nil, errors.Errorf("no certifiers defined")
+	}
+
 	// 1. prepare request
 	logger.Debugf("prepare certification request for [%v]", i.ids)
 	tms, err := token2.GetManagementService(
@@ -184,16 +227,13 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	// 2. send request
 	logger.Debugf("send certification request for [%v]", i.ids)
 
-	if i.certifier.IsNone() {
-		return nil, errors.Errorf("no certifiers defined")
-	}
-
 	s, err := session.NewJSON(context, i, i.certifier)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed opening session to [%s]", i.certifier)
 	}
 
 	if err := s.Send(&CertificationRequest{
+		Network:   i.network,
 		Channel:   i.channel,
 		Namespace: i.ns,
 		IDs:       i.ids,
@@ -206,18 +246,32 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	logger.Debugf("wait certification request response for [%v]", i.ids)
 
 	var certifications [][]byte
-	if err := s.ReceiveWithTimeout(&certifications, 60*time.Second); err != nil {
+	if err := s.ReceiveWithTimeout(&certifications, i.responseTimeout); err != nil {
 		return nil, errors.WithMessagef(err, "failed receiving certifications [%v] from [%s]", i.ids, i.certifier)
 	}
 
 	// 4. Validate response
 	logger.Debugf("validate certification request response for [%v]", i.ids)
 
+	if len(certifications) != len(i.ids) {
+		return nil, errors.Errorf(
+			"certifier returned %d certifications for %d token IDs [%v] from [%s]",
+			len(certifications), len(i.ids), i.ids, i.certifier,
+		)
+	}
+
 	processedCertifications, err := cm.VerifyCertifications(i.ids, certifications)
 	if err != nil {
 		logger.Errorf("failed verifying certifications of [%v] from [%s] with err [%s]", i.ids, i.certifier, err)
 
 		return nil, errors.WithMessagef(err, "failed verifying certifications of [%v] from [%s]", i.ids, i.certifier)
+	}
+
+	if len(processedCertifications) != len(i.ids) {
+		return nil, errors.Errorf(
+			"certification manager returned %d processed certifications for %d token IDs from [%s]",
+			len(processedCertifications), len(i.ids), i.certifier,
+		)
 	}
 
 	logger.Debugf("certifications of [%v] from [%s] are valid", i.ids, i.certifier)

@@ -112,8 +112,8 @@ func MyIssuerWallet(context view.Context, opts ...token.ServiceOption) *token.Is
 	if err != nil {
 		return nil
 	}
-	w := tms.WalletManager().IssuerWallet(context.Context(), "")
-	if w == nil {
+	w, err := tms.WalletManager().IssuerWallet(context.Context(), "")
+	if err != nil {
 		return nil
 	}
 
@@ -128,8 +128,8 @@ func GetIssuerWallet(context view.Context, id string, opts ...token.ServiceOptio
 	if err != nil {
 		return nil
 	}
-	w := tms.WalletManager().IssuerWallet(context.Context(), id)
-	if w == nil {
+	w, err := tms.WalletManager().IssuerWallet(context.Context(), id)
+	if err != nil {
 		return nil
 	}
 
@@ -144,8 +144,8 @@ func GetIssuerWalletForChannel(context view.Context, channel, id string, opts ..
 	if err != nil {
 		return nil
 	}
-	w := tms.WalletManager().IssuerWallet(context.Context(), id)
-	if w == nil {
+	w, err := tms.WalletManager().IssuerWallet(context.Context(), id)
+	if err != nil {
 		return nil
 	}
 
@@ -158,8 +158,8 @@ func MyAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.A
 	if err != nil {
 		return nil
 	}
-	w := tms.WalletManager().AuditorWallet(context.Context(), "")
-	if w == nil {
+	w, err := tms.WalletManager().AuditorWallet(context.Context(), "")
+	if err != nil {
 		return nil
 	}
 

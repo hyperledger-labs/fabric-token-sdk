@@ -24,4 +24,17 @@ const (
 	DefaultFlushInterval = 5 * time.Second
 	// DefaultWorkers is the default number of worker goroutines processing certification batches.
 	DefaultWorkers = 1
+	// DefaultResponseTimeout is the maximum time the client waits for the certifier
+	// to respond before treating the request as failed.
+	DefaultResponseTimeout = 60 * time.Second
+
+	// MaxTokensPerRequest is the maximum number of token IDs accepted in a single
+	// certification request. Requests exceeding this limit are rejected to prevent
+	// resource exhaustion on the certifier node.
+	MaxTokensPerRequest = 500
+
+	// MaxRequestBytes is the maximum byte-length of the cryptographic request payload
+	// in a CertificationRequest. Requests exceeding this limit are rejected to prevent
+	// memory exhaustion on the certifier node.
+	MaxRequestBytes = 1 << 20 // 1 MiB
 )

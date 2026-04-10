@@ -167,6 +167,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			signerConfig.Sk = nil
 
 			// save the original signer config to a new file
+			//nolint:gosec
 			err = os.WriteFile(
 				filepath.Join(userOutput, idemix.IdemixConfigDirUser, msp2.SignerConfigFull),
 				signerBytes,
