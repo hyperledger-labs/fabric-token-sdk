@@ -28,7 +28,7 @@ func (s *stubExistenceChecker) TransactionExists(_ context.Context, _ string) (b
 }
 
 type stubStatusSetter struct {
-	calls   []setStatusCall
+	calls     []setStatusCall
 	returnErr error
 }
 
