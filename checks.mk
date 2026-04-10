@@ -4,13 +4,13 @@ checks: licensecheck gofmt goimports govet misspell ineffassign staticcheck
 .PHONY: licensecheck
 licensecheck:
 	@echo Running license check
-	@find . -name '*.go' | xargs addlicense -check || (echo "Missing license headers"; exit 1)
+	@find . -path './.git' -prune -o -name '*.go' -print | xargs addlicense -check || (echo "Missing license headers"; exit 1)
 
 .PHONY: gofmt
 gofmt:
 	@echo Running gofmt
 	@{ \
-	OUTPUT="$$(gofmt -l -s . || true)"; \
+	OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -print | xargs gofmt -l -s || true)"; \
 	if [ -n "$$OUTPUT" ]; then \
 		echo "The following gofmt issues were flagged:"; \
 		echo "$$OUTPUT"; \
@@ -23,7 +23,7 @@ gofmt:
 goimports:
 	@echo Running goimports
 	@{ \
-	OUTPUT="$$(goimports -l .)"; \
+	OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -print | xargs goimports -l || true)"; \
 	if [ -n "$$OUTPUT" ]; then \
     	echo "The following files contain goimports errors"; \
     	echo "$$OUTPUT"; \
@@ -41,7 +41,7 @@ govet:
 misspell:
 	@echo Running misspell
 	@{ \
-	OUTPUT="$$(find . -type f | grep -v '.golangci.yml' | grep -v 'testdata' | xargs misspell || true)"; \
+	OUTPUT="$$(find . -path './.git' -prune -o -type f -print | grep -v '.golangci.yml' | grep -v 'testdata' | xargs misspell || true)"; \
 	if [ -n "$$OUTPUT" ]; then \
 		echo "The following files are have spelling errors:"; \
 		echo "$$OUTPUT"; \

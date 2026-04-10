@@ -355,7 +355,7 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 
 	// Register a new issuer wallet and issue with that wallet
 	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
-	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	tokenPlatform := token.GetPlatform(network.NWOCtx, "token")
 	gomega.Expect(tokenPlatform).ToNot(gomega.BeNil(), "cannot find token platform in context")
 	gomega.Expect(tokenPlatform.GetTopology()).ToNot(gomega.BeNil(), "invalid token topology, it is nil")
 	gomega.Expect(len(tokenPlatform.GetTopology().TMSs)).ToNot(gomega.BeEquivalentTo(0), "no tms defined in token topology")
@@ -921,7 +921,7 @@ func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, a
 	issuer := sel.Get("issuer")
 	charlie := sel.Get("charlie")
 
-	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	tokenPlatform := token.GetPlatform(network.NWOCtx, "token")
 	idConfig1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), charlie.Id(), "charlie.ExtraId1", false)
 	RegisterOwnerIdentity(ctx, network, charlie, idConfig1)
 	idConfig2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), charlie.Id(), "charlie.ExtraId2", useFabricCA)
@@ -1224,7 +1224,7 @@ func TestTokensUpgrade(network *integration.Infrastructure, auditorId string, on
 	manager := sel.Get("manager")
 	endorsers := GetEndorsers(network, sel)
 	RegisterAuditor(network, auditor)
-	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
+	tokenPlatform, ok := network.NWOCtx.PlatformsByName["token"].(*token.Platform)
 	gomega.Expect(ok).To(gomega.BeTrue())
 
 	// give some time to the nodes to get the public parameters
@@ -1298,7 +1298,7 @@ func TestLocalTokensUpgrade(network *integration.Infrastructure, auditorId strin
 	manager := sel.Get("manager")
 	endorsers := GetEndorsers(network, sel)
 	RegisterAuditor(network, auditor)
-	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
+	tokenPlatform, ok := network.NWOCtx.PlatformsByName["token"].(*token.Platform)
 	gomega.Expect(ok).To(gomega.BeTrue())
 
 	// give some time to the nodes to get the public parameters
@@ -1352,7 +1352,7 @@ func TestIdemixIssuerPublicKeyRotation(network *integration.Infrastructure, audi
 	manager := sel.Get("manager")
 	endorsers := GetEndorsers(network, sel)
 	RegisterAuditor(network, auditor)
-	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
+	tokenPlatform, ok := network.NWOCtx.PlatformsByName["token"].(*token.Platform)
 	gomega.Expect(ok).To(gomega.BeTrue())
 
 	// give some time to the nodes to get the public parameters

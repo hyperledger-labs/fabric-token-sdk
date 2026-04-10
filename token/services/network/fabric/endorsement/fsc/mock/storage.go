@@ -102,8 +102,6 @@ func (fake *Storage) AppendValidationRecordReturnsOnCall(i int, result1 error) {
 func (fake *Storage) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.appendValidationRecordMutex.RLock()
-	defer fake.appendValidationRecordMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

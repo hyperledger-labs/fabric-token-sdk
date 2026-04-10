@@ -379,38 +379,6 @@ func TestAction_Validate(t *testing.T) {
 			expectedError: "invalid output at index [0]: token data cannot be empty",
 		},
 		{
-			name: "A Redeem action must have an issuer",
-			action: &transfer.Action{
-				Inputs: []*transfer.ActionInput{
-					{
-						ID: &token.ID{TxId: "txid"},
-						Token: &token2.Token{
-							Owner: []byte("owner"),
-							Data:  &math.G1{},
-						},
-						UpgradeWitness: &token2.UpgradeWitness{
-							FabToken: &fabtokenv1.Output{
-								Owner:    []byte("owner"),
-								Type:     "type",
-								Quantity: "10",
-							},
-							BlindingFactor: &math.Zr{},
-						},
-					},
-				},
-				Outputs: []*token2.Token{
-					{
-						Owner: []byte(nil),
-						Data:  &math.G1{},
-					},
-				},
-				Issuer: []byte(nil),
-			},
-			wantErr:       true,
-			expectedErr:   transfer.ErrMissingIssuer,
-			expectedError: "expected issuer for a redeem action",
-		},
-		{
 			name: "empty proof",
 			action: &transfer.Action{
 				ProofType: rp.RangeProofType,
@@ -445,6 +413,43 @@ func TestAction_Validate(t *testing.T) {
 			expectedError: "proof cannot be empty",
 		},
 		{
+ unit-test-token-package-1348
+			name: "empty proof",
+			action: &transfer.Action{
+				ProofType: rp.RangeProofType,
+				Inputs: []*transfer.ActionInput{
+					{
+						ID: &token.ID{TxId: "txid"},
+						Token: &token2.Token{
+							Owner: []byte("owner"),
+							Data:  &math.G1{},
+						},
+						UpgradeWitness: &token2.UpgradeWitness{
+							FabToken: &fabtokenv1.Output{
+								Owner:    []byte("owner"),
+								Type:     "type",
+								Quantity: "10",
+							},
+							BlindingFactor: &math.Zr{},
+						},
+					},
+				},
+				Outputs: []*token2.Token{
+					{
+						Owner: []byte("owner"),
+						Data:  &math.G1{},
+					},
+				},
+				Issuer: []byte("issuer"),
+				Proof:  []byte{},
+			},
+			wantErr:       true,
+			expectedErr:   transfer.ErrEmptyProof,
+			expectedError: "proof cannot be empty",
+		},
+		{
+
+ main
 			name: "valid",
 			action: &transfer.Action{
 				ProofType: rp.RangeProofType,

@@ -12,7 +12,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
+ unit-test-token-package-1348
 	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
+
+	executor "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
+ main
 )
 
 // RangeProofData contains the elements of a Bulletproof-style range proof.
@@ -202,7 +206,11 @@ type rangeProver struct {
 	Curve *math.Curve
 	// Provider creates a fresh Executor for each Prove call.
 	// If nil, DefaultProvider (SerialProvider) is used.
+ unit-test-token-package-1348
 	Provider rp.ExecutorProvider
+
+	Provider executor.ExecutorProvider
+ main
 }
 
 // NewRangeProver returns a rangeProver based on  the passed arguments
@@ -216,7 +224,11 @@ func NewRangeProver(
 	P, Q *math.G1,
 	numberOfRounds, bitLength uint64,
 	curve *math.Curve,
+ unit-test-token-package-1348
 	provider rp.ExecutorProvider,
+
+	provider executor.ExecutorProvider,
+ main
 ) *rangeProver {
 	return &rangeProver{
 		Commitment:           com,
@@ -451,7 +463,11 @@ type rangeVerifier struct {
 	Curve *math.Curve
 	// Provider creates a fresh Executor for each Prove call.
 	// If nil, DefaultProvider (SerialProvider) is used.
+ unit-test-token-package-1348
 	Provider rp.ExecutorProvider
+
+	Provider executor.ExecutorProvider
+ main
 }
 
 // NewRangeVerifier returns a rangeVerifier based on the passed arguments
@@ -463,7 +479,11 @@ func NewRangeVerifier(
 	P, Q *math.G1,
 	numberOfRounds, bitLength uint64,
 	curve *math.Curve,
+ unit-test-token-package-1348
 	provider rp.ExecutorProvider,
+
+	provider executor.ExecutorProvider,
+ main
 ) *rangeVerifier {
 	return &rangeVerifier{
 		Commitment:           com,
