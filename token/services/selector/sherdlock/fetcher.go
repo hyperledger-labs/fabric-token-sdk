@@ -105,7 +105,7 @@ func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID str
 	logger.DebugfContext(ctx, "call unspent tokens iterator")
 	it, err := f.eagerFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
 	logger.DebugfContext(ctx, "fetched eager iterator")
-	if err == nil && it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext() {
+	if err == nil && it.(interface{ HasNext() bool }).HasNext() {
 		logger.DebugfContext(ctx, "eager iterator had tokens. Returning iterator")
 		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
 
@@ -116,12 +116,6 @@ func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID str
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
 
 	return f.lazyFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
-}
-
-// newCachedFetcher is an internal alias for NewCachedFetcher to maintain compatibility within the package if needed,
-// though we usually just use the exported version now.
-func newCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
-	return NewCachedFetcher(tokenDB, cacheSize, freshnessInterval, maxQueriesBeforeRefresh)
 }
 
 // newMixedFetcher is an internal alias for NewMixedFetcher.
@@ -148,11 +142,6 @@ func (f *lazyFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	}
 
 	return collections.NewPermutatedIterator[token2.UnspentTokenInWallet](it)
-}
-
-type enhancedIterator[T any] interface {
-	iterators.Iterator[T]
-	HasNext() bool
 }
 
 type permutatableIterator[T any] interface {
