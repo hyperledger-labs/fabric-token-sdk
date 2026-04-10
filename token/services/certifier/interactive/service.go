@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package interactive
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -32,11 +33,12 @@ type ResponderRegistry interface {
 type CertificationService struct {
 	ResponderRegistry ResponderRegistry
 
-	startOnce sync.Once
-	mu        sync.RWMutex
-	wallets   map[string]string
-	backend   Backend
-	metrics   *Metrics
+	startOnce      sync.Once
+	mu             sync.RWMutex
+	wallets        map[string]string
+	backend        Backend
+	metrics        *Metrics
+	sessionFactory func(view.Context) session.JsonSession
 }
 
 func NewCertificationService(responderRegistry ResponderRegistry, mp metrics.Provider, backend Backend) *CertificationService {
@@ -45,6 +47,7 @@ func NewCertificationService(responderRegistry ResponderRegistry, mp metrics.Pro
 		metrics:           NewMetrics(mp),
 		backend:           backend,
 		ResponderRegistry: responderRegistry,
+		sessionFactory:    session.JSON,
 	}
 }
 
@@ -67,13 +70,28 @@ func (c *CertificationService) SetWallet(tms *token2.ManagementService, wallet s
 }
 
 func (c *CertificationService) Call(context view.Context) (interface{}, error) {
-	// 1. receive request
+	// 1. receive request — check wire size before deserialising to prevent
+	// memory exhaustion from decoding an oversized JSON payload into a struct.
+	// This is the code-level equivalent of the comm-stack filter recommended
+	// by the reviewer: drop the message before it touches the JSON decoder.
 	logger.Debugf("receive certification request [%s]", context.ID())
-	s := session.JSON(context)
+	s := c.sessionFactory(context)
+
+	raw, err := s.ReceiveRaw()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed receiving certification request")
+	}
+
+	if len(raw) > MaxWireMessageBytes {
+		return nil, errors.Errorf(
+			"invalid certification request: wire message too large (%d > %d bytes)",
+			len(raw), MaxWireMessageBytes,
+		)
+	}
 
 	var cr *CertificationRequest
-	if err := s.Receive(&cr); err != nil {
-		return nil, errors.WithMessagef(err, "failed receiving certification request")
+	if err := json.Unmarshal(raw, &cr); err != nil {
+		return nil, errors.WithMessagef(err, "failed deserialising certification request")
 	}
 
 	if cr == nil {
