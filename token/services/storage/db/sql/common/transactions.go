@@ -507,6 +507,7 @@ func (w *AtomicWrite) AddTokenRequest(ctx context.Context, txID string, tr []byt
 	query, args := q.InsertInto(w.table.Requests).
 		Fields("tx_id", "request", "status", "status_message", "application_metadata", "public_metadata", "pp_hash").
 		Row(txID, tr, driver4.Pending, "", ja, jp, ppHash).
+		OnConflictDoNothing().
 		Format()
 	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(publicMetadata), len(ppHash))
 	_, err = w.txn.ExecContext(ctx, query, args...)
