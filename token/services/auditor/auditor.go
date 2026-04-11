@@ -28,6 +28,13 @@ import (
 
 var logger = logging.MustGetLogger()
 
+//go:generate counterfeiter -o mock/transaction.go -fake-name Transaction . Transaction
+//go:generate counterfeiter -o mock/network_provider.go -fake-name NetworkProvider . NetworkProvider
+//go:generate counterfeiter -o mock/check_service.go -fake-name CheckService . CheckService
+//go:generate counterfeiter -o mock/network_driver.go -fake-name Network github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver.Network
+//go:generate counterfeiter -o mock/audit_transaction_store.go -fake-name AuditTransactionStore github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver.AuditTransactionStore
+//go:generate counterfeiter -o mock/atomic_write.go -fake-name AtomicWrite github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver.AtomicWrite
+
 // TxStatus is the status of a transaction
 type TxStatus = auditdb.TxStatus
 
