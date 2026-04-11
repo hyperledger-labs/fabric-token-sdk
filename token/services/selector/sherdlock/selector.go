@@ -205,12 +205,18 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			s.logger.DebugfContext(ctx, "Got the lock on token [%v]", t)
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
+				if unlockErr := s.locker.UnlockAll(ctx); unlockErr != nil {
+					s.logger.Errorf("failed to unlock tokens after quantity parse error: %s", unlockErr)
+				}
 				return nil, nil, immediateRetries, errors.Wrapf(err, "invalid token [%s] found", t.Id)
 			}
 			s.logger.DebugfContext(ctx, "Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
 			immediateRetries = 0
 			sum, err = sum.Add(q)
 			if err != nil {
+				if unlockErr := s.locker.UnlockAll(ctx); unlockErr != nil {
+					s.logger.Errorf("failed to unlock tokens after quantity add error: %s", unlockErr)
+				}
 				return nil, nil, immediateRetries, errors.Wrap(err, "failed to add quantity")
 			}
 			selected.Add(&t.Id)
