@@ -210,7 +210,7 @@ func TestScriptAuthAmIAnAuditor(t *testing.T) {
 
 func TestScriptAuthIssued(t *testing.T) {
 	sa := htlc.NewScriptAuth(nil)
-	require.False(t, sa.Issued(context.Background(), nil, &token3.Token{}))
+	require.False(t, sa.Issued(t.Context(), nil, &token3.Token{}))
 }
 
 func TestScriptAuthOwnerType(t *testing.T) {
@@ -287,21 +287,21 @@ func TestScriptAuthIsMine(t *testing.T) {
 
 	t.Run("sender owns token", func(t *testing.T) {
 		sa := htlc.NewScriptAuth(stubWalletService("wallet1", ""))
-		_, ids, mine := sa.IsMine(context.Background(), tok)
+		_, ids, mine := sa.IsMine(t.Context(), tok)
 		require.True(t, mine)
 		require.Contains(t, ids, "htlc.senderwallet1")
 	})
 
 	t.Run("recipient owns token", func(t *testing.T) {
 		sa := htlc.NewScriptAuth(stubWalletService("", "wallet2"))
-		_, ids, mine := sa.IsMine(context.Background(), tok)
+		_, ids, mine := sa.IsMine(t.Context(), tok)
 		require.True(t, mine)
 		require.Contains(t, ids, "htlc.recipientwallet2")
 	})
 
 	t.Run("both own token", func(t *testing.T) {
 		sa := htlc.NewScriptAuth(stubWalletService("wallet1", "wallet2"))
-		_, ids, mine := sa.IsMine(context.Background(), tok)
+		_, ids, mine := sa.IsMine(t.Context(), tok)
 		require.True(t, mine)
 		require.Len(t, ids, 2)
 		require.Contains(t, ids, "htlc.senderwallet1")
@@ -310,7 +310,7 @@ func TestScriptAuthIsMine(t *testing.T) {
 
 	t.Run("neither owns token", func(t *testing.T) {
 		sa := htlc.NewScriptAuth(stubWalletService("", ""))
-		_, ids, mine := sa.IsMine(context.Background(), tok)
+		_, ids, mine := sa.IsMine(t.Context(), tok)
 		require.False(t, mine)
 		require.Empty(t, ids)
 	})
@@ -321,7 +321,7 @@ func TestScriptAuthIsMineEdgeCases(t *testing.T) {
 
 	t.Run("invalid owner bytes", func(t *testing.T) {
 		tok := &token3.Token{Owner: []byte("garbage"), Type: "USD", Quantity: "100"}
-		_, _, mine := sa.IsMine(context.Background(), tok)
+		_, _, mine := sa.IsMine(t.Context(), tok)
 		require.False(t, mine)
 	})
 
@@ -331,7 +331,7 @@ func TestScriptAuthIsMineEdgeCases(t *testing.T) {
 			Type:     "USD",
 			Quantity: "100",
 		}
-		_, _, mine := sa.IsMine(context.Background(), tok)
+		_, _, mine := sa.IsMine(t.Context(), tok)
 		require.False(t, mine)
 	})
 
@@ -341,13 +341,13 @@ func TestScriptAuthIsMineEdgeCases(t *testing.T) {
 			Type:     "USD",
 			Quantity: "100",
 		}
-		_, _, mine := sa.IsMine(context.Background(), tok)
+		_, _, mine := sa.IsMine(t.Context(), tok)
 		require.False(t, mine)
 	})
 
 	t.Run("nil sender and recipient", func(t *testing.T) {
 		tok := makeHTLCToken(t, nil, nil)
-		_, _, mine := sa.IsMine(context.Background(), tok)
+		_, _, mine := sa.IsMine(t.Context(), tok)
 		require.False(t, mine)
 	})
 }
