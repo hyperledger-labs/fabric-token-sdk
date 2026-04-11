@@ -102,15 +102,11 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ token.Typ
 }
 
 func IssueSuccessfulCash(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, finalities ...*token3.NodeReference) string {
-	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, nil, finalities, false, []string{})
+	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, nil, finalities, []string{})
 }
 
 func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
-	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, tmsId, []*token3.NodeReference{}, false, expectedErrorMsgs)
-}
-
-func IssueCashWithNoAuditorSigVerification(network *integration.Infrastructure, wallet string, typ token.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, anonymous bool, issuer *token3.NodeReference, expectedErrorMsgs ...string) string {
-	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, nil, []*token3.NodeReference{}, true, expectedErrorMsgs)
+	return issueCashForTMSID(network, wallet, typ, amount, receiver, auditor, anonymous, issuer, tmsId, []*token3.NodeReference{}, expectedErrorMsgs)
 }
 
 func issueCashForTMSID(
@@ -124,19 +120,17 @@ func issueCashForTMSID(
 	issuer *token3.NodeReference,
 	tmsId *token2.TMSID,
 	endorsers []*token3.NodeReference,
-	skipAuditorSignatureVerification bool,
 	expectedErrorMsgs []string,
 ) string {
 	txIDBoxed, err := network.Client(issuer.ReplicaName()).CallView("issue", common.JSONMarshall(&views.IssueCash{
-		Anonymous:                        anonymous,
-		Auditor:                          auditor.Id(),
-		IssuerWallet:                     wallet,
-		TokenType:                        typ,
-		Quantity:                         amount,
-		Recipient:                        network.Identity(receiver.Id()),
-		RecipientEID:                     receiver.Id(),
-		TMSID:                            tmsId,
-		SkipAuditorSignatureVerification: skipAuditorSignatureVerification,
+		Anonymous:    anonymous,
+		Auditor:      auditor.Id(),
+		IssuerWallet: wallet,
+		TokenType:    typ,
+		Quantity:     amount,
+		Recipient:    network.Identity(receiver.Id()),
+		RecipientEID: receiver.Id(),
+		TMSID:        tmsId,
 	}))
 
 	topology.ToOptions(network.FscPlatform.Peers[0].Options).Endorser()

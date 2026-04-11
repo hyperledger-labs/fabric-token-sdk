@@ -909,7 +909,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 		if updateWithAppend {
 			IssueCash(network, "", "USD", 110, alice, auditor, true, newIssuer)
 		} else {
-			IssueCashWithNoAuditorSigVerification(network, "", "USD", 110, alice, auditor, true, newIssuer, "is not in auditors")
+			IssueCash(network, "", "USD", 110, alice, auditor, true, newIssuer, "failed verifying auditor signature")
 		}
 	}
 
