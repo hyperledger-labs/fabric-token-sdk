@@ -1,0 +1,210 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package config_test
+
+import (
+	"testing"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config/mocks"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	TMSPath = "token.tms"
+)
+
+func TestNewService(t *testing.T) {
+	cp := &mocks.Provider{}
+	cp.GetStringReturns("v2")
+	cp.GetBoolReturns(true)
+
+	s := config.NewService(cp)
+	assert.NotNil(t, s)
+	assert.Equal(t, "v2", s.Version())
+	assert.True(t, s.Enabled())
+
+	// Test default version
+	cp.GetStringReturns("")
+	s = config.NewService(cp)
+	assert.Equal(t, "v1", s.Version())
+}
+
+func TestLookupNamespace(t *testing.T) {
+	cp := &mocks.Provider{}
+	s := config.NewService(cp)
+
+	// Test Case: Single Hit
+	tmsID1 := driver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"}
+	tmsID2 := driver.TMSID{Network: "n2", Channel: "c2", Namespace: "ns2"}
+
+	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		if key == TMSPath {
+			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
+				"id1": nil,
+				"id2": nil,
+			}
+
+			return nil
+		}
+		if key == "token.tms.id1" {
+			*rawVal.(*driver.TMSID) = tmsID1
+
+			return nil
+		}
+		if key == "token.tms.id2" {
+			*rawVal.(*driver.TMSID) = tmsID2
+
+			return nil
+		}
+
+		return nil
+	}
+
+	ns, err := s.LookupNamespace("n1", "c1")
+	require.NoError(t, err)
+	assert.Equal(t, "ns1", ns)
+
+	// Test Case: No Hit
+	ns, err = s.LookupNamespace("n3", "c3")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no token-sdk configuration")
+	assert.Empty(t, ns)
+
+	// Test Case: Multiple Hits
+	tmsID3 := driver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns3"}
+	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		if key == TMSPath {
+			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
+				"id1": nil,
+				"id3": nil,
+			}
+
+			return nil
+		}
+		if key == "token.tms.id1" {
+			*rawVal.(*driver.TMSID) = tmsID1
+
+			return nil
+		}
+		if key == "token.tms.id3" {
+			*rawVal.(*driver.TMSID) = tmsID3
+
+			return nil
+		}
+
+		return nil
+	}
+	// We need to reset the holder to trigger a reload
+	err = s.ResetConfigurations()
+	require.NoError(t, err)
+
+	_, err = s.LookupNamespace("n1", "c1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "multiple token-sdk configurations")
+}
+
+func TestConfigurationFor(t *testing.T) {
+	cp := &mocks.Provider{}
+	s := config.NewService(cp)
+
+	tmsID1 := driver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"}
+	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		if key == TMSPath {
+			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
+				"id1": nil,
+			}
+
+			return nil
+		}
+		if key == "token.tms.id1" {
+			*rawVal.(*driver.TMSID) = tmsID1
+
+			return nil
+		}
+
+		return nil
+	}
+
+	conf, err := s.ConfigurationFor("n1", "c1", "ns1")
+	require.NoError(t, err)
+	assert.NotNil(t, conf)
+	assert.Equal(t, tmsID1, conf.ID())
+
+	// Test Case: Not Found
+	conf, err = s.ConfigurationFor("n2", "c2", "ns2")
+	require.Error(t, err)
+	assert.Nil(t, conf)
+	assert.Contains(t, err.Error(), "configuration not found")
+}
+
+func TestAddConfiguration(t *testing.T) {
+	cp := &mocks.Provider{}
+	s := config.NewService(cp)
+
+	raw := []byte("some config")
+
+	// Test Case: ProvideFromRaw fails (Exported method)
+	cp.ProvideFromRawReturns(nil, assert.AnError)
+	err := s.AddConfiguration(raw)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed loading configuration")
+
+	// Test Case: Validation Success (Internal method)
+	vcp := &mocks.Provider{}
+	vcp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		if key == TMSPath {
+			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
+				"new_id": nil,
+			}
+
+			return nil
+		}
+		if key == "token.tms.new_id" {
+			*rawVal.(*driver.TMSID) = driver.TMSID{Network: "new", Channel: "new", Namespace: "new"}
+
+			return nil
+		}
+
+		return nil
+	}
+
+	cp.MergeConfigReturns(nil)
+	err = s.AddConfigurationInternal(vcp, raw)
+	require.NoError(t, err)
+	assert.Equal(t, 1, cp.MergeConfigCallCount())
+	assert.Equal(t, raw, cp.MergeConfigArgsForCall(0))
+
+	// Test Case: Update existing configuration (Success)
+	vcp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		if key == TMSPath {
+			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
+				"id1": nil,
+			}
+
+			return nil
+		}
+		if key == "token.tms.id1" {
+			*rawVal.(*driver.TMSID) = driver.TMSID{Network: "exist", Channel: "exist", Namespace: "exist"}
+
+			return nil
+		}
+
+		return nil
+	}
+	cp.UnmarshalKeyStub = vcp.UnmarshalKeyStub
+
+	// Initial state has "exist"
+	err = s.ResetConfigurations()
+	require.NoError(t, err)
+	_, _ = s.ConfigurationsInternal()
+
+	err = s.AddConfigurationInternal(vcp, raw)
+	require.NoError(t, err)
+}
