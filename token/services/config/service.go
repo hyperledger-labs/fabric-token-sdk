@@ -12,7 +12,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
+
+var logger = logging.MustGetLogger("token.services.config")
 
 const (
 	RootKey = "token"
@@ -108,10 +111,10 @@ func (m *Service) ConfigurationFor(network, channel, namespace string) (*Configu
 		return nil, err
 	}
 
-	for key, config := range tmsConfigs {
+	for _, config := range tmsConfigs {
 		id := config.ID()
 		if id.Network == network && id.Channel == channel && id.Namespace == namespace {
-			return NewConfiguration(m.cp, key, id), nil
+			return config, nil
 		}
 	}
 
@@ -135,14 +138,20 @@ func (m *Service) Configurations() ([]*Configuration, error) {
 // If all good, accept the new TMS
 // Updates to an existing TMS should be rejected.
 func (m *Service) AddConfiguration(raw []byte) error {
+	logger.Infof("Add configuration from raw [%d bytes]", len(raw))
 	// Do the following:
 	// - parse raw as a yaml stream
 	v, err := m.cp.ProvideFromRaw(raw)
 	if err != nil {
 		return errors.Wrapf(err, "failed loading configuration")
 	}
+
+	return m.addConfiguration(v, raw)
+}
+
+func (m *Service) addConfiguration(cp Provider, raw []byte) error {
 	// - extract the configuration
-	loader := &loader{cp: v}
+	loader := &loader{cp: cp}
 	configurations, err := loader.load()
 	if err != nil {
 		return errors.Wrapf(err, "failed loading configurations from raw")
@@ -153,20 +162,6 @@ func (m *Service) AddConfiguration(raw []byte) error {
 			return errors.Wrapf(err, "failed validating configuration [%s]", config.ID())
 		}
 	}
-	// Updates to an existing TMS should be rejected.
-	existingConfigurations, err := m.configurations()
-	if err != nil {
-		return errors.Wrapf(err, "failed getting existing configurations")
-	}
-	for _, oldConfig := range existingConfigurations {
-		oldConfig.ID()
-		for _, newConf := range configurations {
-			if newConf.ID().Equal(oldConfig.ID()) {
-				return errors.Errorf("updating existing configuration is not supported [%s]", oldConfig.ID())
-			}
-		}
-	}
-
 	// If all good, merge into the main configuration service
 	if err := m.cp.MergeConfig(raw); err != nil {
 		return err
@@ -194,12 +189,23 @@ func (m *loader) load() (map[string]*Configuration, error) {
 	// load
 	var boxedConfig map[interface{}]interface{}
 	if err := m.cp.UnmarshalKey(TMSPath, &boxedConfig); err != nil {
-		return nil, errors.WithMessagef(err, "cannot load token-sdk configurations")
+		logger.Debugf("cannot unmarshal token-sdk configurations from [%s], try empty map: [%v]", TMSPath, err)
+		boxedConfig = map[interface{}]interface{}{}
+	}
+	if boxedConfig == nil {
+		logger.Debugf("token-sdk configurations from [%s] is nil, return empty map", TMSPath)
+
+		return map[string]*Configuration{}, nil
 	}
 
 	tmsConfigs := map[string]*Configuration{}
 	for k := range boxedConfig {
-		id := k.(string)
+		id, ok := k.(string)
+		if !ok {
+			logger.Warnf("token.tms key [%v] is not a string, skipping", k)
+
+			continue
+		}
 		tmsID := driver.TMSID{}
 		if err := m.cp.UnmarshalKey(config.Join(TMSPath, id), &tmsID); err != nil {
 			return nil, errors.WithMessagef(err, "cannot load token-sdk tms configuration for [%s]", id)
