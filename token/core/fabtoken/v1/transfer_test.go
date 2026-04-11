@@ -8,6 +8,7 @@ package v1_test
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -16,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -308,4 +310,133 @@ func TestTransferService(t *testing.T) {
 		_, err = s.DeserializeTransferAction([]byte("invalid"))
 		require.Error(t, err)
 	})
+}
+
+// BenchmarkTransferServiceTransfer benchmarks the Transfer method of the TransferService.
+func BenchmarkTransferServiceTransfer(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	for _, tc := range cases {
+		b.Run(tc.Name, func(b *testing.B) {
+			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase)
+			require.NoError(b, err)
+
+			b.ResetTimer()
+			i := 0
+			for b.Loop() {
+				e := env.Envs[i%len(env.Envs)]
+				action, _, err := e.ts.Transfer(
+					b.Context(),
+					"an_anchor",
+					nil,
+					e.ids,
+					e.outputs,
+					nil,
+				)
+				require.NoError(b, err)
+				require.NotNil(b, action)
+				i++
+			}
+		})
+	}
+}
+
+// TestParallelBenchmarkTransferServiceTransfer runs the transfer benchmark in parallel.
+func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*benchmarkTransferEnv](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*benchmarkTransferEnv, error) {
+			return newBenchmarkTransferEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkTransferEnv) error {
+			action, _, err := env.Envs[0].ts.Transfer(
+				ctx,
+				"an_anchor",
+				nil,
+				env.Envs[0].ids,
+				env.Envs[0].outputs,
+				nil,
+			)
+			if err != nil {
+				return err
+			}
+			_, err = action.Serialize()
+
+			return err
+		},
+	)
+}
+
+type transferEnv struct {
+	ts      *v1.TransferService
+	outputs []*token.Token
+	ids     []*token.ID
+}
+
+func newTransferEnv(benchmarkCase *benchmark2.Case) (*transferEnv, error) {
+	logger := logging.MustGetLogger("test")
+	ppm := &mockPublicParamsManager{PublicParamsManager: &mock.PublicParamsManager{}}
+	pp, err := setup.Setup(64)
+	if err != nil {
+		return nil, err
+	}
+	ppm.PublicParametersReturns(pp)
+
+	ws := &mock.WalletService{}
+	tl := &MockTokenLoader{}
+	des := &mock.Deserializer{}
+	ts := v1.NewTransferService(logger, ppm, ws, tl, des)
+
+	outputs := make([]*token.Token, benchmarkCase.NumOutputs)
+	for i := range outputs {
+		outputs[i] = &token.Token{
+			Owner:    []byte("owner2"),
+			Type:     "ABC",
+			Quantity: token.NewQuantityFromUInt64(uint64(i)*10 + 10).Hex(),
+		}
+	}
+
+	ids := make([]*token.ID, benchmarkCase.NumInputs)
+	inputTokens := make([]*token.Token, benchmarkCase.NumInputs)
+	for i := range ids {
+		ids[i] = &token.ID{TxId: strconv.Itoa(i), Index: 0}
+		inputTokens[i] = &token.Token{
+			Owner:    []byte("owner1"),
+			Type:     "ABC",
+			Quantity: token.NewQuantityFromUInt64(uint64(i)*10 + 10).Hex(),
+		}
+	}
+
+	tl.GetTokensStub = func(ctx context.Context, ids []*token.ID) ([]*token.Token, error) {
+		return inputTokens, nil
+	}
+	des.GetAuditInfoReturns([]byte("audit"), nil)
+	des.RecipientsReturns([]driver.Identity{[]byte("owner2")}, nil)
+
+	return &transferEnv{
+		ts:      ts,
+		outputs: outputs,
+		ids:     ids,
+	}, nil
+}
+
+type benchmarkTransferEnv struct {
+	Envs []*transferEnv
+}
+
+func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkTransferEnv, error) {
+	envs := make([]*transferEnv, n)
+	for i := range n {
+		env, err := newTransferEnv(benchmarkCase)
+		if err != nil {
+			return nil, err
+		}
+		envs[i] = env
+	}
+
+	return &benchmarkTransferEnv{Envs: envs}, nil
 }
