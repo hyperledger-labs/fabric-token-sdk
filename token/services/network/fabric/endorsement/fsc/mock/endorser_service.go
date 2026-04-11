@@ -412,16 +412,6 @@ func (fake *EndorserService) ReceiveTxReturnsOnCall(i int, result1 *endorser.Tra
 func (fake *EndorserService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.collectEndorsementsMutex.RLock()
-	defer fake.collectEndorsementsMutex.RUnlock()
-	fake.endorseMutex.RLock()
-	defer fake.endorseMutex.RUnlock()
-	fake.endorserIDMutex.RLock()
-	defer fake.endorserIDMutex.RUnlock()
-	fake.newTransactionMutex.RLock()
-	defer fake.newTransactionMutex.RUnlock()
-	fake.receiveTxMutex.RLock()
-	defer fake.receiveTxMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

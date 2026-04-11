@@ -162,6 +162,10 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			return nil, nil, immediateRetries, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), tokenType, err2)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
+				if err2 := s.locker.UnlockAll(ctx); err2 != nil {
+					s.logger.Warnf("failed to unlock tokens on insufficient funds: %v", err2)
+				}
+
 				return nil, nil, immediateRetries, errors.Wrapf(
 					token.SelectorInsufficientFunds,
 					"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked",
@@ -205,7 +209,10 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			}
 			s.logger.DebugfContext(ctx, "Found token [%s] to add: [%s:%s].", t.Id, q.Decimal(), t.Type)
 			immediateRetries = 0
-			sum.Add(q)
+			sum, err = sum.Add(q)
+			if err != nil {
+				return nil, nil, immediateRetries, errors.Wrap(err, "failed to add quantity")
+			}
 			selected.Add(&t.Id)
 			if sum.Cmp(quantity) >= 0 {
 				return selected.ToSlice(), sum, immediateRetries, nil

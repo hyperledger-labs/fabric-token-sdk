@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
-	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
+	executor "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
 )
 
 // IPA contains the proof for the inner product argument.
@@ -113,7 +113,7 @@ type ipaProver struct {
 	Curve *mathlib.Curve
 	// Provider creates a fresh Executor for each Prove call.
 	// If nil, DefaultProvider (SerialProvider) is used.
-	Provider rp.ExecutorProvider
+	Provider executor.ExecutorProvider
 }
 
 // NewIPAProver returns a new ipaProver instance.
@@ -127,10 +127,10 @@ func NewIPAProver(
 	Commitment *mathlib.G1,
 	rounds uint64,
 	c *mathlib.Curve,
-	provider rp.ExecutorProvider,
+	provider executor.ExecutorProvider,
 ) *ipaProver {
 	if provider == nil {
-		provider = rp.DefaultProvider
+		provider = executor.DefaultProvider
 	}
 
 	return &ipaProver{
@@ -254,7 +254,7 @@ type ipaVerifier struct {
 	Curve *mathlib.Curve
 	// Provider creates a fresh Executor for each Prove call.
 	// If nil, DefaultProvider (SerialProvider) is used.
-	Provider rp.ExecutorProvider
+	Provider executor.ExecutorProvider
 }
 
 // NewIPAVerifier returns an ipaVerifier instance.
@@ -267,10 +267,10 @@ func NewIPAVerifier(
 	Commitment *mathlib.G1,
 	rounds uint64,
 	c *mathlib.Curve,
-	provider rp.ExecutorProvider,
+	provider executor.ExecutorProvider,
 ) *ipaVerifier {
 	if provider == nil {
-		provider = rp.DefaultProvider
+		provider = executor.DefaultProvider
 	}
 
 	return &ipaVerifier{
@@ -406,7 +406,7 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 
 // reduceGenerators reduces the number of generators passed in the parameters by 1/2,
 // as a function of the old generators,  x and 1/x
-func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr, provider rp.ExecutorProvider) ([]*mathlib.G1, []*mathlib.G1) {
+func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr, provider executor.ExecutorProvider) ([]*mathlib.G1, []*mathlib.G1) {
 	l := len(leftGen) / 2
 	// Use the Executor abstraction so that the execution strategy can be
 	// swapped without changing this function. SerialExecutor runs each task

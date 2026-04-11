@@ -131,6 +131,7 @@ func (s *IdentityStore) StoreIdentityData(ctx context.Context, id []byte, identi
 		IdentityDBPrefix,
 		[]string{
 			IdentityDBData,
+			s.tmsID.String(),
 			tdriver.Identity(id).String(),
 		},
 	)
@@ -150,6 +151,7 @@ func (s *IdentityStore) GetAuditInfo(ctx context.Context, identity []byte) ([]by
 		IdentityDBPrefix,
 		[]string{
 			IdentityDBData,
+			s.tmsID.String(),
 			tdriver.Identity(identity).String(),
 		},
 	)
@@ -169,6 +171,7 @@ func (s *IdentityStore) GetTokenInfo(ctx context.Context, identity []byte) ([]by
 		IdentityDBPrefix,
 		[]string{
 			IdentityDBData,
+			s.tmsID.String(),
 			tdriver.Identity(identity).String(),
 		},
 	)
@@ -189,6 +192,7 @@ func (s *IdentityStore) StoreSignerInfo(ctx context.Context, id tdriver.Identity
 		IdentityDBPrefix,
 		[]string{
 			IdentityDBSigner,
+			s.tmsID.String(),
 			idHash,
 		},
 	)
@@ -210,6 +214,7 @@ func (s *IdentityStore) GetExistingSignerInfo(ctx context.Context, identities ..
 			IdentityDBPrefix,
 			[]string{
 				IdentityDBSigner,
+				s.tmsID.String(),
 				id.UniqueID(),
 			},
 		)
@@ -237,6 +242,7 @@ func (s *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]b
 		IdentityDBPrefix,
 		[]string{
 			IdentityDBSigner,
+			s.tmsID.String(),
 			idHash,
 		},
 	)

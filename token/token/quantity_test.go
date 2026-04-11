@@ -15,7 +15,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func TestToQuantity(t *testing.T) {
@@ -112,41 +112,37 @@ func TestOverflow(t *testing.T) {
 	b, err := token.ToQuantity(ToHex(uint64(math.MaxUint64)), 64)
 	require.NoError(t, err)
 
-	assert.Panics(t, func() {
-		a.Add(b)
-	})
-	assert.Panics(t, func() {
-		b.Add(b)
-	})
+	_, err = a.Add(b)
+	require.Error(t, err)
+	_, err = b.Add(b)
+	require.Error(t, err)
 
-	a, err = token.NewUBigQuantity(ToHex(1), 64)
+	abig, err := token.NewUBigQuantity(ToHex(1), 64)
 	require.NoError(t, err)
-	b, err = token.NewUBigQuantity(ToHex(uint64(math.MaxUint64)), 64)
+	bbig, err := token.NewUBigQuantity(ToHex(uint64(math.MaxUint64)), 64)
 	require.NoError(t, err)
 
-	assert.Panics(t, func() {
-		a.Add(b)
-	})
-	assert.Panics(t, func() {
-		b.Add(b)
-	})
+	_, err = abig.Add(bbig)
+	require.Error(t, err)
+	_, err = bbig.Add(bbig)
+	assert.Error(t, err)
 }
 
 func TestBigQuantity_Add(t *testing.T) {
-	q := token.NewZeroQuantity(128).(*token.BigQuantity)
+	q := token.NewZeroQuantity(128)
 	b := token.NewOneQuantity(128)
 
-	result := q.Add(b)
-
+	result, err := q.Add(b)
+	require.NoError(t, err)
 	assert.Equal(t, "1", result.Decimal())
 }
 
 func TestBigQuantity_Sub(t *testing.T) {
-	q := token.NewOneQuantity(128).(*token.BigQuantity)
+	q := token.NewOneQuantity(128)
 	b := token.NewOneQuantity(128)
 
-	result := q.Sub(b)
-
+	result, err := q.Sub(b)
+	require.NoError(t, err)
 	assert.Equal(t, "0", result.Decimal())
 }
 
@@ -177,20 +173,20 @@ func TestBigQuantity_Decimal(t *testing.T) {
 }
 
 func TestUInt64Quantity_Add(t *testing.T) {
-	q := token.NewOneQuantity(64).(*token.UInt64Quantity)
+	q := token.NewOneQuantity(64)
 	b := token.NewZeroQuantity(64)
 
-	result := q.Add(b)
-
+	result, err := q.Add(b)
+	require.NoError(t, err)
 	assert.Equal(t, "1", result.Decimal())
 }
 
 func TestUInt64Quantity_Sub(t *testing.T) {
-	q := token.NewQuantityFromUInt64(2).(*token.UInt64Quantity)
+	q := token.NewQuantityFromUInt64(2)
 	b := token.NewOneQuantity(64)
 
-	result := q.Sub(b)
-
+	result, err := q.Sub(b)
+	require.NoError(t, err)
 	assert.Equal(t, "1", result.Decimal())
 }
 
@@ -251,40 +247,77 @@ func TestCrossTypeComparisons(t *testing.T) {
 	assert.Equal(t, 0, bg.Cmp(u64Eq))
 }
 
-func TestBigQuantity_Add_Panic(t *testing.T) {
+func TestBigQuantity_Add_TypeMismatch(t *testing.T) {
 	q := token.NewZeroQuantity(2).(*token.BigQuantity) // Precision set to 2 bits
-	b := token.NewOneQuantity(64)                      // Precision set to 64 bits
+	b := token.NewOneQuantity(64)                      // UInt64Quantity
 
-	assert.Panics(t, func() {
-		_ = q.Add(b)
-	})
+	_, err := q.Add(b)
+	assert.Error(t, err)
 }
 
-func TestBigQuantity_Sub_Panic(t *testing.T) {
-	q := token.NewZeroQuantity(128).(*token.BigQuantity)
+func TestBigQuantity_Sub_Underflow(t *testing.T) {
+	q := token.NewZeroQuantity(128)
 	b := token.NewOneQuantity(128)
 
-	assert.Panics(t, func() {
-		_ = q.Sub(b)
-	})
+	_, err := q.Sub(b)
+	assert.Error(t, err)
 }
 
-func TestUInt64Quantity_Add_Panic(t *testing.T) {
+func TestUInt64Quantity_Add_Overflow(t *testing.T) {
 	q := token.NewQuantityFromUInt64(18446744073709551615) // Max uint64 value
 	b := token.NewQuantityFromUInt64(1)
 
-	assert.Panics(t, func() {
-		_ = q.Add(b)
-	})
+	_, err := q.Add(b)
+	assert.Error(t, err)
 }
 
-func TestUInt64Quantity_Sub_Panic(t *testing.T) {
+func TestUInt64Quantity_Sub_Underflow(t *testing.T) {
 	q := token.NewQuantityFromUInt64(0)
 	b := token.NewQuantityFromUInt64(1)
 
-	assert.Panics(t, func() {
-		_ = q.Sub(b)
-	})
+	_, err := q.Sub(b)
+	assert.Error(t, err)
+}
+
+func TestBigQuantity_Add_Immutability(t *testing.T) {
+	q := token.NewZeroQuantity(128)
+	b := token.NewOneQuantity(128)
+
+	result, err := q.Add(b)
+	require.NoError(t, err)
+	assert.Equal(t, "1", result.Decimal())
+	assert.Equal(t, "0", q.Decimal())
+}
+
+func TestBigQuantity_Sub_Immutability(t *testing.T) {
+	q, err := token.ToQuantity("10", 128)
+	require.NoError(t, err)
+	b := token.NewOneQuantity(128)
+
+	result, err := q.Sub(b)
+	require.NoError(t, err)
+	assert.Equal(t, "9", result.Decimal())
+	assert.Equal(t, "10", q.Decimal())
+}
+
+func TestUInt64Quantity_Add_Immutability(t *testing.T) {
+	q := token.NewQuantityFromUInt64(5)
+	b := token.NewQuantityFromUInt64(3)
+
+	result, err := q.Add(b)
+	require.NoError(t, err)
+	assert.Equal(t, "8", result.Decimal())
+	assert.Equal(t, "5", q.Decimal())
+}
+
+func TestUInt64Quantity_Sub_Immutability(t *testing.T) {
+	q := token.NewQuantityFromUInt64(5)
+	b := token.NewQuantityFromUInt64(3)
+
+	result, err := q.Sub(b)
+	require.NoError(t, err)
+	assert.Equal(t, "2", result.Decimal())
+	assert.Equal(t, "5", q.Decimal())
 }
 
 func TestNewUBigQuantity_ValidInput(t *testing.T) {
@@ -367,7 +400,8 @@ func TestUInt64Quantity_Clone(t *testing.T) {
 	clone := original.Clone()
 	assert.Equal(t, "100", clone.Decimal())
 
-	original.Add(token.NewOneQuantity(64))
+	_, err = original.Add(token.NewOneQuantity(64))
+	require.NoError(t, err)
 	assert.Equal(t, "100", clone.Decimal())
 }
 
@@ -381,61 +415,37 @@ func IntToHex(q int64) string {
 
 // Additional comprehensive tests for improved coverage
 
-func TestPrecisionMismatchPanics(t *testing.T) {
-	t.Run("BigQuantity Add with different precisions", func(t *testing.T) {
-		q1 := token.NewZeroQuantity(128).(*token.BigQuantity)
-		q2 := token.NewZeroQuantity(256)
-
-		assert.Panics(t, func() {
-			q1.Add(q2)
-		})
-	})
-
-	t.Run("BigQuantity Sub with different precisions", func(t *testing.T) {
-		q1 := token.NewOneQuantity(128).(*token.BigQuantity)
-		q2 := token.NewOneQuantity(256)
-
-		assert.Panics(t, func() {
-			q1.Sub(q2)
-		})
-	})
-}
-
-func TestTypeMismatchPanics(t *testing.T) {
+func TestTypeMismatchErrors(t *testing.T) {
 	t.Run("BigQuantity Add with UInt64Quantity", func(t *testing.T) {
 		q1 := token.NewZeroQuantity(128).(*token.BigQuantity)
 		q2 := token.NewZeroQuantity(64)
 
-		assert.Panics(t, func() {
-			q1.Add(q2)
-		})
+		_, err := q1.Add(q2)
+		require.Error(t, err)
 	})
 
 	t.Run("BigQuantity Sub with UInt64Quantity", func(t *testing.T) {
 		q1 := token.NewOneQuantity(128).(*token.BigQuantity)
 		q2 := token.NewOneQuantity(64)
 
-		assert.Panics(t, func() {
-			q1.Sub(q2)
-		})
+		_, err := q1.Sub(q2)
+		require.Error(t, err)
 	})
 
 	t.Run("UInt64Quantity Add with BigQuantity", func(t *testing.T) {
 		q1 := token.NewZeroQuantity(64).(*token.UInt64Quantity)
 		q2 := token.NewZeroQuantity(128)
 
-		assert.Panics(t, func() {
-			q1.Add(q2)
-		})
+		_, err := q1.Add(q2)
+		require.Error(t, err)
 	})
 
 	t.Run("UInt64Quantity Sub with BigQuantity", func(t *testing.T) {
 		q1 := token.NewOneQuantity(64).(*token.UInt64Quantity)
 		q2 := token.NewOneQuantity(128)
 
-		assert.Panics(t, func() {
-			q1.Sub(q2)
-		})
+		_, err := q1.Sub(q2)
+		require.Error(t, err)
 	})
 }
 
@@ -570,28 +580,44 @@ func TestUInt64ToQuantityEdgeCases(t *testing.T) {
 }
 
 func TestBigQuantityOperationsChaining(t *testing.T) {
-	q := token.NewZeroQuantity(128).(*token.BigQuantity)
+	q := token.NewZeroQuantity(128)
 	one := token.NewOneQuantity(128)
 
 	// Chain operations: 0 + 1 + 1 + 1 = 3
-	result := q.Add(one).Add(token.NewOneQuantity(128)).Add(token.NewOneQuantity(128))
+	result, err := q.Add(one)
+	require.NoError(t, err)
+	result, err = result.Add(token.NewOneQuantity(128))
+	require.NoError(t, err)
+	result, err = result.Add(token.NewOneQuantity(128))
+	require.NoError(t, err)
 	assert.Equal(t, "3", result.Decimal())
 
 	// Chain subtraction: 3 - 1 - 1 = 1
-	result = result.Sub(token.NewOneQuantity(128)).Sub(token.NewOneQuantity(128))
+	result, err = result.Sub(token.NewOneQuantity(128))
+	require.NoError(t, err)
+	result, err = result.Sub(token.NewOneQuantity(128))
+	require.NoError(t, err)
 	assert.Equal(t, "1", result.Decimal())
 }
 
 func TestUInt64QuantityOperationsChaining(t *testing.T) {
-	q := token.NewZeroQuantity(64).(*token.UInt64Quantity)
+	q := token.NewZeroQuantity(64)
 	one := token.NewOneQuantity(64)
 
 	// Chain operations: 0 + 1 + 1 + 1 = 3
-	result := q.Add(one).Add(token.NewOneQuantity(64)).Add(token.NewOneQuantity(64))
+	result, err := q.Add(one)
+	require.NoError(t, err)
+	result, err = result.Add(token.NewOneQuantity(64))
+	require.NoError(t, err)
+	result, err = result.Add(token.NewOneQuantity(64))
+	require.NoError(t, err)
 	assert.Equal(t, "3", result.Decimal())
 
 	// Chain subtraction: 3 - 1 - 1 = 1
-	result = result.Sub(token.NewOneQuantity(64)).Sub(token.NewOneQuantity(64))
+	result, err = result.Sub(token.NewOneQuantity(64))
+	require.NoError(t, err)
+	result, err = result.Sub(token.NewOneQuantity(64))
+	require.NoError(t, err)
 	assert.Equal(t, "1", result.Decimal())
 }
 
@@ -691,27 +717,25 @@ func TestBigQuantityPrecisionBoundary(t *testing.T) {
 	})
 }
 
-func TestAddSubMutability(t *testing.T) {
-	t.Run("BigQuantity Add mutates receiver", func(t *testing.T) {
-		q := token.NewZeroQuantity(128).(*token.BigQuantity)
-		originalPtr := q
+func TestAddSubImmutability(t *testing.T) {
+	t.Run("BigQuantity Add does not mutate receiver", func(t *testing.T) {
+		q := token.NewZeroQuantity(128)
 
-		result := q.Add(token.NewOneQuantity(128))
+		result, err := q.Add(token.NewOneQuantity(128))
+		require.NoError(t, err)
 
-		// Verify same instance
-		assert.Same(t, originalPtr, result.(*token.BigQuantity))
-		assert.Equal(t, "1", q.Decimal())
+		assert.Equal(t, "1", result.Decimal())
+		assert.Equal(t, "0", q.Decimal()) // Original unchanged
 	})
 
-	t.Run("UInt64Quantity Add mutates receiver", func(t *testing.T) {
-		q := token.NewZeroQuantity(64).(*token.UInt64Quantity)
-		originalPtr := q
+	t.Run("UInt64Quantity Add does not mutate receiver", func(t *testing.T) {
+		q := token.NewZeroQuantity(64)
 
-		result := q.Add(token.NewOneQuantity(64))
+		result, err := q.Add(token.NewOneQuantity(64))
+		require.NoError(t, err)
 
-		// Verify same instance
-		assert.Same(t, originalPtr, result.(*token.UInt64Quantity))
-		assert.Equal(t, "1", q.Decimal())
+		assert.Equal(t, "1", result.Decimal())
+		assert.Equal(t, "0", q.Decimal()) // Original unchanged
 	})
 }
 
@@ -739,13 +763,13 @@ func TestValidateBigIntForQuantity(t *testing.T) {
 // InvalidQuantity is a mock type for testing panic conditions
 type InvalidQuantity struct{}
 
-func (InvalidQuantity) Add(b token.Quantity) token.Quantity { return nil }
-func (InvalidQuantity) Sub(b token.Quantity) token.Quantity { return nil }
-func (InvalidQuantity) Cmp(b token.Quantity) int            { return 0 }
-func (InvalidQuantity) Hex() string                         { return "" }
-func (InvalidQuantity) Decimal() string                     { return "" }
-func (InvalidQuantity) ToBigInt() *big.Int                  { return nil }
-func (InvalidQuantity) Clone() token.Quantity               { return InvalidQuantity{} }
+func (InvalidQuantity) Add(b token.Quantity) (token.Quantity, error) { return nil, nil }
+func (InvalidQuantity) Sub(b token.Quantity) (token.Quantity, error) { return nil, nil }
+func (InvalidQuantity) Cmp(b token.Quantity) int                     { return 0 }
+func (InvalidQuantity) Hex() string                                  { return "" }
+func (InvalidQuantity) Decimal() string                              { return "" }
+func (InvalidQuantity) ToBigInt() *big.Int                           { return nil }
+func (InvalidQuantity) Clone() token.Quantity                        { return InvalidQuantity{} }
 
 func TestCmpPanicOnInvalidType(t *testing.T) {
 	t.Run("BigQuantity Cmp with invalid type", func(t *testing.T) {
