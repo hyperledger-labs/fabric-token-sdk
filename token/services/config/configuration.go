@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
-	"fmt"
-
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -84,7 +82,13 @@ func (m *Configuration) IsSet(key string) bool {
 
 // Serialize serializes this configuration with the respect to the passed tms ID
 func (m *Configuration) Serialize(tmsID token.TMSID) ([]byte, error) {
-	keyID := fmt.Sprintf("%s%s%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	keyID := tmsID.Network
+	if len(tmsID.Channel) != 0 {
+		keyID += "-" + tmsID.Channel
+	}
+	if len(tmsID.Namespace) != 0 {
+		keyID += "-" + tmsID.Namespace
+	}
 	keys := map[string]any{}
 	if err := m.cp.UnmarshalKey(config.Join(TMSPath, m.keyID), &keys); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling key [%s]", config.Join(TMSPath, m.keyID))
