@@ -15,6 +15,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
@@ -53,6 +54,8 @@ type Driver struct {
 	llmProvider                     lookup.ListenerManagerProvider
 	EndorsementServiceProvider      EndorsementServiceProvider
 	setupListenerProvider           SetupListenerProvider
+	storeServiceManager             ttxdb.StoreServiceManager
+	metricsProvider                 metrics.Provider
 }
 
 func NewGenericDriver(
@@ -67,6 +70,7 @@ func NewGenericDriver(
 	identityProvider view.IdentityProvider,
 	configService cdriver.ConfigService,
 	storeServiceManager ttxdb.StoreServiceManager,
+	metricsProvider metrics.Provider,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
 
@@ -96,6 +100,8 @@ func NewGenericDriver(
 			storeServiceManager,
 		),
 		NewSetupListenerProvider(tmsProvider, tokensManager),
+		storeServiceManager,
+		metricsProvider,
 		config2.GenericDriver,
 	)
 }
@@ -117,6 +123,8 @@ func NewDriver(
 	llmProvider lookup.ListenerManagerProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
 	setupListenerProvider SetupListenerProvider,
+	storeServiceManager ttxdb.StoreServiceManager,
+	metricsProvider metrics.Provider,
 	supportedDrivers ...string,
 ) *Driver {
 	return &Driver{
@@ -137,6 +145,8 @@ func NewDriver(
 		llmProvider:                     llmProvider,
 		EndorsementServiceProvider:      endorsementServiceProvider,
 		setupListenerProvider:           setupListenerProvider,
+		storeServiceManager:             storeServiceManager,
+		metricsProvider:                 metricsProvider,
 	}
 }
 
@@ -170,5 +180,24 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		return nil, errors.Wrapf(err, "failed to create a new llm")
 	}
 
-	return NewNetwork(fns, ch, d.configService, d.filterProvider, d.tokensManager, d.viewManager, d.tmsProvider, d.EndorsementServiceProvider, tokenQueryExecutor, d.tracerProvider, d.defaultPublicParamsFetcher, spentTokenQueryExecutor, d.keyTranslator, flm, llm, d.setupListenerProvider), nil
+	return NewNetwork(
+		fns,
+		ch,
+		d.configService,
+		d.filterProvider,
+		d.tokensManager,
+		d.viewManager,
+		d.tmsProvider,
+		d.EndorsementServiceProvider,
+		tokenQueryExecutor,
+		d.tracerProvider,
+		d.defaultPublicParamsFetcher,
+		spentTokenQueryExecutor,
+		d.keyTranslator,
+		flm,
+		llm,
+		d.setupListenerProvider,
+		d.storeServiceManager,
+		d.metricsProvider,
+	), nil
 }

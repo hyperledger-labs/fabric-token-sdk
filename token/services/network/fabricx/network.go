@@ -9,6 +9,7 @@ package fabricx
 import (
 	ffabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -16,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/qe"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 
 	"go.opentelemetry.io/otel/trace"
@@ -32,6 +34,7 @@ type Network struct {
 // It initializes a base Fabric network and overrides its ledger with a FabricX-specific
 // implementation that supports advanced state query executors.
 func NewNetwork(
+	storeServiceManager ttxdb.StoreServiceManager,
 	n *ffabric.NetworkService,
 	ch *ffabric.Channel,
 	configuration common.Configuration,
@@ -49,6 +52,7 @@ func NewNetwork(
 	flm finality.ListenerManager,
 	llm lookup.ListenerManager,
 	setupListenerProvider fabric.SetupListenerProvider,
+	metricsProvider metrics.Provider,
 ) *Network {
 	// first create a fabric network
 	tn := fabric.NewNetwork(
@@ -68,6 +72,8 @@ func NewNetwork(
 		flm,
 		llm,
 		setupListenerProvider,
+		storeServiceManager,
+		metricsProvider,
 	)
 
 	// we override the ledger created by fabric.NewNetwork with our fabricx specific impl

@@ -18,15 +18,21 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/recovery"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
+	ttxfinality "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go-apiv2/peer"
@@ -140,16 +146,18 @@ type SetupListenerProvider interface {
 // Network implements the driver.Network interface for Hyperledger Fabric.
 // It orchestrates finality listeners, state queries, and endorsement requests.
 type Network struct {
-	n               *fabric.NetworkService
-	ch              *fabric.Channel
-	tmsProvider     *token2.ManagementServiceProvider
-	viewManager     ViewManager
-	ledger          *ledger
-	configuration   common2.Configuration
-	filterProvider  common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
-	tokensProvider  *tokens.ServiceManager
-	finalityTracer  trace.Tracer
-	localMembership *lm
+	n                   *fabric.NetworkService
+	ch                  *fabric.Channel
+	tmsProvider         *token2.ManagementServiceProvider
+	viewManager         ViewManager
+	ledger              *ledger
+	configuration       common2.Configuration
+	filterProvider      common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
+	tokensProvider      *tokens.ServiceManager
+	finalityTracer      trace.Tracer
+	localMembership     *lm
+	storeServiceManager ttxdb.StoreServiceManager
+	metricsProvider     metrics.Provider
 
 	setupListenerProvider      SetupListenerProvider
 	flm                        finality.ListenerManager
@@ -161,6 +169,7 @@ type Network struct {
 	keyTranslator              translator.KeyTranslator
 
 	connectedNamespaces lazy.Provider[string, []token2.ServiceOption]
+	recoveryManagers    lazy.Provider[string, *recovery.Manager]
 }
 
 // NewNetwork creates a new Fabric Network instance.
@@ -181,6 +190,8 @@ func NewNetwork(
 	flm finality.ListenerManager,
 	llm lookup.ListenerManager,
 	setupListenerProvider SetupListenerProvider,
+	storeServiceManager ttxdb.StoreServiceManager,
+	metricsProvider metrics.Provider,
 ) *Network {
 	network := &Network{
 		n:                          n,
@@ -203,10 +214,15 @@ func NewNetwork(
 		keyTranslator:         keyTranslator,
 		setupListenerProvider: setupListenerProvider,
 		localMembership:       &lm{lm: n.LocalMembership()},
+		storeServiceManager:   storeServiceManager,
+		metricsProvider:       metricsProvider,
 	}
 	network.connectedNamespaces = lazy.NewProviderWithKeyMapper(func(s string) string {
 		return s
 	}, network.connect)
+	network.recoveryManagers = lazy.NewProviderWithKeyMapper(func(s string) string {
+		return s
+	}, network.createRecoveryManager)
 
 	return network
 }
@@ -368,7 +384,204 @@ func (n *Network) connect(ns string) ([]token2.ServiceOption, error) {
 		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
 	}
 
+	// Initialize and start recovery manager using lazy provider
+	if _, err := n.recoveryManagers.Get(ns); err != nil {
+		return nil, errors.WithMessagef(err, "failed to start recovery manager for [%s]", tmsID)
+	}
+
 	return nil, nil
+}
+
+// finalityListenerFactory creates finality listeners for transaction recovery
+type finalityListenerFactory struct {
+	networkAdapter  *networkAdapter
+	tmsProvider     *token2.ManagementServiceProvider
+	tmsID           token2.TMSID
+	ttxDB           *ttxdb.StoreService
+	tokensService   *tokens.Service
+	finalityTracer  trace.Tracer
+	metricsProvider metrics.Provider
+}
+
+// NewFinalityListener creates a new finality listener for the given transaction ID
+func (f *finalityListenerFactory) NewFinalityListener(txID string) (network.FinalityListener, error) {
+	// Create a TMS provider adapter
+	tmsProviderAdapter := &tmsProviderAdapter{provider: f.tmsProvider}
+
+	// Create and return a new finality listener
+	return ttxfinality.NewListener(
+		logger,
+		f.networkAdapter,
+		f.tmsID.Namespace,
+		tmsProviderAdapter,
+		f.tmsID,
+		f.ttxDB,
+		f.tokensService,
+		f.finalityTracer,
+		f.metricsProvider,
+	), nil
+}
+
+// tmsProviderAdapter adapts token2.ManagementServiceProvider to dep.TokenManagementServiceProvider
+type tmsProviderAdapter struct {
+	provider *token2.ManagementServiceProvider
+}
+
+func (a *tmsProviderAdapter) TokenManagementService(opts ...token2.ServiceOption) (dep.TokenManagementServiceWithExtensions, error) {
+	tms, err := a.provider.GetManagementService(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tmsAdapter{tms: tms}, nil
+}
+
+// tmsAdapter adapts token2.ManagementService to ttx dep.TokenManagementServiceWithExtensions
+type tmsAdapter struct {
+	tms *token2.ManagementService
+}
+
+func (a *tmsAdapter) ID() token2.TMSID { return a.tms.ID() }
+func (a *tmsAdapter) Network() string  { return a.tms.Network() }
+func (a *tmsAdapter) Channel() string  { return a.tms.Channel() }
+func (a *tmsAdapter) NewRequest(anchor token2.RequestAnchor) (*token2.Request, error) {
+	return a.tms.NewRequest(anchor)
+}
+
+func (a *tmsAdapter) SelectorManager() (token2.SelectorManager, error) {
+	return a.tms.SelectorManager()
+}
+
+func (a *tmsAdapter) PublicParametersManager() *token2.PublicParametersManager {
+	return a.tms.PublicParametersManager()
+}
+func (a *tmsAdapter) SigService() *token2.SignatureService { return a.tms.SigService() }
+func (a *tmsAdapter) WalletManager() *token2.WalletManager { return a.tms.WalletManager() }
+func (a *tmsAdapter) NewFullRequestFromBytes(raw []byte) (*token2.Request, error) {
+	return a.tms.NewFullRequestFromBytes(raw)
+}
+func (a *tmsAdapter) Vault() *token2.Vault { return a.tms.Vault() }
+func (a *tmsAdapter) SetTokenManagementService(req *token2.Request) error {
+	// This is typically a no-op for recovery scenarios
+	return nil
+}
+
+// createRecoveryManager initializes and starts the recovery manager for the given namespace
+func (n *Network) createRecoveryManager(ns string) (*recovery.Manager, error) {
+	tmsID := token2.TMSID{
+		Network:   n.n.Name(),
+		Channel:   n.ch.Name(),
+		Namespace: ns,
+	}
+
+	// Get TMS configuration
+	cfg, err := n.configuration.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	if err != nil {
+		logger.Warnf("failed to get configuration for [%s], using default recovery config: %v", tmsID, err)
+		cfg = nil
+	}
+
+	// Load recovery configuration
+	var recoveryConfig recovery.Config
+	if cfg != nil {
+		recoveryConfig, err = recovery.LoadConfig(cfg)
+		if err != nil {
+			logger.Warnf("failed to load recovery config for [%s], using defaults: %v", tmsID, err)
+			recoveryConfig = recovery.DefaultConfig()
+		}
+	} else {
+		recoveryConfig = recovery.DefaultConfig()
+	}
+
+	// Get tokens service
+	tokensService, err := n.tokensProvider.ServiceByTMSId(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get tokens service for [%s]", tmsID)
+	}
+
+	// Get TTXDB store service using the store service manager
+	ttxDB, err := n.storeServiceManager.StoreServiceByTMSId(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get TTXDB store service for [%s]", tmsID)
+	}
+
+	// Create recovery manager with network adapter
+	networkAdapter := &networkAdapter{network: n}
+
+	// Create finality listener factory
+	listenerFactory := &finalityListenerFactory{
+		networkAdapter:  networkAdapter,
+		tmsProvider:     n.tmsProvider,
+		tmsID:           tmsID,
+		ttxDB:           ttxDB,
+		tokensService:   tokensService,
+		finalityTracer:  n.finalityTracer,
+		metricsProvider: n.metricsProvider,
+	}
+
+	manager := recovery.NewManager(
+		logger,
+		ttxDB,
+		networkAdapter,
+		tmsID.Namespace,
+		listenerFactory,
+		recoveryConfig,
+	)
+
+	// Start the recovery manager
+	if err := manager.Start(); err != nil {
+		return nil, errors.Wrapf(err, "failed to start recovery manager for [%s]", tmsID)
+	}
+
+	logger.Debugf("recovery manager started for namespace [%s]", tmsID.Namespace)
+
+	return manager, nil
+}
+
+// networkAdapter adapts the Fabric Network to dep.Network interface
+// It only implements AddFinalityListener which is what the recovery manager needs
+type networkAdapter struct {
+	network *Network
+}
+
+func (a *networkAdapter) AddFinalityListener(namespace string, txID string, listener network.FinalityListener) error {
+	// Adapt network.FinalityListener to driver.FinalityListener
+	driverListener := &finalityListenerAdapter{listener: listener}
+
+	return a.network.AddFinalityListener(namespace, txID, driverListener)
+}
+
+func (a *networkAdapter) NewEnvelope() *network.Envelope {
+	// This method is not used by the recovery manager, but required by dep.Network interface
+	panic("NewEnvelope not implemented in networkAdapter")
+}
+
+func (a *networkAdapter) AnonymousIdentity() (view.Identity, error) {
+	// This method is not used by the recovery manager, but required by dep.Network interface
+	panic("AnonymousIdentity not implemented in networkAdapter")
+}
+
+func (a *networkAdapter) LocalMembership() *network.LocalMembership {
+	// This method is not used by the recovery manager, but required by dep.Network interface
+	panic("LocalMembership not implemented in networkAdapter")
+}
+
+func (a *networkAdapter) ComputeTxID(n *network.TxID) string {
+	// This method is not used by the recovery manager, but required by dep.Network interface
+	panic("ComputeTxID not implemented in networkAdapter")
+}
+
+// finalityListenerAdapter adapts network.FinalityListener to driver.FinalityListener
+type finalityListenerAdapter struct {
+	listener network.FinalityListener
+}
+
+func (a *finalityListenerAdapter) OnStatus(ctx context.Context, txID string, status int, message string, tokenRequestHash []byte) {
+	a.listener.OnStatus(ctx, txID, status, message, tokenRequestHash)
+}
+
+func (a *finalityListenerAdapter) OnError(ctx context.Context, txID string, err error) {
+	a.listener.OnError(ctx, txID, err)
 }
 
 type lookupListener struct {

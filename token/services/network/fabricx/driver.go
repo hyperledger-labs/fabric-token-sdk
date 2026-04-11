@@ -84,6 +84,7 @@ func NewDriver(
 	}
 
 	d := &Driver{
+		storeServiceManager:        storeServiceManager,
 		fnsProvider:                fnsProvider,
 		tokensManager:              tokensManager,
 		configService:              configs,
@@ -121,6 +122,7 @@ func NewDriver(
 			vkp,
 		),
 		supportedDrivers: []string{fabricx.DriverName},
+		metricsProvider:  metricsProvider,
 	}
 
 	return d, nil
@@ -128,6 +130,7 @@ func NewDriver(
 
 // Driver models the FabricX network driver.
 type Driver struct {
+	storeServiceManager        ttxdb.StoreServiceManager
 	fnsProvider                *fabric2.NetworkServiceProvider
 	tokensManager              *tokens.ServiceManager
 	configService              *config.Service
@@ -144,6 +147,7 @@ type Driver struct {
 	EndorsementServiceProvider fabric.EndorsementServiceProvider
 	setupListenerProvider      fabric.SetupListenerProvider
 	queryExecutorProvider      *qe.ExecutorProvider
+	metricsProvider            metrics.Provider
 }
 
 // New returns a new Network instance for the specified network and channel.
@@ -187,6 +191,7 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 	logger.Debugf("fabricx network [%s:%s] with driver [%s] ready to be created...", network, channel, fns.ConfigService().DriverName())
 
 	return NewNetwork(
+		d.storeServiceManager,
 		fns,
 		ch,
 		d.configService,
@@ -204,5 +209,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		flm,
 		llm,
 		d.setupListenerProvider,
+		d.metricsProvider,
 	), nil
 }
