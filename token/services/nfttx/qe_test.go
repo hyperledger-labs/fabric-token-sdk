@@ -4,17 +4,20 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nfttx
+package nfttx_test
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/nfttxfakes"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
-	"github.com/thedevsaddam/gojsonq"
+	"github.com/stretchr/testify/require"
 )
 
 type House struct {
@@ -23,31 +26,97 @@ type House struct {
 	Valuation uint64
 }
 
-func TestJsonFilter(t *testing.T) {
+func TestNewQueryExecutor(t *testing.T) {
+	assert.Panics(t, func() {
+		nfttx.NewQueryExecutor(nil, "my-wallet", 64)
+	})
+	qe, err := nfttx.NewQueryExecutor(getErrorCtx(), "my-wallet", 64)
+	assert.Error(t, err)
+	assert.Nil(t, qe)
+}
+
+func TestQueryExecutor_QueryByKey_FilterErrors(t *testing.T) {
+	fakeSelector := &nfttxfakes.Selector{}
+	fakeVault := &nfttxfakes.Vault{}
+
+	qe := nfttx.NewTestQueryExecutor(fakeSelector, fakeVault, 64)
+
+	fakeSelector.FilterReturns(nil, nfttx.ErrNoResults)
+	err := qe.QueryByKey(context.TODO(), &House{}, "LinearID", "123")
+	assert.ErrorIs(t, err, nfttx.ErrNoResults)
+
+	fakeSelector.FilterReturns(nil, errors.New("some filter error"))
+	err = qe.QueryByKey(context.TODO(), &House{}, "LinearID", "123")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "some filter error")
+}
+
+func TestQueryExecutor_QueryByKey_VaultErrors(t *testing.T) {
+	fakeSelector := &nfttxfakes.Selector{}
+	fakeVault := &nfttxfakes.Vault{}
+
+	qe := nfttx.NewTestQueryExecutor(fakeSelector, fakeVault, 64)
+
+	fakeSelector.FilterReturns([]*token2.ID{{TxId: "tx1", Index: 0}}, nil)
+	fakeVault.GetTokensReturns(nil, errors.New("vault error"))
+	err := qe.QueryByKey(context.TODO(), &House{}, "LinearID", "123")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "vault error")
+}
+
+func TestQueryExecutor_QueryByKey_Success(t *testing.T) {
+	fakeSelector := &nfttxfakes.Selector{}
+	fakeVault := &nfttxfakes.Vault{}
+
+	qe := nfttx.NewTestQueryExecutor(fakeSelector, fakeVault, 64)
+
 	h := &House{
-		LinearID:  "hello world",
+		LinearID:  "123",
 		Address:   "5th Avenue",
 		Valuation: 100,
 	}
 	raw, err := json.Marshal(h)
-	require.NoError(t, err, "json marshal failed")
-	tok := &token2.UnspentToken{
-		Type: token2.Type(base64.StdEncoding.EncodeToString(raw)),
-	}
+	require.NoError(t, err)
 
-	// hit
-	f := &jsonFilter{
-		q:     gojsonq.New(),
-		key:   "LinearID",
-		value: "hello world",
+	tokens := []*token2.Token{
+		{
+			Type:     token2.Type(base64.StdEncoding.EncodeToString(raw)),
+			Quantity: "0x01",
+		},
 	}
-	assert.True(t, f.ContainsToken(tok))
+	fakeSelector.FilterReturns([]*token2.ID{{TxId: "tx1", Index: 0}}, nil)
+	fakeVault.GetTokensReturns(tokens, nil)
 
-	// no hit
-	f = &jsonFilter{
-		q:     gojsonq.New(),
-		key:   "LinearID",
-		value: "pineapple",
+	var house House
+	err = qe.QueryByKey(context.TODO(), &house, "LinearID", "123")
+	assert.NoError(t, err)
+	assert.Equal(t, "123", house.LinearID)
+
+	// fail decoding type
+	tokens[0].Type = "not-base64"
+	err = qe.QueryByKey(context.TODO(), &house, "LinearID", "123")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to decode type")
+
+	// test no matching token, empty tokens list
+	fakeVault.GetTokensReturns([]*token2.Token{}, nil)
+	err = qe.QueryByKey(context.TODO(), &house, "LinearID", "123")
+	assert.ErrorIs(t, err, nfttx.ErrNoResults)
+}
+
+func TestQueryExecutor_QueryByKey_BadQuantity(t *testing.T) {
+	fakeSelector := &nfttxfakes.Selector{}
+	fakeVault := &nfttxfakes.Vault{}
+
+	qe := nfttx.NewTestQueryExecutor(fakeSelector, fakeVault, 64)
+
+	tokens := []*token2.Token{
+		{Type: "abc", Quantity: "bad-quantity"},
 	}
-	assert.False(t, f.ContainsToken(tok))
+	fakeSelector.FilterReturns([]*token2.ID{{TxId: "tx1", Index: 0}}, nil)
+	fakeVault.GetTokensReturns(tokens, nil)
+
+	err := qe.QueryByKey(context.TODO(), &House{}, "LinearID", "123")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to convert quantity")
 }
