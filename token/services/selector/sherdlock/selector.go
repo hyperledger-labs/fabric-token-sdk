@@ -49,6 +49,8 @@ type selector struct {
 	precision uint64
 	metrics   *Metrics
 	mu        sync.Mutex // protects cache field for concurrent Close() calls
+	lockMu    sync.RWMutex
+	locks     map[token2.ID]struct{}
 }
 
 type stubbornSelector struct {
@@ -85,7 +87,7 @@ func (m *stubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 		select {
 		case <-time.After(backoffDuration):
 		case <-ctx.Done():
-			if err := m.locker.UnlockAll(ctx); err != nil {
+			if err := m.UnlockAll(ctx); err != nil {
 				m.logger.Errorf("failed to unlock tokens on context cancellation: %s", err)
 			}
 			m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
@@ -118,6 +120,7 @@ func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker
 		locker:    lockDB,
 		precision: precision,
 		metrics:   m,
+		locks:     make(map[token2.ID]struct{}),
 	}
 }
 
@@ -157,7 +160,7 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(s.precision), collections.NewSet[*token2.ID](), true, 0
 	for {
 		if t, err := s.cache.Next(); err != nil {
-			err2 := s.locker.UnlockAll(ctx)
+			err2 := s.UnlockAll(ctx)
 
 			return nil, nil, immediateRetries, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), tokenType, err2)
 		} else if t == nil {
@@ -177,7 +180,7 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 
 			if immediateRetries > maxImmediateRetries {
 				s.logger.Warnf("Exceeded max number of immediate retries. Unlock tokens and abort...")
-				if err := s.locker.UnlockAll(ctx); err != nil {
+				if err := s.UnlockAll(ctx); err != nil {
 					return nil, nil, immediateRetries, errors.Wrapf(err, "exceeded number of retries: %d and unlock failed", maxImmediateRetries)
 				}
 
@@ -191,18 +194,21 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 
 			s.logger.DebugfContext(ctx, "Fetch all non-deleted tokens from the DB and refresh the token cache.")
 			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
-				err2 := s.locker.UnlockAll(ctx)
+				err2 := s.UnlockAll(ctx)
 
 				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), tokenType, err2)
 			}
 
 			immediateRetries++
 			tokensLockedByOthersExist = false
+		} else if s.isLockedLocally(t.Id) {
+			s.logger.DebugfContext(ctx, "Token [%v] already locked locally, skipping lock attempt", t.Id)
 		} else if locked := s.locker.TryLock(ctx, &t.Id); !locked {
 			s.logger.DebugfContext(ctx, "Tried to lock token [%v], but it was already locked by another process", t)
 			tokensLockedByOthersExist = true
 		} else {
 			s.logger.DebugfContext(ctx, "Got the lock on token [%v]", t)
+			s.recordLock(t.Id)
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
 				return nil, nil, immediateRetries, errors.Wrapf(err, "invalid token [%s] found", t.Id)
@@ -242,7 +248,34 @@ func (s *selector) isClosed() bool {
 }
 
 func (s *selector) UnlockAll(ctx context.Context) error {
-	return s.locker.UnlockAll(ctx)
+	if err := s.locker.UnlockAll(ctx); err != nil {
+		return err
+	}
+	s.clearLocks()
+
+	return nil
+}
+
+func (s *selector) isLockedLocally(tokenID token2.ID) bool {
+	s.lockMu.RLock()
+	_, ok := s.locks[tokenID]
+	s.lockMu.RUnlock()
+
+	return ok
+}
+
+func (s *selector) recordLock(tokenID token2.ID) {
+	s.lockMu.Lock()
+	s.locks[tokenID] = struct{}{}
+	s.lockMu.Unlock()
+}
+
+func (s *selector) clearLocks() {
+	s.lockMu.Lock()
+	if len(s.locks) > 0 {
+		s.locks = make(map[token2.ID]struct{})
+	}
+	s.lockMu.Unlock()
 }
 
 func tokenKey(walletID string, typ token2.Type) string {
