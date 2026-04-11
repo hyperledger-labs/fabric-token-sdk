@@ -18,14 +18,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokenlockdb"
 )
 
-type ConfigProvider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
-}
-
 type SelectorService struct {
-	managerLazyCache lazy2.Provider[*token.ManagementService, token.SelectorManager]
+	managerLazyCache lazy2.Provider[token.ManagementService, token.SelectorManager]
 	mu               sync.Mutex
-	managers         []*manager
+	managers         []*Manager
 }
 
 func NewService(
@@ -60,7 +56,7 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 		return nil, errors.Errorf("invalid tms, nil reference")
 	}
 
-	return s.managerLazyCache.Get(tms)
+	return s.managerLazyCache.Get(*tms)
 }
 
 // Shutdown stops all background goroutines for every manager created by this service.
@@ -75,10 +71,17 @@ func (s *SelectorService) Shutdown() {
 	}
 }
 
-func (s *SelectorService) trackManager(m *manager) {
+func (s *SelectorService) trackManager(m *Manager) {
 	s.mu.Lock()
 	s.managers = append(s.managers, m)
 	s.mu.Unlock()
+}
+
+func (s *SelectorService) ManagersCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.managers)
 }
 
 type loader struct {
@@ -89,10 +92,10 @@ type loader struct {
 	leaseExpiry                  time.Duration
 	leaseCleanupTickPeriod       time.Duration
 	metrics                      *Metrics
-	onCreate                     func(*manager)
+	onCreate                     func(*Manager)
 }
 
-func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
+func (s *loader) load(tms token.ManagementService) (token.SelectorManager, error) {
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
@@ -123,6 +126,6 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 	return mgr, nil
 }
 
-func key(tms *token.ManagementService) string {
+func key(tms token.ManagementService) string {
 	return tms.ID().String()
 }
