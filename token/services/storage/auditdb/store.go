@@ -43,13 +43,7 @@ type tokenRequest interface {
 type StoreServiceManager db.StoreServiceManager[*StoreService]
 
 func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
-	return db.NewStoreServiceManager(cp, "auditdb.persistence", drivers.NewAuditTransaction, newStoreService)
-}
-
-// NewStoreServiceForTest creates a StoreService backed by the given AuditTransactionStore.
-// Intended for unit testing only.
-func NewStoreServiceForTest(db driver2.AuditTransactionStore) (*StoreService, error) {
-	return newStoreService(db)
+	return db.NewStoreServiceManager(cp, "auditdb.persistence", drivers.NewAuditTransaction, NewStoreService)
 }
 
 func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
@@ -138,7 +132,7 @@ type StoreService struct {
 	pendingTXs []string
 }
 
-func newStoreService(p driver2.AuditTransactionStore) (*StoreService, error) {
+func NewStoreService(p driver2.AuditTransactionStore) (*StoreService, error) {
 	return &StoreService{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,

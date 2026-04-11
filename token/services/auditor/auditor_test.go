@@ -140,7 +140,7 @@ func (s *stubTokenRequestIterator) Close() {}
 // newTestStoreService builds a *auditdb.StoreService backed by the given store mock.
 func newTestStoreService(t *testing.T, store dbdriver.AuditTransactionStore) *auditdb.StoreService {
 	t.Helper()
-	ss, err := auditdb.NewStoreServiceForTest(store)
+	ss, err := auditdb.NewStoreService(store)
 	require.NoError(t, err)
 
 	return ss
