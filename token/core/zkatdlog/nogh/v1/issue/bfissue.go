@@ -96,7 +96,7 @@ func NewBulletProofProver(tw []*token.Metadata, tokens []*math.G1, pp *v1.Public
 		pp.RangeProofParams.BitLength,
 		pp.RangeProofParams.NumberOfRounds,
 		math.Curves[pp.Curve],
-		nil,
+		pp.ExecutorProvider,
 	)
 
 	return p, nil
