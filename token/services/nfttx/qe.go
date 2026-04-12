@@ -113,3 +113,12 @@ func (j *jsonFilter) ContainsToken(token *token2.UnspentToken) bool {
 
 	return false
 }
+
+// NewTestQueryExecutor returns a new QueryExecutor for testing purposes
+func NewTestQueryExecutor(s selector, v vault, p uint64) *QueryExecutor {
+	return &QueryExecutor{
+		selector:  s,
+		vault:     v,
+		precision: p,
+	}
+}
