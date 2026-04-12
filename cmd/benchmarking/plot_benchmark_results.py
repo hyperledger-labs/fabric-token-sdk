@@ -1,3 +1,15 @@
+#!/usr/bin/env python3
+"""
+plot_benchmark_results.py: Generates comparison plots across executor
+strategies (serial, unbounded, pool) for each parallel benchmark test.
+
+Reads benchmark_results.csv produced by run_benchmarks.py and outputs
+a PDF with two plots per test:
+  Left:  TPS vs worker count, one line per executor strategy
+  Right: TPS vs mean latency (with std error bars), one series per
+         executor × worker combination
+"""
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -6,18 +18,14 @@ import argparse
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
-
-# Optional positional argument
 parser.add_argument(
     "results_file",
-    nargs="?",  # makes it optional
+    nargs="?",
     default="benchmark_results.csv",
-    help="Path to the results CSV file"
+    help="Path to the results CSV file (default: benchmark_results.csv)"
 )
-
 args = parser.parse_args()
 
-# Set source and target paths
 csv_path = args.results_file
 pdf_path = str(Path(csv_path).with_suffix(".pdf"))
 
@@ -29,96 +37,132 @@ test_names = [
     "TestParallelBenchmarkValidatorTransfer",
 ]
 
+executors     = ["serial", "unbounded", "pool"]
+executor_colors = {
+    "serial":    "tab:blue",
+    "unbounded": "tab:orange",
+    "pool":      "tab:green",
+}
+executor_markers = {
+    "serial":    "o",
+    "unbounded": "s",
+    "pool":      "^",
+}
+
 df = pd.read_csv(csv_path)
-last_row = df.iloc[-1]
+last_row  = df.iloc[-1]
 timestamp = last_row["timestamp"]
-markers = ['o', 's', '^', 'D', 'x', '*']
-p95_marker = "X"   # single marker style for all p95 points
+
+# Column pattern: TestParallelBenchmarkSender[pool]/8 tps
+col_re = re.compile(
+    r"^(.+?)\[(\w+)\]/(\d+)\s+(tps|lat-p95|lat-avg|lat-std|goroutines)$"
+)
+
+def get_value(row, test, executor, cpu, metric):
+    col = f"{test}[{executor}]/{cpu} {metric}"
+    return row.get(col, None)
 
 with PdfPages(pdf_path) as pdf:
-
     for test_name in test_names:
 
-        pattern = re.compile(rf"{re.escape(test_name)}/(\d+)\s+tps")
-
-        workers = []
-        tps_values = []
-        lat_p95_values = []
-        lat_avg_values = []
-        lat_std_values = []
-
+        # Discover which worker counts are present for this test
+        worker_set = set()
         for col in df.columns:
-            match = pattern.match(col)
-            if match:
-                worker = match.group(1)
-                tps = last_row[col]
-                lat_p95_col = f"{test_name}/{worker} lat-p95"
-                lat_avg_col = f"{test_name}/{worker} lat-avg"
-                lat_std_col = f"{test_name}/{worker} lat-std"
-                lat_p95 = last_row[lat_p95_col]
-                lat_avg = last_row[lat_avg_col]
-                lat_std = last_row[lat_std_col]
+            m = col_re.match(col)
+            if m and m.group(1) == test_name:
+                worker_set.add(int(m.group(3)))
+        if not worker_set:
+            # Fall back to old-style columns without executor tag
+            old_re = re.compile(rf"^{re.escape(test_name)}/(\d+)\s+tps$")
+            for col in df.columns:
+                om = old_re.match(col)
+                if om:
+                    worker_set.add(int(om.group(1)))
+        if not worker_set:
+            continue
 
-                workers.append(worker)
-                tps_values.append(tps)
-                lat_p95_values.append(lat_p95)
-                lat_avg_values.append(lat_avg)
-                lat_std_values.append(lat_std)
+        workers_sorted = sorted(worker_set)
 
-        # Create figure with two subplots
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 7))
+        fig.suptitle(f"{test_name}\n(last run: {timestamp})", fontsize=12)
 
-        # --- Left subplot:
-        worker_counts = [int(w) for w in workers]  # convert strings to integers
-
-        ax1.plot(
-            worker_counts,
-            tps_values,
-            marker='o',
-            linestyle='-',
-            color='tab:blue'
-        )
+        # ---- Left plot: TPS vs workers, one line per executor ----
+        for executor in executors:
+            tps_vals = []
+            w_vals   = []
+            for cpu in workers_sorted:
+                v = get_value(last_row, test_name, executor, cpu, "tps")
+                if v is not None and not pd.isna(v):
+                    tps_vals.append(float(v))
+                    w_vals.append(cpu)
+            if tps_vals:
+                ax1.plot(
+                    w_vals, tps_vals,
+                    marker=executor_markers[executor],
+                    linestyle="-",
+                    color=executor_colors[executor],
+                    label=executor,
+                )
 
         ax1.set_xlabel("Worker count")
         ax1.set_ylabel("TPS")
-        ax1.set_title(f"{test_name}: TPS vs Worker Count\nLast Row ({timestamp})")
-        ax1.grid(True)  # <-- grid added
+        ax1.set_title("TPS vs Worker Count")
+        ax1.legend(title="Executor")
+        ax1.grid(True)
 
-        # --- Right subplot: TPS vs Latency with error bars (mean ± std) ---
-        for i, worker in enumerate(workers):
-            err = ax2.errorbar(
-                tps_values[i],
-                lat_avg_values[i],
-                yerr=lat_std_values[i],
-                marker=markers[i % len(markers)],
-                label=f"{worker} worker(s)",
-                capsize=5,
-                capthick=2,
-                linestyle='None'
-            )
-            color = err[0].get_color()
+        # ---- Right plot: TPS vs mean latency with error bars ----
+        # One point per (executor, worker) combination
+        p95_marker = "X"
+        plotted_executors = set()
+        for executor in executors:
+            for cpu in workers_sorted:
+                tps   = get_value(last_row, test_name, executor, cpu, "tps")
+                avg   = get_value(last_row, test_name, executor, cpu, "lat-avg")
+                std   = get_value(last_row, test_name, executor, cpu, "lat-std")
+                p95   = get_value(last_row, test_name, executor, cpu, "lat-p95")
 
-            ax2.scatter(
-                tps_values[i],
-                lat_p95_values[i],
-                marker=p95_marker,
-                color=color,
-                s=80,           # size tweak so it stands out
-                zorder=3,
-                label=None     # don't add a second legend entry
-            )
+                if any(v is None or pd.isna(v) for v in [tps, avg, std, p95]):
+                    continue
 
-        # dummy scatter = to add ONE legend entry documenting p95 marker ---
+                label = executor if executor not in plotted_executors else None
+                err = ax2.errorbar(
+                    float(tps), float(avg),
+                    yerr=float(std),
+                    marker=executor_markers[executor],
+                    color=executor_colors[executor],
+                    label=label,
+                    capsize=4,
+                    capthick=1.5,
+                    linestyle="None",
+                )
+                plotted_executors.add(executor)
+                ax2.scatter(
+                    float(tps), float(p95),
+                    marker=p95_marker,
+                    color=executor_colors[executor],
+                    s=80,
+                    zorder=3,
+                )
+                # Annotate worker count
+                ax2.annotate(
+                    str(cpu),
+                    (float(tps), float(avg)),
+                    textcoords="offset points",
+                    xytext=(4, 4),
+                    fontsize=7,
+                    color=executor_colors[executor],
+                )
+
+        # Dummy entry for p95 marker in legend
         ax2.scatter([], [], marker=p95_marker, color="black", label="p95")
-        ax2.set_title(f"{test_name}\nThroughput vs. Latency per worker count")
+
         ax2.set_xlabel("Throughput (TPS)")
         ax2.set_ylabel("Mean Latency [ms]")
+        ax2.set_title("TPS vs Latency (dot=mean±std, X=p95, label=workers)")
+        ax2.legend(title="Executor")
         ax2.grid(True)
-        ax2.legend()
 
         plt.tight_layout()
-        plt.show()
-
         pdf.savefig(fig)
         plt.close(fig)
 

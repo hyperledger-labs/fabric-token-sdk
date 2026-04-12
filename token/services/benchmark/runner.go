@@ -36,6 +36,10 @@ func NewConfig(workers int, duration time.Duration, warmupDuration time.Duration
 type Result struct {
 	Config     Config
 	GoRoutines int // Workers (kept for compatibility)
+	// GoRoutinesCreated is the net number of goroutines observed above the
+	// baseline during the recording window. It reflects scheduler pressure
+	// caused by the executor strategy (serial≈0, unbounded=n, pool=fixed).
+	GoRoutinesCreated int64
 
 	// Throughput
 	OpsTotal      uint64
@@ -240,6 +244,11 @@ func RunBenchmark[T any](
 	startGlobal = time.Now()
 	recording.Store(true)
 
+	// Sample goroutine count 100ms into recording, when executor goroutines
+	// are most likely active. Sampled here rather than after endWg.Wait()
+	// because workers exit before we can measure them.
+	goroutinesBaseline := int64(runtime.NumGoroutine())
+
 	// Timeline Monitor
 	timeline := make([]TimePoint, 0, int(cfg.Duration.Seconds())+1)
 
@@ -271,6 +280,13 @@ func RunBenchmark[T any](
 
 	time.Sleep(cfg.Duration)
 
+	// Sample peak goroutines at end of recording, before workers exit.
+	goroutinesPeak := int64(runtime.NumGoroutine())
+	goroutinesCreated := goroutinesPeak - goroutinesBaseline
+	if goroutinesCreated < 0 {
+		goroutinesCreated = 0
+	}
+
 	running.Store(false)
 	endWg.Wait()
 	cancel()
@@ -280,7 +296,7 @@ func RunBenchmark[T any](
 
 	runtime.ReadMemStats(&memAfter)
 
-	return analyzeResults(cfg, workerResults, memBytes, memAllocs, memBefore, memAfter, globalDuration, timeline)
+	return analyzeResults(cfg, workerResults, memBytes, memAllocs, memBefore, memAfter, globalDuration, timeline, goroutinesCreated)
 }
 
 func measureMemory[T any](setup func() T, work func(T) error) (bytes, allocs uint64) {
@@ -309,6 +325,7 @@ func analyzeResults(
 	mStart, mEnd runtime.MemStats,
 	duration time.Duration,
 	timeline []TimePoint,
+	goroutinesCreated int64,
 ) Result {
 	var totalOps uint64
 	var totalErrors uint64
@@ -407,36 +424,37 @@ func analyzeResults(
 	allocRate := (float64(mEnd.TotalAlloc-mStart.TotalAlloc) / 1024 / 1024) / duration.Seconds()
 
 	return Result{
-		Config:        cfg,
-		GoRoutines:    cfg.Workers,
-		OpsTotal:      totalOps,
-		Duration:      duration,
-		OpsPerSecReal: opsPerSecReal,
-		OpsPerSecPure: opsPerSecPure,
-		AvgLatency:    avgLatency,
-		StdDevLatency: stdDev,
-		Variance:      variance,
-		P50Latency:    p50,
-		P75Latency:    p75,
-		P95Latency:    p95,
-		P99Latency:    p99,
-		P999Latency:   p999,
-		P9999Latency:  p9999,
-		MinLatency:    minLat,
-		MaxLatency:    maxLat,
-		IQR:           iqr,
-		Jitter:        jitter,
-		CoeffVar:      coeffVar,
-		BytesPerOp:    memBytes,
-		AllocsPerOp:   memAllocs,
-		AllocRateMBPS: allocRate,
-		NumGC:         numGC,
-		GCPauseTotal:  time.Duration(pauseNs), // #nosec G115
-		GCOverhead:    gcOverhead,
-		ErrorCount:    totalErrors,
-		ErrorRate:     (float64(totalErrors) / float64(totalOps)) * 100,
-		Histogram:     calcHistogramImproved(allLatencies, minLat, maxLat, 20),
-		Timeline:      timeline,
+		Config:            cfg,
+		GoRoutines:        cfg.Workers,
+		OpsTotal:          totalOps,
+		Duration:          duration,
+		OpsPerSecReal:     opsPerSecReal,
+		OpsPerSecPure:     opsPerSecPure,
+		AvgLatency:        avgLatency,
+		StdDevLatency:     stdDev,
+		Variance:          variance,
+		P50Latency:        p50,
+		P75Latency:        p75,
+		P95Latency:        p95,
+		P99Latency:        p99,
+		P999Latency:       p999,
+		P9999Latency:      p9999,
+		MinLatency:        minLat,
+		MaxLatency:        maxLat,
+		IQR:               iqr,
+		Jitter:            jitter,
+		CoeffVar:          coeffVar,
+		BytesPerOp:        memBytes,
+		AllocsPerOp:       memAllocs,
+		AllocRateMBPS:     allocRate,
+		NumGC:             numGC,
+		GCPauseTotal:      time.Duration(pauseNs), // #nosec G115
+		GCOverhead:        gcOverhead,
+		ErrorCount:        totalErrors,
+		ErrorRate:         (float64(totalErrors) / float64(totalOps)) * 100,
+		Histogram:         calcHistogramImproved(allLatencies, minLat, maxLat, 20),
+		Timeline:          timeline,
+		GoRoutinesCreated: goroutinesCreated,
 	}
 }
 
@@ -575,6 +593,7 @@ func (r Result) printSystemHealth(w *tabwriter.Writer) {
 	writef(w, " GC Overhead\t%.2f%%\t%s\n", r.GCOverhead, gcStatus)
 	writef(w, " GC Pause\t%v\tTotal Stop-The-World time\n", r.GCPauseTotal)
 	writef(w, " GC Cycles\t%d\tFull garbage collection cycles\n", r.NumGC)
+	writef(w, " Goroutines Created\t%d\tNet goroutines above baseline during recording\n", r.GoRoutinesCreated)
 	writeLine(w, "")
 }
 
