@@ -522,7 +522,7 @@ func TestRangeProofDifferentCurves(t *testing.T) {
 	}
 
 	for _, curveID := range curves {
-		t.Run("curve_"+string(rune('0'+curveID)), func(t *testing.T) {
+		t.Run(fmt.Sprintf("curve_%d", curveID), func(t *testing.T) {
 			setup, err := newRPSetup(math.Curves[curveID], 4, 10)
 			require.NoError(t, err)
 

@@ -121,6 +121,7 @@ func NewCSPBasedProver(inputWitness, outputWitness []*token.Metadata, inputs, ou
 			pp.CSPRangeProofParams.RightGenerators,
 			pp.CSPRangeProofParams.BitLength,
 			math.Curves[pp.Curve],
+			pp.ExecutorProvider,
 		).WithTranscriptHeader(pp.CSPRangeProofParams.RPTranscriptHeader)
 	}
 
@@ -175,6 +176,7 @@ func NewCSPVerifier(inputs, outputs []*math.G1, pp *v1.PublicParams) *CSPVerifie
 			pp.CSPRangeProofParams.RightGenerators,
 			pp.CSPRangeProofParams.BitLength,
 			math.Curves[pp.Curve],
+			pp.ExecutorProvider,
 		).WithTranscriptHeader(pp.CSPRangeProofParams.RPTranscriptHeader)
 	}
 

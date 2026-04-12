@@ -95,10 +95,10 @@ func keyPairGen() error {
 	skPath := filepath.Join(output, "certifier.sk")
 	pkPath := filepath.Join(output, "certifier.pk")
 	fmt.Printf("Store key-pair to [%s,%s]...\n", skPath, pkPath)
-	if err := os.WriteFile(skPath, skRaw, 0600); err != nil {
+	if err := os.WriteFile(skPath, skRaw, 0600); err != nil { //nolint:gosec
 		return errors.Wrap(err, "failed writing certifier secret key to file")
 	}
-	if err := os.WriteFile(pkPath, pkRaw, 0600); err != nil {
+	if err := os.WriteFile(pkPath, pkRaw, 0600); err != nil { //nolint:gosec
 		return errors.Wrap(err, "failed writing certifier public key to file")
 	}
 

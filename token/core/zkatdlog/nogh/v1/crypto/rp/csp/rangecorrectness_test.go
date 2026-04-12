@@ -63,6 +63,7 @@ func TestCSPRangeCorrectnessProveVerify(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 
 			rc, err := prover.Prove()
@@ -77,6 +78,7 @@ func TestCSPRangeCorrectnessProveVerify(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 			verifier.Commitments = commitments
 
@@ -125,6 +127,7 @@ func TestCSPRangeCorrectnessSingleCommitment(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 
 			rc, err := prover.Prove()
@@ -137,6 +140,7 @@ func TestCSPRangeCorrectnessSingleCommitment(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 			verifier.Commitments = []*math.G1{commitment}
 
@@ -177,6 +181,7 @@ func TestCSPRangeCorrectnessEmptyCommitments(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 
 			rc, err := prover.Prove()
@@ -189,6 +194,7 @@ func TestCSPRangeCorrectnessEmptyCommitments(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 
 			verifier.Commitments = []*math.G1{}
@@ -243,6 +249,7 @@ func TestCSPRangeCorrectnessMismatchedProofCount(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 			verifier.Commitments = commitments
 
@@ -290,6 +297,7 @@ func TestCSPRangeCorrectnessNilProof(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 			verifier.Commitments = []*math.G1{commitment}
 
@@ -346,6 +354,7 @@ func TestCSPRangeCorrectnessSerializationRoundTrip(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 
 			rc, err := prover.Prove()
@@ -373,6 +382,7 @@ func TestCSPRangeCorrectnessSerializationRoundTrip(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 
 			verifier.Commitments = commitments
@@ -495,6 +505,7 @@ func TestCSPRangeCorrectnessLargeSet(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 
 			rc, err := prover.Prove()
@@ -507,6 +518,7 @@ func TestCSPRangeCorrectnessLargeSet(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 			verifier.Commitments = commitments
 
@@ -560,6 +572,7 @@ func TestCSPRangeCorrectnessBoundaryValues(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 
 			rc, err := prover.Prove()
@@ -571,6 +584,7 @@ func TestCSPRangeCorrectnessBoundaryValues(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 			verifier.Commitments = commitments
 
@@ -619,6 +633,7 @@ func TestCSPRangeCorrectnessWrongCommitment(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 
 			rc, err := prover.Prove()
@@ -633,6 +648,7 @@ func TestCSPRangeCorrectnessWrongCommitment(t *testing.T) {
 				rightGens,
 				n,
 				curve,
+				nil,
 			).WithTranscriptHeader([]byte("a_transcript_header"))
 			verifier.Commitments = []*math.G1{wrongCommitment}
 

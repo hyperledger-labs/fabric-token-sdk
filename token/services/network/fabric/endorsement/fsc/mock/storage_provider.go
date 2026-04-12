@@ -93,8 +93,6 @@ func (fake *StorageProvider) GetStorageReturnsOnCall(i int, result1 fsc.Storage,
 func (fake *StorageProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getStorageMutex.RLock()
-	defer fake.getStorageMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
