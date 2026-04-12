@@ -121,6 +121,7 @@ func TestVaultLedgerTokenLoaderWithCounterfeiter(t *testing.T) {
 		})
 		deserializer.DeserializeTokenCalls(func(raw []byte) (string, error) {
 			callN++
+
 			return string(raw) + "-des", nil
 		})
 
