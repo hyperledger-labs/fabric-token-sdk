@@ -9,6 +9,7 @@ package sherdlock
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -980,3 +981,101 @@ func (m *mockStoreServiceManager) StoreServiceByTMSId(tmsID token.TMSID) (*token
 
 	return nil, errors.New("not implemented")
 }
+
+// TestCachedFetcher_UpdateDoesNotBlockReaders tests that the update() function
+// releases the lock during the potentially slow DB operation, allowing concurrent
+// readers to access the cache. This is the fix for issue #16.
+func TestCachedFetcher_UpdateDoesNotBlockReaders(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	// Use long freshness interval so cache won't be stale
+	fetcher := newCachedFetcher(mockDB, 0, 10*time.Second, 100)
+
+	// Pre-populate the cache so readers can hit it
+	initialTokens := []*token2.UnspentTokenInWallet{
+		{WalletID: "wallet1", Type: "USD", Quantity: "100"},
+	}
+	mockIterator := iterators.Slice(initialTokens)
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(mockIterator, nil).Once()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+
+	// Make cache stale so update() will be called
+	fetcher.lastFetched = time.Now().Add(-20 * time.Second)
+
+	// Use a channel to simulate a slow DB operation
+	slowDB := make(chan struct{})
+	tokensAfterSlowDB := []*token2.UnspentTokenInWallet{
+		{WalletID: "wallet1", Type: "USD", Quantity: "200"},
+	}
+	mockIterator2 := iterators.Slice(tokensAfterSlowDB)
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(mockIterator2, nil).Run(func(args mock.Arguments) {
+		<-slowDB // Wait before returning to simulate slow DB
+	}).Once()
+
+	// Track whether reader succeeded while update() was blocked on DB
+	var readerSuccess atomic.Bool
+	var readerWg sync.WaitGroup
+
+	// Start update in background (it will block on DB call)
+	readerWg.Add(1)
+	go func() {
+		defer readerWg.Done()
+		fetcher.update(ctx)
+	}()
+
+	// Small delay to ensure update() has released lock and is waiting on DB
+	time.Sleep(10 * time.Millisecond)
+
+	// Reader should be able to acquire RLock while update() waits on DB
+	// This would deadlock before the fix (issue #16)
+	fetcher.mu.RLock()
+	_, ok := fetcher.cache.Get(tokenKey("wallet1", "USD"))
+	fetcher.mu.RUnlock()
+
+	if ok {
+		readerSuccess.Store(true)
+	}
+
+	// Signal DB to complete
+	close(slowDB)
+
+	// Wait for update to complete
+	readerWg.Wait()
+
+	// Verify reader succeeded - the cache should still be accessible during update
+	assert.True(t, readerSuccess.Load(), "reader should be able to access cache while update() is blocked on DB")
+	mockDB.AssertExpectations(t)
+}
+
+// TestCachedFetcher_UpdateReacquiresLockAfterDB tests that after the DB operation
+// completes, update() correctly re-acquires the lock and performs the cache update.
+func TestCachedFetcher_UpdateReacquiresLockAfterDB(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	fetcher := newCachedFetcher(mockDB, 0, 1*time.Second, 100)
+
+	// Pre-populate to make cache appear stale
+	fetcher.lastFetched = time.Now().Add(-20 * time.Second)
+
+	tokens := []*token2.UnspentTokenInWallet{
+		{WalletID: "wallet1", Type: "USD", Quantity: "300"},
+	}
+	mockIterator := iterators.Slice(tokens)
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(mockIterator, nil).Once()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+
+	// After update completes, cache should be refreshed (not stale)
+	assert.False(t, fetcher.isCacheStale())
+	assert.Equal(t, uint32(0), atomic.LoadUint32(&fetcher.queriesResponded))
+
+	// Token should be in cache
+	fetcher.mu.RLock()
+	_, ok := fetcher.cache.Get(tokenKey("wallet1", "USD"))
+	fetcher.mu.RUnlock()
+	assert.True(t, ok, "token should be in cache after update")
+
+	mockDB.AssertExpectations(t)
+}
+
