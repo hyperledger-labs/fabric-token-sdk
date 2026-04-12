@@ -9,19 +9,24 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	commondrivermock "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	drivermock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	tokenmock "github.com/hyperledger-labs/fabric-token-sdk/token/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // ---------------------------------------------------------------------------
-// Shared test helpers (used across internal and external test files via
-// export_test.go wrappers).
+// Shared test helpers used across test files in this package.
 // ---------------------------------------------------------------------------
 
 // minimalRequest builds a minimal token.Request suitable for requestWrapper tests.
@@ -197,4 +202,224 @@ func TestMetricsProviderCall(t *testing.T) {
 	assert.NotPanics(t, func() {
 		nh.Observe(12)
 	})
+}
+
+// ---------------------------------------------------------------------------
+// requestWrapper tests — access unexported types directly within package auditor
+// ---------------------------------------------------------------------------
+
+func newInternalTestManagementService(t *testing.T) *token.ManagementService {
+	t.Helper()
+	mockTMS := &drivermock.TokenManagerService{}
+	mockVP := &tokenmock.VaultProvider{}
+
+	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
+
+	mockPPM := &drivermock.PublicParamsManager{}
+	mockPP := &drivermock.PublicParameters{}
+	mockPP.PrecisionReturns(64)
+	mockPPM.PublicParametersReturns(mockPP)
+
+	mockTMS.PublicParamsManagerReturns(mockPPM)
+	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
+	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
+	mockTMS.IssueServiceReturns(&drivermock.IssueService{})
+	mockTMS.TransferServiceReturns(&drivermock.TransferService{})
+
+	mockQE := &drivermock.QueryEngine{}
+	mockQE.ListAuditTokensReturns([]*token2.Token{}, nil)
+	mockV := &drivermock.Vault{}
+	mockV.QueryEngineReturns(mockQE)
+	mockVP.VaultReturns(mockV, nil)
+
+	tms, err := token.NewManagementService(
+		token.TMSID{},
+		mockTMS,
+		logging.MustGetLogger("test"),
+		mockVP,
+		nil,
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, tms)
+
+	return tms
+}
+
+func newInternalTestManagementServiceWithTokens(t *testing.T, toks []*token2.Token) *token.ManagementService {
+	t.Helper()
+	mockTMS := &drivermock.TokenManagerService{}
+	mockVP := &tokenmock.VaultProvider{}
+
+	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
+
+	mockPPM := &drivermock.PublicParamsManager{}
+	mockPP := &drivermock.PublicParameters{}
+	mockPP.PrecisionReturns(64)
+	mockPPM.PublicParametersReturns(mockPP)
+
+	mockTMS.PublicParamsManagerReturns(mockPPM)
+	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
+	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
+	mockTMS.IssueServiceReturns(&drivermock.IssueService{})
+	mockTMS.TransferServiceReturns(&drivermock.TransferService{})
+
+	mockQE := &drivermock.QueryEngine{}
+	mockQE.ListAuditTokensReturns(toks, nil)
+	mockV := &drivermock.Vault{}
+	mockV.QueryEngineReturns(mockQE)
+	mockVP.VaultReturns(mockV, nil)
+
+	tms, err := token.NewManagementService(
+		token.TMSID{},
+		mockTMS,
+		logging.MustGetLogger("test"),
+		mockVP,
+		nil,
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, tms)
+
+	return tms
+}
+
+func TestRequestWrapper_PublicParamsHash(t *testing.T) {
+	rw := newRequestWrapper(minimalRequest("tx-pph"), nil)
+	assert.Panics(t, func() {
+		rw.PublicParamsHash()
+	})
+}
+
+func TestRequestWrapper_CompleteInputsWithEmptyEID_Shortcut(t *testing.T) {
+	tms := newInternalTestManagementService(t)
+	rw := newRequestWrapper(
+		token.NewRequest(tms, token.RequestAnchor("tx-cid")), tms,
+	)
+	record := &token.AuditRecord{
+		Inputs: token.NewInputStream(nil, []*token.Input{}, 0),
+	}
+	err := rw.completeInputsWithEmptyEID(context.Background(), record)
+	assert.NoError(t, err)
+}
+
+func TestRequestWrapper_CompleteInputsWithEmptyEID_WithInputs(t *testing.T) {
+	tmsWithToken := newInternalTestManagementServiceWithTokens(t, []*token2.Token{
+		{Type: "USD", Quantity: "100", Owner: []byte("owner1")},
+	})
+	rw := newRequestWrapper(
+		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-cid2")), tmsWithToken,
+	)
+	recordWithInputs := &token.AuditRecord{
+		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
+	}
+	err := rw.completeInputsWithEmptyEID(context.Background(), recordWithInputs)
+	assert.NoError(t, err)
+}
+
+func TestRequestWrapper_AuditRecord(t *testing.T) {
+	tms := newInternalTestManagementService(t)
+	rw := newRequestWrapper(
+		token.NewRequest(tms, token.RequestAnchor("tx-ar")), tms,
+	)
+	record, err := rw.AuditRecord(context.Background())
+	require.NoError(t, err)
+	assert.NotNil(t, record)
+}
+
+func TestRequestWrapper_AuditRecord_RequestError(t *testing.T) {
+	// nil PublicParameters forces r.r.AuditRecord to return an error.
+	mockTMS := &drivermock.TokenManagerService{}
+	mockVP := &tokenmock.VaultProvider{}
+	mockPPM := &drivermock.PublicParamsManager{}
+	mockPPM.PublicParametersReturns(nil)
+	mockTMS.PublicParamsManagerReturns(mockPPM)
+	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
+	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
+	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
+	mockV := &drivermock.Vault{}
+	mockV.QueryEngineReturns(&drivermock.QueryEngine{})
+	mockVP.VaultReturns(mockV, nil)
+
+	badTMS, err := token.NewManagementService(
+		token.TMSID{}, mockTMS, logging.MustGetLogger("test"), mockVP, nil, nil,
+	)
+	require.NoError(t, err)
+
+	rw := newRequestWrapper(token.NewRequest(badTMS, token.RequestAnchor("tx-aud-rec-err")), badTMS)
+	_, err = rw.AuditRecord(context.Background())
+	require.Error(t, err)
+}
+
+func TestCompleteInputsWithEmptyEID_ListTokensError(t *testing.T) {
+	mockTMS := &drivermock.TokenManagerService{}
+	mockVP := &tokenmock.VaultProvider{}
+	mockPPM := &drivermock.PublicParamsManager{}
+	mockPP := &drivermock.PublicParameters{}
+	mockPP.PrecisionReturns(64)
+	mockPPM.PublicParametersReturns(mockPP)
+	mockTMS.PublicParamsManagerReturns(mockPPM)
+	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
+	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
+	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
+	mockTMS.IssueServiceReturns(&drivermock.IssueService{})
+	mockTMS.TransferServiceReturns(&drivermock.TransferService{})
+
+	mockQE := &drivermock.QueryEngine{}
+	mockQE.ListAuditTokensReturns(nil, errors.New("list tokens error"))
+	mockV := &drivermock.Vault{}
+	mockV.QueryEngineReturns(mockQE)
+	mockVP.VaultReturns(mockV, nil)
+
+	tms, err := token.NewManagementService(
+		token.TMSID{}, mockTMS, logging.MustGetLogger("test"), mockVP, nil, nil,
+	)
+	require.NoError(t, err)
+
+	rw := newRequestWrapper(token.NewRequest(tms, token.RequestAnchor("tx-list-err")), tms)
+	record := &token.AuditRecord{
+		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
+	}
+	err = rw.completeInputsWithEmptyEID(context.Background(), record)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed listing tokens")
+}
+
+func TestCompleteInputsWithEmptyEID_ToQuantityError(t *testing.T) {
+	mockTMS := &drivermock.TokenManagerService{}
+	mockVP := &tokenmock.VaultProvider{}
+	mockPPM := &drivermock.PublicParamsManager{}
+	mockPP := &drivermock.PublicParameters{}
+	mockPP.PrecisionReturns(64)
+	mockPPM.PublicParametersReturns(mockPP)
+	mockTMS.PublicParamsManagerReturns(mockPPM)
+	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
+	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
+	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
+	mockTMS.IssueServiceReturns(&drivermock.IssueService{})
+	mockTMS.TransferServiceReturns(&drivermock.TransferService{})
+
+	mockQE := &drivermock.QueryEngine{}
+	mockQE.ListAuditTokensReturns([]*token2.Token{
+		{Type: "USD", Quantity: "NOT_A_VALID_QUANTITY", Owner: []byte("owner1")},
+	}, nil)
+	mockV := &drivermock.Vault{}
+	mockV.QueryEngineReturns(mockQE)
+	mockVP.VaultReturns(mockV, nil)
+
+	tms, err := token.NewManagementService(
+		token.TMSID{}, mockTMS, logging.MustGetLogger("test"), mockVP, nil, nil,
+	)
+	require.NoError(t, err)
+
+	rw := newRequestWrapper(token.NewRequest(tms, token.RequestAnchor("tx-qty-err")), tms)
+	record := &token.AuditRecord{
+		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
+	}
+	err = rw.completeInputsWithEmptyEID(context.Background(), record)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed converting token quantity")
 }

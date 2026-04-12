@@ -32,11 +32,11 @@ import (
 
 // fakeServiceProvider is a simple test stub implementing token.ServiceProvider.
 type fakeServiceProvider struct {
-	service interface{}
+	service any
 	err     error
 }
 
-func (f *fakeServiceProvider) GetService(_ interface{}) (interface{}, error) {
+func (f *fakeServiceProvider) GetService(_ any) (any, error) {
 	return f.service, f.err
 }
 
@@ -64,44 +64,6 @@ func newTestManagementService(t *testing.T) *token.ManagementService {
 
 	mockQE := &drivermock.QueryEngine{}
 	mockQE.ListAuditTokensReturns([]*token2.Token{}, nil)
-	mockV := &drivermock.Vault{}
-	mockV.QueryEngineReturns(mockQE)
-	mockVP.VaultReturns(mockV, nil)
-
-	tms, err := token.NewManagementService(
-		token.TMSID{},
-		mockTMS,
-		logging.MustGetLogger("test"),
-		mockVP,
-		nil,
-		nil,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, tms)
-
-	return tms
-}
-
-func newTestManagementServiceWithTokens(t *testing.T, toks []*token2.Token) *token.ManagementService {
-	t.Helper()
-	mockTMS := &drivermock.TokenManagerService{}
-	mockVP := &tokenmock.VaultProvider{}
-
-	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
-
-	mockPPM := &drivermock.PublicParamsManager{}
-	mockPP := &drivermock.PublicParameters{}
-	mockPP.PrecisionReturns(64)
-	mockPPM.PublicParametersReturns(mockPP)
-
-	mockTMS.PublicParamsManagerReturns(mockPPM)
-	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
-	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
-	mockTMS.IssueServiceReturns(&drivermock.IssueService{})
-	mockTMS.TransferServiceReturns(&drivermock.TransferService{})
-
-	mockQE := &drivermock.QueryEngine{}
-	mockQE.ListAuditTokensReturns(toks, nil)
 	mockV := &drivermock.Vault{}
 	mockV.QueryEngineReturns(mockQE)
 	mockVP.VaultReturns(mockV, nil)
@@ -158,16 +120,16 @@ func newFakeStore() *auditmock.AuditTransactionStore {
 	return fakeStore
 }
 
-// newTestService is a convenience wrapper that creates a Service with nil-metrics and the given fields.
+// newTestService creates a Service with the given auditDB and checkService for testing.
 func newTestService(auditDB *auditdb.StoreService, checkService auditor.CheckService) *auditor.Service {
-	return auditor.NewTestService(
+	return auditor.NewService(
 		token.TMSID{},
 		nil, // networkProvider
 		auditDB,
 		nil, // tokenDB
 		nil, // tmsProvider
 		nil, // finalityTracer
-		nil, // metricsProvider (→ noopProvider inside)
+		nil, // metricsProvider
 		checkService,
 	)
 }
@@ -381,7 +343,7 @@ func TestService_Audit_TMSProviderIrrelevant(t *testing.T) {
 	tmsProv := &depmock.TokenManagementServiceProvider{}
 	tmsProv.TokenManagementServiceReturns(nil, errors.New("tms err"))
 
-	svc := auditor.NewTestService(
+	svc := auditor.NewService(
 		token.TMSID{}, nil,
 		newTestStoreService(t, newFakeStore()),
 		nil, tmsProv, nil, nil, nil,
@@ -404,7 +366,7 @@ func TestService_Append_Error_TMSProvider(t *testing.T) {
 	tmsProv := &depmock.TokenManagementServiceProvider{}
 	tmsProv.TokenManagementServiceReturns(nil, errors.New("tms err"))
 
-	svc := auditor.NewTestService(
+	svc := auditor.NewService(
 		token.TMSID{}, nil,
 		newTestStoreService(t, newFakeStore()),
 		nil, tmsProv, nil, nil, nil,
@@ -422,7 +384,7 @@ func TestService_Append_GetNetworkError(t *testing.T) {
 	netProvider := &auditmock.NetworkProvider{}
 	netProvider.GetNetworkReturns(nil, errors.New("network unavailable"))
 
-	svc := auditor.NewTestService(
+	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, newFakeStore()),
 		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
@@ -443,7 +405,7 @@ func TestService_Append_Success(t *testing.T) {
 	netProvider := &auditmock.NetworkProvider{}
 	netProvider.GetNetworkReturns(newStubNetwork(), nil)
 
-	svc := auditor.NewTestService(
+	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, newFakeStore()),
 		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
@@ -466,7 +428,7 @@ func TestService_Append_AddFinalityListenerError(t *testing.T) {
 	netProvider := &auditmock.NetworkProvider{}
 	netProvider.GetNetworkReturns(network.NewNetwork(fakeNet, nil), nil)
 
-	svc := auditor.NewTestService(
+	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, newFakeStore()),
 		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
@@ -495,7 +457,7 @@ func TestService_Append_AuditError(t *testing.T) {
 	netProvider := &auditmock.NetworkProvider{}
 	netProvider.GetNetworkReturns(newStubNetwork(), nil)
 
-	svc := auditor.NewTestService(
+	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, fakeStore),
 		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
@@ -510,54 +472,6 @@ func TestService_Append_AuditError(t *testing.T) {
 	err := svc.Append(context.Background(), tx)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed appending request")
-}
-
-// ---------------------------------------------------------------------------
-// requestWrapper tests (via export_test.go helpers)
-// ---------------------------------------------------------------------------
-
-func TestRequestWrapper_PublicParamsHash(t *testing.T) {
-	rw := auditor.NewTestRequestWrapper(auditor.MinimalRequestForTest("tx-pph"), nil)
-	assert.Panics(t, func() {
-		rw.PublicParamsHash()
-	})
-}
-
-func TestRequestWrapper_CompleteInputsWithEmptyEID_Shortcut(t *testing.T) {
-	tms := newTestManagementService(t)
-	rw := auditor.NewTestRequestWrapper(
-		token.NewRequest(tms, token.RequestAnchor("tx-cid")), tms,
-	)
-	record := &token.AuditRecord{
-		Inputs: token.NewInputStream(nil, []*token.Input{}, 0),
-	}
-	err := auditor.CompleteInputsWithEmptyEIDForTest(rw, context.Background(), record)
-	assert.NoError(t, err)
-}
-
-func TestRequestWrapper_CompleteInputsWithEmptyEID_WithInputs(t *testing.T) {
-	tmsWithToken := newTestManagementServiceWithTokens(t, []*token2.Token{
-		{Type: "USD", Quantity: "100", Owner: []byte("owner1")},
-	})
-	rw := auditor.NewTestRequestWrapper(
-		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-cid2")), tmsWithToken,
-	)
-	recordWithInputs := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
-		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
-	}
-	err := auditor.CompleteInputsWithEmptyEIDForTest(rw, context.Background(), recordWithInputs)
-	assert.NoError(t, err)
-}
-
-func TestRequestWrapper_AuditRecord(t *testing.T) {
-	tms := newTestManagementService(t)
-	rw := auditor.NewTestRequestWrapper(
-		token.NewRequest(tms, token.RequestAnchor("tx-ar")), tms,
-	)
-	record, err := rw.AuditRecord(context.Background())
-	require.NoError(t, err)
-	assert.NotNil(t, record)
 }
 
 // ---------------------------------------------------------------------------
@@ -633,6 +547,61 @@ func TestServiceManager_RestoreTMS(t *testing.T) {
 	err = sm2.RestoreTMS(token.TMSID{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get auditdb")
+}
+
+func TestServiceManager_RestoreTMS_GetAuditorError(t *testing.T) {
+	// GetNetwork and ServiceByTMSId succeed at the outer level, but the lazy
+	// factory fails because CheckService returns an error — so p.Get returns an error.
+	netProv := &auditmock.NetworkProvider{}
+	netProv.GetNetworkReturns(&network.Network{}, nil)
+
+	ssm := &auditdbmock.AuditStoreServiceManager{}
+	ssm.StoreServiceByTMSIdReturns(newTestStoreService(t, newFakeStore()), nil)
+
+	tsm := &auditmock.TokensServiceManager{}
+	tsm.ServiceByTMSIdReturns(&tokens.Service{}, nil)
+
+	csp := &auditmock.CheckServiceProvider{}
+	csp.CheckServiceReturns(nil, errors.New("checkservice err"))
+
+	sm := auditor.NewServiceManager(
+		netProv, ssm, tsm,
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		csp,
+	)
+	err := sm.RestoreTMS(token.TMSID{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get auditor for")
+}
+
+func TestServiceManager_RestoreTMS_TokenRequestsError(t *testing.T) {
+	// p.Get succeeds but the underlying store returns an error from QueryTokenRequests.
+	netProv := &auditmock.NetworkProvider{}
+	netProv.GetNetworkReturns(&network.Network{}, nil)
+
+	errStore := newFakeStore()
+	errStore.QueryTokenRequestsStub = func(_ context.Context, _ dbdriver.QueryTokenRequestsParams) (dbdriver.TokenRequestIterator, error) {
+		return nil, errors.New("token requests err")
+	}
+
+	ssm := &auditdbmock.AuditStoreServiceManager{}
+	ssm.StoreServiceByTMSIdReturns(newTestStoreService(t, errStore), nil)
+
+	tsm := &auditmock.TokensServiceManager{}
+	tsm.ServiceByTMSIdReturns(&tokens.Service{}, nil)
+
+	sm := auditor.NewServiceManager(
+		netProv, ssm, tsm,
+		&depmock.TokenManagementServiceProvider{},
+		noop.NewTracerProvider(),
+		nil,
+		&auditmock.CheckServiceProvider{},
+	)
+	err := sm.RestoreTMS(token.TMSID{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get tx iterator")
 }
 
 func TestServiceManager_RestoreTMS_Success(t *testing.T) {

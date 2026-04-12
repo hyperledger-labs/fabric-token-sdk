@@ -81,6 +81,30 @@ type Service struct {
 	checkService    CheckService
 }
 
+// NewService creates a new auditor Service with the provided dependencies.
+func NewService(
+	tmsID token.TMSID,
+	networkProvider NetworkProvider,
+	auditDB *auditdb.StoreService,
+	tokenDB *tokens.Service,
+	tmsProvider dep.TokenManagementServiceProvider,
+	finalityTracer trace.Tracer,
+	metricsProvider metrics.Provider,
+	checkService CheckService,
+) *Service {
+	return &Service{
+		tmsID:           tmsID,
+		networkProvider: networkProvider,
+		auditDB:         auditDB,
+		tokenDB:         tokenDB,
+		tmsProvider:     tmsProvider,
+		finalityTracer:  finalityTracer,
+		metricsProvider: metricsProvider,
+		metrics:         newMetrics(metricsProvider),
+		checkService:    checkService,
+	}
+}
+
 // Validate validates the passed token request
 func (a *Service) Validate(ctx context.Context, request *token.Request) error {
 	return request.AuditCheck(ctx)
