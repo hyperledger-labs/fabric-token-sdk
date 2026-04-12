@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	executor "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -52,6 +53,9 @@ type SetupParams struct {
 	CurveIDs           []math.CurveID
 	OwnerIdentityType  identity.Type
 	ProofType          rp.ProofType // RangeProofType or CSPRangeProofType
+	// ExecutorProvider controls how independent range proofs are executed.
+	// If nil, rp.SerialProvider{} is used (serial execution, zero overhead).
+	ExecutorProvider executor.ExecutorProvider
 }
 
 // SetupConfiguration holds the prepared public parameters and related
@@ -68,6 +72,8 @@ type SetupConfiguration struct {
 	IssuerSigner  *Signer
 	Bits          uint64
 	CurveID       math.CurveID
+	// ExecutorProvider is the execution strategy for range proofs in this configuration.
+	ExecutorProvider executor.ExecutorProvider
 }
 
 // SetupConfigurations contains a set of named benchmark configurations.
@@ -168,13 +174,21 @@ func NewSetupConfigurationsWithParams(params SetupParams) (*SetupConfigurations,
 				return nil, err
 			}
 			pp.AddAuditor(auditorID)
+
+			provider := params.ExecutorProvider
+			if provider == nil {
+				provider = executor.SerialProvider{}
+			}
+			pp.ExecutorProvider = provider
+
 			configurations[key(bit, curveID)] = &SetupConfiguration{
-				Bits:          bit,
-				CurveID:       curveID,
-				PP:            pp,
-				OwnerIdentity: oID,
-				AuditorSigner: auditorSigner,
-				IssuerSigner:  issuerSigner,
+				Bits:             bit,
+				CurveID:          curveID,
+				PP:               pp,
+				OwnerIdentity:    oID,
+				AuditorSigner:    auditorSigner,
+				IssuerSigner:     issuerSigner,
+				ExecutorProvider: provider,
 			}
 		}
 	}

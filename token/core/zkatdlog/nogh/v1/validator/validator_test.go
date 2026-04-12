@@ -131,12 +131,14 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
 	proofType := benchmark.ProofType()
+	executorProvider := benchmark.ExecutorProvider()
 	configurations, err := benchmark.NewSetupConfigurationsWithParams(benchmark.SetupParams{
 		IdemixTestdataPath: "./../testdata",
 		Bits:               bits,
 		CurveIDs:           curves,
 		OwnerIdentityType:  idemixnym.IdentityType,
 		ProofType:          proofType,
+		ExecutorProvider:   executorProvider,
 	})
 	require.NoError(t, err)
 
