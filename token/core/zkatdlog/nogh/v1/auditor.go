@@ -66,19 +66,28 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 		return errors.Wrapf(err, "failed to deserialize actions")
 	}
 
+	// Collect token IDs from the deserialized actions so we always have non-nil IDs,
+	// independent of whether the caller populated metadata.Transfers[i].Inputs[j].TokenID.
 	tokenIDs := make([]*token2.ID, 0)
-	for i, transfer := range metadata.Transfers {
+	for i, transfer := range transfers {
 		s.Logger.DebugfContext(ctx, "[%s] transfer action [%d] contains [%d] inputs", anchor, i, len(transfer.Inputs))
-		tokenIDs = append(tokenIDs, transfer.TokenIDs()...)
+		for _, input := range transfer.Inputs {
+			tokenIDs = append(tokenIDs, input.ID)
+		}
 	}
 
-	// tokenMap, err := s.TokenCommitmentLoader.GetTokenOutputs(ctx, tokenIDs)
-	// if err != nil {
-	// 	return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
-	// }
-	s.Logger.DebugfContext(ctx, "loaded [%d] corresponding inputs for TX [%s]", len(tokenIDs), anchor)
+	// Load the actual token commitments from the ledger.  ctx carries any deadline
+	// set by the caller so the retry loop inside GetTokenOutputs respects it.
+	tokenMap, err := s.TokenCommitmentLoader.GetTokenOutputs(ctx, tokenIDs)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting token outputs to perform auditor check for [%s]", anchor)
+	}
+	s.Logger.DebugfContext(ctx, "loaded [%d] ledger tokens for TX [%s]", len(tokenMap), anchor)
 
-	inputTokens := make([][]*token.Token, len(metadata.Transfers))
+	// Build the per-transfer, per-input token slices from the ledger map.
+	// Using the action's input IDs as keys preserves positional correspondence
+	// with metadata.Transfers[i].Inputs[j] which GetAuditInfoForTransfers relies on.
+	inputTokens := make([][]*token.Token, len(transfers))
 	for i, transfer := range transfers {
 		if err := transfer.Validate(); err != nil {
 			s.Logger.ErrorfContext(ctx, "failed to validate transfer: %s", err)
@@ -86,8 +95,12 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 			return errors.Wrapf(err, "failed to validate transfer")
 		}
 		inputTokens[i] = make([]*token.Token, len(transfer.Inputs))
-		for j := range transfer.Inputs {
-			inputTokens[i][j] = transfer.Inputs[j].Token
+		for j, input := range transfer.Inputs {
+			tok, ok := tokenMap[input.ID.String()]
+			if !ok {
+				return errors.Errorf("ledger token [%v] not found for transfer [%d] input [%d] in TX [%s]", input.ID, i, j, anchor)
+			}
+			inputTokens[i][j] = tok
 		}
 	}
 

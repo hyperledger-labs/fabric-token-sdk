@@ -38,7 +38,7 @@ func TestVaultLedgerTokenLoaderWithCounterfeiter(t *testing.T) {
 
 		res, err := loader.GetTokenOutputs(ctx, ids)
 		require.NoError(t, err)
-		assert.Equal(t, map[string]string{"tx1": "token-deserialized"}, res)
+		assert.Equal(t, map[string]string{"[tx1:0]": "token-deserialized"}, res)
 	})
 
 	t.Run("GetTokenOutputs_EmptyBytes", func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestVaultLedgerTokenLoaderWithCounterfeiter(t *testing.T) {
 
 		res, err := loader.GetTokenOutputs(ctx, ids)
 		require.NoError(t, err)
-		assert.Equal(t, map[string]string{"tx1": "token-deserialized"}, res)
+		assert.Equal(t, map[string]string{"[tx1:0]": "token-deserialized"}, res)
 		assert.Equal(t, 2, vault.GetTokenOutputsCallCount())
 	})
 
@@ -100,6 +100,36 @@ func TestVaultLedgerTokenLoaderWithCounterfeiter(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "bad token")
 		assert.Nil(t, res)
+	})
+
+	t.Run("GetTokenOutputs_MultipleOutputsSameTransaction", func(t *testing.T) {
+		// Two outputs from the same transaction must NOT collide in the result map.
+		// Before the fix (key = id.TxId), the second output would silently overwrite
+		// the first. With the fix (key = id.String() = "[txId:index]") both survive.
+		vault := &dmock.TokenVault{}
+		deserializer := &dmock.TokenDeserializer[string]{}
+		multiIDs := []*token.ID{{TxId: "tx1", Index: 0}, {TxId: "tx1", Index: 1}}
+		loader := NewLedgerTokenLoader[string](logger, nil, vault, deserializer)
+
+		callN := 0
+		vault.GetTokenOutputsCalls(func(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error {
+			if err := callback(ids[0], []byte("raw-0")); err != nil {
+				return err
+			}
+
+			return callback(ids[1], []byte("raw-1"))
+		})
+		deserializer.DeserializeTokenCalls(func(raw []byte) (string, error) {
+			callN++
+			return string(raw) + "-des", nil
+		})
+
+		res, err := loader.GetTokenOutputs(ctx, multiIDs)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"[tx1:0]": "raw-0-des",
+			"[tx1:1]": "raw-1-des",
+		}, res)
 	})
 
 	t.Run("GetTokenOutputs_IsPendingError", func(t *testing.T) {

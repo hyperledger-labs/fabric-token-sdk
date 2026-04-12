@@ -55,7 +55,7 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*
 			if err != nil {
 				return errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(bytes))
 			}
-			tokens[id.TxId] = ti
+			tokens[id.String()] = ti
 			counter++
 
 			return nil
