@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package interactive
+package interactive_test
 
 import (
 	"context"
@@ -16,6 +16,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	drivermock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
@@ -28,8 +30,8 @@ import (
 
 // makePopulatedQueryEngine returns a QueryEngineMock whose UnspentTokensIterator
 // returns a fresh iterator over the given items on every call.
-func makePopulatedQueryEngine(items []*token.UnspentToken) *QueryEngineMock {
-	qe := &QueryEngineMock{}
+func makePopulatedQueryEngine(items []*token.UnspentToken) *mock.QueryEngineMock {
+	qe := &mock.QueryEngineMock{}
 	qe.UnspentTokensIteratorStub = func(_ context.Context) (*token2.UnspentTokensIterator, error) {
 		iter := &drivermock.UnspentTokensIterator{}
 		for i, item := range items {
@@ -65,10 +67,10 @@ func (e *wrongMsgTypeEvent) Message() interface{} { return 42 }
 // TestNewCertificationClient_WithNotifier verifies that when a Subscriber is
 // provided the client registers itself for the expected topics.
 func TestNewCertificationClient_WithNotifier(t *testing.T) {
-	sub := &SubscriberMock{}
+	sub := &mock.SubscriberMock{}
 	storage := newFakeCertificationStorage()
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -77,10 +79,10 @@ func TestNewCertificationClient_WithNotifier(t *testing.T) {
 		&fakeViewManager{},
 		[]view.Identity{view.Identity([]byte("c"))},
 		sub,
-		DefaultMaxAttempts, DefaultWaitTime,
-		DefaultBatchSize, DefaultBufferSize,
-		DefaultFlushInterval, DefaultWorkers,
-		DefaultResponseTimeout,
+		interactive.DefaultMaxAttempts, interactive.DefaultWaitTime,
+		interactive.DefaultBatchSize, interactive.DefaultBufferSize,
+		interactive.DefaultFlushInterval, interactive.DefaultWorkers,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -137,11 +139,11 @@ func TestRequestCertification_PartialAlreadyCertified(t *testing.T) {
 // exhausting maxAttempts.
 func TestRequestCertification_RetriesExhausted(t *testing.T) {
 	certErr := errors.New("certifier down")
-	vm := &ViewManagerMock{}
+	vm := &mock.ViewManagerMock{}
 	vm.InitiateViewReturns(nil, certErr)
 	storage := newFakeCertificationStorage()
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -153,7 +155,7 @@ func TestRequestCertification_RetriesExhausted(t *testing.T) {
 		2,                  // maxAttempts=2
 		1*time.Millisecond, // short retry gap
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -169,11 +171,11 @@ func TestRequestCertification_RetriesExhausted(t *testing.T) {
 // context during a retry wait causes RequestCertification to return
 // context.DeadlineExceeded promptly instead of waiting for the full retry gap.
 func TestRequestCertification_ContextCancelled(t *testing.T) {
-	vm := &ViewManagerMock{}
+	vm := &mock.ViewManagerMock{}
 	vm.InitiateViewReturns(nil, errors.New("always fails"))
 	storage := newFakeCertificationStorage()
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -185,7 +187,7 @@ func TestRequestCertification_ContextCancelled(t *testing.T) {
 		10,             // many attempts — context must cancel first
 		10*time.Second, // long wait between retries
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -202,11 +204,11 @@ func TestRequestCertification_ContextCancelled(t *testing.T) {
 // TestRequestCertification_InvalidReturnType verifies the error path when the
 // ViewManager returns a type that cannot be cast to map[*token.ID][]byte.
 func TestRequestCertification_InvalidReturnType(t *testing.T) {
-	vm := &ViewManagerMock{}
+	vm := &mock.ViewManagerMock{}
 	vm.InitiateViewReturns("not-a-map", nil)
 	storage := newFakeCertificationStorage()
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -217,7 +219,7 @@ func TestRequestCertification_InvalidReturnType(t *testing.T) {
 		nil,
 		1, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -233,11 +235,11 @@ func TestRequestCertification_InvalidReturnType(t *testing.T) {
 func TestRequestCertification_StoreError(t *testing.T) {
 	vm := &fakeViewManager{}
 	storeErr := errors.New("storage is unavailable")
-	storage := &CertificationStorageMock{}
+	storage := &mock.CertificationStorageMock{}
 	storage.ExistsReturns(false)
 	storage.StoreReturns(storeErr)
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -248,7 +250,7 @@ func TestRequestCertification_StoreError(t *testing.T) {
 		nil,
 		1, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -268,7 +270,7 @@ func TestRequestCertification_RetryThenSuccess(t *testing.T) {
 	vm := &fakeViewManager{failErr: transientErr}
 	storage := newFakeCertificationStorage()
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -280,7 +282,7 @@ func TestRequestCertification_RetryThenSuccess(t *testing.T) {
 		3, // 3 attempts available
 		1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -306,7 +308,7 @@ func TestOnReceive_WrongMessageType(t *testing.T) {
 	assert.NotPanics(t, func() {
 		cc.OnReceive(&wrongMsgTypeEvent{})
 	})
-	assert.Empty(t, cc.tokens, "wrong-type event must not enqueue a token")
+	assert.Empty(t, interactive.ClientTokensChan(cc), "wrong-type event must not enqueue a token")
 }
 
 // TestOnReceive_UnknownTopic verifies that an event with an unregistered topic
@@ -319,7 +321,7 @@ func TestOnReceive_UnknownTopic(t *testing.T) {
 	assert.NotPanics(t, func() {
 		cc.OnReceive(&unknownTopicEvent{})
 	})
-	assert.Empty(t, cc.tokens, "unknown-topic event must not enqueue a token")
+	assert.Empty(t, interactive.ClientTokensChan(cc), "unknown-topic event must not enqueue a token")
 }
 
 // ---------------------------------------------------------------------------
@@ -350,7 +352,7 @@ func TestScan_UncertifiedTokens(t *testing.T) {
 		{Id: token.ID{TxId: "vault-tx-2", Index: 0}},
 	}
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -361,7 +363,7 @@ func TestScan_UncertifiedTokens(t *testing.T) {
 		nil,
 		2, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -387,7 +389,7 @@ func TestScan_AlreadyCertified(t *testing.T) {
 		{Id: token.ID{TxId: "pre-certified", Index: 0}},
 	}
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -398,7 +400,7 @@ func TestScan_AlreadyCertified(t *testing.T) {
 		nil,
 		2, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -422,7 +424,7 @@ func TestProcessBatch_EmptyBatch_TriggersVaultScan(t *testing.T) {
 		{Id: token.ID{TxId: "vault-via-empty-batch", Index: 0}},
 	}
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -433,12 +435,12 @@ func TestProcessBatch_EmptyBatch_TriggersVaultScan(t *testing.T) {
 		nil,
 		2, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
 	// Invoke directly — no Start() needed.
-	cc.processBatch([]*token.ID{})
+	interactive.ClientProcessBatch(cc, []*token.ID{})
 
 	id := &unspent[0].Id
 	assert.True(t, storage.Exists(context.Background(), id),
@@ -450,11 +452,11 @@ func TestProcessBatch_EmptyBatch_TriggersVaultScan(t *testing.T) {
 // tokens channel for a future retry rather than silently dropped.
 func TestProcessBatch_CertificationFailure_PushesBackToBuffer(t *testing.T) {
 	certErr := errors.New("certification service unavailable")
-	vm := &ViewManagerMock{}
+	vm := &mock.ViewManagerMock{}
 	vm.InitiateViewReturns(nil, certErr)
 	storage := newFakeCertificationStorage()
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"ch", "ns",
@@ -468,16 +470,16 @@ func TestProcessBatch_CertificationFailure_PushesBackToBuffer(t *testing.T) {
 		10,
 		100, // bufferSize=100, enough room for push-back
 		1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 	// Do NOT Start() — we call processBatch directly so the tokens channel
 	// is not being consumed by the accumulator.
 
 	id := &token.ID{TxId: "pushback-tx", Index: 0}
-	cc.processBatch([]*token.ID{id})
+	interactive.ClientProcessBatch(cc, []*token.ID{id})
 
-	assert.Len(t, cc.tokens, 1, "failed token should be pushed back to the tokens channel")
+	assert.Len(t, interactive.ClientTokensChan(cc), 1, "failed token should be pushed back to the tokens channel")
 }
 
 // ---------------------------------------------------------------------------
@@ -489,7 +491,7 @@ func TestProcessBatch_CertificationFailure_PushesBackToBuffer(t *testing.T) {
 func TestNewDriver_Construction(t *testing.T) {
 	mp := &disabled.Provider{}
 
-	d := NewDriver(nil, nil, nil, &fakeViewManager{}, &ResponderRegistryMock{}, mp)
+	d := interactive.NewDriver(nil, nil, nil, &fakeViewManager{}, &mock.ResponderRegistryMock{}, mp)
 
 	assert.NotNil(t, d)
 	assert.NotNil(t, d.CertificationClients, "CertificationClients map should be initialised")
@@ -506,10 +508,10 @@ func TestNewDriver_Construction(t *testing.T) {
 // is propagated back to the caller.
 func TestScan_QueryEngineError(t *testing.T) {
 	queryErr := errors.New("vault iterator failure")
-	qe := &QueryEngineMock{}
+	qe := &mock.QueryEngineMock{}
 	qe.UnspentTokensIteratorReturns(nil, queryErr)
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"net", "ch", "ns",
 		qe,
@@ -519,7 +521,7 @@ func TestScan_QueryEngineError(t *testing.T) {
 		nil,
 		1, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -532,14 +534,14 @@ func TestScan_QueryEngineError(t *testing.T) {
 // fails for uncertified vault tokens, Scan propagates the error.
 func TestScan_RequestCertificationError(t *testing.T) {
 	certErr := errors.New("certification service down")
-	vm := &ViewManagerMock{}
+	vm := &mock.ViewManagerMock{}
 	vm.InitiateViewReturns(nil, certErr)
 
 	unspent := []*token.UnspentToken{
 		{Id: token.ID{TxId: "scan-fail-tx", Index: 0}},
 	}
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"net", "ch", "ns",
 		makePopulatedQueryEngine(unspent),
@@ -549,7 +551,7 @@ func TestScan_RequestCertificationError(t *testing.T) {
 		nil,
 		1, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
@@ -566,10 +568,10 @@ func TestScan_RequestCertificationError(t *testing.T) {
 // triggered by an empty batch returns an error, processBatch logs and returns
 // without panicking.
 func TestProcessBatch_EmptyBatch_ScanError(t *testing.T) {
-	qe := &QueryEngineMock{}
+	qe := &mock.QueryEngineMock{}
 	qe.UnspentTokensIteratorReturns(nil, errors.New("vault error"))
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"net", "ch", "ns",
 		qe,
@@ -579,12 +581,12 @@ func TestProcessBatch_EmptyBatch_ScanError(t *testing.T) {
 		nil,
 		1, 1*time.Millisecond,
 		10, 1000, 1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
 	require.NotPanics(t, func() {
-		cc.processBatch([]*token.ID{})
+		interactive.ClientProcessBatch(cc, []*token.ID{})
 	})
 }
 
@@ -593,10 +595,10 @@ func TestProcessBatch_EmptyBatch_ScanError(t *testing.T) {
 // is dropped rather than causing a deadlock.
 func TestProcessBatch_FailureBufferFull_DropsTokens(t *testing.T) {
 	certErr := errors.New("certifier unavailable")
-	vm := &ViewManagerMock{}
+	vm := &mock.ViewManagerMock{}
 	vm.InitiateViewReturns(nil, certErr)
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"net", "ch", "ns",
 		&fakeQueryEngine{},
@@ -608,16 +610,16 @@ func TestProcessBatch_FailureBufferFull_DropsTokens(t *testing.T) {
 		1,
 		1, // bufferSize=1 — filled below so push-back overflows
 		1*time.Second, 1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 
 	// Fill the buffer to capacity so push-back hits the default (drop) branch.
-	cc.tokens <- &token.ID{TxId: "pre-fill", Index: 0}
+	interactive.ClientTokensChan(cc) <- &token.ID{TxId: "pre-fill", Index: 0}
 
 	done := make(chan struct{})
 	go func() {
-		cc.processBatch([]*token.ID{{TxId: "fail-tx", Index: 0}})
+		interactive.ClientProcessBatch(cc, []*token.ID{{TxId: "fail-tx", Index: 0}})
 		close(done)
 	}()
 

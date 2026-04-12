@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package interactive
+package interactive_test
 
 import (
 	"testing"
@@ -12,6 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	token "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,12 +23,12 @@ import (
 func TestDriver_NewCertificationService_BackendFactoryError(t *testing.T) {
 	factoryErr := errors.New("backend init failed")
 
-	d := NewDriver(
-		func(_ *token.ManagementService, _ string) (Backend, error) {
+	d := interactive.NewDriver(
+		func(_ *token.ManagementService, _ string) (interactive.Backend, error) {
 			return nil, factoryErr
 		},
 		nil, nil, &fakeViewManager{},
-		&ResponderRegistryMock{},
+		&mock.ResponderRegistryMock{},
 		&disabled.Provider{},
 	)
 

@@ -30,18 +30,18 @@ const (
 
 var logger = logging.MustGetLogger()
 
-//go:generate sh -c "counterfeiter -o query_engine_mock.go -fake-name QueryEngineMock . QueryEngine && sed -i '/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\\/services\\/certifier\\/interactive\"/d' query_engine_mock.go && sed -i 's/interactive\\.QueryEngine/QueryEngine/g' query_engine_mock.go"
+//go:generate counterfeiter -o mock/query_engine.go -fake-name QueryEngineMock . QueryEngine
 type QueryEngine interface {
 	UnspentTokensIterator(ctx context.Context) (*token2.UnspentTokensIterator, error)
 }
 
-//go:generate sh -c "counterfeiter -o certification_storage_mock.go -fake-name CertificationStorageMock . CertificationStorage && sed -i '/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\\/services\\/certifier\\/interactive\"/d' certification_storage_mock.go && sed -i 's/interactive\\.CertificationStorage/CertificationStorage/g' certification_storage_mock.go"
+//go:generate counterfeiter -o mock/certification_storage.go -fake-name CertificationStorageMock . CertificationStorage
 type CertificationStorage interface {
 	Exists(ctx context.Context, id *token.ID) bool
 	Store(ctx context.Context, certifications map[*token.ID][]byte) error
 }
 
-//go:generate sh -c "counterfeiter -o view_manager_mock.go -fake-name ViewManagerMock . ViewManager && sed -i '/\"github.com\\/hyperledger-labs\\/fabric-token-sdk\\/token\\/services\\/certifier\\/interactive\"/d' view_manager_mock.go && sed -i 's/interactive\\.ViewManager/ViewManager/g' view_manager_mock.go"
+//go:generate counterfeiter -o mock/view_manager.go -fake-name ViewManagerMock . ViewManager
 type ViewManager interface {
 	InitiateView(view view.View) (interface{}, error)
 }
