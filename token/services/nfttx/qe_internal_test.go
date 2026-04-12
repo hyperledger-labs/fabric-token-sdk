@@ -13,7 +13,7 @@ import (
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 	"github.com/thedevsaddam/gojsonq"
 )
 
@@ -50,4 +50,14 @@ func TestJsonFilter(t *testing.T) {
 		value: "pineapple",
 	}
 	assert.False(t, f.ContainsToken(tok))
+}
+
+func TestContainsToken_DecodeError(t *testing.T) {
+	f := &jsonFilter{}
+	tok := &token2.UnspentToken{Type: "invalid-base64"}
+	assert.False(t, f.ContainsToken(tok))
+
+	tok2 := &token2.UnspentToken{Type: token2.Type(base64.StdEncoding.EncodeToString([]byte(`{"LinearID": 100}`)))}
+	f2 := &jsonFilter{q: gojsonq.New(), key: "LinearID", value: "100"}
+	assert.False(t, f2.ContainsToken(tok2))
 }
