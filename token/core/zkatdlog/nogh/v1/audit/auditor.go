@@ -122,7 +122,6 @@ func (a *Auditor) Check(
 	inputTokens [][]*token.Token,
 	txID driver.TokenRequestAnchor,
 ) error {
-	// TODO: inputTokens should be checked against the actions
 	// De-obfuscate issue requests
 	a.Logger.DebugfContext(ctx, "Get audit info for %d issues", len(tokenRequest.Issues))
 	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssues(tokenRequest.Issues, tokenRequestMetadata.Issues)
@@ -144,7 +143,7 @@ func (a *Auditor) Check(
 	}
 	// De-obfuscate transfer requests
 	a.Logger.DebugfContext(ctx, "Get audit info for %d transfers", len(tokenRequest.Transfers))
-	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfers(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
+	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfers(ctx, tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers for [%s]", txID)
 	}
@@ -333,7 +332,7 @@ func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver
 
 // GetAuditInfoForTransfers returns an array of InspectableToken for each transfer action.
 // It takes an array of serialized transfer actions, an array of transfer metadata and input tokens.
-func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error) {
+func (a *Auditor) GetAuditInfoForTransfers(ctx context.Context, transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
 	}
@@ -367,6 +366,25 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 		if err != nil {
 			return nil, nil, err
 		}
+		// Verify that the number of action inputs matches and each input token matches what the
+		// transfer action committed to (#998).
+		if len(ta.Inputs) != len(inputs[k]) {
+			return nil, nil, errors.Errorf("transfer action at index [%d]: has [%d] inputs but [%d] tokens provided", k, len(ta.Inputs), len(inputs[k]))
+		}
+		for i, actionInput := range ta.Inputs {
+			if actionInput == nil || actionInput.Token == nil {
+				continue // nil or upgrade-witness input: skip commitment comparison
+			}
+			if inputs[k][i].Data == nil || actionInput.Token.Data == nil {
+				return nil, nil, errors.Errorf("input token at index [%d][%d]: nil token commitment", k, i)
+			}
+			if !inputs[k][i].Data.Equals(actionInput.Token.Data) {
+				return nil, nil, errors.Errorf("input token at index [%d][%d]: commitment does not match the transfer action", k, i)
+			}
+			if !bytes.Equal(inputs[k][i].Owner, actionInput.Token.Owner) {
+				return nil, nil, errors.Errorf("input token at index [%d][%d]: owner does not match the transfer action", k, i)
+			}
+		}
 		if len(ta.Outputs) != len(transferMetadata.Outputs) {
 			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.Outputs), len(transferMetadata.Outputs))
 		}
@@ -385,7 +403,6 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			if err != nil {
 				return nil, nil, err
 			}
-			// TODO: we need to check also how many recipients the output contains, and check them all in isolation and compatibility
 			outputs[k][i], err = NewInspectableToken(
 				ta.Outputs[i],
 				transferMetadata.Outputs[i].OutputAuditInfo,
@@ -395,6 +412,24 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			)
 			if err != nil {
 				return nil, nil, err
+			}
+			// Verify each declared recipient for non-redeemed outputs in isolation (#1000).
+			if !ta.Outputs[i].IsRedeem() {
+				if len(transferMetadata.Outputs[i].Receivers) == 0 {
+					return nil, nil, errors.Errorf("output at index [%d][%d] has no receivers", k, i)
+				}
+				for j, receiver := range transferMetadata.Outputs[i].Receivers {
+					if receiver == nil {
+						return nil, nil, errors.Errorf("receiver at index [%d][%d][%d] is nil", k, i, j)
+					}
+					if err := a.InspectIdentity(ctx, a.InfoMatcher, &InspectableIdentity{
+						Identity:         ta.Outputs[i].Owner,
+						IdentityFromMeta: receiver.Identity,
+						AuditInfo:        receiver.AuditInfo,
+					}, j); err != nil {
+						return nil, nil, errors.Wrapf(err, "failed inspecting receiver at index [%d][%d][%d]", k, i, j)
+					}
+				}
 			}
 		}
 	}
