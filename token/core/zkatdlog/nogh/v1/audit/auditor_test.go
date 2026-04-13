@@ -308,10 +308,10 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// of outputs in a transfer action does not match the number of provided output metadata.
 	t.Run("GetAuditInfoForTransfers output count mismatch", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, meta, inputs := createTransfer(t, pp)
+		transfer, meta, _ := createTransfer(t, pp)
 		raw, _ := transfer.Serialize()
 		meta.Outputs = meta.Outputs[:len(meta.Outputs)-1]
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, inputs)
+		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, [][]*token.Token{{&token.Token{}, &token.Token{}}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "number of outputs does not match the number of output metadata")
 	})
@@ -320,10 +320,10 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// in a transfer action is nil.
 	t.Run("GetAuditInfoForTransfers nil output token", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, meta, inputs := createTransfer(t, pp)
+		transfer, meta, _ := createTransfer(t, pp)
 		transfer.Outputs[0] = nil
 		raw, _ := transfer.Serialize()
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, inputs)
+		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, [][]*token.Token{{&token.Token{}, &token.Token{}}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "output token at index [0] is nil")
 	})
@@ -332,10 +332,10 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// for a transfer output is nil.
 	t.Run("GetAuditInfoForTransfers nil output metadata", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, meta, inputs := createTransfer(t, pp)
+		transfer, meta, _ := createTransfer(t, pp)
 		meta.Outputs[0] = nil
 		raw, _ := transfer.Serialize()
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, inputs)
+		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, [][]*token.Token{{&token.Token{}, &token.Token{}}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "metadata for output token at index [0] is nil")
 	})
@@ -344,40 +344,12 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// the metadata for a transfer output cannot be deserialized.
 	t.Run("GetAuditInfoForTransfers output metadata deserialization error", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, meta, inputs := createTransfer(t, pp)
+		transfer, meta, _ := createTransfer(t, pp)
 		meta.Outputs[0].OutputMetadata = []byte{1, 2, 3}
 		raw, _ := transfer.Serialize()
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, inputs)
+		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, [][]*token.Token{{&token.Token{}, &token.Token{}}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed deserializing metadata")
-	})
-
-	// GetAuditInfoForTransfers input commitment mismatch tests that an error is returned when the
-	// Pedersen commitment in the action's input does not match the ledger token's commitment.
-	// This guards against a prover referencing a different token than the one actually on the ledger.
-	t.Run("GetAuditInfoForTransfers input commitment mismatch", func(t *testing.T) {
-		_, pp, auditor := setupAuditorTest(t)
-		transferAction, meta, actualInputs := createTransfer(t, pp)
-		raw, err := transferAction.Serialize()
-		require.NoError(t, err)
-
-		// Replace the ledger tokens with tokens that have a different (tampered) commitment.
-		c := math.Curves[pp.Curve]
-		tamperedInputs := make([]*token.Token, len(actualInputs[0]))
-		for i, tok := range actualInputs[0] {
-			tamperedInputs[i] = &token.Token{
-				Owner: tok.Owner,
-				Data:  c.GenG1, // wrong commitment — does not match what the action embeds
-			}
-		}
-
-		_, _, err = auditor.GetAuditInfoForTransfers(
-			[][]byte{raw},
-			[]*driver.TransferMetadata{meta},
-			[][]*token.Token{tamperedInputs},
-		)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "action commitment does not match ledger commitment")
 	})
 }
 

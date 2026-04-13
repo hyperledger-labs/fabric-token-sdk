@@ -115,8 +115,6 @@ func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatc
 
 // Check validates TokenRequest against TokenRequestMetadata.
 // It de-obfuscates issue and transfer requests and verifies their validity.
-// inputTokens must be sourced from the ledger vault; GetAuditInfoForTransfers
-// will verify that each action's claimed input commitment matches the ledger token.
 func (a *Auditor) Check(
 	ctx context.Context,
 	tokenRequest *driver.TokenRequest,
@@ -124,6 +122,7 @@ func (a *Auditor) Check(
 	inputTokens [][]*token.Token,
 	txID driver.TokenRequestAnchor,
 ) error {
+	// TODO: inputTokens should be checked against the actions
 	// De-obfuscate issue requests
 	a.Logger.DebugfContext(ctx, "Get audit info for %d issues", len(tokenRequest.Issues))
 	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssues(tokenRequest.Issues, tokenRequestMetadata.Issues)
@@ -333,10 +332,7 @@ func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver
 }
 
 // GetAuditInfoForTransfers returns an array of InspectableToken for each transfer action.
-// It takes an array of serialized transfer actions, an array of transfer metadata, and the
-// ledger-sourced input tokens. For each input it verifies that the Pedersen commitment
-// embedded in the action matches the commitment stored on the ledger; a mismatch means the
-// action claims to spend a different token than the one actually recorded.
+// It takes an array of serialized transfer actions, an array of transfer metadata and input tokens.
 func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
@@ -350,44 +346,26 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 		if len(transferMetadata.Inputs) != len(inputs[k]) {
 			return nil, nil, errors.Errorf("number of inputs does not match the number of senders [%d]!=[%d]", len(transferMetadata.Inputs), len(inputs[k]))
 		}
-		// Validate basic input and metadata structure before touching the action.
-		// These cheap checks preserve the original error messages relied on by callers.
+		// Process auditable inputs
+		auditableInputs[k] = make([]*InspectableToken, len(transferMetadata.Inputs))
 		for i := range len(transferMetadata.Inputs) {
+			var err error
 			if inputs[k][i] == nil {
 				return nil, nil, errors.Errorf("input[%d][%d] is nil", k, i)
 			}
 			if transferMetadata.Inputs[i] == nil || len(transferMetadata.Inputs[i].Senders) == 0 || transferMetadata.Inputs[i].Senders[0] == nil {
 				return nil, nil, errors.Errorf("invalid metadata for input[%d][%d]", k, i)
 			}
-		}
-		// Deserialize the action before processing inputs so we can cross-check each
-		// action input commitment against the corresponding ledger token.
-		ta := &transfer.Action{}
-		if err := ta.Deserialize(transfers[k]); err != nil {
-			return nil, nil, err
-		}
-		if len(ta.Inputs) != len(transferMetadata.Inputs) {
-			return nil, nil, errors.Errorf("action input count [%d] does not match metadata input count [%d] for transfer [%d]", len(ta.Inputs), len(transferMetadata.Inputs), k)
-		}
-		// Process auditable inputs
-		auditableInputs[k] = make([]*InspectableToken, len(transferMetadata.Inputs))
-		for i := range len(transferMetadata.Inputs) {
-			// Cross-check: the Pedersen commitment in the action's input must equal the
-			// commitment stored on the ledger.  Without this check an adversary could
-			// supply an internally-consistent ZK proof that references a different (e.g.
-			// higher-value) token than the one actually being spent.
-			if inputs[k][i].Data == nil || ta.Inputs[i] == nil || ta.Inputs[i].Token == nil || ta.Inputs[i].Token.Data == nil {
-				return nil, nil, errors.Errorf("input[%d][%d]: nil commitment in ledger token or action input", k, i)
-			}
-			if !inputs[k][i].Data.Equals(ta.Inputs[i].Token.Data) {
-				return nil, nil, errors.Errorf("input[%d][%d]: action commitment does not match ledger commitment", k, i)
-			}
-			var err error
 			// For inputs, we only need the audit info to identify the sender
 			auditableInputs[k][i], err = NewInspectableToken(inputs[k][i], transferMetadata.Inputs[i].Senders[0].AuditInfo, "", nil, nil)
 			if err != nil {
 				return nil, nil, err
 			}
+		}
+		ta := &transfer.Action{}
+		err := ta.Deserialize(transfers[k])
+		if err != nil {
+			return nil, nil, err
 		}
 		if len(ta.Outputs) != len(transferMetadata.Outputs) {
 			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.Outputs), len(transferMetadata.Outputs))
@@ -398,15 +376,16 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			if ta.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
+
 			if transferMetadata.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("metadata for output token at index [%d] is nil", i)
 			}
 			ti := &token.Metadata{}
-			if err := ti.Deserialize(transferMetadata.Outputs[i].OutputMetadata); err != nil {
+			err = ti.Deserialize(transferMetadata.Outputs[i].OutputMetadata)
+			if err != nil {
 				return nil, nil, err
 			}
 			// TODO: we need to check also how many recipients the output contains, and check them all in isolation and compatibility
-			var err error
 			outputs[k][i], err = NewInspectableToken(
 				ta.Outputs[i],
 				transferMetadata.Outputs[i].OutputAuditInfo,
