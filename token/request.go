@@ -312,6 +312,11 @@ func (r *Request) Issue(ctx context.Context, wallet *IssuerWallet, receiver Iden
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
 
+	// Validate metadata size
+	if err := validateMetadata(opt.Attributes); err != nil {
+		return nil, errors.Wrap(err, "invalid metadata")
+	}
+
 	// Compute Issue
 	action, metaRaw, err := r.TokenService.tms.IssueService().Issue(
 		ctx,
@@ -343,15 +348,40 @@ func (r *Request) Issue(ctx context.Context, wallet *IssuerWallet, receiver Iden
 // In other words, owners[0] will receives values[0], and so on.
 // Additional options can be passed to customize the action.
 func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.Type, values []uint64, owners []Identity, opts ...TransferOption) (*TransferAction, error) {
-	for _, v := range values {
+	// Validate token type
+	if typ == "" {
+		return nil, errors.Errorf("type is empty")
+	}
+
+	// Validate values
+	for i, v := range values {
 		if v == 0 {
-			return nil, errors.Errorf("value is zero")
+			return nil, errors.Errorf("value at index %d is zero", i)
 		}
 	}
+
+	// Validate owners match values length
+	if len(owners) != len(values) {
+		return nil, errors.Errorf("number of owners [%d] does not match number of values [%d]", len(owners), len(values))
+	}
+
+	// Validate all owners are defined
+	for i, owner := range owners {
+		if owner.IsNone() {
+			return nil, errors.Errorf("owner at index %d is not defined", i)
+		}
+	}
+
 	opt, err := CompileTransferOptions(opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
+
+	// Validate metadata size
+	if err := validateMetadata(opt.Attributes); err != nil {
+		return nil, errors.Wrap(err, "invalid metadata")
+	}
+
 	tokenIDs, outputTokens, err := r.prepareTransfer(ctx, false, wallet, typ, values, owners, opt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed preparing transfer")
@@ -397,10 +427,26 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 // The action redeems tokens of the passed type for a total amount matching the passed value.
 // Additional options can be passed to customize the action.
 func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Type, value uint64, opts ...TransferOption) (*TransferAction, error) {
+	// Validate token type
+	if typ == "" {
+		return nil, errors.Errorf("type is empty")
+	}
+
+	// Validate value
+	if value == 0 {
+		return nil, errors.Errorf("value is zero")
+	}
+
 	opt, err := CompileTransferOptions(opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
+
+	// Validate metadata size
+	if err := validateMetadata(opt.Attributes); err != nil {
+		return nil, errors.Wrap(err, "invalid metadata")
+	}
+
 	tokenIDs, outputTokens, err := r.prepareTransfer(ctx, true, wallet, typ, []uint64{value}, []Identity{nil}, opt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed preparing transfer")
@@ -1557,4 +1603,27 @@ func (r *Request) cleanupInputIDs(ds []*token.ID) []*token.ID {
 	}
 
 	return newSlice
+}
+
+// validateMetadata validates metadata fields for size and key constraints
+func validateMetadata(metadata map[interface{}]interface{}) error {
+	if metadata == nil {
+		return nil
+	}
+
+	for key, value := range metadata {
+		keyStr, isString := key.(string)
+		if key == nil || (isString && keyStr == "") {
+			return errors.Errorf("metadata key cannot be empty")
+		}
+
+		// Check size for byte slice values
+		if bytes, ok := value.([]byte); ok {
+			if len(bytes) > 10*1024 { // 10KB limit
+				return errors.Errorf("metadata value for key [%v] exceeds maximum size of 10KB", key)
+			}
+		}
+	}
+
+	return nil
 }
