@@ -128,11 +128,11 @@ func TestAuditor_Errors(t *testing.T) {
 	// in the number of transfers, transfer metadata, or input tokens.
 	t.Run("GetAuditInfoForTransfers length mismatch", func(t *testing.T) {
 		_, _, auditor := setupAuditorTest(t)
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{{1}}, nil, nil)
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{{1}}, nil, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "number of transfers does not match the number of provided metadata")
 
-		_, _, err = auditor.GetAuditInfoForTransfers([][]byte{{1}}, []*driver.TransferMetadata{{}}, nil)
+		_, _, err = auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{{1}}, []*driver.TransferMetadata{{}}, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "number of inputs does not match the number of provided metadata")
 	})
@@ -280,7 +280,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// for a transfer is nil.
 	t.Run("GetAuditInfoForTransfers nil input token", func(t *testing.T) {
 		_, _, auditor := setupAuditorTest(t)
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{{}}, []*driver.TransferMetadata{{Inputs: []*driver.TransferInputMetadata{{}}}}, [][]*token.Token{{nil}})
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{{}}, []*driver.TransferMetadata{{Inputs: []*driver.TransferInputMetadata{{}}}}, [][]*token.Token{{nil}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "input[0][0] is nil")
 	})
@@ -289,7 +289,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// metadata for a transfer input is nil.
 	t.Run("GetAuditInfoForTransfers invalid input metadata", func(t *testing.T) {
 		_, _, auditor := setupAuditorTest(t)
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{{}}, []*driver.TransferMetadata{{Inputs: []*driver.TransferInputMetadata{nil}}}, [][]*token.Token{{&token.Token{}}})
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{{}}, []*driver.TransferMetadata{{Inputs: []*driver.TransferInputMetadata{nil}}}, [][]*token.Token{{&token.Token{}}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid metadata for input[0][0]")
 	})
@@ -299,7 +299,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	t.Run("GetAuditInfoForTransfers transfer deserialization error", func(t *testing.T) {
 		_, _, auditor := setupAuditorTest(t)
 		inputs := []*driver.TransferInputMetadata{{Senders: []*driver.AuditableIdentity{{AuditInfo: []byte{1}}}}}
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{{1, 2, 3}}, []*driver.TransferMetadata{{Inputs: inputs}}, [][]*token.Token{{&token.Token{}}})
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{{1, 2, 3}}, []*driver.TransferMetadata{{Inputs: inputs}}, [][]*token.Token{{&token.Token{}}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to deserialize transfer action")
 	})
@@ -308,10 +308,10 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// of outputs in a transfer action does not match the number of provided output metadata.
 	t.Run("GetAuditInfoForTransfers output count mismatch", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, meta, _ := createTransfer(t, pp)
+		transfer, meta, tokens := createTransfer(t, pp)
 		raw, _ := transfer.Serialize()
 		meta.Outputs = meta.Outputs[:len(meta.Outputs)-1]
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, [][]*token.Token{{&token.Token{}, &token.Token{}}})
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "number of outputs does not match the number of output metadata")
 	})
@@ -320,10 +320,10 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// in a transfer action is nil.
 	t.Run("GetAuditInfoForTransfers nil output token", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, meta, _ := createTransfer(t, pp)
+		transfer, meta, tokens := createTransfer(t, pp)
 		transfer.Outputs[0] = nil
 		raw, _ := transfer.Serialize()
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, [][]*token.Token{{&token.Token{}, &token.Token{}}})
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "output token at index [0] is nil")
 	})
@@ -332,10 +332,10 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// for a transfer output is nil.
 	t.Run("GetAuditInfoForTransfers nil output metadata", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, meta, _ := createTransfer(t, pp)
+		transfer, meta, tokens := createTransfer(t, pp)
 		meta.Outputs[0] = nil
 		raw, _ := transfer.Serialize()
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, [][]*token.Token{{&token.Token{}, &token.Token{}}})
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "metadata for output token at index [0] is nil")
 	})
@@ -344,12 +344,64 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	// the metadata for a transfer output cannot be deserialized.
 	t.Run("GetAuditInfoForTransfers output metadata deserialization error", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, meta, _ := createTransfer(t, pp)
+		transfer, meta, tokens := createTransfer(t, pp)
 		meta.Outputs[0].OutputMetadata = []byte{1, 2, 3}
 		raw, _ := transfer.Serialize()
-		_, _, err := auditor.GetAuditInfoForTransfers([][]byte{raw}, []*driver.TransferMetadata{meta}, [][]*token.Token{{&token.Token{}, &token.Token{}}})
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed deserializing metadata")
+	})
+
+	// GetAuditInfoForTransfers input token commitment mismatch tests that an error is returned when
+	// an input token's Pedersen commitment does not match the one embedded in the transfer action (#998).
+	t.Run("GetAuditInfoForTransfers input token commitment mismatch", func(t *testing.T) {
+		_, pp, auditor := setupAuditorTest(t)
+		transfer, meta, tokens := createTransfer(t, pp)
+		raw, _ := transfer.Serialize()
+		tokens[0][0].Data = pp.PedersenGenerators[0] // tamper with commitment
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "commitment does not match the transfer action")
+	})
+
+	// GetAuditInfoForTransfers input token owner mismatch tests that an error is returned when
+	// an input token's owner does not match the one embedded in the transfer action (#998).
+	t.Run("GetAuditInfoForTransfers input token owner mismatch", func(t *testing.T) {
+		_, pp, auditor := setupAuditorTest(t)
+		transfer, meta, tokens := createTransfer(t, pp)
+		raw, _ := transfer.Serialize()
+		tokens[0][0].Owner = []byte("wrong-owner") // tamper with owner
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "owner does not match the transfer action")
+	})
+
+	// GetAuditInfoForTransfers no receivers for output tests that an error is returned when a
+	// non-redeemed output has no declared receivers (#1000).
+	t.Run("GetAuditInfoForTransfers no receivers for output", func(t *testing.T) {
+		_, pp, auditor := setupAuditorTest(t)
+		transfer, meta, tokens := createTransfer(t, pp)
+		raw, _ := transfer.Serialize()
+		meta.Outputs[0].Receivers = nil
+		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "has no receivers")
+	})
+
+	// GetAuditInfoForTransfers receiver audit info mismatch tests that an error is returned when
+	// a receiver's audit info does not match the output owner (#1000).
+	t.Run("GetAuditInfoForTransfers receiver audit info mismatch", func(t *testing.T) {
+		_, pp, auditor := setupAuditorTest(t)
+		transfer, meta, tokens := createTransfer(t, pp)
+		_, differentAuditInfo := getIdemixInfo(t, "./testdata/bls12_381_bbs/idemix")
+		differentAuditInfoRaw, err := differentAuditInfo.Bytes()
+		require.NoError(t, err)
+		raw, err := transfer.Serialize()
+		require.NoError(t, err)
+		meta.Outputs[0].Receivers[0].AuditInfo = differentAuditInfoRaw
+		_, _, err = auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed inspecting receiver")
 	})
 }
 
