@@ -240,6 +240,7 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
+
 		return
 	}
 	defer it.Close()
