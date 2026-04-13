@@ -65,6 +65,7 @@ type Resolver interface {
 	ResolveIdentities(endpoints ...string) ([]view.Identity, error)
 }
 
+//go:generate counterfeiter -o mock/subscriber.go -fake-name SubscriberMock . Subscriber
 type Subscriber = events.Subscriber
 
 type Driver struct {
