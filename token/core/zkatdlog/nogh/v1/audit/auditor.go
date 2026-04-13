@@ -366,8 +366,7 @@ func (a *Auditor) GetAuditInfoForTransfers(ctx context.Context, transfers [][]by
 		if err != nil {
 			return nil, nil, err
 		}
-		// Verify that the number of action inputs matches and each input token matches what the
-		// transfer action committed to (#998).
+		// Verify each input token's commitment and owner match what the transfer action recorded.
 		if len(ta.Inputs) != len(inputs[k]) {
 			return nil, nil, errors.Errorf("transfer action at index [%d]: has [%d] inputs but [%d] tokens provided", k, len(ta.Inputs), len(inputs[k]))
 		}
@@ -413,7 +412,7 @@ func (a *Auditor) GetAuditInfoForTransfers(ctx context.Context, transfers [][]by
 			if err != nil {
 				return nil, nil, err
 			}
-			// Verify each declared recipient for non-redeemed outputs in isolation (#1000).
+			// Verify each declared receiver's audit info matches their identity; fall back to the output owner for single-recipient outputs.
 			if !ta.Outputs[i].IsRedeem() {
 				if len(transferMetadata.Outputs[i].Receivers) == 0 {
 					return nil, nil, errors.Errorf("output at index [%d][%d] has no receivers", k, i)
@@ -422,10 +421,13 @@ func (a *Auditor) GetAuditInfoForTransfers(ctx context.Context, transfers [][]by
 					if receiver == nil {
 						return nil, nil, errors.Errorf("receiver at index [%d][%d][%d] is nil", k, i, j)
 					}
+					identityToVerify := driver.Identity(receiver.Identity)
+					if identityToVerify.IsNone() {
+						identityToVerify = ta.Outputs[i].Owner
+					}
 					if err := a.InspectIdentity(ctx, a.InfoMatcher, &InspectableIdentity{
-						Identity:         ta.Outputs[i].Owner,
-						IdentityFromMeta: receiver.Identity,
-						AuditInfo:        receiver.AuditInfo,
+						Identity:  identityToVerify,
+						AuditInfo: receiver.AuditInfo,
 					}, j); err != nil {
 						return nil, nil, errors.Wrapf(err, "failed inspecting receiver at index [%d][%d][%d]", k, i, j)
 					}
