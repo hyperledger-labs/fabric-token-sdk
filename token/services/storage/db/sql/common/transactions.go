@@ -146,7 +146,7 @@ func (db *TransactionStore) QueryTransactions(ctx context.Context, params driver
 			cond.Cmp(transactionsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
 		).
 		Where(HasTransactionParams(params, transactionsTable)).
-		OrderBy(q.Asc(common3.FieldName("stored_at"))).
+		OrderBy(orderBy("stored_at", params.SearchDirection)).
 		Paginated(pagination).
 		FormatPaginated(db.ci, db.pi)
 
