@@ -353,7 +353,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	})
 
 	// GetAuditInfoForTransfers input token commitment mismatch tests that an error is returned when
-	// an input token's Pedersen commitment does not match the one embedded in the transfer action (#998).
+	// an input token's Pedersen commitment does not match the one embedded in the transfer action.
 	t.Run("GetAuditInfoForTransfers input token commitment mismatch", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
 		transfer, meta, tokens := createTransfer(t, pp)
@@ -365,7 +365,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	})
 
 	// GetAuditInfoForTransfers input token owner mismatch tests that an error is returned when
-	// an input token's owner does not match the one embedded in the transfer action (#998).
+	// an input token's owner does not match the one embedded in the transfer action.
 	t.Run("GetAuditInfoForTransfers input token owner mismatch", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
 		transfer, meta, tokens := createTransfer(t, pp)
@@ -377,7 +377,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	})
 
 	// GetAuditInfoForTransfers no receivers for output tests that an error is returned when a
-	// non-redeemed output has no declared receivers (#1000).
+	// non-redeemed output has no declared receivers.
 	t.Run("GetAuditInfoForTransfers no receivers for output", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
 		transfer, meta, tokens := createTransfer(t, pp)
@@ -389,7 +389,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	})
 
 	// GetAuditInfoForTransfers receiver audit info mismatch tests that an error is returned when
-	// a receiver's audit info does not match the output owner (#1000).
+	// a receiver's audit info does not match the output owner.
 	t.Run("GetAuditInfoForTransfers receiver audit info mismatch", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
 		transfer, meta, tokens := createTransfer(t, pp)
