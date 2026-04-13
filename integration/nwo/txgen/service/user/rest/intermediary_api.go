@@ -8,7 +8,7 @@ package rest
 
 type LoginRequest struct {
 	Username string `json:"username"`
-	Password string `json:"password"` //nolint:gosec // G117: login request struct for tests, not a real credential
+	Password string `json:"password"`
 }
 
 type LoginResponse struct {

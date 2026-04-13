@@ -38,7 +38,7 @@ func newUserProvider(nw *integration.Infrastructure, metrics *metrics.Metrics, t
 		for i, replicaName := range selector.Get(username).AllNames() {
 			client := nw.Client(replicaName)
 			if client == nil {
-				return nil, errors2.Errorf("could not find client for %s, only following found: [%v]", replicaName, collections.Keys(nw.Ctx.ViewClients))
+				return nil, errors2.Errorf("could not find client for %s, only following found: [%v]", replicaName, collections.Keys(nw.NWOCtx.ViewClients))
 			}
 			replicas[i] = runner2.NewViewUser(username, auditor, client, nw, metrics, tracerProvider, logger)
 		}

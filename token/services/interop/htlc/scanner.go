@@ -82,7 +82,7 @@ func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Has
 		return nil, errors.WithMessagef(err, "failed to compute image of [%x]", preImage)
 	}
 	if !bytes.Equal(image, recomputedImage) {
-		return nil, errors.WithMessagef(err, "pre-image on the ledger does not match the passed image [%x!=%x]", image, recomputedImage)
+		return nil, errors.Errorf("pre-image on the ledger does not match the passed image [%x!=%x]", image, recomputedImage)
 	}
 
 	return preImage, nil

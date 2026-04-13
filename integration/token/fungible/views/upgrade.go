@@ -44,8 +44,8 @@ func (i *TokensUpgradeInitiatorView) Call(context view.Context) (interface{}, er
 	tms, err := token.GetManagementService(context, token.WithTMSID(i.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "failed getting token management service for [%s]", i.TMSID)
-	w := tms.WalletManager().OwnerWallet(context.Context(), i.Wallet)
-	assert.NotNil(w, "cannot find wallet [%s:%s]", i.TMSID, i.Wallet)
+	w, err := tms.WalletManager().OwnerWallet(context.Context(), i.Wallet)
+	assert.NoError(err, "cannot find wallet [%s:%s]", i.TMSID, i.Wallet)
 
 	tokens, err := tokens.GetService(context, tms.ID())
 	assert.NoError(err, "failed getting tokens")
@@ -150,8 +150,8 @@ func (p *TokensUpgradeResponderView) Call(context view.Context) (interface{}, er
 		// No check is performed for other types.
 		tms, err := token.GetManagementService(context, token.WithTMSID(upgradeRequest.TMSID))
 		assert.NoError(err, "failed to lookup TMS [%s]", upgradeRequest.TMSID)
-		wallet := tms.WalletManager().IssuerWallet(context.Context(), "")
-		assert.NotNil(wallet, "issuer wallet not found")
+		wallet, err := tms.WalletManager().IssuerWallet(context.Context(), "")
+		assert.NoError(err, "issuer wallet not found")
 
 		// At this point, the issuer is ready to prepare the token transaction.
 		// The issuer creates a new token transaction and specifies the auditor that must be contacted to approve the operation.

@@ -319,7 +319,12 @@ func (s *TransferService) VerifyTransfer(ctx context.Context, transferAction dri
 		s.Logger.DebugfContext(ctx, "transfer output [%s,%s,%s]", tok.Type, tok.Quantity, driver.Identity(tok.Owner))
 	}
 
-	return transfer.NewVerifier(getTokenData(action.InputTokens()), com, pp).Verify(action.Proof)
+	return transfer.NewVerifier(
+		getTokenData(action.InputTokens()),
+		com,
+		pp,
+		action.ProofType,
+	).Verify(action.Proof)
 }
 
 // DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.

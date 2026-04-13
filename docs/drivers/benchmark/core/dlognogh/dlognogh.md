@@ -3,6 +3,32 @@
 > **Related Documentation:**
 > - [Testing Architecture](./dlognogh_architecture.md) - Understanding the test layers
 > - [Regression Tests](./dlognogh_regression.md) - Backwards compatibility testing
+> - [Driver Specification](../../../dlogwogh.md) - Complete driver documentation including CSP range proofs
+
+## Range Proof Systems
+
+**As of commit 586d4f58**, the driver supports two range proof systems:
+
+1. **Bulletproofs** (Original) - IPA-based range proofs
+2. **Compressed Sigma Protocols (CSP)** (New) - Recursive folding with optimized verification
+
+The proof system is selected via the `-proof_type` flag:
+- `bulletproof` or `1` - Uses Bulletproof range proofs (default)
+- `csp` or `2` - Uses Compressed Sigma Protocol range proofs
+
+**Performance Impact**: CSP proofs offer improved verification performance through optimized Lagrange interpolation, particularly beneficial for high-throughput scenarios. Benchmark results will vary based on the selected proof system.
+
+## Executor Strategies
+
+The driver supports three execution strategies for independent range proof generation and verification, controlled via the `-executor` flag:
+
+- `serial` (default) — Tasks run inline on the calling goroutine. Zero scheduling overhead. Best for latency-sensitive single-proof workloads.
+- `unbounded` — One goroutine per range proof. Maximum parallelism but unbounded goroutine creation. Best for small numbers of coarse-grained independent proofs.
+- `pool` — Bounded pool of `runtime.NumCPU()` goroutines. Balances throughput and stability. Best for high-concurrency scenarios with multiple output tokens.
+
+The executor strategy adds a new dimension to benchmarking: a given workload can be measured with all three strategies to find the optimal configuration for a specific deployment's latency/throughput tradeoff.
+
+## Benchmark Packages
 
 Packages with benchmark tests:
 
@@ -39,6 +65,8 @@ The benchmark accepts the following tunable parameters:
 - CurveID: the `math.CurveID` used (examples: `BN254`, `BLS12_381_BBS_GURVY`).
 - NumInputs: number of input tokens provided to the sender (1, 2, ...).
 - NumOutputs: number of outputs produced by the transfer (1, 2, ...).
+- ProofType: the range proof system to use (`bulletproof` or `csp`).
+- Executor: the execution strategy for independent range proofs (`serial`, `unbounded`, or `pool`).
 
 These parameters can be configured from the command line using the following flags:
 
@@ -51,6 +79,10 @@ These parameters can be configured from the command line using the following fla
         a comma-separate list of number of inputs (1,2,3,...)
   -num_outputs string
         a comma-separate list of number of outputs (1,2,3,...)
+  -proof_type string
+        range proof system: bulletproof (default) or csp
+  -executor string
+        execution strategy for range proofs: serial (default), unbounded, or pool
 ```
 
 ### Default parameter set used in the benchmark
@@ -61,6 +93,7 @@ If no flag is used, the test file currently uses the following parameter slices 
 - curves: [BN254, BLS12_381_BBS_GURVY, BLS12_381_BBS_GURVY_FAST_RNG]
 - inputs: [1, 2, 3]
 - outputs: [1, 2, 3]
+- executor: serial
 
 This produces 2 (bits) * 3 (curves) * 3 (inputs) * 3 (outputs) = 54 sub-benchmarks. 
 Each sub-benchmark runs the standard `b.N` iterations and reports time and allocation statistics.
@@ -88,11 +121,10 @@ Note: `-count` controls how many times the test binary is executed (useful to re
 You can also change the parameters:
 
 ```shell
-go test ./token/core/zkatdlog/nogh/v1/transfer -test.bench=BenchmarkSender -test.benchmem -test.count=10 -test.cpu=1 -test.timeout 0 -test.run=^$ -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2"  | tee bench.txt
+go test ./token/core/zkatdlog/nogh/v1/transfer -test.bench=BenchmarkSender -test.benchmem -test.count=10 -test.cpu=1 -test.timeout 0 -test.run=^$ -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2" -proof_type="csp" -executor="pool" | tee bench.txt
 ```
 
 > Notice that in this the above case, the `go test` options must be prefixed with `test.` otherwise the tool will fail.
- 
 
 
 ### Notes and best practices
@@ -101,6 +133,7 @@ go test ./token/core/zkatdlog/nogh/v1/transfer -test.bench=BenchmarkSender -test
   For CI or quick local runs, reduce the parameter lists to a small subset (for example: one bit size, one curve, and 1-2 input/output sizes).
 - The benchmark creates `b.N` independent sender environments (via `NewBenchmarkSenderEnv`) and runs `GenerateZKTransfer` for each environment in the inner loop — so memory and setup cost scale with `b.N` during setup.
 - If you need to measure only the transfer-generation time and omit setup, consider modifying the benchmark to move expensive one-time setup out of the measured region and call `b.ResetTimer()` appropriately (the current benchmark already calls `b.ResetTimer()` before the inner loop).
+- When comparing executor strategies, run each strategy in isolation with the same duration and worker count to get a fair comparison. The `pool` executor generally reduces tail latency at the cost of slightly higher GC overhead compared to `serial`.
 
 ### Collecting and interpreting results
 
@@ -124,7 +157,7 @@ This allows the analyst to understand if shared data structures are actual bottl
 It uses a custom-made runner whose documentation can be found [here](../../../../../token/services/benchmark/runner.md).
 
 ```shell
-go test ./token/core/zkatdlog/nogh/v1/transfer -test.run=TestParallelBenchmarkSender -test.v -test.timeout 0 -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2" -workers="NumCPU" -duration="10s" -setup_samples=128 | tee bench.txt
+go test ./token/core/zkatdlog/nogh/v1/transfer -test.run=TestParallelBenchmarkSender -test.v -test.timeout 0 -bits="32" -curves="BN254" -num_inputs="2" -num_outputs="2" -workers="NumCPU" -duration="10s" -setup_samples=128 -executor="pool" | tee bench.txt
 ```
 
 The test supports the following flags:
@@ -141,6 +174,10 @@ The test supports the following flags:
         a comma-separate list of number of outputs (1,2,3,...)
   -workers string
         a comma-separate list of workers (1,2,3,...,NumCPU), where NumCPU is converted to the number of available CPUs
+  -proof_type string
+        range proof system: bulletproof (default) or csp
+  -executor string
+        execution strategy for range proofs: serial (default), unbounded, or pool
   -profile bool
         write pprof profiles to file
   -setup_samples uint
@@ -155,70 +192,67 @@ The test supports the following flags:
 Metric           Value     Description
 ------           -----     -----------
 Workers          10        
-Total Ops        1230      (Low Sample Size)
-Duration         10.068s   (Good Duration)
-Real Throughput  122.17/s  Observed Ops/sec (Wall Clock)
-Pure Throughput  123.04/s  Theoretical Max (Low Overhead)
+Total Ops        2415      (Low Sample Size)
+Duration         10.029s   (Good Duration)
+Real Throughput  240.80/s  Observed Ops/sec (Wall Clock)
+Pure Throughput  241.47/s  Theoretical Max (Low Overhead)
 
 Latency Distribution:
- Min           59.895916ms   
- P50 (Median)  77.717333ms   
- Average       81.27214ms    
- P95           112.28194ms   
- P99           137.126207ms  
- P99.9         189.117473ms  
- Max           215.981417ms  (Stable Tail)
+ Min           31.760236ms  
+ P50 (Median)  41.257005ms  
+ Average       41.41284ms   
+ P95           45.007531ms  
+ P99           46.786355ms  
+ P99.9         48.476513ms  
+ Max           49.139729ms  (Stable Tail)
 
 Stability Metrics:
- Std Dev  16.96192ms   
- IQR      19.050834ms  Interquartile Range
- Jitter   15.937043ms  Avg delta per worker
- CV       20.87%       Unstable (>20%) - Result is Noisy
+ Std Dev  2.026146ms  
+ IQR      2.616459ms  Interquartile Range
+ Jitter   1.960907ms  Avg delta per worker
+ CV       4.89%       Excellent Stability (<5%)
 
 System Health & Reliability:
  Error Rate   0.0000%          (100% Success) (0 errors)
- Memory       1159374 B/op     Allocated bytes per operation
- Allocs       17213 allocs/op  Allocations per operation
- Alloc Rate   133.20 MB/s      Memory pressure on system
- GC Overhead  1.27%            (High GC Pressure)
- GC Pause     127.435871ms     Total Stop-The-World time
- GC Cycles    264              Full garbage collection cycles
+ Memory       1787240 B/op     Allocated bytes per operation
+ Allocs       19166 allocs/op  Allocations per operation
+ Alloc Rate   397.47 MB/s      Memory pressure on system
+ GC Overhead  7.00%            (Severe GC Thrashing)
+ GC Pause     702.07326ms      Total Stop-The-World time
+ GC Cycles    2160             Full garbage collection cycles
 
 Latency Heatmap (Dynamic Range):
-Range                       Freq  Distribution Graph
- 59.895916ms-63.862831ms    98    ██████████████████████ (8.0%)
- 63.862831ms-68.092476ms    163   ████████████████████████████████████ (13.3%)
- 68.092476ms-72.602251ms    170   ██████████████████████████████████████ (13.8%)
- 72.602251ms-77.410709ms    172   ██████████████████████████████████████ (14.0%)
- 77.410709ms-82.537631ms    177   ████████████████████████████████████████ (14.4%)
- 82.537631ms-88.004111ms    128   ████████████████████████████ (10.4%)
- 88.004111ms-93.832637ms    119   ██████████████████████████ (9.7%)
- 93.832637ms-100.047186ms   73    ████████████████ (5.9%)
- 100.047186ms-106.673326ms  40    █████████ (3.3%)
- 106.673326ms-113.738317ms  32    ███████ (2.6%)
- 113.738317ms-121.271222ms  20    ████ (1.6%)
- 121.271222ms-129.303034ms  14    ███ (1.1%)
- 129.303034ms-137.866793ms  12    ██ (1.0%)
- 137.866793ms-146.997731ms  3      (0.2%)
- 146.997731ms-156.733413ms  4      (0.3%)
- 167.11389ms-178.181868ms   2      (0.2%)
- 178.181868ms-189.98288ms   1      (0.1%)
- 189.98288ms-202.565475ms   1      (0.1%)
- 202.565475ms-215.981417ms  1      (0.1%)
+Range                     Freq  Distribution Graph
+ 31.760236ms-32.460946ms  2      (0.1%)
+ 33.177115ms-33.909085ms  1      (0.0%)
+ 35.421828ms-36.203322ms  2      (0.1%)
+ 36.203322ms-37.002058ms  12    █ (0.5%)
+ 37.002058ms-37.818416ms  54    ████ (2.2%)
+ 37.818416ms-38.652784ms  103   ████████ (4.3%)
+ 38.652784ms-39.505561ms  230   ████████████████████ (9.5%)
+ 39.505561ms-40.377152ms  349   ██████████████████████████████ (14.5%)
+ 40.377152ms-41.267973ms  460   ████████████████████████████████████████ (19.0%)
+ 41.267973ms-42.178447ms  421   ████████████████████████████████████ (17.4%)
+ 42.178447ms-43.109009ms  311   ███████████████████████████ (12.9%)
+ 43.109009ms-44.060101ms  232   ████████████████████ (9.6%)
+ 44.060101ms-45.032177ms  119   ██████████ (4.9%)
+ 45.032177ms-46.025699ms  81    ███████ (3.4%)
+ 46.025699ms-47.041141ms  19    █ (0.8%)
+ 47.041141ms-48.078986ms  15    █ (0.6%)
+ 48.078986ms-49.139729ms  4      (0.2%)
 
 --- Analysis & Recommendations ---
-[WARN] Low sample size (1230). Results may not be statistically significant. Run for longer.
-[FAIL] High Variance (CV 20.87%). System noise is affecting results. Isolate the machine or increase duration.
-[INFO] High Allocations (17213/op). This will trigger frequent GC cycles and increase Max Latency.
+[WARN] Low sample size (2415). Results may not be statistically significant. Run for longer.
+[INFO] High Allocations (19166/op). This will trigger frequent GC cycles and increase Max Latency.
 ----------------------------------
 
 --- Throughput Timeline ---
-Timeline: [▇▇▇█▇▇▇▇▆▇] (Max: 131 ops/s)
+Timeline: [▇█▇▇▇▇▇▇▇] (Max: 247 ops/s)
 
---- PASS: TestParallelBenchmarkSender (13.97s)
-    --- PASS: TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_10_workers (13.96s)
+--- PASS: TestParallelBenchmarkSender (13.29s)
+    --- PASS: TestParallelBenchmarkSender/Setup(bits_32,_curve_BN254,_#i_2,_#o_2)_with_10_workers (13.28s)
 PASS
-ok      github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer       14.566s
+ok      github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer       13.320s
 ```
 
 ### Running selected benchmarks with run_benchmarks.py
@@ -263,4 +297,3 @@ python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
 ```shell
 python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
 ```
-

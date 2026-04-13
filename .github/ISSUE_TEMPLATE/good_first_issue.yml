@@ -1,0 +1,134 @@
+name: Good First Issue
+description: Create a Good First Issue for new contributors
+title: "[Good First Issue]: "
+labels: ["good first issue"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## **Thanks for creating a good first issue!** 😊
+
+        We truly appreciate your time and effort. This template helps create a **Good First Issue (GFI)**: a small, well-scoped task that helps new contributors learn the codebase and workflow.
+        ---
+
+  - type: textarea
+    id: intro
+    attributes:
+      label: 🆕🐥 Newcomer Friendly
+      description: Who is this issue for?
+      value: |
+        This **[Good First Issue](https://github.com/hyperledger-labs/fabric-token-sdk/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22)** is a guided, well-scoped task intended for new human contributors to the Fabric Token SDK.
+
+        #### What you’ll do
+        - ✅ Understand the project structure
+        - ✅ Practice the standard Hyperledger contribution workflow
+        - ✅ Submit and merge your first Pull Request
+
+        #### Support
+        A maintainer or mentor actively monitors this issue and will help **guide it to completion**.
+
+        > [!IMPORTANT]
+        > **This issue does not require deep blockchain knowledge.**
+        > - No prior Hyperledger Fabric experience needed
+        > - **Basic Go and Git are sufficient**
+
+        > [!NOTE]
+        > ⏱️ **Typical time to complete:** 30–90 minutes (once setup is done)
+        > 🧩 **Difficulty:** Small, well-contained change
+        > 🎓 **Best for:** New contributors
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: 👾 Issue description
+      description: |
+        Describe the issue clearly. Explain why this change is useful.
+        Avoid jargon where possible. Links to code are very welcome.
+      placeholder: |
+        Describe the problem here...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 💡 Proposed Solution
+      description: Describe what a good solution looks like at a high level.
+      placeholder: |
+        Briefly explain the fix...
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: 🛠️ Implementation Steps
+      description: |
+        Provide guided steps to help the contributor:
+        - Which files to change
+        - Which functions are involved
+        - Expected output/result
+      value: |
+        - [ ] Step 1: ...
+        - [ ] Step 2: ...
+        - [ ] Step 3: Verify with `make unit-tests`
+    validations:
+      required: true
+
+  - type: textarea
+    id: setup_guide
+    attributes:
+      label: 📋 Setup Guide
+      description: Quick links for setting up the environment.
+      value: |
+        #### Setup the Fabric Token SDK
+        - [ ] **Fork & Clone**: Follow the [Contributing Guide](https://github.com/hyperledger-labs/fabric-token-sdk/blob/main/CONTRIBUTING.md)
+        - [ ] **Install Tools**: Run `make install-tools`
+    validations:
+      required: true
+
+  - type: textarea
+    id: contribution_workflow
+    attributes:
+      label: 📋 Contribution Workflow
+      description: Step-by-step for new contributors.
+      value: |
+        - [ ] **Claim the issue**: Comment "I would like to work on this" to be assigned.
+        - [ ] **Create a branch**: `git checkout -b feature/my-fix`
+        - [ ] **Implement & Test**: Run `make unit-tests` or specific integration tests.
+        - [ ] **Commit with DCO**: Use `git commit -s -m "feat: description"` (The `-s` is mandatory).
+        - [ ] **Push & PR**: Push to your fork and open a Pull Request.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: ✅ Acceptance Criteria
+      value: |
+        - [ ] The issue is solved as described.
+        - [ ] Unit tests pass (`make unit-tests`, `make unit-tests-race`, and `make unit-tests-regression`).
+        - [ ] Linting passes (`make lint` and `make checks`).
+        - [ ] Commits are signed off (`-s`).
+    validations:
+      required: true
+
+  - type: textarea
+    id: getting_help
+    attributes:
+      label: 🧭 Getting Help
+      value: |
+        If you get stuck, don't hesitate to ask!
+        - Comment on this issue.
+        - Join us on **Discord**: [#fabric-token-sdk](https://discord.gg/hyperledger)
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 📚 Useful Resources
+        - [Documentation Overview](https://github.com/hyperledger-labs/fabric-token-sdk/blob/main/docs/README.md)
+        - [Development Guidelines](https://github.com/hyperledger-labs/fabric-token-sdk/blob/main/docs/development/development.md)
+        - [Testing Guide](https://github.com/hyperledger-labs/fabric-token-sdk/blob/main/docs/development/testing.md)

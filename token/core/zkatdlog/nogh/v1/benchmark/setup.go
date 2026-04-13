@@ -27,6 +27,8 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
+	executor "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -44,6 +46,18 @@ type SetupConfigurationSer struct {
 	CurveID int    `json:"curveID"`
 }
 
+// SetupParams holds all parameters needed to create benchmark configurations.
+type SetupParams struct {
+	IdemixTestdataPath string
+	Bits               []uint64
+	CurveIDs           []math.CurveID
+	OwnerIdentityType  identity.Type
+	ProofType          rp.ProofType // RangeProofType or CSPRangeProofType
+	// ExecutorProvider controls how independent range proofs are executed.
+	// If nil, rp.SerialProvider{} is used (serial execution, zero overhead).
+	ExecutorProvider executor.ExecutorProvider
+}
+
 // SetupConfiguration holds the prepared public parameters and related
 // identities/signers used by a single benchmark configuration.
 //
@@ -58,6 +72,8 @@ type SetupConfiguration struct {
 	IssuerSigner  *Signer
 	Bits          uint64
 	CurveID       math.CurveID
+	// ExecutorProvider is the execution strategy for range proofs in this configuration.
+	ExecutorProvider executor.ExecutorProvider
 }
 
 // SetupConfigurations contains a set of named benchmark configurations.
@@ -72,31 +88,45 @@ type SetupConfigurations struct {
 // idemix or idemixnym owner identities.
 // It returns a container mapping keys to configurations or an error if any setup step fails.
 func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs []math.CurveID, ownerIdentityType identity.Type) (*SetupConfigurations, error) {
+	return NewSetupConfigurationsWithParams(SetupParams{
+		IdemixTestdataPath: idemixTestdataPath,
+		Bits:               bits,
+		CurveIDs:           curveIDs,
+		OwnerIdentityType:  ownerIdentityType,
+		ProofType:          rp.RangeProofType, // Default to RangeProof
+	})
+}
+
+// NewSetupConfigurationsWithParams loads test data and builds setup configurations
+// for each combination of the provided parameters. The ProofType field in params
+// determines which range proof system to use (0 = RangeProof, 1 = CSPRangeProof).
+// It returns a container mapping keys to configurations or an error if any setup step fails.
+func NewSetupConfigurationsWithParams(params SetupParams) (*SetupConfigurations, error) {
 	configurations := map[string]*SetupConfiguration{}
-	for _, curveID := range curveIDs {
+	for _, curveID := range params.CurveIDs {
 		var ipk []byte
 		var err error
 		var oID *OwnerIdentity
 		switch curveID {
 		case math.BN254:
-			idemixPath := filepath.Join(idemixTestdataPath, "bn254", "idemix")
+			idemixPath := filepath.Join(params.IdemixTestdataPath, "bn254", "idemix")
 			ipk, err = os.ReadFile(filepath.Join(idemixPath, "msp", "IssuerPublicKey"))
 			if err != nil {
 				return nil, err
 			}
-			oID, err = loadOwnerIdentityByType(context.Background(), idemixPath, curveID, ownerIdentityType)
+			oID, err = loadOwnerIdentityByType(context.Background(), idemixPath, curveID, params.OwnerIdentityType)
 			if err != nil {
 				return nil, err
 			}
 		case math.BLS12_381_BBS_GURVY:
 			fallthrough
 		case math2.BLS12_381_BBS_GURVY_FAST_RNG:
-			idemixPath := filepath.Join(idemixTestdataPath, "bls12_381_bbs", "idemix")
+			idemixPath := filepath.Join(params.IdemixTestdataPath, "bls12_381_bbs", "idemix")
 			ipk, err = os.ReadFile(filepath.Join(idemixPath, "msp", "IssuerPublicKey"))
 			if err != nil {
 				return nil, err
 			}
-			oID, err = loadOwnerIdentityByType(context.Background(), idemixPath, curveID, ownerIdentityType)
+			oID, err = loadOwnerIdentityByType(context.Background(), idemixPath, curveID, params.OwnerIdentityType)
 			if err != nil {
 				return nil, err
 			}
@@ -113,8 +143,24 @@ func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs [
 			return nil, err
 		}
 
-		for _, bit := range bits {
-			pp, err := setup.Setup(bit, ipk, curveID)
+		for _, bit := range params.Bits {
+			var pp *setup.PublicParams
+			// Use the proof type to determine which setup method to call
+			switch params.ProofType {
+			case rp.RangeProofType:
+				pp, err = setup.Setup(bit, ipk, curveID)
+			case rp.CSPRangeProofType:
+				pp, err = setup.NewWith(setup.SetupParams{
+					DriverName:     setup.DLogNoGHDriverName,
+					DriverVersion:  setup.ProtocolV1,
+					BitLength:      bit,
+					IdemixIssuerPK: ipk,
+					ProofType:      rp.CSPRangeProofType,
+					CurveID:        curveID,
+				})
+			default:
+				return nil, errors.Errorf("unrecognized proof type: %d", params.ProofType)
+			}
 			if err != nil {
 				return nil, err
 			}
@@ -128,13 +174,21 @@ func NewSetupConfigurations(idemixTestdataPath string, bits []uint64, curveIDs [
 				return nil, err
 			}
 			pp.AddAuditor(auditorID)
+
+			provider := params.ExecutorProvider
+			if provider == nil {
+				provider = executor.SerialProvider{}
+			}
+			pp.ExecutorProvider = provider
+
 			configurations[key(bit, curveID)] = &SetupConfiguration{
-				Bits:          bit,
-				CurveID:       curveID,
-				PP:            pp,
-				OwnerIdentity: oID,
-				AuditorSigner: auditorSigner,
-				IssuerSigner:  issuerSigner,
+				Bits:             bit,
+				CurveID:          curveID,
+				PP:               pp,
+				OwnerIdentity:    oID,
+				AuditorSigner:    auditorSigner,
+				IssuerSigner:     issuerSigner,
+				ExecutorProvider: provider,
 			}
 		}
 	}

@@ -51,6 +51,7 @@ func newFactoryDirectory[T driver.PPReader](fs ...NamedFactory[T]) *factoryDirec
 // PublicParametersFromBytes unmarshals the bytes to a driver.PublicParameters instance.
 // The passed bytes are expected to encode a driver.SerializedPublicParameters instance.
 // If no driver is registered for the public params' identifier, it returns an error.
+// It is responsibility of the caller to validate the unmarshalled public parameters.
 func (s *factoryDirectory[T]) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
 	pp, err := serializedPublicParametersFromBytes(params)
 	if err != nil {
@@ -97,6 +98,10 @@ func (s *PPManagerFactoryService) NewPublicParametersManager(pp driver.PublicPar
 // DefaultValidator returns a new instance of driver.Validator for the passed public parameters.
 // If no driver is registered for the public params' identifier, it returns an error.
 func (s *PPManagerFactoryService) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed validating public parameters")
+	}
+
 	if instantiator, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
 		return instantiator.DefaultValidator(pp)
 	}

@@ -13,9 +13,12 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testutils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	"github.com/stretchr/testify/require"
 )
@@ -36,49 +39,69 @@ const (
 )
 
 func TestValidator(t *testing.T) {
-	t.Run("Validator is called correctly with a non-anonymous issue action", func(t *testing.T) {
-		testVerifyNoErrorOnAction(t, IssueAction)
-	})
-	t.Run("validator is called correctly with a transfer action", func(t *testing.T) {
-		testVerifyNoErrorOnAction(t, TransferAction)
-	})
-	t.Run("validator is called correctly with a redeem action", func(t *testing.T) {
-		testVerifyNoErrorOnAction(t, RedeemAction)
-	})
-	t.Run("engine is called correctly with atomic swap", func(t *testing.T) {
-		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID}, idemixnym.IdentityType)
-		require.NoError(t, err)
-		env, err := testing2.NewEnv(testUseCase, configurations)
-		require.NoError(t, err)
+	for _, identityType := range []identity.Type{idemix.IdentityType, idemixnym.IdentityType} {
+		for _, proofType := range []rp.ProofType{rp.RangeProofType, rp.CSPRangeProofType} {
+			t.Run("Validator is called correctly with a non-anonymous issue action", func(t *testing.T) {
+				testVerifyNoErrorOnAction(t, IssueAction, identityType, proofType)
+			})
+			t.Run("validator is called correctly with a transfer action", func(t *testing.T) {
+				testVerifyNoErrorOnAction(t, TransferAction, identityType, proofType)
+			})
+			t.Run("validator is called correctly with a redeem action", func(t *testing.T) {
+				testVerifyNoErrorOnAction(t, RedeemAction, identityType, proofType)
+			})
+			t.Run("engine is called correctly with atomic swap", func(t *testing.T) {
+				configurations, err := benchmark.NewSetupConfigurationsWithParams(
+					benchmark.SetupParams{
+						IdemixTestdataPath: "./../testdata",
+						Bits:               []uint64{testUseCase.Bits},
+						CurveIDs:           []math.CurveID{testUseCase.CurveID},
+						OwnerIdentityType:  identityType,
+						ProofType:          proofType,
+					},
+				)
+				require.NoError(t, err)
+				env, err := testing2.NewEnv(testUseCase, configurations)
+				require.NoError(t, err)
 
-		raw, err := env.TRWithSwap.Bytes()
-		require.NoError(t, err)
+				raw, err := env.TRWithSwap.Bytes()
+				require.NoError(t, err)
 
-		actions, _, err := env.Engine.VerifyTokenRequestFromRaw(t.Context(), nil, "2", raw)
-		require.NoError(t, err)
-		require.Len(t, actions, 2)
-	})
-	t.Run("when the sender's signature is not valid: wrong txID", func(t *testing.T) {
-		configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID}, idemixnym.IdentityType)
-		require.NoError(t, err)
-		env, err := testing2.NewEnv(testUseCase, configurations)
-		require.NoError(t, err)
+				actions, _, err := env.Engine.VerifyTokenRequestFromRaw(t.Context(), nil, "2", raw)
+				require.NoError(t, err)
+				require.Len(t, actions, 2)
+			})
+			t.Run("when the sender's signature is not valid: wrong txID", func(t *testing.T) {
+				configurations, err := benchmark.NewSetupConfigurationsWithParams(
+					benchmark.SetupParams{
+						IdemixTestdataPath: "./../testdata",
+						Bits:               []uint64{testUseCase.Bits},
+						CurveIDs:           []math.CurveID{testUseCase.CurveID},
+						OwnerIdentityType:  identityType,
+						ProofType:          proofType,
+					},
+				)
+				require.NoError(t, err)
+				env, err := testing2.NewEnv(testUseCase, configurations)
+				require.NoError(t, err)
 
-		request := &driver.TokenRequest{Issues: env.TRWithSwap.Issues, Transfers: env.TRWithSwap.Transfers}
-		raw, err := request.MarshalToMessageToSign([]byte("3"))
-		require.NoError(t, err)
+				request := &driver.TokenRequest{Issues: env.TRWithSwap.Issues, Transfers: env.TRWithSwap.Transfers}
+				raw, err := request.MarshalToMessageToSign([]byte("3"))
+				require.NoError(t, err)
 
-		signatures, err := env.Sender.SignTokenActions(raw)
-		require.NoError(t, err)
-		env.TRWithSwap.Signatures[1] = signatures[0]
+				signatures, err := env.Sender.SignTokenActions(raw)
+				require.NoError(t, err)
+				env.TRWithSwap.Signatures[1] = signatures[0]
 
-		raw, err = env.TRWithSwap.Bytes()
-		require.NoError(t, err)
+				raw, err = env.TRWithSwap.Bytes()
+				require.NoError(t, err)
 
-		_, _, err = env.Engine.VerifyTokenRequestFromRaw(t.Context(), nil, "2", raw)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed signature verification")
-	})
+				_, _, err = env.Engine.VerifyTokenRequestFromRaw(t.Context(), nil, "2", raw)
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed signature verification")
+			})
+		}
+	}
 }
 
 func BenchmarkValidatorTransfer(b *testing.B) {
@@ -107,7 +130,16 @@ func BenchmarkValidatorTransfer(b *testing.B) {
 func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", bits, curves, idemixnym.IdentityType)
+	proofType := benchmark.ProofType()
+	executorProvider := benchmark.ExecutorProvider()
+	configurations, err := benchmark.NewSetupConfigurationsWithParams(benchmark.SetupParams{
+		IdemixTestdataPath: "./../testdata",
+		Bits:               bits,
+		CurveIDs:           curves,
+		OwnerIdentityType:  idemixnym.IdentityType,
+		ProofType:          proofType,
+		ExecutorProvider:   executorProvider,
+	})
 	require.NoError(t, err)
 
 	test := benchmark2.NewTest[*testing2.Env](cases)
@@ -123,9 +155,17 @@ func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
 	)
 }
 
-func testVerifyNoErrorOnAction(t *testing.T, actionType actionType) {
+func testVerifyNoErrorOnAction(t *testing.T, actionType actionType, identityType identity.Type, proofType rp.ProofType) {
 	t.Helper()
-	configurations, err := benchmark.NewSetupConfigurations("./../testdata", []uint64{testUseCase.Bits}, []math.CurveID{testUseCase.CurveID}, idemixnym.IdentityType)
+	configurations, err := benchmark.NewSetupConfigurationsWithParams(
+		benchmark.SetupParams{
+			IdemixTestdataPath: "./../testdata",
+			Bits:               []uint64{testUseCase.Bits},
+			CurveIDs:           []math.CurveID{testUseCase.CurveID},
+			OwnerIdentityType:  identityType,
+			ProofType:          proofType,
+		},
+	)
 	require.NoError(t, err)
 	env, err := testing2.NewEnv(testUseCase, configurations)
 	require.NoError(t, err)

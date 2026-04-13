@@ -352,6 +352,7 @@ func (db *TransactionStore) GetSchema() string {
 			public_metadata JSONB NOT NULL,
 			pp_hash BYTEA NOT NULL
 		);
+		CREATE INDEX IF NOT EXISTS idx_status_%s ON %s ( status );
 
 		-- transactions
 		CREATE TABLE IF NOT EXISTS %s (
@@ -394,7 +395,7 @@ func (db *TransactionStore) GetSchema() string {
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 		`,
-		db.table.Requests,
+		db.table.Requests, db.table.Requests, db.table.Requests,
 		db.table.Transactions, db.table.Requests, db.table.Transactions, db.table.Transactions,
 		db.table.Movements, db.table.Requests, db.table.Movements, db.table.Movements,
 		db.table.Validations, db.table.Requests,

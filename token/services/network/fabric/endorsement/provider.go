@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -141,6 +142,25 @@ func (c *ChannelProvider) GetMSPManager(network, channel string) (fsc.MSPManager
 	return ch.MSPManager(), nil
 }
 
+// GetACLProvider returns the MSP manager for the given network and channel.
+func (c *ChannelProvider) GetACLProvider(network, channel string) (fsc.ACLProvider, error) {
+	fns, err := c.fnsp.FabricNetworkService(network)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get fabric network service for [%s]", network)
+	}
+	ch, err := fns.Channel(channel)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get channel [%s] for network [%s]", channel, network)
+	}
+
+	if fns.ConfigService().DriverName() == fabricx.DriverName {
+		return ch.ACLProvider(), nil
+	}
+
+	// fabric does not support yet ACL check
+	return &noopACLProvider{}, nil
+}
+
 // NamespaceTxProcessor models a namespace transaction processor for fabric
 type NamespaceTxProcessor struct {
 	networkServiceProvider *fabric.NetworkServiceProvider
@@ -257,4 +277,10 @@ func NewStorageProvider(storeServiceManager ttxdb.StoreServiceManager) *StorageP
 // GetStorage returns the fsc.Storage instance for the given tms id.
 func (s *StorageProvider) GetStorage(id token2.TMSID) (fsc.Storage, error) {
 	return s.StoreServiceByTMSId(id)
+}
+
+type noopACLProvider struct{}
+
+func (n *noopACLProvider) CheckACL(_ *fabric.SignedProposal) error {
+	return nil
 }
