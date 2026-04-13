@@ -421,7 +421,7 @@ func (a *Auditor) GetAuditInfoForTransfers(ctx context.Context, transfers [][]by
 					if receiver == nil {
 						return nil, nil, errors.Errorf("receiver at index [%d][%d][%d] is nil", k, i, j)
 					}
-					identityToVerify := driver.Identity(receiver.Identity)
+					identityToVerify := receiver.Identity
 					if identityToVerify.IsNone() {
 						identityToVerify = ta.Outputs[i].Owner
 					}
