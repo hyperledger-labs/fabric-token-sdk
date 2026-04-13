@@ -9,11 +9,37 @@ package common
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
+
+// validationTimeKey is the unexported context key used to carry a deterministic
+// reference timestamp into the token-request validator (e.g. the Fabric proposal
+// timestamp from stub.GetTxTimestamp()).
+type validationTimeKey struct{}
+
+// WithValidationTime returns a child context that carries t as the reference
+// time for HTLC deadline evaluation.  Call this from the chaincode path so that
+// all endorsing peers use the same client-supplied proposal timestamp instead of
+// each peer's local wall clock.
+func WithValidationTime(ctx context.Context, t time.Time) context.Context {
+	return context.WithValue(ctx, validationTimeKey{}, t)
+}
+
+// validationTimeFromContext extracts the reference time injected by
+// WithValidationTime.  If none was set it falls back to time.Now(), which
+// preserves the existing behaviour for non-chaincode callers (local FSC
+// validation, unit tests, etc.).
+func validationTimeFromContext(ctx context.Context) time.Time {
+	if t, ok := ctx.Value(validationTimeKey{}).(time.Time); ok && !t.IsZero() {
+		return t
+	}
+
+	return time.Now()
+}
 
 // MetadataCounterID defines the type for metadata counter identifiers.
 type MetadataCounterID = string
@@ -40,6 +66,11 @@ type Context[P driver.PublicParameters, T driver.Input, TA driver.TransferAction
 	Ledger            driver.Ledger
 	MetadataCounter   map[MetadataCounterID]int
 	Attributes        driver.ValidationAttributes
+	// Now is the reference time used for HTLC deadline evaluation.
+	// It is populated by VerifyTransfer from the Go context so that the
+	// chaincode path can supply the deterministic Fabric proposal timestamp
+	// (stub.GetTxTimestamp()) instead of each peer's local wall clock.
+	Now time.Time
 }
 
 // CountMetadataKey increments the counter for the passed metadata key.
@@ -285,6 +316,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTransfer(
 		SignatureProvider: signatureProvider,
 		MetadataCounter:   map[MetadataCounterID]int{},
 		Attributes:        attributes,
+		Now:               validationTimeFromContext(ctx),
 	}
 	for _, v := range v.TransferValidators {
 		if err := v(ctx, context); err != nil {

@@ -140,7 +140,10 @@ func TransferBalanceValidate(c context.Context, ctx *Context) error {
 
 // TransferHTLCValidate checks the validity of the HTLC scripts, if any
 func TransferHTLCValidate(c context.Context, ctx *Context) error {
-	now := time.Now()
+	now := ctx.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
 
 	for i, in := range ctx.InputTokens {
 		owner, err := identity.UnmarshalTypedIdentity(in.GetOwner())

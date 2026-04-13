@@ -148,7 +148,10 @@ func TransferZKProofValidate(c context.Context, ctx *Context) error {
 // TransferHTLCValidate validates the HTLC scripts in the transfer action.
 // It ensures that HTLC scripts only transfer ownership of a single token and that the script conditions are met.
 func TransferHTLCValidate(c context.Context, ctx *Context) error {
-	now := time.Now()
+	now := ctx.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
 
 	for i, in := range ctx.InputTokens {
 		owner, err := identity.UnmarshalTypedIdentity(in.Owner)

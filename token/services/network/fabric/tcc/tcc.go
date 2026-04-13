@@ -231,9 +231,20 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 		return shim.Error(err.Error())
 	}
 
+	// Derive a deterministic reference time from the Fabric proposal timestamp.
+	// stub.GetTxTimestamp() returns the timestamp embedded by the client in the
+	// signed proposal; it is identical for all endorsing peers processing the
+	// same transaction, making HTLC deadline evaluation deterministic across the
+	// endorsing set regardless of local wall-clock skew.
+	ts, err := stub.GetTxTimestamp()
+	if err != nil {
+		return shim.Error("failed to get tx timestamp: " + err.Error())
+	}
+	ctx := common.WithValidationTime(context.Background(), ts.AsTime())
+
 	// Verify
 	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(
-		context.Background(),
+		ctx,
 		&ledger{stub: stub, keyTranslator: &keys.Translator{}},
 		token.RequestAnchor(stub.GetTxID()),
 		raw,
@@ -244,7 +255,6 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 
 	// Write
 	w := translator.New(stub.GetTxID(), translator.NewRWSetWrapper(&rwsWrapper{stub: stub}, "", stub.GetTxID()), &keys.Translator{})
-	ctx := context.Background()
 	for _, action := range actions {
 		err = w.Write(ctx, action)
 		if err != nil {
