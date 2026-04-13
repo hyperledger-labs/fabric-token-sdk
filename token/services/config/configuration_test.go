@@ -20,6 +20,7 @@ func newTestConfiguration(t *testing.T) *Configuration {
 	t.Helper()
 	cp, err := fscconfig.NewProvider("./testdata/token0")
 	require.NoError(t, err)
+
 	return NewConfiguration(cp, "n1c1ns1", driver.TMSID{
 		Network:   "n1",
 		Channel:   "c1",
