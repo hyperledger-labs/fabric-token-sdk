@@ -142,7 +142,7 @@ func (q *TransferZKView) Call(viewCtx view.Context) (interface{}, error) {
 			in[i] = tok.Data
 		}
 
-		if err := transfer.NewVerifier(in, action.GetOutputCommitments(), pp).Verify(action.GetProof()); err != nil {
+		if err := transfer.NewVerifier(in, action.GetOutputCommitments(), pp, action.ProofType).Verify(action.GetProof()); err != nil {
 			return nil, fmt.Errorf("failed to verify transfer proof: %w", err)
 		}
 	}
