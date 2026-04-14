@@ -228,7 +228,7 @@ func (t *Service) StorePublicParams(ctx context.Context, raw []byte) error {
 
 // DeleteTokensBy marks the tokens identified by ids as spent in the database, attributed to a specific actor.
 func (t *Service) DeleteTokensBy(ctx context.Context, deletedBy string, ids ...*token2.ID) (err error) {
-	return t.Storage.tokenDB.DeleteTokens(ctx, deletedBy, ids...)
+	return t.Storage.TokenDB.DeleteTokens(ctx, deletedBy, ids...)
 }
 
 // DeleteTokens marks the tokens as spent in the database, attributed to the caller's stack trace.
@@ -275,19 +275,19 @@ func (t *Service) SetSpendableBySupportedTokenTypes(ctx context.Context, types [
 
 // SetSupportedTokenFormats updates the list of token formats currently supported by the storage.
 func (t *Service) SetSupportedTokenFormats(tokenTypes []token2.Format) error {
-	return t.Storage.tokenDB.SetSupportedTokenFormats(tokenTypes)
+	return t.Storage.TokenDB.SetSupportedTokenFormats(tokenTypes)
 }
 
 // UnsupportedTokensIteratorBy returns an iterator for tokens that are no longer supported,
 // typically used during upgrade processes.
 func (t *Service) UnsupportedTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.UnsupportedTokensIterator, error) {
-	return t.Storage.tokenDB.UnsupportedTokensIteratorBy(ctx, walletID, typ)
+	return t.Storage.TokenDB.UnsupportedTokensIteratorBy(ctx, walletID, typ)
 }
 
 // PruneInvalidUnspentTokens identifies and removes unspent tokens from the local store
 // that are no longer available on the ledger.
 func (t *Service) PruneInvalidUnspentTokens(ctx context.Context) ([]*token2.ID, error) {
-	tmsID := t.Storage.tmsID
+	tmsID := t.Storage.TMSID
 	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
@@ -412,14 +412,14 @@ func (t *Service) extractActions(ctx context.Context, tmsID token.TMSID, anchor 
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get request's outputs")
 	}
-	toSpend, toAppend, err := t.parse(ctx, auth, anchor, md, is, os, auditorFlag, precision, graphHiding)
+	toSpend, toAppend, err := t.Parse(ctx, auth, anchor, md, is, os, auditorFlag, precision, graphHiding)
 	logger.DebugfContext(ctx, "transaction [%s] parsed [%d] inputs and [%d] outputs", anchor, len(toSpend), len(toAppend))
 
 	return toSpend, toAppend, err
 }
 
-// parse returns the tokens to store and spend as the result of a transaction
-func (t *Service) parse(
+// Parse returns the tokens to store and spend as the result of a transaction
+func (t *Service) Parse(
 	ctx context.Context,
 	auth driver.Authorization,
 	requestAnchor token.RequestAnchor,
@@ -484,19 +484,19 @@ func (t *Service) parse(
 		}
 
 		tta := TokenToAppend{
-			txID:                  string(requestAnchor),
-			index:                 output.Index,
-			tok:                   &output.Token,
-			tokenOnLedger:         output.LedgerOutput,
-			tokenOnLedgerFormat:   output.LedgerOutputFormat,
-			tokenOnLedgerMetadata: output.LedgerOutputMetadata,
-			ownerType:             identity.TypeToString(ownerType),
-			ownerIdentity:         ownerIdentity,
-			ownerWalletID:         ownerWalletID,
-			owners:                ids,
-			issuer:                output.Issuer,
-			precision:             precision,
-			flags: Flags{
+			TxID:                  string(requestAnchor),
+			Index:                 output.Index,
+			Tok:                   &output.Token,
+			TokenOnLedger:         output.LedgerOutput,
+			TokenOnLedgerFormat:   output.LedgerOutputFormat,
+			TokenOnLedgerMetadata: output.LedgerOutputMetadata,
+			OwnerType:             identity.TypeToString(ownerType),
+			OwnerIdentity:         ownerIdentity,
+			OwnerWalletID:         ownerWalletID,
+			Owners:                ids,
+			Issuer:                output.Issuer,
+			Precision:             precision,
+			Flags: Flags{
 				Mine:    mine,
 				Auditor: auditorFlag,
 				Issuer:  issuerFlag,
