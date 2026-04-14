@@ -1078,4 +1078,3 @@ func TestCachedFetcher_UpdateReacquiresLockAfterDB(t *testing.T) {
 
 	mockDB.AssertExpectations(t)
 }
-
