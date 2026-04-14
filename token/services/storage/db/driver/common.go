@@ -237,6 +237,9 @@ type QueryTransactionsParams struct {
 	// TokenTypes is the list of token types to accept
 	// If empty, any token type is accepted
 	TokenTypes []token2.Type
+	// SearchDirection is the direction of the search.
+	// Default (zero value) is FromLast (descending by stored_at).
+	SearchDirection SearchDirection
 }
 
 // QueryValidationRecordsParams defines the parameters for querying validation records.

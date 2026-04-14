@@ -308,7 +308,7 @@ func TTransaction(t *testing.T, db driver3.TokenTransactionStore) {
 
 	// get all except last year's
 	t1 := time.Now().Add(time.Second * 3)
-	it, err := db.QueryTransactions(ctx, driver3.QueryTransactionsParams{From: &t0, To: &t1}, nil)
+	it, err := db.QueryTransactions(ctx, driver3.QueryTransactionsParams{From: &t0, To: &t1, SearchDirection: driver3.FromBeginning}, nil)
 	require.NoError(t, err)
 	for _, exp := range txs {
 		act, err := it.Items.Next()
@@ -547,7 +547,8 @@ func TAllowsSameTxID(t *testing.T, db driver3.TokenTransactionStore) {
 	require.NoError(t, w.AddTransaction(ctx, tr2))
 	require.NoError(t, w.Commit())
 
-	txs := getTransactions(t, db, driver3.QueryTransactionsParams{})
+	// Explicit ASC: tr1 first, tr2 second
+	txs := getTransactions(t, db, driver3.QueryTransactionsParams{SearchDirection: driver3.FromBeginning})
 	assert.Len(t, txs, 2)
 	assertTxEqual(t, &tr1, txs[0])
 	assertTxEqual(t, &tr2, txs[1])
@@ -822,6 +823,28 @@ func TTransactionQueries(t *testing.T, db driver3.TokenTransactionStore) {
 			assert.Len(t, res, tc.expectedLen, fmt.Sprintf("params: %v", tc.params))
 		})
 	}
+
+	// SearchDirection: redemptions have distinct stored_at (now-1day vs now+1day)
+	t.Run("SearchDirection ASC", func(t *testing.T) {
+		res := getTransactions(t, db, driver3.QueryTransactionsParams{
+			ActionTypes:     []driver3.ActionType{driver3.Redeem},
+			Statuses:        []driver3.TxStatus{driver3.Confirmed},
+			SearchDirection: driver3.FromBeginning,
+		})
+		require.Len(t, res, 2)
+		assert.Equal(t, "8", res[0].TxID, "ASC: older redemption first")
+		assert.Equal(t, "10", res[1].TxID, "ASC: newer redemption second")
+	})
+	t.Run("SearchDirection DESC", func(t *testing.T) {
+		res := getTransactions(t, db, driver3.QueryTransactionsParams{
+			ActionTypes:     []driver3.ActionType{driver3.Redeem},
+			Statuses:        []driver3.TxStatus{driver3.Confirmed},
+			SearchDirection: driver3.FromLast,
+		})
+		require.Len(t, res, 2)
+		assert.Equal(t, "10", res[0].TxID, "DESC: newer redemption first")
+		assert.Equal(t, "8", res[1].TxID, "DESC: older redemption second")
+	})
 }
 
 func getTransactions(t *testing.T, db driver3.TokenTransactionStore, params driver3.QueryTransactionsParams) []*driver3.TransactionRecord {
