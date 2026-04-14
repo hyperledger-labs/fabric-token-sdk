@@ -56,7 +56,7 @@ func TestStubbornSelector_ContextCancellation(t *testing.T) {
 		)
 
 		// 50 ms is far shorter than time.Hour backoff — ctx.Done() fires first.
-		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
 		defer cancel()
 
 		_, _, err := sel.Select(ctx, &ownerFilter{id: "wallet1"}, "100", "USD")
@@ -64,6 +64,42 @@ func TestStubbornSelector_ContextCancellation(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorIs(t, err, context.DeadlineExceeded, "expected deadline exceeded, got: %v", err)
 		assert.True(t, unlockAllCalled, "UnlockAll must be called on context cancellation")
+	})
+}
+
+// TestSelector_UnlockAllOnQuantityParseError verifies that when TryLock succeeds
+// but ToQuantity fails (e.g. after a precision change), UnlockAll is called and
+// the unlock error is surfaced alongside the original error.
+func TestSelector_UnlockAllOnQuantityParseError(t *testing.T) {
+	t.Run("unlocks all tokens when ToQuantity fails after TryLock", func(t *testing.T) {
+		unlockAllCalled := false
+
+		mockFetcher := &mockTokenFetcher{
+			unspentTokensIteratorByFunc: func(_ context.Context, _ string, _ token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+				// quantity "not-a-number" will fail token2.ToQuantity for any precision
+				tok := &token2.UnspentTokenInWallet{
+					Id:       token2.ID{TxId: "tx1", Index: 0},
+					Type:     "USD",
+					Quantity: "not-a-number",
+				}
+
+				return collections.NewSliceIterator([]*token2.UnspentTokenInWallet{tok}), nil
+			},
+		}
+
+		// TryLock always succeeds so the code enters the else-branch that used to leak.
+		mockLck := &cancelTestLocker{
+			tryLockResult:   true,
+			unlockAllCalled: &unlockAllCalled,
+		}
+
+		m := NewMetrics(&disabled.Provider{})
+		sel := NewSelector(logger, mockFetcher, mockLck, 64, m)
+
+		_, _, err := sel.Select(context.Background(), &ownerFilter{id: "wallet1"}, "100", "USD")
+
+		require.Error(t, err)
+		assert.True(t, unlockAllCalled, "UnlockAll must be called when ToQuantity fails after TryLock")
 	})
 }
 

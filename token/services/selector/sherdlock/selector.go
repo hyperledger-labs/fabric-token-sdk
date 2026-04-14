@@ -124,6 +124,11 @@ func NewSelector(logger logging.Logger, tokenDB tokenFetcher, lockDB tokenLocker
 func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	start := time.Now()
 	ids, quantity, immediateRetries, err := s.selectInternal(ctx, owner, q, tokenType)
+	if err != nil {
+		if err2 := s.locker.UnlockAll(ctx); err2 != nil {
+			s.logger.Warnf("failed to unlock tokens after selection error: %v", err2)
+		}
+	}
 	s.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
 	s.metrics.ImmediateRetries.Observe(float64(immediateRetries))
 	if err == nil {
@@ -142,6 +147,11 @@ func (s *selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 // selectWithoutMetrics is used by stubbornSelector to avoid double-counting metrics.
 func (s *selector) selectWithoutMetrics(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	ids, quantity, _, err := s.selectInternal(ctx, owner, q, tokenType)
+	if err != nil {
+		if err2 := s.locker.UnlockAll(ctx); err2 != nil {
+			s.logger.Warnf("failed to unlock tokens after selection error: %v", err2)
+		}
+	}
 
 	return ids, quantity, err
 }
@@ -157,9 +167,7 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(s.precision), collections.NewSet[*token2.ID](), true, 0
 	for {
 		if t, err := s.cache.Next(); err != nil {
-			err2 := s.locker.UnlockAll(ctx)
-
-			return nil, nil, immediateRetries, errors.Wrapf(err, "failed to get tokens for [%s:%s] - unlock: %v", owner.ID(), tokenType, err2)
+			return nil, nil, immediateRetries, errors.Wrapf(err, "failed to get tokens for [%s:%s]", owner.ID(), tokenType)
 		} else if t == nil {
 			if !tokensLockedByOthersExist {
 				return nil, nil, immediateRetries, errors.Wrapf(
@@ -173,9 +181,6 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 
 			if immediateRetries > maxImmediateRetries {
 				s.logger.Warnf("Exceeded max number of immediate retries. Unlock tokens and abort...")
-				if err := s.locker.UnlockAll(ctx); err != nil {
-					return nil, nil, immediateRetries, errors.Wrapf(err, "exceeded number of retries: %d and unlock failed", maxImmediateRetries)
-				}
 
 				// When we loop over the tokens, we check whether a token is already locked.
 				// Every time our token cache finishes, but we noted that one of the tokens we saw was used by someone,
@@ -187,9 +192,7 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 
 			s.logger.DebugfContext(ctx, "Fetch all non-deleted tokens from the DB and refresh the token cache.")
 			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
-				err2 := s.locker.UnlockAll(ctx)
-
-				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s] - unlock: %v", immediateRetries, owner.ID(), tokenType, err2)
+				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s]", immediateRetries, owner.ID(), tokenType)
 			}
 
 			immediateRetries++
@@ -207,7 +210,7 @@ func (s *selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			immediateRetries = 0
 			sum, err = sum.Add(q)
 			if err != nil {
-				return nil, nil, immediateRetries, errors.Wrap(err, "failed to add quantity")
+				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to add quantity")
 			}
 			selected.Add(&t.Id)
 			if sum.Cmp(quantity) >= 0 {

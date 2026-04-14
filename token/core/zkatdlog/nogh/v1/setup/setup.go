@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/csp"
+	executor "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
@@ -265,6 +266,9 @@ type PublicParams struct {
 	// ExtraData contains any extra custom data
 	ExtraData           driver.Extras
 	CSPRangeProofParams *CSPRangeProofParams
+	// ExecutorProvider is a runtime-only field (not serialized) that controls
+	// how independent range proofs are executed. If nil, SerialProvider is used.
+	ExecutorProvider executor.ExecutorProvider `json:"-"`
 }
 
 // NewPublicParamsFromBytes unmarshal the given serialized version of the public parameters

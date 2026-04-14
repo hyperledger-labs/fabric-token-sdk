@@ -116,7 +116,7 @@ func TestQueryTransactions(t *testing.T, store transactionsStoreConstructor) {
 	mockDB.
 		ExpectQuery("SELECT TRANSACTIONS.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, " +
 			"REQUESTS.status, REQUESTS.application_metadata, REQUESTS.public_metadata, stored_at " +
-			"FROM TRANSACTIONS LEFT JOIN REQUESTS ON TRANSACTIONS.tx_id = REQUESTS.tx_id ORDER BY stored_at ASC").
+			"FROM TRANSACTIONS LEFT JOIN REQUESTS ON TRANSACTIONS.tx_id = REQUESTS.tx_id ORDER BY stored_at DESC").
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "action_type", "sender_eid", "recipient_eid", "token_type", "amount", "status", "application_metadata", "public_metadata", "stored_at"}).AddRow(output...))
 
 	info, err := store(db).QueryTransactions(t.Context(),
