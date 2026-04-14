@@ -37,7 +37,7 @@ Running Local Benchmark:
 GOGC=10000 go test ./token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/ -run ^$ -ben
 ch=BenchmarkLocalTransferService -benchtime=30s -count=5 -cpu=1,4,8,16,32,64
 ```
-Other benchamrks:
+Other benchmarks:
 ```
 GOGC=10000 go test -bench=BenchmarkAPIGRPC -benchtime=30s -count=5 -cpu=32 2>&1
 ```
