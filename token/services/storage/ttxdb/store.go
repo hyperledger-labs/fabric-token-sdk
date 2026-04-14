@@ -78,6 +78,16 @@ const (
 	Redeem = dbdriver.Redeem
 )
 
+// SearchDirection defines the direction of a search.
+type SearchDirection = dbdriver.SearchDirection
+
+const (
+	// FromLast defines the direction of a search from the last key.
+	FromLast = dbdriver.FromLast
+	// FromBeginning defines the direction of a search from the first key.
+	FromBeginning = dbdriver.FromBeginning
+)
+
 // TransactionRecord is a more finer-grained version of a movement record.
 // Given a Token Transaction, for each token action in the Token Request,
 // a transaction record is created for each unique enrollment ID found in the outputs.
