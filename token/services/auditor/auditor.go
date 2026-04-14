@@ -28,6 +28,13 @@ import (
 
 var logger = logging.MustGetLogger()
 
+//go:generate counterfeiter -o mock/transaction.go -fake-name Transaction . Transaction
+//go:generate counterfeiter -o mock/network_provider.go -fake-name NetworkProvider . NetworkProvider
+//go:generate counterfeiter -o mock/check_service.go -fake-name CheckService . CheckService
+//go:generate counterfeiter -o mock/network_driver.go -fake-name Network github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver.Network
+//go:generate counterfeiter -o mock/audit_transaction_store.go -fake-name AuditTransactionStore github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver.AuditTransactionStore
+//go:generate counterfeiter -o mock/atomic_write.go -fake-name AtomicWrite github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver.AtomicWrite
+
 // TxStatus is the status of a transaction
 type TxStatus = auditdb.TxStatus
 
@@ -72,6 +79,30 @@ type Service struct {
 	metricsProvider metrics.Provider
 	metrics         *Metrics
 	checkService    CheckService
+}
+
+// NewService creates a new auditor Service with the provided dependencies.
+func NewService(
+	tmsID token.TMSID,
+	networkProvider NetworkProvider,
+	auditDB *auditdb.StoreService,
+	tokenDB *tokens.Service,
+	tmsProvider dep.TokenManagementServiceProvider,
+	finalityTracer trace.Tracer,
+	metricsProvider metrics.Provider,
+	checkService CheckService,
+) *Service {
+	return &Service{
+		tmsID:           tmsID,
+		networkProvider: networkProvider,
+		auditDB:         auditDB,
+		tokenDB:         tokenDB,
+		tmsProvider:     tmsProvider,
+		finalityTracer:  finalityTracer,
+		metricsProvider: metricsProvider,
+		metrics:         newMetrics(metricsProvider),
+		checkService:    checkService,
+	}
 }
 
 // Validate validates the passed token request

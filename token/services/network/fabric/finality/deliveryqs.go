@@ -24,9 +24,17 @@ const (
 	FirstBlock       = 1
 )
 
+type txLedger interface {
+	GetTransactionByID(txID string) (*fabric.ProcessedTransaction, error)
+}
+
+type blockScanner interface {
+	ScanFromBlock(ctx context.Context, block uint64, callback fabric.DeliveryCallback) error
+}
+
 type DeliveryScanQueryByID struct {
-	Delivery *fabric.Delivery
-	Ledger   *fabric.Ledger
+	Delivery blockScanner
+	Ledger   txLedger
 	Mapper   events2.EventInfoMapper[TxInfo]
 }
 
@@ -53,9 +61,10 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			logger.DebugfContext(ctx, "transaction [%s] found on ledger", txID)
 			infos, err := q.Mapper.MapProcessedTx(pt)
 			if err != nil {
-				logger.Errorf("failed to map tx [%s]: [%s]", txID, err)
+				logger.Errorf("failed to map tx [%s]: [%s], skipping", txID, err)
+				keySet.Remove(txID)
 
-				return
+				continue
 			}
 			keySet.Remove(txID)
 			ch <- infos
@@ -75,10 +84,9 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			continue
 		}
 
-		// error not recoverable, fail
-		logger.DebugfContext(ctx, "scan for tx [%s] failed with err [%s]", txID, err)
-
-		return
+		// transient ledger error; fall back to block scan for this txID
+		logger.Errorf("scan for tx [%s] failed with err [%s], falling back to block scan", txID, err)
+		startDelivery = true
 	}
 
 	if !startDelivery {
