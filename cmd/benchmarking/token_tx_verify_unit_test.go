@@ -8,6 +8,7 @@ package benchmarking
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	math "github.com/IBM/mathlib"
@@ -160,7 +161,7 @@ func TestNewView_MultipleOutputCounts(t *testing.T) {
 	factory := &TokenTxVerifyViewFactory{}
 
 	for _, numOutputs := range []int{1, 2, 4} {
-		t.Run("outputs_"+string(rune('0'+numOutputs)), func(t *testing.T) {
+		t.Run("outputs_"+strconv.Itoa(numOutputs), func(t *testing.T) {
 			p := &TokenTxVerifyParams{NumOutputTokens: numOutputs}
 			proof, err := GenerateProofData(p)
 			require.NoError(t, err)
