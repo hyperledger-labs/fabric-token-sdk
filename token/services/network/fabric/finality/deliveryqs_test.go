@@ -35,7 +35,9 @@ type fakeLedgerResult struct {
 func (f *fakeLedger) GetTransactionByID(txID string) (*fabric.ProcessedTransaction, error) {
 	r, ok := f.results[txID]
 	if !ok {
-		return nil, fmt.Errorf("TXID [%s] not available", txID)
+		// The real ledger's raw string error is normalized by normalizedLedger (deliveryflm.go)
+		// before reaching DeliveryScanQueryByID. Fakes must return the typed sentinel directly.
+		return nil, fmt.Errorf("%w: TXID [%s] not available", finality.ErrTxNotFound, txID)
 	}
 
 	return r.pt, r.err
