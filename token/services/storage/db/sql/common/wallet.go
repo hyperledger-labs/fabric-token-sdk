@@ -82,7 +82,6 @@ func (db *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.W
 	}
 
 	it := common.NewIterator(rows, func(walletID *driver.WalletID) error { return rows.Scan(walletID) })
-	defer it.Close()
 
 	return iterators.ReadAllValues(it)
 }
