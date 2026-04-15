@@ -31,15 +31,6 @@ sed 's#127.0.0.1#123.456.789#g' ./out/testdata/fsc/nodes/test-node.0/client-conf
 GOGC=10000 nohup go run ./client/ -benchtime=30s -count=5 -workloads=transfer-service -cpu=1,2,4,8,16,32,48,64 -numConn=1,2,4,8 2>&1 | tee out.txt &
 ```
 
-Running Local Benchmark:
 
-```bash
-GOGC=10000 go test ./token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/ -run ^$ -ben
-ch=BenchmarkLocalTransferService -benchtime=30s -count=5 -cpu=1,4,8,16,32,64
-```
-Other benchmarks:
-```
-GOGC=10000 go test -bench=BenchmarkAPIGRPC -benchtime=30s -count=5 -cpu=32 2>&1
-```
 
 
