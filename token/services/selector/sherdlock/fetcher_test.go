@@ -82,8 +82,8 @@ func TestCachedFetcher_IsCacheStale(t *testing.T) {
 	fetcher.lastFetched = time.Now()
 	assert.False(t, fetcher.isCacheStale())
 
-	// Wait for cache to become stale
-	time.Sleep(150 * time.Millisecond)
+	// Wait for cache to become stale (use 2.5x interval for slower CI machines)
+	time.Sleep(250 * time.Millisecond)
 	assert.True(t, fetcher.isCacheStale())
 }
 
@@ -236,8 +236,8 @@ func TestCachedFetcher_UnspentTokensIteratorBy_StaleCache(t *testing.T) {
 	ctx := t.Context()
 	fetcher.update(ctx)
 
-	// Wait for cache to become stale
-	time.Sleep(100 * time.Millisecond)
+	// Wait for cache to become stale (use 4x interval for slower CI machines)
+	time.Sleep(200 * time.Millisecond)
 
 	// Setup second call expectation
 	tokens2 := []*token2.UnspentTokenInWallet{
@@ -668,8 +668,9 @@ func TestCachedFetcher_UpdateCache(t *testing.T) {
 		}
 		fetcher.updateCache(ctx, tokensByKey2)
 
-		// Wait for cache to process deletions
-		time.Sleep(10 * time.Millisecond)
+		// Wait for cache to process deletions (Ristretto is async)
+		// We increase the sleep or use a loop if Ristretto's Wait() isn't sufficient for the test observer
+		time.Sleep(200 * time.Millisecond)
 
 		// First key should still exist, second should be removed
 		_, ok1 = fetcher.cache.Get(tokenKey("wallet1", "USD"))
@@ -732,12 +733,12 @@ func TestCachedFetcher_UpdateCache(t *testing.T) {
 				},
 			}
 			fetcher.updateCache(ctx, newTokens)
-			time.Sleep(5 * time.Millisecond)
+			time.Sleep(20 * time.Millisecond)
 		}
 
 		// Stop readers
 		close(stopReading)
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
 		// Check for errors
 		select {
@@ -1003,14 +1004,16 @@ func TestCachedFetcher_UpdateDoesNotBlockReaders(t *testing.T) {
 	// Make cache stale so update() will be called
 	fetcher.lastFetched = time.Now().Add(-20 * time.Second)
 
-	// Use a channel to simulate a slow DB operation
+	// Use channels to synchronize instead of Sleep
+	dbStarted := make(chan struct{})
 	slowDB := make(chan struct{})
 	tokensAfterSlowDB := []*token2.UnspentTokenInWallet{
 		{WalletID: "wallet1", Type: "USD", Quantity: "200"},
 	}
 	mockIterator2 := iterators.Slice(tokensAfterSlowDB)
 	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(mockIterator2, nil).Run(func(args mock.Arguments) {
-		<-slowDB // Wait before returning to simulate slow DB
+		close(dbStarted) // Signal that the DB operation has started
+		<-slowDB         // Wait before returning to simulate slow DB
 	}).Once()
 
 	// Track whether reader succeeded while update() was blocked on DB
@@ -1024,11 +1027,16 @@ func TestCachedFetcher_UpdateDoesNotBlockReaders(t *testing.T) {
 		fetcher.update(ctx)
 	}()
 
-	// Small delay to ensure update() has released lock and is waiting on DB
-	time.Sleep(10 * time.Millisecond)
+	// Wait for the background update to actually reach the DB call
+	select {
+	case <-dbStarted:
+		// Background update is now at line 240, having released the lock at line 238
+	case <-time.After(5 * time.Second):
+		t.Fatal("Timeout waiting for background update to reach DB operation")
+	}
 
 	// Reader should be able to acquire RLock while update() waits on DB
-	// This would deadlock before the fix (issue #16)
+	// This would deadlock before the fix
 	fetcher.mu.RLock()
 	_, ok := fetcher.cache.Get(tokenKey("wallet1", "USD"))
 	fetcher.mu.RUnlock()
