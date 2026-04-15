@@ -69,7 +69,7 @@ func (f *fakeViewContext) RunView(_ view.View, _ ...view.RunViewOption) (interfa
 }
 func (f *fakeViewContext) Me() view.Identity         { return nil }
 func (f *fakeViewContext) IsMe(_ view.Identity) bool { return false }
-func (f *fakeViewContext) Initiator() view.View { return nil }
+func (f *fakeViewContext) Initiator() view.View      { return nil }
 func (f *fakeViewContext) GetSession(_ view.View, _ view.Identity, _ ...view.View) (view.Session, error) {
 	return nil, nil
 }
@@ -81,10 +81,13 @@ func (f *fakeViewContext) Context() context.Context { return context.Background(
 func (f *fakeViewContext) OnError(_ func())         {}
 
 // newServiceWithSession builds a CertificationService whose Call() will use
-// the provided fakeJsonSession instead of the real comm-stack session.
+// the provided fakeJsonSession wrapped in a SizeLimitedJsonSession so that
+// the wire-size guard fires exactly as in production.
 func newServiceWithSession(fs *fakeJsonSession) *interactive.CertificationService {
 	svc := interactive.NewCertificationService(&mock.ResponderRegistryMock{}, &disabled.Provider{}, &mock.BackendMock{})
-	interactive.SetSessionFactory(svc, func(_ view.Context) session.JsonSession { return fs })
+	interactive.SetSessionFactory(svc, func(_ view.Context) session.JsonSession {
+		return session.NewSizeLimitedSession(fs, interactive.MaxWireMessageBytes)
+	})
 
 	return svc
 }
@@ -172,8 +175,8 @@ func TestCertificationRequest_String(t *testing.T) {
 
 // ---------------------------------------------------------------------------
 // Wire-size guard — Call() must reject oversized messages before JSON decode.
-// These tests validate the pre-deserialization size check added to address the
-// reviewer's concern about allocate-then-reject memory exhaustion (PR #1498).
+// The guard lives in session.SizeLimitedJsonSession; these tests verify it is
+// wired up correctly through the service's sessionFactory.
 // ---------------------------------------------------------------------------
 
 // TestCall_WireMessageTooLarge verifies that Call() rejects a message whose raw
@@ -185,7 +188,7 @@ func TestCall_WireMessageTooLarge(t *testing.T) {
 	_, err := svc.Call(&fakeViewContext{})
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "wire message too large")
+	assert.Contains(t, err.Error(), "message too large")
 	assert.Contains(t, err.Error(), strconv.Itoa(interactive.MaxWireMessageBytes))
 }
 
@@ -198,8 +201,8 @@ func TestCall_WireMessageAtLimit(t *testing.T) {
 	_, err := svc.Call(&fakeViewContext{})
 
 	require.Error(t, err)
-	// Must NOT be a wire-size error — the guard must pass.
-	assert.NotContains(t, err.Error(), "wire message too large")
+	// Must NOT be a size-guard error — the guard must pass.
+	assert.NotContains(t, err.Error(), "message too large")
 }
 
 // TestCall_ReceiveRawError verifies that a transport error from ReceiveRaw is
