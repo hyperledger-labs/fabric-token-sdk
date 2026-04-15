@@ -84,6 +84,9 @@ func (f *TrackedKVS) Get(id string, entry interface{}) error {
 	}
 
 	f.GetHistory = append(f.GetHistory, KeyValuePair{Key: id, Value: e, Error: errorMsg})
-
 	return err
+}
+
+func (f *TrackedKVS) Close() error {
+	return nil
 }

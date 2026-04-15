@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/test-go/testify/require"
 )
@@ -23,6 +24,7 @@ func KeyStoreTest(t *testing.T, cfgProvider cfgProvider) {
 			t.Fatal(err)
 		}
 		t.Run(c.Name, func(xt *testing.T) {
+			defer utils.IgnoreError(db.Close)
 			c.Fn(xt, db)
 		})
 	}

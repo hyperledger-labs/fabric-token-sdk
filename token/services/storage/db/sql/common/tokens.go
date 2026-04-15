@@ -271,6 +271,7 @@ func (db *TokenStore) ListUnspentTokensBy(ctx context.Context, walletID string, 
 	if err != nil {
 		return nil, err
 	}
+	defer it.Close()
 	tokens, err := iterators.ReadAllPointers(it)
 	if err != nil {
 		return nil, err
@@ -286,6 +287,7 @@ func (db *TokenStore) ListUnspentTokens(ctx context.Context) (*token.UnspentToke
 	if err != nil {
 		return nil, err
 	}
+	defer it.Close()
 	tokens, err := iterators.ReadAllPointers(it)
 	if err != nil {
 		return nil, err
@@ -378,6 +380,7 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 	it := common.NewIterator(rows, func(tok *token.IssuedToken) error {
 		return rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity, &tok.Issuer)
 	})
+	defer it.Close()
 	tokens, err := iterators.ReadAllPointers(it)
 	if err != nil {
 		return nil, err
@@ -546,6 +549,7 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 	it := common.NewIterator(rows, func(tok *token.UnspentToken) error {
 		return rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity)
 	})
+	defer it.Close()
 	counter := 0
 	tokens := make([]*token.Token, len(inputs))
 	err = iterators.ForEach(it, func(tok *token.UnspentToken) error {
@@ -622,6 +626,7 @@ func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.Query
 	it := common.NewIterator(rows, func(td *driver.TokenDetails) error {
 		return rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &td.Amount, &td.IsSpent, &td.SpentBy, &td.StoredAt)
 	})
+	defer it.Close()
 
 	return iterators.ReadAllValues(it)
 }
@@ -987,6 +992,7 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 	logger.DebugfContext(ctx, "supported token formats are [%v]", supported)
 
 	all := common.NewIterator(rows, func(f *token.Format) error { return rows.Scan(f) })
+	defer all.Close()
 	unsupported := iterators.Filter(all, func(f *token.Format) bool { return !supported.Contains(*f) })
 
 	return iterators.ReadAllValues(unsupported)

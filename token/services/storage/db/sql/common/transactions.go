@@ -150,6 +150,7 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params dbdriver.
 
 		return nil
 	})
+	defer it.Close()
 
 	return iterators.ReadAllPointers(it)
 }

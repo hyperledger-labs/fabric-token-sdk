@@ -354,6 +354,7 @@ func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriv
 		return nil, errors.Wrapf(err, "error querying db")
 	}
 	it := common.NewIterator(rows, func(idHash *string) error { return rows.Scan(idHash) })
+	defer it.Close()
 
 	found, err := iterators.Reduce(it, iterators.ToSet[string]())
 	if err != nil {

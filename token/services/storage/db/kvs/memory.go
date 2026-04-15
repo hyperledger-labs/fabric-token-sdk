@@ -9,17 +9,17 @@ package kvs
 import (
 	"context"
 
-	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
+	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 )
 
 func NewInMemory() (KVS, error) {
 	return kvs.New(utils.MustGet(mem.NewDriver().NewKVS("")), "", kvs.DefaultCacheSize)
 }
 
-func Keystore(kvs KVS) keystore.KVS {
+func Keystore(kvs KVS) idriver.Keystore {
 	return &kvsAdapter{kvs: kvs}
 }
 
@@ -33,4 +33,8 @@ func (k *kvsAdapter) Put(id string, state interface{}) error {
 
 func (k *kvsAdapter) Get(id string, state interface{}) error {
 	return k.kvs.Get(context.Background(), id, state)
+}
+
+func (k *kvsAdapter) Close() error {
+	return nil
 }
