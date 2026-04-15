@@ -23,7 +23,8 @@ import re
 import argparse
 from datetime import datetime
 from collections import defaultdict
-
+from itertools import count as counter
+from pathlib import Path
 
 # ----- CLI -----
 
@@ -71,17 +72,17 @@ cpus = [int(c) for c in args.cpus.split(",")]
 # ----- Paths -----
 
 TOKENSDK_ROOT              = os.environ.get("TOKENSDK_ROOT", "../../")
-v1_benchmarks_folder       = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1")
-transfer_benchmarks_folder = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1/transfer")
-issuer_benchmarks_folder   = os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1/issue")
-validator_benchmarks_folder= os.path.join(TOKENSDK_ROOT, "token/core/zkatdlog/nogh/v1/validator")
+TOKENSDK_ROOT              = Path(TOKENSDK_ROOT)
+v1_benchmarks_folder       = TOKENSDK_ROOT / "token/core/zkatdlog/nogh/v1"
+transfer_benchmarks_folder = TOKENSDK_ROOT / "token/core/zkatdlog/nogh/v1/transfer"
+issuer_benchmarks_folder   = TOKENSDK_ROOT / "token/core/zkatdlog/nogh/v1/issue"
+validator_benchmarks_folder= TOKENSDK_ROOT / "token/core/zkatdlog/nogh/v1/validator"
 
 results_csv = "benchmark_results.csv"
 results_pdf = "benchmark_results.pdf"
 results_IO  = "benchmark_IOstats.csv"
 
-timestamp_str      = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-output_folder_name = f"benchmark_logs_{timestamp_str}"
+output_folder_name = f"benchmark_logs_{datetime.now():%Y-%m-%d_%H-%M-%S}"
 output_folder_path = os.path.join(".", output_folder_name)
 os.makedirs(output_folder_path, exist_ok=True)
 
@@ -105,11 +106,10 @@ def to_ms(value: float, unit: str) -> int:
 
 # Counter for run numbering
 
-run_counter = [1]
+RUN_COUNTER = counter(0)
 
 def _next_run():
-    n = run_counter[0]
-    run_counter[0] += 1
+    n = next(RUN_COUNTER)
     return n
 
 

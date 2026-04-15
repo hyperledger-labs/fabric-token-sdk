@@ -3,6 +3,11 @@
 plot_benchmark_results.py: Generates comparison plots across executor
 strategies (serial, unbounded, pool) for each parallel benchmark test.
 
+Executor strategies:
+  serial: executes tasks sequentially in the same goroutine (baseline, no concurrency)
+  unbounded: spawns a new goroutine per task (maximum concurrency, higher overhead)
+  pool: uses a fixed-size worker pool (bounded concurrency, better control and stability)
+
 Reads benchmark_results.csv produced by run_benchmarks.py and outputs
 a PDF with two plots per test:
   Left:  TPS vs worker count, one line per executor strategy

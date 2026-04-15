@@ -145,12 +145,13 @@ func RunBenchmark[T any](
 	time.Sleep(50 * time.Millisecond)
 
 	var (
-		running     atomic.Bool
-		recording   atomic.Bool
-		opsCounter  atomic.Uint64
-		startWg     sync.WaitGroup
-		endWg       sync.WaitGroup
-		startGlobal time.Time
+		running        atomic.Bool
+		recording      atomic.Bool
+		opsCounter     atomic.Uint64
+		startWg        sync.WaitGroup
+		endWg          sync.WaitGroup
+		startGlobal    time.Time
+		peakGoroutines atomic.Int64
 	)
 
 	running.Store(true)
@@ -244,16 +245,16 @@ func RunBenchmark[T any](
 	startGlobal = time.Now()
 	recording.Store(true)
 
-	// Sample goroutine count 100ms into recording, when executor goroutines
-	// are most likely active. Sampled here rather than after endWg.Wait()
-	// because workers exit before we can measure them.
-	goroutinesBaseline := int64(runtime.NumGoroutine())
-
 	// Timeline Monitor
 	timeline := make([]TimePoint, 0, int(cfg.Duration.Seconds())+1)
 
 	var monitorWg sync.WaitGroup
 	monitorWg.Add(1)
+
+	// Baseline goroutine count: workers + monitor + main + any framework goroutines.
+	// Captured just before recording so executor goroutines are not yet active.
+	goroutineBaseline := int64(runtime.NumGoroutine())
+	peakGoroutines.Store(goroutineBaseline)
 
 	go func() {
 		defer monitorWg.Done()
@@ -274,18 +275,25 @@ func RunBenchmark[T any](
 				prevOps = currOps
 				pt := TimePoint{Timestamp: t.Sub(startTime), OpsSec: float64(delta)}
 				timeline = append(timeline, pt)
+
+				// Track peak goroutine count during recording.
+				// Unbounded executors spawn goroutines per proof that live
+				// microseconds — we sample every tick to catch their peak.
+				current := int64(runtime.NumGoroutine())
+				for {
+					old := peakGoroutines.Load()
+					if current <= old {
+						break
+					}
+					if peakGoroutines.CompareAndSwap(old, current) {
+						break
+					}
+				}
 			}
 		}
 	}()
 
 	time.Sleep(cfg.Duration)
-
-	// Sample peak goroutines at end of recording, before workers exit.
-	goroutinesPeak := int64(runtime.NumGoroutine())
-	goroutinesCreated := goroutinesPeak - goroutinesBaseline
-	if goroutinesCreated < 0 {
-		goroutinesCreated = 0
-	}
 
 	running.Store(false)
 	endWg.Wait()
@@ -295,6 +303,11 @@ func RunBenchmark[T any](
 	monitorWg.Wait() // BLOCK here until monitor goroutine returns
 
 	runtime.ReadMemStats(&memAfter)
+
+	goroutinesCreated := peakGoroutines.Load() - goroutineBaseline
+	if goroutinesCreated < 0 {
+		goroutinesCreated = 0
+	}
 
 	return analyzeResults(cfg, workerResults, memBytes, memAllocs, memBefore, memAfter, globalDuration, timeline, goroutinesCreated)
 }
