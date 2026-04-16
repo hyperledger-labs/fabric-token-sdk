@@ -96,8 +96,9 @@ Translating high-level token requests (e.g., "Transfer 10 tokens from A to B") i
 ### 2. Transaction Submission
 Broadcasting endorsed transaction envelopes to the network's ordering service via [`Broadcast`](../../token/services/network/network.go).
 
-### 3. Finality Tracking
-Monitoring the ledger for transaction commitment. It provides a listener-based API ([`FinalityListener`](../../token/services/network/network.go)) that notifies the SDK when a transaction is validated or invalidated.
+### 3.  Finality Tracking
+Monitoring the ledger for transaction commitment. It provides a listener-based API ([`FinalityListener`](../../token/services/network/network.go)) that notifies the SDK when a transaction is validated or invalidated. 
+The Network Service also instantiates the **Transaction Recovery Service** from the Storage Service to handle pending transactions that may have lost their finality listeners.
 
 ### 4. Public Parameters Discovery
 Acting as the primary fetcher for the system's [Public Parameters](../public_parameters.md). It monitors the ledger for updates and ensures the SDK is synchronized with the latest cryptographic material.
@@ -193,10 +194,23 @@ networkProvider.RegisterDriver(fabricxDriver)
 
 The provider automatically selects the appropriate driver based on the network configuration when `GetNetwork()` is called.
 
+## Transaction Recovery Integration
+
+The Network Service instantiates and manages the **Transaction Recovery Service** provided by the Storage Service. This integration ensures that pending transactions are automatically recovered if their finality listeners are lost due to node restarts, network interruptions, or other failures.
+
+**Key Integration Points:**
+- **Recovery Service Instantiation**: The Network Service creates recovery managers with the appropriate transaction database (TTXDB for regular nodes, AuditDB for auditor nodes)
+- **Network-Specific Handlers**: Provides network-specific transaction status query capabilities to the recovery handlers
+- **Background Processing**: Starts and manages the background recovery process as part of network initialization
+- **Distributed Coordination**: Leverages PostgreSQL advisory locks for leader election in multi-instance deployments
+
+For detailed information about the recovery mechanism, see [Storage Service - Transaction Recovery](storage.md#transaction-recovery-service).
+
 ## See Also
 
 - [Fabric Implementation Details](./network-fabric.md) - Chaincode-based endorsement
 - [FabricX Implementation Details](./network-fabricx.md) - FSC node endorsement
+- [Storage Service - Transaction Recovery](./storage.md#transaction-recovery-service) - Recovery mechanism details
 - [Public Parameters](../public_parameters.md) - Cryptographic setup management
 - [TTX Service](./ttx.md) - Token transaction orchestration
 - [Token SDK Architecture](../tokensdk.md) - Overall system design
