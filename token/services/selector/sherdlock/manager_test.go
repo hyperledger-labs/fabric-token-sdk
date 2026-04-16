@@ -116,9 +116,6 @@ func startContainer(t *testing.T) (func(), string) {
 	t.Helper()
 	cfg := postgres2.DefaultConfig(postgres2.WithDBName(t.Name()))
 	terminate, _, err := postgres2.StartPostgres(t.Context(), cfg, nil)
-	if err != nil {
-		t.Skipf("skipping: postgres docker container is not available: %v", err)
-	}
 	require.NoError(t, err)
 
 	return terminate, cfg.DataSource()
