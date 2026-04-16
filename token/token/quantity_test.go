@@ -20,22 +20,22 @@ import (
 
 func TestToQuantity(t *testing.T) {
 	_, err := token.ToQuantity(ToHex(100), 0)
-	assert.Equal(t, "precision must be larger than 0", err.Error())
+	require.EqualError(t, err, "precision must be larger than 0")
 
 	_, err = token.ToQuantity(IntToHex(-100), 64)
-	assert.Equal(t, "invalid input [0x-64,64]", err.Error())
+	require.EqualError(t, err, "invalid input [0x-64,64]")
 
 	_, err = token.ToQuantity("abc", 64)
-	assert.Equal(t, "invalid input [abc,64]", err.Error())
+	require.EqualError(t, err, "invalid input [abc,64]")
 
 	_, err = token.ToQuantity("0babc", 64)
-	assert.Equal(t, "invalid input [0babc,64]", err.Error())
+	require.EqualError(t, err, "invalid input [0babc,64]")
 
 	_, err = token.ToQuantity("0abc", 64)
-	assert.Equal(t, "invalid input [0abc,64]", err.Error())
+	require.EqualError(t, err, "invalid input [0abc,64]")
 
 	_, err = token.ToQuantity("0xabc", 2)
-	assert.Equal(t, "0xabc has precision 12 > 2", err.Error())
+	require.EqualError(t, err, "0xabc has precision 12 > 2")
 
 	_, err = token.ToQuantity("10231", 64)
 	require.NoError(t, err)
@@ -53,19 +53,19 @@ func TestToQuantity(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = token.ToQuantity(IntToHex(-100), 128)
-	assert.Equal(t, "invalid input [0x-64,128]", err.Error())
+	require.EqualError(t, err, "invalid input [0x-64,128]")
 
 	_, err = token.ToQuantity("abc", 128)
-	assert.Equal(t, "invalid input [abc,128]", err.Error())
+	require.EqualError(t, err, "invalid input [abc,128]")
 
 	_, err = token.ToQuantity("0babc", 128)
-	assert.Equal(t, "invalid input [0babc,128]", err.Error())
+	require.EqualError(t, err, "invalid input [0babc,128]")
 
 	_, err = token.ToQuantity("0abc", 128)
-	assert.Equal(t, "invalid input [0abc,128]", err.Error())
+	require.EqualError(t, err, "invalid input [0abc,128]")
 
 	_, err = token.ToQuantity("0xabc", 2)
-	assert.Equal(t, "0xabc has precision 12 > 2", err.Error())
+	require.EqualError(t, err, "0xabc has precision 12 > 2")
 
 	_, err = token.ToQuantity("10231", 128)
 	require.NoError(t, err)
@@ -788,5 +788,101 @@ func TestCmpPanicOnInvalidType(t *testing.T) {
 		assert.Panics(t, func() {
 			q.Cmp(invalid)
 		})
+	})
+}
+
+func TestBigQuantity_ToBigInt(t *testing.T) {
+	q, err := token.NewUBigQuantity("42", 128)
+	require.NoError(t, err)
+
+	bi := q.ToBigInt()
+	assert.Equal(t, int64(42), bi.Int64())
+
+	// Verify copy semantics: mutating the result does not affect the original
+	bi.SetInt64(999)
+	assert.Equal(t, "42", q.Decimal())
+}
+
+func TestUInt64Quantity_ToBigInt(t *testing.T) {
+	q := token.NewQuantityFromUInt64(12345)
+
+	bi := q.ToBigInt()
+	assert.Equal(t, int64(12345), bi.Int64())
+}
+
+func TestQuantity_TypeMismatchReturnsError(t *testing.T) {
+	u64, err := token.UInt64ToQuantity(10, 64)
+	require.NoError(t, err)
+
+	big128, err := token.NewUBigQuantity("10", 128)
+	require.NoError(t, err)
+
+	_, err = big128.Add(u64)
+	require.Error(t, err)
+
+	_, err = big128.Sub(u64)
+	require.Error(t, err)
+
+	_, err = u64.(*token.UInt64Quantity).Add(big128)
+	require.Error(t, err)
+
+	_, err = u64.(*token.UInt64Quantity).Sub(big128)
+	require.Error(t, err)
+}
+
+func TestUInt64ToQuantity_BigQuantityPath(t *testing.T) {
+	// Non-64 precision should return a BigQuantity
+	q, err := token.UInt64ToQuantity(100, 128)
+	require.NoError(t, err)
+
+	_, ok := q.(*token.BigQuantity)
+	assert.True(t, ok, "expected BigQuantity for precision 128")
+	assert.Equal(t, "100", q.Decimal())
+}
+
+func TestToQuantity_NegativeDecimal(t *testing.T) {
+	_, err := token.ToQuantity("-100", 64)
+	require.EqualError(t, err, "quantity must be larger than 0")
+
+	_, err = token.ToQuantity("-1", 128)
+	require.EqualError(t, err, "quantity must be larger than 0")
+}
+
+func TestToQuantitySum(t *testing.T) {
+	t.Run("Valid sum", func(t *testing.T) {
+		reducer := token.ToQuantitySum(64)
+		s := reducer.Produce()
+		var err error
+
+		s, err = reducer.Reduce(s, &token.UnspentToken{Quantity: "10"})
+		require.NoError(t, err)
+
+		s, err = reducer.Reduce(s, &token.UnspentToken{Quantity: "20"})
+		require.NoError(t, err)
+
+		assert.Equal(t, "30", s.Decimal())
+	})
+
+	t.Run("Invalid parsing", func(t *testing.T) {
+		reducer := token.ToQuantitySum(64)
+		s := reducer.Produce()
+		_, err := reducer.Reduce(s, &token.UnspentToken{Quantity: "invalid"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid input")
+	})
+
+	t.Run("Overflow panic recovery", func(t *testing.T) {
+		reducer := token.ToQuantitySum(64)
+		s := reducer.Produce()
+		var err error
+
+		// Add max uint64
+		s, err = reducer.Reduce(s, &token.UnspentToken{Quantity: strconv.FormatUint(math.MaxUint64, 10)})
+		require.NoError(t, err)
+
+		// Add 1 more to trigger panic
+		_, err = reducer.Reduce(s, &token.UnspentToken{Quantity: "1"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds uint64")
 	})
 }
