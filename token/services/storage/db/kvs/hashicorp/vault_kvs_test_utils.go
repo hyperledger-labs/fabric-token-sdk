@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	ImageName           = "hashicorp/vault"
+	ImageName           = "hashicorp/vault:latest"
 	ContainerNamePrefix = "dev-hashicorp-vault-container-"
 )
 
@@ -64,6 +64,7 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 	containerConfig := &container.Config{
 		Image: ImageName,
 		Env: []string{
+			"SKIP_SETCAP=true",
 			"VAULT_DEV_ROOT_TOKEN_ID=" + token,
 			"VAULT_DEV_LISTEN_ADDRESS=" + address,
 		},
