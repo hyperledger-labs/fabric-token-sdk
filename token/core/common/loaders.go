@@ -8,97 +8,14 @@ package common
 
 import (
 	"context"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"go.opentelemetry.io/otel/trace"
 )
 
 var logger = logging.MustGetLogger()
-
-// VaultLedgerTokenLoader loads tokens from the vault ledger.
-type VaultLedgerTokenLoader[T any] struct {
-	Logger       logging.Logger
-	TokenVault   driver.TokenVault
-	Deserializer driver.TokenDeserializer[T]
-
-	// Variables used to control retry condition
-	NumRetries int
-	RetryDelay time.Duration
-}
-
-// NewLedgerTokenLoader returns a new VaultLedgerTokenLoader instance.
-func NewLedgerTokenLoader[T any](logger logging.Logger, _ trace.TracerProvider, tokenVault driver.TokenVault, deserializer driver.TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
-	return &VaultLedgerTokenLoader[T]{
-		Logger:       logger,
-		TokenVault:   tokenVault,
-		Deserializer: deserializer,
-		NumRetries:   6,
-		RetryDelay:   1 * time.Second,
-	}
-}
-
-// GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs.
-func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ctx context.Context, ids []*token.ID) (map[string]T, error) {
-	var err error
-	for i := range s.NumRetries {
-		tokens := make(map[string]T, len(ids))
-		counter := 0
-		err = s.TokenVault.GetTokenOutputs(ctx, ids, func(id *token.ID, bytes []byte) error {
-			if len(bytes) == 0 {
-				return errors.Errorf("failed getting serialized token output for id [%v], nil value", id)
-			}
-			ti, err := s.Deserializer.DeserializeToken(bytes)
-			if err != nil {
-				return errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(bytes))
-			}
-			tokens[id.TxId] = ti
-			counter++
-
-			return nil
-		})
-		if err == nil {
-			s.Logger.DebugfContext(ctx, "retrieve [%d] token outputs for [%v]", len(tokens), ids)
-
-			return tokens, nil
-		}
-		s.Logger.DebugfContext(ctx, "failed to retrieve tokens for [%v], any pending transaction? [%s]", ids, err)
-
-		// check if there is any token id whose corresponding transaction is pending
-		// if there is, then wait a bit and retry to load the outputs
-		anyPending, anyError := s.isAnyPending(ctx, ids...)
-		if anyError != nil {
-			err = anyError
-
-			break
-		}
-		if anyError == nil && !anyPending {
-			s.Logger.DebugfContext(ctx, "failed to retrieve tokens: no transaction is pending")
-
-			break
-		}
-
-		if lastRetry := s.NumRetries - 1; i < lastRetry {
-			time.Sleep(s.RetryDelay)
-		}
-	}
-	s.Logger.DebugfContext(ctx, "failed to retrieve tokens [%s]", err)
-
-	return nil, errors.Wrapf(err, "failed to get token outputs")
-}
-
-func (s *VaultLedgerTokenLoader[T]) isAnyPending(ctx context.Context, ids ...*token.ID) (anyPending bool, anyError error) {
-	for _, id := range ids {
-		if pending, error := s.TokenVault.IsPending(ctx, id); pending || error != nil {
-			return pending, error
-		}
-	}
-
-	return false, nil
-}
 
 // LoadedToken represents a token and its metadata loaded from the vault.
 type LoadedToken[T any, M any] struct {
