@@ -112,4 +112,4 @@ The recovery service is part of the **Storage Service** and is instantiated by t
 
 For detailed information about the recovery mechanism, see:
 - [Storage Service - Transaction Recovery](storage.md#transaction-recovery-service)
-- [Configuration Guide - Recovery Parameters](../configuration.md#optional-tokentmsnameservicesnetworkfabricrecovery)
+- [Configuration Guide - Recovery Parameters](../configuration.md), Section `Optional: token.tms.<name>.services.network.fabric.recovery`

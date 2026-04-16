@@ -94,7 +94,7 @@ It uses a distributed locking mechanism (PostgreSQL advisory locks) to ensure on
 - **Multi-Database Support**:
   - **PostgreSQL**: Recommended for production multi-instance deployments. Uses advisory locks for distributed coordination and leader election
   - **SQLite**: Supported for single-node deployments and development. Handles node restarts gracefully but is not designed for multi-replica scenarios
-- **Configurable Behavior**: Recovery parameters can be tuned via configuration (see [Configuration](../configuration.md#optional-tokentmsnameservicesnetworkfabricrecovery))
+- **Configurable Behavior**: Recovery parameters can be tuned via configuration (see [Configuration](../configuration.md), Section `Optional: token.tms.<name>.services.network.fabric.recovery`)
 
 ### Recovery Process
 
@@ -140,4 +140,4 @@ The recovery service supports both PostgreSQL and SQLite backends, with differen
 ### Configuration
 
 Recovery behavior is controlled by the `token.tms.<name>.services.network.fabric.recovery` configuration section. 
-See the [Configuration Guide](../configuration.md#optional-tokentmsnameservicesnetworkfabricrecovery) for detailed parameter descriptions and tuning recommendations.
+See the [Configuration Guide](../configuration.md), Section `Optional: token.tms.<name>.services.network.fabric.recovery`, for detailed parameter descriptions and tuning recommendations.
