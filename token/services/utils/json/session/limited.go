@@ -50,6 +50,7 @@ func (s *SizeLimitedJsonSession) ReceiveRaw() ([]byte, error) {
 	if err := s.checkSize(raw); err != nil {
 		return nil, err
 	}
+
 	return raw, nil
 }
 
@@ -63,6 +64,7 @@ func (s *SizeLimitedJsonSession) ReceiveRawWithTimeout(d time.Duration) ([]byte,
 	if err := s.checkSize(raw); err != nil {
 		return nil, err
 	}
+
 	return raw, nil
 }
 
@@ -73,6 +75,7 @@ func (s *SizeLimitedJsonSession) Receive(state interface{}) error {
 	if err != nil {
 		return err
 	}
+
 	return json.Unmarshal(raw, state)
 }
 
@@ -83,6 +86,7 @@ func (s *SizeLimitedJsonSession) ReceiveWithTimeout(state interface{}, d time.Du
 	if err != nil {
 		return err
 	}
+
 	return json.Unmarshal(raw, state)
 }
 
@@ -112,5 +116,6 @@ func (s *SizeLimitedJsonSession) checkSize(raw []byte) error {
 	if len(raw) > s.maxBytes {
 		return errors.Errorf("message too large (%d > %d bytes)", len(raw), s.maxBytes)
 	}
+
 	return nil
 }
