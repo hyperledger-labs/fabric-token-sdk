@@ -19,18 +19,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
-
-type TokenCommitmentLoader interface {
-	GetTokenOutputs(ctx context.Context, ids []*token2.ID) (map[string]*token.Token, error)
-}
 
 type AuditorService struct {
 	Logger                  logging.Logger
 	PublicParametersManager common.PublicParametersManager[*setup.PublicParams]
-	TokenCommitmentLoader   TokenCommitmentLoader
 	Deserializer            driver.Deserializer
 	Metrics                 *Metrics
 	tracer                  trace.Tracer
@@ -39,7 +33,6 @@ type AuditorService struct {
 func NewAuditorService(
 	logger logging.Logger,
 	publicParametersManager common.PublicParametersManager[*setup.PublicParams],
-	tokenCommitmentLoader TokenCommitmentLoader,
 	deserializer driver.Deserializer,
 	metrics *Metrics,
 	tracerProvider trace.TracerProvider,
@@ -47,7 +40,6 @@ func NewAuditorService(
 	return &AuditorService{
 		Logger:                  logger,
 		PublicParametersManager: publicParametersManager,
-		TokenCommitmentLoader:   tokenCommitmentLoader,
 		Deserializer:            deserializer,
 		Metrics:                 metrics,
 		tracer:                  tracerProvider.Tracer("auditor_service", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
@@ -65,18 +57,6 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	if err != nil {
 		return errors.Wrapf(err, "failed to deserialize actions")
 	}
-
-	tokenIDs := make([]*token2.ID, 0)
-	for i, transfer := range metadata.Transfers {
-		s.Logger.DebugfContext(ctx, "[%s] transfer action [%d] contains [%d] inputs", anchor, i, len(transfer.Inputs))
-		tokenIDs = append(tokenIDs, transfer.TokenIDs()...)
-	}
-
-	// tokenMap, err := s.TokenCommitmentLoader.GetTokenOutputs(ctx, tokenIDs)
-	// if err != nil {
-	// 	return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
-	// }
-	s.Logger.DebugfContext(ctx, "loaded [%d] corresponding inputs for TX [%s]", len(tokenIDs), anchor)
 
 	inputTokens := make([][]*token.Token, len(metadata.Transfers))
 	for i, transfer := range transfers {
