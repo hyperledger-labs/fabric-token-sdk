@@ -61,7 +61,7 @@ func NewManager(
 	leaseCleanupTickPeriod time.Duration,
 	m *Metrics,
 ) *manager {
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec
+	ctx, cancel := context.WithCancel(context.Background())
 	mgr := &manager{
 		locker:                 locker,
 		leaseExpiry:            leaseExpiry,

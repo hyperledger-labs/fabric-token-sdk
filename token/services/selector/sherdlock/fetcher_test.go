@@ -82,8 +82,8 @@ func TestCachedFetcher_IsCacheStale(t *testing.T) {
 	fetcher.lastFetched = time.Now()
 	assert.False(t, fetcher.isCacheStale())
 
-	// Wait for cache to become stale (use 2.5x interval for slower CI machines)
-	time.Sleep(250 * time.Millisecond)
+	// Manually set lastFetched to the past instead of sleeping
+	fetcher.lastFetched = time.Now().Add(-fetcher.freshnessInterval * 2)
 	assert.True(t, fetcher.isCacheStale())
 }
 
@@ -236,8 +236,9 @@ func TestCachedFetcher_UnspentTokensIteratorBy_StaleCache(t *testing.T) {
 	ctx := t.Context()
 	fetcher.update(ctx)
 
-	// Wait for cache to become stale (use 4x interval for slower CI machines)
-	time.Sleep(200 * time.Millisecond)
+	// Trigger hard refresh by setting lastFetched to the past
+	fetcher.lastFetched = time.Now().Add(-fetcher.freshnessInterval * 2)
+	assert.True(t, fetcher.isCacheStale())
 
 	// Setup second call expectation
 	tokens2 := []*token2.UnspentTokenInWallet{
@@ -303,10 +304,6 @@ func TestCachedFetcher_CacheClear(t *testing.T) {
 	fetcher.lastFetched = time.Now().Add(-20 * time.Second)
 
 	fetcher.update(ctx)
-
-	// Note: Ristretto cache uses probabilistic eviction and may not immediately reflect changes
-	// We wait a bit for the cache to process the clear and new additions
-	time.Sleep(10 * time.Millisecond)
 
 	// New key should exist
 	_, ok3 := fetcher.cache.Get(tokenKey("wallet3", "GBP"))
@@ -609,7 +606,8 @@ func TestCachedFetcher_GroupTokensByKey(t *testing.T) {
 		mockIterator := iterators.Slice(tokens)
 
 		ctx := t.Context()
-		grouped := fetcher.groupTokensByKey(ctx, mockIterator)
+		grouped, err := fetcher.groupTokensByKey(ctx, mockIterator)
+		require.NoError(t, err)
 
 		// Should have 3 keys: wallet1-USD, wallet1-EUR, wallet2-USD
 		assert.Len(t, grouped, 3)
@@ -629,7 +627,8 @@ func TestCachedFetcher_GroupTokensByKey(t *testing.T) {
 		mockIterator := iterators.Slice(tokens)
 
 		ctx := t.Context()
-		grouped := fetcher.groupTokensByKey(ctx, mockIterator)
+		grouped, err := fetcher.groupTokensByKey(ctx, mockIterator)
+		require.NoError(t, err)
 
 		assert.Empty(t, grouped)
 	})
@@ -667,10 +666,6 @@ func TestCachedFetcher_UpdateCache(t *testing.T) {
 			},
 		}
 		fetcher.updateCache(ctx, tokensByKey2)
-
-		// Wait for cache to process deletions (Ristretto is async)
-		// We increase the sleep or use a loop if Ristretto's Wait() isn't sufficient for the test observer
-		time.Sleep(200 * time.Millisecond)
 
 		// First key should still exist, second should be removed
 		_, ok1 = fetcher.cache.Get(tokenKey("wallet1", "USD"))
@@ -787,6 +782,61 @@ func TestCachedFetcher_SoftRefresh(t *testing.T) {
 
 		mockDB.AssertExpectations(t)
 	})
+}
+
+func TestCachedFetcher_Update_ThunderingHerd(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	// Short freshness interval
+	fetcher := newCachedFetcher(mockDB, 0, 50*time.Millisecond, 100)
+
+	// Initial population
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).
+		Return(iterators.Slice([]*token2.UnspentTokenInWallet{}), nil).Once()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+
+	// Trigger staleness manually
+	fetcher.mu.Lock()
+	fetcher.lastFetched = time.Now().Add(-10 * time.Second)
+	fetcher.mu.Unlock()
+
+	// Block the next DB call with a mock that waits
+	dbCallStarted := make(chan struct{})
+	dbCallRelease := make(chan struct{})
+
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).
+		Run(func(args mock.Arguments) {
+			close(dbCallStarted)
+			<-dbCallRelease
+		}).
+		Return(iterators.Slice([]*token2.UnspentTokenInWallet{}), nil).Once()
+
+	// Start multiple concurrent reads
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = fetcher.UnspentTokensIteratorBy(ctx, "wallet1", "USD")
+		}()
+	}
+
+	// Wait for at least one to start the DB call
+	select {
+	case <-dbCallStarted:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for DB call to start")
+	}
+
+	// Release the DB call
+	close(dbCallRelease)
+
+	// Wait for all to finish
+	wg.Wait()
+
+	// Mock should only have been called TWICE total (once for initial, once for the 10 concurrent ones)
+	mockDB.AssertNumberOfCalls(t, "SpendableTokensIteratorBy", 2)
 }
 
 // TestNewFetcherProvider verifies provider creation with valid/invalid strategies and zero values.
