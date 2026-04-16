@@ -9,6 +9,7 @@ package recovery
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -136,6 +137,20 @@ func (m *Manager) recoveryLoop() {
 	ticker := time.NewTicker(m.config.ScanInterval)
 	defer ticker.Stop()
 
+	// Add random jitter (0-1 second) before initial sweep to prevent thundering herd
+	// when multiple replicas restart simultaneously
+	jitter := time.Duration(rand.Int63n(int64(time.Second)))
+	m.logger.Debugf("delaying initial recovery sweep by %s to avoid thundering herd", jitter)
+
+	select {
+	case <-m.ctx.Done():
+		m.logger.Debugf("recovery loop stopped before initial sweep")
+
+		return
+	case <-time.After(jitter):
+		// Continue with initial sweep
+	}
+
 	if err := m.runSweep(m.ctx); err != nil {
 		m.logger.Warnf("initial transaction recovery sweep failed: %v", err)
 	}
@@ -241,12 +256,18 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 			continue
 		}
 		failures++
+		// Log each individual failure for better debugging
+		m.logger.Warnf("recovery failure: %v", err)
 		if firstErr == nil {
 			firstErr = err
 		}
 	}
 
-	m.logger.Infof("completed recovery sweep: claimed=%d, failed=%d", len(records), failures)
+	if failures > 0 {
+		m.logger.Warnf("completed recovery sweep: claimed=%d, succeeded=%d, failed=%d", len(records), len(records)-failures, failures)
+	} else {
+		m.logger.Infof("completed recovery sweep: claimed=%d, all succeeded", len(records))
+	}
 
 	return firstErr
 }

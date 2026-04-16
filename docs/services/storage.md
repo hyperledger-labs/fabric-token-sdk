@@ -78,6 +78,8 @@ This ensures that the local view of the "Token Landscape" always reflects the gr
 
 The Storage Service includes a **Transaction Recovery Service** that provides the core recovery mechanism for handling pending transactions that may have lost their finality listeners due to node restarts, network interruptions, or other failures.
 
+For detailed documentation on the recovery service architecture, configuration, and usage, see [**Transaction Recovery Service**](recovery.md).
+
 ### Architecture
 
 The recovery service is instantiated by the **Network Service** (both Fabric and FabricX implementations) and operates on either the `TTXDB` (for regular transactions) or `AuditDB` (for auditor nodes). 

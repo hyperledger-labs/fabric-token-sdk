@@ -80,8 +80,8 @@ func TestManager_StartStop(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "already started")
 
-	// Wait a bit to let it scan at least once
-	time.Sleep(150 * time.Millisecond)
+	// Wait a bit to let it scan at least once (accounting for jitter delay up to 1s)
+	time.Sleep(1200 * time.Millisecond)
 
 	// Stop the manager
 	_ = manager.Stop()
@@ -134,8 +134,8 @@ func TestManager_RecoverTransaction(t *testing.T) {
 	err := manager.Start()
 	require.NoError(t, err)
 
-	// Wait for recovery to happen
-	time.Sleep(200 * time.Millisecond)
+	// Wait for recovery to happen (accounting for jitter delay up to 1s)
+	time.Sleep(1300 * time.Millisecond)
 
 	// Stop the manager
 	_ = manager.Stop()
@@ -194,8 +194,8 @@ func TestManager_SkipAlreadyRecovered(t *testing.T) {
 	err := manager.Start()
 	require.NoError(t, err)
 
-	// Wait for multiple scan cycles
-	time.Sleep(200 * time.Millisecond)
+	// Wait for multiple scan cycles (accounting for jitter delay up to 1s)
+	time.Sleep(1200 * time.Millisecond)
 
 	// Stop the manager
 	_ = manager.Stop()
