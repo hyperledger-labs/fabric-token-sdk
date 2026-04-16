@@ -66,8 +66,29 @@ func LoadConfig(cfg *config.Configuration) (Config, error) {
 		return result, err
 	}
 
-	// Apply configuration values
+	// Apply configuration values (preserve defaults if not set)
 	result.Enabled = config.Enabled
+	if config.TTL > 0 {
+		result.TTL = config.TTL
+	}
+	if config.ScanInterval > 0 {
+		result.ScanInterval = config.ScanInterval
+	}
+	if config.BatchSize > 0 {
+		result.BatchSize = config.BatchSize
+	}
+	if config.WorkerCount > 0 {
+		result.WorkerCount = config.WorkerCount
+	}
+	if config.LeaseDuration > 0 {
+		result.LeaseDuration = config.LeaseDuration
+	}
+	if config.AdvisoryLockID != 0 {
+		result.AdvisoryLockID = config.AdvisoryLockID
+	}
+	if config.InstanceID != "" {
+		result.InstanceID = config.InstanceID
+	}
 
 	return result, nil
 }

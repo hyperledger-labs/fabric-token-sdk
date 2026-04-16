@@ -229,11 +229,11 @@ func TestTTXRecoveryHandler_Recover_BusyTransaction(t *testing.T) {
 	// Execute
 	err := handler.Recover(ctx, txID)
 
-	// Verify - should return error for non-finalized transaction
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "not yet finalized")
+	// Verify - should return nil (graceful handling) for non-finalized transaction
+	// This allows the transaction to be retried on the next scan without error churn
+	require.NoError(t, err)
 	require.Equal(t, 1, mockNetwork.GetTransactionStatusCallCount())
-	require.Equal(t, 0, mockTTXDB.SetStatusCallCount()) // Should not update status
+	require.Equal(t, 0, mockTTXDB.SetStatusCallCount()) // Should not update status for Busy
 }
 
 func TestTTXRecoveryHandler_Recover_NetworkError(t *testing.T) {
