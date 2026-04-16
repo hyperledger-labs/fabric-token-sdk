@@ -38,6 +38,8 @@ Packages with benchmark tests:
 - `token/core/zkatdlog/nogh/v1/issue`: `BenchmarkIssuer` and `BenchmarkProofVerificationIssuer`
 - `token/core/zkatdlog/nogh/v1/validator`: `TestParallelBenchmarkValidatorTransfer`.
 - `token/core/zkatdlog/nogh/v1`: `BenchmarkTransferServiceTransfer` and `TestParallelBenchmarkTransferServiceTransfer`.
+- `token/core/zkatdlog/nogh/v1` (service layer): `BenchmarkIssueServiceIssue` and `TestParallelBenchmarkIssueServiceIssue` benchmark the full `IssueService.Issue()` path (wallet lookup, signer resolution, ZK proof generation, audit-info encoding, and serialization).
+- `token/core/zkatdlog/nogh/v1` (service layer): `BenchmarkAuditorServiceCheck` and `TestParallelBenchmarkAuditorServiceCheck` benchmark `AuditorService.AuditorCheck()` (action deserialization and Pedersen commitment arithmetic).
 
 The steps necessary to run the benchmarks are very similar.
 We give two examples here:
@@ -297,3 +299,71 @@ python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
 ```shell
 python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
 ```
+
+## Benchmark: `token/core/zkatdlog/nogh/v1#BenchmarkIssueServiceIssue`
+
+### Overview
+
+`BenchmarkIssueServiceIssue` measures the end-to-end cost of `IssueService.Issue()` at the service layer — including wallet lookup, signer resolution, ZK proof generation, audit-info encoding, and serialization.
+Unlike the crypto-layer `BenchmarkIssuer` (which benchmarks only `GenerateZKIssue`), this benchmark exercises the full call stack through the service.
+
+The benchmark runs across a matrix of bit sizes and curve choices derived from `benchmark.NewSetupConfigurations`.
+
+### How to run
+
+```sh
+# Serial benchmark
+go test ./token/core/zkatdlog/nogh/v1 -bench=BenchmarkIssueServiceIssue -benchmem -count=1 -cpu=1 -timeout 0 -run=^$
+```
+
+```sh
+# Parallel harness
+go test ./token/core/zkatdlog/nogh/v1 -test.run=TestParallelBenchmarkIssueServiceIssue -test.v -test.timeout 0 \
+  -bits="32" -curves="BN254" -workers="NumCPU" -duration="10s" -setup_samples=128
+```
+
+Via the automation script:
+```shell
+python run_benchmarks.py --benchName BenchmarkIssueServiceIssue --timeout 4s --count 5
+```
+
+### Example results (i7-12650H, WSL2)
+
+| Configuration | ops | ns/op |
+|---|---|---|
+| bits=32, BN254 | 136 | 26 318 705 (~26.3 ms) |
+| bits=64, BN254 | 80 | 46 373 263 (~46.4 ms) |
+
+## Benchmark: `token/core/zkatdlog/nogh/v1#BenchmarkAuditorServiceCheck`
+
+### Overview
+
+`BenchmarkAuditorServiceCheck` measures the end-to-end cost of `AuditorService.AuditorCheck()` at the service layer — including action deserialization and Pedersen commitment arithmetic.
+A real ZK issue action is generated once per configuration at setup time; each benchmark iteration re-runs only the hot verification path.
+
+The benchmark runs across a matrix of bit sizes and curve choices derived from `benchmark.NewSetupConfigurations`.
+
+### How to run
+
+```sh
+# Serial benchmark
+go test ./token/core/zkatdlog/nogh/v1 -bench=BenchmarkAuditorServiceCheck -benchmem -count=1 -cpu=1 -timeout 0 -run=^$
+```
+
+```sh
+# Parallel harness
+go test ./token/core/zkatdlog/nogh/v1 -test.run=TestParallelBenchmarkAuditorServiceCheck -test.v -test.timeout 0 \
+  -bits="32" -curves="BN254" -workers="NumCPU" -duration="10s" -setup_samples=128
+```
+
+Via the automation script:
+```shell
+python run_benchmarks.py --benchName BenchmarkAuditorServiceCheck --timeout 4s --count 5
+```
+
+### Example results (i7-12650H, WSL2)
+
+| Configuration | ops | ns/op |
+|---|---|---|
+| bits=32, BN254 | 19 646 | 184 946 (~185 µs) |
+| bits=32, BLS12_381_BBS_GURVY | 7 060 | 465 376 (~465 µs) |
