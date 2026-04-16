@@ -1,4 +1,3 @@
-version: "2"
 linters:
   enable:
     - canonicalheader # Canonicalheader checks whether net/http.Header uses canonical header. [auto-fix]
