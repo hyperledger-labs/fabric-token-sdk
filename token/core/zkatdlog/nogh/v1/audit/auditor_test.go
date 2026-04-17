@@ -313,7 +313,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 		meta.Outputs = meta.Outputs[:len(meta.Outputs)-1]
 		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "number of outputs does not match the number of output metadata")
+		require.Contains(t, err.Error(), "expected [1] outputs but got [2]")
 	})
 
 	// GetAuditInfoForTransfers nil output token tests that an error is returned when one of the outputs
@@ -353,7 +353,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 	})
 
 	// GetAuditInfoForTransfers input token commitment mismatch tests that an error is returned when
-	// an input token's Pedersen commitment does not match the one embedded in the transfer action.
+	// an input token's serialized form does not match the one embedded in the transfer action.
 	t.Run("GetAuditInfoForTransfers input token commitment mismatch", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
 		transfer, meta, tokens := createTransfer(t, pp)
@@ -361,11 +361,11 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 		tokens[0][0].Data = pp.PedersenGenerators[0] // tamper with commitment
 		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "commitment does not match the transfer action")
+		require.Contains(t, err.Error(), "does not match the transfer action")
 	})
 
 	// GetAuditInfoForTransfers input token owner mismatch tests that an error is returned when
-	// an input token's owner does not match the one embedded in the transfer action.
+	// an input token's serialized form does not match the one embedded in the transfer action.
 	t.Run("GetAuditInfoForTransfers input token owner mismatch", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
 		transfer, meta, tokens := createTransfer(t, pp)
@@ -373,7 +373,7 @@ func TestAuditor_GetAuditInfo_Errors(t *testing.T) {
 		tokens[0][0].Owner = []byte("wrong-owner") // tamper with owner
 		_, _, err := auditor.GetAuditInfoForTransfers(t.Context(), [][]byte{raw}, []*driver.TransferMetadata{meta}, tokens)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "owner does not match the transfer action")
+		require.Contains(t, err.Error(), "does not match the transfer action")
 	})
 
 	// GetAuditInfoForTransfers no receivers for output tests that an error is returned when a
