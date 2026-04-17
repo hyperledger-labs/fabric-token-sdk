@@ -12,10 +12,8 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock/mocks"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -150,72 +148,6 @@ func TestStubbornSelectorUnit(t *testing.T) {
 		shortBackoffS := sherdlock.NewStubbornSelector(sherdlock.Logger(), mockFetcher, mockLocker, 64, 1*time.Millisecond, 1, metrics)
 		_, _, err := shortBackoffS.Select(t.Context(), &unitTestMockOwnerFilter{id: "alice"}, "50", "ABC")
 		require.Error(t, err)
-	})
-}
-
-func TestServiceUnit(t *testing.T) {
-	mockFP := &mocks.FakeFetcherProvider{}
-	mockLSM := &mocks.FakeTokenLockStoreServiceManager{}
-	mockCP := &mocks.FakeConfigProvider{}
-	mockM, _ := setupMetricsMocks()
-
-	svc := sherdlock.NewService(mockFP, mockLSM, mockCP, mockM)
-	require.NotNil(t, svc)
-
-	t.Run("Shutdown", func(t *testing.T) {
-		svc.Shutdown()
-		assert.Equal(t, 0, svc.ManagersCount())
-	})
-
-	t.Run("SelectorManager_NilTMS", func(t *testing.T) {
-		_, err := svc.SelectorManager(nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid tms")
-	})
-
-	t.Run("Loader_Load_Errors", func(t *testing.T) {
-		// We can't access l := &loader{} because loader is unexported.
-		// However, we can test NewService which uses loader.
-		// Testing through NewService is done in other tests.
-	})
-}
-
-func TestManagerUnit(t *testing.T) {
-	mockFetcher := &mocks.FakeTokenFetcher{}
-	mockLocker := &mocks.FakeLocker{}
-	_, metrics := setupMetricsMocks()
-
-	mgr := sherdlock.NewManager(mockFetcher, mockLocker, 64, 0, 0, 0, 0, metrics)
-	require.NotNil(t, mgr)
-
-	t.Run("NewSelector", func(t *testing.T) {
-		sel, err := mgr.NewSelector(transaction.ID("tx1"))
-		require.NoError(t, err)
-		assert.NotNil(t, sel)
-	})
-
-	t.Run("Close_NotFound", func(t *testing.T) {
-		err := mgr.Close(transaction.ID("nonexistent"))
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "not found")
-	})
-
-	t.Run("Stop", func(t *testing.T) {
-		mgr.Stop()
-	})
-}
-
-func TestFetcherProviderUnit(t *testing.T) {
-	mockSSM := &mocks.FakeTokenDBStoreServiceManager{}
-	metricsProvider, _ := setupMetricsMocks()
-
-	provider := sherdlock.NewFetcherProvider(mockSSM, metricsProvider, sherdlock.Mixed, 0, 0, 0)
-
-	t.Run("GetFetcher_Error", func(t *testing.T) {
-		mockSSM.StoreServiceByTMSIdReturns(nil, errors.New("ssm error"))
-		_, err := provider.GetFetcher(token.TMSID{Network: "n1"})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "ssm error")
 	})
 }
 

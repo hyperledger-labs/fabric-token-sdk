@@ -181,6 +181,11 @@ func (t *ManagementService) PublicParametersManager() *PublicParametersManager {
 	return t.publicParametersManager
 }
 
+// PublicParameters returns the public parameters, nil if not set yet.
+func (t *ManagementService) PublicParameters() *PublicParameters {
+	return t.publicParametersManager.PublicParameters()
+}
+
 // SelectorManager returns the manager for token selection strategies.
 func (t *ManagementService) SelectorManager() (SelectorManager, error) {
 	return t.selectorManagerProvider.SelectorManager(t)
