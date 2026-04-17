@@ -8,11 +8,11 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
@@ -26,53 +26,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-//go:generate counterfeiter -o mock/config.go -fake-name Config . Config
-type Config = core.Config
-
-// Base contains the static logic of the zkatdlog driver.
-type Base struct{}
-
-// PublicParametersFromBytes unmarshals the passed bytes into zkatdlog public parameters.
-func (d *Base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := v1.NewPublicParamsFromBytes(params, v1.DLogNoGHDriverName, v1.ProtocolV1)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
-	}
-
-	return pp, nil
-}
-
-// NewValidator returns a new zkatdlog validator for the passed public parameters.
-func (d *Base) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	ppp, ok := pp.(*v1.PublicParams)
-	if !ok {
-		return nil, errors.Errorf("invalid public parameters type [%T]", pp)
-	}
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "failed validating public parameters")
-	}
-	deserializer, err := NewDeserializer(ppp)
-	if err != nil {
-		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
-	}
-	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", string(pp.TokenDriverName()))
-
-	return validator.New(
-		logger,
-		ppp,
-		deserializer,
-		nil,
-		nil,
-		nil,
-	), nil
-}
-
-type TokenDriverBase struct {
-	*Base
+type BaseWalletServiceFactory struct {
+	PublicParametersDeserializer
 }
 
 // NewWalletService returns a new zkatdlog wallet service.
-func (d *TokenDriverBase) NewWalletService(
+func (d *BaseWalletServiceFactory) NewWalletService(
 	tmsConfig core.Config,
 	binder identity.NetworkBinderService,
 	storageProvider identity.StorageProvider,
@@ -173,4 +132,45 @@ func (d *TokenDriverBase) NewWalletService(
 		deserializer,
 		wallet.Convert(roles.Registries(logger, walletDB, role.NewDefaultFactory(logger, identityProvider, qe, identityConfig, deserializer, metricsProvider))),
 	), nil
+}
+
+// WalletServiceFactory is a factory for creating zkatdlog wallet services.
+type WalletServiceFactory struct {
+	*BaseWalletServiceFactory
+
+	storageProvider identity.StorageProvider
+}
+
+// NewWalletServiceFactory returns a new factory for the zkatdlog wallet service.
+func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.NamedFactory[driver.WalletServiceFactory] {
+	return core.NamedFactory[driver.WalletServiceFactory]{
+		Name: core.DriverIdentifier(v1.DLogNoGHDriverName, v1.ProtocolV1),
+		Driver: &WalletServiceFactory{
+			BaseWalletServiceFactory: &BaseWalletServiceFactory{},
+			storageProvider:          storageProvider},
+	}
+}
+
+// NewWalletService returns a new zkatdlog wallet service for the passed configuration and public parameters.
+func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, params driver.PublicParameters) (driver.WalletService, error) {
+	tmsID := tmsConfig.ID()
+	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+
+	pp, ok := params.(*v1.PublicParams)
+	if !ok {
+		return nil, errors.Errorf("invalid public parameters type [%T]", params)
+	}
+
+	return d.BaseWalletServiceFactory.NewWalletService(
+		tmsConfig,
+		&membership.NoBinder{},
+		d.storageProvider,
+		nil,
+		logger,
+		nil,
+		nil,
+		pp,
+		true,
+		&disabled.Provider{},
+	)
 }

@@ -179,24 +179,7 @@ func TestNewTokenService(t *testing.T) {
 
 // TestNewDefaultValidator tests the creation of a default zkatdlog validator.
 func TestNewDefaultValidator(t *testing.T) {
-	metricsProvider := &disabled.Provider{}
-	configService := &mock2.ConfigService{}
-	storageProvider := &imock.StorageProvider{}
-	identityProvider := &mock2.IdentityProvider{}
-	endpointService := &idmock.NetworkBinderService{}
-	networkProvider := &mock2.NetworkProvider{}
-	vaultProvider := &mock2.VaultProvider{}
-
-	d := driver.NewTokenDriver(
-		metricsProvider,
-		noop.NewTracerProvider(),
-		configService,
-		storageProvider,
-		identityProvider,
-		endpointService,
-		networkProvider,
-		vaultProvider,
-	).Driver.(*driver.Driver)
+	d := driver.NewValidatorDriver().Driver
 
 	issuerPK := testingHelper(t)
 	pp, _ := setup.Setup(32, issuerPK, math3.FP256BN_AMCL)

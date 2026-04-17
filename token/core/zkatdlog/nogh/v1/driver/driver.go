@@ -26,7 +26,7 @@ import (
 
 // Driver contains the non-static logic of the zkatdlog driver (including services).
 type Driver struct {
-	*TokenDriverBase
+	BaseWalletServiceFactory
 	metricsProvider  cdriver.MetricsProvider
 	tracerProvider   cdriver.TracerProvider
 	configService    cdriver.ConfigService
