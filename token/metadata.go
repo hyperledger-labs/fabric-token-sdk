@@ -227,6 +227,7 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if err := action.Validate(); err != nil {
 		return errors.Wrap(err, "failed validating issue action")
 	}
+
 	return m.IssueMetadata.Match(action.a)
 }
 
@@ -253,6 +254,7 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	if err := action.Validate(); err != nil {
 		return errors.Wrap(err, "failed validating issue action")
 	}
+
 	return m.TransferMetadata.Match(action.TransferAction)
 }
 

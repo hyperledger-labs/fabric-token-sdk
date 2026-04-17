@@ -34,6 +34,7 @@ func (i *IssueMetadata) Match(action IssueAction) error {
 	if !i.Issuer.Identity.Equal(action.GetIssuer()) {
 		return errors.Errorf("expected issuer [%s] but got [%s]", i.Issuer.Identity, action.GetIssuer())
 	}
+
 	return nil
 }
 
