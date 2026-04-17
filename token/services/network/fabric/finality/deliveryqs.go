@@ -8,21 +8,24 @@ package finality
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"errors"
 
-	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	events2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 )
 
 const (
 	NumberPastBlocks = 10
 	FirstBlock       = 1
 )
+
+// ErrTxNotFound is the sentinel returned by txLedger when a transaction does not
+// exist on the ledger. The wiring layer (deliveryflm.go) translates FSC's
+// string-based "not found" errors into this typed error so that callers can use
+// errors.Is instead of fragile substring matching.
+var ErrTxNotFound = errors.New("transaction not found")
 
 type txLedger interface {
 	GetTransactionByID(txID string) (*fabric.ProcessedTransaction, error)
@@ -32,10 +35,16 @@ type blockScanner interface {
 	ScanFromBlock(ctx context.Context, block uint64, callback fabric.DeliveryCallback) error
 }
 
+// txMapper is the subset of events.EventInfoMapper used by DeliveryScanQueryByID.
+// It only needs MapProcessedTx; MapTxData (the block-path method) is not called here.
+type txMapper interface {
+	MapProcessedTx(tx *fabric.ProcessedTransaction) ([]TxInfo, error)
+}
+
 type DeliveryScanQueryByID struct {
 	Delivery blockScanner
 	Ledger   txLedger
-	Mapper   events2.EventInfoMapper[TxInfo]
+	Mapper   txMapper
 }
 
 func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, lastBlock driver.BlockNum, evicted map[driver.TxID][]events2.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
@@ -72,12 +81,8 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			continue
 		}
 
-		// which kind of error do we have here?
-		// TODO: AF In FSC, we have to map the error from Ledger.GetTransactionByID to TxNotFound instead of using substrings
-		if strings.Contains(err.Error(), fmt.Sprintf("TXID [%s] not available", txID)) ||
-			strings.Contains(err.Error(), fmt.Sprintf("no such transaction ID [%s]", txID)) ||
-			errors2.HasType(err, finality.TxNotFound) {
-			// transaction was not found
+		if errors.Is(err, ErrTxNotFound) {
+			// transaction was not found on the ledger; fall back to block scan
 			logger.Errorf("tx [%s] not found on the ledger [%s]", txID, err)
 			startDelivery = true
 
@@ -94,7 +99,6 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 	}
 
 	startingBlock := max(FirstBlock, lastBlock-NumberPastBlocks)
-	// startingBlock := uint64(0)
 	logger.DebugfContext(ctx, "start scanning blocks starting from [%d], looking for remaining keys [%s]", startingBlock, keySet)
 
 	// start delivery for the future

@@ -8,6 +8,8 @@ package finality
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	vault2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/core/generic/vault"
@@ -17,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/fabricutils"
+	fscFinality "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/rwset"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/vault"
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
@@ -56,6 +59,35 @@ func (e *listenerEntry) OnStatus(ctx context.Context, info TxInfo) {
 
 func (e *listenerEntry) Equals(other events.ListenerEntry[TxInfo]) bool {
 	return other != nil && other.(*listenerEntry).listener == e.listener
+}
+
+// normalizedLedger wraps the FSC ledger and translates its string-based "not found"
+// errors into the typed ErrTxNotFound sentinel so that DeliveryScanQueryByID can
+// use errors.Is instead of fragile substring matching.
+//
+// This adapter lives in the wiring layer so that deliveryqs.go stays free of
+// FSC error-format knowledge. Once FSC's Ledger.GetTransactionByID returns a
+// typed TxNotFound error, this wrapper can be removed.
+type normalizedLedger struct {
+	inner txLedger
+}
+
+func newNormalizedLedger(l txLedger) *normalizedLedger {
+	return &normalizedLedger{inner: l}
+}
+
+func (l *normalizedLedger) GetTransactionByID(txID string) (*fabric.ProcessedTransaction, error) {
+	pt, err := l.inner.GetTransactionByID(txID)
+	if err == nil {
+		return pt, nil
+	}
+	if errors.HasCause(err, fscFinality.TxNotFound) ||
+		strings.Contains(err.Error(), fmt.Sprintf("TXID [%s] not available", txID)) ||
+		strings.Contains(err.Error(), fmt.Sprintf("no such transaction ID [%s]", txID)) {
+		return nil, fmt.Errorf("%w: %w", ErrTxNotFound, err)
+	}
+
+	return nil, err
 }
 
 type TxInfo struct {
@@ -116,7 +148,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 		},
 		&DeliveryScanQueryByID{
 			Delivery: ch.Delivery(),
-			Ledger:   ch.Ledger(),
+			Ledger:   newNormalizedLedger(ch.Ledger()),
 			Mapper:   mapper,
 		},
 		p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
