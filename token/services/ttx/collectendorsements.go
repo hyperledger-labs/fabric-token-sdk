@@ -224,8 +224,14 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			continue
 		}
 
-		// Case: there is a signer locally bound to the party, use it to generate the signature
-		if signer, err := c.tx.TokenService().SigService().GetSigner(context.Context(), signerIdentity); err == nil {
+		// Case: there is a signer locally bound to the party, use it to generate the signature.
+		// IsMe() is a cheap cache/DB lookup that avoids the expensive idemix sign-and-verify in
+		// GetSigner() for identities we do not own.
+		if c.tx.TokenService().SigService().IsMe(context.Context(), signerIdentity) {
+			signer, err := c.tx.TokenService().SigService().GetSigner(context.Context(), signerIdentity)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed getting local signer for party [%s]", signerIdentity)
+			}
 			logger.DebugfContext(context.Context(), "found signer for party [%s], request local signature", signerIdentity)
 			sigma, err := c.signLocal(context.Context(), signerIdentity, signer, requestRaw)
 			if err != nil {
@@ -234,9 +240,8 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			sigmas[signerIdentity.UniqueID()] = sigma
 
 			continue
-		} else {
-			logger.DebugfContext(context.Context(), "failed to find a signer for party [%s]: [%s]", signerIdentity, err)
 		}
+		logger.DebugfContext(context.Context(), "no local signer for party [%s], checking wallet", signerIdentity)
 
 		// Case: there is a wallet bound to the party but the signer is not local, the signature is generated externally
 		if w, err := c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), signerIdentity); err == nil {
