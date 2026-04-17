@@ -15,7 +15,7 @@ import (
 )
 
 // PPMFactory is a factory for creating zkatdlog public parameters managers.
-type PPMFactory struct{ *ValidatorDriver }
+type PPMFactory struct{ ValidatorDriver }
 
 // NewPPMFactory returns a new factory for the zkatdlog public parameters manager.
 func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {

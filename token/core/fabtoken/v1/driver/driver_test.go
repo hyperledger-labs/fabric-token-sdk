@@ -156,24 +156,7 @@ func TestNewTokenService(t *testing.T) {
 
 // TestNewDefaultValidator tests the creation of a default fabtoken validator.
 func TestNewDefaultValidator(t *testing.T) {
-	metricsProvider := &mock2.MetricsProvider{}
-	configService := &mock2.ConfigService{}
-	storageProvider := &imock.StorageProvider{}
-	identityProvider := &mock2.IdentityProvider{}
-	endpointService := &idmock.NetworkBinderService{}
-	networkProvider := &mock2.NetworkProvider{}
-	vaultProvider := &mock2.VaultProvider{}
-
-	d := driver.NewTokenDriver(
-		metricsProvider,
-		nil,
-		configService,
-		storageProvider,
-		identityProvider,
-		endpointService,
-		networkProvider,
-		vaultProvider,
-	).Driver.(*driver.Driver)
+	d := driver.NewValidatorDriver().Driver
 
 	pp, _ := setup.NewWith(setup.FabTokenDriverName, setup.ProtocolV1, 64)
 

@@ -24,12 +24,12 @@ type ValidatorDriver struct {
 func NewValidatorDriver() core.NamedFactory[driver.ValidatorDriver] {
 	return core.NamedFactory[driver.ValidatorDriver]{
 		Name:   core.DriverIdentifier(v1.DLogNoGHDriverName, v1.ProtocolV1),
-		Driver: &ValidatorDriver{},
+		Driver: ValidatorDriver{},
 	}
 }
 
 // NewValidator returns a new zkatdlog validator for the passed public parameters.
-func (d *ValidatorDriver) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
+func (d ValidatorDriver) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	ppp, ok := pp.(*v1.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", pp)

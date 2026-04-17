@@ -24,7 +24,7 @@ import (
 
 // Driver contains the non-static logic of the fabtoken driver (including services).
 type Driver struct {
-	*base
+	BaseWalletServiceFactory
 	metricsProvider  cdriver.MetricsProvider
 	tracerProvider   cdriver.TracerProvider
 	configService    cdriver.ConfigService
@@ -72,7 +72,6 @@ func newTokenDriver(
 	vaultProvider cdriver.VaultProvider,
 ) *Driver {
 	return &Driver{
-		base:             &base{},
 		metricsProvider:  metricsProvider,
 		tracerProvider:   tracerProvider,
 		configService:    configService,
