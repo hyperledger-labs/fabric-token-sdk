@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	fscerrors "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	vault2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/core/generic/vault"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
@@ -81,7 +81,7 @@ func (l *normalizedLedger) GetTransactionByID(txID string) (*fabric.ProcessedTra
 	if err == nil {
 		return pt, nil
 	}
-	if fscerrors.HasCause(err, fscFinality.TxNotFound) ||
+	if errors.HasCause(err, fscFinality.TxNotFound) ||
 		strings.Contains(err.Error(), fmt.Sprintf("TXID [%s] not available", txID)) ||
 		strings.Contains(err.Error(), fmt.Sprintf("no such transaction ID [%s]", txID)) {
 		return nil, fmt.Errorf("%w: %w", ErrTxNotFound, err)
@@ -177,7 +177,7 @@ type endorserTxInfoMapper struct {
 func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]TxInfo, error) {
 	_, payl, chdr, err := fabricutils.UnmarshalTx(tx)
 	if err != nil {
-		return nil, fscerrors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
+		return nil, errors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
 	}
 	if common.HeaderType(chdr.Type) != common.HeaderType_ENDORSER_TRANSACTION {
 		logger.DebugfContext(ctx, "Type of TX [%d:%d] is [%d]. Skipping...", blockNum, txNum, chdr.Type)
@@ -186,11 +186,11 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 	}
 	rwSet, err := rwset.NewEndorserTransactionReader(m.network).Read(payl, chdr)
 	if err != nil {
-		return nil, fscerrors.Wrapf(err, "failed extracting rwset")
+		return nil, errors.Wrapf(err, "failed extracting rwset")
 	}
 
 	if len(block.Metadata) < int(common.BlockMetadataIndex_TRANSACTIONS_FILTER) {
-		return nil, fscerrors.Errorf("block metadata lacks transaction filter")
+		return nil, errors.Errorf("block metadata lacks transaction filter")
 	}
 	code, message := committer.MapValidationCode(int32(committer.ValidationFlags(block.Metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER])[txNum]))
 
@@ -218,7 +218,7 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string, code driver3.ValidationCode, message string) (map[driver2.Namespace]TxInfo, error) {
 	key, err := m.keyTranslator.CreateTokenRequestKey(txID)
 	if err != nil {
-		return nil, fscerrors.Wrapf(err, "can't create for token request [%s]", txID)
+		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)
 	}
 	txInfos := make(map[driver2.Namespace]TxInfo, len(rwSet.Writes))
 	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.Writes))
