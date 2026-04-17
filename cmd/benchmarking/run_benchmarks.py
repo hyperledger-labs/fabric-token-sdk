@@ -332,6 +332,8 @@ non_parallel_tests = [
     ("BenchmarkIssuer",                  "",                                                 issuer_benchmarks_folder),
     ("BenchmarkProofVerificationIssuer", "",                                                 issuer_benchmarks_folder),
     ("BenchmarkTransferServiceTransfer", "",                                                 v1_benchmarks_folder),
+    ("BenchmarkIssueServiceIssue",       "",                                                 v1_benchmarks_folder),
+    ("BenchmarkAuditorServiceCheck",     "",                                                 v1_benchmarks_folder),
 ]
 parallel_tests = [
     ("TestParallelBenchmarkValidatorTransfer",      "", validator_benchmarks_folder),
@@ -339,6 +341,8 @@ parallel_tests = [
     ("TestParallelBenchmarkVerificationSenderProof","", ""),
     ("TestParallelBenchmarkTransferProofGeneration","", ""),
     ("TestParallelBenchmarkTransferServiceTransfer","", v1_benchmarks_folder),
+    ("TestParallelBenchmarkIssueServiceIssue",      "", v1_benchmarks_folder),
+    ("TestParallelBenchmarkAuditorServiceCheck",    "", v1_benchmarks_folder),
 ]
 
 
