@@ -12,6 +12,7 @@ import (
 	tokcommon "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	zkcommon "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
+	v1driver "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	issue_pkg "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	drivermock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -32,9 +33,10 @@ type IssueSetup struct {
 }
 
 // NewIssueSetup constructs an IssueSetup from a SetupConfiguration.
-// It stubs WalletService and Deserializer with counterfeiter mocks, wiring the
-// real IssuerSigner from the configuration so that GenerateZKIssue exercises
-// the actual ECDSA signing path.
+// It stubs WalletService with a counterfeiter mock, wiring the real IssuerSigner
+// from the configuration so that GenerateZKIssue exercises the actual ECDSA
+// signing path. The Deserializer is instantiated via the driver so that
+// audit-info encoding matches production behaviour.
 func NewIssueSetup(conf *SetupConfiguration) (*IssueSetup, error) {
 	ppm, err := tokcommon.NewPublicParamsManagerFromParams(conf.PP)
 	if err != nil {
@@ -47,11 +49,10 @@ func NewIssueSetup(conf *SetupConfiguration) (*IssueSetup, error) {
 	walletService := &drivermock.WalletService{}
 	walletService.IssuerWalletReturns(issuerWallet, nil)
 
-	// GetAuditInfo is called twice inside Issue(): once per recipient and once
-	// for the issuer identity. Returning fixed bytes is sufficient because the
-	// audit info is stored in the metadata but not validated within Issue().
-	deserializer := &drivermock.Deserializer{}
-	deserializer.GetAuditInfoReturns([]byte("auditInfo"), nil)
+	deserializer, err := v1driver.NewDeserializer(conf.PP)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating deserializer for issue setup")
+	}
 
 	issuerID, err := conf.IssuerSigner.Serialize()
 	if err != nil {
@@ -90,8 +91,8 @@ type AuditCheckSetup struct {
 
 // NewAuditCheckSetup constructs an AuditCheckSetup from a SetupConfiguration.
 // It generates a real ZK issue action using the crypto layer directly, then
-// wires an AuditorService with a mock Deserializer (MatchIdentity always
-// succeeds) and a mock TokenCommitmentLoader (unused for issue-only requests).
+// wires an AuditorService with the driver Deserializer so that identity
+// verification matches production behaviour.
 func NewAuditCheckSetup(conf *SetupConfiguration) (*AuditCheckSetup, error) {
 	// Build a real issue action using the crypto layer so that the Pedersen
 	// commitment in the action is genuine and AuditorCheck performs real arithmetic.
@@ -154,11 +155,10 @@ func NewAuditCheckSetup(conf *SetupConfiguration) (*AuditCheckSetup, error) {
 		return nil, errors.Wrap(err, "failed creating public params manager for audit check setup")
 	}
 
-	// MatchIdentity always returns nil so identity verification is a no-op.
-	// The benchmark focuses on the Pedersen commitment arithmetic in InspectOutput,
-	// not on identity-matching overhead.
-	deserializer := &drivermock.Deserializer{}
-	deserializer.MatchIdentityReturns(nil)
+	deserializer, err := v1driver.NewDeserializer(conf.PP)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating deserializer for audit check setup")
+	}
 
 	service := v1.NewAuditorService(
 		logging.MustGetLogger(),

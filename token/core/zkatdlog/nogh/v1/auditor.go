@@ -19,14 +19,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
-
-//go:generate counterfeiter -o mock/token_commitment_loader.go -fake-name TokenCommitmentLoader . TokenCommitmentLoader
-type TokenCommitmentLoader interface {
-	GetTokenOutputs(ctx context.Context, ids []*token2.ID) (map[string]*token.Token, error)
-}
 
 type AuditorService struct {
 	Logger                  logging.Logger
