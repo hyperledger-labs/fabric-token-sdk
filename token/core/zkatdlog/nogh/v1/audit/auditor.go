@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package audit
 
 import (
-	"bytes"
 	"context"
 
 	math "github.com/IBM/mathlib"
@@ -257,7 +256,7 @@ func (a *Auditor) InspectIdentity(ctx context.Context, matcher InfoMatcher, iden
 	// If identity is provided in metadata, it must match the one in the action
 	if len(identity.IdentityFromMeta) != 0 {
 		// enforce equality
-		if !bytes.Equal(identity.IdentityFromMeta, identity.Identity) {
+		if !identity.IdentityFromMeta.Equal(identity.Identity) {
 			return errors.Errorf("failed to inspect identity at index [%d]: identity does not match the identity form metadata", index)
 		}
 	}
@@ -362,30 +361,35 @@ func (a *Auditor) GetAuditInfoForTransfers(ctx context.Context, transfers [][]by
 			}
 		}
 		ta := &transfer.Action{}
-		err := ta.Deserialize(transfers[k])
-		if err != nil {
+		if err := ta.Deserialize(transfers[k]); err != nil {
 			return nil, nil, err
 		}
-		// Verify each input token's commitment and owner match what the transfer action recorded.
-		if len(ta.Inputs) != len(inputs[k]) {
-			return nil, nil, errors.Errorf("transfer action at index [%d]: has [%d] inputs but [%d] tokens provided", k, len(ta.Inputs), len(inputs[k]))
+		// Validate structural consistency between action and metadata (counts, signers, issuer).
+		if err := transferMetadata.Match(ta); err != nil {
+			return nil, nil, errors.Wrapf(err, "transfer at index [%d]", k)
 		}
+		// Build serialized forms and validate input tokens match the action.
+		actionInputSer := make([][]byte, len(ta.Inputs))
 		for i, actionInput := range ta.Inputs {
-			if actionInput == nil || actionInput.Token == nil {
-				continue // nil or upgrade-witness input: skip commitment comparison
+			if actionInput.Token == nil {
+				continue // upgrade-witness input: no zkatdlog commitment to compare
 			}
-			if inputs[k][i].Data == nil || actionInput.Token.Data == nil {
-				return nil, nil, errors.Errorf("input token at index [%d][%d]: nil token commitment", k, i)
+			ser, err := actionInput.Token.Serialize()
+			if err != nil {
+				return nil, nil, errors.Errorf("failed serializing action input at [%d][%d]: %s", k, i, err)
 			}
-			if !inputs[k][i].Data.Equals(actionInput.Token.Data) {
-				return nil, nil, errors.Errorf("input token at index [%d][%d]: commitment does not match the transfer action", k, i)
-			}
-			if !bytes.Equal(inputs[k][i].Owner, actionInput.Token.Owner) {
-				return nil, nil, errors.Errorf("input token at index [%d][%d]: owner does not match the transfer action", k, i)
-			}
+			actionInputSer[i] = ser
 		}
-		if len(ta.Outputs) != len(transferMetadata.Outputs) {
-			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.Outputs), len(transferMetadata.Outputs))
+		ledgerInputSer := make([][]byte, len(inputs[k]))
+		for i, t := range inputs[k] {
+			ser, err := t.Serialize()
+			if err != nil {
+				return nil, nil, errors.Errorf("failed serializing ledger input at [%d][%d]: %s", k, i, err)
+			}
+			ledgerInputSer[i] = ser
+		}
+		if err := transferMetadata.MatchInputs(actionInputSer, ledgerInputSer); err != nil {
+			return nil, nil, errors.Wrapf(err, "transfer at index [%d]", k)
 		}
 		// Process auditable outputs
 		outputs[k] = make([]*InspectableToken, len(ta.Outputs))
@@ -393,12 +397,11 @@ func (a *Auditor) GetAuditInfoForTransfers(ctx context.Context, transfers [][]by
 			if ta.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
-
 			if transferMetadata.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("metadata for output token at index [%d] is nil", i)
 			}
 			ti := &token.Metadata{}
-			err = ti.Deserialize(transferMetadata.Outputs[i].OutputMetadata)
+			err := ti.Deserialize(transferMetadata.Outputs[i].OutputMetadata)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -412,15 +415,12 @@ func (a *Auditor) GetAuditInfoForTransfers(ctx context.Context, transfers [][]by
 			if err != nil {
 				return nil, nil, err
 			}
-			// Verify each declared receiver's audit info matches their identity; fall back to the output owner for single-recipient outputs.
+			// Verify each receiver's audit info matches their identity for non-redeem outputs.
 			if !ta.Outputs[i].IsRedeem() {
-				if len(transferMetadata.Outputs[i].Receivers) == 0 {
-					return nil, nil, errors.Errorf("output at index [%d][%d] has no receivers", k, i)
+				if err := transferMetadata.Outputs[i].ValidateReceivers(); err != nil {
+					return nil, nil, errors.Wrapf(err, "output at index [%d][%d]", k, i)
 				}
 				for j, receiver := range transferMetadata.Outputs[i].Receivers {
-					if receiver == nil {
-						return nil, nil, errors.Errorf("receiver at index [%d][%d][%d] is nil", k, i, j)
-					}
 					identityToVerify := receiver.Identity
 					if identityToVerify.IsNone() {
 						identityToVerify = ta.Outputs[i].Owner
