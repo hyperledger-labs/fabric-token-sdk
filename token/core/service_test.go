@@ -117,7 +117,7 @@ func TestPPManagerFactoryService_DefaultValidator(t *testing.T) {
 
 	// Success case: A factory exists for the driver, and it successfully returns the default validator.
 	expectedValidator := &mock.Validator{}
-	ppmFactory.DefaultValidatorReturns(expectedValidator, nil)
+	ppmFactory.NewValidatorReturns(expectedValidator, nil)
 
 	res, err := service.NewValidator(pp)
 	require.NoError(t, err)
@@ -263,7 +263,7 @@ func TestValidatorDriverService_NewDefaultValidator(t *testing.T) {
 
 	// Success case: The default validator is successfully returned by the driver.
 	expectedValidator := &mock.Validator{}
-	driverMock.NewDefaultValidatorReturns(expectedValidator, nil)
+	driverMock.NewValidatorReturns(expectedValidator, nil)
 
 	res, err := service.NewValidator(pp)
 	require.NoError(t, err)

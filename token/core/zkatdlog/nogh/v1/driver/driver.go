@@ -74,7 +74,6 @@ func newTokenDriver(
 	vaultProvider cdriver.VaultProvider,
 ) *Driver {
 	return &Driver{
-		Base:             &Base{},
 		metricsProvider:  metricsProvider,
 		tracerProvider:   tracerProvider,
 		configService:    configService,

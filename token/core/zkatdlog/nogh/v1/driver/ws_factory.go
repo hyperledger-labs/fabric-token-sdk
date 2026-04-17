@@ -19,7 +19,7 @@ import (
 
 // WalletServiceFactory is a factory for creating zkatdlog wallet services.
 type WalletServiceFactory struct {
-	*Base
+	*TokenDriverBase
 
 	storageProvider identity.StorageProvider
 }
@@ -27,8 +27,12 @@ type WalletServiceFactory struct {
 // NewWalletServiceFactory returns a new factory for the zkatdlog wallet service.
 func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.NamedFactory[driver.WalletServiceFactory] {
 	return core.NamedFactory[driver.WalletServiceFactory]{
-		Name:   core.DriverIdentifier(v1.DLogNoGHDriverName, v1.ProtocolV1),
-		Driver: &WalletServiceFactory{storageProvider: storageProvider},
+		Name: core.DriverIdentifier(v1.DLogNoGHDriverName, v1.ProtocolV1),
+		Driver: &WalletServiceFactory{
+			TokenDriverBase: &TokenDriverBase{
+				Base: &Base{},
+			},
+			storageProvider: storageProvider},
 	}
 }
 
@@ -42,7 +46,7 @@ func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, 
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	return d.Base.NewWalletService(
+	return d.TokenDriverBase.NewWalletService(
 		tmsConfig,
 		&membership.NoBinder{},
 		d.storageProvider,

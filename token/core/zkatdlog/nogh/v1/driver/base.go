@@ -44,13 +44,12 @@ func (d *Base) PublicParametersFromBytes(params []byte) (driver.PublicParameters
 
 // NewValidator returns a new zkatdlog validator for the passed public parameters.
 func (d *Base) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "failed validating public parameters")
-	}
-	deserializer, err := NewDeserializer(pp.(*v1.PublicParams))
 	ppp, ok := pp.(*v1.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", pp)
+	}
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed validating public parameters")
 	}
 	deserializer, err := NewDeserializer(ppp)
 	if err != nil {
@@ -68,7 +67,7 @@ func (d *Base) NewValidator(pp driver.PublicParameters) (driver.Validator, error
 	), nil
 }
 
-type TokenDriverBase struct{
+type TokenDriverBase struct {
 	*Base
 }
 
