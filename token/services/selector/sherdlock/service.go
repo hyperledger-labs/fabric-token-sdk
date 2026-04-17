@@ -96,7 +96,11 @@ type loader struct {
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
-	pp := tms.PublicParametersManager().PublicParameters()
+	return s.loadTMS(tms)
+}
+
+func (s *loader) loadTMS(tms TMS) (token.SelectorManager, error) {
+	pp := tms.PublicParameters()
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
 	}

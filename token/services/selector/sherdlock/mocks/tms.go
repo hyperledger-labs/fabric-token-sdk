@@ -19,15 +19,15 @@ type FakeTMS struct {
 	iDReturnsOnCall map[int]struct {
 		result1 token.TMSID
 	}
-	PublicParametersManagerStub        func() *token.PublicParametersManager
-	publicParametersManagerMutex       sync.RWMutex
-	publicParametersManagerArgsForCall []struct {
+	PublicParametersStub        func() *token.PublicParameters
+	publicParametersMutex       sync.RWMutex
+	publicParametersArgsForCall []struct {
 	}
-	publicParametersManagerReturns struct {
-		result1 *token.PublicParametersManager
+	publicParametersReturns struct {
+		result1 *token.PublicParameters
 	}
-	publicParametersManagerReturnsOnCall map[int]struct {
-		result1 *token.PublicParametersManager
+	publicParametersReturnsOnCall map[int]struct {
+		result1 *token.PublicParameters
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -86,15 +86,15 @@ func (fake *FakeTMS) IDReturnsOnCall(i int, result1 token.TMSID) {
 	}{result1}
 }
 
-func (fake *FakeTMS) PublicParametersManager() *token.PublicParametersManager {
-	fake.publicParametersManagerMutex.Lock()
-	ret, specificReturn := fake.publicParametersManagerReturnsOnCall[len(fake.publicParametersManagerArgsForCall)]
-	fake.publicParametersManagerArgsForCall = append(fake.publicParametersManagerArgsForCall, struct {
+func (fake *FakeTMS) PublicParameters() *token.PublicParameters {
+	fake.publicParametersMutex.Lock()
+	ret, specificReturn := fake.publicParametersReturnsOnCall[len(fake.publicParametersArgsForCall)]
+	fake.publicParametersArgsForCall = append(fake.publicParametersArgsForCall, struct {
 	}{})
-	stub := fake.PublicParametersManagerStub
-	fakeReturns := fake.publicParametersManagerReturns
-	fake.recordInvocation("PublicParametersManager", []interface{}{})
-	fake.publicParametersManagerMutex.Unlock()
+	stub := fake.PublicParametersStub
+	fakeReturns := fake.publicParametersReturns
+	fake.recordInvocation("PublicParameters", []interface{}{})
+	fake.publicParametersMutex.Unlock()
 	if stub != nil {
 		return stub()
 	}
@@ -104,38 +104,38 @@ func (fake *FakeTMS) PublicParametersManager() *token.PublicParametersManager {
 	return fakeReturns.result1
 }
 
-func (fake *FakeTMS) PublicParametersManagerCallCount() int {
-	fake.publicParametersManagerMutex.RLock()
-	defer fake.publicParametersManagerMutex.RUnlock()
-	return len(fake.publicParametersManagerArgsForCall)
+func (fake *FakeTMS) PublicParametersCallCount() int {
+	fake.publicParametersMutex.RLock()
+	defer fake.publicParametersMutex.RUnlock()
+	return len(fake.publicParametersArgsForCall)
 }
 
-func (fake *FakeTMS) PublicParametersManagerCalls(stub func() *token.PublicParametersManager) {
-	fake.publicParametersManagerMutex.Lock()
-	defer fake.publicParametersManagerMutex.Unlock()
-	fake.PublicParametersManagerStub = stub
+func (fake *FakeTMS) PublicParametersCalls(stub func() *token.PublicParameters) {
+	fake.publicParametersMutex.Lock()
+	defer fake.publicParametersMutex.Unlock()
+	fake.PublicParametersStub = stub
 }
 
-func (fake *FakeTMS) PublicParametersManagerReturns(result1 *token.PublicParametersManager) {
-	fake.publicParametersManagerMutex.Lock()
-	defer fake.publicParametersManagerMutex.Unlock()
-	fake.PublicParametersManagerStub = nil
-	fake.publicParametersManagerReturns = struct {
-		result1 *token.PublicParametersManager
+func (fake *FakeTMS) PublicParametersReturns(result1 *token.PublicParameters) {
+	fake.publicParametersMutex.Lock()
+	defer fake.publicParametersMutex.Unlock()
+	fake.PublicParametersStub = nil
+	fake.publicParametersReturns = struct {
+		result1 *token.PublicParameters
 	}{result1}
 }
 
-func (fake *FakeTMS) PublicParametersManagerReturnsOnCall(i int, result1 *token.PublicParametersManager) {
-	fake.publicParametersManagerMutex.Lock()
-	defer fake.publicParametersManagerMutex.Unlock()
-	fake.PublicParametersManagerStub = nil
-	if fake.publicParametersManagerReturnsOnCall == nil {
-		fake.publicParametersManagerReturnsOnCall = make(map[int]struct {
-			result1 *token.PublicParametersManager
+func (fake *FakeTMS) PublicParametersReturnsOnCall(i int, result1 *token.PublicParameters) {
+	fake.publicParametersMutex.Lock()
+	defer fake.publicParametersMutex.Unlock()
+	fake.PublicParametersStub = nil
+	if fake.publicParametersReturnsOnCall == nil {
+		fake.publicParametersReturnsOnCall = make(map[int]struct {
+			result1 *token.PublicParameters
 		})
 	}
-	fake.publicParametersManagerReturnsOnCall[i] = struct {
-		result1 *token.PublicParametersManager
+	fake.publicParametersReturnsOnCall[i] = struct {
+		result1 *token.PublicParameters
 	}{result1}
 }
 

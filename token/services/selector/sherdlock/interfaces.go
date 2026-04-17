@@ -60,12 +60,9 @@ type ConfigProvider interface {
 	UnmarshalKey(key string, rawVal interface{}) error
 }
 
-// TMS interface for Token Management Service.
-//
-//go:generate counterfeiter -o mocks/tms.go -fake-name FakeTMS . TMS
 type TMS interface {
 	ID() token.TMSID
-	PublicParametersManager() *token.PublicParametersManager
+	PublicParameters() *token.PublicParameters
 }
 
 // Locker interface for manager locking.
