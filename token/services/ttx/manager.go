@@ -11,17 +11,14 @@ import (
 	"reflect"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -94,44 +91,6 @@ func (m *ServiceManager) ServiceByTMSId(tmsID token.TMSID) (*Service, error) {
 	return m.p.Get(tmsID)
 }
 
-// RestoreTMS restores the ttxdb corresponding to the passed TMS ID.
-func (m *ServiceManager) RestoreTMS(ctx context.Context, tmsID token.TMSID) error {
-	net, err := m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
-	}
-
-	db, err := m.ServiceByTMSId(tmsID)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
-	}
-
-	it, err := db.ttxStoreService.TokenRequests(ctx, ttxdb.QueryTokenRequestsParams{Statuses: []TxStatus{storage.Pending}})
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
-	}
-
-	return iterators.ForEach(it, func(record *storage.TokenRequestRecord) error {
-		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-
-		return net.AddFinalityListener(
-			tmsID.Namespace,
-			record.TxID,
-			finality.NewListener(
-				logger,
-				net,
-				tmsID.Namespace,
-				db.tmsProvider,
-				db.tmsID,
-				db.ttxStoreService,
-				db.tokensService,
-				db.finalityTracer,
-				db.metricsProvider,
-			),
-		)
-	})
-}
-
 // CacheRequest stores the request's details for later use.
 func (m *ServiceManager) CacheRequest(ctx context.Context, tmsID token.TMSID, request *token.Request) error {
 	service, err := m.tokensServiceManager.ServiceByTMSId(tmsID)
@@ -139,12 +98,10 @@ func (m *ServiceManager) CacheRequest(ctx context.Context, tmsID token.TMSID, re
 		return errors.WithMessagef(err, "failed to get service for [%s]", tmsID)
 	}
 
-	return service.CacheRequest(ctx, tmsID, request)
+	return service.CacheRequest(ctx, request)
 }
 
-var (
-	managerType = reflect.TypeOf((*ServiceManager)(nil))
-)
+var managerType = reflect.TypeOf((*ServiceManager)(nil))
 
 // Get returns the Service instance for the passed TMS
 func Get(sp token.ServiceProvider, tms dep.TokenManagementService) *Service {

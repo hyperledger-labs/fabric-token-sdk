@@ -17,8 +17,8 @@ type AuditTransactionStore interface {
 	// Close closes the database
 	Close() error
 
-	// BeginAtomicWrite opens an atomic database transaction. It must be committed or discarded.
-	BeginAtomicWrite() (AtomicWrite, error)
+	// NewTransactionStoreTransaction opens an atomic database transaction. It must be committed or discarded.
+	NewTransactionStoreTransaction() (TransactionStoreTransaction, error)
 
 	// SetStatus sets the status of a TokenRequest
 	// (and with that, the associated ValidationRecord, Movement and Transaction)
@@ -43,4 +43,16 @@ type AuditTransactionStore interface {
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.
 	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
+
+	// AcquireRecoveryLeadership tries to acquire the PostgreSQL advisory lock backing the sweeper leader election.
+	// If acquired is false, leadership was not obtained and the returned lease must be nil.
+	AcquireRecoveryLeadership(ctx context.Context, lockID int64) (RecoveryLeadership, bool, error)
+
+	// ClaimPendingTransactions atomically claims a batch of Pending transactions for recovery processing.
+	// Transactions whose recovery lease expired are eligible again.
+	ClaimPendingTransactions(ctx context.Context, params RecoveryClaimParams) ([]*TransactionRecord, error)
+
+	// ReleaseRecoveryClaim clears the recovery claim metadata for the given transaction if owned by owner.
+	// The message parameter is stored for audit/debugging purposes.
+	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
 }

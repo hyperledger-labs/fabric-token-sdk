@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -60,6 +61,16 @@ func (d *DBStorage) NewTransaction() (*DBTransaction, error) {
 	}
 
 	return NewTransaction(d.Notifier, tx, d.TMSID)
+}
+
+// ContinueTransaction starts a new transaction for local storage operations.
+func (d *DBStorage) ContinueTransaction(tx dbdriver.Transaction) (*DBTransaction, error) {
+	ctx, err := d.TokenDB.ContinueTransaction(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTransaction(d.Notifier, ctx, d.TMSID)
 }
 
 // TransactionExists checks if a transaction with the given ID has already been recorded in local storage.

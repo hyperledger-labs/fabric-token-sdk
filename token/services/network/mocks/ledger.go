@@ -24,6 +24,25 @@ type Ledger struct {
 		result1 [][]byte
 		result2 error
 	}
+	GetTransactionStatusStub        func(context.Context, string, string) (int, []byte, string, error)
+	getTransactionStatusMutex       sync.RWMutex
+	getTransactionStatusArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+	}
+	getTransactionStatusReturns struct {
+		result1 int
+		result2 []byte
+		result3 string
+		result4 error
+	}
+	getTransactionStatusReturnsOnCall map[int]struct {
+		result1 int
+		result2 []byte
+		result3 string
+		result4 error
+	}
 	StatusStub        func(string) (driver.ValidationCode, error)
 	statusMutex       sync.RWMutex
 	statusArgsForCall []struct {
@@ -118,6 +137,78 @@ func (fake *Ledger) GetStatesReturnsOnCall(i int, result1 [][]byte, result2 erro
 		result1 [][]byte
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *Ledger) GetTransactionStatus(arg1 context.Context, arg2 string, arg3 string) (int, []byte, string, error) {
+	fake.getTransactionStatusMutex.Lock()
+	ret, specificReturn := fake.getTransactionStatusReturnsOnCall[len(fake.getTransactionStatusArgsForCall)]
+	fake.getTransactionStatusArgsForCall = append(fake.getTransactionStatusArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.GetTransactionStatusStub
+	fakeReturns := fake.getTransactionStatusReturns
+	fake.recordInvocation("GetTransactionStatus", []interface{}{arg1, arg2, arg3})
+	fake.getTransactionStatusMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3, ret.result4
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4
+}
+
+func (fake *Ledger) GetTransactionStatusCallCount() int {
+	fake.getTransactionStatusMutex.RLock()
+	defer fake.getTransactionStatusMutex.RUnlock()
+	return len(fake.getTransactionStatusArgsForCall)
+}
+
+func (fake *Ledger) GetTransactionStatusCalls(stub func(context.Context, string, string) (int, []byte, string, error)) {
+	fake.getTransactionStatusMutex.Lock()
+	defer fake.getTransactionStatusMutex.Unlock()
+	fake.GetTransactionStatusStub = stub
+}
+
+func (fake *Ledger) GetTransactionStatusArgsForCall(i int) (context.Context, string, string) {
+	fake.getTransactionStatusMutex.RLock()
+	defer fake.getTransactionStatusMutex.RUnlock()
+	argsForCall := fake.getTransactionStatusArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *Ledger) GetTransactionStatusReturns(result1 int, result2 []byte, result3 string, result4 error) {
+	fake.getTransactionStatusMutex.Lock()
+	defer fake.getTransactionStatusMutex.Unlock()
+	fake.GetTransactionStatusStub = nil
+	fake.getTransactionStatusReturns = struct {
+		result1 int
+		result2 []byte
+		result3 string
+		result4 error
+	}{result1, result2, result3, result4}
+}
+
+func (fake *Ledger) GetTransactionStatusReturnsOnCall(i int, result1 int, result2 []byte, result3 string, result4 error) {
+	fake.getTransactionStatusMutex.Lock()
+	defer fake.getTransactionStatusMutex.Unlock()
+	fake.GetTransactionStatusStub = nil
+	if fake.getTransactionStatusReturnsOnCall == nil {
+		fake.getTransactionStatusReturnsOnCall = make(map[int]struct {
+			result1 int
+			result2 []byte
+			result3 string
+			result4 error
+		})
+	}
+	fake.getTransactionStatusReturnsOnCall[i] = struct {
+		result1 int
+		result2 []byte
+		result3 string
+		result4 error
+	}{result1, result2, result3, result4}
 }
 
 func (fake *Ledger) Status(arg1 string) (driver.ValidationCode, error) {

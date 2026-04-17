@@ -192,6 +192,8 @@ type TokenStore interface {
 	PublicParamsByHash(ctx context.Context, rawHash driver.PPHash) ([]byte, error)
 	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
 	NewTokenDBTransaction() (TokenStoreTransaction, error)
+	// ContinueTokenDBTransaction returns a new TokenStoreTransaction building upon the passed transaction.
+	ContinueTokenDBTransaction(tx Transaction) (TokenStoreTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens
 	QueryTokenDetails(ctx context.Context, params QueryTokenDetailsParams) ([]TokenDetails, error)
 	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
@@ -258,6 +260,4 @@ type TokenLockStore interface {
 	Close() error
 }
 
-var (
-	ErrTokenDoesNotExist = errors.New("token does not exist")
-)
+var ErrTokenDoesNotExist = errors.New("token does not exist")

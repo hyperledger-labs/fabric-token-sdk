@@ -33,7 +33,7 @@ var logger = logging.MustGetLogger()
 //go:generate counterfeiter -o mock/check_service.go -fake-name CheckService . CheckService
 //go:generate counterfeiter -o mock/network_driver.go -fake-name Network github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver.Network
 //go:generate counterfeiter -o mock/audit_transaction_store.go -fake-name AuditTransactionStore github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver.AuditTransactionStore
-//go:generate counterfeiter -o mock/atomic_write.go -fake-name AtomicWrite github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver.AtomicWrite
+//go:generate counterfeiter -o mock/tst.go -fake-name TransactionStoreTransaction github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver.TransactionStoreTransaction
 
 // TxStatus is the status of a transaction
 type TxStatus = auditdb.TxStatus
@@ -165,8 +165,7 @@ func (a *Service) Append(ctx context.Context, tx Transaction) error {
 		logger,
 		net,
 		tx.Namespace(),
-		a.tmsProvider,
-		a.tmsID,
+		finality.NewTokenRequestHasher(a.tmsProvider, a.tmsID),
 		a.auditDB,
 		a.tokenDB,
 		a.finalityTracer,

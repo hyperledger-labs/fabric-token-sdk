@@ -68,13 +68,13 @@ func TestQueryMovements(t *testing.T, store transactionsStoreConstructor, traits
 		query = "SELECT MOVEMENTS.tx_id, enrollment_id, token_type, amount, REQUESTS.status " +
 			"FROM MOVEMENTS LEFT JOIN REQUESTS ON MOVEMENTS.tx_id = REQUESTS.tx_id " +
 			"WHERE \\(\\(\\(enrollment_id = \\$1\\)\\)\\) AND \\(\\(\\(token_type = \\$2\\)\\)\\) AND \\(\\(\\(status = \\$3\\)\\)\\) AND \\(amount < \\$4\\) " +
-			"ORDER BY stored_at DESC " +
+			"ORDER BY MOVEMENTS.stored_at DESC " +
 			"LIMIT \\$5"
 	} else {
 		query = "SELECT MOVEMENTS.tx_id, enrollment_id, token_type, amount, REQUESTS.status " +
 			"FROM MOVEMENTS LEFT JOIN REQUESTS ON MOVEMENTS.tx_id = REQUESTS.tx_id " +
 			"WHERE \\(enrollment_id = \\$1\\) AND \\(token_type = \\$2\\) AND \\(status = \\$3\\) AND \\(amount < \\$4\\) " +
-			"ORDER BY stored_at DESC " +
+			"ORDER BY MOVEMENTS.stored_at DESC " +
 			"LIMIT \\$5"
 	}
 	mockDB.
@@ -115,8 +115,8 @@ func TestQueryTransactions(t *testing.T, store transactionsStoreConstructor) {
 	}
 	mockDB.
 		ExpectQuery("SELECT TRANSACTIONS.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, " +
-			"REQUESTS.status, REQUESTS.application_metadata, REQUESTS.public_metadata, stored_at " +
-			"FROM TRANSACTIONS LEFT JOIN REQUESTS ON TRANSACTIONS.tx_id = REQUESTS.tx_id ORDER BY stored_at DESC").
+			"REQUESTS.status, REQUESTS.application_metadata, REQUESTS.public_metadata, TRANSACTIONS.stored_at " +
+			"FROM TRANSACTIONS LEFT JOIN REQUESTS ON TRANSACTIONS.tx_id = REQUESTS.tx_id ORDER BY TRANSACTIONS.stored_at DESC").
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "action_type", "sender_eid", "recipient_eid", "token_type", "amount", "status", "application_metadata", "public_metadata", "stored_at"}).AddRow(output...))
 
 	info, err := store(db).QueryTransactions(t.Context(),
@@ -177,11 +177,11 @@ func TestQueryValidations(t *testing.T, store transactionsStoreConstructor, trai
 	if traits.MultipleParenthesis {
 		query = "SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at " +
 			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id " +
-			"WHERE \\(\\(stored_at >= \\$1\\) AND \\(stored_at <= \\$2\\)\\) AND " + statusClause
+			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\) AND " + statusClause
 	} else {
 		query = "SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at " +
 			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id " +
-			"WHERE \\(\\(stored_at >= \\$1\\) AND \\(stored_at <= \\$2\\)\\) AND " + statusClause
+			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\) AND " + statusClause
 	}
 	mockDB.
 		ExpectQuery(query).
@@ -338,7 +338,7 @@ func TestAWAddTransaction(t *testing.T, store transactionsStoreConstructor) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
 
-	aw, err := store(db).BeginAtomicWrite()
+	aw, err := store(db).NewTransactionStoreTransaction()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	gomega.Expect(aw.AddTransaction(t.Context(), input)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())
@@ -359,13 +359,13 @@ func TestAWAddTokenRequest(t *testing.T, store transactionsStoreConstructor) {
 
 	mockDB.ExpectBegin()
 	mockDB.
-		ExpectExec("INSERT INTO REQUESTS \\(tx_id, request, status, status_message, application_metadata, public_metadata, pp_hash\\) "+
-			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7\\)").
-		WithArgs(txID, tr, status, status_message, "{}", "{}", ppHash).
+		ExpectExec("INSERT INTO REQUESTS \\(tx_id, request, status, status_message, application_metadata, public_metadata, pp_hash, stored_at\\) "+
+			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7, \\$8\\)").
+		WithArgs(txID, tr, status, status_message, "{}", "{}", ppHash, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
 
-	aw, err := store(db).BeginAtomicWrite()
+	aw, err := store(db).NewTransactionStoreTransaction()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	gomega.Expect(aw.AddTokenRequest(t.Context(), txID, tr, nil, nil, ppHash)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())
@@ -395,7 +395,7 @@ func TestAWAddMovement(t *testing.T, store transactionsStoreConstructor) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
 
-	aw, err := store(db).BeginAtomicWrite()
+	aw, err := store(db).NewTransactionStoreTransaction()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	gomega.Expect(aw.AddMovement(t.Context(), input)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())
@@ -418,7 +418,7 @@ func TestAWAddValidationRecord(t *testing.T, store transactionsStoreConstructor)
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
 
-	aw, err := store(db).BeginAtomicWrite()
+	aw, err := store(db).NewTransactionStoreTransaction()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	gomega.Expect(aw.AddValidationRecord(t.Context(), txID, nil)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())

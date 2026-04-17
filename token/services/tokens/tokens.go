@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.uber.org/zap/zapcore"
@@ -75,6 +76,7 @@ type CacheEntry struct {
 // It handles the synchronization of tokens between the ledger and the local TokenDB,
 // manages request caching, and provides utilities for state inspection.
 type Service struct {
+	tmsID token.TMSID
 	// TMSProvider is used to obtain management services for different TMS IDs.
 	TMSProvider TMSProvider
 	// NetworkProvider is used to interact with the underlying blockchain network.
@@ -85,10 +87,14 @@ type Service struct {
 	RequestsCache Cache
 }
 
-// Append extracts actions from a token request and applies them to the local storage.
-// It identifies which tokens are mine, which were issued by me, or which I am auditing,
-// and updates the local state accordingly.
-func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.RequestAnchor, request *token.Request) (err error) {
+func NewService(tmsID token.TMSID, TMSProvider TMSProvider, networkProvider NetworkProvider, storage *DBStorage, requestsCache Cache) *Service {
+	return &Service{tmsID: tmsID, TMSProvider: TMSProvider, NetworkProvider: networkProvider, Storage: storage, RequestsCache: requestsCache}
+}
+
+// AppendValid extracts actions from a token request, applies them to the local storage,
+// and sets the transaction status to Confirmed. This is a convenience function that combines
+// Append with SetStatus for valid/confirmed transactions.
+func (t *Service) AppendValid(ctx context.Context, tx dbdriver.Transaction, txID token.RequestAnchor, request *token.Request) (err error) {
 	if request == nil {
 		logger.DebugfContext(ctx, "transaction [%s], no request found, skip it", txID)
 
@@ -113,14 +119,14 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.Requ
 		return nil
 	}
 
-	toSpend, toAppend, err := t.getActions(ctx, tmsID, txID, request)
+	toSpend, toAppend, err := t.getActions(ctx, txID, request)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to extract actions", txID)
 	}
 	defer t.removeCachedTokenRequest(string(txID))
 
 	logger.DebugfContext(ctx, "transaction [%s] start db transaction", txID)
-	ts, err := t.Storage.NewTransaction()
+	ts, err := t.Storage.ContinueTransaction(tx)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to start db transaction", txID)
 	}
@@ -150,34 +156,13 @@ func (t *Service) Append(ctx context.Context, tmsID token.TMSID, txID token.Requ
 	}
 
 	logger.DebugfContext(ctx, "ready to commit")
-	if err = ts.Commit(); err != nil {
-		return errors.WithMessagef(err, "transaction [%s], failed to commit tokens to database", txID)
-	}
-	logger.DebugfContext(ctx, "transaction [%s], committed tokens [%d:%d] to database", txID, len(toAppend), len(toSpend))
 
 	return nil
 }
 
-// AppendRaw unmarshals a raw token request and appends its extracted actions to the local storage.
-func (t *Service) AppendRaw(ctx context.Context, tmsID token.TMSID, txID token.RequestAnchor, requestRaw []byte) (err error) {
-	logger.DebugfContext(ctx, "get tms for [%s]", txID)
-	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
-	}
-	logger.DebugfContext(ctx, "get tms for [%s], done", txID)
-	tr, err := tms.NewFullRequestFromBytes(requestRaw)
-	if err != nil {
-		return errors.WithMessagef(err, "failed unmarshal token request [%s]", txID)
-	}
-	logger.DebugfContext(ctx, "append token request for [%s]", txID)
-
-	return t.Append(ctx, tmsID, txID, tr)
-}
-
 // CacheRequest extracts actions from a token request and caches them locally to avoid redundant parsing during the commit phase.
-func (t *Service) CacheRequest(ctx context.Context, tmsID token.TMSID, request *token.Request) error {
-	toSpend, toAppend, err := t.extractActions(ctx, tmsID, request.Anchor, request)
+func (t *Service) CacheRequest(ctx context.Context, request *token.Request) error {
+	toSpend, toAppend, err := t.extractActions(ctx, request.Anchor, request)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to extract actions for request [%s]", request.ID())
 	}
@@ -209,16 +194,6 @@ func (t *Service) GetCachedTokenRequest(txID string) (*token.Request, []byte) {
 
 func (t *Service) removeCachedTokenRequest(txID string) {
 	t.RequestsCache.Delete(txID)
-}
-
-// AppendTransaction appends the actions of the provided transaction to the local store.
-// If the transaction has already been processed, it is skipped. This operation is atomic.
-func (t *Service) AppendTransaction(ctx context.Context, tx Transaction) (err error) {
-	return t.Append(ctx, token.TMSID{
-		Network:   tx.Network(),
-		Channel:   tx.Channel(),
-		Namespace: tx.Namespace(),
-	}, token.RequestAnchor(tx.ID()), tx.Request())
 }
 
 // StorePublicParams persists the raw byte representation of public parameters in TokenDB.
@@ -373,7 +348,7 @@ func (t *Service) deleteTokens(ctx context.Context, network *network.Network, tm
 	return toDelete, nil
 }
 
-func (t *Service) getActions(ctx context.Context, tmsID token.TMSID, anchor token.RequestAnchor, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+func (t *Service) getActions(ctx context.Context, anchor token.RequestAnchor, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
 	// check the cache first
 	logger.DebugfContext(ctx, "check request cache for [%s]", anchor)
 	entry, ok := t.RequestsCache.Get(string(anchor))
@@ -383,13 +358,13 @@ func (t *Service) getActions(ctx context.Context, tmsID token.TMSID, anchor toke
 		return entry.ToSpend, entry.ToAppend, nil
 	}
 	// extract
-	return t.extractActions(ctx, tmsID, anchor, request)
+	return t.extractActions(ctx, anchor, request)
 }
 
-func (t *Service) extractActions(ctx context.Context, tmsID token.TMSID, anchor token.RequestAnchor, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
-	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
+func (t *Service) extractActions(ctx context.Context, anchor token.RequestAnchor, request *token.Request) ([]*token2.ID, []TokenToAppend, error) {
+	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(t.tmsID))
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
+		return nil, nil, errors.WithMessagef(err, "failed getting token management service [%s]", t.tmsID)
 	}
 
 	logger.DebugfContext(ctx, "transaction [%s on (%s)] is known, extract tokens", anchor, tms.ID())
