@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -45,6 +46,25 @@ type Network struct {
 	}
 	computeTxIDReturnsOnCall map[int]struct {
 		result1 string
+	}
+	GetTransactionStatusStub        func(context.Context, string, string) (int, []byte, string, error)
+	getTransactionStatusMutex       sync.RWMutex
+	getTransactionStatusArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+	}
+	getTransactionStatusReturns struct {
+		result1 int
+		result2 []byte
+		result3 string
+		result4 error
+	}
+	getTransactionStatusReturnsOnCall map[int]struct {
+		result1 int
+		result2 []byte
+		result3 string
+		result4 error
 	}
 	LocalMembershipStub        func() *network.LocalMembership
 	localMembershipMutex       sync.RWMutex
@@ -248,6 +268,78 @@ func (fake *Network) ComputeTxIDReturnsOnCall(i int, result1 string) {
 	fake.computeTxIDReturnsOnCall[i] = struct {
 		result1 string
 	}{result1}
+}
+
+func (fake *Network) GetTransactionStatus(arg1 context.Context, arg2 string, arg3 string) (int, []byte, string, error) {
+	fake.getTransactionStatusMutex.Lock()
+	ret, specificReturn := fake.getTransactionStatusReturnsOnCall[len(fake.getTransactionStatusArgsForCall)]
+	fake.getTransactionStatusArgsForCall = append(fake.getTransactionStatusArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.GetTransactionStatusStub
+	fakeReturns := fake.getTransactionStatusReturns
+	fake.recordInvocation("GetTransactionStatus", []interface{}{arg1, arg2, arg3})
+	fake.getTransactionStatusMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3, ret.result4
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4
+}
+
+func (fake *Network) GetTransactionStatusCallCount() int {
+	fake.getTransactionStatusMutex.RLock()
+	defer fake.getTransactionStatusMutex.RUnlock()
+	return len(fake.getTransactionStatusArgsForCall)
+}
+
+func (fake *Network) GetTransactionStatusCalls(stub func(context.Context, string, string) (int, []byte, string, error)) {
+	fake.getTransactionStatusMutex.Lock()
+	defer fake.getTransactionStatusMutex.Unlock()
+	fake.GetTransactionStatusStub = stub
+}
+
+func (fake *Network) GetTransactionStatusArgsForCall(i int) (context.Context, string, string) {
+	fake.getTransactionStatusMutex.RLock()
+	defer fake.getTransactionStatusMutex.RUnlock()
+	argsForCall := fake.getTransactionStatusArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *Network) GetTransactionStatusReturns(result1 int, result2 []byte, result3 string, result4 error) {
+	fake.getTransactionStatusMutex.Lock()
+	defer fake.getTransactionStatusMutex.Unlock()
+	fake.GetTransactionStatusStub = nil
+	fake.getTransactionStatusReturns = struct {
+		result1 int
+		result2 []byte
+		result3 string
+		result4 error
+	}{result1, result2, result3, result4}
+}
+
+func (fake *Network) GetTransactionStatusReturnsOnCall(i int, result1 int, result2 []byte, result3 string, result4 error) {
+	fake.getTransactionStatusMutex.Lock()
+	defer fake.getTransactionStatusMutex.Unlock()
+	fake.GetTransactionStatusStub = nil
+	if fake.getTransactionStatusReturnsOnCall == nil {
+		fake.getTransactionStatusReturnsOnCall = make(map[int]struct {
+			result1 int
+			result2 []byte
+			result3 string
+			result4 error
+		})
+	}
+	fake.getTransactionStatusReturnsOnCall[i] = struct {
+		result1 int
+		result2 []byte
+		result3 string
+		result4 error
+	}{result1, result2, result3, result4}
 }
 
 func (fake *Network) LocalMembership() *network.LocalMembership {

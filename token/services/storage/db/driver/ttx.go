@@ -8,12 +8,15 @@ package driver
 
 import (
 	"context"
-	"errors"
+	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
+
+var ErrTokenRequestDoesNotExist = errors.New("token request does not exist")
 
 // TokenTransactionStore defines the interface for a token transaction database.
 // This database is used to store records related to the processed token transactions.
@@ -22,14 +25,9 @@ type TokenTransactionStore interface {
 	TransactionEndorsementAckStore
 }
 
-type AtomicWrite interface {
-	// Commit commits the current update to the database
-	Commit() error
-
-	// Rollback discards the in progress database transaction.
-	// It logs but otherwise ignores errors rolling back:
-	// the result is always the end of the transaction.
-	Rollback()
+//go:generate counterfeiter -o mock/tst.go -fake-name TransactionStoreTransaction . TransactionStoreTransaction
+type TransactionStoreTransaction interface {
+	Transaction
 
 	// AddTokenRequest binds the passed transaction id to the passed token request
 	AddTokenRequest(ctx context.Context, txID string, tr []byte, applicationMetadata, publicMetadata map[string][]byte, ppHash driver.PPHash) error
@@ -46,14 +44,18 @@ type AtomicWrite interface {
 	// AddValidationRecord adds a new validation records for the given params
 	// This operation _requires_ a TokenRequest with the same tx_id to exist
 	AddValidationRecord(ctx context.Context, txID string, meta map[string][]byte) error
+
+	// SetStatus sets the status of a TokenRequest
+	// (and with that, the associated ValidationRecord, Movement and Transaction)
+	SetStatus(ctx context.Context, txID string, status driver.TxStatus, message string) error
 }
 
 type TransactionStore interface {
 	// Close closes the databases
 	Close() error
 
-	// BeginAtomicWrite opens an atomic database transaction. It must be committed or discarded.
-	BeginAtomicWrite() (AtomicWrite, error)
+	// NewTransactionStoreTransaction opens an atomic database transaction. It must be committed or discarded.
+	NewTransactionStoreTransaction() (TransactionStoreTransaction, error)
 
 	// SetStatus sets the status of a TokenRequest
 	// (and with that, the associated ValidationRecord, Movement and Transaction)
@@ -78,6 +80,21 @@ type TransactionStore interface {
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.
 	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
+
+	// AcquireRecoveryLeadership tries to acquire the PostgreSQL advisory lock backing the sweeper leader election.
+	// If acquired is false, leadership was not obtained and the returned lease must be nil.
+	AcquireRecoveryLeadership(ctx context.Context, lockID int64) (RecoveryLeadership, bool, error)
+
+	// ClaimPendingTransactions atomically claims a batch of Pending transactions for recovery processing.
+	// Transactions whose recovery lease expired are eligible again.
+	ClaimPendingTransactions(ctx context.Context, params RecoveryClaimParams) ([]*TransactionRecord, error)
+
+	// ReleaseRecoveryClaim clears the recovery claim metadata for the given transaction if owned by owner.
+	// The message parameter is stored for audit/debugging purposes.
+	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
+
+	// Notifier returns a TransactionNotifier for this store to subscribe to transaction status changes.
+	Notifier() (TransactionNotifier, error)
 }
 
 type TransactionEndorsementAckStore interface {
@@ -88,6 +105,27 @@ type TransactionEndorsementAckStore interface {
 	GetTransactionEndorsementAcks(ctx context.Context, txID string) (map[string][]byte, error)
 }
 
-var (
-	ErrTokenRequestDoesNotExist = errors.New("token request does not exist")
-)
+type RecoveryLeadership interface {
+	Close() error
+}
+
+type RecoveryClaimParams struct {
+	OlderThan     time.Time
+	LeaseDuration time.Duration
+	Limit         int
+	Owner         string
+}
+
+// TransactionRecordReference contains the primary key fields of a transaction request record.
+type TransactionRecordReference struct {
+	// TxID is the unique identifier of the transaction request.
+	TxID string
+}
+
+// TransactionNotifier is used to subscribe to transaction status changes in the storage.
+type TransactionNotifier interface {
+	// Subscribe registers a callback function to be called when a transaction request status is updated.
+	Subscribe(callback func(Operation, TransactionRecordReference)) error
+	// UnsubscribeAll unregisters all callbacks.
+	UnsubscribeAll() error
+}

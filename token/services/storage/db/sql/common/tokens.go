@@ -36,19 +36,7 @@ type tokenTables struct {
 	Ownership      string
 	PublicParams   string
 	Certifications string
-}
-
-func NewTokenStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*TokenStore, error) {
-	return newTokenStore(readDB, writeDB, tokenTables{
-		Tokens:         tables.Tokens,
-		Ownership:      tables.Ownership,
-		PublicParams:   tables.PublicParams,
-		Certifications: tables.Certifications,
-	}, ci, nil), nil
-}
-
-func (db *TokenStore) CreateSchema() error {
-	return common.InitSchema(db.writeDB, db.GetSchema())
+	Requests       string
 }
 
 type TokenStore struct {
@@ -78,7 +66,12 @@ func NewTokenStoreWithNotifier(readDB, writeDB *sql.DB, tables TableNames, ci co
 		Ownership:      tables.Ownership,
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
+		Requests:       tables.Requests,
 	}, ci, notifier), nil
+}
+
+func (db *TokenStore) CreateSchema() error {
+	return common.InitSchema(db.writeDB, db.GetSchema())
 }
 
 func (db *TokenStore) Notifier() (driver.TokenNotifier, error) {
@@ -236,7 +229,6 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	logging.Debug(logger, query, args)
 
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
-
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
@@ -848,6 +840,22 @@ func (db *TokenStore) GetCertifications(ctx context.Context, ids []*token.ID) ([
 
 func (db *TokenStore) GetSchema() string {
 	return fmt.Sprintf(`
+		-- Requests
+		CREATE TABLE IF NOT EXISTS %s (
+			tx_id TEXT NOT NULL PRIMARY KEY,
+			request BYTEA NOT NULL,
+			status INT NOT NULL,
+			status_message TEXT NOT NULL,
+			application_metadata JSONB NOT NULL,
+			public_metadata JSONB NOT NULL,
+			pp_hash BYTEA NOT NULL,
+			recovery_claimed_by TEXT,
+			recovery_claim_expires_at TIMESTAMP,
+			stored_at TIMESTAMP NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_status_%s ON %s ( status );
+		CREATE INDEX IF NOT EXISTS idx_recovery_claim_%s ON %s ( status, recovery_claim_expires_at, stored_at ) WHERE status = 1;
+
 		-- Tokens
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL,
@@ -904,6 +912,7 @@ func (db *TokenStore) GetSchema() string {
 			FOREIGN KEY (tx_id, idx) REFERENCES %s
 		);
 		`,
+		db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests,
 		db.table.Tokens,
 		db.table.Tokens, db.table.Tokens,
 		db.table.Tokens, db.table.Tokens,
@@ -925,6 +934,15 @@ func (db *TokenStore) NewTokenDBTransaction() (driver.TokenStoreTransaction, err
 	}
 
 	return &TokenTransaction{ci: db.ci, table: &db.table, tx: tx}, nil
+}
+
+func (db *TokenStore) ContinueTokenDBTransaction(tx driver.Transaction) (driver.TokenStoreTransaction, error) {
+	sqlTx, ok := tx.Impl().(*sql.Tx)
+	if !ok {
+		return nil, errors.Errorf("failed continuing a db transaction, expecting an sql transaction")
+	}
+
+	return &TokenTransaction{ci: db.ci, table: &db.table, tx: sqlTx}, nil
 }
 
 func (db *TokenStore) SetSupportedTokenFormats(formats []token.Format) error {

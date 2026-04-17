@@ -147,6 +147,60 @@ token:
               - endorser2
               - endorser2
 
+            # recovery config controls background re-registration of finality listeners
+            # for pending transactions that may have lost their listeners due to node restarts,
+            # network interruptions, or other failures.
+            # If omitted, the recovery manager uses its built-in defaults.
+            recovery:
+              # enabled determines whether transaction recovery runs. Default: true.
+              # Set to false to disable automatic recovery (not recommended for production).
+              enabled: true
+              
+              # ttl is the minimum age of a pending transaction before it is eligible for recovery. Default: 30s.
+              # This prevents the recovery manager from interfering with transactions that are still being
+              # actively processed. Increase this value if you have long-running transaction assembly processes.
+              # Relationship: Should be greater than your typical transaction assembly time.
+              ttl: 30s
+              
+              # scanInterval is how often the recovery manager scans for pending transactions. Default: 5s.
+              # Lower values provide faster recovery but increase database load.
+              # Higher values reduce overhead but delay recovery detection.
+              # Relationship: Should be less than ttl to ensure timely detection of eligible transactions.
+              # Performance impact: Each scan queries the transaction database for pending transactions.
+              scanInterval: 5s
+              
+              # batchSize is the maximum number of pending transactions claimed per scan. Default: 100.
+              # Limits the number of transactions processed in a single recovery sweep to prevent
+              # overwhelming the system. Increase for high-throughput environments with many pending transactions.
+              # Performance impact: Larger batches reduce scan overhead but increase memory usage and processing time per sweep.
+              batchSize: 100
+              
+              # workerCount is the number of local workers that process claimed transactions in parallel. Default: 4.
+              # Increase to improve recovery throughput in high-volume scenarios.
+              # Decrease to reduce resource consumption on constrained systems.
+              # Performance impact: More workers increase CPU and network utilization but improve recovery speed.
+              workerCount: 4
+              
+              # leaseDuration is how long a claimed transaction remains leased to this instance before it can be reclaimed. Default: 30s.
+              # This prevents stuck transactions from blocking recovery indefinitely if a worker crashes.
+              # Should be longer than the typical time to query and process a single transaction.
+              # Relationship: Should be greater than the expected network latency + processing time for transaction status queries.
+              leaseDuration: 30s
+              
+              # advisoryLockID is the PostgreSQL advisory lock identifier used for recovery leader election.
+              # This ensures only one replica performs recovery sweeps at a time in multi-instance deployments.
+              # Default: 8389190333894887286 (hex: 0x74746b7265636f76, ASCII: "ttkrecov")
+              # The default value is derived from the ASCII encoding of "ttkrecov" (Token Transaction Recovery).
+              # Only change this if you need to run multiple independent recovery managers on the same database.
+              # Note: PostgreSQL advisory locks use 64-bit integers. This value must be unique across your application.
+              advisoryLockID: 8389190333894887286
+              
+              # instanceID identifies this replica as the owner of recovery claims.
+              # If empty, a process-local identifier is generated automatically at startup using a UUID.
+              # Set this explicitly in containerized environments to maintain consistent identity across restarts.
+              # This helps with debugging and tracking which instance processed which transactions.
+              instanceID:
+
       # sections dedicated to the definition of the wallets
       wallets:
         # Default cache size reference that can be used by any wallet that supports caching.
@@ -290,3 +344,79 @@ Default values:
 - permanent.interval: 1m
 - once.deadline: 5m
 - once.interval: 2s
+
+---
+
+### Optional: token.tms.<name>.services.network.fabric.recovery
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  tms:
+    <name>:
+      services:
+        network:
+          fabric:
+            recovery:
+              enabled: true
+              ttl: 30s
+              scanInterval: 5s
+              batchSize: 100
+              workerCount: 4
+              leaseDuration: 30s
+              advisoryLockID: 8389190333894887286
+              instanceID:
+```
+
+Default values:
+
+- enabled: true
+- ttl: 30s
+- scanInterval: 5s
+- batchSize: 100
+- workerCount: 4
+- leaseDuration: 30s
+- advisoryLockID: 8389190333894887286 (`0x74746b7265636f76`)
+- instanceID: empty, auto-generated when the recovery manager starts
+
+**Parameter Relationships and Tuning:**
+
+- **Recovery is enabled by default** to ensure automatic recovery of lost finality listeners.
+- **Only pending transactions older than `ttl` are considered for recovery** to avoid interfering with active transaction processing.
+- **The manager validates** that `ttl`, `scanInterval`, `batchSize`, `workerCount`, and `leaseDuration` are all greater than zero.
+- **`advisoryLockID`** is used to acquire PostgreSQL advisory-lock leadership so that only one replica performs a recovery sweep at a time. The default value (8389190333894887286 or 0x74746b7265636f76) represents the ASCII string "ttkrecov" (Token Transaction Recovery) encoded as a 64-bit integer.
+- **`instanceID`** is used as the lease owner identifier for claimed transactions; if omitted, the manager generates a unique UUID automatically at startup.
+
+**Tuning Recommendations:**
+
+1. **For High-Throughput Environments:**
+   - Increase `batchSize` to 200-500 to process more transactions per sweep
+   - Increase `workerCount` to 8-16 to improve parallel processing
+   - Decrease `scanInterval` to 2-3s for faster recovery detection
+
+2. **For Resource-Constrained Environments:**
+   - Decrease `batchSize` to 50 to reduce memory usage
+   - Decrease `workerCount` to 2 to reduce CPU load
+   - Increase `scanInterval` to 10-15s to reduce database queries
+
+3. **For Long-Running Transaction Assembly:**
+   - Increase `ttl` to 60s or more to avoid premature recovery attempts
+   - Ensure `leaseDuration` is at least 2x the expected transaction processing time
+
+4. **For Multi-Instance Deployments:**
+   - **PostgreSQL Required**: Multi-instance deployments require PostgreSQL for distributed coordination via advisory locks
+   - Keep default `advisoryLockID` unless running multiple independent recovery systems
+   - Consider setting explicit `instanceID` values for easier debugging and monitoring
+   - Ensure all instances share the same PostgreSQL database for proper coordination
+
+5. **For Single-Node Deployments:**
+   - **SQLite Supported**: SQLite can be used for single-node deployments and handles node restarts gracefully
+   - Recovery works automatically after node restarts by scanning for pending transactions
+   - **Important**: Do not use SQLite with multiple replicas as it lacks the advisory lock mechanism for leader election
+
+**Performance Impact:**
+- Each scan queries the transaction database, so `scanInterval` directly affects database load
+- `workerCount` affects CPU and network utilization during recovery sweeps
+- `batchSize` affects memory usage and the duration of each recovery sweep
+- The relationship `scanInterval < ttl` ensures timely detection without premature recovery

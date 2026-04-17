@@ -47,7 +47,7 @@ var tokenLockDBCases = []struct {
 
 func TestFully(t *testing.T, tokenLockDB driver3.TokenLockStore, tokenTransactionDB driver3.TokenTransactionStore) {
 	ctx := t.Context()
-	tx, err := tokenTransactionDB.BeginAtomicWrite()
+	tx, err := tokenTransactionDB.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	require.NoError(t, tx.AddTokenRequest(ctx, "apple", []byte("apple_tx_content"), nil, nil, driver2.PPHash("tr")))
 	require.NoError(t, tx.Commit())

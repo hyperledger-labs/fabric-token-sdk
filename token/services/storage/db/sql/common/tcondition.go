@@ -94,9 +94,9 @@ func HasMovementsParams(params driver2.QueryMovementsParams) cond.Condition {
 	return cond.And(conds...)
 }
 
-func HasValidationParams(params driver2.QueryValidationRecordsParams) cond.Condition {
+func HasValidationParams(params driver2.QueryValidationRecordsParams, tableName string) cond.Condition {
 	return cond.And(
-		cond.BetweenTimestamps("stored_at", utc(params.From), utc(params.To)),
+		cond.BetweenTimestamps(common.FieldName(tableName+".stored_at"), utc(params.From), utc(params.To)),
 		cond.In("status", params.Statuses...),
 	)
 }
@@ -104,7 +104,7 @@ func HasValidationParams(params driver2.QueryValidationRecordsParams) cond.Condi
 func HasTransactionParams(params driver2.QueryTransactionsParams, table common.Table) cond.Condition {
 	conds := []cond.Condition{
 		cond.FieldIn(table.Field("tx_id"), params.IDs...),
-		cond.BetweenTimestamps("stored_at", utc(params.From), utc(params.To)),
+		cond.FieldBetweenTimestamps(table.Field("stored_at"), utc(params.From), utc(params.To)),
 		cond.In("action_type", params.ActionTypes...),
 		// Specific transaction status if requested, defaults to all but Deleted
 		cond.In("status", params.Statuses...),
