@@ -27,7 +27,7 @@ const (
 	MaxAnchorSize = 128 // bytes
 )
 
-// Typed errors for V2 protocol validation
+// Typed errors for protocol validation
 var (
 	// ErrAnchorEmpty is returned when the anchor parameter is empty in V2 protocol
 	ErrAnchorEmpty = errors.New("anchor cannot be empty")
@@ -37,6 +37,12 @@ var (
 
 	// ErrUnsupportedVersion is returned when an unsupported protocol version is encountered
 	ErrUnsupportedVersion = errors.New("unsupported token request version")
+
+	// ErrInvalidVersion is returned when the protocol version is 0 (invalid)
+	ErrInvalidVersion = errors.New("invalid token request: protocol version cannot be 0")
+
+	// ErrVersionBelowMinimum is returned when the protocol version is below the configured minimum
+	ErrVersionBelowMinimum = errors.New("token request protocol version is below minimum required version")
 )
 
 type (
@@ -173,14 +179,6 @@ func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
 	return nil
 }
 
-// signatureMessage is the structured format used in ProtocolV2 for creating
-// messages to sign. It provides clear boundary separation between the request
-// data and the anchor, preventing hash collision vulnerabilities.
-type signatureMessage struct {
-	Request []byte
-	Anchor  []byte
-}
-
 // MarshalToMessageToSign creates a canonical byte representation of the TokenRequest
 // for signature generation. The behavior depends on the protocol version:
 //
@@ -240,8 +238,10 @@ func (r *TokenRequest) marshalToMessageToSignV1(anchor []byte) ([]byte, error) {
 	// including empty Signatures and AuditorSignatures as empty sequences.
 	// This ensures identical ASN.1 encoding for backward compatibility with V1 signatures.
 	type tokenRequestV1 struct {
-		Issues    [][]byte
-		Transfers [][]byte
+		Issues            [][]byte
+		Transfers         [][]byte
+		Signatures        [][]byte
+		AuditorSignatures []*AuditorSignature
 	}
 
 	bytes, err := asn1.Marshal(tokenRequestV1{
@@ -266,6 +266,9 @@ func (r *TokenRequest) marshalToMessageToSignV1(anchor []byte) ([]byte, error) {
 //
 // This method should be used for all new token requests to benefit from
 // enhanced security properties.
+//
+// This implementation uses an optimized fast marshaller that avoids reflection overhead
+// while maintaining full ASN.1 compatibility.
 func (r *TokenRequest) marshalToMessageToSignV2(anchor []byte) ([]byte, error) {
 	// Input validation with typed errors
 	if len(anchor) == 0 {
@@ -275,26 +278,14 @@ func (r *TokenRequest) marshalToMessageToSignV2(anchor []byte) ([]byte, error) {
 		return nil, ErrAnchorTooLarge
 	}
 
-	// Marshal the request data (Issues and Transfers only, excluding signatures and version)
-	// Create a temporary struct without the Version field for ASN.1 marshaling
-	type tokenRequestForSigning struct {
-		Issues    [][]byte
-		Transfers [][]byte
-	}
-
-	requestBytes, err := asn1.Marshal(tokenRequestForSigning{Issues: r.Issues, Transfers: r.Transfers})
+	// Marshal the request data using fast marshaller (Issues and Transfers only)
+	requestBytes, err := fastMarshalTokenRequestForSigning(r.Issues, r.Transfers)
 	if err != nil {
 		return nil, errors.Wrapf(err, "audit of tx [%x] failed: error marshal token request for signature", anchor)
 	}
 
-	// Create structured message with clear boundary separation
-	msg := signatureMessage{
-		Request: requestBytes,
-		Anchor:  anchor,
-	}
-
-	// Marshal the complete structured message
-	msgBytes, err := asn1.Marshal(msg)
+	// Marshal the complete structured message using fast marshaller
+	msgBytes, err := fastMarshalSignatureMessageV2(requestBytes, anchor)
 	if err != nil {
 		return nil, errors.Wrapf(err, "audit of tx [%x] failed: error marshal signature message", anchor)
 	}
