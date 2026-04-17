@@ -59,6 +59,7 @@ func (t *TransferMetadata) Match(action TransferAction) error {
 	if !t.Issuer.Equal(action.GetIssuer()) {
 		return errors.Errorf("expected issuer [%s] but got [%s]", t.Issuer, action.GetIssuer().Bytes())
 	}
+
 	return nil
 }
 
@@ -76,6 +77,7 @@ func (t *TransferMetadata) MatchInputs(serializedActionInputs [][]byte, serializ
 			return errors.Errorf("input token at index [%d]: does not match the transfer action", i)
 		}
 	}
+
 	return nil
 }
 
@@ -89,5 +91,6 @@ func (t *TransferOutputMetadata) ValidateReceivers() error {
 			return errors.Errorf("receiver at index [%d] is nil", j)
 		}
 	}
+
 	return nil
 }
