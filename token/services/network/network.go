@@ -294,6 +294,11 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener Fi
 	return n.n.AddFinalityListener(namespace, txID, listener)
 }
 
+// GetTransactionStatus retrieves the current status and token request hash for a transaction.
+func (n *Network) GetTransactionStatus(ctx context.Context, namespace, txID string) (status int, tokenRequestHash []byte, message string, err error) {
+	return n.n.GetTransactionStatus(ctx, namespace, txID)
+}
+
 // LookupTransferMetadataKey performs a ledger scan to find a metadata key matching the provided sub-key.
 func (n *Network) LookupTransferMetadataKey(namespace, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
 	return n.n.LookupTransferMetadataKey(namespace, key, timeout)

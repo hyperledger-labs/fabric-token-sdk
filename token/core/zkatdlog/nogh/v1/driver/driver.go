@@ -179,7 +179,6 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		v1.NewAuditorService(
 			logger,
 			ppm,
-			common.NewLedgerTokenLoader[*v1token.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
 			deserializer,
 			driverMetrics,
 			d.tracerProvider,

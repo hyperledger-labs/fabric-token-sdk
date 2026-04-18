@@ -9,7 +9,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
 
-type AtomicWrite struct {
+type TransactionStoreTransaction struct {
 	AddMovementStub        func(context.Context, ...driver.MovementRecord) error
 	addMovementMutex       sync.RWMutex
 	addMovementArgsForCall []struct {
@@ -73,15 +73,39 @@ type AtomicWrite struct {
 	commitReturnsOnCall map[int]struct {
 		result1 error
 	}
+	ImplStub        func() driver.TransactionImpl
+	implMutex       sync.RWMutex
+	implArgsForCall []struct {
+	}
+	implReturns struct {
+		result1 driver.TransactionImpl
+	}
+	implReturnsOnCall map[int]struct {
+		result1 driver.TransactionImpl
+	}
 	RollbackStub        func()
 	rollbackMutex       sync.RWMutex
 	rollbackArgsForCall []struct {
+	}
+	SetStatusStub        func(context.Context, string, drivera.TxStatus, string) error
+	setStatusMutex       sync.RWMutex
+	setStatusArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+		arg3 drivera.TxStatus
+		arg4 string
+	}
+	setStatusReturns struct {
+		result1 error
+	}
+	setStatusReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *AtomicWrite) AddMovement(arg1 context.Context, arg2 ...driver.MovementRecord) error {
+func (fake *TransactionStoreTransaction) AddMovement(arg1 context.Context, arg2 ...driver.MovementRecord) error {
 	fake.addMovementMutex.Lock()
 	ret, specificReturn := fake.addMovementReturnsOnCall[len(fake.addMovementArgsForCall)]
 	fake.addMovementArgsForCall = append(fake.addMovementArgsForCall, struct {
@@ -101,26 +125,26 @@ func (fake *AtomicWrite) AddMovement(arg1 context.Context, arg2 ...driver.Moveme
 	return fakeReturns.result1
 }
 
-func (fake *AtomicWrite) AddMovementCallCount() int {
+func (fake *TransactionStoreTransaction) AddMovementCallCount() int {
 	fake.addMovementMutex.RLock()
 	defer fake.addMovementMutex.RUnlock()
 	return len(fake.addMovementArgsForCall)
 }
 
-func (fake *AtomicWrite) AddMovementCalls(stub func(context.Context, ...driver.MovementRecord) error) {
+func (fake *TransactionStoreTransaction) AddMovementCalls(stub func(context.Context, ...driver.MovementRecord) error) {
 	fake.addMovementMutex.Lock()
 	defer fake.addMovementMutex.Unlock()
 	fake.AddMovementStub = stub
 }
 
-func (fake *AtomicWrite) AddMovementArgsForCall(i int) (context.Context, []driver.MovementRecord) {
+func (fake *TransactionStoreTransaction) AddMovementArgsForCall(i int) (context.Context, []driver.MovementRecord) {
 	fake.addMovementMutex.RLock()
 	defer fake.addMovementMutex.RUnlock()
 	argsForCall := fake.addMovementArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *AtomicWrite) AddMovementReturns(result1 error) {
+func (fake *TransactionStoreTransaction) AddMovementReturns(result1 error) {
 	fake.addMovementMutex.Lock()
 	defer fake.addMovementMutex.Unlock()
 	fake.AddMovementStub = nil
@@ -129,7 +153,7 @@ func (fake *AtomicWrite) AddMovementReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *AtomicWrite) AddMovementReturnsOnCall(i int, result1 error) {
+func (fake *TransactionStoreTransaction) AddMovementReturnsOnCall(i int, result1 error) {
 	fake.addMovementMutex.Lock()
 	defer fake.addMovementMutex.Unlock()
 	fake.AddMovementStub = nil
@@ -143,7 +167,7 @@ func (fake *AtomicWrite) AddMovementReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *AtomicWrite) AddTokenRequest(arg1 context.Context, arg2 string, arg3 []byte, arg4 map[string][]byte, arg5 map[string][]byte, arg6 drivera.PPHash) error {
+func (fake *TransactionStoreTransaction) AddTokenRequest(arg1 context.Context, arg2 string, arg3 []byte, arg4 map[string][]byte, arg5 map[string][]byte, arg6 drivera.PPHash) error {
 	var arg3Copy []byte
 	if arg3 != nil {
 		arg3Copy = make([]byte, len(arg3))
@@ -172,26 +196,26 @@ func (fake *AtomicWrite) AddTokenRequest(arg1 context.Context, arg2 string, arg3
 	return fakeReturns.result1
 }
 
-func (fake *AtomicWrite) AddTokenRequestCallCount() int {
+func (fake *TransactionStoreTransaction) AddTokenRequestCallCount() int {
 	fake.addTokenRequestMutex.RLock()
 	defer fake.addTokenRequestMutex.RUnlock()
 	return len(fake.addTokenRequestArgsForCall)
 }
 
-func (fake *AtomicWrite) AddTokenRequestCalls(stub func(context.Context, string, []byte, map[string][]byte, map[string][]byte, drivera.PPHash) error) {
+func (fake *TransactionStoreTransaction) AddTokenRequestCalls(stub func(context.Context, string, []byte, map[string][]byte, map[string][]byte, drivera.PPHash) error) {
 	fake.addTokenRequestMutex.Lock()
 	defer fake.addTokenRequestMutex.Unlock()
 	fake.AddTokenRequestStub = stub
 }
 
-func (fake *AtomicWrite) AddTokenRequestArgsForCall(i int) (context.Context, string, []byte, map[string][]byte, map[string][]byte, drivera.PPHash) {
+func (fake *TransactionStoreTransaction) AddTokenRequestArgsForCall(i int) (context.Context, string, []byte, map[string][]byte, map[string][]byte, drivera.PPHash) {
 	fake.addTokenRequestMutex.RLock()
 	defer fake.addTokenRequestMutex.RUnlock()
 	argsForCall := fake.addTokenRequestArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
-func (fake *AtomicWrite) AddTokenRequestReturns(result1 error) {
+func (fake *TransactionStoreTransaction) AddTokenRequestReturns(result1 error) {
 	fake.addTokenRequestMutex.Lock()
 	defer fake.addTokenRequestMutex.Unlock()
 	fake.AddTokenRequestStub = nil
@@ -200,7 +224,7 @@ func (fake *AtomicWrite) AddTokenRequestReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *AtomicWrite) AddTokenRequestReturnsOnCall(i int, result1 error) {
+func (fake *TransactionStoreTransaction) AddTokenRequestReturnsOnCall(i int, result1 error) {
 	fake.addTokenRequestMutex.Lock()
 	defer fake.addTokenRequestMutex.Unlock()
 	fake.AddTokenRequestStub = nil
@@ -214,7 +238,7 @@ func (fake *AtomicWrite) AddTokenRequestReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *AtomicWrite) AddTransaction(arg1 context.Context, arg2 ...driver.TransactionRecord) error {
+func (fake *TransactionStoreTransaction) AddTransaction(arg1 context.Context, arg2 ...driver.TransactionRecord) error {
 	fake.addTransactionMutex.Lock()
 	ret, specificReturn := fake.addTransactionReturnsOnCall[len(fake.addTransactionArgsForCall)]
 	fake.addTransactionArgsForCall = append(fake.addTransactionArgsForCall, struct {
@@ -234,26 +258,26 @@ func (fake *AtomicWrite) AddTransaction(arg1 context.Context, arg2 ...driver.Tra
 	return fakeReturns.result1
 }
 
-func (fake *AtomicWrite) AddTransactionCallCount() int {
+func (fake *TransactionStoreTransaction) AddTransactionCallCount() int {
 	fake.addTransactionMutex.RLock()
 	defer fake.addTransactionMutex.RUnlock()
 	return len(fake.addTransactionArgsForCall)
 }
 
-func (fake *AtomicWrite) AddTransactionCalls(stub func(context.Context, ...driver.TransactionRecord) error) {
+func (fake *TransactionStoreTransaction) AddTransactionCalls(stub func(context.Context, ...driver.TransactionRecord) error) {
 	fake.addTransactionMutex.Lock()
 	defer fake.addTransactionMutex.Unlock()
 	fake.AddTransactionStub = stub
 }
 
-func (fake *AtomicWrite) AddTransactionArgsForCall(i int) (context.Context, []driver.TransactionRecord) {
+func (fake *TransactionStoreTransaction) AddTransactionArgsForCall(i int) (context.Context, []driver.TransactionRecord) {
 	fake.addTransactionMutex.RLock()
 	defer fake.addTransactionMutex.RUnlock()
 	argsForCall := fake.addTransactionArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *AtomicWrite) AddTransactionReturns(result1 error) {
+func (fake *TransactionStoreTransaction) AddTransactionReturns(result1 error) {
 	fake.addTransactionMutex.Lock()
 	defer fake.addTransactionMutex.Unlock()
 	fake.AddTransactionStub = nil
@@ -262,7 +286,7 @@ func (fake *AtomicWrite) AddTransactionReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *AtomicWrite) AddTransactionReturnsOnCall(i int, result1 error) {
+func (fake *TransactionStoreTransaction) AddTransactionReturnsOnCall(i int, result1 error) {
 	fake.addTransactionMutex.Lock()
 	defer fake.addTransactionMutex.Unlock()
 	fake.AddTransactionStub = nil
@@ -276,7 +300,7 @@ func (fake *AtomicWrite) AddTransactionReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *AtomicWrite) AddValidationRecord(arg1 context.Context, arg2 string, arg3 map[string][]byte) error {
+func (fake *TransactionStoreTransaction) AddValidationRecord(arg1 context.Context, arg2 string, arg3 map[string][]byte) error {
 	fake.addValidationRecordMutex.Lock()
 	ret, specificReturn := fake.addValidationRecordReturnsOnCall[len(fake.addValidationRecordArgsForCall)]
 	fake.addValidationRecordArgsForCall = append(fake.addValidationRecordArgsForCall, struct {
@@ -297,26 +321,26 @@ func (fake *AtomicWrite) AddValidationRecord(arg1 context.Context, arg2 string, 
 	return fakeReturns.result1
 }
 
-func (fake *AtomicWrite) AddValidationRecordCallCount() int {
+func (fake *TransactionStoreTransaction) AddValidationRecordCallCount() int {
 	fake.addValidationRecordMutex.RLock()
 	defer fake.addValidationRecordMutex.RUnlock()
 	return len(fake.addValidationRecordArgsForCall)
 }
 
-func (fake *AtomicWrite) AddValidationRecordCalls(stub func(context.Context, string, map[string][]byte) error) {
+func (fake *TransactionStoreTransaction) AddValidationRecordCalls(stub func(context.Context, string, map[string][]byte) error) {
 	fake.addValidationRecordMutex.Lock()
 	defer fake.addValidationRecordMutex.Unlock()
 	fake.AddValidationRecordStub = stub
 }
 
-func (fake *AtomicWrite) AddValidationRecordArgsForCall(i int) (context.Context, string, map[string][]byte) {
+func (fake *TransactionStoreTransaction) AddValidationRecordArgsForCall(i int) (context.Context, string, map[string][]byte) {
 	fake.addValidationRecordMutex.RLock()
 	defer fake.addValidationRecordMutex.RUnlock()
 	argsForCall := fake.addValidationRecordArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *AtomicWrite) AddValidationRecordReturns(result1 error) {
+func (fake *TransactionStoreTransaction) AddValidationRecordReturns(result1 error) {
 	fake.addValidationRecordMutex.Lock()
 	defer fake.addValidationRecordMutex.Unlock()
 	fake.AddValidationRecordStub = nil
@@ -325,7 +349,7 @@ func (fake *AtomicWrite) AddValidationRecordReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *AtomicWrite) AddValidationRecordReturnsOnCall(i int, result1 error) {
+func (fake *TransactionStoreTransaction) AddValidationRecordReturnsOnCall(i int, result1 error) {
 	fake.addValidationRecordMutex.Lock()
 	defer fake.addValidationRecordMutex.Unlock()
 	fake.AddValidationRecordStub = nil
@@ -339,7 +363,7 @@ func (fake *AtomicWrite) AddValidationRecordReturnsOnCall(i int, result1 error) 
 	}{result1}
 }
 
-func (fake *AtomicWrite) Commit() error {
+func (fake *TransactionStoreTransaction) Commit() error {
 	fake.commitMutex.Lock()
 	ret, specificReturn := fake.commitReturnsOnCall[len(fake.commitArgsForCall)]
 	fake.commitArgsForCall = append(fake.commitArgsForCall, struct {
@@ -357,19 +381,19 @@ func (fake *AtomicWrite) Commit() error {
 	return fakeReturns.result1
 }
 
-func (fake *AtomicWrite) CommitCallCount() int {
+func (fake *TransactionStoreTransaction) CommitCallCount() int {
 	fake.commitMutex.RLock()
 	defer fake.commitMutex.RUnlock()
 	return len(fake.commitArgsForCall)
 }
 
-func (fake *AtomicWrite) CommitCalls(stub func() error) {
+func (fake *TransactionStoreTransaction) CommitCalls(stub func() error) {
 	fake.commitMutex.Lock()
 	defer fake.commitMutex.Unlock()
 	fake.CommitStub = stub
 }
 
-func (fake *AtomicWrite) CommitReturns(result1 error) {
+func (fake *TransactionStoreTransaction) CommitReturns(result1 error) {
 	fake.commitMutex.Lock()
 	defer fake.commitMutex.Unlock()
 	fake.CommitStub = nil
@@ -378,7 +402,7 @@ func (fake *AtomicWrite) CommitReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *AtomicWrite) CommitReturnsOnCall(i int, result1 error) {
+func (fake *TransactionStoreTransaction) CommitReturnsOnCall(i int, result1 error) {
 	fake.commitMutex.Lock()
 	defer fake.commitMutex.Unlock()
 	fake.CommitStub = nil
@@ -392,7 +416,60 @@ func (fake *AtomicWrite) CommitReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *AtomicWrite) Rollback() {
+func (fake *TransactionStoreTransaction) Impl() driver.TransactionImpl {
+	fake.implMutex.Lock()
+	ret, specificReturn := fake.implReturnsOnCall[len(fake.implArgsForCall)]
+	fake.implArgsForCall = append(fake.implArgsForCall, struct {
+	}{})
+	stub := fake.ImplStub
+	fakeReturns := fake.implReturns
+	fake.recordInvocation("Impl", []interface{}{})
+	fake.implMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *TransactionStoreTransaction) ImplCallCount() int {
+	fake.implMutex.RLock()
+	defer fake.implMutex.RUnlock()
+	return len(fake.implArgsForCall)
+}
+
+func (fake *TransactionStoreTransaction) ImplCalls(stub func() driver.TransactionImpl) {
+	fake.implMutex.Lock()
+	defer fake.implMutex.Unlock()
+	fake.ImplStub = stub
+}
+
+func (fake *TransactionStoreTransaction) ImplReturns(result1 driver.TransactionImpl) {
+	fake.implMutex.Lock()
+	defer fake.implMutex.Unlock()
+	fake.ImplStub = nil
+	fake.implReturns = struct {
+		result1 driver.TransactionImpl
+	}{result1}
+}
+
+func (fake *TransactionStoreTransaction) ImplReturnsOnCall(i int, result1 driver.TransactionImpl) {
+	fake.implMutex.Lock()
+	defer fake.implMutex.Unlock()
+	fake.ImplStub = nil
+	if fake.implReturnsOnCall == nil {
+		fake.implReturnsOnCall = make(map[int]struct {
+			result1 driver.TransactionImpl
+		})
+	}
+	fake.implReturnsOnCall[i] = struct {
+		result1 driver.TransactionImpl
+	}{result1}
+}
+
+func (fake *TransactionStoreTransaction) Rollback() {
 	fake.rollbackMutex.Lock()
 	fake.rollbackArgsForCall = append(fake.rollbackArgsForCall, struct {
 	}{})
@@ -404,19 +481,83 @@ func (fake *AtomicWrite) Rollback() {
 	}
 }
 
-func (fake *AtomicWrite) RollbackCallCount() int {
+func (fake *TransactionStoreTransaction) RollbackCallCount() int {
 	fake.rollbackMutex.RLock()
 	defer fake.rollbackMutex.RUnlock()
 	return len(fake.rollbackArgsForCall)
 }
 
-func (fake *AtomicWrite) RollbackCalls(stub func()) {
+func (fake *TransactionStoreTransaction) RollbackCalls(stub func()) {
 	fake.rollbackMutex.Lock()
 	defer fake.rollbackMutex.Unlock()
 	fake.RollbackStub = stub
 }
 
-func (fake *AtomicWrite) Invocations() map[string][][]interface{} {
+func (fake *TransactionStoreTransaction) SetStatus(arg1 context.Context, arg2 string, arg3 drivera.TxStatus, arg4 string) error {
+	fake.setStatusMutex.Lock()
+	ret, specificReturn := fake.setStatusReturnsOnCall[len(fake.setStatusArgsForCall)]
+	fake.setStatusArgsForCall = append(fake.setStatusArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+		arg3 drivera.TxStatus
+		arg4 string
+	}{arg1, arg2, arg3, arg4})
+	stub := fake.SetStatusStub
+	fakeReturns := fake.setStatusReturns
+	fake.recordInvocation("SetStatus", []interface{}{arg1, arg2, arg3, arg4})
+	fake.setStatusMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *TransactionStoreTransaction) SetStatusCallCount() int {
+	fake.setStatusMutex.RLock()
+	defer fake.setStatusMutex.RUnlock()
+	return len(fake.setStatusArgsForCall)
+}
+
+func (fake *TransactionStoreTransaction) SetStatusCalls(stub func(context.Context, string, drivera.TxStatus, string) error) {
+	fake.setStatusMutex.Lock()
+	defer fake.setStatusMutex.Unlock()
+	fake.SetStatusStub = stub
+}
+
+func (fake *TransactionStoreTransaction) SetStatusArgsForCall(i int) (context.Context, string, drivera.TxStatus, string) {
+	fake.setStatusMutex.RLock()
+	defer fake.setStatusMutex.RUnlock()
+	argsForCall := fake.setStatusArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *TransactionStoreTransaction) SetStatusReturns(result1 error) {
+	fake.setStatusMutex.Lock()
+	defer fake.setStatusMutex.Unlock()
+	fake.SetStatusStub = nil
+	fake.setStatusReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *TransactionStoreTransaction) SetStatusReturnsOnCall(i int, result1 error) {
+	fake.setStatusMutex.Lock()
+	defer fake.setStatusMutex.Unlock()
+	fake.SetStatusStub = nil
+	if fake.setStatusReturnsOnCall == nil {
+		fake.setStatusReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.setStatusReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *TransactionStoreTransaction) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
@@ -426,7 +567,7 @@ func (fake *AtomicWrite) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *AtomicWrite) recordInvocation(key string, args []interface{}) {
+func (fake *TransactionStoreTransaction) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -438,4 +579,4 @@ func (fake *AtomicWrite) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ driver.AtomicWrite = new(AtomicWrite)
+var _ driver.TransactionStoreTransaction = new(TransactionStoreTransaction)

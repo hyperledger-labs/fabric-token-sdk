@@ -85,6 +85,20 @@ type FakeTokenStoreTransaction struct {
 	setSpendableBySupportedTokenFormatsReturnsOnCall map[int]struct {
 		result1 error
 	}
+	SetStatusStub        func(context.Context, string, driver.TxStatus, string) error
+	setStatusMutex       sync.RWMutex
+	setStatusArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+		arg3 driver.TxStatus
+		arg4 string
+	}
+	setStatusReturns struct {
+		result1 error
+	}
+	setStatusReturnsOnCall map[int]struct {
+		result1 error
+	}
 	StoreTokenStub        func(context.Context, driver.TokenRecord, []string) error
 	storeTokenMutex       sync.RWMutex
 	storeTokenArgsForCall []struct {
@@ -466,6 +480,70 @@ func (fake *FakeTokenStoreTransaction) SetSpendableBySupportedTokenFormatsReturn
 		})
 	}
 	fake.setSpendableBySupportedTokenFormatsReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeTokenStoreTransaction) SetStatus(arg1 context.Context, arg2 string, arg3 driver.TxStatus, arg4 string) error {
+	fake.setStatusMutex.Lock()
+	ret, specificReturn := fake.setStatusReturnsOnCall[len(fake.setStatusArgsForCall)]
+	fake.setStatusArgsForCall = append(fake.setStatusArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+		arg3 driver.TxStatus
+		arg4 string
+	}{arg1, arg2, arg3, arg4})
+	stub := fake.SetStatusStub
+	fakeReturns := fake.setStatusReturns
+	fake.recordInvocation("SetStatus", []interface{}{arg1, arg2, arg3, arg4})
+	fake.setStatusMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeTokenStoreTransaction) SetStatusCallCount() int {
+	fake.setStatusMutex.RLock()
+	defer fake.setStatusMutex.RUnlock()
+	return len(fake.setStatusArgsForCall)
+}
+
+func (fake *FakeTokenStoreTransaction) SetStatusCalls(stub func(context.Context, string, driver.TxStatus, string) error) {
+	fake.setStatusMutex.Lock()
+	defer fake.setStatusMutex.Unlock()
+	fake.SetStatusStub = stub
+}
+
+func (fake *FakeTokenStoreTransaction) SetStatusArgsForCall(i int) (context.Context, string, driver.TxStatus, string) {
+	fake.setStatusMutex.RLock()
+	defer fake.setStatusMutex.RUnlock()
+	argsForCall := fake.setStatusArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *FakeTokenStoreTransaction) SetStatusReturns(result1 error) {
+	fake.setStatusMutex.Lock()
+	defer fake.setStatusMutex.Unlock()
+	fake.SetStatusStub = nil
+	fake.setStatusReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeTokenStoreTransaction) SetStatusReturnsOnCall(i int, result1 error) {
+	fake.setStatusMutex.Lock()
+	defer fake.setStatusMutex.Unlock()
+	fake.SetStatusStub = nil
+	if fake.setStatusReturnsOnCall == nil {
+		fake.setStatusReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.setStatusReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

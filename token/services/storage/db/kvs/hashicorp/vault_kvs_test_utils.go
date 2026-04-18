@@ -134,7 +134,7 @@ func waitForVault(vaultURL, token string) error {
 	}
 	req.Header.Set("X-Vault-Token", token)
 
-	for i := 0; i < 30; i++ { // Try for 30 seconds
+	for i := 0; i < 90; i++ { // Try for a bit
 		resp, err := client.Do(req)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			return nil

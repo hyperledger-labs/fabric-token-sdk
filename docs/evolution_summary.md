@@ -24,7 +24,8 @@ One of the most substantial additions is the `nogh` (**No Graph Hiding**) varian
 The Token Transaction service, a core component for orchestrating token lifecycles, has been significantly refactored:
 - **Dependency Injection Pattern:** The introduction of the `dep/` sub-package in the TTX service enables better dependency management, reducing circular dependencies and drastically improving unit testability.
 - **Multisig Support:** New capabilities for multi-signature transactions have been introduced in `token/services/ttx/multisig`.
-- **Finality Tracking:** Improved transaction finality handling via the new `token/services/ttx/finality` package.
+- **Finality Tracking:** Improved transaction finality handling via the new `token/services/ttx/finality` package, including a new `TTXRecoveryHandler` for synchronous transaction recovery.
+- **Transaction Recovery:** A new recovery mechanism has been introduced to automatically re-register finality listeners for pending transactions that may have lost their listeners due to node restarts or network issues.
 *   *See also:* [**TTX Service Documentation**](services/ttx.md)
 
 ## Core Service Enhancements
