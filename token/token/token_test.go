@@ -1,4 +1,6 @@
 /*
+// This file contains unit tests for token logic including validation, conversion, and edge cases not covered in quantity tests.
+
 Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0

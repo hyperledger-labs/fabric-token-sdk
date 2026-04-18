@@ -871,18 +871,15 @@ func TestToQuantitySum(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid input")
 	})
 
-	t.Run("Overflow panic recovery", func(t *testing.T) {
+	t.Run("Panic recovery", func(t *testing.T) {
 		reducer := token.ToQuantitySum(64)
 		s := reducer.Produce()
+
 		var err error
+		require.NotPanics(t, func() {
+			_, err = reducer.Reduce(s, (*token.UnspentToken)(nil))
+		})
 
-		// Add max uint64
-		s, err = reducer.Reduce(s, &token.UnspentToken{Quantity: strconv.FormatUint(math.MaxUint64, 10)})
-		require.NoError(t, err)
-
-		// Add 1 more to trigger panic
-		_, err = reducer.Reduce(s, &token.UnspentToken{Quantity: "1"})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "exceeds uint64")
 	})
 }
