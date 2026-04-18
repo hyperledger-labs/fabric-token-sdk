@@ -161,7 +161,7 @@ func TestRequestSignatures_RemoteIdentity_SkipsGetSigner(t *testing.T) {
 
 	_, callErr := cev.Call(ctx)
 
-	assert.Error(t, callErr, "Call should fail because remote signing cannot proceed")
+	require.Error(t, callErr, "Call should fail because remote signing cannot proceed")
 	assert.Equal(t, 0, mockIP.GetSignerCallCount(),
 		"GetSigner must not be called when IsMe() returns false for a remote party")
 	assert.GreaterOrEqual(t, mockIP.IsMeCallCount(), 1,

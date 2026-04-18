@@ -226,20 +226,22 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 
 		// Case: there is a signer locally bound to the party, use it to generate the signature.
 		// IsMe() is a cheap cache/DB lookup that avoids the expensive idemix sign-and-verify in
-		// GetSigner() for identities we do not own.
+		// GetSigner() for identities we do not own. Even when IsMe() returns true, GetSigner()
+		// may fail for remote wallets whose identity row exists in the DB but whose private key
+		// is not held locally; in that case fall through to the wallet/remote-party path.
 		if c.tx.TokenService().SigService().IsMe(context.Context(), signerIdentity) {
-			signer, err := c.tx.TokenService().SigService().GetSigner(context.Context(), signerIdentity)
-			if err != nil {
-				return nil, errors.WithMessagef(err, "failed getting local signer for party [%s]", signerIdentity)
-			}
-			logger.DebugfContext(context.Context(), "found signer for party [%s], request local signature", signerIdentity)
-			sigma, err := c.signLocal(context.Context(), signerIdentity, signer, requestRaw)
-			if err != nil {
-				return nil, errors.WithMessagef(err, "failed signing local for party [%s]", signerIdentity)
-			}
-			sigmas[signerIdentity.UniqueID()] = sigma
+			if signer, err := c.tx.TokenService().SigService().GetSigner(context.Context(), signerIdentity); err == nil {
+				logger.DebugfContext(context.Context(), "found signer for party [%s], request local signature", signerIdentity)
+				sigma, err := c.signLocal(context.Context(), signerIdentity, signer, requestRaw)
+				if err != nil {
+					return nil, errors.WithMessagef(err, "failed signing local for party [%s]", signerIdentity)
+				}
+				sigmas[signerIdentity.UniqueID()] = sigma
 
-			continue
+				continue
+			} else {
+				logger.DebugfContext(context.Context(), "IsMe true but GetSigner failed for party [%s]: [%s]", signerIdentity, err)
+			}
 		}
 		logger.DebugfContext(context.Context(), "no local signer for party [%s], checking wallet", signerIdentity)
 
