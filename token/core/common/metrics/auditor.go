@@ -57,5 +57,6 @@ func (w *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 	if err != nil {
 		w.errors.With("method", "AuditorCheck").Add(1)
 	}
+
 	return err
 }

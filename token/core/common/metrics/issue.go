@@ -58,6 +58,7 @@ func (w *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 	if err != nil {
 		w.errors.With("method", "Issue").Add(1)
 	}
+
 	return action, meta, err
 }
 
@@ -69,6 +70,7 @@ func (w *IssueService) VerifyIssue(ctx context.Context, ia driver.IssueAction, m
 	if err != nil {
 		w.errors.With("method", "VerifyIssue").Add(1)
 	}
+
 	return err
 }
 
@@ -80,5 +82,6 @@ func (w *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, e
 	if err != nil {
 		w.errors.With("method", "DeserializeIssueAction").Add(1)
 	}
+
 	return action, err
 }

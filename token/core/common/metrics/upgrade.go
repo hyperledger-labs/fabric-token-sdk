@@ -58,6 +58,7 @@ func (w *TokensUpgradeService) NewUpgradeChallenge() (driver.TokensUpgradeChalle
 	if err != nil {
 		w.errors.With("method", "NewUpgradeChallenge").Add(1)
 	}
+
 	return ch, err
 }
 
@@ -69,6 +70,7 @@ func (w *TokensUpgradeService) GenUpgradeProof(ctx context.Context, ch driver.To
 	if err != nil {
 		w.errors.With("method", "GenUpgradeProof").Add(1)
 	}
+
 	return proof, err
 }
 
@@ -80,5 +82,6 @@ func (w *TokensUpgradeService) CheckUpgradeProof(ctx context.Context, ch driver.
 	if err != nil {
 		w.errors.With("method", "CheckUpgradeProof").Add(1)
 	}
+
 	return ok, err
 }

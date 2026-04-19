@@ -55,6 +55,7 @@ func (w *TokensService) SupportedTokenFormats() []token.Format {
 	start := time.Now()
 	formats := w.inner.SupportedTokenFormats()
 	w.duration.With("method", "SupportedTokenFormats").Observe(time.Since(start).Seconds())
+
 	return formats
 }
 
@@ -66,6 +67,7 @@ func (w *TokensService) Deobfuscate(ctx context.Context, output driver.TokenOutp
 	if err != nil {
 		w.errors.With("method", "Deobfuscate").Add(1)
 	}
+
 	return tok, issuer, recipients, format, err
 }
 
@@ -77,5 +79,6 @@ func (w *TokensService) Recipients(output driver.TokenOutput) ([]driver.Identity
 	if err != nil {
 		w.errors.With("method", "Recipients").Add(1)
 	}
+
 	return ids, err
 }

@@ -58,6 +58,7 @@ func (w *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 	if err != nil {
 		w.errors.With("method", "Transfer").Add(1)
 	}
+
 	return action, meta, err
 }
 
@@ -69,6 +70,7 @@ func (w *TransferService) VerifyTransfer(ctx context.Context, tr driver.Transfer
 	if err != nil {
 		w.errors.With("method", "VerifyTransfer").Add(1)
 	}
+
 	return err
 }
 
@@ -80,5 +82,6 @@ func (w *TransferService) DeserializeTransferAction(raw []byte) (driver.Transfer
 	if err != nil {
 		w.errors.With("method", "DeserializeTransferAction").Add(1)
 	}
+
 	return action, err
 }
