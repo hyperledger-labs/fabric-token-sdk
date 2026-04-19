@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	cdriver "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
@@ -137,6 +138,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		nil,
 		nil,
 	)
+	metricsProvider := metrics.NewTMSProvider(tmsConfig.ID(), d.metricsProvider)
 	service, err := v1.NewService(
 		logger,
 		ws,
@@ -144,11 +146,11 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		ip,
 		deserializer,
 		tmsConfig,
-		v1.NewIssueService(publicParamsManager, ws, deserializer),
-		v1.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
-		v1.NewAuditorService(),
-		tokensService,
-		&v1.TokensUpgradeService{},
+		metrics.NewIssueService(v1.NewIssueService(publicParamsManager, ws, deserializer), metricsProvider),
+		metrics.NewTransferService(v1.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer), metricsProvider),
+		metrics.NewAuditorService(v1.NewAuditorService(), metricsProvider),
+		metrics.NewTokensService(tokensService, metricsProvider),
+		metrics.NewTokensUpgradeService(&v1.TokensUpgradeService{}, metricsProvider),
 		authorization,
 		validator,
 	)

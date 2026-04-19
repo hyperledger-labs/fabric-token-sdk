@@ -8,7 +8,7 @@ package benchmark
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
+
 	tokcommon "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	v1driver "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
@@ -61,7 +61,7 @@ func NewIssueSetup(conf *SetupConfiguration) (*IssueSetup, error) {
 		ppm,
 		walletService,
 		deserializer,
-		v1.NewMetrics(&disabled.Provider{}),
+		nil, // TokensService is not needed for benchmarks
 		nil, // TokensUpgradeService is only used when issuerIdentity.IsNone()
 	)
 
