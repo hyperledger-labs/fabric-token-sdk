@@ -18,17 +18,17 @@ var (
 	tokensOpsOpts = CounterOpts{
 		Name:       "tokens_service_operations_total",
 		Help:       "Total number of TokensService method invocations",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	tokensDurationOpts = HistogramOpts{
 		Name:       "tokens_service_duration_seconds",
 		Help:       "Duration of TokensService method calls in seconds",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	tokensErrorsOpts = CounterOpts{
 		Name:       "tokens_service_errors_total",
 		Help:       "Total number of TokensService method errors",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 )
 

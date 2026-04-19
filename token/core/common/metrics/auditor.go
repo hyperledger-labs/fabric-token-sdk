@@ -17,17 +17,17 @@ var (
 	auditorOpsOpts = CounterOpts{
 		Name:       "auditor_service_operations_total",
 		Help:       "Total number of AuditorService method invocations",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	auditorDurationOpts = HistogramOpts{
 		Name:       "auditor_service_duration_seconds",
 		Help:       "Duration of AuditorService method calls in seconds",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	auditorErrorsOpts = CounterOpts{
 		Name:       "auditor_service_errors_total",
 		Help:       "Total number of AuditorService method errors",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 )
 

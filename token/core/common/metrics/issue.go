@@ -18,17 +18,17 @@ var (
 	issueOpsOpts = CounterOpts{
 		Name:       "issue_service_operations_total",
 		Help:       "Total number of IssueService method invocations",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	issueDurationOpts = HistogramOpts{
 		Name:       "issue_service_duration_seconds",
 		Help:       "Duration of IssueService method calls in seconds",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	issueErrorsOpts = CounterOpts{
 		Name:       "issue_service_errors_total",
 		Help:       "Total number of IssueService method errors",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 )
 

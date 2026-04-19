@@ -18,17 +18,17 @@ var (
 	transferOpsOpts = CounterOpts{
 		Name:       "transfer_service_operations_total",
 		Help:       "Total number of TransferService method invocations",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	transferDurationOpts = HistogramOpts{
 		Name:       "transfer_service_duration_seconds",
 		Help:       "Duration of TransferService method calls in seconds",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	transferErrorsOpts = CounterOpts{
 		Name:       "transfer_service_errors_total",
 		Help:       "Total number of TransferService method errors",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 )
 

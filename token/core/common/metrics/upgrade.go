@@ -18,17 +18,17 @@ var (
 	upgradeOpsOpts = CounterOpts{
 		Name:       "tokens_upgrade_service_operations_total",
 		Help:       "Total number of TokensUpgradeService method invocations",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	upgradeDurationOpts = HistogramOpts{
 		Name:       "tokens_upgrade_service_duration_seconds",
 		Help:       "Duration of TokensUpgradeService method calls in seconds",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	upgradeErrorsOpts = CounterOpts{
 		Name:       "tokens_upgrade_service_errors_total",
 		Help:       "Total number of TokensUpgradeService method errors",
-		LabelNames: []string{"method"},
+		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 )
 

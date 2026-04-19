@@ -26,6 +26,7 @@ type testCounter struct {
 
 func (c *testCounter) With(labelValues ...string) Counter {
 	c.labels = append(c.labels, labelValues...)
+
 	return c
 }
 
@@ -42,6 +43,7 @@ type testHistogram struct {
 
 func (h *testHistogram) With(labelValues ...string) Histogram {
 	h.labels = append(h.labels, labelValues...)
+
 	return h
 }
 
@@ -341,7 +343,7 @@ func TestTokensUpgradeService_NewUpgradeChallenge(t *testing.T) {
 
 		ch, err := w.NewUpgradeChallenge()
 		require.NoError(t, err)
-		assert.Equal(t, []byte("challenge"), []byte(ch))
+		assert.Equal(t, []byte("challenge"), ch)
 		assert.Equal(t, 1, inner.NewUpgradeChallengeCallCount())
 		assert.GreaterOrEqual(t, p.counter.addCount, 1)
 		assert.Equal(t, 1, p.histogram.observeCount)
@@ -368,7 +370,7 @@ func TestTokensUpgradeService_GenUpgradeProof(t *testing.T) {
 
 		proof, err := w.GenUpgradeProof(context.Background(), []byte("ch"), nil, nil)
 		require.NoError(t, err)
-		assert.Equal(t, []byte("proof"), []byte(proof))
+		assert.Equal(t, []byte("proof"), proof)
 		assert.Equal(t, 1, inner.GenUpgradeProofCallCount())
 	})
 
