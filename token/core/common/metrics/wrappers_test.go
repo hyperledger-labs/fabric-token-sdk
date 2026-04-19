@@ -56,8 +56,8 @@ type testProvider struct {
 	histogram *testHistogram
 }
 
-func (p *testProvider) NewCounter(opts CounterOpts) Counter   { return p.counter }
-func (p *testProvider) NewGauge(opts GaugeOpts) Gauge         { return nil }
+func (p *testProvider) NewCounter(opts CounterOpts) Counter       { return p.counter }
+func (p *testProvider) NewGauge(opts GaugeOpts) Gauge             { return nil }
 func (p *testProvider) NewHistogram(opts HistogramOpts) Histogram { return p.histogram }
 
 func newTestProvider() *testProvider {
