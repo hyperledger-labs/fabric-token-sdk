@@ -35,8 +35,6 @@ The Transfer Service benchmarks serve several critical purposes:
 
 ## Quickstart
 
-( **Prerequisite:** [Setting Up Nodes](setting_up_nodes.md) )
-
 ### 1. Local View Benchmark
 
 Tests transfer validation directly in-process without any network or API overhead. This establishes the performance baseline.
@@ -85,59 +83,119 @@ GOGC=10000 go test -bench=BenchmarkAPIGRPC -benchtime=30s -count=5 -cpu=32 -numC
 
 ### 4. Distributed Two-Node Benchmark
 
-For realistic deployment testing with separate client and server machines, see the detailed setup guide:
+To setup AWS EC2 nodes See: [AWS Benchmark 2 Machines](../../../token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/aws_bench_2_machines.md)
 
-**[Setting Up Two-Node Benchmarking →](setting_up_nodes.md)**
+For realistic deployment testing with separate client and server machines:
+
+Architecture: 
+1. Machine 1 is the server (FC Node)
+2. Machine 2 is the client sending to the server and gathering the metrics
+
+Setup: 
+1. Add ssh pubkey of server to client `known_hosts` (If not already connected)  
+2. Start the server:
+
+```bash
+cd token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/
+GOGC=10000 go run ./server/
+```
+Wait until you see the output:
+```bash
+Running fscnode test-node
+```
+[Note: We set GOGC to 10K but you don't have to]
+
+3. In the client, copy the node data from the server  
+We can use `Rsync` for this:
+```bash
+cd token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/
+
+rsync -avz <YourServerName>:/<fullpath>/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/out/ ./out
+``` 
+Note: Make sure full path and server name are correct
+
+4. Replace the IP (or full name DNS can resolve) to the Server IP in the client out folder:
+
+```bash
+sed 's#127.0.0.1#123.456.789#g' ./out/testdata/fsc/nodes/test-node.0/client-config.yaml -i
+```
+5. Start client and tee output to file
+
+```bash
+GOGC=10000 nohup go run ./client/ -benchtime=30s -count=5 -workloads=transfer-service -cpu=1,2,4,8,16,32,48,64 -numConn=1,2,4,8 2>&1 | tee out.txt &
+```
 
 This setup is ideal for:
 - Testing real network latency and bandwidth constraints
 - Evaluating performance on production-like infrastructure
 - Measuring impact of geographic distribution
 - Load testing with dedicated client machines
+## Visualising the results 
 
-## Architecture
+0. Set up python environment:
 
-### Benchmark Layers
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 4: Distributed (Client-Server)                        │
-│ Location: server/ and client/ directories                   │
-│ Purpose: Real-world deployment simulation                   │
-│ Network: Actual network between machines                    │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 3: gRPC API (BenchmarkAPIGRPC)                        │
-│ Purpose: Network serialization overhead measurement         │
-│ Network: Localhost gRPC (127.0.0.1)                         │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 2: View API (BenchmarkAPI)                            │
-│ Purpose: FSC API overhead measurement                       │
-│ Network: In-process API calls                               │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 1: Direct (BenchmarkLocalTransferService)             │
-│ Purpose: Baseline performance without overhead              │
-│ Network: None (direct function calls)                       │
-└─────────────────────────────────────────────────────────────┘
+```bash
+python -m venv .venv 
+source .venv/bin/activate
+pip install streamlit pandas
 ```
 
-### View Pool Pattern
+1. Place the results in `.txt` files in a folder called `bench`.
 
-All benchmarks use a **view pool** to ensure realistic testing:
-
-```go
-type viewPool struct {
-    views []view.View  // Pre-generated transfer views
-    idx   atomic.Int64 // Round-robin index
-}
+2. Run:
+```bash
+streamlit run cmd/benchmarking/plotly_plot_node.py
 ```
 
-**Why?** Without a pool, benchmarks would repeatedly verify the *same* ZK proof, which doesn't reflect real-world scenarios where each transaction is unique. The pool rotates through 64 different pre-generated proofs (by default) to simulate realistic validation workload.
+## Real world example:
+- Server: dectrust2.vpc.cloud9.ibm.com
+- Client: dectrust1.vpc.cloud9.ibm.com
+
+They both already have each-others SSH Keys, so I don't need to do it again.
+
+On dectrust2, Server Runs:
+```bash
+cd token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/
+GOGC=10000 go run ./server/
+```
+I wait to see:
+
+```bash
+Running fscnode test-node
+```
+
+On dectrust1:
+```bash
+cd ~/effi/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/
+rsync -avz root@dectrust2.vpc.cloud9.ibm.com:/root/effi/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/out/ ./out
+sed 's#127.0.0.1#dectrust1.vpc.cloud9.ibm.com#g' ./out/testdata/fsc/nodes/test-node.0/client-config.yaml -i
+GOGC=10000 nohup go run ./client/ -benchtime=30s -count=5 -workloads=zkp -cpu=1,2,4,8,16,32 -numConn=1,2,4,8 2>&1 | tee example-2node.txt &
+```
+
+I also run gRPC benchmark without the 2 node setup:
+
+```bash
+GOGC=10000 go test -bench=BenchmarkAPIGRPC -benchtime=30s -count=5 -cpu=32 -numConn=1,2,4,8 | tee example-grpc.txt
+```
+
+I now move the outputs to `bench` folder and run the visualisation:
+
+```bash
+mv example-2node.txt bench
+mv example-grpc.txt
+```
+
+(Optional) I setup python `venv`:
+```bash
+python -m venv .venv 
+source .venv/bin/activate
+pip install streamlit pandas
+```
+
+Now I can run the visualisation:
+```bash 
+streamlit run cmd/benchmarking/plotly_plot_node.py 
+```
 
 ## Understanding Results
 
@@ -161,22 +219,6 @@ BenchmarkLocalTransferService/out-tokens=2in-tokens=2-32    1000    30000000 ns/
 - Each validation took ~30ms (30,000,000 ns)
 - Achieved ~33,333 transactions per second
 
-## Visualising the results 
-
-0. Set up python environment:
-
-```bash
-python -m venv .venv 
-source .venv/bin/activate
-pip install streamlit pandas
-```
-
-1. Place the results in `.txt` files in a folder called `bench`.
-
-2. Run:
-```bash
-streamlit run cmd/benchmarking/plotly_plot_node.py
-```
 
 ## Related Documentation
 

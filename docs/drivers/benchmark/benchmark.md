@@ -20,5 +20,4 @@
 - [Identity Service - Idemix](services/identity/idemix.md)
 
 ### Node Level Benchmarks
-- [Setting Up Nodes](setting_up_nodes.md)
 - [FSC Transfer Service Benchmark](transfer_service_benchmark.md)
