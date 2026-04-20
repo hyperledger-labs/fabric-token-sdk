@@ -224,7 +224,6 @@ BenchmarkLocalTransferService/out-tokens=2in-tokens=2-32    1000    30000000 ns/
 
 - **[Core Driver Benchmarks](core/dlognogh/dlognogh.md)** - Lower-level cryptographic benchmarks
 - **[Testing Architecture](core/dlognogh/dlognogh_architecture.md)** - Understanding the test layers
-- **[Setting Up Nodes](setting_up_nodes.md)** - Distributed two-node setup guide
 - **[Benchmark Tools](tools.md)** - Analysis and profiling tools
-- **[AWS Setup Guide](../../../token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/aws_setup_2_machines.md)** - Cloud deployment instructions
+- **[AWS Setup Guide](../../../token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/aws_bench_2_machines.md)** - Cloud deployment instructions
 
