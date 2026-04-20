@@ -103,6 +103,8 @@ func (p *prover) Prove() (*Proof, error) {
 	witness := make([]*mathlib.Zr, len(p.witness))
 	copy(witness, p.witness)
 
+	one := math.One(p.Curve)
+
 	for i := range p.NumberOfRounds {
 		n := len(generators) / 2
 
@@ -133,17 +135,18 @@ func (p *prover) Prove() (*Proof, error) {
 		// Fold linear form: f'[j]   = f_L[j]   + c · f_R[j]
 		// Fold witness:     w'[j]   = c · w_L[j] + w_R[j]
 		for j := range n {
-			generators[j].Add(generators[n+j].Mul(c))
+			// gen'[j] = 1·gen_L[j] + c·gen_R[j], zero allocations
+			generators[j].Mul2InPlace(one, generators[n+j], c)
 
 			linearForm[j] = p.Curve.ModAddMul2(
-				linearForm[j], math.One(p.Curve),
+				linearForm[j], one,
 				c, linearForm[n+j],
 				p.Curve.GroupOrder,
 			)
 
 			witness[j] = p.Curve.ModAddMul2(
 				c, witness[j],
-				witness[n+j], math.One(p.Curve),
+				witness[n+j], one,
 				p.Curve.GroupOrder,
 			)
 		}
@@ -213,11 +216,11 @@ func (v *verifier) Verify(proof *Proof) error {
 	}
 	tr.Absorb(v.Value.Bytes())
 
-	// Replay transcript to collect all challenges, tracking commitment and
-	// value updates. Generators are NOT folded per round.
+	// Replay transcript to collect all challenges and update the value
+	// accumulator. The commitment folding is deferred to a single MSM below.
 	challenges := make([]*mathlib.Zr, v.NumberOfRounds)
-	com := v.Commitment.Copy()
 	val := v.Value.Copy()
+	one := math.One(v.Curve)
 
 	for i := range v.NumberOfRounds {
 		// Absorb cross terms (same order as Prove()).
@@ -233,20 +236,39 @@ func (v *verifier) Verify(proof *Proof) error {
 		challenges[i] = c
 		cSq := v.Curve.ModMul(c, c, v.Curve.GroupOrder)
 
-		// Update commitment: C' = c·C + Left[i] + c²·Right[i]
-		newCom := com.Mul(c)
-		newCom.Add(proof.Left[i])
-		newCom.Add(proof.Right[i].Mul(cSq))
-		com = newCom
-
 		// Update value: v' = c·v + VLeft[i] + c²·VRight[i]
+		// (scalar-only; no G1 allocations)
 		val = v.Curve.ModAddMul3(
 			c, val,
-			proof.VLeft[i], math.One(v.Curve),
+			proof.VLeft[i], one,
 			cSq, proof.VRight[i],
 			v.Curve.GroupOrder,
 		)
 	}
+
+	// Batch-compute the folded commitment via a single MSM, replacing the
+	// sequential Mul+Add loop that allocated one G1 per round.
+	k := int(v.NumberOfRounds)
+	suffProd := make([]*mathlib.Zr, k)
+	suffProd[k-1] = one
+	for i := k - 2; i >= 0; i-- {
+		suffProd[i] = v.Curve.ModMul(suffProd[i+1], challenges[i+1], v.Curve.GroupOrder)
+	}
+	sC := v.Curve.ModMul(challenges[0], suffProd[0], v.Curve.GroupOrder)
+
+	// Build flat (point, scalar) slices: C₀, then (L_i, R_i) for each round.
+	comPoints := make([]*mathlib.G1, 0, 2*k+1)
+	comScalars := make([]*mathlib.Zr, 0, 2*k+1)
+	comPoints = append(comPoints, v.Commitment)
+	comScalars = append(comScalars, sC)
+	for i := range k {
+		cSq := v.Curve.ModMul(challenges[i], challenges[i], v.Curve.GroupOrder)
+		comPoints = append(comPoints, proof.Left[i])
+		comScalars = append(comScalars, suffProd[i])
+		comPoints = append(comPoints, proof.Right[i])
+		comScalars = append(comScalars, v.Curve.ModMul(cSq, suffProd[i], v.Curve.GroupOrder))
+	}
+	com := v.Curve.MultiScalarMul(comPoints, comScalars)
 
 	// Compute the coefficient vector s such that
 	//   gen_f = sum_i s[i] · gen[i]   and   f_f = sum_i s[i] · f[i]
