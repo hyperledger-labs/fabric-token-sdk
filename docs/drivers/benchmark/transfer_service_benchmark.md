@@ -184,5 +184,5 @@ streamlit run cmd/benchmarking/plotly_plot_node.py
 - **[Testing Architecture](core/dlognogh/dlognogh_architecture.md)** - Understanding the test layers
 - **[Setting Up Nodes](setting_up_nodes.md)** - Distributed two-node setup guide
 - **[Benchmark Tools](tools.md)** - Analysis and profiling tools
-- **[AWS Setup Guide](../../token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/aws_setup_2_machines.md)** - Cloud deployment instructions
+- **[AWS Setup Guide](../../../token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/aws_setup_2_machines.md)** - Cloud deployment instructions
 

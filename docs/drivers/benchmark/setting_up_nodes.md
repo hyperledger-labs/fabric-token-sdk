@@ -1,21 +1,22 @@
 # Setting up 2 nodes Benchmarking on 2 Severs
 
-To setup AWS EC2 nodes See: [AWS Setup 2 Machines](token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/aws_setup_2_machines.md)
+To setup AWS EC2 nodes See: [AWS Setup 2 Machines](../../../token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/aws_setup_2_machines.md)
 
 Architecture: 
 1. Machine 1 is the server (FC Node)
 2. Machine 2 is the client sending to the server and gathering the metrics
 
 Setup: 
-1. Add ssh pubkey of server to client `known_hosts`
+1. Add ssh pubkey of server to client `known_hosts` (If not already connected, so they know each other)
 2. Start the server:
 
 ```bash
 cd token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/
 GOGC=10000 go run ./server/
 ```
-3. In the client, Rsync the node data from the server:
-
+[Note: Here we set GOGC to 10K]
+3. In the client, copy the node data from the server:
+We can use Rsync for this
 ```bash
 cd token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/
 
