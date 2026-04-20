@@ -248,7 +248,7 @@ func (v *verifier) Verify(proof *Proof) error {
 
 	// Batch-compute the folded commitment via a single MSM, replacing the
 	// sequential Mul+Add loop that allocated one G1 per round.
-	k := int(v.NumberOfRounds)
+	k := int(v.NumberOfRounds) // #nosec G115
 	suffProd := make([]*mathlib.Zr, k)
 	suffProd[k-1] = one
 	for i := k - 2; i >= 0; i-- {
