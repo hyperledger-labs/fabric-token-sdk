@@ -35,6 +35,8 @@ The Transfer Service benchmarks serve several critical purposes:
 
 ## Quickstart
 
+( **Prerequisite:** [Setting Up Nodes](setting_up_nodes.md) )
+
 ### 1. Local View Benchmark
 
 Tests transfer validation directly in-process without any network or API overhead. This establishes the performance baseline.
@@ -158,6 +160,23 @@ BenchmarkLocalTransferService/out-tokens=2in-tokens=2-32    1000    30000000 ns/
 - 2 input tokens, 2 output tokens
 - Each validation took ~30ms (30,000,000 ns)
 - Achieved ~33,333 transactions per second
+
+## Visualising the results 
+
+0. Set up python environment:
+
+```bash
+python -m venv .venv 
+source .venv/bin/activate
+pip install streamlit pandas
+```
+
+1. Place the results in `.txt` files in a folder called `bench`.
+
+2. Run:
+```bash
+streamlit run cmd/benchmarking/plotly_plot_node.py
+```
 
 ## Related Documentation
 

@@ -1,9 +1,9 @@
 # Setting up 2 nodes Benchmarking on 2 Severs
 
-To setup AWS EC2 nodes See: [AWS Setup 2 Machines](../../../token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/aws_setup_2_machines.md)
+To setup AWS EC2 nodes See: [AWS Setup 2 Machines](token/core/zkatdlog/nogh/v1/validator/bench/transfer_service/aws_setup_2_machines.md)
 
 Architecture: 
-1. Machine 1 is the server 
+1. Machine 1 is the server (FC Node)
 2. Machine 2 is the client sending to the server and gathering the metrics
 
 Setup: 

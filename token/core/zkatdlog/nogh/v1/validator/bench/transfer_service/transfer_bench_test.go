@@ -20,16 +20,16 @@ import (
 
 // viewPool pre-generates distinct views so that benchmark iterations rotate
 // through different ZK proofs instead of repeatedly verifying same data.
-
-const (
-	defaultNumViews = 64
-)
-
 type viewPool struct {
 	views []view.View
 	idx   atomic.Int64
 }
 
+const (
+	defaultNumViews = 64
+)
+
+// shuffle randomizes the slice order unless shuffling is disabled.
 func shuffle[T any](s []T, noSeed bool, disable bool) {
 	if disable {
 		return
@@ -46,6 +46,7 @@ func shuffle[T any](s []T, noSeed bool, disable bool) {
 	}
 }
 
+// CreateViewsWithProofs builds a pool of benchmark views backed by transfer proofs.
 func CreateViewsWithProofs(b *testing.B, testRoot string, f *TransferServiceViewFactory, n int) (*viewPool, []*trandferServiceParams) {
 	b.Helper()
 	vp := &viewPool{}
@@ -77,6 +78,7 @@ func (vp *viewPool) nextView() view.View {
 	return vp.views[i%int64(l)]
 }
 
+// BenchmarkLocalTransferService measures local transfer verification throughput.
 func BenchmarkLocalTransferService(b *testing.B) {
 	f := &TransferServiceViewFactory{}
 	pool, params := CreateViewsWithProofs(b, "", f, defaultNumViews)
