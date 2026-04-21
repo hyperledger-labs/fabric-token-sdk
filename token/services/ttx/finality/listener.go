@@ -24,6 +24,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const MaxRetry = 3
+
 //go:generate counterfeiter -o mock/transaction_db.go -fake-name TransactionDB . transactionDB
 type transactionDB interface {
 	NewTransaction() (dbdriver.TransactionStoreTransaction, error)
@@ -77,7 +79,7 @@ func NewListener(
 		tokens:      tokens,
 		tracer:      tracer,
 		metrics:     newMetrics(metricsProvider),
-		retryRunner: utils.NewRetryRunner(logger, utils.Infinitely, time.Second, true),
+		retryRunner: utils.NewRetryRunner(logger, MaxRetry, time.Second, true),
 	}
 }
 
@@ -145,14 +147,8 @@ func (t *Listener) runOnStatus(ctx context.Context, txID string, status int, mes
 	case network.Invalid:
 		txStatus = storage.Deleted
 	default:
-		t.logger.Infof("listener invoked on [%s] with status [%d], listen again...", txID, status)
-		// In this case, we do the following:
-		// We return no error to terminate this listener, and we add it again for a second chance.
-		if err := t.net.AddFinalityListener(t.namespace, txID, t); err != nil {
-			return errors.Wrap(err, "failed to add finality listener")
-		}
 
-		return nil
+		return errors.Errorf("listener invoked on [%s] with status [%d], cannot proceed", txID, status)
 	}
 
 	// update the status, if here, either txStatus is not Confirmed
