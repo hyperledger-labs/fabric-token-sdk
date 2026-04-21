@@ -220,6 +220,7 @@ The Token SDK comes equipped with two reference drivers:
 
 - [**FabToken**](./drivers/fabtoken.md): A straightforward implementation prioritizing simplicity. It stores token transaction details (type, value, owner) in cleartext on the ledger, using X.509 certificates for identities.
 - [**DLOG w/o Graph Hiding (NOGH)**](./drivers/dlogwogh.md): A privacy-preserving driver using Zero-Knowledge Proofs (ZKP) to hide token types and values via Pedersen commitments. It leverages Idemix for owner anonymity while revealing the spending graph.
+- [**Extending a Validator Driver&&](./drivers/extending_validator.md)
 
 ## Observability
 

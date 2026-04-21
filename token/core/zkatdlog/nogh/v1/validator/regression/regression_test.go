@@ -113,7 +113,7 @@ func testRegression(t *testing.T, rootDir, subFolder string) {
 }
 
 func tokenServicesFactory(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
-	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+	is := core.NewValidatorDriverService(fabtoken.NewValidatorDriver(), dlog.NewValidatorDriver())
 
 	ppm, err := is.PublicParametersFromBytes(bytes)
 	if err != nil {

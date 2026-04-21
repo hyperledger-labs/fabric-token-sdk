@@ -58,7 +58,10 @@ func main() {
 		Writer:  os.Stderr,
 	})
 
-	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+	is := core.NewValidatorDriverService(
+		fabtoken.NewValidatorDriver(),
+		dlog.NewValidatorDriver(),
+	)
 	if config.CCID == "" || config.CCaddress == "" {
 		fmt.Println("CC ID or CC address is empty... Running as usual...")
 		if os.Getenv("DEVMODE_ENABLED") != "" {

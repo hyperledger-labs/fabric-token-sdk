@@ -95,19 +95,6 @@ func (s *PPManagerFactoryService) NewPublicParametersManager(pp driver.PublicPar
 	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", DriverIdentifierFromPP(pp))
 }
 
-// NewValidator returns a new instance of driver.Validator for the passed public parameters.
-// If no driver is registered for the public params' identifier, it returns an error.
-func (s *PPManagerFactoryService) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "failed validating public parameters")
-	}
-	if instantiator, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
-		return instantiator.NewValidator(pp)
-	}
-
-	return nil, errors.Errorf("cannot load default validator, driver [%s] not found", DriverIdentifierFromPP(pp))
-}
-
 // WalletServiceFactoryService manages factories for creating wallet services.
 type WalletServiceFactoryService struct {
 	*factoryDirectory[driver.WalletServiceFactory]
@@ -165,7 +152,7 @@ type ValidatorDriverService struct {
 }
 
 // NewValidatorDriverService creates a new ValidatorDriverService with the provided factories.
-func NewValidatorDriverService(factories []NamedFactory[driver.ValidatorDriver]) *ValidatorDriverService {
+func NewValidatorDriverService(factories ...NamedFactory[driver.ValidatorDriver]) *ValidatorDriverService {
 	return &ValidatorDriverService{factoryDirectory: newFactoryDirectory(factories...)}
 }
 

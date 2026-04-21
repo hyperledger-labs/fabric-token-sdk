@@ -98,42 +98,6 @@ func TestPPManagerFactoryService_NewPublicParametersManager(t *testing.T) {
 	assert.Contains(t, err.Error(), "driver [unknown.v1] not found")
 }
 
-// TestPPManagerFactoryService_DefaultValidator verifies that the default validator can be retrieved
-// for a registered driver and handles the case where the driver is not found.
-func TestPPManagerFactoryService_DefaultValidator(t *testing.T) {
-	name := driver.TokenDriverName("test-driver")
-	version := driver.TokenDriverVersion(1)
-	identifier := core.DriverIdentifier(name, version)
-
-	ppmFactory := &mock.PPMFactory{}
-	service := core.NewPPManagerFactoryService(core.NamedFactory[driver.PPMFactory]{
-		Name:   identifier,
-		Driver: ppmFactory,
-	})
-
-	pp := &mock.PublicParameters{}
-	pp.TokenDriverNameReturns(name)
-	pp.TokenDriverVersionReturns(version)
-
-	// Success case: A factory exists for the driver, and it successfully returns the default validator.
-	expectedValidator := &mock.Validator{}
-	ppmFactory.NewValidatorReturns(expectedValidator, nil)
-
-	res, err := service.NewValidator(pp)
-	require.NoError(t, err)
-	assert.Equal(t, expectedValidator, res)
-
-	// Driver not found case: No factory is registered for the specified driver identifier.
-	ppUnknown := &mock.PublicParameters{}
-	ppUnknown.TokenDriverNameReturns("unknown")
-	ppUnknown.TokenDriverVersionReturns(1)
-
-	res, err = service.NewValidator(ppUnknown)
-	require.Error(t, err)
-	assert.Nil(t, res)
-	assert.Contains(t, err.Error(), "cannot load default validator, driver [unknown.v1] not found")
-}
-
 // TestWalletServiceFactoryService_NewWalletService verifies that a WalletService can be created
 // and handles various error conditions like public parameter unmarshalling failures and missing drivers.
 func TestWalletServiceFactoryService_NewWalletService(t *testing.T) {
@@ -250,12 +214,12 @@ func TestValidatorDriverService_NewDefaultValidator(t *testing.T) {
 	identifier := core.DriverIdentifier(name, version)
 
 	driverMock := &mock.ValidatorDriver{}
-	service := core.NewValidatorDriverService([]core.NamedFactory[driver.ValidatorDriver]{
-		{
+	service := core.NewValidatorDriverService(
+		core.NamedFactory[driver.ValidatorDriver]{
 			Name:   identifier,
 			Driver: driverMock,
 		},
-	})
+	)
 
 	pp := &mock.PublicParameters{}
 	pp.TokenDriverNameReturns(name)
