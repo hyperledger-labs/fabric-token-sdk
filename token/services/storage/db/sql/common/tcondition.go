@@ -42,7 +42,17 @@ func HasTokenDetails(params driver2.QueryTokenDetailsParams, tokenTable common.T
 		conds = append(conds, cond.Eq("token_type", params.TokenType))
 	}
 	if tokenTable != nil {
-		if len(params.WalletID) > 0 {
+		// WalletIDs takes precedence over WalletID when set. Match both
+		// wallet_id and owner_wallet_id columns, mirroring the single-wallet
+		// OR path (some tokens are stored only under wallet_id, some under
+		// owner_wallet_id).
+		switch {
+		case len(params.WalletIDs) > 0:
+			conds = append(conds, cond.Or(
+				cond.In("wallet_id", params.WalletIDs...),
+				cond.In("owner_wallet_id", params.WalletIDs...),
+			))
+		case len(params.WalletID) > 0:
 			conds = append(conds, cond.Or(cond.Eq("wallet_id", params.WalletID), cond.Eq("owner_wallet_id", params.WalletID)))
 		}
 		conds = append(conds,
@@ -50,7 +60,10 @@ func HasTokenDetails(params driver2.QueryTokenDetailsParams, tokenTable common.T
 			hasTokens(tokenTable.Field("tx_id"), tokenTable.Field("idx"), params.IDs...),
 		)
 	} else {
-		if len(params.WalletID) > 0 {
+		switch {
+		case len(params.WalletIDs) > 0:
+			conds = append(conds, cond.In("owner_wallet_id", params.WalletIDs...))
+		case len(params.WalletID) > 0:
 			conds = append(conds, cond.Eq("owner_wallet_id", params.WalletID))
 		}
 		conds = append(conds,

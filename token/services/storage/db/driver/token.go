@@ -82,8 +82,13 @@ type TokenDetails struct {
 
 // QueryTokenDetailsParams defines the parameters for querying token details
 type QueryTokenDetailsParams struct {
-	// WalletID is the optional identifier of the wallet owning the token
+	// WalletID is the optional identifier of the wallet owning the token.
+	// When WalletIDs is non-empty this field is ignored.
 	WalletID string
+	// WalletIDs is an optional list of wallet identifiers. When set, tokens
+	// owned by any of the listed wallets match (single SQL query with IN).
+	// Takes precedence over WalletID; leave empty for the single-wallet path.
+	WalletIDs []string
 	// OwnerType is the type of owner, for instance 'idemix' or 'htlc'
 	OwnerType string
 	// TokenType (optional) is the type of token
@@ -162,6 +167,20 @@ type TokenStore interface {
 	UnsupportedTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (driver.UnsupportedTokensIterator, error)
 	// ListUnspentTokensBy returns the list of all tokens owned by the passed identifier of a given type
 	ListUnspentTokensBy(ctx context.Context, walletID string, typ token.Type) (*token.UnspentTokens, error)
+	// ListUnspentTokensByWallets returns unspent tokens owned by any of the
+	// provided wallets, partitioned by wallet id. An optional token type
+	// filter narrows the result set (empty type means any type).
+	//
+	// The returned map contains only wallet ids that had at least one
+	// matching unspent token — callers should treat a missing key as "no
+	// tokens" (same semantics as an empty *token.UnspentTokens). An empty
+	// or nil walletIDs slice returns an empty map without touching the
+	// database.
+	//
+	// This is a single-query alternative to calling ListUnspentTokensBy
+	// per wallet in a loop: one SQL statement with an IN clause, then
+	// partitioned on the read side.
+	ListUnspentTokensByWallets(ctx context.Context, walletIDs []string, typ token.Type) (map[string]*token.UnspentTokens, error)
 	// ListUnspentTokens returns the list of all owned tokens
 	ListUnspentTokens(ctx context.Context) (*token.UnspentTokens, error)
 	// ListAuditTokens returns the audited tokens for the passed ids

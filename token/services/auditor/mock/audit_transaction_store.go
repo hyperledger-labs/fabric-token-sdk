@@ -80,6 +80,20 @@ type AuditTransactionStore struct {
 		result1 []byte
 		result2 error
 	}
+	GetTokenRequestsStub        func(context.Context, []string) (map[string][]byte, error)
+	getTokenRequestsMutex       sync.RWMutex
+	getTokenRequestsArgsForCall []struct {
+		arg1 context.Context
+		arg2 []string
+	}
+	getTokenRequestsReturns struct {
+		result1 map[string][]byte
+		result2 error
+	}
+	getTokenRequestsReturnsOnCall map[int]struct {
+		result1 map[string][]byte
+		result2 error
+	}
 	NewTransactionStoreTransactionStub        func() (driver.TransactionStoreTransaction, error)
 	newTransactionStoreTransactionMutex       sync.RWMutex
 	newTransactionStoreTransactionArgsForCall []struct {
@@ -496,6 +510,76 @@ func (fake *AuditTransactionStore) GetTokenRequestReturnsOnCall(i int, result1 [
 	}
 	fake.getTokenRequestReturnsOnCall[i] = struct {
 		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *AuditTransactionStore) GetTokenRequests(arg1 context.Context, arg2 []string) (map[string][]byte, error) {
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.getTokenRequestsMutex.Lock()
+	ret, specificReturn := fake.getTokenRequestsReturnsOnCall[len(fake.getTokenRequestsArgsForCall)]
+	fake.getTokenRequestsArgsForCall = append(fake.getTokenRequestsArgsForCall, struct {
+		arg1 context.Context
+		arg2 []string
+	}{arg1, arg2Copy})
+	stub := fake.GetTokenRequestsStub
+	fakeReturns := fake.getTokenRequestsReturns
+	fake.recordInvocation("GetTokenRequests", []interface{}{arg1, arg2Copy})
+	fake.getTokenRequestsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *AuditTransactionStore) GetTokenRequestsCallCount() int {
+	fake.getTokenRequestsMutex.RLock()
+	defer fake.getTokenRequestsMutex.RUnlock()
+	return len(fake.getTokenRequestsArgsForCall)
+}
+
+func (fake *AuditTransactionStore) GetTokenRequestsCalls(stub func(context.Context, []string) (map[string][]byte, error)) {
+	fake.getTokenRequestsMutex.Lock()
+	defer fake.getTokenRequestsMutex.Unlock()
+	fake.GetTokenRequestsStub = stub
+}
+
+func (fake *AuditTransactionStore) GetTokenRequestsArgsForCall(i int) (context.Context, []string) {
+	fake.getTokenRequestsMutex.RLock()
+	defer fake.getTokenRequestsMutex.RUnlock()
+	argsForCall := fake.getTokenRequestsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *AuditTransactionStore) GetTokenRequestsReturns(result1 map[string][]byte, result2 error) {
+	fake.getTokenRequestsMutex.Lock()
+	defer fake.getTokenRequestsMutex.Unlock()
+	fake.GetTokenRequestsStub = nil
+	fake.getTokenRequestsReturns = struct {
+		result1 map[string][]byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *AuditTransactionStore) GetTokenRequestsReturnsOnCall(i int, result1 map[string][]byte, result2 error) {
+	fake.getTokenRequestsMutex.Lock()
+	defer fake.getTokenRequestsMutex.Unlock()
+	fake.GetTokenRequestsStub = nil
+	if fake.getTokenRequestsReturnsOnCall == nil {
+		fake.getTokenRequestsReturnsOnCall = make(map[int]struct {
+			result1 map[string][]byte
+			result2 error
+		})
+	}
+	fake.getTokenRequestsReturnsOnCall[i] = struct {
+		result1 map[string][]byte
 		result2 error
 	}{result1, result2}
 }
