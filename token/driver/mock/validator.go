@@ -9,6 +9,11 @@ import (
 )
 
 type Validator struct {
+	SetMinProtocolVersionStub        func(uint32)
+	setMinProtocolVersionMutex       sync.RWMutex
+	setMinProtocolVersionArgsForCall []struct {
+		arg1 uint32
+	}
 	UnmarshalActionsStub        func([]byte) ([]interface{}, error)
 	unmarshalActionsMutex       sync.RWMutex
 	unmarshalActionsArgsForCall []struct {
@@ -42,6 +47,38 @@ type Validator struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *Validator) SetMinProtocolVersion(arg1 uint32) {
+	fake.setMinProtocolVersionMutex.Lock()
+	fake.setMinProtocolVersionArgsForCall = append(fake.setMinProtocolVersionArgsForCall, struct {
+		arg1 uint32
+	}{arg1})
+	stub := fake.SetMinProtocolVersionStub
+	fake.recordInvocation("SetMinProtocolVersion", []interface{}{arg1})
+	fake.setMinProtocolVersionMutex.Unlock()
+	if stub != nil {
+		fake.SetMinProtocolVersionStub(arg1)
+	}
+}
+
+func (fake *Validator) SetMinProtocolVersionCallCount() int {
+	fake.setMinProtocolVersionMutex.RLock()
+	defer fake.setMinProtocolVersionMutex.RUnlock()
+	return len(fake.setMinProtocolVersionArgsForCall)
+}
+
+func (fake *Validator) SetMinProtocolVersionCalls(stub func(uint32)) {
+	fake.setMinProtocolVersionMutex.Lock()
+	defer fake.setMinProtocolVersionMutex.Unlock()
+	fake.SetMinProtocolVersionStub = stub
+}
+
+func (fake *Validator) SetMinProtocolVersionArgsForCall(i int) uint32 {
+	fake.setMinProtocolVersionMutex.RLock()
+	defer fake.setMinProtocolVersionMutex.RUnlock()
+	argsForCall := fake.setMinProtocolVersionArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *Validator) UnmarshalActions(arg1 []byte) ([]interface{}, error) {
