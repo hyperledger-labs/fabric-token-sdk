@@ -9,7 +9,7 @@ Maintainers
 | Kaoutar Elkhiyaoui | [KElkhiyaoui][KElkhiyaoui]           | KElkhiyaoui | <kao@zurich.ibm.com>        |
 | Arne Rutjes        | [arner][arner]                       | arner       | <arne.rutjesISC@nl.ibm.com> |
 | Alexandros Filios  | [alexandrosfilios][alexandrosfilios] | lio         | <alexandros.filios@alumni.ethz.ch> |
-| Akram Bitar        | [AkramBitar][AkramBitar]             | akrambitar  | <akb@zurich.ibm.com>        |
+| Akram Bitar        | [AkramBitar][AkramBitar]             | akrambitar  | <akram@il.ibm.com>        |
 
 **Emeritus Maintainers**
 
