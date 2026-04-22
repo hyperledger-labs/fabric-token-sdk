@@ -4,14 +4,14 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package artifactgen
+package main
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/artifactgen/testdata"
+	"github.com/hyperledger-labs/fabric-token-sdk/cmd/artifactgen/testdata"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/stretchr/testify/assert"

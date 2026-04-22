@@ -160,6 +160,11 @@ clean-fabric-peer-images:
 tokengen:
 	@go install ./cmd/tokengen
 
+.PHONY: artifactgen
+# install artifactgen tool
+artifactgen:
+	@go install ./cmd/artifactgen
+
 .PHONY: traceinspector
 # install traceinspector tool
 traceinspector:
