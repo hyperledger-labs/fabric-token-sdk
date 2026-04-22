@@ -168,7 +168,7 @@ func testRegressionWithMinVersion(t *testing.T, rootDir, subFolder string) {
 	require.NoError(t, err)
 
 	// Create validator with MinProtocolVersion set to V2
-	_, tokenValidator, err := tokenServicesFactoryWithMinVersion(ppRaw, driver.ProtocolV2)
+	_, tokenValidator, err := validatorWithMinVersion(ppRaw, driver.ProtocolV2)
 	require.NoError(t, err)
 
 	var tokenData struct {
@@ -198,8 +198,8 @@ func testRegressionWithMinVersion(t *testing.T, rootDir, subFolder string) {
 		"Error should be ErrVersionBelowMinimum, got: %v", err)
 }
 
-func tokenServicesFactoryWithMinVersion(bytes []byte, minVersion uint32) (tcc.PublicParameters, tcc.Validator, error) {
-	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+func validatorWithMinVersion(bytes []byte, minVersion uint32) (tcc.PublicParameters, tcc.Validator, error) {
+	is := core.NewValidatorDriverService(fabtoken.NewValidatorDriver(), dlog.NewValidatorDriver())
 
 	ppm, err := is.PublicParametersFromBytes(bytes)
 	if err != nil {
@@ -208,7 +208,7 @@ func tokenServicesFactoryWithMinVersion(bytes []byte, minVersion uint32) (tcc.Pu
 	if err := ppm.Validate(); err != nil {
 		return nil, nil, err
 	}
-	v, err := is.DefaultValidator(ppm)
+	v, err := is.NewValidator(ppm)
 	if err != nil {
 		return nil, nil, err
 	}
