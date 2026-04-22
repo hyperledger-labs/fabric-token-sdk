@@ -8,7 +8,6 @@ package benchmark
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-
 	tokcommon "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	v1driver "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
