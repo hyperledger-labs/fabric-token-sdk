@@ -160,5 +160,6 @@ func (f *retryRunner) RunWithErrorsContext(ctx context.Context, runner func() (b
 	if len(errs) == 0 {
 		return ErrMaxRetriesExceeded
 	}
+
 	return errors.Join(errs...)
 }

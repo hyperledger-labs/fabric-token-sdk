@@ -398,6 +398,7 @@ func TestRunWithErrorsContext_PreCanceledContext(t *testing.T) {
 	start := time.Now()
 	err := runner.RunWithErrorsContext(ctx, func() (bool, error) {
 		calls++
+
 		return false, errors.New("should not be reached")
 	})
 	elapsed := time.Since(start)
@@ -420,6 +421,7 @@ func TestRunWithErrorsContext_CanceledDuringBackoff(t *testing.T) {
 	go func() {
 		done <- runner.RunWithErrorsContext(ctx, func() (bool, error) {
 			calls++
+
 			return false, errors.New("transient error")
 		})
 	}()
@@ -453,6 +455,7 @@ func TestRunWithErrorsContext_TerminateWithNil(t *testing.T) {
 		if calls < 3 {
 			return false, errors.New("transient error")
 		}
+
 		return true, nil // terminate with success
 	})
 
@@ -472,6 +475,7 @@ func TestRunWithErrorsContext_TerminateWithError(t *testing.T) {
 		if calls < 2 {
 			return false, errors.New("transient")
 		}
+
 		return true, expectedErr // terminate with error
 	})
 
@@ -487,6 +491,7 @@ func TestRunWithErrorsContext_MaxRetriesExhaustedWithErrors(t *testing.T) {
 	calls := 0
 	err := runner.RunWithErrorsContext(t.Context(), func() (bool, error) {
 		calls++
+
 		return false, errors.New("persistent failure")
 	})
 
@@ -503,6 +508,7 @@ func TestRunWithErrorsContext_MaxRetriesExhaustedNoErrors(t *testing.T) {
 	calls := 0
 	err := runner.RunWithErrorsContext(t.Context(), func() (bool, error) {
 		calls++
+
 		return false, nil // keep retrying but no error
 	})
 
