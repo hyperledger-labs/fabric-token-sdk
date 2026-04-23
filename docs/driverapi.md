@@ -220,3 +220,7 @@ The Token SDK comes equipped with two reference drivers:
 
 - [**FabToken**](./drivers/fabtoken.md): A straightforward implementation prioritizing simplicity. It stores token transaction details (type, value, owner) in cleartext on the ledger, using X.509 certificates for identities.
 - [**DLOG w/o Graph Hiding (NOGH)**](./drivers/dlogwogh.md): A privacy-preserving driver using Zero-Knowledge Proofs (ZKP) to hide token types and values via Pedersen commitments. It leverages Idemix for owner anonymity while revealing the spending graph.
+
+## Observability
+
+All drivers are instrumented with a shared metrics layer that records call counts, durations, and error rates for every driver service method. See [**Driver Metrics**](./drivers/metrics.md) for the approach and the full list of available Prometheus metrics.

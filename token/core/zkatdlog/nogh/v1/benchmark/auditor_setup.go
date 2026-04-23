@@ -8,7 +8,6 @@ package benchmark
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	tokcommon "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
 	zkcommon "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
@@ -106,7 +105,6 @@ func NewAuditCheckSetup(conf *SetupConfiguration) (*AuditCheckSetup, error) {
 		logging.MustGetLogger(),
 		ppm,
 		deserializer,
-		v1.NewMetrics(&disabled.Provider{}),
 		noop.NewTracerProvider(),
 	)
 
