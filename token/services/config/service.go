@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-var logger = logging.MustGetLogger("token.services.config")
+var logger = logging.MustGetLogger()
 
 const (
 	RootKey = "token"
@@ -156,10 +156,22 @@ func (m *Service) addConfiguration(cp Provider, raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed loading configurations from raw")
 	}
+
+	currentConfigs, err := m.configurations()
+	if err != nil {
+		return errors.Wrapf(err, "failed getting current configurations")
+	}
+
 	// - validate it making sure it contains a new TMS
 	for _, config := range configurations {
 		if err := config.Validate(); err != nil {
 			return errors.Wrapf(err, "failed validating configuration [%s]", config.ID())
+		}
+		// If the TMS already exists, return an error
+		for _, currentConfig := range currentConfigs {
+			if currentConfig.ID().Equal(config.ID()) {
+				return errors.Errorf("updating existing configuration is not supported [%s]", config.ID())
+			}
 		}
 	}
 	// If all good, merge into the main configuration service
@@ -178,6 +190,11 @@ func (m *Service) addConfiguration(cp Provider, raw []byte) error {
 
 func (m *Service) configurations() (map[string]*Configuration, error) {
 	return m.configurationsHolder.Get()
+}
+
+// ResetConfigurations resets the internal configurations holder.
+func (m *Service) ResetConfigurations() error {
+	return m.configurationsHolder.Reset()
 }
 
 type loader struct {

@@ -231,14 +231,12 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) ([]byte, err
 	// 2. publicParametersStorage
 	// 3. local configuration
 	// 4. public parameters fetcher, if any
-	for i, retriever := range []func(options *driver.ServiceOptions) ([]byte, error){m.ppFromOpts, m.ppFromStorage, m.ppFromConfig, m.ppFromFetcher} {
-		ppRaw, err := retriever(opts)
-		if err == nil {
-			logger.Infof("public parameters found using retriever [%d]", i)
-
+	for _, retriever := range []func(options *driver.ServiceOptions) ([]byte, error){m.ppFromOpts, m.ppFromStorage, m.ppFromConfig, m.ppFromFetcher} {
+		if ppRaw, err := retriever(opts); err != nil {
+			logger.Warnf("failed to retrieve params for [%s]: [%s]", opts, err)
+		} else if len(ppRaw) != 0 {
 			return ppRaw, nil
 		}
-		logger.Debugf("public parameters NOT found using retriever [%d]: [%v]", i, err)
 	}
 	logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, string(debug.Stack()))
 
