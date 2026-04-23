@@ -15,7 +15,7 @@ The project will be subject to rapid changes to complete the open-sourcing proce
 # Useful Links
  
 - [`Documentation`](docs/README.md): The entry point for the Fabric Token SDK documentation.
-- [`Code Wiki`](https://codewiki.google/github.com/hyperledger-labs/fabric-token-sdk): AI-powered documentation, architecture overviews, and interactive exploration of the Fabric Token-SDK codebase.
+- [`Code Wiki`](https://codewiki.google/github.com/hyperledger-labs/fabric-token-sdk): AI-powered documentation, architecture overviews, and interactive exploration of the Fabric Token SDK codebase.
 - [`Development`](docs/development/development.md): All about the development guidelines.
 - [`Contributing`](CONTRIBUTING.md): How to contribute to the project.
 - [`Fabric Samples`](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk) Token SDK sample application is the
