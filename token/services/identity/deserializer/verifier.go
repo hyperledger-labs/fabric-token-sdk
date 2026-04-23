@@ -9,6 +9,7 @@ package deserializer
 import (
 	"context"
 	errors2 "errors"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -24,10 +25,13 @@ type TypedVerifierDeserializer = idriver.TypedVerifierDeserializer
 
 type TypedVerifierDeserializerMultiplex struct {
 	deserializers map[idriver.IdentityType][]idriver.TypedVerifierDeserializer
+	verifierCache sync.Map // key: string(identity bytes) → driver.Verifier
 }
 
 func NewTypedVerifierDeserializerMultiplex() *TypedVerifierDeserializerMultiplex {
-	return &TypedVerifierDeserializerMultiplex{deserializers: map[idriver.IdentityType][]TypedVerifierDeserializer{}}
+	return &TypedVerifierDeserializerMultiplex{
+		deserializers: map[idriver.IdentityType][]TypedVerifierDeserializer{},
+	}
 }
 
 func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ idriver.IdentityType, d TypedVerifierDeserializer) {
@@ -41,6 +45,14 @@ func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ id
 }
 
 func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	// Check cache first — avoids re-running expensive deserialization for the same identity
+	cacheKey := string(id)
+	if cached, ok := v.verifierCache.Load(cacheKey); ok {
+		logger.DebugfContext(ctx, "cache hit for identity [%s]", id)
+
+		return cached.(driver.Verifier), nil
+	}
+
 	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
@@ -58,6 +70,8 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(ctx context.Con
 
 			continue
 		}
+		// Store in cache for future calls with the same identity
+		v.verifierCache.Store(cacheKey, verifier)
 
 		return verifier, nil
 	}
