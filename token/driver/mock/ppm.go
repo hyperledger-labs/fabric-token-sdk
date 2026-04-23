@@ -214,12 +214,6 @@ func (fake *PublicParamsManager) PublicParamsHashReturnsOnCall(i int, result1 dr
 func (fake *PublicParamsManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.newCertifierKeyPairMutex.RLock()
-	defer fake.newCertifierKeyPairMutex.RUnlock()
-	fake.publicParametersMutex.RLock()
-	defer fake.publicParametersMutex.RUnlock()
-	fake.publicParamsHashMutex.RLock()
-	defer fake.publicParamsHashMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

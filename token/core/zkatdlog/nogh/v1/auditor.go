@@ -26,7 +26,6 @@ type AuditorService struct {
 	Logger                  logging.Logger
 	PublicParametersManager common.PublicParametersManager[*setup.PublicParams]
 	Deserializer            driver.Deserializer
-	Metrics                 *Metrics
 	tracer                  trace.Tracer
 }
 
@@ -34,14 +33,12 @@ func NewAuditorService(
 	logger logging.Logger,
 	publicParametersManager common.PublicParametersManager[*setup.PublicParams],
 	deserializer driver.Deserializer,
-	metrics *Metrics,
 	tracerProvider trace.TracerProvider,
 ) *AuditorService {
 	return &AuditorService{
 		Logger:                  logger,
 		PublicParametersManager: publicParametersManager,
 		Deserializer:            deserializer,
-		Metrics:                 metrics,
 		tracer:                  tracerProvider.Tracer("auditor_service", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
 	}
 }

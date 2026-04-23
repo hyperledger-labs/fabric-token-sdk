@@ -62,4 +62,10 @@ type Validator interface {
 	// - A map of validation attributes (driver-specific) containing additional details about the request.
 	// - An error if the validation fails.
 	VerifyTokenRequestFromRaw(ctx context.Context, getState GetStateFnc, anchor TokenRequestAnchor, raw []byte) ([]interface{}, ValidationAttributes, error)
+
+	// SetMinProtocolVersion configures the minimum protocol version that this validator will accept.
+	// Token requests with a protocol version below this minimum will be rejected during validation.
+	// Setting this to 0 (default) accepts all protocol versions.
+	// This is useful for enforcing protocol upgrades across a network.
+	SetMinProtocolVersion(version uint32)
 }
