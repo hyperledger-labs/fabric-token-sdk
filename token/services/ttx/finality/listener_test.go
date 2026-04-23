@@ -214,6 +214,30 @@ func TestOnStatus_StatusSetToDeletedForInvalidTx(t *testing.T) {
 		"an Invalid network status should map to Deleted in local storage")
 }
 
+// TestOnStatus_UnknownStatusTerminatesWithoutRetry verifies that an unrecognized
+// network status causes OnStatus to stop immediately without retrying.
+// With RunWithErrorsContext, permanent errors (unknown status) return (true, err)
+// so the retry loop exits after a single attempt.
+func TestOnStatus_UnknownStatusTerminatesWithoutRetry(t *testing.T) {
+	var setCalls atomic.Int32
+	db := &mock.TransactionDB{}
+	db.SetStatusCalls(func(_ context.Context, _ string, _ storage.TxStatus, _ string) error {
+		setCalls.Add(1)
+
+		return nil
+	})
+	l := newTestListener(t, db)
+
+	// Status 99 is not network.Valid or network.Invalid — it hits the default branch
+	// in runOnStatus and returns a permanent error that must not be retried.
+	start := time.Now()
+	l.OnStatus(t.Context(), "tx1", 99, "unknown", nil)
+	elapsed := time.Since(start)
+
+	assert.Equal(t, int32(0), setCalls.Load(), "SetStatus should never be called for an unknown status")
+	assert.Less(t, elapsed, 500*time.Millisecond, "OnStatus should return immediately for permanent errors, not spin through retries")
+}
+
 // TestOnError tests the OnError callback
 func TestOnError(t *testing.T) {
 	ctx := t.Context()
