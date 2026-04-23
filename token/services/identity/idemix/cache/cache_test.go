@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 // TestIdentityCache verifies basic cache functionality and identity retrieval.
@@ -58,7 +58,7 @@ func TestIdentityCacheForRace(t *testing.T) {
 
 			for range 100 {
 				id, err := c.Identity(t.Context(), nil)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, driver.Identity("hello world"), id.Identity)
 				assert.Equal(t, []byte("audit"), id.AuditInfo)
 			}
