@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	tk "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/require"
@@ -112,7 +113,7 @@ func testRegression(t *testing.T, rootDir, subFolder string) {
 }
 
 func tokenServicesFactory(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
-	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+	is := core.NewValidatorDriverService(fabtoken.NewValidatorDriver(), dlog.NewValidatorDriver())
 
 	ppm, err := is.PublicParametersFromBytes(bytes)
 	if err != nil {
@@ -121,7 +122,7 @@ func tokenServicesFactory(bytes []byte) (tcc.PublicParameters, tcc.Validator, er
 	if err := ppm.Validate(); err != nil {
 		return nil, nil, err
 	}
-	v, err := is.DefaultValidator(ppm)
+	v, err := is.NewValidator(ppm)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -133,4 +134,87 @@ type fakeLedger struct{}
 
 func (*fakeLedger) GetState(_ tk.ID) ([]byte, error) {
 	panic("ciao")
+}
+
+// TestRegressionWithMinProtocolVersionV2 verifies that when the validator is configured
+// with MinProtocolVersion set to V2, all V1 token requests (from testdata) are rejected
+// with the expected error message about protocol version being below minimum.
+func TestRegressionWithMinProtocolVersionV2(t *testing.T) {
+	t.Parallel()
+	// Test with one representative sample from each testdata directory
+	for _, root := range []string{"testdata", "testdata2", "testdata3"} {
+		for _, variant := range []string{"32-BLS12_381_BBS_GURVY", "64-BLS12_381_BBS_GURVY", "32-BN254", "64-BN254"} {
+			testRegressionWithMinVersionParallel(t, filepath.Join(root, variant), "transfers_i1_o1")
+		}
+	}
+}
+
+func testRegressionWithMinVersionParallel(t *testing.T, rootDir, subFolder string) {
+	t.Helper()
+	t.Run(fmt.Sprintf("%s-%s-MinV2", rootDir, subFolder), func(t *testing.T) {
+		t.Parallel()
+		testRegressionWithMinVersion(t, rootDir, subFolder)
+	})
+}
+
+func testRegressionWithMinVersion(t *testing.T, rootDir, subFolder string) {
+	t.Helper()
+	t.Logf("regression test with MinProtocolVersion=V2 for [%s:%s]", rootDir, subFolder)
+
+	paramsData, err := testDataFS.ReadFile(filepath.Join(rootDir, "params.txt"))
+	require.NoError(t, err)
+
+	ppRaw, err := base64.StdEncoding.DecodeString(string(paramsData))
+	require.NoError(t, err)
+
+	// Create validator with MinProtocolVersion set to V2
+	_, tokenValidator, err := validatorWithMinVersion(ppRaw, driver.ProtocolV2)
+	require.NoError(t, err)
+
+	var tokenData struct {
+		ReqRaw []byte `json:"req_raw"`
+		TXID   string `json:"txid"`
+	}
+
+	// Test just the first vector - all vectors in testdata are V1
+	filePath := filepath.Join(rootDir, subFolder, "output.0.json")
+	jsonData, err := testDataFS.ReadFile(filePath)
+	require.NoError(t, err)
+
+	err = json.Unmarshal(jsonData, &tokenData)
+	require.NoError(t, err)
+
+	// Verify that validation fails with the expected typed error
+	_, _, err = tokenValidator.UnmarshallAndVerifyWithMetadata(
+		t.Context(),
+		&fakeLedger{},
+		token.RequestAnchor(tokenData.TXID),
+		tokenData.ReqRaw,
+	)
+
+	// Should fail because testdata contains V1 requests
+	require.Error(t, err, "Expected validation to fail for V1 request when MinProtocolVersion=V2")
+	require.ErrorIs(t, err, driver.ErrVersionBelowMinimum,
+		"Error should be ErrVersionBelowMinimum, got: %v", err)
+}
+
+func validatorWithMinVersion(bytes []byte, minVersion uint32) (tcc.PublicParameters, tcc.Validator, error) {
+	is := core.NewValidatorDriverService(fabtoken.NewValidatorDriver(), dlog.NewValidatorDriver())
+
+	ppm, err := is.PublicParametersFromBytes(bytes)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := ppm.Validate(); err != nil {
+		return nil, nil, err
+	}
+	v, err := is.NewValidator(ppm)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Set MinProtocolVersion on the validator using the new interface method
+	v.SetMinProtocolVersion(minVersion)
+
+	return ppm, token.NewValidator(v), nil
 }

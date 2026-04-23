@@ -106,7 +106,7 @@ func (s *AcceptView) cacheRequest(context view.Context) error {
 		return errors.Wrapf(err, "failed to get tokens db for [%s]", s.tx.TMSID())
 	}
 
-	if err := t.CacheRequest(context.Context(), s.tx.TMSID(), s.tx.TokenRequest); err != nil {
+	if err := t.CacheRequest(context.Context(), s.tx.TokenRequest); err != nil {
 		logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", s.tx.TokenRequest.Anchor, err)
 	}
 

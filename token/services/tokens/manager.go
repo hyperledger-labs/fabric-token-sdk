@@ -64,12 +64,7 @@ func NewServiceManager(
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get token cache for [%s]", tmsID)
 			}
-			tokens := &Service{
-				TMSProvider:     tmsProvider,
-				NetworkProvider: networkProvider,
-				Storage:         storage,
-				RequestsCache:   cacheInst,
-			}
+			tokens := NewService(tmsID, tmsProvider, networkProvider, storage, cacheInst)
 
 			return tokens, nil
 		}),

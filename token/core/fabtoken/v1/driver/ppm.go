@@ -15,7 +15,7 @@ import (
 )
 
 // PPMFactory contains the static logic of the fabtoken driver.
-type PPMFactory struct{ *base }
+type PPMFactory struct{ ValidatorDriver }
 
 // NewPPMFactory returns a new factory for the fabtoken public parameters manager.
 func NewPPMFactory() core.NamedFactory[driver.PPMFactory] {

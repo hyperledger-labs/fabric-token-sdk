@@ -76,7 +76,7 @@ func TestTransactionSql(t *testing.T) {
 				RecipientWallet: "alice",
 				From:            &lastYear,
 			},
-			expectedSql:  "((stored_at >= $1)) AND ((sender_eid = $2) OR (recipient_eid = $3))",
+			expectedSql:  "((tbl.stored_at >= $1)) AND ((sender_eid = $2) OR (recipient_eid = $3))",
 			expectedArgs: []common2.Param{&lastYear, "alice", "alice"},
 		},
 		{
@@ -85,7 +85,7 @@ func TestTransactionSql(t *testing.T) {
 				To:   &now,
 				From: &lastYear,
 			},
-			expectedSql:  "((stored_at >= $1) AND (stored_at <= $2))",
+			expectedSql:  "((tbl.stored_at >= $1) AND (tbl.stored_at <= $2))",
 			expectedArgs: []common2.Param{&lastYear, &now},
 		},
 		{

@@ -10,8 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	core2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
+	v2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
@@ -23,33 +22,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
-// base contains the common functionality for the fabtoken driver.
-type base struct{}
-
-// PublicParametersFromBytes unmarshals the passed bytes into fabtoken public parameters.
-func (d *base) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := core2.NewPublicParamsFromBytes(params, core2.FabTokenDriverName, core2.ProtocolV1)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
-	}
-
-	return pp, nil
-}
-
-// DefaultValidator returns a new fabtoken validator for the passed public parameters.
-func (d *base) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "failed validating public parameters")
-	}
-	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
-	deserializer := NewDeserializer()
-
-	return validator.NewValidator(logger, pp.(*core2.PublicParams), deserializer, nil, nil, nil), nil
+type BaseWalletServiceFactory struct {
+	PublicParametersDeserializer
 }
 
 // newWalletService returns a new wallet service for the passed configuration and parameters.
 // newWalletService returns a new wallet service for the passed configuration and parameters.
-func (d *base) newWalletService(
+func (d BaseWalletServiceFactory) newWalletService(
 	tmsConfig core.Config,
 	binder identity.NetworkBinderService,
 	storageProvider identity.StorageProvider,
@@ -125,4 +104,37 @@ func (d *base) newWalletService(
 	)
 
 	return ws, nil
+}
+
+// WalletServiceFactory is a factory for fabtoken wallet services.
+type WalletServiceFactory struct {
+	BaseWalletServiceFactory
+
+	storageProvider identity.StorageProvider
+}
+
+// NewWalletServiceFactory returns a new factory for fabtoken wallet services.
+func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.NamedFactory[driver.WalletServiceFactory] {
+	return core.NamedFactory[driver.WalletServiceFactory]{
+		Name:   core.DriverIdentifier(v2.FabTokenDriverName, v2.ProtocolV1),
+		Driver: &WalletServiceFactory{storageProvider: storageProvider},
+	}
+}
+
+// NewWalletService returns a new fabtoken wallet service for the passed configuration and parameters.
+func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, params driver.PublicParameters) (driver.WalletService, error) {
+	tmsID := tmsConfig.ID()
+	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+
+	return d.newWalletService(
+		tmsConfig,
+		&membership.NoBinder{},
+		d.storageProvider,
+		nil,
+		logger,
+		nil,
+		nil,
+		params,
+		true,
+	)
 }

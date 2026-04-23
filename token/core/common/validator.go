@@ -66,6 +66,12 @@ type Validator[P driver.PublicParameters, T driver.Input, TA driver.TransferActi
 	AuditingValidators []ValidateAuditingFunc[P, T, TA, IA, DS]
 	TransferValidators []ValidateTransferFunc[P, T, TA, IA, DS]
 	IssueValidators    []ValidateIssueFunc[P, T, TA, IA, DS]
+
+	// MinProtocolVersion specifies the minimum protocol version required for token requests.
+	// If set to 0, no minimum version is enforced (accepts all versions).
+	// If set to a specific version (e.g., driver.ProtocolV2), only requests with that version
+	// or higher will be accepted, rejecting older protocol versions.
+	MinProtocolVersion uint32
 }
 
 // NewValidator returns a new Validator instance for the passed arguments.
@@ -89,6 +95,13 @@ func NewValidator[P driver.PublicParameters, T driver.Input, TA driver.TransferA
 	}
 }
 
+// SetMinProtocolVersion configures the minimum protocol version that this validator will accept.
+// Token requests with a protocol version below this minimum will be rejected during validation.
+// Setting this to 0 (default) accepts all protocol versions.
+func (v *Validator[P, T, TA, IA, DS]) SetMinProtocolVersion(version uint32) {
+	v.MinProtocolVersion = version
+}
+
 // VerifyTokenRequestFromRaw verifies a token request from its raw representation.
 func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Context, getState driver.GetStateFnc, anchor driver.TokenRequestAnchor, raw []byte) ([]interface{}, driver.ValidationAttributes, error) {
 	logger.DebugfContext(ctx, "Verify token request from raw")
@@ -99,6 +112,21 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 	err := tr.FromBytes(raw)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to unmarshal token request")
+	}
+
+	// Validate protocol version
+	if tr.Version == 0 {
+		return nil, nil, driver.ErrInvalidVersion
+	}
+
+	// Enforce minimum protocol version if configured
+	if v.MinProtocolVersion > 0 && tr.Version < v.MinProtocolVersion {
+		return nil, nil, errors.Wrapf(
+			driver.ErrVersionBelowMinimum,
+			"got version %d, minimum required is %d",
+			tr.Version,
+			v.MinProtocolVersion,
+		)
 	}
 
 	// Prepare message expected to be signed

@@ -38,6 +38,8 @@ Packages with benchmark tests:
 - `token/core/zkatdlog/nogh/v1/issue`: `BenchmarkIssuer` and `BenchmarkProofVerificationIssuer`
 - `token/core/zkatdlog/nogh/v1/validator`: `TestParallelBenchmarkValidatorTransfer`.
 - `token/core/zkatdlog/nogh/v1`: `BenchmarkTransferServiceTransfer` and `TestParallelBenchmarkTransferServiceTransfer`.
+- `token/core/zkatdlog/nogh/v1`: `BenchmarkIssueServiceIssue` and `TestParallelBenchmarkIssueServiceIssue` benchmark the full `IssueService.Issue()` path (wallet lookup, signer resolution, ZK proof generation, audit-info encoding, and serialization).
+- `token/core/zkatdlog/nogh/v1`: `BenchmarkAuditorServiceCheck` and `TestParallelBenchmarkAuditorServiceCheck` benchmark `AuditorService.AuditorCheck()` (action deserialization and Pedersen commitment arithmetic).
 
 The steps necessary to run the benchmarks are very similar.
 We give two examples here:
@@ -297,3 +299,4 @@ python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
 ```shell
 python run_benchmarks.py --benchName BenchmarkSender --timeout 4s --count 5
 ```
+

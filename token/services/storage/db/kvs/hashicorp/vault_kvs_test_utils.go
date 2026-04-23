@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	ImageName           = "hashicorp/vault"
+	ImageName           = "hashicorp/vault:latest"
 	ContainerNamePrefix = "dev-hashicorp-vault-container-"
 )
 
@@ -59,13 +59,15 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 	// Define the container configuration
 	portStr := fmt.Sprintf("%d", port)
 	token := "00000000-0000-0000-0000-000000000000"
-	address := "0.0.0.0:" + portStr
+	listenAddress := "0.0.0.0:" + portStr
+	clientAddress := "127.0.0.1:" + portStr
 	portBinding := nat.Port(fmt.Sprintf("%d/tcp", port))
 	containerConfig := &container.Config{
 		Image: ImageName,
 		Env: []string{
+			"SKIP_SETCAP=true",
 			"VAULT_DEV_ROOT_TOKEN_ID=" + token,
-			"VAULT_DEV_LISTEN_ADDRESS=" + address,
+			"VAULT_DEV_LISTEN_ADDRESS=" + listenAddress,
 		},
 		ExposedPorts: map[nat.Port]struct{}{
 			portBinding: {},
@@ -105,8 +107,8 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 
 	fmt.Println(resp.ID)
 
-	// Wait for Vault to be ready
-	vaultURL := fmt.Sprintf("http://%s", address)
+	// Wait for Vault to be ready using 127.0.0.1 (0.0.0.0 is a bind address, not routable by clients)
+	vaultURL := fmt.Sprintf("http://%s", clientAddress)
 	if err := waitForVault(vaultURL, token); err != nil {
 		t.Fatal(err)
 	}
@@ -133,10 +135,17 @@ func waitForVault(vaultURL, token string) error {
 	}
 	req.Header.Set("X-Vault-Token", token)
 
-	for i := 0; i < 30; i++ { // Try for 30 seconds
+	for i := 0; i < 90; i++ { // Try for a bit
+
 		resp, err := client.Do(req)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			return nil
+		}
+		if err != nil {
+			fmt.Printf("vault not ready yet (iteration %d): %s\n", i, err)
+		} else {
+			fmt.Printf("vault not ready yet (iteration %d): status %d\n", i, resp.StatusCode)
+			resp.Body.Close()
 		}
 		time.Sleep(2 * time.Second)
 	}

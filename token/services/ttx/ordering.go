@@ -15,6 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 )
 
+const finalityTimeout = 10 * time.Minute
+
 type orderingView struct {
 	opts []TxOption
 }
@@ -50,7 +52,7 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", options.Transaction.TMSID())
 	}
 	if !options.NoCachingRequest {
-		if err := t.CacheRequest(context.Context(), options.Transaction.TMSID(), options.Transaction.TokenRequest); err != nil {
+		if err := t.CacheRequest(context.Context(), options.Transaction.TokenRequest); err != nil {
 			logger.WarnfContext(context.Context(), "failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", options.Transaction.TokenRequest.Anchor, err)
 		}
 	}
@@ -88,8 +90,8 @@ type orderingAndFinalityView struct {
 // NewOrderingAndFinalityView returns a new instance of the orderingAndFinalityView struct.
 // The view does the following:
 // 1. It broadcasts the token transaction to the proper backend.
-// 2. It waits for finality of the token transaction by listening to delivery events from one of the
-// Fabric peer nodes trusted by the FSC node.
+// 2. It waits for finality of the token transaction.
+// The default timeout is used and it is set to 10mins.
 func NewOrderingAndFinalityView(tx *Transaction) *orderingAndFinalityView {
 	return NewOrderingAndFinalityWithTimeoutView(tx, finalityTimeout)
 }
