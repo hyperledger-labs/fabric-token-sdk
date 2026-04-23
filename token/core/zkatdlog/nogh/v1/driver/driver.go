@@ -131,7 +131,6 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		multisig.NewEscrowAuth(ws),
 	)
 
-	driverMetrics := v1.NewMetrics(metricsProvider)
 	tokensService, err := v1token.NewTokensService(logger, ppm, deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
@@ -158,33 +157,24 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		ip,
 		deserializer,
 		tmsConfig,
-		v1.NewIssueService(
-			logger,
-			ppm,
-			ws,
-			deserializer,
-			driverMetrics,
-			tokensUpgradeService,
-		),
-		v1.NewTransferService(
+		metrics.NewIssueService(v1.NewIssueService(logger, ppm, ws, deserializer, tokensService, tokensUpgradeService), metricsProvider),
+		metrics.NewTransferService(v1.NewTransferService(
 			logger,
 			ppm,
 			ws,
 			common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
 			deserializer,
-			driverMetrics,
 			d.tracerProvider,
 			tokensService,
-		),
-		v1.NewAuditorService(
+		), metricsProvider),
+		metrics.NewAuditorService(v1.NewAuditorService(
 			logger,
 			ppm,
 			deserializer,
-			driverMetrics,
 			d.tracerProvider,
-		),
-		tokensService,
-		tokensUpgradeService,
+		), metricsProvider),
+		metrics.NewTokensService(tokensService, metricsProvider),
+		metrics.NewTokensUpgradeService(tokensUpgradeService, metricsProvider),
 		authorization,
 		validator,
 	)

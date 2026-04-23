@@ -10,6 +10,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
@@ -51,7 +52,7 @@ func TestNewDriver(t *testing.T) {
 
 // TestNewTokenService tests the creation of a new fabtoken token manager service, covering success and various error paths.
 func TestNewTokenService(t *testing.T) {
-	metricsProvider := &mock2.MetricsProvider{}
+	metricsProvider := &disabled.Provider{}
 	configService := &mock2.ConfigService{}
 	storageProvider := &imock.StorageProvider{}
 	identityProvider := &mock2.IdentityProvider{}
