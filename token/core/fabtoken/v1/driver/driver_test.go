@@ -35,7 +35,7 @@ func TestNewDriver(t *testing.T) {
 	networkProvider := &mock2.NetworkProvider{}
 	vaultProvider := &mock2.VaultProvider{}
 
-	factory := driver.NewDriver(
+	factory := driver.NewTokenDriver(
 		metricsProvider,
 		nil,
 		configService,
@@ -60,7 +60,7 @@ func TestNewTokenService(t *testing.T) {
 	networkProvider := &mock2.NetworkProvider{}
 	vaultProvider := &mock2.VaultProvider{}
 
-	d := driver.NewDriver(
+	d := driver.NewTokenDriver(
 		metricsProvider,
 		nil,
 		configService,
@@ -156,34 +156,17 @@ func TestNewTokenService(t *testing.T) {
 
 // TestNewDefaultValidator tests the creation of a default fabtoken validator.
 func TestNewDefaultValidator(t *testing.T) {
-	metricsProvider := &mock2.MetricsProvider{}
-	configService := &mock2.ConfigService{}
-	storageProvider := &imock.StorageProvider{}
-	identityProvider := &mock2.IdentityProvider{}
-	endpointService := &idmock.NetworkBinderService{}
-	networkProvider := &mock2.NetworkProvider{}
-	vaultProvider := &mock2.VaultProvider{}
-
-	d := driver.NewDriver(
-		metricsProvider,
-		nil,
-		configService,
-		storageProvider,
-		identityProvider,
-		endpointService,
-		networkProvider,
-		vaultProvider,
-	).Driver.(*driver.Driver)
+	d := driver.NewValidatorDriver().Driver
 
 	pp, _ := setup.NewWith(setup.FabTokenDriverName, setup.ProtocolV1, 64)
 
 	// Case 1: Valid public parameters
-	v, err := d.NewDefaultValidator(pp)
+	v, err := d.NewValidator(pp)
 	require.NoError(t, err)
 	assert.NotNil(t, v)
 
 	// Case 2: Invalid public parameters type
-	v, err = d.NewDefaultValidator(&dmock.PublicParameters{})
+	v, err = d.NewValidator(&dmock.PublicParameters{})
 	require.Error(t, err)
 	assert.Nil(t, v)
 	assert.Contains(t, err.Error(), "invalid public parameters type")

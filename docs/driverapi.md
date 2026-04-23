@@ -2,10 +2,10 @@
 
 The **Driver API** serves as the interface bridging the generic Token API with specific token implementations. It defines the protocols for token creation, transfer, and management within a given system.
 
-Each driver must implement the `driver.Driver` interface, fulfilling three primary objectives:
-1.  **Public Parameters Discovery**: Decodes raw bytes into driver-specific public parameters.
-2.  **TMS Instantiation**: Provides a mechanism to instantiate a new `TokenManagementService` (TMS) tailored to the driver and its public parameters.
-3.  **Default Validation**: Returns a default `Validator` instance configured with the driver's public parameters.
+Each driver must implement the `driver.Driver` and `driver.ValidatorDriver` interfaces, fulfilling three primary objectives:
+1.  **Public Parameters**: Through `driver.PPReader` (embedded in both), facilitates the retrieval of driver-specific public parameters from bytes.
+2.  **Token Management Service (TMS)**: Through `driver.Driver`, provides a mechanism to instantiate a new TMS tailored to the driver.
+3.  **Validation**: Through `driver.ValidatorDriver`, provides a mechanism to instantiate a new validator from public parameters.
 
 ## Core Architecture
 
@@ -220,6 +220,7 @@ The Token SDK comes equipped with two reference drivers:
 
 - [**FabToken**](./drivers/fabtoken.md): A straightforward implementation prioritizing simplicity. It stores token transaction details (type, value, owner) in cleartext on the ledger, using X.509 certificates for identities.
 - [**DLOG w/o Graph Hiding (NOGH)**](./drivers/dlogwogh.md): A privacy-preserving driver using Zero-Knowledge Proofs (ZKP) to hide token types and values via Pedersen commitments. It leverages Idemix for owner anonymity while revealing the spending graph.
+- [**Extending a Validator Driver&&](./drivers/extending_validator.md)
 
 ## Observability
 

@@ -33,7 +33,7 @@ func (m *mockPPMFactory) NewPublicParametersManager(pp driver.PublicParameters) 
 	return m.publicParamsManager, m.publicParamsManagerErr
 }
 
-func (m *mockPPMFactory) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
+func (m *mockPPMFactory) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
 	return nil, nil
 }
 

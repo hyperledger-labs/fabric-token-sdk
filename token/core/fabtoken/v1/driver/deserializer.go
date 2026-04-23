@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -54,4 +55,17 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d.AddDeserializer(boolpolicy.Policy, &boolpolicy.AuditInfoDeserializer{})
 
 	return d
+}
+
+// PublicParametersDeserializer contains the logic to deserialize public parameters
+type PublicParametersDeserializer struct{}
+
+// PublicParametersFromBytes unmarshals the passed bytes into fabtoken public parameters.
+func (d PublicParametersDeserializer) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
+	pp, err := v1.NewPublicParamsFromBytes(params, v1.FabTokenDriverName, v1.ProtocolV1)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
+	}
+
+	return pp, nil
 }
