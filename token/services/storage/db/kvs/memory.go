@@ -9,17 +9,21 @@ package kvs
 import (
 	"context"
 
-	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	mem "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 )
 
 func NewInMemory() (KVS, error) {
-	return kvs.New(utils.MustGet(mem.NewDriver().NewKVS("")), "", kvs.DefaultCacheSize)
+	k, err := kvs.New(utils.MustGet(mem.NewDriver().NewKVS("")), "", kvs.DefaultCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return &fscKVS{KVS: k}, nil
 }
 
-func Keystore(kvs KVS) keystore.KVS {
+func Keystore(kvs KVS) *kvsAdapter {
 	return &kvsAdapter{kvs: kvs}
 }
 
@@ -33,4 +37,18 @@ func (k *kvsAdapter) Put(id string, state interface{}) error {
 
 func (k *kvsAdapter) Get(id string, state interface{}) error {
 	return k.kvs.Get(context.Background(), id, state)
+}
+
+func (k *kvsAdapter) Close() error {
+	return k.kvs.Close()
+}
+
+type fscKVS struct {
+	*kvs.KVS
+}
+
+func (k *fscKVS) Close() error {
+	k.Stop()
+
+	return nil
 }

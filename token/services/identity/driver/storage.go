@@ -33,6 +33,8 @@ type Keystore interface {
 	// provided `key` parameter.
 	// If no entry exists for id, implementations should return an error describing the missing entry.
 	Get(id string, key interface{}) error
+	// Close closes the store
+	Close() error
 }
 
 // StorageProvider returns storage services scoped to a specific token
