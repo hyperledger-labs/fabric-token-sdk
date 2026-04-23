@@ -154,12 +154,12 @@ func (*fakeLedger) GetState(_ tk.ID) ([]byte, error) {
 }
 
 func newTokenValidator(ppRaw []byte) (*token.Validator, error) {
-	is := core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlog.NewPPMFactory())
+	is := core.NewValidatorDriverService(fabtoken.NewValidatorDriver(), dlog.NewValidatorDriver())
 	ppm, err := is.PublicParametersFromBytes(ppRaw)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deserialize public parameters: %w", err)
 	}
-	v, err := is.DefaultValidator(ppm)
+	v, err := is.NewValidator(ppm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create default validator: %w", err)
 	}
