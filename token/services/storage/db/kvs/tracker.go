@@ -15,6 +15,7 @@ import (
 type Backend interface {
 	Put(ctx context.Context, id string, value interface{}) error
 	Get(ctx context.Context, id string, entry interface{}) error
+	Close() error
 }
 
 // KeyValuePair stores tracking info
@@ -86,4 +87,8 @@ func (f *TrackedKVS) Get(id string, entry interface{}) error {
 	f.GetHistory = append(f.GetHistory, KeyValuePair{Key: id, Value: e, Error: errorMsg})
 
 	return err
+}
+
+func (f *TrackedKVS) Close() error {
+	return f.Backend.Close()
 }
