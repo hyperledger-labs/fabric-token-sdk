@@ -24,7 +24,7 @@ import (
 
 // Driver contains the non-static logic of the fabtoken driver (including services).
 type Driver struct {
-	*base
+	BaseWalletServiceFactory
 	metricsProvider  cdriver.MetricsProvider
 	tracerProvider   cdriver.TracerProvider
 	configService    cdriver.ConfigService
@@ -35,8 +35,8 @@ type Driver struct {
 	vaultProvider    cdriver.VaultProvider
 }
 
-// NewDriver returns a new factory for the fabtoken driver.
-func NewDriver(
+// NewTokenDriver returns a new factory for the fabtoken driver.
+func NewTokenDriver(
 	metricsProvider cdriver.MetricsProvider,
 	tracerProvider cdriver.TracerProvider,
 	configService cdriver.ConfigService,
@@ -48,17 +48,38 @@ func NewDriver(
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
 		Name: core.DriverIdentifier(v1setup.FabTokenDriverName, 1),
-		Driver: &Driver{
-			base:             &base{},
-			metricsProvider:  metricsProvider,
-			tracerProvider:   tracerProvider,
-			configService:    configService,
-			storageProvider:  storageProvider,
-			identityProvider: identityProvider,
-			endpointService:  endpointService,
-			networkProvider:  networkProvider,
-			vaultProvider:    vaultProvider,
-		},
+		Driver: newTokenDriver(
+			metricsProvider,
+			tracerProvider,
+			configService,
+			storageProvider,
+			identityProvider,
+			endpointService,
+			networkProvider,
+			vaultProvider,
+		),
+	}
+}
+
+func newTokenDriver(
+	metricsProvider cdriver.MetricsProvider,
+	tracerProvider cdriver.TracerProvider,
+	configService cdriver.ConfigService,
+	storageProvider cdriver.StorageProvider,
+	identityProvider cdriver.IdentityProvider,
+	endpointService cdriver.NetworkBinderService,
+	networkProvider cdriver.NetworkProvider,
+	vaultProvider cdriver.VaultProvider,
+) *Driver {
+	return &Driver{
+		metricsProvider:  metricsProvider,
+		tracerProvider:   tracerProvider,
+		configService:    configService,
+		storageProvider:  storageProvider,
+		identityProvider: identityProvider,
+		endpointService:  endpointService,
+		networkProvider:  networkProvider,
+		vaultProvider:    vaultProvider,
 	}
 }
 
@@ -159,14 +180,4 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	}
 
 	return service, nil
-}
-
-// NewDefaultValidator returns a new fabtoken validator for the passed public parameters.
-func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
-	pp, ok := params.(*v1setup.PublicParams)
-	if !ok {
-		return nil, errors.Errorf("invalid public parameters type [%T]", params)
-	}
-
-	return d.DefaultValidator(pp)
 }

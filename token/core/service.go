@@ -53,26 +53,26 @@ func newFactoryDirectory[T driver.PPReader](fs ...NamedFactory[T]) *factoryDirec
 // If no driver is registered for the public params' identifier, it returns an error.
 // It is responsibility of the caller to validate the unmarshalled public parameters.
 func (s *factoryDirectory[T]) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := serializedPublicParametersFromBytes(params)
+	publicParams, err := serializedPublicParametersFromBytes(params)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling public params")
 	}
 
-	if f, ok := s.factories[TokenDriverIdentifier(pp.Identifier)]; ok {
+	if f, ok := s.factories[TokenDriverIdentifier(publicParams.Identifier)]; ok {
 		return f.PublicParametersFromBytes(params)
 	}
 
-	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier)
+	return nil, errors.Errorf("cannot load public parameters, driver [%s] not found", publicParams.Identifier)
 }
 
 // serializedPublicParametersFromBytes returns a driver.SerializedPublicParameters instance from the passed bytes.
 func serializedPublicParametersFromBytes(raw []byte) (*pp.PublicParameters, error) {
-	pp := &pp.PublicParameters{}
-	if err := json.Unmarshal(raw, pp); err != nil {
+	publicParams := &pp.PublicParameters{}
+	if err := json.Unmarshal(raw, publicParams); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing public parameters")
 	}
 
-	return pp, nil
+	return publicParams, nil
 }
 
 // PPManagerFactoryService manages factories for creating public parameters managers and validators.
@@ -92,21 +92,7 @@ func (s *PPManagerFactoryService) NewPublicParametersManager(pp driver.PublicPar
 		return instantiator.NewPublicParametersManager(pp)
 	}
 
-	return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", DriverIdentifierFromPP(pp))
-}
-
-// DefaultValidator returns a new instance of driver.Validator for the passed public parameters.
-// If no driver is registered for the public params' identifier, it returns an error.
-func (s *PPManagerFactoryService) DefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "failed validating public parameters")
-	}
-
-	if instantiator, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
-		return instantiator.DefaultValidator(pp)
-	}
-
-	return nil, errors.Errorf("cannot load default validator, driver [%s] not found", DriverIdentifierFromPP(pp))
+	return nil, errors.Errorf("cannot load public parameters, driver [%s] not found", DriverIdentifierFromPP(pp))
 }
 
 // WalletServiceFactoryService manages factories for creating wallet services.
@@ -122,46 +108,59 @@ func NewWalletServiceFactoryService(fs ...NamedFactory[driver.WalletServiceFacto
 // NewWalletService returns a new instance of driver.WalletService for the passed configuration and public parameters.
 // If no driver is registered for the public params' identifier, it returns an error.
 func (s *WalletServiceFactoryService) NewWalletService(tmsConfig driver.Configuration, ppRaw []byte) (driver.WalletService, error) {
-	pp, err := s.PublicParametersFromBytes(ppRaw)
+	publicParams, err := s.PublicParametersFromBytes(ppRaw)
 	if err != nil {
 		return nil, err
 	}
-	if factory, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
-		return factory.NewWalletService(tmsConfig, pp)
+	if factory, ok := s.factories[DriverIdentifierFromPP(publicParams)]; ok {
+		return factory.NewWalletService(tmsConfig, publicParams)
 	}
 
-	return nil, errors.Errorf("no validator found for token driver [%s]", DriverIdentifierFromPP(pp))
+	return nil, errors.Errorf("no validator found for token driver [%s]", DriverIdentifierFromPP(publicParams))
 }
 
-// TokenDriverService manages factories for creating token manager services and validators.
-type TokenDriverService struct {
+// TMSDriverService manages factories for creating token manager services.
+type TMSDriverService struct {
 	*factoryDirectory[driver.Driver]
 }
 
-// NewTokenDriverService creates a new TokenDriverService with the provided factories.
-func NewTokenDriverService(factories []NamedFactory[driver.Driver]) *TokenDriverService {
-	return &TokenDriverService{factoryDirectory: newFactoryDirectory(factories...)}
+// NewTokenDriverService creates a new TMSDriverService with the provided factories.
+func NewTokenDriverService(factories []NamedFactory[driver.Driver]) *TMSDriverService {
+	return &TMSDriverService{factoryDirectory: newFactoryDirectory(factories...)}
 }
 
 // NewTokenService returns a new instance of driver.TokenManagerService for the passed TMSID and public parameters.
 // If no driver is registered for the public params' identifier, it returns an error.
-func (s *TokenDriverService) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
-	pp, err := s.PublicParametersFromBytes(publicParams)
+func (s *TMSDriverService) NewTokenService(tmsID driver.TMSID, publicParamsRaw []byte) (driver.TokenManagerService, error) {
+	publicParams, err := s.PublicParametersFromBytes(publicParamsRaw)
 	if err != nil {
 		return nil, err
 	}
-	if driver, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
-		return driver.NewTokenService(tmsID, publicParams)
+	if d, ok := s.factories[DriverIdentifierFromPP(publicParams)]; ok {
+		return d.NewTokenService(tmsID, publicParamsRaw)
 	}
 
-	return nil, errors.Errorf("no token driver named '%s' found", DriverIdentifierFromPP(pp))
+	return nil, errors.Errorf("no token driver named '%s' found", DriverIdentifierFromPP(publicParams))
 }
 
-// NewDefaultValidator returns a new instance of driver.Validator for the passed public parameters.
+// TokenDriverService is an alias for TMSDriverService for backward compatibility.
+type TokenDriverService = TMSDriverService
+
+// ValidatorDriverService manages factories for creating validators.
+type ValidatorDriverService struct {
+	*factoryDirectory[driver.ValidatorDriver]
+}
+
+// NewValidatorDriverService creates a new ValidatorDriverService with the provided factories.
+func NewValidatorDriverService(factories ...NamedFactory[driver.ValidatorDriver]) *ValidatorDriverService {
+	return &ValidatorDriverService{factoryDirectory: newFactoryDirectory(factories...)}
+}
+
+// NewValidator returns a new instance of driver.Validator for the passed public parameters.
 // If no driver is registered for the public params' identifier, it returns an error.
-func (s *TokenDriverService) NewDefaultValidator(pp driver.PublicParameters) (driver.Validator, error) {
-	if driver, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
-		return driver.NewDefaultValidator(pp)
+func (s *ValidatorDriverService) NewValidator(pp driver.PublicParameters) (driver.Validator, error) {
+	if d, ok := s.factories[DriverIdentifierFromPP(pp)]; ok {
+		return d.NewValidator(pp)
 	}
 
 	return nil, errors.Errorf("no validator found for token driver [%s]", DriverIdentifierFromPP(pp))

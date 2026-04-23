@@ -95,3 +95,16 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 
 	return d
 }
+
+// PublicParametersDeserializer contains the logic to deserialize public parameters
+type PublicParametersDeserializer struct{}
+
+// PublicParametersFromBytes unmarshals the passed bytes into zkatdlog public parameters.
+func (d PublicParametersDeserializer) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
+	pp, err := v1.NewPublicParamsFromBytes(params, v1.DLogNoGHDriverName, v1.ProtocolV1)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
+	}
+
+	return pp, nil
+}
