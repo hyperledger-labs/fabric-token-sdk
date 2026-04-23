@@ -9,6 +9,7 @@ package config_test
 import (
 	"testing"
 
+	fscconfig "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config/mocks"
@@ -148,17 +149,30 @@ func TestAddConfiguration(t *testing.T) {
 	cp := &mocks.Provider{}
 	s := config.NewService(cp)
 
-	raw := []byte("some config")
+	raw := []byte("token:\n  tms:\n    new_id:\n      network: new\n      channel: new\n      namespace: new")
 
-	// Test Case: ProvideFromRaw fails (Exported method)
+	// Test Case: ProvideFromRaw fails
 	cp.ProvideFromRawReturns(nil, assert.AnError)
 	err := s.AddConfiguration(raw)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed loading configuration")
 
-	// Test Case: Validation Success (Internal method)
-	vcp := &mocks.Provider{}
-	vcp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+	// Test Case: Success
+	vcp, err := fscconfig.NewProvider("./testdata/token0")
+	require.NoError(t, err)
+	err = vcp.MergeConfig(raw)
+	require.NoError(t, err)
+
+	cp.MergeConfigReturns(nil)
+	cp.ProvideFromRawReturns(vcp, nil)
+	err = s.AddConfiguration(raw)
+	require.NoError(t, err)
+	assert.Equal(t, 1, cp.MergeConfigCallCount())
+	assert.Equal(t, raw, cp.MergeConfigArgsForCall(0))
+
+	// Test Case: Already Exists
+	// Initial state has "new" (id1 in previous tests, but let's use "new_id" here)
+	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
 		if key == TMSPath {
 			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
 				"new_id": nil,
@@ -174,37 +188,13 @@ func TestAddConfiguration(t *testing.T) {
 
 		return nil
 	}
-
-	cp.MergeConfigReturns(nil)
-	err = s.AddConfigurationInternal(vcp, raw)
-	require.NoError(t, err)
-	assert.Equal(t, 1, cp.MergeConfigCallCount())
-	assert.Equal(t, raw, cp.MergeConfigArgsForCall(0))
-
-	// Test Case: Update existing configuration (Success)
-	vcp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
-		if key == TMSPath {
-			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
-				"id1": nil,
-			}
-
-			return nil
-		}
-		if key == "token.tms.id1" {
-			*rawVal.(*driver.TMSID) = driver.TMSID{Network: "exist", Channel: "exist", Namespace: "exist"}
-
-			return nil
-		}
-
-		return nil
-	}
-	cp.UnmarshalKeyStub = vcp.UnmarshalKeyStub
-
-	// Initial state has "exist"
 	err = s.ResetConfigurations()
 	require.NoError(t, err)
-	_, _ = s.ConfigurationsInternal()
-
-	err = s.AddConfigurationInternal(vcp, raw)
+	_, err = s.Configurations()
 	require.NoError(t, err)
+
+	cp.ProvideFromRawReturns(vcp, nil)
+	err = s.AddConfiguration(raw)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "updating existing configuration is not supported")
 }

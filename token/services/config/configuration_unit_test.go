@@ -20,7 +20,7 @@ import (
 func TestConfiguration_Validate(t *testing.T) {
 	cp := &mocks.Provider{}
 	tmsID := driver.TMSID{Network: "net", Channel: "ch", Namespace: "ns"}
-	c := config.NewConfigurationInternal(cp, "id", tmsID)
+	c := config.NewConfiguration(cp, "id", tmsID)
 
 	// Valid
 	err := c.Validate()
@@ -28,7 +28,7 @@ func TestConfiguration_Validate(t *testing.T) {
 
 	// Missing Network
 	tmsID.Network = ""
-	c = config.NewConfigurationInternal(cp, "id", tmsID)
+	c = config.NewConfiguration(cp, "id", tmsID)
 	err = c.Validate()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "missing required field 'network'")
@@ -36,14 +36,14 @@ func TestConfiguration_Validate(t *testing.T) {
 	// Missing Namespace
 	tmsID.Network = "net"
 	tmsID.Namespace = ""
-	c = config.NewConfigurationInternal(cp, "id", tmsID)
+	c = config.NewConfiguration(cp, "id", tmsID)
 	err = c.Validate()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "missing required field 'namespace'")
 
 	// Custom Validator
 	tmsID.Namespace = "ns"
-	c = config.NewConfigurationInternal(cp, "id", tmsID)
+	c = config.NewConfiguration(cp, "id", tmsID)
 	validator := &mocks.Validator{}
 	c.SetValidators([]config.Validator{validator})
 
@@ -61,7 +61,7 @@ func TestConfiguration_Validate(t *testing.T) {
 func TestConfiguration_Serialize(t *testing.T) {
 	cp := &mocks.Provider{}
 	tmsID := driver.TMSID{Network: "net", Channel: "ch", Namespace: "ns"}
-	c := config.NewConfigurationInternal(cp, "old_id", tmsID)
+	c := config.NewConfiguration(cp, "old_id", tmsID)
 
 	// Test Unmarshal Error
 	cp.UnmarshalKeyReturns(assert.AnError)
@@ -86,7 +86,7 @@ func TestConfiguration_Serialize(t *testing.T) {
 func TestConfiguration_Wrappers(t *testing.T) {
 	cp := &mocks.Provider{}
 	tmsID := driver.TMSID{Network: "net", Channel: "ch", Namespace: "ns"}
-	c := config.NewConfigurationInternal(cp, "id", tmsID)
+	c := config.NewConfiguration(cp, "id", tmsID)
 
 	// ID
 	assert.Equal(t, tmsID, c.ID())
