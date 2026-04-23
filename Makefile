@@ -226,3 +226,11 @@ install-linter-tool:
 fmt: ## Run gofmt on the entire project
 	@echo "Running gofmt..."
 	@gofmt -l -s -w .
+
+.PHONY: update-all-deps-latest
+update-all-deps-latest: ## Update all dependencies in all Go modules to their latest version
+	@echo "Updating all dependencies to @latest..."
+	@for dir in $$(find . -name "go.mod" -exec dirname {} \;); do \
+		echo "=> Updating dependencies in $$dir"; \
+		(cd $$dir && go get ./...@latest && go mod tidy); \
+	done

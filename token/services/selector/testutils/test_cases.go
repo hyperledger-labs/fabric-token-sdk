@@ -22,7 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 const defaultCurrency = "CHF"
@@ -217,10 +217,10 @@ func parallelSelect(t *testing.T, replicas []EnhancedManager, quantities []token
 				} else {
 					assert.NotNil(t, sum)
 					change, subErr := sum.Sub(quantity)
-					require.NoError(t, subErr)
+					assert.NoError(t, subErr)
 					assert.GreaterOrEqual(t, change.ToBigInt().Int64(), int64(0))
 					assert.NotEmpty(t, tokens)
-					require.NoError(t, deleteTokensAndStoreChange(replica, tokens, change))
+					assert.NoError(t, deleteTokensAndStoreChange(replica, tokens, change))
 				}
 				// if tokenSum, err := replica.TokenSum(); err == nil {
 				// 	logger.Infof("Current sum of tokens in the DB: %s", tokenSum.Decimal())

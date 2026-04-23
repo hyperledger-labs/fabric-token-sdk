@@ -18,8 +18,8 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/test-go/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type cfgProvider func(string) driver2.Driver
@@ -113,7 +113,7 @@ func TTokenTransaction(t *testing.T, db TestTokenDB) {
 	tok, owners, err = tx.GetToken(t.Context(), token.ID{TxId: "tx1"}, false)
 	require.NoError(t, err)
 	assert.Nil(t, tok)
-	assert.Len(t, owners, 0)
+	assert.Empty(t, owners)
 
 	tok, _, err = tx.GetToken(t.Context(), token.ID{TxId: "tx1"}, true) // include deleted
 	require.NoError(t, err)
@@ -361,7 +361,7 @@ func TDeleteAndMine(t *testing.T, db TestTokenDB) {
 	assert.True(t, deleted[0], "expected tx101-0 to be deleted")
 	assert.Equal(t, "tx103", deletedBy[0], "expected tx101-0 to be deleted by tx103")
 	assert.False(t, deleted[1], "expected tx101-0 to not be deleted")
-	assert.Equal(t, "", deletedBy[1], "expected tx101-0 to not be deleted by tx103")
+	assert.Empty(t, deletedBy[1], "expected tx101-0 to not be deleted by tx103")
 }
 
 // // ListAuditTokens returns the audited tokens associated to the passed ids
@@ -436,7 +436,7 @@ func TListAuditTokens(t *testing.T, db TestTokenDB) {
 
 	tok, err = db.ListAuditTokens(ctx)
 	require.NoError(t, err)
-	assert.Len(t, tok, 0)
+	assert.Empty(t, tok)
 }
 
 func TListIssuedTokens(t *testing.T, db TestTokenDB) {
@@ -749,12 +749,12 @@ func TCertification(t *testing.T, db TestTokenDB) {
 				t.Error(err)
 			}
 
-			require.NoError(t, db.StoreCertifications(ctx, map[*token.ID][]byte{
+			assert.NoError(t, db.StoreCertifications(ctx, map[*token.ID][]byte{
 				tokenID: []byte(fmt.Sprintf("certification_%d", i)),
 			}))
 			assert.True(t, db.ExistsCertification(ctx, tokenID))
 			certifications, err := db.GetCertifications(ctx, []*token.ID{tokenID})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			for _, bytes := range certifications {
 				assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
 			}
@@ -877,9 +877,9 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	assertEqual(t, tx1, res[0])
 	assertEqual(t, tx2, res[1])
 	assertEqual(t, tx21, res[2])
-	assert.Equal(t, false, res[0].IsSpent, "tx1 is not spent")
-	assert.Equal(t, false, res[1].IsSpent, "tx2-0 is not spent")
-	assert.Equal(t, false, res[2].IsSpent, "tx2-1 is not spent")
+	assert.False(t, res[0].IsSpent, "tx1 is not spent")
+	assert.False(t, res[1].IsSpent, "tx2-0 is not spent")
+	assert.False(t, res[2].IsSpent, "tx2-1 is not spent")
 
 	// alice
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{WalletID: "alice"})
@@ -920,15 +920,15 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{})
 	require.NoError(t, err)
 	assert.Len(t, res, 2)
-	assert.Equal(t, false, res[0].IsSpent, "tx1 is not spent")
-	assert.Equal(t, false, res[1].IsSpent, "tx2-0 is not spent")
+	assert.False(t, res[0].IsSpent, "tx1 is not spent")
+	assert.False(t, res[1].IsSpent, "tx2-0 is not spent")
 
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{IncludeDeleted: true})
 	require.NoError(t, err)
 	assert.Len(t, res, 3)
-	assert.Equal(t, false, res[0].IsSpent, "tx1 is not spent")
-	assert.Equal(t, false, res[1].IsSpent, "tx2-0 is not spent")
-	assert.Equal(t, true, res[2].IsSpent, "tx2-1 is spent")
+	assert.False(t, res[0].IsSpent, "tx1 is not spent")
+	assert.False(t, res[1].IsSpent, "tx2-0 is not spent")
+	assert.True(t, res[2].IsSpent, "tx2-1 is spent")
 	assert.Equal(t, "delby", res[2].SpentBy)
 
 	// by ids
