@@ -22,6 +22,10 @@ type RetryRunner interface {
 	Run(func() error) error
 	// RunWithContext retries like Run but stops early if ctx is canceled.
 	RunWithContext(ctx context.Context, runner func() error) error
+	// RunWithErrors retries until runner returns true or maxTimes is exhausted.
+	RunWithErrors(runner func() (bool, error)) error
+	// RunWithErrorsContext retries like RunWithErrors but stops early if ctx is canceled.
+	RunWithErrorsContext(ctx context.Context, runner func() (bool, error)) error
 }
 
 var ErrMaxRetriesExceeded = errors.New("maximum number of retries exceeded")
@@ -123,5 +127,38 @@ func (f *retryRunner) RunWithErrors(runner func() (bool, error)) error {
 		return ErrMaxRetriesExceeded
 	}
 
+	return errors.Join(errs...)
+}
+
+// RunWithErrorsContext retries until runner() returns true, ctx is canceled, or maxTimes
+// attempts are exhausted. The backoff sleep respects ctx cancellation so callers
+// are not blocked for the full sleep duration.
+func (f *retryRunner) RunWithErrorsContext(ctx context.Context, runner func() (bool, error)) error {
+	var (
+		errs  []error
+		delay time.Duration
+	)
+	for i := 0; f.maxTimes < 0 || i < f.maxTimes; i++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		terminate, err := runner()
+		if terminate {
+			return err
+		}
+		if err != nil {
+			errs = append(errs, err)
+		}
+		delay = f.nextDelay(delay)
+		f.logger.Warnf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
+		select {
+		case <-time.After(delay):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	if len(errs) == 0 {
+		return ErrMaxRetriesExceeded
+	}
 	return errors.Join(errs...)
 }

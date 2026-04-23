@@ -384,3 +384,127 @@ func TestNextDelay_FixedBackoff(t *testing.T) {
 			"interval %d should be ~10ms for fixed backoff, got %v", i, intervals[i])
 	}
 }
+
+// TestRunWithErrorsContext_PreCanceledContext verifies that a pre-canceled context causes
+// RunWithErrorsContext to return immediately without invoking the runner at all.
+func TestRunWithErrorsContext_PreCanceledContext(t *testing.T) {
+	runner := utils.NewRetryRunner(testLogger(), utils.Infinitely, 10*time.Second, false)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel() // cancel before calling Run
+
+	calls := 0
+	start := time.Now()
+	err := runner.RunWithErrorsContext(ctx, func() (bool, error) {
+		calls++
+		return false, errors.New("should not be reached")
+	})
+	elapsed := time.Since(start)
+
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Equal(t, 0, calls, "runner should not be invoked on a pre-canceled context")
+	assert.Less(t, elapsed, 500*time.Millisecond, "should return immediately, not block on 10s sleep")
+}
+
+// TestRunWithErrorsContext_CanceledDuringBackoff verifies that canceling the context
+// while the retry loop is sleeping unblocks the caller promptly.
+func TestRunWithErrorsContext_CanceledDuringBackoff(t *testing.T) {
+	runner := utils.NewRetryRunner(testLogger(), utils.Infinitely, 5*time.Second, false)
+
+	ctx, cancel := context.WithCancel(t.Context())
+
+	calls := 0
+	done := make(chan error, 1)
+
+	go func() {
+		done <- runner.RunWithErrorsContext(ctx, func() (bool, error) {
+			calls++
+			return false, errors.New("transient error")
+		})
+	}()
+
+	// Let the runner execute once and enter the 5s sleep.
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+
+	start := time.Now()
+
+	select {
+	case err := <-done:
+		elapsed := time.Since(start)
+		require.ErrorIs(t, err, context.Canceled)
+		assert.Equal(t, 1, calls, "runner should have been called exactly once before cancel")
+		assert.Less(t, elapsed, time.Second,
+			"RunWithErrorsContext should unblock within 1s of cancellation, not wait out the 5s sleep")
+	case <-time.After(6 * time.Second):
+		t.Fatal("RunWithErrorsContext did not respect context cancellation")
+	}
+}
+
+// TestRunWithErrorsContext_TerminateWithNil verifies that when runner returns (true, nil),
+// RunWithErrorsContext stops retrying and returns nil.
+func TestRunWithErrorsContext_TerminateWithNil(t *testing.T) {
+	runner := utils.NewRetryRunner(testLogger(), utils.Infinitely, time.Millisecond, false)
+
+	calls := 0
+	err := runner.RunWithErrorsContext(t.Context(), func() (bool, error) {
+		calls++
+		if calls < 3 {
+			return false, errors.New("transient error")
+		}
+		return true, nil // terminate with success
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 3, calls)
+}
+
+// TestRunWithErrorsContext_TerminateWithError verifies that when runner returns (true, err),
+// RunWithErrorsContext stops retrying and returns that error immediately.
+func TestRunWithErrorsContext_TerminateWithError(t *testing.T) {
+	runner := utils.NewRetryRunner(testLogger(), utils.Infinitely, time.Millisecond, false)
+
+	calls := 0
+	expectedErr := errors.New("fatal error")
+	err := runner.RunWithErrorsContext(t.Context(), func() (bool, error) {
+		calls++
+		if calls < 2 {
+			return false, errors.New("transient")
+		}
+		return true, expectedErr // terminate with error
+	})
+
+	require.ErrorIs(t, err, expectedErr)
+	assert.Equal(t, 2, calls)
+}
+
+// TestRunWithErrorsContext_MaxRetriesExhaustedWithErrors verifies that when maxTimes
+// is exhausted and errors were collected, errors.Join is returned.
+func TestRunWithErrorsContext_MaxRetriesExhaustedWithErrors(t *testing.T) {
+	runner := utils.NewRetryRunner(testLogger(), 3, time.Millisecond, false)
+
+	calls := 0
+	err := runner.RunWithErrorsContext(t.Context(), func() (bool, error) {
+		calls++
+		return false, errors.New("persistent failure")
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "persistent failure")
+	assert.Equal(t, 3, calls)
+}
+
+// TestRunWithErrorsContext_MaxRetriesExhaustedNoErrors verifies that when maxTimes
+// is exhausted but no errors occurred, ErrMaxRetriesExceeded is returned.
+func TestRunWithErrorsContext_MaxRetriesExhaustedNoErrors(t *testing.T) {
+	runner := utils.NewRetryRunner(testLogger(), 3, time.Millisecond, false)
+
+	calls := 0
+	err := runner.RunWithErrorsContext(t.Context(), func() (bool, error) {
+		calls++
+		return false, nil // keep retrying but no error
+	})
+
+	require.ErrorIs(t, err, utils.ErrMaxRetriesExceeded)
+	assert.Equal(t, 3, calls)
+}
