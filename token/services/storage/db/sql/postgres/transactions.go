@@ -27,7 +27,8 @@ import (
 // AuditTransactionStore wraps common.TransactionStore to add advisory lock to schema creation
 type AuditTransactionStore struct {
 	*sqlcommon.TransactionStore
-	lockID int64
+	writeDB *sql.DB
+	lockID  int64
 }
 
 // GetSchema overrides the base GetSchema to prefix with advisory lock
@@ -35,6 +36,11 @@ func (s *AuditTransactionStore) GetSchema() string {
 	baseSchema := s.TransactionStore.GetSchema()
 
 	return prefixSchemaWithLock(baseSchema, s.lockID)
+}
+
+// CreateSchema overrides the base CreateSchema to ensure GetSchema is called on the correct receiver
+func (s *AuditTransactionStore) CreateSchema() error {
+	return common.InitSchema(s.writeDB, s.GetSchema())
 }
 
 // TransactionStore extends the common TransactionStore with PostgreSQL-specific atomic claim operations.
@@ -51,6 +57,11 @@ func (s *TransactionStore) GetSchema() string {
 	baseSchema := s.TransactionStore.GetSchema()
 
 	return prefixSchemaWithLock(baseSchema, s.lockID)
+}
+
+// CreateSchema overrides the base CreateSchema to ensure GetSchema is called on the correct receiver
+func (s *TransactionStore) CreateSchema() error {
+	return common.InitSchema(s.writeDB, s.GetSchema())
 }
 
 // NewTransactionStoreWithNotifier creates a new TransactionStore with the provided notifier and recovery support.
@@ -95,6 +106,7 @@ func NewAuditTransactionStore(dbs *scommon.RWDB, tableNames sqlcommon.TableNames
 
 	return &AuditTransactionStore{
 		TransactionStore: baseStore,
+		writeDB:          dbs.WriteDB,
 		lockID:           createTableLockID("audittx"),
 	}, nil
 }
