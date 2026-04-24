@@ -219,28 +219,45 @@ func newCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 	}
 }
 
-// update refreshes the token cache from the database, adding new entries before removing stale ones to prevent race conditions.
+// update refreshes the token cache from the database. It releases the lock during the
+// potentially slow DB operation to avoid blocking other goroutines, then re-acquires
+// the lock to atomically update the cache. A re-check of staleness is performed
+// after the DB call completes to avoid overwriting a cache that was refreshed by
+// another goroutine while waiting for the database.
 func (f *cachedFetcher) update(ctx context.Context) {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	if !f.isCacheStale() && !f.isCacheOverused() {
 		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process")
+		f.mu.Unlock()
 
 		return
 	}
 	logger.DebugfContext(ctx, "Renew token cache")
+
+	// Release lock during slow DB operation to not block other token operations
+	f.mu.Unlock()
+
 	it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
-
 		return
 	}
 	defer it.Close()
 
 	m := f.groupTokensByKey(ctx, it)
+
+	f.mu.Lock()
+	// Re-check: another goroutine may have refreshed while we waited for DB
+	if !f.isCacheStale() && !f.isCacheOverused() {
+		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process, skipping")
+		f.mu.Unlock()
+
+		return
+	}
 	f.updateCache(ctx, m)
 	f.lastFetched = time.Now()
 	atomic.StoreUint32(&f.queriesResponded, 0)
+	f.mu.Unlock()
 }
 
 // groupTokensByKey reads tokens from the iterator and groups them by wallet/currency key.

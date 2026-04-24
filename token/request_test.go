@@ -590,7 +590,7 @@ func TestRequest_Transfer(t *testing.T) {
 		wallet := &OwnerWallet{}
 		_, err := req.Transfer(ctx, wallet, "USD", []uint64{0, 100}, []Identity{Identity("receiver1"), Identity("receiver2")})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "value is zero")
+		assert.Contains(t, err.Error(), "value at index 0 is zero")
 	})
 
 	t.Run("multiple zero values", func(t *testing.T) {
@@ -598,7 +598,7 @@ func TestRequest_Transfer(t *testing.T) {
 		wallet := &OwnerWallet{}
 		_, err := req.Transfer(ctx, wallet, "USD", []uint64{100, 0}, []Identity{Identity("receiver1"), Identity("receiver2")})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "value is zero")
+		assert.Contains(t, err.Error(), "value at index 1 is zero")
 	})
 }
 
