@@ -32,22 +32,22 @@ import (
 //
 //	com_f^{f_f} == gen_f^{val_f}
 type Proof struct {
-	Left   []*mathlib.G1
-	Right  []*mathlib.G1
-	VLeft  []*mathlib.Zr
-	VRight []*mathlib.Zr
-	Curve  *mathlib.Curve
+	Left   []*mathlib.G1  // cross commitment MSM(gen_L, wit_R)
+	Right  []*mathlib.G1  // cross commitment MSM(gen_R, wit_L)
+	VLeft  []*mathlib.Zr  // cross scalar <f_L, wit_R>
+	VRight []*mathlib.Zr  // cross scalar <f_R, wit_L>
+	Curve  *mathlib.Curve // elliptic curve
 }
 
 // prover instantiates a CSP prover
 type prover struct {
-	Generators     []*mathlib.G1
-	NumberOfRounds uint64
-	Commitment     *mathlib.G1
-	LinearForm     []*mathlib.Zr
-	Value          *mathlib.Zr
-	Curve          *mathlib.Curve
-	witness        []*mathlib.Zr
+	Generators     []*mathlib.G1  // Generators for pedersen commitment
+	NumberOfRounds uint64         // log(length of vectors), assume power of 2
+	Commitment     *mathlib.G1    // Commitment to the witness
+	LinearForm     []*mathlib.Zr  // Linear function
+	Value          *mathlib.Zr    // Claimed value of linear function over witness
+	Curve          *mathlib.Curve // Curve identifier
+	witness        []*mathlib.Zr  // opening for the commitment
 
 	TranscriptHeader []byte
 }
@@ -174,11 +174,11 @@ func (p *prover) Prove() (*Proof, error) {
 
 // verifier verifies a Proof against a public statement.
 type verifier struct {
-	Commitment       *mathlib.G1
-	Generators       []*mathlib.G1
-	LinearForm       []*mathlib.Zr
-	Value            *mathlib.Zr
-	NumberOfRounds   uint64
+	Commitment       *mathlib.G1   // Pedersen commitment C = MSM(gen, w)
+	Generators       []*mathlib.G1 // Commitment generators
+	LinearForm       []*mathlib.Zr // Coefficients of the linear form f
+	Value            *mathlib.Zr   // Claimed evaluation v = ⟨f, w⟩
+	NumberOfRounds   uint64        // log₂(vector length)
 	Curve            *mathlib.Curve
 	TranscriptHeader []byte
 }
@@ -245,6 +245,8 @@ func (v *verifier) Verify(proof *Proof) error {
 		}
 		challenges[i] = c
 
+		// Update value: v' = c·v + VLeft[i] + c²·VRight[i]
+		// (scalar-only; no G1 allocations)
 		v.Curve.ModMulInPlace(cSq, c, c, v.Curve.GroupOrder)
 
 		v.Curve.ModAddMul3InPlace(
@@ -256,6 +258,8 @@ func (v *verifier) Verify(proof *Proof) error {
 		)
 	}
 
+	// Batch-compute the folded commitment via a single MSM, replacing the
+	// sequential Mul+Add loop that allocated one G1 per round.
 	k := int(v.NumberOfRounds) // #nosec G115
 
 	suffProd := make([]*mathlib.Zr, k)
@@ -337,8 +341,8 @@ func sVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) []*mathlib.Z
 	}
 
 	for r := range k {
-		halfLen := 1 << r
-		c := challenges[k-1-r]
+		halfLen := 1 << r      // number of entries already filled
+		c := challenges[k-1-r] // reverse order matches bit(i, k-1-r)
 		for i := range halfLen {
 			curve.ModMulInPlace(s[i+halfLen], s[i], c, curve.GroupOrder)
 		}
