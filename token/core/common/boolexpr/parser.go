@@ -10,13 +10,15 @@ SPDX-License-Identifier: Apache-2.0
 //
 // Grammar (OR binds less tightly than AND):
 //
-//	expr     = or_expr
-//	or_expr  = and_expr ( 'OR'  and_expr )*
-//	and_expr = primary  ( 'AND' primary  )*
-//	primary  = '$' digits | '(' expr ')'
+//	expr      = or_expr
+//
+//	or_expr   = and_expr ( 'OR' and_expr )*
+//	and_expr  = primary  ( 'AND' primary  )*
+//	primary   = '$' digits | '(' expr ')'
 package boolexpr
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -44,6 +46,7 @@ func (r *RefNode) Eval(refs []bool) bool {
 	if r.Index < 0 || r.Index >= len(refs) {
 		return false
 	}
+
 	return refs[r.Index]
 }
 
@@ -109,10 +112,12 @@ func (l *lexer) next() (lexToken, error) {
 	switch {
 	case ch == '(':
 		l.pos++
+
 		return lexToken{kind: tokLParen}, nil
 
 	case ch == ')':
 		l.pos++
+
 		return lexToken{kind: tokRParen}, nil
 
 	case ch == '$':
@@ -128,6 +133,7 @@ func (l *lexer) next() (lexToken, error) {
 		if err != nil {
 			return lexToken{}, fmt.Errorf("invalid index at position %d: %w", start, err)
 		}
+
 		return lexToken{kind: tokRef, index: idx}, nil
 
 	case unicode.IsLetter(ch):
@@ -175,7 +181,7 @@ func Parse(input string) (Node, error) {
 		return nil, p.err
 	}
 	if p.current.kind != tokEOF {
-		return nil, fmt.Errorf("unexpected token after expression")
+		return nil, errors.New("unexpected token after expression")
 	}
 
 	return node, nil
@@ -197,6 +203,7 @@ func (p *parser) parseOr() Node {
 		right := p.parseAnd()
 		left = &OrNode{Left: left, Right: right}
 	}
+
 	return left
 }
 
@@ -209,6 +216,7 @@ func (p *parser) parseAnd() Node {
 		right := p.parsePrimary()
 		left = &AndNode{Left: left, Right: right}
 	}
+
 	return left
 }
 
@@ -221,6 +229,7 @@ func (p *parser) parsePrimary() Node {
 	case tokRef:
 		node := &RefNode{Index: p.current.index}
 		p.advance()
+
 		return node
 
 	case tokLParen:
@@ -231,13 +240,16 @@ func (p *parser) parsePrimary() Node {
 		}
 		if p.current.kind != tokRParen {
 			p.err = fmt.Errorf("expected ')' but got token kind %v", p.current.kind)
+
 			return nil
 		}
 		p.advance() // consume ')'
+
 		return node
 
 	default:
 		p.err = fmt.Errorf("expected '$N' or '(' at position %d", p.lex.pos)
+
 		return nil
 	}
 }
