@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
@@ -109,7 +108,16 @@ func BenchmarkTransferServiceTransfer(b *testing.B) {
 func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
 	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
 	require.NoError(t, err)
-	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves, idemixnym.IdentityType)
+	proofType := benchmark.ProofType()
+	executorProvider := benchmark.ExecutorProvider()
+	configurations, err := benchmark.NewSetupConfigurationsWithParams(benchmark.SetupParams{
+		IdemixTestdataPath: "./testdata",
+		Bits:               bits,
+		CurveIDs:           curves,
+		OwnerIdentityType:  idemixnym.IdentityType,
+		ProofType:          proofType,
+		ExecutorProvider:   executorProvider,
+	})
 	require.NoError(t, err)
 
 	test := benchmark2.NewTest[*benchmarkTransferEnv](cases)
@@ -231,7 +239,6 @@ func newTransferEnv(benchmarkCase *benchmark2.Case, configurations *benchmark.Se
 		auditInfoProvider,
 		tokenLoader,
 		deserializer,
-		v1.NewMetrics(&disabled.Provider{}),
 		noop.NewTracerProvider(),
 		tokensService,
 	)

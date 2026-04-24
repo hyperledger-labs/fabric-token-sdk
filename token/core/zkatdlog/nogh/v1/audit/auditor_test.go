@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -587,8 +588,9 @@ func createIssue(t *testing.T, pp *v1.PublicParams) (*issue.Action, *driver.Issu
 	com := commit([]*math.Zr{c.HashToZr([]byte(ttype)), value, bf}, pp.PedersenGenerators, c)
 
 	ia := &issue.Action{
-		Issuer:  id,
-		Outputs: []*token.Token{{Owner: id, Data: com}},
+		Issuer:    id,
+		Outputs:   []*token.Token{{Owner: id, Data: com}},
+		ProofType: rp.RangeProofType,
 	}
 
 	meta := &token.Metadata{Type: ttype, Value: value, BlindingFactor: bf}

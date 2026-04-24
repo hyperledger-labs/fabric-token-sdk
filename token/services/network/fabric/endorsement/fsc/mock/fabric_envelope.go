@@ -475,20 +475,6 @@ func (fake *Envelope) TxIDReturnsOnCall(i int, result1 string) {
 func (fake *Envelope) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.bytesMutex.RLock()
-	defer fake.bytesMutex.RUnlock()
-	fake.creatorMutex.RLock()
-	defer fake.creatorMutex.RUnlock()
-	fake.fromBytesMutex.RLock()
-	defer fake.fromBytesMutex.RUnlock()
-	fake.nonceMutex.RLock()
-	defer fake.nonceMutex.RUnlock()
-	fake.resultsMutex.RLock()
-	defer fake.resultsMutex.RUnlock()
-	fake.stringMutex.RLock()
-	defer fake.stringMutex.RUnlock()
-	fake.txIDMutex.RLock()
-	defer fake.txIDMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

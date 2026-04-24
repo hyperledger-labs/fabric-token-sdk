@@ -42,8 +42,8 @@ func (r *GetEnrollmentIDView) Call(context view.Context) (interface{}, error) {
 	tms, err := token.GetManagementService(context, ServiceOpts(r.TMSID)...)
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	w := tms.WalletManager().OwnerWallet(context.Context(), r.Wallet)
-	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
+	w, err := tms.WalletManager().OwnerWallet(context.Context(), r.Wallet)
+	assert.NoError(err, "wallet not found [%s]", r.Wallet)
 
 	return w.EnrollmentID(), nil
 }
@@ -225,13 +225,21 @@ func (p *DoesWalletExistView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(tms, "failed to get TMS")
 	switch p.WalletType {
 	case OwnerWallet:
-		return tms.WalletManager().OwnerWallet(context.Context(), p.Wallet) != nil, nil
+		_, err = tms.WalletManager().OwnerWallet(context.Context(), p.Wallet)
+
+		return err == nil, nil
 	case IssuerWallet:
-		return tms.WalletManager().IssuerWallet(context.Context(), p.Wallet) != nil, nil
+		_, err = tms.WalletManager().IssuerWallet(context.Context(), p.Wallet)
+
+		return err == nil, nil
 	case AuditorWallet:
-		return tms.WalletManager().AuditorWallet(context.Context(), p.Wallet) != nil, nil
+		_, err = tms.WalletManager().AuditorWallet(context.Context(), p.Wallet)
+
+		return err == nil, nil
 	default:
-		return tms.WalletManager().OwnerWallet(context.Context(), p.Wallet) != nil, nil
+		_, err = tms.WalletManager().OwnerWallet(context.Context(), p.Wallet)
+
+		return err == nil, nil
 	}
 }
 

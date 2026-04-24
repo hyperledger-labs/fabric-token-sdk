@@ -156,9 +156,14 @@ clean-fabric-peer-images:
 	docker images -a | grep "_peer_" | awk '{print $3}' | xargs docker rmi
 
 .PHONY: tokengen
-# install tokengen tool
+# install tokengen tool (must build without cgo; see #1445)
 tokengen:
-	@go install ./cmd/tokengen
+	@CGO_ENABLED=0 go install ./cmd/tokengen
+
+.PHONY: artifactgen
+# install artifactgen tool (must build without cgo; see #1445)
+artifactgen:
+	@CGO_ENABLED=0 go install ./cmd/artifactgen
 
 .PHONY: traceinspector
 # install traceinspector tool
@@ -220,7 +225,7 @@ lint-auto-fix:
 # install golangci-lint
 install-linter-tool:
 	@echo "Installing golangci Linter"
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.10.1
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.11.4
 
 .PHONY: fmt
 fmt: ## Run gofmt on the entire project

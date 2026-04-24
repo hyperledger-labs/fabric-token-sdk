@@ -88,7 +88,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 	}
 
 	logger.DebugfContext(ctx, "Create new transfer")
-	transfer, err := NewAction(s.InputIDs, s.Inputs, out, owners, proof)
+	transfer, err := NewAction(s.InputIDs, s.Inputs, out, owners, proof, prover.RangeProofType())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to produce transfer action")
 	}

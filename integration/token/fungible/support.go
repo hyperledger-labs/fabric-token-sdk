@@ -177,8 +177,9 @@ func GetEndorsers(network *integration.Infrastructure, sel *token3.ReplicaSelect
 
 func CheckAuditedTransactions(network *integration.Infrastructure, auditor *token3.NodeReference, expected []TransactionRecord, start *time.Time, end *time.Time) {
 	txsBoxed, err := network.Client(auditor.ReplicaName()).CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
-		From: start,
-		To:   end,
+		From:            start,
+		To:              end,
+		SearchDirection: ttxdb.FromBeginning,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	var txs []*ttxdb.TransactionRecord
@@ -214,6 +215,7 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id *token3.N
 		To:              end,
 		ActionTypes:     actionTypes,
 		Statuses:        statuses,
+		SearchDirection: ttxdb.FromBeginning,
 	}
 	txsBoxed, err := network.Client(id.ReplicaName()).CallView("acceptedTransactionHistory", common.JSONMarshall(&params))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -1002,7 +1004,7 @@ func CheckPublicParamsMatch(network *integration.Infrastructure, tmsId *token2.T
 }
 
 func GetTMSByNetworkName(network *integration.Infrastructure, networkName string) *topology.TMS {
-	tp := tplatform.GetPlatform(network.Ctx, "token")
+	tp := tplatform.GetPlatform(network.NWOCtx, "token")
 	gomega.Expect(tp).NotTo(gomega.BeNil())
 	for _, TMS := range tp.GetTopology().TMSs {
 		if TMS.Network == networkName {
@@ -1013,7 +1015,7 @@ func GetTMSByNetworkName(network *integration.Infrastructure, networkName string
 }
 
 func GetTMSByTMSID(network *integration.Infrastructure, tmsID token2.TMSID) *topology.TMS {
-	tp := tplatform.GetPlatform(network.Ctx, "token")
+	tp := tplatform.GetPlatform(network.NWOCtx, "token")
 	gomega.Expect(tp).NotTo(gomega.BeNil())
 	for _, tms := range tp.GetTopology().TMSs {
 		if tms.Network == tmsID.Network && tms.Channel == tmsID.Channel && tms.Namespace == tmsID.Namespace {
@@ -1024,7 +1026,7 @@ func GetTMSByTMSID(network *integration.Infrastructure, tmsID token2.TMSID) *top
 }
 
 func GetTMSByAlias(network *integration.Infrastructure, alias topology.TMSAlias) *topology.TMS {
-	tp := tplatform.GetPlatform(network.Ctx, "token")
+	tp := tplatform.GetPlatform(network.NWOCtx, "token")
 	gomega.Expect(tp).NotTo(gomega.BeNil())
 	for _, TMS := range tp.GetTopology().TMSs {
 		if TMS.Alias == alias {
@@ -1035,12 +1037,12 @@ func GetTMSByAlias(network *integration.Infrastructure, alias topology.TMSAlias)
 }
 
 func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS) {
-	p := network.Ctx.PlatformsByName["token"]
+	p := network.NWOCtx.PlatformsByName["token"]
 	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 }
 
 func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS, nodes ...*token3.NodeReference) {
-	p := network.Ctx.PlatformsByName["token"]
+	p := network.NWOCtx.PlatformsByName["token"]
 	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 	for _, node := range nodes {
 		if node.Id() == "custodian" {
@@ -1217,7 +1219,7 @@ func Restart(network *integration.Infrastructure, deleteVault bool, onRestart On
 	time.Sleep(10 * time.Second)
 	if deleteVault {
 		for _, id := range ids {
-			for name, platform := range network.Ctx.PlatformsByName {
+			for name, platform := range network.NWOCtx.PlatformsByName {
 				if dv, ok := platform.(deleteVaultPlatform); ok {
 					logger.Infof("Platform %d supports delete vault. Deleting...", name)
 					dv.DeleteVault(id.Id())
@@ -1225,7 +1227,7 @@ func Restart(network *integration.Infrastructure, deleteVault bool, onRestart On
 			}
 
 			// delete token dbs as well
-			tokenPlatform := tplatform.GetPlatform(network.Ctx, "token")
+			tokenPlatform := tplatform.GetPlatform(network.NWOCtx, "token")
 			gomega.Expect(tokenPlatform).ToNot(gomega.BeNil(), "cannot find token platform in context")
 			for _, tms := range tokenPlatform.GetTopology().TMSs {
 				tokenPlatform.DeleteDBs(tms, id.Id())
@@ -1249,7 +1251,7 @@ func Restart(network *integration.Infrastructure, deleteVault bool, onRestart On
 }
 
 func CopyDBsTo(network *integration.Infrastructure, to string, ids ...*token3.NodeReference) {
-	tokenPlatform := tplatform.GetPlatform(network.Ctx, "token")
+	tokenPlatform := tplatform.GetPlatform(network.NWOCtx, "token")
 	gomega.Expect(tokenPlatform).ToNot(gomega.BeNil(), "cannot find token platform in context")
 
 	for _, id := range ids {
@@ -1265,7 +1267,7 @@ func RegisterIssuerIdentity(network *integration.Infrastructure, id *token3.Node
 		Path: walletPath,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	network.Ctx.SetViewClient(walletPath, network.Client(id.ReplicaName()))
+	network.NWOCtx.SetViewClient(walletPath, network.Client(id.ReplicaName()))
 }
 
 func RegisterOwnerIdentity(ctx context.Context, network *integration.Infrastructure, id *token3.NodeReference, identityConfiguration token2.IdentityConfiguration) {
@@ -1274,7 +1276,7 @@ func RegisterOwnerIdentity(ctx context.Context, network *integration.Infrastruct
 			IdentityConfiguration: identityConfiguration,
 		}))
 		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "cannot register owner identity at replica [%s]", replicaName)
-		network.Ctx.SetViewClient(identityConfiguration.ID, network.Client(replicaName))
+		network.NWOCtx.SetViewClient(identityConfiguration.ID, network.Client(replicaName))
 	}
 }
 
@@ -1284,7 +1286,7 @@ func RegisterRecipientData(network *integration.Infrastructure, ref *token3.Node
 		RecipientData: *rd,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	network.Ctx.SetViewClient(walletID, network.Client(ref.ReplicaName()))
+	network.NWOCtx.SetViewClient(walletID, network.Client(ref.ReplicaName()))
 }
 
 func CheckOwnerWalletIDs(network *integration.Infrastructure, owner *token3.NodeReference, ids ...string) {
@@ -1507,7 +1509,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	auditorId := GetAuditorIdentity(tms, auditor)
 	issuerId := GetIssuerIdentity(tms, issuer)
 
-	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*tplatform.Platform)
+	tokenPlatform, ok := network.NWOCtx.PlatformsByName["token"].(*tplatform.Platform)
 	gomega.Expect(ok).To(gomega.BeTrue(), "failed to get token platform from context")
 
 	// Deserialize current params
@@ -1563,7 +1565,7 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 	wrap, err := identity.WrapWithType(x509.IdentityType, identityDescriptor.Identity)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*tplatform.Platform)
+	tokenPlatform, ok := network.NWOCtx.PlatformsByName["token"].(*tplatform.Platform)
 	gomega.Expect(ok).To(gomega.BeTrue(), "failed to get token platform from context")
 
 	// Deserialize current params

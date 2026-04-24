@@ -40,9 +40,9 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	tms, err := token.GetManagementService(context, ServiceOpts(b.TMSID)...)
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "TMSID is nil")
-	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
-	if wallet == nil {
-		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
+	wallet, err := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
+	if err != nil {
+		return nil, fmt.Errorf("wallet %s not found: %w", b.Wallet, err)
 	}
 
 	unspentTokens, err := wallet.ListUnspentTokensIterator(token.WithType(b.Type), token.WithContext(context.Context()))
@@ -103,9 +103,9 @@ type CoOwnedBalanceView struct {
 func (b *CoOwnedBalanceView) Call(context view.Context) (interface{}, error) {
 	tms, err := token.GetManagementService(context, ServiceOpts(b.TMSID)...)
 	assert.NoError(err, "failed getting management service")
-	wallet := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
-	if wallet == nil {
-		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
+	wallet, err := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
+	if err != nil {
+		return nil, fmt.Errorf("wallet %s not found: %w", b.Wallet, err)
 	}
 
 	// co-owned

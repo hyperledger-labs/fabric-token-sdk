@@ -224,8 +224,8 @@ func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err)
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 
-	w := tms.WalletManager().AuditorWallet(context.Context(), "")
-	assert.NotNil(w, "failed getting default auditor wallet")
+	w, err := tms.WalletManager().AuditorWallet(context.Context(), "")
+	assert.NoError(err, "failed getting default auditor wallet")
 
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")

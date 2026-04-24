@@ -50,7 +50,7 @@ func TestNotifierSubscribeError(t *testing.T) {
 			return errors.New("listener failed to start")
 		},
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	db := &Notifier{
 		table:       "test_table",
@@ -85,7 +85,7 @@ func TestNotifierSubscribeClosed(t *testing.T) {
 
 // TestNotifierClose tests that Close properly cleans up resources
 func TestNotifierClose(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec // G118: cancel is stored and called in Close
 	db := &Notifier{
 		table:            "test_table",
 		writeDB:          nil,
@@ -136,7 +136,7 @@ func TestNotifierListenerErrorChannel(t *testing.T) {
 
 // TestNotifierSubscribeAfterClose tests that Subscribe returns error when called after Close
 func TestNotifierSubscribeAfterClose(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec
 	db := &Notifier{
 		table:            "test_table",
 		writeDB:          nil,
@@ -163,7 +163,7 @@ func TestNotifierSubscribeAfterClose(t *testing.T) {
 
 // TestNotifierSubscriberAccessSafety tests that subscriber access is thread-safe
 func TestNotifierSubscriberAccessSafety(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	db := &Notifier{
 		table:       "test_table",
@@ -218,7 +218,7 @@ func TestNotifierSubscriberAccessSafety(t *testing.T) {
 
 // TestNotifierConcurrentSubscribeAndClose tests concurrent Subscribe and Close operations
 func TestNotifierConcurrentSubscribeAndClose(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec
 	db := &Notifier{
 		table:   "test_table",
 		writeDB: nil,

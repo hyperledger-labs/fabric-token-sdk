@@ -135,6 +135,29 @@ The public parameters include three Pedersen generators `[g_0, g_1, g_2]` used f
 - `g_1`: Used for token value commitments
 - `g_2`: Used for blinding factor commitments
 
+### 2.4 Range Proof Systems
+
+**As of commit 586d4f58**, the driver supports **two range proof systems**:
+
+1. **Bulletproofs** (Original implementation)
+   - Based on Inner Product Arguments (IPA)
+   - Proof size: O(log n) where n is the bit length
+   - Verification time: O(n) group operations
+   - Implementation: [`crypto/rp/bulletproof/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof/)
+
+2. **Compressed Sigma Protocols (CSP)** (New implementation)
+   - Based on recursive folding with Fiat-Shamir
+   - Proof size: O(log n) where n is the bit length
+   - Faster verification through Lagrange interpolation optimizations
+   - Implementation: [`crypto/rp/csp/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/csp/)
+
+The proof system is selected via the `ProofType` parameter in `SetupParams`:
+- `rp.Bulletproof` - Uses Bulletproof range proofs (default)
+- `rp.CSP` - Uses Compressed Sigma Protocol range proofs
+
+**Performance Comparison**: CSP proofs offer improved verification performance through optimized Lagrange interpolation, particularly beneficial for high-throughput scenarios. 
+See [benchmark documentation](./benchmark/core/dlognogh/dlognogh.md) for detailed performance metrics.
+
 ---
 
 ## 3. Architecture Overview
@@ -245,23 +268,47 @@ type PublicParams struct {
 
 ### 4.2 Range Proof Parameters
 
+The driver supports two types of range proof parameters depending on the selected proof system:
+
+#### 4.2.1 Bulletproof Parameters
+
 ```go
 type RangeProofParams struct {
     LeftGenerators  []*mathlib.G1  // Length = BitLength
     RightGenerators []*mathlib.G1  // Length = BitLength
     P               *mathlib.G1    // Base point for IPA
     Q               *mathlib.G1    // Base point for IPA
-    BitLength       uint64         // 16, 32, or 64
+    BitLength       uint64         // Arbitrary number between 1 and 64 (included)
     NumberOfRounds  uint64         // log2(BitLength)
 }
 ```
 
-**Supported Precisions**: The driver supports three precision levels, defined in [`setup.go`](../../token/core/zkatdlog/nogh/v1/setup/setup.go):
-- **16-bit**: Maximum value 65,535 (2^16 - 1)
-- **32-bit**: Maximum value 4,294,967,295 (2^32 - 1)
-- **64-bit**: Maximum value 18,446,744,073,709,551,615 (2^64 - 1)
+#### 4.2.2 CSP Range Proof Parameters
 
-The precision determines both the maximum token value and the size of the range proofs. Higher precision allows larger token values but results in larger proofs and slower verification.
+```go
+type CSPRangeProofParams struct {
+    LeftGenerators  []*mathlib.G1  // Length = BitLength + 1
+    RightGenerators []*mathlib.G1  // Length = BitLength + 1
+    BitLength       uint64         // Arbitrary number between 1 and 64 (included)
+}
+```
+
+**Key Differences**:
+- CSP parameters do not require P and Q base points (used only in Bulletproof IPA)
+- CSP generators have length `BitLength + 1` (one extra generator for the protocol)
+- CSP does not use NumberOfRounds (computed internally as needed)
+
+**Selection**: The appropriate parameter structure is populated based on the `ProofType` specified during setup. Only one set of parameters is included in the serialized `PublicParams`.
+
+**Supported Precisions**: Any number between 1 and 64 is accepted. 
+For the CSP-based range proof, since CSP inner product argument is over 2n+4 sized vector, 
+bit lengths of 30 or 62 are ideal because it makes 2n+4 a power of 2, i.e, 64 and 128 respectively. 
+This avoids performance hit from overflowing to next power of two. 
+Sacrificing 2 bits from the range is perhaps worth the performance.
+This is ultimately a decision that must be driven by the requirements of the specific use-case.
+
+The precision determines both the maximum token value and the size of the range proofs. 
+Higher precision allows larger token values but results in larger proofs and slower verification.
 
 ### 4.3 TMS Instantiation
 
@@ -457,13 +504,17 @@ sequenceDiagram
    - $z_{bf,i} = s_{bf,i} + c \cdot (r_{in,i} - r_T)$
    - $z_{sum} = s_{sum} + c \cdot \sum ( (r_{in,i} - r_T) - (r_{out,j} - r_T) )$
 
-### 7.2 Range Proof (Bulletproofs)
+### 7.2 Range Proofs
+
+The driver supports two range proof systems. The choice is made during public parameter setup and affects proof generation and verification.
+
+#### 7.2.1 Bulletproof Range Proofs
 
 Each output $C_{out,j}$ includes a **Bulletproof** showing $V_j \in [0, 2^{64}-1]$. It uses an **Inner Product Argument (IPA)** to achieve $O(\log n)$ proof size.
 
-**Implementation**: [`crypto/rp/bulletproof.go`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof.go)
+**Implementation**: [`crypto/rp/bulletproof/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof/)
 
-#### 7.2.1 Bulletproof Structure
+**Bulletproof Structure**:
 
 ```go
 type RangeProof struct {
@@ -478,11 +529,49 @@ type RangeProof struct {
 }
 ```
 
-#### 7.2.2 Performance
-
+**Performance**:
 - **Proof Size**: $O(\log n)$ where $n$ is the bit length
 - **Verification Time**: $O(n)$ group operations
 - **Prover Time**: $O(n \log n)$ group operations
+
+#### 7.2.2 Compressed Sigma Protocol (CSP) Range Proofs
+
+**New in commit 586d4f58**: CSP-based range proofs using recursive folding with Fiat-Shamir transformation.
+
+**Implementation**: [`crypto/rp/csp/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/csp/)
+
+**CSP Proof Structure**:
+
+```go
+type CSPProof struct {
+    Left   []*mathlib.G1  // Cross-commitment MSM(gen_L, wit_R)
+    Right  []*mathlib.G1  // Cross-commitment MSM(gen_R, wit_L)
+    VLeft  []*mathlib.Zr  // Cross scalar ⟨f_L, wit_R⟩
+    VRight []*mathlib.Zr  // Cross scalar ⟨f_R, wit_L⟩
+    Curve  *mathlib.Curve
+}
+```
+
+**Protocol Overview**:
+
+At each of the `NumberOfRounds` folding steps, the prover supplies:
+- `Left[i]` = MSM(gen_L, wit_R) — cross-commitment
+- `Right[i]` = MSM(gen_R, wit_L) — cross-commitment  
+- `VLeft[i]` = ⟨f_L, wit_R⟩ — cross scalar
+- `VRight[i]` = ⟨f_R, wit_L⟩ — cross scalar
+
+The verifier reproduces Fiat-Shamir challenges and performs final verification using Lagrange interpolation.
+
+**Performance**:
+- **Proof Size**: $O(\log n)$ where $n$ is the bit length (similar to Bulletproofs)
+- **Verification Time**: Improved through optimized Lagrange interpolation
+- **Prover Time**: Comparable to Bulletproofs with recursive folding
+
+**Key Advantages**:
+- Native field arithmetic optimizations for BN254 and BLS12-381 curves
+- Batch inverse computation for efficiency
+- Optimized Lagrange coefficient calculation
+- Reduced verification overhead in high-throughput scenarios
 
 ---
 
@@ -1430,8 +1519,6 @@ The security of ZKAT-DLOG (NOGH) relies on:
 - Timing attacks (constant-time operations)
 - Cache attacks (memory access patterns)
 - Power analysis (where applicable)
-
----
 
 ## 13. Implementation Details
 

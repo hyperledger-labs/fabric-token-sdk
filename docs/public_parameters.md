@@ -37,7 +37,7 @@ In a standard Hyperledger Fabric network, public parameters are managed by the *
 
 ### FabricX
 In FabricX, public parameters are managed through a dedicated **Public Parameters Service** and the **Vault**.
-1.  **Publication**: Parameters are written to the ledger (e.g., Orion or a similar backend) under a well-known setup key within the token namespace.
+1.  **Publication**: Parameters are written to the ledger under a well-known setup key within the token namespace.
 2.  **Query Service**: FSC nodes use the `FabricX` Query Service to fetch these parameters directly from the vault's world state.
 
 ---

@@ -340,6 +340,13 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 
 	inComs := make([]*math.G1, len(inputs))
 
+	// Negate the challenge once. Used with Mul2InPlace to fold each
+	// subtraction into a fused multiply-add, eliminating one temporary
+	// G1 allocation per input plus two more for sumCom and typeCom.
+	negChal := stp.Challenge.Copy()
+	negChal.Neg()
+	one := v.Curve.NewZrFromInt(1)
+
 	for i := range len(v.Inputs) {
 		if stp.InputValues[i] == nil {
 			return ErrMissingSumAndTypeInputValue
@@ -348,8 +355,13 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 		inputs[i].Sub(stp.CommitmentToType)
 		sum.Add(inputs[i])
 
+		// inComs[i] = PedParams[1]·InputValues[i] + PedParams[2]·InputBF[i]
+		//           - inputs[i]·Challenge
+		// Step 1: two-point MSM into inComs[i] (one allocation, unavoidable)
 		inComs[i] = v.PedParams[1].Mul2(stp.InputValues[i], v.PedParams[2], stp.InputBlindingFactors[i])
-		inComs[i].Sub(inputs[i].Mul(stp.Challenge))
+		// Step 2: fused multiply-add in-place: inComs[i] = 1·inComs[i] + negChal·inputs[i]
+		// Replaces inputs[i].Mul(stp.Challenge) which allocated a temporary G1.
+		inComs[i].Mul2InPlace(one, inputs[i], negChal)
 	}
 
 	for i := range len(v.Outputs) {
@@ -358,11 +370,13 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 		sum.Sub(outputs[i])
 	}
 
+	// sumCom = PedParams[2]·EqualityOfSum - sum·Challenge
 	sumCom := v.PedParams[2].Mul(stp.EqualityOfSum)
-	sumCom.Sub(sum.Mul(stp.Challenge))
+	sumCom.Mul2InPlace(one, sum, negChal)
 
+	// typeCom = PedParams[0]·Type + PedParams[2]·TypeBF - CommitmentToType·Challenge
 	typeCom := v.PedParams[0].Mul2(stp.Type, v.PedParams[2], stp.TypeBlindingFactor)
-	typeCom.Sub(stp.CommitmentToType.Mul(stp.Challenge))
+	typeCom.Mul2InPlace(one, stp.CommitmentToType, negChal)
 
 	raw, err := crypto.GetG1Array(inComs, []*math.G1{typeCom, sumCom}, inputs, outputs, []*math.G1{stp.CommitmentToType, sum}).Bytes()
 	if err != nil {

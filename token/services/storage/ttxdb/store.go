@@ -78,6 +78,16 @@ const (
 	Redeem = dbdriver.Redeem
 )
 
+// SearchDirection defines the direction of a search.
+type SearchDirection = dbdriver.SearchDirection
+
+const (
+	// FromLast defines the direction of a search from the last key.
+	FromLast = dbdriver.FromLast
+	// FromBeginning defines the direction of a search from the first key.
+	FromBeginning = dbdriver.FromBeginning
+)
+
 // TransactionRecord is a more finer-grained version of a movement record.
 // Given a Token Transaction, for each token action in the Token Request,
 // a transaction record is created for each unique enrollment ID found in the outputs.
@@ -199,6 +209,10 @@ func (d *StoreService) TokenRequests(ctx context.Context, params QueryTokenReque
 	return d.db.QueryTokenRequests(ctx, params)
 }
 
+func (d *StoreService) NewTransaction() (dbdriver.TransactionStoreTransaction, error) {
+	return d.db.NewTransactionStoreTransaction()
+}
+
 // ValidationRecords returns an iterators of validation records filtered by the given params.
 func (d *StoreService) ValidationRecords(ctx context.Context, params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
 	it, err := d.db.QueryValidations(ctx, params)
@@ -234,7 +248,7 @@ func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.R
 	}
 
 	logger.DebugfContext(ctx, "storing new records... [%d,%d]", len(raw), len(txs))
-	w, err := d.db.BeginAtomicWrite()
+	w, err := d.db.NewTransactionStoreTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
@@ -317,7 +331,7 @@ func (d *StoreService) GetTransactionEndorsementAcks(ctx context.Context, txID s
 func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver2.PPHash) error {
 	logger.DebugfContext(ctx, "appending new validation record... [%s]", txID)
 
-	w, err := d.db.BeginAtomicWrite()
+	w, err := d.db.NewTransactionStoreTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
@@ -336,6 +350,47 @@ func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, 
 		return errors.WithMessagef(err, "append validation record commit for txid [%s] failed", txID)
 	}
 	logger.DebugfContext(ctx, "appending validation record completed without errors")
+
+	return nil
+}
+
+// AcquireRecoveryLeadership tries to acquire the DB-backed recovery leadership lease.
+func (d *StoreService) AcquireRecoveryLeadership(ctx context.Context, lockID int64) (dbdriver.RecoveryLeadership, bool, error) {
+	leadership, acquired, err := d.db.AcquireRecoveryLeadership(ctx, lockID)
+	if err != nil {
+		return nil, false, errors.Wrapf(err, "failed to acquire recovery leadership")
+	}
+
+	return leadership, acquired, nil
+}
+
+// ClaimPendingTransactions returns a claimed batch of Pending transactions older than the given duration.
+func (d *StoreService) ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*TransactionRecord, error) {
+	storedBefore := time.Now().UTC().Add(-olderThan)
+	logger.DebugfContext(ctx, "claiming pending transactions stored before %s (older than %s), lease duration [%s], limit [%d], owner [%s]",
+		storedBefore, olderThan, leaseDuration, limit, owner)
+
+	records, err := d.db.ClaimPendingTransactions(ctx, dbdriver.RecoveryClaimParams{
+		OlderThan:     storedBefore,
+		LeaseDuration: leaseDuration,
+		Limit:         limit,
+		Owner:         owner,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to claim pending transactions")
+	}
+
+	logger.DebugfContext(ctx, "claimed %d pending transactions older than %s for owner [%s]", len(records), olderThan, owner)
+
+	return records, nil
+}
+
+// ReleaseRecoveryClaim clears the recovery claim for the passed transaction if owned by owner.
+// The message parameter is stored for audit/debugging purposes.
+func (d *StoreService) ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error {
+	if err := d.db.ReleaseRecoveryClaim(ctx, txID, owner, message); err != nil {
+		return errors.Wrapf(err, "failed to release recovery claim for tx [%s]", txID)
+	}
 
 	return nil
 }
@@ -425,8 +480,8 @@ func Movements(ctx context.Context, record *token.AuditRecord, created time.Time
 		for _, tokenType := range tokenTypes {
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			diff := received.Sub(received, sent)
-			if sent == received {
+			diff := new(big.Int).Sub(received, sent)
+			if sent.Cmp(received) == 0 {
 				continue
 			}
 

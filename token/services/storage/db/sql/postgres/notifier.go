@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -34,7 +35,7 @@ type databaseListener interface {
 	// Listen starts listening for database notifications
 	Listen(context.Context) error
 	// Handle registers a handler for notifications on a specific table
-	Handle(string, pgxlisten.Handler)
+	Handle(channelName string, handler pgxlisten.Handler)
 }
 
 // Notifier implements a simple subscription API to listen for updates on a database table.
@@ -69,6 +70,9 @@ type Notifier struct {
 	listenerWg sync.WaitGroup
 	// closed indicates whether the notifier has been closed
 	closed bool
+	// channelName is the name of the channel on which to receive notifications.
+	// It must be smaller than 63 characters per Postgres limit
+	channelName string
 }
 
 var logger = logging.MustGetLogger()
@@ -108,7 +112,7 @@ func NewNotifier(
 	notifyOperations []driver.Operation,
 	primaryKeys ...PrimaryKey,
 ) *Notifier {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec
 
 	// Create a real listener that implements the databaseListener interface
 	realListener := &listenerAdapter{
@@ -121,6 +125,8 @@ func NewNotifier(
 		},
 	}
 
+	channelName := pgChannelName(table)
+
 	n := &Notifier{
 		writeDB:          writeDB,
 		table:            table,
@@ -131,10 +137,11 @@ func NewNotifier(
 		cancel:           cancel,
 		listenerErr:      make(chan error, 1), // buffered to prevent blocking
 		closed:           false,
+		channelName:      channelName,
 	}
 
 	// attach handler that calls the subscribers
-	n.listener.Handle(table, &notificationHandler{
+	n.listener.Handle(channelName, &notificationHandler{
 		table:       table,
 		primaryKeys: primaryKeys,
 		callback:    n.dispatch,
@@ -313,7 +320,7 @@ func (db *Notifier) GetSchema() string {
 		lock,
 		funcName,
 		concatenateIDs(primaryKeys),
-		db.table,
+		db.channelName,
 		db.table,
 		convertOperations(db.notifyOperations), db.table,
 		funcName,
@@ -346,8 +353,8 @@ func (a *listenerAdapter) Listen(ctx context.Context) error {
 }
 
 // Handle delegates to the wrapped listener
-func (a *listenerAdapter) Handle(table string, handler pgxlisten.Handler) {
-	a.Listener.Handle(table, handler)
+func (a *listenerAdapter) Handle(channelName string, handler pgxlisten.Handler) {
+	a.Listener.Handle(channelName, handler)
 }
 
 // notificationHandler handles database notifications and invokes subscribers
@@ -434,4 +441,11 @@ func createLockTag(m string) int64 {
 	h := sha256.Sum256([]byte(m))
 
 	return int64(binary.BigEndian.Uint64(h[:])) //nolint:gosec
+}
+
+func pgChannelName(input string) string {
+	const prefix = "notify_"
+	sum := sha256.Sum256([]byte(input))
+
+	return prefix + hex.EncodeToString(sum[:])[:16] // 23 chars total
 }

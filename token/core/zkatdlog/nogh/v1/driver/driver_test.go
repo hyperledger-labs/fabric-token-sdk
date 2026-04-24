@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -50,7 +51,7 @@ func TestNewDriver(t *testing.T) {
 	networkProvider := &mock2.NetworkProvider{}
 	vaultProvider := &mock2.VaultProvider{}
 
-	factory := driver.NewDriver(
+	factory := driver.NewTokenDriver(
 		metricsProvider,
 		noop.NewTracerProvider(),
 		configService,
@@ -75,7 +76,7 @@ func TestNewTokenService(t *testing.T) {
 	networkProvider := &mock2.NetworkProvider{}
 	vaultProvider := &mock2.VaultProvider{}
 
-	d := driver.NewDriver(
+	d := driver.NewTokenDriver(
 		metricsProvider,
 		noop.NewTracerProvider(),
 		configService,
@@ -88,7 +89,14 @@ func TestNewTokenService(t *testing.T) {
 
 	tmsID := tdriver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"}
 	issuerPK := testingHelper(t)
-	pp, err := setup.NewWith(setup.DLogNoGHDriverName, setup.ProtocolV1, 32, issuerPK, math3.FP256BN_AMCL)
+	pp, err := setup.NewWith(setup.SetupParams{
+		DriverName:     setup.DLogNoGHDriverName,
+		DriverVersion:  setup.ProtocolV1,
+		BitLength:      32,
+		IdemixIssuerPK: issuerPK,
+		CurveID:        math3.FP256BN_AMCL,
+		ProofType:      rp.RangeProofType,
+	})
 	require.NoError(t, err)
 	pp.AddIssuer([]byte("issuer-1"))
 	pp.AddAuditor([]byte("auditor-1"))
@@ -171,35 +179,18 @@ func TestNewTokenService(t *testing.T) {
 
 // TestNewDefaultValidator tests the creation of a default zkatdlog validator.
 func TestNewDefaultValidator(t *testing.T) {
-	metricsProvider := &disabled.Provider{}
-	configService := &mock2.ConfigService{}
-	storageProvider := &imock.StorageProvider{}
-	identityProvider := &mock2.IdentityProvider{}
-	endpointService := &idmock.NetworkBinderService{}
-	networkProvider := &mock2.NetworkProvider{}
-	vaultProvider := &mock2.VaultProvider{}
-
-	d := driver.NewDriver(
-		metricsProvider,
-		noop.NewTracerProvider(),
-		configService,
-		storageProvider,
-		identityProvider,
-		endpointService,
-		networkProvider,
-		vaultProvider,
-	).Driver.(*driver.Driver)
+	d := driver.NewValidatorDriver().Driver
 
 	issuerPK := testingHelper(t)
 	pp, _ := setup.Setup(32, issuerPK, math3.FP256BN_AMCL)
 
 	// Case 1: Valid public parameters
-	v, err := d.NewDefaultValidator(pp)
+	v, err := d.NewValidator(pp)
 	require.NoError(t, err)
 	assert.NotNil(t, v)
 
 	// Case 2: Invalid public parameters type
-	v, err = d.NewDefaultValidator(&dmock.PublicParameters{})
+	v, err = d.NewValidator(&dmock.PublicParameters{})
 	require.Error(t, err)
 	assert.Nil(t, v)
 	assert.Contains(t, err.Error(), "invalid public parameters type")
@@ -308,6 +299,7 @@ func TestDeserializers(t *testing.T) {
 	res, err := ppd.DeserializePublicParams(ppBytes, setup.DLogNoGHDriverName, setup.ProtocolV1)
 	require.NoError(t, err)
 	assert.NotNil(t, res)
+	require.NoError(t, res.Validate())
 
 	eidrh := driver.NewEIDRHDeserializer()
 	assert.NotNil(t, eidrh)

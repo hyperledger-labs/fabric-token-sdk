@@ -10,11 +10,11 @@ import (
 	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
+	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/committer/queryservice"
 	finalityx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/core/finality"
-	fabricx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -24,17 +24,16 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	config3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	endorsement2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/endorsement"
 	finality2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/finality/queue"
 	lookup2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/lookup"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/qe"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"go.opentelemetry.io/otel/trace"
@@ -54,9 +53,10 @@ func NewDriver(
 	tracerProvider trace.TracerProvider,
 	identityProvider view.IdentityProvider,
 	ppFetcher *pp2.PublicParametersService,
-	configService driver2.ConfigService,
+	configService cdriver.ConfigService,
 	qsProvider queryservice.Provider,
-	storeServiceManager ttxdb.StoreServiceManager,
+	ttxStoreServiceManager ttxdb.StoreServiceManager,
+	auditStoreServiceManager auditdb.StoreServiceManager,
 	queryServiceProvider queryservice.Provider,
 	finalityProvider *finalityx.Provider,
 	metricsProvider metrics.Provider,
@@ -65,12 +65,6 @@ func NewDriver(
 	kt := &keys.Translator{}
 
 	queryExecutorProvider := qe.NewExecutorProvider(qsProvider)
-
-	// In FabricX, we only support 'notification' finality type
-	lmCfg := config2.NewListenerManagerConfig(configService)
-	if lmCfg.Type() != config3.Notification {
-		return nil, errors.Errorf("invalid finality type [%s], expected [%s]", lmCfg.Type(), config3.Notification)
-	}
 
 	// Load event queue configuration from token.finality.notification
 	qCfg := queue.NewConfig(configService)
@@ -84,6 +78,8 @@ func NewDriver(
 	}
 
 	d := &Driver{
+		ttxStoreServiceManager:     ttxStoreServiceManager,
+		auditStoreServiceManager:   auditStoreServiceManager,
 		fnsProvider:                fnsProvider,
 		tokensManager:              tokensManager,
 		configService:              configs,
@@ -112,7 +108,7 @@ func NewDriver(
 			kt,
 			vkp,
 			tmsProvider,
-			endorsement2.NewStorageProvider(storeServiceManager),
+			endorsement2.NewStorageProvider(ttxStoreServiceManager),
 			fnsProvider,
 		),
 		setupListenerProvider: lookup2.NewSetupListenerProvider(
@@ -120,7 +116,8 @@ func NewDriver(
 			tokensManager,
 			vkp,
 		),
-		supportedDrivers: []string{fabricx.FabricxDriverName},
+		supportedDrivers: []string{fabricx.DriverName},
+		metricsProvider:  metricsProvider,
 	}
 
 	return d, nil
@@ -128,6 +125,8 @@ func NewDriver(
 
 // Driver models the FabricX network driver.
 type Driver struct {
+	ttxStoreServiceManager     ttxdb.StoreServiceManager
+	auditStoreServiceManager   auditdb.StoreServiceManager
 	fnsProvider                *fabric2.NetworkServiceProvider
 	tokensManager              *tokens.ServiceManager
 	configService              *config.Service
@@ -144,6 +143,7 @@ type Driver struct {
 	EndorsementServiceProvider fabric.EndorsementServiceProvider
 	setupListenerProvider      fabric.SetupListenerProvider
 	queryExecutorProvider      *qe.ExecutorProvider
+	metricsProvider            metrics.Provider
 }
 
 // New returns a new Network instance for the specified network and channel.
@@ -187,6 +187,8 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 	logger.Debugf("fabricx network [%s:%s] with driver [%s] ready to be created...", network, channel, fns.ConfigService().DriverName())
 
 	return NewNetwork(
+		d.ttxStoreServiceManager,
+		d.auditStoreServiceManager,
 		fns,
 		ch,
 		d.configService,
@@ -204,5 +206,6 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		flm,
 		llm,
 		d.setupListenerProvider,
+		d.metricsProvider,
 	), nil
 }

@@ -94,7 +94,7 @@ func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platf
 
 // GetPlatform returns the token platform from the passed context bound to the passed id.
 // It returns nil, if nothing is found
-func GetPlatform(ctx *context.Context, id string) PF {
+func GetPlatform(ctx *context.NWOContext, id string) PF {
 	p := ctx.PlatformByName(id)
 	if p == nil {
 		return nil
@@ -271,7 +271,6 @@ func (p *Platform) UpdatePublicParams(tms *topology2.TMS, publicParams []byte) {
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TokenSelector": func() string { return p.Topology.TokenSelector },
-		"FinalityType":  func() string { return string(p.Topology.FinalityType) },
 	}).Parse(Extension)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 

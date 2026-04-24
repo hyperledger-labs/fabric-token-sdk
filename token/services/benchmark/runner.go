@@ -36,6 +36,10 @@ func NewConfig(workers int, duration time.Duration, warmupDuration time.Duration
 type Result struct {
 	Config     Config
 	GoRoutines int // Workers (kept for compatibility)
+	// GoRoutinesCreated is the net number of goroutines observed above the
+	// baseline during the recording window. It reflects scheduler pressure
+	// caused by the executor strategy (serial≈0, unbounded=n, pool=fixed).
+	GoRoutinesCreated int64
 
 	// Throughput
 	OpsTotal      uint64
@@ -141,12 +145,13 @@ func RunBenchmark[T any](
 	time.Sleep(50 * time.Millisecond)
 
 	var (
-		running     atomic.Bool
-		recording   atomic.Bool
-		opsCounter  atomic.Uint64
-		startWg     sync.WaitGroup
-		endWg       sync.WaitGroup
-		startGlobal time.Time
+		running        atomic.Bool
+		recording      atomic.Bool
+		opsCounter     atomic.Uint64
+		startWg        sync.WaitGroup
+		endWg          sync.WaitGroup
+		startGlobal    time.Time
+		peakGoroutines atomic.Int64
 	)
 
 	running.Store(true)
@@ -246,6 +251,11 @@ func RunBenchmark[T any](
 	var monitorWg sync.WaitGroup
 	monitorWg.Add(1)
 
+	// Baseline goroutine count: workers + monitor + main + any framework goroutines.
+	// Captured just before recording so executor goroutines are not yet active.
+	goroutineBaseline := int64(runtime.NumGoroutine())
+	peakGoroutines.Store(goroutineBaseline)
+
 	go func() {
 		defer monitorWg.Done()
 		ticker := time.NewTicker(1 * time.Second)
@@ -265,6 +275,20 @@ func RunBenchmark[T any](
 				prevOps = currOps
 				pt := TimePoint{Timestamp: t.Sub(startTime), OpsSec: float64(delta)}
 				timeline = append(timeline, pt)
+
+				// Track peak goroutine count during recording.
+				// Unbounded executors spawn goroutines per proof that live
+				// microseconds — we sample every tick to catch their peak.
+				current := int64(runtime.NumGoroutine())
+				for {
+					old := peakGoroutines.Load()
+					if current <= old {
+						break
+					}
+					if peakGoroutines.CompareAndSwap(old, current) {
+						break
+					}
+				}
 			}
 		}
 	}()
@@ -280,7 +304,12 @@ func RunBenchmark[T any](
 
 	runtime.ReadMemStats(&memAfter)
 
-	return analyzeResults(cfg, workerResults, memBytes, memAllocs, memBefore, memAfter, globalDuration, timeline)
+	goroutinesCreated := peakGoroutines.Load() - goroutineBaseline
+	if goroutinesCreated < 0 {
+		goroutinesCreated = 0
+	}
+
+	return analyzeResults(cfg, workerResults, memBytes, memAllocs, memBefore, memAfter, globalDuration, timeline, goroutinesCreated)
 }
 
 func measureMemory[T any](setup func() T, work func(T) error) (bytes, allocs uint64) {
@@ -309,6 +338,7 @@ func analyzeResults(
 	mStart, mEnd runtime.MemStats,
 	duration time.Duration,
 	timeline []TimePoint,
+	goroutinesCreated int64,
 ) Result {
 	var totalOps uint64
 	var totalErrors uint64
@@ -407,36 +437,37 @@ func analyzeResults(
 	allocRate := (float64(mEnd.TotalAlloc-mStart.TotalAlloc) / 1024 / 1024) / duration.Seconds()
 
 	return Result{
-		Config:        cfg,
-		GoRoutines:    cfg.Workers,
-		OpsTotal:      totalOps,
-		Duration:      duration,
-		OpsPerSecReal: opsPerSecReal,
-		OpsPerSecPure: opsPerSecPure,
-		AvgLatency:    avgLatency,
-		StdDevLatency: stdDev,
-		Variance:      variance,
-		P50Latency:    p50,
-		P75Latency:    p75,
-		P95Latency:    p95,
-		P99Latency:    p99,
-		P999Latency:   p999,
-		P9999Latency:  p9999,
-		MinLatency:    minLat,
-		MaxLatency:    maxLat,
-		IQR:           iqr,
-		Jitter:        jitter,
-		CoeffVar:      coeffVar,
-		BytesPerOp:    memBytes,
-		AllocsPerOp:   memAllocs,
-		AllocRateMBPS: allocRate,
-		NumGC:         numGC,
-		GCPauseTotal:  time.Duration(pauseNs), // #nosec G115
-		GCOverhead:    gcOverhead,
-		ErrorCount:    totalErrors,
-		ErrorRate:     (float64(totalErrors) / float64(totalOps)) * 100,
-		Histogram:     calcHistogramImproved(allLatencies, minLat, maxLat, 20),
-		Timeline:      timeline,
+		Config:            cfg,
+		GoRoutines:        cfg.Workers,
+		OpsTotal:          totalOps,
+		Duration:          duration,
+		OpsPerSecReal:     opsPerSecReal,
+		OpsPerSecPure:     opsPerSecPure,
+		AvgLatency:        avgLatency,
+		StdDevLatency:     stdDev,
+		Variance:          variance,
+		P50Latency:        p50,
+		P75Latency:        p75,
+		P95Latency:        p95,
+		P99Latency:        p99,
+		P999Latency:       p999,
+		P9999Latency:      p9999,
+		MinLatency:        minLat,
+		MaxLatency:        maxLat,
+		IQR:               iqr,
+		Jitter:            jitter,
+		CoeffVar:          coeffVar,
+		BytesPerOp:        memBytes,
+		AllocsPerOp:       memAllocs,
+		AllocRateMBPS:     allocRate,
+		NumGC:             numGC,
+		GCPauseTotal:      time.Duration(pauseNs), // #nosec G115
+		GCOverhead:        gcOverhead,
+		ErrorCount:        totalErrors,
+		ErrorRate:         (float64(totalErrors) / float64(totalOps)) * 100,
+		Histogram:         calcHistogramImproved(allLatencies, minLat, maxLat, 20),
+		Timeline:          timeline,
+		GoRoutinesCreated: goroutinesCreated,
 	}
 }
 
@@ -575,6 +606,7 @@ func (r Result) printSystemHealth(w *tabwriter.Writer) {
 	writef(w, " GC Overhead\t%.2f%%\t%s\n", r.GCOverhead, gcStatus)
 	writef(w, " GC Pause\t%v\tTotal Stop-The-World time\n", r.GCPauseTotal)
 	writef(w, " GC Cycles\t%d\tFull garbage collection cycles\n", r.NumGC)
+	writef(w, " Goroutines Created\t%d\tNet goroutines above baseline during recording\n", r.GoRoutinesCreated)
 	writeLine(w, "")
 }
 
@@ -689,7 +721,7 @@ func (r Result) printAnalysis(w *tabwriter.Writer, cvPct float64, tailRatio floa
 // --- HELPER FUNCTIONS ---
 
 func writef(w *tabwriter.Writer, format string, a ...interface{}) {
-	_, _ = fmt.Fprintf(w, format, a...) //nolint:gosec // G705: w is a tabwriter.Writer for CLI output, not HTTP
+	_, _ = fmt.Fprintf(w, format, a...)
 }
 
 func writeLine(w *tabwriter.Writer, s string) {

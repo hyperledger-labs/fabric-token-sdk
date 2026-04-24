@@ -58,8 +58,9 @@ func (i *ListIssuedTokensViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type ListAuditedTransactions struct {
-	From *time.Time
-	To   *time.Time
+	From            *time.Time
+	To              *time.Time
+	SearchDirection ttxdb.SearchDirection
 }
 
 type ListAuditedTransactionsView struct {
@@ -79,7 +80,7 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 		return nil, errors.Wrapf(err, "failed to get auditor instance")
 	}
 
-	it, err := auditor.Transactions(context.Context(), ttxdb.QueryTransactionsParams{From: p.From, To: p.To}, pagination.None())
+	it, err := auditor.Transactions(context.Context(), ttxdb.QueryTransactionsParams{From: p.From, To: p.To, SearchDirection: p.SearchDirection}, pagination.None())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying transactions")
 	}
@@ -108,6 +109,7 @@ type ListAcceptedTransactions struct {
 	Statuses        []ttxdb.TxStatus
 	TMSID           *token.TMSID
 	IDs             []string
+	SearchDirection ttxdb.SearchDirection
 }
 
 type ListAcceptedTransactionsView struct {
@@ -127,6 +129,7 @@ func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, 
 		ActionTypes:     p.ActionTypes,
 		Statuses:        p.Statuses,
 		IDs:             p.IDs,
+		SearchDirection: p.SearchDirection,
 	}, pagination.None())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed querying transactions")

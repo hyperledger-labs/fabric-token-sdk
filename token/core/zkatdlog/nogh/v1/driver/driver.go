@@ -26,7 +26,7 @@ import (
 
 // Driver contains the non-static logic of the zkatdlog driver (including services).
 type Driver struct {
-	*Base
+	BaseWalletServiceFactory
 	metricsProvider  cdriver.MetricsProvider
 	tracerProvider   cdriver.TracerProvider
 	configService    cdriver.ConfigService
@@ -37,8 +37,8 @@ type Driver struct {
 	vaultProvider    cdriver.VaultProvider
 }
 
-// NewDriver returns a new factory for the zkatdlog driver.
-func NewDriver(
+// NewTokenDriver returns a new factory for the zkatdlog driver.
+func NewTokenDriver(
 	metricsProvider cdriver.MetricsProvider,
 	tracerProvider cdriver.TracerProvider,
 	configService cdriver.ConfigService,
@@ -50,17 +50,38 @@ func NewDriver(
 ) core.NamedFactory[driver.Driver] {
 	return core.NamedFactory[driver.Driver]{
 		Name: core.DriverIdentifier(v1setup.DLogNoGHDriverName, v1setup.ProtocolV1),
-		Driver: &Driver{
-			Base:             &Base{},
-			metricsProvider:  metricsProvider,
-			tracerProvider:   tracerProvider,
-			configService:    configService,
-			storageProvider:  storageProvider,
-			identityProvider: identityProvider,
-			endpointService:  endpointService,
-			networkProvider:  networkProvider,
-			vaultProvider:    vaultProvider,
-		},
+		Driver: newTokenDriver(
+			metricsProvider,
+			tracerProvider,
+			configService,
+			storageProvider,
+			identityProvider,
+			endpointService,
+			networkProvider,
+			vaultProvider,
+		),
+	}
+}
+
+func newTokenDriver(
+	metricsProvider cdriver.MetricsProvider,
+	tracerProvider cdriver.TracerProvider,
+	configService cdriver.ConfigService,
+	storageProvider cdriver.StorageProvider,
+	identityProvider cdriver.IdentityProvider,
+	endpointService cdriver.NetworkBinderService,
+	networkProvider cdriver.NetworkProvider,
+	vaultProvider cdriver.VaultProvider,
+) *Driver {
+	return &Driver{
+		metricsProvider:  metricsProvider,
+		tracerProvider:   tracerProvider,
+		configService:    configService,
+		storageProvider:  storageProvider,
+		identityProvider: identityProvider,
+		endpointService:  endpointService,
+		networkProvider:  networkProvider,
+		vaultProvider:    vaultProvider,
 	}
 }
 
@@ -131,7 +152,6 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		multisig.NewEscrowAuth(ws),
 	)
 
-	driverMetrics := v1.NewMetrics(metricsProvider)
 	tokensService, err := v1token.NewTokensService(logger, ppm, deserializer)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initiliaze token service for [%s:%s]", tmsID.Network, tmsID.Namespace)
@@ -158,27 +178,24 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		ip,
 		deserializer,
 		tmsConfig,
-		v1.NewIssueService(logger, ppm, ws, deserializer, driverMetrics, tokensService, tokensUpgradeService),
-		v1.NewTransferService(
+		metrics.NewIssueService(v1.NewIssueService(logger, ppm, ws, deserializer, tokensService, tokensUpgradeService), metricsProvider),
+		metrics.NewTransferService(v1.NewTransferService(
 			logger,
 			ppm,
 			ws,
 			common.NewVaultLedgerTokenAndMetadataLoader[[]byte, []byte](qe, &common.IdentityTokenAndMetadataDeserializer{}),
 			deserializer,
-			driverMetrics,
 			d.tracerProvider,
 			tokensService,
-		),
-		v1.NewAuditorService(
+		), metricsProvider),
+		metrics.NewAuditorService(v1.NewAuditorService(
 			logger,
 			ppm,
-			common.NewLedgerTokenLoader[*v1token.Token](logger, d.tracerProvider, qe, &TokenDeserializer{}),
 			deserializer,
-			driverMetrics,
 			d.tracerProvider,
-		),
-		tokensService,
-		tokensUpgradeService,
+		), metricsProvider),
+		metrics.NewTokensService(tokensService, metricsProvider),
+		metrics.NewTokensUpgradeService(tokensUpgradeService, metricsProvider),
 		authorization,
 		validator,
 	)
@@ -187,14 +204,4 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	}
 
 	return service, err
-}
-
-// NewDefaultValidator returns a new zkatdlog validator for the passed public parameters.
-func (d *Driver) NewDefaultValidator(params driver.PublicParameters) (driver.Validator, error) {
-	pp, ok := params.(*v1setup.PublicParams)
-	if !ok {
-		return nil, errors.Errorf("invalid public parameters type [%T]", params)
-	}
-
-	return d.DefaultValidator(pp)
 }

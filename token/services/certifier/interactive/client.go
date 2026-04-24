@@ -8,11 +8,13 @@ package interactive
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -28,38 +30,55 @@ const (
 
 var logger = logging.MustGetLogger()
 
+//go:generate counterfeiter -o mock/query_engine.go -fake-name QueryEngineMock . QueryEngine
 type QueryEngine interface {
 	UnspentTokensIterator(ctx context.Context) (*token2.UnspentTokensIterator, error)
 }
 
+//go:generate counterfeiter -o mock/certification_storage.go -fake-name CertificationStorageMock . CertificationStorage
 type CertificationStorage interface {
 	Exists(ctx context.Context, id *token.ID) bool
 	Store(ctx context.Context, certifications map[*token.ID][]byte) error
 }
 
+//go:generate counterfeiter -o mock/view_manager.go -fake-name ViewManagerMock . ViewManager
 type ViewManager interface {
 	InitiateView(view view.View) (interface{}, error)
 }
 
-// CertificationClient scans the vault for tokens not yet certified and asks the certification.
+// CertificationClient scans the vault for tokens not yet certified and requests certification.
+// It batches incoming token IDs, dispatches them to a configurable worker pool, and retries
+// on failure. Callers must invoke Start() before using the client and Stop() to release resources.
 type CertificationClient struct {
-	ctx                  context.Context
-	channel, namespace   string
-	queryEngine          QueryEngine
-	certificationStorage CertificationStorage
-	viewManager          ViewManager
-	certifiers           []view.Identity
-	eventOperationMap    map[string]Op
-	// waitTime is used in case of a failure. It tells how much time to wait before retrying.
-	waitTime    time.Duration
-	maxAttempts int
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 
-	tokens    chan *token.ID
-	batchSize int
+	network, channel, namespace string
+	queryEngine                 QueryEngine
+	certificationStorage        CertificationStorage
+	viewManager                 ViewManager
+	certifiers                  []view.Identity
+	eventOperationMap           map[string]Op
+
+	waitTime        time.Duration
+	maxAttempts     int
+	batchSize       int
+	flushInterval   time.Duration
+	workers         int
+	responseTimeout time.Duration
+
+	// tokens receives individual token IDs from OnReceive and Scan.
+	tokens chan *token.ID
+	// batches receives assembled batches from the accumulator goroutine.
+	batches chan []*token.ID
+
+	metrics *ClientMetrics
 }
 
 func NewCertificationClient(
 	ctx context.Context,
+	network string,
 	channel string,
 	namespace string,
 	qe QueryEngine,
@@ -69,9 +88,19 @@ func NewCertificationClient(
 	notifier events.Subscriber,
 	maxAttempts int,
 	waitTime time.Duration,
+	batchSize int,
+	bufferSize int,
+	flushInterval time.Duration,
+	workers int,
+	responseTimeout time.Duration,
+	metricsProvider metrics.Provider,
 ) *CertificationClient {
+	derivedCtx, cancel := context.WithCancel(ctx)
+
 	cc := &CertificationClient{
-		ctx:                  ctx,
+		ctx:                  derivedCtx,
+		cancel:               cancel,
+		network:              network,
 		channel:              channel,
 		namespace:            namespace,
 		queryEngine:          qe,
@@ -79,9 +108,14 @@ func NewCertificationClient(
 		viewManager:          fm,
 		certifiers:           certifiers,
 		waitTime:             waitTime,
-		tokens:               make(chan *token.ID, 1000),
-		batchSize:            10,
+		tokens:               make(chan *token.ID, bufferSize),
+		batches:              make(chan []*token.ID, workers),
+		batchSize:            batchSize,
+		flushInterval:        flushInterval,
+		workers:              workers,
 		maxAttempts:          maxAttempts,
+		responseTimeout:      responseTimeout,
+		metrics:              newClientMetrics(metricsProvider),
 	}
 
 	eventOperationMap := make(map[string]Op)
@@ -107,6 +141,7 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 			toBeCertified = append(toBeCertified, id)
 		}
 	}
+
 	if len(toBeCertified) == 0 {
 		// all tokens already certified.
 		return nil
@@ -114,24 +149,36 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 
 	var resultBoxed interface{}
 	var err error
+	labels := []string{"channel", cc.channel, "namespace", cc.namespace}
+
+	start := time.Now()
 	for i := range cc.maxAttempts {
-		resultBoxed, err = cc.viewManager.InitiateView(NewCertificationRequestView(cc.channel, cc.namespace, cc.certifiers[0], toBeCertified...))
-		if err != nil {
-			logger.Errorf("failed to request certification [%s], try again [%d] after [%s]...", err, i, cc.waitTime)
-			time.Sleep(cc.waitTime)
-
-			continue
+		view := NewCertificationRequestView(cc.network, cc.channel, cc.namespace, cc.certifiers[0], toBeCertified...)
+		view.responseTimeout = cc.responseTimeout
+		resultBoxed, err = cc.viewManager.InitiateView(view)
+		if err == nil {
+			break
 		}
-
-		break
+		cc.metrics.Errors.With(labels...).Add(1)
+		logger.Errorf("failed to request certification [%s], try again [%d] after [%s]...", err, i, cc.waitTime)
+		select {
+		case <-time.After(cc.waitTime):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
+
 	if err != nil {
 		return err
 	}
+
+	cc.metrics.RequestDuration.With(labels...).Observe(time.Since(start).Seconds())
+
 	certifications, ok := resultBoxed.(map[*token.ID][]byte)
 	if !ok {
 		return errors.Errorf("invalid type, expected map[token.ID][]byte")
 	}
+
 	if err := cc.certificationStorage.Store(ctx, certifications); err != nil {
 		return err
 	}
@@ -139,26 +186,31 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 	return nil
 }
 
+// Scan checks the vault for uncertified tokens and requests certification.
 func (cc *CertificationClient) Scan() error {
 	logger.Debugf("check the certification of unspent tokens from the vault...")
-	// Check the unspent tokens
 
 	allTokens, err := cc.queryEngine.UnspentTokensIterator(cc.ctx)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get an iterator over unspent tokens")
 	}
 
-	tokenIds := iterators.Map(allTokens.UnspentTokensIterator, func(t *token.UnspentToken) (*token.ID, error) { return &t.Id, nil })
-	uncertifiedTokenIds := iterators.Filter(tokenIds, func(t *token.ID) bool { return !cc.certificationStorage.Exists(context.Background(), t) })
+	tokenIds := iterators.Map(allTokens.UnspentTokensIterator, func(t *token.UnspentToken) (*token.ID, error) {
+		if t == nil {
+			return nil, nil
+		}
+
+		return &t.Id, nil
+	})
+	uncertifiedTokenIds := iterators.Filter(tokenIds, func(t *token.ID) bool { return !cc.certificationStorage.Exists(cc.ctx, t) })
 	toBeCertified, err := iterators.ReadAllPointers(uncertifiedTokenIds)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to read tokens to be certified")
 	}
 
 	if len(toBeCertified) != 0 {
-		// Request certification
 		logger.Debugf("request certification of [%v]", toBeCertified)
-		if err := cc.RequestCertification(context.Background(), toBeCertified...); err != nil {
+		if err := cc.RequestCertification(cc.ctx, toBeCertified...); err != nil {
 			return errors.WithMessagef(err, "failed retrieving certification")
 		}
 		logger.Debugf("request certification of [%v] satisfied with no error", toBeCertified)
@@ -167,85 +219,161 @@ func (cc *CertificationClient) Scan() error {
 	return nil
 }
 
+// Start launches the accumulator goroutine and the worker pool.
+// It must be called before the client processes any tokens.
 func (cc *CertificationClient) Start() {
-	go cc.accumulatorCutter(context.Background())
+	for range cc.workers {
+		cc.wg.Add(1)
+
+		go func() {
+			defer cc.wg.Done()
+
+			for batch := range cc.batches {
+				cc.processBatch(batch)
+			}
+		}()
+	}
+
+	cc.wg.Add(1)
+
+	go func() {
+		defer cc.wg.Done()
+		cc.accumulatorCutter()
+	}()
 }
 
+// Stop signals the client to shut down and waits for all goroutines to finish.
+// In-flight certification requests are completed before returning.
+func (cc *CertificationClient) Stop() {
+	cc.cancel()
+	cc.wg.Wait()
+}
+
+// OnReceive handles a token-added event and enqueues the token for certification.
+// It is non-blocking: if the input buffer is full, the token is dropped and counted.
 func (cc *CertificationClient) OnReceive(event events.Event) {
 	t, ok := event.Message().(tokens.TokenMessage)
 	if !ok {
 		logger.Warnf("cannot cast to TokenMessage %v", event.Message())
-		// drop this event
-		return
-	}
-
-	// sanity check that we really registered for this type of event
-	_, ok = cc.eventOperationMap[event.Topic()]
-	if !ok {
-		logger.Warnf("receive an event we did not registered for %v", event.Message())
-		// drop this event
-		return
-	}
-
-	// accumulate token
-	if len(cc.tokens) >= cap(cc.tokens) {
-		// skip this
-		logger.Warnf("certification pipeline filled up, skipping id [%s:%d]", t.TxID, t.Index)
 
 		return
 	}
-	cc.tokens <- &token.ID{
+
+	if _, ok = cc.eventOperationMap[event.Topic()]; !ok {
+		logger.Warnf("receive an event we did not register for %v", event.Message())
+
+		return
+	}
+
+	id := &token.ID{
 		TxId:  t.TxID,
 		Index: t.Index,
 	}
+
+	labels := []string{"channel", cc.channel, "namespace", cc.namespace}
+
+	select {
+	case cc.tokens <- id:
+		cc.metrics.PendingTokens.With(labels...).Set(float64(len(cc.tokens)))
+	default:
+		logger.Warnf("certification pipeline filled up, dropping id [%s:%d]", t.TxID, t.Index)
+		cc.metrics.DroppedTokens.With(labels...).Add(1)
+	}
 }
 
-func (cc *CertificationClient) accumulatorCutter(ctx context.Context) {
-	// TODO: introduce workers
-	timeout := time.NewTimer(5 * time.Second)
+// accumulatorCutter reads from the token channel and assembles batches. It sends
+// complete batches to the batches channel and flushes partial batches on a timer.
+// It closes the batches channel when it exits so that workers drain and stop.
+func (cc *CertificationClient) accumulatorCutter() {
+	defer close(cc.batches)
+
+	timer := time.NewTimer(cc.flushInterval)
+	defer timer.Stop()
+
 	var accumulator []*token.ID
+
+	flush := func() {
+		if len(accumulator) == 0 {
+			return
+		}
+
+		batch := accumulator
+		accumulator = nil
+
+		select {
+		case cc.batches <- batch:
+		case <-cc.ctx.Done():
+		}
+	}
+
+	resetTimer := func() {
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+		timer.Reset(cc.flushInterval)
+	}
+
 	for {
 		select {
 		case id := <-cc.tokens:
 			logger.Debugf("Accumulate token [%s]", id)
 			accumulator = append(accumulator, id)
+
 			if len(accumulator) >= cc.batchSize {
-				logger.Debugf("Limit reached, certify accumulator...")
-				toCertify := accumulator
-				accumulator = nil
-				go cc.requestCertification(ctx, toCertify...)
+				logger.Debugf("Batch limit reached, dispatching to workers...")
+				resetTimer()
+				flush()
 			}
-		case <-timeout.C:
-			logger.Debugf("Timeout, certify accumulator...")
-			toCertify := accumulator
-			accumulator = nil
-			go cc.requestCertification(ctx, toCertify...)
+
+		case <-timer.C:
+			logger.Debugf("Flush interval reached, dispatching partial batch...")
+			flush()
+			timer.Reset(cc.flushInterval)
+
 		case <-cc.ctx.Done():
-			// time to close
+			// Flush any remaining tokens before exiting.
+			flush()
+
 			return
 		}
 	}
 }
 
-func (cc *CertificationClient) requestCertification(ctx context.Context, tokens ...*token.ID) {
-	if len(tokens) == 0 {
-		// no tokens passed, check the vault
-		logger.Debugf("request certification of 0 tokens, check the vault...")
+// processBatch certifies a batch of tokens. On failure it pushes uncertified tokens
+// back to the input channel using a non-blocking send to avoid deadlocks.
+func (cc *CertificationClient) processBatch(batch []*token.ID) {
+	if len(batch) == 0 {
+		// empty batch: scan the vault for uncertified tokens
+		logger.Debugf("processBatch: empty batch, scanning vault...")
 		if err := cc.Scan(); err != nil {
-			logger.Errorf("failed to scan the vault for token to be certified [%s]", err)
+			logger.Errorf("failed to scan the vault for tokens to be certified [%s]", err)
 		}
 
 		return
 	}
-	logger.Debugf("request certification of [%v]", tokens)
-	if err := cc.RequestCertification(ctx, tokens...); err != nil {
-		// push back the ids
-		logger.Warnf("failed retrieving certification [%s], push back token ids [%s]", err, tokens)
-		for _, id := range tokens {
-			cc.tokens <- id
+
+	logger.Debugf("request certification of [%v]", batch)
+
+	if err := cc.RequestCertification(cc.ctx, batch...); err != nil {
+		// Push uncertified tokens back with a non-blocking send to avoid deadlock.
+		labels := []string{"channel", cc.channel, "namespace", cc.namespace}
+
+		logger.Warnf("failed retrieving certification [%s], attempting to re-queue tokens", err)
+
+		for _, id := range batch {
+			select {
+			case cc.tokens <- id:
+			default:
+				logger.Warnf("certification buffer full after failure, dropping token [%s]", id)
+				cc.metrics.DroppedTokens.With(labels...).Add(1)
+			}
 		}
 
 		return
 	}
-	logger.Debugf("request certification of [%v] satisfied with no error", tokens)
+
+	logger.Debugf("certification of [%v] succeeded", batch)
 }
