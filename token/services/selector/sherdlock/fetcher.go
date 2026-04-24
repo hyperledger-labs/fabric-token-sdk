@@ -27,39 +27,17 @@ const (
 	defaultCacheMaxQueries        = maxImmediateRetries
 )
 
-type tokenFetcher interface {
-	UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error)
-}
-
-//go:generate counterfeiter -o mock/tokendb.go -fake-name TokenDB . TokenDB
-type TokenDB interface {
-	SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token2.Type) (driver.SpendableTokensIterator, error)
-}
-
-type enhancedIterator[T any] interface {
-	HasNext() bool
-}
-
-type permutatableIterator[T any] interface {
-	iterators.Iterator[T]
-	NewPermutation() iterators.Iterator[T]
-}
-
 type FetcherStrategy string
 
 const (
-	Lazy     = "lazy"
-	Eager    = "eager"
-	Mixed    = "mixed"
-	Listener = "listener"
-	Cached   = "cached"
+	Lazy     FetcherStrategy = "lazy"
+	Eager    FetcherStrategy = "eager"
+	Mixed    FetcherStrategy = "mixed"
+	Listener FetcherStrategy = "listener"
+	Cached   FetcherStrategy = "cached"
 )
 
-type FetcherProvider interface {
-	GetFetcher(tmsID token.TMSID) (tokenFetcher, error)
-}
-
-type fetchFunc func(db *tokendb.StoreService, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) tokenFetcher
+type fetchFunc func(db *tokendb.StoreService, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) TokenFetcher
 
 type fetcherProvider struct {
 	tokenStoreServiceManager tokendb.StoreServiceManager
@@ -71,7 +49,7 @@ type fetcherProvider struct {
 }
 
 var fetchers = map[FetcherStrategy]fetchFunc{
-	Mixed: func(db *tokendb.StoreService, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) tokenFetcher {
+	Mixed: func(db *tokendb.StoreService, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) TokenFetcher {
 		return newMixedFetcher(db, m, cacheSize, freshnessInterval, maxQueries)
 	},
 }
@@ -94,7 +72,7 @@ func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, metrics
 }
 
 // GetFetcher returns a token fetcher instance for the specified TMS ID.
-func (p *fetcherProvider) GetFetcher(tmsID token.TMSID) (tokenFetcher, error) {
+func (p *fetcherProvider) GetFetcher(tmsID token.TMSID) (TokenFetcher, error) {
 	tokenDB, err := p.tokenStoreServiceManager.StoreServiceByTMSId(tmsID)
 	if err != nil {
 		return nil, err
@@ -113,21 +91,21 @@ type mixedFetcher struct {
 	m            *Metrics
 }
 
-// newMixedFetcher creates a fetcher that combines eager (cached) and lazy (on-demand) strategies.
-func newMixedFetcher(tokenDB TokenDB, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) *mixedFetcher {
+// NewMixedFetcher creates a fetcher that combines eager (cached) and lazy (on-demand) strategies.
+func NewMixedFetcher(tokenDB TokenDB, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) *mixedFetcher {
 	return &mixedFetcher{
 		lazyFetcher:  NewLazyFetcher(tokenDB),
-		eagerFetcher: newCachedFetcher(tokenDB, cacheSize, freshnessInterval, maxQueries),
+		eagerFetcher: NewCachedFetcher(tokenDB, cacheSize, freshnessInterval, maxQueries),
 		m:            m,
 	}
 }
 
 // UnspentTokensIteratorBy returns an iterator for unspent tokens, trying cached results first, falling back to database query.
-func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (Iterator[*token2.UnspentTokenInWallet], error) {
 	logger.DebugfContext(ctx, "call unspent tokens iterator")
 	it, err := f.eagerFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
 	logger.DebugfContext(ctx, "fetched eager iterator")
-	if err == nil && it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext() {
+	if err == nil && it.(interface{ HasNext() bool }).HasNext() {
 		logger.DebugfContext(ctx, "eager iterator had tokens. Returning iterator")
 		f.m.UnspentTokensInvocations.With(fetcherTypeLabel, eager).Add(1)
 
@@ -138,6 +116,11 @@ func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID str
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
 
 	return f.lazyFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
+}
+
+// newMixedFetcher is an internal alias for NewMixedFetcher.
+func newMixedFetcher(tokenDB TokenDB, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) *mixedFetcher {
+	return NewMixedFetcher(tokenDB, m, cacheSize, freshnessInterval, maxQueries)
 }
 
 // lazyFetcher only looks up the results when requested
@@ -151,7 +134,7 @@ func NewLazyFetcher(tokenDB TokenDB) *lazyFetcher {
 }
 
 // UnspentTokensIteratorBy queries the database directly for unspent tokens.
-func (f *lazyFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+func (f *lazyFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (Iterator[*token2.UnspentTokenInWallet], error) {
 	logger.DebugfContext(ctx, "Query the DB for new tokens")
 	it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, walletID, currency)
 	if err != nil {
@@ -159,6 +142,11 @@ func (f *lazyFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	}
 
 	return collections.NewPermutatedIterator[token2.UnspentTokenInWallet](it)
+}
+
+type permutatableIterator[T any] interface {
+	iterators.Iterator[T]
+	NewPermutation() iterators.Iterator[T]
 }
 
 type tokenCache interface {
@@ -178,15 +166,15 @@ type cachedFetcher struct {
 	maxQueriesBeforeRefresh uint32
 
 	// TODO: A better strategy is to keep following variables per cache key (type/owner combination) and lock/fetch only the 'expired' entry
-	lastFetched      time.Time
+	lastFetched      int64
 	queriesResponded uint32
 	// prevKeys tracks cache keys from the previous update cycle to identify stale entries that need removal.
 	prevKeys map[string]struct{}
 	mu       sync.RWMutex
 }
 
-// newCachedFetcher creates a fetcher that maintains a periodically refreshed cache of all tokens.
-func newCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
+// NewCachedFetcher creates a fetcher that maintains a periodically refreshed cache of all tokens.
+func NewCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
 	// Use defaults if values are not provided (zero values)
 	if freshnessInterval <= 0 {
 		freshnessInterval = defaultCacheFreshnessInterval
@@ -219,7 +207,6 @@ func newCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 	}
 }
 
-// update refreshes the token cache from the database, adding new entries before removing stale ones to prevent race conditions.
 func (f *cachedFetcher) update(ctx context.Context) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -239,7 +226,7 @@ func (f *cachedFetcher) update(ctx context.Context) {
 
 	m := f.groupTokensByKey(ctx, it)
 	f.updateCache(ctx, m)
-	f.lastFetched = time.Now()
+	atomic.StoreInt64(&f.lastFetched, time.Now().UnixNano())
 	atomic.StoreUint32(&f.queriesResponded, 0)
 }
 
@@ -282,7 +269,7 @@ func (f *cachedFetcher) updateCache(ctx context.Context, tokensByKey map[string]
 }
 
 // UnspentTokensIteratorBy returns cached unspent tokens, triggering a refresh if the cache is stale or overused.
-func (f *cachedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+func (f *cachedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (Iterator[*token2.UnspentTokenInWallet], error) {
 	defer atomic.AddUint32(&f.queriesResponded, 1)
 	if f.isCacheOverused() {
 		logger.DebugfContext(ctx, "Overused data. Soft refresh (in the background)...")
@@ -313,5 +300,10 @@ func (f *cachedFetcher) isCacheOverused() bool {
 
 // isCacheStale checks if the cache has exceeded its freshness interval.
 func (f *cachedFetcher) isCacheStale() bool {
-	return time.Since(f.lastFetched) > f.freshnessInterval
+	lastFetched := atomic.LoadInt64(&f.lastFetched)
+	if lastFetched == 0 {
+		return true
+	}
+
+	return time.Since(time.Unix(0, lastFetched)) > f.freshnessInterval
 }
