@@ -10,8 +10,6 @@ package ttx
 type EndorsementsOpts struct {
 	// SkipAuditing set it to true to skip the auditing phase
 	SkipAuditing bool
-	// SkipAuditorSignatureVerification set it to true to skip the verification of the auditor signature
-	SkipAuditorSignatureVerification bool
 	// SkipApproval set it to true to skip the approval phase
 	SkipApproval bool
 	// SkipDistributeEnv set it to true to skip the distribution phase
@@ -47,15 +45,6 @@ func CompileCollectEndorsementsOpts(opts ...EndorsementsOpt) (*EndorsementsOpts,
 func WithSkipAuditing() EndorsementsOpt {
 	return func(o *EndorsementsOpts) error {
 		o.SkipAuditing = true
-
-		return nil
-	}
-}
-
-// WithSkipAuditorSignatureVerification to skip auditor signature verification
-func WithSkipAuditorSignatureVerification() EndorsementsOpt {
-	return func(o *EndorsementsOpts) error {
-		o.SkipAuditorSignatureVerification = true
 
 		return nil
 	}
