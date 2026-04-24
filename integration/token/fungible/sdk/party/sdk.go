@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	views1 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/boolpolicy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/multisig"
 )
 
@@ -74,9 +75,16 @@ func (p *SDK) Install() error {
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{}),
 			registry.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{}),
+			registry.RegisterFactory("PolicyLock", &views.PolicyLockViewFactory{}),
+			registry.RegisterFactory("PolicySpendOR", &views.PolicySpendORViewFactory{}),
+			registry.RegisterFactory("PolicySpendAND", &views.PolicySpendANDViewFactory{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigLockView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigSpendView{}),
 			registry.RegisterResponder(&views.MultiSigAcceptSpendView{}, &multisig.RequestSpendView{}),
+			registry.RegisterResponder(&views.AcceptCashView{}, &views.PolicyLockView{}),
+			registry.RegisterResponder(&views.AcceptCashView{}, &views.PolicySpendORView{}),
+			registry.RegisterResponder(&views.AcceptCashView{}, &views.PolicySpendANDView{}),
+			registry.RegisterResponder(&views.PolicyAcceptSpendView{}, &boolpolicy.RequestSpendView{}),
 			registry.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.MaliciousTransferView{}),
 		)

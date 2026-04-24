@@ -115,6 +115,20 @@ var _ = Describe("EndToEnd", func() {
 			It("succeeded", Label("T12"), func() { fungible.TestMultiSig(ts.II, selector) })
 		})
 
+		Describe("PolicyIdentity OR", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T14"), func() { fungible.TestPolicyOR(ts.II, selector) })
+		})
+
+		Describe("PolicyIdentity AND", t.Label, func() {
+			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
+			BeforeEach(ts.Setup)
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T15"), func() { fungible.TestPolicyAND(ts.II, selector) })
+		})
+
 		Describe("Redeem to yourself", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
