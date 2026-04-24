@@ -347,9 +347,9 @@ func TestVerifyPrecedenceAndOverOr(t *testing.T) {
 	stubs := makeVerifiers(testMsg, "s0", "s1", "s2")
 	pv := policyVerifier(t, "$0 OR $1 AND $2", stubs)
 	// $0 alone satisfies
-	assert.NoError(t, pv.Verify([]byte(testMsg), buildPolicySig(t, "s0", "", "")))
+	require.NoError(t, pv.Verify([]byte(testMsg), buildPolicySig(t, "s0", "", "")))
 	// $1 alone does not satisfy (needs $2 as well)
-	assert.Error(t, pv.Verify([]byte(testMsg), buildPolicySig(t, "", "s1", "")))
+	require.Error(t, pv.Verify([]byte(testMsg), buildPolicySig(t, "", "s1", "")))
 	// $1 AND $2 satisfies
-	assert.NoError(t, pv.Verify([]byte(testMsg), buildPolicySig(t, "", "s1", "s2")))
+	require.NoError(t, pv.Verify([]byte(testMsg), buildPolicySig(t, "", "s1", "s2")))
 }
