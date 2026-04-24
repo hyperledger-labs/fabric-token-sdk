@@ -648,6 +648,8 @@ github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478 h
 github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20250313153527-832db18b9478/go.mod h1:k4Q5EYKRnYC6t80ipSCY3G8H4FdcxRa8jjlsJdGfNCY=
 github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478 h1:Uzmcb4pNb54/fbAjnrZTiJwWV74+twP60N4qBGm4PvU=
 github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478/go.mod h1:Pi1QIuIZ+1OXIbnYe27vNwJOnSq2WvkHRT/sfweTw8E=
+github.com/IBM/mathlib v0.1.0 h1:0inEcfyirCVjnR2UkEEqgYzEMLS88EmbtCpGpm4HCJY=
+github.com/IBM/mathlib v0.1.0/go.mod h1:114UL+paco19iU1a+W5A++TjnSiXTghpJUu5n4I2g2g=
 github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c/go.mod h1:X0CRv0ky0k6m906ixxpzmDRLvX58TFUKS2eePweuyxk=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible h1:1G1pk05UrOh0NlF1oeaaix1x8XzrfjIDK47TY0Zehcw=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
@@ -1317,8 +1319,6 @@ github.com/ncruces/go-strftime v1.0.0 h1:HMFp8mLCTPp341M/ZnA4qaf7ZlsbTc+miZjCLOF
 github.com/ncruces/go-strftime v1.0.0/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
 github.com/neelance/astrewrite v0.0.0-20160511093645-99348263ae86/go.mod h1:kHJEU3ofeGjhHklVoIGuVj85JJwZ6kWPaJwCIxgnFmo=
 github.com/neelance/sourcemap v0.0.0-20200213170602-2833bce08e4c/go.mod h1:Qr6/a/Q4r9LP1IltGz7tA7iOK1WonHEYhu1HRBA7ZiM=
-github.com/neetance/mathlib v0.0.0-20260424070451-41a5fb68e5cd h1:hEfmrKj5i6KXgdfNkyOXopnsJdMppdgCsFRNZKyRuIM=
-github.com/neetance/mathlib v0.0.0-20260424070451-41a5fb68e5cd/go.mod h1:114UL+paco19iU1a+W5A++TjnSiXTghpJUu5n4I2g2g=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=

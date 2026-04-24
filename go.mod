@@ -6,7 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/IBM/idemix v0.0.2
 	github.com/IBM/idemix/bccsp/types v0.0.0-20250313153527-832db18b9478
-	github.com/IBM/mathlib v0.0.3-0.20260331162040-6bc25a7c15ac
+	github.com/IBM/mathlib v0.1.0
 	github.com/consensys/gnark-crypto v0.20.1
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/gin-gonic/gin v1.12.0
@@ -304,5 +304,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
-
-replace github.com/IBM/mathlib => github.com/neetance/mathlib v0.0.0-20260424070451-41a5fb68e5cd
