@@ -15,8 +15,18 @@ import (
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
-// TokenStore is an alias for common.TokenStore.
-type TokenStore = sqlcommon.TokenStore
+// TokenStore wraps common.TokenStore to add advisory lock to schema creation
+type TokenStore struct {
+	*sqlcommon.TokenStore
+	lockID int64
+}
+
+// GetSchema overrides the base GetSchema to prefix with advisory lock
+func (s *TokenStore) GetSchema() string {
+	baseSchema := s.TokenStore.GetSchema()
+
+	return prefixSchemaWithLock(baseSchema, s.lockID)
+}
 
 // TokenNotifier handles notifications for tokens.
 type TokenNotifier struct {
@@ -33,7 +43,8 @@ func NewTokenNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, dataSo
 			AllOperations,
 			*NewSimplePrimaryKey("tx_id"),
 			*NewSimplePrimaryKey("idx"),
-		)}, nil
+		),
+	}, nil
 }
 
 // Subscribe registers a callback function to be called when a token is inserted, updated, or deleted.
@@ -53,11 +64,20 @@ func (n *TokenNotifier) Subscribe(callback func(tokensdriver.Operation, tokensdr
 }
 
 func NewTokenStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, notifier *TokenNotifier) (*TokenStore, error) {
-	return sqlcommon.NewTokenStoreWithNotifier(
+	baseStore, err := sqlcommon.NewTokenStoreWithNotifier(
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
 		postgres.NewConditionInterpreter(),
 		notifier,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wrap with postgres-specific store that adds advisory lock to schema
+	return &TokenStore{
+		TokenStore: baseStore,
+		lockID:     createTableLockID("tokens"),
+	}, nil
 }

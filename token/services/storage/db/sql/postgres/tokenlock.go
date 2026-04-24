@@ -28,7 +28,15 @@ import (
 type TokenLockStore struct {
 	*common5.TokenLockStore
 
-	ci common3.CondInterpreter
+	ci     common3.CondInterpreter
+	lockID int64
+}
+
+// GetSchema overrides the base GetSchema to prefix with advisory lock
+func (s *TokenLockStore) GetSchema() string {
+	baseSchema := s.TokenLockStore.GetSchema()
+
+	return prefixSchemaWithLock(baseSchema, s.lockID)
 }
 
 // NewTokenLockStore returns a new TokenLockStore for the given RWDB and table names.
@@ -39,7 +47,11 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common5.TableNames) (*Token
 		return nil, err
 	}
 
-	return &TokenLockStore{TokenLockStore: tldb, ci: ci}, nil
+	return &TokenLockStore{
+		TokenLockStore: tldb,
+		ci:             ci,
+		lockID:         createTableLockID("tokenlock"),
+	}, nil
 }
 
 // Cleanup removes stale token locks that have expired.

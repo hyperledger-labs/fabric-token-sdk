@@ -24,8 +24,18 @@ import (
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
-// AuditTransactionStore is an alias for common.TransactionStore.
-type AuditTransactionStore = sqlcommon.TransactionStore
+// AuditTransactionStore wraps common.TransactionStore to add advisory lock to schema creation
+type AuditTransactionStore struct {
+	*sqlcommon.TransactionStore
+	lockID int64
+}
+
+// GetSchema overrides the base GetSchema to prefix with advisory lock
+func (s *AuditTransactionStore) GetSchema() string {
+	baseSchema := s.TransactionStore.GetSchema()
+
+	return prefixSchemaWithLock(baseSchema, s.lockID)
+}
 
 // TransactionStore extends the common TransactionStore with PostgreSQL-specific atomic claim operations.
 type TransactionStore struct {
@@ -33,6 +43,14 @@ type TransactionStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
 	tables  sqlcommon.TableNames
+	lockID  int64
+}
+
+// GetSchema overrides the base GetSchema to prefix with advisory lock
+func (s *TransactionStore) GetSchema() string {
+	baseSchema := s.TransactionStore.GetSchema()
+
+	return prefixSchemaWithLock(baseSchema, s.lockID)
 }
 
 // NewTransactionStoreWithNotifier creates a new TransactionStore with the provided notifier and recovery support.
@@ -58,18 +76,27 @@ func NewTransactionStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.Tab
 		readDB:           dbs.ReadDB,
 		writeDB:          dbs.WriteDB,
 		tables:           tableNames,
+		lockID:           createTableLockID("transactions"),
 	}, nil
 }
 
 // NewAuditTransactionStore creates a new AuditTransactionStore.
 func NewAuditTransactionStore(dbs *scommon.RWDB, tableNames sqlcommon.TableNames) (*AuditTransactionStore, error) {
-	return sqlcommon.NewAuditTransactionStore(
+	baseStore, err := sqlcommon.NewAuditTransactionStore(
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
 		postgres.NewConditionInterpreter(),
 		postgres.NewPaginationInterpreter(),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuditTransactionStore{
+		TransactionStore: baseStore,
+		lockID:           createTableLockID("audittx"),
+	}, nil
 }
 
 // ClaimPendingTransactions atomically claims a batch of pending transactions using PostgreSQL's UPDATE...RETURNING.
