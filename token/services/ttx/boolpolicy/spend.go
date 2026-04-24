@@ -97,8 +97,7 @@ type RequestSpendView struct {
 	parties      []view.Identity
 	options      *token2.ServiceOptions
 
-	err     error
-	timeout time.Duration
+	err error
 }
 
 // NewRequestSpendView creates a RequestSpendView for the given policy token.
