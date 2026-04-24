@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/boolpolicy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -218,6 +219,30 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			sigma, err := multisig.JoinSignatures(multiSigners, multiSignersSigmas)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed joining multi-sig signatures")
+			}
+			sigmas[signerIdentity.UniqueID()] = sigma
+
+			continue
+		}
+
+		// Case: the identity is a policy identity
+		pi, ok, err := boolpolicy.Unwrap(signerIdentity)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unwrapping policy identity [%s]", signerIdentity)
+		}
+		if ok {
+			componentIDs := make([]token.Identity, len(pi.Identities))
+			for idx, b := range pi.Identities {
+				componentIDs[idx] = b
+			}
+			logger.DebugfContext(context.Context(), "found policy identity [%s], collecting signatures from [%d] components", signerIdentity, len(componentIDs))
+			componentSigmas, err := c.requestSignatures(componentIDs, verifierGetter, context, externalWallets)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed requesting policy signatures")
+			}
+			sigma, err := boolpolicy.JoinSignatures(componentIDs, componentSigmas)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed joining policy signatures")
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
 
@@ -534,9 +559,23 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		}
 		if ok {
 			allIds = append(allIds, multiSigners...)
-		} else {
-			allIds = append(allIds, id)
+
+			continue
 		}
+
+		pi, ok, err := boolpolicy.Unwrap(id)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unwrapping policy identity [%s]", id)
+		}
+		if ok {
+			for _, b := range pi.Identities {
+				allIds = append(allIds, token.Identity(b))
+			}
+
+			continue
+		}
+
+		allIds = append(allIds, id)
 	}
 	distributionList = allIds
 	allIds = append(allIds, auditors...)
