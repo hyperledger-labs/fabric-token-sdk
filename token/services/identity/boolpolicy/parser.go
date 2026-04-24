@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-// Package boolexpr implements a recursive-descent parser for boolean
+// Package boolpolicy implements a recursive-descent parser for boolean
 // expressions of the form "$0 OR ($1 AND $2)", where $N is an index
 // reference into a caller-supplied slice of bool values.
 //
@@ -15,7 +15,7 @@ SPDX-License-Identifier: Apache-2.0
 //	or_expr   = and_expr ( 'OR' and_expr )*
 //	and_expr  = primary  ( 'AND' primary  )*
 //	primary   = '$' digits | '(' expr ')'
-package boolexpr
+package boolpolicy
 
 import (
 	"errors"

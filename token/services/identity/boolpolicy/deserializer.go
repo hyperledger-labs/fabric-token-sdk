@@ -10,7 +10,6 @@ import (
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/boolexpr"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -117,7 +116,7 @@ func (d *TypedIdentityDeserializer) DeserializeVerifier(ctx context.Context, typ
 	if err := pi.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal policy identity")
 	}
-	node, err := boolexpr.Parse(pi.Policy)
+	node, err := Parse(pi.Policy)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse policy expression [%s]", pi.Policy)
 	}

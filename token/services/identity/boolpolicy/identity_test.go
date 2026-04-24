@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/boolexpr"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -221,7 +220,7 @@ func asDriverVerifiers(stubs []*stubVerifier) []tdriver.Verifier {
 
 func policyVerifier(t *testing.T, expr string, stubs []*stubVerifier) *PolicyVerifier {
 	t.Helper()
-	node, err := boolexpr.Parse(expr)
+	node, err := Parse(expr)
 	require.NoError(t, err)
 
 	return &PolicyVerifier{Policy: node, Verifiers: asDriverVerifiers(stubs)}

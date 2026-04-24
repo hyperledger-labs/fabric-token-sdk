@@ -11,7 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/boolexpr"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -64,8 +63,8 @@ func JoinSignatures(identities []token.Identity, sigmas map[string][]byte) ([]by
 // This means a valid PolicySignature need only carry signatures for the
 // identities actually required by the satisfied policy branch.
 type PolicyVerifier struct {
-	// Policy is the parsed boolean AST, produced by boolexpr.Parse.
-	Policy boolexpr.Node
+	// Policy is the parsed boolean AST, produced by Parse.
+	Policy Node
 	// Verifiers is indexed by $N; each entry verifies the corresponding
 	// component identity's individual signature.
 	Verifiers []driver.Verifier
@@ -90,9 +89,9 @@ func (v *PolicyVerifier) Verify(msg, sigBytes []byte) error {
 }
 
 // evalNode recursively evaluates the policy AST against the provided signatures.
-func (v *PolicyVerifier) evalNode(node boolexpr.Node, msg []byte, sigs [][]byte) bool {
+func (v *PolicyVerifier) evalNode(node Node, msg []byte, sigs [][]byte) bool {
 	switch n := node.(type) {
-	case *boolexpr.RefNode:
+	case *RefNode:
 		i := n.Index
 		if i < 0 || i >= len(sigs) || len(sigs[i]) == 0 {
 			return false
@@ -100,10 +99,10 @@ func (v *PolicyVerifier) evalNode(node boolexpr.Node, msg []byte, sigs [][]byte)
 
 		return v.Verifiers[i].Verify(msg, sigs[i]) == nil
 
-	case *boolexpr.AndNode:
+	case *AndNode:
 		return v.evalNode(n.Left, msg, sigs) && v.evalNode(n.Right, msg, sigs)
 
-	case *boolexpr.OrNode:
+	case *OrNode:
 		return v.evalNode(n.Left, msg, sigs) || v.evalNode(n.Right, msg, sigs)
 
 	default:
