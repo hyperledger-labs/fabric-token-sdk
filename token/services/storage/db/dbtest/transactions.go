@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package dbtest
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -20,8 +19,8 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	"github.com/test-go/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TransactionsTest(t *testing.T, cfgProvider cfgProvider) {
@@ -79,19 +78,19 @@ func TFailsIfRequestDoesNotExist(t *testing.T, db driver3.TokenTransactionStore)
 	w, _ := db.NewTransactionStoreTransaction()
 	err := w.AddTransaction(ctx, tx)
 	require.Error(t, err)
-	assert.True(t, errors.Is(err, driver3.ErrTokenRequestDoesNotExist))
+	require.ErrorIs(t, err, driver3.ErrTokenRequestDoesNotExist)
 	w.Rollback()
 
 	w, _ = db.NewTransactionStoreTransaction()
 	err = w.AddValidationRecord(ctx, "tx1", nil)
 	require.Error(t, err)
-	assert.True(t, errors.Is(err, driver3.ErrTokenRequestDoesNotExist))
+	require.ErrorIs(t, err, driver3.ErrTokenRequestDoesNotExist)
 	w.Rollback()
 
 	w, _ = db.NewTransactionStoreTransaction()
 	err = w.AddMovement(ctx, mv)
 	require.Error(t, err)
-	assert.True(t, errors.Is(err, driver3.ErrTokenRequestDoesNotExist))
+	require.ErrorIs(t, err, driver3.ErrTokenRequestDoesNotExist)
 	w.Rollback()
 }
 
@@ -127,7 +126,7 @@ func TStatus(t *testing.T, db driver3.TokenTransactionStore) {
 	s, mess, err := db.GetStatus(ctx, "tx1")
 	require.NoError(t, err, "get status error")
 	assert.Equal(t, driver3.Pending, s, "status should be pending after first creation")
-	assert.Equal(t, "", mess)
+	assert.Empty(t, mess)
 
 	txn := getTransactions(t, db, driver3.QueryTransactionsParams{})[0]
 	assert.Equal(t, driver3.Pending, txn.Status, "transaction status should be pending")
@@ -581,10 +580,10 @@ func TRollback(t *testing.T, db driver3.TokenTransactionStore) {
 	require.NoError(t, w.AddTransaction(ctx, tr1))
 	require.NoError(t, w.AddMovement(ctx, mr1))
 	w.Rollback()
-	assert.Len(t, getTransactions(t, db, driver3.QueryTransactionsParams{}), 0)
+	assert.Empty(t, getTransactions(t, db, driver3.QueryTransactionsParams{}))
 	mvm, err := db.QueryMovements(ctx, driver3.QueryMovementsParams{})
 	require.NoError(t, err)
-	assert.Len(t, mvm, 0)
+	assert.Empty(t, mvm)
 }
 
 func TTransactionQueries(t *testing.T, db driver3.TokenTransactionStore) {
@@ -820,7 +819,7 @@ func TTransactionQueries(t *testing.T, db driver3.TokenTransactionStore) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			res := getTransactions(t, db, tc.params)
-			assert.Len(t, res, tc.expectedLen, fmt.Sprintf("params: %v", tc.params))
+			assert.Len(t, res, tc.expectedLen, "params: %v", tc.params)
 		})
 	}
 
@@ -909,20 +908,20 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 	assert.Len(t, all, 4)
 
 	for i, vr := range exp {
-		assert.Equal(t, vr.TxID, all[i].TxID, fmt.Sprintf("%v", all[i]))
+		assert.Equal(t, vr.TxID, all[i].TxID, "%v", all[i])
 		if len(all[i].TokenRequest) == 0 {
 			all[i].TokenRequest = []byte{}
 		}
-		assert.Equal(t, vr.TokenRequest, all[i].TokenRequest, fmt.Sprintf("%v - %d", all[i], len(all[i].TokenRequest)))
-		assert.Equal(t, vr.Metadata, all[i].Metadata, fmt.Sprintf("%v", all[i]))
-		assert.Equal(t, vr.Status, all[i].Status, fmt.Sprintf("%v", all[i]))
-		assert.WithinDuration(t, beforeTx, all[i].Timestamp, 5*time.Second, fmt.Sprintf("%v", all[i]))
+		assert.Equal(t, vr.TokenRequest, all[i].TokenRequest, "%v - %d", all[i], len(all[i].TokenRequest))
+		assert.Equal(t, vr.Metadata, all[i].Metadata, "%v", all[i])
+		assert.Equal(t, vr.Status, all[i].Status, "%v", all[i])
+		assert.WithinDuration(t, beforeTx, all[i].Timestamp, 5*time.Second, "%v", all[i])
 	}
 
 	to := getValidationRecords(t, db, driver3.QueryValidationRecordsParams{
 		To: &beforeTx,
 	})
-	assert.Len(t, to, 0, "Expect no results if all records are created after 'To'")
+	assert.Empty(t, to, "Expect no results if all records are created after 'To'")
 
 	from := getValidationRecords(t, db, driver3.QueryValidationRecordsParams{
 		From: &beforeTx,
@@ -961,10 +960,10 @@ func TEndorserAcks(t *testing.T, db driver3.TokenTransactionStore) {
 	wg.Add(n)
 	for i := range n {
 		go func(i int) {
-			require.NoError(t, db.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			assert.NoError(t, db.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
 			acks, err := db.GetTransactionEndorsementAcks(ctx, "1")
-			require.NoError(t, err)
-			assert.True(t, len(acks) != 0)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, acks)
 			wg.Done()
 		}(i)
 	}

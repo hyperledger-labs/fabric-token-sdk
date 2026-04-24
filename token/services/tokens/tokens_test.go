@@ -15,8 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/mock"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/test-go/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
@@ -75,9 +75,9 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, "tx1", store[0].TxID)
 	assert.Equal(t, output1.Index, store[0].Index)
 	assert.Equal(t, output1.LedgerOutput, store[0].TokenOnLedger)
-	assert.Equal(t, true, store[0].Flags.Mine)
-	assert.Equal(t, false, store[0].Flags.Auditor)
-	assert.Equal(t, false, store[0].Flags.Issuer)
+	assert.True(t, store[0].Flags.Mine)
+	assert.False(t, store[0].Flags.Auditor)
+	assert.False(t, store[0].Flags.Issuer)
 	assert.Equal(t, uint64(64), store[0].Precision)
 	assert.Equal(t, output1.Type, store[0].Tok.Type)
 
@@ -87,7 +87,7 @@ func TestParse(t *testing.T) {
 	spend, store, err = ts.Parse(ctx, auth, "tx1", md, is, os, false, 64, false)
 	require.NoError(t, err)
 	assert.Len(t, spend, 1)
-	assert.Len(t, store, 0)
+	assert.Empty(t, store)
 
 	// transfer with several inputs and outputs
 	input1 = &token.Input{

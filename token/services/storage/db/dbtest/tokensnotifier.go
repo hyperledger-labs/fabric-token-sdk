@@ -12,8 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/test-go/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 type TestTokenDB interface {
@@ -119,7 +118,8 @@ func (t *tokenSubscriber) Subscribe(f func(operation driver.Operation, vals driv
 func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
 	result, err := collectDBEvents[driver.TokenRecordReference](&tokenSubscriber{notifier: notifier})
-	assert.Nil(t, err)
+	require.NoError(t, err)
+	require.NoError(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
 	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[0], []string{"alice"}))
@@ -132,7 +132,7 @@ func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier
 func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
 	result, err := collectDBEvents[driver.TokenRecordReference](&tokenSubscriber{notifier: notifier})
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
 	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[0], []string{"alice"}))
@@ -146,7 +146,7 @@ func TSubscribeStoreDelete(t *testing.T, db TestTokenDB, notifier driver.TokenNo
 func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
 	result, err := collectDBEvents[driver.TokenRecordReference](&tokenSubscriber{notifier: notifier})
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
 	require.NoError(t, tx.StoreToken(t.Context(), tokenRecords[0], []string{"alice"}))
@@ -158,7 +158,7 @@ func TSubscribeStoreNoCommit(t *testing.T, db TestTokenDB, notifier driver.Token
 func TSubscribeRead(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {
 	t.Helper()
 	result, err := collectDBEvents[driver.TokenRecordReference](&tokenSubscriber{notifier: notifier})
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	tx, err := db.NewTokenDBTransaction()
 	require.NoError(t, err)
 	// require.NoError(t, tx.StoreToken(t.Context(), driver.TokenRecord{TxID: "tx1", Index: 0}, []string{"alice"}))

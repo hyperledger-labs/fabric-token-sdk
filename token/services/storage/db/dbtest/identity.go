@@ -22,7 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func IdentityTest(t *testing.T, cfgProvider cfgProvider) {
@@ -196,22 +196,23 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 	}
 }
 
+//nolint:testifylint
 func tSignerInfo(t *testing.T, db driver.IdentityStore, index int) {
 	t.Helper()
 	ctx := t.Context()
 	alice := []byte(fmt.Sprintf("alice_%d", index))
 	bob := []byte(fmt.Sprintf("bob_%d", index))
 	signerInfo := []byte("signer_info")
-	require.NoError(t, db.StoreSignerInfo(ctx, alice, signerInfo))
+	assert.NoError(t, db.StoreSignerInfo(ctx, alice, signerInfo))
 	exists, err := db.SignerInfoExists(ctx, alice)
-	require.NoError(t, err, "failed to check signer info existence for [%s]", alice)
+	assert.NoError(t, err, "failed to check signer info existence for [%s]", alice)
 	assert.True(t, exists)
 	signerInfo2, err := db.GetSignerInfo(ctx, alice)
-	require.NoError(t, err, "failed to retrieve signer info for [%s]", alice)
+	assert.NoError(t, err, "failed to retrieve signer info for [%s]", alice)
 	assert.Equal(t, signerInfo, signerInfo2)
 
 	exists, err = db.SignerInfoExists(ctx, bob)
-	require.NoError(t, err, "failed to check signer info existence for [%s]", bob)
+	assert.NoError(t, err, "failed to check signer info existence for [%s]", bob)
 	assert.False(t, exists)
 }
 

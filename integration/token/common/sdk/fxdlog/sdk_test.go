@@ -14,7 +14,7 @@ import (
 	fabricx "github.com/hyperledger-labs/fabric-smart-client/platform/fabricx/sdk/dig"
 	sdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFabricWiring(t *testing.T) {
