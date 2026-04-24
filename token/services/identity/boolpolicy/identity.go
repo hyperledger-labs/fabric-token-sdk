@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 // Package boolpolicy provides an identity type whose ownership is governed
 // by a boolean expression over a set of component identities.
 //
-// Wire representation
+// # Wire representation
 //
 // A PolicyIdentity is serialised as a DER SEQUENCE carrying two fields:
 //
@@ -20,7 +20,7 @@ SPDX-License-Identifier: Apache-2.0
 // (type tag PolicyIdentityType = 6) before being placed on the wire, exactly
 // as MultiIdentity is wrapped with MultiSigIdentityType = 5.
 //
-// Signature representation
+// # Signature representation
 //
 // A PolicySignature is serialised as:
 //
@@ -89,7 +89,7 @@ type AuditInfo struct {
 	IdentityAuditInfos []IdentityAuditInfo
 }
 
-func (a *AuditInfo) EnrollmentID() string    { return "" }
+func (a *AuditInfo) EnrollmentID() string     { return "" }
 func (a *AuditInfo) RevocationHandle() string { return "" }
 func (a *AuditInfo) Bytes() ([]byte, error)   { return json.Marshal(a) }
 

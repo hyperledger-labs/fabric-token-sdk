@@ -205,8 +205,8 @@ const (
 	X509IdentityType       IdentityType = 2
 	IdemixNymIdentityType  IdentityType = 3
 	HTLCScriptIdentityType IdentityType = 4
-	MultiSigIdentityType    IdentityType = 5
-	PolicyIdentityType      IdentityType = 6
+	MultiSigIdentityType   IdentityType = 5
+	PolicyIdentityType     IdentityType = 6
 )
 
 // IdentityTypeString identifies the type of identity as a string
