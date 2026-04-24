@@ -205,7 +205,8 @@ const (
 	X509IdentityType       IdentityType = 2
 	IdemixNymIdentityType  IdentityType = 3
 	HTLCScriptIdentityType IdentityType = 4
-	MultiSigIdentityType   IdentityType = 5
+	MultiSigIdentityType    IdentityType = 5
+	PolicyIdentityType      IdentityType = 6
 )
 
 // IdentityTypeString identifies the type of identity as a string
@@ -217,6 +218,7 @@ const (
 	IdemixNymIdentityTypeString  IdentityTypeString = "idemixnym"
 	HTLCScriptIdentityTypeString IdentityTypeString = "htlc"
 	MultiSigIdentityTypeString   IdentityTypeString = "multisig"
+	PolicyIdentityTypeString     IdentityTypeString = "policy"
 )
 
 // Authorization checks the relationship between a token and different wallet types (owner, issuer, auditor).
