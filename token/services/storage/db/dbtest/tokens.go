@@ -1083,6 +1083,22 @@ func TListUnspentTokensByWallets(t *testing.T, db TestTokenDB) {
 			Owner:          true,
 		}, nil))
 	}
+	storeDisagree := func(txID string, typ token.Type, ownerWalletID string, owners []string) {
+		require.NoError(t, db.StoreToken(ctx, driver2.TokenRecord{
+			TxID:           txID,
+			Index:          0,
+			OwnerRaw:       []byte{1, 2, 3},
+			OwnerType:      "idemix",
+			OwnerIdentity:  []byte{},
+			OwnerWalletID:  ownerWalletID,
+			Ledger:         []byte("ledger"),
+			LedgerMetadata: []byte{},
+			Quantity:       "0x02",
+			Type:           typ,
+			Amount:         2,
+			Owner:          true,
+		}, owners))
+	}
 
 	storeForOwners("bw-a-1", TST, []string{"alice"})
 	storeForOwners("bw-a-2", TST, []string{"alice"})
@@ -1134,6 +1150,20 @@ func TListUnspentTokensByWallets(t *testing.T, db TestTokenDB) {
 	res, err = db.ListUnspentTokensByWallets(ctx, []string{}, "")
 	require.NoError(t, err)
 	assert.Empty(t, res)
+
+	// Disagreement between tokens.owner_wallet_id and ownership.wallet_id:
+	// StoreToken writes them independently, so a row can match via the
+	// Ownership join while carrying a different owner_wallet_id. The caller
+	// asked for "carol", so the token must be bucketed under "carol" — not
+	// under the unrequested "stranger".
+	storeDisagree("bw-dis-1", TST, "stranger", []string{"carol"})
+	res, err = db.ListUnspentTokensByWallets(ctx, []string{"carol"}, "")
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.NotNil(t, res["carol"])
+	assert.Len(t, res["carol"].Tokens, 1)
+	_, hasStranger := res["stranger"]
+	assert.False(t, hasStranger, "unrequested wallet must not appear as a bucket key")
 }
 
 func consumeSpendableTokensIterator(t *testing.T, it tdriver.SpendableTokensIterator, tokenType token.Type, count int) {

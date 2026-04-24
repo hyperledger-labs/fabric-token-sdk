@@ -180,6 +180,14 @@ type TokenStore interface {
 	// This is a single-query alternative to calling ListUnspentTokensBy
 	// per wallet in a loop: one SQL statement with an IN clause, then
 	// partitioned on the read side.
+	//
+	// Position in the ListUnspentTokens family:
+	//
+	//	UnspentTokensIterator(ctx)                       → iterator (all)
+	//	UnspentTokensIteratorBy(ctx, walletID, typ)      → iterator (one wallet)
+	//	ListUnspentTokens(ctx)                           → *UnspentTokens (all)
+	//	ListUnspentTokensBy(ctx, walletID, typ)          → *UnspentTokens (one wallet)
+	//	ListUnspentTokensByWallets(ctx, walletIDs, typ)  → map[walletID]*UnspentTokens (batch)
 	ListUnspentTokensByWallets(ctx context.Context, walletIDs []string, typ token.Type) (map[string]*token.UnspentTokens, error)
 	// ListUnspentTokens returns the list of all owned tokens
 	ListUnspentTokens(ctx context.Context) (*token.UnspentTokens, error)

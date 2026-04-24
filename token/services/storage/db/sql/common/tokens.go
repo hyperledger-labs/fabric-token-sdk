@@ -306,11 +306,12 @@ func (db *TokenStore) ListUnspentTokensByWallets(ctx context.Context, walletIDs 
 
 	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
 	// owner_wallet_id lives on Tokens, wallet_id lives on Ownership. The
-	// WHERE condition (HasTokenDetails) matches either, so we project both
-	// and pick whichever is populated per row to key the output map. A
-	// single token can show up through the Ownership join multiple times
-	// if it has multiple wallet owners; that is intentional — each
-	// (token, wallet) pair contributes one row.
+	// WHERE condition (HasTokenDetails) matches a row if either column is
+	// in walletIDs, so we project both and bucket each row (below) under
+	// whichever column is actually in the requested set. A single token
+	// can show up through the Ownership join multiple times if it has
+	// multiple wallet owners; that is intentional — each (token, wallet)
+	// pair contributes one row.
 	query, args := q.Select().
 		Fields(
 			ownershipTable.Field("wallet_id"),
@@ -335,6 +336,16 @@ func (db *TokenStore) ListUnspentTokensByWallets(ctx context.Context, walletIDs 
 	}
 	defer rows.Close()
 
+	// The WHERE clause matches rows where EITHER ownership.wallet_id OR
+	// tokens.owner_wallet_id is in walletIDs, but the two columns are not
+	// constrained to agree (StoreToken writes them independently). Bucket
+	// under whichever column is actually in the requested set, preferring
+	// ownership.wallet_id so a single input id always maps to a single key.
+	walletIDSet := make(map[string]struct{}, len(walletIDs))
+	for _, id := range walletIDs {
+		walletIDSet[id] = struct{}{}
+	}
+
 	result := make(map[string]*token.UnspentTokens, len(walletIDs))
 	for rows.Next() {
 		var walletCol, ownerWalletCol sql.NullString
@@ -346,14 +357,16 @@ func (db *TokenStore) ListUnspentTokensByWallets(ctx context.Context, walletIDs 
 		); err != nil {
 			return nil, err
 		}
-		// Prefer owner_wallet_id (canonical for new rows); fall back to
-		// wallet_id (older rows). The WHERE clause guarantees at least
-		// one of the two is populated and matches the input set.
 		walletID := ""
-		if ownerWalletCol.Valid && ownerWalletCol.String != "" {
-			walletID = ownerWalletCol.String
-		} else if walletCol.Valid {
-			walletID = walletCol.String
+		if walletCol.Valid && walletCol.String != "" {
+			if _, ok := walletIDSet[walletCol.String]; ok {
+				walletID = walletCol.String
+			}
+		}
+		if walletID == "" && ownerWalletCol.Valid && ownerWalletCol.String != "" {
+			if _, ok := walletIDSet[ownerWalletCol.String]; ok {
+				walletID = ownerWalletCol.String
+			}
 		}
 		if walletID == "" {
 			continue
