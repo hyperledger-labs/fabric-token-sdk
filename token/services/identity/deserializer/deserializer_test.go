@@ -785,6 +785,59 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		assert.Equal(t, 1, mockDeserializer1.GetAuditInfoCallCount())
 		assert.Equal(t, 1, mockDeserializer2.GetAuditInfoCallCount())
 	})
+
+	// Test that calling DeserializeVerifier twice with the same identity
+	// only calls the underlying deserializer once — second call hits the cache.
+	t.Run("DeserializeVerifier_CacheHit_SecondCallSkipsDeserializer", func(t *testing.T) {
+		multiplex := NewTypedVerifierDeserializerMultiplex()
+
+		mockVerifier := &drivermock.Verifier{}
+		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
+		mockDeserializer.DeserializeVerifierReturns(mockVerifier, nil)
+
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
+
+		typedID := createTypedIdentity(t, identity.Type(99), []byte("raw-identity"))
+
+		// First call — should call the underlying deserializer
+		verifier1, err := multiplex.DeserializeVerifier(context.Background(), typedID)
+		require.NoError(t, err)
+		assert.Equal(t, mockVerifier, verifier1)
+		assert.Equal(t, 1, mockDeserializer.DeserializeVerifierCallCount())
+
+		// Second call with same identity — should hit cache, not call deserializer again
+		verifier2, err := multiplex.DeserializeVerifier(context.Background(), typedID)
+		require.NoError(t, err)
+		assert.Equal(t, mockVerifier, verifier2)
+		assert.Equal(t, 1, mockDeserializer.DeserializeVerifierCallCount(), "deserializer should not be called again on cache hit")
+	})
+
+	// Test that calling DeserializeVerifier with two different identities
+	// calls the underlying deserializer twice — no false cache hits.
+	t.Run("DeserializeVerifier_DifferentIdentities_NoCacheCross", func(t *testing.T) {
+		multiplex := NewTypedVerifierDeserializerMultiplex()
+
+		mockVerifier1 := &drivermock.Verifier{}
+		mockVerifier2 := &drivermock.Verifier{}
+		mockDeserializer := &identitydrivermock.TypedVerifierDeserializer{}
+		mockDeserializer.DeserializeVerifierReturnsOnCall(0, mockVerifier1, nil)
+		mockDeserializer.DeserializeVerifierReturnsOnCall(1, mockVerifier2, nil)
+
+		multiplex.AddTypedVerifierDeserializer(identity.Type(99), mockDeserializer)
+
+		typedID1 := createTypedIdentity(t, identity.Type(99), []byte("identity-alice"))
+		typedID2 := createTypedIdentity(t, identity.Type(99), []byte("identity-bob"))
+
+		verifier1, err := multiplex.DeserializeVerifier(context.Background(), typedID1)
+		require.NoError(t, err)
+		assert.Equal(t, mockVerifier1, verifier1)
+
+		verifier2, err := multiplex.DeserializeVerifier(context.Background(), typedID2)
+		require.NoError(t, err)
+		assert.Equal(t, mockVerifier2, verifier2)
+
+		assert.Equal(t, 2, mockDeserializer.DeserializeVerifierCallCount(), "different identities should each call the deserializer")
+	})
 }
 
 // Tests the TypedIdentityVerifierDeserializer under various success and failure paths
