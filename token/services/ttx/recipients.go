@@ -347,7 +347,6 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		if !w.Contains(context.Context(), recipientIdentity) {
 			return nil, errors.Errorf("cannot find identity [%s] in wallet [%s:%s]", recipientIdentity, wallet, recipientRequest.TMSID)
 		}
-		// TODO: check the other values too
 	} else {
 		logger.DebugfContext(context.Context(), "generate_identity")
 		// otherwise generate one fresh
@@ -596,13 +595,19 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, err
 	}
 
+	if request.RecipientData == nil {
+		return nil, errors.Errorf("missing recipient data in exchange request")
+	}
 	ts, err := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
 	other := request.RecipientData.Identity
 	if err := ts.WalletManager().RegisterRecipientIdentity(context.Context(), &RecipientData{
-		Identity: other, AuditInfo: request.RecipientData.AuditInfo, TokenMetadata: request.RecipientData.TokenMetadata,
+		Identity:               other,
+		AuditInfo:              request.RecipientData.AuditInfo,
+		TokenMetadata:          request.RecipientData.TokenMetadata,
+		TokenMetadataAuditInfo: request.RecipientData.TokenMetadataAuditInfo,
 	}); err != nil {
 		return nil, err
 	}

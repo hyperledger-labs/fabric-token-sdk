@@ -94,8 +94,10 @@ func TestRecipientRequest_BytesRoundTrip(t *testing.T) {
 		TMSID:    token.TMSID{Network: "net2", Channel: "ch2", Namespace: "ns2"},
 		WalletID: []byte("wallet-id"),
 		RecipientData: &RecipientData{
-			Identity:  view.Identity("bob"),
-			AuditInfo: []byte("bob-audit"),
+			Identity:               view.Identity("bob"),
+			AuditInfo:              []byte("bob-audit"),
+			TokenMetadata:          []byte("bob-token-meta"),
+			TokenMetadataAuditInfo: []byte("bob-meta-audit"),
 		},
 		MultiSig: true,
 	}
@@ -113,6 +115,8 @@ func TestRecipientRequest_BytesRoundTrip(t *testing.T) {
 	require.NotNil(t, decoded.RecipientData)
 	assert.Equal(t, original.RecipientData.Identity, decoded.RecipientData.Identity)
 	assert.Equal(t, original.RecipientData.AuditInfo, decoded.RecipientData.AuditInfo)
+	assert.Equal(t, original.RecipientData.TokenMetadata, decoded.RecipientData.TokenMetadata)
+	assert.Equal(t, original.RecipientData.TokenMetadataAuditInfo, decoded.RecipientData.TokenMetadataAuditInfo)
 }
 
 func TestRecipientRequest_FromBytes_InvalidInput(t *testing.T) {
