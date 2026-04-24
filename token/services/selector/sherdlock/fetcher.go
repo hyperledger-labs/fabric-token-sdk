@@ -12,6 +12,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"io"
+
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -182,7 +185,11 @@ type cachedFetcher struct {
 	queriesResponded uint32
 	// prevKeys tracks cache keys from the previous update cycle to identify stale entries that need removal.
 	prevKeys map[string]struct{}
-	mu       sync.RWMutex
+	// isUpdating indicates if a cache refresh is currently in progress.
+	isUpdating bool
+	// updateCond allows goroutines to wait for an in-progress update to complete.
+	updateCond *sync.Cond
+	mu         sync.RWMutex
 }
 
 // newCachedFetcher creates a fetcher that maintains a periodically refreshed cache of all tokens.
@@ -210,49 +217,104 @@ func newCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 		panic("failed to create ristretto cache: " + err.Error())
 	}
 
-	return &cachedFetcher{
+	f := &cachedFetcher{
 		tokenDB:                 tokenDB,
 		cache:                   ristrettoCache,
 		freshnessInterval:       freshnessInterval,
 		maxQueriesBeforeRefresh: uint32(maxQueriesBeforeRefresh),
 		prevKeys:                make(map[string]struct{}),
 	}
+	f.updateCond = sync.NewCond(&f.mu)
+
+	return f
 }
 
-// update refreshes the token cache from the database, adding new entries before removing stale ones to prevent race conditions.
+// update refreshes the token cache from the database. It releases the lock during the
+// potentially slow DB operation to avoid blocking other goroutines, then re-acquires
+// the lock to atomically update the cache. A re-check of staleness is performed
+// after the DB call completes to avoid overwriting a cache that was refreshed by
+// another goroutine while waiting for the database.
 func (f *cachedFetcher) update(ctx context.Context) {
 	f.mu.Lock()
-	defer f.mu.Unlock()
+	if f.isUpdating {
+		// Wait for the in-progress update to finish
+		for f.isUpdating {
+			f.updateCond.Wait()
+		}
+		f.mu.Unlock()
+
+		return
+	}
+
 	if !f.isCacheStale() && !f.isCacheOverused() {
 		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process")
+		f.mu.Unlock()
 
 		return
 	}
 	logger.DebugfContext(ctx, "Renew token cache")
+	f.isUpdating = true
+
+	// Release lock during slow DB operation to not block other token operations
+	f.mu.Unlock()
+
 	it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
+		f.mu.Lock()
+		f.isUpdating = false
+		f.updateCond.Broadcast()
+		f.mu.Unlock()
 
 		return
 	}
 	defer it.Close()
 
-	m := f.groupTokensByKey(ctx, it)
+	m, err := f.groupTokensByKey(ctx, it)
+	if err != nil {
+		logger.Warnf("Failed to group tokens from iterator: %v", err)
+		f.mu.Lock()
+		f.isUpdating = false
+		f.updateCond.Broadcast()
+		f.mu.Unlock()
+
+		return
+	}
+
+	f.mu.Lock()
+	// Re-check: another goroutine may have refreshed while we waited for DB
+	if !f.isCacheStale() && !f.isCacheOverused() {
+		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process, skipping")
+		f.isUpdating = false
+		f.updateCond.Broadcast()
+		f.mu.Unlock()
+
+		return
+	}
 	f.updateCache(ctx, m)
 	f.lastFetched = time.Now()
 	atomic.StoreUint32(&f.queriesResponded, 0)
+	f.isUpdating = false
+	f.updateCond.Broadcast()
+	f.mu.Unlock()
 }
 
 // groupTokensByKey reads tokens from the iterator and groups them by wallet/currency key.
-func (f *cachedFetcher) groupTokensByKey(ctx context.Context, it driver.SpendableTokensIterator) map[string][]*token2.UnspentTokenInWallet {
+// It returns an error if the iterator fails mid-way to prevent partial updates.
+func (f *cachedFetcher) groupTokensByKey(ctx context.Context, it driver.SpendableTokensIterator) (map[string][]*token2.UnspentTokenInWallet, error) {
 	m := map[string][]*token2.UnspentTokenInWallet{}
 	for t, err := it.Next(); err == nil && t != nil; t, err = it.Next() {
 		key := tokenKey(t.WalletID, t.Type)
 		logger.DebugfContext(ctx, "Adding token with key [%s]", key)
 		m[key] = append(m[key], t)
 	}
+	// Re-check for error after loop termination
+	_, err := it.Next()
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	}
 
-	return m
+	return m, nil
 }
 
 // updateCache updates the cache by adding new entries before removing stale ones.
