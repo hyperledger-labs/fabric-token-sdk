@@ -8,6 +8,7 @@ package v1_test
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -16,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -308,4 +310,380 @@ func TestTransferService(t *testing.T) {
 		_, err = s.DeserializeTransferAction([]byte("invalid"))
 		require.Error(t, err)
 	})
+}
+
+// BenchmarkTransferServiceTransfer benchmarks the Transfer method of the TransferService.
+func BenchmarkTransferServiceTransfer(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	for _, tc := range cases {
+		b.Run(tc.Name, func(b *testing.B) {
+			env, err := newBenchmarkTransferEnv(b.N, tc.BenchmarkCase)
+			require.NoError(b, err)
+
+			b.ResetTimer()
+			i := 0
+			for b.Loop() {
+				e := env.Envs[i%len(env.Envs)]
+				action, _, err := e.ts.Transfer(
+					b.Context(),
+					"an_anchor",
+					nil,
+					e.ids,
+					e.outputs,
+					nil,
+				)
+				require.NoError(b, err)
+				require.NotNil(b, action)
+				i++
+			}
+		})
+	}
+}
+
+// TestParallelBenchmarkTransferServiceTransfer runs the transfer benchmark in parallel.
+func TestParallelBenchmarkTransferServiceTransfer(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*benchmarkTransferEnv](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*benchmarkTransferEnv, error) {
+			return newBenchmarkTransferEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkTransferEnv) error {
+			action, _, err := env.Envs[0].ts.Transfer(
+				ctx,
+				"an_anchor",
+				nil,
+				env.Envs[0].ids,
+				env.Envs[0].outputs,
+				nil,
+			)
+			if err != nil {
+				return err
+			}
+			_, err = action.Serialize()
+
+			return err
+		},
+	)
+}
+
+// BenchmarkSender benchmarks transfer action generation and serialization.
+func BenchmarkSender(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
+	test.GoBenchmark(b,
+		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
+			return newBenchmarkSenderEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
+			transfer := &actions.TransferAction{
+				Inputs:  env.Envs[0].inputs,
+				Outputs: env.Envs[0].outputs,
+			}
+			_, err := transfer.Serialize()
+
+			return err
+		},
+	)
+}
+
+// BenchmarkParallelSender benchmarks parallel transfer action generation and serialization.
+func BenchmarkParallelSender(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
+	test.GoBenchmarkParallel(b,
+		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
+			return newBenchmarkSenderEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
+			transfer := &actions.TransferAction{
+				Inputs:  env.Envs[0].inputs,
+				Outputs: env.Envs[0].outputs,
+			}
+			_, err := transfer.Serialize()
+
+			return err
+		},
+	)
+}
+
+// TestParallelBenchmarkSender benchmarks transfer action generation and serialization when multiple go routines are doing the same thing.
+func TestParallelBenchmarkSender(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
+			return newBenchmarkSenderEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
+			transfer := &actions.TransferAction{
+				Inputs:  env.Envs[0].inputs,
+				Outputs: env.Envs[0].outputs,
+			}
+			_, err := transfer.Serialize()
+
+			return err
+		},
+	)
+}
+
+// BenchmarkVerificationSenderProof benchmarks transfer action deserialization and verification.
+func BenchmarkVerificationSenderProof(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
+	test.GoBenchmark(b,
+		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
+			return newBenchmarkSenderVerificationEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
+			ta := &actions.TransferAction{}
+			if err := ta.Deserialize(env.Envs[0].raw); err != nil {
+				return err
+			}
+
+			return ta.Validate()
+		},
+	)
+}
+
+// BenchmarkVerificationParallelSenderProof benchmarks parallel transfer action deserialization and verification.
+func BenchmarkVerificationParallelSenderProof(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
+	test.GoBenchmarkParallel(b,
+		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
+			return newBenchmarkSenderVerificationEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
+			ta := &actions.TransferAction{}
+			if err := ta.Deserialize(env.Envs[0].raw); err != nil {
+				return err
+			}
+
+			return ta.Validate()
+		},
+	)
+}
+
+// TestParallelBenchmarkVerificationSenderProof benchmarks transfer action deserialization and verification when multiple go routines are doing the same thing.
+func TestParallelBenchmarkVerificationSenderProof(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
+			return newBenchmarkSenderVerificationEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
+			ta := &actions.TransferAction{}
+			if err := ta.Deserialize(env.Envs[0].raw); err != nil {
+				return err
+			}
+
+			return ta.Validate()
+		},
+	)
+}
+
+// BenchmarkTransferProofGeneration benchmarks the pure transfer action generation.
+// In fabtoken, this is equivalent to creating the action structure as there is no separate ZK proof.
+func BenchmarkTransferProofGeneration(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
+	test.GoBenchmark(b,
+		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
+			return newBenchmarkSenderEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
+			transfer := &actions.TransferAction{
+				Inputs:  env.Envs[0].inputs,
+				Outputs: env.Envs[0].outputs,
+			}
+			_, err := transfer.Serialize()
+
+			return err
+		},
+	)
+}
+
+// TestParallelBenchmarkTransferProofGeneration runs the transfer proof generation benchmark in parallel.
+func TestParallelBenchmarkTransferProofGeneration(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*benchmarkSenderEnv](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*benchmarkSenderEnv, error) {
+			return newBenchmarkSenderEnv(1, c)
+		},
+		func(ctx context.Context, env *benchmarkSenderEnv) error {
+			transfer := &actions.TransferAction{
+				Inputs:  env.Envs[0].inputs,
+				Outputs: env.Envs[0].outputs,
+			}
+			_, err := transfer.Serialize()
+
+			return err
+		},
+	)
+}
+
+type senderEnv struct {
+	inputs  []*actions.TransferActionInput
+	outputs []*actions.Output
+	raw     []byte
+}
+
+func newSenderEnv(benchmarkCase *benchmark2.Case) (*senderEnv, error) {
+	outputs := make([]*actions.Output, benchmarkCase.NumOutputs)
+	for i := range outputs {
+		outputs[i] = &actions.Output{
+			Owner:    []byte("owner2"),
+			Type:     "ABC",
+			Quantity: token.NewQuantityFromUInt64(uint64(i)*10 + 10).Hex(),
+		}
+	}
+
+	inputs := make([]*actions.TransferActionInput, benchmarkCase.NumInputs)
+	for i := range inputs {
+		inputs[i] = &actions.TransferActionInput{
+			ID: &token.ID{TxId: strconv.Itoa(i), Index: 0},
+			Input: &actions.Output{
+				Owner:    []byte("owner1"),
+				Type:     "ABC",
+				Quantity: token.NewQuantityFromUInt64(uint64(i)*10 + 10).Hex(),
+			},
+		}
+	}
+
+	return &senderEnv{
+		inputs:  inputs,
+		outputs: outputs,
+	}, nil
+}
+
+type benchmarkSenderEnv struct {
+	Envs []*senderEnv
+}
+
+func newBenchmarkSenderEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkSenderEnv, error) {
+	envs := make([]*senderEnv, n)
+	for i := range n {
+		env, err := newSenderEnv(benchmarkCase)
+		if err != nil {
+			return nil, err
+		}
+		envs[i] = env
+	}
+
+	return &benchmarkSenderEnv{Envs: envs}, nil
+}
+
+func newBenchmarkSenderVerificationEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkSenderEnv, error) {
+	envs := make([]*senderEnv, n)
+	for i := range n {
+		env, err := newSenderEnv(benchmarkCase)
+		if err != nil {
+			return nil, err
+		}
+		transfer := &actions.TransferAction{
+			Inputs:  env.inputs,
+			Outputs: env.outputs,
+		}
+		raw, err := transfer.Serialize()
+		if err != nil {
+			return nil, err
+		}
+		env.raw = raw
+		envs[i] = env
+	}
+
+	return &benchmarkSenderEnv{Envs: envs}, nil
+}
+
+type transferEnv struct {
+	ts      *v1.TransferService
+	outputs []*token.Token
+	ids     []*token.ID
+}
+
+func newTransferEnv(benchmarkCase *benchmark2.Case) (*transferEnv, error) {
+	logger := logging.MustGetLogger("test")
+	ppm := &mockPublicParamsManager{PublicParamsManager: &mock.PublicParamsManager{}}
+	pp, err := setup.Setup(64)
+	if err != nil {
+		return nil, err
+	}
+	ppm.PublicParametersReturns(pp)
+
+	ws := &mock.WalletService{}
+	tl := &MockTokenLoader{}
+	des := &mock.Deserializer{}
+	ts := v1.NewTransferService(logger, ppm, ws, tl, des)
+
+	outputs := make([]*token.Token, benchmarkCase.NumOutputs)
+	for i := range outputs {
+		outputs[i] = &token.Token{
+			Owner:    []byte("owner2"),
+			Type:     "ABC",
+			Quantity: token.NewQuantityFromUInt64(uint64(i)*10 + 10).Hex(),
+		}
+	}
+
+	ids := make([]*token.ID, benchmarkCase.NumInputs)
+	inputTokens := make([]*token.Token, benchmarkCase.NumInputs)
+	for i := range ids {
+		ids[i] = &token.ID{TxId: strconv.Itoa(i), Index: 0}
+		inputTokens[i] = &token.Token{
+			Owner:    []byte("owner1"),
+			Type:     "ABC",
+			Quantity: token.NewQuantityFromUInt64(uint64(i)*10 + 10).Hex(),
+		}
+	}
+
+	tl.GetTokensStub = func(ctx context.Context, ids []*token.ID) ([]*token.Token, error) {
+		return inputTokens, nil
+	}
+	des.GetAuditInfoReturns([]byte("audit"), nil)
+	des.RecipientsReturns([]driver.Identity{[]byte("owner2")}, nil)
+
+	return &transferEnv{
+		ts:      ts,
+		outputs: outputs,
+		ids:     ids,
+	}, nil
+}
+
+type benchmarkTransferEnv struct {
+	Envs []*transferEnv
+}
+
+func newBenchmarkTransferEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkTransferEnv, error) {
+	envs := make([]*transferEnv, n)
+	for i := range n {
+		env, err := newTransferEnv(benchmarkCase)
+		if err != nil {
+			return nil, err
+		}
+		envs[i] = env
+	}
+
+	return &benchmarkTransferEnv{Envs: envs}, nil
 }

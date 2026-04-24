@@ -19,6 +19,7 @@ import (
 	validator2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
@@ -960,4 +961,201 @@ func TestTransferHTLCValidate(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "expiration date has already passed")
 	})
+}
+
+// BenchmarkValidatorTransfer benchmarks the verification of a transfer token request.
+func BenchmarkValidatorTransfer(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	for _, tc := range cases {
+		b.Run(tc.Name, func(b *testing.B) {
+			env, err := newBenchmarkValidatorEnv(b.N, tc.BenchmarkCase, false)
+			require.NoError(b, err)
+
+			b.ResetTimer()
+			i := 0
+			for b.Loop() {
+				e := env.Envs[i%len(env.Envs)]
+				_, _, err := e.v.VerifyTokenRequestFromRaw(
+					b.Context(),
+					nil,
+					"an_anchor",
+					e.raw,
+				)
+				require.NoError(b, err)
+				i++
+			}
+		})
+	}
+}
+
+// TestParallelBenchmarkValidatorTransfer runs the validator transfer benchmark in parallel.
+func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*benchmarkValidatorEnv](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*benchmarkValidatorEnv, error) {
+			return newBenchmarkValidatorEnv(1, c, false)
+		},
+		func(ctx context.Context, env *benchmarkValidatorEnv) error {
+			_, _, err := env.Envs[0].v.VerifyTokenRequestFromRaw(
+				ctx,
+				nil,
+				"an_anchor",
+				env.Envs[0].raw,
+			)
+
+			return err
+		},
+	)
+}
+
+// BenchmarkValidatorIssue benchmarks the verification of an issue token request.
+func BenchmarkValidatorIssue(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	for _, tc := range cases {
+		b.Run(tc.Name, func(b *testing.B) {
+			env, err := newBenchmarkValidatorEnv(b.N, tc.BenchmarkCase, true)
+			require.NoError(b, err)
+
+			b.ResetTimer()
+			i := 0
+			for b.Loop() {
+				e := env.Envs[i%len(env.Envs)]
+				_, _, err := e.v.VerifyTokenRequestFromRaw(
+					b.Context(),
+					nil,
+					"an_anchor",
+					e.raw,
+				)
+				require.NoError(b, err)
+				i++
+			}
+		})
+	}
+}
+
+// TestParallelBenchmarkValidatorIssue runs the validator issue benchmark in parallel.
+func TestParallelBenchmarkValidatorIssue(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*benchmarkValidatorEnv](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*benchmarkValidatorEnv, error) {
+			return newBenchmarkValidatorEnv(1, c, true)
+		},
+		func(ctx context.Context, env *benchmarkValidatorEnv) error {
+			_, _, err := env.Envs[0].v.VerifyTokenRequestFromRaw(
+				ctx,
+				nil,
+				"an_anchor",
+				env.Envs[0].raw,
+			)
+
+			return err
+		},
+	)
+}
+
+type validatorEnv struct {
+	v   *validator.Validator
+	raw []byte
+}
+
+func newBenchmarkValidatorEnv(n int, benchmarkCase *benchmark2.Case, isIssue bool) (*benchmarkValidatorEnv, error) {
+	envs := make([]*validatorEnv, n)
+	for i := range n {
+		env, err := newValidatorEnv(benchmarkCase, isIssue)
+		if err != nil {
+			return nil, err
+		}
+		envs[i] = env
+	}
+
+	return &benchmarkValidatorEnv{Envs: envs}, nil
+}
+
+type benchmarkValidatorEnv struct {
+	Envs []*validatorEnv
+}
+
+func newValidatorEnv(benchmarkCase *benchmark2.Case, isIssue bool) (*validatorEnv, error) {
+	logger := logging.MustGetLogger("test")
+	pp, err := setup.Setup(64)
+	if err != nil {
+		return nil, err
+	}
+	des := &mock.Deserializer{}
+	v := validator.NewValidator(logger, pp, des, nil, nil, nil)
+
+	id, _ := identity.WrapWithType(x509.IdentityType, []byte("owner"))
+	issuer, _ := identity.WrapWithType(x509.IdentityType, []byte("issuer"))
+
+	tr := &driver.TokenRequest{}
+	if isIssue {
+		ia := &actions.IssueAction{
+			Issuer: issuer,
+		}
+		for range benchmarkCase.NumOutputs {
+			ia.Outputs = append(ia.Outputs, &actions.Output{
+				Quantity: token.NewQuantityFromUInt64(100).Hex(),
+				Type:     "ABC",
+				Owner:    id,
+			})
+		}
+		rawIA, err := ia.Serialize()
+		if err != nil {
+			return nil, err
+		}
+		tr.Issues = [][]byte{rawIA}
+		tr.Signatures = [][]byte{[]byte("signature")}
+	} else {
+		ta := &actions.TransferAction{
+			Issuer: issuer,
+		}
+		for range benchmarkCase.NumInputs {
+			ta.Inputs = append(ta.Inputs, &actions.TransferActionInput{
+				ID: &token.ID{TxId: "tx1", Index: 0},
+				Input: &actions.Output{
+					Quantity: token.NewQuantityFromUInt64(100).Hex(),
+					Type:     "ABC",
+					Owner:    id,
+				},
+			})
+		}
+		for range benchmarkCase.NumOutputs {
+			ta.Outputs = append(ta.Outputs, &actions.Output{
+				Quantity: token.NewQuantityFromUInt64(100).Hex(),
+				Type:     "ABC",
+				Owner:    id,
+			})
+		}
+		rawTA, err := ta.Serialize()
+		if err != nil {
+			return nil, err
+		}
+		tr.Transfers = [][]byte{rawTA}
+		for range benchmarkCase.NumInputs {
+			tr.Signatures = append(tr.Signatures, []byte("signature"))
+		}
+	}
+
+	raw, err := tr.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	des.GetIssuerVerifierReturns(&mock.Verifier{}, nil)
+	des.GetOwnerVerifierReturns(&mock.Verifier{}, nil)
+
+	return &validatorEnv{
+		v:   v,
+		raw: raw,
+	}, nil
 }
