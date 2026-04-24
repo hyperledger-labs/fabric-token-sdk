@@ -181,6 +181,12 @@ type TokenStore interface {
 	// per wallet in a loop: one SQL statement with an IN clause, then
 	// partitioned on the read side.
 	//
+	// Scale note: the IN clause expands to two placeholders per wallet id
+	// (one per wallet column). Postgres's default parameter limit (~65k)
+	// leaves ample headroom; SQLite's default (999) caps the practical
+	// batch size at a few hundred wallet ids. Callers expecting thousands
+	// of ids should chunk on the caller side and merge the returned maps.
+	//
 	// Position in the ListUnspentTokens family:
 	//
 	//	UnspentTokensIterator(ctx)                       → iterator (all)
