@@ -39,13 +39,12 @@ token:
     # fetcherCacheMaxQueries is the number of queries after which a soft refresh (non-blocking background update) is triggered.
     # This helps keep the cache fresh without blocking queries. If not specified or set to 0, defaults to 5 queries.
     fetcherCacheMaxQueries: 5
+
   # When we are interested in knowing when a transaction reaches finality, we subscribe to the Finality Listener Manager for the finality event of that transaction.
   # This configuration specifies the way the manager is instantiated (i.e., how it gets notified about the finality events, how often it checks).
- 
  finality:
-    # driver is the implementation of the finality manager. The finality manager keeps track of all subscribers that are interested in a transaction.
-    # These are the possible values:
-    # delivery: The manager subscribes to the delivery service and receives all final transactions.
+    # Only applicable for fabric networks.
+    # The manager subscribes to the delivery service and receives all final transactions.
     #   This manager keeps two structures: an LRU cache of recently finalized transactions, and a list of listeners that are waiting for future transactions.
     #   When a new block comes from the delivery service, we store all new transactions in the cache and notify all interested listeners.
     #   When a client subscribes to the manager for a specific transaction, we go through the following steps, which correspond to all possible scenarios with decreasing probability:
@@ -53,12 +52,6 @@ token:
     #   b) The transaction will reach finality shortly, so we append a listener and wait for a timeout. If the listener reaches timeout, we proceed to step c.
     #   c) The transaction reached finality long ago, so we query the whole ledger for this specific transaction. If the query returns no result, we proceed to step d.
     #   d) The transaction will reach finality at some point beyond the timeout or never, so we return Unknown. Then it is up to the client to either append another listener or accept that the transaction will never reach finality.  
-    # notification: The manager is notified about finality events via a notification service (e.g. for FabricX).
-    #   When a new notification arrives, an event is added to a queue for asynchronous processing.
-    #   When a client subscribes to the manager for a specific transaction, we perform an immediate query to check its status.
-    # The field can also be left empty. In that case, the default option will be used depending on the network type each TMS refers to.
-    type: delivery
-    # Only applicable when type = 'delivery'
     delivery:
       # mapperParallelism is the number of goroutines that process incoming transactions in parallel. Defaults to 1.
       mapperParallelism: 10
@@ -78,7 +71,10 @@ token:
       # If the timeout is not set, then the listener will never be evicted and we will never proceed to step c.
       # We will wait forever for the transaction to return (as is done for the 'committer' type).
       listenerTimeout: 10s
-    # Only applicable when type = 'notification'
+    # Only applicable for fabricx networks
+    # notification: The manager is notified about finality events via a notification service (e.g. for FabricX).
+    #   When a new notification arrives, an event is added to a queue for asynchronous processing.
+    #   When a client subscribes to the manager for a specific transaction, we perform an immediate query to check its status.
     notification:
       # workers is the number of goroutines that process events in parallel. Defaults to 10.
       workers: 10
@@ -303,24 +299,15 @@ Default values:
 
 ### Optional: token.finality
 
-If not specified, the default configuration is:
-
-```yaml
-token:
-  finality:
-    type: delivery
-```
-
 Default values:
 
-- type: delivery
-- committer.maxRetries: 3
-- committer.retryWaitDuration: 5s
 - delivery.mapperParallelism: 10
 - delivery.blockProcessParallelism: 10
 - delivery.lruSize: 30
 - delivery.lruBuffer: 15
 - delivery.listenerTimeout: 10s
+- notification.workers: 10
+- notification.queueSize: 1000
 
 ---
 
