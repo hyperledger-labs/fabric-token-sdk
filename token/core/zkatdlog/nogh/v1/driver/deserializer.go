@@ -12,6 +12,7 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/boolpolicy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
@@ -46,6 +47,7 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 	des.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	des.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(des))
 	des.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(des, des))
+	des.AddTypedVerifierDeserializer(boolpolicy.Policy, boolpolicy.NewTypedIdentityDeserializer(des, des))
 
 	return &Deserializer{Deserializer: common.NewDeserializer(des, des, des, des, des)}, nil
 }
@@ -92,6 +94,7 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(d))
 	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})
+	d.AddDeserializer(boolpolicy.Policy, &boolpolicy.AuditInfoDeserializer{})
 
 	return d
 }
