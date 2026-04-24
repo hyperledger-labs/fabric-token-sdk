@@ -109,25 +109,7 @@ func (f *retryRunner) RunWithContext(ctx context.Context, runner func() error) e
 // If it returns true, then the error or nil will be returned.
 // If it returns maxTimes false, then it will always return an error: either a join of all errors it encountered or a ErrMaxRetriesExceeded.
 func (f *retryRunner) RunWithErrors(runner func() (bool, error)) error {
-	errs := make([]error, 0)
-	var delay time.Duration
-	for i := 0; f.maxTimes < 0 || i < f.maxTimes; i++ {
-		terminate, err := runner()
-		if terminate {
-			return err
-		}
-		if err != nil {
-			errs = append(errs, err)
-		}
-		delay = f.nextDelay(delay)
-		f.logger.Warnf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
-		time.Sleep(delay)
-	}
-	if len(errs) == 0 {
-		return ErrMaxRetriesExceeded
-	}
-
-	return errors.Join(errs...)
+	return f.RunWithErrorsContext(context.Background(), runner)
 }
 
 // RunWithErrorsContext retries until runner() returns true, ctx is canceled, or maxTimes

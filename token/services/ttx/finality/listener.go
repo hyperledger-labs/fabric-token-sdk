@@ -93,19 +93,13 @@ func (t *Listener) OnStatus(ctx context.Context, txID string, status int, messag
 	start := time.Now()
 	newCtx, span := t.tracer.Start(ctx, "on_status")
 	defer span.End()
-	if err := t.retryRunner.RunWithErrorsContext(newCtx, func() (bool, error) {
+	if err := t.retryRunner.RunWithContext(newCtx, func() error {
 		err := t.runOnStatus(newCtx, txID, status, message, tokenRequestHash)
 		if err != nil {
 			t.logger.Errorf("finality listener on [%s] failed with error: [%+v], retrying...", txID, err)
-			// An unrecognized status is a permanent error — retrying will never succeed.
-			if status != network.Valid && status != network.Invalid {
-				return true, err
-			}
-
-			return false, err
 		}
 
-		return true, nil
+		return err
 	}); err != nil {
 		t.logger.Errorf("finality listener on [%s] failed with error: [%+v], stop.", txID, err)
 	}
