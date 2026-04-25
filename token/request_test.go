@@ -695,7 +695,7 @@ func TestRequest_Issues(t *testing.T) {
 							},
 						},
 					},
-					ExtraSigners: []Identity{Identity("signer1")},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: Identity("signer1")}},
 				},
 				{
 					Issuer: driver.AuditableIdentity{
@@ -746,7 +746,7 @@ func TestRequest_Transfers(t *testing.T) {
 							},
 						},
 					},
-					ExtraSigners: []Identity{Identity("extra1")},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: Identity("extra1")}},
 					Issuer:       Identity("issuer1"),
 				},
 			},
@@ -785,7 +785,7 @@ func TestRequest_TransferSigners(t *testing.T) {
 							},
 						},
 					},
-					ExtraSigners: []Identity{Identity("extra1")},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: Identity("extra1")}},
 					Issuer:       Identity("issuer1"),
 				},
 			},
@@ -809,7 +809,7 @@ func TestRequest_IssueSigners(t *testing.T) {
 					Issuer: driver.AuditableIdentity{
 						Identity: Identity("issuer1"),
 					},
-					ExtraSigners: []Identity{Identity("extra1"), Identity("extra2")},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: Identity("extra1")}, {Identity: Identity("extra2")}},
 				},
 				{
 					Issuer: driver.AuditableIdentity{

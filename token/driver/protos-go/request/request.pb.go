@@ -344,7 +344,7 @@ type TransferMetadata struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Inputs        []*TransferInputMetadata `protobuf:"bytes,1,rep,name=inputs,proto3" json:"inputs,omitempty"`                                 // Inputs
 	Outputs       []*OutputMetadata        `protobuf:"bytes,2,rep,name=outputs,proto3" json:"outputs,omitempty"`                               // Outputs
-	ExtraSigners  []*Identity              `protobuf:"bytes,8,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"` // Additional signers for the transfer
+	ExtraSigners  []*AuditableIdentity     `protobuf:"bytes,8,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"` // Additional signers for the transfer
 	Issuer        *Identity                `protobuf:"bytes,3,opt,name=issuer,proto3" json:"issuer,omitempty"`                                 // Issuer signer for the redeem transfer
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -394,7 +394,7 @@ func (x *TransferMetadata) GetOutputs() []*OutputMetadata {
 	return nil
 }
 
-func (x *TransferMetadata) GetExtraSigners() []*Identity {
+func (x *TransferMetadata) GetExtraSigners() []*AuditableIdentity {
 	if x != nil {
 		return x.ExtraSigners
 	}
@@ -458,7 +458,7 @@ type IssueMetadata struct {
 	Issuer        *AuditableIdentity     `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`                                 // Issuer of the tokens
 	Inputs        []*IssueInputMetadata  `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`                                 // Inputs
 	Outputs       []*OutputMetadata      `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`                               // Outputs
-	ExtraSigners  []*Identity            `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"` // Additional signers for the issuance
+	ExtraSigners  []*AuditableIdentity   `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"` // Additional signers for the issuance
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -514,7 +514,7 @@ func (x *IssueMetadata) GetOutputs() []*OutputMetadata {
 	return nil
 }
 
-func (x *IssueMetadata) GetExtraSigners() []*Identity {
+func (x *IssueMetadata) GetExtraSigners() []*AuditableIdentity {
 	if x != nil {
 		return x.ExtraSigners
 	}

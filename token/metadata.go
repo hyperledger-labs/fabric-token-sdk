@@ -247,7 +247,9 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 		return errors.Errorf("expected [%d] extra signers but got [%d]", len(extraSigners), len(m.ExtraSigners))
 	}
 	for i, signer := range extraSigners {
-		if !slices.ContainsFunc(m.ExtraSigners, signer.Equal) {
+		if !slices.ContainsFunc(m.ExtraSigners, func(es *driver.AuditableIdentity) bool {
+			return es != nil && signer.Equal(es.Identity)
+		}) {
 			return errors.Errorf("expected extra signer [%s] but got [%s]", signer, m.ExtraSigners[i])
 		}
 	}
@@ -302,7 +304,7 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 		return errors.Errorf("expected [%d] extra signers but got [%d]", len(m.ExtraSigners), len(extraSigners))
 	}
 	for i, signer := range extraSigners {
-		if !signer.Equal(m.ExtraSigners[i]) {
+		if m.ExtraSigners[i] == nil || !signer.Equal(m.ExtraSigners[i].Identity) {
 			return errors.Errorf("expected extra signer [%s] but got [%s]", m.ExtraSigners[i], signer)
 		}
 	}
