@@ -50,7 +50,7 @@ message OutputMetadata {
 message TransferMetadata {
   repeated TransferInputMetadata inputs = 1; // Inputs
   repeated OutputMetadata outputs = 2; // Outputs
-  repeated Identity extra_signers = 8; // Additional signers for the transfer
+  repeated AuditableIdentity extra_signers = 8; // Additional signers for the transfer
   Identity issuer = 3; // Issuer signer for the redeem transfer
 }
 
@@ -63,7 +63,7 @@ message IssueMetadata {
   AuditableIdentity issuer = 1; // Issuer of the tokens
   repeated IssueInputMetadata inputs = 2; // Inputs
   repeated OutputMetadata outputs = 3; // Outputs
-  repeated Identity extra_signers = 4; // Additional signers for the issuance
+  repeated AuditableIdentity extra_signers = 4; // Additional signers for the issuance
 }
 
 // Union type containing either issue or transfer metadata
