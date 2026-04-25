@@ -8,7 +8,6 @@ package ttx
 
 import (
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -50,8 +49,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	jsonSession := jsession.JSON(context)
 	msg, err := jsonSession.ReceiveRawWithTimeout(options.Timeout)
 	if err != nil {
-		// TODO: replace this with a check of a typed error
-		if strings.Contains(err.Error(), "time out reached") {
+		if errors.Is(err, jsession.ErrTimeout) {
 			return nil, errors.Join(err, ErrTimeout)
 		}
 		logger.ErrorfContext(context.Context(), err.Error())
