@@ -13,8 +13,6 @@ token:
   selector:
     driver: {{ TokenSelector }}
   finality:
-    # we leave type empty so that the default is peaked per type of network
-    type:
     delivery:
       mapperParallelism: 10
       lruSize: 100
