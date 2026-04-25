@@ -138,7 +138,7 @@ func (db *TransactionStore) GetTokenRequests(ctx context.Context, txIDs []string
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	result := make(map[string][]byte, len(txIDs))
 	for rows.Next() {
@@ -149,6 +149,7 @@ func (db *TransactionStore) GetTokenRequests(ctx context.Context, txIDs []string
 		}
 		result[txID] = request
 	}
+
 	return result, rows.Err()
 }
 

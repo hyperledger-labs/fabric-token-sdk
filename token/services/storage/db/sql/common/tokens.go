@@ -334,7 +334,7 @@ func (db *TokenStore) ListUnspentTokensByWallets(ctx context.Context, walletIDs 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer Close(rows)
 
 	// The WHERE clause matches rows where EITHER ownership.wallet_id OR
 	// tokens.owner_wallet_id is in walletIDs, but the two columns are not
@@ -378,6 +378,7 @@ func (db *TokenStore) ListUnspentTokensByWallets(ctx context.Context, walletIDs 
 		}
 		bucket.Tokens = append(bucket.Tokens, ut)
 	}
+
 	return result, rows.Err()
 }
 
