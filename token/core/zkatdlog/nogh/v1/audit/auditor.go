@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package audit
 
 import (
-	"bytes"
 	"context"
 
 	math "github.com/IBM/mathlib"
@@ -122,7 +121,6 @@ func (a *Auditor) Check(
 	inputTokens [][]*token.Token,
 	txID driver.TokenRequestAnchor,
 ) error {
-	// TODO: inputTokens should be checked against the actions
 	// De-obfuscate issue requests
 	a.Logger.DebugfContext(ctx, "Get audit info for %d issues", len(tokenRequest.Issues))
 	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssues(tokenRequest.Issues, tokenRequestMetadata.Issues)
@@ -144,7 +142,7 @@ func (a *Auditor) Check(
 	}
 	// De-obfuscate transfer requests
 	a.Logger.DebugfContext(ctx, "Get audit info for %d transfers", len(tokenRequest.Transfers))
-	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfers(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
+	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfers(ctx, tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers for [%s]", txID)
 	}
@@ -258,7 +256,7 @@ func (a *Auditor) InspectIdentity(ctx context.Context, matcher InfoMatcher, iden
 	// If identity is provided in metadata, it must match the one in the action
 	if len(identity.IdentityFromMeta) != 0 {
 		// enforce equality
-		if !bytes.Equal(identity.IdentityFromMeta, identity.Identity) {
+		if !identity.IdentityFromMeta.Equal(identity.Identity) {
 			return errors.Errorf("failed to inspect identity at index [%d]: identity does not match the identity form metadata", index)
 		}
 	}
@@ -333,7 +331,7 @@ func (a *Auditor) GetAuditInfoForIssues(issues [][]byte, issueMetadata []*driver
 
 // GetAuditInfoForTransfers returns an array of InspectableToken for each transfer action.
 // It takes an array of serialized transfer actions, an array of transfer metadata and input tokens.
-func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error) {
+func (a *Auditor) GetAuditInfoForTransfers(ctx context.Context, transfers [][]byte, metadata []*driver.TransferMetadata, inputs [][]*token.Token) ([][]*InspectableToken, [][]*InspectableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
 	}
@@ -363,12 +361,35 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			}
 		}
 		ta := &transfer.Action{}
-		err := ta.Deserialize(transfers[k])
-		if err != nil {
+		if err := ta.Deserialize(transfers[k]); err != nil {
 			return nil, nil, err
 		}
-		if len(ta.Outputs) != len(transferMetadata.Outputs) {
-			return nil, nil, errors.Errorf("number of outputs does not match the number of output metadata [%d]!=[%d]", len(ta.Outputs), len(transferMetadata.Outputs))
+		// Validate structural consistency between action and metadata (counts, signers, issuer).
+		if err := transferMetadata.Match(ta); err != nil {
+			return nil, nil, errors.Wrapf(err, "transfer at index [%d]", k)
+		}
+		// Build serialized forms and validate input tokens match the action.
+		actionInputSer := make([][]byte, len(ta.Inputs))
+		for i, actionInput := range ta.Inputs {
+			if actionInput.Token == nil {
+				continue // upgrade-witness input: no zkatdlog commitment to compare
+			}
+			ser, err := actionInput.Token.Serialize()
+			if err != nil {
+				return nil, nil, errors.Errorf("failed serializing action input at [%d][%d]: %s", k, i, err)
+			}
+			actionInputSer[i] = ser
+		}
+		ledgerInputSer := make([][]byte, len(inputs[k]))
+		for i, t := range inputs[k] {
+			ser, err := t.Serialize()
+			if err != nil {
+				return nil, nil, errors.Errorf("failed serializing ledger input at [%d][%d]: %s", k, i, err)
+			}
+			ledgerInputSer[i] = ser
+		}
+		if err := transferMetadata.MatchInputs(actionInputSer, ledgerInputSer); err != nil {
+			return nil, nil, errors.Wrapf(err, "transfer at index [%d]", k)
 		}
 		// Process auditable outputs
 		outputs[k] = make([]*InspectableToken, len(ta.Outputs))
@@ -376,16 +397,14 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			if ta.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
-
 			if transferMetadata.Outputs[i] == nil {
 				return nil, nil, errors.Errorf("metadata for output token at index [%d] is nil", i)
 			}
 			ti := &token.Metadata{}
-			err = ti.Deserialize(transferMetadata.Outputs[i].OutputMetadata)
+			err := ti.Deserialize(transferMetadata.Outputs[i].OutputMetadata)
 			if err != nil {
 				return nil, nil, err
 			}
-			// TODO: we need to check also how many recipients the output contains, and check them all in isolation and compatibility
 			outputs[k][i], err = NewInspectableToken(
 				ta.Outputs[i],
 				transferMetadata.Outputs[i].OutputAuditInfo,
@@ -395,6 +414,24 @@ func (a *Auditor) GetAuditInfoForTransfers(transfers [][]byte, metadata []*drive
 			)
 			if err != nil {
 				return nil, nil, err
+			}
+			// Verify each receiver's audit info matches their identity for non-redeem outputs.
+			if !ta.Outputs[i].IsRedeem() {
+				if err := transferMetadata.Outputs[i].ValidateReceivers(); err != nil {
+					return nil, nil, errors.Wrapf(err, "output at index [%d][%d]", k, i)
+				}
+				for j, receiver := range transferMetadata.Outputs[i].Receivers {
+					identityToVerify := receiver.Identity
+					if identityToVerify.IsNone() {
+						identityToVerify = ta.Outputs[i].Owner
+					}
+					if err := a.InspectIdentity(ctx, a.InfoMatcher, &InspectableIdentity{
+						Identity:  identityToVerify,
+						AuditInfo: receiver.AuditInfo,
+					}, j); err != nil {
+						return nil, nil, errors.Wrapf(err, "failed inspecting receiver at index [%d][%d][%d]", k, i, j)
+					}
+				}
 			}
 		}
 	}
