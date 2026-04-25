@@ -91,7 +91,10 @@ func nativeBatchInverse[T any, E gnarkFr[T]](elems []E) []E {
 // getLagrangeMultipliers. Conversions between mathlib.Zr and fr.Element occur
 // only once at the boundary (once for input c, n+1 times for the output slice),
 // so the O(n²) arithmetic runs entirely in native Montgomery form.
-func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
+//
+// The denominator inverses d_i^{-1} = (∏_{j≠i}(i-j))^{-1} depend only on n,
+// not on c, so they are retrieved from the cache (computed once per n).
+func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve, denomInvs []E) ([]*mathlib.Zr, error) {
 	m := int(n) + 1 // #nosec G115
 
 	// Convert c once.
@@ -107,32 +110,20 @@ func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, 
 		cMinusJE[j].Sub(cE, E(&jE))
 	}
 
-	// Compute numerator and denominator for each Lagrange basis polynomial L_i(c).
+	// Compute numerator for each Lagrange basis polynomial L_i(c).
+	// Denominators come from the cache — no O(n²) recomputation.
 	numers := make([]T, m)
-	denoms := make([]T, m)
 	numersE := make([]E, m)
-	denomsE := make([]E, m)
 	for i := range numers {
 		numersE[i] = E(&numers[i])
-		denomsE[i] = E(&denoms[i])
-	}
-
-	for i := range m {
 		numersE[i].SetOne()
-		denomsE[i].SetOne()
-		var diff T
-		diffE := E(&diff)
 		for j := range m {
 			if j == i {
 				continue
 			}
 			numersE[i].Mul(numersE[i], cMinusJE[j])
-			diffE.SetInt64(int64(i - j)) // handles negative i-j correctly
-			denomsE[i].Mul(denomsE[i], diffE)
 		}
 	}
-
-	denomInvs := nativeBatchInverse[T, E](denomsE)
 
 	result := make([]*mathlib.Zr, m)
 	for i := range m {
@@ -146,7 +137,8 @@ func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, 
 
 // getLagrangeMultipliersPartialNative is the native fr.Element implementation of
 // getLagrangeMultipliersPartial. Same boundary-only conversion strategy.
-func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, error) {
+// Denominator inverses are retrieved from the cache.
+func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve, denomInvs []E) ([]*mathlib.Zr, error) {
 	total := 2*int(n) + 1 // #nosec G115 // all evaluation points: 0..2n
 
 	cE := nativeFromZr[T, E](c)
@@ -169,30 +161,20 @@ func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathl
 	}
 
 	numers := make([]T, len(relevant))
-	denoms := make([]T, len(relevant))
 	numersE := make([]E, len(relevant))
-	denomsE := make([]E, len(relevant))
 	for k := range relevant {
 		numersE[k] = E(&numers[k])
-		denomsE[k] = E(&denoms[k])
 	}
 
 	for k, i := range relevant {
 		numersE[k].SetOne()
-		denomsE[k].SetOne()
-		var diff T
-		diffE := E(&diff)
 		for j := range total {
 			if j == i {
 				continue
 			}
 			numersE[k].Mul(numersE[k], cMinusJE[j])
-			diffE.SetInt64(int64(i - j))
-			denomsE[k].Mul(denomsE[k], diffE)
 		}
 	}
-
-	denomInvs := nativeBatchInverse[T, E](denomsE)
 
 	result := make([]*mathlib.Zr, len(relevant))
 	for k := range relevant {
@@ -280,15 +262,17 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 }
 
 // nativeLagrangeMultipliers dispatches getLagrangeMultipliers to the native
-// fr.Element implementation for supported curves.
+// fr.Element implementation for supported curves, using cached denominator inverses.
 func nativeLagrangeMultipliers(n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, bool, error) {
 	switch curve.GroupOrder.CurveID() {
 	case mathlib.BLS12_381, mathlib.BLS12_381_GURVY, mathlib.BLS12_381_BBS, mathlib.BLS12_381_BBS_GURVY:
-		r, err := getLagrangeMultipliersNative[bls12381fr.Element, *bls12381fr.Element](n, c, curve)
+		denomInvs := getOrComputeDenomInvsBLS(n, false)
+		r, err := getLagrangeMultipliersNative[bls12381fr.Element, *bls12381fr.Element](n, c, curve, denomInvs)
 
 		return r, true, err
 	case mathlib.BN254:
-		r, err := getLagrangeMultipliersNative[bn254fr.Element, *bn254fr.Element](n, c, curve)
+		denomInvs := getOrComputeDenomInvsBN254(n, false)
+		r, err := getLagrangeMultipliersNative[bn254fr.Element, *bn254fr.Element](n, c, curve, denomInvs)
 
 		return r, true, err
 	}
@@ -297,15 +281,17 @@ func nativeLagrangeMultipliers(n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([
 }
 
 // nativeLagrangeMultipliersPartial dispatches getLagrangeMultipliersPartial to
-// the native fr.Element implementation for supported curves.
+// the native fr.Element implementation for supported curves, using cached denominator inverses.
 func nativeLagrangeMultipliersPartial(n uint64, c *mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, bool, error) {
 	switch curve.GroupOrder.CurveID() {
 	case mathlib.BLS12_381, mathlib.BLS12_381_GURVY, mathlib.BLS12_381_BBS, mathlib.BLS12_381_BBS_GURVY:
-		r, err := getLagrangeMultipliersPartialNative[bls12381fr.Element, *bls12381fr.Element](n, c, curve)
+		denomInvs := getOrComputeDenomInvsBLS(n, true)
+		r, err := getLagrangeMultipliersPartialNative[bls12381fr.Element, *bls12381fr.Element](n, c, curve, denomInvs)
 
 		return r, true, err
 	case mathlib.BN254:
-		r, err := getLagrangeMultipliersPartialNative[bn254fr.Element, *bn254fr.Element](n, c, curve)
+		denomInvs := getOrComputeDenomInvsBN254(n, true)
+		r, err := getLagrangeMultipliersPartialNative[bn254fr.Element, *bn254fr.Element](n, c, curve, denomInvs)
 
 		return r, true, err
 	}

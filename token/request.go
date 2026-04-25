@@ -1191,12 +1191,12 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 
 		// extra signers
 		for _, eid := range r.Metadata.Transfers[i].ExtraSigners {
-			if w := r.TokenService.WalletManager().Wallet(ctx, eid); w != nil {
+			if w := r.TokenService.WalletManager().Wallet(ctx, eid.Identity); w != nil {
 				// this is me, skip
 				continue
 			}
-			r.TokenService.logger.DebugfContext(ctx, "bind extra signer [%s] to [%s]", eid, identity)
-			if err := binder.Bind(ctx, identity, eid); err != nil {
+			r.TokenService.logger.DebugfContext(ctx, "bind extra signer [%s] to [%s]", eid.Identity, identity)
+			if err := binder.Bind(ctx, identity, eid.Identity); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
 		}
@@ -1225,10 +1225,16 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 func (r *Request) Issues() []*Issue {
 	var issues []*Issue
 	for _, issue := range r.Metadata.Issues {
+		extraSigners := make([]Identity, 0, len(issue.ExtraSigners))
+		for _, es := range issue.ExtraSigners {
+			if es != nil {
+				extraSigners = append(extraSigners, es.Identity)
+			}
+		}
 		issues = append(issues, &Issue{
 			Issuer:       issue.Issuer.Identity,
 			Receivers:    issue.Receivers(),
-			ExtraSigners: issue.ExtraSigners,
+			ExtraSigners: extraSigners,
 		})
 	}
 
@@ -1239,10 +1245,16 @@ func (r *Request) Issues() []*Issue {
 func (r *Request) Transfers() []*Transfer {
 	var transfers []*Transfer
 	for _, transfer := range r.Metadata.Transfers {
+		extraSigners := make([]Identity, 0, len(transfer.ExtraSigners))
+		for _, es := range transfer.ExtraSigners {
+			if es != nil {
+				extraSigners = append(extraSigners, es.Identity)
+			}
+		}
 		transfers = append(transfers, &Transfer{
 			Senders:      transfer.Senders(),
 			Receivers:    transfer.Receivers(),
-			ExtraSigners: transfer.ExtraSigners,
+			ExtraSigners: extraSigners,
 			Issuer:       transfer.Issuer,
 		})
 	}

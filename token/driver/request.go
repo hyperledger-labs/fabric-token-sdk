@@ -385,7 +385,7 @@ type IssueMetadata struct {
 	Outputs []*IssueOutputMetadata
 	// ExtraSigners is the list of extra identities that are not part of the issue action per se
 	// but needs to sign the request
-	ExtraSigners []Identity
+	ExtraSigners []*AuditableIdentity
 }
 
 func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
@@ -402,11 +402,16 @@ func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
 
+	extraSigners, err := protos.ToProtosSlice[request.AuditableIdentity, *AuditableIdentity](i.ExtraSigners)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling extra signers")
+	}
+
 	return &request.IssueMetadata{
 		Issuer:       issuer,
 		Inputs:       inputs,
 		Outputs:      outputs,
-		ExtraSigners: ToProtoIdentitySlice(i.ExtraSigners),
+		ExtraSigners: extraSigners,
 	}, nil
 }
 
@@ -426,7 +431,10 @@ func (i *IssueMetadata) FromProtos(issueMetadata *request.IssueMetadata) error {
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling output metadata")
 	}
-	i.ExtraSigners = FromProtoIdentitySlice(issueMetadata.ExtraSigners)
+	i.ExtraSigners = slices.GenericSliceOfPointers[AuditableIdentity](len(issueMetadata.ExtraSigners))
+	if err = protos.FromProtosSlice[request.AuditableIdentity, *AuditableIdentity](issueMetadata.ExtraSigners, i.ExtraSigners); err != nil {
+		return errors.Wrap(err, "failed unmarshalling extra signers")
+	}
 
 	return nil
 }
@@ -536,7 +544,7 @@ type TransferMetadata struct {
 	Outputs []*TransferOutputMetadata
 	// ExtraSigners is the list of extra identities that are not part of the transfer action per se
 	// but needs to sign the request
-	ExtraSigners []Identity
+	ExtraSigners []*AuditableIdentity
 	// Issuer contains the identity of the issuer to sign the transfer action
 	Issuer Identity
 }
@@ -560,6 +568,10 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
+	extraSigners, err := protos.ToProtosSlice[request.AuditableIdentity, *AuditableIdentity](t.ExtraSigners)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling extra signers")
+	}
 
 	var issuer *request.Identity
 	if t.Issuer != nil {
@@ -571,7 +583,7 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 	return &request.TransferMetadata{
 		Inputs:       inputs,
 		Outputs:      outputs,
-		ExtraSigners: ToProtoIdentitySlice(t.ExtraSigners),
+		ExtraSigners: extraSigners,
 		Issuer:       issuer,
 	}, nil
 }
@@ -585,7 +597,10 @@ func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata
 	if err := protos.FromProtosSlice(transferMetadata.Outputs, t.Outputs); err != nil {
 		return errors.Wrap(err, "failed unmarshalling outputs")
 	}
-	t.ExtraSigners = FromProtoIdentitySlice(transferMetadata.ExtraSigners)
+	t.ExtraSigners = slices.GenericSliceOfPointers[AuditableIdentity](len(transferMetadata.ExtraSigners))
+	if err := protos.FromProtosSlice[request.AuditableIdentity, *AuditableIdentity](transferMetadata.ExtraSigners, t.ExtraSigners); err != nil {
+		return errors.Wrap(err, "failed unmarshalling extra signers")
+	}
 
 	t.Issuer = nil
 	if transferMetadata.Issuer != nil {
