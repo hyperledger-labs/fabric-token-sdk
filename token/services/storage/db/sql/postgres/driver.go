@@ -7,10 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
+	"fmt"
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
@@ -58,13 +60,13 @@ func NewDriverWithDbProvider(config driver3.Config, dbProvider postgres.DbProvid
 		cp: postgres.NewConfigProvider(common.NewConfig(config)),
 	}
 
-	d.TokenLock = newProviderWithKeyMapper(dbProvider, NewTokenLockStore)
-	d.Wallet = newProviderWithKeyMapper(dbProvider, NewWalletStore)
+	d.TokenLock = newProviderWithKeyMapper(dbProvider, NewTokenLockStore, "tokenlock")
+	d.Wallet = newProviderWithKeyMapper(dbProvider, NewWalletStore, "wallet")
 	d.Identity = newIdentityStoreProvider(dbProvider)
 	d.Token = newTokenStoreProvider(dbProvider)
-	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore)
+	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore, "audittx")
 	d.OwnerTx = newTransactionStoreProvider(dbProvider)
-	d.KeyStore = newProviderWithKeyMapper(dbProvider, NewKeystoreStore)
+	d.KeyStore = newProviderWithKeyMapper(dbProvider, NewKeystoreStore, "keystore")
 
 	return d
 }
@@ -135,26 +137,18 @@ func newIdentityStoreProvider(dbProvider postgres.DbProvider) lazy.Provider[post
 			return nil, err
 		}
 
-		// notifier
+		// Create identity store with notifier (includes advisory lock)
+		p, err := NewIdentityStore(dbs, tableNames, o.DataSource)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get notifier for schema creation
 		notifier, err := NewIdentityNotifier(dbs, tableNames, o.DataSource)
 		if err != nil {
 			return nil, err
 		}
 
-		// db
-		p, err := common3.NewIdentityStoreWithNotifier(
-			dbs.ReadDB,
-			dbs.WriteDB,
-			tableNames,
-			secondcache.NewTyped[bool](5000),
-			secondcache.NewTyped[[]byte](5000),
-			postgres.NewConditionInterpreter(),
-			&postgres.ErrorMapper{},
-			notifier,
-		)
-		if err != nil {
-			return nil, err
-		}
 		if !o.SkipCreateTable {
 			if err := p.CreateSchema(); err != nil {
 				return nil, err
@@ -284,7 +278,7 @@ func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...str
 }
 
 // newProviderWithKeyMapper returns a lazy provider for a DB object using a common constructor.
-func newProviderWithKeyMapper[V common.DBObject](dbProvider postgres.DbProvider, constructor common3.PersistenceConstructor[V]) lazy.Provider[postgres.Config, V] {
+func newProviderWithKeyMapper[V common.DBObject](dbProvider postgres.DbProvider, constructor common3.PersistenceConstructor[V], storeType string) lazy.Provider[postgres.Config, V] {
 	return lazy.NewProviderWithKeyMapper(key, func(o postgres.Config) (V, error) {
 		opts := postgres.Opts{
 			DataSource:      o.DataSource,
@@ -320,4 +314,20 @@ func newProviderWithKeyMapper[V common.DBObject](dbProvider postgres.DbProvider,
 // key returns a unique key for the given Postgres configuration.
 func key(k postgres.Config) string {
 	return "postgres" + k.DataSource + k.TablePrefix + strings.Join(k.TableNameParams, "_")
+}
+
+// createTableLockID generates a deterministic lock ID for a store type.
+// Uses SHA256 hash of the store type name, converted to int64.
+// This ensures the same store type always gets the same lock ID across replicas.
+func createTableLockID(storeType string) int64 {
+	h := sha256.Sum256([]byte(storeType))
+
+	return int64(binary.BigEndian.Uint64(h[:])) //nolint:gosec
+}
+
+// prefixSchemaWithLock prefixes SQL schema with a PostgreSQL advisory lock statement.
+// The lock is transaction-scoped (pg_advisory_xact_lock) and automatically released on commit/rollback.
+// This prevents conflicts when multiple replicas attempt to create the same tables simultaneously.
+func prefixSchemaWithLock(schema string, lockID int64) string {
+	return fmt.Sprintf("SELECT pg_advisory_xact_lock(%d);\n%s", lockID, schema)
 }
