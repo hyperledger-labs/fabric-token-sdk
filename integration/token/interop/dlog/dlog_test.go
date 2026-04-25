@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/fdlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	. "github.com/onsi/ginkgo/v2"
 )
 
@@ -81,7 +80,6 @@ func newTestSuiteNoCrossClaimFabric(commType fsc.P2PCommunicationType, factor in
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&fdlog.SDK{}},
-		FinalityType:    config.Delivery,
 		FSCLogSpec:      "info",
 	}))
 

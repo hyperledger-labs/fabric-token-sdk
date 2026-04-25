@@ -7,16 +7,34 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
+	"database/sql"
 	"strconv"
 
 	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
 	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
-// TokenStore is an alias for common.TokenStore.
-type TokenStore = sqlcommon.TokenStore
+// TokenStore wraps common.TokenStore to add advisory lock to schema creation
+type TokenStore struct {
+	*sqlcommon.TokenStore
+	writeDB *sql.DB
+	lockID  int64
+}
+
+// GetSchema overrides the base GetSchema to prefix with advisory lock
+func (s *TokenStore) GetSchema() string {
+	baseSchema := s.TokenStore.GetSchema()
+
+	return prefixSchemaWithLock(baseSchema, s.lockID)
+}
+
+// CreateSchema overrides the base CreateSchema to ensure GetSchema is called on the correct receiver
+func (s *TokenStore) CreateSchema() error {
+	return common.InitSchema(s.writeDB, s.GetSchema())
+}
 
 // TokenNotifier handles notifications for tokens.
 type TokenNotifier struct {
@@ -33,7 +51,8 @@ func NewTokenNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, dataSo
 			AllOperations,
 			*NewSimplePrimaryKey("tx_id"),
 			*NewSimplePrimaryKey("idx"),
-		)}, nil
+		),
+	}, nil
 }
 
 // Subscribe registers a callback function to be called when a token is inserted, updated, or deleted.
@@ -53,11 +72,21 @@ func (n *TokenNotifier) Subscribe(callback func(tokensdriver.Operation, tokensdr
 }
 
 func NewTokenStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, notifier *TokenNotifier) (*TokenStore, error) {
-	return sqlcommon.NewTokenStoreWithNotifier(
+	baseStore, err := sqlcommon.NewTokenStoreWithNotifier(
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
 		postgres.NewConditionInterpreter(),
 		notifier,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wrap with postgres-specific store that adds advisory lock to schema
+	return &TokenStore{
+		TokenStore: baseStore,
+		writeDB:    dbs.WriteDB,
+		lockID:     createTableLockID("tokens"),
+	}, nil
 }
