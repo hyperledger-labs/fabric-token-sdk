@@ -41,17 +41,29 @@ func HasTokenDetails(params driver2.QueryTokenDetailsParams, tokenTable common.T
 	if len(params.TokenType) > 0 {
 		conds = append(conds, cond.Eq("token_type", params.TokenType))
 	}
+	// WalletIDs takes precedence over WalletID when both are set; normalize
+	// to a single list so each branch below applies the rule identically.
+	effectiveWallets := params.WalletIDs
+	if len(effectiveWallets) == 0 && len(params.WalletID) > 0 {
+		effectiveWallets = []string{params.WalletID}
+	}
+
 	if tokenTable != nil {
-		if len(params.WalletID) > 0 {
-			conds = append(conds, cond.Or(cond.Eq("wallet_id", params.WalletID), cond.Eq("owner_wallet_id", params.WalletID)))
+		// Match both wallet_id and owner_wallet_id — some tokens are stored
+		// only under the Ownership join, some only under owner_wallet_id.
+		if len(effectiveWallets) > 0 {
+			conds = append(conds, cond.Or(
+				cond.In("wallet_id", effectiveWallets...),
+				cond.In("owner_wallet_id", effectiveWallets...),
+			))
 		}
 		conds = append(conds,
 			cond.FieldIn(tokenTable.Field("tx_id"), params.TransactionIDs...),
 			hasTokens(tokenTable.Field("tx_id"), tokenTable.Field("idx"), params.IDs...),
 		)
 	} else {
-		if len(params.WalletID) > 0 {
-			conds = append(conds, cond.Eq("owner_wallet_id", params.WalletID))
+		if len(effectiveWallets) > 0 {
+			conds = append(conds, cond.In("owner_wallet_id", effectiveWallets...))
 		}
 		conds = append(conds,
 			cond.FieldIn(common.FieldName("tx_id"), params.TransactionIDs...),
