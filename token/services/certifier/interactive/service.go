@@ -32,11 +32,12 @@ type ResponderRegistry interface {
 type CertificationService struct {
 	ResponderRegistry ResponderRegistry
 
-	startOnce sync.Once
-	mu        sync.RWMutex
-	wallets   map[string]string
-	backend   Backend
-	metrics   *Metrics
+	startOnce      sync.Once
+	mu             sync.RWMutex
+	wallets        map[string]string
+	backend        Backend
+	metrics        *Metrics
+	sessionFactory func(view.Context) session.JsonSession
 }
 
 func NewCertificationService(responderRegistry ResponderRegistry, mp metrics.Provider, backend Backend) *CertificationService {
@@ -45,6 +46,9 @@ func NewCertificationService(responderRegistry ResponderRegistry, mp metrics.Pro
 		metrics:           NewMetrics(mp),
 		backend:           backend,
 		ResponderRegistry: responderRegistry,
+		sessionFactory: func(ctx view.Context) session.JsonSession {
+			return session.JSONWithLimit(ctx, MaxWireMessageBytes)
+		},
 	}
 }
 
@@ -67,9 +71,11 @@ func (c *CertificationService) SetWallet(tms *token2.ManagementService, wallet s
 }
 
 func (c *CertificationService) Call(context view.Context) (interface{}, error) {
-	// 1. receive request
+	// 1. receive request — the session returned by sessionFactory enforces
+	// MaxWireMessageBytes before JSON deserialisation, preventing memory
+	// exhaustion from oversized payloads. See session.SizeLimitedJsonSession.
 	logger.Debugf("receive certification request [%s]", context.ID())
-	s := session.JSON(context)
+	s := c.sessionFactory(context)
 
 	var cr *CertificationRequest
 	if err := s.Receive(&cr); err != nil {
