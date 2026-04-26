@@ -102,10 +102,12 @@ func (j *jsonSession) ReceiveWithTimeout(state interface{}, d time.Duration) err
 	if err != nil {
 		return err
 	}
+
 	err = j.marshaller.Unmarshal(raw, state)
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling state, len [%d]", len(raw))
 	}
+
 	return nil
 }
 
@@ -123,19 +125,24 @@ func (j *jsonSession) ReceiveRawWithTimeout(d time.Duration) ([]byte, error) {
 	case msg := <-ch:
 		if msg == nil {
 			logger.ErrorfContext(j.ctx, "Received nil message")
+
 			return nil, errors.New("received message is nil")
 		}
 		if msg.Status == view.ERROR {
 			logger.ErrorfContext(j.ctx, "Received error message")
+
 			return nil, errors.Errorf("received error from remote [%s]", string(msg.Payload))
 		}
 		logger.DebugfContext(j.ctx, "json session, received message [%s]", logging.SHA256Base64(msg.Payload))
+
 		return msg.Payload, nil
 	case <-timeout.C:
 		logger.ErrorfContext(j.ctx, "timeout reached")
+
 		return nil, errors.Join(errors.Errorf("time out reached on session [%s]", j.Info().ID), ErrTimeout)
 	case <-j.ctx.Done():
 		logger.ErrorfContext(j.ctx, "ctx done: %w", j.ctx.Err())
+
 		return nil, errors.Errorf("ctx done [%s]", j.ctx.Err())
 	}
 }
@@ -149,12 +156,15 @@ func (j *jsonSession) SendWithContext(ctx context.Context, state interface{}) er
 	if err != nil {
 		return err
 	}
+
 	logger.DebugfContext(ctx, "json session, send message [%s]", logging.SHA256Base64(v))
+
 	return j.s.SendWithContext(ctx, v)
 }
 
 func (j *jsonSession) SendRaw(ctx context.Context, raw []byte) error {
 	logger.DebugfContext(ctx, "json session, send raw message [%s]", logging.SHA256Base64(raw))
+
 	return j.s.SendWithContext(ctx, raw)
 }
 
@@ -164,6 +174,7 @@ func (j *jsonSession) SendError(err string) error {
 
 func (j *jsonSession) SendErrorWithContext(ctx context.Context, err string) error {
 	logger.ErrorfContext(ctx, "json session, send error: %w", err)
+
 	return j.s.SendErrorWithContext(ctx, []byte(err))
 }
 
