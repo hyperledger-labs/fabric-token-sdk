@@ -229,6 +229,14 @@ func newCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 	return f
 }
 
+// finishUpdate releases the update lock and signals waiting goroutines.
+// Must be called while holding f.mu.
+func (f *cachedFetcher) finishUpdate() {
+	f.isUpdating = false
+	f.updateCond.Broadcast()
+	f.mu.Unlock()
+}
+
 // update refreshes the token cache from the database. It releases the lock during the
 // potentially slow DB operation to avoid blocking other goroutines, then re-acquires
 // the lock to atomically update the cache. A re-check of staleness is performed
@@ -262,9 +270,7 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
 		f.mu.Lock()
-		f.isUpdating = false
-		f.updateCond.Broadcast()
-		f.mu.Unlock()
+		f.finishUpdate()
 
 		return
 	}
@@ -274,9 +280,7 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	if err != nil {
 		logger.Warnf("Failed to group tokens from iterator: %v", err)
 		f.mu.Lock()
-		f.isUpdating = false
-		f.updateCond.Broadcast()
-		f.mu.Unlock()
+		f.finishUpdate()
 
 		return
 	}
@@ -285,18 +289,14 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	// Re-check: another goroutine may have refreshed while we waited for DB
 	if !f.isCacheStale() && !f.isCacheOverused() {
 		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process, skipping")
-		f.isUpdating = false
-		f.updateCond.Broadcast()
-		f.mu.Unlock()
+		f.finishUpdate()
 
 		return
 	}
 	f.updateCache(ctx, m)
 	f.lastFetched = time.Now()
 	atomic.StoreUint32(&f.queriesResponded, 0)
-	f.isUpdating = false
-	f.updateCond.Broadcast()
-	f.mu.Unlock()
+	f.finishUpdate()
 }
 
 // groupTokensByKey reads tokens from the iterator and groups them by wallet/currency key.
