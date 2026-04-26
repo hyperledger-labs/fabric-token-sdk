@@ -66,6 +66,7 @@ func NewJSON(viewCtx view.Context, caller view.View, party view.Identity) (JsonS
 	if err != nil {
 		return nil, err
 	}
+
 	return NewFromSession(viewCtx, s), nil
 }
 
@@ -74,6 +75,7 @@ func NewFromInitiator(viewCtx view.Context, party view.Identity) (JsonSession, e
 	if err != nil {
 		return nil, err
 	}
+
 	return NewFromSession(viewCtx, s), nil
 }
 
@@ -87,6 +89,7 @@ func JSON(viewCtx view.Context) JsonSession {
 
 func newJSONSession(s Session, ctx context.Context, m Marshaller) *jsonSession {
 	logger.DebugfContext(ctx, "Open json session to [%s]", logging.Eval(s.Info))
+
 	return &jsonSession{s: s, ctx: ctx, marshaller: m}
 }
 
