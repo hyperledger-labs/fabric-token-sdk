@@ -235,8 +235,13 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			for idx, b := range pi.Identities {
 				componentIDs[idx] = b
 			}
-			logger.DebugfContext(context.Context(), "found policy identity [%s], collecting signatures from [%d] components", signerIdentity, len(componentIDs))
-			componentSigmas, err := c.requestSignatures(componentIDs, verifierGetter, context, externalWallets)
+			// collectIDs is the subset we actually request signatures from.
+			// If the caller supplied WithPolicySigners, only contact those
+			// components; the absent slots stay nil in the PolicySignature,
+			// which satisfies OR branches without unnecessary network calls.
+			collectIDs := c.policyCollectIDs(componentIDs)
+			logger.DebugfContext(context.Context(), "found policy identity [%s], collecting signatures from [%d/%d] components", signerIdentity, len(collectIDs), len(componentIDs))
+			componentSigmas, err := c.requestSignatures(collectIDs, verifierGetter, context, externalWallets)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed requesting policy signatures")
 			}
@@ -728,6 +733,27 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 	}
 
 	return distributionList
+}
+
+// policyCollectIDs returns the subset of componentIDs to collect signatures from.
+// When WithPolicySigners was supplied, only those matching identities are returned;
+// otherwise all components are returned (the default, AND-safe behaviour).
+func (c *CollectEndorsementsView) policyCollectIDs(componentIDs []token.Identity) []token.Identity {
+	if len(c.Opts.PolicySigners) == 0 {
+		return componentIDs
+	}
+	allowed := make(map[string]struct{}, len(c.Opts.PolicySigners))
+	for _, id := range c.Opts.PolicySigners {
+		allowed[id.UniqueID()] = struct{}{}
+	}
+	filtered := make([]token.Identity, 0, len(c.Opts.PolicySigners))
+	for _, id := range componentIDs {
+		if _, ok := allowed[id.UniqueID()]; ok {
+			filtered = append(filtered, id)
+		}
+	}
+
+	return filtered
 }
 
 // CleanupExternalWallets calls Done() on all external wallets to signal completion
