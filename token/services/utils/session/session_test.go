@@ -20,6 +20,7 @@ import (
 
 func newSession(t *testing.T, s utilsession.Session, m utilsession.Marshaller) *utilsession.S {
 	t.Helper()
+
 	return utilsession.New(s, t.Context(), m)
 }
 
