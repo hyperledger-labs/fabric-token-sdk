@@ -1490,12 +1490,16 @@ func TestPolicyOR(network *integration.Infrastructure, sel *token3.ReplicaSelect
 
 	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
 	CheckBalance(network, alice, "", "USD", 110)
+	CheckHolding(network, alice, "", "USD", 110, auditor)
 
 	// Alice locks 50 USD under policy "$0 OR $1" with bob as $0 and charlie as $1.
 	PolicyLockCash(network, alice, "", "USD", 50, "$0 OR $1", []*token3.NodeReference{bob, charlie}, auditor)
 	CheckBalance(network, alice, "", "USD", 60)
 	CheckBalance(network, bob, "", "USD", 0)
 	CheckBalance(network, charlie, "", "USD", 0)
+	CheckHolding(network, alice, "", "USD", 60, auditor)
+	CheckHolding(network, bob, "", "USD", 0, auditor)
+	CheckHolding(network, charlie, "", "USD", 0, auditor)
 
 	// Bob alone can satisfy "$0 OR $1" and spends to manager.
 	PolicySpendCashOR(network, bob, "", "USD", manager, auditor)
@@ -1503,6 +1507,10 @@ func TestPolicyOR(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckBalance(network, bob, "", "USD", 0)
 	CheckBalance(network, charlie, "", "USD", 0)
 	CheckBalance(network, manager, "", "USD", 50)
+	CheckHolding(network, alice, "", "USD", 60, auditor)
+	CheckHolding(network, bob, "", "USD", 0, auditor)
+	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckHolding(network, manager, "", "USD", 50, auditor)
 }
 
 // TestPolicyAND exercises a two-party AND policy ($0 AND $1): alice locks tokens under
@@ -1523,12 +1531,16 @@ func TestPolicyAND(network *integration.Infrastructure, sel *token3.ReplicaSelec
 
 	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
 	CheckBalance(network, alice, "", "USD", 110)
+	CheckHolding(network, alice, "", "USD", 110, auditor)
 
 	// Alice locks 50 USD under policy "$0 AND $1" with bob as $0 and charlie as $1.
 	PolicyLockCash(network, alice, "", "USD", 50, "$0 AND $1", []*token3.NodeReference{bob, charlie}, auditor)
 	CheckBalance(network, alice, "", "USD", 60)
 	CheckBalance(network, bob, "", "USD", 0)
 	CheckBalance(network, charlie, "", "USD", 0)
+	CheckHolding(network, alice, "", "USD", 60, auditor)
+	CheckHolding(network, bob, "", "USD", 0, auditor)
+	CheckHolding(network, charlie, "", "USD", 0, auditor)
 
 	// Bob initiates the spend; charlie co-endorses via PolicyAcceptSpendView.
 	PolicySpendCashAND(network, bob, "", "USD", manager, auditor)
@@ -1536,6 +1548,10 @@ func TestPolicyAND(network *integration.Infrastructure, sel *token3.ReplicaSelec
 	CheckBalance(network, bob, "", "USD", 0)
 	CheckBalance(network, charlie, "", "USD", 0)
 	CheckBalance(network, manager, "", "USD", 50)
+	CheckHolding(network, alice, "", "USD", 60, auditor)
+	CheckHolding(network, bob, "", "USD", 0, auditor)
+	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckHolding(network, manager, "", "USD", 50, auditor)
 }
 
 func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
