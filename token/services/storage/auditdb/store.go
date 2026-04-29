@@ -23,6 +23,7 @@ import (
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
+	"golang.org/x/sync/semaphore"
 )
 
 var (
@@ -275,6 +276,9 @@ func (d *StoreService) GetTokenRequests(ctx context.Context, txIDs []string) (ma
 
 // AcquireLocks acquires locks for the passed anchor and enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
+// The function respects context cancellation and deadlines, returning an error if the context is cancelled
+// or times out before all locks can be acquired. This prevents indefinite blocking and enables fast failure
+// in case of lock contention or deadlock scenarios.
 func (d *StoreService) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
 	// This implementation allows concurrent calls to AcquireLocks such that if two
 	// or more calls involve non-overlapping enrollment IDs, both calls will succeed.
@@ -286,12 +290,29 @@ func (d *StoreService) AcquireLocks(ctx context.Context, anchor string, eIDs ...
 	// Without sorting, these two calls could deadlock. Sorting prevents this issue.
 	dedup := deduplicateAndSort(eIDs)
 	logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
-	d.eIDsLocks.LoadOrStore(anchor, dedup)
+
+	acquired := []string{}
 	for _, id := range dedup {
-		lock, _ := d.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
-		lock.(*sync.RWMutex).Lock()
+		// Use semaphore with weight 1 to act as a mutex, but with context support
+		sem, _ := d.eIDsLocks.LoadOrStore(id, semaphore.NewWeighted(1))
+
+		// Acquire respects context cancellation and deadlines without spawning goroutines
+		if err := sem.(*semaphore.Weighted).Acquire(ctx, 1); err != nil {
+			// Context cancelled or timed out - rollback already acquired locks
+			logger.WarnfContext(ctx, "Failed to acquire lock for enrollment ID [%s] due to context cancellation, rolling back %d acquired locks", id, len(acquired))
+			for _, acquiredID := range acquired {
+				if s, ok := d.eIDsLocks.Load(acquiredID); ok {
+					s.(*semaphore.Weighted).Release(1)
+				}
+			}
+			return errors.Wrapf(err, "failed to acquire lock for enrollment ID [%s]", id)
+		}
+		acquired = append(acquired, id)
 		logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment id done", anchor, id)
 	}
+
+	// Store anchor mapping only after successfully acquiring all locks
+	d.eIDsLocks.Store(anchor, dedup)
 	logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
 
 	return nil
@@ -308,14 +329,14 @@ func (d *StoreService) ReleaseLocks(ctx context.Context, anchor string) {
 	dedup := dedupBoxed.([]string)
 	logger.DebugfContext(ctx, "Release locks for [%s:%v] enrollment ids", anchor, dedup)
 	for _, id := range dedup {
-		lock, ok := d.eIDsLocks.Load(id)
+		sem, ok := d.eIDsLocks.Load(id)
 		if !ok {
 			logger.Warnf("unlock for enrollment id [%s:%s] not possible, lock never acquired", anchor, id)
 
 			continue
 		}
 		logger.DebugfContext(ctx, "unlock lock for [%s:%v] enrollment id done", anchor, id)
-		lock.(*sync.RWMutex).Unlock()
+		sem.(*semaphore.Weighted).Release(1)
 	}
 	logger.DebugfContext(ctx, "Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
 }
