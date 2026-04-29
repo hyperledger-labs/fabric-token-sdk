@@ -5,6 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 package session
 
+//go:generate counterfeiter -o mock/session.go -fake-name Session . Session
+//go:generate counterfeiter -o mock/marshaller.go -fake-name Marshaller . Marshaller
+
 import (
 	"context"
 	"time"
