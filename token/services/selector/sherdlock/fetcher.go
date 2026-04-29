@@ -8,11 +8,10 @@ package sherdlock
 
 import (
 	"context"
+	"io"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"io"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
@@ -217,7 +216,8 @@ func NewCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 	return f
 }
 
-// finishUpdate releases the update lock and signals waiting goroutines.
+// finishUpdate releases the update lock and signals all waiting goroutines.
+// Broadcast wakes all goroutines that are waiting on updateCond, not just one.
 // Must be called while holding f.mu.
 func (f *cachedFetcher) finishUpdate() {
 	f.isUpdating = false
@@ -251,14 +251,16 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	logger.DebugfContext(ctx, "Renew token cache")
 	f.isUpdating = true
 
+	// Defer finishUpdate to ensure cleanup and signaling happens regardless of exit path.
+	// This avoids repeating finishUpdate calls at every return site.
+	defer f.finishUpdate()
+
 	// Release lock during slow DB operation to not block other token operations
 	f.mu.Unlock()
 
 	it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
-		f.mu.Lock()
-		f.finishUpdate()
 
 		return
 	}
@@ -267,8 +269,6 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	m, err := f.groupTokensByKey(ctx, it)
 	if err != nil {
 		logger.Warnf("Failed to group tokens from iterator: %v", err)
-		f.mu.Lock()
-		f.finishUpdate()
 
 		return
 	}
@@ -277,14 +277,13 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	// Re-check: another goroutine may have refreshed while we waited for DB
 	if !f.isCacheStale() && !f.isCacheOverused() {
 		logger.DebugfContext(ctx, "Cache renewed in the meantime by another process, skipping")
-		f.finishUpdate()
 
 		return
 	}
+
 	f.updateCache(ctx, m)
 	atomic.StoreInt64(&f.lastFetched, time.Now().UnixNano())
 	atomic.StoreUint32(&f.queriesResponded, 0)
-	f.finishUpdate()
 }
 
 // groupTokensByKey reads tokens from the iterator and groups them by wallet/currency key.
