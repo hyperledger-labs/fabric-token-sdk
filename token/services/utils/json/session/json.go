@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package session
 
+//go:generate counterfeiter -o mock/json_session.go -fake-name JsonSession . JsonSession
+
 import (
 	"encoding/json"
 
