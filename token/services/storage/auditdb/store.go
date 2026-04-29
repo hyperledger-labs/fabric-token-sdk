@@ -305,6 +305,7 @@ func (d *StoreService) AcquireLocks(ctx context.Context, anchor string, eIDs ...
 					s.(*semaphore.Weighted).Release(1)
 				}
 			}
+
 			return errors.Wrapf(err, "failed to acquire lock for enrollment ID [%s]", id)
 		}
 		acquired = append(acquired, id)
