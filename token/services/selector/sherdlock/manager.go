@@ -15,27 +15,10 @@ import (
 	lazy2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type Locker interface {
-	// Lock locks a specific token for the consumer TX
-	Lock(ctx context.Context, tokenID *token2.ID, consumerTxID transaction.ID) error
-	// UnlockByTxID unlocks all tokens locked by the consumer TX
-	UnlockByTxID(ctx context.Context, consumerTxID transaction.ID) error
-	// Cleanup removes the locks such that either:
-	// 1. The transaction that locked that token is valid or invalid;
-	// 2. The lock is too old.
-	Cleanup(ctx context.Context, leaseExpiry time.Duration) error
-}
-
-type tokenSelectorUnlocker interface {
-	token.Selector
-	UnlockAll(ctx context.Context) error
-}
-
-type manager struct {
-	selectorCache          lazy2.Provider[transaction.ID, tokenSelectorUnlocker]
+type Manager struct {
+	selectorCache          lazy2.Provider[transaction.ID, TokenSelectorUnlocker]
 	locker                 Locker
 	leaseExpiry            time.Duration
 	leaseCleanupTickPeriod time.Duration
@@ -45,14 +28,8 @@ type manager struct {
 	stopOnce               sync.Once
 }
 
-//go:generate counterfeiter -o mock/iterator.go  -fake-name Iterator . iterator
-type iterator[k any] interface {
-	Next() (k, error)
-	Close()
-}
-
 func NewManager(
-	fetcher tokenFetcher,
+	fetcher TokenFetcher,
 	locker Locker,
 	precision uint64,
 	backoff time.Duration,
@@ -60,16 +37,16 @@ func NewManager(
 	leaseExpiry time.Duration,
 	leaseCleanupTickPeriod time.Duration,
 	m *Metrics,
-) *manager {
+) *Manager {
 	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec
-	mgr := &manager{
+	mgr := &Manager{
 		locker:                 locker,
 		leaseExpiry:            leaseExpiry,
 		leaseCleanupTickPeriod: leaseCleanupTickPeriod,
 		metrics:                m,
 		cancel:                 cancel,
 		cleanerDone:            make(chan struct{}),
-		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (tokenSelectorUnlocker, error) {
+		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (TokenSelectorUnlocker, error) {
 			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, m), nil
 		}),
 	}
@@ -82,15 +59,15 @@ func NewManager(
 	return mgr
 }
 
-func (m *manager) NewSelector(id transaction.ID) (token.Selector, error) {
+func (m *Manager) NewSelector(id transaction.ID) (token.Selector, error) {
 	return m.selectorCache.Get(id)
 }
 
-func (m *manager) Unlock(ctx context.Context, id transaction.ID) error {
+func (m *Manager) Unlock(ctx context.Context, id transaction.ID) error {
 	return m.locker.UnlockByTxID(ctx, id)
 }
 
-func (m *manager) Close(id transaction.ID) error {
+func (m *Manager) Close(id transaction.ID) error {
 	if c, ok := m.selectorCache.Delete(id); ok {
 		return c.Close()
 	}
@@ -98,7 +75,7 @@ func (m *manager) Close(id transaction.ID) error {
 	return errors.New("selector for " + id + " not found")
 }
 
-func (m *manager) cleaner(ctx context.Context) {
+func (m *Manager) cleaner(ctx context.Context) {
 	defer close(m.cleanerDone)
 	ticker := time.NewTicker(m.leaseCleanupTickPeriod)
 	defer ticker.Stop()
@@ -119,7 +96,7 @@ func (m *manager) cleaner(ctx context.Context) {
 }
 
 // Stop cancels the cleaner goroutine and waits for it to exit.
-func (m *manager) Stop() {
+func (m *Manager) Stop() {
 	m.stopOnce.Do(func() {
 		m.cancel()
 		<-m.cleanerDone

@@ -73,6 +73,7 @@ var tokensCases = []struct {
 	{"Certification", TCertification},
 	{"QueryTokenDetails", TQueryTokenDetails},
 	{"TTokenTypes", TTokenTypes},
+	{"ListUnspentTokensByWallets", TListUnspentTokensByWallets},
 }
 
 func TTokenTransaction(t *testing.T, db TestTokenDB) {
@@ -1039,6 +1040,130 @@ func TTokenTypes(t *testing.T, db TestTokenDB) {
 	it, err = db.SpendableTokensIteratorBy(t.Context(), "", "TST1")
 	require.NoError(t, err)
 	consumeSpendableTokensIterator(t, it, "TST1", 1)
+}
+
+// TListUnspentTokensByWallets exercises the batch variant of
+// ListUnspentTokensBy. Seeds tokens across multiple wallets — two via
+// the ownership wallet_id column (StoreToken's owner list) and one via
+// the owner_wallet_id column on TokenRecord — then verifies the batch
+// method partitions results correctly and honors the empty-input /
+// missing-wallet / type-filter contracts.
+func TListUnspentTokensByWallets(t *testing.T, db TestTokenDB) {
+	t.Helper()
+	ctx := t.Context()
+
+	storeForOwners := func(txID string, typ token.Type, owners []string) {
+		require.NoError(t, db.StoreToken(ctx, driver2.TokenRecord{
+			TxID:           txID,
+			Index:          0,
+			OwnerRaw:       []byte{1, 2, 3},
+			OwnerType:      "idemix",
+			OwnerIdentity:  []byte{},
+			Ledger:         []byte("ledger"),
+			LedgerMetadata: []byte{},
+			Quantity:       "0x02",
+			Type:           typ,
+			Amount:         2,
+			Owner:          true,
+		}, owners))
+	}
+	storeForOwnerWalletID := func(txID string, typ token.Type, walletID string) {
+		require.NoError(t, db.StoreToken(ctx, driver2.TokenRecord{
+			TxID:           txID,
+			Index:          0,
+			OwnerRaw:       []byte{1, 2, 3},
+			OwnerType:      "idemix",
+			OwnerIdentity:  []byte{},
+			OwnerWalletID:  walletID,
+			Ledger:         []byte("ledger"),
+			LedgerMetadata: []byte{},
+			Quantity:       "0x02",
+			Type:           typ,
+			Amount:         2,
+			Owner:          true,
+		}, nil))
+	}
+	storeDisagree := func(txID string, typ token.Type, ownerWalletID string, owners []string) {
+		require.NoError(t, db.StoreToken(ctx, driver2.TokenRecord{
+			TxID:           txID,
+			Index:          0,
+			OwnerRaw:       []byte{1, 2, 3},
+			OwnerType:      "idemix",
+			OwnerIdentity:  []byte{},
+			OwnerWalletID:  ownerWalletID,
+			Ledger:         []byte("ledger"),
+			LedgerMetadata: []byte{},
+			Quantity:       "0x02",
+			Type:           typ,
+			Amount:         2,
+			Owner:          true,
+		}, owners))
+	}
+
+	storeForOwners("bw-a-1", TST, []string{"alice"})
+	storeForOwners("bw-a-2", TST, []string{"alice"})
+	storeForOwners("bw-a-3", ABC, []string{"alice"}) // second type for alice; exercises typ filter
+	storeForOwners("bw-b-1", TST, []string{"bob"})
+	storeForOwnerWalletID("bw-p-1", TST, "pineapple") // exercises the owner_wallet_id column path
+
+	// Batch across the two storage columns: alice (wallet_id) +
+	// pineapple (owner_wallet_id). bob is in the DB but not requested.
+	// Empty typ → all types, so alice's ABC token is included.
+	res, err := db.ListUnspentTokensByWallets(ctx, []string{"alice", "pineapple"}, "")
+	require.NoError(t, err)
+	assert.Len(t, res, 2)
+	require.NotNil(t, res["alice"])
+	require.NotNil(t, res["pineapple"])
+	assert.Len(t, res["alice"].Tokens, 3)
+	assert.Len(t, res["pineapple"].Tokens, 1)
+	_, hasBob := res["bob"]
+	assert.False(t, hasBob, "unrequested wallet must not appear in result")
+
+	// Narrow to TST — alice's ABC token drops out.
+	res, err = db.ListUnspentTokensByWallets(ctx, []string{"alice", "pineapple"}, TST)
+	require.NoError(t, err)
+	assert.Len(t, res["alice"].Tokens, 2)
+	assert.Len(t, res["pineapple"].Tokens, 1)
+
+	// Narrow to ABC — only alice has one.
+	res, err = db.ListUnspentTokensByWallets(ctx, []string{"alice", "pineapple"}, ABC)
+	require.NoError(t, err)
+	assert.Len(t, res, 1)
+	assert.Len(t, res["alice"].Tokens, 1)
+
+	// Unknown wallets produce no map entry (not an error, not a zero-token entry).
+	res, err = db.ListUnspentTokensByWallets(ctx, []string{"ghost"}, "")
+	require.NoError(t, err)
+	assert.Empty(t, res)
+
+	// Mixed existent + missing: only the existent ones come back.
+	res, err = db.ListUnspentTokensByWallets(ctx, []string{"alice", "ghost", "bob"}, TST)
+	require.NoError(t, err)
+	assert.Len(t, res, 2)
+	assert.Len(t, res["alice"].Tokens, 2)
+	assert.Len(t, res["bob"].Tokens, 1)
+
+	// Empty / nil input must short-circuit.
+	res, err = db.ListUnspentTokensByWallets(ctx, nil, "")
+	require.NoError(t, err)
+	assert.Empty(t, res)
+	res, err = db.ListUnspentTokensByWallets(ctx, []string{}, "")
+	require.NoError(t, err)
+	assert.Empty(t, res)
+
+	// Disagreement between tokens.owner_wallet_id and ownership.wallet_id:
+	// StoreToken writes them independently, so a row can match via the
+	// Ownership join while carrying a different owner_wallet_id. The caller
+	// asked for "carol", so the token must be bucketed under "carol" — not
+	// under the unrequested "stranger".
+	storeDisagree("bw-dis-1", TST, "stranger", []string{"carol"})
+	res, err = db.ListUnspentTokensByWallets(ctx, []string{"carol"}, "")
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.NotNil(t, res["carol"])
+	assert.Len(t, res["carol"].Tokens, 1)
+	_, hasStranger := res["stranger"]
+	assert.False(t, hasStranger, "unrequested wallet must not appear as a bucket key")
 }
 
 func consumeSpendableTokensIterator(t *testing.T, it tdriver.SpendableTokensIterator, tokenType token.Type, count int) {

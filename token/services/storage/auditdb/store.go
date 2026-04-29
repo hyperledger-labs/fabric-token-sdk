@@ -266,6 +266,13 @@ func (d *StoreService) GetTokenRequest(ctx context.Context, txID string) ([]byte
 	return d.db.GetTokenRequest(ctx, txID)
 }
 
+// GetTokenRequests returns the token requests bound to the given tx ids in
+// a single query. See driver.TransactionStore.GetTokenRequests for details
+// about missing-key semantics.
+func (d *StoreService) GetTokenRequests(ctx context.Context, txIDs []string) (map[string][]byte, error) {
+	return d.db.GetTokenRequests(ctx, txIDs)
+}
+
 // AcquireLocks acquires locks for the passed anchor and enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
 func (d *StoreService) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {

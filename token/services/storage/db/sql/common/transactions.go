@@ -119,6 +119,40 @@ func (db *TransactionStore) GetTokenRequest(ctx context.Context, txID string) ([
 	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
+// GetTokenRequests fetches the token requests for the given tx ids in a
+// single SELECT. Missing tx ids are absent from the returned map — callers
+// should treat a missing key identically to GetTokenRequest returning nil.
+// Empty input returns an empty map without querying.
+func (db *TransactionStore) GetTokenRequests(ctx context.Context, txIDs []string) (map[string][]byte, error) {
+	if len(txIDs) == 0 {
+		return map[string][]byte{}, nil
+	}
+	query, args := q.Select().
+		FieldsByName("tx_id", "request").
+		From(q.Table(db.table.Requests)).
+		Where(cond.In("tx_id", txIDs...)).
+		Format(db.ci)
+
+	logging.Debug(logger, query, args)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer Close(rows)
+
+	result := make(map[string][]byte, len(txIDs))
+	for rows.Next() {
+		var txID string
+		var request []byte
+		if err := rows.Scan(&txID, &request); err != nil {
+			return nil, err
+		}
+		result[txID] = request
+	}
+
+	return result, rows.Err()
+}
+
 func (db *TransactionStore) QueryMovements(ctx context.Context, params dbdriver.QueryMovementsParams) (res []*dbdriver.MovementRecord, err error) {
 	movementsTable, requestsTable := q.Table(db.table.Movements), q.Table(db.table.Requests)
 	query, args := q.Select().
@@ -472,6 +506,7 @@ func (db *TransactionStore) GetSchema() string {
 			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+		CREATE INDEX IF NOT EXISTS idx_eid_storedat_%s ON %s ( enrollment_id, stored_at );
 
 		-- validations
 		CREATE TABLE IF NOT EXISTS %s (
@@ -492,7 +527,7 @@ func (db *TransactionStore) GetSchema() string {
 		`,
 		db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests,
 		db.table.Transactions, db.table.Requests, db.table.Transactions, db.table.Transactions,
-		db.table.Movements, db.table.Requests, db.table.Movements, db.table.Movements,
+		db.table.Movements, db.table.Requests, db.table.Movements, db.table.Movements, db.table.Movements, db.table.Movements,
 		db.table.Validations, db.table.Requests,
 		db.table.TransactionEndorseAck, db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
 	)

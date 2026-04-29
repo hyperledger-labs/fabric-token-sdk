@@ -217,6 +217,21 @@ type FakeTokenStore struct {
 		result1 *token.UnspentTokens
 		result2 error
 	}
+	ListUnspentTokensByWalletsStub        func(context.Context, []string, token.Type) (map[string]*token.UnspentTokens, error)
+	listUnspentTokensByWalletsMutex       sync.RWMutex
+	listUnspentTokensByWalletsArgsForCall []struct {
+		arg1 context.Context
+		arg2 []string
+		arg3 token.Type
+	}
+	listUnspentTokensByWalletsReturns struct {
+		result1 map[string]*token.UnspentTokens
+		result2 error
+	}
+	listUnspentTokensByWalletsReturnsOnCall map[int]struct {
+		result1 map[string]*token.UnspentTokens
+		result2 error
+	}
 	NewTokenDBTransactionStub        func() (driver.TokenStoreTransaction, error)
 	newTokenDBTransactionMutex       sync.RWMutex
 	newTokenDBTransactionArgsForCall []struct {
@@ -1400,6 +1415,77 @@ func (fake *FakeTokenStore) ListUnspentTokensByReturnsOnCall(i int, result1 *tok
 	}
 	fake.listUnspentTokensByReturnsOnCall[i] = struct {
 		result1 *token.UnspentTokens
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeTokenStore) ListUnspentTokensByWallets(arg1 context.Context, arg2 []string, arg3 token.Type) (map[string]*token.UnspentTokens, error) {
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.listUnspentTokensByWalletsMutex.Lock()
+	ret, specificReturn := fake.listUnspentTokensByWalletsReturnsOnCall[len(fake.listUnspentTokensByWalletsArgsForCall)]
+	fake.listUnspentTokensByWalletsArgsForCall = append(fake.listUnspentTokensByWalletsArgsForCall, struct {
+		arg1 context.Context
+		arg2 []string
+		arg3 token.Type
+	}{arg1, arg2Copy, arg3})
+	stub := fake.ListUnspentTokensByWalletsStub
+	fakeReturns := fake.listUnspentTokensByWalletsReturns
+	fake.recordInvocation("ListUnspentTokensByWallets", []interface{}{arg1, arg2Copy, arg3})
+	fake.listUnspentTokensByWalletsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeTokenStore) ListUnspentTokensByWalletsCallCount() int {
+	fake.listUnspentTokensByWalletsMutex.RLock()
+	defer fake.listUnspentTokensByWalletsMutex.RUnlock()
+	return len(fake.listUnspentTokensByWalletsArgsForCall)
+}
+
+func (fake *FakeTokenStore) ListUnspentTokensByWalletsCalls(stub func(context.Context, []string, token.Type) (map[string]*token.UnspentTokens, error)) {
+	fake.listUnspentTokensByWalletsMutex.Lock()
+	defer fake.listUnspentTokensByWalletsMutex.Unlock()
+	fake.ListUnspentTokensByWalletsStub = stub
+}
+
+func (fake *FakeTokenStore) ListUnspentTokensByWalletsArgsForCall(i int) (context.Context, []string, token.Type) {
+	fake.listUnspentTokensByWalletsMutex.RLock()
+	defer fake.listUnspentTokensByWalletsMutex.RUnlock()
+	argsForCall := fake.listUnspentTokensByWalletsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeTokenStore) ListUnspentTokensByWalletsReturns(result1 map[string]*token.UnspentTokens, result2 error) {
+	fake.listUnspentTokensByWalletsMutex.Lock()
+	defer fake.listUnspentTokensByWalletsMutex.Unlock()
+	fake.ListUnspentTokensByWalletsStub = nil
+	fake.listUnspentTokensByWalletsReturns = struct {
+		result1 map[string]*token.UnspentTokens
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeTokenStore) ListUnspentTokensByWalletsReturnsOnCall(i int, result1 map[string]*token.UnspentTokens, result2 error) {
+	fake.listUnspentTokensByWalletsMutex.Lock()
+	defer fake.listUnspentTokensByWalletsMutex.Unlock()
+	fake.ListUnspentTokensByWalletsStub = nil
+	if fake.listUnspentTokensByWalletsReturnsOnCall == nil {
+		fake.listUnspentTokensByWalletsReturnsOnCall = make(map[int]struct {
+			result1 map[string]*token.UnspentTokens
+			result2 error
+		})
+	}
+	fake.listUnspentTokensByWalletsReturnsOnCall[i] = struct {
+		result1 map[string]*token.UnspentTokens
 		result2 error
 	}{result1, result2}
 }

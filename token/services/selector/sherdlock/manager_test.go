@@ -664,10 +664,10 @@ func TestManager_NewSelector_WithDifferentPrecisions(t *testing.T) {
 // Mock implementations for testing
 
 type mockTokenFetcher struct {
-	unspentTokensIteratorByFunc func(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error)
+	unspentTokensIteratorByFunc func(ctx context.Context, walletID string, currency token2.Type) (Iterator[*token2.UnspentTokenInWallet], error)
 }
 
-func (m *mockTokenFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (iterator[*token2.UnspentTokenInWallet], error) {
+func (m *mockTokenFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (Iterator[*token2.UnspentTokenInWallet], error) {
 	if m.unspentTokensIteratorByFunc != nil {
 		return m.unspentTokensIteratorByFunc(ctx, walletID, currency)
 	}

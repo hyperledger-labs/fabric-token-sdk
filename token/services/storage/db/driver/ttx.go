@@ -81,6 +81,14 @@ type TransactionStore interface {
 	// It returns nil without error if the key is not found.
 	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
 
+	// GetTokenRequests returns the token requests bound to the given
+	// transaction ids, in a single query. The returned map contains an
+	// entry only for tx ids that were present in storage — callers should
+	// treat a missing key identically to GetTokenRequest returning nil
+	// (no error, no record). An empty or nil txIDs slice returns an empty
+	// map without touching the database.
+	GetTokenRequests(ctx context.Context, txIDs []string) (map[string][]byte, error)
+
 	// AcquireRecoveryLeadership tries to acquire the PostgreSQL advisory lock backing the sweeper leader election.
 	// If acquired is false, leadership was not obtained and the returned lease must be nil.
 	AcquireRecoveryLeadership(ctx context.Context, lockID int64) (RecoveryLeadership, bool, error)
