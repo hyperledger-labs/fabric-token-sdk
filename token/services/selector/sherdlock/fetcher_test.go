@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -48,7 +49,7 @@ func TestNewCachedFetcher_WithDefaults(t *testing.T) {
 	mockDB := new(mockTokenDB)
 
 	// Test with zero values (should use defaults)
-	fetcher := NewCachedFetcher(mockDB, 0, 0, 0)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 0, 0)
 
 	assert.NotNil(t, fetcher)
 	assert.Equal(t, defaultCacheFreshnessInterval, fetcher.freshnessInterval)
@@ -63,7 +64,7 @@ func TestNewCachedFetcher_WithCustomValues(t *testing.T) {
 	customFreshness := 60 * time.Second
 	customMaxQueries := 200
 
-	fetcher := NewCachedFetcher(mockDB, customSize, customFreshness, customMaxQueries)
+	fetcher := NewCachedFetcher(mockDB, nil, customSize, customFreshness, customMaxQueries)
 
 	assert.NotNil(t, fetcher)
 	assert.Equal(t, customFreshness, fetcher.freshnessInterval)
@@ -73,7 +74,7 @@ func TestNewCachedFetcher_WithCustomValues(t *testing.T) {
 
 func TestCachedFetcher_IsCacheStale(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 100*time.Millisecond, 0)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 100*time.Millisecond, 0)
 
 	// Initially cache should be stale (lastFetched is zero time)
 	assert.True(t, fetcher.isCacheStale())
@@ -90,7 +91,7 @@ func TestCachedFetcher_IsCacheStale(t *testing.T) {
 func TestCachedFetcher_IsCacheOverused(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	maxQueries := 5
-	fetcher := NewCachedFetcher(mockDB, 0, 0, maxQueries)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 0, maxQueries)
 
 	// Initially not overused
 	assert.False(t, fetcher.isCacheOverused())
@@ -108,7 +109,7 @@ func TestCachedFetcher_IsCacheOverused(t *testing.T) {
 
 func TestCachedFetcher_Update(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 1*time.Second, 100)
 
 	// Create test tokens
 	tokens := []*token2.UnspentTokenInWallet{
@@ -159,7 +160,7 @@ func TestCachedFetcher_Update(t *testing.T) {
 
 func TestCachedFetcher_UnspentTokensIteratorBy_CacheHit(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 10*time.Second, 100)
 
 	// Populate cache
 	tokens := []*token2.UnspentTokenInWallet{
@@ -190,7 +191,7 @@ func TestCachedFetcher_UnspentTokensIteratorBy_CacheHit(t *testing.T) {
 
 func TestCachedFetcher_UnspentTokensIteratorBy_CacheMiss(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 10*time.Second, 100)
 
 	// Populate cache with different key
 	tokens := []*token2.UnspentTokenInWallet{
@@ -220,7 +221,7 @@ func TestCachedFetcher_UnspentTokensIteratorBy_CacheMiss(t *testing.T) {
 func TestCachedFetcher_UnspentTokensIteratorBy_StaleCache(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	// Very short freshness interval
-	fetcher := NewCachedFetcher(mockDB, 0, 50*time.Millisecond, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 50*time.Millisecond, 100)
 
 	// Initial population
 	tokens1 := []*token2.UnspentTokenInWallet{
@@ -262,7 +263,7 @@ func TestCachedFetcher_UnspentTokensIteratorBy_StaleCache(t *testing.T) {
 
 func TestCachedFetcher_CacheClear(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 10*time.Second, 100)
 
 	// First update with tokens
 	tokens1 := []*token2.UnspentTokenInWallet{
@@ -315,7 +316,7 @@ func TestCachedFetcher_CacheClear(t *testing.T) {
 func TestNewMixedFetcher(t *testing.T) {
 	mockDB := new(mockTokenDB)
 
-	fetcher := NewMixedFetcher(mockDB, nil, 100, 30*time.Second, 100)
+	fetcher := NewMixedFetcher(mockDB, nil, nil, 100, 30*time.Second, 100)
 
 	assert.NotNil(t, fetcher)
 	assert.NotNil(t, fetcher.lazyFetcher)
@@ -324,7 +325,7 @@ func TestNewMixedFetcher(t *testing.T) {
 
 func TestRistrettoCache_Integration(t *testing.T) {
 	// Test that Ristretto cache works correctly with the fetcher
-	c, err := cache.NewRistrettoCacheWithSize[permutatableIterator[*token2.UnspentTokenInWallet]](10)
+	c, err := cache.NewRistrettoCacheWithSize[[]*token2.UnspentTokenInWallet](10)
 	require.NoError(t, err)
 	assert.NotNil(t, c)
 
@@ -336,8 +337,7 @@ func TestRistrettoCache_Integration(t *testing.T) {
 			Quantity: "100",
 		},
 	}
-	it := iterators.Slice(tokens)
-	c.Add("key1", it)
+	c.Add("key1", tokens)
 
 	// Wait for cache to process the addition (Ristretto is async)
 	time.Sleep(50 * time.Millisecond)
@@ -362,7 +362,7 @@ func TestRistrettoCache_Integration(t *testing.T) {
 func TestRistrettoCache_SizeLimit(t *testing.T) {
 	// Test that cache respects size limit
 	smallSize := int64(5)
-	c, err := cache.NewRistrettoCacheWithSize[permutatableIterator[*token2.UnspentTokenInWallet]](smallSize)
+	c, err := cache.NewRistrettoCacheWithSize[[]*token2.UnspentTokenInWallet](smallSize)
 	require.NoError(t, err)
 
 	// Add items with cost=1 each
@@ -374,8 +374,7 @@ func TestRistrettoCache_SizeLimit(t *testing.T) {
 				Quantity: "100",
 			},
 		}
-		it := iterators.Slice(tokens)
-		c.Add(tokenKey("wallet", token2.Type(string([]rune{rune(i)}))), it)
+		c.Add(tokenKey("wallet", token2.Type(string([]rune{rune(i)}))), tokens)
 	}
 
 	// Wait for cache to process additions
@@ -390,8 +389,7 @@ func TestRistrettoCache_SizeLimit(t *testing.T) {
 			Quantity: "100",
 		},
 	}
-	it := iterators.Slice(tokens)
-	c.Add("test_key", it)
+	c.Add("test_key", tokens)
 
 	// Wait for cache to process the addition
 	time.Sleep(50 * time.Millisecond)
@@ -484,7 +482,7 @@ func TestLazyFetcher_UnspentTokensIteratorBy_ErrorHandling(t *testing.T) {
 
 func TestMixedFetcher_FallbackBehavior(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewMixedFetcher(mockDB, NewMetrics(&disabled.Provider{}), 0, 10*time.Second, 100)
+	fetcher := NewMixedFetcher(mockDB, nil, NewMetrics(&disabled.Provider{}), 0, 10*time.Second, 100)
 
 	t.Run("uses lazy fetcher when eager returns error", func(t *testing.T) {
 		// Setup: eager fetcher will fail to update
@@ -551,7 +549,7 @@ func TestMixedFetcher_FallbackBehavior(t *testing.T) {
 
 func TestCachedFetcher_ConcurrentAccess(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 1*time.Second, 100)
 
 	t.Run("handles concurrent reads during update", func(t *testing.T) {
 		// Populate cache
@@ -594,7 +592,7 @@ func TestCachedFetcher_ConcurrentAccess(t *testing.T) {
 
 func TestCachedFetcher_GroupTokensByKey(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 1*time.Second, 100)
 
 	t.Run("groups tokens correctly", func(t *testing.T) {
 		tokens := []*token2.UnspentTokenInWallet{
@@ -637,7 +635,7 @@ func TestCachedFetcher_GroupTokensByKey(t *testing.T) {
 // TestCachedFetcher_UpdateCache verifies cache updates without race conditions (add before remove).
 func TestCachedFetcher_UpdateCache(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 1*time.Second, 100)
 
 	t.Run("removes stale keys", func(t *testing.T) {
 		ctx := t.Context()
@@ -748,7 +746,7 @@ func TestCachedFetcher_UpdateCache(t *testing.T) {
 func TestCachedFetcher_SoftRefresh(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	maxQueries := 3
-	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, maxQueries)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 10*time.Second, maxQueries)
 
 	t.Run("triggers soft refresh when overused", func(t *testing.T) {
 		// Initial population
@@ -787,7 +785,7 @@ func TestCachedFetcher_SoftRefresh(t *testing.T) {
 func TestCachedFetcher_Update_ThunderingHerd(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	// Short freshness interval
-	fetcher := NewCachedFetcher(mockDB, 0, 50*time.Millisecond, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 50*time.Millisecond, 100)
 
 	// Initial population
 	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).
@@ -849,6 +847,7 @@ func TestNewFetcherProvider(t *testing.T) {
 			100,
 			time.Second,
 			10,
+			false,
 		)
 
 		assert.NotNil(t, provider)
@@ -866,6 +865,7 @@ func TestNewFetcherProvider(t *testing.T) {
 				100,
 				time.Second,
 				10,
+				false,
 			)
 		})
 	})
@@ -878,6 +878,7 @@ func TestNewFetcherProvider(t *testing.T) {
 			0,
 			0,
 			0,
+			false,
 		)
 
 		assert.NotNil(t, provider)
@@ -903,6 +904,7 @@ func TestFetcherProvider_GetFetcher(t *testing.T) {
 			100,
 			time.Second,
 			10,
+			false,
 		)
 
 		fetcher, err := provider.GetFetcher(token.TMSID{})
@@ -926,6 +928,7 @@ func TestFetcherProvider_GetFetcher(t *testing.T) {
 			100,
 			time.Second,
 			10,
+			false,
 		)
 
 		fetcher, err := provider.GetFetcher(token.TMSID{})
@@ -938,7 +941,7 @@ func TestFetcherProvider_GetFetcher(t *testing.T) {
 // TestCachedFetcher_UpdateWithDatabaseError verifies cache stays stale when DB update fails.
 func TestCachedFetcher_UpdateWithDatabaseError(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 1*time.Second, 100)
 
 	t.Run("handles database error gracefully", func(t *testing.T) {
 		expectedErr := errors.New("database connection failed")
@@ -981,7 +984,7 @@ func TestTokenKey_EdgeCases(t *testing.T) {
 func TestMixedFetcher_MetricsTracking(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	metrics := NewMetrics(&disabled.Provider{})
-	fetcher := NewMixedFetcher(mockDB, metrics, 0, 10*time.Second, 100)
+	fetcher := NewMixedFetcher(mockDB, nil, metrics, 0, 10*time.Second, 100)
 
 	t.Run("tracks eager fetcher usage", func(t *testing.T) {
 		// Populate cache
@@ -1039,7 +1042,7 @@ func (m *mockStoreServiceManager) StoreServiceByTMSId(tmsID token.TMSID) (*token
 func TestCachedFetcher_UpdateDoesNotBlockReaders(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	// Use long freshness interval so cache won't be stale
-	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 10*time.Second, 100)
 
 	// Pre-populate the cache so readers can hit it
 	initialTokens := []*token2.UnspentTokenInWallet{
@@ -1110,7 +1113,7 @@ func TestCachedFetcher_UpdateDoesNotBlockReaders(t *testing.T) {
 // completes, update() correctly re-acquires the lock and performs the cache update.
 func TestCachedFetcher_UpdateReacquiresLockAfterDB(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, nil, 0, 1*time.Second, 100)
 
 	// Pre-populate to make cache appear stale
 	atomic.StoreInt64(&fetcher.lastFetched, time.Now().Add(-20*time.Second).UnixNano())
@@ -1133,6 +1136,115 @@ func TestCachedFetcher_UpdateReacquiresLockAfterDB(t *testing.T) {
 	_, ok := fetcher.cache.Get(tokenKey("wallet1", "USD"))
 	fetcher.mu.RUnlock()
 	assert.True(t, ok, "token should be in cache after update")
+}
 
+// mockTokenNotifier is a simple in-process notifier for testing.
+type mockTokenNotifier struct {
+	callback func(dbdriver.Operation, dbdriver.TokenRecordReference)
+}
+
+func (n *mockTokenNotifier) Subscribe(cb func(dbdriver.Operation, dbdriver.TokenRecordReference)) error {
+	n.callback = cb
+
+	return nil
+}
+
+func (n *mockTokenNotifier) UnsubscribeAll() error {
+	n.callback = nil
+
+	return nil
+}
+
+func (n *mockTokenNotifier) fire(op dbdriver.Operation, ref dbdriver.TokenRecordReference) {
+	if n.callback != nil {
+		n.callback(op, ref)
+	}
+}
+
+// TestCachedFetcher_NotifierMarksDirtyOnInsert verifies that an Insert notification
+// immediately makes the cache stale regardless of the freshness interval.
+func TestCachedFetcher_NotifierMarksDirtyOnInsert(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	notifier := &mockTokenNotifier{}
+	// Long freshness interval so time-based staleness cannot trigger.
+	fetcher := NewCachedFetcher(mockDB, notifier, 0, 10*time.Minute, 1000)
+
+	tokens := []*token2.UnspentTokenInWallet{{WalletID: "alice", Type: "USD", Quantity: "100"}}
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(iterators.Slice(tokens), nil).Once()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+	assert.False(t, fetcher.isCacheStale(), "cache should be fresh right after update")
+
+	// Simulate a token being stored in the DB.
+	notifier.fire(dbdriver.Insert, dbdriver.TokenRecordReference{TxID: "tx1", Index: 0})
+
+	assert.True(t, fetcher.isCacheStale(), "cache must be stale immediately after Insert notification")
+	mockDB.AssertExpectations(t)
+}
+
+// TestCachedFetcher_NotifierMarksDirtyOnDelete verifies that a Delete notification
+// immediately makes the cache stale.
+func TestCachedFetcher_NotifierMarksDirtyOnDelete(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	notifier := &mockTokenNotifier{}
+	fetcher := NewCachedFetcher(mockDB, notifier, 0, 10*time.Minute, 1000)
+
+	tokens := []*token2.UnspentTokenInWallet{{WalletID: "alice", Type: "USD", Quantity: "100"}}
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(iterators.Slice(tokens), nil).Once()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+	assert.False(t, fetcher.isCacheStale())
+
+	notifier.fire(dbdriver.Delete, dbdriver.TokenRecordReference{TxID: "tx1", Index: 0})
+
+	assert.True(t, fetcher.isCacheStale(), "cache must be stale immediately after Delete notification")
+	mockDB.AssertExpectations(t)
+}
+
+// TestCachedFetcher_DirtyFlagClearedAfterUpdate verifies that the dirty flag is cleared
+// after a successful cache refresh so a second query does not trigger an unnecessary reload.
+func TestCachedFetcher_DirtyFlagClearedAfterUpdate(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	notifier := &mockTokenNotifier{}
+	fetcher := NewCachedFetcher(mockDB, notifier, 0, 10*time.Minute, 1000)
+
+	tokens := []*token2.UnspentTokenInWallet{{WalletID: "alice", Type: "USD", Quantity: "100"}}
+	// First update on construction (dirty flag causes this), second after notification.
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(iterators.Slice(tokens), nil).Twice()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+
+	notifier.fire(dbdriver.Insert, dbdriver.TokenRecordReference{TxID: "tx2", Index: 0})
+	assert.True(t, fetcher.isCacheStale())
+
+	fetcher.update(ctx)
+	assert.False(t, fetcher.isCacheStale(), "dirty flag must be cleared after a successful update")
+	mockDB.AssertExpectations(t)
+}
+
+// TestCachedFetcher_DirtyFlagRestoredOnDBError verifies that if the DB fetch fails during
+// a notification-triggered refresh, the dirty flag is restored so the next query retries.
+func TestCachedFetcher_DirtyFlagRestoredOnDBError(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	notifier := &mockTokenNotifier{}
+	fetcher := NewCachedFetcher(mockDB, notifier, 0, 10*time.Minute, 1000)
+
+	// First update succeeds to get a clean cache.
+	tokens := []*token2.UnspentTokenInWallet{{WalletID: "alice", Type: "USD", Quantity: "100"}}
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(iterators.Slice(tokens), nil).Once()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+	assert.False(t, fetcher.isCacheStale())
+
+	// Notification marks dirty, then DB fails on the next update.
+	notifier.fire(dbdriver.Insert, dbdriver.TokenRecordReference{TxID: "tx3", Index: 0})
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(nil, errors.New("db error")).Once()
+
+	fetcher.update(ctx)
+	assert.True(t, fetcher.isCacheStale(), "dirty flag must be restored when DB refresh fails")
 	mockDB.AssertExpectations(t)
 }

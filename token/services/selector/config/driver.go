@@ -38,6 +38,10 @@ type Config struct {
 	FetcherCacheSize       int64         `yaml:"fetcherCacheSize,omitempty"`
 	FetcherCacheRefresh    time.Duration `yaml:"fetcherCacheRefresh,omitempty"`
 	FetcherCacheMaxQueries int           `yaml:"fetcherCacheMaxQueries,omitempty"`
+	// TokenNotifierDisabled disables the Postgres LISTEN/NOTIFY-based cache
+	// invalidation and falls back to the time-based freshness interval.
+	// Set to true if the notifier becomes a bottleneck under high write load.
+	TokenNotifierDisabled bool `yaml:"tokenNotifierDisabled,omitempty"`
 }
 
 // New returns a SelectorConfig with the values from the token.selector key
@@ -104,4 +108,10 @@ func (c *Config) GetFetcherCacheRefresh() time.Duration {
 func (c *Config) GetFetcherCacheMaxQueries() int {
 	// Return 0 if not set, which will trigger use of fetcher default
 	return c.FetcherCacheMaxQueries
+}
+
+// IsTokenNotifierDisabled returns true when the DB notifier should be skipped
+// and the selector falls back to the time-based freshness interval.
+func (c *Config) IsTokenNotifierDisabled() bool {
+	return c.TokenNotifierDisabled
 }

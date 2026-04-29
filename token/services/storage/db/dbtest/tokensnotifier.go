@@ -67,8 +67,11 @@ func TTokenNotifier(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier)
 	values := result.Values()
 	require.Equal(t, driver.Insert, values[0].Op)
 	require.Equal(t, driver.TokenRecordReference{
-		TxID:  tr.TxID,
-		Index: tr.Index,
+		TxID:     tr.TxID,
+		Index:    tr.Index,
+		WalletID: "alice",
+		Type:     tr.Type,
+		Quantity: tr.Quantity,
 	}, values[0].Val)
 }
 

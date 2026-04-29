@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
 	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
+	token "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // TokenStore wraps common.TokenStore to add advisory lock to schema creation
@@ -42,6 +43,8 @@ type TokenNotifier struct {
 }
 
 // NewTokenNotifier returns a new TokenNotifier for the given RWDB and table names.
+// It includes owner_wallet_id, token_type, and quantity in the NOTIFY payload so
+// subscribers can perform surgical cache updates without an extra DB query.
 func NewTokenNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, dataSource string) (*TokenNotifier, error) {
 	return &TokenNotifier{
 		Notifier: NewNotifier(
@@ -51,6 +54,9 @@ func NewTokenNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, dataSo
 			AllOperations,
 			*NewSimplePrimaryKey("tx_id"),
 			*NewSimplePrimaryKey("idx"),
+			*NewSimplePrimaryKey("owner_wallet_id"),
+			*NewSimplePrimaryKey("token_type"),
+			*NewSimplePrimaryKey("quantity"),
 		),
 	}, nil
 }
@@ -65,8 +71,11 @@ func (n *TokenNotifier) Subscribe(callback func(tokensdriver.Operation, tokensdr
 			return
 		}
 		callback(operation, tokensdriver.TokenRecordReference{
-			TxID:  m["tx_id"],
-			Index: idx,
+			TxID:     m["tx_id"],
+			Index:    idx,
+			WalletID: m["owner_wallet_id"],
+			Type:     token.Type(m["token_type"]),
+			Quantity: m["quantity"],
 		})
 	})
 }

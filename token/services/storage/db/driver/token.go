@@ -255,12 +255,20 @@ const (
 	Delete = driver2.Delete
 )
 
-// TokenRecordReference contains the primary key fields of a token record.
+// TokenRecordReference contains the primary key fields of a token record,
+// plus the extra columns emitted by the Postgres trigger so subscribers can
+// perform surgical cache updates without an additional DB round-trip.
 type TokenRecordReference struct {
 	// TxID is the unique identifier of the transaction that created the token.
 	TxID string
 	// Index is the index of the token in the transaction.
 	Index uint64
+	// WalletID is the owner wallet identifier (empty string when unavailable).
+	WalletID string
+	// Type is the token type (empty string when unavailable).
+	Type token.Type
+	// Quantity is the token amount encoded as a hex string (empty string when unavailable).
+	Quantity string
 }
 
 // TokenNotifier is used to subscribe to token changes in the storage.
