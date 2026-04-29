@@ -93,11 +93,17 @@ func (f *PolicyLockViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 // ---------------------------------------------------------------------------
-// OR-policy spend: a single co-owner spends unilaterally.
+// Unified policy spend.
 // ---------------------------------------------------------------------------
 
-// PolicySpendOR contains the parameters for spending a policy token when the policy is OR.
-type PolicySpendOR struct {
+// PolicySpend contains the parameters for spending a policy token.
+//
+// When Signers is non-nil it restricts signature collection to those
+// component identities (OR-policy optimisation: only the listed parties sign,
+// leaving other slots nil so the policy evaluator treats them as absent).
+// When Signers is nil or empty, all co-owners are notified via
+// RequestSpendView and must sign (AND-policy behaviour).
+type PolicySpend struct {
 	// Auditor is the name of the auditor FSC node.
 	Auditor string
 	// Wallet is the spender's owner wallet identifier.
@@ -108,15 +114,20 @@ type PolicySpendOR struct {
 	TMSID *token2.TMSID
 	// TokenType is the type of tokens to spend.
 	TokenType token.Type
+	// Signers, when non-nil, restricts which component identities are asked to
+	// sign.  Leave nil to require all co-owners (AND behaviour).
+	Signers []view.Identity
 }
 
-// PolicySpendORView spends a policy token whose OR policy can be satisfied by a single signer.
-type PolicySpendORView struct {
-	*PolicySpendOR
+// PolicySpendView spends a policy token.  OR-policy callers supply Signers to
+// skip co-owner notification and restrict signing to just those identities;
+// AND-policy callers leave Signers nil so every co-owner is contacted first.
+type PolicySpendView struct {
+	*PolicySpend
 }
 
 // Call implements view.View.
-func (r *PolicySpendORView) Call(context view.Context) (interface{}, error) {
+func (r *PolicySpendView) Call(context view.Context) (interface{}, error) {
 	serviceOpts := ServiceOpts(r.TMSID)
 	recipient, err := ttx.RequestRecipientIdentity(context, r.Recipient, serviceOpts...)
 	assert.NoError(err, "failed getting recipient")
@@ -130,6 +141,12 @@ func (r *PolicySpendORView) Call(context view.Context) (interface{}, error) {
 	matched, err := pWallet.ListTokens(context.Context(), token2.WithType(r.TokenType))
 	assert.NoError(err, "failed to list policy tokens")
 	assert.True(matched.Count() == 1, "expected exactly one policy token, got [%d]", matched.Count())
+
+	if len(r.Signers) == 0 {
+		// AND behaviour: notify all co-owners before assembling the transaction.
+		_, err = context.RunView(bptx.NewRequestSpendView(matched.At(0), serviceOpts...))
+		assert.NoError(err, "failed to request policy spend")
+	}
 
 	idProvider, err := id.GetProvider(context)
 	assert.NoError(err, "failed getting id provider")
@@ -140,95 +157,26 @@ func (r *PolicySpendORView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to create policy transaction")
 	assert.NoError(bptx.Wrap(tx).Spend(spendWallet, matched.At(0), recipient), "failed adding spend")
 
-	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
-	assert.NoError(err, "failed to collect endorsements on policy OR spend")
+	var collectOpts []ttx.EndorsementsOpt
+	if len(r.Signers) > 0 {
+		collectOpts = append(collectOpts, ttx.WithPolicySigners(r.Signers...))
+	}
+	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, collectOpts...))
+	assert.NoError(err, "failed to collect endorsements on policy spend")
 
 	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx))
-	assert.NoError(err, "failed to commit policy OR spend")
+	assert.NoError(err, "failed to commit policy spend")
 
 	return tx.ID(), nil
 }
 
-// PolicySpendORViewFactory creates PolicySpendORView instances.
-type PolicySpendORViewFactory struct{}
+// PolicySpendViewFactory creates PolicySpendView instances.
+type PolicySpendViewFactory struct{}
 
 // NewView implements view.Factory.
-func (f *PolicySpendORViewFactory) NewView(in []byte) (view.View, error) {
-	v := &PolicySpendORView{PolicySpendOR: &PolicySpendOR{}}
-	assert.NoError(json.Unmarshal(in, v.PolicySpendOR), "failed unmarshalling input")
-
-	return v, nil
-}
-
-// ---------------------------------------------------------------------------
-// AND-policy spend: all co-owners must endorse.
-// ---------------------------------------------------------------------------
-
-// PolicySpendAND contains parameters for an AND-policy spend where all parties must sign.
-type PolicySpendAND struct {
-	// Auditor is the name of the auditor FSC node.
-	Auditor string
-	// Wallet is the initiating spender's owner wallet identifier.
-	Wallet string
-	// Recipient is the FSC node identity that will receive the tokens.
-	Recipient view.Identity
-	// TMSID optionally pins a specific TMS.
-	TMSID *token2.TMSID
-	// TokenType is the type of tokens to spend.
-	TokenType token.Type
-}
-
-// PolicySpendANDView initiates spending a policy-AND token: it notifies co-owners, then
-// collects all endorsements before committing.
-type PolicySpendANDView struct {
-	*PolicySpendAND
-}
-
-// Call implements view.View.
-func (r *PolicySpendANDView) Call(context view.Context) (interface{}, error) {
-	serviceOpts := ServiceOpts(r.TMSID)
-	recipient, err := ttx.RequestRecipientIdentity(context, r.Recipient, serviceOpts...)
-	assert.NoError(err, "failed getting recipient")
-
-	spendWallet := bptx.GetWallet(context, r.Wallet, serviceOpts...)
-	assert.NotNil(spendWallet, "wallet [%s] not found", r.Wallet)
-
-	pWallet := bptx.Wallet(context, spendWallet)
-	assert.NotNil(pWallet, "policy wallet wrapper for [%s] not found", r.Wallet)
-
-	matched, err := pWallet.ListTokens(context.Context(), token2.WithType(r.TokenType))
-	assert.NoError(err, "failed to list policy tokens")
-	assert.True(matched.Count() == 1, "expected exactly one policy token, got [%d]", matched.Count())
-
-	// Notify co-owners about the intent to spend.
-	_, err = context.RunView(bptx.NewRequestSpendView(matched.At(0), serviceOpts...))
-	assert.NoError(err, "failed to request policy spend")
-
-	idProvider, err := id.GetProvider(context)
-	assert.NoError(err, "failed getting id provider")
-	tx, err := ttx.NewAnonymousTransaction(
-		context,
-		TxOpts(r.TMSID, ttx.WithAuditor(idProvider.Identity(r.Auditor)))...,
-	)
-	assert.NoError(err, "failed to create policy AND transaction")
-	assert.NoError(bptx.Wrap(tx).Spend(spendWallet, matched.At(0), recipient), "failed adding spend")
-
-	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
-	assert.NoError(err, "failed to collect endorsements on policy AND spend")
-
-	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx))
-	assert.NoError(err, "failed to commit policy AND spend")
-
-	return tx.ID(), nil
-}
-
-// PolicySpendANDViewFactory creates PolicySpendANDView instances.
-type PolicySpendANDViewFactory struct{}
-
-// NewView implements view.Factory.
-func (f *PolicySpendANDViewFactory) NewView(in []byte) (view.View, error) {
-	v := &PolicySpendANDView{PolicySpendAND: &PolicySpendAND{}}
-	assert.NoError(json.Unmarshal(in, v.PolicySpendAND), "failed unmarshalling input")
+func (f *PolicySpendViewFactory) NewView(in []byte) (view.View, error) {
+	v := &PolicySpendView{PolicySpend: &PolicySpend{}}
+	assert.NoError(json.Unmarshal(in, v.PolicySpend), "failed unmarshalling input")
 
 	return v, nil
 }

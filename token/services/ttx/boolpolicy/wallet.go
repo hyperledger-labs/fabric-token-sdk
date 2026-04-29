@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package boolpolicy
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -98,6 +99,31 @@ func Wallet(context view.Context, wallet *token.OwnerWallet) *OwnerWallet {
 		vault:       svc,
 		queryEngine: tms.Vault().NewQueryEngine(),
 	}
+}
+
+// VerifyApprover checks that tok is owned by a policy identity and that
+// approver is listed as one of its component identities.  It returns an error
+// when the token is not a policy token or when approver is absent from the
+// policy's identity list.
+func (w *OwnerWallet) VerifyApprover(tok *token2.UnspentToken, approver token.Identity) error {
+	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal token owner")
+	}
+	if owner.Type != boolpolicy.Policy {
+		return errors.Errorf("token is not a policy identity (type %d)", owner.Type)
+	}
+	pi := &boolpolicy.PolicyIdentity{}
+	if err := pi.Deserialize(owner.Identity); err != nil {
+		return errors.Wrap(err, "failed to deserialize policy identity")
+	}
+	for _, componentID := range pi.Identities {
+		if bytes.Equal(componentID, approver) {
+			return nil
+		}
+	}
+
+	return errors.Errorf("approver is not listed in policy [%s]", pi.Policy)
 }
 
 // containsPolicy returns true when the token's owner is a valid policy identity.
