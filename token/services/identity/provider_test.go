@@ -174,6 +174,21 @@ func TestProvider_EnrollmentIDHelpers(t *testing.T) {
 	assert.Equal(t, "rh2", erh)
 }
 
+func TestProvider_RollbackPartialRecipientRegistration(t *testing.T) {
+	storage := &idmock.Storage{}
+	des := &idmock.Deserializer{}
+	nbs := &idmock.NetworkBinderService{}
+	eidu := &idmock.EnrollmentIDUnmarshaler{}
+
+	p := identity.NewProvider(logging.MustGetLogger(), storage, des, nbs, eidu)
+
+	id := driver.Identity("recipient_id")
+	require.NoError(t, p.RegisterRecipientIdentity(t.Context(), id))
+
+	var rb identity.RecipientRegistrationRollback = p
+	rb.RollbackPartialRecipientRegistration(t.Context(), id)
+}
+
 func TestProvider_GetAuditInfo(t *testing.T) {
 	storage := &idmock.Storage{}
 	des := &idmock.Deserializer{}
