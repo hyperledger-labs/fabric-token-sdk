@@ -359,19 +359,19 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		recipientIdentity = recipientData.Identity
 	}
 
+	// Update the endpoint resolver before sending so a local bind failure does not
+	// leave the peer with a RecipientData we never successfully wired locally.
+	resolver := endpoint.GetService(context)
+	logger.DebugfContext(context.Context(), "bind me [%s] to [%s]", context.Me(), recipientData)
+
+	if err := resolver.Bind(context.Context(), context.Me(), recipientIdentity); err != nil {
+		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
+	}
+
 	// Step 3: send the public key back to the invoker
 	logger.DebugfContext(context.Context(), "Send recipient identity response to %s", session.Info().Caller)
 	if err := session.Send(recipientData); err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
-	}
-
-	// Update the Endpoint Resolver
-	resolver := endpoint.GetService(context)
-	logger.DebugfContext(context.Context(), "bind me [%s] to [%s]", context.Me(), recipientData)
-
-	err = resolver.Bind(context.Context(), context.Me(), recipientIdentity)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
 	}
 
 	if err := s.handleMultisig(context, session.Session(), tms, recipientRequest, recipientIdentity); err != nil {
@@ -462,7 +462,7 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 	for i, node := range multisigRecipientData.Nodes {
 		err = resolver.Bind(context.Context(), node, multisigRecipientData.Recipients[i])
 		if err != nil {
-			return errors.Wrapf(err, "failed to bind me to recipient identity")
+			return errors.Wrapf(err, "failed to bind node identity to recipient identity")
 		}
 	}
 
@@ -602,7 +602,10 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	}
 	other := request.RecipientData.Identity
 	if err := ts.WalletManager().RegisterRecipientIdentity(context.Context(), &RecipientData{
-		Identity: other, AuditInfo: request.RecipientData.AuditInfo, TokenMetadata: request.RecipientData.TokenMetadata,
+		Identity:               other,
+		AuditInfo:              request.RecipientData.AuditInfo,
+		TokenMetadata:          request.RecipientData.TokenMetadata,
+		TokenMetadataAuditInfo: request.RecipientData.TokenMetadataAuditInfo,
 	}); err != nil {
 		return nil, err
 	}
@@ -622,19 +625,18 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, errors.WithMessagef(err, "failed getting recipient data, wallet [%s]", w.ID())
 	}
 
-	if err := session.Send(recipientData); err != nil {
-		return nil, errors.WithMessagef(err, "failed sending recipient data, wallet [%s]", w.ID())
+	// Bind locally before sending so a bind failure does not leave the initiator
+	// with our RecipientData while this node never finished resolver wiring.
+	resolver := endpoint.GetService(context)
+	if err := resolver.Bind(context.Context(), context.Me(), recipientData.Identity); err != nil {
+		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
+	}
+	if err := resolver.Bind(context.Context(), session.Info().Caller, other); err != nil {
+		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}
 
-	// Update the Endpoint Resolver
-	resolver := endpoint.GetService(context)
-	err = resolver.Bind(context.Context(), context.Me(), recipientData.Identity)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
-	}
-	err = resolver.Bind(context.Context(), session.Info().Caller, other)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
+	if err := session.Send(recipientData); err != nil {
+		return nil, errors.WithMessagef(err, "failed sending recipient data, wallet [%s]", w.ID())
 	}
 
 	return []token.Identity{recipientData.Identity, other}, nil
