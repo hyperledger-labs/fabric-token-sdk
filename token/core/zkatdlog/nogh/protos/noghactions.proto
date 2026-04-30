@@ -1,15 +1,15 @@
 /*
-Copyright IBM Corp. All Rights Reserved.
+   Copyright IBM Corp. All Rights Reserved.
 
-SPDX-License-Identifier: Apache-2.0
+   SPDX-License-Identifier: Apache-2.0
 */
 
 syntax = "proto3";
 
 package nogh;
 
-import "noghmath.proto";
 import "ftactions.proto";
+import "noghmath.proto";
 import "noghpp.proto";
 
 option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions";
@@ -27,8 +27,8 @@ message TokenMetadata {
 }
 
 message TokenID {
-    string id = 1;
-    uint64 index = 2;
+  string id = 1;
+  uint64 index = 2;
 }
 
 message TransferActionInput {
@@ -39,7 +39,7 @@ message TransferActionInput {
 
 message TransferActionInputUpgradeWitness {
   fabtoken.Token output = 1;
-   Zr blinding_factor = 2;
+  Zr blinding_factor = 2;
 }
 
 message TransferActionOutput {
@@ -48,7 +48,7 @@ message TransferActionOutput {
 
 message Proof {
   oneof proof_type {
-    bytes proof  = 1;
+    bytes proof = 1;
     bytes csp_based_proof = 2;
   }
 }

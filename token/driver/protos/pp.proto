@@ -1,14 +1,14 @@
 /*
-Copyright IBM Corp. All Rights Reserved.
+   Copyright IBM Corp. All Rights Reserved.
 
-SPDX-License-Identifier: Apache-2.0
+   SPDX-License-Identifier: Apache-2.0
 */
 
 syntax = "proto3";
 
 package protos;
 
-option go_package = "../protos-go/pp";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp";
 
 // PublicParameters describes typed public parameters
 message PublicParameters {

@@ -4,9 +4,9 @@
 
 syntax = "proto3";
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/protos-go/config";
-
 package identity_x509;
+
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/protos-go/config";
 
 // Config collects all the configuration information for an x509 identity.
 message Config {

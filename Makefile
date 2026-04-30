@@ -242,3 +242,14 @@ update-all-deps-latest: ## Update all dependencies in all Go modules to their la
 		echo "=> Updating dependencies in $$dir"; \
 		(cd $$dir && go get ./...@latest && go mod tidy); \
 	done
+
+.PHONY: buf-format-fix
+buf-format-fix: ## Run buf format to fix protobuf files
+	@echo "Fixing protobuf formatting..."
+	@buf format -w
+
+.PHONY: protos
+# generate protobuf files
+protos:
+	@echo "Generating protobuf files..."
+	@buf generate

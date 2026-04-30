@@ -1,7 +1,7 @@
 /*
-Copyright IBM Corp. All Rights Reserved.
+   Copyright IBM Corp. All Rights Reserved.
 
-SPDX-License-Identifier: Apache-2.0
+   SPDX-License-Identifier: Apache-2.0
 */
 
 syntax = "proto3";
@@ -18,7 +18,7 @@ message Identity {
 
 message IdemixIssuerPublicKey {
   bytes public_key = 1;
-    CurveID curver_id = 2;
+  CurveID curver_id = 2;
 }
 
 message RangeProofParams {
@@ -50,5 +50,5 @@ message PublicParameters {
   uint64 max_token = 9; // is the maximum quantity a token can hold
   uint64 quantity_precision = 10; // is the precision used to represent quantities
   map<string, bytes> extra_data = 11; // extra_data allows to store arbitrary data in the public parameters
-  CSPRangeProofParams csp_range_proof_params = 12;       // csp-based range proof params
+  CSPRangeProofParams csp_range_proof_params = 12; // csp-based range proof params
 }
