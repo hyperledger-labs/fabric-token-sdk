@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/pp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

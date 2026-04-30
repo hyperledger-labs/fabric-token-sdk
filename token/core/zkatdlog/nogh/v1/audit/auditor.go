@@ -124,8 +124,18 @@ func (a *Auditor) Check(
 ) error {
 	// TODO: inputTokens should be checked against the actions
 	// De-obfuscate issue requests
-	a.Logger.DebugfContext(ctx, "Get audit info for %d issues", len(tokenRequest.Issues))
-	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssues(tokenRequest.Issues, tokenRequestMetadata.Issues)
+	issues := tokenRequest.GetIssues()
+	a.Logger.DebugfContext(ctx, "Get audit info for %d issues", len(issues))
+
+	// Extract issue metadata
+	issueMetadata := make([]*driver.IssueMetadata, 0)
+	for _, action := range tokenRequestMetadata.Actions {
+		if action.IssueMetadata != nil {
+			issueMetadata = append(issueMetadata, action.IssueMetadata)
+		}
+	}
+
+	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssues(issues, issueMetadata)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues for [%s]", txID)
 	}
@@ -143,8 +153,18 @@ func (a *Auditor) Check(
 		}
 	}
 	// De-obfuscate transfer requests
-	a.Logger.DebugfContext(ctx, "Get audit info for %d transfers", len(tokenRequest.Transfers))
-	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfers(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
+	transfers := tokenRequest.GetTransfers()
+	a.Logger.DebugfContext(ctx, "Get audit info for %d transfers", len(transfers))
+
+	// Extract transfer metadata
+	transferMetadata := make([]*driver.TransferMetadata, 0)
+	for _, action := range tokenRequestMetadata.Actions {
+		if action.TransferMetadata != nil {
+			transferMetadata = append(transferMetadata, action.TransferMetadata)
+		}
+	}
+
+	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfers(transfers, transferMetadata, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers for [%s]", txID)
 	}

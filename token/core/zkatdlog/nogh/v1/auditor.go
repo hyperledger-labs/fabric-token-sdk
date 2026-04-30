@@ -45,7 +45,7 @@ func NewAuditorService(
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
 func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.TokenRequest, metadata *driver.TokenRequestMetadata, anchor driver.TokenRequestAnchor) error {
-	s.Logger.DebugfContext(ctx, "[%s] check token request validity, number of transfer actions [%d]...", anchor, len(metadata.Transfers))
+	s.Logger.DebugfContext(ctx, "[%s] check token request validity, number of transfer actions [%d]...", anchor, metadata.NumTransfers())
 
 	actionDes := &validator.ActionDeserializer{
 		PublicParams: s.PublicParametersManager.PublicParams(),
@@ -55,7 +55,7 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 		return errors.Wrapf(err, "failed to deserialize actions")
 	}
 
-	inputTokens := make([][]*token.Token, len(metadata.Transfers))
+	inputTokens := make([][]*token.Token, len(transfers))
 	for i, transfer := range transfers {
 		if err := transfer.Validate(); err != nil {
 			s.Logger.ErrorfContext(ctx, "failed to validate transfer: %s", err)

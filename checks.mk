@@ -1,16 +1,16 @@
 .PHONY: checks
-checks: licensecheck gofmt goimports govet misspell ineffassign staticcheck
+checks: licensecheck gofmt goimports govet misspell ineffassign staticcheck protos-lint buf-format
 
 .PHONY: licensecheck
 licensecheck:
 	@echo Running license check
-	@find . -path './.git' -prune -o -name '*.go' -print | xargs addlicense -check || (echo "Missing license headers"; exit 1)
+	@find . -path './.git' -prune -o -name '*.go' -not -name '*.pb.go' -print | xargs addlicense -check || (echo "Missing license headers"; exit 1)
 
 .PHONY: gofmt
 gofmt:
 	@echo Running gofmt
 	@{ \
-	OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -print | xargs gofmt -l -s || true)"; \
+	OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -not -name '*.pb.go' -print | xargs gofmt -l -s || true)"; \
 	if [ -n "$$OUTPUT" ]; then \
 		echo "The following gofmt issues were flagged:"; \
 		echo "$$OUTPUT"; \
@@ -23,7 +23,7 @@ gofmt:
 goimports:
 	@echo Running goimports
 	@{ \
-	OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -print | xargs goimports -l || true)"; \
+	OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -not -name '*.pb.go' -print | xargs goimports -l || true)"; \
 	if [ -n "$$OUTPUT" ]; then \
     	echo "The following files contain goimports errors"; \
     	echo "$$OUTPUT"; \
@@ -71,6 +71,12 @@ ineffassign:
 	@echo Running ineffassign
 	@ineffassign $(shell go list -f '{{.Dir}}' ./...)
 
+.PHONY: protos-lint
+protos-lint:
+	@echo "Linting protobuf files..."
+	@buf lint
 
-
-
+.PHONY: buf-format
+buf-format:
+	@echo "Checking protobuf formatting..."
+	@buf format -d --exit-code
