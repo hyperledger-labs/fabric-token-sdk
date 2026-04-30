@@ -13,6 +13,7 @@ import (
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/require"
@@ -114,23 +115,28 @@ func newAuditEnv(benchmarkCase *benchmark2.Case) (*auditEnv, error) {
 	}
 
 	request := &driver.TokenRequest{
-		Issues: [][]byte{rawAction},
+		Actions: []*driver.TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: rawAction},
+		},
 	}
 
 	metadata := &driver.TokenRequestMetadata{
-		Issues: []*driver.IssueMetadata{
+		Actions: []*driver.ActionMetadataEntry{
 			{
-				Issuer: driver.AuditableIdentity{
-					Identity:  []byte("issuer"),
-					AuditInfo: []byte("audit-info"),
-				},
-				Outputs: []*driver.IssueOutputMetadata{
-					{
-						OutputMetadata: []byte("token-metadata"),
-						Receivers: []*driver.AuditableIdentity{
-							{
-								Identity:  []byte("owner"),
-								AuditInfo: []byte("audit-info"),
+				ActionID: 0,
+				IssueMetadata: &driver.IssueMetadata{
+					Issuer: driver.AuditableIdentity{
+						Identity:  []byte("issuer"),
+						AuditInfo: []byte("audit-info"),
+					},
+					Outputs: []*driver.IssueOutputMetadata{
+						{
+							OutputMetadata: []byte("token-metadata"),
+							Receivers: []*driver.AuditableIdentity{
+								{
+									Identity:  []byte("owner"),
+									AuditInfo: []byte("audit-info"),
+								},
 							},
 						},
 					},

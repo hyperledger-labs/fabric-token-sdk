@@ -185,7 +185,7 @@ func TestLoadConfig(t *testing.T) {
 	t.Run("Directory Without Certificates", func(t *testing.T) {
 		dir := t.TempDir()
 		signcertDir := filepath.Join(dir, SignCertsDirName)
-		err := os.MkdirAll(signcertDir, 0750)
+		err := os.MkdirAll(signcertDir, 0o750)
 		require.NoError(t, err)
 
 		_, err = LoadConfig(dir, "")
