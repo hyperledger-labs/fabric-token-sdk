@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
-	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testutils"
+	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/testutils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -85,13 +85,15 @@ func TestValidator(t *testing.T) {
 				env, err := testing2.NewEnv(testUseCase, configurations)
 				require.NoError(t, err)
 
-				request := &driver.TokenRequest{Issues: env.TRWithSwap.Issues, Transfers: env.TRWithSwap.Transfers}
+				request := &driver.TokenRequest{
+					Actions: env.TRWithSwap.Actions,
+				}
 				raw, err := request.MarshalToMessageToSign([]byte("3"))
 				require.NoError(t, err)
 
 				signatures, err := env.Sender.SignTokenActions(raw)
 				require.NoError(t, err)
-				env.TRWithSwap.Signatures[1] = signatures[0]
+				env.TRWithSwap.Signatures[1].Action.Signature = signatures[0]
 
 				raw, err = env.TRWithSwap.Bytes()
 				require.NoError(t, err)

@@ -33,7 +33,7 @@ type UpdateArgs struct {
 	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
 	Auditors []string
 	// Version allows the caller of tokengen to override the version number put in the public params
-	Version uint
+	Version uint32
 }
 
 // UpdateCmd returns the Cobra Command for updating public parameters.
@@ -44,7 +44,7 @@ func UpdateCmd() *cobra.Command {
 	flags.StringVarP(&OutputDir, "output", "o", ".", "output folder")
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
-	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
+	flags.Uint32VarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
 	flags.StringArrayVarP(&Extras, "extra", "x", []string{}, "extra data in key=value format, where is the path to a file containing the data to load and store in the key")
 
 	return cmd

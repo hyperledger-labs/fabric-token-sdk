@@ -194,6 +194,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 			logger,
 			ppm,
 			deserializer,
+			qe,
 			d.tracerProvider,
 		), metricsProvider),
 		metrics.NewTokensService(tokensService, metricsProvider),
