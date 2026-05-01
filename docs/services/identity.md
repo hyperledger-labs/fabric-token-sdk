@@ -232,6 +232,24 @@ Located in `token/services/identity/multisig`.
 *   **Usage**: Useful for requiring multiple signatures or representing a group of parties.
 *   **Auditability**: Aggregates audit information for all underlying identities.
 
+#### PolicyIdentity (Boolean-Expression-Governed Ownership)
+Located in `token/services/identity/boolpolicy`.
+*   **Concept**: An identity whose ownership is governed by a boolean expression over a set of component identities, enabling OR-style (any one signer suffices) and AND-style (all signers required) multi-party control without a fixed M-of-N scheme.
+*   **Policy Expression Syntax**: A string using `$N` slot references and the operators `AND`, `OR`, and parentheses:
+    - `$0 OR $1` — either component identity 0 or 1 can satisfy ownership alone.
+    - `$0 AND $1` — both component identity 0 and 1 must sign.
+    - `($0 OR $1) AND $2` — one of the first two parties plus the third must sign.
+*   **Identity (Payload)**: An ASN.1-encoded `PolicyIdentity` sequence:
+    - `policy` (UTF8String): the boolean expression, e.g. `"$0 OR $1"`.
+    - `identities` (SEQUENCE OF OCTET STRING): ordered list of raw component identity bytes; `$N` indexes into this list.
+*   **Audit Info**: JSON-encoded `AuditInfo` structure.
+    - `IdentityAuditInfos` (array of `IdentityAuditInfo`): per-component audit info blobs in the same order as `identities`.
+*   **Encoding**:
+    - `TypedIdentity` payload: ASN.1 DER.
+    - Audit Info: JSON.
+*   **Signature Representation**: An ASN.1 `PolicySignature` (`SEQUENCE OF OCTET STRING`) where each slot corresponds to one component identity. A slot may be nil/empty when that component does not need to sign (valid for OR branches).
+*   **Implementation**: `token/services/identity/boolpolicy`.
+
 #### HTLC (Hashed Time Lock Contract)
 Located in `token/services/identity/interop/htlc`.
 *   **Concept**: A script-based identity used primarily for interoperability mechanisms like atomic swaps.

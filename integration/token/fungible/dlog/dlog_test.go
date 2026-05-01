@@ -119,8 +119,10 @@ var _ = Describe("EndToEnd", func() {
 			ts, selector := newTestSuite(t.CommType, Aries, t.ReplicationFactor, "", "alice", "bob", "charlie")
 			BeforeEach(ts.Setup)
 			AfterEach(ts.TearDown)
-			It("OR succeeded", Label("T14"), func() { fungible.TestPolicyOR(ts.II, selector) })
-			It("AND succeeded", Label("T15"), func() { fungible.TestPolicyAND(ts.II, selector) })
+			It("OR and AND succeeded", Label("T14", "T15"), func() {
+				fungible.TestPolicyOR(ts.II, selector)
+				fungible.TestPolicyAND(ts.II, selector)
+			})
 		})
 
 		Describe("Redeem to yourself", t.Label, func() {

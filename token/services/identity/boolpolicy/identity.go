@@ -50,6 +50,14 @@ const (
 	PolicyString = tdriver.PolicyIdentityTypeString // "policy"
 )
 
+var (
+	// ErrNoRecipients is returned by WrapAuditInfo when the recipients slice is empty.
+	ErrNoRecipients = errors.New("no recipients provided")
+	// ErrMismatch is returned by InfoMatcher when the identity count or a
+	// component identity does not match the corresponding audit info.
+	ErrMismatch = errors.New("policy identity mismatch")
+)
+
 // PolicyIdentity holds a boolean policy expression and the ordered list of
 // component identities that the $N references index into.
 type PolicyIdentity struct {
@@ -96,7 +104,7 @@ func (a *AuditInfo) Bytes() ([]byte, error)   { return json.Marshal(a) }
 // WrapAuditInfo packs per-component audit info bytes into a single blob.
 func WrapAuditInfo(recipients [][]byte) ([]byte, error) {
 	if len(recipients) == 0 {
-		return nil, errors.New("no recipients provided")
+		return nil, ErrNoRecipients
 	}
 	ai := &AuditInfo{IdentityAuditInfos: make([]IdentityAuditInfo, len(recipients))}
 	for k, r := range recipients {
@@ -131,12 +139,12 @@ func (e *InfoMatcher) Match(ctx context.Context, raw []byte) error {
 		return err
 	}
 	if len(e.AuditInfoMatcher) != len(pi.Identities) {
-		return errors.Errorf("expected [%d] identities, received [%d]",
-			len(e.AuditInfoMatcher), len(pi.Identities))
+		return errors.Join(ErrMismatch, errors.Errorf("expected [%d] identities, received [%d]",
+			len(e.AuditInfoMatcher), len(pi.Identities)))
 	}
 	for k, id := range pi.Identities {
 		if err := e.AuditInfoMatcher[k].Match(ctx, id); err != nil {
-			return errors.Wrapf(err, "identity at index %d does not match the audit info", k)
+			return errors.Join(ErrMismatch, errors.Wrapf(err, "identity at index %d does not match the audit info", k))
 		}
 	}
 

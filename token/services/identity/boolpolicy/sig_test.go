@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-// verify_test.go contains focused unit tests for PolicyVerifier.Verify.
+// sig_test.go contains focused unit tests for PolicyVerifier.Verify (sig.go).
 // Each test group targets one logical requirement; helpers are shared with
 // identity_test.go (same package).
 
