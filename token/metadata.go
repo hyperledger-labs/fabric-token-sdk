@@ -142,6 +142,7 @@ func (m *Metadata) filterTransfers(ctx context.Context, issues []*driver.Transfe
 			Inputs:       nil,
 			Outputs:      nil,
 			ExtraSigners: transfer.ExtraSigners,
+			Issuer:       transfer.Issuer,
 		}
 
 		// Filter outputs: if the receiver has the given enrollment ID, add it. Otherwise, add empty entries.
@@ -246,9 +247,11 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if len(m.ExtraSigners) != len(extraSigners) {
 		return errors.Errorf("expected [%d] extra signers but got [%d]", len(extraSigners), len(m.ExtraSigners))
 	}
-	for i, signer := range extraSigners {
-		if !slices.ContainsFunc(m.ExtraSigners, signer.Equal) {
-			return errors.Errorf("expected extra signer [%s] but got [%s]", signer, m.ExtraSigners[i])
+	for _, signer := range extraSigners {
+		if !slices.ContainsFunc(m.ExtraSigners, func(es *driver.AuditableIdentity) bool {
+			return es != nil && signer.Equal(es.Identity)
+		}) {
+			return errors.Errorf("expected extra signer among [%v] but got [%s]", m.ExtraSigners, signer)
 		}
 	}
 
@@ -302,14 +305,14 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 		return errors.Errorf("expected [%d] extra signers but got [%d]", len(m.ExtraSigners), len(extraSigners))
 	}
 	for i, signer := range extraSigners {
-		if !signer.Equal(m.ExtraSigners[i]) {
-			return errors.Errorf("expected extra signer [%s] but got [%s]", m.ExtraSigners[i], signer)
+		if m.ExtraSigners[i] == nil || !signer.Equal(m.ExtraSigners[i].Identity) {
+			return errors.Errorf("expected extra signer [%s] but got [%s]", m.ExtraSigners[i].Identity, signer)
 		}
 	}
 
 	// Check that the issuer identity matches, if present in the metadata.
-	if !m.Issuer.Equal(action.GetIssuer()) {
-		return errors.Errorf("expected issuer [%s] but got [%s]", m.Issuer, action.GetIssuer().Bytes())
+	if !m.Issuer.Identity.Equal(action.GetIssuer()) {
+		return errors.Errorf("expected issuer [%s] but got [%s]", m.Issuer.Identity, action.GetIssuer())
 	}
 
 	return nil

@@ -21,6 +21,7 @@ import (
 const (
 	ProtocolV1 = 1
 	ProtocolV2 = 2
+	ProtocolV3 = 3
 
 	// MaxAnchorSize defines the maximum allowed size for anchor parameter in bytes.
 	// This limit prevents potential DoS attacks through excessive memory allocation.
@@ -169,7 +170,6 @@ func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
 		r.Signatures = append(r.Signatures, signature.Raw)
 	}
 	if tr.Auditing != nil {
-		r.AuditorSignatures = make([]*AuditorSignature, len(tr.Auditing.Signatures))
 		r.AuditorSignatures = slices.GenericSliceOfPointers[AuditorSignature](len(tr.Auditing.Signatures))
 		if err := protos.FromProtosSlice(tr.Auditing.Signatures, r.AuditorSignatures); err != nil {
 			return errors.Wrap(err, "failed converting auditor signatures")
@@ -214,13 +214,13 @@ func (r *TokenRequest) MarshalToMessageToSign(anchor []byte) ([]byte, error) {
 
 // getVersion returns the protocol version of this TokenRequest.
 // Returns the stored version, defaulting to V2 for new requests.
-func (r *TokenRequest) getVersion() int {
+func (r *TokenRequest) getVersion() uint32 {
 	if r.Version == 0 {
 		// Default to V2 for new requests
 		return ProtocolV2
 	}
 
-	return int(r.Version)
+	return r.Version
 }
 
 // marshalToMessageToSignV1 implements the V1 protocol signature message construction.
@@ -385,7 +385,7 @@ type IssueMetadata struct {
 	Outputs []*IssueOutputMetadata
 	// ExtraSigners is the list of extra identities that are not part of the issue action per se
 	// but needs to sign the request
-	ExtraSigners []Identity
+	ExtraSigners []*AuditableIdentity
 }
 
 func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
@@ -402,11 +402,45 @@ func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
 
+	extraSigners := make([]*request.Identity, len(i.ExtraSigners))
+	for idx, es := range i.ExtraSigners {
+		if es != nil {
+			extraSigners[idx] = &request.Identity{Raw: es.Identity}
+		}
+	}
+
 	return &request.IssueMetadata{
 		Issuer:       issuer,
 		Inputs:       inputs,
 		Outputs:      outputs,
-		ExtraSigners: ToProtoIdentitySlice(i.ExtraSigners),
+		ExtraSigners: extraSigners,
+	}, nil
+}
+
+func (i *IssueMetadata) ToProtosV3() (*request.IssueMetadataV3, error) {
+	issuer, err := i.Issuer.ToProtos()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling issuer [%v]", i.Issuer)
+	}
+	inputs, err := protos.ToProtosSlice(i.Inputs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling inputs")
+	}
+	outputs, err := protos.ToProtosSlice(i.Outputs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling outputs")
+	}
+
+	extraSigners, err := protos.ToProtosSlice[request.AuditableIdentity, *AuditableIdentity](i.ExtraSigners)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling extra signers")
+	}
+
+	return &request.IssueMetadataV3{
+		Issuer:       issuer,
+		Inputs:       inputs,
+		Outputs:      outputs,
+		ExtraSigners: extraSigners,
 	}, nil
 }
 
@@ -426,7 +460,36 @@ func (i *IssueMetadata) FromProtos(issueMetadata *request.IssueMetadata) error {
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling output metadata")
 	}
-	i.ExtraSigners = FromProtoIdentitySlice(issueMetadata.ExtraSigners)
+	i.ExtraSigners = make([]*AuditableIdentity, len(issueMetadata.ExtraSigners))
+	for idx, es := range issueMetadata.ExtraSigners {
+		if es != nil {
+			i.ExtraSigners[idx] = &AuditableIdentity{Identity: es.Raw}
+		}
+	}
+
+	return nil
+}
+
+func (i *IssueMetadata) FromProtosV3(issueMetadata *request.IssueMetadataV3) error {
+	issuer := &AuditableIdentity{}
+	if err := issuer.FromProtos(issueMetadata.Issuer); err != nil {
+		return errors.Wrapf(err, "failed unmarshalling issuer [%v]", issueMetadata.Issuer)
+	}
+	i.Issuer = *issuer
+	i.Inputs = slices.GenericSliceOfPointers[IssueInputMetadata](len(issueMetadata.Inputs))
+	err := protos.FromProtosSlice[request.IssueInputMetadata, *IssueInputMetadata](issueMetadata.Inputs, i.Inputs)
+	if err != nil {
+		return errors.Wrap(err, "failed unmarshalling input metadata")
+	}
+	i.Outputs = slices.GenericSliceOfPointers[IssueOutputMetadata](len(issueMetadata.Outputs))
+	err = protos.FromProtosSlice(issueMetadata.Outputs, i.Outputs)
+	if err != nil {
+		return errors.Wrap(err, "failed unmarshalling output metadata")
+	}
+	i.ExtraSigners = slices.GenericSliceOfPointers[AuditableIdentity](len(issueMetadata.ExtraSigners))
+	if err = protos.FromProtosSlice[request.AuditableIdentity, *AuditableIdentity](issueMetadata.ExtraSigners, i.ExtraSigners); err != nil {
+		return errors.Wrap(err, "failed unmarshalling extra signers")
+	}
 
 	return nil
 }
@@ -536,9 +599,9 @@ type TransferMetadata struct {
 	Outputs []*TransferOutputMetadata
 	// ExtraSigners is the list of extra identities that are not part of the transfer action per se
 	// but needs to sign the request
-	ExtraSigners []Identity
+	ExtraSigners []*AuditableIdentity
 	// Issuer contains the identity of the issuer to sign the transfer action
-	Issuer Identity
+	Issuer AuditableIdentity
 }
 
 // TokenIDAt returns the TokenID at the given index.
@@ -560,18 +623,51 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
+	extraSigners := make([]*request.Identity, len(t.ExtraSigners))
+	for idx, es := range t.ExtraSigners {
+		if es != nil {
+			extraSigners[idx] = &request.Identity{Raw: es.Identity}
+		}
+	}
 
 	var issuer *request.Identity
-	if t.Issuer != nil {
+	if t.Issuer.Identity != nil {
 		issuer = &request.Identity{
-			Raw: t.Issuer.Bytes(),
+			Raw: t.Issuer.Identity,
 		}
 	}
 
 	return &request.TransferMetadata{
 		Inputs:       inputs,
 		Outputs:      outputs,
-		ExtraSigners: ToProtoIdentitySlice(t.ExtraSigners),
+		ExtraSigners: extraSigners,
+		Issuer:       issuer,
+	}, nil
+}
+
+func (t *TransferMetadata) ToProtosV3() (*request.TransferMetadataV3, error) {
+	inputs, err := protos.ToProtosSlice[request.TransferInputMetadata, *TransferInputMetadata](t.Inputs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling inputs")
+	}
+	outputs, err := protos.ToProtosSlice(t.Outputs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling outputs")
+	}
+	extraSigners, err := protos.ToProtosSlice[request.AuditableIdentity, *AuditableIdentity](t.ExtraSigners)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling extra signers")
+	}
+
+	issuer, err := t.Issuer.ToProtos()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling issuer [%v]", t.Issuer)
+	}
+
+	return &request.TransferMetadataV3{
+		Inputs:       inputs,
+		Outputs:      outputs,
+		ExtraSigners: extraSigners,
 		Issuer:       issuer,
 	}, nil
 }
@@ -585,11 +681,40 @@ func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata
 	if err := protos.FromProtosSlice(transferMetadata.Outputs, t.Outputs); err != nil {
 		return errors.Wrap(err, "failed unmarshalling outputs")
 	}
-	t.ExtraSigners = FromProtoIdentitySlice(transferMetadata.ExtraSigners)
+	t.ExtraSigners = make([]*AuditableIdentity, len(transferMetadata.ExtraSigners))
+	for idx, es := range transferMetadata.ExtraSigners {
+		if es != nil {
+			t.ExtraSigners[idx] = &AuditableIdentity{Identity: es.Raw}
+		}
+	}
 
-	t.Issuer = nil
+	t.Issuer = AuditableIdentity{}
 	if transferMetadata.Issuer != nil {
-		t.Issuer = transferMetadata.Issuer.Raw
+		t.Issuer = AuditableIdentity{Identity: transferMetadata.Issuer.Raw}
+	}
+
+	return nil
+}
+
+func (t *TransferMetadata) FromProtosV3(transferMetadata *request.TransferMetadataV3) error {
+	t.Inputs = slices.GenericSliceOfPointers[TransferInputMetadata](len(transferMetadata.Inputs))
+	if err := protos.FromProtosSlice(transferMetadata.Inputs, t.Inputs); err != nil {
+		return errors.Wrap(err, "failed unmarshalling inputs")
+	}
+	t.Outputs = slices.GenericSliceOfPointers[TransferOutputMetadata](len(transferMetadata.Outputs))
+	if err := protos.FromProtosSlice(transferMetadata.Outputs, t.Outputs); err != nil {
+		return errors.Wrap(err, "failed unmarshalling outputs")
+	}
+	t.ExtraSigners = slices.GenericSliceOfPointers[AuditableIdentity](len(transferMetadata.ExtraSigners))
+	if err := protos.FromProtosSlice[request.AuditableIdentity, *AuditableIdentity](transferMetadata.ExtraSigners, t.ExtraSigners); err != nil {
+		return errors.Wrap(err, "failed unmarshalling extra signers")
+	}
+
+	if transferMetadata.Issuer != nil {
+		t.Issuer = AuditableIdentity{}
+		if err := t.Issuer.FromProtos(transferMetadata.Issuer); err != nil {
+			return errors.Wrap(err, "failed unmarshalling issuer")
+		}
 	}
 
 	return nil
@@ -669,7 +794,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 
 func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error) {
 	trm := &request.TokenRequestMetadata{
-		Version:     ProtocolV1,
+		Version:     ProtocolV3,
 		Metadata:    nil,
 		Application: m.Application,
 	}
@@ -678,13 +803,13 @@ func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error)
 		if meta == nil {
 			return nil, errors.Errorf("failed unmarshalling issue metadata, it is nil")
 		}
-		metaProto, err := meta.ToProtos()
+		metaProto, err := meta.ToProtosV3()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed marshalling issue metadata")
 		}
 		trm.Metadata = append(trm.Metadata, &request.ActionMetadata{
-			Metadata: &request.ActionMetadata_IssueMetadata{
-				IssueMetadata: metaProto,
+			Metadata: &request.ActionMetadata_IssueMetadataV3{
+				IssueMetadataV3: metaProto,
 			},
 		})
 	}
@@ -692,13 +817,13 @@ func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error)
 		if meta == nil {
 			return nil, errors.Errorf("failed unmarshalling issue metadata, it is nil")
 		}
-		metaProto, err := meta.ToProtos()
+		metaProto, err := meta.ToProtosV3()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed marshalling transfer metadata")
 		}
 		trm.Metadata = append(trm.Metadata, &request.ActionMetadata{
-			Metadata: &request.ActionMetadata_TransferMetadata{
-				TransferMetadata: metaProto,
+			Metadata: &request.ActionMetadata_TransferMetadataV3{
+				TransferMetadataV3: metaProto,
 			},
 		})
 	}
@@ -708,14 +833,13 @@ func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error)
 
 func (m *TokenRequestMetadata) FromProtos(trm *request.TokenRequestMetadata) error {
 	// assert version
-	if trm.Version != ProtocolV1 {
-		return errors.Errorf("invalid token request metadata version, expected [%d], got [%d]", ProtocolV1, trm.Version)
+	if trm.Version != ProtocolV1 && trm.Version != ProtocolV2 && trm.Version != ProtocolV3 {
+		return errors.Errorf("invalid token request metadata version, expected [%d, %d, or %d], got [%d]", ProtocolV1, ProtocolV2, ProtocolV3, trm.Version)
 	}
 
 	m.Application = trm.Application
 	for _, meta := range trm.Metadata {
-		im := meta.GetIssueMetadata()
-		if im != nil {
+		if im := meta.GetIssueMetadata(); im != nil {
 			issueMetadata := &IssueMetadata{}
 			if err := issueMetadata.FromProtos(im); err != nil {
 				return errors.Wrapf(err, "failed unmarshalling issue metadata")
@@ -724,11 +848,28 @@ func (m *TokenRequestMetadata) FromProtos(trm *request.TokenRequestMetadata) err
 
 			continue
 		}
-		tm := meta.GetTransferMetadata()
-		if tm != nil {
+		if imv3 := meta.GetIssueMetadataV3(); imv3 != nil {
+			issueMetadata := &IssueMetadata{}
+			if err := issueMetadata.FromProtosV3(imv3); err != nil {
+				return errors.Wrapf(err, "failed unmarshalling issue metadata v3")
+			}
+			m.Issues = append(m.Issues, issueMetadata)
+
+			continue
+		}
+		if tm := meta.GetTransferMetadata(); tm != nil {
 			transferMetadata := &TransferMetadata{}
 			if err := transferMetadata.FromProtos(tm); err != nil {
 				return errors.Wrapf(err, "failed unmarshalling transfer metadata")
+			}
+			m.Transfers = append(m.Transfers, transferMetadata)
+
+			continue
+		}
+		if tmv3 := meta.GetTransferMetadataV3(); tmv3 != nil {
+			transferMetadata := &TransferMetadata{}
+			if err := transferMetadata.FromProtosV3(tmv3); err != nil {
+				return errors.Wrapf(err, "failed unmarshalling transfer metadata v3")
 			}
 			m.Transfers = append(m.Transfers, transferMetadata)
 

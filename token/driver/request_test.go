@@ -387,7 +387,9 @@ func TestIssueMetadata_ToProtos(t *testing.T) {
 		Outputs: []*IssueOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		ExtraSigners: []Identity{Identity("signer1")},
+		ExtraSigners: []*AuditableIdentity{
+			{Identity: Identity("signer1")},
+		},
 	}
 
 	proto, err := im.ToProtos()
@@ -432,7 +434,7 @@ func TestIssueMetadata_FromProtos(t *testing.T) {
 	assert.Len(t, im.Outputs, 1)
 	assert.Equal(t, []byte("output1"), im.Outputs[0].OutputMetadata)
 	assert.Len(t, im.ExtraSigners, 1)
-	assert.Equal(t, Identity("signer1"), im.ExtraSigners[0])
+	assert.Equal(t, Identity("signer1"), im.ExtraSigners[0].Identity)
 }
 
 // TestTransferInputMetadata_ToProtos tests conversion to protobuf
@@ -648,8 +650,10 @@ func TestTransferMetadata_ToProtos(t *testing.T) {
 		Outputs: []*TransferOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		ExtraSigners: []Identity{Identity("signer1")},
-		Issuer:       Identity("issuer1"),
+		ExtraSigners: []*AuditableIdentity{
+			{Identity: Identity("signer1")},
+		},
+		Issuer: AuditableIdentity{Identity: Identity("issuer1")},
 	}
 
 	proto, err := tm.ToProtos()
@@ -671,7 +675,7 @@ func TestTransferMetadata_ToProtos_NilIssuer(t *testing.T) {
 	tm := &TransferMetadata{
 		Inputs:  []*TransferInputMetadata{},
 		Outputs: []*TransferOutputMetadata{},
-		Issuer:  nil,
+		Issuer:  AuditableIdentity{},
 	}
 
 	proto, err := tm.ToProtos()
@@ -704,8 +708,8 @@ func TestTransferMetadata_FromProtos(t *testing.T) {
 	assert.Len(t, tm.Outputs, 1)
 	assert.Equal(t, []byte("output1"), tm.Outputs[0].OutputMetadata)
 	assert.Len(t, tm.ExtraSigners, 1)
-	assert.Equal(t, Identity("signer1"), tm.ExtraSigners[0])
-	assert.Equal(t, Identity("issuer1"), tm.Issuer)
+	assert.Equal(t, Identity("signer1"), tm.ExtraSigners[0].Identity)
+	assert.Equal(t, Identity("issuer1"), tm.Issuer.Identity)
 }
 
 // TestTransferMetadata_FromProtos_NilIssuer tests conversion with nil issuer
@@ -719,7 +723,7 @@ func TestTransferMetadata_FromProtos_NilIssuer(t *testing.T) {
 	tm := &TransferMetadata{}
 	err := tm.FromProtos(proto)
 	require.NoError(t, err)
-	assert.Nil(t, tm.Issuer)
+	assert.Nil(t, tm.Issuer.Identity)
 }
 
 func TestTokenRequestMetadataSerialization(t *testing.T) {
@@ -751,9 +755,9 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 						},
 					},
 				},
-				ExtraSigners: []Identity{
-					[]byte("issue_extra_signer1"),
-					[]byte("issue_extra_signer2"),
+				ExtraSigners: []*AuditableIdentity{
+					{Identity: []byte("issue_extra_signer1")},
+					{Identity: []byte("issue_extra_signer2")},
 				},
 			},
 		},
@@ -807,11 +811,11 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 						},
 					},
 				},
-				ExtraSigners: []Identity{
-					[]byte("extra_signer1"),
-					[]byte("extra_signer2"),
+				ExtraSigners: []*AuditableIdentity{
+					{Identity: []byte("extra_signer1")},
+					{Identity: []byte("extra_signer2")},
 				},
-				Issuer: Identity([]byte("issuer")),
+				Issuer: AuditableIdentity{Identity: Identity([]byte("issuer"))},
 			},
 		},
 		Application: map[string][]byte{
@@ -1312,20 +1316,23 @@ func TestIssueMetadata_ToProtos_WithExtraSigners(t *testing.T) {
 		Outputs: []*IssueOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		ExtraSigners: []Identity{
-			Identity("signer1"),
-			Identity("signer2"),
-			Identity("signer3"),
+		ExtraSigners: []*AuditableIdentity{
+			{Identity: Identity("signer1"), AuditInfo: []byte("audit1")},
+			{Identity: Identity("signer2"), AuditInfo: []byte("audit2")},
+			{Identity: Identity("signer3"), AuditInfo: []byte("audit3")},
 		},
 	}
 
-	proto, err := im.ToProtos()
+	proto, err := im.ToProtosV3()
 	require.NoError(t, err)
 	assert.NotNil(t, proto)
 	assert.Len(t, proto.ExtraSigners, 3)
-	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Raw)
-	assert.Equal(t, []byte("signer2"), proto.ExtraSigners[1].Raw)
-	assert.Equal(t, []byte("signer3"), proto.ExtraSigners[2].Raw)
+	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Identity.Raw)
+	assert.Equal(t, []byte("audit1"), proto.ExtraSigners[0].AuditInfo)
+	assert.Equal(t, []byte("signer2"), proto.ExtraSigners[1].Identity.Raw)
+	assert.Equal(t, []byte("audit2"), proto.ExtraSigners[1].AuditInfo)
+	assert.Equal(t, []byte("signer3"), proto.ExtraSigners[2].Identity.Raw)
+	assert.Equal(t, []byte("audit3"), proto.ExtraSigners[2].AuditInfo)
 }
 
 // TestTransferMetadata_ToProtos_WithExtraSigners tests ToProtos with extra signers
@@ -1337,21 +1344,23 @@ func TestTransferMetadata_ToProtos_WithExtraSigners(t *testing.T) {
 		Outputs: []*TransferOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		ExtraSigners: []Identity{
-			Identity("signer1"),
-			Identity("signer2"),
+		ExtraSigners: []*AuditableIdentity{
+			{Identity: Identity("signer1"), AuditInfo: []byte("audit1")},
+			{Identity: Identity("signer2"), AuditInfo: []byte("audit2")},
 		},
-		Issuer: Identity("issuer1"),
+		Issuer: AuditableIdentity{Identity: Identity("issuer1")},
 	}
 
-	proto, err := tm.ToProtos()
+	proto, err := tm.ToProtosV3()
 	require.NoError(t, err)
 	assert.NotNil(t, proto)
 	assert.Len(t, proto.ExtraSigners, 2)
-	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Raw)
-	assert.Equal(t, []byte("signer2"), proto.ExtraSigners[1].Raw)
+	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Identity.Raw)
+	assert.Equal(t, []byte("audit1"), proto.ExtraSigners[0].AuditInfo)
+	assert.Equal(t, []byte("signer2"), proto.ExtraSigners[1].Identity.Raw)
+	assert.Equal(t, []byte("audit2"), proto.ExtraSigners[1].AuditInfo)
 	assert.NotNil(t, proto.Issuer)
-	assert.Equal(t, []byte("issuer1"), proto.Issuer.Raw)
+	assert.Equal(t, []byte("issuer1"), proto.Issuer.Identity.Raw)
 }
 
 // TestTokenRequest_ToProtos_EmptyAuditorSignatures tests ToProtos with empty auditor signatures
@@ -1582,7 +1591,7 @@ func TestTransferMetadata_ToProtos_WithIssuer(t *testing.T) {
 		Outputs: []*TransferOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		Issuer: Identity("issuer1"),
+		Issuer: AuditableIdentity{Identity: Identity("issuer1")},
 	}
 
 	proto, err := meta.ToProtos()

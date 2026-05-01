@@ -248,10 +248,10 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 			action: &token.TransferAction{transferActionWithIssuer},
 			meta: &token.TransferMetadata{
 				&driver.TransferMetadata{
-					Issuer:       mockIssuer,
+					Issuer:       driver.AuditableIdentity{Identity: mockIssuer},
 					Inputs:       []*driver.TransferInputMetadata{{}},
 					Outputs:      []*driver.TransferOutputMetadata{{}},
-					ExtraSigners: []token.Identity{signer1},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: signer1}},
 				},
 			},
 			wantErr: false,
@@ -309,7 +309,7 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 				&driver.TransferMetadata{
 					Inputs:       []*driver.TransferInputMetadata{{}},
 					Outputs:      []*driver.TransferOutputMetadata{{}},
-					ExtraSigners: []token.Identity{},
+					ExtraSigners: []*driver.AuditableIdentity{},
 				},
 			},
 			wantErr:       true,
@@ -322,7 +322,7 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 				&driver.TransferMetadata{
 					Inputs:       []*driver.TransferInputMetadata{{}},
 					Outputs:      []*driver.TransferOutputMetadata{{}},
-					ExtraSigners: []token.Identity{token.Identity("other")},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: token.Identity("other")}},
 				},
 			},
 			wantErr:       true,
@@ -333,14 +333,14 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 			action: &token.TransferAction{transferActionWithIssuer},
 			meta: &token.TransferMetadata{
 				&driver.TransferMetadata{
-					Issuer:       token.Identity("other"),
+					Issuer:       driver.AuditableIdentity{Identity: token.Identity("other")},
 					Inputs:       []*driver.TransferInputMetadata{{}},
 					Outputs:      []*driver.TransferOutputMetadata{{}},
-					ExtraSigners: []token.Identity{signer1},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: signer1}},
 				},
 			},
 			wantErr:       true,
-			expectedError: "expected issuer [2SmKENGwc1g33EvYXaxkGw887yekfl1TpU8vP1svz/o=] but got [issuer1]",
+			expectedError: "expected issuer [2SmKENGwc1g33EvYXaxkGw887yekfl1TpU8vP1svz/o=] but got [7yg9tam/vXldzOxgyOs2BIObcQTCxk7wTJK/CZJARw4=]",
 		},
 	}
 
@@ -525,7 +525,7 @@ func TestIssueMetadata_Match(t *testing.T) {
 					Issuer:       driver.AuditableIdentity{Identity: issuer1},
 					Inputs:       []*driver.IssueInputMetadata{{}},
 					Outputs:      []*driver.IssueOutputMetadata{{}},
-					ExtraSigners: []token.Identity{signer1},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: signer1}},
 				},
 			},
 			action:  token.NewIssueAction(action),
@@ -583,7 +583,7 @@ func TestIssueMetadata_Match(t *testing.T) {
 				IssueMetadata: &driver.IssueMetadata{
 					Inputs:       []*driver.IssueInputMetadata{{}},
 					Outputs:      []*driver.IssueOutputMetadata{{}},
-					ExtraSigners: []token.Identity{},
+					ExtraSigners: []*driver.AuditableIdentity{},
 				},
 			},
 			action:        token.NewIssueAction(action),
@@ -596,7 +596,7 @@ func TestIssueMetadata_Match(t *testing.T) {
 				IssueMetadata: &driver.IssueMetadata{
 					Inputs:       []*driver.IssueInputMetadata{{}},
 					Outputs:      []*driver.IssueOutputMetadata{{}},
-					ExtraSigners: []token.Identity{token.Identity("other")},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: token.Identity("other")}},
 				},
 			},
 			action:        token.NewIssueAction(action),
@@ -610,7 +610,7 @@ func TestIssueMetadata_Match(t *testing.T) {
 					Issuer:       driver.AuditableIdentity{Identity: issuer2},
 					Inputs:       []*driver.IssueInputMetadata{{}},
 					Outputs:      []*driver.IssueOutputMetadata{{}},
-					ExtraSigners: []token.Identity{signer1},
+					ExtraSigners: []*driver.AuditableIdentity{{Identity: signer1}},
 				},
 			},
 			action:        token.NewIssueAction(action),

@@ -557,7 +557,7 @@ func prepareTransfer(
 	tokns[0] = append(tokns[0], tokens...)
 
 	if issuerIdentity != nil {
-		metadata.Issuer = issuerIdentity
+		metadata.Issuer = driver.AuditableIdentity{Identity: issuerIdentity}
 	}
 
 	transferMetadata := &driver.TokenRequestMetadata{Transfers: []*driver.TransferMetadata{metadata}}

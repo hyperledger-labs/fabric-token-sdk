@@ -166,7 +166,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 		Inputs:       transferInputsMetadata,
 		Outputs:      transferOutputsMetadata,
 		ExtraSigners: nil,
-		Issuer:       nil,
+		Issuer:       driver.AuditableIdentity{},
 	}
 
 	if isRedeem {
@@ -175,7 +175,7 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 			return nil, nil, errors.Wrap(err, "failed to select issuer for redeem")
 		}
 		transfer.Issuer = issuer
-		transferMetadata.Issuer = issuer
+		transferMetadata.Issuer = driver.AuditableIdentity{Identity: issuer}
 	}
 
 	return transfer, transferMetadata, nil
