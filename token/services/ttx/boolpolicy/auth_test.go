@@ -91,7 +91,7 @@ func TestEscrowAuth_IsMine_NonPolicyOwner(t *testing.T) {
 func TestEscrowAuth_IsMine_InvalidPolicyDeserialization(t *testing.T) {
 	auth := boolpolicy.NewEscrowAuth(nil)
 	// Wrap garbage bytes with the policy type tag.
-	typedID, err := identity.WrapWithType(identity.Type(identityboolpolicy.Policy), []byte("garbage"))
+	typedID, err := identity.WrapWithType(identityboolpolicy.Policy, []byte("garbage"))
 	require.NoError(t, err)
 
 	tok := &token2.Token{Owner: typedID, Type: "USD", Quantity: "1"}
