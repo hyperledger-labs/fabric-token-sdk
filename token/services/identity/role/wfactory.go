@@ -22,7 +22,14 @@ import (
 type TokenVault interface {
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
+<<<<<<< HEAD
 	Balance(ctx context.Context, id string, tokenType token.Type) (*big.Int, error)
+=======
+	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
+	IssuedBalance(ctx context.Context) (uint64, error)
+	ListRedeemedTokens(ctx context.Context) (*token.IssuedTokens, error)
+	RedeemedBalance(ctx context.Context) (uint64, error)
+>>>>>>> effff1e9 (Regenerate mocks and add new methods to TokenVault interface)
 }
 
 //go:generate counterfeiter -o mock/wc.go -fake-name WalletsConfiguration . WalletsConfiguration
