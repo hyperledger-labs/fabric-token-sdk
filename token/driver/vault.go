@@ -88,11 +88,14 @@ type QueryEngine interface {
 	// ListHistoryIssuedTokens returns a list of all tokens issued by the service.
 	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
 	// IssuedBalance returns the sum of amounts of non-deleted tokens flagged as issued.
-	IssuedBalance(ctx context.Context) (uint64, error)
+	// If tokenType is non-empty, only tokens of that type are included.
+	IssuedBalance(ctx context.Context, tokenType token.Type) (uint64, error)
 	// ListRedeemedTokens returns issued tokens that were spent by a Redeem action.
-	ListRedeemedTokens(ctx context.Context) (*token.IssuedTokens, error)
+	// If tokenType is non-empty, only tokens of that type are included.
+	ListRedeemedTokens(ctx context.Context, tokenType token.Type) (*token.IssuedTokens, error)
 	// RedeemedBalance returns the sum of amounts of issued tokens spent by a Redeem action.
-	RedeemedBalance(ctx context.Context) (uint64, error)
+	// If tokenType is non-empty, only tokens of that type are included.
+	RedeemedBalance(ctx context.Context, tokenType token.Type) (uint64, error)
 	// PublicParams returns the serialized public parameters used by the driver.
 	PublicParams(ctx context.Context) ([]byte, error)
 	// GetTokenMetadata retrieves the private information (metadata) for the given token IDs.

@@ -26,10 +26,16 @@ type TokenVault interface {
 	Balance(ctx context.Context, id string, tokenType token.Type) (*big.Int, error)
 =======
 	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
+<<<<<<< HEAD
 	IssuedBalance(ctx context.Context) (uint64, error)
 	ListRedeemedTokens(ctx context.Context) (*token.IssuedTokens, error)
 	RedeemedBalance(ctx context.Context) (uint64, error)
 >>>>>>> effff1e9 (Regenerate mocks and add new methods to TokenVault interface)
+=======
+	IssuedBalance(ctx context.Context, tokenType token.Type) (uint64, error)
+	ListRedeemedTokens(ctx context.Context, tokenType token.Type) (*token.IssuedTokens, error)
+	RedeemedBalance(ctx context.Context, tokenType token.Type) (uint64, error)
+>>>>>>> 1f0e98c8 (Wire TokenType filter into IssuedBalance, ListRedeemedTokens, RedeemedBalance SQL queries)
 }
 
 //go:generate counterfeiter -o mock/wc.go -fake-name WalletsConfiguration . WalletsConfiguration

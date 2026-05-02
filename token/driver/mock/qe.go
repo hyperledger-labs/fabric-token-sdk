@@ -129,10 +129,11 @@ type QueryEngine struct {
 		result1 bool
 		result2 error
 	}
-	IssuedBalanceStub        func(context.Context) (uint64, error)
+	IssuedBalanceStub        func(context.Context, token.Type) (uint64, error)
 	issuedBalanceMutex       sync.RWMutex
 	issuedBalanceArgsForCall []struct {
 		arg1 context.Context
+		arg2 token.Type
 	}
 	issuedBalanceReturns struct {
 		result1 uint64
@@ -169,10 +170,11 @@ type QueryEngine struct {
 		result1 *token.IssuedTokens
 		result2 error
 	}
-	ListRedeemedTokensStub        func(context.Context) (*token.IssuedTokens, error)
+	ListRedeemedTokensStub        func(context.Context, token.Type) (*token.IssuedTokens, error)
 	listRedeemedTokensMutex       sync.RWMutex
 	listRedeemedTokensArgsForCall []struct {
 		arg1 context.Context
+		arg2 token.Type
 	}
 	listRedeemedTokensReturns struct {
 		result1 *token.IssuedTokens
@@ -208,10 +210,11 @@ type QueryEngine struct {
 		result1 []byte
 		result2 error
 	}
-	RedeemedBalanceStub        func(context.Context) (uint64, error)
+	RedeemedBalanceStub        func(context.Context, token.Type) (uint64, error)
 	redeemedBalanceMutex       sync.RWMutex
 	redeemedBalanceArgsForCall []struct {
 		arg1 context.Context
+		arg2 token.Type
 	}
 	redeemedBalanceReturns struct {
 		result1 uint64
@@ -825,18 +828,19 @@ func (fake *QueryEngine) IsPendingReturnsOnCall(i int, result1 bool, result2 err
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) IssuedBalance(arg1 context.Context) (uint64, error) {
+func (fake *QueryEngine) IssuedBalance(arg1 context.Context, arg2 token.Type) (uint64, error) {
 	fake.issuedBalanceMutex.Lock()
 	ret, specificReturn := fake.issuedBalanceReturnsOnCall[len(fake.issuedBalanceArgsForCall)]
 	fake.issuedBalanceArgsForCall = append(fake.issuedBalanceArgsForCall, struct {
 		arg1 context.Context
-	}{arg1})
+		arg2 token.Type
+	}{arg1, arg2})
 	stub := fake.IssuedBalanceStub
 	fakeReturns := fake.issuedBalanceReturns
-	fake.recordInvocation("IssuedBalance", []interface{}{arg1})
+	fake.recordInvocation("IssuedBalance", []interface{}{arg1, arg2})
 	fake.issuedBalanceMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -850,17 +854,17 @@ func (fake *QueryEngine) IssuedBalanceCallCount() int {
 	return len(fake.issuedBalanceArgsForCall)
 }
 
-func (fake *QueryEngine) IssuedBalanceCalls(stub func(context.Context) (uint64, error)) {
+func (fake *QueryEngine) IssuedBalanceCalls(stub func(context.Context, token.Type) (uint64, error)) {
 	fake.issuedBalanceMutex.Lock()
 	defer fake.issuedBalanceMutex.Unlock()
 	fake.IssuedBalanceStub = stub
 }
 
-func (fake *QueryEngine) IssuedBalanceArgsForCall(i int) context.Context {
+func (fake *QueryEngine) IssuedBalanceArgsForCall(i int) (context.Context, token.Type) {
 	fake.issuedBalanceMutex.RLock()
 	defer fake.issuedBalanceMutex.RUnlock()
 	argsForCall := fake.issuedBalanceArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) IssuedBalanceReturns(result1 uint64, result2 error) {
@@ -1018,18 +1022,19 @@ func (fake *QueryEngine) ListHistoryIssuedTokensReturnsOnCall(i int, result1 *to
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) ListRedeemedTokens(arg1 context.Context) (*token.IssuedTokens, error) {
+func (fake *QueryEngine) ListRedeemedTokens(arg1 context.Context, arg2 token.Type) (*token.IssuedTokens, error) {
 	fake.listRedeemedTokensMutex.Lock()
 	ret, specificReturn := fake.listRedeemedTokensReturnsOnCall[len(fake.listRedeemedTokensArgsForCall)]
 	fake.listRedeemedTokensArgsForCall = append(fake.listRedeemedTokensArgsForCall, struct {
 		arg1 context.Context
-	}{arg1})
+		arg2 token.Type
+	}{arg1, arg2})
 	stub := fake.ListRedeemedTokensStub
 	fakeReturns := fake.listRedeemedTokensReturns
-	fake.recordInvocation("ListRedeemedTokens", []interface{}{arg1})
+	fake.recordInvocation("ListRedeemedTokens", []interface{}{arg1, arg2})
 	fake.listRedeemedTokensMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1043,17 +1048,17 @@ func (fake *QueryEngine) ListRedeemedTokensCallCount() int {
 	return len(fake.listRedeemedTokensArgsForCall)
 }
 
-func (fake *QueryEngine) ListRedeemedTokensCalls(stub func(context.Context) (*token.IssuedTokens, error)) {
+func (fake *QueryEngine) ListRedeemedTokensCalls(stub func(context.Context, token.Type) (*token.IssuedTokens, error)) {
 	fake.listRedeemedTokensMutex.Lock()
 	defer fake.listRedeemedTokensMutex.Unlock()
 	fake.ListRedeemedTokensStub = stub
 }
 
-func (fake *QueryEngine) ListRedeemedTokensArgsForCall(i int) context.Context {
+func (fake *QueryEngine) ListRedeemedTokensArgsForCall(i int) (context.Context, token.Type) {
 	fake.listRedeemedTokensMutex.RLock()
 	defer fake.listRedeemedTokensMutex.RUnlock()
 	argsForCall := fake.listRedeemedTokensArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) ListRedeemedTokensReturns(result1 *token.IssuedTokens, result2 error) {
@@ -1210,18 +1215,19 @@ func (fake *QueryEngine) PublicParamsReturnsOnCall(i int, result1 []byte, result
 	}{result1, result2}
 }
 
-func (fake *QueryEngine) RedeemedBalance(arg1 context.Context) (uint64, error) {
+func (fake *QueryEngine) RedeemedBalance(arg1 context.Context, arg2 token.Type) (uint64, error) {
 	fake.redeemedBalanceMutex.Lock()
 	ret, specificReturn := fake.redeemedBalanceReturnsOnCall[len(fake.redeemedBalanceArgsForCall)]
 	fake.redeemedBalanceArgsForCall = append(fake.redeemedBalanceArgsForCall, struct {
 		arg1 context.Context
-	}{arg1})
+		arg2 token.Type
+	}{arg1, arg2})
 	stub := fake.RedeemedBalanceStub
 	fakeReturns := fake.redeemedBalanceReturns
-	fake.recordInvocation("RedeemedBalance", []interface{}{arg1})
+	fake.recordInvocation("RedeemedBalance", []interface{}{arg1, arg2})
 	fake.redeemedBalanceMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1235,17 +1241,17 @@ func (fake *QueryEngine) RedeemedBalanceCallCount() int {
 	return len(fake.redeemedBalanceArgsForCall)
 }
 
-func (fake *QueryEngine) RedeemedBalanceCalls(stub func(context.Context) (uint64, error)) {
+func (fake *QueryEngine) RedeemedBalanceCalls(stub func(context.Context, token.Type) (uint64, error)) {
 	fake.redeemedBalanceMutex.Lock()
 	defer fake.redeemedBalanceMutex.Unlock()
 	fake.RedeemedBalanceStub = stub
 }
 
-func (fake *QueryEngine) RedeemedBalanceArgsForCall(i int) context.Context {
+func (fake *QueryEngine) RedeemedBalanceArgsForCall(i int) (context.Context, token.Type) {
 	fake.redeemedBalanceMutex.RLock()
 	defer fake.redeemedBalanceMutex.RUnlock()
 	argsForCall := fake.redeemedBalanceArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *QueryEngine) RedeemedBalanceReturns(result1 uint64, result2 error) {
