@@ -123,6 +123,18 @@ func (q *QueryEngine) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 	return q.qe.ListHistoryIssuedTokens(ctx)
 }
 
+func (q *QueryEngine) IssuedBalance(ctx context.Context) (uint64, error) {
+	return q.qe.IssuedBalance(ctx)
+}
+
+func (q *QueryEngine) ListRedeemedTokens(ctx context.Context) (*token.IssuedTokens, error) {
+	return q.qe.ListRedeemedTokens(ctx)
+}
+
+func (q *QueryEngine) RedeemedBalance(ctx context.Context) (uint64, error) {
+	return q.qe.RedeemedBalance(ctx)
+}
+
 // PublicParams returns the public parameters stored in the vault
 func (q *QueryEngine) PublicParams(ctx context.Context) ([]byte, error) {
 	return q.qe.PublicParams(ctx)

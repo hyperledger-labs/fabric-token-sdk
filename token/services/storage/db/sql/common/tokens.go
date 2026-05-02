@@ -38,6 +38,7 @@ type tokenTables struct {
 	PublicParams   string
 	Certifications string
 	Requests       string
+	Transactions   string
 }
 
 type TokenStore struct {
@@ -68,6 +69,7 @@ func NewTokenStoreWithNotifier(readDB, writeDB *sql.DB, tables TableNames, ci co
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
 		Requests:       tables.Requests,
+		Transactions:   tables.Transactions,
 	}, ci, notifier), nil
 }
 
@@ -608,6 +610,84 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 	}
 
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
+}
+
+// IssuedBalance returns the sum of amounts of non-deleted tokens flagged as issued.
+func (db *TokenStore) IssuedBalance(ctx context.Context) (uint64, error) {
+	query, args := q.Select().
+		FieldsByName("SUM(amount)").
+		From(q.Table(db.table.Tokens)).
+		Where(cond.And(cond.Eq("issuer", true), cond.Eq("is_deleted", false))).
+		Format(db.ci)
+
+	logging.Debug(logger, query, args)
+	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
+	if err != nil || sum == nil {
+		return 0, err
+	}
+
+	return *sum, nil
+}
+
+// ListRedeemedTokens returns issued tokens that were spent by a Redeem action.
+// It JOINs with the transactions table to identify tokens whose spent_by txID
+// has action_type = Redeem (2).
+func (db *TokenStore) ListRedeemedTokens(ctx context.Context) (*token.IssuedTokens, error) {
+	tokTable := q.Table(db.table.Tokens)
+	txTable := q.Table(db.table.Transactions)
+	query, args := q.Select().
+		Fields(
+			tokTable.Field("tx_id"), tokTable.Field("idx"),
+			tokTable.Field("owner_raw"), tokTable.Field("token_type"),
+			tokTable.Field("quantity"), tokTable.Field("issuer_raw"),
+			tokTable.Field("is_deleted"), tokTable.Field("spent_by"),
+		).
+		From(tokTable.Join(txTable, cond.Cmp(tokTable.Field("spent_by"), "=", txTable.Field("tx_id")))).
+		Where(cond.And(
+			cond.Eq("issuer", true),
+			cond.Eq("is_deleted", true),
+			cond.Eq("action_type", int(driver.Redeem)),
+		)).
+		Format(db.ci)
+
+	logging.Debug(logger, query, args)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	it := common.NewIterator(rows, func(tok *token.IssuedToken) error {
+		return rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity, &tok.Issuer, &tok.IsSpent, &tok.SpentBy)
+	})
+	tokens, err := iterators.ReadAllPointers(it)
+	if err != nil {
+		return nil, err
+	}
+
+	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
+}
+
+// RedeemedBalance returns the sum of amounts of issued tokens spent by a Redeem action.
+func (db *TokenStore) RedeemedBalance(ctx context.Context) (uint64, error) {
+	tokTable := q.Table(db.table.Tokens)
+	txTable := q.Table(db.table.Transactions)
+	query, args := q.Select().
+		FieldsByName("SUM(amount)").
+		From(tokTable.Join(txTable, cond.Cmp(tokTable.Field("spent_by"), "=", txTable.Field("tx_id")))).
+		Where(cond.And(
+			cond.Eq("issuer", true),
+			cond.Eq("is_deleted", true),
+			cond.Eq("action_type", int(driver.Redeem)),
+		)).
+		Format(db.ci)
+
+	logging.Debug(logger, query, args)
+	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
+	if err != nil || sum == nil {
+		return 0, err
+	}
+
+	return *sum, nil
 }
 
 func (db *TokenStore) GetTokenOutputs(ctx context.Context, ids []*token.ID, callback tdriver.QueryCallbackFunc) error {
