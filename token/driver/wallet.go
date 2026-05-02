@@ -180,6 +180,15 @@ type IssuerWallet interface {
 
 	// HistoryTokens returns the list of tokens issued by this wallet filtered using the passed options.
 	HistoryTokens(ctx context.Context, opts *ListTokensOptions) (*token.IssuedTokens, error)
+
+	// IssuedBalance returns the total amount of tokens issued by this wallet (not yet redeemed).
+	IssuedBalance(ctx context.Context, opts *ListTokensOptions) (uint64, error)
+
+	// RedeemedTokens returns the list of redeemed tokens that were originally issued by this wallet.
+	RedeemedTokens(ctx context.Context, opts *ListTokensOptions) (*token.IssuedTokens, error)
+
+	// RedeemedBalance returns the total amount of redeemed tokens that were originally issued by this wallet.
+	RedeemedBalance(ctx context.Context, opts *ListTokensOptions) (uint64, error)
 }
 
 // AuditorWallet models the wallet of an auditor
