@@ -119,13 +119,16 @@ type IssuerTokenVault interface {
 	ListHistoryIssuedTokens(context.Context) (*token.IssuedTokens, error)
 	// IssuedBalance returns the sum of amounts of non-deleted tokens issued by this node.
 	// If tokenType is non-empty, only tokens of that type are included.
-	IssuedBalance(ctx context.Context, tokenType token.Type) (uint64, error)
+	// If issuerRaw is non-empty, only tokens issued by that identity are included.
+	IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw Identity) (uint64, error)
 	// ListRedeemedTokens returns issued tokens that were redeemed (spent via a Redeem action).
 	// If tokenType is non-empty, only tokens of that type are included.
-	ListRedeemedTokens(ctx context.Context, tokenType token.Type) (*token.IssuedTokens, error)
+	// If issuerRaw is non-empty, only tokens issued by that identity are included.
+	ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw Identity) (*token.IssuedTokens, error)
 	// RedeemedBalance returns the sum of amounts of redeemed tokens issued by this node.
 	// If tokenType is non-empty, only tokens of that type are included.
-	RedeemedBalance(ctx context.Context, tokenType token.Type) (uint64, error)
+	// If issuerRaw is non-empty, only tokens issued by that identity are included.
+	RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw Identity) (uint64, error)
 }
 
 // IssuerWallet represents a wallet that manages a single issuer identity.
@@ -228,13 +231,13 @@ func (w *IssuerWallet) HistoryTokens(ctx context.Context, opts *driver.ListToken
 func (w *IssuerWallet) IssuedBalance(ctx context.Context, opts *driver.ListTokensOptions) (uint64, error) {
 	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: issued balance, type [%s]", w.ID(), opts.TokenType)
 
-	return w.TokenVault.IssuedBalance(ctx, opts.TokenType)
+	return w.TokenVault.IssuedBalance(ctx, opts.TokenType, w.Identity)
 }
 
 // RedeemedTokens returns the list of redeemed tokens originally issued by this wallet.
 func (w *IssuerWallet) RedeemedTokens(ctx context.Context, opts *driver.ListTokensOptions) (*token.IssuedTokens, error) {
 	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: redeemed tokens, type [%s]", w.ID(), opts.TokenType)
-	source, err := w.TokenVault.ListRedeemedTokens(ctx, opts.TokenType)
+	source, err := w.TokenVault.ListRedeemedTokens(ctx, opts.TokenType, w.Identity)
 	if err != nil {
 		return nil, errors.Wrap(err, "redeemed tokens query failed")
 	}
@@ -247,7 +250,7 @@ func (w *IssuerWallet) RedeemedTokens(ctx context.Context, opts *driver.ListToke
 func (w *IssuerWallet) RedeemedBalance(ctx context.Context, opts *driver.ListTokensOptions) (uint64, error) {
 	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: redeemed balance, type [%s]", w.ID(), opts.TokenType)
 
-	return w.TokenVault.RedeemedBalance(ctx, opts.TokenType)
+	return w.TokenVault.RedeemedBalance(ctx, opts.TokenType, w.Identity)
 }
 
 // filterTokens filters the source tokens by token type and wallet identity.

@@ -614,10 +614,13 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 
 // IssuedBalance returns the sum of amounts of non-deleted tokens flagged as issued.
 // If tokenType is non-empty, only tokens of that type are included.
-func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type) (uint64, error) {
+func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity) (uint64, error) {
 	conds := []cond.Condition{cond.Eq("issuer", true), cond.Eq("is_deleted", false)}
 	if len(tokenType) != 0 {
 		conds = append(conds, cond.Eq("token_type", tokenType))
+	}
+	if len(issuerRaw) != 0 {
+		conds = append(conds, cond.Eq("issuer_raw", issuerRaw))
 	}
 	query, args := q.Select().
 		FieldsByName("SUM(amount)").
@@ -637,7 +640,7 @@ func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type) (
 // ListRedeemedTokens returns issued tokens that were spent by a Redeem action.
 // It JOINs with the transactions table to identify tokens whose spent_by txID
 // has action_type = Redeem (2). If tokenType is non-empty, only tokens of that type are included.
-func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Type) (*token.IssuedTokens, error) {
+func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity) (*token.IssuedTokens, error) {
 	tokTable := q.Table(db.table.Tokens)
 	txTable := q.Table(db.table.Transactions)
 	conds := []cond.Condition{
@@ -647,6 +650,9 @@ func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Ty
 	}
 	if len(tokenType) != 0 {
 		conds = append(conds, cond.Eq("token_type", tokenType))
+	}
+	if len(issuerRaw) != 0 {
+		conds = append(conds, cond.Eq("issuer_raw", issuerRaw))
 	}
 	query, args := q.Select().
 		Fields(
@@ -678,7 +684,7 @@ func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Ty
 
 // RedeemedBalance returns the sum of amounts of issued tokens spent by a Redeem action.
 // If tokenType is non-empty, only tokens of that type are included.
-func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type) (uint64, error) {
+func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity) (uint64, error) {
 	tokTable := q.Table(db.table.Tokens)
 	txTable := q.Table(db.table.Transactions)
 	conds := []cond.Condition{
@@ -688,6 +694,9 @@ func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type)
 	}
 	if len(tokenType) != 0 {
 		conds = append(conds, cond.Eq("token_type", tokenType))
+	}
+	if len(issuerRaw) != 0 {
+		conds = append(conds, cond.Eq("issuer_raw", issuerRaw))
 	}
 	query, args := q.Select().
 		FieldsByName("SUM(amount)").
