@@ -371,6 +371,39 @@ func (i *IssuerWallet) ListIssuedTokens(ctx context.Context, opts ...ListTokensO
 	return i.w.HistoryTokens(ctx, compiledOpts)
 }
 
+// IssuedBalance returns the total amount of non-redeemed tokens issued by this wallet.
+// Options: WithType
+func (i *IssuerWallet) IssuedBalance(ctx context.Context, opts ...ListTokensOption) (uint64, error) {
+	compiledOpts, err := CompileListTokensOption(opts...)
+	if err != nil {
+		return 0, err
+	}
+
+	return i.w.IssuedBalance(ctx, compiledOpts)
+}
+
+// ListRedeemedTokens returns the list of redeemed tokens originally issued by this wallet.
+// Options: WithType
+func (i *IssuerWallet) ListRedeemedTokens(ctx context.Context, opts ...ListTokensOption) (*token.IssuedTokens, error) {
+	compiledOpts, err := CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return i.w.RedeemedTokens(ctx, compiledOpts)
+}
+
+// RedeemedBalance returns the total amount of redeemed tokens originally issued by this wallet.
+// Options: WithType
+func (i *IssuerWallet) RedeemedBalance(ctx context.Context, opts ...ListTokensOption) (uint64, error) {
+	compiledOpts, err := CompileListTokensOption(opts...)
+	if err != nil {
+		return 0, err
+	}
+
+	return i.w.RedeemedBalance(ctx, compiledOpts)
+}
+
 func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOptions, error) {
 	txOptions := &ListTokensOptions{}
 	for _, opt := range opts {
