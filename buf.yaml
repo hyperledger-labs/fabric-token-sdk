@@ -1,0 +1,20 @@
+version: v2
+
+modules:
+  - path: token/core/fabtoken/protos
+  - path: token/core/zkatdlog/nogh/protos
+  - path: token/driver/protos
+  - path: token/services/identity/x509/crypto/protos
+  - path: token/services/identity/idemix/crypto/protos
+
+lint:
+  use:
+    - MINIMAL
+  except:
+    - PACKAGE_DIRECTORY_MATCH
+  ignore:
+    - token/services/identity/idemix/crypto/protos/idemix_config.proto
+
+breaking:
+  use:
+    - FILE

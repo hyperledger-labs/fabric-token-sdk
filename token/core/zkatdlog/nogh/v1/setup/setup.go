@@ -219,7 +219,7 @@ func (i *IdemixIssuerPublicKey) ToProtos() (*pp.IdemixIssuerPublicKey, error) {
 
 	return &pp.IdemixIssuerPublicKey{
 		PublicKey: i.PublicKey,
-		CurverId: &math2.CurveID{
+		CurveId: &math2.CurveID{
 			Id: uint64(i.Curve), // #nosec G115
 		},
 	}, nil
@@ -230,13 +230,13 @@ func (i *IdemixIssuerPublicKey) FromProtos(s *pp.IdemixIssuerPublicKey) error {
 		return errors.New("invalid idemix public key, it is nil")
 	}
 	i.PublicKey = s.PublicKey
-	if s.CurverId == nil {
+	if s.CurveId == nil {
 		return errors.New("invalid idemix issuer public key")
 	}
-	if s.CurverId.Id > math3.MaxInt {
+	if s.CurveId.Id > math3.MaxInt {
 		return errors.New("curve id out of range")
 	}
-	i.Curve = mathlib.CurveID(s.CurverId.Id) // #nosec G115
+	i.Curve = mathlib.CurveID(s.CurveId.Id) // #nosec G115
 
 	return nil
 }
