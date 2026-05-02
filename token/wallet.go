@@ -37,6 +37,28 @@ func WithType(tokenType token.Type) ListTokensOption {
 	}
 }
 
+<<<<<<< HEAD
+=======
+// WithContext return a list tokens option that contains the passed context
+func WithContext(ctx context.Context) ListTokensOption {
+	return func(o *ListTokensOptions) error {
+		o.Context = ctx
+
+		return nil
+	}
+}
+
+// WithSortBy returns a list token option that specifies the sort field and direction.
+func WithSortBy(field driver.SortField, dir driver.SortDirection) ListTokensOption {
+	return func(o *ListTokensOptions) error {
+		o.SortBy = field
+		o.SortDirection = dir
+
+		return nil
+	}
+}
+
+>>>>>>> f26e9668 (Add sorting options to ListTokensOptions)
 type IdentityConfiguration = driver.IdentityConfiguration
 
 // WalletManager defines the interface for managing wallets.
@@ -358,6 +380,13 @@ func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOption
 	}
 
 	return &driver.ListTokensOptions{
+<<<<<<< HEAD
 		TokenType: txOptions.TokenType,
+=======
+		TokenType:     txOptions.TokenType,
+		Context:       txOptions.Context,
+		SortBy:        txOptions.SortBy,
+		SortDirection: txOptions.SortDirection,
+>>>>>>> f26e9668 (Add sorting options to ListTokensOptions)
 	}, nil
 }

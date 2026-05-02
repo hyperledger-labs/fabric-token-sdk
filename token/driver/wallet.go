@@ -69,10 +69,39 @@ type RecipientData struct {
 	TokenMetadataAuditInfo []byte
 }
 
+// SortField specifies which field to use for ordering token results.
+type SortField int
+
+const (
+	// SortByDefault leaves ordering to the database default.
+	SortByDefault SortField = iota
+	// SortByQuantity orders results by token quantity (amount).
+	SortByQuantity
+)
+
+// SortDirection specifies ascending or descending order.
+type SortDirection int
+
+const (
+	// SortAscending orders results from smallest to largest.
+	SortAscending SortDirection = iota
+	// SortDescending orders results from largest to smallest.
+	SortDescending
+)
+
 // ListTokensOptions contains options that can be used to list tokens from a wallet
 type ListTokensOptions struct {
 	// TokenType is the type of token to list
 	TokenType token.Type
+<<<<<<< HEAD
+=======
+	// Context is used to track the operation
+	Context context.Context
+	// SortBy specifies which field to use for ordering the results.
+	SortBy SortField
+	// SortDirection specifies ascending or descending order.
+	SortDirection SortDirection
+>>>>>>> f26e9668 (Add sorting options to ListTokensOptions)
 }
 
 // Wallet models a generic wallet
