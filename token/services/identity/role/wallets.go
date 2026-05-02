@@ -224,6 +224,7 @@ func (w *IssuerWallet) HistoryTokens(ctx context.Context, opts *driver.ListToken
 // this wallet.
 func (w *IssuerWallet) IssuedBalance(ctx context.Context, opts *driver.ListTokensOptions) (uint64, error) {
 	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: issued balance, type [%s]", w.ID(), opts.TokenType)
+
 	return w.TokenVault.IssuedBalance(ctx)
 }
 
@@ -242,6 +243,7 @@ func (w *IssuerWallet) RedeemedTokens(ctx context.Context, opts *driver.ListToke
 // issued by this wallet.
 func (w *IssuerWallet) RedeemedBalance(ctx context.Context, opts *driver.ListTokensOptions) (uint64, error) {
 	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: redeemed balance, type [%s]", w.ID(), opts.TokenType)
+
 	return w.TokenVault.RedeemedBalance(ctx)
 }
 
@@ -257,6 +259,7 @@ func (w *IssuerWallet) filterTokens(ctx context.Context, source *token.IssuedTok
 		}
 		result.Tokens = append(result.Tokens, t)
 	}
+
 	return result
 }
 
