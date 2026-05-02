@@ -9,6 +9,7 @@ package sherdlock
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -47,7 +48,7 @@ func TestNewCachedFetcher_WithDefaults(t *testing.T) {
 	mockDB := new(mockTokenDB)
 
 	// Test with zero values (should use defaults)
-	fetcher := newCachedFetcher(mockDB, 0, 0, 0)
+	fetcher := NewCachedFetcher(mockDB, 0, 0, 0)
 
 	assert.NotNil(t, fetcher)
 	assert.Equal(t, defaultCacheFreshnessInterval, fetcher.freshnessInterval)
@@ -62,7 +63,7 @@ func TestNewCachedFetcher_WithCustomValues(t *testing.T) {
 	customFreshness := 60 * time.Second
 	customMaxQueries := 200
 
-	fetcher := newCachedFetcher(mockDB, customSize, customFreshness, customMaxQueries)
+	fetcher := NewCachedFetcher(mockDB, customSize, customFreshness, customMaxQueries)
 
 	assert.NotNil(t, fetcher)
 	assert.Equal(t, customFreshness, fetcher.freshnessInterval)
@@ -72,24 +73,24 @@ func TestNewCachedFetcher_WithCustomValues(t *testing.T) {
 
 func TestCachedFetcher_IsCacheStale(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newCachedFetcher(mockDB, 0, 100*time.Millisecond, 0)
+	fetcher := NewCachedFetcher(mockDB, 0, 100*time.Millisecond, 0)
 
 	// Initially cache should be stale (lastFetched is zero time)
 	assert.True(t, fetcher.isCacheStale())
 
 	// Update lastFetched to now
-	fetcher.lastFetched = time.Now()
+	atomic.StoreInt64(&fetcher.lastFetched, time.Now().UnixNano())
 	assert.False(t, fetcher.isCacheStale())
 
-	// Wait for cache to become stale
-	time.Sleep(150 * time.Millisecond)
+	// Manually set lastFetched to the past instead of sleeping
+	atomic.StoreInt64(&fetcher.lastFetched, time.Now().Add(-fetcher.freshnessInterval*2).UnixNano())
 	assert.True(t, fetcher.isCacheStale())
 }
 
 func TestCachedFetcher_IsCacheOverused(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	maxQueries := 5
-	fetcher := newCachedFetcher(mockDB, 0, 0, maxQueries)
+	fetcher := NewCachedFetcher(mockDB, 0, 0, maxQueries)
 
 	// Initially not overused
 	assert.False(t, fetcher.isCacheOverused())
@@ -107,7 +108,7 @@ func TestCachedFetcher_IsCacheOverused(t *testing.T) {
 
 func TestCachedFetcher_Update(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
 
 	// Create test tokens
 	tokens := []*token2.UnspentTokenInWallet{
@@ -158,7 +159,7 @@ func TestCachedFetcher_Update(t *testing.T) {
 
 func TestCachedFetcher_UnspentTokensIteratorBy_CacheHit(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newCachedFetcher(mockDB, 0, 10*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, 100)
 
 	// Populate cache
 	tokens := []*token2.UnspentTokenInWallet{
@@ -179,7 +180,7 @@ func TestCachedFetcher_UnspentTokensIteratorBy_CacheHit(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotNil(t, it)
-	assert.True(t, it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext())
+	assert.True(t, it.(interface{ HasNext() bool }).HasNext())
 
 	// Verify query counter incremented
 	assert.Equal(t, uint32(1), atomic.LoadUint32(&fetcher.queriesResponded))
@@ -189,7 +190,7 @@ func TestCachedFetcher_UnspentTokensIteratorBy_CacheHit(t *testing.T) {
 
 func TestCachedFetcher_UnspentTokensIteratorBy_CacheMiss(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newCachedFetcher(mockDB, 0, 10*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, 100)
 
 	// Populate cache with different key
 	tokens := []*token2.UnspentTokenInWallet{
@@ -211,7 +212,7 @@ func TestCachedFetcher_UnspentTokensIteratorBy_CacheMiss(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, it)
 	// Should return empty iterator
-	assert.False(t, it.(enhancedIterator[*token2.UnspentTokenInWallet]).HasNext())
+	assert.False(t, it.(interface{ HasNext() bool }).HasNext())
 
 	mockDB.AssertExpectations(t)
 }
@@ -219,7 +220,7 @@ func TestCachedFetcher_UnspentTokensIteratorBy_CacheMiss(t *testing.T) {
 func TestCachedFetcher_UnspentTokensIteratorBy_StaleCache(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	// Very short freshness interval
-	fetcher := newCachedFetcher(mockDB, 0, 50*time.Millisecond, 100)
+	fetcher := NewCachedFetcher(mockDB, 0, 50*time.Millisecond, 100)
 
 	// Initial population
 	tokens1 := []*token2.UnspentTokenInWallet{
@@ -235,8 +236,9 @@ func TestCachedFetcher_UnspentTokensIteratorBy_StaleCache(t *testing.T) {
 	ctx := t.Context()
 	fetcher.update(ctx)
 
-	// Wait for cache to become stale
-	time.Sleep(100 * time.Millisecond)
+	// Trigger hard refresh by setting lastFetched to the past
+	atomic.StoreInt64(&fetcher.lastFetched, time.Now().Add(-fetcher.freshnessInterval*2).UnixNano())
+	assert.True(t, fetcher.isCacheStale())
 
 	// Setup second call expectation
 	tokens2 := []*token2.UnspentTokenInWallet{
@@ -260,7 +262,7 @@ func TestCachedFetcher_UnspentTokensIteratorBy_StaleCache(t *testing.T) {
 
 func TestCachedFetcher_CacheClear(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newCachedFetcher(mockDB, 0, 10*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, 100)
 
 	// First update with tokens
 	tokens1 := []*token2.UnspentTokenInWallet{
@@ -299,13 +301,9 @@ func TestCachedFetcher_CacheClear(t *testing.T) {
 	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(mockIterator2, nil).Once()
 
 	// Force cache to be stale so update will actually run
-	fetcher.lastFetched = time.Now().Add(-20 * time.Second)
+	atomic.StoreInt64(&fetcher.lastFetched, time.Now().Add(-20*time.Second).UnixNano())
 
 	fetcher.update(ctx)
-
-	// Note: Ristretto cache uses probabilistic eviction and may not immediately reflect changes
-	// We wait a bit for the cache to process the clear and new additions
-	time.Sleep(10 * time.Millisecond)
 
 	// New key should exist
 	_, ok3 := fetcher.cache.Get(tokenKey("wallet3", "GBP"))
@@ -317,7 +315,7 @@ func TestCachedFetcher_CacheClear(t *testing.T) {
 func TestNewMixedFetcher(t *testing.T) {
 	mockDB := new(mockTokenDB)
 
-	fetcher := newMixedFetcher(mockDB, nil, 100, 30*time.Second, 100)
+	fetcher := NewMixedFetcher(mockDB, nil, 100, 30*time.Second, 100)
 
 	assert.NotNil(t, fetcher)
 	assert.NotNil(t, fetcher.lazyFetcher)
@@ -486,7 +484,7 @@ func TestLazyFetcher_UnspentTokensIteratorBy_ErrorHandling(t *testing.T) {
 
 func TestMixedFetcher_FallbackBehavior(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newMixedFetcher(mockDB, NewMetrics(&disabled.Provider{}), 0, 10*time.Second, 100)
+	fetcher := NewMixedFetcher(mockDB, NewMetrics(&disabled.Provider{}), 0, 10*time.Second, 100)
 
 	t.Run("uses lazy fetcher when eager returns error", func(t *testing.T) {
 		// Setup: eager fetcher will fail to update
@@ -553,7 +551,7 @@ func TestMixedFetcher_FallbackBehavior(t *testing.T) {
 
 func TestCachedFetcher_ConcurrentAccess(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
 
 	t.Run("handles concurrent reads during update", func(t *testing.T) {
 		// Populate cache
@@ -596,7 +594,7 @@ func TestCachedFetcher_ConcurrentAccess(t *testing.T) {
 
 func TestCachedFetcher_GroupTokensByKey(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
 
 	t.Run("groups tokens correctly", func(t *testing.T) {
 		tokens := []*token2.UnspentTokenInWallet{
@@ -608,7 +606,8 @@ func TestCachedFetcher_GroupTokensByKey(t *testing.T) {
 		mockIterator := iterators.Slice(tokens)
 
 		ctx := t.Context()
-		grouped := fetcher.groupTokensByKey(ctx, mockIterator)
+		grouped, err := fetcher.groupTokensByKey(ctx, mockIterator)
+		require.NoError(t, err)
 
 		// Should have 3 keys: wallet1-USD, wallet1-EUR, wallet2-USD
 		assert.Len(t, grouped, 3)
@@ -628,7 +627,8 @@ func TestCachedFetcher_GroupTokensByKey(t *testing.T) {
 		mockIterator := iterators.Slice(tokens)
 
 		ctx := t.Context()
-		grouped := fetcher.groupTokensByKey(ctx, mockIterator)
+		grouped, err := fetcher.groupTokensByKey(ctx, mockIterator)
+		require.NoError(t, err)
 
 		assert.Empty(t, grouped)
 	})
@@ -637,7 +637,7 @@ func TestCachedFetcher_GroupTokensByKey(t *testing.T) {
 // TestCachedFetcher_UpdateCache verifies cache updates without race conditions (add before remove).
 func TestCachedFetcher_UpdateCache(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
 
 	t.Run("removes stale keys", func(t *testing.T) {
 		ctx := t.Context()
@@ -666,9 +666,6 @@ func TestCachedFetcher_UpdateCache(t *testing.T) {
 			},
 		}
 		fetcher.updateCache(ctx, tokensByKey2)
-
-		// Wait for cache to process deletions
-		time.Sleep(10 * time.Millisecond)
 
 		// First key should still exist, second should be removed
 		_, ok1 = fetcher.cache.Get(tokenKey("wallet1", "USD"))
@@ -731,12 +728,12 @@ func TestCachedFetcher_UpdateCache(t *testing.T) {
 				},
 			}
 			fetcher.updateCache(ctx, newTokens)
-			time.Sleep(5 * time.Millisecond)
+			time.Sleep(20 * time.Millisecond)
 		}
 
 		// Stop readers
 		close(stopReading)
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
 		// Check for errors
 		select {
@@ -751,7 +748,7 @@ func TestCachedFetcher_UpdateCache(t *testing.T) {
 func TestCachedFetcher_SoftRefresh(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	maxQueries := 3
-	fetcher := newCachedFetcher(mockDB, 0, 10*time.Second, maxQueries)
+	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, maxQueries)
 
 	t.Run("triggers soft refresh when overused", func(t *testing.T) {
 		// Initial population
@@ -785,6 +782,61 @@ func TestCachedFetcher_SoftRefresh(t *testing.T) {
 
 		mockDB.AssertExpectations(t)
 	})
+}
+
+func TestCachedFetcher_Update_ThunderingHerd(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	// Short freshness interval
+	fetcher := NewCachedFetcher(mockDB, 0, 50*time.Millisecond, 100)
+
+	// Initial population
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).
+		Return(iterators.Slice([]*token2.UnspentTokenInWallet{}), nil).Once()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+
+	// Trigger staleness manually
+	fetcher.mu.Lock()
+	atomic.StoreInt64(&fetcher.lastFetched, time.Now().Add(-10*time.Second).UnixNano())
+	fetcher.mu.Unlock()
+
+	// Block the next DB call with a mock that waits
+	dbCallStarted := make(chan struct{})
+	dbCallRelease := make(chan struct{})
+
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).
+		Run(func(args mock.Arguments) {
+			close(dbCallStarted)
+			<-dbCallRelease
+		}).
+		Return(iterators.Slice([]*token2.UnspentTokenInWallet{}), nil).Once()
+
+	// Start multiple concurrent reads
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = fetcher.UnspentTokensIteratorBy(ctx, "wallet1", "USD")
+		}()
+	}
+
+	// Wait for at least one to start the DB call
+	select {
+	case <-dbCallStarted:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for DB call to start")
+	}
+
+	// Release the DB call
+	close(dbCallRelease)
+
+	// Wait for all to finish
+	wg.Wait()
+
+	// Mock should only have been called TWICE total (once for initial, once for the 10 concurrent ones)
+	mockDB.AssertNumberOfCalls(t, "SpendableTokensIteratorBy", 2)
 }
 
 // TestNewFetcherProvider verifies provider creation with valid/invalid strategies and zero values.
@@ -886,7 +938,7 @@ func TestFetcherProvider_GetFetcher(t *testing.T) {
 // TestCachedFetcher_UpdateWithDatabaseError verifies cache stays stale when DB update fails.
 func TestCachedFetcher_UpdateWithDatabaseError(t *testing.T) {
 	mockDB := new(mockTokenDB)
-	fetcher := newCachedFetcher(mockDB, 0, 1*time.Second, 100)
+	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
 
 	t.Run("handles database error gracefully", func(t *testing.T) {
 		expectedErr := errors.New("database connection failed")
@@ -929,7 +981,7 @@ func TestTokenKey_EdgeCases(t *testing.T) {
 func TestMixedFetcher_MetricsTracking(t *testing.T) {
 	mockDB := new(mockTokenDB)
 	metrics := NewMetrics(&disabled.Provider{})
-	fetcher := newMixedFetcher(mockDB, metrics, 0, 10*time.Second, 100)
+	fetcher := NewMixedFetcher(mockDB, metrics, 0, 10*time.Second, 100)
 
 	t.Run("tracks eager fetcher usage", func(t *testing.T) {
 		// Populate cache
@@ -979,4 +1031,108 @@ func (m *mockStoreServiceManager) StoreServiceByTMSId(tmsID token.TMSID) (*token
 	}
 
 	return nil, errors.New("not implemented")
+}
+
+// TestCachedFetcher_UpdateDoesNotBlockReaders tests that the update() function
+// releases the lock during the potentially slow DB operation, allowing concurrent
+// readers to access the cache. This is the fix for issue #16.
+func TestCachedFetcher_UpdateDoesNotBlockReaders(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	// Use long freshness interval so cache won't be stale
+	fetcher := NewCachedFetcher(mockDB, 0, 10*time.Second, 100)
+
+	// Pre-populate the cache so readers can hit it
+	initialTokens := []*token2.UnspentTokenInWallet{
+		{WalletID: "wallet1", Type: "USD", Quantity: "100"},
+	}
+	mockIterator := iterators.Slice(initialTokens)
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(mockIterator, nil).Once()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+
+	// Make cache stale so update() will be called
+	atomic.StoreInt64(&fetcher.lastFetched, time.Now().Add(-20*time.Second).UnixNano())
+
+	// Use channels to synchronize instead of Sleep
+	dbStarted := make(chan struct{})
+	slowDB := make(chan struct{})
+	tokensAfterSlowDB := []*token2.UnspentTokenInWallet{
+		{WalletID: "wallet1", Type: "USD", Quantity: "200"},
+	}
+	mockIterator2 := iterators.Slice(tokensAfterSlowDB)
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(mockIterator2, nil).Run(func(args mock.Arguments) {
+		close(dbStarted) // Signal that the DB operation has started
+		<-slowDB         // Wait before returning to simulate slow DB
+	}).Once()
+
+	// Track whether reader succeeded while update() was blocked on DB
+	var readerSuccess atomic.Bool
+	var readerWg sync.WaitGroup
+
+	// Start update in background (it will block on DB call)
+	readerWg.Add(1)
+	go func() {
+		defer readerWg.Done()
+		fetcher.update(ctx)
+	}()
+
+	// Wait for the background update to actually reach the DB call
+	select {
+	case <-dbStarted:
+		// Background update is now at line 240, having released the lock at line 238
+	case <-time.After(5 * time.Second):
+		t.Fatal("Timeout waiting for background update to reach DB operation")
+	}
+
+	// Reader should be able to acquire RLock while update() waits on DB
+	// This would deadlock before the fix
+	fetcher.mu.RLock()
+	_, ok := fetcher.cache.Get(tokenKey("wallet1", "USD"))
+	fetcher.mu.RUnlock()
+
+	if ok {
+		readerSuccess.Store(true)
+	}
+
+	// Signal DB to complete
+	close(slowDB)
+
+	// Wait for update to complete
+	readerWg.Wait()
+
+	// Verify reader succeeded - the cache should still be accessible during update
+	assert.True(t, readerSuccess.Load(), "reader should be able to access cache while update() is blocked on DB")
+	mockDB.AssertExpectations(t)
+}
+
+// TestCachedFetcher_UpdateReacquiresLockAfterDB tests that after the DB operation
+// completes, update() correctly re-acquires the lock and performs the cache update.
+func TestCachedFetcher_UpdateReacquiresLockAfterDB(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	fetcher := NewCachedFetcher(mockDB, 0, 1*time.Second, 100)
+
+	// Pre-populate to make cache appear stale
+	atomic.StoreInt64(&fetcher.lastFetched, time.Now().Add(-20*time.Second).UnixNano())
+
+	tokens := []*token2.UnspentTokenInWallet{
+		{WalletID: "wallet1", Type: "USD", Quantity: "300"},
+	}
+	mockIterator := iterators.Slice(tokens)
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(mockIterator, nil).Once()
+
+	ctx := t.Context()
+	fetcher.update(ctx)
+
+	// After update completes, cache should be refreshed (not stale)
+	assert.False(t, fetcher.isCacheStale())
+	assert.Equal(t, uint32(0), atomic.LoadUint32(&fetcher.queriesResponded))
+
+	// Token should be in cache
+	fetcher.mu.RLock()
+	_, ok := fetcher.cache.Get(tokenKey("wallet1", "USD"))
+	fetcher.mu.RUnlock()
+	assert.True(t, ok, "token should be in cache after update")
+
+	mockDB.AssertExpectations(t)
 }

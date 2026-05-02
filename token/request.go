@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/validation"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.uber.org/zap/zapcore"
 )
@@ -283,24 +284,30 @@ func (r *Request) ID() RequestAnchor {
 // Additional options can be passed to customize the action.
 func (r *Request) Issue(ctx context.Context, wallet *IssuerWallet, receiver Identity, typ token.Type, q uint64, opts ...IssueOption) (*IssueAction, error) {
 	logger.DebugfContext(ctx, "Start issue")
-	logger.DebugfContext(ctx, "Done issue")
+
 	if wallet == nil {
 		return nil, errors.Errorf("wallet is nil")
 	}
-	if typ == "" {
-		return nil, errors.Errorf("type is empty")
+	if err := validation.ValidateTokenType(string(typ)); err != nil {
+		return nil, errors.Wrap(err, "invalid token type")
 	}
-	if q == 0 {
-		return nil, errors.Errorf("q is zero")
+	if err := validation.ValidateAmount(q, 0); err != nil {
+		return nil, errors.Wrap(err, "invalid amount")
 	}
-	maxTokenValue := r.TokenService.PublicParametersManager().PublicParameters().MaxTokenValue()
-	if q > maxTokenValue {
-		return nil, errors.Errorf("q is larger than max token value [%d]", maxTokenValue)
-	}
-
 	if receiver.IsNone() {
 		return nil, errors.Errorf("all recipients should be defined")
 	}
+	if r.TokenService == nil || r.TokenService.PublicParametersManager() == nil || r.TokenService.PublicParametersManager().PublicParameters() == nil {
+		return nil, errors.Errorf("token service is not properly initialized")
+	}
+
+	// Validate amount doesn't exceed max token value
+	maxTokenValue := r.TokenService.PublicParametersManager().PublicParameters().MaxTokenValue()
+	if q > maxTokenValue {
+		return nil, errors.Errorf("amount exceeds max token value [%d]", maxTokenValue)
+	}
+
+	logger.DebugfContext(ctx, "Done issue")
 
 	id, err := wallet.GetIssuerIdentity(typ)
 	if err != nil {
@@ -310,6 +317,11 @@ func (r *Request) Issue(ctx context.Context, wallet *IssuerWallet, receiver Iden
 	opt, err := compileIssueOptions(opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
+	}
+
+	// Validate metadata using the validation package
+	if err := validation.ValidateMetadata(opt.Attributes); err != nil {
+		return nil, errors.Wrap(err, "invalid metadata")
 	}
 
 	// Compute Issue
@@ -343,15 +355,51 @@ func (r *Request) Issue(ctx context.Context, wallet *IssuerWallet, receiver Iden
 // In other words, owners[0] will receives values[0], and so on.
 // Additional options can be passed to customize the action.
 func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.Type, values []uint64, owners []Identity, opts ...TransferOption) (*TransferAction, error) {
-	for _, v := range values {
+	if wallet == nil {
+		return nil, errors.Errorf("wallet is nil")
+	}
+	if r.TokenService == nil || r.TokenService.PublicParametersManager() == nil || r.TokenService.PublicParametersManager().PublicParameters() == nil {
+		return nil, errors.Errorf("token service is not properly initialized")
+	}
+
+	// Validate token type
+	if err := validation.ValidateTokenType(string(typ)); err != nil {
+		return nil, errors.Wrap(err, "invalid token type")
+	}
+
+	// Validate values using the validation package
+	maxTokenValue := r.TokenService.PublicParametersManager().PublicParameters().MaxTokenValue()
+	for i, v := range values {
 		if v == 0 {
-			return nil, errors.Errorf("value is zero")
+			return nil, errors.Errorf("value at index %d is zero", i)
+		}
+		if v > maxTokenValue {
+			return nil, errors.Errorf("value at index %d exceeds max token value [%d]", i, maxTokenValue)
 		}
 	}
+
+	// Validate owners match values length
+	if len(owners) != len(values) {
+		return nil, errors.Errorf("number of owners [%d] does not match number of values [%d]", len(owners), len(values))
+	}
+
+	// Validate all owners are defined
+	for i, owner := range owners {
+		if owner.IsNone() {
+			return nil, errors.Errorf("owner at index %d is not defined", i)
+		}
+	}
+
 	opt, err := CompileTransferOptions(opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
+
+	// Validate metadata using the validation package
+	if err := validation.ValidateMetadata(opt.Attributes); err != nil {
+		return nil, errors.Wrap(err, "invalid metadata")
+	}
+
 	tokenIDs, outputTokens, err := r.prepareTransfer(ctx, false, wallet, typ, values, owners, opt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed preparing transfer")
@@ -397,10 +445,37 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 // The action redeems tokens of the passed type for a total amount matching the passed value.
 // Additional options can be passed to customize the action.
 func (r *Request) Redeem(ctx context.Context, wallet *OwnerWallet, typ token.Type, value uint64, opts ...TransferOption) (*TransferAction, error) {
+	if wallet == nil {
+		return nil, errors.Errorf("wallet is nil")
+	}
+	if r.TokenService == nil || r.TokenService.PublicParametersManager() == nil || r.TokenService.PublicParametersManager().PublicParameters() == nil {
+		return nil, errors.Errorf("token service is not properly initialized")
+	}
+
+	// Validate token type
+	if err := validation.ValidateTokenType(string(typ)); err != nil {
+		return nil, errors.Wrap(err, "invalid token type")
+	}
+
+	// Validate value doesn't exceed max
+	maxTokenValue := r.TokenService.PublicParametersManager().PublicParameters().MaxTokenValue()
+	if value == 0 {
+		return nil, errors.Errorf("redeem value is zero")
+	}
+	if value > maxTokenValue {
+		return nil, errors.Errorf("redeem value exceeds max token value [%d]", maxTokenValue)
+	}
+
 	opt, err := CompileTransferOptions(opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
+
+	// Validate metadata using the validation package
+	if err := validation.ValidateMetadata(opt.Attributes); err != nil {
+		return nil, errors.Wrap(err, "invalid metadata")
+	}
+
 	tokenIDs, outputTokens, err := r.prepareTransfer(ctx, true, wallet, typ, []uint64{value}, []Identity{nil}, opt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed preparing transfer")

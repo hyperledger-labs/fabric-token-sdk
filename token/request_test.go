@@ -525,7 +525,7 @@ func TestRequest_Issue(t *testing.T) {
 		wallet := &IssuerWallet{}
 		_, err := req.Issue(ctx, wallet, Identity("receiver"), "", 100)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "type is empty")
+		assert.Contains(t, err.Error(), "invalid token type")
 	})
 
 	t.Run("zero quantity", func(t *testing.T) {
@@ -533,7 +533,7 @@ func TestRequest_Issue(t *testing.T) {
 		wallet := &IssuerWallet{}
 		_, err := req.Issue(ctx, wallet, Identity("receiver"), "USD", 0)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "q is zero")
+		assert.Contains(t, err.Error(), "invalid amount")
 	})
 
 	t.Run("none receiver", func(t *testing.T) {
@@ -577,7 +577,7 @@ func TestRequest_Issue(t *testing.T) {
 		mockWallet := &IssuerWallet{}
 		_, err := req.Issue(ctx, mockWallet, Identity("receiver"), "USD", 200)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "q is larger than max token value")
+		assert.Contains(t, err.Error(), "amount exceeds max token value")
 	})
 }
 
@@ -585,20 +585,51 @@ func TestRequest_Issue(t *testing.T) {
 func TestRequest_Transfer(t *testing.T) {
 	ctx := t.Context()
 
-	t.Run("zero value", func(t *testing.T) {
+	t.Run("nil wallet", func(t *testing.T) {
 		req := NewRequest(nil, "test-anchor")
+		_, err := req.Transfer(ctx, nil, "USD", []uint64{100}, []Identity{Identity("receiver")})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "wallet is nil")
+	})
+
+	t.Run("zero value", func(t *testing.T) {
+		mockPP := &driver2.PublicParameters{}
+		mockPP.MaxTokenValueReturns(1000000)
+
+		mockPPM := &driver2.PublicParamsManager{}
+		mockPPM.PublicParametersReturns(mockPP)
+
+		tms := &ManagementService{
+			publicParametersManager: &PublicParametersManager{
+				ppm: mockPPM,
+				pp:  &PublicParameters{PublicParameters: mockPP},
+			},
+		}
+		req := NewRequest(tms, "test-anchor")
 		wallet := &OwnerWallet{}
 		_, err := req.Transfer(ctx, wallet, "USD", []uint64{0, 100}, []Identity{Identity("receiver1"), Identity("receiver2")})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "value is zero")
+		assert.Contains(t, err.Error(), "value at index 0 is zero")
 	})
 
 	t.Run("multiple zero values", func(t *testing.T) {
-		req := NewRequest(nil, "test-anchor")
+		mockPP := &driver2.PublicParameters{}
+		mockPP.MaxTokenValueReturns(1000000)
+
+		mockPPM := &driver2.PublicParamsManager{}
+		mockPPM.PublicParametersReturns(mockPP)
+
+		tms := &ManagementService{
+			publicParametersManager: &PublicParametersManager{
+				ppm: mockPPM,
+				pp:  &PublicParameters{PublicParameters: mockPP},
+			},
+		}
+		req := NewRequest(tms, "test-anchor")
 		wallet := &OwnerWallet{}
 		_, err := req.Transfer(ctx, wallet, "USD", []uint64{100, 0}, []Identity{Identity("receiver1"), Identity("receiver2")})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "value is zero")
+		assert.Contains(t, err.Error(), "value at index 1 is zero")
 	})
 }
 
