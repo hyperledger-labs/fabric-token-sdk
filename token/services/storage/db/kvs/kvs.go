@@ -18,4 +18,5 @@ type KVS interface {
 	Put(ctx context.Context, id string, state interface{}) error
 	Get(ctx context.Context, id string, state interface{}) error
 	GetByPartialCompositeID(ctx context.Context, prefix string, attrs []string) (kvs.Iterator, error)
+	Close() error
 }

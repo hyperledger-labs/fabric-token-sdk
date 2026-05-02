@@ -25,6 +25,20 @@ Each layer represents a different **code abstraction level**.
 │ Purpose: End-to-end transfer operation generation with vault,   │
 │          audit, and metadata handling                           │
 ├─────────────────────────────────────────────────────────────────┤
+│ Issue Generation Service                                        │
+│ Location: token/core/zkatdlog/nogh/v1/                          │
+│ Tests: - BenchmarkIssueServiceIssue                             │
+│        - TestParallelBenchmarkIssueServiceIssue                 │
+│ Purpose: End-to-end issue operation: wallet lookup, signer      │
+│          resolution, ZK proof, audit-info encoding, serialize   │
+├─────────────────────────────────────────────────────────────────┤
+│ Auditor Check Service                                           │
+│ Location: token/core/zkatdlog/nogh/v1/                          │
+│ Tests: - BenchmarkAuditorServiceCheck                           │
+│        - TestParallelBenchmarkAuditorServiceCheck               │
+│ Purpose: Audit verification: action deserialization and         │
+│          Pedersen commitment arithmetic                         │
+├─────────────────────────────────────────────────────────────────┤
 │ Transfer Validator Service                                      │
 │ Location: token/core/zkatdlog/nogh/v1/validator/                │
 │ Tests: - BenchmarkValidatorTransfer                             │
@@ -206,7 +220,7 @@ go test -bench=BenchmarkProofVerificationIssuer -benchtime=10s
 
 ## Layer 3: Service Layer
 
-The Service Layer provides the highest level of abstraction for complete end-to-end transfer operation generation through the high-level Transfer Service API and complete validation pipeline performance, including all cryptographic and business logic checks.
+The Service Layer provides the highest level of abstraction, covering end-to-end operation generation and validation through the high-level service APIs.
 
 ### Transfer Generation Service
 
@@ -238,34 +252,53 @@ go test -bench=BenchmarkTransferServiceTransfer -benchtime=10s
 go test -run=TestParallelBenchmarkTransferServiceTransfer -v
 ```
 
-### Transfer Validator Service
+### Issue Generation Service
 
-**Location:** `token/core/zkatdlog/nogh/v1/validator/`
+**Location:** `token/core/zkatdlog/nogh/v1/`
 
 #### Tests
-- `BenchmarkValidatorTransfer`
-- `TestParallelBenchmarkValidatorTransfer`
-
-#### Compatibility Tests
-- `regression_test.go` (in `validator/regression/`)
+- `BenchmarkIssueServiceIssue`
+- `TestParallelBenchmarkIssueServiceIssue`
 
 #### Purpose
-Complete validation pipeline performance, including all cryptographic and business logic checks.
+End-to-end issue operation generation through the high-level Issue Service API.
 
 #### Includes
-- Action deserialization
-- Token validation
-- Signature verification (including auditors)
-- Business logic checks (double-spend prevention, balance checks, etc.)
-- ZKP format validation
-- ZKP verification (range proofs, sum proofs, type proofs)
+- Wallet lookup and signer resolution
+- ZK proof generation (range proofs, same-type proofs)
+- Audit-info encoding for issuer and recipients
+- Action and metadata serialization
 
 #### Example Commands
 ```bash
-cd token/core/zkatdlog/nogh/v1/validator
-go test -bench=BenchmarkValidatorTransfer -benchtime=10s
-go test -run=TestParallelBenchmarkValidatorTransfer -v
+cd token/core/zkatdlog/nogh/v1
+go test -bench=BenchmarkIssueServiceIssue -benchtime=10s
+go test -run=TestParallelBenchmarkIssueServiceIssue -v
 ```
+
+### Auditor Check Service
+
+**Location:** `token/core/zkatdlog/nogh/v1/`
+
+#### Tests
+- `BenchmarkAuditorServiceCheck`
+- `TestParallelBenchmarkAuditorServiceCheck`
+
+#### Purpose
+End-to-end audit verification through the high-level Auditor Service API.
+
+#### Includes
+- Action deserialization
+- Pedersen commitment arithmetic (InspectOutput)
+- Identity matching via the driver deserializer
+
+#### Example Commands
+```bash
+cd token/core/zkatdlog/nogh/v1
+go test -bench=BenchmarkAuditorServiceCheck -benchtime=10s
+go test -run=TestParallelBenchmarkAuditorServiceCheck -v
+```
+
 ### Transfer Validator Service
 
 **Location:** `token/core/zkatdlog/nogh/v1/validator/`
@@ -306,8 +339,10 @@ Each layer tests a **different code abstraction level independently**:
 - **Layer 1** tests only the cryptographic proof generation code (`Prover.Prove()`)
 - **Layer 2** tests the action creation/verification code (`Sender.GenerateZKTransfer()`, `Verifier.Verify()`)
 - **Layer 3** tests the service layer code:
-  - **Transfer Validator Service**: validation logic (`Validator.VerifyTransfer()`)
   - **Transfer Generation Service**: end-to-end transfer generation (`TransferService.Transfer()`)
+  - **Issue Generation Service**: end-to-end issue generation (`IssueService.Issue()`)
+  - **Auditor Check Service**: audit verification (`AuditorService.AuditorCheck()`)
+  - **Transfer Validator Service**: validation logic (`Validator.VerifyTransfer()`)
 
 **The layers do NOT build on each other** - they test different parts of the codebase at different abstraction levels.
 

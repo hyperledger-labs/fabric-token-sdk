@@ -9,6 +9,7 @@ package ttx
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -19,6 +20,7 @@ type TxOptions struct {
 	TMSID                     token.TMSID
 	NoTransactionVerification bool
 	Timeout                   time.Duration
+	PollingTimeout            time.Duration
 	TxID                      string
 	Transaction               *Transaction
 	NetworkTxID               network.TxID
@@ -123,6 +125,18 @@ func WithNoTransactionVerification() TxOption {
 func WithTimeout(timeout time.Duration) TxOption {
 	return func(o *TxOptions) error {
 		o.Timeout = timeout
+
+		return nil
+	}
+}
+
+// WithPollingTimeout sets the polling interval for finality checks
+func WithPollingTimeout(timeout time.Duration) TxOption {
+	return func(o *TxOptions) error {
+		if timeout <= 0 {
+			return errors.Wrapf(ErrInvalidInput, "polling timeout must be positive")
+		}
+		o.PollingTimeout = timeout
 
 		return nil
 	}

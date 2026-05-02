@@ -60,6 +60,15 @@ func (d *StoreService) NewTransaction() (*Transaction, error) {
 	return &Transaction{TokenStoreTransaction: tx}, nil
 }
 
+func (d *StoreService) ContinueTransaction(tx driver.Transaction) (*Transaction, error) {
+	ctx, err := d.ContinueTokenDBTransaction(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Transaction{TokenStoreTransaction: ctx}, nil
+}
+
 func newStoreService(p driver.TokenStore) (*StoreService, error) {
 	return &StoreService{TokenStore: p}, nil
 }

@@ -8,12 +8,13 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	common4 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
 	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
@@ -28,7 +29,21 @@ import (
 type TokenLockStore struct {
 	*common5.TokenLockStore
 
-	ci common3.CondInterpreter
+	writeDB *sql.DB
+	ci      common3.CondInterpreter
+	lockID  int64
+}
+
+// GetSchema overrides the base GetSchema to prefix with advisory lock
+func (s *TokenLockStore) GetSchema() string {
+	baseSchema := s.TokenLockStore.GetSchema()
+
+	return prefixSchemaWithLock(baseSchema, s.lockID)
+}
+
+// CreateSchema overrides the base CreateSchema to ensure GetSchema is called on the correct receiver
+func (s *TokenLockStore) CreateSchema() error {
+	return common.InitSchema(s.writeDB, s.GetSchema())
 }
 
 // NewTokenLockStore returns a new TokenLockStore for the given RWDB and table names.
@@ -39,7 +54,12 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common5.TableNames) (*Token
 		return nil, err
 	}
 
-	return &TokenLockStore{TokenLockStore: tldb, ci: ci}, nil
+	return &TokenLockStore{
+		TokenLockStore: tldb,
+		writeDB:        dbs.WriteDB,
+		ci:             ci,
+		lockID:         createTableLockID("tokenlock"),
+	}, nil
 }
 
 // Cleanup removes stale token locks that have expired.
@@ -91,7 +111,7 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 		return err
 	}
 
-	it := common4.NewIterator(rows, func(entry *lockEntry) error {
+	it := common.NewIterator(rows, func(entry *lockEntry) error {
 		entry.LeaseExpiry = leaseExpiry
 
 		return rows.Scan(&entry.ConsumerTxID, &entry.TokenID.TxId, &entry.TokenID.Index, &entry.Status, &entry.CreatedAt, &entry.Now)

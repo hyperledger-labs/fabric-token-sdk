@@ -32,25 +32,23 @@ import (
 //
 //	com_f^{f_f} == gen_f^{val_f}
 type Proof struct {
-	Left   []*mathlib.G1 // cross commitment MSM(gen_L, wit_R)
-	Right  []*mathlib.G1 // cross commitment MSM(gen_R, wit_L)
-	VLeft  []*mathlib.Zr // cross scalar <f_L, wit_R>
-	VRight []*mathlib.Zr // cross scalar <f_R, wit_L>
-
-	Curve *mathlib.Curve
+	Left   []*mathlib.G1  // cross commitment MSM(gen_L, wit_R)
+	Right  []*mathlib.G1  // cross commitment MSM(gen_R, wit_L)
+	VLeft  []*mathlib.Zr  // cross scalar <f_L, wit_R>
+	VRight []*mathlib.Zr  // cross scalar <f_R, wit_L>
+	Curve  *mathlib.Curve // elliptic curve
 }
 
 // prover instantiates a CSP prover
 type prover struct {
-	Generators     []*mathlib.G1 // Generators for pedersen commitment
-	NumberOfRounds uint64        // log(length of vectors), assume power of 2
+	Generators     []*mathlib.G1  // Generators for pedersen commitment
+	NumberOfRounds uint64         // log(length of vectors), assume power of 2
+	Commitment     *mathlib.G1    // Commitment to the witness
+	LinearForm     []*mathlib.Zr  // Linear function
+	Value          *mathlib.Zr    // Claimed value of linear function over witness
+	Curve          *mathlib.Curve // Curve identifier
+	witness        []*mathlib.Zr  // opening for the commitment
 
-	Commitment *mathlib.G1    // Commitment to the witness
-	LinearForm []*mathlib.Zr  // Linear function
-	Value      *mathlib.Zr    // Claimed value of linear function over witness
-	Curve      *mathlib.Curve // Curve identifier
-
-	witness          []*mathlib.Zr // opening for the commitment
 	TranscriptHeader []byte
 }
 
@@ -78,6 +76,7 @@ func (p *prover) Prove() (*Proof, error) {
 	if len(p.TranscriptHeader) == 0 {
 		return nil, errors.New("invalid transcript header")
 	}
+
 	tr := Transcript{Curve: p.Curve}
 	tr.SetState(p.TranscriptHeader)
 
@@ -98,10 +97,18 @@ func (p *prover) Prove() (*Proof, error) {
 	for i, g := range p.Generators {
 		generators[i] = g.Copy()
 	}
+
 	linearForm := make([]*mathlib.Zr, len(p.LinearForm))
-	copy(linearForm, p.LinearForm)
+	for i, f := range p.LinearForm {
+		linearForm[i] = f.Copy()
+	}
+
 	witness := make([]*mathlib.Zr, len(p.witness))
-	copy(witness, p.witness)
+	for i, w := range p.witness {
+		witness[i] = w.Copy()
+	}
+
+	one := math.One(p.Curve)
 
 	for i := range p.NumberOfRounds {
 		n := len(generators) / 2
@@ -126,24 +133,27 @@ func (p *prover) Prove() (*Proof, error) {
 
 		c, err := tr.Squeeze()
 		if err != nil {
-			return nil, errors.New("unable to generate random challenge")
+			return nil, errors.New("unable to generate challenge")
 		}
 
 		// Fold generators:  gen'[j] = gen_L[j] + c · gen_R[j]
 		// Fold linear form: f'[j]   = f_L[j]   + c · f_R[j]
 		// Fold witness:     w'[j]   = c · w_L[j] + w_R[j]
 		for j := range n {
-			generators[j].Add(generators[n+j].Mul(c))
+			// gen'[j] = 1·gen_L[j] + c·gen_R[j], zero allocations
+			generators[j].Mul2InPlace(one, generators[n+j], c)
 
-			linearForm[j] = p.Curve.ModAddMul2(
-				linearForm[j], math.One(p.Curve),
+			p.Curve.ModAddMul2InPlace(
+				linearForm[j],
+				one, linearForm[j],
 				c, linearForm[n+j],
 				p.Curve.GroupOrder,
 			)
 
-			witness[j] = p.Curve.ModAddMul2(
+			p.Curve.ModAddMul2InPlace(
+				witness[j],
 				c, witness[j],
-				witness[n+j], math.One(p.Curve),
+				witness[n+j], one,
 				p.Curve.GroupOrder,
 			)
 		}
@@ -197,13 +207,14 @@ func (v *verifier) Verify(proof *Proof) error {
 
 	// Validate proof structure
 	if err := validateCSPProof(v.Curve, proof, v.NumberOfRounds); err != nil {
-		return errors.Wrap(err, "invalid CSP proof structure")
+		return errors.Wrap(err, "invalid CSP proof")
 	}
 
 	// Initialize transcript — must mirror Prove() exactly.
 	if len(v.TranscriptHeader) == 0 {
 		return errors.New("invalid transcript header")
 	}
+
 	tr := Transcript{Curve: v.Curve}
 	tr.SetState(v.TranscriptHeader)
 
@@ -213,11 +224,13 @@ func (v *verifier) Verify(proof *Proof) error {
 	}
 	tr.Absorb(v.Value.Bytes())
 
-	// Replay transcript to collect all challenges, tracking commitment and
-	// value updates. Generators are NOT folded per round.
+	// Replay transcript to collect all challenges and update the value
+	// accumulator. The commitment folding is deferred to a single MSM below.
 	challenges := make([]*mathlib.Zr, v.NumberOfRounds)
-	com := v.Commitment.Copy()
 	val := v.Value.Copy()
+	one := math.One(v.Curve)
+
+	cSq := v.Curve.NewZrFromInt(0)
 
 	for i := range v.NumberOfRounds {
 		// Absorb cross terms (same order as Prove()).
@@ -231,22 +244,58 @@ func (v *verifier) Verify(proof *Proof) error {
 			return errors.New("unable to recompute challenge")
 		}
 		challenges[i] = c
-		cSq := v.Curve.ModMul(c, c, v.Curve.GroupOrder)
-
-		// Update commitment: C' = c·C + Left[i] + c²·Right[i]
-		newCom := com.Mul(c)
-		newCom.Add(proof.Left[i])
-		newCom.Add(proof.Right[i].Mul(cSq))
-		com = newCom
 
 		// Update value: v' = c·v + VLeft[i] + c²·VRight[i]
-		val = v.Curve.ModAddMul3(
+		// (scalar-only; no G1 allocations)
+		v.Curve.ModMulInPlace(cSq, c, c, v.Curve.GroupOrder)
+
+		v.Curve.ModAddMul3InPlace(
+			val,
 			c, val,
-			proof.VLeft[i], math.One(v.Curve),
+			proof.VLeft[i], one,
 			cSq, proof.VRight[i],
 			v.Curve.GroupOrder,
 		)
 	}
+
+	// Batch-compute the folded commitment via a single MSM, replacing the
+	// sequential Mul+Add loop that allocated one G1 per round.
+	k := int(v.NumberOfRounds) // #nosec G115
+
+	suffProd := make([]*mathlib.Zr, k)
+	suffProd[k-1] = one
+
+	for i := k - 2; i >= 0; i-- {
+		suffProd[i] = v.Curve.NewZrFromInt(0)
+		v.Curve.ModMulInPlace(suffProd[i], suffProd[i+1], challenges[i+1], v.Curve.GroupOrder)
+	}
+
+	sC := v.Curve.NewZrFromInt(0)
+	v.Curve.ModMulInPlace(sC, challenges[0], suffProd[0], v.Curve.GroupOrder)
+
+	// Build flat (point, scalar) slices: C₀, then (L_i, R_i) for each round.
+	comPoints := make([]*mathlib.G1, 0, 2*k+1)
+	comScalars := make([]*mathlib.Zr, 0, 2*k+1)
+
+	comPoints = append(comPoints, v.Commitment)
+	comScalars = append(comScalars, sC)
+
+	cSqScratch := v.Curve.NewZrFromInt(0)
+	mulScratch := v.Curve.NewZrFromInt(0)
+
+	for i := range k {
+		v.Curve.ModMulInPlace(cSqScratch, challenges[i], challenges[i], v.Curve.GroupOrder)
+
+		comPoints = append(comPoints, proof.Left[i])
+		comScalars = append(comScalars, suffProd[i])
+
+		v.Curve.ModMulInPlace(mulScratch, cSqScratch, suffProd[i], v.Curve.GroupOrder)
+
+		comPoints = append(comPoints, proof.Right[i])
+		comScalars = append(comScalars, mulScratch.Copy())
+	}
+
+	com := v.Curve.MultiScalarMul(comPoints, comScalars)
 
 	// Compute the coefficient vector s such that
 	//   gen_f = sum_i s[i] · gen[i]   and   f_f = sum_i s[i] · f[i]
@@ -263,6 +312,7 @@ func (v *verifier) Verify(proof *Proof) error {
 	// Final check: com_f^{f_f} == gen_f^{val_f}
 	lhs := com.Mul(fF)
 	rhs := genF.Mul(val)
+
 	if !lhs.Equals(rhs) {
 		return errors.New("CSP proof verification failed")
 	}
@@ -283,12 +333,18 @@ func (v *verifier) Verify(proof *Proof) error {
 func sVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) []*mathlib.Zr {
 	k := len(challenges)
 	s := make([]*mathlib.Zr, n)
+
 	s[0] = math.One(curve)
+
+	for i := 1; i < n; i++ {
+		s[i] = curve.NewZrFromInt(0)
+	}
+
 	for r := range k {
 		halfLen := 1 << r      // number of entries already filled
 		c := challenges[k-1-r] // reverse order matches bit(i, k-1-r)
 		for i := range halfLen {
-			s[i+halfLen] = curve.ModMul(s[i], c, curve.GroupOrder)
+			curve.ModMulInPlace(s[i+halfLen], s[i], c, curve.GroupOrder)
 		}
 	}
 

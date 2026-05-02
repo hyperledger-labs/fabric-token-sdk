@@ -30,15 +30,18 @@ const (
 
 var logger = logging.MustGetLogger()
 
+//go:generate counterfeiter -o mock/query_engine.go -fake-name QueryEngineMock . QueryEngine
 type QueryEngine interface {
 	UnspentTokensIterator(ctx context.Context) (*token2.UnspentTokensIterator, error)
 }
 
+//go:generate counterfeiter -o mock/certification_storage.go -fake-name CertificationStorageMock . CertificationStorage
 type CertificationStorage interface {
 	Exists(ctx context.Context, id *token.ID) bool
 	Store(ctx context.Context, certifications map[*token.ID][]byte) error
 }
 
+//go:generate counterfeiter -o mock/view_manager.go -fake-name ViewManagerMock . ViewManager
 type ViewManager interface {
 	InitiateView(view view.View) (interface{}, error)
 }

@@ -76,15 +76,15 @@ func (p *noopProvider) NewHistogram(_ metrics.HistogramOpts) metrics.Histogram {
 type noopCounter struct{}
 
 func (c *noopCounter) With(_ ...string) metrics.Counter { return c }
-func (c *noopCounter) Add(_ float64)                    {}
+func (c *noopCounter) Add(delta float64)                { _ = delta }
 
 type noopGauge struct{}
 
 func (g *noopGauge) With(_ ...string) metrics.Gauge { return g }
-func (g *noopGauge) Add(_ float64)                  {}
-func (g *noopGauge) Set(_ float64)                  {}
+func (g *noopGauge) Add(delta float64)              { _ = delta }
+func (g *noopGauge) Set(val float64)                { _ = val }
 
 type noopHistogram struct{}
 
 func (h *noopHistogram) With(_ ...string) metrics.Histogram { return h }
-func (h *noopHistogram) Observe(_ float64)                  {}
+func (h *noopHistogram) Observe(val float64)                { _ = val }

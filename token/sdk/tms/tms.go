@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package tms
 
 import (
-	"context"
-
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -45,16 +43,6 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 		Network:   networkID,
 		Channel:   channel,
 		Namespace: namespace,
-	}
-
-	// restore owner db
-	if err := p.ownerManager.RestoreTMS(context.Background(), tmsID); err != nil {
-		return errors.WithMessagef(err, "failed to restore onwer dbs for [%s]", tmsID)
-	}
-
-	// restore auditor db
-	if err := p.auditorManager.RestoreTMS(tmsID); err != nil {
-		return errors.WithMessagef(err, "failed to restore auditor dbs for [%s]", tmsID)
 	}
 
 	// set supported tokens

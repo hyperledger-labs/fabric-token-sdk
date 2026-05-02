@@ -8,15 +8,12 @@ package finality
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"errors"
 
-	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	events2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 )
 
 const (
@@ -24,10 +21,30 @@ const (
 	FirstBlock       = 1
 )
 
+// ErrTxNotFound is the sentinel returned by txLedger when a transaction does not
+// exist on the ledger. The wiring layer (deliveryflm.go) translates FSC's
+// string-based "not found" errors into this typed error so that callers can use
+// errors.Is instead of fragile substring matching.
+var ErrTxNotFound = errors.New("transaction not found")
+
+type txLedger interface {
+	GetTransactionByID(txID string) (*fabric.ProcessedTransaction, error)
+}
+
+type blockScanner interface {
+	ScanFromBlock(ctx context.Context, block uint64, callback fabric.DeliveryCallback) error
+}
+
+// txMapper is the subset of events.EventInfoMapper used by DeliveryScanQueryByID.
+// It only needs MapProcessedTx; MapTxData (the block-path method) is not called here.
+type txMapper interface {
+	MapProcessedTx(tx *fabric.ProcessedTransaction) ([]TxInfo, error)
+}
+
 type DeliveryScanQueryByID struct {
-	Delivery *fabric.Delivery
-	Ledger   *fabric.Ledger
-	Mapper   events2.EventInfoMapper[TxInfo]
+	Delivery blockScanner
+	Ledger   txLedger
+	Mapper   txMapper
 }
 
 func (q *DeliveryScanQueryByID) QueryByID(ctx context.Context, lastBlock driver.BlockNum, evicted map[driver.TxID][]events2.ListenerEntry[TxInfo]) (<-chan []TxInfo, error) {
@@ -53,9 +70,10 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			logger.DebugfContext(ctx, "transaction [%s] found on ledger", txID)
 			infos, err := q.Mapper.MapProcessedTx(pt)
 			if err != nil {
-				logger.Errorf("failed to map tx [%s]: [%s]", txID, err)
+				logger.Errorf("failed to map tx [%s]: [%s], skipping", txID, err)
+				keySet.Remove(txID)
 
-				return
+				continue
 			}
 			keySet.Remove(txID)
 			ch <- infos
@@ -63,22 +81,17 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 			continue
 		}
 
-		// which kind of error do we have here?
-		// TODO: AF In FSC, we have to map the error from Ledger.GetTransactionByID to TxNotFound instead of using substrings
-		if strings.Contains(err.Error(), fmt.Sprintf("TXID [%s] not available", txID)) ||
-			strings.Contains(err.Error(), fmt.Sprintf("no such transaction ID [%s]", txID)) ||
-			errors2.HasType(err, finality.TxNotFound) {
-			// transaction was not found
+		if errors.Is(err, ErrTxNotFound) {
+			// transaction was not found on the ledger; fall back to block scan
 			logger.Errorf("tx [%s] not found on the ledger [%s]", txID, err)
 			startDelivery = true
 
 			continue
 		}
 
-		// error not recoverable, fail
-		logger.DebugfContext(ctx, "scan for tx [%s] failed with err [%s]", txID, err)
-
-		return
+		// transient ledger error; fall back to block scan for this txID
+		logger.Errorf("scan for tx [%s] failed with err [%s], falling back to block scan", txID, err)
+		startDelivery = true
 	}
 
 	if !startDelivery {
@@ -86,7 +99,6 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.TxI
 	}
 
 	startingBlock := max(FirstBlock, lastBlock-NumberPastBlocks)
-	// startingBlock := uint64(0)
 	logger.DebugfContext(ctx, "start scanning blocks starting from [%d], looking for remaining keys [%s]", startingBlock, keySet)
 
 	// start delivery for the future

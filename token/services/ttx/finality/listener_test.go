@@ -19,8 +19,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/mock"
+	depmock "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,51 +29,24 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-// stubTxDB is a minimal transactionDB implementation for testing.
-type stubTxDB struct {
-	getTokenRequestFn func(ctx context.Context, txID string) ([]byte, error)
-	setStatusFn       func(ctx context.Context, txID string, status storage.TxStatus, message string) error
-}
-
-func (s *stubTxDB) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
-	if s.getTokenRequestFn != nil {
-		return s.getTokenRequestFn(ctx, txID)
-	}
-
-	return nil, nil
-}
-
-func (s *stubTxDB) SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error {
-	if s.setStatusFn != nil {
-		return s.setStatusFn(ctx, txID, status, message)
-	}
-
-	return nil
-}
-
 func noopTracer() trace.Tracer {
 	return noop.NewTracerProvider().Tracer("")
 }
 
-func listenerLogger() logging.Logger {
-	return logging.MustGetLogger()
-}
-
-// newTestListener builds a Listener wired with the given ttxDB stub.
+// newTestListener builds a Listener wired with the given ttxDB mock.
 // tokens.Service is nil because the test cases below never reach the token-append path.
-func newTestListener(t *testing.T, db *stubTxDB) *finality.Listener {
+func newTestListener(t *testing.T, db *mock.TransactionDB) *finality.Listener {
 	t.Helper()
 
 	return finality.NewListener(
-		listenerLogger(),
-		&mock.Network{},
+		logging.MustGetLogger(),
+		&depmock.Network{},
 		"test-namespace",
-		&mock.TokenManagementServiceProvider{},
-		token.TMSID{Network: "n", Channel: "c", Namespace: "ns"},
+		finality.NewTokenRequestHasher(&depmock.TokenManagementServiceProvider{}, token.TMSID{Network: "n", Channel: "c", Namespace: "ns"}),
 		db,
-		nil, // tokens.Service — not accessed for network.Invalid status
+		nil,
 		noopTracer(),
-		nil, // metricsProvider — noop fallback
+		nil,
 	)
 }
 
@@ -85,13 +59,13 @@ func newTestListener(t *testing.T, db *stubTxDB) *finality.Listener {
 // retry loop and OnStatus returns promptly.
 func TestOnStatus_ContextCanceledDuringRetry(t *testing.T) {
 	var setCalls atomic.Int32
-	db := &stubTxDB{
-		setStatusFn: func(_ context.Context, _ string, _ storage.TxStatus, _ string) error {
-			setCalls.Add(1)
+	db := &mock.TransactionDB{}
+	db.SetStatusReturns(errors.New("db unavailable"))
+	db.SetStatusCalls(func(_ context.Context, _ string, _ storage.TxStatus, _ string) error {
+		setCalls.Add(1)
 
-			return errors.New("db unavailable")
-		},
-	}
+		return errors.New("db unavailable")
+	})
 	l := newTestListener(t, db)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -121,16 +95,15 @@ func TestOnStatus_ContextCanceledDuringRetry(t *testing.T) {
 // and completes successfully once the transient error resolves.
 func TestOnStatus_SucceedsAfterTransientError(t *testing.T) {
 	var setCalls atomic.Int32
-	db := &stubTxDB{
-		setStatusFn: func(_ context.Context, _ string, _ storage.TxStatus, _ string) error {
-			n := setCalls.Add(1)
-			if n < 3 {
-				return errors.New("transient db error")
-			}
+	db := &mock.TransactionDB{}
+	db.SetStatusCalls(func(_ context.Context, _ string, _ storage.TxStatus, _ string) error {
+		n := setCalls.Add(1)
+		if n < 3 {
+			return errors.New("transient db error")
+		}
 
-			return nil
-		},
-	}
+		return nil
+	})
 	l := newTestListener(t, db)
 
 	done := make(chan struct{})
@@ -152,13 +125,12 @@ func TestOnStatus_SucceedsAfterTransientError(t *testing.T) {
 // when SetStatus succeeds on the first try, OnStatus returns without any retries.
 func TestOnStatus_CompletesImmediatelyOnSuccess(t *testing.T) {
 	var setCalls atomic.Int32
-	db := &stubTxDB{
-		setStatusFn: func(_ context.Context, _ string, _ storage.TxStatus, _ string) error {
-			setCalls.Add(1)
+	db := &mock.TransactionDB{}
+	db.SetStatusCalls(func(_ context.Context, _ string, _ storage.TxStatus, _ string) error {
+		setCalls.Add(1)
 
-			return nil
-		},
-	}
+		return nil
+	})
 	l := newTestListener(t, db)
 
 	l.OnStatus(t.Context(), "tx1", network.Invalid, "invalid", nil)
@@ -170,18 +142,16 @@ func TestOnStatus_CompletesImmediatelyOnSuccess(t *testing.T) {
 // for different transactions do not interfere with each other.
 func TestOnStatus_ConcurrentCallsAreIndependent(t *testing.T) {
 	var mu sync.Mutex
-
 	statusSet := map[string]bool{}
 
-	db := &stubTxDB{
-		setStatusFn: func(_ context.Context, txID string, _ storage.TxStatus, _ string) error {
-			mu.Lock()
-			statusSet[txID] = true
-			mu.Unlock()
+	db := &mock.TransactionDB{}
+	db.SetStatusCalls(func(_ context.Context, txID string, _ storage.TxStatus, _ string) error {
+		mu.Lock()
+		statusSet[txID] = true
+		mu.Unlock()
 
-			return nil
-		},
-	}
+		return nil
+	})
 	l := newTestListener(t, db)
 
 	txIDs := []string{"tx1", "tx2", "tx3", "tx4", "tx5"}
@@ -210,11 +180,8 @@ func TestOnStatus_ConcurrentCallsAreIndependent(t *testing.T) {
 // TestOnStatus_PreCanceledContextReturnsImmediately verifies that a pre-canceled context
 // causes OnStatus to return before the first retry sleep, not after it.
 func TestOnStatus_PreCanceledContextReturnsImmediately(t *testing.T) {
-	db := &stubTxDB{
-		setStatusFn: func(_ context.Context, _ string, _ storage.TxStatus, _ string) error {
-			return errors.New("always fails")
-		},
-	}
+	db := &mock.TransactionDB{}
+	db.SetStatusReturns(errors.New("always fails"))
 	l := newTestListener(t, db)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -233,13 +200,12 @@ func TestOnStatus_PreCanceledContextReturnsImmediately(t *testing.T) {
 // status, the local DB is updated to Deleted.
 func TestOnStatus_StatusSetToDeletedForInvalidTx(t *testing.T) {
 	var capturedStatus storage.TxStatus
-	db := &stubTxDB{
-		setStatusFn: func(_ context.Context, _ string, s storage.TxStatus, _ string) error {
-			capturedStatus = s
+	db := &mock.TransactionDB{}
+	db.SetStatusCalls(func(_ context.Context, _ string, s storage.TxStatus, _ string) error {
+		capturedStatus = s
 
-			return nil
-		},
-	}
+		return nil
+	})
 	l := newTestListener(t, db)
 
 	l.OnStatus(t.Context(), "tx1", network.Invalid, "rejected", nil)
@@ -252,7 +218,7 @@ func TestOnStatus_StatusSetToDeletedForInvalidTx(t *testing.T) {
 func TestOnError(t *testing.T) {
 	ctx := t.Context()
 
-	listener := newTestListener(t, &stubTxDB{})
+	listener := newTestListener(t, &mock.TransactionDB{})
 
 	// OnError should just log and not panic
 	listener.OnError(ctx, "test-tx-id", errors.New("test error"))

@@ -10,7 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/artifactgen/gen"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/certfier"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/version"
@@ -57,7 +56,6 @@ func Execute() error {
 	mainCmd.AddCommand(pp.UpdateCmd())
 	mainCmd.AddCommand(pp.UtilsCmd())
 	mainCmd.AddCommand(certfier.KeyPairGenCmd())
-	mainCmd.AddCommand(gen.Cmd())
 	mainCmd.AddCommand(version.Cmd())
 
 	return mainCmd.Execute()

@@ -229,6 +229,60 @@ func TestFinalityView(t *testing.T) {
 			opts:        []ttx.TxOption{ttx.WithTimeout(1500 * time.Millisecond)},
 			expectError: false,
 		},
+		{
+			name: "empty transaction id",
+			opts: []ttx.TxOption{
+				ttx.WithTxID(""),
+				ttx.WithTMSID(token.TMSID{Network: "network", Channel: "channel", Namespace: "namespace"}),
+			},
+			expectError:   true,
+			errorContains: "transaction ID cannot be empty",
+			expectErr:     ttx.ErrInvalidInput,
+		},
+		{
+			name: "negative timeout",
+			opts: []ttx.TxOption{
+				ttx.WithTxID("tx_id"),
+				ttx.WithTMSID(token.TMSID{Network: "network", Channel: "channel", Namespace: "namespace"}),
+				ttx.WithTimeout(-1 * time.Second),
+			},
+			expectError:   true,
+			errorContains: "timeout cannot be negative",
+			expectErr:     ttx.ErrInvalidInput,
+		},
+		{
+			name: "timeout exceeds 24 hours",
+			opts: []ttx.TxOption{
+				ttx.WithTxID("tx_id"),
+				ttx.WithTMSID(token.TMSID{Network: "network", Channel: "channel", Namespace: "namespace"}),
+				ttx.WithTimeout(25 * time.Hour),
+			},
+			expectError:   true,
+			errorContains: "timeout cannot exceed 24 hours",
+			expectErr:     ttx.ErrInvalidInput,
+		},
+		{
+			name: "custom polling timeout",
+			prepare: func(c *testFinalityViewContext) {
+				c.transactionDB.GetStatusReturns(ttxdb.Confirmed, "", nil)
+				c.auditDB.GetStatusReturns(ttxdb.Unknown, "", nil)
+			},
+			opts: []ttx.TxOption{
+				ttx.WithPollingTimeout(500 * time.Millisecond),
+			},
+			expectError: false,
+		},
+		{
+			name: "invalid polling timeout",
+			opts: []ttx.TxOption{
+				ttx.WithTxID("tx_id"),
+				ttx.WithTMSID(token.TMSID{Network: "network", Channel: "channel", Namespace: "namespace"}),
+				ttx.WithPollingTimeout(0),
+			},
+			expectError:   true,
+			errorContains: "polling timeout must be positive",
+			expectErr:     ttx.ErrInvalidInput,
+		},
 	}
 
 	for _, tc := range testCases {

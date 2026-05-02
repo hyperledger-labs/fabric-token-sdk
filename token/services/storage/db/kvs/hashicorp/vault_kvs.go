@@ -112,6 +112,10 @@ func (v *KVS) Delete(id string) error {
 	return nil
 }
 
+func (v *KVS) Close() error {
+	return nil
+}
+
 func (v *KVS) Put(_ context.Context, id string, state interface{}) error {
 	id = v.NormalizeID(id)
 	raw, err := json.Marshal(state)

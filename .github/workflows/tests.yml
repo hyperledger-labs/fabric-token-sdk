@@ -206,3 +206,32 @@ jobs:
       - name: Compile benchmarks (do not run)
         run: go test ./... -run=^$ -bench=^$
 
+  # Guard: the tokengen / artifactgen binaries must build without cgo so
+  # they can be distributed in scratch / alpine images and on hosts
+  # without a C toolchain. See #1445.
+  cgo-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache-dependency-path: "**/*.sum"
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build tokengen without cgo
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o /dev/null ./cmd/tokengen
+
+      - name: Build artifactgen without cgo
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o /dev/null ./cmd/artifactgen
+

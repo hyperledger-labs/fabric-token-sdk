@@ -1520,8 +1520,6 @@ The security of ZKAT-DLOG (NOGH) relies on:
 - Cache attacks (memory access patterns)
 - Power analysis (where applicable)
 
----
-
 ## 13. Implementation Details
 
 ### 13.1 Error Handling

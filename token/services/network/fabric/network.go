@@ -18,15 +18,22 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
+	ncommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/recovery"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/wrapper"
+	ttxfinality "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go-apiv2/peer"
@@ -66,11 +73,12 @@ func (n *lm) AnonymousIdentity() (view.Identity, error) {
 type ledger struct {
 	l             *fabric.Ledger
 	ch            *fabric.Channel
+	network       string
 	keyTranslator translator.KeyTranslator
 }
 
-func newLedger(ch *fabric.Channel, keyTranslator translator.KeyTranslator) *ledger {
-	return &ledger{ch: ch, l: ch.Ledger(), keyTranslator: keyTranslator}
+func NewLedger(ch *fabric.Channel, network string, keyTranslator translator.KeyTranslator) *ledger {
+	return &ledger{ch: ch, l: ch.Ledger(), network: network, keyTranslator: keyTranslator}
 }
 
 // Status retrieves the validation status of a transaction from the Fabric ledger.
@@ -86,6 +94,52 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	default:
 		return driver.Invalid, nil
 	}
+}
+
+// GetTransactionStatus retrieves the current status and token request hash for a transaction.
+func (l *ledger) GetTransactionStatus(ctx context.Context, namespace, txID string) (status int, tokenRequestHash []byte, message string, err error) {
+	// Get the transaction from the ledger
+	tx, err := l.l.GetTransactionByID(txID)
+	if err != nil {
+		return driver.Unknown, nil, "", errors.Wrapf(err, "failed to get transaction [%s]", txID)
+	}
+
+	// Map validation code to driver status
+	validationCode := tx.ValidationCode()
+	var txStatus driver.ValidationCode
+	var statusMessage string
+	switch peer.TxValidationCode(validationCode) {
+	case peer.TxValidationCode_VALID:
+		txStatus = driver.Valid
+	default:
+		txStatus = driver.Invalid
+		statusMessage = peer.TxValidationCode(validationCode).String()
+	}
+
+	// If invalid, return early without token request hash
+	if txStatus == driver.Invalid {
+		return txStatus, nil, statusMessage, nil
+	}
+
+	// Extract token request hash from the transaction
+	mapper := &finality.EndorserTxInfoMapper{
+		Network:       l.network,
+		KeyTranslator: l.keyTranslator,
+	}
+	txInfos, err := mapper.MapProcessedTx(tx)
+	if err != nil {
+		return driver.Unknown, nil, "", errors.Wrapf(err, "failed to map transaction [%s]", txID)
+	}
+
+	// Find the token request hash for the specified namespace
+	for _, info := range txInfos {
+		if info.Namespace == namespace {
+			return info.Status, info.RequestHash, info.Message, nil
+		}
+	}
+
+	// If no matching namespace found, return status without hash
+	return txStatus, nil, statusMessage, nil
 }
 
 // GetStates performs a multi-key state query against the token chaincode.
@@ -140,16 +194,19 @@ type SetupListenerProvider interface {
 // Network implements the driver.Network interface for Hyperledger Fabric.
 // It orchestrates finality listeners, state queries, and endorsement requests.
 type Network struct {
-	n               *fabric.NetworkService
-	ch              *fabric.Channel
-	tmsProvider     *token2.ManagementServiceProvider
-	viewManager     ViewManager
-	ledger          *ledger
-	configuration   common2.Configuration
-	filterProvider  common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter]
-	tokensProvider  *tokens.ServiceManager
-	finalityTracer  trace.Tracer
-	localMembership *lm
+	n                        *fabric.NetworkService
+	ch                       *fabric.Channel
+	tmsProvider              *token2.ManagementServiceProvider
+	viewManager              ViewManager
+	ledger                   driver.Ledger
+	configuration            ncommon.Configuration
+	filterProvider           ncommon.TransactionFilterProvider[*ncommon.AcceptTxInDBsFilter]
+	tokensProvider           *tokens.ServiceManager
+	finalityTracer           trace.Tracer
+	localMembership          *lm
+	auditStoreServiceManager auditdb.StoreServiceManager
+	ttxStoreServiceManager   ttxdb.StoreServiceManager
+	metricsProvider          metrics.Provider
 
 	setupListenerProvider      SetupListenerProvider
 	flm                        finality.ListenerManager
@@ -167,8 +224,8 @@ type Network struct {
 func NewNetwork(
 	n *fabric.NetworkService,
 	ch *fabric.Channel,
-	configuration common2.Configuration,
-	filterProvider common2.TransactionFilterProvider[*common2.AcceptTxInDBsFilter],
+	configuration ncommon.Configuration,
+	filterProvider ncommon.TransactionFilterProvider[*ncommon.AcceptTxInDBsFilter],
 	tokensProvider *tokens.ServiceManager,
 	viewManager ViewManager,
 	tmsProvider *token2.ManagementServiceProvider,
@@ -181,13 +238,17 @@ func NewNetwork(
 	flm finality.ListenerManager,
 	llm lookup.ListenerManager,
 	setupListenerProvider SetupListenerProvider,
+	ttxStoreServiceManager ttxdb.StoreServiceManager,
+	auditStoreServiceManager auditdb.StoreServiceManager,
+	metricsProvider metrics.Provider,
+	ledger driver.Ledger,
 ) *Network {
 	network := &Network{
 		n:                          n,
 		ch:                         ch,
 		tmsProvider:                tmsProvider,
 		viewManager:                viewManager,
-		ledger:                     newLedger(ch, keyTranslator),
+		ledger:                     ledger,
 		configuration:              configuration,
 		filterProvider:             filterProvider,
 		tokensProvider:             tokensProvider,
@@ -200,9 +261,12 @@ func NewNetwork(
 		finalityTracer: tracerProvider.Tracer("finality_listener", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			LabelNames: []tracing.LabelName{},
 		})),
-		keyTranslator:         keyTranslator,
-		setupListenerProvider: setupListenerProvider,
-		localMembership:       &lm{lm: n.LocalMembership()},
+		keyTranslator:            keyTranslator,
+		setupListenerProvider:    setupListenerProvider,
+		localMembership:          &lm{lm: n.LocalMembership()},
+		ttxStoreServiceManager:   ttxStoreServiceManager,
+		auditStoreServiceManager: auditStoreServiceManager,
+		metricsProvider:          metricsProvider,
 	}
 	network.connectedNamespaces = lazy.NewProviderWithKeyMapper(func(s string) string {
 		return s
@@ -247,7 +311,7 @@ func (n *Network) Normalize(opt *token2.ServiceOptions) (*token2.ServiceOptions,
 		}
 	}
 	if opt.PublicParamsFetcher == nil {
-		opt.PublicParamsFetcher = common2.NewPublicParamsFetcher(n, opt.Namespace)
+		opt.PublicParamsFetcher = ncommon.NewPublicParamsFetcher(n, opt.Namespace)
 	}
 
 	return opt, nil
@@ -317,6 +381,12 @@ func (n *Network) AddFinalityListener(namespace string, txID string, listener dr
 	return n.flm.AddFinalityListener(namespace, txID, listener)
 }
 
+// GetTransactionStatus retrieves the current status and token request hash for a transaction.
+// It delegates to the ledger implementation.
+func (n *Network) GetTransactionStatus(ctx context.Context, namespace, txID string) (status int, tokenRequestHash []byte, message string, err error) {
+	return n.ledger.GetTransactionStatus(ctx, namespace, txID)
+}
+
 // LookupTransferMetadataKey performs a scan to find transfer metadata matching a sub-key.
 func (n *Network) LookupTransferMetadataKey(namespace string, key string, timeout time.Duration) ([]byte, error) {
 	transferMetadataKey, err := n.keyTranslator.CreateTransferActionMetadataKey(key)
@@ -368,7 +438,86 @@ func (n *Network) connect(ns string) ([]token2.ServiceOption, error) {
 		return nil, errors.WithMessagef(err, "failed to get endorsement service at [%s]", tmsID)
 	}
 
+	// Initialize and start recovery managers
+	tokensService, err := n.tokensProvider.ServiceByTMSId(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get tokens service for [%s]", tmsID)
+	}
+
+	{
+		storage, err := n.ttxStoreServiceManager.StoreServiceByTMSId(tmsID)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get ttx storage for [%s]", tmsID)
+		}
+		_, err = n.createRecoveryManager(tmsID, storage, tokensService)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create recovery manager for ttx storage for [%s]", tmsID)
+		}
+	}
+
+	{
+		storage, err := n.auditStoreServiceManager.StoreServiceByTMSId(tmsID)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get audit storage for [%s]", tmsID)
+		}
+		_, err = n.createRecoveryManager(tmsID, storage, tokensService)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create recovery manager for audit storage for [%s]", tmsID)
+		}
+	}
+
 	return nil, nil
+}
+
+// createRecoveryManager initializes and starts the recovery manager for the given namespace
+func (n *Network) createRecoveryManager(tmsID token2.TMSID, storage transactionDB, tokensService *tokens.Service) (*recovery.Manager, error) {
+	// Get TMS configuration
+	cfg, err := n.configuration.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	if err != nil {
+		logger.Warnf("failed to get configuration for [%s], using default recovery config: %v", tmsID, err)
+		cfg = nil
+	}
+
+	// Load recovery configuration
+	var recoveryConfig recovery.Config
+	if cfg != nil {
+		recoveryConfig, err = recovery.LoadConfig(cfg)
+		if err != nil {
+			logger.Warnf("failed to load recovery config for [%s], using defaults: %v", tmsID, err)
+			recoveryConfig = recovery.DefaultConfig()
+		}
+	} else {
+		recoveryConfig = recovery.DefaultConfig()
+	}
+
+	// Create recovery handler with all required dependencies
+	recoveryHandler := ttxfinality.NewTTXRecoveryHandler(
+		logger,
+		n,
+		tmsID.Namespace,
+		ttxfinality.NewTokenRequestHasher(wrapper.NewTokenManagementServiceProvider(n.tmsProvider), tmsID),
+		tmsID,
+		storage,
+		tokensService,
+		n.finalityTracer,
+		n.metricsProvider,
+	)
+
+	manager := recovery.NewManager(
+		logger,
+		storage,
+		recoveryHandler,
+		recoveryConfig,
+	)
+
+	// Start the recovery manager
+	if err := manager.Start(); err != nil {
+		return nil, errors.Wrapf(err, "failed to start recovery manager for [%s]", tmsID)
+	}
+
+	logger.Debugf("recovery manager started for namespace [%s]", tmsID.Namespace)
+
+	return manager, nil
 }
 
 type lookupListener struct {
@@ -462,4 +611,13 @@ func (s *setupListener) OnStatus(ctx context.Context, key string, value []byte) 
 
 func (s *setupListener) OnError(ctx context.Context, key string, err error) {
 	logger.Warnf("setup listener error for TMS [%s] key [%s]: [%v]", s.TMSID, key, err)
+}
+
+type transactionDB interface {
+	NewTransaction() (storage.TransactionStoreTransaction, error)
+	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
+	SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error
+	AcquireRecoveryLeadership(ctx context.Context, lockID int64) (recovery.Leadership, bool, error)
+	ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*ttxdb.TransactionRecord, error)
+	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
 }

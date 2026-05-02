@@ -30,6 +30,7 @@ var (
 //go:generate counterfeiter -o mock/network.go -fake-name Network . Network
 type Network interface {
 	AddFinalityListener(namespace string, txID string, listener network.FinalityListener) error
+	GetTransactionStatus(ctx context.Context, namespace, txID string) (status int, tokenRequestHash []byte, message string, err error)
 	NewEnvelope() *network.Envelope
 	AnonymousIdentity() (view.Identity, error)
 	LocalMembership() *network.LocalMembership

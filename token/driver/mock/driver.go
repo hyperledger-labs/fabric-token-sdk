@@ -8,19 +8,6 @@ import (
 )
 
 type Driver struct {
-	NewDefaultValidatorStub        func(driver.PublicParameters) (driver.Validator, error)
-	newDefaultValidatorMutex       sync.RWMutex
-	newDefaultValidatorArgsForCall []struct {
-		arg1 driver.PublicParameters
-	}
-	newDefaultValidatorReturns struct {
-		result1 driver.Validator
-		result2 error
-	}
-	newDefaultValidatorReturnsOnCall map[int]struct {
-		result1 driver.Validator
-		result2 error
-	}
 	NewTokenServiceStub        func(driver.TMSID, []byte) (driver.TokenManagerService, error)
 	newTokenServiceMutex       sync.RWMutex
 	newTokenServiceArgsForCall []struct {
@@ -50,70 +37,6 @@ type Driver struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *Driver) NewDefaultValidator(arg1 driver.PublicParameters) (driver.Validator, error) {
-	fake.newDefaultValidatorMutex.Lock()
-	ret, specificReturn := fake.newDefaultValidatorReturnsOnCall[len(fake.newDefaultValidatorArgsForCall)]
-	fake.newDefaultValidatorArgsForCall = append(fake.newDefaultValidatorArgsForCall, struct {
-		arg1 driver.PublicParameters
-	}{arg1})
-	stub := fake.NewDefaultValidatorStub
-	fakeReturns := fake.newDefaultValidatorReturns
-	fake.recordInvocation("NewDefaultValidator", []interface{}{arg1})
-	fake.newDefaultValidatorMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *Driver) NewDefaultValidatorCallCount() int {
-	fake.newDefaultValidatorMutex.RLock()
-	defer fake.newDefaultValidatorMutex.RUnlock()
-	return len(fake.newDefaultValidatorArgsForCall)
-}
-
-func (fake *Driver) NewDefaultValidatorCalls(stub func(driver.PublicParameters) (driver.Validator, error)) {
-	fake.newDefaultValidatorMutex.Lock()
-	defer fake.newDefaultValidatorMutex.Unlock()
-	fake.NewDefaultValidatorStub = stub
-}
-
-func (fake *Driver) NewDefaultValidatorArgsForCall(i int) driver.PublicParameters {
-	fake.newDefaultValidatorMutex.RLock()
-	defer fake.newDefaultValidatorMutex.RUnlock()
-	argsForCall := fake.newDefaultValidatorArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *Driver) NewDefaultValidatorReturns(result1 driver.Validator, result2 error) {
-	fake.newDefaultValidatorMutex.Lock()
-	defer fake.newDefaultValidatorMutex.Unlock()
-	fake.NewDefaultValidatorStub = nil
-	fake.newDefaultValidatorReturns = struct {
-		result1 driver.Validator
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *Driver) NewDefaultValidatorReturnsOnCall(i int, result1 driver.Validator, result2 error) {
-	fake.newDefaultValidatorMutex.Lock()
-	defer fake.newDefaultValidatorMutex.Unlock()
-	fake.NewDefaultValidatorStub = nil
-	if fake.newDefaultValidatorReturnsOnCall == nil {
-		fake.newDefaultValidatorReturnsOnCall = make(map[int]struct {
-			result1 driver.Validator
-			result2 error
-		})
-	}
-	fake.newDefaultValidatorReturnsOnCall[i] = struct {
-		result1 driver.Validator
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *Driver) NewTokenService(arg1 driver.TMSID, arg2 []byte) (driver.TokenManagerService, error) {

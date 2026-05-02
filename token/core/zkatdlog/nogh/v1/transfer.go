@@ -8,7 +8,6 @@ package v1
 
 import (
 	"context"
-	"time"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -87,7 +86,6 @@ type TransferService struct {
 	TokenLoader             TokenLoader
 	IdentityDeserializer    driver.Deserializer
 	TokenDeserializer       TokenDeserializer
-	Metrics                 *Metrics
 	tracer                  trace.Tracer
 }
 
@@ -98,7 +96,6 @@ func NewTransferService(
 	auditInfoProvider driver.AuditInfoProvider,
 	tokenLoader TokenLoader,
 	identityDeserializer driver.Deserializer,
-	metrics *Metrics,
 	tracerProvider trace.TracerProvider,
 	tokenDeserializer TokenDeserializer,
 ) *TransferService {
@@ -108,7 +105,6 @@ func NewTransferService(
 		AuditInfoProvider:       auditInfoProvider,
 		TokenLoader:             tokenLoader,
 		IdentityDeserializer:    identityDeserializer,
-		Metrics:                 metrics,
 		tracer: tracerProvider.Tracer("transfer_service", tracing.WithMetricsOpts(tracing.MetricsOpts{
 			LabelNames: []tracing.LabelName{},
 		})),
@@ -162,15 +158,12 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 		}
 	}
 	// 5. Generate the ZK-SNARK transfer action and the metadata for the new outputs.
-	start := time.Now()
 	s.Logger.DebugfContext(ctx, "Generate zk transfer")
 	transfer, outputsMetadata, err := sender.GenerateZKTransfer(ctx, values, owners)
 	s.Logger.DebugfContext(ctx, "Done generating zk transfer")
-	duration := time.Since(start)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", anchor)
 	}
-	s.Metrics.zkTransferDuration.Observe(duration.Seconds())
 
 	// 6. Enrich the transfer action with additional metadata and upgrade witnesses if present.
 	if opts != nil {

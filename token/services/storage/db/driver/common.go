@@ -66,15 +66,13 @@ const (
 	Deleted = driver2.Deleted
 )
 
-var (
-	// TxStatusMessage maps TxStatus to string
-	TxStatusMessage = map[TxStatus]string{
-		Unknown:   "Unknown",
-		Pending:   "Pending",
-		Confirmed: "Confirmed",
-		Deleted:   "Deleted",
-	}
-)
+// TxStatusMessage maps TxStatus to string
+var TxStatusMessage = map[TxStatus]string{
+	Unknown:   "Unknown",
+	Pending:   "Pending",
+	Confirmed: "Confirmed",
+	Deleted:   "Deleted",
+}
 
 // MovementRecord is a record of a movement of assets.
 // Given a Token Transaction, a movement record is created for each enrollment ID that participated in the transaction
@@ -120,6 +118,10 @@ type TransactionRecord struct {
 	Amount *big.Int
 	// Timestamp is the time the transaction was submitted to the db
 	Timestamp time.Time
+	// RecoveryClaimedBy identifies the recovery worker/replica currently holding the lease for this transaction.
+	RecoveryClaimedBy string
+	// RecoveryClaimExpiresAt is the lease expiration for the current recovery claim, if any.
+	RecoveryClaimExpiresAt *time.Time
 	// Status is the status of the transaction
 	Status TxStatus
 	// ApplicationMetadata is the metadata sent by the application in the
@@ -237,6 +239,9 @@ type QueryTransactionsParams struct {
 	// TokenTypes is the list of token types to accept
 	// If empty, any token type is accepted
 	TokenTypes []token2.Type
+	// SearchDirection is the direction of the search.
+	// Default (zero value) is FromLast (descending by stored_at).
+	SearchDirection SearchDirection
 }
 
 // QueryValidationRecordsParams defines the parameters for querying validation records.

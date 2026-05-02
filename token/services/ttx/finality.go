@@ -19,8 +19,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const finalityTimeout = 10 * time.Minute
-
 type finalityDB interface {
 	AddStatusListener(txID string, ch chan db.TransactionStatusEvent)
 	DeleteStatusListener(txID string, ch chan db.TransactionStatusEvent)
@@ -40,7 +38,13 @@ func NewFinalityView(tx *Transaction, opts ...TxOption) *finalityView {
 }
 
 func NewFinalityWithOpts(opts ...TxOption) *finalityView {
-	return &finalityView{opts: opts, pollingTimeout: 1 * time.Second}
+	pollingTimeout := 1 * time.Second
+	options, err := CompileOpts(opts...)
+	if err == nil && options.PollingTimeout > 0 {
+		pollingTimeout = options.PollingTimeout
+	}
+
+	return &finalityView{opts: opts, pollingTimeout: pollingTimeout}
 }
 
 // Call executes the view.
@@ -70,6 +74,17 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 }
 
 func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
+	// Validate inputs
+	if txID == "" {
+		return nil, errors.Wrapf(ErrInvalidInput, "transaction ID cannot be empty")
+	}
+	if timeout < 0 {
+		return nil, errors.Wrapf(ErrInvalidInput, "timeout cannot be negative")
+	}
+	if timeout > 24*time.Hour {
+		return nil, errors.Wrapf(ErrInvalidInput, "timeout cannot exceed 24 hours")
+	}
+
 	logger.DebugfContext(ctx.Context(), "Listen to finality of [%s]", txID)
 
 	c := ctx.Context()
@@ -87,35 +102,34 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 	if err != nil {
 		return nil, err
 	}
-	counter := 0
 
-	statusTTXDB, _, err := transactionDB.GetStatus(ctx.Context(), txID)
-	if err == nil && statusTTXDB != ttxdb.Unknown {
-		counter++
-	}
+	// Check if transaction is known in at least one database
+	// Note: We check both databases to determine which ones to monitor
+	statusTTXDB, _, errTTXDB := transactionDB.GetStatus(ctx.Context(), txID)
+	knownInTTXDB := errTTXDB == nil && statusTTXDB != ttxdb.Unknown
 
-	statusAuditDB, _, err := auditDB.GetStatus(ctx.Context(), txID)
-	if err == nil && statusAuditDB != ttxdb.Unknown {
-		counter++
-	}
-	if counter == 0 {
+	statusAuditDB, _, errAuditDB := auditDB.GetStatus(ctx.Context(), txID)
+	knownInAuditDB := errAuditDB == nil && statusAuditDB != ttxdb.Unknown
+
+	if !knownInTTXDB && !knownInAuditDB {
 		return nil, errors.Wrapf(ErrTransactionUnknown, "transaction [%s] is unknown for [%s]", txID, tmsID)
 	}
 
 	logger.DebugfContext(ctx.Context(), "Listen for DB finality")
-	iterations := int(timeout.Milliseconds() / f.pollingTimeout.Milliseconds())
+	// Calculate iterations using ceiling division to avoid precision loss
+	iterations := int((timeout + f.pollingTimeout - 1) / f.pollingTimeout)
 	if iterations == 0 {
 		iterations = 1
 	}
 	index := 0
-	if statusTTXDB != ttxdb.Unknown {
+	if knownInTTXDB {
 		logger.DebugfContext(ctx.Context(), "Request TTXDB finality")
 		index, err = f.dbFinality(c, txID, transactionDB, index, iterations)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if statusAuditDB != ttxdb.Unknown {
+	if knownInAuditDB {
 		logger.DebugfContext(ctx.Context(), "Request AuditDB finality")
 		_, err = f.dbFinality(c, txID, auditDB, index, iterations)
 		if err != nil {
@@ -126,6 +140,20 @@ func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, ti
 	return nil, nil
 }
 
+// dbFinality waits for a transaction to reach finality in a specific database.
+// It polls the database at regular intervals (pollingTimeout) up to a maximum
+// number of iterations calculated from the timeout.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout
+//   - txID: Transaction ID to monitor
+//   - finalityDB: Database to monitor for finality
+//   - startCounter: Starting iteration counter (for logging/debugging)
+//   - iterations: Maximum number of polling iterations
+//
+// Returns:
+//   - int: The iteration number when finality was reached or error occurred
+//   - error: Error if transaction is invalid or timeout occurs
 func (f *finalityView) dbFinality(ctx context.Context, txID string, finalityDB finalityDB, startCounter, iterations int) (int, error) {
 	// notice that adding the listener can happen after the event we are looking for has already happened
 	// therefore we need to check more often before the timeout happens

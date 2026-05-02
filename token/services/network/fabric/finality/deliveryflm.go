@@ -8,6 +8,8 @@ package finality
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	vault2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/core/generic/vault"
@@ -17,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/fabricutils"
+	fscFinality "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/finality"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/rwset"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/vault"
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
@@ -58,6 +61,35 @@ func (e *listenerEntry) Equals(other events.ListenerEntry[TxInfo]) bool {
 	return other != nil && other.(*listenerEntry).listener == e.listener
 }
 
+// normalizedLedger wraps the FSC ledger and translates its string-based "not found"
+// errors into the typed ErrTxNotFound sentinel so that DeliveryScanQueryByID can
+// use errors.Is instead of fragile substring matching.
+//
+// This adapter lives in the wiring layer so that deliveryqs.go stays free of
+// FSC error-format knowledge. Once FSC's Ledger.GetTransactionByID returns a
+// typed TxNotFound error, this wrapper can be removed.
+type normalizedLedger struct {
+	inner txLedger
+}
+
+func newNormalizedLedger(l txLedger) *normalizedLedger {
+	return &normalizedLedger{inner: l}
+}
+
+func (l *normalizedLedger) GetTransactionByID(txID string) (*fabric.ProcessedTransaction, error) {
+	pt, err := l.inner.GetTransactionByID(txID)
+	if err == nil {
+		return pt, nil
+	}
+	if errors.HasCause(err, fscFinality.TxNotFound) ||
+		strings.Contains(err.Error(), fmt.Sprintf("TXID [%s] not available", txID)) ||
+		strings.Contains(err.Error(), fmt.Sprintf("no such transaction ID [%s]", txID)) {
+		return nil, fmt.Errorf("%w: %w", ErrTxNotFound, err)
+	}
+
+	return nil, err
+}
+
 type TxInfo struct {
 	TxId        driver2.TxID
 	Namespace   driver2.Namespace
@@ -88,9 +120,9 @@ func NewDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProv
 
 func newEndorserDeliveryBasedFLMProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, config events.DeliveryListenerManagerConfig) *deliveryBasedFLMProvider {
 	return NewDeliveryBasedFLMProvider(fnsp, tracerProvider, config, func(network, _ string) events.EventInfoMapper[TxInfo] {
-		return &endorserTxInfoMapper{
-			network:       network,
-			keyTranslator: keyTranslator,
+		return &EndorserTxInfoMapper{
+			Network:       network,
+			KeyTranslator: keyTranslator,
 		}
 	})
 }
@@ -116,7 +148,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 		},
 		&DeliveryScanQueryByID{
 			Delivery: ch.Delivery(),
-			Ledger:   ch.Ledger(),
+			Ledger:   newNormalizedLedger(ch.Ledger()),
 			Mapper:   mapper,
 		},
 		p.tracerProvider.Tracer("finality_listener_manager", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
@@ -126,7 +158,7 @@ func (p *deliveryBasedFLMProvider) NewManager(network, channel string) (Listener
 		return nil, err
 	}
 
-	return &deliveryBasedFLM{flm}, nil
+	return &deliveryBasedFLM{lm: flm}, nil
 }
 
 type deliveryBasedFLM struct {
@@ -137,12 +169,13 @@ func (m *deliveryBasedFLM) AddFinalityListener(namespace string, txID string, li
 	return m.lm.AddEventListener(txID, &listenerEntry{namespace, listener})
 }
 
-type endorserTxInfoMapper struct {
-	network       string
-	keyTranslator translator.KeyTranslator
+// EndorserTxInfoMapper maps transaction data to TxInfo structures
+type EndorserTxInfoMapper struct {
+	Network       string
+	KeyTranslator translator.KeyTranslator
 }
 
-func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]TxInfo, error) {
+func (m *EndorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *common.BlockMetadata, blockNum driver2.BlockNum, txNum driver2.TxNum) (map[driver2.Namespace]TxInfo, error) {
 	_, payl, chdr, err := fabricutils.UnmarshalTx(tx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshaling tx [%d:%d]", blockNum, txNum)
@@ -152,7 +185,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 
 		return nil, nil
 	}
-	rwSet, err := rwset.NewEndorserTransactionReader(m.network).Read(payl, chdr)
+	rwSet, err := rwset.NewEndorserTransactionReader(m.Network).Read(payl, chdr)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed extracting rwset")
 	}
@@ -165,7 +198,7 @@ func (m *endorserTxInfoMapper) MapTxData(ctx context.Context, tx []byte, block *
 	return m.mapTxInfo(rwSet, chdr.TxId, code, message)
 }
 
-func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]TxInfo, error) {
+func (m *EndorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) ([]TxInfo, error) {
 	logger.Debugf("Map processed tx [%s] with results of status [%v] and length [%d]", tx.TxID(), tx.ValidationCode(), len(tx.Results()))
 	status, message := committer.MapValidationCode(tx.ValidationCode())
 	if status == driver.Invalid {
@@ -183,8 +216,8 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 	return collections.Values(infos), nil
 }
 
-func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string, code driver3.ValidationCode, message string) (map[driver2.Namespace]TxInfo, error) {
-	key, err := m.keyTranslator.CreateTokenRequestKey(txID)
+func (m *EndorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string, code driver3.ValidationCode, message string) (map[driver2.Namespace]TxInfo, error) {
+	key, err := m.KeyTranslator.CreateTokenRequestKey(txID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't create for token request [%s]", txID)
 	}

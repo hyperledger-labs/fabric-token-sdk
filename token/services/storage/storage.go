@@ -42,5 +42,6 @@ type (
 	IdentityStore         = dbdriver.IdentityStore
 	KeyStore              = dbdriver.KeyStore
 	// StatusEvent models an event related to the status of a transaction
-	StatusEvent = common.StatusEvent
+	StatusEvent                 = common.StatusEvent
+	TransactionStoreTransaction = dbdriver.TransactionStoreTransaction
 )

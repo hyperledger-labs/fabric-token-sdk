@@ -293,7 +293,7 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get tokens db for [%s]", a.tx.TMSID())
 	}
-	if err := t.CacheRequest(context.Context(), a.tx.TMSID(), a.tx.TokenRequest); err != nil {
+	if err := t.CacheRequest(context.Context(), a.tx.TokenRequest); err != nil {
 		logger.Warnf("failed to cache token request [%s], this might cause delay, investigate when possible: [%s]", a.tx.TokenRequest.Anchor, err)
 	}
 

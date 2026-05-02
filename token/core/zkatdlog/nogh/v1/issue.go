@@ -8,7 +8,6 @@ package v1
 
 import (
 	"context"
-	"time"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -27,7 +26,7 @@ type IssueService struct {
 	PublicParametersManager PublicParametersManager
 	WalletService           driver.WalletService
 	Deserializer            driver.Deserializer
-	Metrics                 *Metrics
+	TokensService           *token2.TokensService
 	TokensUpgradeService    *upgrade.Service
 }
 
@@ -36,7 +35,7 @@ func NewIssueService(
 	publicParametersManager PublicParametersManager,
 	walletService driver.WalletService,
 	deserializer driver.Deserializer,
-	metrics *Metrics,
+	tokensService *token2.TokensService,
 	tokensUpgradeService *upgrade.Service,
 ) *IssueService {
 	return &IssueService{
@@ -44,7 +43,7 @@ func NewIssueService(
 		PublicParametersManager: publicParametersManager,
 		WalletService:           walletService,
 		Deserializer:            deserializer,
-		Metrics:                 metrics,
+		TokensService:           tokensService,
 		TokensUpgradeService:    tokensUpgradeService,
 	}
 }
@@ -114,13 +113,10 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 		Signer:   signer,
 	}, pp)
 
-	start := time.Now()
 	issueAction, zkOutputsMetadata, err := issuer.GenerateZKIssue(values, owners)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to generate zk issue")
 	}
-	duration := time.Since(start)
-	s.Metrics.zkIssueDuration.Observe(duration.Seconds())
 
 	// metadata
 

@@ -7,16 +7,21 @@ SPDX-License-Identifier: Apache-2.0
 package v1_test
 
 import (
+	"context"
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -255,4 +260,77 @@ func newToken(value *math.Zr, rand *math.Zr, tokenType string, pp []*math.G1, cu
 	tok.Add(pp[2].Mul(rand))
 
 	return tok
+}
+
+// BenchmarkIssueServiceIssue benchmarks the Issue method of the IssueService at
+// the service layer, including wallet lookup, signer resolution, ZK proof
+// generation, and audit-info encoding.
+func BenchmarkIssueServiceIssue(b *testing.B) {
+	bits, err := benchmark2.Bits(32, 64)
+	require.NoError(b, err)
+	curves := benchmark2.Curves(math.BN254, math.BLS12_381_BBS_GURVY, math2.BLS12_381_BBS_GURVY_FAST_RNG)
+	configurations, err := benchmark.NewSetupConfigurations("./testdata", bits, curves, idemixnym.IdentityType)
+	require.NoError(b, err)
+
+	for k, conf := range configurations.Configurations {
+		issueSetup, err := benchmark.NewIssueSetup(conf)
+		require.NoError(b, err)
+		b.Run(k, func(b *testing.B) {
+			b.ResetTimer()
+			for b.Loop() {
+				_, _, err := issueSetup.Service.Issue(
+					b.Context(),
+					issueSetup.IssuerID,
+					issueSetup.TokenType,
+					issueSetup.Values,
+					issueSetup.Owners,
+					nil,
+				)
+				require.NoError(b, err)
+			}
+		})
+	}
+}
+
+// TestParallelBenchmarkIssueServiceIssue runs the IssueService.Issue benchmark
+// in parallel using the services/benchmark harness, matching the pattern of
+// TestParallelBenchmarkTransferServiceTransfer.
+func TestParallelBenchmarkIssueServiceIssue(t *testing.T) {
+	bits, curves, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+	proofType := benchmark.ProofType()
+	executorProvider := benchmark.ExecutorProvider()
+	configurations, err := benchmark.NewSetupConfigurationsWithParams(benchmark.SetupParams{
+		IdemixTestdataPath: "./testdata",
+		Bits:               bits,
+		CurveIDs:           curves,
+		OwnerIdentityType:  idemixnym.IdentityType,
+		ProofType:          proofType,
+		ExecutorProvider:   executorProvider,
+	})
+	require.NoError(t, err)
+
+	test := benchmark2.NewTest[*benchmark.IssueSetup](cases)
+	test.RunBenchmark(t,
+		func(c *benchmark2.Case) (*benchmark.IssueSetup, error) {
+			conf, err := configurations.GetSetupConfiguration(c.Bits, c.CurveID)
+			if err != nil {
+				return nil, err
+			}
+
+			return benchmark.NewIssueSetup(conf)
+		},
+		func(ctx context.Context, s *benchmark.IssueSetup) error {
+			_, _, err := s.Service.Issue(
+				ctx,
+				s.IssuerID,
+				s.TokenType,
+				s.Values,
+				s.Owners,
+				nil,
+			)
+
+			return err
+		},
+	)
 }

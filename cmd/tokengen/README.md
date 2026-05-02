@@ -24,12 +24,13 @@ tokengen [command] --help
 
 ### Core Commands
 
-- **`artifacts`**: Generates key material and configuration files from a topology description (YAML).
 - **`gen`**: Generates public parameters for specific drivers (e.g., `fabtoken.v1`, `zkatdlognogh.v1`).
 - **`update`**: Updates certificates within existing public parameters.
 - **`pp print`**: Inspects and prints human-readable details of a public parameters file.
 - **`certifier-keygen`**: Generates key pairs for token certifiers.
 - **`version`**: Displays the build version information.
+
+> Topology-driven artifact generation previously offered as `tokengen artifacts` now lives in a separate binary, [`artifactgen`](../artifactgen/README.md). Splitting it keeps `tokengen`'s dependency surface small (it no longer links the `integration/nwo` test framework).
 
 ### Examples
 
@@ -41,11 +42,6 @@ tokengen gen fabtoken.v1 --auditors ./msp/auditor --issuers ./msp/issuer --outpu
 #### Inspect Public Parameters
 ```bash
 tokengen pp print --input ./params/fabtokenv1_pp.json
-```
-
-#### Generate Artifacts from Topology
-```bash
-tokengen artifacts --topology ./topology.yaml --output ./artifacts
 ```
 
 ## Configuration

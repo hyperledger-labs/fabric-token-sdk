@@ -15,6 +15,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
@@ -24,6 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"go.opentelemetry.io/otel/trace"
@@ -53,6 +55,9 @@ type Driver struct {
 	llmProvider                     lookup.ListenerManagerProvider
 	EndorsementServiceProvider      EndorsementServiceProvider
 	setupListenerProvider           SetupListenerProvider
+	ttxStoreServiceManager          ttxdb.StoreServiceManager
+	auditStoreServiceManager        auditdb.StoreServiceManager
+	metricsProvider                 metrics.Provider
 }
 
 func NewGenericDriver(
@@ -66,7 +71,9 @@ func NewGenericDriver(
 	tracerProvider trace.TracerProvider,
 	identityProvider view.IdentityProvider,
 	configService cdriver.ConfigService,
-	storeServiceManager ttxdb.StoreServiceManager,
+	ttxStoreServiceManager ttxdb.StoreServiceManager,
+	auditStoreServiceManager auditdb.StoreServiceManager,
+	metricsProvider metrics.Provider,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
 
@@ -93,9 +100,12 @@ func NewGenericDriver(
 			viewRegistry,
 			identityProvider,
 			keyTranslator,
-			storeServiceManager,
+			ttxStoreServiceManager,
 		),
 		NewSetupListenerProvider(tmsProvider, tokensManager),
+		ttxStoreServiceManager,
+		auditStoreServiceManager,
+		metricsProvider,
 		config2.GenericDriver,
 	)
 }
@@ -117,6 +127,9 @@ func NewDriver(
 	llmProvider lookup.ListenerManagerProvider,
 	endorsementServiceProvider EndorsementServiceProvider,
 	setupListenerProvider SetupListenerProvider,
+	ttxStoreServiceManager ttxdb.StoreServiceManager,
+	auditStoreServiceManager auditdb.StoreServiceManager,
+	metricsProvider metrics.Provider,
 	supportedDrivers ...string,
 ) *Driver {
 	return &Driver{
@@ -137,6 +150,9 @@ func NewDriver(
 		llmProvider:                     llmProvider,
 		EndorsementServiceProvider:      endorsementServiceProvider,
 		setupListenerProvider:           setupListenerProvider,
+		ttxStoreServiceManager:          ttxStoreServiceManager,
+		auditStoreServiceManager:        auditStoreServiceManager,
+		metricsProvider:                 metricsProvider,
 	}
 }
 
@@ -170,5 +186,26 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		return nil, errors.Wrapf(err, "failed to create a new llm")
 	}
 
-	return NewNetwork(fns, ch, d.configService, d.filterProvider, d.tokensManager, d.viewManager, d.tmsProvider, d.EndorsementServiceProvider, tokenQueryExecutor, d.tracerProvider, d.defaultPublicParamsFetcher, spentTokenQueryExecutor, d.keyTranslator, flm, llm, d.setupListenerProvider), nil
+	return NewNetwork(
+		fns,
+		ch,
+		d.configService,
+		d.filterProvider,
+		d.tokensManager,
+		d.viewManager,
+		d.tmsProvider,
+		d.EndorsementServiceProvider,
+		tokenQueryExecutor,
+		d.tracerProvider,
+		d.defaultPublicParamsFetcher,
+		spentTokenQueryExecutor,
+		d.keyTranslator,
+		flm,
+		llm,
+		d.setupListenerProvider,
+		d.ttxStoreServiceManager,
+		d.auditStoreServiceManager,
+		d.metricsProvider,
+		NewLedger(ch, fns.Name(), d.keyTranslator),
+	), nil
 }

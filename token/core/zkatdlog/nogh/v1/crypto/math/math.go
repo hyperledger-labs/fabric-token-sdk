@@ -118,26 +118,37 @@ func BatchInverse(elems []*mathlib.Zr, curve *mathlib.Curve) []*mathlib.Zr {
 	if n == 0 {
 		return nil
 	}
+	if n == 1 {
+		inv := make([]*mathlib.Zr, 1)
+		inv[0] = elems[0].Copy()
+		inv[0].InvModOrder()
+
+		return inv
+	}
 
 	inv := make([]*mathlib.Zr, n)
 
-	// Forward pass: build prefix products
-	// prefixProd[i] = elems[0] * elems[1] * ... * elems[i]
-	prefixProd := make([]*mathlib.Zr, n)
-	prefixProd[0] = elems[0]
+	// Forward pass: build prefix products in the inv array
+	inv[0] = elems[0] // No copy needed since we don't mutate inv[0]
 	for i := 1; i < n; i++ {
-		prefixProd[i] = curve.ModMul(prefixProd[i-1], elems[i], curve.GroupOrder)
+		inv[i] = curve.ModMul(inv[i-1], elems[i], curve.GroupOrder)
 	}
 
 	// Single inversion of the total product
-	acc := prefixProd[n-1]
+	acc := inv[n-1].Copy()
 	acc.InvModOrder()
 
 	// Backward pass: extract individual inverses
 	for i := n - 1; i >= 1; i-- {
-		inv[i] = curve.ModMul(prefixProd[i-1], acc, curve.GroupOrder)
-		acc = curve.ModMul(acc, elems[i], curve.GroupOrder)
+		// inv[i] = inv[i-1] * acc  where inv[i-1] is the prefix product
+		curve.ModMulInPlace(inv[i], inv[i-1], acc, curve.GroupOrder)
+		// acc = acc * elems[i]
+		curve.ModMulInPlace(acc, acc, elems[i], curve.GroupOrder)
 	}
+
+	// acc now holds the inverse of elems[0].
+	// Since acc is fully independent (created by Copy() and mutated in place),
+	// we can safely place it directly into the result slice.
 	inv[0] = acc
 
 	return inv

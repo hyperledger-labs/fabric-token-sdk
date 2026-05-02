@@ -177,8 +177,9 @@ func GetEndorsers(network *integration.Infrastructure, sel *token3.ReplicaSelect
 
 func CheckAuditedTransactions(network *integration.Infrastructure, auditor *token3.NodeReference, expected []TransactionRecord, start *time.Time, end *time.Time) {
 	txsBoxed, err := network.Client(auditor.ReplicaName()).CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
-		From: start,
-		To:   end,
+		From:            start,
+		To:              end,
+		SearchDirection: ttxdb.FromBeginning,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	var txs []*ttxdb.TransactionRecord
@@ -214,6 +215,7 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id *token3.N
 		To:              end,
 		ActionTypes:     actionTypes,
 		Statuses:        statuses,
+		SearchDirection: ttxdb.FromBeginning,
 	}
 	txsBoxed, err := network.Client(id.ReplicaName()).CallView("acceptedTransactionHistory", common.JSONMarshall(&params))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())

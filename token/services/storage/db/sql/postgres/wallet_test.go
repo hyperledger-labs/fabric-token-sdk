@@ -13,7 +13,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
-func mockWalletStore(db *sql.DB) *WalletStore {
+func mockWalletStore(db *sql.DB) *common2.WalletStore {
 	store, _ := common2.NewWalletStore(db, db, common2.TableNames{
 		Wallets: "WALLETS",
 	}, postgres.NewConditionInterpreter())

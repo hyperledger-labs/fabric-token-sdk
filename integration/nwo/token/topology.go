@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/onsi/gomega"
 )
@@ -35,7 +34,6 @@ type Topology struct {
 	TopologyType string `yaml:"type,omitempty"`
 
 	TokenSelector string
-	FinalityType  config.ManagerType
 	TMSs          []*topology.TMS
 }
 
@@ -44,7 +42,6 @@ func NewTopology() *Topology {
 		TopologyName:  TopologyName,
 		TopologyType:  TopologyName,
 		TokenSelector: "",
-		FinalityType:  "delivery",
 		TMSs:          []*topology.TMS{},
 	}
 }

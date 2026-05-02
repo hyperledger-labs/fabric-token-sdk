@@ -8,19 +8,6 @@ import (
 )
 
 type PPMFactory struct {
-	DefaultValidatorStub        func(driver.PublicParameters) (driver.Validator, error)
-	defaultValidatorMutex       sync.RWMutex
-	defaultValidatorArgsForCall []struct {
-		arg1 driver.PublicParameters
-	}
-	defaultValidatorReturns struct {
-		result1 driver.Validator
-		result2 error
-	}
-	defaultValidatorReturnsOnCall map[int]struct {
-		result1 driver.Validator
-		result2 error
-	}
 	NewPublicParametersManagerStub        func(driver.PublicParameters) (driver.PublicParamsManager, error)
 	newPublicParametersManagerMutex       sync.RWMutex
 	newPublicParametersManagerArgsForCall []struct {
@@ -32,6 +19,19 @@ type PPMFactory struct {
 	}
 	newPublicParametersManagerReturnsOnCall map[int]struct {
 		result1 driver.PublicParamsManager
+		result2 error
+	}
+	NewValidatorStub        func(driver.PublicParameters) (driver.Validator, error)
+	newValidatorMutex       sync.RWMutex
+	newValidatorArgsForCall []struct {
+		arg1 driver.PublicParameters
+	}
+	newValidatorReturns struct {
+		result1 driver.Validator
+		result2 error
+	}
+	newValidatorReturnsOnCall map[int]struct {
+		result1 driver.Validator
 		result2 error
 	}
 	PublicParametersFromBytesStub        func([]byte) (driver.PublicParameters, error)
@@ -49,70 +49,6 @@ type PPMFactory struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *PPMFactory) DefaultValidator(arg1 driver.PublicParameters) (driver.Validator, error) {
-	fake.defaultValidatorMutex.Lock()
-	ret, specificReturn := fake.defaultValidatorReturnsOnCall[len(fake.defaultValidatorArgsForCall)]
-	fake.defaultValidatorArgsForCall = append(fake.defaultValidatorArgsForCall, struct {
-		arg1 driver.PublicParameters
-	}{arg1})
-	stub := fake.DefaultValidatorStub
-	fakeReturns := fake.defaultValidatorReturns
-	fake.recordInvocation("DefaultValidator", []interface{}{arg1})
-	fake.defaultValidatorMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *PPMFactory) DefaultValidatorCallCount() int {
-	fake.defaultValidatorMutex.RLock()
-	defer fake.defaultValidatorMutex.RUnlock()
-	return len(fake.defaultValidatorArgsForCall)
-}
-
-func (fake *PPMFactory) DefaultValidatorCalls(stub func(driver.PublicParameters) (driver.Validator, error)) {
-	fake.defaultValidatorMutex.Lock()
-	defer fake.defaultValidatorMutex.Unlock()
-	fake.DefaultValidatorStub = stub
-}
-
-func (fake *PPMFactory) DefaultValidatorArgsForCall(i int) driver.PublicParameters {
-	fake.defaultValidatorMutex.RLock()
-	defer fake.defaultValidatorMutex.RUnlock()
-	argsForCall := fake.defaultValidatorArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *PPMFactory) DefaultValidatorReturns(result1 driver.Validator, result2 error) {
-	fake.defaultValidatorMutex.Lock()
-	defer fake.defaultValidatorMutex.Unlock()
-	fake.DefaultValidatorStub = nil
-	fake.defaultValidatorReturns = struct {
-		result1 driver.Validator
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *PPMFactory) DefaultValidatorReturnsOnCall(i int, result1 driver.Validator, result2 error) {
-	fake.defaultValidatorMutex.Lock()
-	defer fake.defaultValidatorMutex.Unlock()
-	fake.DefaultValidatorStub = nil
-	if fake.defaultValidatorReturnsOnCall == nil {
-		fake.defaultValidatorReturnsOnCall = make(map[int]struct {
-			result1 driver.Validator
-			result2 error
-		})
-	}
-	fake.defaultValidatorReturnsOnCall[i] = struct {
-		result1 driver.Validator
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *PPMFactory) NewPublicParametersManager(arg1 driver.PublicParameters) (driver.PublicParamsManager, error) {
@@ -175,6 +111,70 @@ func (fake *PPMFactory) NewPublicParametersManagerReturnsOnCall(i int, result1 d
 	}
 	fake.newPublicParametersManagerReturnsOnCall[i] = struct {
 		result1 driver.PublicParamsManager
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *PPMFactory) NewValidator(arg1 driver.PublicParameters) (driver.Validator, error) {
+	fake.newValidatorMutex.Lock()
+	ret, specificReturn := fake.newValidatorReturnsOnCall[len(fake.newValidatorArgsForCall)]
+	fake.newValidatorArgsForCall = append(fake.newValidatorArgsForCall, struct {
+		arg1 driver.PublicParameters
+	}{arg1})
+	stub := fake.NewValidatorStub
+	fakeReturns := fake.newValidatorReturns
+	fake.recordInvocation("NewValidator", []interface{}{arg1})
+	fake.newValidatorMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *PPMFactory) NewValidatorCallCount() int {
+	fake.newValidatorMutex.RLock()
+	defer fake.newValidatorMutex.RUnlock()
+	return len(fake.newValidatorArgsForCall)
+}
+
+func (fake *PPMFactory) NewValidatorCalls(stub func(driver.PublicParameters) (driver.Validator, error)) {
+	fake.newValidatorMutex.Lock()
+	defer fake.newValidatorMutex.Unlock()
+	fake.NewValidatorStub = stub
+}
+
+func (fake *PPMFactory) NewValidatorArgsForCall(i int) driver.PublicParameters {
+	fake.newValidatorMutex.RLock()
+	defer fake.newValidatorMutex.RUnlock()
+	argsForCall := fake.newValidatorArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *PPMFactory) NewValidatorReturns(result1 driver.Validator, result2 error) {
+	fake.newValidatorMutex.Lock()
+	defer fake.newValidatorMutex.Unlock()
+	fake.NewValidatorStub = nil
+	fake.newValidatorReturns = struct {
+		result1 driver.Validator
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *PPMFactory) NewValidatorReturnsOnCall(i int, result1 driver.Validator, result2 error) {
+	fake.newValidatorMutex.Lock()
+	defer fake.newValidatorMutex.Unlock()
+	fake.NewValidatorStub = nil
+	if fake.newValidatorReturnsOnCall == nil {
+		fake.newValidatorReturnsOnCall = make(map[int]struct {
+			result1 driver.Validator
+			result2 error
+		})
+	}
+	fake.newValidatorReturnsOnCall[i] = struct {
+		result1 driver.Validator
 		result2 error
 	}{result1, result2}
 }

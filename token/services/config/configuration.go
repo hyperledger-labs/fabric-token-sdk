@@ -56,6 +56,11 @@ func (m *Configuration) Validate() error {
 	return nil
 }
 
+// SetValidators sets the validators for this configuration.
+func (m *Configuration) SetValidators(validators []Validator) {
+	m.validators = validators
+}
+
 func (m *Configuration) ID() driver.TMSID {
 	return m.tmsID
 }

@@ -122,8 +122,8 @@ func TestManager_Stop(t *testing.T) {
 func TestSelectorService_Shutdown(t *testing.T) {
 	t.Run("Shutdown stops all tracked managers", func(t *testing.T) {
 		svc := &SelectorService{}
-		m1 := &manager{cancel: func() {}, cleanerDone: make(chan struct{})}
-		m2 := &manager{cancel: func() {}, cleanerDone: make(chan struct{})}
+		m1 := &Manager{cancel: func() {}, cleanerDone: make(chan struct{})}
+		m2 := &Manager{cancel: func() {}, cleanerDone: make(chan struct{})}
 		close(m1.cleanerDone)
 		close(m2.cleanerDone)
 
@@ -133,7 +133,7 @@ func TestSelectorService_Shutdown(t *testing.T) {
 		// Must not panic.
 		svc.Shutdown()
 
-		assert.Nil(t, svc.managers, "managers slice cleared after Shutdown")
+		assert.Equal(t, 0, svc.ManagersCount(), "managers slice cleared after Shutdown")
 	})
 
 	t.Run("Shutdown is safe with no managers", func(t *testing.T) {

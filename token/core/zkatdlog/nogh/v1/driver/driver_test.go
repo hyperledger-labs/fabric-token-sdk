@@ -51,7 +51,7 @@ func TestNewDriver(t *testing.T) {
 	networkProvider := &mock2.NetworkProvider{}
 	vaultProvider := &mock2.VaultProvider{}
 
-	factory := driver.NewDriver(
+	factory := driver.NewTokenDriver(
 		metricsProvider,
 		noop.NewTracerProvider(),
 		configService,
@@ -76,7 +76,7 @@ func TestNewTokenService(t *testing.T) {
 	networkProvider := &mock2.NetworkProvider{}
 	vaultProvider := &mock2.VaultProvider{}
 
-	d := driver.NewDriver(
+	d := driver.NewTokenDriver(
 		metricsProvider,
 		noop.NewTracerProvider(),
 		configService,
@@ -179,35 +179,18 @@ func TestNewTokenService(t *testing.T) {
 
 // TestNewDefaultValidator tests the creation of a default zkatdlog validator.
 func TestNewDefaultValidator(t *testing.T) {
-	metricsProvider := &disabled.Provider{}
-	configService := &mock2.ConfigService{}
-	storageProvider := &imock.StorageProvider{}
-	identityProvider := &mock2.IdentityProvider{}
-	endpointService := &idmock.NetworkBinderService{}
-	networkProvider := &mock2.NetworkProvider{}
-	vaultProvider := &mock2.VaultProvider{}
-
-	d := driver.NewDriver(
-		metricsProvider,
-		noop.NewTracerProvider(),
-		configService,
-		storageProvider,
-		identityProvider,
-		endpointService,
-		networkProvider,
-		vaultProvider,
-	).Driver.(*driver.Driver)
+	d := driver.NewValidatorDriver().Driver
 
 	issuerPK := testingHelper(t)
 	pp, _ := setup.Setup(32, issuerPK, math3.FP256BN_AMCL)
 
 	// Case 1: Valid public parameters
-	v, err := d.NewDefaultValidator(pp)
+	v, err := d.NewValidator(pp)
 	require.NoError(t, err)
 	assert.NotNil(t, v)
 
 	// Case 2: Invalid public parameters type
-	v, err = d.NewDefaultValidator(&dmock.PublicParameters{})
+	v, err = d.NewValidator(&dmock.PublicParameters{})
 	require.Error(t, err)
 	assert.Nil(t, v)
 	assert.Contains(t, err.Error(), "invalid public parameters type")

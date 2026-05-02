@@ -10,113 +10,12 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	dmock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestVaultLedgerTokenLoaderWithCounterfeiter(t *testing.T) {
-	logger := &logging.MockLogger{}
-	ids := []*token.ID{{TxId: "tx1", Index: 0}}
-	ctx := context.Background()
-
-	t.Run("GetTokenOutputs_Success", func(t *testing.T) {
-		vault := &dmock.TokenVault{}
-		deserializer := &dmock.TokenDeserializer[string]{}
-		loader := NewLedgerTokenLoader[string](logger, nil, vault, deserializer)
-
-		vault.GetTokenOutputsReturns(nil)
-		vault.GetTokenOutputsCalls(func(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error {
-			return callback(ids[0], []byte("token-raw"))
-		})
-		deserializer.DeserializeTokenReturns("token-deserialized", nil)
-
-		res, err := loader.GetTokenOutputs(ctx, ids)
-		require.NoError(t, err)
-		assert.Equal(t, map[string]string{"tx1": "token-deserialized"}, res)
-	})
-
-	t.Run("GetTokenOutputs_EmptyBytes", func(t *testing.T) {
-		vault := &dmock.TokenVault{}
-		deserializer := &dmock.TokenDeserializer[string]{}
-		loader := NewLedgerTokenLoader[string](logger, nil, vault, deserializer)
-		loader.NumRetries = 1
-
-		vault.GetTokenOutputsCalls(func(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error {
-			return callback(ids[0], nil)
-		})
-		vault.IsPendingReturns(false, nil)
-
-		res, err := loader.GetTokenOutputs(ctx, ids)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed getting serialized token output for id [[tx1:0]], nil value")
-		assert.Nil(t, res)
-	})
-
-	t.Run("GetTokenOutputs_RetryOnPending", func(t *testing.T) {
-		vault := &dmock.TokenVault{}
-		deserializer := &dmock.TokenDeserializer[string]{}
-		loader := NewLedgerTokenLoader[string](logger, nil, vault, deserializer)
-		loader.NumRetries = 2
-		loader.RetryDelay = 1 * time.Millisecond
-
-		vault.GetTokenOutputsReturnsOnCall(0, errors.New("not found"))
-		vault.IsPendingReturnsOnCall(0, true, nil)
-
-		vault.GetTokenOutputsReturnsOnCall(1, nil)
-		vault.GetTokenOutputsCalls(func(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error {
-			if vault.GetTokenOutputsCallCount() == 2 {
-				return callback(ids[0], []byte("token-raw"))
-			}
-
-			return errors.New("not found")
-		})
-		deserializer.DeserializeTokenReturns("token-deserialized", nil)
-
-		res, err := loader.GetTokenOutputs(ctx, ids)
-		require.NoError(t, err)
-		assert.Equal(t, map[string]string{"tx1": "token-deserialized"}, res)
-		assert.Equal(t, 2, vault.GetTokenOutputsCallCount())
-	})
-
-	t.Run("GetTokenOutputs_DeserializationError", func(t *testing.T) {
-		vault := &dmock.TokenVault{}
-		deserializer := &dmock.TokenDeserializer[string]{}
-		loader := NewLedgerTokenLoader[string](logger, nil, vault, deserializer)
-		loader.NumRetries = 1
-
-		vault.GetTokenOutputsCalls(func(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error {
-			return callback(ids[0], []byte("invalid"))
-		})
-		deserializer.DeserializeTokenReturns("", errors.New("bad token"))
-		vault.IsPendingReturns(false, nil)
-
-		res, err := loader.GetTokenOutputs(ctx, ids)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "bad token")
-		assert.Nil(t, res)
-	})
-
-	t.Run("GetTokenOutputs_IsPendingError", func(t *testing.T) {
-		vault := &dmock.TokenVault{}
-		deserializer := &dmock.TokenDeserializer[string]{}
-		loader := NewLedgerTokenLoader[string](logger, nil, vault, deserializer)
-		loader.NumRetries = 1
-
-		vault.GetTokenOutputsReturns(errors.New("not found"))
-		vault.IsPendingReturns(false, errors.New("pending check failed"))
-
-		res, err := loader.GetTokenOutputs(ctx, ids)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "pending check failed")
-		assert.Nil(t, res)
-	})
-}
 
 func TestVaultLedgerTokenAndMetadataLoaderWithCounterfeiter(t *testing.T) {
 	ids := []*token.ID{{TxId: "tx1", Index: 0}}

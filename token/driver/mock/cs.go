@@ -285,12 +285,6 @@ func (fake *CertificationService) VerifyCertificationsReturnsOnCall(i int, resul
 func (fake *CertificationService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.certifyMutex.RLock()
-	defer fake.certifyMutex.RUnlock()
-	fake.newCertificationRequestMutex.RLock()
-	defer fake.newCertificationRequestMutex.RUnlock()
-	fake.verifyCertificationsMutex.RLock()
-	defer fake.verifyCertificationsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

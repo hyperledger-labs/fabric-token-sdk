@@ -119,6 +119,7 @@ func (p *SDK) Install() error {
 		// network service
 		p.Container().Provide(network.NewProvider),
 		p.Container().Provide(newTokenDriverService),
+		p.Container().Provide(newValidatorDriverService),
 		p.Container().Provide(
 			digutils.Identity[*network.Provider](),
 			dig.As(
@@ -226,6 +227,7 @@ func (p *SDK) Install() error {
 	err = errors2.Join(
 		digutils.Register[*kvs.KVS](p.Container()),
 		digutils.Register[*ftscore.TokenDriverService](p.Container()),
+		digutils.Register[*ftscore.ValidatorDriverService](p.Container()),
 		digutils.Register[*network.Provider](p.Container()),
 		digutils.Register[*token.ManagementServiceProvider](p.Container()),
 		digutils.Register[ttxdb.StoreServiceManager](p.Container()),

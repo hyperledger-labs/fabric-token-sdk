@@ -84,6 +84,10 @@ type Network interface {
 	// When the listener is invoked, then it is also removed.
 	AddFinalityListener(namespace string, txID string, listener FinalityListener) error
 
+	// GetTransactionStatus retrieves the current status and token request hash for a transaction.
+	// Returns the validation status, token request hash, status message, and any error encountered.
+	GetTransactionStatus(ctx context.Context, namespace, txID string) (status int, tokenRequestHash []byte, message string, err error)
+
 	// LookupTransferMetadataKey scans the ledger for metadata associated with a transfer action.
 	LookupTransferMetadataKey(namespace string, key string, timeout time.Duration) ([]byte, error)
 

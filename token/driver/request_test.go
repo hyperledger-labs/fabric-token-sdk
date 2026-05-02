@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"encoding/asn1"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
@@ -93,7 +94,7 @@ func TestTokenRequest_FromBytes_InvalidVersion(t *testing.T) {
 	req := &TokenRequest{}
 	err = req.FromBytes(raw)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid token request version")
+	assert.Contains(t, err.Error(), "unsupported token request version")
 }
 
 // TestTokenRequest_FromBytes_NilAction tests error handling for nil action
@@ -192,6 +193,9 @@ func TestTokenRequestSerialization(t *testing.T) {
 	req2 := &TokenRequest{}
 	err = req2.FromBytes(raw)
 	require.NoError(t, err)
+
+	// Version defaults to V2 for new requests
+	req.Version = ProtocolV2
 	assert.Equal(t, req, req2)
 }
 
@@ -1622,4 +1626,256 @@ func TestTokenRequestMetadata_ToProtos_WithEmptyMetadata(t *testing.T) {
 	proto, err := reqMeta.ToProtos()
 	require.NoError(t, err)
 	assert.Empty(t, proto.Metadata)
+}
+
+// TestMarshalToMessageToSign_V1 tests the V1 protocol signature message construction
+func TestMarshalToMessageToSign_V1(t *testing.T) {
+	tr := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1"), []byte("issue2")},
+		Transfers: [][]byte{[]byte("transfer1")},
+	}
+
+	anchor := []byte("test-anchor")
+	msg, err := tr.marshalToMessageToSignV1(anchor)
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+
+	// V1 should use simple concatenation
+	// The message should end with the anchor
+	assert.Greater(t, len(msg), len(anchor))
+	assert.Equal(t, anchor, msg[len(msg)-len(anchor):])
+}
+
+// TestMarshalToMessageToSign_V2_Success tests the V2 protocol signature message construction
+func TestMarshalToMessageToSign_V2_Success(t *testing.T) {
+	tr := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1"), []byte("issue2")},
+		Transfers: [][]byte{[]byte("transfer1")},
+	}
+
+	anchor := []byte("test-anchor")
+	msg, err := tr.marshalToMessageToSignV2(anchor)
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+
+	// V2 should use structured ASN.1 format
+	// The message should be different from V1
+	msgV1, err := tr.marshalToMessageToSignV1(anchor)
+	require.NoError(t, err)
+	assert.NotEqual(t, msgV1, msg, "V2 message should differ from V1")
+}
+
+// TestMarshalToMessageToSign_V2_EmptyAnchor tests V2 validation for empty anchor
+func TestMarshalToMessageToSign_V2_EmptyAnchor(t *testing.T) {
+	tr := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+	}
+
+	_, err := tr.marshalToMessageToSignV2([]byte{})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAnchorEmpty)
+}
+
+// TestMarshalToMessageToSign_V2_AnchorTooLarge tests V2 validation for oversized anchor
+func TestMarshalToMessageToSign_V2_AnchorTooLarge(t *testing.T) {
+	tr := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+	}
+
+	// Create anchor larger than MaxAnchorSize
+	largeAnchor := make([]byte, MaxAnchorSize+1)
+	_, err := tr.marshalToMessageToSignV2(largeAnchor)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAnchorTooLarge)
+}
+
+// TestMarshalToMessageToSign_V2_UniquenessProperty tests that different inputs produce different outputs
+func TestMarshalToMessageToSign_V2_UniquenessProperty(t *testing.T) {
+	tr1 := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+	}
+	tr2 := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue2")},
+		Transfers: [][]byte{[]byte("transfer2")},
+	}
+
+	anchor := []byte("test-anchor")
+
+	msg1, err := tr1.marshalToMessageToSignV2(anchor)
+	require.NoError(t, err)
+
+	msg2, err := tr2.marshalToMessageToSignV2(anchor)
+	require.NoError(t, err)
+
+	// Different requests should produce different messages
+	assert.NotEqual(t, msg1, msg2, "Different requests should produce different signature messages")
+}
+
+// TestMarshalToMessageToSign_V2_AnchorUniqueness tests that different anchors produce different outputs
+func TestMarshalToMessageToSign_V2_AnchorUniqueness(t *testing.T) {
+	tr := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+	}
+
+	anchor1 := []byte("anchor1")
+	anchor2 := []byte("anchor2")
+
+	msg1, err := tr.marshalToMessageToSignV2(anchor1)
+	require.NoError(t, err)
+
+	msg2, err := tr.marshalToMessageToSignV2(anchor2)
+	require.NoError(t, err)
+
+	// Different anchors should produce different messages
+	assert.NotEqual(t, msg1, msg2, "Different anchors should produce different signature messages")
+}
+
+// TestMarshalToMessageToSign_V1_V2_Difference tests that V1 and V2 produce different outputs
+func TestMarshalToMessageToSign_V1_V2_Difference(t *testing.T) {
+	tr := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1"), []byte("issue2")},
+		Transfers: [][]byte{[]byte("transfer1"), []byte("transfer2")},
+	}
+
+	anchor := []byte("test-anchor")
+
+	msgV1, err := tr.marshalToMessageToSignV1(anchor)
+	require.NoError(t, err)
+
+	msgV2, err := tr.marshalToMessageToSignV2(anchor)
+	require.NoError(t, err)
+
+	// V1 and V2 should produce different messages for the same input
+	assert.NotEqual(t, msgV1, msgV2, "V1 and V2 should produce different signature messages")
+}
+
+// TestMarshalToMessageToSign_V2_Deterministic tests that V2 is deterministic
+func TestMarshalToMessageToSign_V2_Deterministic(t *testing.T) {
+	tr := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+	}
+
+	anchor := []byte("test-anchor")
+
+	msg1, err := tr.marshalToMessageToSignV2(anchor)
+	require.NoError(t, err)
+
+	msg2, err := tr.marshalToMessageToSignV2(anchor)
+	require.NoError(t, err)
+
+	// Same input should always produce same output
+	assert.Equal(t, msg1, msg2, "V2 should be deterministic")
+}
+
+// TestTokenRequest_VersionPreservation tests that version is preserved during serialization
+func TestTokenRequest_VersionPreservation(t *testing.T) {
+	// Test V1 preservation
+	trV1 := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+		Version:   uint32(ProtocolV1),
+	}
+
+	bytes, err := trV1.Bytes()
+	require.NoError(t, err)
+
+	trV1Restored := &TokenRequest{}
+	err = trV1Restored.FromBytes(bytes)
+	require.NoError(t, err)
+	assert.Equal(t, uint32(ProtocolV1), trV1Restored.Version, "V1 version should be preserved")
+	assert.Equal(t, ProtocolV1, trV1Restored.getVersion(), "getVersion should return V1")
+
+	// Test V2 preservation
+	trV2 := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+		Version:   uint32(ProtocolV2),
+	}
+
+	bytes, err = trV2.Bytes()
+	require.NoError(t, err)
+
+	trV2Restored := &TokenRequest{}
+	err = trV2Restored.FromBytes(bytes)
+	require.NoError(t, err)
+	assert.Equal(t, uint32(ProtocolV2), trV2Restored.Version, "V2 version should be preserved")
+	assert.Equal(t, ProtocolV2, trV2Restored.getVersion(), "getVersion should return V2")
+
+	// Test default to V2 for new requests
+	trNew := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+		// Version not set (0)
+	}
+
+	bytes, err = trNew.Bytes()
+	require.NoError(t, err)
+
+	trNewRestored := &TokenRequest{}
+	err = trNewRestored.FromBytes(bytes)
+	require.NoError(t, err)
+	assert.Equal(t, uint32(ProtocolV2), trNewRestored.Version, "New requests should default to V2")
+	assert.Equal(t, ProtocolV2, trNewRestored.getVersion(), "getVersion should return V2 for new requests")
+}
+
+// TestMarshalToMessageToSign_V1_BackwardCompatibility verifies V1 produces same output as original implementation
+func TestMarshalToMessageToSign_V1_BackwardCompatibility(t *testing.T) {
+	tr := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1"), []byte("issue2")},
+		Transfers: [][]byte{[]byte("transfer1")},
+		Version:   uint32(ProtocolV1),
+	}
+
+	anchor := []byte("test-anchor")
+
+	// Get the new V1 implementation output
+	msgNew, err := tr.marshalToMessageToSignV1(anchor)
+	require.NoError(t, err)
+
+	// Simulate the ACTUAL original implementation (with 4 fields in struct)
+	// The original TokenRequest had Issues, Transfers, Signatures, AuditorSignatures
+	type oldTokenRequest struct {
+		Issues            [][]byte
+		Transfers         [][]byte
+		Signatures        [][]byte
+		AuditorSignatures []*AuditorSignature
+	}
+	bytesOld, err := asn1.Marshal(oldTokenRequest{Issues: tr.Issues, Transfers: tr.Transfers})
+	require.NoError(t, err)
+	msgOld := append(bytesOld, anchor...)
+
+	// They should be identical
+	assert.Equal(t, msgOld, msgNew, "V1 implementation should produce same output as original")
+}
+
+// TestMarshalToMessageToSign_V1_ExcludesVersion verifies Version field is not included in V1 marshaling
+func TestMarshalToMessageToSign_V1_ExcludesVersion(t *testing.T) {
+	// Create two requests with same Issues/Transfers but different Versions
+	tr1 := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+		Version:   uint32(ProtocolV1),
+	}
+
+	tr2 := &TokenRequest{
+		Issues:    [][]byte{[]byte("issue1")},
+		Transfers: [][]byte{[]byte("transfer1")},
+		Version:   uint32(ProtocolV2), // Different version
+	}
+
+	anchor := []byte("test-anchor")
+
+	// Both should produce the same V1 message (Version should not be included)
+	msg1, err := tr1.marshalToMessageToSignV1(anchor)
+	require.NoError(t, err)
+
+	msg2, err := tr2.marshalToMessageToSignV1(anchor)
+	require.NoError(t, err)
+
+	assert.Equal(t, msg1, msg2, "V1 marshaling should not include Version field")
 }

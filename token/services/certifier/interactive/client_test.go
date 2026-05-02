@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package interactive
+package interactive_test
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
@@ -90,13 +91,13 @@ func (f *fakeViewManager) InitiateView(v view.View) (interface{}, error) {
 	}
 
 	// Build a success result using the IDs from the CertificationRequestView.
-	crv, ok := v.(*CertificationRequestView)
+	crv, ok := v.(*interactive.CertificationRequestView)
 	if !ok {
 		return nil, errors.Errorf("unexpected view type %T", v)
 	}
 
-	result := make(map[*token.ID][]byte, len(crv.ids))
-	for _, id := range crv.ids {
+	result := make(map[*token.ID][]byte, len(interactive.CRVIDs(crv)))
+	for _, id := range interactive.CRVIDs(crv) {
 		result[id] = []byte("cert:" + id.TxId)
 	}
 
@@ -120,15 +121,15 @@ var _ = (*fakeViewManager).callCount
 // newTestClient creates a CertificationClient with defaults suitable for tests.
 func newTestClient(
 	t *testing.T,
-	vm ViewManager,
-	storage CertificationStorage,
+	vm interactive.ViewManager,
+	storage interactive.CertificationStorage,
 	batchSize int,
 	flushInterval time.Duration,
 	workers int,
-) *CertificationClient {
+) *interactive.CertificationClient {
 	t.Helper()
 
-	return NewCertificationClient(
+	return interactive.NewCertificationClient(
 		context.Background(),
 		"test-network",
 		"test-channel",
@@ -144,15 +145,15 @@ func newTestClient(
 		1000,
 		flushInterval,
 		workers,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 }
 
 // injectToken sends a token ID directly into the client's input channel.
 // This simulates what OnReceive does without going through the events system.
-func injectToken(cc *CertificationClient, id *token.ID) {
-	cc.tokens <- id
+func injectToken(cc *interactive.CertificationClient, id *token.ID) {
+	interactive.ClientTokensChan(cc) <- id
 }
 
 // --- tests ---
@@ -236,7 +237,7 @@ func TestCertificationClient_OnReceive_BufferFull_DoesNotBlock(t *testing.T) {
 	storage := newFakeCertificationStorage()
 
 	// batchSize=1000 and flushInterval=10min so tokens accumulate but are never batched.
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"net", "ch", "ns",
 		&fakeQueryEngine{},
@@ -249,7 +250,7 @@ func TestCertificationClient_OnReceive_BufferFull_DoesNotBlock(t *testing.T) {
 		2, // tiny buffer — fills immediately
 		10*time.Minute,
 		1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 	cc.Start()
@@ -280,7 +281,7 @@ func TestCertificationClient_PushbackNonBlocking(t *testing.T) {
 	vm := &fakeViewManager{failErr: errors.New("simulated failure")}
 	storage := newFakeCertificationStorage()
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"net", "ch", "ns",
 		&fakeQueryEngine{},
@@ -294,7 +295,7 @@ func TestCertificationClient_PushbackNonBlocking(t *testing.T) {
 		1, // bufferSize=1 — push-back will overflow
 		20*time.Millisecond,
 		1,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 	cc.Start()
@@ -327,7 +328,7 @@ func TestCertificationClient_MultipleWorkers(t *testing.T) {
 
 	storage := newFakeCertificationStorage()
 
-	cc := NewCertificationClient(
+	cc := interactive.NewCertificationClient(
 		context.Background(),
 		"net", "ch", "ns",
 		&fakeQueryEngine{},
@@ -340,7 +341,7 @@ func TestCertificationClient_MultipleWorkers(t *testing.T) {
 		1000,
 		5*time.Millisecond,
 		workers,
-		DefaultResponseTimeout,
+		interactive.DefaultResponseTimeout,
 		&disabled.Provider{},
 	)
 	cc.Start()
@@ -399,7 +400,7 @@ func TestCertificationClient_TimerResets_MultipleFlushes(t *testing.T) {
 
 // countingViewManager wraps a fakeViewManager and counts successful certifications.
 type countingViewManager struct {
-	inner   ViewManager
+	inner   interactive.ViewManager
 	counter *atomic.Int32
 }
 

@@ -29,18 +29,11 @@ type ListenerManager interface {
 }
 
 func NewListenerManagerProvider(fnsp *fabric.NetworkServiceProvider, tracerProvider trace.TracerProvider, keyTranslator translator.KeyTranslator, lmConfig config.ListenerManagerConfig) ListenerManagerProvider {
-	logger.Debugf("Create Lookup Listener Manager provider with config: %s", lmConfig)
-	switch lmConfig.Type() {
-	case config.Delivery:
-		return newEndorserDeliveryBasedLLMProvider(fnsp, tracerProvider, keyTranslator, events.DeliveryListenerManagerConfig{
-			MapperParallelism:       lmConfig.DeliveryMapperParallelism(),
-			BlockProcessParallelism: lmConfig.DeliveryBlockProcessParallelism(),
-			ListenerTimeout:         lmConfig.DeliveryListenerTimeout(),
-			LRUSize:                 lmConfig.DeliveryLRUSize(),
-			LRUBuffer:               lmConfig.DeliveryLRUBuffer(),
-		})
-	case config.Notification:
-		return nil
-	}
-	panic("unknown config type: " + lmConfig.Type())
+	return newEndorserDeliveryBasedLLMProvider(fnsp, tracerProvider, keyTranslator, events.DeliveryListenerManagerConfig{
+		MapperParallelism:       lmConfig.DeliveryMapperParallelism(),
+		BlockProcessParallelism: lmConfig.DeliveryBlockProcessParallelism(),
+		ListenerTimeout:         lmConfig.DeliveryListenerTimeout(),
+		LRUSize:                 lmConfig.DeliveryLRUSize(),
+		LRUBuffer:               lmConfig.DeliveryLRUBuffer(),
+	})
 }

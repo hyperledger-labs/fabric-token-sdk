@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/config"
 	"github.com/onsi/gomega"
 )
 
@@ -43,7 +42,6 @@ type Opts struct {
 	TokenSelector       string
 	FSCBasedEndorsement bool
 	ExtraTMSs           []TMSOpts
-	FinalityType        config.ManagerType
 }
 
 func SetDefaultParams(tms *topology.TMS, opts TMSOpts) {

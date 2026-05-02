@@ -28,8 +28,6 @@ type PPMFactory interface {
 	PPReader
 	// NewPublicParametersManager returns a new PublicParametersManager instance from the passed public parameters
 	NewPublicParametersManager(pp PublicParameters) (PublicParamsManager, error)
-	// DefaultValidator returns a new Validator instance from the passed public parameters
-	DefaultValidator(pp PublicParameters) (Validator, error)
 }
 
 // PublicParamsFetcher models a public parameters fetcher.

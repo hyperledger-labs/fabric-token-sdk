@@ -282,12 +282,6 @@ func (fake *TransferService) VerifyTransferReturnsOnCall(i int, result1 error) {
 func (fake *TransferService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.deserializeTransferActionMutex.RLock()
-	defer fake.deserializeTransferActionMutex.RUnlock()
-	fake.transferMutex.RLock()
-	defer fake.transferMutex.RUnlock()
-	fake.verifyTransferMutex.RLock()
-	defer fake.verifyTransferMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
