@@ -9,6 +9,7 @@ package role
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
@@ -120,15 +121,17 @@ type IssuerTokenVault interface {
 	// IssuedBalance returns the sum of amounts of non-deleted tokens issued by this node.
 	// If tokenType is non-empty, only tokens of that type are included.
 	// If issuerRaw is non-empty, only tokens issued by that identity are included.
-	IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw Identity) (uint64, error)
+	IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw Identity, from, to *time.Time) (uint64, error)
 	// ListRedeemedTokens returns issued tokens that were redeemed (spent via a Redeem action).
 	// If tokenType is non-empty, only tokens of that type are included.
 	// If issuerRaw is non-empty, only tokens issued by that identity are included.
-	ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw Identity) (*token.IssuedTokens, error)
+	// If from/to are non-nil, only tokens stored within that time range are included.
+	ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw Identity, from, to *time.Time, sortBy driver.SortField, sortDirection driver.SortDirection) (*token.IssuedTokens, error)
 	// RedeemedBalance returns the sum of amounts of redeemed tokens issued by this node.
 	// If tokenType is non-empty, only tokens of that type are included.
 	// If issuerRaw is non-empty, only tokens issued by that identity are included.
-	RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw Identity) (uint64, error)
+	// If from/to are non-nil, only tokens stored within that time range are included.
+	RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw Identity, from, to *time.Time) (uint64, error)
 }
 
 // IssuerWallet represents a wallet that manages a single issuer identity.
@@ -228,16 +231,16 @@ func (w *IssuerWallet) HistoryTokens(ctx context.Context, opts *driver.ListToken
 
 // IssuedBalance returns the total amount of non-redeemed tokens issued by
 // this wallet.
-func (w *IssuerWallet) IssuedBalance(ctx context.Context, opts *driver.ListTokensOptions) (uint64, error) {
+func (w *IssuerWallet) IssuedBalance(ctx context.Context, opts *driver.BalanceOpts) (uint64, error) {
 	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: issued balance, type [%s]", w.ID(), opts.TokenType)
 
-	return w.TokenVault.IssuedBalance(ctx, opts.TokenType, w.Identity)
+	return w.TokenVault.IssuedBalance(ctx, opts.TokenType, w.Identity, opts.From, opts.To)
 }
 
 // RedeemedTokens returns the list of redeemed tokens originally issued by this wallet.
 func (w *IssuerWallet) RedeemedTokens(ctx context.Context, opts *driver.ListTokensOptions) (*token.IssuedTokens, error) {
 	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: redeemed tokens, type [%s]", w.ID(), opts.TokenType)
-	source, err := w.TokenVault.ListRedeemedTokens(ctx, opts.TokenType, w.Identity)
+	source, err := w.TokenVault.ListRedeemedTokens(ctx, opts.TokenType, w.Identity, opts.From, opts.To, opts.SortBy, opts.SortDirection)
 	if err != nil {
 		return nil, errors.Wrap(err, "redeemed tokens query failed")
 	}
@@ -247,10 +250,32 @@ func (w *IssuerWallet) RedeemedTokens(ctx context.Context, opts *driver.ListToke
 
 // RedeemedBalance returns the total amount of redeemed tokens originally
 // issued by this wallet.
-func (w *IssuerWallet) RedeemedBalance(ctx context.Context, opts *driver.ListTokensOptions) (uint64, error) {
+func (w *IssuerWallet) RedeemedBalance(ctx context.Context, opts *driver.BalanceOpts) (uint64, error) {
 	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: redeemed balance, type [%s]", w.ID(), opts.TokenType)
 
-	return w.TokenVault.RedeemedBalance(ctx, opts.TokenType, w.Identity)
+	return w.TokenVault.RedeemedBalance(ctx, opts.TokenType, w.Identity, opts.From, opts.To)
+}
+
+// OutstandingBalance returns the net amount still in circulation:
+// IssuedBalance − RedeemedBalance.
+func (w *IssuerWallet) OutstandingBalance(ctx context.Context, opts *driver.BalanceOpts) (uint64, error) {
+	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: outstanding balance, type [%s]", w.ID(), opts.TokenType)
+
+	issued, err := w.IssuedBalance(ctx, opts)
+	if err != nil {
+		return 0, errors.Wrap(err, "outstanding balance: issued query failed")
+	}
+
+	redeemed, err := w.RedeemedBalance(ctx, opts)
+	if err != nil {
+		return 0, errors.Wrap(err, "outstanding balance: redeemed query failed")
+	}
+
+	if redeemed > issued {
+		return 0, errors.Errorf("outstanding balance: redeemed (%d) exceeds issued (%d)", redeemed, issued)
+	}
+
+	return issued - redeemed, nil
 }
 
 // filterTokens filters the source tokens by token type and wallet identity.
@@ -434,8 +459,7 @@ func (w *LongTermOwnerWallet) ListTokens(ctx context.Context, opts *driver.ListT
 }
 
 // Balance returns the on-chain balance for the wallet for the given token
-// type in the listing options. The result is returned as a *big.Int to support
-// arbitrary precision and prevent overflow.
+// type in the listing options.
 func (w *LongTermOwnerWallet) Balance(ctx context.Context, opts *driver.ListTokensOptions) (*big.Int, error) {
 	balance, err := w.TokenVault.Balance(ctx, w.WalletID, opts.TokenType)
 	if err != nil {

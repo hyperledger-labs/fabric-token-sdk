@@ -205,15 +205,17 @@ type TokenStore interface {
 	// IssuedBalance returns the sum of amounts of non-deleted tokens flagged as issued.
 	// If tokenType is non-empty, only tokens of that type are included.
 	// If issuerRaw is non-empty, only tokens issued by that identity are included.
-	IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity) (uint64, error)
+	IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time) (uint64, error)
 	// ListRedeemedTokens returns issued tokens that were spent by a Redeem action.
 	// If tokenType is non-empty, only tokens of that type are included.
 	// If issuerRaw is non-empty, only tokens issued by that identity are included.
-	ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity) (*token.IssuedTokens, error)
+	// If from/to are non-nil, only tokens stored within that time range are included.
+	ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time, sortBy driver.SortField, sortDirection driver.SortDirection) (*token.IssuedTokens, error)
 	// RedeemedBalance returns the sum of amounts of issued tokens spent by a Redeem action.
 	// If tokenType is non-empty, only tokens of that type are included.
 	// If issuerRaw is non-empty, only tokens issued by that identity are included.
-	RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity) (uint64, error)
+	// If from/to are non-nil, only tokens stored within that time range are included.
+	RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time) (uint64, error)
 	// GetTokenOutputs returns the value of the tokens as they appear on the ledger for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
 	GetTokenOutputs(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error

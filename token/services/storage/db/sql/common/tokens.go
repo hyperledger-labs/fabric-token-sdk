@@ -10,7 +10,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math/big"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -134,7 +133,7 @@ func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bo
 		Limit(1).
 		Format(db.ci)
 
-	id, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
+	id, err := common.QueryUnique[string](db.readDB, query, args...)
 
 	logger.DebugfContext(ctx, "token [%s:%d] is mine [%s]", txID, index, id)
 
@@ -367,16 +366,15 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	}), nil
 }
 
-// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
-// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
-func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (*big.Int, error) {
+// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
+func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (uint64, error) {
 	return db.balance(ctx, driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	})
 }
 
-func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (*big.Int, error) {
+func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (uint64, error) {
 	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
 	query, args := q.Select().FieldsByName("SUM(amount)").
 		From(tokenTable.Join(ownershipTable, cond.And(
@@ -386,20 +384,12 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 		Where(HasTokenDetails(opts, tokenTable)).
 		Format(db.ci)
 
-	var sum BigInt
-	err := db.readDB.QueryRowContext(ctx, query, args...).Scan(&sum)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return big.NewInt(0), nil
-		}
-
-		return nil, err
-	}
-	if sum.Int == nil {
-		return big.NewInt(0), nil
+	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
+	if err != nil || sum == nil {
+		return 0, err
 	}
 
-	return sum.Int, nil
+	return *sum, nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
@@ -614,13 +604,19 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 
 // IssuedBalance returns the sum of amounts of non-deleted tokens flagged as issued.
 // If tokenType is non-empty, only tokens of that type are included.
-func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity) (uint64, error) {
+func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time) (uint64, error) {
 	conds := []cond.Condition{cond.Eq("issuer", true), cond.Eq("is_deleted", false)}
 	if len(tokenType) != 0 {
 		conds = append(conds, cond.Eq("token_type", tokenType))
 	}
 	if len(issuerRaw) != 0 {
 		conds = append(conds, cond.Eq("issuer_raw", issuerRaw))
+	}
+	if from != nil {
+		conds = append(conds, cond.Gte("stored_at", from.UTC()))
+	}
+	if to != nil {
+		conds = append(conds, cond.Lte("stored_at", to.UTC()))
 	}
 	query, args := q.Select().
 		FieldsByName("SUM(amount)").
@@ -640,7 +636,7 @@ func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, i
 // ListRedeemedTokens returns issued tokens that were spent by a Redeem action.
 // It JOINs with the transactions table to identify tokens whose spent_by txID
 // has action_type = Redeem (2). If tokenType is non-empty, only tokens of that type are included.
-func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity) (*token.IssuedTokens, error) {
+func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time, sortBy tdriver.SortField, sortDirection tdriver.SortDirection) (*token.IssuedTokens, error) {
 	tokTable := q.Table(db.table.Tokens)
 	txTable := q.Table(db.table.Transactions)
 	conds := []cond.Condition{
@@ -649,12 +645,18 @@ func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Ty
 		cond.Eq("action_type", int(driver.Redeem)),
 	}
 	if len(tokenType) != 0 {
-		conds = append(conds, cond.Eq("token_type", tokenType))
+		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
 	}
 	if len(issuerRaw) != 0 {
 		conds = append(conds, cond.Eq("issuer_raw", issuerRaw))
 	}
-	query, args := q.Select().
+	if from != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), ">=", from.UTC()))
+	}
+	if to != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), "<=", to.UTC()))
+	}
+	sel := q.Select().
 		Fields(
 			tokTable.Field("tx_id"), tokTable.Field("idx"),
 			tokTable.Field("owner_raw"), tokTable.Field("token_type"),
@@ -662,8 +664,18 @@ func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Ty
 			tokTable.Field("is_deleted"), tokTable.Field("spent_by"),
 		).
 		From(tokTable.Join(txTable, cond.Cmp(tokTable.Field("spent_by"), "=", txTable.Field("tx_id")))).
-		Where(cond.And(conds...)).
-		Format(db.ci)
+		Where(cond.And(conds...))
+	var query string
+	var args []any
+	if sortBy == tdriver.SortByQuantity {
+		if sortDirection == tdriver.SortDescending {
+			query, args = sel.OrderBy(q.Desc(tokTable.Field("amount"))).Format(db.ci)
+		} else {
+			query, args = sel.OrderBy(q.Asc(tokTable.Field("amount"))).Format(db.ci)
+		}
+	} else {
+		query, args = sel.Format(db.ci)
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -684,7 +696,7 @@ func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Ty
 
 // RedeemedBalance returns the sum of amounts of issued tokens spent by a Redeem action.
 // If tokenType is non-empty, only tokens of that type are included.
-func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity) (uint64, error) {
+func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time) (uint64, error) {
 	tokTable := q.Table(db.table.Tokens)
 	txTable := q.Table(db.table.Transactions)
 	conds := []cond.Condition{
@@ -693,13 +705,19 @@ func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type,
 		cond.Eq("action_type", int(driver.Redeem)),
 	}
 	if len(tokenType) != 0 {
-		conds = append(conds, cond.Eq("token_type", tokenType))
+		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
 	}
 	if len(issuerRaw) != 0 {
 		conds = append(conds, cond.Eq("issuer_raw", issuerRaw))
 	}
+	if from != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), ">=", from.UTC()))
+	}
+	if to != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), "<=", to.UTC()))
+	}
 	query, args := q.Select().
-		FieldsByName("SUM(amount)").
+		FieldsByName(common3.FieldName("SUM(" + db.table.Tokens + ".amount)")).
 		From(tokTable.Join(txTable, cond.Cmp(tokTable.Field("spent_by"), "=", txTable.Field("tx_id")))).
 		Where(cond.And(conds...)).
 		Format(db.ci)
@@ -947,13 +965,7 @@ func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.Query
 	}
 
 	it := common.NewIterator(rows, func(td *driver.TokenDetails) error {
-		var amount BigInt
-		if err := rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &amount, &td.IsSpent, &td.SpentBy, &td.StoredAt); err != nil {
-			return err
-		}
-		td.Amount = amount.Int
-
-		return nil
+		return rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &td.Amount, &td.IsSpent, &td.SpentBy, &td.StoredAt)
 	})
 
 	return iterators.ReadAllValues(it)
@@ -1064,7 +1076,7 @@ func (db *TokenStore) PublicParams(ctx context.Context) ([]byte, error) {
 		Limit(1).
 		Format(db.ci)
 
-	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
 func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PPHash) ([]byte, error) {
@@ -1074,7 +1086,7 @@ func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PP
 		Where(cond.Eq("raw_hash", rawHash)).
 		Format(db.ci)
 
-	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
 func (db *TokenStore) StoreCertifications(ctx context.Context, certifications map[*token.ID][]byte) error {
@@ -1112,7 +1124,7 @@ func (db *TokenStore) ExistsCertification(ctx context.Context, tokenID *token.ID
 		Where(HasTokens("tx_id", "idx", tokenID)).
 		Format(db.ci)
 
-	certification, err := common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+	certification, err := common.QueryUnique[[]byte](db.readDB, query, args...)
 	if err != nil {
 		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
 
@@ -1194,7 +1206,7 @@ func (db *TokenStore) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL,
 			idx INT NOT NULL,
-			amount NUMERIC(78, 0) NOT NULL,
+			amount BIGINT NOT NULL,
 			token_type TEXT NOT NULL,
 			quantity TEXT NOT NULL,
 			issuer_raw BYTEA,

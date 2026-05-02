@@ -5,6 +5,7 @@ import (
 	"context"
 	"math/big"
 	"sync"
+	"time"
 
 	drivera "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
@@ -163,12 +164,14 @@ type FakeTokenStore struct {
 		result1 bool
 		result2 error
 	}
-	IssuedBalanceStub        func(context.Context, token.Type, drivera.Identity) (uint64, error)
+	IssuedBalanceStub        func(context.Context, token.Type, drivera.Identity, *time.Time, *time.Time) (uint64, error)
 	issuedBalanceMutex       sync.RWMutex
 	issuedBalanceArgsForCall []struct {
 		arg1 context.Context
 		arg2 token.Type
 		arg3 drivera.Identity
+		arg4 *time.Time
+		arg5 *time.Time
 	}
 	issuedBalanceReturns struct {
 		result1 uint64
@@ -205,12 +208,16 @@ type FakeTokenStore struct {
 		result1 *token.IssuedTokens
 		result2 error
 	}
-	ListRedeemedTokensStub        func(context.Context, token.Type, drivera.Identity) (*token.IssuedTokens, error)
+	ListRedeemedTokensStub        func(context.Context, token.Type, drivera.Identity, *time.Time, *time.Time, drivera.SortField, drivera.SortDirection) (*token.IssuedTokens, error)
 	listRedeemedTokensMutex       sync.RWMutex
 	listRedeemedTokensArgsForCall []struct {
 		arg1 context.Context
 		arg2 token.Type
 		arg3 drivera.Identity
+		arg4 *time.Time
+		arg5 *time.Time
+		arg6 drivera.SortField
+		arg7 drivera.SortDirection
 	}
 	listRedeemedTokensReturns struct {
 		result1 *token.IssuedTokens
@@ -328,12 +335,14 @@ type FakeTokenStore struct {
 		result1 []driver.TokenDetails
 		result2 error
 	}
-	RedeemedBalanceStub        func(context.Context, token.Type, drivera.Identity) (uint64, error)
+	RedeemedBalanceStub        func(context.Context, token.Type, drivera.Identity, *time.Time, *time.Time) (uint64, error)
 	redeemedBalanceMutex       sync.RWMutex
 	redeemedBalanceArgsForCall []struct {
 		arg1 context.Context
 		arg2 token.Type
 		arg3 drivera.Identity
+		arg4 *time.Time
+		arg5 *time.Time
 	}
 	redeemedBalanceReturns struct {
 		result1 uint64
@@ -1206,20 +1215,22 @@ func (fake *FakeTokenStore) IsMineReturnsOnCall(i int, result1 bool, result2 err
 	}{result1, result2}
 }
 
-func (fake *FakeTokenStore) IssuedBalance(arg1 context.Context, arg2 token.Type, arg3 drivera.Identity) (uint64, error) {
+func (fake *FakeTokenStore) IssuedBalance(arg1 context.Context, arg2 token.Type, arg3 drivera.Identity, arg4 *time.Time, arg5 *time.Time) (uint64, error) {
 	fake.issuedBalanceMutex.Lock()
 	ret, specificReturn := fake.issuedBalanceReturnsOnCall[len(fake.issuedBalanceArgsForCall)]
 	fake.issuedBalanceArgsForCall = append(fake.issuedBalanceArgsForCall, struct {
 		arg1 context.Context
 		arg2 token.Type
 		arg3 drivera.Identity
-	}{arg1, arg2, arg3})
+		arg4 *time.Time
+		arg5 *time.Time
+	}{arg1, arg2, arg3, arg4, arg5})
 	stub := fake.IssuedBalanceStub
 	fakeReturns := fake.issuedBalanceReturns
-	fake.recordInvocation("IssuedBalance", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("IssuedBalance", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.issuedBalanceMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1233,17 +1244,17 @@ func (fake *FakeTokenStore) IssuedBalanceCallCount() int {
 	return len(fake.issuedBalanceArgsForCall)
 }
 
-func (fake *FakeTokenStore) IssuedBalanceCalls(stub func(context.Context, token.Type, drivera.Identity) (uint64, error)) {
+func (fake *FakeTokenStore) IssuedBalanceCalls(stub func(context.Context, token.Type, drivera.Identity, *time.Time, *time.Time) (uint64, error)) {
 	fake.issuedBalanceMutex.Lock()
 	defer fake.issuedBalanceMutex.Unlock()
 	fake.IssuedBalanceStub = stub
 }
 
-func (fake *FakeTokenStore) IssuedBalanceArgsForCall(i int) (context.Context, token.Type, drivera.Identity) {
+func (fake *FakeTokenStore) IssuedBalanceArgsForCall(i int) (context.Context, token.Type, drivera.Identity, *time.Time, *time.Time) {
 	fake.issuedBalanceMutex.RLock()
 	defer fake.issuedBalanceMutex.RUnlock()
 	argsForCall := fake.issuedBalanceArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
 func (fake *FakeTokenStore) IssuedBalanceReturns(result1 uint64, result2 error) {
@@ -1401,20 +1412,24 @@ func (fake *FakeTokenStore) ListHistoryIssuedTokensReturnsOnCall(i int, result1 
 	}{result1, result2}
 }
 
-func (fake *FakeTokenStore) ListRedeemedTokens(arg1 context.Context, arg2 token.Type, arg3 drivera.Identity) (*token.IssuedTokens, error) {
+func (fake *FakeTokenStore) ListRedeemedTokens(arg1 context.Context, arg2 token.Type, arg3 drivera.Identity, arg4 *time.Time, arg5 *time.Time, arg6 drivera.SortField, arg7 drivera.SortDirection) (*token.IssuedTokens, error) {
 	fake.listRedeemedTokensMutex.Lock()
 	ret, specificReturn := fake.listRedeemedTokensReturnsOnCall[len(fake.listRedeemedTokensArgsForCall)]
 	fake.listRedeemedTokensArgsForCall = append(fake.listRedeemedTokensArgsForCall, struct {
 		arg1 context.Context
 		arg2 token.Type
 		arg3 drivera.Identity
-	}{arg1, arg2, arg3})
+		arg4 *time.Time
+		arg5 *time.Time
+		arg6 drivera.SortField
+		arg7 drivera.SortDirection
+	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
 	stub := fake.ListRedeemedTokensStub
 	fakeReturns := fake.listRedeemedTokensReturns
-	fake.recordInvocation("ListRedeemedTokens", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("ListRedeemedTokens", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
 	fake.listRedeemedTokensMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1428,17 +1443,17 @@ func (fake *FakeTokenStore) ListRedeemedTokensCallCount() int {
 	return len(fake.listRedeemedTokensArgsForCall)
 }
 
-func (fake *FakeTokenStore) ListRedeemedTokensCalls(stub func(context.Context, token.Type, drivera.Identity) (*token.IssuedTokens, error)) {
+func (fake *FakeTokenStore) ListRedeemedTokensCalls(stub func(context.Context, token.Type, drivera.Identity, *time.Time, *time.Time, drivera.SortField, drivera.SortDirection) (*token.IssuedTokens, error)) {
 	fake.listRedeemedTokensMutex.Lock()
 	defer fake.listRedeemedTokensMutex.Unlock()
 	fake.ListRedeemedTokensStub = stub
 }
 
-func (fake *FakeTokenStore) ListRedeemedTokensArgsForCall(i int) (context.Context, token.Type, drivera.Identity) {
+func (fake *FakeTokenStore) ListRedeemedTokensArgsForCall(i int) (context.Context, token.Type, drivera.Identity, *time.Time, *time.Time, drivera.SortField, drivera.SortDirection) {
 	fake.listRedeemedTokensMutex.RLock()
 	defer fake.listRedeemedTokensMutex.RUnlock()
 	argsForCall := fake.listRedeemedTokensArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6, argsForCall.arg7
 }
 
 func (fake *FakeTokenStore) ListRedeemedTokensReturns(result1 *token.IssuedTokens, result2 error) {
@@ -1974,20 +1989,22 @@ func (fake *FakeTokenStore) QueryTokenDetailsReturnsOnCall(i int, result1 []driv
 	}{result1, result2}
 }
 
-func (fake *FakeTokenStore) RedeemedBalance(arg1 context.Context, arg2 token.Type, arg3 drivera.Identity) (uint64, error) {
+func (fake *FakeTokenStore) RedeemedBalance(arg1 context.Context, arg2 token.Type, arg3 drivera.Identity, arg4 *time.Time, arg5 *time.Time) (uint64, error) {
 	fake.redeemedBalanceMutex.Lock()
 	ret, specificReturn := fake.redeemedBalanceReturnsOnCall[len(fake.redeemedBalanceArgsForCall)]
 	fake.redeemedBalanceArgsForCall = append(fake.redeemedBalanceArgsForCall, struct {
 		arg1 context.Context
 		arg2 token.Type
 		arg3 drivera.Identity
-	}{arg1, arg2, arg3})
+		arg4 *time.Time
+		arg5 *time.Time
+	}{arg1, arg2, arg3, arg4, arg5})
 	stub := fake.RedeemedBalanceStub
 	fakeReturns := fake.redeemedBalanceReturns
-	fake.recordInvocation("RedeemedBalance", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("RedeemedBalance", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.redeemedBalanceMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -2001,17 +2018,17 @@ func (fake *FakeTokenStore) RedeemedBalanceCallCount() int {
 	return len(fake.redeemedBalanceArgsForCall)
 }
 
-func (fake *FakeTokenStore) RedeemedBalanceCalls(stub func(context.Context, token.Type, drivera.Identity) (uint64, error)) {
+func (fake *FakeTokenStore) RedeemedBalanceCalls(stub func(context.Context, token.Type, drivera.Identity, *time.Time, *time.Time) (uint64, error)) {
 	fake.redeemedBalanceMutex.Lock()
 	defer fake.redeemedBalanceMutex.Unlock()
 	fake.RedeemedBalanceStub = stub
 }
 
-func (fake *FakeTokenStore) RedeemedBalanceArgsForCall(i int) (context.Context, token.Type, drivera.Identity) {
+func (fake *FakeTokenStore) RedeemedBalanceArgsForCall(i int) (context.Context, token.Type, drivera.Identity, *time.Time, *time.Time) {
 	fake.redeemedBalanceMutex.RLock()
 	defer fake.redeemedBalanceMutex.RUnlock()
 	argsForCall := fake.redeemedBalanceArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
 func (fake *FakeTokenStore) RedeemedBalanceReturns(result1 uint64, result2 error) {

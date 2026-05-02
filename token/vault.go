@@ -123,16 +123,16 @@ func (q *QueryEngine) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 	return q.qe.ListHistoryIssuedTokens(ctx)
 }
 
-func (q *QueryEngine) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity) (uint64, error) {
-	return q.qe.IssuedBalance(ctx, tokenType, issuerRaw)
+func (q *QueryEngine) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time) (uint64, error) {
+	return q.qe.IssuedBalance(ctx, tokenType, issuerRaw, from, to)
 }
 
-func (q *QueryEngine) ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity) (*token.IssuedTokens, error) {
-	return q.qe.ListRedeemedTokens(ctx, tokenType, issuerRaw)
+func (q *QueryEngine) ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time, sortBy driver.SortField, sortDirection driver.SortDirection) (*token.IssuedTokens, error) {
+	return q.qe.ListRedeemedTokens(ctx, tokenType, issuerRaw, from, to, sortBy, sortDirection)
 }
 
-func (q *QueryEngine) RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity) (uint64, error) {
-	return q.qe.RedeemedBalance(ctx, tokenType, issuerRaw)
+func (q *QueryEngine) RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time) (uint64, error) {
+	return q.qe.RedeemedBalance(ctx, tokenType, issuerRaw, from, to)
 }
 
 // PublicParams returns the public parameters stored in the vault

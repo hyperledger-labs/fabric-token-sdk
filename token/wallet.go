@@ -9,7 +9,7 @@ package token
 
 import (
 	"context"
-	"math/big"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -37,17 +37,6 @@ func WithType(tokenType token.Type) ListTokensOption {
 	}
 }
 
-<<<<<<< HEAD
-=======
-// WithContext return a list tokens option that contains the passed context
-func WithContext(ctx context.Context) ListTokensOption {
-	return func(o *ListTokensOptions) error {
-		o.Context = ctx
-
-		return nil
-	}
-}
-
 // WithSortBy returns a list token option that specifies the sort field and direction.
 func WithSortBy(field driver.SortField, dir driver.SortDirection) ListTokensOption {
 	return func(o *ListTokensOptions) error {
@@ -58,7 +47,36 @@ func WithSortBy(field driver.SortField, dir driver.SortDirection) ListTokensOpti
 	}
 }
 
->>>>>>> f26e9668 (Add sorting options to ListTokensOptions)
+// BalanceOpts contains options for balance queries (methods that return a scalar
+// total rather than a list of tokens). Sort fields are intentionally excluded
+// because the result is a single number.
+type BalanceOpts = driver.BalanceOpts
+
+// BalanceOption is a functional option that configures a BalanceOpts struct.
+// Use WithBalanceTokenType and WithTimeRange to construct values.
+type BalanceOption func(*BalanceOpts) error
+
+// WithBalanceTokenType returns a BalanceOption that restricts the balance
+// computation to the given token type. An empty token type means all types.
+func WithBalanceTokenType(tokenType token.Type) BalanceOption {
+	return func(o *BalanceOpts) error {
+		o.TokenType = tokenType
+
+		return nil
+	}
+}
+
+// WithTimeRange returns a balance option that restricts the computation to
+// tokens stored within [from, to]. Nil values are treated as unbounded.
+func WithTimeRange(from, to *time.Time) BalanceOption {
+	return func(o *BalanceOpts) error {
+		o.From = from
+		o.To = to
+
+		return nil
+	}
+}
+
 type IdentityConfiguration = driver.IdentityConfiguration
 
 // WalletManager defines the interface for managing wallets.
@@ -313,16 +331,15 @@ func (o *OwnerWallet) ListUnspentTokensIterator(ctx context.Context, opts ...Lis
 	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
-// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
-// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
-func (o *OwnerWallet) Balance(ctx context.Context, opts ...ListTokensOption) (*big.Int, error) {
-	compiledOpts, err := CompileListTokensOption(opts...)
+// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
+func (o *OwnerWallet) Balance(ctx context.Context, opts ...BalanceOption) (uint64, error) {
+	compiledOpts, err := CompileBalanceOption(opts...)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	sum, err := o.w.Balance(ctx, compiledOpts)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	return sum, nil
@@ -372,9 +389,9 @@ func (i *IssuerWallet) ListIssuedTokens(ctx context.Context, opts ...ListTokensO
 }
 
 // IssuedBalance returns the total amount of non-redeemed tokens issued by this wallet.
-// Options: WithType
-func (i *IssuerWallet) IssuedBalance(ctx context.Context, opts ...ListTokensOption) (uint64, error) {
-	compiledOpts, err := CompileListTokensOption(opts...)
+// Options: WithBalanceTokenType, WithTimeRange
+func (i *IssuerWallet) IssuedBalance(ctx context.Context, opts ...BalanceOption) (uint64, error) {
+	compiledOpts, err := CompileBalanceOption(opts...)
 	if err != nil {
 		return 0, err
 	}
@@ -394,14 +411,25 @@ func (i *IssuerWallet) ListRedeemedTokens(ctx context.Context, opts ...ListToken
 }
 
 // RedeemedBalance returns the total amount of redeemed tokens originally issued by this wallet.
-// Options: WithType
-func (i *IssuerWallet) RedeemedBalance(ctx context.Context, opts ...ListTokensOption) (uint64, error) {
-	compiledOpts, err := CompileListTokensOption(opts...)
+// Options: WithBalanceTokenType, WithTimeRange
+func (i *IssuerWallet) RedeemedBalance(ctx context.Context, opts ...BalanceOption) (uint64, error) {
+	compiledOpts, err := CompileBalanceOption(opts...)
 	if err != nil {
 		return 0, err
 	}
 
 	return i.w.RedeemedBalance(ctx, compiledOpts)
+}
+
+// OutstandingBalance returns the net amount still in circulation: IssuedBalance − RedeemedBalance.
+// Options: WithBalanceTokenType, WithTimeRange
+func (i *IssuerWallet) OutstandingBalance(ctx context.Context, opts ...BalanceOption) (uint64, error) {
+	compiledOpts, err := CompileBalanceOption(opts...)
+	if err != nil {
+		return 0, err
+	}
+
+	return i.w.OutstandingBalance(ctx, compiledOpts)
 }
 
 func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOptions, error) {
@@ -413,13 +441,21 @@ func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOption
 	}
 
 	return &driver.ListTokensOptions{
-<<<<<<< HEAD
-		TokenType: txOptions.TokenType,
-=======
 		TokenType:     txOptions.TokenType,
-		Context:       txOptions.Context,
 		SortBy:        txOptions.SortBy,
 		SortDirection: txOptions.SortDirection,
->>>>>>> f26e9668 (Add sorting options to ListTokensOptions)
 	}, nil
+}
+
+// CompileBalanceOption compiles variadic BalanceOption values into a single
+// BalanceOpts struct ready to be passed to a driver-level balance method.
+func CompileBalanceOption(opts ...BalanceOption) (*driver.BalanceOpts, error) {
+	bo := &driver.BalanceOpts{}
+	for _, opt := range opts {
+		if err := opt(bo); err != nil {
+			return nil, err
+		}
+	}
+
+	return bo, nil
 }
