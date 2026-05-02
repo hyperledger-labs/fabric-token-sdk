@@ -220,6 +220,46 @@ func (w *IssuerWallet) HistoryTokens(ctx context.Context, opts *driver.ListToken
 	return unspentTokens, nil
 }
 
+// IssuedBalance returns the total amount of non-redeemed tokens issued by
+// this wallet.
+func (w *IssuerWallet) IssuedBalance(ctx context.Context, opts *driver.ListTokensOptions) (uint64, error) {
+	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: issued balance, type [%s]", w.ID(), opts.TokenType)
+	return w.TokenVault.IssuedBalance(ctx)
+}
+
+// RedeemedTokens returns the list of redeemed tokens originally issued by this wallet.
+func (w *IssuerWallet) RedeemedTokens(ctx context.Context, opts *driver.ListTokensOptions) (*token.IssuedTokens, error) {
+	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: redeemed tokens, type [%s]", w.ID(), opts.TokenType)
+	source, err := w.TokenVault.ListRedeemedTokens(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "redeemed tokens query failed")
+	}
+
+	return w.filterTokens(ctx, source, opts), nil
+}
+
+// RedeemedBalance returns the total amount of redeemed tokens originally
+// issued by this wallet.
+func (w *IssuerWallet) RedeemedBalance(ctx context.Context, opts *driver.ListTokensOptions) (uint64, error) {
+	w.Logger.DebugfContext(ctx, "issuer wallet [%s]: redeemed balance, type [%s]", w.ID(), opts.TokenType)
+	return w.TokenVault.RedeemedBalance(ctx)
+}
+
+// filterTokens filters the source tokens by token type and wallet identity.
+func (w *IssuerWallet) filterTokens(ctx context.Context, source *token.IssuedTokens, opts *driver.ListTokensOptions) *token.IssuedTokens {
+	result := &token.IssuedTokens{}
+	for _, t := range source.Tokens {
+		if len(opts.TokenType) != 0 && t.Type != opts.TokenType {
+			continue
+		}
+		if !w.Contains(ctx, t.Issuer) {
+			continue
+		}
+		result.Tokens = append(result.Tokens, t)
+	}
+	return result
+}
+
 // CertifierWallet represents a wallet bounded to a single certifier
 // identity. It provides access to a signer and exposes whether a given
 // identity is the certifier for this wallet.
