@@ -117,6 +117,12 @@ func (w *AuditorWallet) GetSigner(ctx context.Context, identity Identity) (Signe
 //go:generate counterfeiter -o mock/itv.go -fake-name IssuerTokenVault . IssuerTokenVault
 type IssuerTokenVault interface {
 	ListHistoryIssuedTokens(context.Context) (*token.IssuedTokens, error)
+	// IssuedBalance returns the sum of amounts of non-deleted tokens issued by this node.
+	IssuedBalance(ctx context.Context) (uint64, error)
+	// ListRedeemedTokens returns issued tokens that were redeemed (spent via a Redeem action).
+	ListRedeemedTokens(ctx context.Context) (*token.IssuedTokens, error)
+	// RedeemedBalance returns the sum of amounts of redeemed tokens issued by this node.
+	RedeemedBalance(ctx context.Context) (uint64, error)
 }
 
 // IssuerWallet represents a wallet that manages a single issuer identity.
