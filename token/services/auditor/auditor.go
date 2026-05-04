@@ -158,6 +158,7 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks with retry", tx.ID())
 	if err := a.acquireLocksWithRetry(ctx, string(request.Anchor), eids); err != nil {
 		a.metrics.AuditLockConflicts.Add(1)
+
 		return nil, nil, err
 	}
 
@@ -173,7 +174,7 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids []string) error {
 	var lastErr error
 
-	for attempt := 0; attempt < maxLockRetries; attempt++ {
+	for attempt := range maxLockRetries {
 		// Attempt to acquire locks
 		err := a.auditDB.AcquireLocks(ctx, anchor, eids...)
 		if err == nil {
@@ -181,6 +182,7 @@ func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids
 			if attempt > 0 {
 				logger.DebugfContext(ctx, "Lock acquisition succeeded on attempt %d for anchor [%s]", attempt+1, anchor)
 			}
+
 			return nil
 		}
 
@@ -202,6 +204,7 @@ func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids
 		select {
 		case <-ctx.Done():
 			timer.Stop()
+
 			return errors.WithMessagef(ctx.Err(), "lock acquisition cancelled during backoff after %d attempts for anchor [%s]", attempt+1, anchor)
 		case <-timer.C:
 			// Continue to next retry attempt
