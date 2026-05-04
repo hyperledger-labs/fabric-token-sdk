@@ -1,47 +1,52 @@
 /*
 Copyright IBM Corp. All Rights Reserved.
-
 SPDX-License-Identifier: Apache-2.0
 */
 
 package session
 
-import (
-	"context"
-	"time"
+//go:generate counterfeiter -o mock/json_session.go -fake-name JsonSession . JsonSession
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/session"
+import (
+	"encoding/json"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	session "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/session"
 )
 
-type Session = view.Session
+// JSONMarshaller is the default JSON marshaller.
+type JSONMarshaller struct{}
 
-type JsonSession interface {
-	Info() view.SessionInfo
-	Send(payload any) error
-	SendRaw(ctx context.Context, raw []byte) error
-	SendWithContext(ctx context.Context, payload any) error
-	SendError(error string) error
-	SendErrorWithContext(ctx context.Context, error string) error
-	Receive(state interface{}) error
-	ReceiveWithTimeout(state interface{}, d time.Duration) error
-	ReceiveRaw() ([]byte, error)
-	ReceiveRawWithTimeout(d time.Duration) ([]byte, error)
-	Session() Session
+func (JSONMarshaller) Marshal(v any) ([]byte, error) {
+	return json.Marshal(v)
 }
 
-func NewJSON(context view.Context, caller view.View, party view.Identity) (JsonSession, error) {
-	return session.NewJSON(context, caller, party)
+func (JSONMarshaller) Unmarshal(data []byte, v any) error {
+	return json.Unmarshal(data, v)
 }
 
-func NewFromInitiator(context view.Context, party view.Identity) (JsonSession, error) {
-	return session.NewFromInitiator(context, party)
+func NewJSON(viewCtx view.Context, caller view.View, party view.Identity) (*session.S, error) {
+	s, err := viewCtx.GetSession(caller, party)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewFromSession(viewCtx, s), nil
 }
 
-func NewFromSession(context view.Context, s Session) JsonSession {
-	return session.NewFromSession(context, s)
+func NewFromInitiator(viewCtx view.Context, party view.Identity) (*session.S, error) {
+	s, err := viewCtx.GetSession(viewCtx.Initiator(), party)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewFromSession(viewCtx, s), nil
 }
 
-func JSON(context view.Context) JsonSession {
-	return session.JSON(context)
+func NewFromSession(viewCtx view.Context, s view.Session) *session.S {
+	return session.New(s, viewCtx.Context(), JSONMarshaller{})
+}
+
+func JSON(viewCtx view.Context) *session.S {
+	return session.New(viewCtx.Session(), viewCtx.Context(), JSONMarshaller{})
 }

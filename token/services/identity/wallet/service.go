@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -100,29 +101,32 @@ func (s *Service) GetEIDAndRH(ctx context.Context, identity tdriver.Identity, au
 // RegisterRecipientIdentity registers the passed identity as a third-party recipient identity.
 // The function performs these steps:
 //   - validate the input
+//   - match the identity against the provided audit info using the Deserializer (before any provider registration)
 //   - ask the IdentityProvider to register the recipient identity
-//   - match the identity against the provided audit info using the Deserializer
-//   - obtain the owner verifier and register it with the IdentityProvider
 //   - store the recipient data via the IdentityProvider
+//
+// If RegisterRecipientData fails after RegisterRecipientIdentity succeeds, the IdentityProvider
+// may implement identity.RecipientRegistrationRollback so partial registration can be undone.
 func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *tdriver.RecipientData) error {
 	if data == nil {
 		return errors.Wrapf(ErrNilRecipientData, "invalid recipient data")
 	}
 
-	// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
+	s.Logger.DebugfContext(ctx, "register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
+
+	if err := s.Deserializer.MatchIdentity(ctx, data.Identity, data.AuditInfo); err != nil {
+		return errors.Wrapf(err, "failed to match identity to audit information for [%s]:[%s]", data.Identity, utils.Hashable(data.AuditInfo))
+	}
+
 	if err := s.IdentityProvider.RegisterRecipientIdentity(ctx, data.Identity); err != nil {
 		return errors.Wrapf(err, "failed to register recipient identity")
 	}
 
-	s.Logger.DebugfContext(ctx, "register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
-
-	// match identity and audit info
-	err := s.Deserializer.MatchIdentity(ctx, data.Identity, data.AuditInfo)
-	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s]:[%s]", data.Identity, utils.Hashable(data.AuditInfo))
-	}
-
 	if err := s.IdentityProvider.RegisterRecipientData(ctx, data); err != nil {
+		if rb, ok := s.IdentityProvider.(identity.RecipientRegistrationRollback); ok {
+			rb.RollbackPartialRecipientRegistration(ctx, data.Identity)
+		}
+
 		return errors.Wrapf(err, "failed registering audit info for owner [%s]", data.Identity)
 	}
 

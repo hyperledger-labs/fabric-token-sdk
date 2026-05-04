@@ -8,13 +8,13 @@ package ttx
 
 import (
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	utilsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/session"
 )
 
 // ReceiveTransactionView is a view to read a transaction from the context's session.
@@ -50,8 +50,7 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	jsonSession := jsession.JSON(context)
 	msg, err := jsonSession.ReceiveRawWithTimeout(options.Timeout)
 	if err != nil {
-		// TODO: replace this with a check of a typed error
-		if strings.Contains(err.Error(), "time out reached") {
+		if errors.Is(err, utilsession.ErrTimeout) {
 			return nil, errors.Join(err, ErrTimeout)
 		}
 		logger.ErrorfContext(context.Context(), err.Error())

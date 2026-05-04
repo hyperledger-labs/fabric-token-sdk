@@ -24,6 +24,8 @@ import (
 var (
 	// This makes sure that Provider implements driver.IdentityProvider
 	_ driver.IdentityProvider = &Provider{}
+	// This makes sure that Provider can roll back partial recipient registration
+	_ RecipientRegistrationRollback = &Provider{}
 )
 
 // StorageProvider returns storage services scoped to a specific token
@@ -225,6 +227,13 @@ func (p *Provider) RegisterRecipientIdentity(ctx context.Context, id driver.Iden
 	p.isMeCache.Add(id.UniqueID(), false)
 
 	return nil
+}
+
+// RollbackPartialRecipientRegistration clears in-memory marks written by
+// RegisterRecipientIdentity when RegisterRecipientData did not complete.
+func (p *Provider) RollbackPartialRecipientRegistration(ctx context.Context, id driver.Identity) {
+	p.Logger.DebugfContext(ctx, "rolling back partial recipient registration for identity [%s]", id)
+	p.isMeCache.Delete(id.UniqueID())
 }
 
 // RegisterIdentityDescriptor stores the given identity descriptor in the configured storage.

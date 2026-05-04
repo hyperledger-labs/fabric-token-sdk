@@ -13,6 +13,7 @@ import (
 	math "github.com/IBM/mathlib"
 	bls12381fr "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -212,8 +213,8 @@ func TestNativeFromZrToZrRoundTripBLS12381(t *testing.T) {
 	// Convert to native and back
 	switch curve.GroupOrder.CurveID() {
 	case math.BLS12_381, math.BLS12_381_GURVY, math.BLS12_381_BBS, math.BLS12_381_BBS_GURVY:
-		native := nativeFromZr[bls12381fr.Element, *bls12381fr.Element](original)
-		recovered := nativeToZr[bls12381fr.Element, *bls12381fr.Element](native, curve)
+		native := math2.NativeFromZr[bls12381fr.Element, *bls12381fr.Element](original)
+		recovered := math2.NativeToZr[bls12381fr.Element, *bls12381fr.Element](native, curve)
 		assert.True(t, original.Equals(recovered), "round-trip conversion should preserve value")
 	}
 }
@@ -232,8 +233,8 @@ func TestNativeFromZrToZrRoundTripBN254(t *testing.T) {
 	// Convert to native and back
 	switch curve.GroupOrder.CurveID() {
 	case math.BN254:
-		native := nativeFromZr[bn254fr.Element, *bn254fr.Element](original)
-		recovered := nativeToZr[bn254fr.Element, *bn254fr.Element](native, curve)
+		native := math2.NativeFromZr[bn254fr.Element, *bn254fr.Element](original)
+		recovered := math2.NativeToZr[bn254fr.Element, *bn254fr.Element](native, curve)
 		assert.True(t, original.Equals(recovered), "round-trip conversion should preserve value")
 	}
 }
@@ -251,10 +252,10 @@ func TestNativeBatchInverseBLS12381(t *testing.T) {
 	elems := make([]*bls12381fr.Element, n)
 	for i := range elems {
 		zr := curve.NewRandomZr(rand)
-		elems[i] = nativeFromZr[bls12381fr.Element, *bls12381fr.Element](zr)
+		elems[i] = math2.NativeFromZr[bls12381fr.Element, *bls12381fr.Element](zr)
 	}
 
-	invs := nativeBatchInverse[bls12381fr.Element, *bls12381fr.Element](elems)
+	invs := math2.NativeBatchInverse[bls12381fr.Element, *bls12381fr.Element](elems)
 	require.Len(t, invs, n)
 
 	// Verify each inverse
@@ -282,10 +283,10 @@ func TestNativeBatchInverseBN254(t *testing.T) {
 	elems := make([]*bn254fr.Element, n)
 	for i := range elems {
 		zr := curve.NewRandomZr(rand)
-		elems[i] = nativeFromZr[bn254fr.Element, *bn254fr.Element](zr)
+		elems[i] = math2.NativeFromZr[bn254fr.Element, *bn254fr.Element](zr)
 	}
 
-	invs := nativeBatchInverse[bn254fr.Element, *bn254fr.Element](elems)
+	invs := math2.NativeBatchInverse[bn254fr.Element, *bn254fr.Element](elems)
 	require.Len(t, invs, n)
 
 	// Verify each inverse
@@ -306,7 +307,7 @@ func TestNativeBatchInverseBN254(t *testing.T) {
 // Then the result should be nil.
 func TestNativeBatchInverseEmpty(t *testing.T) {
 	var elems []*bls12381fr.Element
-	invs := nativeBatchInverse[bls12381fr.Element, *bls12381fr.Element](elems)
+	invs := math2.NativeBatchInverse[bls12381fr.Element, *bls12381fr.Element](elems)
 	assert.Nil(t, invs, "batch inverse of empty slice should return nil")
 }
 
@@ -320,10 +321,10 @@ func TestNativeBatchInverseSingle(t *testing.T) {
 	require.NoError(t, err)
 
 	zr := curve.NewRandomZr(rand)
-	elem := nativeFromZr[bls12381fr.Element, *bls12381fr.Element](zr)
+	elem := math2.NativeFromZr[bls12381fr.Element, *bls12381fr.Element](zr)
 	elems := []*bls12381fr.Element{elem}
 
-	invs := nativeBatchInverse[bls12381fr.Element, *bls12381fr.Element](elems)
+	invs := math2.NativeBatchInverse[bls12381fr.Element, *bls12381fr.Element](elems)
 	require.Len(t, invs, 1)
 
 	var prod bls12381fr.Element
@@ -343,8 +344,8 @@ func TestNativeConversionZeroValue(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	zero := curve.NewZrFromInt(0)
 
-	native := nativeFromZr[bn254fr.Element, *bn254fr.Element](zero)
-	recovered := nativeToZr[bn254fr.Element, *bn254fr.Element](native, curve)
+	native := math2.NativeFromZr[bn254fr.Element, *bn254fr.Element](zero)
+	recovered := math2.NativeToZr[bn254fr.Element, *bn254fr.Element](native, curve)
 
 	assert.True(t, zero.Equals(recovered), "zero value should round-trip correctly")
 }
@@ -357,8 +358,8 @@ func TestNativeConversionOneValue(t *testing.T) {
 	curve := math.Curves[math.BN254]
 	one := curve.NewZrFromInt(1)
 
-	native := nativeFromZr[bn254fr.Element, *bn254fr.Element](one)
-	recovered := nativeToZr[bn254fr.Element, *bn254fr.Element](native, curve)
+	native := math2.NativeFromZr[bn254fr.Element, *bn254fr.Element](one)
+	recovered := math2.NativeToZr[bn254fr.Element, *bn254fr.Element](native, curve)
 
 	assert.True(t, one.Equals(recovered), "one value should round-trip correctly")
 }
@@ -376,8 +377,8 @@ func TestNativeConversionLargeValue(t *testing.T) {
 	largeInt.Sub(largeInt, big.NewInt(1))
 	large := curve.NewZrFromBytes(largeInt.Bytes())
 
-	native := nativeFromZr[bn254fr.Element, *bn254fr.Element](large)
-	recovered := nativeToZr[bn254fr.Element, *bn254fr.Element](native, curve)
+	native := math2.NativeFromZr[bn254fr.Element, *bn254fr.Element](large)
+	recovered := math2.NativeToZr[bn254fr.Element, *bn254fr.Element](native, curve)
 
 	assert.True(t, large.Equals(recovered), "large value should round-trip correctly")
 }
