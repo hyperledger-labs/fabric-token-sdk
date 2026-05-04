@@ -216,6 +216,13 @@ func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescr
 		if err := p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
 			return errors.Wrapf(err, "failed to register identity descriptor")
 		}
+		// StoreSignerInfo marks this identity as "mine" in the DB so that IsMe() returns true
+		// even after a process restart (GetExistingSignerInfo only sees identities written here).
+		if identityDescriptor.Signer != nil {
+			if err := p.storage.StoreSignerInfo(ctx, identityDescriptor.Identity, identityDescriptor.SignerInfo); err != nil {
+				return errors.Wrapf(err, "failed to store signer info for identity descriptor")
+			}
+		}
 	}
 
 	// update caches
