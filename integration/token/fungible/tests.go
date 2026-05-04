@@ -445,6 +445,12 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[:10], &t0, &t12)
 	CheckSpending(network, bob, "", "USD", auditor, 11)
 
+	// Verify issuer balance APIs after issue + redeem cycle.
+	// Default issuer wallet issued 110 + 10 (withdraw) + 10 (post-redeem) = 130 USD; redeemed 11 USD.
+	CheckIssuedBalance(network, issuer, "", "USD", 130)
+	CheckRedeemedBalance(network, issuer, "", "USD", 11)
+	CheckOutstandingBalance(network, issuer, "", "USD", 119)
+
 	// test multi action transfer...
 	t13 := time.Now()
 	IssueCash(network, "", "LIRA", 3, alice, auditor, true, issuer)
@@ -505,6 +511,16 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	gomega.Expect(h.Count()).To(gomega.BeNumerically(">", 0))
 	gomega.Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(180))).To(gomega.BeEquivalentTo(0))
 	gomega.Expect(h.ByType("EUR").Count()).To(gomega.BeEquivalentTo(h.Count()))
+
+	// Verify issuer balances after all issue and redeem operations.
+	// Default issuer: 241 USD issued, 21 redeemed (11 + 10).
+	CheckIssuedBalance(network, issuer, "", "USD", 241)
+	CheckRedeemedBalance(network, issuer, "", "USD", 21)
+	CheckOutstandingBalance(network, issuer, "", "USD", 220)
+	// New issuer wallet: 180 EUR issued, 0 redeemed.
+	CheckIssuedBalance(network, issuer, "newIssuerWallet", "EUR", 180)
+	CheckRedeemedBalance(network, issuer, "newIssuerWallet", "EUR", 0)
+	CheckOutstandingBalance(network, issuer, "newIssuerWallet", "EUR", 180)
 
 	CheckBalanceAndHolding(network, issuer, "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, issuer, "", "EUR", 150, auditor)
