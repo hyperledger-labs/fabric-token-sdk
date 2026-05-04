@@ -77,6 +77,7 @@ func (p *SDK) Install() error {
 			registry.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{}),
 			registry.RegisterFactory("PolicyLock", &views.PolicyLockViewFactory{}),
 			registry.RegisterFactory("PolicySpend", &views.PolicySpendViewFactory{}),
+			registry.RegisterFactory("PolicyOwnedBalance", &views.PolicyOwnedBalanceViewFactory{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigLockView{}),
 			registry.RegisterResponder(&views.AcceptCashView{}, &views.MultiSigSpendView{}),
 			registry.RegisterResponder(&views.MultiSigAcceptSpendView{}, &multisig.RequestSpendView{}),

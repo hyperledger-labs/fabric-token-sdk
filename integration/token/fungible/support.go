@@ -301,6 +301,26 @@ func CheckBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeR
 	}).WithArguments(network, ref, wallet, typ, expected, tmsID).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
 }
 
+func CheckPolicyOwnedBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
+	CheckPolicyOwnedBalanceForTMSID(network, ref, wallet, typ, expected, nil)
+}
+
+func CheckPolicyOwnedBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, tmsID *token2.TMSID) {
+	res, err := network.Client(ref.ReplicaName()).CallView("PolicyOwnedBalance", common.JSONMarshall(&views.PolicyOwnedBalanceQuery{
+		Wallet: wallet,
+		Type:   typ,
+		TMSID:  tmsID,
+	}))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	b := &views.Balance{}
+	common.JSONUnmarshal(res.([]byte), b)
+	gomega.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
+	q, err := token.ToQuantity(b.Quantity, 64)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	expectedQ := token.NewQuantityFromUInt64(expected)
+	gomega.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+}
+
 func CheckCoOwnedBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
 	CheckCoOwnedBalanceForTMSID(network, ref, wallet, typ, expected, nil)
 }

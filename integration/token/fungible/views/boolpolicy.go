@@ -8,8 +8,10 @@ package views
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -207,4 +209,59 @@ func (m *PolicyAcceptSpendView) Call(context view.Context) (interface{}, error) 
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in confirmed state", tx.ID())
 
 	return nil, nil
+}
+
+// ---------------------------------------------------------------------------
+// Policy-owned balance: lists tokens held under a policy identity.
+// ---------------------------------------------------------------------------
+
+// PolicyOwnedBalanceQuery is the input for PolicyOwnedBalanceView.
+type PolicyOwnedBalanceQuery struct {
+	TMSID  *token2.TMSID
+	Wallet string
+	Type   token.Type
+}
+
+// PolicyOwnedBalanceView returns the total quantity of policy-identity tokens
+// visible to the given wallet, following the same pattern as CoOwnedBalanceView.
+type PolicyOwnedBalanceView struct {
+	*PolicyOwnedBalanceQuery
+}
+
+// Call implements view.View.
+func (b *PolicyOwnedBalanceView) Call(context view.Context) (interface{}, error) {
+	tms, err := token2.GetManagementService(context, ServiceOpts(b.TMSID)...)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting management service: %w", err)
+	}
+	wallet, err := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
+	if err != nil {
+		return nil, fmt.Errorf("wallet %s not found: %w", b.Wallet, err)
+	}
+
+	precision := tms.PublicParametersManager().PublicParameters().Precision()
+	pWallet := bptx.Wallet(context, wallet)
+	assert.NotNil(pWallet, "policy wallet wrapper for [%s] not found", b.Wallet)
+	policyTokens, err := pWallet.ListTokensIterator(context.Context(), token2.WithType(b.Type))
+	assert.NoError(err, "failed to list policy-owned tokens")
+	total, err := iterators.Reduce(policyTokens, token.ToQuantitySum(precision))
+	assert.NoError(err, "failed to compute sum of policy-owned tokens")
+
+	return Balance{
+		Quantity: total.Decimal(),
+		Type:     b.Type,
+	}, nil
+}
+
+// PolicyOwnedBalanceViewFactory creates PolicyOwnedBalanceView instances.
+type PolicyOwnedBalanceViewFactory struct{}
+
+// NewView implements view.Factory.
+func (f *PolicyOwnedBalanceViewFactory) NewView(in []byte) (view.View, error) {
+	v := &PolicyOwnedBalanceView{PolicyOwnedBalanceQuery: &PolicyOwnedBalanceQuery{}}
+	if err := json.Unmarshal(in, v.PolicyOwnedBalanceQuery); err != nil {
+		return nil, err
+	}
+
+	return v, nil
 }
