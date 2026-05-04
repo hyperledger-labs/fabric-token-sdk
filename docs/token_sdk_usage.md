@@ -143,13 +143,15 @@ if err != nil {
 }
 
 // 2. Add Redeem Action
-// If the issuer is not automatically resolvable, provide their identity.
+// If the issuer is not automatically resolvable, provide their FSC identity.
+// If needed, also pin the issuer signing key expected by public parameters.
 senderWallet := ttx.GetWallet(context, senderWalletID)
 err = tx.Redeem(
     senderWallet,
     tokenType,
     amount,
-    ttx.WithFSCIssuerIdentity(issuerIdentity), // Contact issuer for approval
+    ttx.WithFSCIssuerIdentity(issuerIdentity),                     // Contact issuer for approval
+    ttx.WithIssuerPublicParamsPublicKey(issuerPublicParamsPubKey), // Optional key pinning
 )
 if err != nil {
     return nil, err
@@ -167,6 +169,9 @@ if err != nil {
     return nil, err
 }
 ```
+
+Use `ttx.WithFSCIssuerIdentity(...)` when your app cannot resolve the issuer endpoint automatically.
+Use `ttx.WithIssuerPublicParamsPublicKey(...)` when you want redeem authorization to be verified against a specific issuer key from public parameters.
 
 ---
 

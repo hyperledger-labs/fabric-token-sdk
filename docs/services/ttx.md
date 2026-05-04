@@ -178,11 +178,17 @@ Enables the transfer of token ownership. The service:
 ### Redeem
 A specialized transfer where the recipient is "hidden" or "empty," effectively removing the tokens from circulation on the ledger.
 
+Redeem supports an enhanced flow where an issuer signature is required as part of transfer validation:
+1. Add the redeem action with `tx.Redeem(...)`.
+2. If the issuer endpoint cannot be resolved automatically, pass `ttx.WithFSCIssuerIdentity(...)` so the initiator can contact the issuer for endorsement.
+3. Optionally pass `ttx.WithIssuerPublicParamsPublicKey(...)` to pin which issuer public-parameters signing key must authorize the redeem.
+4. Run `CollectEndorsementsView` to collect owner, auditor (if configured), and issuer signatures.
+
 ## Collecting Endorsements
 
 The `CollectEndorsementsView` is responsible for gathering all signatures required to make a transaction valid:
 *   **Owner Signatures**: For every token spent, the service requests a signature from the node that owns the corresponding identity.
-*   **Issuer Signatures**: For transactions involving token issuance.
+*   **Issuer Signatures**: For transactions involving token issuance and enhanced redeem flows that require issuer authorization.
 *   **Auditor Signatures**: If the TMS is configured with an auditor, the transaction must be approved via the `AuditApproveView`.
 *   **Network Endorsements**: The service delegates to the **Network Service** to obtain backend-specific endorsements (e.g., Fabric chaincode endorsements).
 
