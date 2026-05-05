@@ -9,6 +9,7 @@ package postgres
 import (
 	"database/sql"
 
+	sq "github.com/Masterminds/squirrel"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
@@ -36,7 +37,7 @@ func (s *KeystoreStore) CreateSchema() error {
 
 // NewKeystoreStore returns a new KeystoreStore for the given RWDB and table names.
 func NewKeystoreStore(dbs *common2.RWDB, tableNames common3.TableNames) (*KeystoreStore, error) {
-	baseStore, err := common3.NewKeystoreStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter(), &postgres.ErrorMapper{})
+	baseStore, err := common3.NewKeystoreStore(dbs.ReadDB, dbs.WriteDB, tableNames, sq.Dollar, &postgres.ErrorMapper{})
 	if err != nil {
 		return nil, err
 	}

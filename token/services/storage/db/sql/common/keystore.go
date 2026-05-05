@@ -8,18 +8,15 @@ package common
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	dcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	qcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
@@ -32,27 +29,27 @@ type KeystoreStore struct {
 	writeDB      *sql.DB
 	errorWrapper driver.SQLErrorWrapper
 	table        keystoreTables
-	ci           qcommon.CondInterpreter
+	pf           sq.PlaceholderFormat
 }
 
-func newKeystoreStore(readDB, writeDB *sql.DB, tables keystoreTables, ci qcommon.CondInterpreter, errorWrapper driver.SQLErrorWrapper) *KeystoreStore {
+func newKeystoreStore(readDB, writeDB *sql.DB, tables keystoreTables, pf sq.PlaceholderFormat, errorWrapper driver.SQLErrorWrapper) *KeystoreStore {
 	return &KeystoreStore{
 		readDB:       readDB,
 		writeDB:      writeDB,
 		table:        tables,
-		ci:           ci,
+		pf:           pf,
 		errorWrapper: errorWrapper,
 	}
 }
 
-func NewKeystoreStore(readDB, writeDB *sql.DB, tables TableNames, ci qcommon.CondInterpreter, errorWrapper driver.SQLErrorWrapper) (*KeystoreStore, error) {
+func NewKeystoreStore(readDB, writeDB *sql.DB, tables TableNames, pf sq.PlaceholderFormat, errorWrapper driver.SQLErrorWrapper) (*KeystoreStore, error) {
 	return newKeystoreStore(
 		readDB,
 		writeDB,
 		keystoreTables{
 			KeyStore: tables.KeyStore,
 		},
-		ci,
+		pf,
 		errorWrapper,
 	), nil
 }
@@ -76,10 +73,14 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 	if err != nil {
 		return errors.Wrapf(err, "cannot marshal state with key [%s]", key)
 	}
-	query, args := q.InsertInto(db.table.KeyStore).
-		Fields("key", "val").
-		Row(key, raw).
-		Format()
+	query, args, err := sq.Insert(db.table.KeyStore).
+		Columns("key", "val").
+		Values(key, raw).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "failed building insert for key [%s]", key)
+	}
 	logging.Debug(logger, query, args)
 
 	_, err = db.writeDB.Exec(query, args...)
@@ -118,12 +119,15 @@ func (db *KeystoreStore) Get(key string, state interface{}) error {
 }
 
 func (db *KeystoreStore) GetRaw(key string) ([]byte, error) {
-	query, args := q.Select().
-		FieldsByName("val").
-		From(q.Table(db.table.KeyStore)).
-		Where(cond.Eq("key", key)).
-		Format(db.ci)
-	raw, err := common.QueryUniqueContext[[]byte](context.Background(), db.readDB, query, args...)
+	query, args, err := sq.Select("val").
+		From(db.table.KeyStore).
+		Where(sq.Eq{"key": key}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed building query for key [%s]", key)
+	}
+	raw, err := common.QueryUnique[[]byte](db.readDB, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed retrieving key [%s]", key)
 	}
