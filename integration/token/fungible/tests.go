@@ -1500,6 +1500,8 @@ func TestPolicyOR(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckHolding(network, alice, "", "USD", 60, auditor)
 	CheckHolding(network, bob, "", "USD", 0, auditor)
 	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckPolicyOwnedBalance(network, bob, "", "USD", 50)
+	CheckPolicyOwnedBalance(network, charlie, "", "USD", 50)
 
 	// Bob alone can satisfy "$0 OR $1" and spends to manager.
 	PolicySpendCashOR(network, bob, "", "USD", manager, auditor)
@@ -1510,6 +1512,8 @@ func TestPolicyOR(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckHolding(network, alice, "", "USD", 60, auditor)
 	CheckHolding(network, bob, "", "USD", 0, auditor)
 	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckPolicyOwnedBalance(network, bob, "", "USD", 0)
+	CheckPolicyOwnedBalance(network, charlie, "", "USD", 0)
 	CheckHolding(network, manager, "", "USD", 50, auditor)
 }
 
@@ -1541,6 +1545,8 @@ func TestPolicyAND(network *integration.Infrastructure, sel *token3.ReplicaSelec
 	CheckHolding(network, alice, "", "USD", 60, auditor)
 	CheckHolding(network, bob, "", "USD", 0, auditor)
 	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckPolicyOwnedBalance(network, bob, "", "USD", 50)
+	CheckPolicyOwnedBalance(network, charlie, "", "USD", 50)
 
 	// Bob initiates the spend; charlie co-endorses via PolicyAcceptSpendView.
 	PolicySpendCashAND(network, bob, "", "USD", manager, auditor)
@@ -1551,6 +1557,8 @@ func TestPolicyAND(network *integration.Infrastructure, sel *token3.ReplicaSelec
 	CheckHolding(network, alice, "", "USD", 60, auditor)
 	CheckHolding(network, bob, "", "USD", 0, auditor)
 	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckPolicyOwnedBalance(network, bob, "", "USD", 0)
+	CheckPolicyOwnedBalance(network, charlie, "", "USD", 0)
 	CheckHolding(network, manager, "", "USD", 50, auditor)
 }
 
