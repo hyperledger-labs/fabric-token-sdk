@@ -9,6 +9,7 @@ package sqlite
 import (
 	"strings"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
@@ -89,7 +90,7 @@ func newIdentityStoreProvider(dbProvider sqlite.DbProvider) lazy.Provider[sqlite
 			tableNames,
 			secondcache.NewTyped[bool](5000),
 			secondcache.NewTyped[[]byte](5000),
-			sqlite.NewConditionInterpreter(),
+			sq.Question,
 			&sqlite.ErrorMapper{},
 			nil,
 		)

@@ -11,15 +11,13 @@ import (
 	"database/sql"
 	"fmt"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -39,7 +37,7 @@ type cache[T any] interface {
 }
 
 type dbTransaction interface {
-	ExecContext(ctx context.Context, query string, args ...common3.Param) (sql.Result, error)
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
 type identityTables struct {
@@ -53,7 +51,7 @@ type IdentityStore struct {
 	readDB   *sql.DB
 	writeDB  *sql.DB
 	table    identityTables
-	ci       common3.CondInterpreter
+	pf       sq.PlaceholderFormat
 	notifier idriver.IdentityConfigurationNotifier
 
 	signerInfoCache cache[bool]
@@ -66,7 +64,7 @@ func newIdentityStore(
 	tables identityTables,
 	singerInfoCache cache[bool],
 	auditInfoCache cache[[]byte],
-	ci common3.CondInterpreter,
+	pf sq.PlaceholderFormat,
 	errorWrapper driver2.SQLErrorWrapper,
 	notifier idriver.IdentityConfigurationNotifier,
 ) *IdentityStore {
@@ -76,7 +74,7 @@ func newIdentityStore(
 		table:           tables,
 		signerInfoCache: singerInfoCache,
 		auditInfoCache:  auditInfoCache,
-		ci:              ci,
+		pf:              pf,
 		errorWrapper:    errorWrapper,
 		notifier:        notifier,
 	}
@@ -85,7 +83,7 @@ func newIdentityStore(
 func NewCachedIdentityStore(
 	readDB, writeDB *sql.DB,
 	tables TableNames,
-	ci common3.CondInterpreter,
+	pf sq.PlaceholderFormat,
 	errorWrapper driver2.SQLErrorWrapper,
 ) (*IdentityStore, error) {
 	return NewIdentityStore(
@@ -94,7 +92,7 @@ func NewCachedIdentityStore(
 		tables,
 		secondcache.NewTyped[bool](5000),
 		secondcache.NewTyped[[]byte](5000),
-		ci,
+		pf,
 		errorWrapper,
 	)
 }
@@ -102,7 +100,7 @@ func NewCachedIdentityStore(
 func NewNoCacheIdentityStore(
 	readDB, writeDB *sql.DB,
 	tables TableNames,
-	ci common3.CondInterpreter,
+	pf sq.PlaceholderFormat,
 	errorWrapper driver2.SQLErrorWrapper,
 ) (*IdentityStore, error) {
 	return NewIdentityStore(
@@ -111,7 +109,7 @@ func NewNoCacheIdentityStore(
 		tables,
 		cache2.NewNoCache[bool](),
 		cache2.NewNoCache[[]byte](),
-		ci,
+		pf,
 		errorWrapper,
 	)
 }
@@ -121,7 +119,7 @@ func NewIdentityStore(
 	tables TableNames,
 	signerInfoCache cache[bool],
 	auditInfoCache cache[[]byte],
-	ci common3.CondInterpreter,
+	pf sq.PlaceholderFormat,
 	errorWrapper driver2.SQLErrorWrapper,
 ) (*IdentityStore, error) {
 	return newIdentityStore(
@@ -134,7 +132,7 @@ func NewIdentityStore(
 		},
 		signerInfoCache,
 		auditInfoCache,
-		ci,
+		pf,
 		errorWrapper,
 		nil,
 	), nil
@@ -146,7 +144,7 @@ func NewIdentityStoreWithNotifier(
 	tables TableNames,
 	signerInfoCache cache[bool],
 	auditInfoCache cache[[]byte],
-	ci common3.CondInterpreter,
+	pf sq.PlaceholderFormat,
 	errorWrapper driver2.SQLErrorWrapper,
 	notifier idriver.IdentityConfigurationNotifier,
 ) (*IdentityStore, error) {
@@ -160,7 +158,7 @@ func NewIdentityStoreWithNotifier(
 		},
 		signerInfoCache,
 		auditInfoCache,
-		ci,
+		pf,
 		errorWrapper,
 		notifier,
 	), nil
@@ -173,13 +171,17 @@ func (db *IdentityStore) CreateSchema() error {
 // AddConfiguration stores an identity configuration in the database.
 // It also enqueues an event to the notifier if available.
 func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.IdentityConfiguration) error {
-	query, args := q.InsertInto(db.table.IdentityConfigurations).
-		Fields("id", "type", "url", "conf", "raw").
-		Row(wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw).
-		Format()
+	query, args, err := sq.Insert(db.table.IdentityConfigurations).
+		Columns("id", "type", "url", "conf", "raw").
+		Values(wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "failed building insert for configuration [%s]", wp.ID)
+	}
 	logging.Debug(logger, query, args)
 
-	_, err := db.writeDB.ExecContext(ctx, query, args...)
+	_, err = db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -189,15 +191,18 @@ func (db *IdentityStore) AddConfiguration(ctx context.Context, wp driver.Identit
 
 // GetConfiguration returns the configuration with the given id, type, and url.
 func (db *IdentityStore) GetConfiguration(ctx context.Context, id, typ, url string) (*driver.IdentityConfiguration, error) {
-	query, args := q.Select().
-		FieldsByName("id", "type", "url", "conf", "raw").
-		From(q.Table(db.table.IdentityConfigurations)).
-		Where(cond.And(cond.Eq("id", id), cond.Eq("type", typ), cond.Eq("url", url))).
-		Format(db.ci)
+	query, args, err := sq.Select("id", "type", "url", "conf", "raw").
+		From(db.table.IdentityConfigurations).
+		Where(sq.And{sq.Eq{"id": id}, sq.Eq{"type": typ}, sq.Eq{"url": url}}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed building query for configuration [%s:%s:%s]", id, typ, url)
+	}
 	logging.Debug(logger, query, args)
 	row := db.readDB.QueryRowContext(ctx, query, args...)
 	c := &driver.IdentityConfiguration{}
-	err := row.Scan(&c.ID, &c.Type, &c.URL, &c.Config, &c.Raw)
+	err = row.Scan(&c.ID, &c.Type, &c.URL, &c.Config, &c.Raw)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -211,11 +216,14 @@ func (db *IdentityStore) GetConfiguration(ctx context.Context, id, typ, url stri
 
 // IteratorConfigurations returns an iterator to all configurations of the given type.
 func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurationType string) (idriver.IdentityConfigurationIterator, error) {
-	query, args := q.Select().
-		FieldsByName("id", "url", "conf", "raw").
-		From(q.Table(db.table.IdentityConfigurations)).
-		Where(cond.Eq("type", configurationType)).
-		Format(db.ci)
+	query, args, err := sq.Select("id", "url", "conf", "raw").
+		From(db.table.IdentityConfigurations).
+		Where(sq.Eq{"type": configurationType}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed building query for configuration type [%s]", configurationType)
+	}
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -230,12 +238,15 @@ func (db *IdentityStore) IteratorConfigurations(ctx context.Context, configurati
 }
 
 func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url string) (bool, error) {
-	query, args := q.Select().
-		FieldsByName("id").
-		From(q.Table(db.table.IdentityConfigurations)).
-		Where(cond.And(cond.Eq("id", id), cond.Eq("type", typ), cond.Eq("url", url))).
-		Format(db.ci)
-	result, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
+	query, args, err := sq.Select("id").
+		From(db.table.IdentityConfigurations).
+		Where(sq.And{sq.Eq{"id": id}, sq.Eq{"type": typ}, sq.Eq{"url": url}}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return false, errors.Wrapf(err, "failed building query for [%s:%s:%s]", id, typ, url)
+	}
+	result, err := common.QueryUnique[string](db.readDB, query, args...)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s:%s]", id, typ, url)
 	}
@@ -263,13 +274,16 @@ func (db *IdentityStore) GetAuditInfo(ctx context.Context, id []byte) ([]byte, e
 
 	value, _, err := db.auditInfoCache.GetOrLoad(h, func() ([]byte, error) {
 		logger.DebugfContext(ctx, "load from backend identity data for [%s]", view.Identity(id))
-		query, args := q.Select().
-			FieldsByName("identity_audit_info").
-			From(q.Table(db.table.IdentityInfo)).
-			Where(cond.Eq("identity_hash", h)).
-			Format(db.ci)
+		query, args, err := sq.Select("identity_audit_info").
+			From(db.table.IdentityInfo).
+			Where(sq.Eq{"identity_hash": h}).
+			PlaceholderFormat(db.pf).
+			ToSql()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed building query for identity [%s]", h)
+		}
 
-		return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+		return common.QueryUnique[[]byte](db.readDB, query, args...)
 	})
 
 	return value, err
@@ -279,17 +293,20 @@ func (db *IdentityStore) GetTokenInfo(ctx context.Context, id []byte) ([]byte, [
 	h := token.Identity(id).String()
 	logger.DebugfContext(ctx, "get identity data for [%s]", h)
 
-	query, args := q.Select().
-		FieldsByName("token_metadata", "token_metadata_audit_info").
-		From(q.Table(db.table.IdentityInfo)).
-		Where(cond.Eq("identity_hash", h)).
-		Format(db.ci)
+	query, args, err := sq.Select("token_metadata", "token_metadata_audit_info").
+		From(db.table.IdentityInfo).
+		Where(sq.Eq{"identity_hash": h}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed building query for identity [%s]", h)
+	}
 	logging.Debug(logger, query, args)
 
 	row := db.readDB.QueryRowContext(ctx, query, args...)
 	var tokenMetadata []byte
 	var tokenMetadataAuditInfo []byte
-	err := row.Scan(&tokenMetadata, &tokenMetadataAuditInfo)
+	err = row.Scan(&tokenMetadata, &tokenMetadataAuditInfo)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil, nil
@@ -342,11 +359,14 @@ func (db *IdentityStore) GetExistingSignerInfo(ctx context.Context, ids ...tdriv
 
 	idHashes = notFound
 
-	query, args := q.Select().
-		FieldsByName("identity_hash").
-		From(q.Table(db.table.Signers)).
-		Where(cond.In("identity_hash", idHashes...)).
-		Format(db.ci)
+	query, args, err := sq.Select("identity_hash").
+		From(db.table.Signers).
+		Where(sq.Eq{"identity_hash": idHashes}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed building query for signers")
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -376,11 +396,14 @@ func (db *IdentityStore) SignerInfoExists(ctx context.Context, id []byte) (bool,
 }
 
 func (db *IdentityStore) GetSignerInfo(ctx context.Context, identity []byte) ([]byte, error) {
-	query, args := q.Select().
-		FieldsByName("info").
-		From(q.Table(db.table.Signers)).
-		Where(cond.Eq("identity_hash", token.Identity(identity).UniqueID())).
-		Format(db.ci)
+	query, args, err := sq.Select("info").
+		From(db.table.Signers).
+		Where(sq.Eq{"identity_hash": token.Identity(identity).UniqueID()}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed building query for signer info")
+	}
 
 	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
@@ -523,14 +546,18 @@ func (db *IdentityStore) GetSchema() string {
 
 func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx dbTransaction, h string, id tdriver.Identity, info []byte, updateCache bool) (bool, error) {
 	logger.DebugfContext(ctx, "store signer info for [%s]", h)
-	query, args := q.InsertInto(db.table.Signers).
-		Fields("identity_hash", "identity", "info").
-		Row(h, id, info).
-		Format()
+	query, args, err := sq.Insert(db.table.Signers).
+		Columns("identity_hash", "identity", "info").
+		Values(h, id, info).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return false, errors.Wrapf(err, "failed building insert for signer info [%s]", h)
+	}
 
 	logging.Debug(logger, query, h, utils.Hashable(info))
 	exists := false
-	_, err := tx.ExecContext(ctx, query, args...)
+	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		if errors.Is(db.errorWrapper.WrapError(err), driver2.UniqueKeyViolation) {
 			logger.DebugfContext(ctx, "signer info [%s] exists, no error to return", h)
@@ -549,13 +576,17 @@ func (db *IdentityStore) storeSignerInfo(ctx context.Context, tx dbTransaction, 
 
 func (db *IdentityStore) storeIdentityData(ctx context.Context, tx dbTransaction, h string, id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte, updateCache bool) error {
 	logger.DebugfContext(ctx, "store identity data for [%s]", h)
-	query, args := q.InsertInto(db.table.IdentityInfo).
-		Fields("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
-		Row(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
-		Format()
+	query, args, err := sq.Insert(db.table.IdentityInfo).
+		Columns("identity_hash", "identity", "identity_audit_info", "token_metadata", "token_metadata_audit_info").
+		Values(h, id, identityAudit, tokenMetadata, tokenMetadataAudit).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "failed building insert for identity data [%s]", h)
+	}
 	logging.Debug(logger, query, args)
 
-	_, err := tx.ExecContext(ctx, query, args...)
+	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		if !errors.Is(db.errorWrapper.WrapError(err), driver2.UniqueKeyViolation) {
 			return err
