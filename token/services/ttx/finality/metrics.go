@@ -58,9 +58,11 @@ func newMetrics(p metrics.Provider) *Metrics {
 			Help: "Total number of transactions whose finality processing was abandoned after all retries were exhausted",
 		}),
 		OnStatusDuration: p.NewHistogram(metrics.HistogramOpts{
-			Name:    "finality_listener_on_status_duration_seconds",
-			Help:    "Histogram of total OnStatus processing time per transaction (including retries), in seconds",
-			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			Name:                            "finality_listener_on_status_duration_seconds",
+			Help:                            "Histogram of total OnStatus processing time per transaction (including retries), in seconds",
+			Buckets:                         []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			NativeHistogramBucketFactor:     1.1,
+			NativeHistogramMaxBucketNumber:  100,
 		}),
 	}
 }

@@ -18,10 +18,12 @@ var (
 	}
 
 	certificationRequestDuration = metrics.HistogramOpts{
-		Name:       "certification_request_duration_seconds",
-		Help:       "Histogram of certification batch request durations in seconds.",
-		Buckets:    []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
-		LabelNames: []string{"channel", "namespace"},
+		Name:                            "certification_request_duration_seconds",
+		Help:                            "Histogram of certification batch request durations in seconds.",
+		Buckets:                         []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+		LabelNames:                      []string{"channel", "namespace"},
+		NativeHistogramBucketFactor:     1.1,
+		NativeHistogramMaxBucketNumber:  100,
 	}
 
 	certificationErrors = metrics.CounterOpts{
