@@ -200,7 +200,7 @@ func (p *IssuedBalanceView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("wallet [%s] not found", p.Wallet)
 	}
 
-	return wallet.IssuedBalance(context.Context(), token.WithBalanceType(p.TokenType))
+	return wallet.IssuedBalance(context.Context(), token.WithBalanceTokenType(p.TokenType))
 }
 
 type IssuedBalanceViewFactory struct{}
@@ -225,7 +225,7 @@ func (p *RedeemedBalanceView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("wallet [%s] not found", p.Wallet)
 	}
 
-	return wallet.RedeemedBalance(context.Context(), token.WithBalanceType(p.TokenType))
+	return wallet.RedeemedBalance(context.Context(), token.WithBalanceTokenType(p.TokenType))
 }
 
 type RedeemedBalanceViewFactory struct{}
@@ -250,7 +250,7 @@ func (p *OutstandingBalanceView) Call(context view.Context) (interface{}, error)
 		return nil, errors.Errorf("wallet [%s] not found", p.Wallet)
 	}
 
-	return wallet.OutstandingBalance(context.Context(), token.WithBalanceType(p.TokenType))
+	return wallet.OutstandingBalance(context.Context(), token.WithBalanceTokenType(p.TokenType))
 }
 
 type OutstandingBalanceViewFactory struct{}
