@@ -9,9 +9,9 @@ package postgres
 import (
 	"database/sql"
 
+	sq "github.com/Masterminds/squirrel"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
 	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
@@ -36,7 +36,7 @@ func (s *WalletStore) CreateSchema() error {
 
 // NewWalletStore returns a new WalletStore for the given RWDB and table names.
 func NewWalletStore(dbs *common2.RWDB, tableNames common3.TableNames) (*WalletStore, error) {
-	baseStore, err := common3.NewWalletStore(dbs.ReadDB, dbs.WriteDB, tableNames, postgres.NewConditionInterpreter())
+	baseStore, err := common3.NewWalletStore(dbs.ReadDB, dbs.WriteDB, tableNames, sq.Dollar)
 	if err != nil {
 		return nil, err
 	}
