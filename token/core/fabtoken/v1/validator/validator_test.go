@@ -477,6 +477,33 @@ func TestTransferSignatureValidate(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed deserializing issuer")
 	})
 
+	t.Run("SameOwnerCachesVerifier", func(t *testing.T) {
+		deserializer := &mock.Deserializer{}
+		sigProvider := &mock.SignatureProvider{}
+		ta := &actions.TransferAction{
+			Inputs: []*actions.TransferActionInput{
+				{Input: &actions.Output{Owner: []byte("owner1")}},
+				{Input: &actions.Output{Owner: []byte("owner1")}},
+				{Input: &actions.Output{Owner: []byte("owner1")}},
+			},
+			Outputs: []*actions.Output{
+				{Owner: []byte("owner2")},
+			},
+		}
+		deserializer.GetOwnerVerifierReturns(&mock.Verifier{}, nil)
+		sigProvider.HasBeenSignedByReturns([]byte("sig"), nil)
+		c := &validator.Context{
+			TransferAction:    ta,
+			Deserializer:      deserializer,
+			SignatureProvider: sigProvider,
+			Logger:            logger,
+			PP:                pp,
+		}
+		err := validator.TransferSignatureValidate(ctx, c)
+		require.NoError(t, err)
+		assert.Equal(t, 1, deserializer.GetOwnerVerifierCallCount(), "GetOwnerVerifier should be called only once for repeated same owner")
+	})
+
 	t.Run("RedeemIssuerSignatureError", func(t *testing.T) {
 		deserializer := &mock.Deserializer{}
 		sigProvider := &mock.SignatureProvider{}
