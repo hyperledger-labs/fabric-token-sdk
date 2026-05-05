@@ -785,7 +785,6 @@ func TestTypedVerifierDeserializerMultiplex(t *testing.T) {
 		assert.Equal(t, 1, mockDeserializer1.GetAuditInfoCallCount())
 		assert.Equal(t, 1, mockDeserializer2.GetAuditInfoCallCount())
 	})
-
 }
 
 // Tests the TypedIdentityVerifierDeserializer under various success and failure paths
