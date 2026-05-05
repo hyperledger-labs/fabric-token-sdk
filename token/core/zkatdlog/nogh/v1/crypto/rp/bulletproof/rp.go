@@ -336,7 +336,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
-		
+
 		return nativeRPPreprocess[bls12381fr.Element, *bls12381fr.Element](p, left, right, randomLeft, randomRight, y, z, C, D, rho, eta, rand)
 	} else if isBN254 {
 		rand, err := p.Curve.Rand()
