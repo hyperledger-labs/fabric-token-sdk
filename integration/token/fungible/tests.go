@@ -1472,6 +1472,96 @@ func TestMultiSig(network *integration.Infrastructure, sel *token3.ReplicaSelect
 	CheckCoOwnedBalance(network, manager, "", "USD", 0)
 }
 
+// TestPolicyOR exercises a two-party OR policy ($0 OR $1): alice locks tokens under
+// the policy identity, then bob spends them alone without involving charlie.
+func TestPolicyOR(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
+	auditor := sel.Get("auditor")
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+	bob := sel.Get("bob")
+	charlie := sel.Get("charlie")
+	manager := sel.Get("manager")
+	RegisterAuditor(network, auditor)
+
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
+	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
+	CheckBalance(network, alice, "", "USD", 110)
+	CheckHolding(network, alice, "", "USD", 110, auditor)
+
+	// Alice locks 50 USD under policy "$0 OR $1" with bob as $0 and charlie as $1.
+	PolicyLockCash(network, alice, "", "USD", 50, "$0 OR $1", []*token3.NodeReference{bob, charlie}, auditor)
+	CheckBalance(network, alice, "", "USD", 60)
+	CheckBalance(network, bob, "", "USD", 0)
+	CheckBalance(network, charlie, "", "USD", 0)
+	CheckHolding(network, alice, "", "USD", 60, auditor)
+	CheckHolding(network, bob, "", "USD", 0, auditor)
+	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckPolicyOwnedBalance(network, bob, "", "USD", 50)
+	CheckPolicyOwnedBalance(network, charlie, "", "USD", 50)
+
+	// Bob alone can satisfy "$0 OR $1" and spends to manager.
+	PolicySpendCashOR(network, bob, "", "USD", manager, auditor)
+	CheckBalance(network, alice, "", "USD", 60)
+	CheckBalance(network, bob, "", "USD", 0)
+	CheckBalance(network, charlie, "", "USD", 0)
+	CheckBalance(network, manager, "", "USD", 50)
+	CheckHolding(network, alice, "", "USD", 60, auditor)
+	CheckHolding(network, bob, "", "USD", 0, auditor)
+	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckPolicyOwnedBalance(network, bob, "", "USD", 0)
+	CheckPolicyOwnedBalance(network, charlie, "", "USD", 0)
+	CheckHolding(network, manager, "", "USD", 50, auditor)
+}
+
+// TestPolicyAND exercises a two-party AND policy ($0 AND $1): alice locks tokens under
+// the policy identity, then bob initiates a spend that charlie must also endorse.
+func TestPolicyAND(network *integration.Infrastructure, sel *token3.ReplicaSelector) {
+	auditor := sel.Get("auditor")
+	issuer := sel.Get("issuer")
+	alice := sel.Get("alice")
+	bob := sel.Get("bob")
+	charlie := sel.Get("charlie")
+	manager := sel.Get("manager")
+	RegisterAuditor(network, auditor)
+
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, issuer, "auditor", auditor.Id())
+	CheckPublicParams(network, issuer, auditor, alice, bob, charlie, manager)
+
+	IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
+	CheckBalance(network, alice, "", "USD", 110)
+	CheckHolding(network, alice, "", "USD", 110, auditor)
+
+	// Alice locks 50 USD under policy "$0 AND $1" with bob as $0 and charlie as $1.
+	PolicyLockCash(network, alice, "", "USD", 50, "$0 AND $1", []*token3.NodeReference{bob, charlie}, auditor)
+	CheckBalance(network, alice, "", "USD", 60)
+	CheckBalance(network, bob, "", "USD", 0)
+	CheckBalance(network, charlie, "", "USD", 0)
+	CheckHolding(network, alice, "", "USD", 60, auditor)
+	CheckHolding(network, bob, "", "USD", 0, auditor)
+	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckPolicyOwnedBalance(network, bob, "", "USD", 50)
+	CheckPolicyOwnedBalance(network, charlie, "", "USD", 50)
+
+	// Bob initiates the spend; charlie co-endorses via PolicyAcceptSpendView.
+	PolicySpendCashAND(network, bob, "", "USD", manager, auditor)
+	CheckBalance(network, alice, "", "USD", 60)
+	CheckBalance(network, bob, "", "USD", 0)
+	CheckBalance(network, charlie, "", "USD", 0)
+	CheckBalance(network, manager, "", "USD", 50)
+	CheckHolding(network, alice, "", "USD", 60, auditor)
+	CheckHolding(network, bob, "", "USD", 0, auditor)
+	CheckHolding(network, charlie, "", "USD", 0, auditor)
+	CheckPolicyOwnedBalance(network, bob, "", "USD", 0)
+	CheckPolicyOwnedBalance(network, charlie, "", "USD", 0)
+	CheckHolding(network, manager, "", "USD", 50, auditor)
+}
+
 func TestRedeem(network *integration.Infrastructure, sel *token3.ReplicaSelector, networkName string) {
 	auditor := sel.Get("auditor")
 	issuer := sel.Get("issuer")
