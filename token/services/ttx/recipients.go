@@ -472,12 +472,12 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	if err := resolver.Bind(context.Context(), context.Me(), recipientIdentity); err != nil {
 		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
 	}
-  
-  logger.DebugfContext(context.Context(), "Send recipient identity response to %s", session.Info().Caller)
-  if err := session.Send(recipientData); err != nil {
-      return nil, errors.Wrapf(err, "failed to send recipient data")
-  }
-  
+
+	logger.DebugfContext(context.Context(), "Send recipient identity response to %s", session.Info().Caller)
+	if err := session.Send(recipientData); err != nil {
+		return nil, errors.Wrapf(err, "failed to send recipient data")
+	}
+
 	if err := s.handleComposite(context, session.Session(), tms, recipientRequest, recipientIdentity); err != nil {
 		return nil, errors.Wrapf(err, "failed to handle composite identity")
 	}
