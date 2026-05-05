@@ -10,48 +10,38 @@ import (
 	"context"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	common4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
 type TokenLockStore struct {
 	*common4.TokenLockStore
-	ci common2.CondInterpreter
-}
-
-func IsStale(tokenLocks common2.TableName, requests common2.TableName, leaseExpiry time.Duration) *isStale {
-	return &isStale{tokenLocks: tokenLocks, requests: requests, leaseExpiry: leaseExpiry}
-}
-
-type isStale struct {
-	tokenLocks  common2.TableName
-	requests    common2.TableName
-	leaseExpiry time.Duration
-}
-
-func (c *isStale) WriteString(ci common2.CondInterpreter, sb common2.Builder) {
-	tokenLocks, tokenRequests := q.AliasedTable(string(c.tokenLocks), "tl"), q.AliasedTable(string(c.requests), "tr")
-
-	sb.WriteString("tx_id IN (")
-	q.Select().
-		Fields(tokenLocks.Field("tx_id")).
-		From(tokenLocks.Join(tokenRequests, cond.Cmp(tokenLocks.Field("tx_id"), "=", tokenRequests.Field("tx_id")))).
-		Where(common4.IsExpiredToken(tokenRequests, tokenLocks, c.leaseExpiry)).
-		FormatTo(ci, sb)
-	sb.WriteRune(')')
+	pf sq.PlaceholderFormat
 }
 
 func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration) error {
-	query, args := q.DeleteFrom(db.Table.TokenLocks).
-		Where(IsStale(common2.TableName(db.Table.TokenLocks), common2.TableName(db.Table.Requests), leaseExpiry)).
-		Format(db.ci)
+	tl, tr := db.Table.TokenLocks, db.Table.Requests
+
+	subq, subArgs, err := sq.Select("tl.tx_id").
+		From(tl + " AS tl").
+		LeftJoin(tr + " AS tr ON tl.tx_id = tr.tx_id").
+		Where(common4.IsExpiredToken("tr", "tl", leaseExpiry)).
+		ToSql()
+	if err != nil {
+		return err
+	}
+
+	query, args, err := sq.Delete(tl).
+		Where("tx_id IN ("+subq+")", subArgs...).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return err
+	}
 
 	db.Logger.Debug(query, args)
-	_, err := db.WriteDB.ExecContext(ctx, query, args...)
+	_, err = db.WriteDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		db.Logger.Errorf("query failed: %s", query)
 	}
@@ -60,10 +50,10 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 }
 
 func NewTokenLockStore(dbs *common3.RWDB, tableNames common4.TableNames) (*TokenLockStore, error) {
-	tldb, err := common4.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter())
+	tldb, err := common4.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames, sq.Question)
 	if err != nil {
 		return nil, err
 	}
 
-	return &TokenLockStore{TokenLockStore: tldb, ci: sqlite.NewConditionInterpreter()}, nil
+	return &TokenLockStore{TokenLockStore: tldb, pf: sq.Question}, nil
 }

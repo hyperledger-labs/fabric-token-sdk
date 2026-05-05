@@ -11,13 +11,14 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/onsi/gomega"
 )
 
-type tokenLockStoreConstructor func(*sql.DB) *TokenLockStore
+type tokenLockStoreConstructor func(*sql.DB, sq.PlaceholderFormat) *TokenLockStore
 
-func TestLock(t *testing.T, store tokenLockStoreConstructor) {
+func TestLock(t *testing.T, store tokenLockStoreConstructor, pf sq.PlaceholderFormat) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -27,17 +28,17 @@ func TestLock(t *testing.T, store tokenLockStoreConstructor) {
 	now := sqlmock.AnyArg()
 
 	mockDB.
-		ExpectExec("INSERT INTO TOKEN_LOCKS \\(consumer_tx_id, tx_id, idx, created_at\\) VALUES \\(\\$1, \\$2, \\$3, \\$4\\)").
+		ExpectExec(sqlPattern(pf, "INSERT INTO TOKEN_LOCKS (consumer_tx_id,tx_id,idx,created_at) VALUES (?,?,?,?)")).
 		WithArgs(trID, tokenID.TxId, tokenID.Index, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = store(db).Lock(t.Context(), &tokenID, trID)
+	err = store(db, pf).Lock(t.Context(), &tokenID, trID)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 }
 
-func TestUnlockByTxID(t *testing.T, store tokenLockStoreConstructor) {
+func TestUnlockByTxID(t *testing.T, store tokenLockStoreConstructor, pf sq.PlaceholderFormat) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -45,11 +46,11 @@ func TestUnlockByTxID(t *testing.T, store tokenLockStoreConstructor) {
 	consumerTxID := "1234"
 
 	mockDB.
-		ExpectExec("DELETE FROM TOKEN_LOCKS WHERE consumer_tx_id = \\$1").
+		ExpectExec(sqlPattern(pf, "DELETE FROM TOKEN_LOCKS WHERE consumer_tx_id = ?")).
 		WithArgs(consumerTxID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = store(db).UnlockByTxID(t.Context(), consumerTxID)
+	err = store(db, pf).UnlockByTxID(t.Context(), consumerTxID)
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())

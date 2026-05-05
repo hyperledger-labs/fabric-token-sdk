@@ -9,10 +9,12 @@ package postgres
 import (
 	"database/sql"
 	driver2 "database/sql/driver"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	sq "github.com/Masterminds/squirrel"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
@@ -33,17 +35,13 @@ func mockTokenLockStorePostgress(db *sql.DB) *TokenLockStore {
 	return store
 }
 
-func mockTokenLockStore(db *sql.DB) *common3.TokenLockStore {
-	var dbs = common2.RWDB{
-		ReadDB: db, WriteDB: db,
-	}
-
-	store, _ := NewTokenLockStore(&dbs, common3.TableNames{
+func mockTokenLockStore(db *sql.DB, pf sq.PlaceholderFormat) *common3.TokenLockStore {
+	store, _ := common3.NewTokenLockStore(db, db, common3.TableNames{
 		TokenLocks: "TOKEN_LOCKS",
 		Requests:   "REQUESTS",
-	})
+	}, pf)
 
-	return store.TokenLockStore
+	return store
 }
 
 func TestCleanup(t *testing.T) {
@@ -63,16 +61,21 @@ func TestCleanup(t *testing.T) {
 		consumerTxID, tokenID.TxId, tokenID.Index, *status, createdAt, timeNow,
 	}
 	mockDB.
-		ExpectQuery("SELECT TOKEN_LOCKS.consumer_tx_id, TOKEN_LOCKS.tx_id, TOKEN_LOCKS.idx, REQUESTS.status, TOKEN_LOCKS.created_at, NOW\\(\\) AS now " +
-			"FROM TOKEN_LOCKS LEFT JOIN REQUESTS ON TOKEN_LOCKS.consumer_tx_id = REQUESTS.tx_id " +
-			"WHERE \\(\\(\\(REQUESTS.status = \\$1\\)\\)\\) OR \\(TOKEN_LOCKS.created_at < NOW\\(\\) - INTERVAL '1 seconds'\\)").
-		WithArgs(input).
+		ExpectQuery(regexp.QuoteMeta(
+			"SELECT tl.consumer_tx_id, tl.tx_id, tl.idx, tr.status, tl.created_at, NOW() AS now"+
+				" FROM TOKEN_LOCKS AS tl"+
+				" LEFT JOIN REQUESTS AS tr ON tl.consumer_tx_id = tr.tx_id"+
+				" WHERE (tr.status = $1 OR tl.created_at < $2)",
+		)).
+		WithArgs(input, sqlmock.AnyArg()).
 		WillReturnRows(mockDB.NewRows([]string{"consumer_tx_id", "tx_id", "idx", "status", "created_at", "now"}).AddRow(output...))
 
-	mockDB.ExpectExec("DELETE FROM TOKEN_LOCKS WHERE " +
-		"TOKEN_LOCKS.created_at < NOW\\(\\) - INTERVAL '1 seconds'" +
-		" OR " +
-		"EXISTS \\(SELECT 1 FROM REQUESTS WHERE REQUESTS.tx_id = TOKEN_LOCKS.consumer_tx_id AND  REQUESTS.status IN \\(3\\)").
+	mockDB.ExpectExec(regexp.QuoteMeta(
+		"DELETE FROM TOKEN_LOCKS" +
+			" WHERE (created_at < $1" +
+			" OR EXISTS (SELECT 1 FROM REQUESTS WHERE REQUESTS.tx_id = TOKEN_LOCKS.consumer_tx_id AND REQUESTS.status IN (3)))",
+	)).
+		WithArgs(sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err = mockTokenLockStorePostgress(db).Cleanup(t.Context(), time.Second)
@@ -82,9 +85,9 @@ func TestCleanup(t *testing.T) {
 }
 
 func TestLock(t *testing.T) {
-	common3.TestLock(t, mockTokenLockStore)
+	common3.TestLock(t, mockTokenLockStore, sq.Dollar)
 }
 
 func TestUnlockByTxID(t *testing.T) {
-	common3.TestUnlockByTxID(t, mockTokenLockStore)
+	common3.TestUnlockByTxID(t, mockTokenLockStore, sq.Dollar)
 }

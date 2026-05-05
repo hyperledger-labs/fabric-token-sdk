@@ -12,13 +12,10 @@ import (
 	"fmt"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	common5 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -30,7 +27,7 @@ type TokenLockStore struct {
 	*common5.TokenLockStore
 
 	writeDB *sql.DB
-	ci      common3.CondInterpreter
+	pf      sq.PlaceholderFormat
 	lockID  int64
 }
 
@@ -48,8 +45,7 @@ func (s *TokenLockStore) CreateSchema() error {
 
 // NewTokenLockStore returns a new TokenLockStore for the given RWDB and table names.
 func NewTokenLockStore(dbs *common2.RWDB, tableNames common5.TableNames) (*TokenLockStore, error) {
-	ci := postgres.NewConditionInterpreter()
-	tldb, err := common5.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames, ci)
+	tldb, err := common5.NewTokenLockStore(dbs.ReadDB, dbs.WriteDB, tableNames, sq.Dollar)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +53,7 @@ func NewTokenLockStore(dbs *common2.RWDB, tableNames common5.TableNames) (*Token
 	return &TokenLockStore{
 		TokenLockStore: tldb,
 		writeDB:        dbs.WriteDB,
-		ci:             ci,
+		pf:             sq.Dollar,
 		lockID:         createTableLockID("tokenlock"),
 	}, nil
 }
@@ -67,22 +63,24 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 	if err := db.logStaleLocks(ctx, leaseExpiry); err != nil {
 		db.Logger.Warnf("Could not log stale locks: %v", err)
 	}
-	tokenLocks, _ := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
+	tl, tr := db.Table.TokenLocks, db.Table.Requests
 
-	query, args := common3.NewBuilder().
-		WriteString("DELETE FROM ").
-		WriteConditionSerializable(tokenLocks, db.ci).
-		WriteString(" WHERE ").
-		WriteConditionSerializable(cond.OlderThan(tokenLocks.Field("created_at"), leaseExpiry), db.ci).
-		WriteString(" OR ").
-		WriteString(
-			fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.tx_id = %s.consumer_tx_id AND %s.status IN (%d))",
-				db.Table.Requests, db.Table.Requests, db.Table.TokenLocks, db.Table.Requests, driver.Deleted,
-			)). // TODO: Implement EXIST condition
-		Build()
+	query, args, err := sq.Delete(tl).
+		Where(sq.Or{
+			sq.Lt{"created_at": time.Now().UTC().Add(-leaseExpiry)},
+			sq.Expr(fmt.Sprintf(
+				"EXISTS (SELECT 1 FROM %s WHERE %s.tx_id = %s.consumer_tx_id AND %s.status IN (%d))",
+				tr, tr, tl, tr, driver.Deleted,
+			)),
+		}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return err
+	}
 
 	db.Logger.Debug(query)
-	_, err := db.WriteDB.ExecContext(ctx, query, args...)
+	_, err = db.WriteDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		db.Logger.Errorf("query failed: %s", query)
 	}
@@ -95,15 +93,20 @@ func (db *TokenLockStore) logStaleLocks(ctx context.Context, leaseExpiry time.Du
 	if !db.Logger.IsEnabledFor(zapcore.InfoLevel) {
 		return nil
 	}
-	tokenLocks, tokenRequests := q.Table(db.Table.TokenLocks), q.Table(db.Table.Requests)
+	tl, tr := db.Table.TokenLocks, db.Table.Requests
 
-	query, args := q.Select().
-		Fields(
-			tokenLocks.Field("consumer_tx_id"), tokenLocks.Field("tx_id"), tokenLocks.Field("idx"),
-			tokenRequests.Field("status"), tokenLocks.Field("created_at"), common3.FieldName("NOW() AS now"),
-		).
-		From(tokenLocks.Join(tokenRequests, cond.Cmp(tokenLocks.Field("consumer_tx_id"), "=", tokenRequests.Field("tx_id")))).
-		Where(common5.IsExpiredToken(tokenRequests, tokenLocks, leaseExpiry)).Format(db.ci)
+	query, args, err := sq.Select(
+		"tl.consumer_tx_id", "tl.tx_id", "tl.idx",
+		"tr.status", "tl.created_at", "NOW() AS now",
+	).
+		From(tl + " AS tl").
+		LeftJoin(tr + " AS tr ON tl.consumer_tx_id = tr.tx_id").
+		Where(common5.IsExpiredToken("tr", "tl", leaseExpiry)).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return err
+	}
 	db.Logger.Debug(query, args)
 
 	rows, err := db.ReadDB.QueryContext(ctx, query, args...)
