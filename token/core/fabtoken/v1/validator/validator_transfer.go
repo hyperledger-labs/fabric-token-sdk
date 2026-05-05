@@ -31,16 +31,23 @@ func TransferSignatureValidate(c context.Context, ctx *Context) error {
 		return errors.Errorf("invalid number of token inputs, expected at least 1")
 	}
 
+	verifierCache := make(map[string]driver.Verifier)
 	var inputToken []*actions.Output
-	for _, in := range ctx.TransferAction.Inputs {
+	for i, in := range ctx.TransferAction.Inputs {
 		tok := in.Input
 
 		inputToken = append(inputToken, tok)
 		owner := tok.GetOwner()
 		ctx.Logger.Debugf("check sender [%s]", driver.Identity(owner).UniqueID())
-		verifier, err := ctx.Deserializer.GetOwnerVerifier(c, owner)
-		if err != nil {
-			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, driver.Identity(owner).UniqueID())
+		ownerKey := string(owner)
+		verifier, cached := verifierCache[ownerKey]
+		if !cached {
+			var err error
+			verifier, err = ctx.Deserializer.GetOwnerVerifier(c, owner)
+			if err != nil {
+				return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", i, in, driver.Identity(owner).UniqueID())
+			}
+			verifierCache[ownerKey] = verifier
 		}
 		ctx.Logger.Debugf("signature verification [%v][%s]", tok, driver.Identity(owner).UniqueID())
 
