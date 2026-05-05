@@ -8,6 +8,8 @@ package bulletproof
 
 import (
 	math "github.com/IBM/mathlib"
+	bls12381fr "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
+	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/common"
@@ -249,11 +251,12 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	yInv.InvModOrder()
 
 	rightGeneratorsPrime := make([]*math.G1, len(p.RightGenerators))
+	yInv2i := math2.One(p.Curve)
 	for i := range len(p.RightGenerators) {
-		// compute 1/y^i
-		yInv2i := yInv.PowMod(math2.NewCachedZrFromInt(p.Curve, uint64(i))) // #nosec G115
 		// compute the new generators H'_i = H_i^{1/y^i}
 		rightGeneratorsPrime[i] = p.RightGenerators[i].Mul(yInv2i)
+		// next power
+		yInv2i = p.Curve.ModMul(yInv2i, yInv, p.Curve.GroupOrder)
 	}
 	// compute the commitment to left and right
 	com := CommitVector(left, right, p.LeftGenerators, rightGeneratorsPrime, p.Curve)
@@ -326,6 +329,23 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 	y := p.Curve.HashToZr(bytesToHash)
 	z := p.Curve.HashToZr(y.Bytes())
+
+	isBLS, isBN254 := math2.DispatchCurve(p.Curve)
+	if isBLS {
+		rand, err := p.Curve.Rand()
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+
+		return nativeRPPreprocess[bls12381fr.Element, *bls12381fr.Element](p, left, right, randomLeft, randomRight, y, z, C, D, rho, eta, rand)
+	} else if isBN254 {
+		rand, err := p.Curve.Rand()
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+
+		return nativeRPPreprocess[bn254fr.Element, *bn254fr.Element](p, left, right, randomLeft, randomRight, y, z, C, D, rho, eta, rand)
+	}
 
 	leftPrime := make([]*math.Zr, len(left))
 	rightPrime := make([]*math.Zr, len(right))
@@ -512,6 +532,13 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	}
 	y := v.Curve.HashToZr(bytesToHash)
 	z := v.Curve.HashToZr(y.Bytes())
+
+	isBLS, isBN254 := math2.DispatchCurve(v.Curve)
+	if isBLS {
+		return nativeRPVerify[bls12381fr.Element, *bls12381fr.Element](v, rp, x, y, z)
+	} else if isBN254 {
+		return nativeRPVerify[bn254fr.Element, *bn254fr.Element](v, rp, x, y, z)
+	}
 	// z^2 and z^3
 	zSquare := z.PowMod(math2.Two(v.Curve))
 	zCube := v.Curve.ModMul(zSquare, z, v.Curve.GroupOrder)

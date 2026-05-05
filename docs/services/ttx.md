@@ -159,6 +159,61 @@ sequenceDiagram
     Note over I,R: Full RecipientData on wire today (responder sends local wallet RecipientData)
 ```
 
+### PolicyIdentity — Boolean-Expression-Governed Ownership
+
+The TTX service supports **PolicyIdentity** owners: tokens whose spending requires satisfying a boolean expression over a set of component identities.  This enables richer access-control than simple multisig (M-of-N) — for example, an OR clause where any single co-owner may spend unilaterally, or complex nested expressions.
+
+#### Creating a PolicyIdentity
+
+Call `RequestPolicyIdentity` (in `token/services/ttx/recipients.go`) to negotiate a composite identity from all co-owners before building the transfer:
+
+```go
+recipient, err := bptx.RequestRecipientIdentity(ctx, "$0 OR $1",
+    []view.Identity{bobFSCIdentity, charlieFSCIdentity},
+    token.WithTMSIDPointer(tmsID),
+)
+```
+
+Each co-owner's node responds with its component identity; the SDK assembles the `PolicyIdentity` envelope automatically.
+
+#### Policy Expression Syntax
+
+| Expression | Meaning |
+|:-----------|:--------|
+| `$0 OR $1` | Either component 0 **or** component 1 can spend alone. |
+| `$0 AND $1` | Both component 0 **and** component 1 must sign. |
+| `($0 OR $1) AND $2` | One of the first two parties plus party 2 must sign. |
+
+`$N` is a zero-based index into the ordered component identity list supplied when creating the token.
+
+#### Spending — OR Policy
+
+For an OR policy the initiator alone can satisfy the policy.  Pass `WithPolicySigners` to restrict signature collection to only the signing party's slot; the remaining slots are left nil (which is valid for OR branches):
+
+```go
+_, err = context.RunView(ttx.NewCollectEndorsementsView(tx,
+    ttx.WithPolicySigners(myComponentIdentity),
+))
+```
+
+#### Spending — AND Policy
+
+For an AND policy all co-owners must endorse.  Use `RequestSpendView` (in `token/services/ttx/boolpolicy/spend.go`) to notify co-owners before assembling the transaction, then collect endorsements from all components without restriction:
+
+```go
+_, err = context.RunView(bptx.NewRequestSpendView(unspentToken, serviceOpts...))
+// ... build tx ...
+_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
+```
+
+Co-owners run `EndorseSpendView` (via `EndorseSpend`) on their side, which ACKs the spend request and then endorses the assembled transaction.
+
+#### Wallet and Authorization
+
+The `boolpolicy.OwnerWallet` (in `token/services/ttx/boolpolicy/wallet.go`) wraps a standard owner wallet and filters the token list to policy-type tokens.  `VerifyApprover` can be used to assert that a given identity is one of the named component identities before allowing a spend.
+
+The `EscrowAuth` struct (in `token/services/ttx/boolpolicy/auth.go`) implements the `Authorization` interface: `IsMine` returns true if any component identity of the policy token belongs to one of the node's owner wallets.
+
 ## Token Operations
 
 The TTX service supports three primary operations through the `TokenRequest` API:
@@ -178,11 +233,17 @@ Enables the transfer of token ownership. The service:
 ### Redeem
 A specialized transfer where the recipient is "hidden" or "empty," effectively removing the tokens from circulation on the ledger.
 
+Redeem supports an enhanced flow where an issuer signature is required as part of transfer validation:
+1. Add the redeem action with `tx.Redeem(...)`.
+2. If the issuer endpoint cannot be resolved automatically, pass `ttx.WithFSCIssuerIdentity(...)` so the initiator can contact the issuer for endorsement.
+3. Optionally pass `ttx.WithIssuerPublicParamsPublicKey(...)` to pin which issuer public-parameters signing key must authorize the redeem.
+4. Run `CollectEndorsementsView` to collect owner, auditor (if configured), and issuer signatures.
+
 ## Collecting Endorsements
 
 The `CollectEndorsementsView` is responsible for gathering all signatures required to make a transaction valid:
 *   **Owner Signatures**: For every token spent, the service requests a signature from the node that owns the corresponding identity.
-*   **Issuer Signatures**: For transactions involving token issuance.
+*   **Issuer Signatures**: For transactions involving token issuance and enhanced redeem flows that require issuer authorization.
 *   **Auditor Signatures**: If the TMS is configured with an auditor, the transaction must be approved via the `AuditApproveView`.
 *   **Network Endorsements**: The service delegates to the **Network Service** to obtain backend-specific endorsements (e.g., Fabric chaincode endorsements).
 

@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package ttx
 
+import "github.com/hyperledger-labs/fabric-token-sdk/token"
+
 // EndorsementsOpts is used to configure the CollectEndorsementsView
 type EndorsementsOpts struct {
 	// SkipAuditing set it to true to skip the auditing phase
@@ -18,6 +20,11 @@ type EndorsementsOpts struct {
 	SkipDistributeEnv bool
 	// External Signers
 	ExternalWalletSigners map[string]ExternalWalletSigner
+	// PolicySigners, when non-nil, restricts signature collection for policy
+	// identities to the listed component identities.  Component identities not
+	// in the list produce a nil slot in the PolicySignature, which is valid for
+	// OR branches.  When nil, all component identities are contacted (default).
+	PolicySigners []token.Identity
 }
 
 func (o *EndorsementsOpts) ExternalWalletSigner(id string) ExternalWalletSigner {
@@ -74,6 +81,17 @@ func WithSkipApproval() EndorsementsOpt {
 func WithSkipDistributeEnv() EndorsementsOpt {
 	return func(o *EndorsementsOpts) error {
 		o.SkipDistributeEnv = true
+
+		return nil
+	}
+}
+
+// WithPolicySigners restricts signature collection for PolicyIdentity owners to
+// the given component identities.  Unlisted components produce nil slots in the
+// PolicySignature, satisfying OR branches without contacting the other parties.
+func WithPolicySigners(signers ...token.Identity) EndorsementsOpt {
+	return func(o *EndorsementsOpts) error {
+		o.PolicySigners = append(o.PolicySigners, signers...)
 
 		return nil
 	}
