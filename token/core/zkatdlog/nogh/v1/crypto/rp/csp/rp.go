@@ -10,6 +10,8 @@ import (
 	"math/big"
 
 	mathlib "github.com/IBM/mathlib"
+	bls12381fr "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
+	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/asn1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
@@ -276,12 +278,30 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 	if err != nil {
 		return nil, errors.New("Unable to obtain partial lagrange multipliers")
 	}
-	u := math.InnerProduct(aCoeffs, mu, rp.Curve)
+	// Compute u = <aCoeffs, mu> — dispatch to native for supported curves.
+	isBLS, isBN254 := math.DispatchCurve(rp.Curve)
+	var u *mathlib.Zr
+	if isBLS {
+		u = nativeRPInnerProduct[bls12381fr.Element, *bls12381fr.Element](aCoeffs, mu, rp.Curve)
+	} else if isBN254 {
+		u = nativeRPInnerProduct[bn254fr.Element, *bn254fr.Element](aCoeffs, mu, rp.Curve)
+	} else {
+		u = math.InnerProduct(aCoeffs, mu, rp.Curve)
+	}
 
 	tr.Absorb(u.Bytes())
 	gamma, err := tr.Squeeze()
 	if err != nil {
 		return nil, errors.New("Unable to obtain challenge gamma")
+	}
+
+	// Compute paddedSize for lf/wit (next power of 2 >= 2n+4).
+	witSize := 2*n + 4
+	cspRounds := uint64(0)
+	paddedSize := uint64(1)
+	for paddedSize < witSize {
+		paddedSize <<= 1
+		cspRounds++
 	}
 
 	// Extended commitment: pCommExt = pComm + eta * VCommitment.
@@ -299,45 +319,50 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 	gExt[2*n+2] = rp.VGenerators[0].Mul(eta)
 	gExt[2*n+3] = rp.VGenerators[1].Mul(eta)
 
-	// Build aggregated linear form lf = L1 + gamma*L2 + gamma^2*L3 over pExt.
-	//
-	// pExt layout  [0..n]=aCoeffs  [n+1..2n+1]=bCoeffs  [2n+2]=v  [2n+3]=r
-	//
-	// L1: eta*2^{i-1} at [1..n], -eta at [2n+2]          → checks eta*(Σ a_i·2^{i-1} - v) = 0
-	// L2: mu[i]       at [0..n]                            → checks a(c) = u
-	// L3: nu[k]       at [n+1..2n+1] (k=0..n)             → checks b(c) = u*(u-1)
-	gammaSquare := rp.Curve.ModMul(gamma, gamma, rp.Curve.GroupOrder)
-	lf := make([]*mathlib.Zr, len(pExt))
-	for i := range lf {
-		lf[i] = math.Zero(rp.Curve)
-	}
-	// L1 contribution1s.
-	for i := uint64(1); i <= n; i++ {
-		lf[i] = rp.Curve.ModMul(eta, math.PowerOfTwo(rp.Curve, i-1), rp.Curve.GroupOrder)
-	}
-	negEta := eta.Copy()
-	negEta.Neg()
-	lf[2*n+2] = negEta
-	// L2 contributions: add gamma*mu[i] at positions 0..n.
-	for i := uint64(0); i <= n; i++ {
-		lf[i] = rp.Curve.ModAddMul2(
-			lf[i], math.One(rp.Curve),
-			gamma, mu[i],
+	// Build aggregated linear form, and compute lVal.
+	// Dispatch to native gnark arithmetic for supported curves.
+	var lf []*mathlib.Zr
+	var lVal *mathlib.Zr
+	if isBLS {
+		lf, _, lVal = nativeRPBuildLF[bls12381fr.Element, *bls12381fr.Element](
+			n, eta, gamma, mu, nu, aCoeffs, u, rp.Curve)
+	} else if isBN254 {
+		lf, _, lVal = nativeRPBuildLF[bn254fr.Element, *bn254fr.Element](
+			n, eta, gamma, mu, nu, aCoeffs, u, rp.Curve)
+	} else {
+		gammaSquare := rp.Curve.ModMul(gamma, gamma, rp.Curve.GroupOrder)
+		lf = make([]*mathlib.Zr, len(pExt))
+		for i := range lf {
+			lf[i] = math.Zero(rp.Curve)
+		}
+		// L1 contribution1s.
+		for i := uint64(1); i <= n; i++ {
+			lf[i] = rp.Curve.ModMul(eta, math.PowerOfTwo(rp.Curve, i-1), rp.Curve.GroupOrder)
+		}
+		negEta := eta.Copy()
+		negEta.Neg()
+		lf[2*n+2] = negEta
+		// L2 contributions: add gamma*mu[i] at positions 0..n.
+		for i := uint64(0); i <= n; i++ {
+			lf[i] = rp.Curve.ModAddMul2(
+				lf[i], math.One(rp.Curve),
+				gamma, mu[i],
+				rp.Curve.GroupOrder,
+			)
+		}
+		// L3 contributions: gamma^2*nu[k] at positions n+1..2n+1.
+		for k := uint64(0); k <= n; k++ {
+			lf[n+1+k] = rp.Curve.ModMul(gammaSquare, nu[k], rp.Curve.GroupOrder)
+		}
+
+		// Claimed value: lVal = gamma*u + gamma^2*u*(u-1)  (L1(pExt)=0 for honest prover).
+		uMinus1 := rp.Curve.ModSub(u, math.One(rp.Curve), rp.Curve.GroupOrder)
+		lVal = rp.Curve.ModAddMul2(
+			gamma, u,
+			gammaSquare, rp.Curve.ModMul(u, uMinus1, rp.Curve.GroupOrder),
 			rp.Curve.GroupOrder,
 		)
 	}
-	// L3 contributions: gamma^2*nu[k] at positions n+1..2n+1.
-	for k := uint64(0); k <= n; k++ {
-		lf[n+1+k] = rp.Curve.ModMul(gammaSquare, nu[k], rp.Curve.GroupOrder)
-	}
-
-	// Claimed value: lVal = gamma*u + gamma^2*u*(u-1)  (L1(pExt)=0 for honest prover).
-	uMinus1 := rp.Curve.ModSub(u, math.One(rp.Curve), rp.Curve.GroupOrder)
-	lVal := rp.Curve.ModAddMul2(
-		gamma, u,
-		gammaSquare, rp.Curve.ModMul(u, uMinus1, rp.Curve.GroupOrder),
-		rp.Curve.GroupOrder,
-	)
 
 	// ZK blinding: random sBlind, commit it, evaluate L on it.
 	sBlind := make([]*mathlib.Zr, len(pExt))
@@ -345,7 +370,15 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 		sBlind[i] = rp.Curve.NewRandomZr(rand)
 	}
 	sComm := rp.Curve.MultiScalarMul(gExt, sBlind)
-	sVal := math.InnerProduct(lf, sBlind, rp.Curve)
+	// Compute sVal = ⟨lf, sBlind⟩ — dispatch to native for supported curves.
+	var sVal *mathlib.Zr
+	if isBLS {
+		sVal = nativeRPInnerProduct[bls12381fr.Element, *bls12381fr.Element](lf, sBlind, rp.Curve)
+	} else if isBN254 {
+		sVal = nativeRPInnerProduct[bn254fr.Element, *bn254fr.Element](lf, sBlind, rp.Curve)
+	} else {
+		sVal = math.InnerProduct(lf, sBlind, rp.Curve)
+	}
 	tr.Absorb(sComm.Bytes())
 	tr.Absorb(sVal.Bytes())
 
@@ -354,33 +387,34 @@ func (rp *rangeProver) Prove() (*RangeProof, error) {
 		return nil, errors.New("Unable to obtain challenge rho")
 	}
 
-	// Blinded witness: wit = pExt + rho*sBlind  so that
-	//   MSM(gExt, wit) = pCommExt + rho*sComm
-	//   L(wit)         = lVal + rho*sVal
-	wit := make([]*mathlib.Zr, len(pExt))
-	for i := range pExt {
-		wit[i] = rp.Curve.ModAddMul2(
-			pExt[i], math.One(rp.Curve),
-			rho, sBlind[i],
+	// Compute wit and witVal — dispatch to native for supported curves.
+	var wit []*mathlib.Zr
+	var witVal *mathlib.Zr
+	if isBLS {
+		wit, witVal = nativeRPBlindWitness[bls12381fr.Element, *bls12381fr.Element](
+			sBlind, pExt, rho, lVal, sVal, rp.Curve)
+	} else if isBN254 {
+		wit, witVal = nativeRPBlindWitness[bn254fr.Element, *bn254fr.Element](
+			sBlind, pExt, rho, lVal, sVal, rp.Curve)
+	} else {
+		wit = make([]*mathlib.Zr, len(pExt))
+		for i := range pExt {
+			wit[i] = rp.Curve.ModAddMul2(
+				pExt[i], math.One(rp.Curve),
+				rho, sBlind[i],
+				rp.Curve.GroupOrder,
+			)
+		}
+		witVal = rp.Curve.ModAddMul2(
+			lVal, math.One(rp.Curve),
+			rho, sVal,
 			rp.Curve.GroupOrder,
 		)
 	}
 	witComm := pCommExt.Copy()
 	witComm.Add(sComm.Mul(rho))
-	witVal := rp.Curve.ModAddMul2(
-		lVal, math.One(rp.Curve),
-		rho, sVal,
-		rp.Curve.GroupOrder,
-	)
 
 	// Pad witness / generators / linear form to the next power of 2 for CSP.
-	witSize := uint64(len(wit))
-	cspRounds := uint64(0)
-	paddedSize := uint64(1)
-	for paddedSize < witSize {
-		paddedSize <<= 1
-		cspRounds++
-	}
 	for uint64(len(wit)) < paddedSize {
 		wit = append(wit, math.Zero(rp.Curve))
 		gExt = append(gExt, rp.Curve.GenG1)
