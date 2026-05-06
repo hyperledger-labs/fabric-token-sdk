@@ -48,11 +48,11 @@ func newMetrics(p metrics.Provider) *Metrics {
 			Help: "Total number of errors returned by event.Process in worker goroutines",
 		}),
 		ProcessingDuration: p.NewHistogram(metrics.HistogramOpts{
-			Name:                            "finality_queue_processing_duration_seconds",
-			Help:                            "Histogram of successful event processing time in worker goroutines (seconds)",
-			Buckets:                         []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5},
-			NativeHistogramBucketFactor:     1.1,
-			NativeHistogramMaxBucketNumber:  100,
+			Name:                           "finality_queue_processing_duration_seconds",
+			Help:                           "Histogram of successful event processing time in worker goroutines (seconds)",
+			Buckets:                        []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5},
+			NativeHistogramBucketFactor:    1.1,
+			NativeHistogramMaxBucketNumber: 100,
 		}),
 	}
 }

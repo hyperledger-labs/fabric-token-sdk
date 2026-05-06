@@ -40,28 +40,28 @@ var (
 		LabelNames: []string{"network", "channel", "namespace"},
 	}
 	endorsementDuration = metrics.HistogramOpts{
-		Name:                            "endorsement_duration_seconds",
-		Help:                            "Duration of the full endorsement collection phase including signatures, audit, and chaincode approval.",
-		LabelNames:                      []string{"network", "channel", "namespace"},
-		Buckets:                         defaultDurationBuckets,
-		NativeHistogramBucketFactor:     defaultNativeHistogramBucketFactor,
-		NativeHistogramMaxBucketNumber:  100,
+		Name:                           "endorsement_duration_seconds",
+		Help:                           "Duration of the full endorsement collection phase including signatures, audit, and chaincode approval.",
+		LabelNames:                     []string{"network", "channel", "namespace"},
+		Buckets:                        defaultDurationBuckets,
+		NativeHistogramBucketFactor:    defaultNativeHistogramBucketFactor,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 	auditApprovalDuration = metrics.HistogramOpts{
-		Name:                            "audit_approval_duration_seconds",
-		Help:                            "Duration of the auditor approval phase including validation, append, and signing.",
-		LabelNames:                      []string{"network", "channel", "namespace"},
-		Buckets:                         defaultDurationBuckets,
-		NativeHistogramBucketFactor:     defaultNativeHistogramBucketFactor,
-		NativeHistogramMaxBucketNumber:  100,
+		Name:                           "audit_approval_duration_seconds",
+		Help:                           "Duration of the auditor approval phase including validation, append, and signing.",
+		LabelNames:                     []string{"network", "channel", "namespace"},
+		Buckets:                        defaultDurationBuckets,
+		NativeHistogramBucketFactor:    defaultNativeHistogramBucketFactor,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 	orderingDuration = metrics.HistogramOpts{
-		Name:                            "ordering_duration_seconds",
-		Help:                            "Duration of the transaction broadcast to the ordering service.",
-		LabelNames:                      []string{"network", "channel", "namespace"},
-		Buckets:                         defaultDurationBuckets,
-		NativeHistogramBucketFactor:     defaultNativeHistogramBucketFactor,
-		NativeHistogramMaxBucketNumber:  100,
+		Name:                           "ordering_duration_seconds",
+		Help:                           "Duration of the transaction broadcast to the ordering service.",
+		LabelNames:                     []string{"network", "channel", "namespace"},
+		Buckets:                        defaultDurationBuckets,
+		NativeHistogramBucketFactor:    defaultNativeHistogramBucketFactor,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 )
 
