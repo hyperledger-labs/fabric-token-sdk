@@ -151,25 +151,31 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 		counter++
 	}
 
-	timer := time.NewTimer(c.timeout)
+	return nil, waitForAnswers(answerChannel, counter, c.timeout)
+}
+
+// waitForAnswers drains count replies from ch within the given timeout.
+// It returns the first transport or application error, or a timeout error if
+// no reply arrives in time.
+func waitForAnswers(ch <-chan *answer, count int, timeout time.Duration) error {
+	timer := time.NewTimer(timeout)
 	defer timer.Stop()
-	for range counter {
-		logger.DebugfContext(context.Context(), "Wait for answer")
+
+	for range count {
 		select {
-		case a := <-answerChannel:
-			logger.DebugfContext(context.Context(), "Received answer")
+		case a := <-ch:
 			if a.err != nil {
-				return nil, errors.Wrapf(a.err, "got failure [%s] from [%s]", a.party.String(), a.err)
+				return errors.Wrapf(a.err, "got failure [%s] from [%s]", a.party.String(), a.err)
 			}
 			if a.response.Err != nil {
-				return nil, errors.Wrapf(a.response.Err, "got failure [%s] from [%s]", a.party.String(), a.response.Err)
+				return errors.Wrapf(a.response.Err, "got failure [%s] from [%s]", a.party.String(), a.response.Err)
 			}
 		case <-timer.C:
-			return nil, errors.Errorf("timed out after %s waiting for co-signer response", c.timeout)
+			return errors.Errorf("timed out after %s waiting for co-signer response", timeout)
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func (c *RequestSpendView) WithTimeout(timeout time.Duration) *RequestSpendView {

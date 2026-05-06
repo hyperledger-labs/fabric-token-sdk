@@ -6,46 +6,94 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// ---------------------------------------------------------------------------
+// waitForAnswers — covers every branch of the extracted helper
+// ---------------------------------------------------------------------------
+
+func TestWaitForAnswers_AllSucceed(t *testing.T) {
+	ch := make(chan *answer, 2)
+	ch <- &answer{response: &SpendResponse{}, party: view.Identity("p1")}
+	ch <- &answer{response: &SpendResponse{}, party: view.Identity("p2")}
+
+	err := waitForAnswers(ch, 2, time.Second)
+	require.NoError(t, err)
+}
+
+func TestWaitForAnswers_ZeroCount(t *testing.T) {
+	ch := make(chan *answer)
+	err := waitForAnswers(ch, 0, time.Second)
+	require.NoError(t, err)
+}
+
+func TestWaitForAnswers_TransportError(t *testing.T) {
+	ch := make(chan *answer, 1)
+	ch <- &answer{err: errors.New("session dropped"), party: view.Identity("p1")}
+
+	err := waitForAnswers(ch, 1, time.Second)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "session dropped")
+}
+
+func TestWaitForAnswers_ApplicationError(t *testing.T) {
+	ch := make(chan *answer, 1)
+	ch <- &answer{
+		response: &SpendResponse{Err: errors.New("signature refused")},
+		party:    view.Identity("p1"),
+	}
+
+	err := waitForAnswers(ch, 1, time.Second)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "signature refused")
+}
+
+func TestWaitForAnswers_Timeout(t *testing.T) {
+	ch := make(chan *answer)
+
+	start := time.Now()
+	err := waitForAnswers(ch, 1, 50*time.Millisecond)
+	elapsed := time.Since(start)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "timed out")
+	assert.GreaterOrEqual(t, elapsed, 50*time.Millisecond)
+}
+
+func TestWaitForAnswers_ErrorOnSecondAnswer(t *testing.T) {
+	ch := make(chan *answer, 2)
+	ch <- &answer{response: &SpendResponse{}, party: view.Identity("p1")}
+	ch <- &answer{err: errors.New("second party failed"), party: view.Identity("p2")}
+
+	err := waitForAnswers(ch, 2, time.Second)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "second party failed")
+}
+
+// ---------------------------------------------------------------------------
+// RequestSpendView struct — constructor and WithTimeout
+// ---------------------------------------------------------------------------
 
 func TestNewRequestSpendView_NilToken(t *testing.T) {
 	v := NewRequestSpendView(nil)
-	assert.NotNil(t, v)
+	require.NotNil(t, v)
 	assert.Error(t, v.err)
 }
 
-func TestNewRequestSpendView_DefaultTimeout(t *testing.T) {
-	v := &RequestSpendView{}
-	v = v.WithTimeout(5 * time.Second)
-	assert.Equal(t, 5*time.Second, v.timeout)
+func TestRequestSpendView_DefaultTimeout(t *testing.T) {
+	v := &RequestSpendView{timeout: defaultSpendRequestTimeout}
+	assert.Equal(t, defaultSpendRequestTimeout, v.timeout)
 }
 
 func TestRequestSpendView_WithTimeout(t *testing.T) {
 	v := &RequestSpendView{timeout: defaultSpendRequestTimeout}
-	assert.Equal(t, defaultSpendRequestTimeout, v.timeout)
-
 	v.WithTimeout(10 * time.Second)
 	assert.Equal(t, 10*time.Second, v.timeout)
-}
-
-func TestRequestSpendView_TimeoutApplied(t *testing.T) {
-	answerCh := make(chan *answer)
-	v := &RequestSpendView{timeout: 50 * time.Millisecond}
-
-	timer := time.NewTimer(v.timeout)
-	defer timer.Stop()
-
-	var timedOut bool
-	select {
-	case <-answerCh:
-		timedOut = false
-	case <-timer.C:
-		timedOut = true
-	}
-
-	assert.True(t, timedOut, "select should have taken the timer branch when no answer arrives")
 }
