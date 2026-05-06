@@ -10,9 +10,9 @@ import (
 	"database/sql"
 	"strconv"
 
+	sq "github.com/Masterminds/squirrel"
 	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
 	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
@@ -76,7 +76,7 @@ func NewTokenStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableName
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
-		postgres.NewConditionInterpreter(),
+		sq.Dollar,
 		notifier,
 	)
 	if err != nil {

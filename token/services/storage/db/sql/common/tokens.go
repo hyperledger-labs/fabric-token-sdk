@@ -10,20 +10,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math/big"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
@@ -44,31 +41,31 @@ type TokenStore struct {
 	readDB   *sql.DB
 	writeDB  *sql.DB
 	table    tokenTables
-	ci       common3.CondInterpreter
+	pf       sq.PlaceholderFormat
 	notifier driver.TokenNotifier
 
 	sttMutex              sync.RWMutex
 	supportedTokenFormats []token.Format
 }
 
-func newTokenStore(readDB, writeDB *sql.DB, tables tokenTables, ci common3.CondInterpreter, notifier driver.TokenNotifier) *TokenStore {
+func newTokenStore(readDB, writeDB *sql.DB, tables tokenTables, pf sq.PlaceholderFormat, notifier driver.TokenNotifier) *TokenStore {
 	return &TokenStore{
 		readDB:   readDB,
 		writeDB:  writeDB,
 		table:    tables,
-		ci:       ci,
+		pf:       pf,
 		notifier: notifier,
 	}
 }
 
-func NewTokenStoreWithNotifier(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, notifier driver.TokenNotifier) (*TokenStore, error) {
+func NewTokenStoreWithNotifier(readDB, writeDB *sql.DB, tables TableNames, pf sq.PlaceholderFormat, notifier driver.TokenNotifier) (*TokenStore, error) {
 	return newTokenStore(readDB, writeDB, tokenTables{
 		Tokens:         tables.Tokens,
 		Ownership:      tables.Ownership,
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
 		Requests:       tables.Requests,
-	}, ci, notifier), nil
+	}, pf, notifier), nil
 }
 
 func (db *TokenStore) CreateSchema() error {
@@ -109,12 +106,15 @@ func (db *TokenStore) DeleteTokens(ctx context.Context, deletedBy string, ids ..
 		return nil
 	}
 
-	query, args := q.Update(db.table.Tokens).
+	query, args, err := sq.Update(db.table.Tokens).
 		Set("is_deleted", true).
 		Set("spent_by", deletedBy).
 		Set("spent_at", time.Now().UTC()).
 		Where(HasTokens("tx_id", "idx", ids...)).
-		Format(db.ci)
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "error building delete tokens query")
+	}
 	logging.Debug(logger, query, args)
 	if _, err := db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error setting tokens to deleted [%v]", ids)
@@ -125,14 +125,16 @@ func (db *TokenStore) DeleteTokens(ctx context.Context, deletedBy string, ids ..
 
 // IsMine just checks if the token is in the local storage and not deleted
 func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bool, error) {
-	query, args := q.Select().
-		FieldsByName("tx_id").
-		From(q.Table(db.table.Tokens)).
-		Where(cond.And(cond.Eq("tx_id", txID), cond.Eq("idx", index), cond.Eq("is_deleted", false), cond.Eq("owner", true))).
+	query, args, err := sq.Select("tx_id").
+		From(db.table.Tokens).
+		Where(sq.And{sq.Eq{"tx_id": txID}, sq.Eq{"idx": index}, sq.Eq{"is_deleted": false}, sq.Eq{"owner": true}}).
 		Limit(1).
-		Format(db.ci)
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return false, err
+	}
 
-	id, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
+	id, err := common.QueryUnique[string](db.readDB, query, args...)
 
 	logger.DebugfContext(ctx, "token [%s:%d] is mine [%s]", txID, index, id)
 
@@ -170,74 +172,17 @@ func (db *TokenStore) UnspentTokensIterator(ctx context.Context) (tdriver.Unspen
 // dedup pass; duplicates between the two branches (and within branch 1 when
 // a token has multiple ownership rows) are filtered at the iterator layer.
 func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnspentTokensIterator, error) {
-	tokenTable := q.Table(db.table.Tokens)
-	ownershipTable := q.Table(db.table.Ownership)
-	joinCond := cond.And(
-		cond.Cmp(tokenTable.Field("tx_id"), "=", ownershipTable.Field("tx_id")),
-		cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx")),
-	)
-
-	// branch 1: filter by tokens.owner_wallet_id only (planner can pick the
-	// partial index on tokens), but JOIN ownership so a tokens row without
-	// any ownership row is excluded — matching the pre-PR INNER JOIN.
-	branch1Conds := []cond.Condition{
-		cond.Eq("owner", true),
-		cond.Eq("is_deleted", false),
+	query, args, err := sq.Select("t.tx_id", "t.idx", "owner_raw", "token_type", "quantity").
+		From(db.table.Tokens + " AS t").
+		Join(db.table.Ownership + " AS o ON t.tx_id = o.tx_id AND t.idx = o.idx").
+		Where(HasTokenDetails(driver.QueryTokenDetailsParams{
+			WalletID:  walletID,
+			TokenType: tokenType,
+		}, "t")).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, err
 	}
-	if len(walletID) > 0 {
-		branch1Conds = append(branch1Conds, cond.Eq("owner_wallet_id", walletID))
-	}
-	if len(tokenType) > 0 {
-		branch1Conds = append(branch1Conds, cond.Eq("token_type", tokenType))
-	}
-	// Both branches select ownership.wallet_id as the trailing column. It
-	// isn't part of the iterator output but is used as the dedup key so a
-	// (token, ownership) pair appearing in both branches (when walletID
-	// matches both tokens.owner_wallet_id and ownership.wallet_id of the
-	// same row) is emitted once. Pre-PR semantics yield one row per
-	// matching (token, ownership) pair, including duplicates per token
-	// when multiple ownership rows match (e.g. shared-ownership tokens).
-	branch1 := q.Select().
-		Fields(
-			tokenTable.Field("tx_id"), tokenTable.Field("idx"),
-			common3.FieldName("owner_raw"), common3.FieldName("token_type"), common3.FieldName("quantity"),
-			ownershipTable.Field("wallet_id"),
-		).
-		From(tokenTable.Join(ownershipTable, joinCond)).
-		Where(cond.And(branch1Conds...))
-
-	// branch 2: filter by ownership.wallet_id. `wallet_id` is the unique
-	// unqualified column on the ownership side of the join (tokens has
-	// owner_wallet_id, not wallet_id), so the condition resolves
-	// unambiguously to ownership.wallet_id.
-	branch2Conds := []cond.Condition{
-		cond.Eq("owner", true),
-		cond.Eq("is_deleted", false),
-		cond.Eq("wallet_id", walletID),
-	}
-	if len(tokenType) > 0 {
-		branch2Conds = append(branch2Conds, cond.Eq("token_type", tokenType))
-	}
-	branch2 := q.Select().
-		Fields(
-			tokenTable.Field("tx_id"), tokenTable.Field("idx"),
-			common3.FieldName("owner_raw"), common3.FieldName("token_type"), common3.FieldName("quantity"),
-			ownershipTable.Field("wallet_id"),
-		).
-		From(tokenTable.Join(ownershipTable, joinCond)).
-		Where(cond.And(branch2Conds...))
-
-	// Combine both branches into one statement using a shared builder so
-	// the placeholder counter (`$1`, `$2`, ...) keeps incrementing across
-	// branches; each branch's args are appended in order. SQLite rejects
-	// parenthesised SELECT operands around UNION, so emit unwrapped form
-	// (PostgreSQL accepts both). Neither branch has ORDER BY / LIMIT, so
-	// dropping the parens does not change binding.
-	sb := common3.NewBuilder()
-	branch1.FormatTo(db.ci, sb)
-	sb.WriteString(" UNION ALL ")
-	branch2.FormatTo(db.ci, sb)
-	query, args := sb.Build()
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -301,16 +246,18 @@ func (it *dedupedTokenRowsIterator) Next() (*token.UnspentToken, error) {
 
 // SpendableTokensIteratorBy returns the minimum information about the tokens needed for the selector
 func (db *TokenStore) SpendableTokensIteratorBy(ctx context.Context, walletID string, typ token.Type) (tdriver.SpendableTokensIterator, error) {
-	query, args := q.Select().
-		FieldsByName("tx_id", "idx", "token_type", "quantity", "owner_wallet_id").
-		From(q.Table(db.table.Tokens)).
+	query, args, err := sq.Select("tx_id", "idx", "token_type", "quantity", "owner_wallet_id").
+		From(db.table.Tokens).
 		Where(HasTokenDetails(driver.QueryTokenDetailsParams{
 			WalletID:           walletID,
 			TokenType:          typ,
 			Spendable:          driver.SpendableOnly,
 			LedgerTokenFormats: db.getSupportedTokenFormats(),
-		}, nil)).
-		Format(db.ci)
+		}, "")).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -347,10 +294,13 @@ func (db *TokenStore) UnsupportedTokensIteratorBy(ctx context.Context, walletID 
 }
 
 func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.QueryTokenDetailsParams) (tdriver.UnsupportedTokensIterator, error) {
-	query, args := q.Select().FieldsByName("tx_id", "idx", "ledger", "ledger_metadata", "ledger_type").
-		From(q.Table(db.table.Tokens)).
-		Where(HasTokenDetails(details, nil)).
-		Format(db.ci)
+	query, args, err := sq.Select("tx_id", "idx", "ledger", "ledger_metadata", "ledger_type").
+		From(db.table.Tokens).
+		Where(HasTokenDetails(details, "")).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
 
 	logging.Debug(logger, query, args)
 
@@ -364,39 +314,30 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	}), nil
 }
 
-// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
-// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
-func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (*big.Int, error) {
+// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
+func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (uint64, error) {
 	return db.balance(ctx, driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	})
 }
 
-func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (*big.Int, error) {
-	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
-	query, args := q.Select().FieldsByName("SUM(amount)").
-		From(tokenTable.Join(ownershipTable, cond.And(
-			cond.Cmp(tokenTable.Field("tx_id"), "=", ownershipTable.Field("tx_id")),
-			cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx"))),
-		)).
-		Where(HasTokenDetails(opts, tokenTable)).
-		Format(db.ci)
-
-	var sum BigInt
-	err := db.readDB.QueryRowContext(ctx, query, args...).Scan(&sum)
+func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (uint64, error) {
+	query, args, err := sq.Select("SUM(amount)").
+		From(db.table.Tokens + " AS t").
+		Join(db.table.Ownership + " AS o ON t.tx_id = o.tx_id AND t.idx = o.idx").
+		Where(HasTokenDetails(opts, "t")).
+		PlaceholderFormat(db.pf).ToSql()
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return big.NewInt(0), nil
-		}
-
-		return nil, err
-	}
-	if sum.Int == nil {
-		return big.NewInt(0), nil
+		return 0, err
 	}
 
-	return sum.Int, nil
+	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
+	if err != nil || sum == nil {
+		return 0, err
+	}
+
+	return *sum, nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
@@ -439,7 +380,6 @@ func (db *TokenStore) ListUnspentTokensByWallets(ctx context.Context, walletIDs 
 		return map[string]*token.UnspentTokens{}, nil
 	}
 
-	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
 	// owner_wallet_id lives on Tokens, wallet_id lives on Ownership. The
 	// WHERE condition (HasTokenDetails) matches a row if either column is
 	// in walletIDs, so we project both and bucket each row (below) under
@@ -447,22 +387,17 @@ func (db *TokenStore) ListUnspentTokensByWallets(ctx context.Context, walletIDs 
 	// can show up through the Ownership join multiple times if it has
 	// multiple wallet owners; that is intentional — each (token, wallet)
 	// pair contributes one row.
-	query, args := q.Select().
-		Fields(
-			ownershipTable.Field("wallet_id"),
-			tokenTable.Field("owner_wallet_id"),
-			tokenTable.Field("tx_id"), tokenTable.Field("idx"), common3.FieldName("owner_raw"),
-			common3.FieldName("token_type"), common3.FieldName("quantity"),
-		).
-		From(tokenTable.Join(ownershipTable, cond.And(
-			cond.Cmp(tokenTable.Field("tx_id"), "=", ownershipTable.Field("tx_id")),
-			cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx"))),
-		)).
+	query, args, err := sq.Select("o.wallet_id", "t.owner_wallet_id", "t.tx_id", "t.idx", "owner_raw", "token_type", "quantity").
+		From(db.table.Tokens + " AS t").
+		Join(db.table.Ownership + " AS o ON t.tx_id = o.tx_id AND t.idx = o.idx").
 		Where(HasTokenDetails(driver.QueryTokenDetailsParams{
 			WalletIDs: walletIDs,
 			TokenType: typ,
-		}, tokenTable)).
-		Format(db.ci)
+		}, "t")).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -523,14 +458,13 @@ func (db *TokenStore) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]
 		return []*token.Token{}, nil
 	}
 
-	query, args := q.Select().
-		FieldsByName("tx_id", "idx", "owner_raw", "token_type", "quantity").
-		From(q.Table(db.table.Tokens)).
-		Where(cond.And(
-			HasTokens("tx_id", "idx", ids...),
-			cond.Eq("auditor", true)),
-		).
-		Format(db.ci)
+	query, args, err := sq.Select("tx_id", "idx", "owner_raw", "token_type", "quantity").
+		From(db.table.Tokens).
+		Where(sq.And{HasTokens("tx_id", "idx", ids...), sq.Eq{"auditor": true}}).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -586,11 +520,13 @@ func (db *TokenStore) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]
 
 // ListHistoryIssuedTokens returns the list of issued tokens
 func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error) {
-	query, args := q.Select().
-		FieldsByName("tx_id", "idx", "owner_raw", "token_type", "quantity", "issuer_raw").
-		From(q.Table(db.table.Tokens)).
-		Where(cond.Eq("issuer", true)).
-		Format(db.ci)
+	query, args, err := sq.Select("tx_id", "idx", "owner_raw", "token_type", "quantity", "issuer_raw").
+		From(db.table.Tokens).
+		Where(sq.Eq{"issuer": true}).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -655,11 +591,13 @@ func (db *TokenStore) getLedgerToken(ctx context.Context, ids []*token.ID) ([][]
 		return [][]byte{}, nil
 	}
 
-	query, args := q.Select().
-		FieldsByName("tx_id, idx, ledger").
-		From(q.Table(db.table.Tokens)).
+	query, args, err := sq.Select("tx_id", "idx", "ledger").
+		From(db.table.Tokens).
 		Where(HasTokens("tx_id", "idx", ids...)).
-		Format(db.ci)
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -701,11 +639,13 @@ func (db *TokenStore) getLedgerTokenAndMeta(ctx context.Context, ids []*token.ID
 		return nil, nil, nil, nil
 	}
 
-	query, args := q.Select().
-		FieldsByName("tx_id", "idx", "ledger", "ledger_type", "ledger_metadata").
-		From(q.Table(db.table.Tokens)).
+	query, args, err := sq.Select("tx_id", "idx", "ledger", "ledger_type", "ledger_metadata").
+		From(db.table.Tokens).
 		Where(HasTokens("tx_id", "idx", ids...)).
-		Format(db.ci)
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -751,15 +691,13 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 		return []*token.Token{}, nil
 	}
 
-	query, args := q.Select().
-		FieldsByName("tx_id", "idx", "owner_raw", "token_type", "quantity").
-		From(q.Table(db.table.Tokens)).
-		Where(cond.And(
-			HasTokens("tx_id", "idx", inputs...),
-			cond.Eq("is_deleted", false),
-			cond.Eq("owner", true),
-		)).
-		Format(db.ci)
+	query, args, err := sq.Select("tx_id", "idx", "owner_raw", "token_type", "quantity").
+		From(db.table.Tokens).
+		Where(sq.And{HasTokens("tx_id", "idx", inputs...), sq.Eq{"is_deleted": false}, sq.Eq{"owner": true}}).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -821,20 +759,14 @@ func (db *TokenStore) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*to
 // Filters work cumulatively and may be left empty. If a token is owned by two enrollmentIDs and there
 // is no filter on enrollmentID, the token will be returned twice (once for each owner).
 func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
-	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
-	query, args := q.Select().
-		Fields(
-			tokenTable.Field("tx_id"), tokenTable.Field("idx"), common3.FieldName("owner_identity"),
-			common3.FieldName("owner_type"), common3.FieldName("wallet_id"), common3.FieldName("token_type"),
-			common3.FieldName("amount"), common3.FieldName("is_deleted"), common3.FieldName("spent_by"),
-			common3.FieldName("stored_at"),
-		).
-		From(tokenTable.Join(ownershipTable, cond.And(
-			cond.Cmp(tokenTable.Field("tx_id"), "=", ownershipTable.Field("tx_id")),
-			cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx"))),
-		)).
-		Where(HasTokenDetails(params, tokenTable)).
-		Format(db.ci)
+	query, args, err := sq.Select("t.tx_id", "t.idx", "owner_identity", "owner_type", "wallet_id", "token_type", "amount", "is_deleted", "spent_by", "stored_at").
+		From(db.table.Tokens + " AS t").
+		Join(db.table.Ownership + " AS o ON t.tx_id = o.tx_id AND t.idx = o.idx").
+		Where(HasTokenDetails(params, "t")).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -843,13 +775,7 @@ func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.Query
 	}
 
 	it := common.NewIterator(rows, func(td *driver.TokenDetails) error {
-		var amount BigInt
-		if err := rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &amount, &td.IsSpent, &td.SpentBy, &td.StoredAt); err != nil {
-			return err
-		}
-		td.Amount = amount.Int
-
-		return nil
+		return rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &td.Amount, &td.IsSpent, &td.SpentBy, &td.StoredAt)
 	})
 
 	return iterators.ReadAllValues(it)
@@ -862,11 +788,13 @@ func (db *TokenStore) WhoDeletedTokens(ctx context.Context, inputs ...*token.ID)
 		return []string{}, []bool{}, nil
 	}
 
-	query, args := q.Select().
-		FieldsByName("tx_id", "idx", "spent_by", "is_deleted").
-		From(q.Table(db.table.Tokens)).
+	query, args, err := sq.Select("tx_id", "idx", "spent_by", "is_deleted").
+		From(db.table.Tokens).
 		Where(HasTokens("tx_id", "idx", inputs...)).
-		Format(db.ci)
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -920,12 +848,14 @@ func (db *TokenStore) WhoDeletedTokens(ctx context.Context, inputs ...*token.ID)
 }
 
 func (db *TokenStore) TransactionExists(ctx context.Context, id string) (bool, error) {
-	query, args := q.Select().
-		FieldsByName("tx_id").
-		From(q.Table(db.table.Tokens)).
-		Where(cond.Eq("tx_id", id)).
+	query, args, err := sq.Select("tx_id").
+		From(db.table.Tokens).
+		Where(sq.Eq{"tx_id": id}).
 		Limit(1).
-		Format(db.ci)
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return false, err
+	}
 
 	txID, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
 
@@ -941,35 +871,42 @@ func (db *TokenStore) StorePublicParams(ctx context.Context, raw []byte) error {
 		return nil
 	}
 
-	query, args := q.InsertInto(db.table.PublicParams).
-		Fields("raw", "raw_hash", "stored_at").
-		Row(raw, rawHash, time.Now().UTC()).
-		Format()
+	query, args, err := sq.Insert(db.table.PublicParams).
+		Columns("raw", "raw_hash", "stored_at").
+		Values(raw, rawHash, time.Now().UTC()).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return err
+	}
 	logger.DebugfContext(ctx, query, fmt.Sprintf("store public parameters (%d bytes), hash [%s]", len(raw), logging.Base64(rawHash)))
-	_, err := db.writeDB.ExecContext(ctx, query, args...)
+	_, err = db.writeDB.ExecContext(ctx, query, args...)
 
 	return err
 }
 
 func (db *TokenStore) PublicParams(ctx context.Context) ([]byte, error) {
-	query, args := q.Select().
-		FieldsByName("raw").
-		From(q.Table(db.table.PublicParams)).
-		OrderBy(q.Desc(common3.FieldName("stored_at"))).
+	query, args, err := sq.Select("raw").
+		From(db.table.PublicParams).
+		OrderBy("stored_at DESC").
 		Limit(1).
-		Format(db.ci)
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, err
+	}
 
-	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
 func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PPHash) ([]byte, error) {
-	query, args := q.Select().
-		FieldsByName("raw").
-		From(q.Table(db.table.PublicParams)).
-		Where(cond.Eq("raw_hash", rawHash)).
-		Format(db.ci)
+	query, args, err := sq.Select("raw").
+		From(db.table.PublicParams).
+		Where(sq.Eq{"raw_hash": rawHash}).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, err
+	}
 
-	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
 func (db *TokenStore) StoreCertifications(ctx context.Context, certifications map[*token.ID][]byte) error {
@@ -978,17 +915,17 @@ func (db *TokenStore) StoreCertifications(ctx context.Context, certifications ma
 	}
 	now := time.Now().UTC()
 
-	rows := make([]common3.Tuple, 0, len(certifications))
+	insert := sq.Insert(db.table.Certifications).Columns("tx_id", "idx", "certification", "stored_at")
 	for tokenID, certification := range certifications {
 		if tokenID == nil {
 			return errors.Errorf("invalid token-id, cannot be nil")
 		}
-		rows = append(rows, common3.Tuple{tokenID.TxId, tokenID.Index, certification, now})
+		insert = insert.Values(tokenID.TxId, tokenID.Index, certification, now)
 	}
-	query, args := q.InsertInto(db.table.Certifications).
-		Fields("tx_id", "idx", "certification", "stored_at").
-		Rows(rows).
-		Format()
+	query, args, err := insert.PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return err
+	}
 	if _, err := db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return tokenDBError(err)
 	}
@@ -1001,13 +938,17 @@ func (db *TokenStore) ExistsCertification(ctx context.Context, tokenID *token.ID
 		return false
 	}
 
-	query, args := q.Select().
-		FieldsByName("certification").
-		From(q.Table(db.table.Certifications)).
+	query, args, err := sq.Select("certification").
+		From(db.table.Certifications).
 		Where(HasTokens("tx_id", "idx", tokenID)).
-		Format(db.ci)
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
 
-	certification, err := common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+		return false
+	}
+
+	certification, err := common.QueryUnique[[]byte](db.readDB, query, args...)
 	if err != nil {
 		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
 
@@ -1027,11 +968,13 @@ func (db *TokenStore) GetCertifications(ctx context.Context, ids []*token.ID) ([
 		return nil, nil
 	}
 
-	query, args := q.Select().
-		FieldsByName("tx_id", "idx", "certification").
-		From(q.Table(db.table.Certifications)).
+	query, args, err := sq.Select("tx_id", "idx", "certification").
+		From(db.table.Certifications).
 		Where(HasTokens("tx_id", "idx", ids...)).
-		Format(db.ci)
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to build query")
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -1089,14 +1032,14 @@ func (db *TokenStore) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL,
 			idx INT NOT NULL,
-			amount NUMERIC(78, 0) NOT NULL,
+			amount BIGINT NOT NULL,
 			token_type TEXT NOT NULL,
 			quantity TEXT NOT NULL,
 			issuer_raw BYTEA,
 			owner_raw BYTEA NOT NULL,
 			owner_type TEXT NOT NULL,
 			owner_identity BYTEA NOT NULL,
-			owner_wallet_id TEXT, 
+			owner_wallet_id TEXT,
 			ledger BYTEA NOT NULL,
             ledger_type TEXT DEFAULT '',
 			ledger_metadata BYTEA NOT NULL,
@@ -1128,7 +1071,7 @@ func (db *TokenStore) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
 			raw_hash BYTEA PRIMARY KEY,
 			raw BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL 
+			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS stored_at_%s ON %s ( stored_at );
 
@@ -1164,7 +1107,7 @@ func (db *TokenStore) NewTokenDBTransaction() (driver.TokenStoreTransaction, err
 		return nil, errors.Errorf("failed starting a db transaction")
 	}
 
-	return &TokenTransaction{ci: db.ci, table: &db.table, tx: tx}, nil
+	return &TokenTransaction{pf: db.pf, table: &db.table, tx: tx}, nil
 }
 
 func (db *TokenStore) ContinueTokenDBTransaction(tx driver.Transaction) (driver.TokenStoreTransaction, error) {
@@ -1173,7 +1116,7 @@ func (db *TokenStore) ContinueTokenDBTransaction(tx driver.Transaction) (driver.
 		return nil, errors.Errorf("failed continuing a db transaction, expecting an sql transaction")
 	}
 
-	return &TokenTransaction{ci: db.ci, table: &db.table, tx: sqlTx}, nil
+	return &TokenTransaction{pf: db.pf, table: &db.table, tx: sqlTx}, nil
 }
 
 func (db *TokenStore) SetSupportedTokenFormats(formats []token.Format) error {
@@ -1193,15 +1136,17 @@ func (db *TokenStore) getSupportedTokenFormats() []token.Format {
 }
 
 func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID string, tokenType token.Type) ([]token.Format, error) {
-	query, args := q.SelectDistinct().
-		FieldsByName("ledger_type").
-		From(q.Table(db.table.Tokens)).
+	query, args, err := sq.Select("DISTINCT ledger_type").
+		From(db.table.Tokens).
 		Where(HasTokenDetails(driver.QueryTokenDetailsParams{
 			WalletID:  walletID,
 			TokenType: tokenType,
 			Spendable: driver.Any,
-		}, nil)).
-		Format(db.ci)
+		}, "")).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -1225,26 +1170,22 @@ func (db *TokenStore) unspendableTokenFormats(ctx context.Context, walletID stri
 
 type TokenTransaction struct {
 	table *tokenTables
-	ci    common3.CondInterpreter
+	pf    sq.PlaceholderFormat
 	tx    *sql.Tx
 }
 
 func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, includeDeleted bool) (*token.Token, []string, error) {
-	tokenTable, ownershipTable := q.Table(t.table.Tokens), q.Table(t.table.Ownership)
-	query, args := q.Select().
-		Fields(
-			common3.FieldName("owner_raw"), common3.FieldName("token_type"), common3.FieldName("quantity"),
-			ownershipTable.Field("wallet_id"), common3.FieldName("owner_wallet_id"),
-		).
-		From(tokenTable.Join(ownershipTable, cond.And(
-			cond.Cmp(tokenTable.Field("tx_id"), "=", ownershipTable.Field("tx_id")),
-			cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx"))),
-		)).
+	query, args, err := sq.Select("owner_raw", "token_type", "quantity", "o.wallet_id", "owner_wallet_id").
+		From(t.table.Tokens + " AS t").
+		LeftJoin(t.table.Ownership + " AS o ON t.tx_id = o.tx_id AND t.idx = o.idx").
 		Where(HasTokenDetails(driver.QueryTokenDetailsParams{
 			IDs:            []*token.ID{&tokenID},
 			IncludeDeleted: includeDeleted,
-		}, tokenTable)).
-		Format(t.ci)
+		}, "t")).
+		PlaceholderFormat(t.pf).ToSql()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := t.tx.QueryContext(ctx, query, args...)
@@ -1291,12 +1232,15 @@ func (t *TokenTransaction) GetToken(ctx context.Context, tokenID token.ID, inclu
 
 func (t *TokenTransaction) Delete(ctx context.Context, tokenID token.ID, deletedBy string) error {
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
-	query, args := q.Update(t.table.Tokens).
+	query, args, err := sq.Update(t.table.Tokens).
 		Set("is_deleted", true).
 		Set("spent_by", deletedBy).
 		Set("spent_at", time.Now().UTC()).
-		Where(cond.And(cond.Eq("tx_id", tokenID.TxId), cond.Eq("idx", tokenID.Index))).
-		Format(t.ci)
+		Where(sq.And{sq.Eq{"tx_id": tokenID.TxId}, sq.Eq{"idx": tokenID.Index}}).
+		PlaceholderFormat(t.pf).ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "error building delete query for token [%s]", tokenID.TxId)
+	}
 
 	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
@@ -1312,10 +1256,13 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	}
 
 	// Store token
-	query, args := q.InsertInto(t.table.Tokens).
-		Fields("tx_id", "idx", "issuer_raw", "owner_raw", "owner_type", "owner_identity", "owner_wallet_id", "ledger", "ledger_type", "ledger_metadata", "token_type", "quantity", "amount", "stored_at", "owner", "auditor", "issuer").
-		Row(tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.OwnerType, tr.OwnerIdentity, tr.OwnerWalletID, tr.Ledger, tr.LedgerFormat, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, time.Now().UTC(), tr.Owner, tr.Auditor, tr.Issuer).
-		Format()
+	query, args, err := sq.Insert(t.table.Tokens).
+		Columns("tx_id", "idx", "issuer_raw", "owner_raw", "owner_type", "owner_identity", "owner_wallet_id", "ledger", "ledger_type", "ledger_metadata", "token_type", "quantity", "amount", "stored_at", "owner", "auditor", "issuer").
+		Values(tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.OwnerType, tr.OwnerIdentity, tr.OwnerWalletID, tr.Ledger, tr.LedgerFormat, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, time.Now().UTC(), tr.Owner, tr.Auditor, tr.Issuer).
+		PlaceholderFormat(t.pf).ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "error building store token query [%s]", tr.TxID)
+	}
 	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
 		logger.Errorf("error storing token [%s] in table [%s] [%s]: [%s][%s]", tr.TxID, t.table.Tokens, query, err, string(debug.Stack()))
@@ -1330,14 +1277,14 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	}
 
 	// Store ownership
-	rows := make([]common3.Tuple, len(owners))
-	for i, eid := range owners {
-		rows[i] = common3.Tuple{tr.TxID, tr.Index, eid}
+	insert := sq.Insert(t.table.Ownership).Columns("tx_id", "idx", "wallet_id")
+	for _, eid := range owners {
+		insert = insert.Values(tr.TxID, tr.Index, eid)
 	}
-	query, args = q.InsertInto(t.table.Ownership).
-		Fields("tx_id", "idx", "wallet_id").
-		Rows(rows).
-		Format()
+	query, args, err = insert.PlaceholderFormat(t.pf).ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "error building store ownership query [%s]", tr.TxID)
+	}
 	logging.Debug(logger, query, args)
 
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
@@ -1350,10 +1297,13 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 }
 
 func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, spendable bool) error {
-	query, args := q.Update(t.table.Tokens).
+	query, args, err := sq.Update(t.table.Tokens).
 		Set("spendable", spendable).
-		Where(cond.And(cond.Eq("tx_id", tokenID.TxId), cond.Eq("idx", tokenID.Index))).
-		Format(t.ci)
+		Where(sq.And{sq.Eq{"tx_id": tokenID.TxId}, sq.Eq{"idx": tokenID.Index}}).
+		PlaceholderFormat(t.pf).ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "error building set spendable query")
+	}
 
 	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
@@ -1365,9 +1315,12 @@ func (t *TokenTransaction) SetSpendable(ctx context.Context, tokenID token.ID, s
 
 func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Context, formats []token.Format) error {
 	// first set all spendable flags to false
-	query, args := q.Update(t.table.Tokens).
+	query, args, err := sq.Update(t.table.Tokens).
 		Set("spendable", false).
-		Format(t.ci)
+		PlaceholderFormat(t.pf).ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "error building set spendable false query")
+	}
 
 	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
@@ -1375,10 +1328,13 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 	}
 
 	// then set the spendable flags to true only for the supported token types
-	query, args = q.Update(t.table.Tokens).
+	query, args, err = sq.Update(t.table.Tokens).
 		Set("spendable", true).
-		Where(cond.In("ledger_type", formats...)).
-		Format(t.ci)
+		Where(sq.Eq{"ledger_type": formats}).
+		PlaceholderFormat(t.pf).ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "error building set spendable true query")
+	}
 
 	logging.Debug(logger, query, args)
 	res, err := t.tx.ExecContext(ctx, query, args...)

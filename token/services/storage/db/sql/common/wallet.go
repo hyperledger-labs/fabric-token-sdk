@@ -12,13 +12,11 @@ import (
 	"fmt"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
@@ -32,20 +30,20 @@ type WalletStore struct {
 	readDB  *sql.DB
 	writeDB *sql.DB
 	table   walletTables
-	ci      common3.CondInterpreter
+	pf      sq.PlaceholderFormat
 }
 
-func newWalletStore(readDB, writeDB *sql.DB, tables walletTables, ci common3.CondInterpreter) *WalletStore {
+func newWalletStore(readDB, writeDB *sql.DB, tables walletTables, pf sq.PlaceholderFormat) *WalletStore {
 	return &WalletStore{
 		readDB:  readDB,
 		writeDB: writeDB,
 		table:   tables,
-		ci:      ci,
+		pf:      pf,
 	}
 }
 
-func NewWalletStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter) (*WalletStore, error) {
-	return newWalletStore(readDB, writeDB, walletTables{Wallets: tables.Wallets}, ci), nil
+func NewWalletStore(readDB, writeDB *sql.DB, tables TableNames, pf sq.PlaceholderFormat) (*WalletStore, error) {
+	return newWalletStore(readDB, writeDB, walletTables{Wallets: tables.Wallets}, pf), nil
 }
 
 func (db *WalletStore) CreateSchema() error {
@@ -54,13 +52,15 @@ func (db *WalletStore) CreateSchema() error {
 
 func (db *WalletStore) GetWalletID(ctx context.Context, identity token.Identity, roleID int) (driver.WalletID, error) {
 	idHash := identity.UniqueID()
-	query, args := q.Select().
-		FieldsByName("wallet_id").
-		From(q.Table(db.table.Wallets)).
-		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("role_id", roleID))).
-		Format(db.ci)
+	query, args, err := sq.Select("wallet_id").
+		From(db.table.Wallets).
+		Where(sq.And{sq.Eq{"identity_hash": idHash}, sq.Eq{"role_id": roleID}}).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return "", errors.Wrapf(err, "failed building query for wallet id [%v]", idHash)
+	}
 
-	result, err := common.QueryUniqueContext[driver.WalletID](ctx, db.readDB, query, args...)
+	result, err := common.QueryUnique[driver.WalletID](db.readDB, query, args...)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed getting wallet id for identity [%v]", idHash)
 	}
@@ -70,11 +70,13 @@ func (db *WalletStore) GetWalletID(ctx context.Context, identity token.Identity,
 }
 
 func (db *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.WalletID, error) {
-	query, args := q.SelectDistinct().
-		FieldsByName("wallet_id").
-		From(q.Table(db.table.Wallets)).
-		Where(cond.Eq("role_id", roleID)).
-		Format(db.ci)
+	query, args, err := sq.Select("DISTINCT wallet_id").
+		From(db.table.Wallets).
+		Where(sq.Eq{"role_id": roleID}).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed building query for wallet ids")
+	}
 	logging.Debug(logger, query)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -87,14 +89,17 @@ func (db *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.W
 }
 
 func (db *WalletStore) StoreIdentity(ctx context.Context, identity token.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
-	query, args := q.InsertInto(db.table.Wallets).
-		Fields("identity_hash", "meta", "wallet_id", "role_id", "created_at", "enrollment_id").
-		Row(identity.UniqueID(), meta, wID, roleID, time.Now().UTC(), eID).
-		OnConflictDoNothing().
-		Format()
+	query, args, err := sq.Insert(db.table.Wallets).
+		Columns("identity_hash", "meta", "wallet_id", "role_id", "created_at", "enrollment_id").
+		Values(identity.UniqueID(), meta, wID, roleID, time.Now().UTC(), eID).
+		Suffix("ON CONFLICT DO NOTHING").
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "failed building query for storing wallet [%v]", wID)
+	}
 	logging.Debug(logger, query)
 
-	_, err := db.writeDB.ExecContext(ctx, query, args...)
+	_, err = db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%s]", wID, identity)
 	}
@@ -105,12 +110,14 @@ func (db *WalletStore) StoreIdentity(ctx context.Context, identity token.Identit
 
 func (db *WalletStore) LoadMeta(ctx context.Context, identity token.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.UniqueID()
-	query, args := q.Select().
-		FieldsByName("meta").
-		From(q.Table(db.table.Wallets)).
-		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("wallet_id", wID), cond.Eq("role_id", roleID))).
-		Format(db.ci)
-	result, err := common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+	query, args, err := sq.Select("meta").
+		From(db.table.Wallets).
+		Where(sq.And{sq.Eq{"identity_hash": idHash}, sq.Eq{"wallet_id": wID}, sq.Eq{"role_id": roleID}}).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed building query for meta [%v]", idHash)
+	}
+	result, err := common.QueryUnique[[]byte](db.readDB, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed loading meta for id [%v]", idHash)
 	}
@@ -121,12 +128,16 @@ func (db *WalletStore) LoadMeta(ctx context.Context, identity token.Identity, wI
 
 func (db *WalletStore) IdentityExists(ctx context.Context, identity token.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.UniqueID()
-	query, args := q.Select().
-		FieldsByName("wallet_id").
-		From(q.Table(db.table.Wallets)).
-		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("wallet_id", wID), cond.Eq("role_id", roleID))).
-		Format(db.ci)
-	result, err := common.QueryUniqueContext[driver.WalletID](ctx, db.readDB, query, args...)
+	query, args, err := sq.Select("wallet_id").
+		From(db.table.Wallets).
+		Where(sq.And{sq.Eq{"identity_hash": idHash}, sq.Eq{"wallet_id": wID}, sq.Eq{"role_id": roleID}}).
+		PlaceholderFormat(db.pf).ToSql()
+	if err != nil {
+		logger.Errorf("failed building query for wallet-identity [%s-%s]: %v", wID, idHash, err)
+
+		return false
+	}
+	result, err := common.QueryUnique[driver.WalletID](db.readDB, query, args...)
 	if err != nil {
 		logger.Errorf("failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
 	}
@@ -143,7 +154,7 @@ func (db *WalletStore) GetSchema() string {
 			wallet_id TEXT NOT NULL,
 			meta BYTEA,
             role_id INT NOT NULL,
-			enrollment_id TEXT NOT NULL,	
+			enrollment_id TEXT NOT NULL,
 			created_at TIMESTAMP,
 			PRIMARY KEY(identity_hash, wallet_id, role_id)
 		);

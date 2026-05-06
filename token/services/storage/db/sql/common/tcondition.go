@@ -9,80 +9,76 @@ package common
 import (
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func HasTokens(colTxID, colIdx common.FieldName, ids ...*token.ID) cond.Condition {
-	return hasTokens(colTxID, colIdx, ids...)
-}
-
-func hasTokens(colTxID, colIdx common.Field, ids ...*token.ID) cond.Condition {
+func HasTokens(colTxID, colIdx string, ids ...*token.ID) sq.Sqlizer {
 	if len(ids) == 0 {
-		return cond.AlwaysTrue
+		return sq.Expr("1=1")
 	}
-
-	vals := make([]common.Tuple, len(ids))
+	or := make(sq.Or, len(ids))
 	for i, id := range ids {
-		vals[i] = common.Tuple{id.TxId, id.Index}
+		or[i] = sq.And{sq.Eq{colTxID: id.TxId}, sq.Eq{colIdx: id.Index}}
 	}
-
-	return cond.InTuple([]common.Serializable{colTxID, colIdx}, vals)
+	return or
 }
 
-func HasTokenDetails(params driver2.QueryTokenDetailsParams, tokenTable common.Table) cond.Condition {
-	conds := []cond.Condition{cond.Eq("owner", true)}
+func HasTokenDetails(params driver2.QueryTokenDetailsParams, tableAlias string) sq.Sqlizer {
+	var conds []sq.Sqlizer
+	conds = append(conds, sq.Eq{"owner": true})
 
 	if len(params.OwnerType) > 0 {
-		conds = append(conds, cond.Eq("owner_type", params.OwnerType))
+		conds = append(conds, sq.Eq{"owner_type": params.OwnerType})
 	}
 	if len(params.TokenType) > 0 {
-		conds = append(conds, cond.Eq("token_type", params.TokenType))
+		conds = append(conds, sq.Eq{"token_type": params.TokenType})
 	}
-	// WalletIDs takes precedence over WalletID when both are set; normalize
-	// to a single list so each branch below applies the rule identically.
+
 	effectiveWallets := params.WalletIDs
 	if len(effectiveWallets) == 0 && len(params.WalletID) > 0 {
 		effectiveWallets = []string{params.WalletID}
 	}
 
-	if tokenTable != nil {
-		// Match both wallet_id and owner_wallet_id — some tokens are stored
-		// only under the Ownership join, some only under owner_wallet_id.
+	if tableAlias != "" {
+		// JOIN mode - wallet_id on Ownership, owner_wallet_id on Tokens
 		if len(effectiveWallets) > 0 {
-			conds = append(conds, cond.Or(
-				cond.In("wallet_id", effectiveWallets...),
-				cond.In("owner_wallet_id", effectiveWallets...),
-			))
+			conds = append(conds, sq.Or{
+				sq.Eq{"wallet_id": effectiveWallets},
+				sq.Eq{"owner_wallet_id": effectiveWallets},
+			})
 		}
-		conds = append(conds,
-			cond.FieldIn(tokenTable.Field("tx_id"), params.TransactionIDs...),
-			hasTokens(tokenTable.Field("tx_id"), tokenTable.Field("idx"), params.IDs...),
-		)
+		if len(params.TransactionIDs) > 0 {
+			conds = append(conds, sq.Eq{tableAlias + ".tx_id": params.TransactionIDs})
+		}
+		conds = append(conds, HasTokens(tableAlias+".tx_id", tableAlias+".idx", params.IDs...))
 	} else {
 		if len(effectiveWallets) > 0 {
-			conds = append(conds, cond.In("owner_wallet_id", effectiveWallets...))
+			conds = append(conds, sq.Eq{"owner_wallet_id": effectiveWallets})
 		}
-		conds = append(conds,
-			cond.FieldIn(common.FieldName("tx_id"), params.TransactionIDs...),
-			hasTokens(common.FieldName("tx_id"), common.FieldName("idx"), params.IDs...),
-		)
+		if len(params.TransactionIDs) > 0 {
+			conds = append(conds, sq.Eq{"tx_id": params.TransactionIDs})
+		}
+		conds = append(conds, HasTokens("tx_id", "idx", params.IDs...))
 	}
+
 	if !params.IncludeDeleted {
-		conds = append(conds, cond.Eq("is_deleted", false))
+		conds = append(conds, sq.Eq{"is_deleted": false})
 	}
 	switch params.Spendable {
 	case driver2.NonSpendableOnly:
-		conds = append(conds, cond.Eq("spendable", false))
+		conds = append(conds, sq.Eq{"spendable": false})
 	case driver2.SpendableOnly:
-		conds = append(conds, cond.Eq("spendable", true))
+		conds = append(conds, sq.Eq{"spendable": true})
+	}
+	if len(params.LedgerTokenFormats) > 0 {
+		conds = append(conds, sq.Eq{"ledger_type": params.LedgerTokenFormats})
 	}
 
-	conds = append(conds, cond.In("ledger_type", params.LedgerTokenFormats...))
-
-	return cond.And(conds...)
+	return sq.And(conds)
 }
 
 func HasMovementsParams(params driver2.QueryMovementsParams) cond.Condition {

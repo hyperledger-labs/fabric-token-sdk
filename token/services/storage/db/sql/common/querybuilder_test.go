@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
@@ -246,28 +247,28 @@ func TestTokenSql(t *testing.T) {
 	testCases := []struct {
 		name         string
 		params       driver2.QueryTokenDetailsParams
-		expectedArgs []common2.Param
+		expectedArgs []any
 		expectedSql  string
 	}{
 		{
 			name:         "no filter",
 			params:       driver2.QueryTokenDetailsParams{},
-			expectedSql:  "(owner = $1) AND (is_deleted = $2)",
-			expectedArgs: []common2.Param{true, false},
+			expectedSql:  "(owner = $1 AND 1=1 AND is_deleted = $2)",
+			expectedArgs: []any{true, false},
 		},
 		{
 			name: "no filter with deleted",
 			params: driver2.QueryTokenDetailsParams{
 				IncludeDeleted: true,
 			},
-			expectedSql:  "(owner = $1)",
-			expectedArgs: []common2.Param{true},
+			expectedSql:  "(owner = $1 AND 1=1)",
+			expectedArgs: []any{true},
 		},
 		{
 			name:         "owner unspent",
 			params:       driver2.QueryTokenDetailsParams{WalletID: "me"},
-			expectedSql:  "(owner = $1) AND (owner_wallet_id = $2) AND (is_deleted = $3)",
-			expectedArgs: []common2.Param{true, "me", false},
+			expectedSql:  "(owner = $1 AND owner_wallet_id IN ($2) AND 1=1 AND is_deleted = $3)",
+			expectedArgs: []any{true, "me", false},
 		},
 		{
 			name: "owner with deleted",
@@ -275,8 +276,8 @@ func TestTokenSql(t *testing.T) {
 				WalletID:       "me",
 				IncludeDeleted: true,
 			},
-			expectedSql:  "(owner = $1) AND (owner_wallet_id = $2)",
-			expectedArgs: []common2.Param{true, "me"},
+			expectedSql:  "(owner = $1 AND owner_wallet_id IN ($2) AND 1=1)",
+			expectedArgs: []any{true, "me"},
 		},
 		{
 			name: "owner and htlc with deleted",
@@ -285,14 +286,14 @@ func TestTokenSql(t *testing.T) {
 				OwnerType:      "htlc",
 				IncludeDeleted: true,
 			},
-			expectedSql:  "(owner = $1) AND (owner_type = $2) AND (owner_wallet_id = $3)",
-			expectedArgs: []common2.Param{true, "htlc", "me"},
+			expectedSql:  "(owner = $1 AND owner_type = $2 AND owner_wallet_id IN ($3) AND 1=1)",
+			expectedArgs: []any{true, "htlc", "me"},
 		},
 		{
 			name:         "owner and type",
 			params:       driver2.QueryTokenDetailsParams{TokenType: "tok", WalletID: "me"},
-			expectedSql:  "(owner = $1) AND (token_type = $2) AND (owner_wallet_id = $3) AND (is_deleted = $4)",
-			expectedArgs: []common2.Param{true, "tok", "me", false},
+			expectedSql:  "(owner = $1 AND token_type = $2 AND owner_wallet_id IN ($3) AND 1=1 AND is_deleted = $4)",
+			expectedArgs: []any{true, token.Type("tok"), "me", false},
 		},
 		{
 			name: "owner and type and id",
@@ -301,8 +302,8 @@ func TestTokenSql(t *testing.T) {
 				WalletID:  "me",
 				IDs:       []*token.ID{{TxId: "a", Index: 1}},
 			},
-			expectedSql:  "(owner = $1) AND (token_type = $2) AND (owner_wallet_id = $3) AND ((tx_id, idx) IN (($4, $5))) AND (is_deleted = $6)",
-			expectedArgs: []common2.Param{true, "tok", "me", "a", 1, false},
+			expectedSql:  "(owner = $1 AND token_type = $2 AND owner_wallet_id IN ($3) AND ((tx_id = $4 AND idx = $5)) AND is_deleted = $6)",
+			expectedArgs: []any{true, token.Type("tok"), "me", "a", uint64(1), false},
 		},
 		{
 			name: "type and ids",
@@ -311,23 +312,25 @@ func TestTokenSql(t *testing.T) {
 				IDs:            []*token.ID{{TxId: "a", Index: 1}, {TxId: "b", Index: 2}},
 				IncludeDeleted: true,
 			},
-			expectedSql:  "(owner = $1) AND (token_type = $2) AND ((tx_id, idx) IN (($3, $4), ($5, $6)))",
-			expectedArgs: []common2.Param{true, "tok", "a", uint64(1), "b", uint64(2)},
+			expectedSql:  "(owner = $1 AND token_type = $2 AND ((tx_id = $3 AND idx = $4) OR (tx_id = $5 AND idx = $6)))",
+			expectedArgs: []any{true, token.Type("tok"), "a", uint64(1), "b", uint64(2)},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := evalCondition(HasTokenDetails(tc.params, nil))
+			actualSql, actualArgs, err := evalSqlizer(HasTokenDetails(tc.params, ""))
+			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
-			compareArgs(t, tc.expectedArgs, actualArgs)
+			assert.Equal(t, tc.expectedArgs, actualArgs)
 		})
 	}
 	// with join
-	where, args := evalCondition(HasTokenDetails(driver2.QueryTokenDetailsParams{
+	where, args, err := evalSqlizer(HasTokenDetails(driver2.QueryTokenDetailsParams{
 		IDs:      []*token.ID{{TxId: "a", Index: 1}},
 		WalletID: "me",
-	}, q.Table("A")))
-	assert.Equal(t, "(owner = $1) AND ((wallet_id = $2) OR (owner_wallet_id = $3)) AND ((A.tx_id, A.idx) IN (($4, $5))) AND (is_deleted = $6)", where, "join")
+	}, "A"))
+	assert.NoError(t, err)
+	assert.Equal(t, "(owner = $1 AND (wallet_id IN ($2) OR owner_wallet_id IN ($3)) AND ((A.tx_id = $4 AND A.idx = $5)) AND is_deleted = $6)", where, "join")
 	assert.Len(t, args, 6)
 }
 
@@ -339,32 +342,42 @@ func evalCondition(condition cond.Condition) (string, []common2.Param) {
 	return actualSql, actualArgs
 }
 
+// evalSqlizer converts a sq.Sqlizer to (sql, args) using Dollar placeholder.
+func evalSqlizer(s sq.Sqlizer) (string, []any, error) {
+	sql, args, err := s.ToSql()
+	if err != nil {
+		return "", nil, err
+	}
+	sql, err = sq.Dollar.ReplacePlaceholders(sql)
+	return sql, args, err
+}
+
 func TestTokenSqlNoJoin(t *testing.T) {
 	testCases := []struct {
 		name         string
 		params       driver2.QueryTokenDetailsParams
-		expectedArgs []common2.Param
+		expectedArgs []any
 		expectedSql  string
 	}{
 		{
 			name:         "no filter",
 			params:       driver2.QueryTokenDetailsParams{},
-			expectedSql:  "(owner = $1) AND (is_deleted = $2)",
-			expectedArgs: []common2.Param{true, false},
+			expectedSql:  "(owner = $1 AND 1=1 AND is_deleted = $2)",
+			expectedArgs: []any{true, false},
 		},
 		{
 			name: "no filter with deleted",
 			params: driver2.QueryTokenDetailsParams{
 				IncludeDeleted: true,
 			},
-			expectedSql:  "(owner = $1)",
-			expectedArgs: []common2.Param{true},
+			expectedSql:  "(owner = $1 AND 1=1)",
+			expectedArgs: []any{true},
 		},
 		{
 			name:         "owner unspent",
 			params:       driver2.QueryTokenDetailsParams{WalletID: "me"},
-			expectedSql:  "(owner = $1) AND (owner_wallet_id = $2) AND (is_deleted = $3)",
-			expectedArgs: []common2.Param{true, "me", false},
+			expectedSql:  "(owner = $1 AND owner_wallet_id IN ($2) AND 1=1 AND is_deleted = $3)",
+			expectedArgs: []any{true, "me", false},
 		},
 		{
 			name: "owner with deleted",
@@ -372,8 +385,8 @@ func TestTokenSqlNoJoin(t *testing.T) {
 				WalletID:       "me",
 				IncludeDeleted: true,
 			},
-			expectedSql:  "(owner = $1) AND (owner_wallet_id = $2)",
-			expectedArgs: []common2.Param{true, "me"},
+			expectedSql:  "(owner = $1 AND owner_wallet_id IN ($2) AND 1=1)",
+			expectedArgs: []any{true, "me"},
 		},
 		{
 			name: "owner and htlc with deleted",
@@ -382,14 +395,14 @@ func TestTokenSqlNoJoin(t *testing.T) {
 				OwnerType:      "htlc",
 				IncludeDeleted: true,
 			},
-			expectedSql:  "(owner = $1) AND (owner_type = $2) AND (owner_wallet_id = $3)",
-			expectedArgs: []common2.Param{true, "htlc", "me"},
+			expectedSql:  "(owner = $1 AND owner_type = $2 AND owner_wallet_id IN ($3) AND 1=1)",
+			expectedArgs: []any{true, "htlc", "me"},
 		},
 		{
 			name:         "owner and type",
 			params:       driver2.QueryTokenDetailsParams{TokenType: "tok", WalletID: "me"},
-			expectedSql:  "(owner = $1) AND (token_type = $2) AND (owner_wallet_id = $3) AND (is_deleted = $4)",
-			expectedArgs: []common2.Param{true, "tok", "me", false},
+			expectedSql:  "(owner = $1 AND token_type = $2 AND owner_wallet_id IN ($3) AND 1=1 AND is_deleted = $4)",
+			expectedArgs: []any{true, token.Type("tok"), "me", false},
 		},
 		{
 			name: "owner and type and id",
@@ -398,8 +411,8 @@ func TestTokenSqlNoJoin(t *testing.T) {
 				WalletID:  "me",
 				IDs:       []*token.ID{{TxId: "a", Index: 1}},
 			},
-			expectedSql:  "(owner = $1) AND (token_type = $2) AND (owner_wallet_id = $3) AND ((tx_id, idx) IN (($4, $5))) AND (is_deleted = $6)",
-			expectedArgs: []common2.Param{true, "tok", "me", "a", 1, false},
+			expectedSql:  "(owner = $1 AND token_type = $2 AND owner_wallet_id IN ($3) AND ((tx_id = $4 AND idx = $5)) AND is_deleted = $6)",
+			expectedArgs: []any{true, token.Type("tok"), "me", "a", uint64(1), false},
 		},
 		{
 			name: "type and ids",
@@ -408,15 +421,16 @@ func TestTokenSqlNoJoin(t *testing.T) {
 				IDs:            []*token.ID{{TxId: "a", Index: 1}, {TxId: "b", Index: 2}},
 				IncludeDeleted: true,
 			},
-			expectedSql:  "(owner = $1) AND (token_type = $2) AND ((tx_id, idx) IN (($3, $4), ($5, $6)))",
-			expectedArgs: []common2.Param{true, "tok", "a", uint64(1), "b", uint64(2)},
+			expectedSql:  "(owner = $1 AND token_type = $2 AND ((tx_id = $3 AND idx = $4) OR (tx_id = $5 AND idx = $6)))",
+			expectedArgs: []any{true, token.Type("tok"), "a", uint64(1), "b", uint64(2)},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := evalCondition(HasTokenDetails(tc.params, nil))
+			actualSql, actualArgs, err := evalSqlizer(HasTokenDetails(tc.params, ""))
+			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
-			compareArgs(t, tc.expectedArgs, actualArgs)
+			assert.Equal(t, tc.expectedArgs, actualArgs)
 		})
 	}
 }

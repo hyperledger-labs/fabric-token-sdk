@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
+	sq "github.com/Masterminds/squirrel"
 	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
@@ -22,7 +22,7 @@ func NewTokenStore(
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
-		sqlite.NewConditionInterpreter(),
+		sq.Question,
 		nil,
 	)
 }
