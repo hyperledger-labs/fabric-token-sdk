@@ -11,14 +11,11 @@ import (
 	"database/sql"
 	"fmt"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
@@ -72,8 +69,7 @@ func NewTransactionStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.Tab
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
-		postgres.NewConditionInterpreter(),
-		postgres.NewPaginationInterpreter(),
+		sq.Dollar,
 		notifier,
 		recoveryLeaderFactory,
 	)
@@ -96,8 +92,7 @@ func NewAuditTransactionStore(dbs *scommon.RWDB, tableNames sqlcommon.TableNames
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
-		postgres.NewConditionInterpreter(),
-		postgres.NewPaginationInterpreter(),
+		sq.Dollar,
 	)
 	if err != nil {
 		return nil, err
@@ -191,30 +186,19 @@ func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params
 func (db *TransactionStore) ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error {
 	logger.Debugf("Releasing recovery claim: txID=%s, owner=%s, message=%s", txID, owner, message)
 
-	// Build the release query using query builder
-	// Only release if the transaction is owned by the specified owner (safety check)
-	var query string
-	var args []interface{}
-
+	b := sq.Update(db.tables.Requests).
+		Set("recovery_claimed_by", nil).
+		Set("recovery_claim_expires_at", nil).
+		Where(sq.And{
+			sq.Eq{"tx_id": txID},
+			sq.Eq{"recovery_claimed_by": owner},
+		})
 	if message != "" {
-		query, args = q.Update(db.tables.Requests).
-			Set("recovery_claimed_by", nil).
-			Set("recovery_claim_expires_at", nil).
-			Set("status_message", message).
-			Where(cond.And(
-				cond.Eq("tx_id", txID),
-				cond.Eq("recovery_claimed_by", owner),
-			)).
-			Format(postgres.NewConditionInterpreter())
-	} else {
-		query, args = q.Update(db.tables.Requests).
-			Set("recovery_claimed_by", nil).
-			Set("recovery_claim_expires_at", nil).
-			Where(cond.And(
-				cond.Eq("tx_id", txID),
-				cond.Eq("recovery_claimed_by", owner),
-			)).
-			Format(postgres.NewConditionInterpreter())
+		b = b.Set("status_message", message)
+	}
+	query, args, err := b.PlaceholderFormat(sq.Dollar).ToSql()
+	if err != nil {
+		return errors.Wrapf(err, "failed to build release recovery claim query for tx %s", txID)
 	}
 
 	logger.Debug(query, args)
@@ -244,11 +228,15 @@ func (db *TransactionStore) ReleaseRecoveryClaim(ctx context.Context, txID strin
 func (db *TransactionStore) CleanupExpiredClaims(ctx context.Context) (int, error) {
 	logger.Debug("Cleaning up expired recovery claims")
 
-	query, args := q.Update(db.tables.Requests).
+	query, args, err := sq.Update(db.tables.Requests).
 		Set("recovery_claimed_by", nil).
 		Set("recovery_claim_expires_at", nil).
-		Where(cond.Lt("recovery_claim_expires_at", common3.FieldName("NOW()"))).
-		Format(postgres.NewConditionInterpreter())
+		Where(sq.Expr("recovery_claim_expires_at < NOW()")).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return 0, errors.Wrapf(err, "failed to build cleanup query")
+	}
 
 	logger.Debug(query, args)
 

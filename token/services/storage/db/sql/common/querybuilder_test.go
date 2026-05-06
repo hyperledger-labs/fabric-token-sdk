@@ -11,7 +11,6 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
@@ -26,30 +25,30 @@ func TestTransactionSql(t *testing.T) {
 	testCases := []struct {
 		name         string
 		params       driver2.QueryTransactionsParams
-		expectedArgs []common2.Param
+		expectedArgs []any
 		expectedSql  string
 	}{
 		{
 			name:         "No params",
 			params:       driver2.QueryTransactionsParams{},
-			expectedSql:  "1 = 1",
-			expectedArgs: []common2.Param{},
+			expectedSql:  "",
+			expectedArgs: []any{},
 		},
 		{
 			name: "Only confirmed",
 			params: driver2.QueryTransactionsParams{
 				Statuses: []driver2.TxStatus{driver2.Confirmed},
 			},
-			expectedSql:  "(status = $1)",
-			expectedArgs: []common2.Param{driver2.Confirmed},
+			expectedSql:  "(status IN ($1))",
+			expectedArgs: []any{driver2.Confirmed},
 		},
 		{
 			name: "Pending or deleted",
 			params: driver2.QueryTransactionsParams{
 				Statuses: []driver2.TxStatus{driver2.Pending, driver2.Deleted},
 			},
-			expectedSql:  "((status) IN (($1), ($2)))",
-			expectedArgs: []common2.Param{driver2.Pending, driver2.Deleted},
+			expectedSql:  "(status IN ($1,$2))",
+			expectedArgs: []any{driver2.Pending, driver2.Deleted},
 		},
 		{
 			name: "Confirmed from any (only setting sender should return all)",
@@ -57,8 +56,8 @@ func TestTransactionSql(t *testing.T) {
 				SenderWallet: "alice",
 				Statuses:     []driver2.TxStatus{driver2.Confirmed},
 			},
-			expectedSql:  "(status = $1)",
-			expectedArgs: []common2.Param{driver2.Confirmed},
+			expectedSql:  "(status IN ($1))",
+			expectedArgs: []any{driver2.Confirmed},
 		},
 		{
 			name: "Sender OR recipient matches",
@@ -66,8 +65,8 @@ func TestTransactionSql(t *testing.T) {
 				SenderWallet:    "alice",
 				RecipientWallet: "bob",
 			},
-			expectedSql:  "((sender_eid = $1) OR (recipient_eid = $2))",
-			expectedArgs: []common2.Param{"alice", "bob"},
+			expectedSql:  "((sender_eid = $1 OR recipient_eid = $2))",
+			expectedArgs: []any{"alice", "bob"},
 		},
 		{
 			name: "Sender OR recipient matches, from last year",
@@ -76,8 +75,8 @@ func TestTransactionSql(t *testing.T) {
 				RecipientWallet: "alice",
 				From:            &lastYear,
 			},
-			expectedSql:  "((tbl.stored_at >= $1)) AND ((sender_eid = $2) OR (recipient_eid = $3))",
-			expectedArgs: []common2.Param{&lastYear, "alice", "alice"},
+			expectedSql:  "(tbl.stored_at >= $1 AND (sender_eid = $2 OR recipient_eid = $3))",
+			expectedArgs: []any{&lastYear, "alice", "alice"},
 		},
 		{
 			name: "From last year to now",
@@ -85,8 +84,8 @@ func TestTransactionSql(t *testing.T) {
 				To:   &now,
 				From: &lastYear,
 			},
-			expectedSql:  "((tbl.stored_at >= $1) AND (tbl.stored_at <= $2))",
-			expectedArgs: []common2.Param{&lastYear, &now},
+			expectedSql:  "(tbl.stored_at >= $1 AND tbl.stored_at <= $2)",
+			expectedArgs: []any{&lastYear, &now},
 		},
 		{
 			name: "Sender OR recipient matches, specific tx",
@@ -95,8 +94,8 @@ func TestTransactionSql(t *testing.T) {
 				RecipientWallet: "bob",
 				IDs:             []string{"transactionID"},
 			},
-			expectedSql:  "(tbl.tx_id = $1) AND ((sender_eid = $2) OR (recipient_eid = $3))",
-			expectedArgs: []common2.Param{"transactionID", "alice", "bob"},
+			expectedSql:  "(tbl.tx_id IN ($1) AND (sender_eid = $2 OR recipient_eid = $3))",
+			expectedArgs: []any{"transactionID", "alice", "bob"},
 		},
 		{
 			name: "Sender OR recipient matches, specific tx ids",
@@ -105,22 +104,30 @@ func TestTransactionSql(t *testing.T) {
 				RecipientWallet: "bob",
 				IDs:             []string{"transactionID1", "transactionID2", "transactionID3"},
 			},
-			expectedSql:  "((tbl.tx_id) IN (($1), ($2), ($3))) AND ((sender_eid = $4) OR (recipient_eid = $5))",
-			expectedArgs: []common2.Param{"transactionID1", "transactionID2", "transactionID3", "alice", "bob"},
+			expectedSql:  "(tbl.tx_id IN ($1,$2,$3) AND (sender_eid = $4 OR recipient_eid = $5))",
+			expectedArgs: []any{"transactionID1", "transactionID2", "transactionID3", "alice", "bob"},
 		},
 		{
 			name: "With Token Types",
 			params: driver2.QueryTransactionsParams{
 				TokenTypes: []token.Type{"Pineapple"},
 			},
-			expectedSql:  "(token_type = $1)",
-			expectedArgs: []common2.Param{"Pineapple"},
+			expectedSql:  "(token_type IN ($1))",
+			expectedArgs: []any{token.Type("Pineapple")},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := evalCondition(HasTransactionParams(tc.params, q.Table("tbl")))
+			sqlizer := HasTransactionParams(tc.params, "tbl")
+			if sqlizer == nil {
+				assert.Empty(t, tc.expectedSql)
+				assert.Empty(t, tc.expectedArgs)
+
+				return
+			}
+			actualSql, actualArgs, err := evalSqlizer(sqlizer)
+			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -131,7 +138,7 @@ func TestMovementConditions(t *testing.T) {
 	testCases := []struct {
 		name         string
 		params       driver2.QueryMovementsParams
-		expectedArgs []common2.Param
+		expectedArgs []any
 		expectedSql  string
 	}{
 		{
@@ -139,8 +146,8 @@ func TestMovementConditions(t *testing.T) {
 			params: driver2.QueryMovementsParams{
 				MovementDirection: driver2.All,
 			},
-			expectedSql:  "(status != $1)",
-			expectedArgs: []common2.Param{3},
+			expectedSql:  "(status <> $1)",
+			expectedArgs: []any{driver2.Deleted},
 		},
 		{
 			name: "Max 5",
@@ -148,8 +155,8 @@ func TestMovementConditions(t *testing.T) {
 				NumRecords:        5,
 				MovementDirection: driver2.All,
 			},
-			expectedSql:  "(status != $1)",
-			expectedArgs: []common2.Param{3},
+			expectedSql:  "(status <> $1)",
+			expectedArgs: []any{driver2.Deleted},
 		},
 		{
 			name: "Only enrollment ids",
@@ -157,8 +164,8 @@ func TestMovementConditions(t *testing.T) {
 				EnrollmentIDs:     []string{"eid1", "eid2", "eid3"},
 				MovementDirection: driver2.All,
 			},
-			expectedSql:  "((enrollment_id) IN (($1), ($2), ($3))) AND (status != $4)",
-			expectedArgs: []common2.Param{"eid1", "eid2", "eid3", 3},
+			expectedSql:  "(enrollment_id IN ($1,$2,$3) AND status <> $4)",
+			expectedArgs: []any{"eid1", "eid2", "eid3", driver2.Deleted},
 		},
 		{
 			name: "Only confirmed",
@@ -166,8 +173,8 @@ func TestMovementConditions(t *testing.T) {
 				TxStatuses:        []driver2.TxStatus{driver2.Confirmed},
 				MovementDirection: driver2.All,
 			},
-			expectedSql:  "(status = $1)",
-			expectedArgs: []common2.Param{driver2.Confirmed},
+			expectedSql:  "(status IN ($1))",
+			expectedArgs: []any{driver2.Confirmed},
 		},
 		{
 			name: "Pending and deleted",
@@ -175,8 +182,8 @@ func TestMovementConditions(t *testing.T) {
 				TxStatuses:        []driver2.TxStatus{driver2.Pending, driver2.Deleted},
 				MovementDirection: driver2.All,
 			},
-			expectedSql:  "((status) IN (($1), ($2)))",
-			expectedArgs: []common2.Param{driver2.Pending, driver2.Deleted},
+			expectedSql:  "(status IN ($1,$2))",
+			expectedArgs: []any{driver2.Pending, driver2.Deleted},
 		},
 		{
 			name: "Confirmed from alice",
@@ -185,8 +192,8 @@ func TestMovementConditions(t *testing.T) {
 				TxStatuses:        []driver2.TxStatus{driver2.Confirmed},
 				MovementDirection: driver2.All,
 			},
-			expectedSql:  "(enrollment_id = $1) AND (status = $2)",
-			expectedArgs: []common2.Param{"alice", driver2.Confirmed},
+			expectedSql:  "(enrollment_id IN ($1) AND status IN ($2))",
+			expectedArgs: []any{"alice", driver2.Confirmed},
 		},
 		{
 			name: "Confirmed ABC and XYZ from alice",
@@ -196,8 +203,8 @@ func TestMovementConditions(t *testing.T) {
 				TokenTypes:        []token.Type{"ABC", "XYZ"},
 				MovementDirection: driver2.All,
 			},
-			expectedSql:  "(enrollment_id = $1) AND ((token_type) IN (($2), ($3))) AND (status = $4)",
-			expectedArgs: []common2.Param{"alice", "ABC", "XYZ", driver2.Confirmed},
+			expectedSql:  "(enrollment_id IN ($1) AND token_type IN ($2,$3) AND status IN ($4))",
+			expectedArgs: []any{"alice", token.Type("ABC"), token.Type("XYZ"), driver2.Confirmed},
 		},
 		{
 			name: "Max 5 confirmed ABC and XYZ from alice",
@@ -208,8 +215,8 @@ func TestMovementConditions(t *testing.T) {
 				NumRecords:        5,
 				MovementDirection: driver2.All,
 			},
-			expectedSql:  "(enrollment_id = $1) AND ((token_type) IN (($2), ($3))) AND (status = $4)",
-			expectedArgs: []common2.Param{"alice", "ABC", "XYZ", driver2.Confirmed},
+			expectedSql:  "(enrollment_id IN ($1) AND token_type IN ($2,$3) AND status IN ($4))",
+			expectedArgs: []any{"alice", token.Type("ABC"), token.Type("XYZ"), driver2.Confirmed},
 		},
 		{
 			name: "Sent XYZ from alice",
@@ -218,8 +225,8 @@ func TestMovementConditions(t *testing.T) {
 				TokenTypes:        []token.Type{"XYZ"},
 				MovementDirection: driver2.Sent,
 			},
-			expectedSql:  "(enrollment_id = $1) AND (token_type = $2) AND (status != $3) AND (amount < $4)",
-			expectedArgs: []common2.Param{"alice", "XYZ", 3, 0},
+			expectedSql:  "(enrollment_id IN ($1) AND token_type IN ($2) AND status <> $3 AND amount < $4)",
+			expectedArgs: []any{"alice", token.Type("XYZ"), driver2.Deleted, 0},
 		},
 		{
 			name: "2 last pending received",
@@ -229,14 +236,15 @@ func TestMovementConditions(t *testing.T) {
 				MovementDirection: driver2.Received,
 				NumRecords:        2,
 			},
-			expectedSql:  "(status = $1) AND (amount > $2)",
-			expectedArgs: []common2.Param{driver2.Pending, 0},
+			expectedSql:  "(status IN ($1) AND amount > $2)",
+			expectedArgs: []any{driver2.Pending, 0},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := evalCondition(HasMovementsParams(tc.params))
+			actualSql, actualArgs, err := evalSqlizer(HasMovementsParams(tc.params))
+			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -332,24 +340,6 @@ func TestTokenSql(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "(owner = $1 AND (wallet_id IN ($2) OR owner_wallet_id IN ($3)) AND ((A.tx_id = $4 AND A.idx = $5)) AND is_deleted = $6)", where, "join")
 	assert.Len(t, args, 6)
-}
-
-func evalCondition(condition cond.Condition) (string, []common2.Param) {
-	sb := common2.NewBuilder()
-	condition.WriteString(sqlite.NewConditionInterpreter(), sb)
-	actualSql, actualArgs := sb.Build()
-
-	return actualSql, actualArgs
-}
-
-// evalSqlizer converts a sq.Sqlizer to (sql, args) using Dollar placeholder.
-func evalSqlizer(s sq.Sqlizer) (string, []any, error) {
-	sql, args, err := s.ToSql()
-	if err != nil {
-		return "", nil, err
-	}
-	sql, err = sq.Dollar.ReplacePlaceholders(sql)
-	return sql, args, err
 }
 
 func TestTokenSqlNoJoin(t *testing.T) {
@@ -452,12 +442,36 @@ func TestIn(t *testing.T) {
 	assert.Equal(t, []any{"eid1", "eid2", "eid3"}, args)
 }
 
+func evalCondition(condition cond.Condition) (string, []common2.Param) {
+	sb := common2.NewBuilder()
+	condition.WriteString(sqlite.NewConditionInterpreter(), sb)
+	actualSql, actualArgs := sb.Build()
+
+	return actualSql, actualArgs
+}
+
+// evalSqlizer converts a sq.Sqlizer to (sql, args) using Dollar placeholder.
+func evalSqlizer(s sq.Sqlizer) (string, []any, error) {
+	if s == nil {
+		return "", []any{}, nil
+	}
+	sql, args, err := s.ToSql()
+	if err != nil {
+		return "", nil, err
+	}
+	sql, err = sq.Dollar.ReplacePlaceholders(sql)
+
+	return sql, args, err
+}
+
 func compareArgs(t *testing.T, expected, actual []any) {
 	t.Helper()
 	assert.Len(t, actual, len(expected))
-	// assert.Equal(t, tc.expectedArgs, actualArgs)
 
 	for i := range expected {
+		if i >= len(actual) {
+			break
+		}
 		switch expected[i].(type) {
 		case *time.Time:
 			exp, _ := expected[i].(*time.Time)

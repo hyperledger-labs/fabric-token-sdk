@@ -15,16 +15,15 @@ import (
 	"strings"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
-	_select "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/select"
+	qcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/pagination"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -49,8 +48,7 @@ type TransactionStore struct {
 	readDB                *sql.DB
 	writeDB               *sql.DB
 	table                 transactionTables
-	ci                    common3.CondInterpreter
-	pi                    common3.PagInterpreter
+	pf                    sq.PlaceholderFormat
 	notifier              dbdriver.TransactionNotifier
 	recoveryLeaderFactory func(context.Context, *sql.DB, int64) (dbdriver.RecoveryLeadership, bool, error)
 }
@@ -58,8 +56,7 @@ type TransactionStore struct {
 func newTransactionStore(
 	readDB, writeDB *sql.DB,
 	tables transactionTables,
-	ci common3.CondInterpreter,
-	pi common3.PagInterpreter,
+	pf sq.PlaceholderFormat,
 	notifier dbdriver.TransactionNotifier,
 	recoveryLeaderFactory func(context.Context, *sql.DB, int64) (dbdriver.RecoveryLeadership, bool, error),
 ) *TransactionStore {
@@ -67,32 +64,30 @@ func newTransactionStore(
 		readDB:                readDB,
 		writeDB:               writeDB,
 		table:                 tables,
-		ci:                    ci,
-		pi:                    pi,
+		pf:                    pf,
 		notifier:              notifier,
 		recoveryLeaderFactory: recoveryLeaderFactory,
 	}
 }
 
-func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
-	return NewOwnerTransactionStore(readDB, writeDB, tables, ci, pi)
+func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables TableNames, pf sq.PlaceholderFormat) (*TransactionStore, error) {
+	return NewOwnerTransactionStore(readDB, writeDB, tables, pf)
 }
 
-func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
+func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables TableNames, pf sq.PlaceholderFormat) (*TransactionStore, error) {
 	return newTransactionStore(readDB, writeDB, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
 		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
-	}, ci, pi, nil, nil), nil
+	}, pf, nil, nil), nil
 }
 
 func NewTransactionStoreWithNotifierAndRecovery(
 	readDB, writeDB *sql.DB,
 	tables TableNames,
-	ci common3.CondInterpreter,
-	pi common3.PagInterpreter,
+	pf sq.PlaceholderFormat,
 	notifier dbdriver.TransactionNotifier,
 	recoveryLeaderFactory func(context.Context, *sql.DB, int64) (dbdriver.RecoveryLeadership, bool, error),
 ) (*TransactionStore, error) {
@@ -102,7 +97,7 @@ func NewTransactionStoreWithNotifierAndRecovery(
 		Requests:              tables.Requests,
 		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
-	}, ci, pi, notifier, recoveryLeaderFactory), nil
+	}, pf, notifier, recoveryLeaderFactory), nil
 }
 
 func (db *TransactionStore) CreateSchema() error {
@@ -110,11 +105,14 @@ func (db *TransactionStore) CreateSchema() error {
 }
 
 func (db *TransactionStore) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
-	query, args := q.Select().
-		FieldsByName("request").
-		From(q.Table(db.table.Requests)).
-		Where(cond.Eq("tx_id", txID)).
-		Format(db.ci)
+	query, args, err := sq.Select("request").
+		From(db.table.Requests).
+		Where(sq.Eq{"tx_id": txID}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
@@ -127,11 +125,14 @@ func (db *TransactionStore) GetTokenRequests(ctx context.Context, txIDs []string
 	if len(txIDs) == 0 {
 		return map[string][]byte{}, nil
 	}
-	query, args := q.Select().
-		FieldsByName("tx_id", "request").
-		From(q.Table(db.table.Requests)).
-		Where(cond.In("tx_id", txIDs...)).
-		Format(db.ci)
+	query, args, err := sq.Select("tx_id", "request").
+		From(db.table.Requests).
+		Where(sq.Eq{"tx_id": txIDs}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -154,19 +155,27 @@ func (db *TransactionStore) GetTokenRequests(ctx context.Context, txIDs []string
 }
 
 func (db *TransactionStore) QueryMovements(ctx context.Context, params dbdriver.QueryMovementsParams) (res []*dbdriver.MovementRecord, err error) {
-	movementsTable, requestsTable := q.Table(db.table.Movements), q.Table(db.table.Requests)
-	query, args := q.Select().
-		Fields(
-			movementsTable.Field("tx_id"), common3.FieldName("enrollment_id"), common3.FieldName("token_type"),
-			common3.FieldName("amount"), requestsTable.Field("status"),
-		).
-		From(movementsTable.Join(requestsTable,
-			cond.Cmp(movementsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
-		).
+	b := sq.Select(
+		db.table.Movements+".tx_id",
+		"enrollment_id",
+		"token_type",
+		"amount",
+		db.table.Requests+".status",
+	).
+		From(db.table.Movements).
+		LeftJoin(db.table.Requests + " ON " + db.table.Movements + ".tx_id = " + db.table.Requests + ".tx_id").
 		Where(HasMovementsParams(params)).
-		OrderBy(orderBy(movementsTable.Field("stored_at"), params.SearchDirection)).
-		Limit(params.NumRecords).
-		Format(db.ci)
+		OrderBy(db.table.Movements + ".stored_at " + directionStr(params.SearchDirection)).
+		PlaceholderFormat(db.pf)
+
+	if params.NumRecords > 0 {
+		b = b.Limit(uint64(params.NumRecords))
+	}
+
+	query, args, err := b.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -188,22 +197,33 @@ func (db *TransactionStore) QueryMovements(ctx context.Context, params dbdriver.
 	return iterators.ReadAllPointers(it)
 }
 
-func (db *TransactionStore) QueryTransactions(ctx context.Context, params dbdriver.QueryTransactionsParams, pagination driver3.Pagination) (*driver3.PageIterator[*dbdriver.TransactionRecord], error) {
-	transactionsTable, requestsTable := q.Table(db.table.Transactions), q.Table(db.table.Requests)
-	query, args := q.Select().
-		Fields(
-			transactionsTable.Field("tx_id"), common3.FieldName("action_type"), common3.FieldName("sender_eid"),
-			common3.FieldName("recipient_eid"), common3.FieldName("token_type"), common3.FieldName("amount"),
-			requestsTable.Field("status"), requestsTable.Field("application_metadata"),
-			requestsTable.Field("public_metadata"), transactionsTable.Field("stored_at"),
-		).
-		From(transactionsTable.Join(requestsTable,
-			cond.Cmp(transactionsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
-		).
-		Where(HasTransactionParams(params, transactionsTable)).
-		OrderBy(orderBy(transactionsTable.Field("stored_at"), params.SearchDirection)).
-		Paginated(pagination).
-		FormatPaginated(db.ci, db.pi)
+func (db *TransactionStore) QueryTransactions(ctx context.Context, params dbdriver.QueryTransactionsParams, p driver3.Pagination) (*driver3.PageIterator[*dbdriver.TransactionRecord], error) {
+	b := sq.Select(
+		db.table.Transactions+".tx_id",
+		"action_type",
+		"sender_eid",
+		"recipient_eid",
+		"token_type",
+		"amount",
+		db.table.Requests+".status",
+		db.table.Requests+".application_metadata",
+		db.table.Requests+".public_metadata",
+		db.table.Transactions+".stored_at",
+	).
+		From(db.table.Transactions).
+		LeftJoin(db.table.Requests + " ON " + db.table.Transactions + ".tx_id = " + db.table.Requests + ".tx_id").
+		OrderBy(db.table.Transactions + ".stored_at " + directionStr(params.SearchDirection)).
+		PlaceholderFormat(db.pf)
+
+	if where := HasTransactionParams(params, db.table.Transactions); where != nil {
+		b = b.Where(where)
+	}
+	b = applyPagination(b, p)
+
+	query, args, err := b.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -228,18 +248,21 @@ func (db *TransactionStore) QueryTransactions(ctx context.Context, params dbdriv
 
 	return &driver3.PageIterator[*dbdriver.TransactionRecord]{
 		Items:      results,
-		Pagination: pagination,
+		Pagination: p,
 	}, nil
 }
 
 func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (dbdriver.TxStatus, string, error) {
 	var status dbdriver.TxStatus
 	var statusMessage string
-	query, args := q.Select().
-		FieldsByName("status", "status_message").
-		From(q.Table(db.table.Requests)).
-		Where(cond.Eq("tx_id", txID)).
-		Format(db.ci)
+	query, args, err := sq.Select("status", "status_message").
+		From(db.table.Requests).
+		Where(sq.Eq{"tx_id": txID}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return dbdriver.Unknown, "", err
+	}
 	logging.Debug(logger, query, txID)
 
 	row := db.readDB.QueryRowContext(ctx, query, args...)
@@ -257,17 +280,25 @@ func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (dbdrive
 }
 
 func (db *TransactionStore) QueryValidations(ctx context.Context, params dbdriver.QueryValidationRecordsParams) (dbdriver.ValidationRecordsIterator, error) {
-	validationsTable, requestsTable := q.Table(db.table.Validations), q.Table(db.table.Requests)
-	query, args := q.Select().
-		Fields(
-			validationsTable.Field("tx_id"), requestsTable.Field("request"), common3.FieldName("metadata"),
-			requestsTable.Field("status"), validationsTable.Field("stored_at"),
-		).
-		From(validationsTable.Join(requestsTable,
-			cond.Cmp(validationsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
-		).
-		Where(HasValidationParams(params, db.table.Validations)).
-		Format(db.ci)
+	b := sq.Select(
+		db.table.Validations+".tx_id",
+		db.table.Requests+".request",
+		"metadata",
+		db.table.Requests+".status",
+		db.table.Validations+".stored_at",
+	).
+		From(db.table.Validations).
+		LeftJoin(db.table.Requests + " ON " + db.table.Validations + ".tx_id = " + db.table.Requests + ".tx_id").
+		PlaceholderFormat(db.pf)
+
+	if where := HasValidationParams(params, db.table.Validations); where != nil {
+		b = b.Where(where)
+	}
+
+	query, args, err := b.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -300,11 +331,18 @@ func (db *TransactionStore) Notifier() (dbdriver.TransactionNotifier, error) {
 
 // QueryTokenRequests returns an iterator over the token requests matching the passed params
 func (db *TransactionStore) QueryTokenRequests(ctx context.Context, params dbdriver.QueryTokenRequestsParams) (dbdriver.TokenRequestIterator, error) {
-	query, args := q.Select().
-		FieldsByName("tx_id", "request", "status").
-		From(q.Table(db.table.Requests)).
-		Where(cond.In("status", params.Statuses...)).
-		Format(db.ci)
+	b := sq.Select("tx_id", "request", "status").
+		From(db.table.Requests).
+		PlaceholderFormat(db.pf)
+
+	if len(params.Statuses) > 0 {
+		b = b.Where(sq.Eq{"status": params.Statuses})
+	}
+
+	query, args, err := b.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -332,16 +370,19 @@ func (db *TransactionStore) AcquireRecoveryLeadership(ctx context.Context, lockI
 // the recovery loop needs and adding it would re-introduce a fan-out by
 // movement/output that the caller would have to dedupe by tx_id.
 func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params dbdriver.RecoveryClaimParams) ([]*dbdriver.RecoveryClaim, error) {
-	query, args := q.Select().
-		FieldsByName("tx_id", "stored_at").
-		From(q.Table(db.table.Requests)).
-		Where(cond.And(
-			cond.Eq("status", dbdriver.Pending),
-			cond.Lt("stored_at", params.OlderThan),
-		)).
-		OrderBy(q.Asc(common3.FieldName("stored_at"))).
-		Limit(params.Limit).
-		Format(db.ci)
+	query, args, err := sq.Select("tx_id", "stored_at").
+		From(db.table.Requests).
+		Where(sq.And{
+			sq.Eq{"status": dbdriver.Pending},
+			sq.Lt{"stored_at": params.OlderThan},
+		}).
+		OrderBy("stored_at ASC").
+		Limit(uint64(params.Limit)).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -370,10 +411,14 @@ func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, tx
 	if err != nil {
 		return errors.Wrapf(err, "error generating uuid")
 	}
-	query, args := q.InsertInto(db.table.TransactionEndorseAck).
-		Fields("id", "tx_id", "endorser", "sigma", "stored_at").
-		Row(id, txID, endorser, sigma, now).
-		Format()
+	query, args, err := sq.Insert(db.table.TransactionEndorseAck).
+		Columns("id", "tx_id", "endorser", "sigma", "stored_at").
+		Values(id, txID, endorser, sigma, now).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return err
+	}
 
 	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
 	if _, err = db.writeDB.ExecContext(ctx, query, args...); err != nil {
@@ -384,11 +429,14 @@ func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, tx
 }
 
 func (db *TransactionStore) GetTransactionEndorsementAcks(ctx context.Context, txID string) (map[string][]byte, error) {
-	query, args := q.Select().
-		FieldsByName("endorser", "sigma").
-		From(q.Table(db.table.TransactionEndorseAck)).
-		Where(cond.Eq("tx_id", txID)).
-		Format(db.ci)
+	query, args, err := sq.Select("endorser", "sigma").
+		From(db.table.TransactionEndorseAck).
+		Where(sq.Eq{"tx_id": txID}).
+		PlaceholderFormat(db.pf).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
 	logging.Debug(logger, query, txID)
 
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -424,26 +472,19 @@ func (db *TransactionStore) Close() error {
 }
 
 func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status dbdriver.TxStatus, message string) error {
-	var err error
+	b := sq.Update(db.table.Requests).
+		Set("status", status).
+		Where(sq.Eq{"tx_id": txID})
 	if len(message) != 0 {
-		query, args := q.Update(db.table.Requests).
-			Set("status", status).
-			Set("status_message", message).
-			Where(cond.Eq("tx_id", txID)).
-			Format(db.ci)
-
-		logging.Debug(logger, query, args)
-		_, err = db.writeDB.ExecContext(ctx, query, args...)
-	} else {
-		query, args := q.Update(db.table.Requests).
-			Set("status", status).
-			Where(cond.Eq("tx_id", txID)).
-			Format(db.ci)
-
-		logging.Debug(logger, query, args)
-		_, err = db.writeDB.ExecContext(ctx, query, args...)
+		b = b.Set("status_message", message)
 	}
+	query, args, err := b.PlaceholderFormat(db.pf).ToSql()
 	if err != nil {
+		return errors.Wrapf(err, "error building update query for tx [%s]", txID)
+	}
+
+	logging.Debug(logger, query, args)
+	if _, err = db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error updating tx [%s]", txID)
 	}
 
@@ -527,14 +568,14 @@ func (db *TransactionStore) NewTransactionStoreTransaction() (dbdriver.Transacti
 	return &TransactionStoreTransaction{
 		txn:   txn,
 		table: &db.table,
-		ci:    db.ci,
+		pf:    db.pf,
 	}, nil
 }
 
 type TransactionStoreTransaction struct {
 	txn   *sql.Tx
 	table *transactionTables
-	ci    common3.CondInterpreter
+	pf    sq.PlaceholderFormat
 }
 
 func (w *TransactionStoreTransaction) Impl() dbdriver.TransactionImpl {
@@ -566,8 +607,9 @@ func (w *TransactionStoreTransaction) AddTransaction(ctx context.Context, rs ...
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
 	}
-	rows := make([]common3.Tuple, len(rs))
-	for i, r := range rs {
+	insert := sq.Insert(w.table.Transactions).
+		Columns("id", "tx_id", "action_type", "sender_eid", "recipient_eid", "token_type", "amount", "stored_at")
+	for _, r := range rs {
 		logger.DebugfContext(ctx, "adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
 		id, err := uuid.GenerateUUID()
 		if err != nil {
@@ -576,15 +618,15 @@ func (w *TransactionStoreTransaction) AddTransaction(ctx context.Context, rs ...
 		if r.Amount.BitLen() > maxAmountBits {
 			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount, maxAmountBits)
 		}
-		rows[i] = common3.Tuple{id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.String(), r.Timestamp.UTC()}
+		insert = insert.Values(id, r.TxID, int(r.ActionType), r.SenderEID, r.RecipientEID, r.TokenType, r.Amount.String(), r.Timestamp.UTC())
 	}
 
-	query, args := q.InsertInto(w.table.Transactions).
-		Fields("id", "tx_id", "action_type", "sender_eid", "recipient_eid", "token_type", "amount", "stored_at").
-		Rows(rows).
-		Format()
+	query, args, err := insert.PlaceholderFormat(w.pf).ToSql()
+	if err != nil {
+		return err
+	}
 	logging.Debug(logger, query, args)
-	_, err := w.txn.ExecContext(ctx, query, args...)
+	_, err = w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
@@ -609,10 +651,14 @@ func (w *TransactionStoreTransaction) AddTokenRequest(ctx context.Context, txID 
 		return errors.New("error marshaling application metadata")
 	}
 
-	query, args := q.InsertInto(w.table.Requests).
-		Fields("tx_id", "request", "status", "status_message", "application_metadata", "public_metadata", "pp_hash", "stored_at").
-		Row(txID, tr, dbdriver.Pending, "", ja, jp, ppHash, time.Now().UTC()).
-		Format()
+	query, args, err := sq.Insert(w.table.Requests).
+		Columns("tx_id", "request", "status", "status_message", "application_metadata", "public_metadata", "pp_hash", "stored_at").
+		Values(txID, tr, dbdriver.Pending, "", ja, jp, ppHash, time.Now().UTC()).
+		PlaceholderFormat(w.pf).
+		ToSql()
+	if err != nil {
+		return err
+	}
 	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(publicMetadata), len(ppHash))
 	_, err = w.txn.ExecContext(ctx, query, args...)
 
@@ -629,8 +675,9 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 	}
 
 	now := time.Now().UTC()
-	rows := make([]common3.Tuple, len(rs))
-	for i, r := range rs {
+	insert := sq.Insert(w.table.Movements).
+		Columns("id", "tx_id", "enrollment_id", "token_type", "amount", "stored_at")
+	for _, r := range rs {
 		logger.DebugfContext(ctx, "adding movement record [%s]", r)
 		id, err := uuid.GenerateUUID()
 		if err != nil {
@@ -639,15 +686,15 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 		if r.Amount.BitLen() > maxAmountBits {
 			return errors.Errorf("amount [%s] exceeds maximum supported size of %d bits", r.Amount, maxAmountBits)
 		}
-		rows[i] = common3.Tuple{id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.String(), now}
+		insert = insert.Values(id, r.TxID, r.EnrollmentID, r.TokenType, r.Amount.String(), now)
 	}
 
-	query, args := q.InsertInto(w.table.Movements).
-		Fields("id", "tx_id", "enrollment_id", "token_type", "amount", "stored_at").
-		Rows(rows).
-		Format()
+	query, args, err := insert.PlaceholderFormat(w.pf).ToSql()
+	if err != nil {
+		return err
+	}
 	logging.Debug(logger, query, args)
-	_, err := w.txn.ExecContext(ctx, query, args...)
+	_, err = w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
@@ -663,10 +710,14 @@ func (w *TransactionStoreTransaction) AddValidationRecord(ctx context.Context, t
 	}
 	now := time.Now().UTC()
 
-	query, args := q.InsertInto(w.table.Validations).
-		Fields("tx_id", "metadata", "stored_at").
-		Row(txID, md, now).
-		Format()
+	query, args, err := sq.Insert(w.table.Validations).
+		Columns("tx_id", "metadata", "stored_at").
+		Values(txID, md, now).
+		PlaceholderFormat(w.pf).
+		ToSql()
+	if err != nil {
+		return err
+	}
 	logging.Debug(logger, query, txID, len(md), now)
 
 	_, err = w.txn.ExecContext(ctx, query, args...)
@@ -675,26 +726,19 @@ func (w *TransactionStoreTransaction) AddValidationRecord(ctx context.Context, t
 }
 
 func (w *TransactionStoreTransaction) SetStatus(ctx context.Context, txID string, status dbdriver.TxStatus, message string) error {
-	var err error
+	b := sq.Update(w.table.Requests).
+		Set("status", status).
+		Where(sq.Eq{"tx_id": txID})
 	if len(message) != 0 {
-		query, args := q.Update(w.table.Requests).
-			Set("status", status).
-			Set("status_message", message).
-			Where(cond.Eq("tx_id", txID)).
-			Format(w.ci)
-
-		logging.Debug(logger, query, args)
-		_, err = w.txn.ExecContext(ctx, query, args...)
-	} else {
-		query, args := q.Update(w.table.Requests).
-			Set("status", status).
-			Where(cond.Eq("tx_id", txID)).
-			Format(w.ci)
-
-		logging.Debug(logger, query, args)
-		_, err = w.txn.ExecContext(ctx, query, args...)
+		b = b.Set("status_message", message)
 	}
+	query, args, err := b.PlaceholderFormat(w.pf).ToSql()
 	if err != nil {
+		return errors.Wrapf(err, "error building update query for tx [%s]", txID)
+	}
+
+	logging.Debug(logger, query, args)
+	if _, err = w.txn.ExecContext(ctx, query, args...); err != nil {
 		return errors.Wrapf(err, "error updating tx [%s]", txID)
 	}
 
@@ -714,12 +758,12 @@ func ttxDBError(err error) error {
 	return err
 }
 
-func orderBy(f common3.Serializable, direction dbdriver.SearchDirection) _select.OrderBy {
-	if direction == dbdriver.FromBeginning {
-		return q.Asc(f)
+func directionStr(dir dbdriver.SearchDirection) string {
+	if dir == dbdriver.FromBeginning {
+		return "ASC"
 	}
 
-	return q.Desc(f)
+	return "DESC"
 }
 
 func marshal(in map[string][]byte) (string, error) {
@@ -742,4 +786,133 @@ type noopRecoveryLeadership struct{}
 
 func (noopRecoveryLeadership) Close() error {
 	return nil
+}
+
+// squirrelPag implements qcommon.ModifiableQuery to bridge the FSC pagination
+// system with squirrel query builders.
+type squirrelPag struct {
+	limit    int
+	offset   int
+	fields   []string
+	orderBys []string
+	wheres   []sq.Sqlizer
+}
+
+func (s *squirrelPag) AddField(f qcommon.Field) {
+	buf := &renderBuf{}
+	f.WriteString(buf)
+	s.fields = append(s.fields, buf.str.String())
+}
+
+func (s *squirrelPag) AddWhere(c qcommon.Condition) {
+	buf := &renderBuf{}
+	c.WriteString(panicCI{}, buf)
+	s.wheres = append(s.wheres, sq.Expr(buf.str.String(), buf.args...))
+}
+
+func (s *squirrelPag) AddOrderBy(o qcommon.OrderBy) {
+	buf := &renderBuf{}
+	o.WriteString(buf)
+	s.orderBys = append(s.orderBys, buf.str.String())
+}
+
+func (s *squirrelPag) AddLimit(n int) {
+	s.limit = n
+}
+
+func (s *squirrelPag) AddOffset(n int) {
+	s.offset = n
+}
+
+func (s *squirrelPag) Apply(b sq.SelectBuilder) sq.SelectBuilder {
+	for _, f := range s.fields {
+		b = b.Column(f)
+	}
+	for _, w := range s.wheres {
+		b = b.Where(w)
+	}
+	for _, o := range s.orderBys {
+		b = b.OrderBy(o)
+	}
+	if s.limit == qcommon.ZeroLimit {
+		b = b.Limit(0)
+	} else if s.limit > 0 {
+		b = b.Limit(uint64(s.limit))
+	}
+	if s.offset > 0 {
+		b = b.Offset(uint64(s.offset))
+	}
+
+	return b
+}
+
+// applyPagination applies FSC pagination to a squirrel SelectBuilder.
+// A nil pagination is treated as no-op (same as pagination.None()).
+func applyPagination(b sq.SelectBuilder, p driver3.Pagination) sq.SelectBuilder {
+	if p == nil {
+		return b
+	}
+	pag := &squirrelPag{}
+	pagination.NewDefaultInterpreter().PreProcess(p, pag)
+
+	return pag.Apply(b)
+}
+
+// renderBuf captures SQL text and parameters from old Serializable/ConditionSerializable types.
+type renderBuf struct {
+	str  strings.Builder
+	args []interface{}
+}
+
+func (b *renderBuf) WriteParam(p qcommon.Param) qcommon.Builder {
+	b.str.WriteString("?")
+	b.args = append(b.args, p)
+
+	return b
+}
+
+func (b *renderBuf) WriteTuples(_ []qcommon.Tuple) qcommon.Builder {
+	panic("WriteTuples not supported in pagination context")
+}
+
+func (b *renderBuf) WriteString(s string) qcommon.Builder {
+	b.str.WriteString(s)
+
+	return b
+}
+
+func (b *renderBuf) WriteRune(r rune) qcommon.Builder {
+	b.str.WriteRune(r)
+
+	return b
+}
+
+func (b *renderBuf) WriteSerializables(ss ...qcommon.Serializable) qcommon.Builder {
+	for _, s := range ss {
+		s.WriteString(b)
+	}
+
+	return b
+}
+
+func (b *renderBuf) WriteConditionSerializable(c qcommon.ConditionSerializable, ci qcommon.CondInterpreter) qcommon.Builder {
+	c.WriteString(ci, b)
+
+	return b
+}
+
+func (b *renderBuf) Build() (string, []qcommon.Param) {
+	return b.str.String(), b.args
+}
+
+// panicCI is a CondInterpreter that panics if called.
+// keyset pagination only uses cond.CmpVal which doesn't call CondInterpreter methods.
+type panicCI struct{}
+
+func (panicCI) TimeOffset(_ time.Duration, _ qcommon.Builder) {
+	panic("TimeOffset not supported in pagination context")
+}
+
+func (panicCI) InTuple(_ []qcommon.Serializable, _ []qcommon.Tuple, _ qcommon.Builder) {
+	panic("InTuple not supported in pagination context")
 }

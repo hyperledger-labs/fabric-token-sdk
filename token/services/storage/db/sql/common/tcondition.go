@@ -10,8 +10,6 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -81,58 +79,90 @@ func HasTokenDetails(params driver2.QueryTokenDetailsParams, tableAlias string) 
 	return sq.And(conds)
 }
 
-func HasMovementsParams(params driver2.QueryMovementsParams) cond.Condition {
-	conds := []cond.Condition{
-		cond.In("enrollment_id", params.EnrollmentIDs...),
-		cond.In("token_type", params.TokenTypes...),
-		cond.In("status", params.TxStatuses...),
-	}
+func HasMovementsParams(params driver2.QueryMovementsParams) sq.Sqlizer {
+	var conds []sq.Sqlizer
 
-	if len(params.TxStatuses) == 0 {
-		conds = append(conds, cond.Neq("status", driver2.Deleted))
+	if len(params.EnrollmentIDs) > 0 {
+		conds = append(conds, sq.Eq{"enrollment_id": params.EnrollmentIDs})
+	}
+	if len(params.TokenTypes) > 0 {
+		conds = append(conds, sq.Eq{"token_type": params.TokenTypes})
+	}
+	if len(params.TxStatuses) > 0 {
+		conds = append(conds, sq.Eq{"status": params.TxStatuses})
+	} else {
+		conds = append(conds, sq.NotEq{"status": driver2.Deleted})
 	}
 
 	switch params.MovementDirection {
 	case driver2.Sent:
-		conds = append(conds, cond.Lt("amount", 0))
+		conds = append(conds, sq.Lt{"amount": 0})
 	case driver2.Received:
-		conds = append(conds, cond.Gt("amount", 0))
+		conds = append(conds, sq.Gt{"amount": 0})
 	}
 
-	return cond.And(conds...)
+	return sq.And(conds)
 }
 
-func HasValidationParams(params driver2.QueryValidationRecordsParams, tableName string) cond.Condition {
-	return cond.And(
-		cond.BetweenTimestamps(common.FieldName(tableName+".stored_at"), utc(params.From), utc(params.To)),
-		cond.In("status", params.Statuses...),
-	)
-}
+func HasValidationParams(params driver2.QueryValidationRecordsParams, tableName string) sq.Sqlizer {
+	var conds []sq.Sqlizer
 
-func HasTransactionParams(params driver2.QueryTransactionsParams, table common.Table) cond.Condition {
-	conds := []cond.Condition{
-		cond.FieldIn(table.Field("tx_id"), params.IDs...),
-		cond.FieldBetweenTimestamps(table.Field("stored_at"), utc(params.From), utc(params.To)),
-		cond.In("action_type", params.ActionTypes...),
-		// Specific transaction status if requested, defaults to all but Deleted
-		cond.In("status", params.Statuses...),
-		cond.In("token_type", params.TokenTypes...),
+	if from := utc(params.From); !from.IsZero() {
+		conds = append(conds, sq.GtOrEq{tableName + ".stored_at": from})
+	}
+	if to := utc(params.To); !to.IsZero() {
+		conds = append(conds, sq.LtOrEq{tableName + ".stored_at": to})
+	}
+	if len(params.Statuses) > 0 {
+		conds = append(conds, sq.Eq{"status": params.Statuses})
 	}
 
+	if len(conds) == 0 {
+		return nil
+	}
+
+	return sq.And(conds)
+}
+
+func HasTransactionParams(params driver2.QueryTransactionsParams, tableAlias string) sq.Sqlizer {
+	var conds []sq.Sqlizer
+
+	if len(params.IDs) > 0 {
+		conds = append(conds, sq.Eq{tableAlias + ".tx_id": params.IDs})
+	}
+	if from := utc(params.From); !from.IsZero() {
+		conds = append(conds, sq.GtOrEq{tableAlias + ".stored_at": from})
+	}
+	if to := utc(params.To); !to.IsZero() {
+		conds = append(conds, sq.LtOrEq{tableAlias + ".stored_at": to})
+	}
+	if len(params.ActionTypes) > 0 {
+		conds = append(conds, sq.Eq{"action_type": params.ActionTypes})
+	}
+	if len(params.Statuses) > 0 {
+		conds = append(conds, sq.Eq{"status": params.Statuses})
+	}
+	if len(params.TokenTypes) > 0 {
+		conds = append(conds, sq.Eq{"token_type": params.TokenTypes})
+	}
 	if params.ExcludeToSelf {
-		conds = append(conds, cond.Cmp(common.FieldName("sender_eid"), "!=", common.FieldName("recipient_eid")))
+		conds = append(conds, sq.Expr("sender_eid != recipient_eid"))
 	}
 
 	// See QueryTransactionsParams for expected behavior. If only one of sender or
 	// recipient is set, we return all transactions. If both are set, we do an OR.
 	if params.SenderWallet != "" && params.RecipientWallet != "" {
-		conds = append(conds, cond.Or(
-			cond.Eq("sender_eid", params.SenderWallet),
-			cond.Eq("recipient_eid", params.RecipientWallet),
-		))
+		conds = append(conds, sq.Or{
+			sq.Eq{"sender_eid": params.SenderWallet},
+			sq.Eq{"recipient_eid": params.RecipientWallet},
+		})
 	}
 
-	return cond.And(conds...)
+	if len(conds) == 0 {
+		return nil
+	}
+
+	return sq.And(conds)
 }
 
 func utc(t *time.Time) time.Time {

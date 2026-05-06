@@ -10,7 +10,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
+	sq "github.com/Masterminds/squirrel"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
@@ -21,14 +21,9 @@ func mockTransactionsStore(db *sql.DB) *common2.TransactionStore {
 		Requests:              "REQUESTS",
 		Validations:           "VALIDATIONS",
 		TransactionEndorseAck: "TRANSACTION_ENDORSE_ACK",
-	}, postgres.NewConditionInterpreter(), postgres.NewPaginationInterpreter())
+	}, sq.Dollar)
 
 	return store
-}
-
-var queryConstructorTraits = common2.QueryConstructorTraits{
-	SupportsIN:          false,
-	MultipleParenthesis: true,
 }
 
 func TestGetTokenRequest(t *testing.T) {
@@ -36,7 +31,7 @@ func TestGetTokenRequest(t *testing.T) {
 }
 
 func TestQueryMovements(t *testing.T) {
-	common2.TestQueryMovements(t, mockTransactionsStore, queryConstructorTraits)
+	common2.TestQueryMovements(t, mockTransactionsStore)
 }
 
 func TestQueryTransactions(t *testing.T) {
@@ -48,11 +43,11 @@ func TestGetStatus(t *testing.T) {
 }
 
 func TestQueryValidations(t *testing.T) {
-	common2.TestQueryValidations(t, mockTransactionsStore, queryConstructorTraits)
+	common2.TestQueryValidations(t, mockTransactionsStore)
 }
 
 func TestQueryTokenRequests(t *testing.T) {
-	common2.TestQueryTokenRequests(t, mockTransactionsStore, queryConstructorTraits)
+	common2.TestQueryTokenRequests(t, mockTransactionsStore)
 }
 
 func TestGetTransactionEndorsementAcks(t *testing.T) {

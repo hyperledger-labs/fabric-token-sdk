@@ -10,25 +10,23 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
+	sq "github.com/Masterminds/squirrel"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
 func mockTransactionsStore(db *sql.DB) *common2.TransactionStore {
+	// Use Dollar placeholder format to match the $1-style patterns in the shared test util.
+	// Real SQLite connections use sq.Question; unit mock tests use sq.Dollar for consistency
+	// with the hardcoded $N patterns inherited from the old FSC builder.
 	store, _ := common2.NewOwnerTransactionStore(db, db, common2.TableNames{
 		Movements:             "MOVEMENTS",
 		Transactions:          "TRANSACTIONS",
 		Requests:              "REQUESTS",
 		Validations:           "VALIDATIONS",
 		TransactionEndorseAck: "TRANSACTION_ENDORSE_ACK",
-	}, sqlite.NewConditionInterpreter(), sqlite.NewPaginationInterpreter())
+	}, sq.Dollar)
 
 	return store
-}
-
-var queryConstructorTraits = common2.QueryConstructorTraits{
-	SupportsIN:          true,
-	MultipleParenthesis: false,
 }
 
 func TestGetTokenRequest(t *testing.T) {
@@ -36,7 +34,7 @@ func TestGetTokenRequest(t *testing.T) {
 }
 
 func TestQueryMovements(t *testing.T) {
-	common2.TestQueryMovements(t, mockTransactionsStore, queryConstructorTraits)
+	common2.TestQueryMovements(t, mockTransactionsStore)
 }
 
 func TestQueryTransactions(t *testing.T) {
@@ -48,11 +46,11 @@ func TestGetStatus(t *testing.T) {
 }
 
 func TestQueryValidations(t *testing.T) {
-	common2.TestQueryValidations(t, mockTransactionsStore, queryConstructorTraits)
+	common2.TestQueryValidations(t, mockTransactionsStore)
 }
 
 func TestQueryTokenRequests(t *testing.T) {
-	common2.TestQueryTokenRequests(t, mockTransactionsStore, queryConstructorTraits)
+	common2.TestQueryTokenRequests(t, mockTransactionsStore)
 }
 
 func TestGetTransactionEndorsementAcks(t *testing.T) {

@@ -24,11 +24,6 @@ import (
 
 type transactionsStoreConstructor func(*sql.DB) *TransactionStore
 
-type QueryConstructorTraits struct {
-	SupportsIN          bool
-	MultipleParenthesis bool
-}
-
 func TestGetTokenRequest(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
@@ -48,7 +43,7 @@ func TestGetTokenRequest(t *testing.T, store transactionsStoreConstructor) {
 	gomega.Expect(info).To(gomega.Equal(output))
 }
 
-func TestQueryMovements(t *testing.T, store transactionsStoreConstructor, traits QueryConstructorTraits) {
+func TestQueryMovements(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -63,23 +58,14 @@ func TestQueryMovements(t *testing.T, store transactionsStoreConstructor, traits
 	output := []driver2.Value{
 		record.TxID, record.EnrollmentID, record.TokenType, int(record.Amount.Int64()), record.Status,
 	}
-	var query string
-	if traits.MultipleParenthesis {
-		query = "SELECT MOVEMENTS.tx_id, enrollment_id, token_type, amount, REQUESTS.status " +
-			"FROM MOVEMENTS LEFT JOIN REQUESTS ON MOVEMENTS.tx_id = REQUESTS.tx_id " +
-			"WHERE \\(\\(\\(enrollment_id = \\$1\\)\\)\\) AND \\(\\(\\(token_type = \\$2\\)\\)\\) AND \\(\\(\\(status = \\$3\\)\\)\\) AND \\(amount < \\$4\\) " +
-			"ORDER BY MOVEMENTS.stored_at DESC " +
-			"LIMIT \\$5"
-	} else {
-		query = "SELECT MOVEMENTS.tx_id, enrollment_id, token_type, amount, REQUESTS.status " +
-			"FROM MOVEMENTS LEFT JOIN REQUESTS ON MOVEMENTS.tx_id = REQUESTS.tx_id " +
-			"WHERE \\(enrollment_id = \\$1\\) AND \\(token_type = \\$2\\) AND \\(status = \\$3\\) AND \\(amount < \\$4\\) " +
-			"ORDER BY MOVEMENTS.stored_at DESC " +
-			"LIMIT \\$5"
-	}
+	query := "SELECT MOVEMENTS.tx_id, enrollment_id, token_type, amount, REQUESTS.status " +
+		"FROM MOVEMENTS LEFT JOIN REQUESTS ON MOVEMENTS.tx_id = REQUESTS.tx_id " +
+		"WHERE \\(enrollment_id IN \\(\\$1\\) AND token_type IN \\(\\$2\\) AND status IN \\(\\$3\\) AND amount < \\$4\\) " +
+		"ORDER BY MOVEMENTS.stored_at DESC " +
+		"LIMIT 1"
 	mockDB.
 		ExpectQuery(query).
-		WithArgs(record.EnrollmentID, record.TokenType, record.Status, 0, 1).
+		WithArgs(record.EnrollmentID, record.TokenType, record.Status, 0).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "enrollment_id", "token_type", "amount", "status"}).AddRow(output...))
 
 	info, err := store(db).QueryMovements(t.Context(),
@@ -151,7 +137,7 @@ func TestGetStatus(t *testing.T, store transactionsStoreConstructor) {
 	gomega.Expect(statusMessage).To(gomega.Equal(output[1]))
 }
 
-func TestQueryValidations(t *testing.T, store transactionsStoreConstructor, traits QueryConstructorTraits) {
+func TestQueryValidations(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -167,22 +153,9 @@ func TestQueryValidations(t *testing.T, store transactionsStoreConstructor, trai
 	output := []driver2.Value{
 		record.TxID, record.TokenRequest, nil, record.Status, record.Timestamp,
 	}
-	var query string
-	var statusClause string
-	if traits.SupportsIN {
-		statusClause = "\\(\\(status\\) IN \\(\\(\\$3\\), \\(\\$4\\)\\)\\)"
-	} else {
-		statusClause = "\\(\\(\\(status = \\$3\\)\\) OR \\(\\(status = \\$4\\)\\)\\)"
-	}
-	if traits.MultipleParenthesis {
-		query = "SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at " +
-			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id " +
-			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\) AND " + statusClause
-	} else {
-		query = "SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at " +
-			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id " +
-			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\) AND " + statusClause
-	}
+	query := "SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at " +
+		"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id " +
+		"WHERE \\(VALIDATIONS.stored_at >= \\$1 AND VALIDATIONS.stored_at <= \\$2 AND status IN \\(\\$3,\\$4\\)\\)"
 	mockDB.
 		ExpectQuery(query).
 		WithArgs(timeFrom, timeTo, driver.Deleted, driver.Unknown).
@@ -203,7 +176,7 @@ func TestQueryValidations(t *testing.T, store transactionsStoreConstructor, trai
 	gomega.Expect(records).To(gomega.ConsistOf(record))
 }
 
-func TestQueryTokenRequests(t *testing.T, store transactionsStoreConstructor, traits QueryConstructorTraits) {
+func TestQueryTokenRequests(t *testing.T, store transactionsStoreConstructor) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -216,14 +189,8 @@ func TestQueryTokenRequests(t *testing.T, store transactionsStoreConstructor, tr
 	output := []driver2.Value{
 		record.TxID, record.TokenRequest, record.Status,
 	}
-	var statusClause string
-	if traits.SupportsIN {
-		statusClause = "\\(status\\) IN \\(\\(\\$1\\), \\(\\$2\\)\\)"
-	} else {
-		statusClause = "\\(\\(status = \\$1\\)\\) OR \\(\\(status = \\$2\\)\\)"
-	}
 	mockDB.
-		ExpectQuery("SELECT tx_id, request, status FROM REQUESTS WHERE "+statusClause).
+		ExpectQuery("SELECT tx_id, request, status FROM REQUESTS WHERE status IN \\(\\$1,\\$2\\)").
 		WithArgs(driver.Deleted, driver.Unknown).
 		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "status"}).AddRow(output...))
 
@@ -279,7 +246,7 @@ func TestAddTransactionEndorsementAck(t *testing.T, store transactionsStoreConst
 	sigma := []byte("signature")
 	now := sqlmock.AnyArg()
 
-	mockDB.ExpectExec("INSERT INTO TRANSACTION_ENDORSE_ACK \\(id, tx_id, endorser, sigma, stored_at\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\)").
+	mockDB.ExpectExec("INSERT INTO TRANSACTION_ENDORSE_ACK \\(id,tx_id,endorser,sigma,stored_at\\) VALUES \\(\\$1,\\$2,\\$3,\\$4,\\$5\\)").
 		WithArgs(uuid, txID, eID, sigma, now).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -333,7 +300,7 @@ func TestAWAddTransaction(t *testing.T, store transactionsStoreConstructor) {
 
 	mockDB.ExpectBegin()
 	mockDB.
-		ExpectExec("INSERT INTO TRANSACTIONS \\(id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7, \\$8\\)").
+		ExpectExec("INSERT INTO TRANSACTIONS \\(id,tx_id,action_type,sender_eid,recipient_eid,token_type,amount,stored_at\\) VALUES \\(\\$1,\\$2,\\$3,\\$4,\\$5,\\$6,\\$7,\\$8\\)").
 		WithArgs(AnyUUID{}, input.TxID, 1, input.SenderEID, input.RecipientEID, input.TokenType, input.Amount.String(), input.Timestamp.UTC()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
@@ -359,8 +326,8 @@ func TestAWAddTokenRequest(t *testing.T, store transactionsStoreConstructor) {
 
 	mockDB.ExpectBegin()
 	mockDB.
-		ExpectExec("INSERT INTO REQUESTS \\(tx_id, request, status, status_message, application_metadata, public_metadata, pp_hash, stored_at\\) "+
-			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7, \\$8\\)").
+		ExpectExec("INSERT INTO REQUESTS \\(tx_id,request,status,status_message,application_metadata,public_metadata,pp_hash,stored_at\\) "+
+			"VALUES \\(\\$1,\\$2,\\$3,\\$4,\\$5,\\$6,\\$7,\\$8\\)").
 		WithArgs(txID, tr, status, status_message, "{}", "{}", ppHash, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
@@ -389,8 +356,8 @@ func TestAWAddMovement(t *testing.T, store transactionsStoreConstructor) {
 
 	mockDB.ExpectBegin()
 	mockDB.
-		ExpectExec("INSERT INTO MOVEMENTS \\(id, tx_id, enrollment_id, token_type, amount, stored_at\\) "+
-			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6\\)").
+		ExpectExec("INSERT INTO MOVEMENTS \\(id,tx_id,enrollment_id,token_type,amount,stored_at\\) "+
+			"VALUES \\(\\$1,\\$2,\\$3,\\$4,\\$5,\\$6\\)").
 		WithArgs(AnyUUID{}, input.TxID, input.EnrollmentID, input.TokenType, input.Amount.String(), now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
@@ -413,7 +380,7 @@ func TestAWAddValidationRecord(t *testing.T, store transactionsStoreConstructor)
 
 	mockDB.ExpectBegin()
 	mockDB.
-		ExpectExec("INSERT INTO VALIDATIONS \\(tx_id, metadata, stored_at\\) VALUES \\(\\$1, \\$2, \\$3\\)").
+		ExpectExec("INSERT INTO VALIDATIONS \\(tx_id,metadata,stored_at\\) VALUES \\(\\$1,\\$2,\\$3\\)").
 		WithArgs(txID, "null", now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
