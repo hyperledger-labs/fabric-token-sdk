@@ -324,7 +324,7 @@ func TestAcquireAndReleaseLocks_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify locks are held
-	dedupBoxed, ok := store.eIDsLocks.Load("anchor_integration")
+	_, ok := store.eIDsLocks.Load("anchor_integration")
 	require.True(t, ok)
 
 	// Release locks
