@@ -187,18 +187,44 @@ func (a *Service) Release(ctx context.Context, tx Transaction) {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *Service) SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error {
-	return a.auditDB.SetStatus(ctx, txID, status, message)
+	start := time.Now()
+	defer func() { a.metrics.SetStatusDuration.Observe(time.Since(start).Seconds()) }()
+	if err := a.auditDB.SetStatus(ctx, txID, status, message); err != nil {
+		a.metrics.SetStatusErrors.Add(1)
+
+		return err
+	}
+
+	return nil
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
 func (a *Service) GetStatus(ctx context.Context, txID string) (TxStatus, string, error) {
-	return a.auditDB.GetStatus(ctx, txID)
+	start := time.Now()
+	defer func() { a.metrics.GetStatusDuration.Observe(time.Since(start).Seconds()) }()
+	status, message, err := a.auditDB.GetStatus(ctx, txID)
+	if err != nil {
+		a.metrics.GetStatusErrors.Add(1)
+
+		return status, message, err
+	}
+
+	return status, message, nil
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
 func (a *Service) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
-	return a.auditDB.GetTokenRequest(ctx, txID)
+	start := time.Now()
+	defer func() { a.metrics.GetTokenRequestDuration.Observe(time.Since(start).Seconds()) }()
+	data, err := a.auditDB.GetTokenRequest(ctx, txID)
+	if err != nil {
+		a.metrics.GetTokenRequestErrors.Add(1)
+
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func (a *Service) Check(ctx context.Context) ([]string, error) {
