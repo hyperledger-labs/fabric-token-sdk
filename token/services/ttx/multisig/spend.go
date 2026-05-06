@@ -81,6 +81,11 @@ type answer struct {
 	party    view.Identity
 }
 
+// defaultSpendRequestTimeout is the total time RequestSpendView waits for all
+// co-signers to reply before returning an error. Callers may override it via
+// WithTimeout.
+const defaultSpendRequestTimeout = 30 * time.Second
+
 // RequestSpendView sends a SpendRequest to all parties and waits for their responses
 type RequestSpendView struct {
 	unspentToken *token.UnspentToken
@@ -113,6 +118,7 @@ func NewRequestSpendView(unspentToken *token.UnspentToken, opts ...token2.Servic
 		unspentToken: unspentToken,
 		parties:      identities,
 		options:      serviceOptions,
+		timeout:      defaultSpendRequestTimeout,
 	}
 }
 
@@ -145,16 +151,21 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 		counter++
 	}
 
+	timer := time.NewTimer(c.timeout)
+	defer timer.Stop()
 	for range counter {
 		logger.DebugfContext(context.Context(), "Wait for answer")
-		// TODO: put a timeout
-		a := <-answerChannel
-		logger.DebugfContext(context.Context(), "Received answer")
-		if a.err != nil {
-			return nil, errors.Wrapf(a.err, "got failure [%s] from [%s]", a.party.String(), a.err)
-		}
-		if a.response.Err != nil {
-			return nil, errors.Wrapf(a.response.Err, "got failure [%s] from [%s]", a.party.String(), a.response.Err)
+		select {
+		case a := <-answerChannel:
+			logger.DebugfContext(context.Context(), "Received answer")
+			if a.err != nil {
+				return nil, errors.Wrapf(a.err, "got failure [%s] from [%s]", a.party.String(), a.err)
+			}
+			if a.response.Err != nil {
+				return nil, errors.Wrapf(a.response.Err, "got failure [%s] from [%s]", a.party.String(), a.response.Err)
+			}
+		case <-timer.C:
+			return nil, errors.Errorf("timed out after %s waiting for co-signer response", c.timeout)
 		}
 	}
 
