@@ -40,3 +40,7 @@ func TestIdentityExists(t *testing.T) {
 func TestStoreIdentity(t *testing.T) {
 	common2.TestStoreIdentity(t, mockWalletStore)
 }
+
+func TestStoreIdentityIdempotent(t *testing.T) {
+	common2.TestStoreIdentityIdempotent(t, mockWalletStore)
+}
