@@ -87,14 +87,10 @@ func (db *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.W
 }
 
 func (db *WalletStore) StoreIdentity(ctx context.Context, identity token.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
-	// TODO AF Use upsert
-	if db.IdentityExists(ctx, identity, wID, roleID) {
-		return nil
-	}
-
 	query, args := q.InsertInto(db.table.Wallets).
 		Fields("identity_hash", "meta", "wallet_id", "role_id", "created_at", "enrollment_id").
 		Row(identity.UniqueID(), meta, wID, roleID, time.Now().UTC(), eID).
+		OnConflictDoNothing().
 		Format()
 	logging.Debug(logger, query)
 
