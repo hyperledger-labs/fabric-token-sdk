@@ -281,7 +281,7 @@ func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token.Unspen
 		return nil, err
 	}
 
-	return o.w.ListTokens(compiledOpts)
+	return o.w.ListTokens(compiledOpts.Context, compiledOpts)
 }
 
 // ListUnspentTokensIterator returns an iterator of unspent tokens owned by identities in this wallet and filtered by the passed options.
@@ -291,7 +291,7 @@ func (o *OwnerWallet) ListUnspentTokensIterator(opts ...ListTokensOption) (*Unsp
 	if err != nil {
 		return nil, err
 	}
-	it, err := o.w.ListTokensIterator(compiledOpts)
+	it, err := o.w.ListTokensIterator(compiledOpts.Context, compiledOpts)
 	if err != nil {
 		return nil, err
 	}

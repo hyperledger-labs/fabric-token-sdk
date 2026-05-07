@@ -220,13 +220,13 @@ func TestLongTermOwnerWallet(t *testing.T) {
 		tv.BalanceReturns(30, nil)
 
 		// ListTokens
-		tokens, err := w.ListTokens(&driver.ListTokensOptions{Context: t.Context(), TokenType: "T1"})
+		tokens, err := w.ListTokens(t.Context(), &driver.ListTokensOptions{Context: t.Context(), TokenType: "T1"})
 		require.NoError(t, err)
 		assert.Len(t, tokens.Tokens, 2)
 
 		// ListTokensIterator
 		tv.UnspentTokensIteratorByReturns(it, nil)
-		itRet, err := w.ListTokensIterator(&driver.ListTokensOptions{Context: t.Context()})
+		itRet, err := w.ListTokensIterator(t.Context(), &driver.ListTokensOptions{Context: t.Context()})
 		require.NoError(t, err)
 		assert.Equal(t, it, itRet)
 
