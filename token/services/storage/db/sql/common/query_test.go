@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
+	qcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -73,4 +74,33 @@ func TestDelete_Compile(t *testing.T) {
 		Format(sqlite.NewConditionInterpreter())
 	assert.Equal(t, "DELETE FROM users WHERE id = $1", query)
 	assert.Equal(t, 1, args[0])
+}
+
+// TestUnionAll_Compile verifies that two SELECT queries can be combined into
+// a single UNION ALL statement via a shared builder, with placeholder
+// numbering continuing across branches and args concatenated in order.
+// This is the pattern used by UnspentTokensIteratorBy.
+func TestUnionAll_Compile(t *testing.T) {
+	ci := sqlite.NewConditionInterpreter()
+
+	branch1 := q.Select().
+		FieldsByName("id", "name").
+		From(q.Table("users")).
+		Where(cond.Eq("id", 1))
+
+	branch2 := q.Select().
+		FieldsByName("id", "name").
+		From(q.Table("admins")).
+		Where(cond.Eq("name", "alice"))
+
+	sb := qcommon.NewBuilder()
+	branch1.FormatTo(ci, sb)
+	sb.WriteString(" UNION ALL ")
+	branch2.FormatTo(ci, sb)
+	query, args := sb.Build()
+
+	assert.Equal(t,
+		"SELECT id, name FROM users WHERE id = $1 UNION ALL SELECT id, name FROM admins WHERE name = $2",
+		query)
+	assert.Equal(t, []any{1, "alice"}, args)
 }
