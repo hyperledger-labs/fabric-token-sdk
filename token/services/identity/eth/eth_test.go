@@ -20,6 +20,7 @@ func generateKey(t *testing.T) (*secp256k1.PrivateKey, *secp256k1.PublicKey) {
 	t.Helper()
 	priv, err := secp256k1.GeneratePrivateKey()
 	require.NoError(t, err)
+
 	return priv, priv.PubKey()
 }
 

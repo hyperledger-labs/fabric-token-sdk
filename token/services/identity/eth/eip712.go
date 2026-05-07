@@ -108,6 +108,7 @@ func hashEndorsementStruct(req EndorsementRequest) []byte {
 func keccak256(data []byte) []byte {
 	h := sha3.NewLegacyKeccak256()
 	h.Write(data)
+
 	return h.Sum(nil)
 }
 
@@ -115,5 +116,6 @@ func keccak256(data []byte) []byte {
 func uint64ToBytes32(v uint64) []byte {
 	b := make([]byte, 32)
 	binary.BigEndian.PutUint64(b[24:], v)
+
 	return b
 }
