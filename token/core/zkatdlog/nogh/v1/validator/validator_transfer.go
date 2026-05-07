@@ -17,7 +17,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	hashescrow2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/hashescrow"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -182,6 +184,29 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 				ctx.CountMetadataKey(metadataKey)
 			}
 		}
+		if owner.Type == hashescrow.ScriptType {
+			// Hash escrow script must be a 1-to-1 transfer of ownership
+			if len(ctx.InputTokens) != 1 || len(ctx.TransferAction.GetOutputs()) != 1 {
+				return ErrInvalidHTLCAction
+			}
+
+			out, ok := ctx.TransferAction.GetOutputs()[0].(*token.Token)
+			if !ok || out == nil {
+				return ErrHTLCOutputNotFound
+			}
+
+			script, err := hashescrow2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner)
+			if err != nil {
+				return errors.Wrap(err, "failed to verify transfer from hash escrow script")
+			}
+
+			sigma := ctx.Signatures[i]
+			metadataKey, err := hashescrow2.MetadataClaimKeyCheck(ctx.TransferAction, script, sigma)
+			if err != nil {
+				return errors.WithMessagef(err, "failed to check hash escrow metadata")
+			}
+			ctx.CountMetadataKey(metadataKey)
+		}
 	}
 
 	for _, o := range ctx.TransferAction.Outputs {
@@ -204,6 +229,23 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 			metadataKey, err := htlc2.MetadataLockKeyCheck(ctx.TransferAction, script)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
+			}
+			ctx.CountMetadataKey(metadataKey)
+
+			continue
+		}
+		if owner.Type == hashescrow.ScriptType {
+			script := &hashescrow.Script{}
+			err = script.FromBytes(owner.Identity)
+			if err != nil {
+				return err
+			}
+			if err := script.Validate(); err != nil {
+				return errors.WithMessagef(err, "hash escrow script invalid")
+			}
+			metadataKey, err := hashescrow2.MetadataLockKeyCheck(ctx.TransferAction, script)
+			if err != nil {
+				return errors.WithMessagef(err, "failed to check hash escrow metadata")
 			}
 			ctx.CountMetadataKey(metadataKey)
 

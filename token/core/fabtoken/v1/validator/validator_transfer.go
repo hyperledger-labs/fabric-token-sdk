@@ -15,7 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	hashescrow2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/hashescrow"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -183,6 +185,38 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 				ctx.CountMetadataKey(metadataKey)
 			}
 		}
+		if owner.Type == hashescrow.ScriptType {
+			if len(ctx.TransferAction.GetOutputs()) != 1 {
+				return errors.New("invalid transfer action: a hash escrow script only transfers the ownership of a token")
+			}
+
+			// check type and quantity
+			output := ctx.TransferAction.GetOutputs()[0].(*actions.Output)
+			tok := output
+			if ctx.InputTokens[0].Type != tok.Type {
+				return errors.New("invalid transfer action: type of input does not match type of output")
+			}
+			if ctx.InputTokens[0].Quantity != tok.Quantity {
+				return errors.New("invalid transfer action: quantity of input does not match quantity of output")
+			}
+			if output.IsRedeem() {
+				return errors.New("invalid transfer action: the output corresponding to a hash escrow spending should not be a redeem")
+			}
+
+			// check owner field
+			script, err := hashescrow2.VerifyOwner(ctx.InputTokens[0].GetOwner(), tok.Owner)
+			if err != nil {
+				return errors.Wrap(err, "failed to verify transfer from hash escrow script")
+			}
+
+			// check metadata
+			sigma := ctx.Signatures[i]
+			metadataKey, err := hashescrow2.MetadataClaimKeyCheck(ctx.TransferAction, script, sigma)
+			if err != nil {
+				return errors.WithMessagef(err, "failed to check hash escrow metadata")
+			}
+			ctx.CountMetadataKey(metadataKey)
+		}
 	}
 
 	for _, o := range ctx.TransferAction.GetOutputs() {
@@ -211,6 +245,23 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 			metadataKey, err := htlc2.MetadataLockKeyCheck(ctx.TransferAction, script)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
+			}
+			ctx.CountMetadataKey(metadataKey)
+
+			continue
+		}
+		if owner.Type == hashescrow.ScriptType {
+			script := &hashescrow.Script{}
+			err = json.Unmarshal(owner.Identity, script)
+			if err != nil {
+				return err
+			}
+			if err := script.Validate(); err != nil {
+				return errors.WithMessagef(err, "hash escrow script invalid")
+			}
+			metadataKey, err := hashescrow2.MetadataLockKeyCheck(ctx.TransferAction, script)
+			if err != nil {
+				return errors.WithMessagef(err, "failed to check hash escrow metadata")
 			}
 			ctx.CountMetadataKey(metadataKey)
 

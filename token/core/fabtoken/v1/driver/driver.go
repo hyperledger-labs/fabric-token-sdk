@@ -16,6 +16,7 @@ import (
 	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/boolpolicy"
@@ -146,6 +147,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 	authorization := common.NewAuthorizationMultiplexer(
 		common.NewTMSAuthorization(logger, publicParamsManager.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
+		hashescrow.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
 		boolpolicy.NewEscrowAuth(ws),
 	)
