@@ -73,6 +73,8 @@ func TypeToString(t driver.IdentityType) string {
 		return tdriver.MultiSigIdentityTypeString
 	case tdriver.HTLCScriptIdentityType:
 		return tdriver.HTLCScriptIdentityTypeString
+	case tdriver.Secp256k1IdentityType:
+		return tdriver.Secp256k1IdentityTypeString
 	default:
 		return fmt.Sprintf("Type (%d)", t)
 	}

@@ -207,6 +207,7 @@ const (
 	HTLCScriptIdentityType IdentityType = 4
 	MultiSigIdentityType   IdentityType = 5
 	PolicyIdentityType     IdentityType = 6
+	Secp256k1IdentityType  IdentityType = 7
 )
 
 // IdentityTypeString identifies the type of identity as a string
@@ -219,6 +220,7 @@ const (
 	HTLCScriptIdentityTypeString IdentityTypeString = "htlc"
 	MultiSigIdentityTypeString   IdentityTypeString = "multisig"
 	PolicyIdentityTypeString     IdentityTypeString = "policy"
+	Secp256k1IdentityTypeString  IdentityTypeString = "secp256k1"
 )
 
 // Authorization checks the relationship between a token and different wallet types (owner, issuer, auditor).
