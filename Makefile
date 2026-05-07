@@ -239,3 +239,15 @@ update-all-deps-latest: ## Update all dependencies in all Go modules to their la
 		echo "=> Updating dependencies in $$dir"; \
 		(cd $$dir && go get ./...@latest && go mod tidy); \
 	done
+
+
+.PHONY: docs-install docs-serve docs-build
+
+docs-install:
+	pip install mkdocs-material
+
+docs-serve:
+	mkdocs serve
+
+docs-build:
+	mkdocs build
