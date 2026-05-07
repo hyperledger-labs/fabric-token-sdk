@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/boolpolicy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -218,6 +219,35 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			sigma, err := multisig.JoinSignatures(multiSigners, multiSignersSigmas)
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed joining multi-sig signatures")
+			}
+			sigmas[signerIdentity.UniqueID()] = sigma
+
+			continue
+		}
+
+		// Case: the identity is a policy identity
+		pi, ok, err := boolpolicy.Unwrap(signerIdentity)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unwrapping policy identity [%s]", signerIdentity)
+		}
+		if ok {
+			componentIDs := make([]token.Identity, len(pi.Identities))
+			for idx, b := range pi.Identities {
+				componentIDs[idx] = b
+			}
+			// collectIDs is the subset we actually request signatures from.
+			// If the caller supplied WithPolicySigners, only contact those
+			// components; the absent slots stay nil in the PolicySignature,
+			// which satisfies OR branches without unnecessary network calls.
+			collectIDs := c.policyCollectIDs(componentIDs)
+			logger.DebugfContext(context.Context(), "found policy identity [%s], collecting signatures from [%d/%d] components", signerIdentity, len(collectIDs), len(componentIDs))
+			componentSigmas, err := c.requestSignatures(collectIDs, verifierGetter, context, externalWallets)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed requesting policy signatures")
+			}
+			sigma, err := boolpolicy.JoinSignatures(componentIDs, componentSigmas)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed joining policy signatures")
 			}
 			sigmas[signerIdentity.UniqueID()] = sigma
 
@@ -534,9 +564,23 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		}
 		if ok {
 			allIds = append(allIds, multiSigners...)
-		} else {
-			allIds = append(allIds, id)
+
+			continue
 		}
+
+		pi, ok, err := boolpolicy.Unwrap(id)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unwrapping policy identity [%s]", id)
+		}
+		if ok {
+			for _, b := range pi.Identities {
+				allIds = append(allIds, token.Identity(b))
+			}
+
+			continue
+		}
+
+		allIds = append(allIds, id)
 	}
 	distributionList = allIds
 	allIds = append(allIds, auditors...)
@@ -689,6 +733,27 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 	}
 
 	return distributionList
+}
+
+// policyCollectIDs returns the subset of componentIDs to collect signatures from.
+// When WithPolicySigners was supplied, only those matching identities are returned;
+// otherwise all components are returned (the default, AND-safe behaviour).
+func (c *CollectEndorsementsView) policyCollectIDs(componentIDs []token.Identity) []token.Identity {
+	if len(c.Opts.PolicySigners) == 0 {
+		return componentIDs
+	}
+	allowed := make(map[string]struct{}, len(c.Opts.PolicySigners))
+	for _, id := range c.Opts.PolicySigners {
+		allowed[id.UniqueID()] = struct{}{}
+	}
+	filtered := make([]token.Identity, 0, len(c.Opts.PolicySigners))
+	for _, id := range componentIDs {
+		if _, ok := allowed[id.UniqueID()]; ok {
+			filtered = append(filtered, id)
+		}
+	}
+
+	return filtered
 }
 
 // CleanupExternalWallets calls Done() on all external wallets to signal completion

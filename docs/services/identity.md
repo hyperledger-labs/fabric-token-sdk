@@ -232,6 +232,24 @@ Located in `token/services/identity/multisig`.
 *   **Usage**: Useful for requiring multiple signatures or representing a group of parties.
 *   **Auditability**: Aggregates audit information for all underlying identities.
 
+#### PolicyIdentity (Boolean-Expression-Governed Ownership)
+Located in `token/services/identity/boolpolicy`.
+*   **Concept**: An identity whose ownership is governed by a boolean expression over a set of component identities, enabling OR-style (any one signer suffices) and AND-style (all signers required) multi-party control without a fixed M-of-N scheme.
+*   **Policy Expression Syntax**: A string using `$N` slot references and the operators `AND`, `OR`, and parentheses:
+    - `$0 OR $1` — either component identity 0 or 1 can satisfy ownership alone.
+    - `$0 AND $1` — both component identity 0 and 1 must sign.
+    - `($0 OR $1) AND $2` — one of the first two parties plus the third must sign.
+*   **Identity (Payload)**: An ASN.1-encoded `PolicyIdentity` sequence:
+    - `policy` (UTF8String): the boolean expression, e.g. `"$0 OR $1"`.
+    - `identities` (SEQUENCE OF OCTET STRING): ordered list of raw component identity bytes; `$N` indexes into this list.
+*   **Audit Info**: JSON-encoded `AuditInfo` structure.
+    - `IdentityAuditInfos` (array of `IdentityAuditInfo`): per-component audit info blobs in the same order as `identities`.
+*   **Encoding**:
+    - `TypedIdentity` payload: ASN.1 DER.
+    - Audit Info: JSON.
+*   **Signature Representation**: An ASN.1 `PolicySignature` (`SEQUENCE OF OCTET STRING`) where each slot corresponds to one component identity. A slot may be nil/empty when that component does not need to sign (valid for OR branches).
+*   **Implementation**: `token/services/identity/boolpolicy`.
+
 #### HTLC (Hashed Time Lock Contract)
 Located in `token/services/identity/interop/htlc`.
 *   **Concept**: A script-based identity used primarily for interoperability mechanisms like atomic swaps.
@@ -258,3 +276,111 @@ Typical extension scenarios include:
 - Supporting a new identity type by implementing a custom `KeyManager`
 - Customizing signature generation or verification logic within a `KeyManager`
 - Providing a custom `KeyManagerProvider` to plug new identity mechanisms into `LocalMembership`
+
+### Step-by-Step Guide: Introducing a New Identity Type
+
+The steps below describe how to add a new composite identity type end-to-end, based on the pattern used for **PolicyIdentity** (`token/services/identity/boolpolicy`).
+
+#### Step 1 — Reserve a type tag
+
+Add a new constant to `token/driver/wallet.go` alongside the existing tags:
+
+```go
+const (
+    // ...existing tags...
+    MyNewIdentityType       IdentityType = 7
+    MyNewIdentityTypeString              = "mynew"
+)
+```
+
+The integer must be unique across all registered identity types.
+
+#### Step 2 — Define the wire format
+
+Create a package (e.g. `token/services/identity/mynew/`) and define the identity struct. Use ASN.1 DER for structured binary data (as PolicyIdentity does) or JSON for human-readable payloads (as HTLC does):
+
+```go
+type MyNewIdentity struct {
+    SomeField string `asn1:"utf8"`
+    Parts     [][]byte
+}
+
+func (m *MyNewIdentity) Serialize() ([]byte, error) { return asn1.Marshal(*m) }
+func (m *MyNewIdentity) Deserialize(raw []byte) error {
+    _, err := asn1.Unmarshal(raw, m)
+    return err
+}
+```
+
+Expose `Wrap` / `Unwrap` helpers (see `boolpolicy.WrapPolicyIdentity` / `boolpolicy.Unwrap`) that embed the serialized struct inside a `TypedIdentity` envelope with the new type tag.
+
+#### Step 3 — Implement signature verification
+
+Add a `Verifier` that accepts the new signature format and a `Deserializer` that reconstructs a `Verifier` from raw identity bytes.  Register the deserializer via `des.AddTypedVerifierDeserializer(mynew.MyNewIdentityType, ...)` in each driver's `NewTokenService` (see `token/core/fabtoken/v1/driver/driver.go` and the zkatdlog equivalent).
+
+#### Step 4 — Define the signature format
+
+Define a struct for the signature produced over the token request (analogous to `PolicySignature` in `boolpolicy/sig.go`). Include ASN.1 or JSON encoding helpers and a `JoinSignatures` function if multiple parties contribute partial signatures.
+
+#### Step 5 — Implement the `Authorization` checker
+
+Create an `EscrowAuth` struct (see `token/services/ttx/boolpolicy/auth.go`) that implements the `Authorization` interface:
+
+```go
+type EscrowAuth struct{ WalletService driver.WalletService }
+func (a *EscrowAuth) AmIAnAuditor() bool                                  { return false }
+func (a *EscrowAuth) IsMine(ctx context.Context, tok *token.Token) (string, []string, bool) { ... }
+func (a *EscrowAuth) Issued(_ context.Context, _ driver.Identity, _ *token.Token) bool { return false }
+func (a *EscrowAuth) OwnerType(raw []byte) (driver.IdentityType, []byte, error)        { ... }
+```
+
+Register it in **both** driver files inside `NewAuthorizationMultiplexer`:
+
+```go
+// token/core/fabtoken/v1/driver/driver.go  (and the zkatdlog equivalent)
+authorization := common.NewAuthorizationMultiplexer(
+    common.NewTMSAuthorization(...),
+    htlc.NewScriptAuth(ws),
+    multisig.NewEscrowAuth(ws),
+    boolpolicy.NewEscrowAuth(ws),
+    mynew.NewEscrowAuth(ws),   // ← add here
+)
+```
+
+#### Step 6 — Add a wallet wrapper
+
+Create an `OwnerWallet` wrapper (see `token/services/ttx/boolpolicy/wallet.go`) that filters the unspent token list to tokens whose owner is the new identity type, and exposes domain-specific helpers (e.g. `VerifyApprover`).
+
+#### Step 7 — Wire the recipient-negotiation protocol
+
+If the new identity requires interactive negotiation between parties to assemble the composite identity before a transfer, add a `RequestMyNewIdentity` function following the pattern of `ttx.RequestPolicyIdentity` (`token/services/ttx/recipients.go`).  The function sends a typed request, each counterparty responds with its component data, and the initiator assembles the final composite identity.
+
+#### Step 8 — Add integration views
+
+Create initiator and responder views in the integration layer (e.g. `integration/token/fungible/views/mynew.go`) following the pattern in `boolpolicy.go`:
+
+- **Lock view** — transfers tokens to a recipient with the new composite identity.
+- **Spend view** — spends those tokens, optionally with restricted signer sets.
+- **Balance view** — queries the policy-owned token balance (modelled on `PolicyOwnedBalanceView`).
+- **Responder views** — ACK and endorse spend requests for AND-style policies.
+
+Register all view factories and responders in the integration SDK (`integration/token/fungible/sdk/party/sdk.go`).
+
+#### Step 9 — Add tests
+
+- **Unit tests** for the verifier (`sig_test.go` pattern) and for `EscrowAuth.IsMine` (`auth_test.go` pattern).
+- **Integration tests** in `integration/token/fungible/tests.go` + the relevant `dlog_test.go` `Describe` block, following `TestPolicyOR` / `TestPolicyAND`.
+
+#### Summary checklist
+
+| # | What | Where |
+|:--|:-----|:------|
+| 1 | Reserve type tag | `token/driver/wallet.go` |
+| 2 | Wire format + Wrap/Unwrap | `token/services/identity/mynew/` |
+| 3 | Verifier + Deserializer | same package; register in both drivers |
+| 4 | Signature format + JoinSignatures | same package |
+| 5 | EscrowAuth + register in drivers | `token/services/ttx/mynew/auth.go` |
+| 6 | OwnerWallet wrapper | `token/services/ttx/mynew/wallet.go` |
+| 7 | Recipient-negotiation protocol | `token/services/ttx/recipients.go` |
+| 8 | Integration views + SDK registration | `integration/token/fungible/views/mynew.go` |
+| 9 | Unit + integration tests | alongside each new file |
