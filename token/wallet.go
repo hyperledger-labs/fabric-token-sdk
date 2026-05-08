@@ -36,7 +36,6 @@ func WithType(tokenType token.Type) ListTokensOption {
 	}
 }
 
-
 type IdentityConfiguration = driver.IdentityConfiguration
 
 // WalletManager defines the interface for managing wallets.

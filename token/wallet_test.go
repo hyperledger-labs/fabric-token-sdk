@@ -29,7 +29,6 @@ func TestWithType(t *testing.T) {
 	assert.Equal(t, token.Type("USD"), opts.TokenType)
 }
 
-
 // TestWalletManager_RegisterOwnerIdentity verifies owner identity registration
 func TestWalletManager_RegisterOwnerIdentity(t *testing.T) {
 	mockWS := &mock.WalletService{}
