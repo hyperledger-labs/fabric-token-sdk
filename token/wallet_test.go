@@ -552,7 +552,7 @@ func TestOwnerWallet_Balance(t *testing.T) {
 	balance, err := wallet.Balance(ctx, WithType("USD"))
 
 	require.NoError(t, err)
-	assert.Equal(t, uint64(1000), balance)
+	assert.Equal(t, big.NewInt(1000), balance)
 }
 
 // TestOwnerWallet_RegisterRecipient verifies RegisterRecipient
@@ -744,7 +744,7 @@ func TestOwnerWallet_Balance_Error(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
-	assert.Equal(t, uint64(0), balance)
+	assert.Nil(t, balance)
 }
 
 // TestIssuerWallet_ListIssuedTokens_Error verifies error handling
