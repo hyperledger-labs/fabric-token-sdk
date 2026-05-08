@@ -36,14 +36,6 @@ func WithType(tokenType token.Type) ListTokensOption {
 	}
 }
 
-// WithContext return a list tokens option that contains the passed context
-func WithContext(ctx context.Context) ListTokensOption {
-	return func(o *ListTokensOptions) error {
-		o.Context = ctx
-
-		return nil
-	}
-}
 
 type IdentityConfiguration = driver.IdentityConfiguration
 
@@ -275,23 +267,23 @@ func (o *OwnerWallet) GetSigner(ctx context.Context, identity driver.Identity) (
 
 // ListUnspentTokens returns a list of unspent tokens owned by identities in this wallet and filtered by the passed options.
 // Options: WithType
-func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token.UnspentTokens, error) {
+func (o *OwnerWallet) ListUnspentTokens(ctx context.Context, opts ...ListTokensOption) (*token.UnspentTokens, error) {
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	return o.w.ListTokens(compiledOpts.Context, compiledOpts)
+	return o.w.ListTokens(ctx, compiledOpts)
 }
 
 // ListUnspentTokensIterator returns an iterator of unspent tokens owned by identities in this wallet and filtered by the passed options.
 // Options: WithType
-func (o *OwnerWallet) ListUnspentTokensIterator(opts ...ListTokensOption) (*UnspentTokensIterator, error) {
+func (o *OwnerWallet) ListUnspentTokensIterator(ctx context.Context, opts ...ListTokensOption) (*UnspentTokensIterator, error) {
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
 	}
-	it, err := o.w.ListTokensIterator(compiledOpts.Context, compiledOpts)
+	it, err := o.w.ListTokensIterator(ctx, compiledOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -363,12 +355,8 @@ func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOption
 			return nil, err
 		}
 	}
-	if txOptions.Context == nil {
-		txOptions.Context = context.Background()
-	}
 
 	return &driver.ListTokensOptions{
 		TokenType: txOptions.TokenType,
-		Context:   txOptions.Context,
 	}, nil
 }

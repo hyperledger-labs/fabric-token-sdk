@@ -72,8 +72,6 @@ type RecipientData struct {
 type ListTokensOptions struct {
 	// TokenType is the type of token to list
 	TokenType token.Type
-	// Context is used to track the operation
-	Context context.Context
 }
 
 // Wallet models a generic wallet

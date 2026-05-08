@@ -29,15 +29,6 @@ func TestWithType(t *testing.T) {
 	assert.Equal(t, token.Type("USD"), opts.TokenType)
 }
 
-// TestWithContext verifies WithContext option sets context
-func TestWithContext(t *testing.T) {
-	opts := &ListTokensOptions{}
-	ctx := context.Background()
-	err := WithContext(ctx)(opts)
-
-	require.NoError(t, err)
-	assert.Equal(t, ctx, opts.Context)
-}
 
 // TestWalletManager_RegisterOwnerIdentity verifies owner identity registration
 func TestWalletManager_RegisterOwnerIdentity(t *testing.T) {
@@ -326,28 +317,14 @@ func TestCompileListTokensOption(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, token.Type("USD"), opts.TokenType)
-	assert.NotNil(t, opts.Context)
 }
 
-type contextKey string
-
-// TestCompileListTokensOption_WithContext verifies context is set
-func TestCompileListTokensOption_WithContext(t *testing.T) {
-	ctx := context.WithValue(context.Background(), contextKey("key"), "value")
-	opts, err := CompileListTokensOption(
-		WithContext(ctx),
-	)
-
-	require.NoError(t, err)
-	assert.Equal(t, ctx, opts.Context)
-}
-
-// TestCompileListTokensOption_DefaultContext verifies default context
+// TestCompileListTokensOption_DefaultContext verifies options compile with no args
 func TestCompileListTokensOption_DefaultContext(t *testing.T) {
 	opts, err := CompileListTokensOption()
 
 	require.NoError(t, err)
-	assert.NotNil(t, opts.Context)
+	assert.NotNil(t, opts)
 }
 
 // TestAuditorWallet_GetAuditorIdentity verifies GetAuditorIdentity
@@ -543,7 +520,7 @@ func TestOwnerWallet_ListUnspentTokens(t *testing.T) {
 
 	wallet := &OwnerWallet{w: mockOW}
 
-	tokens, err := wallet.ListUnspentTokens(WithType("USD"))
+	tokens, err := wallet.ListUnspentTokens(context.Background(), WithType("USD"))
 
 	require.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
@@ -557,7 +534,7 @@ func TestOwnerWallet_ListUnspentTokensIterator(t *testing.T) {
 
 	wallet := &OwnerWallet{w: mockOW}
 
-	iterator, err := wallet.ListUnspentTokensIterator(WithType("USD"))
+	iterator, err := wallet.ListUnspentTokensIterator(context.Background(), WithType("USD"))
 
 	require.NoError(t, err)
 	assert.NotNil(t, iterator)
@@ -732,7 +709,7 @@ func TestOwnerWallet_ListUnspentTokens_Error(t *testing.T) {
 
 	wallet := &OwnerWallet{w: mockOW}
 
-	tokens, err := wallet.ListUnspentTokens(WithType("USD"))
+	tokens, err := wallet.ListUnspentTokens(context.Background(), WithType("USD"))
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
@@ -747,7 +724,7 @@ func TestOwnerWallet_ListUnspentTokensIterator_Error(t *testing.T) {
 
 	wallet := &OwnerWallet{w: mockOW}
 
-	iterator, err := wallet.ListUnspentTokensIterator(WithType("USD"))
+	iterator, err := wallet.ListUnspentTokensIterator(context.Background(), WithType("USD"))
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
