@@ -21,9 +21,11 @@ var (
 		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	upgradeDurationOpts = HistogramOpts{
-		Name:       "tokens_upgrade_service_duration_seconds",
-		Help:       "Duration of TokensUpgradeService method calls in seconds",
-		LabelNames: []string{"network", "channel", "namespace", "method"},
+		Name:                           "tokens_upgrade_service_duration_seconds",
+		Help:                           "Duration of TokensUpgradeService method calls in seconds",
+		LabelNames:                     []string{"network", "channel", "namespace", "method"},
+		NativeHistogramBucketFactor:    1.1,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 	upgradeErrorsOpts = CounterOpts{
 		Name:       "tokens_upgrade_service_errors_total",

@@ -21,9 +21,11 @@ var (
 		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	issueDurationOpts = HistogramOpts{
-		Name:       "issue_service_duration_seconds",
-		Help:       "Duration of IssueService method calls in seconds",
-		LabelNames: []string{"network", "channel", "namespace", "method"},
+		Name:                           "issue_service_duration_seconds",
+		Help:                           "Duration of IssueService method calls in seconds",
+		LabelNames:                     []string{"network", "channel", "namespace", "method"},
+		NativeHistogramBucketFactor:    1.1,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 	issueErrorsOpts = CounterOpts{
 		Name:       "issue_service_errors_total",
