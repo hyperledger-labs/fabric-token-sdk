@@ -276,16 +276,21 @@ func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
 
 // verifySpendTxMatchesRequest fails if the received transaction does not consume
 // exactly the token referenced by the SpendRequest.
+//
+// We use Request.Inputs (not AuditRecord) on purpose: the co-owner is not the
+// auditor and so does not have audit-level visibility into the spent tokens.
+// Inputs returns the token IDs without trying to enrich them via ListAuditTokens,
+// which is exactly what we need for the equality check.
 func verifySpendTxMatchesRequest(ctx context.Context, tx *ttx.Transaction, request *SpendRequest) error {
 	if request == nil || request.Token == nil {
 		return errors.New("spend request is missing the token to authorize")
 	}
-	record, err := tx.Request().AuditRecord(ctx)
+	inputs, err := tx.Request().Inputs(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to extract audit record from transaction")
+		return errors.Wrap(err, "failed to extract inputs from transaction")
 	}
 
-	return verifyInputIDsMatchExpected(record.Inputs.IDs(), request.Token.Id)
+	return verifyInputIDsMatchExpected(inputs.IDs(), request.Token.Id)
 }
 
 // verifyInputIDsMatchExpected returns nil when every entry in inputIDs equals expected.
