@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -131,7 +132,7 @@ func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bo
 		Limit(1).
 		Format(db.ci)
 
-	id, err := common.QueryUnique[string](db.readDB, query, args...)
+	id, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
 
 	logger.DebugfContext(ctx, "token [%s:%d] is mine [%s]", txID, index, id)
 
@@ -363,15 +364,16 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	}), nil
 }
 
-// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (uint64, error) {
+// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
+// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
+func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (*big.Int, error) {
 	return db.balance(ctx, driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	})
 }
 
-func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (uint64, error) {
+func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (*big.Int, error) {
 	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
 	query, args := q.Select().FieldsByName("SUM(amount)").
 		From(tokenTable.Join(ownershipTable, cond.And(
@@ -381,12 +383,20 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 		Where(HasTokenDetails(opts, tokenTable)).
 		Format(db.ci)
 
-	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
-	if err != nil || sum == nil {
-		return 0, err
+	var sum BigInt
+	err := db.readDB.QueryRowContext(ctx, query, args...).Scan(&sum)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return big.NewInt(0), nil
+		}
+
+		return nil, err
+	}
+	if sum.Int == nil {
+		return big.NewInt(0), nil
 	}
 
-	return *sum, nil
+	return sum.Int, nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
@@ -943,7 +953,7 @@ func (db *TokenStore) PublicParams(ctx context.Context) ([]byte, error) {
 		Limit(1).
 		Format(db.ci)
 
-	return common.QueryUnique[[]byte](db.readDB, query, args...)
+	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
 func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PPHash) ([]byte, error) {
@@ -953,7 +963,7 @@ func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PP
 		Where(cond.Eq("raw_hash", rawHash)).
 		Format(db.ci)
 
-	return common.QueryUnique[[]byte](db.readDB, query, args...)
+	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
 func (db *TokenStore) StoreCertifications(ctx context.Context, certifications map[*token.ID][]byte) error {
@@ -991,7 +1001,7 @@ func (db *TokenStore) ExistsCertification(ctx context.Context, tokenID *token.ID
 		Where(HasTokens("tx_id", "idx", tokenID)).
 		Format(db.ci)
 
-	certification, err := common.QueryUnique[[]byte](db.readDB, query, args...)
+	certification, err := common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 	if err != nil {
 		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
 
@@ -1073,7 +1083,7 @@ func (db *TokenStore) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL,
 			idx INT NOT NULL,
-			amount BIGINT NOT NULL,
+			amount NUMERIC(78, 0) NOT NULL,
 			token_type TEXT NOT NULL,
 			quantity TEXT NOT NULL,
 			issuer_raw BYTEA,

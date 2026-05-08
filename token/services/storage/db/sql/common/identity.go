@@ -235,7 +235,7 @@ func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url s
 		From(q.Table(db.table.IdentityConfigurations)).
 		Where(cond.And(cond.Eq("id", id), cond.Eq("type", typ), cond.Eq("url", url))).
 		Format(db.ci)
-	result, err := common.QueryUnique[string](db.readDB, query, args...)
+	result, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s:%s]", id, typ, url)
 	}
@@ -269,7 +269,7 @@ func (db *IdentityStore) GetAuditInfo(ctx context.Context, id []byte) ([]byte, e
 			Where(cond.Eq("identity_hash", h)).
 			Format(db.ci)
 
-		return common.QueryUnique[[]byte](db.readDB, query, args...)
+		return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 	})
 
 	return value, err

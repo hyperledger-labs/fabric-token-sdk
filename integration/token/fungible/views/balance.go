@@ -67,8 +67,8 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		if sum.ToBigInt().Uint64() != balance {
-			return nil, errors.Errorf("balance doesn't match [%d]!=[%d]", balance, sum.ToBigInt().Uint64())
+		if sum.ToBigInt().Cmp(balance) != 0 {
+			return nil, errors.Errorf("balance doesn't match [%s]!=[%s]", balance.String(), sum.Decimal())
 		}
 	}
 

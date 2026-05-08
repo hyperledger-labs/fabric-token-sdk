@@ -9,6 +9,7 @@ package token
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -543,7 +544,7 @@ func TestOwnerWallet_ListUnspentTokensIterator(t *testing.T) {
 // TestOwnerWallet_Balance verifies Balance
 func TestOwnerWallet_Balance(t *testing.T) {
 	mockOW := &mock.OwnerWallet{}
-	mockOW.BalanceReturns(uint64(1000), nil)
+	mockOW.BalanceReturns(big.NewInt(1000), nil)
 
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
@@ -734,7 +735,7 @@ func TestOwnerWallet_ListUnspentTokensIterator_Error(t *testing.T) {
 func TestOwnerWallet_Balance_Error(t *testing.T) {
 	mockOW := &mock.OwnerWallet{}
 	expectedErr := errors.New("failed to get balance")
-	mockOW.BalanceReturns(0, expectedErr)
+	mockOW.BalanceReturns(big.NewInt(0), expectedErr)
 
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()

@@ -9,6 +9,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"math/big"
 	"time"
 
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
@@ -229,8 +230,9 @@ type TokenStore interface {
 	ContinueTokenDBTransaction(tx Transaction) (TokenStoreTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens
 	QueryTokenDetails(ctx context.Context, params QueryTokenDetailsParams) ([]TokenDetails, error)
-	// Balance returns the sun of the amounts of the tokens with type and EID equal to those passed as arguments.
-	Balance(ctx context.Context, ownerEID string, typ token.Type) (uint64, error)
+	// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
+	// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
+	Balance(ctx context.Context, ownerEID string, typ token.Type) (*big.Int, error)
 	// SetSupportedTokenFormats sets the supported token formats
 	SetSupportedTokenFormats(formats []token.Format) error
 	// Notifier returns a TokenNotifier for this store to subscribe to token changes.
