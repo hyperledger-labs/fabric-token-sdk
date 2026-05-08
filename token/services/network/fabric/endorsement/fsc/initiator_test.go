@@ -80,6 +80,7 @@ func mockNewRequestApprovalView(t *testing.T, overrideTMSID *token.TMSID) *MockN
 		nil,
 		nil,
 		es,
+		nil,
 	)
 
 	return &MockNewRequestApprovalView{
@@ -125,6 +126,22 @@ func TestRequestApprovalView(t *testing.T) {
 				assert.Equal(t, m.tmsIDRaw, m.transientMap[fsc.TransientTMSIDKey])
 				assert.Equal(t, m.requestRaw, m.transientMap[fsc.TransientTokenRequestKey])
 				assert.Equal(t, m.env, res)
+			},
+			expectError: false,
+		},
+		{
+			name: "Success with approval metadata",
+			setup: func() *MockNewRequestApprovalView {
+				m := mockNewRequestApprovalView(t, nil)
+				m.view.Metadata = driver.TransientMap{
+					"info": []byte("extra"),
+				}
+
+				return m
+			},
+			verify: func(m *MockNewRequestApprovalView, res any) {
+				assert.Len(t, m.transientMap, 3)
+				assert.Contains(t, m.transientMap, fsc.TransientApprovalMetadataKey)
 			},
 			expectError: false,
 		},

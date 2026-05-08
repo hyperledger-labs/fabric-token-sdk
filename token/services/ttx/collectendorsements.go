@@ -376,6 +376,7 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 		requestRaw,
 		c.tx.Signer,
 		c.tx.TxID,
+		c.Opts.ApprovalMetadata,
 	)
 	if err != nil {
 		return nil, err
