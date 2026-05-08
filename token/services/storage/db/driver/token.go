@@ -71,8 +71,8 @@ type TokenDetails struct {
 	OwnerEnrollment string
 	// Type is the type of token
 	Type string
-	// Amount is the Quantity converted to decimal
-	Amount uint64
+	// Amount is the Quantity converted to decimal as a big integer to support arbitrary precision
+	Amount *big.Int
 	// IsSpent is true if the token has been spent
 	IsSpent bool
 	// SpentBy is the transactionID that spent this token, if available
