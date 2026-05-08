@@ -20,9 +20,11 @@ var (
 		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	auditorDurationOpts = HistogramOpts{
-		Name:       "auditor_service_duration_seconds",
-		Help:       "Duration of AuditorService method calls in seconds",
-		LabelNames: []string{"network", "channel", "namespace", "method"},
+		Name:                           "auditor_service_duration_seconds",
+		Help:                           "Duration of AuditorService method calls in seconds",
+		LabelNames:                     []string{"network", "channel", "namespace", "method"},
+		NativeHistogramBucketFactor:    1.1,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 	auditorErrorsOpts = CounterOpts{
 		Name:       "auditor_service_errors_total",
