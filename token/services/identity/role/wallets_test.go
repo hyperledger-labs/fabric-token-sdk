@@ -234,7 +234,7 @@ func TestLongTermOwnerWallet(t *testing.T) {
 		// Balance
 		bal, err := w.Balance(t.Context(), &driver.ListTokensOptions{})
 		require.NoError(t, err)
-		assert.Equal(t, uint64(30), bal)
+		assert.Equal(t, big.NewInt(30), bal)
 	})
 
 	t.Run("GetSigner", func(t *testing.T) {
