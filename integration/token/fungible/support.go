@@ -429,7 +429,7 @@ func CheckIssuedBalance(network *integration.Infrastructure, issuer *token3.Node
 		TokenType: typ,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	balance := res.(uint64)
+	balance := JSONUnmarshalUint64(res)
 	gomega.Expect(balance).To(gomega.Equal(expected), "issued balance: got %d, expected %d", balance, expected)
 }
 
@@ -439,7 +439,7 @@ func CheckRedeemedBalance(network *integration.Infrastructure, issuer *token3.No
 		TokenType: typ,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	balance := res.(uint64)
+	balance := JSONUnmarshalUint64(res)
 	gomega.Expect(balance).To(gomega.Equal(expected), "redeemed balance: got %d, expected %d", balance, expected)
 }
 
@@ -449,7 +449,7 @@ func CheckOutstandingBalance(network *integration.Infrastructure, issuer *token3
 		TokenType: typ,
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	balance := res.(uint64)
+	balance := JSONUnmarshalUint64(res)
 	gomega.Expect(balance).To(gomega.Equal(expected), "outstanding balance: got %d, expected %d", balance, expected)
 }
 
@@ -1253,6 +1253,22 @@ func getIdentity(identities []topology.Identity, id string) []byte {
 
 func JSONUnmarshalFloat64(v any) float64 {
 	var s float64
+	switch v := v.(type) {
+	case []byte:
+		err := json.Unmarshal(v, &s)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	case string:
+		err := json.Unmarshal([]byte(v), &s)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	default:
+		panic(fmt.Sprintf("type not recognized [%T]", v))
+	}
+
+	return s
+}
+
+func JSONUnmarshalUint64(v interface{}) uint64 {
+	var s uint64
 	switch v := v.(type) {
 	case []byte:
 		err := json.Unmarshal(v, &s)
