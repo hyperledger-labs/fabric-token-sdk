@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
+	"context"
 	"slices"
 	"time"
 
@@ -251,7 +252,13 @@ func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
 	}
 	logger.DebugfContext(context.Context(), "multisig tx received with id [%s]", tx.ID())
 
-	// TODO: check tx matches request
+	// Verify the received transaction actually consumes the token this co-owner
+	// approved. Without this check, a malicious or buggy initiator could obtain
+	// approval for one token and submit a transaction spending a different one,
+	// breaking the multisig consent property.
+	if err := verifySpendTxMatchesRequest(context.Context(), tx, a.request); err != nil {
+		return nil, errors.Wrap(err, "rejected spend transaction")
+	}
 
 	// If everything is fine, the recipient accepts and sends back her signature.
 	// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
@@ -265,4 +272,37 @@ func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
 	logger.DebugfContext(context.Context(), "endorse multisig tx received with id [%s] done", tx.ID())
 
 	return tx, nil
+}
+
+// verifySpendTxMatchesRequest fails if the received transaction does not consume
+// exactly the token referenced by the SpendRequest.
+func verifySpendTxMatchesRequest(ctx context.Context, tx *ttx.Transaction, request *SpendRequest) error {
+	if request == nil || request.Token == nil {
+		return errors.New("spend request is missing the token to authorize")
+	}
+	record, err := tx.Request().AuditRecord(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to extract audit record from transaction")
+	}
+
+	return verifyInputIDsMatchExpected(record.Inputs.IDs(), request.Token.Id)
+}
+
+// verifyInputIDsMatchExpected returns nil when every entry in inputIDs equals expected.
+// It is split out from verifySpendTxMatchesRequest so the comparison rule can be
+// exercised in unit tests without constructing a full ttx.Transaction.
+func verifyInputIDsMatchExpected(inputIDs []*token.ID, expected token.ID) error {
+	if len(inputIDs) == 0 {
+		return errors.Errorf("transaction has no inputs to validate against approved token [%s]", expected)
+	}
+	for _, id := range inputIDs {
+		if id == nil || !id.Equal(expected) {
+			return errors.Errorf(
+				"transaction does not match approved spend request: expected token [%s], got input [%s]",
+				expected, id,
+			)
+		}
+	}
+
+	return nil
 }

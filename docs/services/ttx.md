@@ -210,6 +210,43 @@ _, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
 
 Co-owners run `EndorseSpendView` (via `EndorseSpend`) on their side, which ACKs the spend request and then endorses the assembled transaction.
 
+#### Spend Coordination Wire Flow
+
+The same coordination protocol is implemented in `token/services/ttx/multisig/spend.go` (for AND multisig) and in `token/services/ttx/boolpolicy/spend.go` (for AND policies). Both follow the shape below; the responder must verify that the assembled transaction actually consumes the token referenced by the `SpendRequest` it approved.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant I as Initiator (RequestSpendView)
+    participant R as Co-owner (EndorseSpendView)
+
+    rect rgba(230, 230, 250, 0.35)
+        Note over I,R: Phase 1 - Spend approval request
+        I->>R: SpendRequest{Token: UnspentToken to spend}
+        R->>R: ReceiveSpendRequest, decide to approve
+        R-->>I: SpendResponse{}
+    end
+
+    rect rgba(255, 245, 238, 0.5)
+        Note over I,R: Phase 2 - Transaction assembly and delivery
+        I->>I: Assemble transaction consuming SpendRequest.Token
+        I->>R: Transaction (via ttx.ReceiveTransaction)
+    end
+
+    rect rgba(240, 255, 240, 0.45)
+        Note over R: Phase 3 - Verification (required before signing)
+        R->>R: Extract input IDs from tx.Request().AuditRecord
+        alt every input id == SpendRequest.Token.Id
+            R->>R: Run EndorseView(tx) and sign
+            R-->>I: Signed transaction
+        else mismatch
+            R-->>I: Reject with error; no signature is produced
+        end
+    end
+```
+
+The Phase 3 check is what links the artifact a co-owner approves (the `SpendRequest`) to the artifact they sign (the assembled `tx`). Without it, a co-owner who reviews and approves a spend for token `T_a` could be made to sign a transaction consuming a different token `T_b` co-owned by the same group.
+
 #### Wallet and Authorization
 
 The `boolpolicy.OwnerWallet` (in `token/services/ttx/boolpolicy/wallet.go`) wraps a standard owner wallet and filters the token list to policy-type tokens.  `VerifyApprover` can be used to assert that a given identity is one of the named component identities before allowing a spend.
