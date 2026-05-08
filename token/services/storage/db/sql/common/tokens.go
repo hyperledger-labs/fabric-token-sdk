@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -363,17 +364,17 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	}), nil
 }
 
-// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (uint64, error) {
+// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
+func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (*big.Int, error) {
 	return db.balance(ctx, driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	})
 }
 
-func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (uint64, error) {
+func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (*big.Int, error) {
 	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
-	query, args := q.Select().FieldsByName("SUM(amount)").
+	query, args := q.Select().FieldsByName("amount").
 		From(tokenTable.Join(ownershipTable, cond.And(
 			cond.Cmp(tokenTable.Field("tx_id"), "=", ownershipTable.Field("tx_id")),
 			cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx"))),
@@ -381,12 +382,32 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 		Where(HasTokenDetails(opts, tokenTable)).
 		Format(db.ci)
 
-	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
-	if err != nil || sum == nil {
-		return 0, err
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	defer rows.Close()
+
+	sum := big.NewInt(0)
+	for rows.Next() {
+		var amount sql.NullString
+		if err := rows.Scan(&amount); err != nil {
+			return nil, errors.Wrapf(err, "error scanning balance amount")
+		}
+		if !amount.Valid || len(amount.String) == 0 {
+			continue
+		}
+		value, ok := new(big.Int).SetString(amount.String, 10)
+		if !ok {
+			return nil, errors.Errorf("failed parsing balance amount [%s]", amount.String)
+		}
+		sum.Add(sum, value)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, errors.Wrapf(err, "error iterating balance amounts")
 	}
 
-	return *sum, nil
+	return sum, nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type

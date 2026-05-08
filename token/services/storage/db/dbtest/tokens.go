@@ -8,6 +8,7 @@ package dbtest
 
 import (
 	"fmt"
+	"math/big"
 	"sync"
 	"testing"
 
@@ -72,6 +73,7 @@ var tokensCases = []struct {
 	{"PublicParams", TPublicParams},
 	{"Certification", TCertification},
 	{"QueryTokenDetails", TQueryTokenDetails},
+	{"BalanceSupportsLargeSums", TBalanceSupportsLargeSums},
 	{"TTokenTypes", TTokenTypes},
 	{"ListUnspentTokensByWallets", TListUnspentTokensByWallets},
 }
@@ -896,7 +898,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	assertEqual(t, tx1, res[0])
 	balance, err := db.Balance(ctx, "alice", "TST1")
 	require.NoError(t, err)
-	assert.Equal(t, res[0].Amount, balance)
+	assert.Zero(t, new(big.Int).SetUint64(res[0].Amount).Cmp(balance))
 
 	// alice TST
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{WalletID: "alice", TokenType: TST})
@@ -905,7 +907,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	assertEqual(t, tx2, res[0])
 	balance, err = db.Balance(ctx, "alice", TST)
 	require.NoError(t, err)
-	assert.Equal(t, res[0].Amount, balance)
+	assert.Zero(t, new(big.Int).SetUint64(res[0].Amount).Cmp(balance))
 
 	// bob TST
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{WalletID: "bob", TokenType: TST})
@@ -914,7 +916,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	assertEqual(t, tx21, res[0])
 	balance, err = db.Balance(ctx, "bob", TST)
 	require.NoError(t, err)
-	assert.Equal(t, res[0].Amount, balance)
+	assert.Zero(t, new(big.Int).SetUint64(res[0].Amount).Cmp(balance))
 
 	// spent
 	require.NoError(t, db.DeleteTokens(ctx, "delby", &token.ID{TxId: "tx2", Index: 1}))
@@ -938,6 +940,42 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	assert.Len(t, res, 2)
 	assertEqual(t, tx1, res[0])
 	assertEqual(t, tx2, res[1])
+}
+
+func TBalanceSupportsLargeSums(t *testing.T, db TestTokenDB) {
+	t.Helper()
+	ctx := t.Context()
+	tx, err := db.NewTokenDBTransaction()
+	require.NoError(t, err)
+
+	max := uint64(^uint64(0) >> 1)
+	for i, txID := range []string{"overflow-1", "overflow-2", "overflow-3"} {
+		err = tx.StoreToken(ctx, driver2.TokenRecord{
+			TxID:           txID,
+			Index:          0,
+			IssuerRaw:      []byte{},
+			OwnerRaw:       []byte{1, 2, 3},
+			OwnerType:      "idemix",
+			OwnerIdentity:  []byte("owner"),
+			Ledger:         []byte("ledger"),
+			LedgerMetadata: []byte{},
+			Quantity:       fmt.Sprintf("0x%x", max),
+			Type:           "BIG",
+			Amount:         max,
+			Owner:          true,
+			Auditor:        false,
+			Issuer:         false,
+		}, []string{"alice"})
+		require.NoError(t, err, "store token %d", i)
+	}
+	require.NoError(t, tx.Commit())
+
+	balance, err := db.Balance(ctx, "alice", "BIG")
+	require.NoError(t, err)
+
+	expected := new(big.Int).SetUint64(max)
+	expected.Mul(expected, big.NewInt(3))
+	assert.Zero(t, expected.Cmp(balance))
 }
 
 func TTokenTypes(t *testing.T, db TestTokenDB) {

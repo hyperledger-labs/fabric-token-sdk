@@ -9,6 +9,7 @@ package token
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -567,7 +568,7 @@ func TestOwnerWallet_ListUnspentTokensIterator(t *testing.T) {
 // TestOwnerWallet_Balance verifies Balance
 func TestOwnerWallet_Balance(t *testing.T) {
 	mockOW := &mock.OwnerWallet{}
-	mockOW.BalanceReturns(uint64(1000), nil)
+	mockOW.BalanceReturns(big.NewInt(1000), nil)
 
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
@@ -575,7 +576,7 @@ func TestOwnerWallet_Balance(t *testing.T) {
 	balance, err := wallet.Balance(ctx, WithType("USD"))
 
 	require.NoError(t, err)
-	assert.Equal(t, uint64(1000), balance)
+	assert.Zero(t, big.NewInt(1000).Cmp(balance))
 }
 
 // TestOwnerWallet_RegisterRecipient verifies RegisterRecipient
@@ -758,7 +759,7 @@ func TestOwnerWallet_ListUnspentTokensIterator_Error(t *testing.T) {
 func TestOwnerWallet_Balance_Error(t *testing.T) {
 	mockOW := &mock.OwnerWallet{}
 	expectedErr := errors.New("failed to get balance")
-	mockOW.BalanceReturns(0, expectedErr)
+	mockOW.BalanceReturns(nil, expectedErr)
 
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
@@ -767,7 +768,7 @@ func TestOwnerWallet_Balance_Error(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
-	assert.Equal(t, uint64(0), balance)
+	assert.Nil(t, balance)
 }
 
 // TestIssuerWallet_ListIssuedTokens_Error verifies error handling

@@ -3,6 +3,7 @@ package mock
 
 import (
 	"context"
+	"math/big"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -10,18 +11,18 @@ import (
 )
 
 type OwnerWallet struct {
-	BalanceStub        func(context.Context, *driver.ListTokensOptions) (uint64, error)
+	BalanceStub        func(context.Context, *driver.ListTokensOptions) (*big.Int, error)
 	balanceMutex       sync.RWMutex
 	balanceArgsForCall []struct {
 		arg1 context.Context
 		arg2 *driver.ListTokensOptions
 	}
 	balanceReturns struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}
 	balanceReturnsOnCall map[int]struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}
 	ContainsStub        func(context.Context, driver.Identity) bool
@@ -200,7 +201,7 @@ type OwnerWallet struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *OwnerWallet) Balance(arg1 context.Context, arg2 *driver.ListTokensOptions) (uint64, error) {
+func (fake *OwnerWallet) Balance(arg1 context.Context, arg2 *driver.ListTokensOptions) (*big.Int, error) {
 	fake.balanceMutex.Lock()
 	ret, specificReturn := fake.balanceReturnsOnCall[len(fake.balanceArgsForCall)]
 	fake.balanceArgsForCall = append(fake.balanceArgsForCall, struct {
@@ -226,7 +227,7 @@ func (fake *OwnerWallet) BalanceCallCount() int {
 	return len(fake.balanceArgsForCall)
 }
 
-func (fake *OwnerWallet) BalanceCalls(stub func(context.Context, *driver.ListTokensOptions) (uint64, error)) {
+func (fake *OwnerWallet) BalanceCalls(stub func(context.Context, *driver.ListTokensOptions) (*big.Int, error)) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = stub
@@ -239,28 +240,28 @@ func (fake *OwnerWallet) BalanceArgsForCall(i int) (context.Context, *driver.Lis
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *OwnerWallet) BalanceReturns(result1 uint64, result2 error) {
+func (fake *OwnerWallet) BalanceReturns(result1 *big.Int, result2 error) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = nil
 	fake.balanceReturns = struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *OwnerWallet) BalanceReturnsOnCall(i int, result1 uint64, result2 error) {
+func (fake *OwnerWallet) BalanceReturnsOnCall(i int, result1 *big.Int, result2 error) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = nil
 	if fake.balanceReturnsOnCall == nil {
 		fake.balanceReturnsOnCall = make(map[int]struct {
-			result1 uint64
+			result1 *big.Int
 			result2 error
 		})
 	}
 	fake.balanceReturnsOnCall[i] = struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}{result1, result2}
 }

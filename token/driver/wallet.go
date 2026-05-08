@@ -8,6 +8,7 @@ package driver
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -125,8 +126,8 @@ type OwnerWallet interface {
 	// ListTokensIterator returns an iterator of unspent tokens owned by this wallet filtered using the passed options.
 	ListTokensIterator(opts *ListTokensOptions) (UnspentTokensIterator, error)
 
-	// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-	Balance(ctx context.Context, opts *ListTokensOptions) (uint64, error)
+	// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
+	Balance(ctx context.Context, opts *ListTokensOptions) (*big.Int, error)
 
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string
