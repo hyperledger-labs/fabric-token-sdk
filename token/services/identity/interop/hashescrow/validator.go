@@ -45,49 +45,57 @@ func VerifyOwner(senderRawOwner []byte, outRawOwner []byte) (*hashescrow.Script,
 }
 
 // MetadataClaimKeyCheck validates claim metadata and returns the matched metadata key.
-func MetadataClaimKeyCheck(action Action, script *hashescrow.Script, sig []byte) (string, error) {
+func MetadataClaimKeyCheck(action Action, script *hashescrow.Script, sig []byte) (string, []byte, error) {
 	claim := &hashescrow.ClaimSignature{}
 	if err := json.Unmarshal(sig, claim); err != nil {
-		return "", errors.Wrapf(err, "failed unmarshalling claim signature [%s]", string(sig))
+		return "", nil, errors.Wrapf(err, "failed unmarshalling claim signature [%s]", string(sig))
 	}
-	if len(claim.Preimage) == 0 || len(claim.ClaimantSignature) == 0 {
-		return "", errors.New("expected a valid claim preImage and claimant signature")
+	if len(claim.Preimage) == 0 {
+		return "", nil, errors.New("expected a valid claim preImage")
+	}
+	resolvedOwner, image, err := script.ResolveRecipientForPreImage(claim.Preimage)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "failed resolving recipient from preimage")
 	}
 
 	metadata := action.GetMetadata()
 	if len(metadata) == 0 {
-		return "", errors.New("cannot find hash escrow pre-image, no metadata")
-	}
-	image, err := script.HashInfo.Image(claim.Preimage)
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to compute image of [%x]", claim.Preimage)
+		return "", nil, errors.New("cannot find hash escrow pre-image, no metadata")
 	}
 	key := hashescrow.ClaimKey(image)
 	value, ok := metadata[key]
 	if !ok {
-		return "", errors.New("cannot find hash escrow pre-image, missing metadata entry")
+		return "", nil, errors.New("cannot find hash escrow pre-image, missing metadata entry")
 	}
 	if !bytes.Equal(value, claim.Preimage) {
-		return "", errors.Errorf("invalid action, cannot match hash escrow pre-image with metadata [%x]!=[%x]", value, claim.Preimage)
+		return "", nil, errors.Errorf("invalid action, cannot match hash escrow pre-image with metadata [%x]!=[%x]", value, claim.Preimage)
 	}
 
-	return key, nil
+	return key, resolvedOwner, nil
 }
 
 // MetadataLockKeyCheck validates lock metadata and returns the lock metadata key.
-func MetadataLockKeyCheck(action Action, script *hashescrow.Script) (string, error) {
+func MetadataLockKeyCheck(action Action, script *hashescrow.Script) ([]string, error) {
 	metadata := action.GetMetadata()
 	if len(metadata) == 0 {
-		return "", errors.New("cannot find hash escrow lock, no metadata")
+		return nil, errors.New("cannot find hash escrow lock, no metadata")
 	}
-	key := hashescrow.LockKey(script.HashInfo.Hash)
-	value, ok := metadata[key]
+	recipientKey := hashescrow.LockKey(script.RecipientHashInfo.Hash)
+	recipientValue, ok := metadata[recipientKey]
 	if !ok {
-		return "", errors.New("cannot find hash escrow lock, missing metadata entry")
+		return nil, errors.New("cannot find recipient hash escrow lock, missing metadata entry")
 	}
-	if !bytes.Equal(value, hashescrow.LockValue(script.HashInfo.Hash)) {
-		return "", errors.Errorf("invalid action, cannot match hash escrow lock with metadata [%x]!=[%x]", value, script.HashInfo.Hash)
+	if !bytes.Equal(recipientValue, hashescrow.LockValue(script.RecipientHashInfo.Hash)) {
+		return nil, errors.Errorf("invalid action, cannot match recipient hash escrow lock with metadata [%x]!=[%x]", recipientValue, script.RecipientHashInfo.Hash)
+	}
+	senderKey := hashescrow.LockKey(script.SenderHashInfo.Hash)
+	senderValue, ok := metadata[senderKey]
+	if !ok {
+		return nil, errors.New("cannot find sender hash escrow lock, missing metadata entry")
+	}
+	if !bytes.Equal(senderValue, hashescrow.LockValue(script.SenderHashInfo.Hash)) {
+		return nil, errors.Errorf("invalid action, cannot match sender hash escrow lock with metadata [%x]!=[%x]", senderValue, script.SenderHashInfo.Hash)
 	}
 
-	return key, nil
+	return []string{recipientKey, senderKey}, nil
 }

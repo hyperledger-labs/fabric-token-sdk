@@ -28,11 +28,19 @@ func (a *actionStub) GetMetadata() map[string][]byte {
 
 func wrapScript(t *testing.T, sender, recipient []byte, hash []byte) ([]byte, *he.Script) {
 	t.Helper()
+	recipientHash := append([]byte{}, hash...)
+	senderHash := append([]byte{}, hash...)
+	senderHash = append(senderHash, byte('2'))
 	script := &he.Script{
 		Sender:    sender,
 		Recipient: recipient,
-		HashInfo: he.HashInfo{
-			Hash:         hash,
+		RecipientHashInfo: he.HashInfo{
+			Hash:         recipientHash,
+			HashFunc:     crypto.SHA256,
+			HashEncoding: encoding.Base64,
+		},
+		SenderHashInfo: he.HashInfo{
+			Hash:         senderHash,
 			HashFunc:     crypto.SHA256,
 			HashEncoding: encoding.Base64,
 		},
@@ -74,43 +82,50 @@ func TestMetadataClaimKeyCheck(t *testing.T) {
 	_, script := wrapScript(t, []byte("s"), []byte("r"), []byte("h"))
 
 	preimage := []byte("pre")
-	image, err := script.HashInfo.Image(preimage)
+	image, err := script.RecipientHashInfo.Image(preimage)
 	require.NoError(t, err)
+	script.RecipientHashInfo.Hash = image
 	key := he.ClaimKey(image)
 
 	sigRaw, err := json.Marshal(&he.ClaimSignature{
-		ClaimantSignature: []byte("sig"),
-		Preimage:          preimage,
+		Preimage: preimage,
 	})
 	require.NoError(t, err)
 
 	act := &actionStub{md: map[string][]byte{key: preimage}}
-	got, err := ihe.MetadataClaimKeyCheck(act, script, sigRaw)
+	got, _, err := ihe.MetadataClaimKeyCheck(act, script, sigRaw)
 	require.NoError(t, err)
 	require.Equal(t, key, got)
 
 	act = &actionStub{md: map[string][]byte{}}
-	_, err = ihe.MetadataClaimKeyCheck(act, script, sigRaw)
+	_, _, err = ihe.MetadataClaimKeyCheck(act, script, sigRaw)
 	require.Error(t, err)
 
-	_, err = ihe.MetadataClaimKeyCheck(act, script, []byte("bad-json"))
+	_, _, err = ihe.MetadataClaimKeyCheck(act, script, []byte("bad-json"))
 	require.Error(t, err)
 }
 
 func TestMetadataLockKeyCheck(t *testing.T) {
 	_, script := wrapScript(t, []byte("s"), []byte("r"), []byte("h"))
-	key := he.LockKey(script.HashInfo.Hash)
+	recipientKey := he.LockKey(script.RecipientHashInfo.Hash)
+	senderKey := he.LockKey(script.SenderHashInfo.Hash)
 
-	act := &actionStub{md: map[string][]byte{key: he.LockValue(script.HashInfo.Hash)}}
+	act := &actionStub{md: map[string][]byte{
+		recipientKey: he.LockValue(script.RecipientHashInfo.Hash),
+		senderKey:    he.LockValue(script.SenderHashInfo.Hash),
+	}}
 	got, err := ihe.MetadataLockKeyCheck(act, script)
 	require.NoError(t, err)
-	require.Equal(t, key, got)
+	require.ElementsMatch(t, []string{recipientKey, senderKey}, got)
 
 	act = &actionStub{md: map[string][]byte{}}
 	_, err = ihe.MetadataLockKeyCheck(act, script)
 	require.Error(t, err)
 
-	act = &actionStub{md: map[string][]byte{key: []byte("bad")}}
+	act = &actionStub{md: map[string][]byte{
+		recipientKey: []byte("bad"),
+		senderKey:    he.LockValue(script.SenderHashInfo.Hash),
+	}}
 	_, err = ihe.MetadataLockKeyCheck(act, script)
 	require.Error(t, err)
 }

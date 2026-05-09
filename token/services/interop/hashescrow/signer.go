@@ -10,102 +10,64 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
-// ClaimSignature carries the preimage and the claimant signature.
+// ClaimSignature carries the preimage used to unlock a hash escrow script.
 type ClaimSignature struct {
-	ClaimantSignature []byte
-	Preimage          []byte
-}
-
-// ClaimSigner signs token request bytes and embeds the preimage.
-type ClaimSigner struct {
-	Claimant driver.Signer
 	Preimage []byte
 }
 
-// Sign returns a signature of the claimant over token request and preimage.
-func (cs *ClaimSigner) Sign(tokenRequestAndTxID []byte) ([]byte, error) {
-	msg := concatTokenRequestTxIDPreimage(tokenRequestAndTxID, cs.Preimage)
-	sigma, err := cs.Claimant.Sign(msg)
-	if err != nil {
-		return nil, err
-	}
+// ClaimSigner embeds the preimage in the signature payload.
+// No claimant signature is required: anyone can submit if they know a valid preimage.
+type ClaimSigner struct {
+	Preimage []byte
+}
 
+// Sign returns a serialized claim signature containing the preimage.
+func (cs *ClaimSigner) Sign(tokenRequestAndTxID []byte) ([]byte, error) {
 	claimSignature := ClaimSignature{
-		Preimage:          cs.Preimage,
-		ClaimantSignature: sigma,
+		Preimage: cs.Preimage,
 	}
 
 	return json.Marshal(claimSignature)
 }
 
-func concatTokenRequestTxIDPreimage(tokenRequestAndTxID []byte, preImage []byte) []byte {
-	var msg []byte
-	msg = append(msg, tokenRequestAndTxID...)
-	msg = append(msg, preImage...)
-
-	return msg
-}
-
-// ClaimVerifier checks preimage validity and claimant signature.
+// ClaimVerifier checks that the preimage unlocks one of the two script hashes.
 type ClaimVerifier struct {
-	Claimant driver.Verifier
-	HashInfo HashInfo
+	Script *Script
 }
 
 func (cv *ClaimVerifier) Verify(tokenRequestAndTxID, claimSignature []byte) error {
+	_ = tokenRequestAndTxID
 	sig := &ClaimSignature{}
 	err := json.Unmarshal(claimSignature, sig)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal claim signature")
 	}
 
-	msg := concatTokenRequestTxIDPreimage(tokenRequestAndTxID, sig.Preimage)
-	if err := cv.Claimant.Verify(msg, sig.ClaimantSignature); err != nil {
-		return errors.WithMessagef(err, "failed to verify claimant signature")
+	if len(sig.Preimage) == 0 {
+		return errors.New("invalid claim signature, empty preimage")
 	}
-
-	image, err := (&htlc.HashInfo{
-		Hash:         cv.HashInfo.Hash,
-		HashFunc:     cv.HashInfo.HashFunc,
-		HashEncoding: cv.HashInfo.HashEncoding,
-	}).Image(sig.Preimage)
-	if err != nil {
-		return err
+	if cv.Script == nil {
+		return errors.New("invalid claim verifier, script is nil")
 	}
-	if err := (&htlc.HashInfo{Hash: cv.HashInfo.Hash}).Compare(image); err != nil {
-		return errors.Errorf("hash mismatch: %s", err)
+	if _, _, err = cv.Script.ResolveRecipientForPreImage(sig.Preimage); err != nil {
+		return errors.WithMessage(err, "preimage does not unlock hash escrow script")
 	}
 
 	return nil
 }
 
 // Verifier validates claims for hash-based escrow scripts.
-// A valid claim is signed by either recipient or sender and carries a valid preimage.
+// A valid claim carries a preimage that resolves to either recipient or sender.
 type Verifier struct {
-	Recipient driver.Verifier
-	Sender    driver.Verifier
-	HashInfo  HashInfo
+	Script *Script
 }
 
 func (v *Verifier) Verify(msg []byte, sigma []byte) error {
-	recipientClaimVerifier := &ClaimVerifier{
-		Claimant: v.Recipient,
-		HashInfo: v.HashInfo,
-	}
-	if err := recipientClaimVerifier.Verify(msg, sigma); err == nil {
-		return nil
-	}
-
-	senderClaimVerifier := &ClaimVerifier{
-		Claimant: v.Sender,
-		HashInfo: v.HashInfo,
-	}
-	if err := senderClaimVerifier.Verify(msg, sigma); err != nil {
-		return errors.WithMessagef(err, "failed verifying hash escrow claim signature")
+	claimVerifier := &ClaimVerifier{Script: v.Script}
+	if err := claimVerifier.Verify(msg, sigma); err != nil {
+		return errors.WithMessage(err, "failed verifying hash escrow claim signature")
 	}
 
 	return nil

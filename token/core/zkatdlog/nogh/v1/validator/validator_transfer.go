@@ -201,9 +201,12 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 			}
 
 			sigma := ctx.Signatures[i]
-			metadataKey, err := hashescrow2.MetadataClaimKeyCheck(ctx.TransferAction, script, sigma)
+			metadataKey, resolvedOwner, err := hashescrow2.MetadataClaimKeyCheck(ctx.TransferAction, script, sigma)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check hash escrow metadata")
+			}
+			if !identity.Identity(resolvedOwner).Equal(out.Owner) {
+				return errors.New("invalid transfer action: output owner does not match hash escrow recipient resolved from preimage")
 			}
 			ctx.CountMetadataKey(metadataKey)
 		}
@@ -243,11 +246,13 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 			if err := script.Validate(); err != nil {
 				return errors.WithMessagef(err, "hash escrow script invalid")
 			}
-			metadataKey, err := hashescrow2.MetadataLockKeyCheck(ctx.TransferAction, script)
+			metadataKeys, err := hashescrow2.MetadataLockKeyCheck(ctx.TransferAction, script)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check hash escrow metadata")
 			}
-			ctx.CountMetadataKey(metadataKey)
+			for _, metadataKey := range metadataKeys {
+				ctx.CountMetadataKey(metadataKey)
+			}
 
 			continue
 		}

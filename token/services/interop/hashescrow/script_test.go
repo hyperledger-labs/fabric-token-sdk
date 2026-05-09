@@ -23,10 +23,11 @@ func TestScriptValidate(t *testing.T) {
 	require.EqualError(t, s.Validate(), "recipient not set")
 
 	s.Recipient = []byte("recipient")
-	s.HashInfo = HashInfo{Hash: []byte("h")}
+	s.RecipientHashInfo = HashInfo{Hash: []byte("h")}
 	require.Error(t, s.Validate())
 
-	s.HashInfo = HashInfo{Hash: []byte("h"), HashFunc: crypto.SHA256, HashEncoding: encoding.Base64}
+	s.RecipientHashInfo = HashInfo{Hash: []byte("h"), HashFunc: crypto.SHA256, HashEncoding: encoding.Base64}
+	s.SenderHashInfo = HashInfo{Hash: []byte("h2"), HashFunc: crypto.SHA256, HashEncoding: encoding.Base64}
 	require.NoError(t, s.Validate())
 }
 
@@ -34,8 +35,13 @@ func TestScriptFromBytes(t *testing.T) {
 	raw, err := json.Marshal(&Script{
 		Sender:    []byte("sender"),
 		Recipient: []byte("recipient"),
-		HashInfo: HashInfo{
+		RecipientHashInfo: HashInfo{
 			Hash:         []byte("h"),
+			HashFunc:     crypto.SHA256,
+			HashEncoding: encoding.Base64,
+		},
+		SenderHashInfo: HashInfo{
+			Hash:         []byte("h2"),
 			HashFunc:     crypto.SHA256,
 			HashEncoding: encoding.Base64,
 		},
@@ -46,9 +52,48 @@ func TestScriptFromBytes(t *testing.T) {
 	require.NoError(t, s.FromBytes(raw))
 	require.Equal(t, []byte("sender"), []byte(s.Sender))
 	require.Equal(t, []byte("recipient"), []byte(s.Recipient))
-	require.Equal(t, []byte("h"), s.HashInfo.Hash)
+	require.Equal(t, []byte("h"), s.RecipientHashInfo.Hash)
+	require.Equal(t, []byte("h2"), s.SenderHashInfo.Hash)
 
 	require.Error(t, s.FromBytes([]byte("bad-json")))
+}
+
+func TestResolveRecipientForPreImage(t *testing.T) {
+	s := &Script{
+		Sender:    []byte("sender"),
+		Recipient: []byte("recipient"),
+		RecipientHashInfo: HashInfo{
+			HashFunc:     crypto.SHA256,
+			HashEncoding: encoding.Base64,
+		},
+		SenderHashInfo: HashInfo{
+			HashFunc:     crypto.SHA256,
+			HashEncoding: encoding.Base64,
+		},
+	}
+
+	recipientPreImage := []byte("recipient-secret")
+	recipientImage, err := s.RecipientHashInfo.Image(recipientPreImage)
+	require.NoError(t, err)
+	s.RecipientHashInfo.Hash = recipientImage
+
+	senderPreImage := []byte("sender-secret")
+	senderImage, err := s.SenderHashInfo.Image(senderPreImage)
+	require.NoError(t, err)
+	s.SenderHashInfo.Hash = senderImage
+
+	owner, image, err := s.ResolveRecipientForPreImage(recipientPreImage)
+	require.NoError(t, err)
+	require.Equal(t, []byte("recipient"), []byte(owner))
+	require.Equal(t, recipientImage, image)
+
+	owner, image, err = s.ResolveRecipientForPreImage(senderPreImage)
+	require.NoError(t, err)
+	require.Equal(t, []byte("sender"), []byte(owner))
+	require.Equal(t, senderImage, image)
+
+	_, _, err = s.ResolveRecipientForPreImage([]byte("wrong"))
+	require.Error(t, err)
 }
 
 func TestKeys(t *testing.T) {

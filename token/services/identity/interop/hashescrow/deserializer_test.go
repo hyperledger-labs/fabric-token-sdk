@@ -52,7 +52,12 @@ func mkScript(t *testing.T, sender, recipient []byte) []byte {
 	s := &he.Script{
 		Sender:    sender,
 		Recipient: recipient,
-		HashInfo:  he.HashInfo{Hash: []byte("h")},
+		RecipientHashInfo: he.HashInfo{
+			Hash: []byte("rh"),
+		},
+		SenderHashInfo: he.HashInfo{
+			Hash: []byte("sh"),
+		},
 	}
 	raw, err := json.Marshal(s)
 	require.NoError(t, err)

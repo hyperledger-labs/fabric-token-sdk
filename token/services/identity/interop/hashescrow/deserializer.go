@@ -46,18 +46,14 @@ func (t *TypedIdentityDeserializer) DeserializeVerifier(ctx context.Context, typ
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal TypedIdentity as a hash escrow script")
 	}
-	v := &hashescrow.Verifier{}
-	v.Sender, err = t.deserializer.DeserializeVerifier(ctx, script.Sender)
-	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal the identity of the sender in the hash escrow script")
+	// Ensure sender and recipient identities are still syntactically valid and deserializable.
+	if _, err = t.deserializer.DeserializeVerifier(ctx, script.Sender); err != nil {
+		return nil, errors.Errorf("failed to deserialize the identity of the sender in the hash escrow script")
 	}
-	v.Recipient, err = t.deserializer.DeserializeVerifier(ctx, script.Recipient)
-	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal the identity of the recipient in the hash escrow script")
+	if _, err = t.deserializer.DeserializeVerifier(ctx, script.Recipient); err != nil {
+		return nil, errors.Errorf("failed to deserialize the identity of the recipient in the hash escrow script")
 	}
-	v.HashInfo.Hash = script.HashInfo.Hash
-	v.HashInfo.HashFunc = script.HashInfo.HashFunc
-	v.HashInfo.HashEncoding = script.HashInfo.HashEncoding
+	v := &hashescrow.Verifier{Script: script}
 
 	return v, nil
 }

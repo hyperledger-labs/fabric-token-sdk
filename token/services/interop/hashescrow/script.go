@@ -25,15 +25,16 @@ type HashInfo = htlc.HashInfo
 // Script contains the details of a hash-based escrow lock.
 // Either sender or recipient can claim by presenting a valid preimage and signature.
 type Script struct {
-	Sender    view.Identity
-	Recipient view.Identity
-	HashInfo  HashInfo
+	Sender            view.Identity
+	Recipient         view.Identity
+	RecipientHashInfo HashInfo
+	SenderHashInfo    HashInfo
 }
 
 // Validate performs the following checks:
 // - sender must be set
 // - recipient must be set
-// - hash info must be valid
+// - both recipient and sender hash info must be valid
 func (s *Script) Validate() error {
 	if s.Sender.IsNone() {
 		return errors.New("sender not set")
@@ -41,11 +42,37 @@ func (s *Script) Validate() error {
 	if s.Recipient.IsNone() {
 		return errors.New("recipient not set")
 	}
-	if err := s.HashInfo.Validate(); err != nil {
-		return err
+	if err := s.RecipientHashInfo.Validate(); err != nil {
+		return errors.WithMessage(err, "recipient hash info invalid")
+	}
+	if err := s.SenderHashInfo.Validate(); err != nil {
+		return errors.WithMessage(err, "sender hash info invalid")
 	}
 
 	return nil
+}
+
+// ResolveRecipientForPreImage resolves the output recipient from the provided pre-image.
+// If the pre-image matches the recipient hash, recipient receives the token.
+// If the pre-image matches the sender hash, sender receives the token.
+func (s *Script) ResolveRecipientForPreImage(preImage []byte) (view.Identity, []byte, error) {
+	recipientImage, err := s.RecipientHashInfo.Image(preImage)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "failed computing recipient hash image")
+	}
+	if err := s.RecipientHashInfo.Compare(recipientImage); err == nil {
+		return s.Recipient, recipientImage, nil
+	}
+
+	senderImage, err := s.SenderHashInfo.Image(preImage)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "failed computing sender hash image")
+	}
+	if err := s.SenderHashInfo.Compare(senderImage); err == nil {
+		return s.Sender, senderImage, nil
+	}
+
+	return nil, nil, errors.New("preimage does not match any hashescrow hash")
 }
 
 func (s *Script) FromBytes(raw []byte) error {

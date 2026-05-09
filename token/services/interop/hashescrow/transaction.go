@@ -30,12 +30,30 @@ const (
 )
 
 // WithHash sets a hash attribute to customize the lock command.
+// This is kept for backward compatibility and maps to recipient hash.
 func WithHash(hash []byte) token.TransferOption {
+	return WithRecipientHash(hash)
+}
+
+// WithRecipientHash sets recipient-claim hash attribute.
+func WithRecipientHash(hash []byte) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
 			o.Attributes = map[interface{}]interface{}{}
 		}
-		o.Attributes["hashescrow.hash"] = hash
+		o.Attributes["hashescrow.recipientHash"] = hash
+
+		return nil
+	}
+}
+
+// WithSenderHash sets sender-return hash attribute.
+func WithSenderHash(hash []byte) token.TransferOption {
+	return func(o *token.TransferOptions) error {
+		if o.Attributes == nil {
+			o.Attributes = map[interface{}]interface{}{}
+		}
+		o.Attributes["hashescrow.senderHash"] = hash
 
 		return nil
 	}
@@ -86,6 +104,13 @@ type Transaction struct {
 	Binder Binder
 }
 
+// PreImages carries the generated preimages for recipient and sender paths.
+// If a hash is externally provided for a path, the corresponding preimage is nil.
+type PreImages struct {
+	Recipient []byte
+	Sender    []byte
+}
+
 func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption) (*Transaction, error) {
 	tx, err := ttx.NewTransaction(sp, signer, opts...)
 	if err != nil {
@@ -116,6 +141,16 @@ func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []by
 // Lock appends a hash-based escrow lock action to the token request.
 // This lock has no timeout semantics.
 func (t *Transaction) Lock(ctx context.Context, wallet *token.OwnerWallet, sender view.Identity, typ token2.Type, value uint64, recipient view.Identity, opts ...token.TransferOption) ([]byte, error) {
+	preImages, err := t.LockWithPreImages(ctx, wallet, sender, typ, value, recipient, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return preImages.Recipient, nil
+}
+
+// LockWithPreImages appends a hash-based escrow lock action and returns both preimages.
+func (t *Transaction) LockWithPreImages(ctx context.Context, wallet *token.OwnerWallet, sender view.Identity, typ token2.Type, value uint64, recipient view.Identity, opts ...token.TransferOption) (*PreImages, error) {
 	options, err := compileTransferOptions(opts...)
 	if err != nil {
 		return nil, err
@@ -130,15 +165,31 @@ func (t *Transaction) Lock(ctx context.Context, wallet *token.OwnerWallet, sende
 		}
 	}
 
-	var hash []byte
+	var recipientHash []byte
+	var senderHash []byte
 	hashFunc := crypto.SHA256
 	var hashEncoding encoding.Encoding
 	if options.Attributes != nil {
+		// backward compatibility
 		boxed, ok := options.Attributes["hashescrow.hash"]
 		if ok {
-			hash, ok = boxed.([]byte)
+			recipientHash, ok = boxed.([]byte)
 			if !ok {
 				return nil, errors.Errorf("expected hashescrow.hash attribute to be []byte, got [%T]", boxed)
+			}
+		}
+		boxed, ok = options.Attributes["hashescrow.recipientHash"]
+		if ok {
+			recipientHash, ok = boxed.([]byte)
+			if !ok {
+				return nil, errors.Errorf("expected hashescrow.recipientHash attribute to be []byte, got [%T]", boxed)
+			}
+		}
+		boxed, ok = options.Attributes["hashescrow.senderHash"]
+		if ok {
+			senderHash, ok = boxed.([]byte)
+			if !ok {
+				return nil, errors.Errorf("expected hashescrow.senderHash attribute to be []byte, got [%T]", boxed)
 			}
 		}
 		boxed, ok = options.Attributes["hashescrow.hashFunc"]
@@ -160,27 +211,32 @@ func (t *Transaction) Lock(ctx context.Context, wallet *token.OwnerWallet, sende
 		}
 	}
 
-	scriptID, preImage, script, err := t.recipientAsScript(sender, recipient, hash, hashFunc, hashEncoding)
+	scriptID, preImages, script, err := t.recipientAsScript(sender, recipient, recipientHash, senderHash, hashFunc, hashEncoding)
 	if err != nil {
 		return nil, err
 	}
+
+	transferOpts := append(opts,
+		token.WithTransferMetadata(LockKey(script.RecipientHashInfo.Hash), LockValue(script.RecipientHashInfo.Hash)),
+		token.WithTransferMetadata(LockKey(script.SenderHashInfo.Hash), LockValue(script.SenderHashInfo.Hash)),
+	)
 	_, err = t.TokenRequest.Transfer(
 		t.Context,
 		wallet,
 		typ,
 		[]uint64{value},
 		[]view.Identity{scriptID},
-		append(opts, token.WithTransferMetadata(LockKey(script.HashInfo.Hash), LockValue(script.HashInfo.Hash)))...,
+		transferOpts...,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return preImage, nil
+	return preImages, nil
 }
 
 // Claim appends a claim action to the token request.
-// A claim can be performed by either party encoded in the script.
+// Spending can be submitted by anyone; recipient is resolved from the preimage.
 func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte, opts ...token.TransferOption) error {
 	if len(preImage) == 0 {
 		return errors.New("preImage is nil")
@@ -202,42 +258,20 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.New("failed to unmarshal TypedIdentity as a hash escrow script")
 	}
 
-	claimIdentity := script.Recipient
-	if !wallet.Contains(t.Context, script.Recipient) {
-		if wallet.Contains(t.Context, script.Sender) {
-			claimIdentity = script.Sender
-		} else {
-			return errors.New("passed wallet does not contain sender nor recipient identity for this script")
-		}
-	}
-
-	image, err := script.HashInfo.Image(preImage)
+	claimIdentity, image, err := script.ResolveRecipientForPreImage(preImage)
 	if err != nil {
-		return errors.Wrapf(err, "failed to compute image of [%x]", preImage)
-	}
-	if err := script.HashInfo.Compare(image); err != nil {
-		return errors.Wrap(err, "passed preImage does not match script hash")
+		return errors.Wrap(err, "passed preImage does not match script hashes")
 	}
 
 	sigService := t.TokenService().SigService()
-	claimSigner, err := sigService.GetSigner(t.Context, claimIdentity)
-	if err != nil {
-		return err
-	}
-	claimVerifier, err := sigService.OwnerVerifier(t.Context, claimIdentity)
-	if err != nil {
-		return err
-	}
 	if err := sigService.RegisterEphemeralSigner(
 		t.Context,
 		tok.Owner,
 		&ClaimSigner{
-			Claimant: claimSigner,
 			Preimage: preImage,
 		},
 		&ClaimVerifier{
-			Claimant: claimVerifier,
-			HashInfo: script.HashInfo,
+			Script: script,
 		},
 	); err != nil {
 		return err
@@ -256,38 +290,29 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	)
 }
 
-func (t *Transaction) recipientAsScript(sender, recipient view.Identity, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, *Script, error) {
-	var preImage []byte
+func (t *Transaction) recipientAsScript(sender, recipient view.Identity, recipientHash []byte, senderHash []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, *PreImages, *Script, error) {
+	preImages := &PreImages{}
 	var err error
-	if len(h) == 0 {
-		preImage, err = CreateNonce()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		hash := hashFunc.New()
-		if _, err := hash.Write(preImage); err != nil {
-			return nil, nil, nil, err
-		}
-		h = hash.Sum(nil)
-		if hashEncoding != 0 {
-			enc := hashEncoding.New()
-			if enc == nil {
-				return nil, nil, nil, errors.New("hashEncoding.New() returned nil")
-			}
-			h = []byte(enc.EncodeToString(h))
-		}
-	}
 
-	logger.Debugf("pair (pre-image, hash) = (%s,%s)", base64.StdEncoding.EncodeToString(preImage), base64.StdEncoding.EncodeToString(h))
+	recipientHashInfo, recipientPreImage, err := buildHashInfo(recipientHash, hashFunc, hashEncoding)
+	if err != nil {
+		return nil, nil, nil, errors.WithMessage(err, "failed preparing recipient hash info")
+	}
+	senderHashInfo, senderPreImage, err := buildHashInfo(senderHash, hashFunc, hashEncoding)
+	if err != nil {
+		return nil, nil, nil, errors.WithMessage(err, "failed preparing sender hash info")
+	}
+	preImages.Recipient = recipientPreImage
+	preImages.Sender = senderPreImage
+
+	logger.Debugf("recipient pair (pre-image, hash) = (%s,%s)", base64.StdEncoding.EncodeToString(preImages.Recipient), base64.StdEncoding.EncodeToString(recipientHashInfo.Hash))
+	logger.Debugf("sender pair (pre-image, hash) = (%s,%s)", base64.StdEncoding.EncodeToString(preImages.Sender), base64.StdEncoding.EncodeToString(senderHashInfo.Hash))
 
 	script := &Script{
-		HashInfo: HashInfo{
-			Hash:         h,
-			HashFunc:     hashFunc,
-			HashEncoding: hashEncoding,
-		},
-		Recipient: recipient,
-		Sender:    sender,
+		RecipientHashInfo: recipientHashInfo,
+		SenderHashInfo:    senderHashInfo,
+		Recipient:         recipient,
+		Sender:            sender,
 	}
 	rawScript, err := json.Marshal(script)
 	if err != nil {
@@ -302,7 +327,42 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, h []byt
 		return nil, nil, nil, err
 	}
 
-	return raw, preImage, script, nil
+	return raw, preImages, script, nil
+}
+
+func buildHashInfo(hash []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (HashInfo, []byte, error) {
+	var preImage []byte
+	h := hash
+
+	if hashFunc == 0 {
+		hashFunc = crypto.SHA256
+	}
+
+	if len(h) == 0 {
+		var err error
+		preImage, err = CreateNonce()
+		if err != nil {
+			return HashInfo{}, nil, err
+		}
+		digest := hashFunc.New()
+		if _, err := digest.Write(preImage); err != nil {
+			return HashInfo{}, nil, err
+		}
+		h = digest.Sum(nil)
+		if hashEncoding != 0 {
+			enc := hashEncoding.New()
+			if enc == nil {
+				return HashInfo{}, nil, errors.New("hashEncoding.New() returned nil")
+			}
+			h = []byte(enc.EncodeToString(h))
+		}
+	}
+
+	return HashInfo{
+		Hash:         h,
+		HashFunc:     hashFunc,
+		HashEncoding: hashEncoding,
+	}, preImage, nil
 }
 
 // CreateNonce generates a nonce.

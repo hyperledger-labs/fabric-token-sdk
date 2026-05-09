@@ -9,137 +9,83 @@ package hashescrow_test
 import (
 	"crypto"
 	"encoding/json"
-	"errors"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
 	"github.com/stretchr/testify/require"
 )
 
-func validClaimSigBytes(t *testing.T, preimage, claimantSig []byte) []byte {
+func mkScriptForClaims(t *testing.T) (*hashescrow.Script, []byte, []byte) {
 	t.Helper()
-	raw, err := json.Marshal(hashescrow.ClaimSignature{Preimage: preimage, ClaimantSignature: claimantSig})
-	require.NoError(t, err)
 
-	return raw
-}
-
-func claimHashInfo(preimage []byte) hashescrow.HashInfo {
-	h := crypto.SHA256.New()
-	_, _ = h.Write(preimage)
-
-	return hashescrow.HashInfo{
-		Hash:         []byte(encoding.Base64.New().EncodeToString(h.Sum(nil))),
-		HashFunc:     crypto.SHA256,
-		HashEncoding: encoding.Base64,
+	s := &hashescrow.Script{
+		Sender:    []byte("sender"),
+		Recipient: []byte("recipient"),
+		RecipientHashInfo: hashescrow.HashInfo{
+			HashFunc:     crypto.SHA256,
+			HashEncoding: encoding.Base64,
+		},
+		SenderHashInfo: hashescrow.HashInfo{
+			HashFunc:     crypto.SHA256,
+			HashEncoding: encoding.Base64,
+		},
 	}
+
+	recipientPreImage := []byte("recipient-preimage")
+	recipientImage, err := s.RecipientHashInfo.Image(recipientPreImage)
+	require.NoError(t, err)
+	s.RecipientHashInfo.Hash = recipientImage
+
+	senderPreImage := []byte("sender-preimage")
+	senderImage, err := s.SenderHashInfo.Image(senderPreImage)
+	require.NoError(t, err)
+	s.SenderHashInfo.Hash = senderImage
+
+	return s, recipientPreImage, senderPreImage
 }
 
 func TestClaimSignerSign(t *testing.T) {
-	preimage := []byte("secret")
-	msg := []byte("txrequest")
-	expectedSig := []byte("claimant-sig")
-
-	signer := &mock.Signer{}
-	signer.SignReturns(expectedSig, nil)
-
-	cs := &hashescrow.ClaimSigner{Claimant: signer, Preimage: preimage}
-	raw, err := cs.Sign(msg)
+	cs := &hashescrow.ClaimSigner{Preimage: []byte("pre")}
+	raw, err := cs.Sign([]byte("ignored-msg"))
 	require.NoError(t, err)
 
-	var claimSig hashescrow.ClaimSignature
-	require.NoError(t, json.Unmarshal(raw, &claimSig))
-	require.Equal(t, preimage, claimSig.Preimage)
-	require.Equal(t, expectedSig, claimSig.ClaimantSignature)
-	require.Equal(t, 1, signer.SignCallCount())
-	require.Equal(t, append(msg, preimage...), signer.SignArgsForCall(0))
-}
-
-func TestClaimSignerSignError(t *testing.T) {
-	signer := &mock.Signer{}
-	signer.SignReturns(nil, errors.New("sign failed"))
-
-	cs := &hashescrow.ClaimSigner{Claimant: signer, Preimage: []byte("p")}
-	_, err := cs.Sign([]byte("req"))
-	require.EqualError(t, err, "sign failed")
+	var sig hashescrow.ClaimSignature
+	require.NoError(t, json.Unmarshal(raw, &sig))
+	require.Equal(t, []byte("pre"), sig.Preimage)
 }
 
 func TestClaimVerifierVerify(t *testing.T) {
-	preimage := []byte("secret")
-	msg := []byte("txrequest")
+	s, recipientPreImage, senderPreImage := mkScriptForClaims(t)
+	cv := &hashescrow.ClaimVerifier{Script: s}
 
-	verifier := &mock.Verifier{}
-	verifier.VerifyReturns(nil)
+	recipientRaw, err := json.Marshal(&hashescrow.ClaimSignature{Preimage: recipientPreImage})
+	require.NoError(t, err)
+	require.NoError(t, cv.Verify([]byte("msg"), recipientRaw))
 
-	cv := &hashescrow.ClaimVerifier{Claimant: verifier, HashInfo: claimHashInfo(preimage)}
-	require.NoError(t, cv.Verify(msg, validClaimSigBytes(t, preimage, []byte("sig"))))
-	vmsg, _ := verifier.VerifyArgsForCall(0)
-	require.Equal(t, append(msg, preimage...), vmsg)
-}
+	senderRaw, err := json.Marshal(&hashescrow.ClaimSignature{Preimage: senderPreImage})
+	require.NoError(t, err)
+	require.NoError(t, cv.Verify([]byte("msg"), senderRaw))
 
-func TestClaimVerifierErrors(t *testing.T) {
-	cv := &hashescrow.ClaimVerifier{Claimant: &mock.Verifier{}, HashInfo: claimHashInfo([]byte("p"))}
-	require.Error(t, cv.Verify([]byte("req"), []byte("bad-json")))
+	wrongRaw, err := json.Marshal(&hashescrow.ClaimSignature{Preimage: []byte("wrong")})
+	require.NoError(t, err)
+	require.Error(t, cv.Verify([]byte("msg"), wrongRaw))
 
-	verifier := &mock.Verifier{}
-	verifier.VerifyReturns(errors.New("bad sig"))
-	cv = &hashescrow.ClaimVerifier{Claimant: verifier, HashInfo: claimHashInfo([]byte("p"))}
-	err := cv.Verify([]byte("req"), validClaimSigBytes(t, []byte("p"), []byte("sig")))
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to verify claimant signature")
-
-	verifier = &mock.Verifier{}
-	verifier.VerifyReturns(nil)
-	cv = &hashescrow.ClaimVerifier{
-		Claimant: verifier,
-		HashInfo: claimHashInfo([]byte("different-preimage")),
-	}
-	err = cv.Verify([]byte("req"), validClaimSigBytes(t, []byte("p"), []byte("sig")))
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "hash mismatch")
+	require.Error(t, cv.Verify([]byte("msg"), []byte("bad-json")))
+	require.Error(t, (&hashescrow.ClaimVerifier{}).Verify([]byte("msg"), recipientRaw))
 }
 
 func TestVerifierVerify(t *testing.T) {
-	preimage := []byte("secret")
-	msg := []byte("txrequest")
-	sigma := validClaimSigBytes(t, preimage, []byte("sig"))
+	s, recipientPreImage, _ := mkScriptForClaims(t)
+	v := &hashescrow.Verifier{Script: s}
 
-	recipientVerifier := &mock.Verifier{}
-	recipientVerifier.VerifyReturns(nil)
-	senderVerifier := &mock.Verifier{}
-	v := &hashescrow.Verifier{
-		Recipient: recipientVerifier,
-		Sender:    senderVerifier,
-		HashInfo:  claimHashInfo(preimage),
-	}
-	require.NoError(t, v.Verify(msg, sigma))
-	require.Equal(t, 1, recipientVerifier.VerifyCallCount())
-	require.Equal(t, 0, senderVerifier.VerifyCallCount())
+	sigma, err := json.Marshal(&hashescrow.ClaimSignature{Preimage: recipientPreImage})
+	require.NoError(t, err)
+	require.NoError(t, v.Verify([]byte("msg"), sigma))
 
-	recipientVerifier = &mock.Verifier{}
-	recipientVerifier.VerifyReturns(errors.New("bad recipient sig"))
-	senderVerifier = &mock.Verifier{}
-	senderVerifier.VerifyReturns(nil)
-	v = &hashescrow.Verifier{
-		Recipient: recipientVerifier,
-		Sender:    senderVerifier,
-		HashInfo:  claimHashInfo(preimage),
-	}
-	require.NoError(t, v.Verify(msg, sigma))
-	require.Equal(t, 1, senderVerifier.VerifyCallCount())
-
-	recipientVerifier = &mock.Verifier{}
-	recipientVerifier.VerifyReturns(errors.New("bad recipient sig"))
-	senderVerifier = &mock.Verifier{}
-	senderVerifier.VerifyReturns(errors.New("bad sender sig"))
-	v = &hashescrow.Verifier{
-		Recipient: recipientVerifier,
-		Sender:    senderVerifier,
-		HashInfo:  claimHashInfo(preimage),
-	}
-	err := v.Verify(msg, sigma)
+	badSigma, err := json.Marshal(&hashescrow.ClaimSignature{Preimage: []byte("wrong")})
+	require.NoError(t, err)
+	err = v.Verify([]byte("msg"), badSigma)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed verifying hash escrow claim signature")
 }

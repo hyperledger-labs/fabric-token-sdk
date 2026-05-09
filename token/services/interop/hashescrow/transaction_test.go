@@ -16,13 +16,15 @@ import (
 
 func TestCompileTransferOptions(t *testing.T) {
 	opts, err := compileTransferOptions(
-		WithHash([]byte("h")),
+		WithRecipientHash([]byte("h")),
+		WithSenderHash([]byte("h2")),
 		WithHashFunc(crypto.SHA512),
 		WithHashEncoding(encoding.Hex),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, opts.Attributes)
-	require.Equal(t, []byte("h"), opts.Attributes["hashescrow.hash"])
+	require.Equal(t, []byte("h"), opts.Attributes["hashescrow.recipientHash"])
+	require.Equal(t, []byte("h2"), opts.Attributes["hashescrow.senderHash"])
 	require.Equal(t, crypto.SHA512, opts.Attributes["hashescrow.hashFunc"])
 	require.Equal(t, encoding.Hex, opts.Attributes["hashescrow.hashEncoding"])
 }
@@ -32,19 +34,23 @@ func TestRecipientAsScript(t *testing.T) {
 	sender := []byte("sender")
 	recipient := []byte("recipient")
 
-	raw, preimage, script, err := tx.recipientAsScript(sender, recipient, []byte("custom-hash"), crypto.SHA256, encoding.Base64)
+	raw, preimages, script, err := tx.recipientAsScript(sender, recipient, []byte("recipient-hash"), []byte("sender-hash"), crypto.SHA256, encoding.Base64)
 	require.NoError(t, err)
-	require.Empty(t, preimage)
+	require.Empty(t, preimages.Recipient)
+	require.Empty(t, preimages.Sender)
 	require.NotNil(t, raw)
 	require.Equal(t, sender, []byte(script.Sender))
 	require.Equal(t, recipient, []byte(script.Recipient))
-	require.Equal(t, []byte("custom-hash"), script.HashInfo.Hash)
+	require.Equal(t, []byte("recipient-hash"), script.RecipientHashInfo.Hash)
+	require.Equal(t, []byte("sender-hash"), script.SenderHashInfo.Hash)
 
-	raw, preimage, script, err = tx.recipientAsScript(sender, recipient, nil, crypto.SHA256, encoding.Base64)
+	raw, preimages, script, err = tx.recipientAsScript(sender, recipient, nil, nil, crypto.SHA256, encoding.Base64)
 	require.NoError(t, err)
 	require.NotNil(t, raw)
-	require.NotEmpty(t, preimage)
-	require.NotEmpty(t, script.HashInfo.Hash)
+	require.NotEmpty(t, preimages.Recipient)
+	require.NotEmpty(t, preimages.Sender)
+	require.NotEmpty(t, script.RecipientHashInfo.Hash)
+	require.NotEmpty(t, script.SenderHashInfo.Hash)
 }
 
 func TestRecipientAsScriptBadEncoding(t *testing.T) {
@@ -53,10 +59,11 @@ func TestRecipientAsScriptBadEncoding(t *testing.T) {
 		[]byte("sender"),
 		[]byte("recipient"),
 		nil,
+		nil,
 		crypto.SHA256,
 		encoding.Encoding(999),
 	)
-	require.EqualError(t, err, "hashEncoding.New() returned nil")
+	require.EqualError(t, err, "failed preparing recipient hash info: hashEncoding.New() returned nil")
 }
 
 func TestCreateNonce(t *testing.T) {
