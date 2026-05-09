@@ -205,7 +205,7 @@ type FakeNetwork struct {
 		result1 [][]byte
 		result2 error
 	}
-	RequestApprovalStub        func(view.Context, *tokena.ManagementService, []byte, view.Identity, driver.TxID) (driver.Envelope, error)
+	RequestApprovalStub        func(view.Context, *tokena.ManagementService, []byte, view.Identity, driver.TxID, driver.TransientMap) (driver.Envelope, error)
 	requestApprovalMutex       sync.RWMutex
 	requestApprovalArgsForCall []struct {
 		arg1 view.Context
@@ -213,6 +213,7 @@ type FakeNetwork struct {
 		arg3 []byte
 		arg4 view.Identity
 		arg5 driver.TxID
+		arg6 driver.TransientMap
 	}
 	requestApprovalReturns struct {
 		result1 driver.Envelope
@@ -1158,7 +1159,7 @@ func (fake *FakeNetwork) QueryTokensReturnsOnCall(i int, result1 [][]byte, resul
 	}{result1, result2}
 }
 
-func (fake *FakeNetwork) RequestApproval(arg1 view.Context, arg2 *tokena.ManagementService, arg3 []byte, arg4 view.Identity, arg5 driver.TxID) (driver.Envelope, error) {
+func (fake *FakeNetwork) RequestApproval(arg1 view.Context, arg2 *tokena.ManagementService, arg3 []byte, arg4 view.Identity, arg5 driver.TxID, arg6 driver.TransientMap) (driver.Envelope, error) {
 	var arg3Copy []byte
 	if arg3 != nil {
 		arg3Copy = make([]byte, len(arg3))
@@ -1172,13 +1173,14 @@ func (fake *FakeNetwork) RequestApproval(arg1 view.Context, arg2 *tokena.Managem
 		arg3 []byte
 		arg4 view.Identity
 		arg5 driver.TxID
-	}{arg1, arg2, arg3Copy, arg4, arg5})
+		arg6 driver.TransientMap
+	}{arg1, arg2, arg3Copy, arg4, arg5, arg6})
 	stub := fake.RequestApprovalStub
 	fakeReturns := fake.requestApprovalReturns
-	fake.recordInvocation("RequestApproval", []interface{}{arg1, arg2, arg3Copy, arg4, arg5})
+	fake.recordInvocation("RequestApproval", []interface{}{arg1, arg2, arg3Copy, arg4, arg5, arg6})
 	fake.requestApprovalMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4, arg5)
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1192,17 +1194,17 @@ func (fake *FakeNetwork) RequestApprovalCallCount() int {
 	return len(fake.requestApprovalArgsForCall)
 }
 
-func (fake *FakeNetwork) RequestApprovalCalls(stub func(view.Context, *tokena.ManagementService, []byte, view.Identity, driver.TxID) (driver.Envelope, error)) {
+func (fake *FakeNetwork) RequestApprovalCalls(stub func(view.Context, *tokena.ManagementService, []byte, view.Identity, driver.TxID, driver.TransientMap) (driver.Envelope, error)) {
 	fake.requestApprovalMutex.Lock()
 	defer fake.requestApprovalMutex.Unlock()
 	fake.RequestApprovalStub = stub
 }
 
-func (fake *FakeNetwork) RequestApprovalArgsForCall(i int) (view.Context, *tokena.ManagementService, []byte, view.Identity, driver.TxID) {
+func (fake *FakeNetwork) RequestApprovalArgsForCall(i int) (view.Context, *tokena.ManagementService, []byte, view.Identity, driver.TxID, driver.TransientMap) {
 	fake.requestApprovalMutex.RLock()
 	defer fake.requestApprovalMutex.RUnlock()
 	argsForCall := fake.requestApprovalArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *FakeNetwork) RequestApprovalReturns(result1 driver.Envelope, result2 error) {

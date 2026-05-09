@@ -106,7 +106,7 @@ func NewEndorsementService(
 	}, nil
 }
 
-func (e *EndorsementService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
+func (e *EndorsementService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID, metadata driver.TransientMap) (driver.Envelope, error) {
 	var endorsers []view.Identity
 	switch e.PolicyType {
 	case OneOutNPolicy:
@@ -125,6 +125,7 @@ func (e *EndorsementService) Endorse(context view.Context, requestRaw []byte, si
 		nil,
 		endorsers,
 		e.EndorserService,
+		metadata,
 	))
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to request approval")

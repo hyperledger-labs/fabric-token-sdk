@@ -346,7 +346,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.NoError(t, err)
 		require.NotNil(t, env)
@@ -374,7 +374,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.NoError(t, err)
 		require.NotNil(t, env)
@@ -397,7 +397,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.NoError(t, err)
 		require.NotNil(t, env)
@@ -419,7 +419,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		_, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		_, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to request approval")
@@ -441,7 +441,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		_, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		_, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "expected driver.Envelope")

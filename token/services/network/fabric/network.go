@@ -333,13 +333,13 @@ func (n *Network) NewEnvelope() driver.Envelope {
 }
 
 // RequestApproval requests an endorsement for a token request.
-func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
+func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID, metadata driver.TransientMap) (driver.Envelope, error) {
 	endorsement, err := n.endorsementServiceProvider.Get(tms.ID())
 	if err != nil {
 		return nil, errors.Wrapf(err, "network not connected [%s]", tms.ID())
 	}
 
-	return endorsement.Endorse(context, requestRaw, signer, txID)
+	return endorsement.Endorse(context, requestRaw, signer, txID, metadata)
 }
 
 // ComputeTxID calculates the Fabric transaction ID based on creator and nonce.
