@@ -244,11 +244,12 @@ func (n *Network) NewEnvelope() *Envelope {
 }
 
 // RequestApproval sends a token request to an endorsement service and returns the resulting endorsed envelope.
-func (n *Network) RequestApproval(context view.Context, tms *token.ManagementService, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
+// metadata carries optional application-level key-value pairs forwarded to the approver backend.
+func (n *Network) RequestApproval(context view.Context, tms *token.ManagementService, requestRaw []byte, signer view.Identity, txID TxID, metadata driver.TransientMap) (*Envelope, error) {
 	env, err := n.n.RequestApproval(context, tms, requestRaw, signer, driver.TxID{
 		Nonce:   txID.Nonce,
 		Creator: txID.Creator,
-	})
+	}, metadata)
 	if err != nil {
 		return nil, err
 	}

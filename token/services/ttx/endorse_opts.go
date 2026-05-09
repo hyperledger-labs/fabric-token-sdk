@@ -25,6 +25,9 @@ type EndorsementsOpts struct {
 	// in the list produce a nil slot in the PolicySignature, which is valid for
 	// OR branches.  When nil, all component identities are contacted (default).
 	PolicySigners []token.Identity
+	// ApprovalMetadata carries optional application-level metadata forwarded to approvers.
+	// Each driver decides how to deliver this information to the approver backend.
+	ApprovalMetadata map[string][]byte
 }
 
 func (o *EndorsementsOpts) ExternalWalletSigner(id string) ExternalWalletSigner {
@@ -103,6 +106,17 @@ func WithExternalWalletSigner(walletID string, ews ExternalWalletSigner) Endorse
 			o.ExternalWalletSigners = map[string]ExternalWalletSigner{}
 		}
 		o.ExternalWalletSigners[walletID] = ews
+
+		return nil
+	}
+}
+
+// WithApprovalMetadata attaches application-level metadata to be forwarded to the approver.
+// Each key-value pair is delivered to the approver backend in a driver-specific way
+// (e.g. transient data for Fabric FSC endorsement, extra transient entries for chaincode).
+func WithApprovalMetadata(metadata map[string][]byte) EndorsementsOpt {
+	return func(o *EndorsementsOpts) error {
+		o.ApprovalMetadata = metadata
 
 		return nil
 	}
