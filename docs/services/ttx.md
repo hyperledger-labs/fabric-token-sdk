@@ -100,21 +100,21 @@ sequenceDiagram
     end
 
     rect rgba(255, 245, 238, 0.5)
-        Note over R: Phase 2 - Responder decision
+        Note over R: Phase 2 - Responder decision and reply
         alt RecipientRequest.RecipientData != nil
             R->>R: Verify wallet contains RecipientData.Identity
-            R-->>I: RecipientData (echo path)
         else RecipientRequest.RecipientData == nil
             R->>R: Generate RecipientData from wallet
-            R-->>I: RecipientData (fresh data path)
         end
+        R->>R: endpoint.Bind(context.Me, RecipientData.Identity)
+        Note over R,I: Bind before send so local resolver wiring fails before the peer receives RecipientData
+        R-->>I: RecipientData (echo or fresh data path)
     end
 
     rect rgba(240, 255, 240, 0.45)
-        Note over I,R: Phase 3 - Local registration and bindings
+        Note over I,R: Phase 3 - Initiator registration and bindings
         I->>I: RegisterRecipientIdentity(RecipientData)
         I->>I: endpoint.Bind(requested FSC identity, RecipientData.Identity)
-        R->>R: endpoint.Bind(context.Me, RecipientData.Identity)
     end
 
     rect rgba(245, 245, 245, 0.55)
@@ -146,14 +146,16 @@ sequenceDiagram
         Note over R: Phase 2 - Responder processing
         R->>R: RegisterRecipientIdentity(request.RecipientData)
         R->>R: GetRecipientData(responder wallet)
+        R->>R: endpoint.Bind(context.Me, responder RecipientData.Identity)
+        R->>R: endpoint.Bind(session caller, request.RecipientData.Identity)
+        Note over R,I: Binds before send so resolver wiring fails before the initiator receives our RecipientData
         R-->>I: RecipientData(responder)
     end
 
     rect rgba(240, 255, 240, 0.45)
-        Note over I,R: Phase 3 - Local registration and bindings
+        Note over I,R: Phase 3 - Initiator registration and bindings
         I->>I: RegisterRecipientIdentity(remote RecipientData)
         I->>I: endpoint.Bind(other FSC identity, remote RecipientData.Identity)
-        R->>R: endpoint.Bind(session caller, request.RecipientData.Identity)
     end
 
     Note over I,R: Full RecipientData on wire today (responder sends local wallet RecipientData)
