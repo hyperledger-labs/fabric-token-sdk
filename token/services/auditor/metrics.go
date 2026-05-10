@@ -40,18 +40,22 @@ func newMetrics(p metrics.Provider) *Metrics {
 
 	return &Metrics{
 		AuditDuration: p.NewHistogram(metrics.HistogramOpts{
-			Name:    "auditor_audit_duration_seconds",
-			Help:    "Histogram of Audit() processing time per transaction (including lock acquisition), in seconds",
-			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			Name:                           "auditor_audit_duration_seconds",
+			Help:                           "Histogram of Audit() processing time per transaction (including lock acquisition), in seconds",
+			Buckets:                        []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			NativeHistogramBucketFactor:    1.1,
+			NativeHistogramMaxBucketNumber: 100,
 		}),
 		AuditLockConflicts: p.NewCounter(metrics.CounterOpts{
 			Name: "auditor_audit_lock_conflicts_total",
 			Help: "Total number of Audit() calls that failed to acquire enrollment-ID locks",
 		}),
 		AppendDuration: p.NewHistogram(metrics.HistogramOpts{
-			Name:    "auditor_append_duration_seconds",
-			Help:    "Histogram of Append() processing time per transaction, in seconds",
-			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			Name:                           "auditor_append_duration_seconds",
+			Help:                           "Histogram of Append() processing time per transaction, in seconds",
+			Buckets:                        []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			NativeHistogramBucketFactor:    1.1,
+			NativeHistogramMaxBucketNumber: 100,
 		}),
 		AppendErrors: p.NewCounter(metrics.CounterOpts{
 			Name: "auditor_append_errors_total",

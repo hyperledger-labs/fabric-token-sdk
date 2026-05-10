@@ -15,6 +15,12 @@ import (
 
 var defaultDurationBuckets = []float64{.01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30}
 
+// defaultNativeHistogramBucketFactor sets the resolution for native histogram
+// buckets (schema=3, ~9% growth between boundaries). Setting this alongside
+// classic Buckets enables dual-mode emission: old scrapers see classic buckets,
+// new scrapers get the higher-resolution native histogram data.
+const defaultNativeHistogramBucketFactor = 1.1
+
 var (
 	spKey = reflect.TypeOf((*Metrics)(nil))
 
@@ -34,22 +40,28 @@ var (
 		LabelNames: []string{"network", "channel", "namespace"},
 	}
 	endorsementDuration = metrics.HistogramOpts{
-		Name:       "endorsement_duration_seconds",
-		Help:       "Duration of the full endorsement collection phase including signatures, audit, and chaincode approval.",
-		LabelNames: []string{"network", "channel", "namespace"},
-		Buckets:    defaultDurationBuckets,
+		Name:                           "endorsement_duration_seconds",
+		Help:                           "Duration of the full endorsement collection phase including signatures, audit, and chaincode approval.",
+		LabelNames:                     []string{"network", "channel", "namespace"},
+		Buckets:                        defaultDurationBuckets,
+		NativeHistogramBucketFactor:    defaultNativeHistogramBucketFactor,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 	auditApprovalDuration = metrics.HistogramOpts{
-		Name:       "audit_approval_duration_seconds",
-		Help:       "Duration of the auditor approval phase including validation, append, and signing.",
-		LabelNames: []string{"network", "channel", "namespace"},
-		Buckets:    defaultDurationBuckets,
+		Name:                           "audit_approval_duration_seconds",
+		Help:                           "Duration of the auditor approval phase including validation, append, and signing.",
+		LabelNames:                     []string{"network", "channel", "namespace"},
+		Buckets:                        defaultDurationBuckets,
+		NativeHistogramBucketFactor:    defaultNativeHistogramBucketFactor,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 	orderingDuration = metrics.HistogramOpts{
-		Name:       "ordering_duration_seconds",
-		Help:       "Duration of the transaction broadcast to the ordering service.",
-		LabelNames: []string{"network", "channel", "namespace"},
-		Buckets:    defaultDurationBuckets,
+		Name:                           "ordering_duration_seconds",
+		Help:                           "Duration of the transaction broadcast to the ordering service.",
+		LabelNames:                     []string{"network", "channel", "namespace"},
+		Buckets:                        defaultDurationBuckets,
+		NativeHistogramBucketFactor:    defaultNativeHistogramBucketFactor,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 )
 

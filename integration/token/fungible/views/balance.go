@@ -45,7 +45,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 		return nil, fmt.Errorf("wallet %s not found: %w", b.Wallet, err)
 	}
 
-	unspentTokens, err := wallet.ListUnspentTokensIterator(token.WithType(b.Type), token.WithContext(context.Context()))
+	unspentTokens, err := wallet.ListUnspentTokensIterator(context.Context(), token.WithType(b.Type))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed listing unspent tokens")
 	}

@@ -478,12 +478,29 @@ func CloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.
 	return leftGen, rightGen
 }
 
-// ComputeSVector computes the s vector and its entry-wise inverse of s as detailed below:
-// b(i,j) = 1 if (logn - j)^{th} bit of i-1 is 1, else its -1
-// s[i] = \prod_{j=1}^{\log n} x_j^{bits(i,j)}
-// sInv[i] = s[i].Inverse
-// Input: n, challenges = [x_1,\ldots,x_{\log n}]
-// Returns (s, sInv) where sInv[i] = s[i]^{-1}, computed via batch inversion.
+// ComputeSVector computes the s vector and its entry-wise inverse using
+// a dual-butterfly (doubling) recurrence in O(n) multiplications.
+//
+// Each entry is defined as:
+//
+//	s[i] = ∏_{r=0}^{k-1} (bit(i, k-1-r) == 1 ? x_r : x_r^{-1})
+//	sInv[i] = s[i]^{-1}
+//
+// where k = log₂(n) and x_r = challenges[r].
+//
+// The butterfly builds both vectors simultaneously:
+//
+//	Round r: for each existing entry i in [0, 2^r):
+//	  s[i + 2^r]    = s[i]    · x_{k-1-r}        (bit set → challenge)
+//	  s[i]          = s[i]    · x_{k-1-r}^{-1}    (bit unset → inverse)
+//	  sInv[i + 2^r] = sInv[i] · x_{k-1-r}^{-1}   (swapped)
+//	  sInv[i]       = sInv[i] · x_{k-1-r}         (swapped)
+//
+// This replaces the previous O(n·log n) nested-loop implementation and
+// eliminates the final BatchInverse call for sInv.
+//
+// Input: n, challenges = [x_0, …, x_{k-1}] where n = 2^k.
+// Returns (s, sInv) where sInv[i] = s[i]^{-1}.
 func ComputeSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, []*mathlib.Zr) {
 	log2n := len(challenges)
 
@@ -492,40 +509,36 @@ func ComputeSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) ([]*m
 		panic("n must equal 2^(number of challenges)")
 	}
 
-	// Precompute challenge inverses (log2n inversions instead of O(n*log2n))
+	// Precompute challenge inverses: O(log n) with a single field inversion.
 	challengeInvs := math.BatchInverse(challenges, curve)
 
+	// Pre-allocate both vectors. Entries [1..n-1] are initialised to zero
+	// so that ModMulInPlace can write into them without prior allocation.
 	s := make([]*mathlib.Zr, n)
-
-	for i := 1; i <= n; i++ {
-		// Start with s_i = 1
-		si := math.One(curve)
-
-		// Compute product over j=1 to log2(n).
-		// At round j the generator fold splits on bit (log2n - j) of the
-		// 0-based index: first half (bit=0) picks up x_j^{-1}, second
-		// half (bit=1) picks up x_j — matching reduceGenerators.
-		for j := 1; j <= log2n; j++ {
-			bitPosition := log2n - j
-			iMinus1 := i - 1
-			bitIsSet := (iMinus1 >> bitPosition) & 1
-
-			var factor *mathlib.Zr
-			if bitIsSet == 1 {
-				// second half at round j => x_j
-				factor = challenges[j-1]
-			} else {
-				// first half at round j => x_j^{-1}
-				factor = challengeInvs[j-1]
-			}
-
-			// Multiply: s_i *= factor
-			si = curve.ModMul(si, factor, curve.GroupOrder)
-		}
-
-		s[i-1] = si
+	sInv := make([]*mathlib.Zr, n)
+	s[0] = math.One(curve)
+	sInv[0] = math.One(curve)
+	for i := 1; i < n; i++ {
+		s[i] = curve.NewZrFromInt(0)
+		sInv[i] = curve.NewZrFromInt(0)
 	}
-	sInv := math.BatchInverse(s, curve)
+
+	// Dual butterfly: O(n) total multiplications.
+	for r := range log2n {
+		halfLen := 1 << r
+		c := challenges[log2n-1-r]
+		cInv := challengeInvs[log2n-1-r]
+		for i := range halfLen {
+			// s: bit set → challenge, bit unset → inverse.
+			// Compute s[i+halfLen] BEFORE mutating s[i].
+			curve.ModMulInPlace(s[i+halfLen], s[i], c, curve.GroupOrder)
+			s[i] = curve.ModMul(s[i], cInv, curve.GroupOrder)
+
+			// sInv: factors are swapped relative to s.
+			curve.ModMulInPlace(sInv[i+halfLen], sInv[i], cInv, curve.GroupOrder)
+			sInv[i] = curve.ModMul(sInv[i], c, curve.GroupOrder)
+		}
+	}
 
 	return s, sInv
 }

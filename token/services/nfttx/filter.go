@@ -42,11 +42,11 @@ func NewFilter(wallet string, service QueryService, precision uint64) *filter {
 	}
 }
 
-func (s *filter) Filter(filter Filter, q string) ([]*token2.ID, error) {
+func (s *filter) Filter(ctx context.Context, filter Filter, q string) ([]*token2.ID, error) {
 	if filter == nil {
 		return nil, errors.New("filter is nil")
 	}
-	ids, _, err := s.selectByFilter(filter, q)
+	ids, _, err := s.selectByFilter(ctx, filter, q)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to select tokens")
 	}
@@ -54,7 +54,7 @@ func (s *filter) Filter(filter Filter, q string) ([]*token2.ID, error) {
 	return ids, nil
 }
 
-func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Quantity, error) {
+func (s *filter) selectByFilter(ctx context.Context, filter Filter, q string) ([]*token2.ID, token2.Quantity, error) {
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
 	target, err := token2.ToQuantity(q, s.precision)
@@ -62,7 +62,7 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 		return nil, nil, errors.Wrap(err, "failed to convert quantity")
 	}
 
-	unspentTokens, err := s.queryService.UnspentTokensIteratorBy(context.TODO(), s.wallet, "")
+	unspentTokens, err := s.queryService.UnspentTokensIteratorBy(ctx, s.wallet, "")
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "token selection failed")
 	}

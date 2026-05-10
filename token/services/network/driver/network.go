@@ -62,7 +62,8 @@ type Network interface {
 	NewEnvelope() Envelope
 
 	// RequestApproval requests an endorsement for a token request from the network's approval service.
-	RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID TxID) (Envelope, error)
+	// metadata carries optional application-level key-value pairs forwarded to the approver.
+	RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID TxID, metadata TransientMap) (Envelope, error)
 
 	// ComputeTxID calculates the ledger-specific transaction ID from an abstract TxID.
 	ComputeTxID(id *TxID) string

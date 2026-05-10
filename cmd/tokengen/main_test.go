@@ -42,9 +42,9 @@ func TestGenFullSuccess(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	defer gexec.CleanupBuildArtifacts()
 
-	// tempOutput := t.TempDir()
-	// defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
-	tempOutput := "./testdata"
+	tempOutput := t.TempDir()
+	defer utils.IgnoreErrorWithOneArg(os.RemoveAll, tempOutput)
+	// tempOutput := "./testdata"
 	testGenRun(
 		gt,
 		tokengen,

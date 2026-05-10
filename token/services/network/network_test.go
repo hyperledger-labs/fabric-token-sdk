@@ -226,12 +226,12 @@ func TestNetwork(t *testing.T) {
 	require.NoError(t, err)
 
 	txID := network.TxID{Nonce: []byte("nonce"), Creator: []byte("creator")}
-	apprEnv, err := n.RequestApproval(nil, nil, []byte("req"), view.Identity("sig"), txID)
+	apprEnv, err := n.RequestApproval(nil, nil, []byte("req"), view.Identity("sig"), txID, nil)
 	require.NoError(t, err)
 	require.NotNil(t, apprEnv)
 
 	dn.RequestApprovalReturns(nil, errors.New("appr err"))
-	_, err = n.RequestApproval(nil, nil, []byte("req"), view.Identity("sig"), txID)
+	_, err = n.RequestApproval(nil, nil, []byte("req"), view.Identity("sig"), txID, nil)
 	require.Error(t, err)
 
 	cTxID := n.ComputeTxID(&txID)
