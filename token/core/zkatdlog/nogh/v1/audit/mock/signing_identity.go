@@ -33,18 +33,6 @@ type SigningIdentity struct {
 		result1 []byte
 		result2 error
 	}
-	VerifyStub        func([]byte, []byte) error
-	verifyMutex       sync.RWMutex
-	verifyArgsForCall []struct {
-		arg1 []byte
-		arg2 []byte
-	}
-	verifyReturns struct {
-		result1 error
-	}
-	verifyReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -174,87 +162,9 @@ func (fake *SigningIdentity) SignReturnsOnCall(i int, result1 []byte, result2 er
 	}{result1, result2}
 }
 
-func (fake *SigningIdentity) Verify(arg1 []byte, arg2 []byte) error {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
-	fake.verifyMutex.Lock()
-	ret, specificReturn := fake.verifyReturnsOnCall[len(fake.verifyArgsForCall)]
-	fake.verifyArgsForCall = append(fake.verifyArgsForCall, struct {
-		arg1 []byte
-		arg2 []byte
-	}{arg1Copy, arg2Copy})
-	stub := fake.VerifyStub
-	fakeReturns := fake.verifyReturns
-	fake.recordInvocation("Verify", []interface{}{arg1Copy, arg2Copy})
-	fake.verifyMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *SigningIdentity) VerifyCallCount() int {
-	fake.verifyMutex.RLock()
-	defer fake.verifyMutex.RUnlock()
-	return len(fake.verifyArgsForCall)
-}
-
-func (fake *SigningIdentity) VerifyCalls(stub func([]byte, []byte) error) {
-	fake.verifyMutex.Lock()
-	defer fake.verifyMutex.Unlock()
-	fake.VerifyStub = stub
-}
-
-func (fake *SigningIdentity) VerifyArgsForCall(i int) ([]byte, []byte) {
-	fake.verifyMutex.RLock()
-	defer fake.verifyMutex.RUnlock()
-	argsForCall := fake.verifyArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *SigningIdentity) VerifyReturns(result1 error) {
-	fake.verifyMutex.Lock()
-	defer fake.verifyMutex.Unlock()
-	fake.VerifyStub = nil
-	fake.verifyReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *SigningIdentity) VerifyReturnsOnCall(i int, result1 error) {
-	fake.verifyMutex.Lock()
-	defer fake.verifyMutex.Unlock()
-	fake.VerifyStub = nil
-	if fake.verifyReturnsOnCall == nil {
-		fake.verifyReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.verifyReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *SigningIdentity) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.serializeMutex.RLock()
-	defer fake.serializeMutex.RUnlock()
-	fake.signMutex.RLock()
-	defer fake.signMutex.RUnlock()
-	fake.verifyMutex.RLock()
-	defer fake.verifyMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -8,6 +8,7 @@ package driver
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -97,7 +98,8 @@ type QueryEngine interface {
 	// WhoDeletedTokens identifies which transaction deleted the specified tokens.
 	WhoDeletedTokens(ctx context.Context, inputs ...*token.ID) ([]string, []bool, error)
 	// Balance calculates the total value of unspent tokens of a specific type owned by a wallet.
-	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
+	// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
+	Balance(ctx context.Context, id string, tokenType token.Type) (*big.Int, error)
 }
 
 //go:generate counterfeiter -o mock/token_vault.go -fake-name TokenVault . TokenVault
@@ -109,7 +111,7 @@ type TokenVault interface {
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (UnspentTokensIterator, error)
 	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
 	PublicParams(ctx context.Context) ([]byte, error)
-	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
+	Balance(ctx context.Context, id string, tokenType token.Type) (*big.Int, error)
 }
 
 //go:generate counterfeiter -o mock/ledger_token.go -fake-name LedgerToken . LedgerToken

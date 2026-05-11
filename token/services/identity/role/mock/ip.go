@@ -162,19 +162,6 @@ type IdentityProvider struct {
 	registerSignerReturnsOnCall map[int]struct {
 		result1 error
 	}
-	RegisterVerifierStub        func(context.Context, driver.Identity, driver.Verifier) error
-	registerVerifierMutex       sync.RWMutex
-	registerVerifierArgsForCall []struct {
-		arg1 context.Context
-		arg2 driver.Identity
-		arg3 driver.Verifier
-	}
-	registerVerifierReturns struct {
-		result1 error
-	}
-	registerVerifierReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -903,69 +890,6 @@ func (fake *IdentityProvider) RegisterSignerReturnsOnCall(i int, result1 error) 
 		})
 	}
 	fake.registerSignerReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *IdentityProvider) RegisterVerifier(arg1 context.Context, arg2 driver.Identity, arg3 driver.Verifier) error {
-	fake.registerVerifierMutex.Lock()
-	ret, specificReturn := fake.registerVerifierReturnsOnCall[len(fake.registerVerifierArgsForCall)]
-	fake.registerVerifierArgsForCall = append(fake.registerVerifierArgsForCall, struct {
-		arg1 context.Context
-		arg2 driver.Identity
-		arg3 driver.Verifier
-	}{arg1, arg2, arg3})
-	stub := fake.RegisterVerifierStub
-	fakeReturns := fake.registerVerifierReturns
-	fake.recordInvocation("RegisterVerifier", []interface{}{arg1, arg2, arg3})
-	fake.registerVerifierMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2, arg3)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *IdentityProvider) RegisterVerifierCallCount() int {
-	fake.registerVerifierMutex.RLock()
-	defer fake.registerVerifierMutex.RUnlock()
-	return len(fake.registerVerifierArgsForCall)
-}
-
-func (fake *IdentityProvider) RegisterVerifierCalls(stub func(context.Context, driver.Identity, driver.Verifier) error) {
-	fake.registerVerifierMutex.Lock()
-	defer fake.registerVerifierMutex.Unlock()
-	fake.RegisterVerifierStub = stub
-}
-
-func (fake *IdentityProvider) RegisterVerifierArgsForCall(i int) (context.Context, driver.Identity, driver.Verifier) {
-	fake.registerVerifierMutex.RLock()
-	defer fake.registerVerifierMutex.RUnlock()
-	argsForCall := fake.registerVerifierArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
-}
-
-func (fake *IdentityProvider) RegisterVerifierReturns(result1 error) {
-	fake.registerVerifierMutex.Lock()
-	defer fake.registerVerifierMutex.Unlock()
-	fake.RegisterVerifierStub = nil
-	fake.registerVerifierReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *IdentityProvider) RegisterVerifierReturnsOnCall(i int, result1 error) {
-	fake.registerVerifierMutex.Lock()
-	defer fake.registerVerifierMutex.Unlock()
-	fake.RegisterVerifierStub = nil
-	if fake.registerVerifierReturnsOnCall == nil {
-		fake.registerVerifierReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.registerVerifierReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

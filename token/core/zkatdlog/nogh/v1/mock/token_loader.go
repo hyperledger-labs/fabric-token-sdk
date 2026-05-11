@@ -101,8 +101,6 @@ func (fake *TokenLoader) LoadTokensReturnsOnCall(i int, result1 []v1.LoadedToken
 func (fake *TokenLoader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.loadTokensMutex.RLock()
-	defer fake.loadTokensMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
