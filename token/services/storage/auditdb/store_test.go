@@ -8,6 +8,7 @@ package auditdb
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -145,13 +146,13 @@ func TestAcquireLocks_PartialAcquisitionRollback(t *testing.T) {
 	// This should fail because "charlie" is already locked
 	// The sorted order will be: alice, bob, charlie
 	err = store.AcquireLocks(ctx2, "anchor_partial", "alice", "bob", "charlie")
-	assert.Error(t, err, "should fail to acquire all locks")
+	require.Error(t, err, "should fail to acquire all locks")
 
 	// Verify that locks on "alice" and "bob" were rolled back
 	// We can test this by successfully acquiring them with a new anchor
 	ctx3 := context.Background()
 	err = store.AcquireLocks(ctx3, "anchor_verify", "alice", "bob")
-	assert.NoError(t, err, "alice and bob should be available (rollback successful)")
+	require.NoError(t, err, "alice and bob should be available (rollback successful)")
 
 	// Clean up
 	store.ReleaseLocks(ctx1, "anchor_blocker")
@@ -198,11 +199,11 @@ func TestAcquireLocks_ConcurrentOverlapping(t *testing.T) {
 	var mu sync.Mutex
 
 	// Multiple goroutines trying to acquire overlapping locks
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			anchor := "anchor_overlap_" + string(rune('0'+id))
+			anchor := fmt.Sprintf("anchor_overlap_%d", id)
 			err := store.AcquireLocks(ctx, anchor, "shared_resource")
 			if err == nil {
 				mu.Lock()
@@ -336,7 +337,7 @@ func TestAcquireAndReleaseLocks_Integration(t *testing.T) {
 
 	// Verify we can acquire the same locks again
 	err = store.AcquireLocks(ctx, "anchor_integration2", "alice", "bob", "charlie")
-	assert.NoError(t, err, "should be able to re-acquire released locks")
+	require.NoError(t, err, "should be able to re-acquire released locks")
 
 	// Clean up
 	store.ReleaseLocks(ctx, "anchor_integration2")
