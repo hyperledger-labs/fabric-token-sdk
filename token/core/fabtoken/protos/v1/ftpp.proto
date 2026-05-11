@@ -6,9 +6,9 @@
 
 syntax = "proto3";
 
-package fabtoken;
+package fabric_token_sdk.token.fabtoken.v1;
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/pp";
 
 message Identity {
   bytes raw = 1;

@@ -6,9 +6,9 @@
 
 syntax = "proto3";
 
-package protos;
+package fabric_token_sdk.token.driver.v1;
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/pp";
 
 // PublicParameters describes typed public parameters
 message PublicParameters {

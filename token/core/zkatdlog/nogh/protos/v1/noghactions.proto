@@ -6,13 +6,13 @@
 
 syntax = "proto3";
 
-package nogh;
+package fabric_token_sdk.token.zkatdlog.v1;
 
 import "ftactions.proto";
 import "noghmath.proto";
 import "noghpp.proto";
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/actions";
 
 message Token {
   bytes owner = 1; // Owner is the owner of the token
@@ -38,7 +38,7 @@ message TransferActionInput {
 }
 
 message TransferActionInputUpgradeWitness {
-  fabtoken.Token output = 1;
+  fabric_token_sdk.token.fabtoken.v1.Token output = 1;
   Zr blinding_factor = 2;
 }
 

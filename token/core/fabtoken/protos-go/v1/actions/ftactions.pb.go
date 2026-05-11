@@ -12,7 +12,7 @@
 package actions
 
 import (
-	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
+	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/pp"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -487,7 +487,7 @@ var File_ftactions_proto protoreflect.FileDescriptor
 
 const file_ftactions_proto_rawDesc = "" +
 	"\n" +
-	"\x0fftactions.proto\x12\bfabtoken\x1a\n" +
+	"\x0fftactions.proto\x12\"fabric_token_sdk.token.fabtoken.v1\x1a\n" +
 	"ftpp.proto\"M\n" +
 	"\x05Token\x12\x14\n" +
 	"\x05owner\x18\x01 \x01(\fR\x05owner\x12\x12\n" +
@@ -495,35 +495,35 @@ const file_ftactions_proto_rawDesc = "" +
 	"\bquantity\x18\x03 \x01(\tR\bquantity\"/\n" +
 	"\aTokenID\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05index\x18\x02 \x01(\x04R\x05index\"j\n" +
-	"\x13TransferActionInput\x12,\n" +
-	"\btoken_id\x18\x01 \x01(\v2\x11.fabtoken.TokenIDR\atokenId\x12%\n" +
-	"\x05input\x18\x02 \x01(\v2\x0f.fabtoken.TokenR\x05input\"=\n" +
-	"\x14TransferActionOutput\x12%\n" +
-	"\x05token\x18\x01 \x01(\v2\x0f.fabtoken.TokenR\x05token\"\xc8\x02\n" +
+	"\x05index\x18\x02 \x01(\x04R\x05index\"\x9e\x01\n" +
+	"\x13TransferActionInput\x12F\n" +
+	"\btoken_id\x18\x01 \x01(\v2+.fabric_token_sdk.token.fabtoken.v1.TokenIDR\atokenId\x12?\n" +
+	"\x05input\x18\x02 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05input\"W\n" +
+	"\x14TransferActionOutput\x12?\n" +
+	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05token\"\xb0\x03\n" +
 	"\x0eTransferAction\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\x04R\aversion\x125\n" +
-	"\x06inputs\x18\x02 \x03(\v2\x1d.fabtoken.TransferActionInputR\x06inputs\x128\n" +
-	"\aoutputs\x18\x03 \x03(\v2\x1e.fabtoken.TransferActionOutputR\aoutputs\x12B\n" +
-	"\bmetadata\x18\x04 \x03(\v2&.fabtoken.TransferAction.MetadataEntryR\bmetadata\x12*\n" +
-	"\x06issuer\x18\x05 \x01(\v2\x12.fabtoken.IdentityR\x06issuer\x1a;\n" +
+	"\aversion\x18\x01 \x01(\x04R\aversion\x12O\n" +
+	"\x06inputs\x18\x02 \x03(\v27.fabric_token_sdk.token.fabtoken.v1.TransferActionInputR\x06inputs\x12R\n" +
+	"\aoutputs\x18\x03 \x03(\v28.fabric_token_sdk.token.fabtoken.v1.TransferActionOutputR\aoutputs\x12\\\n" +
+	"\bmetadata\x18\x04 \x03(\v2@.fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntryR\bmetadata\x12D\n" +
+	"\x06issuer\x18\x05 \x01(\v2,.fabric_token_sdk.token.fabtoken.v1.IdentityR\x06issuer\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"K\n" +
-	"\x10IssueActionInput\x12!\n" +
-	"\x02id\x18\x01 \x01(\v2\x11.fabtoken.TokenIDR\x02id\x12\x14\n" +
-	"\x05token\x18\x02 \x01(\fR\x05token\":\n" +
-	"\x11IssueActionOutput\x12%\n" +
-	"\x05token\x18\x01 \x01(\v2\x0f.fabtoken.TokenR\x05token\"\xbc\x02\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"e\n" +
+	"\x10IssueActionInput\x12;\n" +
+	"\x02id\x18\x01 \x01(\v2+.fabric_token_sdk.token.fabtoken.v1.TokenIDR\x02id\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\fR\x05token\"T\n" +
+	"\x11IssueActionOutput\x12?\n" +
+	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05token\"\xa4\x03\n" +
 	"\vIssueAction\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\x04R\aversion\x12*\n" +
-	"\x06issuer\x18\x02 \x01(\v2\x12.fabtoken.IdentityR\x06issuer\x122\n" +
-	"\x06inputs\x18\x03 \x03(\v2\x1a.fabtoken.IssueActionInputR\x06inputs\x125\n" +
-	"\aoutputs\x18\x04 \x03(\v2\x1b.fabtoken.IssueActionOutputR\aoutputs\x12?\n" +
-	"\bmetadata\x18\x05 \x03(\v2#.fabtoken.IssueAction.MetadataEntryR\bmetadata\x1a;\n" +
+	"\aversion\x18\x01 \x01(\x04R\aversion\x12D\n" +
+	"\x06issuer\x18\x02 \x01(\v2,.fabric_token_sdk.token.fabtoken.v1.IdentityR\x06issuer\x12L\n" +
+	"\x06inputs\x18\x03 \x03(\v24.fabric_token_sdk.token.fabtoken.v1.IssueActionInputR\x06inputs\x12O\n" +
+	"\aoutputs\x18\x04 \x03(\v25.fabric_token_sdk.token.fabtoken.v1.IssueActionOutputR\aoutputs\x12Y\n" +
+	"\bmetadata\x18\x05 \x03(\v2=.fabric_token_sdk.token.fabtoken.v1.IssueAction.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BTZRgithub.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actionsb\x06proto3"
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BWZUgithub.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/actionsb\x06proto3"
 
 var (
 	file_ftactions_proto_rawDescOnce sync.Once
@@ -539,32 +539,32 @@ func file_ftactions_proto_rawDescGZIP() []byte {
 
 var file_ftactions_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_ftactions_proto_goTypes = []any{
-	(*Token)(nil),                // 0: fabtoken.Token
-	(*TokenID)(nil),              // 1: fabtoken.TokenID
-	(*TransferActionInput)(nil),  // 2: fabtoken.TransferActionInput
-	(*TransferActionOutput)(nil), // 3: fabtoken.TransferActionOutput
-	(*TransferAction)(nil),       // 4: fabtoken.TransferAction
-	(*IssueActionInput)(nil),     // 5: fabtoken.IssueActionInput
-	(*IssueActionOutput)(nil),    // 6: fabtoken.IssueActionOutput
-	(*IssueAction)(nil),          // 7: fabtoken.IssueAction
-	nil,                          // 8: fabtoken.TransferAction.MetadataEntry
-	nil,                          // 9: fabtoken.IssueAction.MetadataEntry
-	(*pp.Identity)(nil),          // 10: fabtoken.Identity
+	(*Token)(nil),                // 0: fabric_token_sdk.token.fabtoken.v1.Token
+	(*TokenID)(nil),              // 1: fabric_token_sdk.token.fabtoken.v1.TokenID
+	(*TransferActionInput)(nil),  // 2: fabric_token_sdk.token.fabtoken.v1.TransferActionInput
+	(*TransferActionOutput)(nil), // 3: fabric_token_sdk.token.fabtoken.v1.TransferActionOutput
+	(*TransferAction)(nil),       // 4: fabric_token_sdk.token.fabtoken.v1.TransferAction
+	(*IssueActionInput)(nil),     // 5: fabric_token_sdk.token.fabtoken.v1.IssueActionInput
+	(*IssueActionOutput)(nil),    // 6: fabric_token_sdk.token.fabtoken.v1.IssueActionOutput
+	(*IssueAction)(nil),          // 7: fabric_token_sdk.token.fabtoken.v1.IssueAction
+	nil,                          // 8: fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntry
+	nil,                          // 9: fabric_token_sdk.token.fabtoken.v1.IssueAction.MetadataEntry
+	(*pp.Identity)(nil),          // 10: fabric_token_sdk.token.fabtoken.v1.Identity
 }
 var file_ftactions_proto_depIdxs = []int32{
-	1,  // 0: fabtoken.TransferActionInput.token_id:type_name -> fabtoken.TokenID
-	0,  // 1: fabtoken.TransferActionInput.input:type_name -> fabtoken.Token
-	0,  // 2: fabtoken.TransferActionOutput.token:type_name -> fabtoken.Token
-	2,  // 3: fabtoken.TransferAction.inputs:type_name -> fabtoken.TransferActionInput
-	3,  // 4: fabtoken.TransferAction.outputs:type_name -> fabtoken.TransferActionOutput
-	8,  // 5: fabtoken.TransferAction.metadata:type_name -> fabtoken.TransferAction.MetadataEntry
-	10, // 6: fabtoken.TransferAction.issuer:type_name -> fabtoken.Identity
-	1,  // 7: fabtoken.IssueActionInput.id:type_name -> fabtoken.TokenID
-	0,  // 8: fabtoken.IssueActionOutput.token:type_name -> fabtoken.Token
-	10, // 9: fabtoken.IssueAction.issuer:type_name -> fabtoken.Identity
-	5,  // 10: fabtoken.IssueAction.inputs:type_name -> fabtoken.IssueActionInput
-	6,  // 11: fabtoken.IssueAction.outputs:type_name -> fabtoken.IssueActionOutput
-	9,  // 12: fabtoken.IssueAction.metadata:type_name -> fabtoken.IssueAction.MetadataEntry
+	1,  // 0: fabric_token_sdk.token.fabtoken.v1.TransferActionInput.token_id:type_name -> fabric_token_sdk.token.fabtoken.v1.TokenID
+	0,  // 1: fabric_token_sdk.token.fabtoken.v1.TransferActionInput.input:type_name -> fabric_token_sdk.token.fabtoken.v1.Token
+	0,  // 2: fabric_token_sdk.token.fabtoken.v1.TransferActionOutput.token:type_name -> fabric_token_sdk.token.fabtoken.v1.Token
+	2,  // 3: fabric_token_sdk.token.fabtoken.v1.TransferAction.inputs:type_name -> fabric_token_sdk.token.fabtoken.v1.TransferActionInput
+	3,  // 4: fabric_token_sdk.token.fabtoken.v1.TransferAction.outputs:type_name -> fabric_token_sdk.token.fabtoken.v1.TransferActionOutput
+	8,  // 5: fabric_token_sdk.token.fabtoken.v1.TransferAction.metadata:type_name -> fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntry
+	10, // 6: fabric_token_sdk.token.fabtoken.v1.TransferAction.issuer:type_name -> fabric_token_sdk.token.fabtoken.v1.Identity
+	1,  // 7: fabric_token_sdk.token.fabtoken.v1.IssueActionInput.id:type_name -> fabric_token_sdk.token.fabtoken.v1.TokenID
+	0,  // 8: fabric_token_sdk.token.fabtoken.v1.IssueActionOutput.token:type_name -> fabric_token_sdk.token.fabtoken.v1.Token
+	10, // 9: fabric_token_sdk.token.fabtoken.v1.IssueAction.issuer:type_name -> fabric_token_sdk.token.fabtoken.v1.Identity
+	5,  // 10: fabric_token_sdk.token.fabtoken.v1.IssueAction.inputs:type_name -> fabric_token_sdk.token.fabtoken.v1.IssueActionInput
+	6,  // 11: fabric_token_sdk.token.fabtoken.v1.IssueAction.outputs:type_name -> fabric_token_sdk.token.fabtoken.v1.IssueActionOutput
+	9,  // 12: fabric_token_sdk.token.fabtoken.v1.IssueAction.metadata:type_name -> fabric_token_sdk.token.fabtoken.v1.IssueAction.MetadataEntry
 	13, // [13:13] is the sub-list for method output_type
 	13, // [13:13] is the sub-list for method input_type
 	13, // [13:13] is the sub-list for extension type_name

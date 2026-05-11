@@ -83,12 +83,12 @@ var File_pp_proto protoreflect.FileDescriptor
 
 const file_pp_proto_rawDesc = "" +
 	"\n" +
-	"\bpp.proto\x12\x06protos\"D\n" +
+	"\bpp.proto\x12 fabric_token_sdk.token.driver.v1\"D\n" +
 	"\x10PublicParameters\x12\x1e\n" +
 	"\n" +
 	"identifier\x18\x01 \x01(\tR\n" +
 	"identifier\x12\x10\n" +
-	"\x03raw\x18\x02 \x01(\fR\x03rawBHZFgithub.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/ppb\x06proto3"
+	"\x03raw\x18\x02 \x01(\fR\x03rawBKZIgithub.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/ppb\x06proto3"
 
 var (
 	file_pp_proto_rawDescOnce sync.Once
@@ -104,7 +104,7 @@ func file_pp_proto_rawDescGZIP() []byte {
 
 var file_pp_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_pp_proto_goTypes = []any{
-	(*PublicParameters)(nil), // 0: protos.PublicParameters
+	(*PublicParameters)(nil), // 0: fabric_token_sdk.token.driver.v1.PublicParameters
 }
 var file_pp_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

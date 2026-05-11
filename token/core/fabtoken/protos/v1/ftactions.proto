@@ -6,11 +6,11 @@
 
 syntax = "proto3";
 
-package fabtoken;
+package fabric_token_sdk.token.fabtoken.v1;
 
 import "ftpp.proto";
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/actions";
 
 message Token {
   bytes owner = 1; // is the token owner

@@ -168,21 +168,21 @@ var File_ftpp_proto protoreflect.FileDescriptor
 const file_ftpp_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"ftpp.proto\x12\bfabtoken\"\x1c\n" +
+	"ftpp.proto\x12\"fabric_token_sdk.token.fabtoken.v1\"\x1c\n" +
 	"\bIdentity\x12\x10\n" +
-	"\x03raw\x18\x01 \x01(\fR\x03raw\"\xa0\x03\n" +
+	"\x03raw\x18\x01 \x01(\fR\x03raw\"\xee\x03\n" +
 	"\x10PublicParameters\x12*\n" +
 	"\x11token_driver_name\x18\x01 \x01(\tR\x0ftokenDriverName\x120\n" +
-	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12,\n" +
-	"\aauditor\x18\x03 \x01(\v2\x12.fabtoken.IdentityR\aauditor\x12,\n" +
-	"\aissuers\x18\x04 \x03(\v2\x12.fabtoken.IdentityR\aissuers\x12\x1b\n" +
+	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12F\n" +
+	"\aauditor\x18\x03 \x01(\v2,.fabric_token_sdk.token.fabtoken.v1.IdentityR\aauditor\x12F\n" +
+	"\aissuers\x18\x04 \x03(\v2,.fabric_token_sdk.token.fabtoken.v1.IdentityR\aissuers\x12\x1b\n" +
 	"\tmax_token\x18\x05 \x01(\x04R\bmaxToken\x12-\n" +
-	"\x12quantity_precision\x18\x06 \x01(\x04R\x11quantityPrecision\x12H\n" +
+	"\x12quantity_precision\x18\x06 \x01(\x04R\x11quantityPrecision\x12b\n" +
 	"\n" +
-	"extra_data\x18\a \x03(\v2).fabtoken.PublicParameters.ExtraDataEntryR\textraData\x1a<\n" +
+	"extra_data\x18\a \x03(\v2C.fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntryR\textraData\x1a<\n" +
 	"\x0eExtraDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BOZMgithub.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/ppb\x06proto3"
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BRZPgithub.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/ppb\x06proto3"
 
 var (
 	file_ftpp_proto_rawDescOnce sync.Once
@@ -198,14 +198,14 @@ func file_ftpp_proto_rawDescGZIP() []byte {
 
 var file_ftpp_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_ftpp_proto_goTypes = []any{
-	(*Identity)(nil),         // 0: fabtoken.Identity
-	(*PublicParameters)(nil), // 1: fabtoken.PublicParameters
-	nil,                      // 2: fabtoken.PublicParameters.ExtraDataEntry
+	(*Identity)(nil),         // 0: fabric_token_sdk.token.fabtoken.v1.Identity
+	(*PublicParameters)(nil), // 1: fabric_token_sdk.token.fabtoken.v1.PublicParameters
+	nil,                      // 2: fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntry
 }
 var file_ftpp_proto_depIdxs = []int32{
-	0, // 0: fabtoken.PublicParameters.auditor:type_name -> fabtoken.Identity
-	0, // 1: fabtoken.PublicParameters.issuers:type_name -> fabtoken.Identity
-	2, // 2: fabtoken.PublicParameters.extra_data:type_name -> fabtoken.PublicParameters.ExtraDataEntry
+	0, // 0: fabric_token_sdk.token.fabtoken.v1.PublicParameters.auditor:type_name -> fabric_token_sdk.token.fabtoken.v1.Identity
+	0, // 1: fabric_token_sdk.token.fabtoken.v1.PublicParameters.issuers:type_name -> fabric_token_sdk.token.fabtoken.v1.Identity
+	2, // 2: fabric_token_sdk.token.fabtoken.v1.PublicParameters.extra_data:type_name -> fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntry
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name

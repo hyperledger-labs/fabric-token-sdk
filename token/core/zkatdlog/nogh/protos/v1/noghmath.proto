@@ -6,9 +6,9 @@
 
 syntax = "proto3";
 
-package nogh;
+package fabric_token_sdk.token.zkatdlog.v1;
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/math";
 
 message G1 {
   bytes raw = 1;

@@ -6,11 +6,11 @@
 
 syntax = "proto3";
 
-package nogh;
+package fabric_token_sdk.token.zkatdlog.v1;
 
 import "noghmath.proto";
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/pp";
 
 message Identity {
   bytes raw = 1;

@@ -162,13 +162,13 @@ var File_noghmath_proto protoreflect.FileDescriptor
 
 const file_noghmath_proto_rawDesc = "" +
 	"\n" +
-	"\x0enoghmath.proto\x12\x04nogh\"\x16\n" +
+	"\x0enoghmath.proto\x12\"fabric_token_sdk.token.zkatdlog.v1\"\x16\n" +
 	"\x02G1\x12\x10\n" +
 	"\x03raw\x18\x01 \x01(\fR\x03raw\"\x16\n" +
 	"\x02Zr\x12\x10\n" +
 	"\x03raw\x18\x01 \x01(\fR\x03raw\"\x19\n" +
 	"\aCurveID\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x04R\x02idBVZTgithub.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/mathb\x06proto3"
+	"\x02id\x18\x01 \x01(\x04R\x02idBYZWgithub.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/mathb\x06proto3"
 
 var (
 	file_noghmath_proto_rawDescOnce sync.Once
@@ -184,9 +184,9 @@ func file_noghmath_proto_rawDescGZIP() []byte {
 
 var file_noghmath_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_noghmath_proto_goTypes = []any{
-	(*G1)(nil),      // 0: nogh.G1
-	(*Zr)(nil),      // 1: nogh.Zr
-	(*CurveID)(nil), // 2: nogh.CurveID
+	(*G1)(nil),      // 0: fabric_token_sdk.token.zkatdlog.v1.G1
+	(*Zr)(nil),      // 1: fabric_token_sdk.token.zkatdlog.v1.Zr
+	(*CurveID)(nil), // 2: fabric_token_sdk.token.zkatdlog.v1.CurveID
 }
 var file_noghmath_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

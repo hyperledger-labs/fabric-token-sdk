@@ -1,0 +1,7 @@
+version: v2
+name: buf.build/hyperledger-labs/fabric-token-sdk-zkatdlog
+lint:
+  use:
+    - STANDARD
+  except:
+    - PACKAGE_DIRECTORY_MATCH

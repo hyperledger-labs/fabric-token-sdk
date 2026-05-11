@@ -667,8 +667,8 @@ func (x *TokenRequestMetadata) GetApplication() map[string][]byte {
 // Represents a single action with its type and raw payload
 type Action struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          ActionType             `protobuf:"varint,1,opt,name=type,proto3,enum=protos.ActionType" json:"type,omitempty"` // Type of action (see ActionType)
-	Raw           []byte                 `protobuf:"bytes,2,opt,name=raw,proto3" json:"raw,omitempty"`                           // Raw bytes representing the action details
+	Type          ActionType             `protobuf:"varint,1,opt,name=type,proto3,enum=fabric_token_sdk.token.driver.v1.ActionType" json:"type,omitempty"` // Type of action (see ActionType)
+	Raw           []byte                 `protobuf:"bytes,2,opt,name=raw,proto3" json:"raw,omitempty"`                                                     // Raw bytes representing the action details
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1001,76 +1001,76 @@ var File_request_proto protoreflect.FileDescriptor
 
 const file_request_proto_rawDesc = "" +
 	"\n" +
-	"\rrequest.proto\x12\x06protos\"\x1c\n" +
+	"\rrequest.proto\x12 fabric_token_sdk.token.driver.v1\"\x1c\n" +
 	"\bIdentity\x12\x10\n" +
-	"\x03raw\x18\x01 \x01(\fR\x03raw\"`\n" +
-	"\x11AuditableIdentity\x12,\n" +
-	"\bidentity\x18\x01 \x01(\v2\x10.protos.IdentityR\bidentity\x12\x1d\n" +
+	"\x03raw\x18\x01 \x01(\fR\x03raw\"z\n" +
+	"\x11AuditableIdentity\x12F\n" +
+	"\bidentity\x18\x01 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\bidentity\x12\x1d\n" +
 	"\n" +
 	"audit_info\x18\x02 \x01(\fR\tauditInfo\"4\n" +
 	"\aTokenID\x12\x13\n" +
 	"\x05tx_id\x18\x01 \x01(\tR\x04txId\x12\x14\n" +
-	"\x05index\x18\x02 \x01(\x04R\x05index\"x\n" +
-	"\x15TransferInputMetadata\x12*\n" +
-	"\btoken_id\x18\x01 \x01(\v2\x0f.protos.TokenIDR\atokenId\x123\n" +
-	"\asenders\x18\x02 \x03(\v2\x19.protos.AuditableIdentityR\asenders\"\x84\x01\n" +
+	"\x05index\x18\x02 \x01(\x04R\x05index\"\xac\x01\n" +
+	"\x15TransferInputMetadata\x12D\n" +
+	"\btoken_id\x18\x01 \x01(\v2).fabric_token_sdk.token.driver.v1.TokenIDR\atokenId\x12M\n" +
+	"\asenders\x18\x02 \x03(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\asenders\"\x9e\x01\n" +
 	"\x0eOutputMetadata\x12\x1a\n" +
 	"\bmetadata\x18\x01 \x01(\fR\bmetadata\x12\x1d\n" +
 	"\n" +
-	"audit_info\x18\x02 \x01(\fR\tauditInfo\x127\n" +
-	"\treceivers\x18\x03 \x03(\v2\x19.protos.AuditableIdentityR\treceivers\"\xdc\x01\n" +
-	"\x10TransferMetadata\x125\n" +
-	"\x06inputs\x18\x01 \x03(\v2\x1d.protos.TransferInputMetadataR\x06inputs\x120\n" +
-	"\aoutputs\x18\x02 \x03(\v2\x16.protos.OutputMetadataR\aoutputs\x125\n" +
-	"\rextra_signers\x18\b \x03(\v2\x10.protos.IdentityR\fextraSigners\x12(\n" +
-	"\x06issuer\x18\x03 \x01(\v2\x10.protos.IdentityR\x06issuer\"@\n" +
-	"\x12IssueInputMetadata\x12*\n" +
-	"\btoken_id\x18\x02 \x01(\v2\x0f.protos.TokenIDR\atokenId\"\xdf\x01\n" +
-	"\rIssueMetadata\x121\n" +
-	"\x06issuer\x18\x01 \x01(\v2\x19.protos.AuditableIdentityR\x06issuer\x122\n" +
-	"\x06inputs\x18\x02 \x03(\v2\x1a.protos.IssueInputMetadataR\x06inputs\x120\n" +
-	"\aoutputs\x18\x03 \x03(\v2\x16.protos.OutputMetadataR\aoutputs\x125\n" +
-	"\rextra_signers\x18\x04 \x03(\v2\x10.protos.IdentityR\fextraSigners\"\xa5\x01\n" +
-	"\x0eActionMetadata\x12>\n" +
-	"\x0eissue_metadata\x18\x01 \x01(\v2\x15.protos.IssueMetadataH\x00R\rissueMetadata\x12G\n" +
-	"\x11transfer_metadata\x18\x02 \x01(\v2\x18.protos.TransferMetadataH\x00R\x10transferMetadataB\n" +
+	"audit_info\x18\x02 \x01(\fR\tauditInfo\x12Q\n" +
+	"\treceivers\x18\x03 \x03(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\treceivers\"\xc4\x02\n" +
+	"\x10TransferMetadata\x12O\n" +
+	"\x06inputs\x18\x01 \x03(\v27.fabric_token_sdk.token.driver.v1.TransferInputMetadataR\x06inputs\x12J\n" +
+	"\aoutputs\x18\x02 \x03(\v20.fabric_token_sdk.token.driver.v1.OutputMetadataR\aoutputs\x12O\n" +
+	"\rextra_signers\x18\b \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\fextraSigners\x12B\n" +
+	"\x06issuer\x18\x03 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\x06issuer\"Z\n" +
+	"\x12IssueInputMetadata\x12D\n" +
+	"\btoken_id\x18\x02 \x01(\v2).fabric_token_sdk.token.driver.v1.TokenIDR\atokenId\"\xc7\x02\n" +
+	"\rIssueMetadata\x12K\n" +
+	"\x06issuer\x18\x01 \x01(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\x06issuer\x12L\n" +
+	"\x06inputs\x18\x02 \x03(\v24.fabric_token_sdk.token.driver.v1.IssueInputMetadataR\x06inputs\x12J\n" +
+	"\aoutputs\x18\x03 \x03(\v20.fabric_token_sdk.token.driver.v1.OutputMetadataR\aoutputs\x12O\n" +
+	"\rextra_signers\x18\x04 \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\fextraSigners\"\xd9\x01\n" +
+	"\x0eActionMetadata\x12X\n" +
+	"\x0eissue_metadata\x18\x01 \x01(\v2/.fabric_token_sdk.token.driver.v1.IssueMetadataH\x00R\rissueMetadata\x12a\n" +
+	"\x11transfer_metadata\x18\x02 \x01(\v22.fabric_token_sdk.token.driver.v1.TransferMetadataH\x00R\x10transferMetadataB\n" +
 	"\n" +
-	"\bMetadata\"\xf5\x01\n" +
+	"\bMetadata\"\xa9\x02\n" +
 	"\x14TokenRequestMetadata\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\rR\aversion\x122\n" +
-	"\bmetadata\x18\x02 \x03(\v2\x16.protos.ActionMetadataR\bmetadata\x12O\n" +
-	"\vapplication\x18\x03 \x03(\v2-.protos.TokenRequestMetadata.ApplicationEntryR\vapplication\x1a>\n" +
+	"\aversion\x18\x01 \x01(\rR\aversion\x12L\n" +
+	"\bmetadata\x18\x02 \x03(\v20.fabric_token_sdk.token.driver.v1.ActionMetadataR\bmetadata\x12i\n" +
+	"\vapplication\x18\x03 \x03(\v2G.fabric_token_sdk.token.driver.v1.TokenRequestMetadata.ApplicationEntryR\vapplication\x1a>\n" +
 	"\x10ApplicationEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"B\n" +
-	"\x06Action\x12&\n" +
-	"\x04type\x18\x01 \x01(\x0e2\x12.protos.ActionTypeR\x04type\x12\x10\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"\\\n" +
+	"\x06Action\x12@\n" +
+	"\x04type\x18\x01 \x01(\x0e2,.fabric_token_sdk.token.driver.v1.ActionTypeR\x04type\x12\x10\n" +
 	"\x03raw\x18\x02 \x01(\fR\x03raw\"\x1d\n" +
 	"\tSignature\x12\x10\n" +
-	"\x03raw\x18\x01 \x01(\fR\x03raw\"q\n" +
-	"\x10AuditorSignature\x12,\n" +
-	"\bidentity\x18\x01 \x01(\v2\x10.protos.IdentityR\bidentity\x12/\n" +
-	"\tsignature\x18\x02 \x01(\v2\x11.protos.SignatureR\tsignature\"D\n" +
-	"\bAuditing\x128\n" +
+	"\x03raw\x18\x01 \x01(\fR\x03raw\"\xa5\x01\n" +
+	"\x10AuditorSignature\x12F\n" +
+	"\bidentity\x18\x01 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\bidentity\x12I\n" +
+	"\tsignature\x18\x02 \x01(\v2+.fabric_token_sdk.token.driver.v1.SignatureR\tsignature\"^\n" +
+	"\bAuditing\x12R\n" +
 	"\n" +
-	"signatures\x18\x01 \x03(\v2\x18.protos.AuditorSignatureR\n" +
-	"signatures\"\xb3\x01\n" +
+	"signatures\x18\x01 \x03(\v22.fabric_token_sdk.token.driver.v1.AuditorSignatureR\n" +
+	"signatures\"\x81\x02\n" +
 	"\fTokenRequest\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\rR\aversion\x12(\n" +
-	"\aactions\x18\x02 \x03(\v2\x0e.protos.ActionR\aactions\x121\n" +
+	"\aversion\x18\x01 \x01(\rR\aversion\x12B\n" +
+	"\aactions\x18\x02 \x03(\v2(.fabric_token_sdk.token.driver.v1.ActionR\aactions\x12K\n" +
 	"\n" +
-	"signatures\x18\x03 \x03(\v2\x11.protos.SignatureR\n" +
-	"signatures\x12,\n" +
-	"\bauditing\x18\x04 \x01(\v2\x10.protos.AuditingR\bauditing\"\xb6\x01\n" +
+	"signatures\x18\x03 \x03(\v2+.fabric_token_sdk.token.driver.v1.SignatureR\n" +
+	"signatures\x12F\n" +
+	"\bauditing\x18\x04 \x01(\v2*.fabric_token_sdk.token.driver.v1.AuditingR\bauditing\"\xea\x01\n" +
 	"\x18TokenRequestWithMetadata\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12\x16\n" +
-	"\x06anchor\x18\x02 \x01(\tR\x06anchor\x12.\n" +
-	"\arequest\x18\x03 \x01(\v2\x14.protos.TokenRequestR\arequest\x128\n" +
-	"\bmetadata\x18\x04 \x01(\v2\x1c.protos.TokenRequestMetadataR\bmetadata*%\n" +
+	"\x06anchor\x18\x02 \x01(\tR\x06anchor\x12H\n" +
+	"\arequest\x18\x03 \x01(\v2..fabric_token_sdk.token.driver.v1.TokenRequestR\arequest\x12R\n" +
+	"\bmetadata\x18\x04 \x01(\v26.fabric_token_sdk.token.driver.v1.TokenRequestMetadataR\bmetadata*%\n" +
 	"\n" +
 	"ActionType\x12\t\n" +
 	"\x05ISSUE\x10\x00\x12\f\n" +
-	"\bTRANSFER\x10\x01BMZKgithub.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/requestb\x06proto3"
+	"\bTRANSFER\x10\x01BPZNgithub.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/requestb\x06proto3"
 
 var (
 	file_request_proto_rawDescOnce sync.Once
@@ -1087,52 +1087,52 @@ func file_request_proto_rawDescGZIP() []byte {
 var file_request_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_request_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_request_proto_goTypes = []any{
-	(ActionType)(0),                  // 0: protos.ActionType
-	(*Identity)(nil),                 // 1: protos.Identity
-	(*AuditableIdentity)(nil),        // 2: protos.AuditableIdentity
-	(*TokenID)(nil),                  // 3: protos.TokenID
-	(*TransferInputMetadata)(nil),    // 4: protos.TransferInputMetadata
-	(*OutputMetadata)(nil),           // 5: protos.OutputMetadata
-	(*TransferMetadata)(nil),         // 6: protos.TransferMetadata
-	(*IssueInputMetadata)(nil),       // 7: protos.IssueInputMetadata
-	(*IssueMetadata)(nil),            // 8: protos.IssueMetadata
-	(*ActionMetadata)(nil),           // 9: protos.ActionMetadata
-	(*TokenRequestMetadata)(nil),     // 10: protos.TokenRequestMetadata
-	(*Action)(nil),                   // 11: protos.Action
-	(*Signature)(nil),                // 12: protos.Signature
-	(*AuditorSignature)(nil),         // 13: protos.AuditorSignature
-	(*Auditing)(nil),                 // 14: protos.Auditing
-	(*TokenRequest)(nil),             // 15: protos.TokenRequest
-	(*TokenRequestWithMetadata)(nil), // 16: protos.TokenRequestWithMetadata
-	nil,                              // 17: protos.TokenRequestMetadata.ApplicationEntry
+	(ActionType)(0),                  // 0: fabric_token_sdk.token.driver.v1.ActionType
+	(*Identity)(nil),                 // 1: fabric_token_sdk.token.driver.v1.Identity
+	(*AuditableIdentity)(nil),        // 2: fabric_token_sdk.token.driver.v1.AuditableIdentity
+	(*TokenID)(nil),                  // 3: fabric_token_sdk.token.driver.v1.TokenID
+	(*TransferInputMetadata)(nil),    // 4: fabric_token_sdk.token.driver.v1.TransferInputMetadata
+	(*OutputMetadata)(nil),           // 5: fabric_token_sdk.token.driver.v1.OutputMetadata
+	(*TransferMetadata)(nil),         // 6: fabric_token_sdk.token.driver.v1.TransferMetadata
+	(*IssueInputMetadata)(nil),       // 7: fabric_token_sdk.token.driver.v1.IssueInputMetadata
+	(*IssueMetadata)(nil),            // 8: fabric_token_sdk.token.driver.v1.IssueMetadata
+	(*ActionMetadata)(nil),           // 9: fabric_token_sdk.token.driver.v1.ActionMetadata
+	(*TokenRequestMetadata)(nil),     // 10: fabric_token_sdk.token.driver.v1.TokenRequestMetadata
+	(*Action)(nil),                   // 11: fabric_token_sdk.token.driver.v1.Action
+	(*Signature)(nil),                // 12: fabric_token_sdk.token.driver.v1.Signature
+	(*AuditorSignature)(nil),         // 13: fabric_token_sdk.token.driver.v1.AuditorSignature
+	(*Auditing)(nil),                 // 14: fabric_token_sdk.token.driver.v1.Auditing
+	(*TokenRequest)(nil),             // 15: fabric_token_sdk.token.driver.v1.TokenRequest
+	(*TokenRequestWithMetadata)(nil), // 16: fabric_token_sdk.token.driver.v1.TokenRequestWithMetadata
+	nil,                              // 17: fabric_token_sdk.token.driver.v1.TokenRequestMetadata.ApplicationEntry
 }
 var file_request_proto_depIdxs = []int32{
-	1,  // 0: protos.AuditableIdentity.identity:type_name -> protos.Identity
-	3,  // 1: protos.TransferInputMetadata.token_id:type_name -> protos.TokenID
-	2,  // 2: protos.TransferInputMetadata.senders:type_name -> protos.AuditableIdentity
-	2,  // 3: protos.OutputMetadata.receivers:type_name -> protos.AuditableIdentity
-	4,  // 4: protos.TransferMetadata.inputs:type_name -> protos.TransferInputMetadata
-	5,  // 5: protos.TransferMetadata.outputs:type_name -> protos.OutputMetadata
-	1,  // 6: protos.TransferMetadata.extra_signers:type_name -> protos.Identity
-	1,  // 7: protos.TransferMetadata.issuer:type_name -> protos.Identity
-	3,  // 8: protos.IssueInputMetadata.token_id:type_name -> protos.TokenID
-	2,  // 9: protos.IssueMetadata.issuer:type_name -> protos.AuditableIdentity
-	7,  // 10: protos.IssueMetadata.inputs:type_name -> protos.IssueInputMetadata
-	5,  // 11: protos.IssueMetadata.outputs:type_name -> protos.OutputMetadata
-	1,  // 12: protos.IssueMetadata.extra_signers:type_name -> protos.Identity
-	8,  // 13: protos.ActionMetadata.issue_metadata:type_name -> protos.IssueMetadata
-	6,  // 14: protos.ActionMetadata.transfer_metadata:type_name -> protos.TransferMetadata
-	9,  // 15: protos.TokenRequestMetadata.metadata:type_name -> protos.ActionMetadata
-	17, // 16: protos.TokenRequestMetadata.application:type_name -> protos.TokenRequestMetadata.ApplicationEntry
-	0,  // 17: protos.Action.type:type_name -> protos.ActionType
-	1,  // 18: protos.AuditorSignature.identity:type_name -> protos.Identity
-	12, // 19: protos.AuditorSignature.signature:type_name -> protos.Signature
-	13, // 20: protos.Auditing.signatures:type_name -> protos.AuditorSignature
-	11, // 21: protos.TokenRequest.actions:type_name -> protos.Action
-	12, // 22: protos.TokenRequest.signatures:type_name -> protos.Signature
-	14, // 23: protos.TokenRequest.auditing:type_name -> protos.Auditing
-	15, // 24: protos.TokenRequestWithMetadata.request:type_name -> protos.TokenRequest
-	10, // 25: protos.TokenRequestWithMetadata.metadata:type_name -> protos.TokenRequestMetadata
+	1,  // 0: fabric_token_sdk.token.driver.v1.AuditableIdentity.identity:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	3,  // 1: fabric_token_sdk.token.driver.v1.TransferInputMetadata.token_id:type_name -> fabric_token_sdk.token.driver.v1.TokenID
+	2,  // 2: fabric_token_sdk.token.driver.v1.TransferInputMetadata.senders:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
+	2,  // 3: fabric_token_sdk.token.driver.v1.OutputMetadata.receivers:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
+	4,  // 4: fabric_token_sdk.token.driver.v1.TransferMetadata.inputs:type_name -> fabric_token_sdk.token.driver.v1.TransferInputMetadata
+	5,  // 5: fabric_token_sdk.token.driver.v1.TransferMetadata.outputs:type_name -> fabric_token_sdk.token.driver.v1.OutputMetadata
+	1,  // 6: fabric_token_sdk.token.driver.v1.TransferMetadata.extra_signers:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	1,  // 7: fabric_token_sdk.token.driver.v1.TransferMetadata.issuer:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	3,  // 8: fabric_token_sdk.token.driver.v1.IssueInputMetadata.token_id:type_name -> fabric_token_sdk.token.driver.v1.TokenID
+	2,  // 9: fabric_token_sdk.token.driver.v1.IssueMetadata.issuer:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
+	7,  // 10: fabric_token_sdk.token.driver.v1.IssueMetadata.inputs:type_name -> fabric_token_sdk.token.driver.v1.IssueInputMetadata
+	5,  // 11: fabric_token_sdk.token.driver.v1.IssueMetadata.outputs:type_name -> fabric_token_sdk.token.driver.v1.OutputMetadata
+	1,  // 12: fabric_token_sdk.token.driver.v1.IssueMetadata.extra_signers:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	8,  // 13: fabric_token_sdk.token.driver.v1.ActionMetadata.issue_metadata:type_name -> fabric_token_sdk.token.driver.v1.IssueMetadata
+	6,  // 14: fabric_token_sdk.token.driver.v1.ActionMetadata.transfer_metadata:type_name -> fabric_token_sdk.token.driver.v1.TransferMetadata
+	9,  // 15: fabric_token_sdk.token.driver.v1.TokenRequestMetadata.metadata:type_name -> fabric_token_sdk.token.driver.v1.ActionMetadata
+	17, // 16: fabric_token_sdk.token.driver.v1.TokenRequestMetadata.application:type_name -> fabric_token_sdk.token.driver.v1.TokenRequestMetadata.ApplicationEntry
+	0,  // 17: fabric_token_sdk.token.driver.v1.Action.type:type_name -> fabric_token_sdk.token.driver.v1.ActionType
+	1,  // 18: fabric_token_sdk.token.driver.v1.AuditorSignature.identity:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	12, // 19: fabric_token_sdk.token.driver.v1.AuditorSignature.signature:type_name -> fabric_token_sdk.token.driver.v1.Signature
+	13, // 20: fabric_token_sdk.token.driver.v1.Auditing.signatures:type_name -> fabric_token_sdk.token.driver.v1.AuditorSignature
+	11, // 21: fabric_token_sdk.token.driver.v1.TokenRequest.actions:type_name -> fabric_token_sdk.token.driver.v1.Action
+	12, // 22: fabric_token_sdk.token.driver.v1.TokenRequest.signatures:type_name -> fabric_token_sdk.token.driver.v1.Signature
+	14, // 23: fabric_token_sdk.token.driver.v1.TokenRequest.auditing:type_name -> fabric_token_sdk.token.driver.v1.Auditing
+	15, // 24: fabric_token_sdk.token.driver.v1.TokenRequestWithMetadata.request:type_name -> fabric_token_sdk.token.driver.v1.TokenRequest
+	10, // 25: fabric_token_sdk.token.driver.v1.TokenRequestWithMetadata.metadata:type_name -> fabric_token_sdk.token.driver.v1.TokenRequestMetadata
 	26, // [26:26] is the sub-list for method output_type
 	26, // [26:26] is the sub-list for method input_type
 	26, // [26:26] is the sub-list for extension type_name

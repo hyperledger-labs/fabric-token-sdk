@@ -12,9 +12,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
 	encoding "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
-	fabpp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/pp"
+	fabpp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 )
 

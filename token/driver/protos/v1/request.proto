@@ -6,9 +6,9 @@
 
 syntax = "proto3";
 
-package protos;
+package fabric_token_sdk.token.driver.v1;
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/request";
+option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request";
 
 // Enum representing different types of token actions
 enum ActionType {

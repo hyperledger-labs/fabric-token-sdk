@@ -12,7 +12,7 @@
 package pp
 
 import (
-	math "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
+	math "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/math"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -412,45 +412,45 @@ var File_noghpp_proto protoreflect.FileDescriptor
 
 const file_noghpp_proto_rawDesc = "" +
 	"\n" +
-	"\fnoghpp.proto\x12\x04nogh\x1a\x0enoghmath.proto\"\x1c\n" +
+	"\fnoghpp.proto\x12\"fabric_token_sdk.token.zkatdlog.v1\x1a\x0enoghmath.proto\"\x1c\n" +
 	"\bIdentity\x12\x10\n" +
-	"\x03raw\x18\x01 \x01(\fR\x03raw\"b\n" +
+	"\x03raw\x18\x01 \x01(\fR\x03raw\"\x80\x01\n" +
 	"\x15IdemixIssuerPublicKey\x12\x1d\n" +
 	"\n" +
-	"public_key\x18\x01 \x01(\fR\tpublicKey\x12*\n" +
-	"\tcurver_id\x18\x02 \x01(\v2\r.nogh.CurveIDR\bcurverId\"\xf3\x01\n" +
-	"\x10RangeProofParams\x121\n" +
-	"\x0fleft_generators\x18\x01 \x03(\v2\b.nogh.G1R\x0eleftGenerators\x123\n" +
-	"\x10right_generators\x18\x02 \x03(\v2\b.nogh.G1R\x0frightGenerators\x12\x16\n" +
-	"\x01P\x18\x03 \x01(\v2\b.nogh.G1R\x01P\x12\x16\n" +
-	"\x01Q\x18\x04 \x01(\v2\b.nogh.G1R\x01Q\x12\x1d\n" +
+	"public_key\x18\x01 \x01(\fR\tpublicKey\x12H\n" +
+	"\tcurver_id\x18\x02 \x01(\v2+.fabric_token_sdk.token.zkatdlog.v1.CurveIDR\bcurverId\"\xeb\x02\n" +
+	"\x10RangeProofParams\x12O\n" +
+	"\x0fleft_generators\x18\x01 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x0eleftGenerators\x12Q\n" +
+	"\x10right_generators\x18\x02 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x0frightGenerators\x124\n" +
+	"\x01P\x18\x03 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x01P\x124\n" +
+	"\x01Q\x18\x04 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x01Q\x12\x1d\n" +
 	"\n" +
 	"bit_length\x18\x05 \x01(\x04R\tbitLength\x12(\n" +
-	"\x10number_of_rounds\x18\x06 \x01(\x04R\x0enumberOfRounds\"\xc6\x01\n" +
-	"\x13CSPRangeProofParams\x121\n" +
-	"\x0fleft_generators\x18\x01 \x03(\v2\b.nogh.G1R\x0eleftGenerators\x123\n" +
-	"\x10right_generators\x18\x02 \x03(\v2\b.nogh.G1R\x0frightGenerators\x12\x1d\n" +
+	"\x10number_of_rounds\x18\x06 \x01(\x04R\x0enumberOfRounds\"\x82\x02\n" +
+	"\x13CSPRangeProofParams\x12O\n" +
+	"\x0fleft_generators\x18\x01 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x0eleftGenerators\x12Q\n" +
+	"\x10right_generators\x18\x02 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x0frightGenerators\x12\x1d\n" +
 	"\n" +
 	"bit_length\x18\x05 \x01(\x04R\tbitLength\x12(\n" +
-	"\x10number_of_rounds\x18\x06 \x01(\x04R\x0enumberOfRounds\"\xe9\x05\n" +
+	"\x10number_of_rounds\x18\x06 \x01(\x04R\x0enumberOfRounds\"\xd9\a\n" +
 	"\x10PublicParameters\x12*\n" +
 	"\x11token_driver_name\x18\x01 \x01(\tR\x0ftokenDriverName\x120\n" +
-	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12(\n" +
-	"\bcurve_id\x18\x03 \x01(\v2\r.nogh.CurveIDR\acurveId\x129\n" +
-	"\x13pedersen_generators\x18\x04 \x03(\v2\b.nogh.G1R\x12pedersenGenerators\x12D\n" +
-	"\x12range_proof_params\x18\x05 \x01(\v2\x16.nogh.RangeProofParamsR\x10rangeProofParams\x12V\n" +
-	"\x19idemix_issuer_public_keys\x18\x06 \x03(\v2\x1b.nogh.IdemixIssuerPublicKeyR\x16idemixIssuerPublicKeys\x12*\n" +
-	"\bauditors\x18\a \x03(\v2\x0e.nogh.IdentityR\bauditors\x12(\n" +
-	"\aissuers\x18\b \x03(\v2\x0e.nogh.IdentityR\aissuers\x12\x1b\n" +
+	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12F\n" +
+	"\bcurve_id\x18\x03 \x01(\v2+.fabric_token_sdk.token.zkatdlog.v1.CurveIDR\acurveId\x12W\n" +
+	"\x13pedersen_generators\x18\x04 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x12pedersenGenerators\x12b\n" +
+	"\x12range_proof_params\x18\x05 \x01(\v24.fabric_token_sdk.token.zkatdlog.v1.RangeProofParamsR\x10rangeProofParams\x12t\n" +
+	"\x19idemix_issuer_public_keys\x18\x06 \x03(\v29.fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKeyR\x16idemixIssuerPublicKeys\x12H\n" +
+	"\bauditors\x18\a \x03(\v2,.fabric_token_sdk.token.zkatdlog.v1.IdentityR\bauditors\x12F\n" +
+	"\aissuers\x18\b \x03(\v2,.fabric_token_sdk.token.zkatdlog.v1.IdentityR\aissuers\x12\x1b\n" +
 	"\tmax_token\x18\t \x01(\x04R\bmaxToken\x12-\n" +
 	"\x12quantity_precision\x18\n" +
-	" \x01(\x04R\x11quantityPrecision\x12D\n" +
+	" \x01(\x04R\x11quantityPrecision\x12b\n" +
 	"\n" +
-	"extra_data\x18\v \x03(\v2%.nogh.PublicParameters.ExtraDataEntryR\textraData\x12N\n" +
-	"\x16csp_range_proof_params\x18\f \x01(\v2\x19.nogh.CSPRangeProofParamsR\x13cspRangeProofParams\x1a<\n" +
+	"extra_data\x18\v \x03(\v2C.fabric_token_sdk.token.zkatdlog.v1.PublicParameters.ExtraDataEntryR\textraData\x12l\n" +
+	"\x16csp_range_proof_params\x18\f \x01(\v27.fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParamsR\x13cspRangeProofParams\x1a<\n" +
 	"\x0eExtraDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BTZRgithub.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/ppb\x06proto3"
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BWZUgithub.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/ppb\x06proto3"
 
 var (
 	file_noghpp_proto_rawDescOnce sync.Once
@@ -466,31 +466,31 @@ func file_noghpp_proto_rawDescGZIP() []byte {
 
 var file_noghpp_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_noghpp_proto_goTypes = []any{
-	(*Identity)(nil),              // 0: nogh.Identity
-	(*IdemixIssuerPublicKey)(nil), // 1: nogh.IdemixIssuerPublicKey
-	(*RangeProofParams)(nil),      // 2: nogh.RangeProofParams
-	(*CSPRangeProofParams)(nil),   // 3: nogh.CSPRangeProofParams
-	(*PublicParameters)(nil),      // 4: nogh.PublicParameters
-	nil,                           // 5: nogh.PublicParameters.ExtraDataEntry
-	(*math.CurveID)(nil),          // 6: nogh.CurveID
-	(*math.G1)(nil),               // 7: nogh.G1
+	(*Identity)(nil),              // 0: fabric_token_sdk.token.zkatdlog.v1.Identity
+	(*IdemixIssuerPublicKey)(nil), // 1: fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey
+	(*RangeProofParams)(nil),      // 2: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams
+	(*CSPRangeProofParams)(nil),   // 3: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams
+	(*PublicParameters)(nil),      // 4: fabric_token_sdk.token.zkatdlog.v1.PublicParameters
+	nil,                           // 5: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.ExtraDataEntry
+	(*math.CurveID)(nil),          // 6: fabric_token_sdk.token.zkatdlog.v1.CurveID
+	(*math.G1)(nil),               // 7: fabric_token_sdk.token.zkatdlog.v1.G1
 }
 var file_noghpp_proto_depIdxs = []int32{
-	6,  // 0: nogh.IdemixIssuerPublicKey.curver_id:type_name -> nogh.CurveID
-	7,  // 1: nogh.RangeProofParams.left_generators:type_name -> nogh.G1
-	7,  // 2: nogh.RangeProofParams.right_generators:type_name -> nogh.G1
-	7,  // 3: nogh.RangeProofParams.P:type_name -> nogh.G1
-	7,  // 4: nogh.RangeProofParams.Q:type_name -> nogh.G1
-	7,  // 5: nogh.CSPRangeProofParams.left_generators:type_name -> nogh.G1
-	7,  // 6: nogh.CSPRangeProofParams.right_generators:type_name -> nogh.G1
-	6,  // 7: nogh.PublicParameters.curve_id:type_name -> nogh.CurveID
-	7,  // 8: nogh.PublicParameters.pedersen_generators:type_name -> nogh.G1
-	2,  // 9: nogh.PublicParameters.range_proof_params:type_name -> nogh.RangeProofParams
-	1,  // 10: nogh.PublicParameters.idemix_issuer_public_keys:type_name -> nogh.IdemixIssuerPublicKey
-	0,  // 11: nogh.PublicParameters.auditors:type_name -> nogh.Identity
-	0,  // 12: nogh.PublicParameters.issuers:type_name -> nogh.Identity
-	5,  // 13: nogh.PublicParameters.extra_data:type_name -> nogh.PublicParameters.ExtraDataEntry
-	3,  // 14: nogh.PublicParameters.csp_range_proof_params:type_name -> nogh.CSPRangeProofParams
+	6,  // 0: fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey.curver_id:type_name -> fabric_token_sdk.token.zkatdlog.v1.CurveID
+	7,  // 1: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.left_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	7,  // 2: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.right_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	7,  // 3: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.P:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	7,  // 4: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.Q:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	7,  // 5: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams.left_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	7,  // 6: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams.right_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	6,  // 7: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.curve_id:type_name -> fabric_token_sdk.token.zkatdlog.v1.CurveID
+	7,  // 8: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.pedersen_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	2,  // 9: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.range_proof_params:type_name -> fabric_token_sdk.token.zkatdlog.v1.RangeProofParams
+	1,  // 10: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.idemix_issuer_public_keys:type_name -> fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey
+	0,  // 11: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.auditors:type_name -> fabric_token_sdk.token.zkatdlog.v1.Identity
+	0,  // 12: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.issuers:type_name -> fabric_token_sdk.token.zkatdlog.v1.Identity
+	5,  // 13: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.extra_data:type_name -> fabric_token_sdk.token.zkatdlog.v1.PublicParameters.ExtraDataEntry
+	3,  // 14: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.csp_range_proof_params:type_name -> fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams
 	15, // [15:15] is the sub-list for method output_type
 	15, // [15:15] is the sub-list for method input_type
 	15, // [15:15] is the sub-list for extension type_name

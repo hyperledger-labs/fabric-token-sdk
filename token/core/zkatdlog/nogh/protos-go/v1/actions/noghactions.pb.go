@@ -12,9 +12,9 @@
 package actions
 
 import (
-	actions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
-	math "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/math"
-	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
+	actions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/actions"
+	math "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/math"
+	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/pp"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -707,57 +707,57 @@ var File_noghactions_proto protoreflect.FileDescriptor
 
 const file_noghactions_proto_rawDesc = "" +
 	"\n" +
-	"\x11noghactions.proto\x12\x04nogh\x1a\x0fftactions.proto\x1a\x0enoghmath.proto\x1a\fnoghpp.proto\";\n" +
+	"\x11noghactions.proto\x12\"fabric_token_sdk.token.zkatdlog.v1\x1a\x0fftactions.proto\x1a\x0enoghmath.proto\x1a\fnoghpp.proto\"Y\n" +
 	"\x05Token\x12\x14\n" +
-	"\x05owner\x18\x01 \x01(\fR\x05owner\x12\x1c\n" +
-	"\x04data\x18\x02 \x01(\v2\b.nogh.G1R\x04data\"\x9e\x01\n" +
+	"\x05owner\x18\x01 \x01(\fR\x05owner\x12:\n" +
+	"\x04data\x18\x02 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x04data\"\xf8\x01\n" +
 	"\rTokenMetadata\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1e\n" +
-	"\x05value\x18\x02 \x01(\v2\b.nogh.ZrR\x05value\x121\n" +
-	"\x0fblinding_factor\x18\x03 \x01(\v2\b.nogh.ZrR\x0eblindingFactor\x12&\n" +
-	"\x06issuer\x18\x04 \x01(\v2\x0e.nogh.IdentityR\x06issuer\"/\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12<\n" +
+	"\x05value\x18\x02 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.ZrR\x05value\x12O\n" +
+	"\x0fblinding_factor\x18\x03 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.ZrR\x0eblindingFactor\x12D\n" +
+	"\x06issuer\x18\x04 \x01(\v2,.fabric_token_sdk.token.zkatdlog.v1.IdentityR\x06issuer\"/\n" +
 	"\aTokenID\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05index\x18\x02 \x01(\x04R\x05index\"\xb4\x01\n" +
-	"\x13TransferActionInput\x12(\n" +
-	"\btoken_id\x18\x01 \x01(\v2\r.nogh.TokenIDR\atokenId\x12!\n" +
-	"\x05input\x18\x02 \x01(\v2\v.nogh.TokenR\x05input\x12P\n" +
-	"\x0fupgrade_witness\x18\x03 \x01(\v2'.nogh.TransferActionInputUpgradeWitnessR\x0eupgradeWitness\"\x7f\n" +
-	"!TransferActionInputUpgradeWitness\x12'\n" +
-	"\x06output\x18\x01 \x01(\v2\x0f.fabtoken.TokenR\x06output\x121\n" +
-	"\x0fblinding_factor\x18\x02 \x01(\v2\b.nogh.ZrR\x0eblindingFactor\"9\n" +
-	"\x14TransferActionOutput\x12!\n" +
-	"\x05token\x18\x01 \x01(\v2\v.nogh.TokenR\x05token\"W\n" +
+	"\x05index\x18\x02 \x01(\x04R\x05index\"\x8e\x02\n" +
+	"\x13TransferActionInput\x12F\n" +
+	"\btoken_id\x18\x01 \x01(\v2+.fabric_token_sdk.token.zkatdlog.v1.TokenIDR\atokenId\x12?\n" +
+	"\x05input\x18\x02 \x01(\v2).fabric_token_sdk.token.zkatdlog.v1.TokenR\x05input\x12n\n" +
+	"\x0fupgrade_witness\x18\x03 \x01(\v2E.fabric_token_sdk.token.zkatdlog.v1.TransferActionInputUpgradeWitnessR\x0eupgradeWitness\"\xb7\x01\n" +
+	"!TransferActionInputUpgradeWitness\x12A\n" +
+	"\x06output\x18\x01 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x06output\x12O\n" +
+	"\x0fblinding_factor\x18\x02 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.ZrR\x0eblindingFactor\"W\n" +
+	"\x14TransferActionOutput\x12?\n" +
+	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.zkatdlog.v1.TokenR\x05token\"W\n" +
 	"\x05Proof\x12\x16\n" +
 	"\x05proof\x18\x01 \x01(\fH\x00R\x05proof\x12(\n" +
 	"\x0fcsp_based_proof\x18\x02 \x01(\fH\x00R\rcspBasedProofB\f\n" +
 	"\n" +
-	"proof_type\"\xdb\x02\n" +
+	"proof_type\"\xf1\x03\n" +
 	"\x0eTransferAction\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\x04R\aversion\x121\n" +
-	"\x06inputs\x18\x02 \x03(\v2\x19.nogh.TransferActionInputR\x06inputs\x124\n" +
-	"\aoutputs\x18\x03 \x03(\v2\x1a.nogh.TransferActionOutputR\aoutputs\x12!\n" +
-	"\x05proof\x18\x04 \x01(\v2\v.nogh.ProofR\x05proof\x12>\n" +
-	"\bmetadata\x18\x05 \x03(\v2\".nogh.TransferAction.MetadataEntryR\bmetadata\x12&\n" +
-	"\x06issuer\x18\x06 \x01(\v2\x0e.nogh.IdentityR\x06issuer\x1a;\n" +
+	"\aversion\x18\x01 \x01(\x04R\aversion\x12O\n" +
+	"\x06inputs\x18\x02 \x03(\v27.fabric_token_sdk.token.zkatdlog.v1.TransferActionInputR\x06inputs\x12R\n" +
+	"\aoutputs\x18\x03 \x03(\v28.fabric_token_sdk.token.zkatdlog.v1.TransferActionOutputR\aoutputs\x12?\n" +
+	"\x05proof\x18\x04 \x01(\v2).fabric_token_sdk.token.zkatdlog.v1.ProofR\x05proof\x12\\\n" +
+	"\bmetadata\x18\x05 \x03(\v2@.fabric_token_sdk.token.zkatdlog.v1.TransferAction.MetadataEntryR\bmetadata\x12D\n" +
+	"\x06issuer\x18\x06 \x01(\v2,.fabric_token_sdk.token.zkatdlog.v1.IdentityR\x06issuer\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"G\n" +
-	"\x10IssueActionInput\x12\x1d\n" +
-	"\x02id\x18\x01 \x01(\v2\r.nogh.TokenIDR\x02id\x12\x14\n" +
-	"\x05token\x18\x02 \x01(\fR\x05token\"6\n" +
-	"\x11IssueActionOutput\x12!\n" +
-	"\x05token\x18\x01 \x01(\v2\v.nogh.TokenR\x05token\"\xcf\x02\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"e\n" +
+	"\x10IssueActionInput\x12;\n" +
+	"\x02id\x18\x01 \x01(\v2+.fabric_token_sdk.token.zkatdlog.v1.TokenIDR\x02id\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\fR\x05token\"T\n" +
+	"\x11IssueActionOutput\x12?\n" +
+	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.zkatdlog.v1.TokenR\x05token\"\xe5\x03\n" +
 	"\vIssueAction\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\x04R\aversion\x12&\n" +
-	"\x06issuer\x18\x02 \x01(\v2\x0e.nogh.IdentityR\x06issuer\x12.\n" +
-	"\x06inputs\x18\x03 \x03(\v2\x16.nogh.IssueActionInputR\x06inputs\x121\n" +
-	"\aoutputs\x18\x04 \x03(\v2\x17.nogh.IssueActionOutputR\aoutputs\x12!\n" +
-	"\x05proof\x18\x05 \x01(\v2\v.nogh.ProofR\x05proof\x12;\n" +
-	"\bmetadata\x18\x06 \x03(\v2\x1f.nogh.IssueAction.MetadataEntryR\bmetadata\x1a;\n" +
+	"\aversion\x18\x01 \x01(\x04R\aversion\x12D\n" +
+	"\x06issuer\x18\x02 \x01(\v2,.fabric_token_sdk.token.zkatdlog.v1.IdentityR\x06issuer\x12L\n" +
+	"\x06inputs\x18\x03 \x03(\v24.fabric_token_sdk.token.zkatdlog.v1.IssueActionInputR\x06inputs\x12O\n" +
+	"\aoutputs\x18\x04 \x03(\v25.fabric_token_sdk.token.zkatdlog.v1.IssueActionOutputR\aoutputs\x12?\n" +
+	"\x05proof\x18\x05 \x01(\v2).fabric_token_sdk.token.zkatdlog.v1.ProofR\x05proof\x12Y\n" +
+	"\bmetadata\x18\x06 \x03(\v2=.fabric_token_sdk.token.zkatdlog.v1.IssueAction.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BYZWgithub.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actionsb\x06proto3"
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01B\\ZZgithub.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/actionsb\x06proto3"
 
 var (
 	file_noghactions_proto_rawDescOnce sync.Once
@@ -773,47 +773,47 @@ func file_noghactions_proto_rawDescGZIP() []byte {
 
 var file_noghactions_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_noghactions_proto_goTypes = []any{
-	(*Token)(nil),                             // 0: nogh.Token
-	(*TokenMetadata)(nil),                     // 1: nogh.TokenMetadata
-	(*TokenID)(nil),                           // 2: nogh.TokenID
-	(*TransferActionInput)(nil),               // 3: nogh.TransferActionInput
-	(*TransferActionInputUpgradeWitness)(nil), // 4: nogh.TransferActionInputUpgradeWitness
-	(*TransferActionOutput)(nil),              // 5: nogh.TransferActionOutput
-	(*Proof)(nil),                             // 6: nogh.Proof
-	(*TransferAction)(nil),                    // 7: nogh.TransferAction
-	(*IssueActionInput)(nil),                  // 8: nogh.IssueActionInput
-	(*IssueActionOutput)(nil),                 // 9: nogh.IssueActionOutput
-	(*IssueAction)(nil),                       // 10: nogh.IssueAction
-	nil,                                       // 11: nogh.TransferAction.MetadataEntry
-	nil,                                       // 12: nogh.IssueAction.MetadataEntry
-	(*math.G1)(nil),                           // 13: nogh.G1
-	(*math.Zr)(nil),                           // 14: nogh.Zr
-	(*pp.Identity)(nil),                       // 15: nogh.Identity
-	(*actions.Token)(nil),                     // 16: fabtoken.Token
+	(*Token)(nil),                             // 0: fabric_token_sdk.token.zkatdlog.v1.Token
+	(*TokenMetadata)(nil),                     // 1: fabric_token_sdk.token.zkatdlog.v1.TokenMetadata
+	(*TokenID)(nil),                           // 2: fabric_token_sdk.token.zkatdlog.v1.TokenID
+	(*TransferActionInput)(nil),               // 3: fabric_token_sdk.token.zkatdlog.v1.TransferActionInput
+	(*TransferActionInputUpgradeWitness)(nil), // 4: fabric_token_sdk.token.zkatdlog.v1.TransferActionInputUpgradeWitness
+	(*TransferActionOutput)(nil),              // 5: fabric_token_sdk.token.zkatdlog.v1.TransferActionOutput
+	(*Proof)(nil),                             // 6: fabric_token_sdk.token.zkatdlog.v1.Proof
+	(*TransferAction)(nil),                    // 7: fabric_token_sdk.token.zkatdlog.v1.TransferAction
+	(*IssueActionInput)(nil),                  // 8: fabric_token_sdk.token.zkatdlog.v1.IssueActionInput
+	(*IssueActionOutput)(nil),                 // 9: fabric_token_sdk.token.zkatdlog.v1.IssueActionOutput
+	(*IssueAction)(nil),                       // 10: fabric_token_sdk.token.zkatdlog.v1.IssueAction
+	nil,                                       // 11: fabric_token_sdk.token.zkatdlog.v1.TransferAction.MetadataEntry
+	nil,                                       // 12: fabric_token_sdk.token.zkatdlog.v1.IssueAction.MetadataEntry
+	(*math.G1)(nil),                           // 13: fabric_token_sdk.token.zkatdlog.v1.G1
+	(*math.Zr)(nil),                           // 14: fabric_token_sdk.token.zkatdlog.v1.Zr
+	(*pp.Identity)(nil),                       // 15: fabric_token_sdk.token.zkatdlog.v1.Identity
+	(*actions.Token)(nil),                     // 16: fabric_token_sdk.token.fabtoken.v1.Token
 }
 var file_noghactions_proto_depIdxs = []int32{
-	13, // 0: nogh.Token.data:type_name -> nogh.G1
-	14, // 1: nogh.TokenMetadata.value:type_name -> nogh.Zr
-	14, // 2: nogh.TokenMetadata.blinding_factor:type_name -> nogh.Zr
-	15, // 3: nogh.TokenMetadata.issuer:type_name -> nogh.Identity
-	2,  // 4: nogh.TransferActionInput.token_id:type_name -> nogh.TokenID
-	0,  // 5: nogh.TransferActionInput.input:type_name -> nogh.Token
-	4,  // 6: nogh.TransferActionInput.upgrade_witness:type_name -> nogh.TransferActionInputUpgradeWitness
-	16, // 7: nogh.TransferActionInputUpgradeWitness.output:type_name -> fabtoken.Token
-	14, // 8: nogh.TransferActionInputUpgradeWitness.blinding_factor:type_name -> nogh.Zr
-	0,  // 9: nogh.TransferActionOutput.token:type_name -> nogh.Token
-	3,  // 10: nogh.TransferAction.inputs:type_name -> nogh.TransferActionInput
-	5,  // 11: nogh.TransferAction.outputs:type_name -> nogh.TransferActionOutput
-	6,  // 12: nogh.TransferAction.proof:type_name -> nogh.Proof
-	11, // 13: nogh.TransferAction.metadata:type_name -> nogh.TransferAction.MetadataEntry
-	15, // 14: nogh.TransferAction.issuer:type_name -> nogh.Identity
-	2,  // 15: nogh.IssueActionInput.id:type_name -> nogh.TokenID
-	0,  // 16: nogh.IssueActionOutput.token:type_name -> nogh.Token
-	15, // 17: nogh.IssueAction.issuer:type_name -> nogh.Identity
-	8,  // 18: nogh.IssueAction.inputs:type_name -> nogh.IssueActionInput
-	9,  // 19: nogh.IssueAction.outputs:type_name -> nogh.IssueActionOutput
-	6,  // 20: nogh.IssueAction.proof:type_name -> nogh.Proof
-	12, // 21: nogh.IssueAction.metadata:type_name -> nogh.IssueAction.MetadataEntry
+	13, // 0: fabric_token_sdk.token.zkatdlog.v1.Token.data:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	14, // 1: fabric_token_sdk.token.zkatdlog.v1.TokenMetadata.value:type_name -> fabric_token_sdk.token.zkatdlog.v1.Zr
+	14, // 2: fabric_token_sdk.token.zkatdlog.v1.TokenMetadata.blinding_factor:type_name -> fabric_token_sdk.token.zkatdlog.v1.Zr
+	15, // 3: fabric_token_sdk.token.zkatdlog.v1.TokenMetadata.issuer:type_name -> fabric_token_sdk.token.zkatdlog.v1.Identity
+	2,  // 4: fabric_token_sdk.token.zkatdlog.v1.TransferActionInput.token_id:type_name -> fabric_token_sdk.token.zkatdlog.v1.TokenID
+	0,  // 5: fabric_token_sdk.token.zkatdlog.v1.TransferActionInput.input:type_name -> fabric_token_sdk.token.zkatdlog.v1.Token
+	4,  // 6: fabric_token_sdk.token.zkatdlog.v1.TransferActionInput.upgrade_witness:type_name -> fabric_token_sdk.token.zkatdlog.v1.TransferActionInputUpgradeWitness
+	16, // 7: fabric_token_sdk.token.zkatdlog.v1.TransferActionInputUpgradeWitness.output:type_name -> fabric_token_sdk.token.fabtoken.v1.Token
+	14, // 8: fabric_token_sdk.token.zkatdlog.v1.TransferActionInputUpgradeWitness.blinding_factor:type_name -> fabric_token_sdk.token.zkatdlog.v1.Zr
+	0,  // 9: fabric_token_sdk.token.zkatdlog.v1.TransferActionOutput.token:type_name -> fabric_token_sdk.token.zkatdlog.v1.Token
+	3,  // 10: fabric_token_sdk.token.zkatdlog.v1.TransferAction.inputs:type_name -> fabric_token_sdk.token.zkatdlog.v1.TransferActionInput
+	5,  // 11: fabric_token_sdk.token.zkatdlog.v1.TransferAction.outputs:type_name -> fabric_token_sdk.token.zkatdlog.v1.TransferActionOutput
+	6,  // 12: fabric_token_sdk.token.zkatdlog.v1.TransferAction.proof:type_name -> fabric_token_sdk.token.zkatdlog.v1.Proof
+	11, // 13: fabric_token_sdk.token.zkatdlog.v1.TransferAction.metadata:type_name -> fabric_token_sdk.token.zkatdlog.v1.TransferAction.MetadataEntry
+	15, // 14: fabric_token_sdk.token.zkatdlog.v1.TransferAction.issuer:type_name -> fabric_token_sdk.token.zkatdlog.v1.Identity
+	2,  // 15: fabric_token_sdk.token.zkatdlog.v1.IssueActionInput.id:type_name -> fabric_token_sdk.token.zkatdlog.v1.TokenID
+	0,  // 16: fabric_token_sdk.token.zkatdlog.v1.IssueActionOutput.token:type_name -> fabric_token_sdk.token.zkatdlog.v1.Token
+	15, // 17: fabric_token_sdk.token.zkatdlog.v1.IssueAction.issuer:type_name -> fabric_token_sdk.token.zkatdlog.v1.Identity
+	8,  // 18: fabric_token_sdk.token.zkatdlog.v1.IssueAction.inputs:type_name -> fabric_token_sdk.token.zkatdlog.v1.IssueActionInput
+	9,  // 19: fabric_token_sdk.token.zkatdlog.v1.IssueAction.outputs:type_name -> fabric_token_sdk.token.zkatdlog.v1.IssueActionOutput
+	6,  // 20: fabric_token_sdk.token.zkatdlog.v1.IssueAction.proof:type_name -> fabric_token_sdk.token.zkatdlog.v1.Proof
+	12, // 21: fabric_token_sdk.token.zkatdlog.v1.IssueAction.metadata:type_name -> fabric_token_sdk.token.zkatdlog.v1.IssueAction.MetadataEntry
 	22, // [22:22] is the sub-list for method output_type
 	22, // [22:22] is the sub-list for method input_type
 	22, // [22:22] is the sub-list for extension type_name
