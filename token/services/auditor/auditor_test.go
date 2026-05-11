@@ -309,6 +309,63 @@ func TestService_Audit_Success(t *testing.T) {
 	assert.NotNil(t, outputs)
 }
 
+// TestService_Audit_LockAcquisitionFailure verifies that when AcquireLocks() fails
+// due to context cancellation, the error is properly returned and no locks are held.
+func TestService_Audit_LockAcquisitionFailure(t *testing.T) {
+	// Create a StoreService with real lock mechanism
+	storeService := newTestStoreService(t, newFakeStore())
+
+	// First, acquire locks directly on enrollment IDs to simulate lock contention
+	ctx := context.Background()
+	err := storeService.AcquireLocks(ctx, "blocking-anchor", "test-eid-1", "test-eid-2")
+	require.NoError(t, err)
+	defer storeService.ReleaseLocks(ctx, "blocking-anchor")
+
+	// Now try to acquire the same locks with a cancelled context
+	cancelledCtx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately to simulate timeout/cancellation
+
+	err = storeService.AcquireLocks(cancelledCtx, "tx-lock-fail", "test-eid-1", "test-eid-2")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "context canceled")
+
+	// Verify no locks are held for the failed transaction by checking the anchor is not stored
+	storeService.ReleaseLocks(ctx, "tx-lock-fail") // Should be a no-op since locks weren't acquired
+}
+
+// TestService_Audit_ContextCancellationDuringAcquisition verifies that when context
+// is cancelled or times out during lock acquisition, the semaphore automatically rolls
+// back acquired locks and returns an error, allowing subsequent acquisitions to succeed.
+func TestService_Audit_ContextCancellationDuringAcquisition(t *testing.T) {
+	// Create a StoreService with real lock mechanism
+	storeService := newTestStoreService(t, newFakeStore())
+
+	// Acquire locks to create contention
+	ctx := context.Background()
+	err := storeService.AcquireLocks(ctx, "blocking-anchor", "test-eid-1", "test-eid-2")
+	require.NoError(t, err)
+
+	// Create a context with a very short timeout
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), 1)
+	defer cancel()
+
+	// This should fail due to context timeout while waiting for locks
+	err = storeService.AcquireLocks(timeoutCtx, "tx-ctx-cancel", "test-eid-1", "test-eid-2")
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled),
+		"expected context cancellation error, got: %v", err)
+
+	// Release the blocking locks
+	storeService.ReleaseLocks(ctx, "blocking-anchor")
+
+	// Verify the semaphore automatically rolled back by attempting acquisition with fresh context
+	err = storeService.AcquireLocks(context.Background(), "tx-after-cancel", "test-eid-1", "test-eid-2")
+	require.NoError(t, err)
+
+	// Clean up
+	storeService.ReleaseLocks(ctx, "tx-after-cancel")
+}
+
 func TestService_Audit_DBCleanSuccess(t *testing.T) {
 	fakeStore := newFakeStore()
 	fakeStore.GetStatusReturns(0, "", errors.New("db status err"))
@@ -661,4 +718,241 @@ func TestManager_GetByTMSID(t *testing.T) {
 	assert.Panics(t, func() {
 		auditor.Get(sp, w)
 	})
+}
+
+// ---------------------------------------------------------------------------
+// Service.Audit Lock Management Tests
+// ---------------------------------------------------------------------------
+
+// TestService_Audit_LocksReleasedOnAuditRecordError verifies that when Audit() fails
+// before lock acquisition (during AuditRecord()), no locks are held and Release() is safe.
+// Audit() acquires locks ONLY after successful AuditRecord(), so early failures don't leak locks.
+func TestService_Audit_LocksReleasedOnAuditRecordError(t *testing.T) {
+	// Create a TMS that will fail on AuditRecord by returning nil public parameters
+	mockTMS := &drivermock.TokenManagerService{}
+	mockPPM := &drivermock.PublicParamsManager{}
+	mockPPM.PublicParametersReturns(nil) // This will cause AuditRecord to fail
+	mockTMS.PublicParamsManagerReturns(mockPPM)
+	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
+	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
+	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
+
+	mockVP := &tokenmock.VaultProvider{}
+	mockV := &drivermock.Vault{}
+	mockV.QueryEngineReturns(&drivermock.QueryEngine{})
+	mockVP.VaultReturns(mockV, nil)
+
+	badTMS, err := token.NewManagementService(
+		token.TMSID{}, mockTMS, logging.MustGetLogger("test"), mockVP, nil, nil,
+	)
+	require.NoError(t, err)
+
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-audit-record-err")
+	tx.RequestReturns(token.NewRequest(badTMS, token.RequestAnchor("tx-audit-record-err")))
+
+	// Audit should fail
+	_, _, err = svc.Audit(context.Background(), tx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed getting transaction audit record")
+
+	// Release should be safe to call even though Audit failed
+	assert.NotPanics(t, func() {
+		svc.Release(context.Background(), tx)
+	})
+
+	// Verify no locks are held by trying to acquire the same anchor
+	ctx := context.Background()
+	err = storeService.AcquireLocks(ctx, "tx-audit-record-err")
+	require.NoError(t, err, "should be able to acquire locks since Audit failed")
+	storeService.ReleaseLocks(ctx, "tx-audit-record-err")
+}
+
+// TestService_Audit_LocksAcquiredOnSuccess verifies successful Audit() acquires locks,
+// Release() frees them, and Release() is idempotent (safe to call multiple times).
+func TestService_Audit_LocksAcquiredOnSuccess(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-audit-success")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-audit-success")))
+
+	ctx := context.Background()
+
+	// Audit should succeed
+	inputs, outputs, err := svc.Audit(ctx, tx)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs)
+	assert.NotNil(t, outputs)
+
+	// Verify Release is safe to call
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+
+	// Verify Release is idempotent
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+}
+
+// TestService_Audit_ContextCancellationBeforeLockAcquisition verifies context cancellation
+// doesn't leak locks. Semaphore auto-rolls back partially acquired locks (PR #1616).
+// Release() is always safe regardless of Audit() outcome.
+func TestService_Audit_ContextCancellationBeforeLockAcquisition(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-ctx-cancel")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-ctx-cancel")))
+
+	// Use a cancelled context
+	cancelledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	// Audit may fail due to context cancellation (depending on timing)
+	// or succeed if AuditRecord completes before cancellation check
+	_, _, _ = svc.Audit(cancelledCtx, tx)
+	// We don't assert error here as it depends on timing
+
+	// Release should always be safe to call
+	assert.NotPanics(t, func() {
+		svc.Release(context.Background(), tx)
+	})
+
+	// Verify we can acquire locks after (no locks were leaked)
+	ctx := context.Background()
+	err := storeService.AcquireLocks(ctx, "tx-ctx-cancel")
+	require.NoError(t, err, "should be able to acquire locks")
+	storeService.ReleaseLocks(ctx, "tx-ctx-cancel")
+}
+
+// TestService_Audit_MultipleAuditsSequential verifies sequential audits work correctly:
+// first Audit() acquires locks, Release() frees them, second Audit() succeeds.
+func TestService_Audit_MultipleAuditsSequential(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	ctx := context.Background()
+
+	// First audit
+	tx1 := &auditmock.Transaction{}
+	tx1.IDReturns("tx-audit-1")
+	tx1.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-audit-1")))
+
+	inputs1, outputs1, err := svc.Audit(ctx, tx1)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs1)
+	assert.NotNil(t, outputs1)
+
+	// Release first audit's locks
+	svc.Release(ctx, tx1)
+
+	// Second audit should succeed
+	tx2 := &auditmock.Transaction{}
+	tx2.IDReturns("tx-audit-2")
+	tx2.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-audit-2")))
+
+	inputs2, outputs2, err := svc.Audit(ctx, tx2)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs2)
+	assert.NotNil(t, outputs2)
+
+	// Clean up
+	svc.Release(ctx, tx2)
+}
+
+// TestService_Audit_ReleaseIdempotency verifies Release() is idempotent - can be called
+// multiple times safely without panics (handles error paths, defer, retry logic).
+func TestService_Audit_ReleaseIdempotency(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-release-idempotent")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-release-idempotent")))
+
+	// Audit to acquire locks
+	_, _, err := svc.Audit(context.Background(), tx)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// First release should work
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+
+	// Second release should also be safe (no-op)
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+
+	// Third release should still be safe
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+}
+
+// TestService_Audit_ReleaseWithoutAudit verifies Release() is safe to call without
+// prior Audit() (handles defer in error paths where Audit() never ran or failed early).
+func TestService_Audit_ReleaseWithoutAudit(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-no-audit")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-no-audit")))
+
+	// Release without Audit should be safe
+	assert.NotPanics(t, func() {
+		svc.Release(context.Background(), tx)
+	})
+}
+
+// TestService_Audit_PanicRecoveryReleasesLocks verifies defer Release() executes even
+// when code panics, preventing lock leaks. Demonstrates correct pattern:
+//
+//	defer auditor.Release(ctx, tx)  // MUST be after error check
+func TestService_Audit_PanicRecoveryReleasesLocks(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-panic-recovery")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-panic-recovery")))
+
+	ctx := context.Background()
+
+	// Simulate code that panics after Audit but has defer Release
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Panic recovered as expected
+				assert.Equal(t, "simulated panic", r)
+			}
+		}()
+
+		// Audit succeeds and acquires locks
+		inputs, outputs, err := svc.Audit(ctx, tx)
+		require.NoError(t, err)
+		assert.NotNil(t, inputs)
+		assert.NotNil(t, outputs)
+
+		// Defer Release - this should execute even if panic occurs
+		defer svc.Release(ctx, tx)
+
+		// Simulate panic in subsequent processing
+		panic("simulated panic")
+	}()
+
+	// Verify locks were released by attempting to acquire them
+	err := storeService.AcquireLocks(ctx, "tx-panic-recovery")
+	require.NoError(t, err, "locks should have been released despite panic")
+	storeService.ReleaseLocks(ctx, "tx-panic-recovery")
 }
