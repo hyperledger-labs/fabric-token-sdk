@@ -8,6 +8,7 @@ package role_test
 
 import (
 	"errors"
+	"math/big"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
@@ -217,7 +218,7 @@ func TestLongTermOwnerWallet(t *testing.T) {
 		}
 
 		tv.UnspentTokensIteratorByReturns(it, nil)
-		tv.BalanceReturns(30, nil)
+		tv.BalanceReturns(big.NewInt(30), nil)
 
 		// ListTokens
 		tokens, err := w.ListTokens(t.Context(), &driver.ListTokensOptions{TokenType: "T1"})
@@ -233,7 +234,7 @@ func TestLongTermOwnerWallet(t *testing.T) {
 		// Balance
 		bal, err := w.Balance(t.Context(), &driver.ListTokensOptions{})
 		require.NoError(t, err)
-		assert.Equal(t, uint64(30), bal)
+		assert.Equal(t, big.NewInt(30), bal)
 	})
 
 	t.Run("GetSigner", func(t *testing.T) {

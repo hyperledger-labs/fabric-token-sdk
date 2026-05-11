@@ -60,7 +60,7 @@ func (db *WalletStore) GetWalletID(ctx context.Context, identity token.Identity,
 		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("role_id", roleID))).
 		Format(db.ci)
 
-	result, err := common.QueryUnique[driver.WalletID](db.readDB, query, args...)
+	result, err := common.QueryUniqueContext[driver.WalletID](ctx, db.readDB, query, args...)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed getting wallet id for identity [%v]", idHash)
 	}
@@ -110,7 +110,7 @@ func (db *WalletStore) LoadMeta(ctx context.Context, identity token.Identity, wI
 		From(q.Table(db.table.Wallets)).
 		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("wallet_id", wID), cond.Eq("role_id", roleID))).
 		Format(db.ci)
-	result, err := common.QueryUnique[[]byte](db.readDB, query, args...)
+	result, err := common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed loading meta for id [%v]", idHash)
 	}
@@ -126,7 +126,7 @@ func (db *WalletStore) IdentityExists(ctx context.Context, identity token.Identi
 		From(q.Table(db.table.Wallets)).
 		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("wallet_id", wID), cond.Eq("role_id", roleID))).
 		Format(db.ci)
-	result, err := common.QueryUnique[driver.WalletID](db.readDB, query, args...)
+	result, err := common.QueryUniqueContext[driver.WalletID](ctx, db.readDB, query, args...)
 	if err != nil {
 		logger.Errorf("failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
 	}

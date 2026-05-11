@@ -9,6 +9,7 @@ package token
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -290,15 +291,16 @@ func (o *OwnerWallet) ListUnspentTokensIterator(ctx context.Context, opts ...Lis
 	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
-// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (o *OwnerWallet) Balance(ctx context.Context, opts ...ListTokensOption) (uint64, error) {
+// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
+// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
+func (o *OwnerWallet) Balance(ctx context.Context, opts ...ListTokensOption) (*big.Int, error) {
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	sum, err := o.w.Balance(ctx, compiledOpts)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	return sum, nil

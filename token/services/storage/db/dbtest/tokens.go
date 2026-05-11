@@ -896,7 +896,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	assertEqual(t, tx1, res[0])
 	balance, err := db.Balance(ctx, "alice", "TST1")
 	require.NoError(t, err)
-	assert.Equal(t, res[0].Amount, balance)
+	assert.Equal(t, balance.Uint64(), res[0].Amount.Uint64())
 
 	// alice TST
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{WalletID: "alice", TokenType: TST})
@@ -905,7 +905,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	assertEqual(t, tx2, res[0])
 	balance, err = db.Balance(ctx, "alice", TST)
 	require.NoError(t, err)
-	assert.Equal(t, res[0].Amount, balance)
+	assert.Equal(t, balance.Uint64(), res[0].Amount.Uint64())
 
 	// bob TST
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{WalletID: "bob", TokenType: TST})
@@ -914,7 +914,7 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	assertEqual(t, tx21, res[0])
 	balance, err = db.Balance(ctx, "bob", TST)
 	require.NoError(t, err)
-	assert.Equal(t, res[0].Amount, balance)
+	assert.Equal(t, balance.Uint64(), res[0].Amount.Uint64())
 
 	// spent
 	require.NoError(t, db.DeleteTokens(ctx, "delby", &token.ID{TxId: "tx2", Index: 1}))
@@ -1183,6 +1183,6 @@ func assertEqual(t *testing.T, r driver2.TokenRecord, d driver2.TokenDetails) {
 	t.Helper()
 	assert.Equal(t, r.TxID, d.TxID)
 	assert.Equal(t, r.Index, d.Index)
-	assert.Equal(t, r.Amount, d.Amount)
+	assert.Equal(t, r.Amount, d.Amount.Uint64())
 	assert.Equal(t, r.OwnerType, d.OwnerType)
 }

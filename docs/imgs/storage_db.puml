@@ -24,7 +24,7 @@ package "Transaction & Audit Store (TTXDB / AuditDB)" {
         sender_eid : TEXT
         recipient_eid : TEXT
         token_type : TEXT <<NOT NULL>>
-        amount : BIGINT <<NOT NULL>>
+        amount : NUMERIC(78,0) <<NOT NULL>>
         stored_at : TIMESTAMP <<NOT NULL>>
     }
 
@@ -34,7 +34,7 @@ package "Transaction & Audit Store (TTXDB / AuditDB)" {
         tx_id : TEXT <<FK, NOT NULL>>
         enrollment_id : TEXT
         token_type : TEXT <<NOT NULL>>
-        amount : BIGINT <<NOT NULL>>
+        amount : NUMERIC(78,0) <<NOT NULL>>
         stored_at : TIMESTAMP <<NOT NULL>>
     }
 
@@ -65,7 +65,7 @@ package "Token Store (TokenDB)" {
         * tx_id : TEXT <<PK, NOT NULL>>
         * idx : INT <<PK, NOT NULL>>
         --
-        amount : BIGINT <<NOT NULL>>
+        amount : NUMERIC(78,0) <<NOT NULL>>
         token_type : TEXT <<NOT NULL>>
         quantity : TEXT <<NOT NULL>>
         issuer_raw : BYTEA

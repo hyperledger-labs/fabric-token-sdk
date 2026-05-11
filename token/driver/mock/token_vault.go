@@ -3,6 +3,7 @@ package mock
 
 import (
 	"context"
+	"math/big"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -10,7 +11,7 @@ import (
 )
 
 type TokenVault struct {
-	BalanceStub        func(context.Context, string, token.Type) (uint64, error)
+	BalanceStub        func(context.Context, string, token.Type) (*big.Int, error)
 	balanceMutex       sync.RWMutex
 	balanceArgsForCall []struct {
 		arg1 context.Context
@@ -18,11 +19,11 @@ type TokenVault struct {
 		arg3 token.Type
 	}
 	balanceReturns struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}
 	balanceReturnsOnCall map[int]struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}
 	GetTokenOutputsStub        func(context.Context, []*token.ID, driver.QueryCallbackFunc) error
@@ -115,7 +116,7 @@ type TokenVault struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokenVault) Balance(arg1 context.Context, arg2 string, arg3 token.Type) (uint64, error) {
+func (fake *TokenVault) Balance(arg1 context.Context, arg2 string, arg3 token.Type) (*big.Int, error) {
 	fake.balanceMutex.Lock()
 	ret, specificReturn := fake.balanceReturnsOnCall[len(fake.balanceArgsForCall)]
 	fake.balanceArgsForCall = append(fake.balanceArgsForCall, struct {
@@ -142,7 +143,7 @@ func (fake *TokenVault) BalanceCallCount() int {
 	return len(fake.balanceArgsForCall)
 }
 
-func (fake *TokenVault) BalanceCalls(stub func(context.Context, string, token.Type) (uint64, error)) {
+func (fake *TokenVault) BalanceCalls(stub func(context.Context, string, token.Type) (*big.Int, error)) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = stub
@@ -155,28 +156,28 @@ func (fake *TokenVault) BalanceArgsForCall(i int) (context.Context, string, toke
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *TokenVault) BalanceReturns(result1 uint64, result2 error) {
+func (fake *TokenVault) BalanceReturns(result1 *big.Int, result2 error) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = nil
 	fake.balanceReturns = struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TokenVault) BalanceReturnsOnCall(i int, result1 uint64, result2 error) {
+func (fake *TokenVault) BalanceReturnsOnCall(i int, result1 *big.Int, result2 error) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = nil
 	if fake.balanceReturnsOnCall == nil {
 		fake.balanceReturnsOnCall = make(map[int]struct {
-			result1 uint64
+			result1 *big.Int
 			result2 error
 		})
 	}
 	fake.balanceReturnsOnCall[i] = struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}{result1, result2}
 }
