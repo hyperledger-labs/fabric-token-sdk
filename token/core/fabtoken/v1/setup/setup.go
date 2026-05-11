@@ -131,7 +131,7 @@ func (p *PublicParams) Bytes() ([]byte, error) {
 
 	params := &fabpp.PublicParameters{
 		TokenDriverName:    string(p.DriverName),
-		TokenDriverVersion: uint64(p.DriverVersion),
+		TokenDriverVersion: uint32(p.DriverVersion),
 		Auditor: &driverv1.Identity{
 			Raw: p.Auditor,
 		},

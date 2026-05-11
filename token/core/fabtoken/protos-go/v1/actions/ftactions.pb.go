@@ -185,7 +185,7 @@ func (x *TransferActionOutput) GetToken() *Token {
 
 type TransferAction struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Version       uint64                  `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	Version       uint32                  `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
 	Inputs        []*TransferActionInput  `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                               // inputs
 	Outputs       []*TransferActionOutput `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                             // outputs
 	Metadata      map[string][]byte       `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Metadata contains the transfer action's metadata
@@ -224,7 +224,7 @@ func (*TransferAction) Descriptor() ([]byte, []int) {
 	return file_ftactions_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *TransferAction) GetVersion() uint64 {
+func (x *TransferAction) GetVersion() uint32 {
 	if x != nil {
 		return x.Version
 	}
@@ -357,7 +357,7 @@ func (x *IssueActionOutput) GetToken() *Token {
 
 type IssueAction struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       uint64                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
 	Issuer        *v1.Identity           `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                               // is the identity of issuer
 	Inputs        []*IssueActionInput    `protobuf:"bytes,3,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                               // are the tokens to be redeemed by this issue action
 	Outputs       []*IssueActionOutput   `protobuf:"bytes,4,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                             // are the newly issued tokens
@@ -396,7 +396,7 @@ func (*IssueAction) Descriptor() ([]byte, []int) {
 	return file_ftactions_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *IssueAction) GetVersion() uint64 {
+func (x *IssueAction) GetVersion() uint32 {
 	if x != nil {
 		return x.Version
 	}
@@ -446,7 +446,7 @@ const file_ftactions_proto_rawDesc = "" +
 	"\x14TransferActionOutput\x12?\n" +
 	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05token\"\xae\x03\n" +
 	"\x0eTransferAction\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\x04R\aversion\x12O\n" +
+	"\aversion\x18\x01 \x01(\rR\aversion\x12O\n" +
 	"\x06inputs\x18\x02 \x03(\v27.fabric_token_sdk.token.fabtoken.v1.TransferActionInputR\x06inputs\x12R\n" +
 	"\aoutputs\x18\x03 \x03(\v28.fabric_token_sdk.token.fabtoken.v1.TransferActionOutputR\aoutputs\x12\\\n" +
 	"\bmetadata\x18\x04 \x03(\v2@.fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntryR\bmetadata\x12B\n" +
@@ -460,7 +460,7 @@ const file_ftactions_proto_rawDesc = "" +
 	"\x11IssueActionOutput\x12?\n" +
 	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05token\"\xa2\x03\n" +
 	"\vIssueAction\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\x04R\aversion\x12B\n" +
+	"\aversion\x18\x01 \x01(\rR\aversion\x12B\n" +
 	"\x06issuer\x18\x02 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\x06issuer\x12L\n" +
 	"\x06inputs\x18\x03 \x03(\v24.fabric_token_sdk.token.fabtoken.v1.IssueActionInputR\x06inputs\x12O\n" +
 	"\aoutputs\x18\x04 \x03(\v25.fabric_token_sdk.token.fabtoken.v1.IssueActionOutputR\aoutputs\x12Y\n" +

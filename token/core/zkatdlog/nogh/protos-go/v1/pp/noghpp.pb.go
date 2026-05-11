@@ -236,7 +236,7 @@ func (x *CSPRangeProofParams) GetNumberOfRounds() uint64 {
 type PublicParameters struct {
 	state                  protoimpl.MessageState   `protogen:"open.v1"`
 	TokenDriverName        string                   `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`                                     // the identifier of the token driver
-	TokenDriverVersion     uint64                   `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                           // the version of the token driver
+	TokenDriverVersion     uint32                   `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                           // the version of the token driver
 	CurveId                *math.CurveID            `protobuf:"bytes,3,opt,name=curve_id,json=curveId,proto3" json:"curve_id,omitempty"`                                                               // the pairing-friendly elliptic curve used for everything but Idemix.
 	PedersenGenerators     []*math.G1               `protobuf:"bytes,4,rep,name=pedersen_generators,json=pedersenGenerators,proto3" json:"pedersen_generators,omitempty"`                              // contains the public parameters for the Pedersen commitment scheme.
 	RangeProofParams       *RangeProofParams        `protobuf:"bytes,5,opt,name=range_proof_params,json=rangeProofParams,proto3" json:"range_proof_params,omitempty"`                                  // contains the public parameters for the range proof scheme.
@@ -288,7 +288,7 @@ func (x *PublicParameters) GetTokenDriverName() string {
 	return ""
 }
 
-func (x *PublicParameters) GetTokenDriverVersion() uint64 {
+func (x *PublicParameters) GetTokenDriverVersion() uint32 {
 	if x != nil {
 		return x.TokenDriverVersion
 	}
@@ -390,7 +390,7 @@ const file_noghpp_proto_rawDesc = "" +
 	"\x10number_of_rounds\x18\x06 \x01(\x04R\x0enumberOfRounds\"\xd0\a\n" +
 	"\x10PublicParameters\x12*\n" +
 	"\x11token_driver_name\x18\x01 \x01(\tR\x0ftokenDriverName\x120\n" +
-	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12F\n" +
+	"\x14token_driver_version\x18\x02 \x01(\rR\x12tokenDriverVersion\x12F\n" +
 	"\bcurve_id\x18\x03 \x01(\v2+.fabric_token_sdk.token.zkatdlog.v1.CurveIDR\acurveId\x12W\n" +
 	"\x13pedersen_generators\x18\x04 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x12pedersenGenerators\x12b\n" +
 	"\x12range_proof_params\x18\x05 \x01(\v24.fabric_token_sdk.token.zkatdlog.v1.RangeProofParamsR\x10rangeProofParams\x12t\n" +

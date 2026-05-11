@@ -11,7 +11,7 @@ option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/services
 // Config collects all the configuration information for an x509 identity.
 message Config {
   // Version indicates message protocol version
-  uint64 version = 1;
+  uint32 version = 1;
 
   // SigningIdentity holds information on the signing identity
   SigningIdentityInfo signing_identity = 2;

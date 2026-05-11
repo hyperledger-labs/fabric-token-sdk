@@ -15,7 +15,7 @@ option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fab
 // PublicParameters describes typed public parameters
 message PublicParameters {
   string token_driver_name = 1; // the name of the token driver
-  uint64 token_driver_version = 2; // the version of token driver
+  uint32 token_driver_version = 2; // the version of token driver
   fabric_token_sdk.token.driver.v1.Identity auditor = 3; // is the public key of the auditor.
   repeated fabric_token_sdk.token.driver.v1.Identity issuers = 4; // is a list of public keys of the entities that can issue tokens.
   uint64 max_token = 5; // is the maximum quantity a token can hold

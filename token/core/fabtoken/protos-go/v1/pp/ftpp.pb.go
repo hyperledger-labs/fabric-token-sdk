@@ -31,7 +31,7 @@ const (
 type PublicParameters struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	TokenDriverName    string                 `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`                                    // the name of the token driver
-	TokenDriverVersion uint64                 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                          // the version of token driver
+	TokenDriverVersion uint32                 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                          // the version of token driver
 	Auditor            *v1.Identity           `protobuf:"bytes,3,opt,name=auditor,proto3" json:"auditor,omitempty"`                                                                             // is the public key of the auditor.
 	Issuers            []*v1.Identity         `protobuf:"bytes,4,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                             // is a list of public keys of the entities that can issue tokens.
 	MaxToken           uint64                 `protobuf:"varint,5,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`                                                          // is the maximum quantity a token can hold
@@ -78,7 +78,7 @@ func (x *PublicParameters) GetTokenDriverName() string {
 	return ""
 }
 
-func (x *PublicParameters) GetTokenDriverVersion() uint64 {
+func (x *PublicParameters) GetTokenDriverVersion() uint32 {
 	if x != nil {
 		return x.TokenDriverVersion
 	}
@@ -128,7 +128,7 @@ const file_ftpp_proto_rawDesc = "" +
 	"ftpp.proto\x12\"fabric_token_sdk.token.fabtoken.v1\x1a\fcommon.proto\"\xe5\x03\n" +
 	"\x10PublicParameters\x12*\n" +
 	"\x11token_driver_name\x18\x01 \x01(\tR\x0ftokenDriverName\x120\n" +
-	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12D\n" +
+	"\x14token_driver_version\x18\x02 \x01(\rR\x12tokenDriverVersion\x12D\n" +
 	"\aauditor\x18\x03 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\aauditor\x12D\n" +
 	"\aissuers\x18\x04 \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\aissuers\x12\x1b\n" +
 	"\tmax_token\x18\x05 \x01(\x04R\bmaxToken\x12-\n" +

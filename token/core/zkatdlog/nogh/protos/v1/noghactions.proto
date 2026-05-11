@@ -49,7 +49,7 @@ message Proof {
 }
 
 message TransferAction {
-  uint64 version = 1;
+  uint32 version = 1;
   repeated TransferActionInput inputs = 2; // inputs
   repeated TransferActionOutput outputs = 3; // outputs
   Proof proof = 4; // ZK Proof that shows that the transfer is correct
@@ -67,7 +67,7 @@ message IssueActionOutput {
 }
 
 message IssueAction {
-  uint64 version = 1;
+  uint32 version = 1;
   fabric_token_sdk.token.driver.v1.Identity issuer = 2; // is the identity of issuer
   repeated IssueActionInput inputs = 3; // are the tokens to be redeemed by this issue action
   repeated IssueActionOutput outputs = 4; // are the newly issued tokens

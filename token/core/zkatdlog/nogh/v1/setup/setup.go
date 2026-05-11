@@ -440,7 +440,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 
 	publicParams := &pp.PublicParameters{
 		TokenDriverName:    string(p.DriverName),
-		TokenDriverVersion: uint64(p.DriverVersion), // #nosec G115 driver.TokenDriverVersion is a uint64
+		TokenDriverVersion: uint32(p.DriverVersion),
 		CurveId: &math2.CurveID{
 			Id: uint64(p.Curve), // #nosec G115
 		},

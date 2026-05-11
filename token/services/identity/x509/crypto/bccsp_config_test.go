@@ -132,7 +132,7 @@ func TestUnmarshalConfig(t *testing.T) {
 
 		config, err := UnmarshalConfig(data)
 		require.NoError(t, err)
-		assert.Equal(t, uint64(1), config.Version)
+		assert.Equal(t, uint32(1), config.Version)
 	})
 
 	// Test failure to unmarshal an invalid raw config

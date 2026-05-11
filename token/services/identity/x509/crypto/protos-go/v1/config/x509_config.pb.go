@@ -29,7 +29,7 @@ const (
 type Config struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Version indicates message protocol version
-	Version uint64 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
 	// SigningIdentity holds information on the signing identity
 	SigningIdentity *SigningIdentityInfo `protobuf:"bytes,2,opt,name=signing_identity,json=signingIdentity,proto3" json:"signing_identity,omitempty"`
 	// CryptoConfig contains the configuration parameters
@@ -69,7 +69,7 @@ func (*Config) Descriptor() ([]byte, []int) {
 	return file_x509_config_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Config) GetVersion() uint64 {
+func (x *Config) GetVersion() uint32 {
 	if x != nil {
 		return x.Version
 	}
@@ -265,7 +265,7 @@ const file_x509_config_proto_rawDesc = "" +
 	"\n" +
 	"\x11x509_config.proto\x12!fabric_token_sdk.identity.x509.v1\"\xdb\x01\n" +
 	"\x06Config\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\x04R\aversion\x12a\n" +
+	"\aversion\x18\x01 \x01(\rR\aversion\x12a\n" +
 	"\x10signing_identity\x18\x02 \x01(\v26.fabric_token_sdk.identity.x509.v1.SigningIdentityInfoR\x0fsigningIdentity\x12T\n" +
 	"\rcrypto_config\x18\x03 \x01(\v2/.fabric_token_sdk.identity.x509.v1.CryptoConfigR\fcryptoConfig\"B\n" +
 	"\fCryptoConfig\x122\n" +
