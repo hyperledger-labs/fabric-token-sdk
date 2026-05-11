@@ -26,9 +26,12 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// G1 represents a point on the G1 group of a pairing-friendly elliptic curve.
+// This is used for commitments and public keys in zero-knowledge proofs.
 type G1 struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Raw           []byte                 `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// raw contains the serialized representation of the G1 point
+	Raw           []byte `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -70,9 +73,12 @@ func (x *G1) GetRaw() []byte {
 	return nil
 }
 
+// Zr represents an element in the scalar field (Zr) of the elliptic curve.
+// This is used for private values, blinding factors, and other scalars.
 type Zr struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Raw           []byte                 `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// raw contains the serialized representation of the field element
+	Raw           []byte `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -114,9 +120,12 @@ func (x *Zr) GetRaw() []byte {
 	return nil
 }
 
+// CurveID identifies which pairing-friendly elliptic curve is being used.
+// Different curves offer different security levels and performance characteristics.
 type CurveID struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the numeric identifier of the curve (e.g., BN254, BLS12-381)
+	Id            uint64 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

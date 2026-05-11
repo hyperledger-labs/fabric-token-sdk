@@ -28,10 +28,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// IdemixIssuerPublicKey contains the public key of an Idemix issuer.
+// Idemix is used for anonymous credential-based authentication.
 type IdemixIssuerPublicKey struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PublicKey     []byte                 `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
-	CurveId       *math.CurveID          `protobuf:"bytes,2,opt,name=curve_id,json=curveId,proto3" json:"curve_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// public_key is the serialized Idemix issuer public key
+	PublicKey []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	// curve_id identifies the elliptic curve used by this Idemix key
+	CurveId       *math.CurveID `protobuf:"bytes,2,opt,name=curve_id,json=curveId,proto3" json:"curve_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -80,16 +84,24 @@ func (x *IdemixIssuerPublicKey) GetCurveId() *math.CurveID {
 	return nil
 }
 
+// RangeProofParams contains the public parameters for the Bulletproofs range proof system.
+// Range proofs ensure that committed values lie within a valid range without revealing the values.
 type RangeProofParams struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	LeftGenerators  []*math.G1             `protobuf:"bytes,1,rep,name=left_generators,json=leftGenerators,proto3" json:"left_generators,omitempty"`
-	RightGenerators []*math.G1             `protobuf:"bytes,2,rep,name=right_generators,json=rightGenerators,proto3" json:"right_generators,omitempty"`
-	P               *math.G1               `protobuf:"bytes,3,opt,name=P,proto3" json:"P,omitempty"`
-	Q               *math.G1               `protobuf:"bytes,4,opt,name=Q,proto3" json:"Q,omitempty"`
-	BitLength       uint64                 `protobuf:"varint,5,opt,name=bit_length,json=bitLength,proto3" json:"bit_length,omitempty"`
-	NumberOfRounds  uint64                 `protobuf:"varint,6,opt,name=number_of_rounds,json=numberOfRounds,proto3" json:"number_of_rounds,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// left_generators are the G vector generators for the inner product argument
+	LeftGenerators []*math.G1 `protobuf:"bytes,1,rep,name=left_generators,json=leftGenerators,proto3" json:"left_generators,omitempty"`
+	// right_generators are the H vector generators for the inner product argument
+	RightGenerators []*math.G1 `protobuf:"bytes,2,rep,name=right_generators,json=rightGenerators,proto3" json:"right_generators,omitempty"`
+	// p is a generator used in the range proof protocol
+	P *math.G1 `protobuf:"bytes,3,opt,name=p,proto3" json:"p,omitempty"`
+	// q is another generator used in the range proof protocol
+	Q *math.G1 `protobuf:"bytes,4,opt,name=q,proto3" json:"q,omitempty"`
+	// bit_length is the number of bits in the range (e.g., 64 for 64-bit values)
+	BitLength uint64 `protobuf:"varint,5,opt,name=bit_length,json=bitLength,proto3" json:"bit_length,omitempty"`
+	// number_of_rounds is the number of rounds in the range proof protocol
+	NumberOfRounds uint64 `protobuf:"varint,6,opt,name=number_of_rounds,json=numberOfRounds,proto3" json:"number_of_rounds,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *RangeProofParams) Reset() {
@@ -164,14 +176,20 @@ func (x *RangeProofParams) GetNumberOfRounds() uint64 {
 	return 0
 }
 
+// CSPRangeProofParams contains parameters for the CSP (Constraint Satisfaction Problem)
+// based range proof system, an alternative to Bulletproofs.
 type CSPRangeProofParams struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	LeftGenerators  []*math.G1             `protobuf:"bytes,1,rep,name=left_generators,json=leftGenerators,proto3" json:"left_generators,omitempty"`
-	RightGenerators []*math.G1             `protobuf:"bytes,2,rep,name=right_generators,json=rightGenerators,proto3" json:"right_generators,omitempty"`
-	BitLength       uint64                 `protobuf:"varint,5,opt,name=bit_length,json=bitLength,proto3" json:"bit_length,omitempty"`
-	NumberOfRounds  uint64                 `protobuf:"varint,6,opt,name=number_of_rounds,json=numberOfRounds,proto3" json:"number_of_rounds,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// left_generators are the G vector generators for the CSP proof
+	LeftGenerators []*math.G1 `protobuf:"bytes,1,rep,name=left_generators,json=leftGenerators,proto3" json:"left_generators,omitempty"`
+	// right_generators are the H vector generators for the CSP proof
+	RightGenerators []*math.G1 `protobuf:"bytes,2,rep,name=right_generators,json=rightGenerators,proto3" json:"right_generators,omitempty"`
+	// bit_length is the number of bits in the range (e.g., 64 for 64-bit values)
+	BitLength uint64 `protobuf:"varint,3,opt,name=bit_length,json=bitLength,proto3" json:"bit_length,omitempty"`
+	// number_of_rounds is the number of rounds in the CSP proof protocol
+	NumberOfRounds uint64 `protobuf:"varint,4,opt,name=number_of_rounds,json=numberOfRounds,proto3" json:"number_of_rounds,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CSPRangeProofParams) Reset() {
@@ -232,23 +250,39 @@ func (x *CSPRangeProofParams) GetNumberOfRounds() uint64 {
 	return 0
 }
 
-// PublicParameters describes typed public parameters
+// PublicParameters contains the public configuration for the zkatdlog (zero-knowledge
+// anonymous token with discrete log) driver. These parameters define the cryptographic
+// setup for privacy-preserving token operations.
 type PublicParameters struct {
-	state                  protoimpl.MessageState   `protogen:"open.v1"`
-	TokenDriverName        string                   `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`                                     // the identifier of the token driver
-	TokenDriverVersion     uint32                   `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                           // the version of the token driver
-	CurveId                *math.CurveID            `protobuf:"bytes,3,opt,name=curve_id,json=curveId,proto3" json:"curve_id,omitempty"`                                                               // the pairing-friendly elliptic curve used for everything but Idemix.
-	PedersenGenerators     []*math.G1               `protobuf:"bytes,4,rep,name=pedersen_generators,json=pedersenGenerators,proto3" json:"pedersen_generators,omitempty"`                              // contains the public parameters for the Pedersen commitment scheme.
-	RangeProofParams       *RangeProofParams        `protobuf:"bytes,5,opt,name=range_proof_params,json=rangeProofParams,proto3" json:"range_proof_params,omitempty"`                                  // contains the public parameters for the range proof scheme.
-	IdemixIssuerPublicKeys []*IdemixIssuerPublicKey `protobuf:"bytes,6,rep,name=idemix_issuer_public_keys,json=idemixIssuerPublicKeys,proto3" json:"idemix_issuer_public_keys,omitempty"`              // contains the idemix issuer public keys. Wallets should prefer the use of keys valid under the public key whose index in the array is the smallest.
-	Auditors               []*v1.Identity           `protobuf:"bytes,7,rep,name=auditors,proto3" json:"auditors,omitempty"`                                                                            // is the public key of the auditor.
-	Issuers                []*v1.Identity           `protobuf:"bytes,8,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                              // is a list of public keys of the entities that can issue tokens.
-	MaxToken               uint64                   `protobuf:"varint,9,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`                                                           // is the maximum quantity a token can hold
-	QuantityPrecision      uint64                   `protobuf:"varint,10,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`                               // is the precision used to represent quantities
-	Metadata               map[string][]byte        `protobuf:"bytes,11,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // metadata allows storing arbitrary application-specific or extension data in the public parameters. Keys should follow a reverse-DNS naming convention to avoid collisions (e.g., "com.example.myapp.custom_field").
-	CspRangeProofParams    *CSPRangeProofParams     `protobuf:"bytes,12,opt,name=csp_range_proof_params,json=cspRangeProofParams,proto3" json:"csp_range_proof_params,omitempty"`                      // csp-based range proof params
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token_driver_name is the identifier of the token driver (e.g., "zkatdlog")
+	TokenDriverName string `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`
+	// token_driver_version is the protocol version of the token driver
+	TokenDriverVersion uint32 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`
+	// curve_id identifies the pairing-friendly elliptic curve used for cryptographic operations
+	CurveId *math.CurveID `protobuf:"bytes,3,opt,name=curve_id,json=curveId,proto3" json:"curve_id,omitempty"`
+	// pedersen_generators are the public generators for the Pedersen commitment scheme
+	PedersenGenerators []*math.G1 `protobuf:"bytes,4,rep,name=pedersen_generators,json=pedersenGenerators,proto3" json:"pedersen_generators,omitempty"`
+	// range_proof_params contains parameters for the Bulletproofs range proof system
+	RangeProofParams *RangeProofParams `protobuf:"bytes,5,opt,name=range_proof_params,json=rangeProofParams,proto3" json:"range_proof_params,omitempty"`
+	// idemix_issuer_public_keys contains Idemix issuer public keys for anonymous credentials.
+	// Wallets should prefer keys with lower array indices.
+	IdemixIssuerPublicKeys []*IdemixIssuerPublicKey `protobuf:"bytes,6,rep,name=idemix_issuer_public_keys,json=idemixIssuerPublicKeys,proto3" json:"idemix_issuer_public_keys,omitempty"`
+	// auditors is the list of auditor identities who can decrypt and view token operations
+	Auditors []*v1.Identity `protobuf:"bytes,7,rep,name=auditors,proto3" json:"auditors,omitempty"`
+	// issuers is the list of authorized issuer identities who can create new tokens
+	Issuers []*v1.Identity `protobuf:"bytes,8,rep,name=issuers,proto3" json:"issuers,omitempty"`
+	// max_token is the maximum quantity value a single token can hold
+	MaxToken uint64 `protobuf:"varint,9,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`
+	// quantity_precision is the number of decimal places supported for token quantities
+	QuantityPrecision uint64 `protobuf:"varint,10,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`
+	// metadata stores arbitrary application-specific or extension data.
+	// Keys should follow reverse-DNS naming (e.g., "com.example.myapp.field") to avoid collisions.
+	Metadata map[string][]byte `protobuf:"bytes,11,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// csp_range_proof_params contains parameters for the CSP-based range proof system
+	CspRangeProofParams *CSPRangeProofParams `protobuf:"bytes,12,opt,name=csp_range_proof_params,json=cspRangeProofParams,proto3" json:"csp_range_proof_params,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *PublicParameters) Reset() {
@@ -377,8 +411,8 @@ const file_noghpp_proto_rawDesc = "" +
 	"\x10RangeProofParams\x12O\n" +
 	"\x0fleft_generators\x18\x01 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x0eleftGenerators\x12Q\n" +
 	"\x10right_generators\x18\x02 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x0frightGenerators\x124\n" +
-	"\x01P\x18\x03 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x01P\x124\n" +
-	"\x01Q\x18\x04 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x01Q\x12\x1d\n" +
+	"\x01p\x18\x03 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x01p\x124\n" +
+	"\x01q\x18\x04 \x01(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x01q\x12\x1d\n" +
 	"\n" +
 	"bit_length\x18\x05 \x01(\x04R\tbitLength\x12(\n" +
 	"\x10number_of_rounds\x18\x06 \x01(\x04R\x0enumberOfRounds\"\x82\x02\n" +
@@ -386,8 +420,8 @@ const file_noghpp_proto_rawDesc = "" +
 	"\x0fleft_generators\x18\x01 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x0eleftGenerators\x12Q\n" +
 	"\x10right_generators\x18\x02 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x0frightGenerators\x12\x1d\n" +
 	"\n" +
-	"bit_length\x18\x05 \x01(\x04R\tbitLength\x12(\n" +
-	"\x10number_of_rounds\x18\x06 \x01(\x04R\x0enumberOfRounds\"\xd0\a\n" +
+	"bit_length\x18\x03 \x01(\x04R\tbitLength\x12(\n" +
+	"\x10number_of_rounds\x18\x04 \x01(\x04R\x0enumberOfRounds\"\xd0\a\n" +
 	"\x10PublicParameters\x12*\n" +
 	"\x11token_driver_name\x18\x01 \x01(\tR\x0ftokenDriverName\x120\n" +
 	"\x14token_driver_version\x18\x02 \x01(\rR\x12tokenDriverVersion\x12F\n" +
@@ -433,8 +467,8 @@ var file_noghpp_proto_depIdxs = []int32{
 	5,  // 0: fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey.curve_id:type_name -> fabric_token_sdk.token.zkatdlog.v1.CurveID
 	6,  // 1: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.left_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
 	6,  // 2: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.right_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
-	6,  // 3: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.P:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
-	6,  // 4: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.Q:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	6,  // 3: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.p:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	6,  // 4: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.q:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
 	6,  // 5: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams.left_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
 	6,  // 6: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams.right_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
 	5,  // 7: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.curve_id:type_name -> fabric_token_sdk.token.zkatdlog.v1.CurveID

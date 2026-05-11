@@ -27,11 +27,16 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Token represents a cleartext fungible token in the fabtoken driver.
+// It contains the owner identity, token type, and quantity in plaintext.
 type Token struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Owner         []byte                 `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`       // is the token owner
-	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`         // is the type of the token
-	Quantity      string                 `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"` // is the number of units of Type carried in the token. It is encoded as a string containing a number in base 16. The string has prefix ``0x''.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// owner is the serialized identity of the token owner
+	Owner []byte `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	// type is the token type identifier (e.g., "USD", "EUR")
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	// quantity is the number of units of this token type, encoded as a base-16 string with "0x" prefix
+	Quantity      string `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -87,10 +92,13 @@ func (x *Token) GetQuantity() string {
 	return ""
 }
 
+// TransferActionInput represents an input token being spent in a transfer action.
 type TransferActionInput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TokenId       *v1.TokenID            `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
-	Input         *Token                 `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token_id uniquely identifies the token being spent
+	TokenId *v1.TokenID `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
+	// input is the actual token being spent
+	Input         *Token `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -139,9 +147,11 @@ func (x *TransferActionInput) GetInput() *Token {
 	return nil
 }
 
+// TransferActionOutput represents a newly created token in a transfer action.
 type TransferActionOutput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         *Token                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"` // Token is the new token
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token is the newly created token
+	Token         *Token `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -183,13 +193,20 @@ func (x *TransferActionOutput) GetToken() *Token {
 	return nil
 }
 
+// TransferAction represents a token transfer operation that spends existing tokens
+// and creates new tokens, preserving the total quantity by type.
 type TransferAction struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Version       uint32                  `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	Inputs        []*TransferActionInput  `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                               // inputs
-	Outputs       []*TransferActionOutput `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                             // outputs
-	Metadata      map[string][]byte       `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Metadata contains the transfer action's metadata
-	Issuer        *v1.Identity            `protobuf:"bytes,5,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                               // is the identity of issuer to sign the transfer action
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// version is the protocol version of this transfer action
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// inputs are the tokens being spent in this transfer
+	Inputs []*TransferActionInput `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
+	// outputs are the newly created tokens from this transfer
+	Outputs []*TransferActionOutput `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`
+	// metadata contains application-specific data for this transfer
+	Metadata map[string][]byte `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// issuer is the identity that signs the transfer action in redeem scenarios
+	Issuer        *v1.Identity `protobuf:"bytes,5,opt,name=issuer,proto3" json:"issuer,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -259,10 +276,13 @@ func (x *TransferAction) GetIssuer() *v1.Identity {
 	return nil
 }
 
+// IssueActionInput represents a token being redeemed (burned) during issuance.
 type IssueActionInput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *v1.TokenID            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`       // is the token id of the token to be redeemed
-	Token         []byte                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"` // is the actual token to be redeemed
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the token identifier of the token being redeemed
+	Id *v1.TokenID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// token is the serialized token being redeemed
+	Token         []byte `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -311,9 +331,11 @@ func (x *IssueActionInput) GetToken() []byte {
 	return nil
 }
 
+// IssueActionOutput represents a newly issued token.
 type IssueActionOutput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         *Token                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"` // is the newly issued token
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token is the newly issued token
+	Token         *Token `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -355,13 +377,20 @@ func (x *IssueActionOutput) GetToken() *Token {
 	return nil
 }
 
+// IssueAction represents a token issuance operation where an authorized issuer
+// creates new tokens, optionally redeeming existing tokens in the process.
 type IssueAction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	Issuer        *v1.Identity           `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                               // is the identity of issuer
-	Inputs        []*IssueActionInput    `protobuf:"bytes,3,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                               // are the tokens to be redeemed by this issue action
-	Outputs       []*IssueActionOutput   `protobuf:"bytes,4,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                             // are the newly issued tokens
-	Metadata      map[string][]byte      `protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Metadata of the issue action
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// version is the protocol version of this issue action
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// issuer is the identity of the authorized issuer creating these tokens
+	Issuer *v1.Identity `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	// inputs are the tokens being redeemed (if any) during this issuance
+	Inputs []*IssueActionInput `protobuf:"bytes,3,rep,name=inputs,proto3" json:"inputs,omitempty"`
+	// outputs are the newly issued tokens
+	Outputs []*IssueActionOutput `protobuf:"bytes,4,rep,name=outputs,proto3" json:"outputs,omitempty"`
+	// metadata contains application-specific data for this issuance
+	Metadata      map[string][]byte `protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

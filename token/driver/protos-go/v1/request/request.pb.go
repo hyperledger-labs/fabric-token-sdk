@@ -82,10 +82,14 @@ func (ActionType) EnumDescriptor() ([]byte, []int) {
 }
 
 // AuditableIdentity represents an identity with its audit info
+// AuditableIdentity pairs an identity with its audit information,
+// allowing auditors to verify and track token operations.
 type AuditableIdentity struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Identity      *v1.Identity           `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`                    // The Identity
-	AuditInfo     []byte                 `protobuf:"bytes,2,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"` // Its audit info
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// identity is the serialized identity of the entity
+	Identity *v1.Identity `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	// audit_info contains encrypted or encoded information for auditors
+	AuditInfo     []byte `protobuf:"bytes,2,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -134,10 +138,13 @@ func (x *AuditableIdentity) GetAuditInfo() []byte {
 	return nil
 }
 
+// TransferInputMetadata describes an input token being spent in a transfer.
 type TransferInputMetadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TokenId       *v1.TokenID            `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"` // The token ID being transferred
-	Senders       []*AuditableIdentity   `protobuf:"bytes,2,rep,name=senders,proto3" json:"senders,omitempty"`                // Senders of the token
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token_id uniquely identifies the token being transferred
+	TokenId *v1.TokenID `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
+	// senders are the identities spending this token, with their audit information
+	Senders       []*AuditableIdentity `protobuf:"bytes,2,rep,name=senders,proto3" json:"senders,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -186,11 +193,15 @@ func (x *TransferInputMetadata) GetSenders() []*AuditableIdentity {
 	return nil
 }
 
+// OutputMetadata describes a newly created token output.
 type OutputMetadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Metadata      []byte                 `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`                    // output's metadata
-	AuditInfo     []byte                 `protobuf:"bytes,2,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"` // the audit information for the output's owner
-	Receivers     []*AuditableIdentity   `protobuf:"bytes,3,rep,name=receivers,proto3" json:"receivers,omitempty"`                  // list of receivers
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// metadata contains driver-specific output metadata
+	Metadata []byte `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// audit_info contains encrypted information about the output owner for auditors
+	AuditInfo []byte `protobuf:"bytes,2,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"`
+	// receivers are the identities receiving this token, with their audit information
+	Receivers     []*AuditableIdentity `protobuf:"bytes,3,rep,name=receivers,proto3" json:"receivers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -246,13 +257,18 @@ func (x *OutputMetadata) GetReceivers() []*AuditableIdentity {
 	return nil
 }
 
-// Metadata for a transfer action containing multiple tokens
+// TransferMetadata contains metadata for a transfer action that spends
+// existing tokens and creates new tokens.
 type TransferMetadata struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Inputs        []*TransferInputMetadata `protobuf:"bytes,1,rep,name=inputs,proto3" json:"inputs,omitempty"`                                 // Inputs
-	Outputs       []*OutputMetadata        `protobuf:"bytes,2,rep,name=outputs,proto3" json:"outputs,omitempty"`                               // Outputs
-	ExtraSigners  []*v1.Identity           `protobuf:"bytes,8,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"` // Additional signers for the transfer
-	Issuer        *v1.Identity             `protobuf:"bytes,3,opt,name=issuer,proto3" json:"issuer,omitempty"`                                 // Issuer signer for the redeem transfer
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// inputs describe the tokens being spent
+	Inputs []*TransferInputMetadata `protobuf:"bytes,1,rep,name=inputs,proto3" json:"inputs,omitempty"`
+	// outputs describe the newly created tokens
+	Outputs []*OutputMetadata `protobuf:"bytes,2,rep,name=outputs,proto3" json:"outputs,omitempty"`
+	// issuer is the identity that signs the transfer in redeem scenarios
+	Issuer *v1.Identity `protobuf:"bytes,3,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	// extra_signers are additional identities that must sign this transfer
+	ExtraSigners  []*v1.Identity `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -301,13 +317,6 @@ func (x *TransferMetadata) GetOutputs() []*OutputMetadata {
 	return nil
 }
 
-func (x *TransferMetadata) GetExtraSigners() []*v1.Identity {
-	if x != nil {
-		return x.ExtraSigners
-	}
-	return nil
-}
-
 func (x *TransferMetadata) GetIssuer() *v1.Identity {
 	if x != nil {
 		return x.Issuer
@@ -315,9 +324,18 @@ func (x *TransferMetadata) GetIssuer() *v1.Identity {
 	return nil
 }
 
+func (x *TransferMetadata) GetExtraSigners() []*v1.Identity {
+	if x != nil {
+		return x.ExtraSigners
+	}
+	return nil
+}
+
+// IssueInputMetadata describes a token being redeemed during issuance.
 type IssueInputMetadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TokenId       *v1.TokenID            `protobuf:"bytes,2,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"` // The Token ID being consumed by the issue
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token_id uniquely identifies the token being consumed by the issuance
+	TokenId       *v1.TokenID `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -359,13 +377,17 @@ func (x *IssueInputMetadata) GetTokenId() *v1.TokenID {
 	return nil
 }
 
-// Metadata for an issuance action containing multiple tokens
+// IssueMetadata contains metadata for an issuance action where new tokens are created.
 type IssueMetadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Issuer        *AuditableIdentity     `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`                                 // Issuer of the tokens
-	Inputs        []*IssueInputMetadata  `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`                                 // Inputs
-	Outputs       []*OutputMetadata      `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`                               // Outputs
-	ExtraSigners  []*v1.Identity         `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"` // Additional signers for the issuance
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// issuer is the identity creating the tokens, with audit information
+	Issuer *AuditableIdentity `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	// inputs describe tokens being redeemed (if any) during issuance
+	Inputs []*IssueInputMetadata `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
+	// outputs describe the newly issued tokens
+	Outputs []*OutputMetadata `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`
+	// extra_signers are additional identities that must sign this issuance
+	ExtraSigners  []*v1.Identity `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -428,14 +450,16 @@ func (x *IssueMetadata) GetExtraSigners() []*v1.Identity {
 	return nil
 }
 
-// Union type containing either issue or transfer metadata
+// ActionMetadata is a union type containing metadata for either an issue or transfer action.
 type ActionMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// metadata contains either issue or transfer metadata
+	//
 	// Types that are valid to be assigned to Metadata:
 	//
 	//	*ActionMetadata_IssueMetadata
 	//	*ActionMetadata_TransferMetadata
-	Metadata      isActionMetadata_Metadata `protobuf_oneof:"Metadata"`
+	Metadata      isActionMetadata_Metadata `protobuf_oneof:"metadata"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -500,23 +524,29 @@ type isActionMetadata_Metadata interface {
 }
 
 type ActionMetadata_IssueMetadata struct {
-	IssueMetadata *IssueMetadata `protobuf:"bytes,1,opt,name=issue_metadata,json=issueMetadata,proto3,oneof"` // Issue action metadata
+	// issue_metadata contains metadata for an issuance action
+	IssueMetadata *IssueMetadata `protobuf:"bytes,1,opt,name=issue_metadata,json=issueMetadata,proto3,oneof"`
 }
 
 type ActionMetadata_TransferMetadata struct {
-	TransferMetadata *TransferMetadata `protobuf:"bytes,2,opt,name=transfer_metadata,json=transferMetadata,proto3,oneof"` // Transfer action metadata
+	// transfer_metadata contains metadata for a transfer action
+	TransferMetadata *TransferMetadata `protobuf:"bytes,2,opt,name=transfer_metadata,json=transferMetadata,proto3,oneof"`
 }
 
 func (*ActionMetadata_IssueMetadata) isActionMetadata_Metadata() {}
 
 func (*ActionMetadata_TransferMetadata) isActionMetadata_Metadata() {}
 
-// Token request metadata containing multiple actions and application-specific data
+// TokenRequestMetadata contains metadata for a complete token request with multiple actions.
 type TokenRequestMetadata struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Version             uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`                                                                                                                             // Version number
-	Metadata            []*ActionMetadata      `protobuf:"bytes,2,rep,name=metadata,proto3" json:"metadata,omitempty"`                                                                                                                            // List of token actions (issue/transfer)
-	ApplicationMetadata map[string][]byte      `protobuf:"bytes,3,rep,name=application_metadata,json=applicationMetadata,proto3" json:"application_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Application-specific metadata stored as key-value pairs. Keys should follow a reverse-DNS naming convention to avoid collisions (e.g., "com.example.myapp.custom_field").
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// version is the protocol version of this metadata format
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// metadata is the list of action metadata (issue/transfer) in this request
+	Metadata []*ActionMetadata `protobuf:"bytes,2,rep,name=metadata,proto3" json:"metadata,omitempty"`
+	// application_metadata stores arbitrary application-specific data.
+	// Keys should follow reverse-DNS naming (e.g., "com.example.myapp.field") to avoid collisions.
+	ApplicationMetadata map[string][]byte `protobuf:"bytes,3,rep,name=application_metadata,json=applicationMetadata,proto3" json:"application_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -572,11 +602,13 @@ func (x *TokenRequestMetadata) GetApplicationMetadata() map[string][]byte {
 	return nil
 }
 
-// Represents a single action with its type and raw payload
+// Action represents a single token operation (issue or transfer) with its serialized data.
 type Action struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          ActionType             `protobuf:"varint,1,opt,name=type,proto3,enum=fabric_token_sdk.token.driver.v1.ActionType" json:"type,omitempty"` // Type of action (see ActionType)
-	Raw           []byte                 `protobuf:"bytes,2,opt,name=raw,proto3" json:"raw,omitempty"`                                                     // Raw bytes representing the action details
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// type specifies whether this is an issue or transfer action
+	Type ActionType `protobuf:"varint,1,opt,name=type,proto3,enum=fabric_token_sdk.token.driver.v1.ActionType" json:"type,omitempty"`
+	// raw contains the serialized action data (driver-specific format)
+	Raw           []byte `protobuf:"bytes,2,opt,name=raw,proto3" json:"raw,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -625,10 +657,11 @@ func (x *Action) GetRaw() []byte {
 	return nil
 }
 
-// Represents a cryptographic signature
+// Signature represents a cryptographic signature over token request data.
 type Signature struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Raw           []byte                 `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"` // Raw bytes of the signature
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// raw contains the serialized signature bytes
+	Raw           []byte `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -670,11 +703,13 @@ func (x *Signature) GetRaw() []byte {
 	return nil
 }
 
-// Represent a signature of an auditor
+// AuditorSignature pairs an auditor's identity with their signature.
 type AuditorSignature struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Identity      *v1.Identity           `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`   // The identity of the auditor that signed
-	Signature     *Signature             `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"` // Its signatures
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// identity is the serialized identity of the auditor who signed
+	Identity *v1.Identity `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	// signature is the auditor's cryptographic signature
+	Signature     *Signature `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -723,10 +758,11 @@ func (x *AuditorSignature) GetSignature() *Signature {
 	return nil
 }
 
-// Auditing is the section dedicated to the auditing
+// Auditing contains signatures from auditors who have reviewed and approved the request.
 type Auditing struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Signatures    []*AuditorSignature    `protobuf:"bytes,1,rep,name=signatures,proto3" json:"signatures,omitempty"` // Signatures of the auditors
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// signatures are the auditor signatures for this request
+	Signatures    []*AuditorSignature `protobuf:"bytes,1,rep,name=signatures,proto3" json:"signatures,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -768,13 +804,17 @@ func (x *Auditing) GetSignatures() []*AuditorSignature {
 	return nil
 }
 
-// Token request containing multiple actions and their signatures
+// TokenRequest represents a complete token request with actions and signatures.
 type TokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`      // Version number
-	Actions       []*Action              `protobuf:"bytes,2,rep,name=actions,proto3" json:"actions,omitempty"`       // List of token actions to perform
-	Signatures    []*Signature           `protobuf:"bytes,3,rep,name=signatures,proto3" json:"signatures,omitempty"` // Signatures for the actions
-	Auditing      *Auditing              `protobuf:"bytes,4,opt,name=auditing,proto3" json:"auditing,omitempty"`     // Section dedicated to the auditing
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// version is the protocol version of this request format
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// actions are the token operations (issue/transfer) to perform
+	Actions []*Action `protobuf:"bytes,2,rep,name=actions,proto3" json:"actions,omitempty"`
+	// signatures are the cryptographic signatures authorizing these actions
+	Signatures []*Signature `protobuf:"bytes,3,rep,name=signatures,proto3" json:"signatures,omitempty"`
+	// auditing contains auditor signatures for this request
+	Auditing      *Auditing `protobuf:"bytes,4,opt,name=auditing,proto3" json:"auditing,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -837,12 +877,18 @@ func (x *TokenRequest) GetAuditing() *Auditing {
 	return nil
 }
 
+// TokenRequestWithMetadata pairs a token request with its metadata.
+// This is the complete structure used for token operations.
 type TokenRequestWithMetadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`  // Version number
-	Anchor        string                 `protobuf:"bytes,2,opt,name=anchor,proto3" json:"anchor,omitempty"`     // Request anchor
-	Request       *TokenRequest          `protobuf:"bytes,3,opt,name=request,proto3" json:"request,omitempty"`   // the request
-	Metadata      *TokenRequestMetadata  `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"` // the corresponding metadata
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// version is the protocol version of this structure
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// anchor is a unique identifier linking this request to a specific context
+	Anchor string `protobuf:"bytes,2,opt,name=anchor,proto3" json:"anchor,omitempty"`
+	// request contains the actual token operations and signatures
+	Request *TokenRequest `protobuf:"bytes,3,opt,name=request,proto3" json:"request,omitempty"`
+	// metadata contains additional information about the request
+	Metadata      *TokenRequestMetadata `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -924,11 +970,11 @@ const file_request_proto_rawDesc = "" +
 	"\treceivers\x18\x03 \x03(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\treceivers\"\xc4\x02\n" +
 	"\x10TransferMetadata\x12O\n" +
 	"\x06inputs\x18\x01 \x03(\v27.fabric_token_sdk.token.driver.v1.TransferInputMetadataR\x06inputs\x12J\n" +
-	"\aoutputs\x18\x02 \x03(\v20.fabric_token_sdk.token.driver.v1.OutputMetadataR\aoutputs\x12O\n" +
-	"\rextra_signers\x18\b \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\fextraSigners\x12B\n" +
-	"\x06issuer\x18\x03 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\x06issuer\"Z\n" +
+	"\aoutputs\x18\x02 \x03(\v20.fabric_token_sdk.token.driver.v1.OutputMetadataR\aoutputs\x12B\n" +
+	"\x06issuer\x18\x03 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\x06issuer\x12O\n" +
+	"\rextra_signers\x18\x04 \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\fextraSigners\"Z\n" +
 	"\x12IssueInputMetadata\x12D\n" +
-	"\btoken_id\x18\x02 \x01(\v2).fabric_token_sdk.token.driver.v1.TokenIDR\atokenId\"\xc7\x02\n" +
+	"\btoken_id\x18\x01 \x01(\v2).fabric_token_sdk.token.driver.v1.TokenIDR\atokenId\"\xc7\x02\n" +
 	"\rIssueMetadata\x12K\n" +
 	"\x06issuer\x18\x01 \x01(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\x06issuer\x12L\n" +
 	"\x06inputs\x18\x02 \x03(\v24.fabric_token_sdk.token.driver.v1.IssueInputMetadataR\x06inputs\x12J\n" +
@@ -938,7 +984,7 @@ const file_request_proto_rawDesc = "" +
 	"\x0eissue_metadata\x18\x01 \x01(\v2/.fabric_token_sdk.token.driver.v1.IssueMetadataH\x00R\rissueMetadata\x12a\n" +
 	"\x11transfer_metadata\x18\x02 \x01(\v22.fabric_token_sdk.token.driver.v1.TransferMetadataH\x00R\x10transferMetadataB\n" +
 	"\n" +
-	"\bMetadata\"\xcb\x02\n" +
+	"\bmetadata\"\xcb\x02\n" +
 	"\x14TokenRequestMetadata\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12L\n" +
 	"\bmetadata\x18\x02 \x03(\v20.fabric_token_sdk.token.driver.v1.ActionMetadataR\bmetadata\x12\x82\x01\n" +
@@ -1017,8 +1063,8 @@ var file_request_proto_depIdxs = []int32{
 	1,  // 3: fabric_token_sdk.token.driver.v1.OutputMetadata.receivers:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
 	2,  // 4: fabric_token_sdk.token.driver.v1.TransferMetadata.inputs:type_name -> fabric_token_sdk.token.driver.v1.TransferInputMetadata
 	3,  // 5: fabric_token_sdk.token.driver.v1.TransferMetadata.outputs:type_name -> fabric_token_sdk.token.driver.v1.OutputMetadata
-	16, // 6: fabric_token_sdk.token.driver.v1.TransferMetadata.extra_signers:type_name -> fabric_token_sdk.token.driver.v1.Identity
-	16, // 7: fabric_token_sdk.token.driver.v1.TransferMetadata.issuer:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	16, // 6: fabric_token_sdk.token.driver.v1.TransferMetadata.issuer:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	16, // 7: fabric_token_sdk.token.driver.v1.TransferMetadata.extra_signers:type_name -> fabric_token_sdk.token.driver.v1.Identity
 	17, // 8: fabric_token_sdk.token.driver.v1.IssueInputMetadata.token_id:type_name -> fabric_token_sdk.token.driver.v1.TokenID
 	1,  // 9: fabric_token_sdk.token.driver.v1.IssueMetadata.issuer:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
 	5,  // 10: fabric_token_sdk.token.driver.v1.IssueMetadata.inputs:type_name -> fabric_token_sdk.token.driver.v1.IssueInputMetadata

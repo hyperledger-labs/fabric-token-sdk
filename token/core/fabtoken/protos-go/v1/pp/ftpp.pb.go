@@ -27,18 +27,28 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// PublicParameters describes typed public parameters
+// PublicParameters contains the public configuration for the fabtoken driver.
+// These parameters define the token system's capabilities, authorized entities,
+// and constraints for token operations.
 type PublicParameters struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	TokenDriverName    string                 `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`                                    // the name of the token driver
-	TokenDriverVersion uint32                 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                          // the version of token driver
-	Auditor            *v1.Identity           `protobuf:"bytes,3,opt,name=auditor,proto3" json:"auditor,omitempty"`                                                                             // is the public key of the auditor.
-	Issuers            []*v1.Identity         `protobuf:"bytes,4,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                             // is a list of public keys of the entities that can issue tokens.
-	MaxToken           uint64                 `protobuf:"varint,5,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`                                                          // is the maximum quantity a token can hold
-	QuantityPrecision  uint64                 `protobuf:"varint,6,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`                               // is the precision used to represent quantities
-	Metadata           map[string][]byte      `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // metadata allows storing arbitrary application-specific or extension data in the public parameters. Keys should follow a reverse-DNS naming convention to avoid collisions (e.g., "com.example.myapp.custom_field").
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token_driver_name is the identifier of the token driver (e.g., "fabtoken")
+	TokenDriverName string `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`
+	// token_driver_version is the protocol version of the token driver
+	TokenDriverVersion uint32 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`
+	// auditor is the serialized identity of the auditor who can view all token operations
+	Auditor *v1.Identity `protobuf:"bytes,3,opt,name=auditor,proto3" json:"auditor,omitempty"`
+	// issuers is the list of authorized issuer identities who can create new tokens
+	Issuers []*v1.Identity `protobuf:"bytes,4,rep,name=issuers,proto3" json:"issuers,omitempty"`
+	// max_token is the maximum quantity value a single token can hold
+	MaxToken uint64 `protobuf:"varint,5,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`
+	// quantity_precision is the number of decimal places supported for token quantities
+	QuantityPrecision uint64 `protobuf:"varint,6,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`
+	// metadata stores arbitrary application-specific or extension data.
+	// Keys should follow reverse-DNS naming (e.g., "com.example.myapp.field") to avoid collisions.
+	Metadata      map[string][]byte `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PublicParameters) Reset() {

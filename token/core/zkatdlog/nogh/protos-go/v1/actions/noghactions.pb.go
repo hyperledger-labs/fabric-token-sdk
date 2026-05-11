@@ -29,10 +29,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Token represents a privacy-preserving token using zero-knowledge proofs.
+// The token data is a Pedersen commitment hiding the type and value.
 type Token struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Owner         []byte                 `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"` // Owner is the owner of the token
-	Data          *math.G1               `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`   // Data is the Pedersen commitment to type and value
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// owner is the serialized identity of the token owner
+	Owner []byte `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	// data is the Pedersen commitment to the token's type and value, providing privacy
+	Data          *math.G1 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -81,14 +85,20 @@ func (x *Token) GetData() *math.G1 {
 	return nil
 }
 
+// TokenMetadata contains the private information about a token that only
+// the owner knows. This is never transmitted on-chain.
 type TokenMetadata struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Type           string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`                                           // Type is the type of the token
-	Value          *math.Zr               `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`                                         // Value is the quantity of the token
-	BlindingFactor *math.Zr               `protobuf:"bytes,3,opt,name=blinding_factor,json=blindingFactor,proto3" json:"blinding_factor,omitempty"` // BlindingFactor is the blinding factor used to commit type and value
-	Issuer         *v1.Identity           `protobuf:"bytes,4,opt,name=issuer,proto3" json:"issuer,omitempty"`                                       // Issuer is the issuer of the token, if defined
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// type is the token type identifier (e.g., "USD", "EUR")
+	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	// value is the quantity of the token as a field element
+	Value *math.Zr `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// blinding_factor is the randomness used in the Pedersen commitment
+	BlindingFactor *math.Zr `protobuf:"bytes,3,opt,name=blinding_factor,json=blindingFactor,proto3" json:"blinding_factor,omitempty"`
+	// issuer is the identity of the token issuer, if applicable
+	Issuer        *v1.Identity `protobuf:"bytes,4,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TokenMetadata) Reset() {
@@ -149,10 +159,14 @@ func (x *TokenMetadata) GetIssuer() *v1.Identity {
 	return nil
 }
 
+// TransferActionInput represents an input token being spent in a privacy-preserving transfer.
 type TransferActionInput struct {
-	state          protoimpl.MessageState             `protogen:"open.v1"`
-	TokenId        *v1.TokenID                        `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
-	Input          *Token                             `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token_id uniquely identifies the token being spent
+	TokenId *v1.TokenID `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
+	// input is the token being spent
+	Input *Token `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
+	// upgrade_witness contains data needed when upgrading from cleartext to privacy tokens
 	UpgradeWitness *TransferActionInputUpgradeWitness `protobuf:"bytes,3,opt,name=upgrade_witness,json=upgradeWitness,proto3" json:"upgrade_witness,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -209,10 +223,14 @@ func (x *TransferActionInput) GetUpgradeWitness() *TransferActionInputUpgradeWit
 	return nil
 }
 
+// TransferActionInputUpgradeWitness provides the information needed to upgrade
+// a cleartext fabtoken to a privacy-preserving zkatdlog token.
 type TransferActionInputUpgradeWitness struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Output         *actions.Token         `protobuf:"bytes,1,opt,name=output,proto3" json:"output,omitempty"`
-	BlindingFactor *math.Zr               `protobuf:"bytes,2,opt,name=blinding_factor,json=blindingFactor,proto3" json:"blinding_factor,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// output is the cleartext token being upgraded
+	Output *actions.Token `protobuf:"bytes,1,opt,name=output,proto3" json:"output,omitempty"`
+	// blinding_factor is the randomness to use in the new commitment
+	BlindingFactor *math.Zr `protobuf:"bytes,2,opt,name=blinding_factor,json=blindingFactor,proto3" json:"blinding_factor,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -261,9 +279,11 @@ func (x *TransferActionInputUpgradeWitness) GetBlindingFactor() *math.Zr {
 	return nil
 }
 
+// TransferActionOutput represents a newly created privacy-preserving token.
 type TransferActionOutput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         *Token                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"` // Token is the new token
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token is the newly created token
+	Token         *Token `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -305,8 +325,12 @@ func (x *TransferActionOutput) GetToken() *Token {
 	return nil
 }
 
+// Proof contains a zero-knowledge proof demonstrating the validity of an action.
+// It can use either the standard proof system or the CSP-based proof system.
 type Proof struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// proof_type determines which proof system is used
+	//
 	// Types that are valid to be assigned to ProofType:
 	//
 	//	*Proof_Proof
@@ -376,10 +400,12 @@ type isProof_ProofType interface {
 }
 
 type Proof_Proof struct {
+	// proof is the standard zero-knowledge proof
 	Proof []byte `protobuf:"bytes,1,opt,name=proof,proto3,oneof"`
 }
 
 type Proof_CspBasedProof struct {
+	// csp_based_proof is the CSP (Constraint Satisfaction Problem) based proof
 	CspBasedProof []byte `protobuf:"bytes,2,opt,name=csp_based_proof,json=cspBasedProof,proto3,oneof"`
 }
 
@@ -387,14 +413,22 @@ func (*Proof_Proof) isProof_ProofType() {}
 
 func (*Proof_CspBasedProof) isProof_ProofType() {}
 
+// TransferAction represents a privacy-preserving token transfer that spends existing
+// tokens and creates new tokens while proving correctness without revealing amounts.
 type TransferAction struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Version       uint32                  `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	Inputs        []*TransferActionInput  `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                               // inputs
-	Outputs       []*TransferActionOutput `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                             // outputs
-	Proof         *Proof                  `protobuf:"bytes,4,opt,name=proof,proto3" json:"proof,omitempty"`                                                                                 // ZK Proof that shows that the transfer is correct
-	Metadata      map[string][]byte       `protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Metadata contains the transfer action's metadata
-	Issuer        *v1.Identity            `protobuf:"bytes,6,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                               // Issuer to sign the transfer action in redeem case
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// version is the protocol version of this transfer action
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// inputs are the tokens being spent in this transfer
+	Inputs []*TransferActionInput `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
+	// outputs are the newly created tokens from this transfer
+	Outputs []*TransferActionOutput `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`
+	// proof is the zero-knowledge proof that the transfer is valid (inputs = outputs by type)
+	Proof *Proof `protobuf:"bytes,4,opt,name=proof,proto3" json:"proof,omitempty"`
+	// metadata contains application-specific data for this transfer
+	Metadata map[string][]byte `protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// issuer is the identity that signs the transfer action in redeem scenarios
+	Issuer        *v1.Identity `protobuf:"bytes,6,opt,name=issuer,proto3" json:"issuer,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -471,10 +505,13 @@ func (x *TransferAction) GetIssuer() *v1.Identity {
 	return nil
 }
 
+// IssueActionInput represents a token being redeemed (burned) during issuance.
 type IssueActionInput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *v1.TokenID            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`       // is the token id of the token to be redeemed
-	Token         []byte                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"` // is the actual token to be redeemed
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the token identifier of the token being redeemed
+	Id *v1.TokenID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// token is the serialized token being redeemed
+	Token         []byte `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -523,9 +560,11 @@ func (x *IssueActionInput) GetToken() []byte {
 	return nil
 }
 
+// IssueActionOutput represents a newly issued privacy-preserving token.
 type IssueActionOutput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         *Token                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"` // is the newly issued token
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// token is the newly issued token
+	Token         *Token `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -567,14 +606,22 @@ func (x *IssueActionOutput) GetToken() *Token {
 	return nil
 }
 
+// IssueAction represents a privacy-preserving token issuance where an authorized
+// issuer creates new tokens with zero-knowledge proofs of validity.
 type IssueAction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	Issuer        *v1.Identity           `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                               // is the identity of issuer
-	Inputs        []*IssueActionInput    `protobuf:"bytes,3,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                               // are the tokens to be redeemed by this issue action
-	Outputs       []*IssueActionOutput   `protobuf:"bytes,4,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                             // are the newly issued tokens
-	Proof         *Proof                 `protobuf:"bytes,5,opt,name=proof,proto3" json:"proof,omitempty"`                                                                                 // carries the ZKP of IssueAction validity
-	Metadata      map[string][]byte      `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Metadata of the issue action
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// version is the protocol version of this issue action
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// issuer is the identity of the authorized issuer creating these tokens
+	Issuer *v1.Identity `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	// inputs are the tokens being redeemed (if any) during this issuance
+	Inputs []*IssueActionInput `protobuf:"bytes,3,rep,name=inputs,proto3" json:"inputs,omitempty"`
+	// outputs are the newly issued tokens
+	Outputs []*IssueActionOutput `protobuf:"bytes,4,rep,name=outputs,proto3" json:"outputs,omitempty"`
+	// proof is the zero-knowledge proof that the issuance is valid
+	Proof *Proof `protobuf:"bytes,5,opt,name=proof,proto3" json:"proof,omitempty"`
+	// metadata contains application-specific data for this issuance
+	Metadata      map[string][]byte `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

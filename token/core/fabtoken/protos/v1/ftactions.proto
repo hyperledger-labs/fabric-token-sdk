@@ -12,42 +12,71 @@ import "common.proto";
 
 option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/actions";
 
+// Token represents a cleartext fungible token in the fabtoken driver.
+// It contains the owner identity, token type, and quantity in plaintext.
 message Token {
-  bytes owner = 1; // is the token owner
-  string type = 2; // is the type of the token
-  string quantity = 3; // is the number of units of Type carried in the token. It is encoded as a string containing a number in base 16. The string has prefix ``0x''.
+  // owner is the serialized identity of the token owner
+  bytes owner = 1;
+  // type is the token type identifier (e.g., "USD", "EUR")
+  string type = 2;
+  // quantity is the number of units of this token type, encoded as a base-16 string with "0x" prefix
+  string quantity = 3;
 }
 
+// TransferActionInput represents an input token being spent in a transfer action.
 message TransferActionInput {
+  // token_id uniquely identifies the token being spent
   fabric_token_sdk.token.driver.v1.TokenID token_id = 1;
+  // input is the actual token being spent
   Token input = 2;
 }
 
+// TransferActionOutput represents a newly created token in a transfer action.
 message TransferActionOutput {
-  Token token = 1; // Token is the new token
+  // token is the newly created token
+  Token token = 1;
 }
 
+// TransferAction represents a token transfer operation that spends existing tokens
+// and creates new tokens, preserving the total quantity by type.
 message TransferAction {
+  // version is the protocol version of this transfer action
   uint32 version = 1;
-  repeated TransferActionInput inputs = 2; // inputs
-  repeated TransferActionOutput outputs = 3; // outputs
-  map<string, bytes> metadata = 4; // Metadata contains the transfer action's metadata
-  fabric_token_sdk.token.driver.v1.Identity issuer = 5; // is the identity of issuer to sign the transfer action
+  // inputs are the tokens being spent in this transfer
+  repeated TransferActionInput inputs = 2;
+  // outputs are the newly created tokens from this transfer
+  repeated TransferActionOutput outputs = 3;
+  // metadata contains application-specific data for this transfer
+  map<string, bytes> metadata = 4;
+  // issuer is the identity that signs the transfer action in redeem scenarios
+  fabric_token_sdk.token.driver.v1.Identity issuer = 5;
 }
 
+// IssueActionInput represents a token being redeemed (burned) during issuance.
 message IssueActionInput {
-  fabric_token_sdk.token.driver.v1.TokenID id = 1; // is the token id of the token to be redeemed
-  bytes token = 2; // is the actual token to be redeemed
+  // id is the token identifier of the token being redeemed
+  fabric_token_sdk.token.driver.v1.TokenID id = 1;
+  // token is the serialized token being redeemed
+  bytes token = 2;
 }
 
+// IssueActionOutput represents a newly issued token.
 message IssueActionOutput {
-  Token token = 1; // is the newly issued token
+  // token is the newly issued token
+  Token token = 1;
 }
 
+// IssueAction represents a token issuance operation where an authorized issuer
+// creates new tokens, optionally redeeming existing tokens in the process.
 message IssueAction {
+  // version is the protocol version of this issue action
   uint32 version = 1;
-  fabric_token_sdk.token.driver.v1.Identity issuer = 2; // is the identity of issuer
-  repeated IssueActionInput inputs = 3; // are the tokens to be redeemed by this issue action
-  repeated IssueActionOutput outputs = 4; // are the newly issued tokens
-  map<string, bytes> metadata = 5; // Metadata of the issue action
+  // issuer is the identity of the authorized issuer creating these tokens
+  fabric_token_sdk.token.driver.v1.Identity issuer = 2;
+  // inputs are the tokens being redeemed (if any) during this issuance
+  repeated IssueActionInput inputs = 3;
+  // outputs are the newly issued tokens
+  repeated IssueActionOutput outputs = 4;
+  // metadata contains application-specific data for this issuance
+  map<string, bytes> metadata = 5;
 }

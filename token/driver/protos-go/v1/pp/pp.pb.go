@@ -26,11 +26,15 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// PublicParameters describes typed public parameters
+// PublicParameters is a generic container for driver-specific public parameters.
+// Different token drivers (fabtoken, zkatdlog, etc.) serialize their specific
+// public parameters into the raw field, identified by the identifier field.
 type PublicParameters struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Identifier    string                 `protobuf:"bytes,1,opt,name=identifier,proto3" json:"identifier,omitempty"` // the identifier of the public parameters
-	Raw           []byte                 `protobuf:"bytes,2,opt,name=raw,proto3" json:"raw,omitempty"`               // the actual public parameters to be interpreted depending on the identifier
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// identifier specifies which token driver these parameters belong to (e.g., "fabtoken", "zkatdlog")
+	Identifier string `protobuf:"bytes,1,opt,name=identifier,proto3" json:"identifier,omitempty"`
+	// raw contains the serialized driver-specific public parameters
+	Raw           []byte `protobuf:"bytes,2,opt,name=raw,proto3" json:"raw,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

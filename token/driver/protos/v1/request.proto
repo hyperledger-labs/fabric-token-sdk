@@ -24,90 +24,135 @@ enum ActionType {
 }
 
 // AuditableIdentity represents an identity with its audit info
+// AuditableIdentity pairs an identity with its audit information,
+// allowing auditors to verify and track token operations.
 message AuditableIdentity {
-  fabric_token_sdk.token.driver.v1.Identity identity = 1; // The Identity
-  bytes audit_info = 2; // Its audit info
+  // identity is the serialized identity of the entity
+  fabric_token_sdk.token.driver.v1.Identity identity = 1;
+  // audit_info contains encrypted or encoded information for auditors
+  bytes audit_info = 2;
 }
 
+// TransferInputMetadata describes an input token being spent in a transfer.
 message TransferInputMetadata {
-  fabric_token_sdk.token.driver.v1.TokenID token_id = 1; // The token ID being transferred
-  repeated AuditableIdentity senders = 2; // Senders of the token
+  // token_id uniquely identifies the token being transferred
+  fabric_token_sdk.token.driver.v1.TokenID token_id = 1;
+  // senders are the identities spending this token, with their audit information
+  repeated AuditableIdentity senders = 2;
 }
 
+// OutputMetadata describes a newly created token output.
 message OutputMetadata {
-  bytes metadata = 1; // output's metadata
-  bytes audit_info = 2; // the audit information for the output's owner
-  repeated AuditableIdentity receivers = 3; // list of receivers
+  // metadata contains driver-specific output metadata
+  bytes metadata = 1;
+  // audit_info contains encrypted information about the output owner for auditors
+  bytes audit_info = 2;
+  // receivers are the identities receiving this token, with their audit information
+  repeated AuditableIdentity receivers = 3;
 }
 
-// Metadata for a transfer action containing multiple tokens
+// TransferMetadata contains metadata for a transfer action that spends
+// existing tokens and creates new tokens.
 message TransferMetadata {
-  repeated TransferInputMetadata inputs = 1; // Inputs
-  repeated OutputMetadata outputs = 2; // Outputs
-  repeated fabric_token_sdk.token.driver.v1.Identity extra_signers = 8; // Additional signers for the transfer
-  fabric_token_sdk.token.driver.v1.Identity issuer = 3; // Issuer signer for the redeem transfer
+  // inputs describe the tokens being spent
+  repeated TransferInputMetadata inputs = 1;
+  // outputs describe the newly created tokens
+  repeated OutputMetadata outputs = 2;
+  // issuer is the identity that signs the transfer in redeem scenarios
+  fabric_token_sdk.token.driver.v1.Identity issuer = 3;
+  // extra_signers are additional identities that must sign this transfer
+  repeated fabric_token_sdk.token.driver.v1.Identity extra_signers = 4;
 }
 
+// IssueInputMetadata describes a token being redeemed during issuance.
 message IssueInputMetadata {
-  fabric_token_sdk.token.driver.v1.TokenID token_id = 2; // The Token ID being consumed by the issue
+  // token_id uniquely identifies the token being consumed by the issuance
+  fabric_token_sdk.token.driver.v1.TokenID token_id = 1;
 }
 
-// Metadata for an issuance action containing multiple tokens
+// IssueMetadata contains metadata for an issuance action where new tokens are created.
 message IssueMetadata {
-  AuditableIdentity issuer = 1; // Issuer of the tokens
-  repeated IssueInputMetadata inputs = 2; // Inputs
-  repeated OutputMetadata outputs = 3; // Outputs
-  repeated fabric_token_sdk.token.driver.v1.Identity extra_signers = 4; // Additional signers for the issuance
+  // issuer is the identity creating the tokens, with audit information
+  AuditableIdentity issuer = 1;
+  // inputs describe tokens being redeemed (if any) during issuance
+  repeated IssueInputMetadata inputs = 2;
+  // outputs describe the newly issued tokens
+  repeated OutputMetadata outputs = 3;
+  // extra_signers are additional identities that must sign this issuance
+  repeated fabric_token_sdk.token.driver.v1.Identity extra_signers = 4;
 }
 
-// Union type containing either issue or transfer metadata
+// ActionMetadata is a union type containing metadata for either an issue or transfer action.
 message ActionMetadata {
-  oneof Metadata { // Oneof field containing either issue or transfer metadata
-    IssueMetadata issue_metadata = 1; // Issue action metadata
-    TransferMetadata transfer_metadata = 2; // Transfer action metadata
+  // metadata contains either issue or transfer metadata
+  oneof metadata {
+    // issue_metadata contains metadata for an issuance action
+    IssueMetadata issue_metadata = 1;
+    // transfer_metadata contains metadata for a transfer action
+    TransferMetadata transfer_metadata = 2;
   }
 }
 
-// Token request metadata containing multiple actions and application-specific data
+// TokenRequestMetadata contains metadata for a complete token request with multiple actions.
 message TokenRequestMetadata {
-  uint32 version = 1; // Version number
-  repeated ActionMetadata metadata = 2; // List of token actions (issue/transfer)
-  map<string, bytes> application_metadata = 3; // Application-specific metadata stored as key-value pairs. Keys should follow a reverse-DNS naming convention to avoid collisions (e.g., "com.example.myapp.custom_field").
+  // version is the protocol version of this metadata format
+  uint32 version = 1;
+  // metadata is the list of action metadata (issue/transfer) in this request
+  repeated ActionMetadata metadata = 2;
+  // application_metadata stores arbitrary application-specific data.
+  // Keys should follow reverse-DNS naming (e.g., "com.example.myapp.field") to avoid collisions.
+  map<string, bytes> application_metadata = 3;
 }
 
-// Represents a single action with its type and raw payload
+// Action represents a single token operation (issue or transfer) with its serialized data.
 message Action {
-  ActionType type = 1; // Type of action (see ActionType)
-  bytes raw = 2; // Raw bytes representing the action details
+  // type specifies whether this is an issue or transfer action
+  ActionType type = 1;
+  // raw contains the serialized action data (driver-specific format)
+  bytes raw = 2;
 }
 
-// Represents a cryptographic signature
+// Signature represents a cryptographic signature over token request data.
 message Signature {
-  bytes raw = 1; // Raw bytes of the signature
+  // raw contains the serialized signature bytes
+  bytes raw = 1;
 }
 
-// Represent a signature of an auditor
+// AuditorSignature pairs an auditor's identity with their signature.
 message AuditorSignature {
-  fabric_token_sdk.token.driver.v1.Identity identity = 1; // The identity of the auditor that signed
-  Signature signature = 2; // Its signatures
+  // identity is the serialized identity of the auditor who signed
+  fabric_token_sdk.token.driver.v1.Identity identity = 1;
+  // signature is the auditor's cryptographic signature
+  Signature signature = 2;
 }
 
-// Auditing is the section dedicated to the auditing
+// Auditing contains signatures from auditors who have reviewed and approved the request.
 message Auditing {
-  repeated AuditorSignature signatures = 1; // Signatures of the auditors
+  // signatures are the auditor signatures for this request
+  repeated AuditorSignature signatures = 1;
 }
 
-// Token request containing multiple actions and their signatures
+// TokenRequest represents a complete token request with actions and signatures.
 message TokenRequest {
-  uint32 version = 1; // Version number
-  repeated Action actions = 2; // List of token actions to perform
-  repeated Signature signatures = 3; // Signatures for the actions
-  Auditing auditing = 4; // Section dedicated to the auditing
+  // version is the protocol version of this request format
+  uint32 version = 1;
+  // actions are the token operations (issue/transfer) to perform
+  repeated Action actions = 2;
+  // signatures are the cryptographic signatures authorizing these actions
+  repeated Signature signatures = 3;
+  // auditing contains auditor signatures for this request
+  Auditing auditing = 4;
 }
 
+// TokenRequestWithMetadata pairs a token request with its metadata.
+// This is the complete structure used for token operations.
 message TokenRequestWithMetadata {
-  uint32 version = 1; // Version number
-  string anchor = 2; // Request anchor
-  TokenRequest request = 3; // the request
-  TokenRequestMetadata metadata = 4; // the corresponding metadata
+  // version is the protocol version of this structure
+  uint32 version = 1;
+  // anchor is a unique identifier linking this request to a specific context
+  string anchor = 2;
+  // request contains the actual token operations and signatures
+  TokenRequest request = 3;
+  // metadata contains additional information about the request
+  TokenRequestMetadata metadata = 4;
 }
