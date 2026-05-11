@@ -14,6 +14,7 @@ import (
 	encoding "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/pp"
 	fabpp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driverv1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 )
@@ -119,8 +120,8 @@ func (p *PublicParams) MaxTokenValue() uint64 {
 
 // Bytes marshals PublicParams
 func (p *PublicParams) Bytes() ([]byte, error) {
-	issuers, err := protos.ToProtosSliceFunc(p.IssuerIDs, func(id driver.Identity) (*fabpp.Identity, error) {
-		return &fabpp.Identity{
+	issuers, err := protos.ToProtosSliceFunc(p.IssuerIDs, func(id driver.Identity) (*driverv1.Identity, error) {
+		return &driverv1.Identity{
 			Raw: id,
 		}, nil
 	})
@@ -131,7 +132,7 @@ func (p *PublicParams) Bytes() ([]byte, error) {
 	params := &fabpp.PublicParameters{
 		TokenDriverName:    string(p.DriverName),
 		TokenDriverVersion: uint64(p.DriverVersion),
-		Auditor: &fabpp.Identity{
+		Auditor: &driverv1.Identity{
 			Raw: p.Auditor,
 		},
 		Issuers:           issuers,
@@ -151,7 +152,7 @@ func (p *PublicParams) FromBytes(data []byte) error {
 	p.DriverVersion = driver.TokenDriverVersion(publicParams.TokenDriverVersion)
 	p.QuantityPrecision = publicParams.QuantityPrecision
 	p.MaxToken = publicParams.MaxToken
-	issuers, err := protos.FromProtosSliceFunc2(publicParams.Issuers, func(id *fabpp.Identity) (driver.Identity, error) {
+	issuers, err := protos.FromProtosSliceFunc2(publicParams.Issuers, func(id *driverv1.Identity) (driver.Identity, error) {
 		if id == nil {
 			return nil, nil
 		}

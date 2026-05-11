@@ -12,6 +12,7 @@
 package pp
 
 import (
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -26,57 +27,13 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Identity struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Raw           []byte                 `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Identity) Reset() {
-	*x = Identity{}
-	mi := &file_ftpp_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Identity) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Identity) ProtoMessage() {}
-
-func (x *Identity) ProtoReflect() protoreflect.Message {
-	mi := &file_ftpp_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Identity.ProtoReflect.Descriptor instead.
-func (*Identity) Descriptor() ([]byte, []int) {
-	return file_ftpp_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *Identity) GetRaw() []byte {
-	if x != nil {
-		return x.Raw
-	}
-	return nil
-}
-
 // PublicParameters describes typed public parameters
 type PublicParameters struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	TokenDriverName    string                 `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`                                                       // the name of the token driver
 	TokenDriverVersion uint64                 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                                             // the version of token driver
-	Auditor            *Identity              `protobuf:"bytes,3,opt,name=auditor,proto3" json:"auditor,omitempty"`                                                                                                // is the public key of the auditor.
-	Issuers            []*Identity            `protobuf:"bytes,4,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                                                // is a list of public keys of the entities that can issue tokens.
+	Auditor            *v1.Identity           `protobuf:"bytes,3,opt,name=auditor,proto3" json:"auditor,omitempty"`                                                                                                // is the public key of the auditor.
+	Issuers            []*v1.Identity         `protobuf:"bytes,4,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                                                // is a list of public keys of the entities that can issue tokens.
 	MaxToken           uint64                 `protobuf:"varint,5,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`                                                                             // is the maximum quantity a token can hold
 	QuantityPrecision  uint64                 `protobuf:"varint,6,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`                                                  // is the precision used to represent quantities
 	ExtraData          map[string][]byte      `protobuf:"bytes,7,rep,name=extra_data,json=extraData,proto3" json:"extra_data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // extra_data allows to store arbitrary data in the public parameters
@@ -86,7 +43,7 @@ type PublicParameters struct {
 
 func (x *PublicParameters) Reset() {
 	*x = PublicParameters{}
-	mi := &file_ftpp_proto_msgTypes[1]
+	mi := &file_ftpp_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -98,7 +55,7 @@ func (x *PublicParameters) String() string {
 func (*PublicParameters) ProtoMessage() {}
 
 func (x *PublicParameters) ProtoReflect() protoreflect.Message {
-	mi := &file_ftpp_proto_msgTypes[1]
+	mi := &file_ftpp_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -111,7 +68,7 @@ func (x *PublicParameters) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublicParameters.ProtoReflect.Descriptor instead.
 func (*PublicParameters) Descriptor() ([]byte, []int) {
-	return file_ftpp_proto_rawDescGZIP(), []int{1}
+	return file_ftpp_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *PublicParameters) GetTokenDriverName() string {
@@ -128,14 +85,14 @@ func (x *PublicParameters) GetTokenDriverVersion() uint64 {
 	return 0
 }
 
-func (x *PublicParameters) GetAuditor() *Identity {
+func (x *PublicParameters) GetAuditor() *v1.Identity {
 	if x != nil {
 		return x.Auditor
 	}
 	return nil
 }
 
-func (x *PublicParameters) GetIssuers() []*Identity {
+func (x *PublicParameters) GetIssuers() []*v1.Identity {
 	if x != nil {
 		return x.Issuers
 	}
@@ -168,14 +125,12 @@ var File_ftpp_proto protoreflect.FileDescriptor
 const file_ftpp_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"ftpp.proto\x12\"fabric_token_sdk.token.fabtoken.v1\"\x1c\n" +
-	"\bIdentity\x12\x10\n" +
-	"\x03raw\x18\x01 \x01(\fR\x03raw\"\xee\x03\n" +
+	"ftpp.proto\x12\"fabric_token_sdk.token.fabtoken.v1\x1a\fcommon.proto\"\xea\x03\n" +
 	"\x10PublicParameters\x12*\n" +
 	"\x11token_driver_name\x18\x01 \x01(\tR\x0ftokenDriverName\x120\n" +
-	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12F\n" +
-	"\aauditor\x18\x03 \x01(\v2,.fabric_token_sdk.token.fabtoken.v1.IdentityR\aauditor\x12F\n" +
-	"\aissuers\x18\x04 \x03(\v2,.fabric_token_sdk.token.fabtoken.v1.IdentityR\aissuers\x12\x1b\n" +
+	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12D\n" +
+	"\aauditor\x18\x03 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\aauditor\x12D\n" +
+	"\aissuers\x18\x04 \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\aissuers\x12\x1b\n" +
 	"\tmax_token\x18\x05 \x01(\x04R\bmaxToken\x12-\n" +
 	"\x12quantity_precision\x18\x06 \x01(\x04R\x11quantityPrecision\x12b\n" +
 	"\n" +
@@ -196,16 +151,16 @@ func file_ftpp_proto_rawDescGZIP() []byte {
 	return file_ftpp_proto_rawDescData
 }
 
-var file_ftpp_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_ftpp_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_ftpp_proto_goTypes = []any{
-	(*Identity)(nil),         // 0: fabric_token_sdk.token.fabtoken.v1.Identity
-	(*PublicParameters)(nil), // 1: fabric_token_sdk.token.fabtoken.v1.PublicParameters
-	nil,                      // 2: fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntry
+	(*PublicParameters)(nil), // 0: fabric_token_sdk.token.fabtoken.v1.PublicParameters
+	nil,                      // 1: fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntry
+	(*v1.Identity)(nil),      // 2: fabric_token_sdk.token.driver.v1.Identity
 }
 var file_ftpp_proto_depIdxs = []int32{
-	0, // 0: fabric_token_sdk.token.fabtoken.v1.PublicParameters.auditor:type_name -> fabric_token_sdk.token.fabtoken.v1.Identity
-	0, // 1: fabric_token_sdk.token.fabtoken.v1.PublicParameters.issuers:type_name -> fabric_token_sdk.token.fabtoken.v1.Identity
-	2, // 2: fabric_token_sdk.token.fabtoken.v1.PublicParameters.extra_data:type_name -> fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntry
+	2, // 0: fabric_token_sdk.token.fabtoken.v1.PublicParameters.auditor:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	2, // 1: fabric_token_sdk.token.fabtoken.v1.PublicParameters.issuers:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	1, // 2: fabric_token_sdk.token.fabtoken.v1.PublicParameters.extra_data:type_name -> fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntry
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -224,7 +179,7 @@ func file_ftpp_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ftpp_proto_rawDesc), len(file_ftpp_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

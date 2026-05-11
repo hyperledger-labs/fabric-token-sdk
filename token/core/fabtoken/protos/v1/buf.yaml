@@ -1,2 +1,4 @@
 version: v2
 name: buf.build/hyperledger-labs/fabric-token-sdk-fabtoken
+deps:
+  - token/driver/protos/v1

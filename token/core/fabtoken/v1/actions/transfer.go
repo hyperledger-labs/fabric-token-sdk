@@ -10,8 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/actions"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driverv1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -27,10 +27,10 @@ type TransferActionInput struct {
 }
 
 func (a *TransferActionInput) ToProtos() (*actions.TransferActionInput, error) {
-	var id *actions.TokenID
+	var id *driverv1.TokenID
 	if a.ID != nil {
-		id = &actions.TokenID{
-			Id:    a.ID.TxId,
+		id = &driverv1.TokenID{
+			TxId:  a.ID.TxId,
 			Index: a.ID.Index,
 		}
 	}
@@ -52,7 +52,7 @@ func (a *TransferActionInput) ToProtos() (*actions.TransferActionInput, error) {
 func (a *TransferActionInput) FromProtos(input *actions.TransferActionInput) error {
 	if input.TokenId != nil {
 		a.ID = &token.ID{
-			TxId:  input.TokenId.Id,
+			TxId:  input.TokenId.TxId,
 			Index: input.TokenId.Index,
 		}
 	}
@@ -257,9 +257,9 @@ func (t *TransferAction) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to serialize outputs")
 	}
 
-	var issuer *pp.Identity
+	var issuer *driverv1.Identity
 	if t.Issuer != nil {
-		issuer = &pp.Identity{
+		issuer = &driverv1.Identity{
 			Raw: t.Issuer.Bytes(),
 		}
 	}
@@ -311,7 +311,7 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 	t.Metadata = action.Metadata
 	t.Issuer = nil
 	if action.Issuer != nil {
-		t.Issuer = driver.Identity(action.Issuer.Raw)
+		t.Issuer = action.Issuer.Raw
 	}
 
 	return nil

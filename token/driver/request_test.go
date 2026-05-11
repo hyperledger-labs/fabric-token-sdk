@@ -10,6 +10,8 @@ import (
 	"encoding/asn1"
 	"testing"
 
+	driver "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
+
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -34,7 +36,7 @@ func TestAuditorSignature_ToProtos(t *testing.T) {
 // TestAuditorSignature_FromProtos tests the conversion from protobuf to AuditorSignature
 func TestAuditorSignature_FromProtos(t *testing.T) {
 	proto := &request.AuditorSignature{
-		Identity: &request.Identity{
+		Identity: &driver.Identity{
 			Raw: []byte("auditor1"),
 		},
 		Signature: &request.Signature{
@@ -231,7 +233,7 @@ func TestAuditableIdentity_ToProtos(t *testing.T) {
 // TestAuditableIdentity_FromProtos tests conversion from protobuf
 func TestAuditableIdentity_FromProtos(t *testing.T) {
 	proto := &request.AuditableIdentity{
-		Identity: &request.Identity{
+		Identity: &driver.Identity{
 			Raw: []byte("identity1"),
 		},
 		AuditInfo: []byte("auditinfo1"),
@@ -263,7 +265,7 @@ func TestIssueInputMetadata_ToProtos(t *testing.T) {
 // TestIssueInputMetadata_FromProtos tests conversion from protobuf
 func TestIssueInputMetadata_FromProtos(t *testing.T) {
 	proto := &request.IssueInputMetadata{
-		TokenId: &request.TokenID{
+		TokenId: &driver.TokenID{
 			TxId:  "tx123",
 			Index: 5,
 		},
@@ -325,7 +327,7 @@ func TestIssueOutputMetadata_FromProtos(t *testing.T) {
 		Metadata: []byte("metadata1"),
 		Receivers: []*request.AuditableIdentity{
 			{
-				Identity:  &request.Identity{Raw: []byte("receiver1")},
+				Identity:  &driver.Identity{Raw: []byte("receiver1")},
 				AuditInfo: []byte("audit1"),
 			},
 		},
@@ -408,16 +410,16 @@ func TestIssueMetadata_ToProtos(t *testing.T) {
 func TestIssueMetadata_FromProtos(t *testing.T) {
 	proto := &request.IssueMetadata{
 		Issuer: &request.AuditableIdentity{
-			Identity:  &request.Identity{Raw: []byte("issuer1")},
+			Identity:  &driver.Identity{Raw: []byte("issuer1")},
 			AuditInfo: []byte("issuer_audit"),
 		},
 		Inputs: []*request.IssueInputMetadata{
-			{TokenId: &request.TokenID{TxId: "tx1", Index: 0}},
+			{TokenId: &driver.TokenID{TxId: "tx1", Index: 0}},
 		},
 		Outputs: []*request.OutputMetadata{
 			{Metadata: []byte("output1")},
 		},
-		ExtraSigners: []*request.Identity{
+		ExtraSigners: []*driver.Identity{
 			{Raw: []byte("signer1")},
 		},
 	}
@@ -457,10 +459,10 @@ func TestTransferInputMetadata_ToProtos(t *testing.T) {
 // TestTransferInputMetadata_FromProtos tests conversion from protobuf
 func TestTransferInputMetadata_FromProtos(t *testing.T) {
 	proto := &request.TransferInputMetadata{
-		TokenId: &request.TokenID{TxId: "tx123", Index: 5},
+		TokenId: &driver.TokenID{TxId: "tx123", Index: 5},
 		Senders: []*request.AuditableIdentity{
 			{
-				Identity:  &request.Identity{Raw: []byte("sender1")},
+				Identity:  &driver.Identity{Raw: []byte("sender1")},
 				AuditInfo: []byte("audit1"),
 			},
 		},
@@ -528,7 +530,7 @@ func TestTransferOutputMetadata_FromProtos(t *testing.T) {
 		Metadata:  []byte("metadata1"),
 		AuditInfo: []byte("auditinfo1"),
 		Receivers: []*request.AuditableIdentity{
-			{Identity: &request.Identity{Raw: []byte("receiver1")}},
+			{Identity: &driver.Identity{Raw: []byte("receiver1")}},
 		},
 	}
 
@@ -684,15 +686,15 @@ func TestTransferMetadata_ToProtos_NilIssuer(t *testing.T) {
 func TestTransferMetadata_FromProtos(t *testing.T) {
 	proto := &request.TransferMetadata{
 		Inputs: []*request.TransferInputMetadata{
-			{TokenId: &request.TokenID{TxId: "tx1", Index: 1}},
+			{TokenId: &driver.TokenID{TxId: "tx1", Index: 1}},
 		},
 		Outputs: []*request.OutputMetadata{
 			{Metadata: []byte("output1")},
 		},
-		ExtraSigners: []*request.Identity{
+		ExtraSigners: []*driver.Identity{
 			{Raw: []byte("signer1")},
 		},
-		Issuer: &request.Identity{Raw: []byte("issuer1")},
+		Issuer: &driver.Identity{Raw: []byte("issuer1")},
 	}
 
 	tm := &TransferMetadata{}
@@ -1038,10 +1040,10 @@ func TestIssueMetadata_ToProtos_ErrorInOutputs(t *testing.T) {
 func TestIssueMetadata_FromProtos_ErrorInInputs(t *testing.T) {
 	proto := &request.IssueMetadata{
 		Issuer: &request.AuditableIdentity{
-			Identity: &request.Identity{Raw: []byte("issuer1")},
+			Identity: &driver.Identity{Raw: []byte("issuer1")},
 		},
 		Inputs: []*request.IssueInputMetadata{
-			{TokenId: &request.TokenID{TxId: "tx1", Index: 0}},
+			{TokenId: &driver.TokenID{TxId: "tx1", Index: 0}},
 		},
 		Outputs: []*request.OutputMetadata{},
 	}
@@ -1055,7 +1057,7 @@ func TestIssueMetadata_FromProtos_ErrorInInputs(t *testing.T) {
 func TestIssueMetadata_FromProtos_ErrorInOutputs(t *testing.T) {
 	proto := &request.IssueMetadata{
 		Issuer: &request.AuditableIdentity{
-			Identity: &request.Identity{Raw: []byte("issuer1")},
+			Identity: &driver.Identity{Raw: []byte("issuer1")},
 		},
 		Inputs: []*request.IssueInputMetadata{},
 		Outputs: []*request.OutputMetadata{
@@ -1115,7 +1117,7 @@ func TestTransferMetadata_ToProtos_ErrorInOutputs(t *testing.T) {
 func TestTransferMetadata_FromProtos_ErrorInInputs(t *testing.T) {
 	proto := &request.TransferMetadata{
 		Inputs: []*request.TransferInputMetadata{
-			{TokenId: &request.TokenID{TxId: "tx1", Index: 1}},
+			{TokenId: &driver.TokenID{TxId: "tx1", Index: 1}},
 		},
 		Outputs: []*request.OutputMetadata{},
 	}
@@ -1201,7 +1203,7 @@ func TestTokenRequestMetadata_FromProtos_NilIssueMetadata(t *testing.T) {
 				Metadata: &request.ActionMetadata_IssueMetadata{
 					IssueMetadata: &request.IssueMetadata{
 						Issuer: &request.AuditableIdentity{
-							Identity: &request.Identity{Raw: []byte("issuer1")},
+							Identity: &driver.Identity{Raw: []byte("issuer1")},
 						},
 					},
 				},
@@ -1431,7 +1433,7 @@ func TestTokenRequest_FromProtos_WithAuditing(t *testing.T) {
 		Auditing: &request.Auditing{
 			Signatures: []*request.AuditorSignature{
 				{
-					Identity:  &request.Identity{Raw: []byte("aud1")},
+					Identity:  &driver.Identity{Raw: []byte("aud1")},
 					Signature: &request.Signature{Raw: []byte("audsig1")},
 				},
 			},

@@ -12,7 +12,7 @@
 package actions
 
 import (
-	pp "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/pp"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -87,61 +87,9 @@ func (x *Token) GetQuantity() string {
 	return ""
 }
 
-type TokenID struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Index         uint64                 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TokenID) Reset() {
-	*x = TokenID{}
-	mi := &file_ftactions_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TokenID) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TokenID) ProtoMessage() {}
-
-func (x *TokenID) ProtoReflect() protoreflect.Message {
-	mi := &file_ftactions_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TokenID.ProtoReflect.Descriptor instead.
-func (*TokenID) Descriptor() ([]byte, []int) {
-	return file_ftactions_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *TokenID) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *TokenID) GetIndex() uint64 {
-	if x != nil {
-		return x.Index
-	}
-	return 0
-}
-
 type TransferActionInput struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	TokenId       *TokenID               `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
+	TokenId       *v1.TokenID            `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
 	Input         *Token                 `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -149,7 +97,7 @@ type TransferActionInput struct {
 
 func (x *TransferActionInput) Reset() {
 	*x = TransferActionInput{}
-	mi := &file_ftactions_proto_msgTypes[2]
+	mi := &file_ftactions_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -161,7 +109,7 @@ func (x *TransferActionInput) String() string {
 func (*TransferActionInput) ProtoMessage() {}
 
 func (x *TransferActionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_ftactions_proto_msgTypes[2]
+	mi := &file_ftactions_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -174,10 +122,10 @@ func (x *TransferActionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferActionInput.ProtoReflect.Descriptor instead.
 func (*TransferActionInput) Descriptor() ([]byte, []int) {
-	return file_ftactions_proto_rawDescGZIP(), []int{2}
+	return file_ftactions_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *TransferActionInput) GetTokenId() *TokenID {
+func (x *TransferActionInput) GetTokenId() *v1.TokenID {
 	if x != nil {
 		return x.TokenId
 	}
@@ -200,7 +148,7 @@ type TransferActionOutput struct {
 
 func (x *TransferActionOutput) Reset() {
 	*x = TransferActionOutput{}
-	mi := &file_ftactions_proto_msgTypes[3]
+	mi := &file_ftactions_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -212,7 +160,7 @@ func (x *TransferActionOutput) String() string {
 func (*TransferActionOutput) ProtoMessage() {}
 
 func (x *TransferActionOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_ftactions_proto_msgTypes[3]
+	mi := &file_ftactions_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -225,7 +173,7 @@ func (x *TransferActionOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferActionOutput.ProtoReflect.Descriptor instead.
 func (*TransferActionOutput) Descriptor() ([]byte, []int) {
-	return file_ftactions_proto_rawDescGZIP(), []int{3}
+	return file_ftactions_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *TransferActionOutput) GetToken() *Token {
@@ -241,14 +189,14 @@ type TransferAction struct {
 	Inputs        []*TransferActionInput  `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                               // inputs
 	Outputs       []*TransferActionOutput `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                             // outputs
 	Metadata      map[string][]byte       `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Metadata contains the transfer action's metadata
-	Issuer        *pp.Identity            `protobuf:"bytes,5,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                               // is the identity of issuer to sign the transfer action
+	Issuer        *v1.Identity            `protobuf:"bytes,5,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                               // is the identity of issuer to sign the transfer action
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TransferAction) Reset() {
 	*x = TransferAction{}
-	mi := &file_ftactions_proto_msgTypes[4]
+	mi := &file_ftactions_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -260,7 +208,7 @@ func (x *TransferAction) String() string {
 func (*TransferAction) ProtoMessage() {}
 
 func (x *TransferAction) ProtoReflect() protoreflect.Message {
-	mi := &file_ftactions_proto_msgTypes[4]
+	mi := &file_ftactions_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -273,7 +221,7 @@ func (x *TransferAction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferAction.ProtoReflect.Descriptor instead.
 func (*TransferAction) Descriptor() ([]byte, []int) {
-	return file_ftactions_proto_rawDescGZIP(), []int{4}
+	return file_ftactions_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *TransferAction) GetVersion() uint64 {
@@ -304,7 +252,7 @@ func (x *TransferAction) GetMetadata() map[string][]byte {
 	return nil
 }
 
-func (x *TransferAction) GetIssuer() *pp.Identity {
+func (x *TransferAction) GetIssuer() *v1.Identity {
 	if x != nil {
 		return x.Issuer
 	}
@@ -313,7 +261,7 @@ func (x *TransferAction) GetIssuer() *pp.Identity {
 
 type IssueActionInput struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *TokenID               `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`       // is the token id of the token to be redeemed
+	Id            *v1.TokenID            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`       // is the token id of the token to be redeemed
 	Token         []byte                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"` // is the actual token to be redeemed
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -321,7 +269,7 @@ type IssueActionInput struct {
 
 func (x *IssueActionInput) Reset() {
 	*x = IssueActionInput{}
-	mi := &file_ftactions_proto_msgTypes[5]
+	mi := &file_ftactions_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -333,7 +281,7 @@ func (x *IssueActionInput) String() string {
 func (*IssueActionInput) ProtoMessage() {}
 
 func (x *IssueActionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_ftactions_proto_msgTypes[5]
+	mi := &file_ftactions_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -346,10 +294,10 @@ func (x *IssueActionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueActionInput.ProtoReflect.Descriptor instead.
 func (*IssueActionInput) Descriptor() ([]byte, []int) {
-	return file_ftactions_proto_rawDescGZIP(), []int{5}
+	return file_ftactions_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *IssueActionInput) GetId() *TokenID {
+func (x *IssueActionInput) GetId() *v1.TokenID {
 	if x != nil {
 		return x.Id
 	}
@@ -372,7 +320,7 @@ type IssueActionOutput struct {
 
 func (x *IssueActionOutput) Reset() {
 	*x = IssueActionOutput{}
-	mi := &file_ftactions_proto_msgTypes[6]
+	mi := &file_ftactions_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -384,7 +332,7 @@ func (x *IssueActionOutput) String() string {
 func (*IssueActionOutput) ProtoMessage() {}
 
 func (x *IssueActionOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_ftactions_proto_msgTypes[6]
+	mi := &file_ftactions_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -397,7 +345,7 @@ func (x *IssueActionOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueActionOutput.ProtoReflect.Descriptor instead.
 func (*IssueActionOutput) Descriptor() ([]byte, []int) {
-	return file_ftactions_proto_rawDescGZIP(), []int{6}
+	return file_ftactions_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *IssueActionOutput) GetToken() *Token {
@@ -410,7 +358,7 @@ func (x *IssueActionOutput) GetToken() *Token {
 type IssueAction struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Version       uint64                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	Issuer        *pp.Identity           `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                               // is the identity of issuer
+	Issuer        *v1.Identity           `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`                                                                               // is the identity of issuer
 	Inputs        []*IssueActionInput    `protobuf:"bytes,3,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                               // are the tokens to be redeemed by this issue action
 	Outputs       []*IssueActionOutput   `protobuf:"bytes,4,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                             // are the newly issued tokens
 	Metadata      map[string][]byte      `protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Metadata of the issue action
@@ -420,7 +368,7 @@ type IssueAction struct {
 
 func (x *IssueAction) Reset() {
 	*x = IssueAction{}
-	mi := &file_ftactions_proto_msgTypes[7]
+	mi := &file_ftactions_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -432,7 +380,7 @@ func (x *IssueAction) String() string {
 func (*IssueAction) ProtoMessage() {}
 
 func (x *IssueAction) ProtoReflect() protoreflect.Message {
-	mi := &file_ftactions_proto_msgTypes[7]
+	mi := &file_ftactions_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -445,7 +393,7 @@ func (x *IssueAction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueAction.ProtoReflect.Descriptor instead.
 func (*IssueAction) Descriptor() ([]byte, []int) {
-	return file_ftactions_proto_rawDescGZIP(), []int{7}
+	return file_ftactions_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *IssueAction) GetVersion() uint64 {
@@ -455,7 +403,7 @@ func (x *IssueAction) GetVersion() uint64 {
 	return 0
 }
 
-func (x *IssueAction) GetIssuer() *pp.Identity {
+func (x *IssueAction) GetIssuer() *v1.Identity {
 	if x != nil {
 		return x.Issuer
 	}
@@ -487,37 +435,33 @@ var File_ftactions_proto protoreflect.FileDescriptor
 
 const file_ftactions_proto_rawDesc = "" +
 	"\n" +
-	"\x0fftactions.proto\x12\"fabric_token_sdk.token.fabtoken.v1\x1a\n" +
-	"ftpp.proto\"M\n" +
+	"\x0fftactions.proto\x12\"fabric_token_sdk.token.fabtoken.v1\x1a\fcommon.proto\"M\n" +
 	"\x05Token\x12\x14\n" +
 	"\x05owner\x18\x01 \x01(\fR\x05owner\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1a\n" +
-	"\bquantity\x18\x03 \x01(\tR\bquantity\"/\n" +
-	"\aTokenID\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05index\x18\x02 \x01(\x04R\x05index\"\x9e\x01\n" +
-	"\x13TransferActionInput\x12F\n" +
-	"\btoken_id\x18\x01 \x01(\v2+.fabric_token_sdk.token.fabtoken.v1.TokenIDR\atokenId\x12?\n" +
+	"\bquantity\x18\x03 \x01(\tR\bquantity\"\x9c\x01\n" +
+	"\x13TransferActionInput\x12D\n" +
+	"\btoken_id\x18\x01 \x01(\v2).fabric_token_sdk.token.driver.v1.TokenIDR\atokenId\x12?\n" +
 	"\x05input\x18\x02 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05input\"W\n" +
 	"\x14TransferActionOutput\x12?\n" +
-	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05token\"\xb0\x03\n" +
+	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05token\"\xae\x03\n" +
 	"\x0eTransferAction\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x04R\aversion\x12O\n" +
 	"\x06inputs\x18\x02 \x03(\v27.fabric_token_sdk.token.fabtoken.v1.TransferActionInputR\x06inputs\x12R\n" +
 	"\aoutputs\x18\x03 \x03(\v28.fabric_token_sdk.token.fabtoken.v1.TransferActionOutputR\aoutputs\x12\\\n" +
-	"\bmetadata\x18\x04 \x03(\v2@.fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntryR\bmetadata\x12D\n" +
-	"\x06issuer\x18\x05 \x01(\v2,.fabric_token_sdk.token.fabtoken.v1.IdentityR\x06issuer\x1a;\n" +
+	"\bmetadata\x18\x04 \x03(\v2@.fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntryR\bmetadata\x12B\n" +
+	"\x06issuer\x18\x05 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\x06issuer\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"e\n" +
-	"\x10IssueActionInput\x12;\n" +
-	"\x02id\x18\x01 \x01(\v2+.fabric_token_sdk.token.fabtoken.v1.TokenIDR\x02id\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"c\n" +
+	"\x10IssueActionInput\x129\n" +
+	"\x02id\x18\x01 \x01(\v2).fabric_token_sdk.token.driver.v1.TokenIDR\x02id\x12\x14\n" +
 	"\x05token\x18\x02 \x01(\fR\x05token\"T\n" +
 	"\x11IssueActionOutput\x12?\n" +
-	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05token\"\xa4\x03\n" +
+	"\x05token\x18\x01 \x01(\v2).fabric_token_sdk.token.fabtoken.v1.TokenR\x05token\"\xa2\x03\n" +
 	"\vIssueAction\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\x04R\aversion\x12D\n" +
-	"\x06issuer\x18\x02 \x01(\v2,.fabric_token_sdk.token.fabtoken.v1.IdentityR\x06issuer\x12L\n" +
+	"\aversion\x18\x01 \x01(\x04R\aversion\x12B\n" +
+	"\x06issuer\x18\x02 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\x06issuer\x12L\n" +
 	"\x06inputs\x18\x03 \x03(\v24.fabric_token_sdk.token.fabtoken.v1.IssueActionInputR\x06inputs\x12O\n" +
 	"\aoutputs\x18\x04 \x03(\v25.fabric_token_sdk.token.fabtoken.v1.IssueActionOutputR\aoutputs\x12Y\n" +
 	"\bmetadata\x18\x05 \x03(\v2=.fabric_token_sdk.token.fabtoken.v1.IssueAction.MetadataEntryR\bmetadata\x1a;\n" +
@@ -537,34 +481,34 @@ func file_ftactions_proto_rawDescGZIP() []byte {
 	return file_ftactions_proto_rawDescData
 }
 
-var file_ftactions_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_ftactions_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_ftactions_proto_goTypes = []any{
 	(*Token)(nil),                // 0: fabric_token_sdk.token.fabtoken.v1.Token
-	(*TokenID)(nil),              // 1: fabric_token_sdk.token.fabtoken.v1.TokenID
-	(*TransferActionInput)(nil),  // 2: fabric_token_sdk.token.fabtoken.v1.TransferActionInput
-	(*TransferActionOutput)(nil), // 3: fabric_token_sdk.token.fabtoken.v1.TransferActionOutput
-	(*TransferAction)(nil),       // 4: fabric_token_sdk.token.fabtoken.v1.TransferAction
-	(*IssueActionInput)(nil),     // 5: fabric_token_sdk.token.fabtoken.v1.IssueActionInput
-	(*IssueActionOutput)(nil),    // 6: fabric_token_sdk.token.fabtoken.v1.IssueActionOutput
-	(*IssueAction)(nil),          // 7: fabric_token_sdk.token.fabtoken.v1.IssueAction
-	nil,                          // 8: fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntry
-	nil,                          // 9: fabric_token_sdk.token.fabtoken.v1.IssueAction.MetadataEntry
-	(*pp.Identity)(nil),          // 10: fabric_token_sdk.token.fabtoken.v1.Identity
+	(*TransferActionInput)(nil),  // 1: fabric_token_sdk.token.fabtoken.v1.TransferActionInput
+	(*TransferActionOutput)(nil), // 2: fabric_token_sdk.token.fabtoken.v1.TransferActionOutput
+	(*TransferAction)(nil),       // 3: fabric_token_sdk.token.fabtoken.v1.TransferAction
+	(*IssueActionInput)(nil),     // 4: fabric_token_sdk.token.fabtoken.v1.IssueActionInput
+	(*IssueActionOutput)(nil),    // 5: fabric_token_sdk.token.fabtoken.v1.IssueActionOutput
+	(*IssueAction)(nil),          // 6: fabric_token_sdk.token.fabtoken.v1.IssueAction
+	nil,                          // 7: fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntry
+	nil,                          // 8: fabric_token_sdk.token.fabtoken.v1.IssueAction.MetadataEntry
+	(*v1.TokenID)(nil),           // 9: fabric_token_sdk.token.driver.v1.TokenID
+	(*v1.Identity)(nil),          // 10: fabric_token_sdk.token.driver.v1.Identity
 }
 var file_ftactions_proto_depIdxs = []int32{
-	1,  // 0: fabric_token_sdk.token.fabtoken.v1.TransferActionInput.token_id:type_name -> fabric_token_sdk.token.fabtoken.v1.TokenID
+	9,  // 0: fabric_token_sdk.token.fabtoken.v1.TransferActionInput.token_id:type_name -> fabric_token_sdk.token.driver.v1.TokenID
 	0,  // 1: fabric_token_sdk.token.fabtoken.v1.TransferActionInput.input:type_name -> fabric_token_sdk.token.fabtoken.v1.Token
 	0,  // 2: fabric_token_sdk.token.fabtoken.v1.TransferActionOutput.token:type_name -> fabric_token_sdk.token.fabtoken.v1.Token
-	2,  // 3: fabric_token_sdk.token.fabtoken.v1.TransferAction.inputs:type_name -> fabric_token_sdk.token.fabtoken.v1.TransferActionInput
-	3,  // 4: fabric_token_sdk.token.fabtoken.v1.TransferAction.outputs:type_name -> fabric_token_sdk.token.fabtoken.v1.TransferActionOutput
-	8,  // 5: fabric_token_sdk.token.fabtoken.v1.TransferAction.metadata:type_name -> fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntry
-	10, // 6: fabric_token_sdk.token.fabtoken.v1.TransferAction.issuer:type_name -> fabric_token_sdk.token.fabtoken.v1.Identity
-	1,  // 7: fabric_token_sdk.token.fabtoken.v1.IssueActionInput.id:type_name -> fabric_token_sdk.token.fabtoken.v1.TokenID
+	1,  // 3: fabric_token_sdk.token.fabtoken.v1.TransferAction.inputs:type_name -> fabric_token_sdk.token.fabtoken.v1.TransferActionInput
+	2,  // 4: fabric_token_sdk.token.fabtoken.v1.TransferAction.outputs:type_name -> fabric_token_sdk.token.fabtoken.v1.TransferActionOutput
+	7,  // 5: fabric_token_sdk.token.fabtoken.v1.TransferAction.metadata:type_name -> fabric_token_sdk.token.fabtoken.v1.TransferAction.MetadataEntry
+	10, // 6: fabric_token_sdk.token.fabtoken.v1.TransferAction.issuer:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	9,  // 7: fabric_token_sdk.token.fabtoken.v1.IssueActionInput.id:type_name -> fabric_token_sdk.token.driver.v1.TokenID
 	0,  // 8: fabric_token_sdk.token.fabtoken.v1.IssueActionOutput.token:type_name -> fabric_token_sdk.token.fabtoken.v1.Token
-	10, // 9: fabric_token_sdk.token.fabtoken.v1.IssueAction.issuer:type_name -> fabric_token_sdk.token.fabtoken.v1.Identity
-	5,  // 10: fabric_token_sdk.token.fabtoken.v1.IssueAction.inputs:type_name -> fabric_token_sdk.token.fabtoken.v1.IssueActionInput
-	6,  // 11: fabric_token_sdk.token.fabtoken.v1.IssueAction.outputs:type_name -> fabric_token_sdk.token.fabtoken.v1.IssueActionOutput
-	9,  // 12: fabric_token_sdk.token.fabtoken.v1.IssueAction.metadata:type_name -> fabric_token_sdk.token.fabtoken.v1.IssueAction.MetadataEntry
+	10, // 9: fabric_token_sdk.token.fabtoken.v1.IssueAction.issuer:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	4,  // 10: fabric_token_sdk.token.fabtoken.v1.IssueAction.inputs:type_name -> fabric_token_sdk.token.fabtoken.v1.IssueActionInput
+	5,  // 11: fabric_token_sdk.token.fabtoken.v1.IssueAction.outputs:type_name -> fabric_token_sdk.token.fabtoken.v1.IssueActionOutput
+	8,  // 12: fabric_token_sdk.token.fabtoken.v1.IssueAction.metadata:type_name -> fabric_token_sdk.token.fabtoken.v1.IssueAction.MetadataEntry
 	13, // [13:13] is the sub-list for method output_type
 	13, // [13:13] is the sub-list for method input_type
 	13, // [13:13] is the sub-list for extension type_name
@@ -583,7 +527,7 @@ func file_ftactions_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ftactions_proto_rawDesc), len(file_ftactions_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

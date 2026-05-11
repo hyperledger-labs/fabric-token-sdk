@@ -8,6 +8,8 @@ syntax = "proto3";
 
 package fabric_token_sdk.token.driver.v1;
 
+import "common.proto";
+
 option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request";
 
 // Enum representing different types of token actions
@@ -18,25 +20,14 @@ enum ActionType {
   TRANSFER = 1;
 }
 
-// Represents an identity, could be a public key or DID
-message Identity {
-  bytes raw = 1; // Raw bytes representing the identity
-}
-
 // AuditableIdentity represents an identity with its audit info
 message AuditableIdentity {
-  Identity identity = 1; // The Identity
+  fabric_token_sdk.token.driver.v1.Identity identity = 1; // The Identity
   bytes audit_info = 2; // Its audit info
 }
 
-// Unique identifier for a token
-message TokenID {
-  string tx_id = 1; // Transaction ID where this token was created
-  uint64 index = 2; // Index of this token in the transaction output
-}
-
 message TransferInputMetadata {
-  TokenID token_id = 1; // The token ID being transferred
+  fabric_token_sdk.token.driver.v1.TokenID token_id = 1; // The token ID being transferred
   repeated AuditableIdentity senders = 2; // Senders of the token
 }
 
@@ -50,12 +41,12 @@ message OutputMetadata {
 message TransferMetadata {
   repeated TransferInputMetadata inputs = 1; // Inputs
   repeated OutputMetadata outputs = 2; // Outputs
-  repeated Identity extra_signers = 8; // Additional signers for the transfer
-  Identity issuer = 3; // Issuer signer for the redeem transfer
+  repeated fabric_token_sdk.token.driver.v1.Identity extra_signers = 8; // Additional signers for the transfer
+  fabric_token_sdk.token.driver.v1.Identity issuer = 3; // Issuer signer for the redeem transfer
 }
 
 message IssueInputMetadata {
-  TokenID token_id = 2; // The Token ID being consumed by the issue
+  fabric_token_sdk.token.driver.v1.TokenID token_id = 2; // The Token ID being consumed by the issue
 }
 
 // Metadata for an issuance action containing multiple tokens
@@ -63,7 +54,7 @@ message IssueMetadata {
   AuditableIdentity issuer = 1; // Issuer of the tokens
   repeated IssueInputMetadata inputs = 2; // Inputs
   repeated OutputMetadata outputs = 3; // Outputs
-  repeated Identity extra_signers = 4; // Additional signers for the issuance
+  repeated fabric_token_sdk.token.driver.v1.Identity extra_signers = 4; // Additional signers for the issuance
 }
 
 // Union type containing either issue or transfer metadata
@@ -94,7 +85,7 @@ message Signature {
 
 // Represent a signature of an auditor
 message AuditorSignature {
-  Identity identity = 1; // The identity of the auditor that signed
+  fabric_token_sdk.token.driver.v1.Identity identity = 1; // The identity of the auditor that signed
   Signature signature = 2; // Its signatures
 }
 

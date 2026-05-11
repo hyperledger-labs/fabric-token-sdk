@@ -8,13 +8,10 @@ syntax = "proto3";
 
 package fabric_token_sdk.token.zkatdlog.v1;
 
+import "common.proto";
 import "noghmath.proto";
 
 option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/pp";
-
-message Identity {
-  bytes raw = 1;
-}
 
 message IdemixIssuerPublicKey {
   bytes public_key = 1;
@@ -45,8 +42,8 @@ message PublicParameters {
   repeated G1 pedersen_generators = 4; // contains the public parameters for the Pedersen commitment scheme.
   RangeProofParams range_proof_params = 5; // contains the public parameters for the range proof scheme.
   repeated IdemixIssuerPublicKey idemix_issuer_public_keys = 6; // contains the idemix issuer public keys. Wallets should prefer the use of keys valid under the public key whose index in the array is the smallest.
-  repeated Identity auditors = 7; // is the public key of the auditor.
-  repeated Identity issuers = 8; // is a list of public keys of the entities that can issue tokens.
+  repeated fabric_token_sdk.token.driver.v1.Identity auditors = 7; // is the public key of the auditor.
+  repeated fabric_token_sdk.token.driver.v1.Identity issuers = 8; // is a list of public keys of the entities that can issue tokens.
   uint64 max_token = 9; // is the maximum quantity a token can hold
   uint64 quantity_precision = 10; // is the precision used to represent quantities
   map<string, bytes> extra_data = 11; // extra_data allows to store arbitrary data in the public parameters

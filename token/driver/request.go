@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/utils"
+	protosv1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
@@ -57,7 +58,7 @@ type AuditorSignature struct {
 
 func (r *AuditorSignature) ToProtos() (*request.AuditorSignature, error) {
 	return &request.AuditorSignature{
-		Identity: &request.Identity{
+		Identity: &protosv1.Identity{
 			Raw: r.Identity,
 		},
 		Signature: &request.Signature{
@@ -300,7 +301,7 @@ type AuditableIdentity struct {
 
 func (a *AuditableIdentity) ToProtos() (*request.AuditableIdentity, error) {
 	return &request.AuditableIdentity{
-		Identity: &request.Identity{
+		Identity: &protosv1.Identity{
 			Raw: a.Identity,
 		},
 		AuditInfo: a.AuditInfo,
@@ -561,9 +562,9 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
 
-	var issuer *request.Identity
+	var issuer *protosv1.Identity
 	if t.Issuer != nil {
-		issuer = &request.Identity{
+		issuer = &protosv1.Identity{
 			Raw: t.Issuer.Bytes(),
 		}
 	}

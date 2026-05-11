@@ -13,6 +13,7 @@ package pp
 
 import (
 	math "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/math"
+	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -27,50 +28,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Identity struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Raw           []byte                 `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Identity) Reset() {
-	*x = Identity{}
-	mi := &file_noghpp_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Identity) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Identity) ProtoMessage() {}
-
-func (x *Identity) ProtoReflect() protoreflect.Message {
-	mi := &file_noghpp_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Identity.ProtoReflect.Descriptor instead.
-func (*Identity) Descriptor() ([]byte, []int) {
-	return file_noghpp_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *Identity) GetRaw() []byte {
-	if x != nil {
-		return x.Raw
-	}
-	return nil
-}
-
 type IdemixIssuerPublicKey struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PublicKey     []byte                 `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
@@ -81,7 +38,7 @@ type IdemixIssuerPublicKey struct {
 
 func (x *IdemixIssuerPublicKey) Reset() {
 	*x = IdemixIssuerPublicKey{}
-	mi := &file_noghpp_proto_msgTypes[1]
+	mi := &file_noghpp_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -93,7 +50,7 @@ func (x *IdemixIssuerPublicKey) String() string {
 func (*IdemixIssuerPublicKey) ProtoMessage() {}
 
 func (x *IdemixIssuerPublicKey) ProtoReflect() protoreflect.Message {
-	mi := &file_noghpp_proto_msgTypes[1]
+	mi := &file_noghpp_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -106,7 +63,7 @@ func (x *IdemixIssuerPublicKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IdemixIssuerPublicKey.ProtoReflect.Descriptor instead.
 func (*IdemixIssuerPublicKey) Descriptor() ([]byte, []int) {
-	return file_noghpp_proto_rawDescGZIP(), []int{1}
+	return file_noghpp_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *IdemixIssuerPublicKey) GetPublicKey() []byte {
@@ -137,7 +94,7 @@ type RangeProofParams struct {
 
 func (x *RangeProofParams) Reset() {
 	*x = RangeProofParams{}
-	mi := &file_noghpp_proto_msgTypes[2]
+	mi := &file_noghpp_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -149,7 +106,7 @@ func (x *RangeProofParams) String() string {
 func (*RangeProofParams) ProtoMessage() {}
 
 func (x *RangeProofParams) ProtoReflect() protoreflect.Message {
-	mi := &file_noghpp_proto_msgTypes[2]
+	mi := &file_noghpp_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -162,7 +119,7 @@ func (x *RangeProofParams) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RangeProofParams.ProtoReflect.Descriptor instead.
 func (*RangeProofParams) Descriptor() ([]byte, []int) {
-	return file_noghpp_proto_rawDescGZIP(), []int{2}
+	return file_noghpp_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *RangeProofParams) GetLeftGenerators() []*math.G1 {
@@ -219,7 +176,7 @@ type CSPRangeProofParams struct {
 
 func (x *CSPRangeProofParams) Reset() {
 	*x = CSPRangeProofParams{}
-	mi := &file_noghpp_proto_msgTypes[3]
+	mi := &file_noghpp_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -231,7 +188,7 @@ func (x *CSPRangeProofParams) String() string {
 func (*CSPRangeProofParams) ProtoMessage() {}
 
 func (x *CSPRangeProofParams) ProtoReflect() protoreflect.Message {
-	mi := &file_noghpp_proto_msgTypes[3]
+	mi := &file_noghpp_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -244,7 +201,7 @@ func (x *CSPRangeProofParams) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CSPRangeProofParams.ProtoReflect.Descriptor instead.
 func (*CSPRangeProofParams) Descriptor() ([]byte, []int) {
-	return file_noghpp_proto_rawDescGZIP(), []int{3}
+	return file_noghpp_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CSPRangeProofParams) GetLeftGenerators() []*math.G1 {
@@ -284,8 +241,8 @@ type PublicParameters struct {
 	PedersenGenerators     []*math.G1               `protobuf:"bytes,4,rep,name=pedersen_generators,json=pedersenGenerators,proto3" json:"pedersen_generators,omitempty"`                                                 // contains the public parameters for the Pedersen commitment scheme.
 	RangeProofParams       *RangeProofParams        `protobuf:"bytes,5,opt,name=range_proof_params,json=rangeProofParams,proto3" json:"range_proof_params,omitempty"`                                                     // contains the public parameters for the range proof scheme.
 	IdemixIssuerPublicKeys []*IdemixIssuerPublicKey `protobuf:"bytes,6,rep,name=idemix_issuer_public_keys,json=idemixIssuerPublicKeys,proto3" json:"idemix_issuer_public_keys,omitempty"`                                 // contains the idemix issuer public keys. Wallets should prefer the use of keys valid under the public key whose index in the array is the smallest.
-	Auditors               []*Identity              `protobuf:"bytes,7,rep,name=auditors,proto3" json:"auditors,omitempty"`                                                                                               // is the public key of the auditor.
-	Issuers                []*Identity              `protobuf:"bytes,8,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                                                 // is a list of public keys of the entities that can issue tokens.
+	Auditors               []*v1.Identity           `protobuf:"bytes,7,rep,name=auditors,proto3" json:"auditors,omitempty"`                                                                                               // is the public key of the auditor.
+	Issuers                []*v1.Identity           `protobuf:"bytes,8,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                                                 // is a list of public keys of the entities that can issue tokens.
 	MaxToken               uint64                   `protobuf:"varint,9,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`                                                                              // is the maximum quantity a token can hold
 	QuantityPrecision      uint64                   `protobuf:"varint,10,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`                                                  // is the precision used to represent quantities
 	ExtraData              map[string][]byte        `protobuf:"bytes,11,rep,name=extra_data,json=extraData,proto3" json:"extra_data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // extra_data allows to store arbitrary data in the public parameters
@@ -296,7 +253,7 @@ type PublicParameters struct {
 
 func (x *PublicParameters) Reset() {
 	*x = PublicParameters{}
-	mi := &file_noghpp_proto_msgTypes[4]
+	mi := &file_noghpp_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -308,7 +265,7 @@ func (x *PublicParameters) String() string {
 func (*PublicParameters) ProtoMessage() {}
 
 func (x *PublicParameters) ProtoReflect() protoreflect.Message {
-	mi := &file_noghpp_proto_msgTypes[4]
+	mi := &file_noghpp_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -321,7 +278,7 @@ func (x *PublicParameters) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublicParameters.ProtoReflect.Descriptor instead.
 func (*PublicParameters) Descriptor() ([]byte, []int) {
-	return file_noghpp_proto_rawDescGZIP(), []int{4}
+	return file_noghpp_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *PublicParameters) GetTokenDriverName() string {
@@ -366,14 +323,14 @@ func (x *PublicParameters) GetIdemixIssuerPublicKeys() []*IdemixIssuerPublicKey 
 	return nil
 }
 
-func (x *PublicParameters) GetAuditors() []*Identity {
+func (x *PublicParameters) GetAuditors() []*v1.Identity {
 	if x != nil {
 		return x.Auditors
 	}
 	return nil
 }
 
-func (x *PublicParameters) GetIssuers() []*Identity {
+func (x *PublicParameters) GetIssuers() []*v1.Identity {
 	if x != nil {
 		return x.Issuers
 	}
@@ -412,9 +369,7 @@ var File_noghpp_proto protoreflect.FileDescriptor
 
 const file_noghpp_proto_rawDesc = "" +
 	"\n" +
-	"\fnoghpp.proto\x12\"fabric_token_sdk.token.zkatdlog.v1\x1a\x0enoghmath.proto\"\x1c\n" +
-	"\bIdentity\x12\x10\n" +
-	"\x03raw\x18\x01 \x01(\fR\x03raw\"\x80\x01\n" +
+	"\fnoghpp.proto\x12\"fabric_token_sdk.token.zkatdlog.v1\x1a\fcommon.proto\x1a\x0enoghmath.proto\"\x80\x01\n" +
 	"\x15IdemixIssuerPublicKey\x12\x1d\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\fR\tpublicKey\x12H\n" +
@@ -432,16 +387,16 @@ const file_noghpp_proto_rawDesc = "" +
 	"\x10right_generators\x18\x02 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x0frightGenerators\x12\x1d\n" +
 	"\n" +
 	"bit_length\x18\x05 \x01(\x04R\tbitLength\x12(\n" +
-	"\x10number_of_rounds\x18\x06 \x01(\x04R\x0enumberOfRounds\"\xd9\a\n" +
+	"\x10number_of_rounds\x18\x06 \x01(\x04R\x0enumberOfRounds\"\xd5\a\n" +
 	"\x10PublicParameters\x12*\n" +
 	"\x11token_driver_name\x18\x01 \x01(\tR\x0ftokenDriverName\x120\n" +
 	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12F\n" +
 	"\bcurve_id\x18\x03 \x01(\v2+.fabric_token_sdk.token.zkatdlog.v1.CurveIDR\acurveId\x12W\n" +
 	"\x13pedersen_generators\x18\x04 \x03(\v2&.fabric_token_sdk.token.zkatdlog.v1.G1R\x12pedersenGenerators\x12b\n" +
 	"\x12range_proof_params\x18\x05 \x01(\v24.fabric_token_sdk.token.zkatdlog.v1.RangeProofParamsR\x10rangeProofParams\x12t\n" +
-	"\x19idemix_issuer_public_keys\x18\x06 \x03(\v29.fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKeyR\x16idemixIssuerPublicKeys\x12H\n" +
-	"\bauditors\x18\a \x03(\v2,.fabric_token_sdk.token.zkatdlog.v1.IdentityR\bauditors\x12F\n" +
-	"\aissuers\x18\b \x03(\v2,.fabric_token_sdk.token.zkatdlog.v1.IdentityR\aissuers\x12\x1b\n" +
+	"\x19idemix_issuer_public_keys\x18\x06 \x03(\v29.fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKeyR\x16idemixIssuerPublicKeys\x12F\n" +
+	"\bauditors\x18\a \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\bauditors\x12D\n" +
+	"\aissuers\x18\b \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\aissuers\x12\x1b\n" +
 	"\tmax_token\x18\t \x01(\x04R\bmaxToken\x12-\n" +
 	"\x12quantity_precision\x18\n" +
 	" \x01(\x04R\x11quantityPrecision\x12b\n" +
@@ -464,33 +419,33 @@ func file_noghpp_proto_rawDescGZIP() []byte {
 	return file_noghpp_proto_rawDescData
 }
 
-var file_noghpp_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_noghpp_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_noghpp_proto_goTypes = []any{
-	(*Identity)(nil),              // 0: fabric_token_sdk.token.zkatdlog.v1.Identity
-	(*IdemixIssuerPublicKey)(nil), // 1: fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey
-	(*RangeProofParams)(nil),      // 2: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams
-	(*CSPRangeProofParams)(nil),   // 3: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams
-	(*PublicParameters)(nil),      // 4: fabric_token_sdk.token.zkatdlog.v1.PublicParameters
-	nil,                           // 5: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.ExtraDataEntry
-	(*math.CurveID)(nil),          // 6: fabric_token_sdk.token.zkatdlog.v1.CurveID
-	(*math.G1)(nil),               // 7: fabric_token_sdk.token.zkatdlog.v1.G1
+	(*IdemixIssuerPublicKey)(nil), // 0: fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey
+	(*RangeProofParams)(nil),      // 1: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams
+	(*CSPRangeProofParams)(nil),   // 2: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams
+	(*PublicParameters)(nil),      // 3: fabric_token_sdk.token.zkatdlog.v1.PublicParameters
+	nil,                           // 4: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.ExtraDataEntry
+	(*math.CurveID)(nil),          // 5: fabric_token_sdk.token.zkatdlog.v1.CurveID
+	(*math.G1)(nil),               // 6: fabric_token_sdk.token.zkatdlog.v1.G1
+	(*v1.Identity)(nil),           // 7: fabric_token_sdk.token.driver.v1.Identity
 }
 var file_noghpp_proto_depIdxs = []int32{
-	6,  // 0: fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey.curver_id:type_name -> fabric_token_sdk.token.zkatdlog.v1.CurveID
-	7,  // 1: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.left_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
-	7,  // 2: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.right_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
-	7,  // 3: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.P:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
-	7,  // 4: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.Q:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
-	7,  // 5: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams.left_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
-	7,  // 6: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams.right_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
-	6,  // 7: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.curve_id:type_name -> fabric_token_sdk.token.zkatdlog.v1.CurveID
-	7,  // 8: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.pedersen_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
-	2,  // 9: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.range_proof_params:type_name -> fabric_token_sdk.token.zkatdlog.v1.RangeProofParams
-	1,  // 10: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.idemix_issuer_public_keys:type_name -> fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey
-	0,  // 11: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.auditors:type_name -> fabric_token_sdk.token.zkatdlog.v1.Identity
-	0,  // 12: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.issuers:type_name -> fabric_token_sdk.token.zkatdlog.v1.Identity
-	5,  // 13: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.extra_data:type_name -> fabric_token_sdk.token.zkatdlog.v1.PublicParameters.ExtraDataEntry
-	3,  // 14: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.csp_range_proof_params:type_name -> fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams
+	5,  // 0: fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey.curver_id:type_name -> fabric_token_sdk.token.zkatdlog.v1.CurveID
+	6,  // 1: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.left_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	6,  // 2: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.right_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	6,  // 3: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.P:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	6,  // 4: fabric_token_sdk.token.zkatdlog.v1.RangeProofParams.Q:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	6,  // 5: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams.left_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	6,  // 6: fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams.right_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	5,  // 7: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.curve_id:type_name -> fabric_token_sdk.token.zkatdlog.v1.CurveID
+	6,  // 8: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.pedersen_generators:type_name -> fabric_token_sdk.token.zkatdlog.v1.G1
+	1,  // 9: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.range_proof_params:type_name -> fabric_token_sdk.token.zkatdlog.v1.RangeProofParams
+	0,  // 10: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.idemix_issuer_public_keys:type_name -> fabric_token_sdk.token.zkatdlog.v1.IdemixIssuerPublicKey
+	7,  // 11: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.auditors:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	7,  // 12: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.issuers:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	4,  // 13: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.extra_data:type_name -> fabric_token_sdk.token.zkatdlog.v1.PublicParameters.ExtraDataEntry
+	2,  // 14: fabric_token_sdk.token.zkatdlog.v1.PublicParameters.csp_range_proof_params:type_name -> fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParams
 	15, // [15:15] is the sub-list for method output_type
 	15, // [15:15] is the sub-list for method input_type
 	15, // [15:15] is the sub-list for extension type_name
@@ -509,7 +464,7 @@ func file_noghpp_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_noghpp_proto_rawDesc), len(file_noghpp_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

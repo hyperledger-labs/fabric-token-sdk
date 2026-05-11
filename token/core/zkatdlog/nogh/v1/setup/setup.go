@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/csp"
 	executor "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	protosv1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
@@ -38,9 +39,7 @@ const (
 	ProtocolV1         = driver.TokenDriverVersion(1)
 )
 
-var (
-	SupportedPrecisions = []uint64{16, 32, 64}
-)
+var SupportedPrecisions = []uint64{16, 32, 64}
 
 // SetupParams contains all parameters needed to setup public parameters
 type SetupParams struct {
@@ -418,16 +417,16 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 			return nil, errors.Wrapf(err, "failed to serialize csp-based range proof parameters")
 		}
 	}
-	issuers, err := protos.ToProtosSliceFunc(p.IssuerIDs, func(id driver.Identity) (*pp.Identity, error) {
-		return &pp.Identity{
+	issuers, err := protos.ToProtosSliceFunc(p.IssuerIDs, func(id driver.Identity) (*protosv1.Identity, error) {
+		return &protosv1.Identity{
 			Raw: id,
 		}, nil
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to serialize issuer")
 	}
-	auditors, err := protos.ToProtosSliceFunc(p.AuditorIDs, func(id driver.Identity) (*pp.Identity, error) {
-		return &pp.Identity{
+	auditors, err := protos.ToProtosSliceFunc(p.AuditorIDs, func(id driver.Identity) (*protosv1.Identity, error) {
+		return &protosv1.Identity{
 			Raw: id,
 		}, nil
 	})
@@ -501,7 +500,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		return errors.Wrapf(err, "failed to deserialize public parameters")
 	}
 	p.PedersenGenerators = pg
-	issuers, err := protos.FromProtosSliceFunc2(publicParams.Issuers, func(id *pp.Identity) (driver.Identity, error) {
+	issuers, err := protos.FromProtosSliceFunc2(publicParams.Issuers, func(id *protosv1.Identity) (driver.Identity, error) {
 		if id == nil {
 			return nil, nil
 		}
@@ -512,7 +511,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		return errors.Wrapf(err, "failed to deserialize issuers")
 	}
 	p.IssuerIDs = issuers
-	auditors, err := protos.FromProtosSliceFunc2(publicParams.Auditors, func(id *pp.Identity) (driver.Identity, error) {
+	auditors, err := protos.FromProtosSliceFunc2(publicParams.Auditors, func(id *protosv1.Identity) (driver.Identity, error) {
 		if id == nil {
 			return nil, nil
 		}

@@ -10,8 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/actions"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driverv1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -60,7 +60,7 @@ func (i *IssueAction) Serialize() ([]byte, error) {
 
 	issueAction := &actions.IssueAction{
 		Version: ProtocolV1,
-		Issuer: &pp.Identity{
+		Issuer: &driverv1.Identity{
 			Raw: i.Issuer,
 		},
 		Outputs:  outputs,
