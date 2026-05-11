@@ -14,10 +14,13 @@ option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/driver/p
 
 // Enum representing different types of token actions
 enum ActionType {
+  // Unspecified action type - used to detect uninitialized values
+  // This value should never be used in production and will be rejected during validation
+  ACTION_TYPE_UNSPECIFIED = 0;
   // Token issuance action type
-  ISSUE = 0;
+  ACTION_TYPE_ISSUE = 1;
   // Token transfer action type
-  TRANSFER = 1;
+  ACTION_TYPE_TRANSFER = 2;
 }
 
 // AuditableIdentity represents an identity with its audit info

@@ -86,7 +86,7 @@ func TestTokenRequest_FromBytes_InvalidVersion(t *testing.T) {
 	protoReq := &request.TokenRequest{
 		Version: 999, // Invalid version
 		Actions: []*request.Action{
-			{Type: request.ActionType_ISSUE, Raw: []byte("issue1")},
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
 		},
 	}
 
@@ -100,6 +100,8 @@ func TestTokenRequest_FromBytes_InvalidVersion(t *testing.T) {
 }
 
 // TestTokenRequest_FromBytes_NilAction tests error handling for nil action
+// Note: protobuf unmarshaling converts nil actions to default-initialized actions
+// with Type=ACTION_TYPE_UNSPECIFIED, which is now caught by our validation
 func TestTokenRequest_FromBytes_NilAction(t *testing.T) {
 	protoReq := &request.TokenRequest{
 		Version: ProtocolV1,
@@ -111,11 +113,9 @@ func TestTokenRequest_FromBytes_NilAction(t *testing.T) {
 
 	req := &TokenRequest{}
 	err = req.FromBytes(raw)
-	// Note: protobuf unmarshaling may skip nil elements, so this might not error
-	// The actual behavior depends on protobuf implementation
-	if err != nil {
-		assert.Contains(t, err.Error(), "nil action found")
-	}
+	// Protobuf converts nil to default-initialized Action with UNSPECIFIED type
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "action type must be explicitly specified")
 }
 
 // TestTokenRequest_FromBytes_UnknownActionType tests error handling for unknown action type
@@ -136,12 +136,30 @@ func TestTokenRequest_FromBytes_UnknownActionType(t *testing.T) {
 	assert.Contains(t, err.Error(), "unknown action type")
 }
 
+// TestTokenRequest_FromBytes_UnspecifiedActionType tests error handling for unspecified action type
+func TestTokenRequest_FromBytes_UnspecifiedActionType(t *testing.T) {
+	protoReq := &request.TokenRequest{
+		Version: ProtocolV1,
+		Actions: []*request.Action{
+			{Type: request.ActionType_ACTION_TYPE_UNSPECIFIED, Raw: []byte("unspecified")},
+		},
+	}
+
+	raw, err := proto.Marshal(protoReq)
+	require.NoError(t, err)
+
+	req := &TokenRequest{}
+	err = req.FromBytes(raw)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "action type must be explicitly specified")
+}
+
 // TestTokenRequest_FromBytes_NilSignature tests error handling for nil signature
 func TestTokenRequest_FromBytes_NilSignature(t *testing.T) {
 	protoReq := &request.TokenRequest{
 		Version: ProtocolV1,
 		Actions: []*request.Action{
-			{Type: request.ActionType_ISSUE, Raw: []byte("issue1")},
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
 		},
 		Signatures: []*request.Signature{nil},
 	}
@@ -160,7 +178,7 @@ func TestTokenRequest_FromBytes_EmptySignature(t *testing.T) {
 	protoReq := &request.TokenRequest{
 		Version: ProtocolV1,
 		Actions: []*request.Action{
-			{Type: request.ActionType_ISSUE, Raw: []byte("issue1")},
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
 		},
 		Signatures: []*request.Signature{{Raw: []byte{}}},
 	}
@@ -1412,11 +1430,11 @@ func TestTokenRequest_ToProtos_WithBothIssuesAndTransfers(t *testing.T) {
 	require.NotNil(t, proto)
 	assert.Len(t, proto.Actions, 3)
 	assert.Equal(t, []byte("issue1"), proto.Actions[0].Raw)
-	assert.Equal(t, request.ActionType_ISSUE, proto.Actions[0].Type)
+	assert.Equal(t, request.ActionType_ACTION_TYPE_ISSUE, proto.Actions[0].Type)
 	assert.Equal(t, []byte("issue2"), proto.Actions[1].Raw)
-	assert.Equal(t, request.ActionType_ISSUE, proto.Actions[1].Type)
+	assert.Equal(t, request.ActionType_ACTION_TYPE_ISSUE, proto.Actions[1].Type)
 	assert.Equal(t, []byte("transfer1"), proto.Actions[2].Raw)
-	assert.Equal(t, request.ActionType_TRANSFER, proto.Actions[2].Type)
+	assert.Equal(t, request.ActionType_ACTION_TYPE_TRANSFER, proto.Actions[2].Type)
 	assert.NotNil(t, proto.Auditing)
 	assert.Len(t, proto.Auditing.Signatures, 1)
 	assert.Equal(t, []byte("aud1"), proto.Auditing.Signatures[0].Identity.Raw)
@@ -1427,7 +1445,7 @@ func TestTokenRequest_FromProtos_WithAuditing(t *testing.T) {
 	protoReq := &request.TokenRequest{
 		Version: ProtocolV1,
 		Actions: []*request.Action{
-			{Type: request.ActionType_ISSUE, Raw: []byte("issue1")},
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
 		},
 		Signatures: []*request.Signature{{Raw: []byte("sig1")}},
 		Auditing: &request.Auditing{

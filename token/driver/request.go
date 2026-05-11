@@ -115,8 +115,8 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 
 func (r *TokenRequest) ToProtos() (*request.TokenRequest, error) {
 	actions := append(
-		utils.ToActionSlice(request.ActionType_ISSUE, r.Issues),
-		utils.ToActionSlice(request.ActionType_TRANSFER, r.Transfers)...,
+		utils.ToActionSlice(request.ActionType_ACTION_TYPE_ISSUE, r.Issues),
+		utils.ToActionSlice(request.ActionType_ACTION_TYPE_TRANSFER, r.Transfers)...,
 	)
 	signatures := utils.ToSignatureSlice(r.Signatures)
 	auditorSignatures, err := protos.ToProtosSlice[request.AuditorSignature, *AuditorSignature](r.AuditorSignatures)
@@ -154,10 +154,14 @@ func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
 		if action == nil {
 			return errors.New("nil action found")
 		}
+		// Validate that action type is explicitly set (not UNSPECIFIED)
+		if action.Type == request.ActionType_ACTION_TYPE_UNSPECIFIED {
+			return errors.New("action type must be explicitly specified (ACTION_TYPE_UNSPECIFIED is not allowed)")
+		}
 		switch action.Type {
-		case request.ActionType_ISSUE:
+		case request.ActionType_ACTION_TYPE_ISSUE:
 			r.Issues = append(r.Issues, action.Raw)
-		case request.ActionType_TRANSFER:
+		case request.ActionType_ACTION_TYPE_TRANSFER:
 			r.Transfers = append(r.Transfers, action.Raw)
 		default:
 			return errors.Errorf("unknown action type [%s]", action.Type)

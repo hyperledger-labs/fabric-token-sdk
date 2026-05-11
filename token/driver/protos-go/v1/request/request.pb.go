@@ -31,21 +31,26 @@ const (
 type ActionType int32
 
 const (
+	// Unspecified action type - used to detect uninitialized values
+	// This value should never be used in production and will be rejected during validation
+	ActionType_ACTION_TYPE_UNSPECIFIED ActionType = 0
 	// Token issuance action type
-	ActionType_ISSUE ActionType = 0
+	ActionType_ACTION_TYPE_ISSUE ActionType = 1
 	// Token transfer action type
-	ActionType_TRANSFER ActionType = 1
+	ActionType_ACTION_TYPE_TRANSFER ActionType = 2
 )
 
 // Enum value maps for ActionType.
 var (
 	ActionType_name = map[int32]string{
-		0: "ISSUE",
-		1: "TRANSFER",
+		0: "ACTION_TYPE_UNSPECIFIED",
+		1: "ACTION_TYPE_ISSUE",
+		2: "ACTION_TYPE_TRANSFER",
 	}
 	ActionType_value = map[string]int32{
-		"ISSUE":    0,
-		"TRANSFER": 1,
+		"ACTION_TYPE_UNSPECIFIED": 0,
+		"ACTION_TYPE_ISSUE":       1,
+		"ACTION_TYPE_TRANSFER":    2,
 	}
 )
 
@@ -610,7 +615,7 @@ func (x *Action) GetType() ActionType {
 	if x != nil {
 		return x.Type
 	}
-	return ActionType_ISSUE
+	return ActionType_ACTION_TYPE_UNSPECIFIED
 }
 
 func (x *Action) GetRaw() []byte {
@@ -964,11 +969,12 @@ const file_request_proto_rawDesc = "" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12\x16\n" +
 	"\x06anchor\x18\x02 \x01(\tR\x06anchor\x12H\n" +
 	"\arequest\x18\x03 \x01(\v2..fabric_token_sdk.token.driver.v1.TokenRequestR\arequest\x12R\n" +
-	"\bmetadata\x18\x04 \x01(\v26.fabric_token_sdk.token.driver.v1.TokenRequestMetadataR\bmetadata*%\n" +
+	"\bmetadata\x18\x04 \x01(\v26.fabric_token_sdk.token.driver.v1.TokenRequestMetadataR\bmetadata*Z\n" +
 	"\n" +
-	"ActionType\x12\t\n" +
-	"\x05ISSUE\x10\x00\x12\f\n" +
-	"\bTRANSFER\x10\x01BPZNgithub.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/requestb\x06proto3"
+	"ActionType\x12\x1b\n" +
+	"\x17ACTION_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11ACTION_TYPE_ISSUE\x10\x01\x12\x18\n" +
+	"\x14ACTION_TYPE_TRANSFER\x10\x02BPZNgithub.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/requestb\x06proto3"
 
 var (
 	file_request_proto_rawDescOnce sync.Once
