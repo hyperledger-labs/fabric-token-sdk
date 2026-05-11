@@ -119,6 +119,8 @@ tidy:
 	@go mod tidy
 	cd tools; go mod tidy
 	cd token/services/storage/db/kvs/hashicorp; go mod tidy
+	cd cmd/artifactgen; go mod tidy
+	cd cmd/tokengen; go mod tidy
 
 .PHONY: clean
 # clean up docker artifacts and generated files
@@ -158,12 +160,12 @@ clean-fabric-peer-images:
 .PHONY: tokengen
 # install tokengen tool (must build without cgo; see #1445)
 tokengen:
-	@CGO_ENABLED=0 go install ./cmd/tokengen
+	@cd ./cmd/tokengen/; CGO_ENABLED=0 go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen
 
 .PHONY: artifactgen
 # install artifactgen tool (must build without cgo; see #1445)
 artifactgen:
-	@CGO_ENABLED=0 go install ./cmd/artifactgen
+	@cd ./cmd/artifactgen/; CGO_ENABLED=0 go install github.com/hyperledger-labs/fabric-token-sdk/cmd/artifactgen
 
 .PHONY: traceinspector
 # install traceinspector tool
