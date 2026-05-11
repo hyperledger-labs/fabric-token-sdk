@@ -674,9 +674,9 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 
 func (m *TokenRequestMetadata) ToProtos() (*request.TokenRequestMetadata, error) {
 	trm := &request.TokenRequestMetadata{
-		Version:     ProtocolV1,
-		Metadata:    nil,
-		Application: m.Application,
+		Version:             ProtocolV1,
+		Metadata:            nil,
+		ApplicationMetadata: m.Application,
 	}
 	trm.Metadata = make([]*request.ActionMetadata, 0, len(m.Issues)+len(m.Transfers))
 	for _, meta := range m.Issues {
@@ -717,7 +717,7 @@ func (m *TokenRequestMetadata) FromProtos(trm *request.TokenRequestMetadata) err
 		return errors.Errorf("invalid token request metadata version, expected [%d], got [%d]", ProtocolV1, trm.Version)
 	}
 
-	m.Application = trm.Application
+	m.Application = trm.ApplicationMetadata
 	for _, meta := range trm.Metadata {
 		im := meta.GetIssueMetadata()
 		if im != nil {

@@ -20,5 +20,5 @@ message PublicParameters {
   repeated fabric_token_sdk.token.driver.v1.Identity issuers = 4; // is a list of public keys of the entities that can issue tokens.
   uint64 max_token = 5; // is the maximum quantity a token can hold
   uint64 quantity_precision = 6; // is the precision used to represent quantities
-  map<string, bytes> extra_data = 7; // extra_data allows to store arbitrary data in the public parameters
+  map<string, bytes> metadata = 7; // metadata allows storing arbitrary application-specific or extension data in the public parameters. Keys should follow a reverse-DNS naming convention to avoid collisions (e.g., "com.example.myapp.custom_field").
 }

@@ -72,7 +72,7 @@ message ActionMetadata {
 message TokenRequestMetadata {
   uint32 version = 1; // Version number
   repeated ActionMetadata metadata = 2; // List of token actions (issue/transfer)
-  map<string, bytes> application = 3; // Application-specific metadata stored as key-value pairs
+  map<string, bytes> application_metadata = 3; // Application-specific metadata stored as key-value pairs. Keys should follow a reverse-DNS naming convention to avoid collisions (e.g., "com.example.myapp.custom_field").
 }
 
 // Represents a single action with its type and raw payload

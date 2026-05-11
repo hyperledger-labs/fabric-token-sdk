@@ -138,7 +138,7 @@ func (p *PublicParams) Bytes() ([]byte, error) {
 		Issuers:           issuers,
 		MaxToken:          p.MaxToken,
 		QuantityPrecision: p.QuantityPrecision,
-		ExtraData:         p.ExtraData,
+		Metadata:          p.ExtraData,
 	}
 
 	return proto.Marshal(params)
@@ -166,7 +166,7 @@ func (p *PublicParams) FromBytes(data []byte) error {
 	if publicParams.Auditor != nil {
 		p.Auditor = publicParams.Auditor.Raw
 	}
-	p.ExtraData = publicParams.ExtraData
+	p.ExtraData = publicParams.Metadata
 	if p.ExtraData == nil {
 		p.ExtraData = driver.Extras{}
 	}

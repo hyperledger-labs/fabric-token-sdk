@@ -513,12 +513,12 @@ func (*ActionMetadata_TransferMetadata) isActionMetadata_Metadata() {}
 
 // Token request metadata containing multiple actions and application-specific data
 type TokenRequestMetadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`                                                                                  // Version number
-	Metadata      []*ActionMetadata      `protobuf:"bytes,2,rep,name=metadata,proto3" json:"metadata,omitempty"`                                                                                 // List of token actions (issue/transfer)
-	Application   map[string][]byte      `protobuf:"bytes,3,rep,name=application,proto3" json:"application,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Application-specific metadata stored as key-value pairs
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Version             uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`                                                                                                                             // Version number
+	Metadata            []*ActionMetadata      `protobuf:"bytes,2,rep,name=metadata,proto3" json:"metadata,omitempty"`                                                                                                                            // List of token actions (issue/transfer)
+	ApplicationMetadata map[string][]byte      `protobuf:"bytes,3,rep,name=application_metadata,json=applicationMetadata,proto3" json:"application_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Application-specific metadata stored as key-value pairs. Keys should follow a reverse-DNS naming convention to avoid collisions (e.g., "com.example.myapp.custom_field").
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *TokenRequestMetadata) Reset() {
@@ -565,9 +565,9 @@ func (x *TokenRequestMetadata) GetMetadata() []*ActionMetadata {
 	return nil
 }
 
-func (x *TokenRequestMetadata) GetApplication() map[string][]byte {
+func (x *TokenRequestMetadata) GetApplicationMetadata() map[string][]byte {
 	if x != nil {
-		return x.Application
+		return x.ApplicationMetadata
 	}
 	return nil
 }
@@ -938,12 +938,12 @@ const file_request_proto_rawDesc = "" +
 	"\x0eissue_metadata\x18\x01 \x01(\v2/.fabric_token_sdk.token.driver.v1.IssueMetadataH\x00R\rissueMetadata\x12a\n" +
 	"\x11transfer_metadata\x18\x02 \x01(\v22.fabric_token_sdk.token.driver.v1.TransferMetadataH\x00R\x10transferMetadataB\n" +
 	"\n" +
-	"\bMetadata\"\xa9\x02\n" +
+	"\bMetadata\"\xcb\x02\n" +
 	"\x14TokenRequestMetadata\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12L\n" +
-	"\bmetadata\x18\x02 \x03(\v20.fabric_token_sdk.token.driver.v1.ActionMetadataR\bmetadata\x12i\n" +
-	"\vapplication\x18\x03 \x03(\v2G.fabric_token_sdk.token.driver.v1.TokenRequestMetadata.ApplicationEntryR\vapplication\x1a>\n" +
-	"\x10ApplicationEntry\x12\x10\n" +
+	"\bmetadata\x18\x02 \x03(\v20.fabric_token_sdk.token.driver.v1.ActionMetadataR\bmetadata\x12\x82\x01\n" +
+	"\x14application_metadata\x18\x03 \x03(\v2O.fabric_token_sdk.token.driver.v1.TokenRequestMetadata.ApplicationMetadataEntryR\x13applicationMetadata\x1aF\n" +
+	"\x18ApplicationMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"\\\n" +
 	"\x06Action\x12@\n" +
@@ -1006,7 +1006,7 @@ var file_request_proto_goTypes = []any{
 	(*Auditing)(nil),                 // 12: fabric_token_sdk.token.driver.v1.Auditing
 	(*TokenRequest)(nil),             // 13: fabric_token_sdk.token.driver.v1.TokenRequest
 	(*TokenRequestWithMetadata)(nil), // 14: fabric_token_sdk.token.driver.v1.TokenRequestWithMetadata
-	nil,                              // 15: fabric_token_sdk.token.driver.v1.TokenRequestMetadata.ApplicationEntry
+	nil,                              // 15: fabric_token_sdk.token.driver.v1.TokenRequestMetadata.ApplicationMetadataEntry
 	(*v1.Identity)(nil),              // 16: fabric_token_sdk.token.driver.v1.Identity
 	(*v1.TokenID)(nil),               // 17: fabric_token_sdk.token.driver.v1.TokenID
 }
@@ -1027,7 +1027,7 @@ var file_request_proto_depIdxs = []int32{
 	6,  // 13: fabric_token_sdk.token.driver.v1.ActionMetadata.issue_metadata:type_name -> fabric_token_sdk.token.driver.v1.IssueMetadata
 	4,  // 14: fabric_token_sdk.token.driver.v1.ActionMetadata.transfer_metadata:type_name -> fabric_token_sdk.token.driver.v1.TransferMetadata
 	7,  // 15: fabric_token_sdk.token.driver.v1.TokenRequestMetadata.metadata:type_name -> fabric_token_sdk.token.driver.v1.ActionMetadata
-	15, // 16: fabric_token_sdk.token.driver.v1.TokenRequestMetadata.application:type_name -> fabric_token_sdk.token.driver.v1.TokenRequestMetadata.ApplicationEntry
+	15, // 16: fabric_token_sdk.token.driver.v1.TokenRequestMetadata.application_metadata:type_name -> fabric_token_sdk.token.driver.v1.TokenRequestMetadata.ApplicationMetadataEntry
 	0,  // 17: fabric_token_sdk.token.driver.v1.Action.type:type_name -> fabric_token_sdk.token.driver.v1.ActionType
 	16, // 18: fabric_token_sdk.token.driver.v1.AuditorSignature.identity:type_name -> fabric_token_sdk.token.driver.v1.Identity
 	10, // 19: fabric_token_sdk.token.driver.v1.AuditorSignature.signature:type_name -> fabric_token_sdk.token.driver.v1.Signature

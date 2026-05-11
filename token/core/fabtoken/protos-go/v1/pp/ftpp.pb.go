@@ -30,13 +30,13 @@ const (
 // PublicParameters describes typed public parameters
 type PublicParameters struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	TokenDriverName    string                 `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`                                                       // the name of the token driver
-	TokenDriverVersion uint64                 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                                             // the version of token driver
-	Auditor            *v1.Identity           `protobuf:"bytes,3,opt,name=auditor,proto3" json:"auditor,omitempty"`                                                                                                // is the public key of the auditor.
-	Issuers            []*v1.Identity         `protobuf:"bytes,4,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                                                // is a list of public keys of the entities that can issue tokens.
-	MaxToken           uint64                 `protobuf:"varint,5,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`                                                                             // is the maximum quantity a token can hold
-	QuantityPrecision  uint64                 `protobuf:"varint,6,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`                                                  // is the precision used to represent quantities
-	ExtraData          map[string][]byte      `protobuf:"bytes,7,rep,name=extra_data,json=extraData,proto3" json:"extra_data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // extra_data allows to store arbitrary data in the public parameters
+	TokenDriverName    string                 `protobuf:"bytes,1,opt,name=token_driver_name,json=tokenDriverName,proto3" json:"token_driver_name,omitempty"`                                    // the name of the token driver
+	TokenDriverVersion uint64                 `protobuf:"varint,2,opt,name=token_driver_version,json=tokenDriverVersion,proto3" json:"token_driver_version,omitempty"`                          // the version of token driver
+	Auditor            *v1.Identity           `protobuf:"bytes,3,opt,name=auditor,proto3" json:"auditor,omitempty"`                                                                             // is the public key of the auditor.
+	Issuers            []*v1.Identity         `protobuf:"bytes,4,rep,name=issuers,proto3" json:"issuers,omitempty"`                                                                             // is a list of public keys of the entities that can issue tokens.
+	MaxToken           uint64                 `protobuf:"varint,5,opt,name=max_token,json=maxToken,proto3" json:"max_token,omitempty"`                                                          // is the maximum quantity a token can hold
+	QuantityPrecision  uint64                 `protobuf:"varint,6,opt,name=quantity_precision,json=quantityPrecision,proto3" json:"quantity_precision,omitempty"`                               // is the precision used to represent quantities
+	Metadata           map[string][]byte      `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // metadata allows storing arbitrary application-specific or extension data in the public parameters. Keys should follow a reverse-DNS naming convention to avoid collisions (e.g., "com.example.myapp.custom_field").
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -113,9 +113,9 @@ func (x *PublicParameters) GetQuantityPrecision() uint64 {
 	return 0
 }
 
-func (x *PublicParameters) GetExtraData() map[string][]byte {
+func (x *PublicParameters) GetMetadata() map[string][]byte {
 	if x != nil {
-		return x.ExtraData
+		return x.Metadata
 	}
 	return nil
 }
@@ -125,17 +125,16 @@ var File_ftpp_proto protoreflect.FileDescriptor
 const file_ftpp_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"ftpp.proto\x12\"fabric_token_sdk.token.fabtoken.v1\x1a\fcommon.proto\"\xea\x03\n" +
+	"ftpp.proto\x12\"fabric_token_sdk.token.fabtoken.v1\x1a\fcommon.proto\"\xe5\x03\n" +
 	"\x10PublicParameters\x12*\n" +
 	"\x11token_driver_name\x18\x01 \x01(\tR\x0ftokenDriverName\x120\n" +
 	"\x14token_driver_version\x18\x02 \x01(\x04R\x12tokenDriverVersion\x12D\n" +
 	"\aauditor\x18\x03 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\aauditor\x12D\n" +
 	"\aissuers\x18\x04 \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\aissuers\x12\x1b\n" +
 	"\tmax_token\x18\x05 \x01(\x04R\bmaxToken\x12-\n" +
-	"\x12quantity_precision\x18\x06 \x01(\x04R\x11quantityPrecision\x12b\n" +
-	"\n" +
-	"extra_data\x18\a \x03(\v2C.fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntryR\textraData\x1a<\n" +
-	"\x0eExtraDataEntry\x12\x10\n" +
+	"\x12quantity_precision\x18\x06 \x01(\x04R\x11quantityPrecision\x12^\n" +
+	"\bmetadata\x18\a \x03(\v2B.fabric_token_sdk.token.fabtoken.v1.PublicParameters.MetadataEntryR\bmetadata\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BRZPgithub.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/ppb\x06proto3"
 
@@ -154,13 +153,13 @@ func file_ftpp_proto_rawDescGZIP() []byte {
 var file_ftpp_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_ftpp_proto_goTypes = []any{
 	(*PublicParameters)(nil), // 0: fabric_token_sdk.token.fabtoken.v1.PublicParameters
-	nil,                      // 1: fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntry
+	nil,                      // 1: fabric_token_sdk.token.fabtoken.v1.PublicParameters.MetadataEntry
 	(*v1.Identity)(nil),      // 2: fabric_token_sdk.token.driver.v1.Identity
 }
 var file_ftpp_proto_depIdxs = []int32{
 	2, // 0: fabric_token_sdk.token.fabtoken.v1.PublicParameters.auditor:type_name -> fabric_token_sdk.token.driver.v1.Identity
 	2, // 1: fabric_token_sdk.token.fabtoken.v1.PublicParameters.issuers:type_name -> fabric_token_sdk.token.driver.v1.Identity
-	1, // 2: fabric_token_sdk.token.fabtoken.v1.PublicParameters.extra_data:type_name -> fabric_token_sdk.token.fabtoken.v1.PublicParameters.ExtraDataEntry
+	1, // 2: fabric_token_sdk.token.fabtoken.v1.PublicParameters.metadata:type_name -> fabric_token_sdk.token.fabtoken.v1.PublicParameters.MetadataEntry
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name

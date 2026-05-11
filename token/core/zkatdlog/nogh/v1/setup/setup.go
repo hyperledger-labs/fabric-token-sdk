@@ -218,7 +218,7 @@ func (i *IdemixIssuerPublicKey) ToProtos() (*pp.IdemixIssuerPublicKey, error) {
 
 	return &pp.IdemixIssuerPublicKey{
 		PublicKey: i.PublicKey,
-		CurverId: &math2.CurveID{
+		CurveId: &math2.CurveID{
 			Id: uint64(i.Curve), // #nosec G115
 		},
 	}, nil
@@ -229,13 +229,13 @@ func (i *IdemixIssuerPublicKey) FromProtos(s *pp.IdemixIssuerPublicKey) error {
 		return errors.New("invalid idemix public key, it is nil")
 	}
 	i.PublicKey = s.PublicKey
-	if s.CurverId == nil {
+	if s.CurveId == nil {
 		return errors.New("invalid idemix issuer public key")
 	}
-	if s.CurverId.Id > math3.MaxInt {
+	if s.CurveId.Id > math3.MaxInt {
 		return errors.New("curve id out of range")
 	}
-	i.Curve = mathlib.CurveID(s.CurverId.Id) // #nosec G115
+	i.Curve = mathlib.CurveID(s.CurveId.Id) // #nosec G115
 
 	return nil
 }
@@ -452,7 +452,7 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 		Issuers:                issuers,
 		MaxToken:               p.MaxToken,
 		QuantityPrecision:      p.QuantityPrecision,
-		ExtraData:              p.ExtraData,
+		Metadata:               p.ExtraData,
 	}
 	raw, err := proto.Marshal(publicParams)
 	if err != nil {
@@ -543,7 +543,7 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 		}
 	}
 
-	p.ExtraData = publicParams.ExtraData
+	p.ExtraData = publicParams.Metadata
 	if p.ExtraData == nil {
 		p.ExtraData = driver.Extras{}
 	}
