@@ -633,22 +633,38 @@ func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, i
 	return *sum, nil
 }
 
+// nullCond is a condition that checks if a field IS NULL.
+type nullCond struct {
+	f common3.Field
+}
+
+func (c *nullCond) WriteString(_ common3.CondInterpreter, sb common3.Builder) {
+	sb.WriteSerializables(c.f).WriteString(" IS NULL")
+}
+
+func isNull(f common3.Field) cond.Condition {
+	return &nullCond{f: f}
+}
+
 // ListRedeemedTokens returns issued tokens that were spent by a Redeem action.
-// It JOINs with the transactions table to identify tokens whose spent_by txID
-// has action_type = Redeem (2). If tokenType is non-empty, only tokens of that type are included.
+// A redeemed token is identified as: issuer=true, is_deleted=true, spent_by is set,
+// and the spending tx_id has NO output tokens in the tokens table (because Parse()
+// skips redeem outputs with empty owner). This avoids relying on the transactions
+// table, which may not have entries on the issuer node.
 func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time, sortBy tdriver.SortField, sortDirection tdriver.SortDirection) (*token.IssuedTokens, error) {
 	tokTable := q.Table(db.table.Tokens)
-	txTable := q.Table(db.table.Transactions)
+	// Alias the same tokens table to check for output tokens of the spending tx.
+	t2 := q.AliasedTable(db.table.Tokens, "t2")
 	conds := []cond.Condition{
-		cond.Eq("issuer", true),
-		cond.Eq("is_deleted", true),
-		cond.Eq("action_type", int(driver.Redeem)),
+		cond.CmpVal(tokTable.Field("issuer"), "=", true),
+		cond.CmpVal(tokTable.Field("is_deleted"), "=", true),
+		isNull(t2.Field("tx_id")),
 	}
 	if len(tokenType) != 0 {
 		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
 	}
 	if len(issuerRaw) != 0 {
-		conds = append(conds, cond.Eq("issuer_raw", issuerRaw))
+		conds = append(conds, cond.CmpVal(tokTable.Field("issuer_raw"), "=", issuerRaw))
 	}
 	if from != nil {
 		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), ">=", from.UTC()))
@@ -663,7 +679,7 @@ func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Ty
 			tokTable.Field("quantity"), tokTable.Field("issuer_raw"),
 			tokTable.Field("is_deleted"), tokTable.Field("spent_by"),
 		).
-		From(tokTable.Join(txTable, cond.Cmp(tokTable.Field("spent_by"), "=", txTable.Field("tx_id")))).
+		From(tokTable.JoinAs(common3.Left, t2, cond.Cmp(t2.Field("tx_id"), "=", tokTable.Field("spent_by")))).
 		Where(cond.And(conds...))
 	var query string
 	var args []any
@@ -695,20 +711,21 @@ func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Ty
 }
 
 // RedeemedBalance returns the sum of amounts of issued tokens spent by a Redeem action.
-// If tokenType is non-empty, only tokens of that type are included.
+// Uses the same self-JOIN approach as ListRedeemedTokens to avoid relying on the
+// transactions table.
 func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time) (uint64, error) {
 	tokTable := q.Table(db.table.Tokens)
-	txTable := q.Table(db.table.Transactions)
+	t2 := q.AliasedTable(db.table.Tokens, "t2")
 	conds := []cond.Condition{
-		cond.Eq("issuer", true),
-		cond.Eq("is_deleted", true),
-		cond.Eq("action_type", int(driver.Redeem)),
+		cond.CmpVal(tokTable.Field("issuer"), "=", true),
+		cond.CmpVal(tokTable.Field("is_deleted"), "=", true),
+		isNull(t2.Field("tx_id")),
 	}
 	if len(tokenType) != 0 {
 		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
 	}
 	if len(issuerRaw) != 0 {
-		conds = append(conds, cond.Eq("issuer_raw", issuerRaw))
+		conds = append(conds, cond.CmpVal(tokTable.Field("issuer_raw"), "=", issuerRaw))
 	}
 	if from != nil {
 		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), ">=", from.UTC()))
@@ -718,7 +735,7 @@ func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type,
 	}
 	query, args := q.Select().
 		FieldsByName(common3.FieldName("SUM(" + db.table.Tokens + ".amount)")).
-		From(tokTable.Join(txTable, cond.Cmp(tokTable.Field("spent_by"), "=", txTable.Field("tx_id")))).
+		From(tokTable.JoinAs(common3.Left, t2, cond.Cmp(t2.Field("tx_id"), "=", tokTable.Field("spent_by")))).
 		Where(cond.And(conds...)).
 		Format(db.ci)
 
