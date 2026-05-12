@@ -308,7 +308,7 @@ func TestLocalBidirectionalChannel_MessageFields(t *testing.T) {
 		assert.Equal(t, payload, msg.Payload)
 		assert.Equal(t, leftSession.Info().ID, msg.SessionID)
 		assert.Equal(t, contextID, msg.ContextID)
-		assert.Equal(t, caller, msg.Caller)
+		assert.Equal(t, caller, msg.FromViewID)
 		assert.Equal(t, endpoint, msg.FromEndpoint)
 		assert.Equal(t, pkid, msg.FromPKID)
 		assert.Equal(t, int32(view.OK), msg.Status)

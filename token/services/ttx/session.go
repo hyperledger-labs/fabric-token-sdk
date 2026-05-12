@@ -44,7 +44,7 @@ func NewLocalBidirectionalChannel(ctx context.Context, caller string, contextID 
 			ctx:          ctx,
 			name:         "left",
 			contextID:    contextID,
-			caller:       caller,
+			viewID:       caller,
 			info:         info,
 			readChannel:  rl,
 			writeChannel: lr,
@@ -53,7 +53,7 @@ func NewLocalBidirectionalChannel(ctx context.Context, caller string, contextID 
 			ctx:          ctx,
 			name:         "right",
 			contextID:    contextID,
-			caller:       caller,
+			viewID:       caller,
 			info:         info,
 			readChannel:  lr,
 			writeChannel: rl,
@@ -77,7 +77,7 @@ type localSession struct {
 	ctx          context.Context
 	name         string
 	contextID    string
-	caller       string
+	viewID       string
 	info         view.SessionInfo
 	readChannel  chan *view.Message
 	writeChannel chan *view.Message
@@ -111,7 +111,7 @@ func (s *localSession) send(ctx context.Context, payload []byte, status int32) e
 	s.writeChannel <- &view.Message{
 		SessionID:    s.info.ID,
 		ContextID:    s.contextID,
-		Caller:       s.caller,
+		FromViewID:   s.viewID,
 		FromEndpoint: s.info.Endpoint,
 		FromPKID:     s.info.EndpointPKID,
 		Status:       status,

@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/hashicorp/vault/api v1.23.0
-	github.com/hyperledger-labs/fabric-smart-client v0.10.2-0.20260506093942-1274969d717d
+	github.com/hyperledger-labs/fabric-smart-client v0.10.2-0.20260512054920-fccf8c371b35
 	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250528165839-032fb9265504
 	github.com/stretchr/testify v1.11.1
 )
