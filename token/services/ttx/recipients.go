@@ -473,7 +473,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
 	}
 
-	logger.DebugfContext(context.Context(), "Send recipient identity response to %s", session.Info().Caller)
+	logger.DebugfContext(context.Context(), "Send recipient identity response to %s", session.Info().CallerIdentity)
 	if err := session.Send(recipientData); err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
@@ -820,7 +820,7 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	if err := resolver.Bind(context.Context(), context.Me(), recipientData.Identity); err != nil {
 		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}
-	if err := resolver.Bind(context.Context(), session.Info().Caller, other); err != nil {
+	if err := resolver.Bind(context.Context(), session.Info().CallerIdentity, other); err != nil {
 		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}
 

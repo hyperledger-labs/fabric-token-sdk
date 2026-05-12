@@ -7,7 +7,7 @@ replace github.com/hyperledger-labs/fabric-token-sdk => ./../../
 require (
 	github.com/IBM/idemix v0.0.2
 	github.com/IBM/mathlib v0.1.0
-	github.com/hyperledger-labs/fabric-smart-client v0.10.2-0.20260512054920-fccf8c371b35
+	github.com/hyperledger-labs/fabric-smart-client v0.10.2-0.20260512081930-82c9a637596c
 	github.com/hyperledger-labs/fabric-token-sdk v0.10.1
 	github.com/onsi/gomega v1.40.0
 	github.com/spf13/cobra v1.10.2

@@ -64,8 +64,8 @@ func TestNewLocalBidirectionalChannel_SessionInfo(t *testing.T) {
 	// Both should have the same endpoint info
 	assert.Equal(t, endpoint, leftInfo.Endpoint)
 	assert.Equal(t, endpoint, rightInfo.Endpoint)
-	assert.Equal(t, pkid, leftInfo.EndpointPKID)
-	assert.Equal(t, pkid, rightInfo.EndpointPKID)
+	assert.Equal(t, pkid, leftInfo.EndpointIdentity)
+	assert.Equal(t, pkid, rightInfo.EndpointIdentity)
 
 	// Both should not be closed initially
 	assert.False(t, leftInfo.Closed)
@@ -310,7 +310,7 @@ func TestLocalBidirectionalChannel_MessageFields(t *testing.T) {
 		assert.Equal(t, contextID, msg.ContextID)
 		assert.Equal(t, caller, msg.FromViewID)
 		assert.Equal(t, endpoint, msg.FromEndpoint)
-		assert.Equal(t, pkid, msg.FromPKID)
+		assert.Equal(t, pkid, msg.FromIdentity)
 		assert.Equal(t, int32(view.OK), msg.Status)
 		assert.NotNil(t, msg.Ctx)
 	case <-time.After(time.Second):

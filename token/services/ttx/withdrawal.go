@@ -190,7 +190,7 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	}
 
 	// Update the Endpoint Resolver
-	caller := context.Session().Info().Caller
+	caller := context.Session().Info().CallerIdentity
 	logger.DebugfContext(context.Context(), "update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
 	if err := endpoint.GetService(context).Bind(context.Context(), caller, request.RecipientData.Identity); err != nil {
 		logger.DebugfContext(context.Context(), "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
