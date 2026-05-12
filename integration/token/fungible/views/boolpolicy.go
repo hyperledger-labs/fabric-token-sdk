@@ -193,8 +193,38 @@ func (m *PolicyAcceptSpendView) Call(context view.Context) (interface{}, error) 
 	assert.NoError(err, "failed receiving policy spend request")
 	assert.NotNil(request.Token, "request doesn't contain a token")
 
-	tx, err := bptx.EndorseSpend(context, request)
-	assert.NoError(err, "failed approving policy spend")
+	// Receive the assembled tx (without endorsing) so the co-owner can
+	// inspect it; the library no longer hardcodes a check policy.
+	tx, err := bptx.ReceiveSpendTx(context, request)
+	assert.NoError(err, "failed receiving policy spend transaction")
+
+	// Business-logic checks (the library does not enforce these):
+	//   1. the tx consumes the token named in SpendRequest;
+	//   2. the tx does not consume any other token owned by this node.
+	inputs, err := tx.Request().Inputs(context.Context())
+	assert.NoError(err, "failed reading inputs from received tx")
+	assert.True(inputs.Count() > 0, "received tx has no inputs")
+
+	tms, err := token2.GetManagementService(context, token2.WithTMSID(tx.TMSID()))
+	assert.NoError(err, "failed getting tms for received tx")
+	sigService := tms.SigService()
+
+	matched := false
+	for i := range inputs.Count() {
+		in := inputs.At(i)
+		if in.Id != nil && in.Id.Equal(request.Token.Id) {
+			matched = true
+
+			continue
+		}
+		if len(in.Owner) != 0 && sigService.IsMe(context.Context(), in.Owner) {
+			assert.Fail("received tx consumes additional token [%s] owned by this responder", in.Id)
+		}
+	}
+	assert.True(matched, "received tx does not consume the token named in SpendRequest")
+
+	_, err = context.RunView(ttx.NewEndorseView(tx.Transaction))
+	assert.NoError(err, "failed to endorse policy spend transaction")
 
 	owner := ttx.NewOwner(context, tx.TokenService())
 	vc, _, err := owner.GetStatus(context.Context(), tx.ID())
