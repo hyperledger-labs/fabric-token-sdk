@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 // Package boolpolicy provides a spend-coordination protocol for policy identity tokens.
 // For OR policies a single co-owner can spend unilaterally; for AND policies all
-// co-owners must endorse.  The RequestSpendView / EndorseSpendView pair mirrors the
+// co-owners must endorse. The RequestSpendView / ReceiveSpendTxView pair mirrors the
 // multisig spend protocol and is reused for the AND case.
 package boolpolicy
 
@@ -189,22 +189,30 @@ func (c *RequestSpendView) collectAnswers(context view.Context, party view.Ident
 	ch <- &answer{response: response, party: party}
 }
 
-// EndorseSpendView is the co-owner's view: it ACKs the spend request and then
-// endorses the assembled transaction.
-type EndorseSpendView struct {
+// ReceiveSpendTxView is the co-owner's view for AND-policy spends: it ACKs
+// the SpendRequest and returns the assembled transaction received from the
+// initiator without endorsing it. The caller inspects the transaction and,
+// if the checks pass, runs ttx.NewEndorseView(tx) to produce the signature.
+//
+// Splitting receive from endorse lets the application decide which
+// business-logic checks to apply rather than baking a fixed policy into
+// the library.
+type ReceiveSpendTxView struct {
 	request *SpendRequest
 }
 
-// NewEndorseSpendView returns a new EndorseSpendView.
-func NewEndorseSpendView(request *SpendRequest) *EndorseSpendView {
-	return &EndorseSpendView{request: request}
+// NewReceiveSpendTxView returns a new ReceiveSpendTxView for the given request.
+func NewReceiveSpendTxView(request *SpendRequest) *ReceiveSpendTxView {
+	return &ReceiveSpendTxView{request: request}
 }
 
-// EndorseSpend is a convenience wrapper that runs NewEndorseSpendView.
-func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, error) {
-	resultBoxed, err := context.RunView(NewEndorseSpendView(request))
+// ReceiveSpendTx is a convenience wrapper that runs ReceiveSpendTxView and
+// returns the unsigned spend transaction so the caller can inspect it before
+// deciding whether to endorse.
+func ReceiveSpendTx(context view.Context, request *SpendRequest) (*Transaction, error) {
+	resultBoxed, err := context.RunView(NewReceiveSpendTxView(request))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to approve spend")
+		return nil, errors.Wrap(err, "failed to receive spend transaction")
 	}
 	result, ok := resultBoxed.(*ttx.Transaction)
 	if !ok {
@@ -214,17 +222,16 @@ func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, er
 	return &Transaction{Transaction: result}, nil
 }
 
-// Call implements view.View.
-func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
+// Call implements view.View. It sends the SpendResponse ACK, receives the
+// assembled transaction, and returns it without endorsing. Endorsement is
+// the caller's responsibility once any business-logic checks pass.
+func (a *ReceiveSpendTxView) Call(context view.Context) (interface{}, error) {
 	if err := session.JSON(context).Send(&SpendResponse{}); err != nil {
 		return nil, errors.Wrap(err, "failed to send spend response")
 	}
 	tx, err := ttx.ReceiveTransaction(context)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
-	}
-	if _, err = context.RunView(ttx.NewEndorseView(tx)); err != nil {
-		return nil, errors.Wrap(err, "failed to endorse transaction")
 	}
 
 	return tx, nil
