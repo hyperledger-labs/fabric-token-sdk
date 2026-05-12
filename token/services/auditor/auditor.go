@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -73,13 +74,98 @@ type CheckService interface {
 }
 
 const (
-	// Lock acquisition retry configuration constants
-	maxLockRetries        = 10                    // Maximum number of retry attempts
-	initialLockBackoff    = 10 * time.Millisecond // Initial backoff delay
-	maxLockBackoff        = 5 * time.Second       // Maximum backoff delay
-	lockBackoffMultiplier = 2.0                   // Exponential backoff multiplier
-	lockJitterFactor      = 0.3                   // Randomization factor (30%)
+	// Default lock acquisition retry configuration constants
+	defaultMaxLockRetries        = 10                    // Maximum number of retry attempts
+	defaultInitialLockBackoff    = 10 * time.Millisecond // Initial backoff delay
+	defaultMaxLockBackoff        = 5 * time.Second       // Maximum backoff delay
+	defaultLockBackoffMultiplier = 2.0                   // Exponential backoff multiplier
+	defaultLockJitterFactor      = 0.3                   // Randomization factor (30%)
 )
+
+// LockConfig holds the configuration for lock acquisition retry logic
+type LockConfig struct {
+	// MaxRetries is the maximum number of retry attempts for lock acquisition
+	MaxRetries int
+	// InitialBackoff is the initial backoff delay before the first retry
+	InitialBackoff time.Duration
+	// MaxBackoff is the maximum backoff delay between retries
+	MaxBackoff time.Duration
+	// BackoffMultiplier is the exponential backoff multiplier
+	BackoffMultiplier float64
+	// JitterFactor is the randomization factor to prevent thundering herd (0.0 to 1.0)
+	JitterFactor float64
+}
+
+// DefaultLockConfig returns the default lock configuration
+func DefaultLockConfig() *LockConfig {
+	return &LockConfig{
+		MaxRetries:        defaultMaxLockRetries,
+		InitialBackoff:    defaultInitialLockBackoff,
+		MaxBackoff:        defaultMaxLockBackoff,
+		BackoffMultiplier: defaultLockBackoffMultiplier,
+		JitterFactor:      defaultLockJitterFactor,
+	}
+}
+
+// lockConfigRaw is used to unmarshal lock configuration from YAML
+type lockConfigRaw struct {
+	MaxRetries        int     `yaml:"maxRetries"`
+	InitialBackoff    string  `yaml:"initialBackoff"`
+	MaxBackoff        string  `yaml:"maxBackoff"`
+	BackoffMultiplier float64 `yaml:"backoffMultiplier"`
+	JitterFactor      float64 `yaml:"jitterFactor"`
+}
+
+// LoadLockConfig loads lock configuration from the configuration provider.
+// If configuration is not found or invalid, returns default configuration.
+func LoadLockConfig(cp *config.Configuration) *LockConfig {
+	cfg := DefaultLockConfig()
+
+	if !cp.IsSet("auditor.lock") {
+		return cfg
+	}
+
+	var raw lockConfigRaw
+	if err := cp.UnmarshalKey("auditor.lock", &raw); err != nil {
+		logger.Warnf("failed to unmarshal auditor lock configuration, using defaults: %v", err)
+		return cfg
+	}
+
+	// Apply max retries if valid
+	if raw.MaxRetries > 0 {
+		cfg.MaxRetries = raw.MaxRetries
+	}
+
+	// Apply initial backoff if valid
+	if raw.InitialBackoff != "" {
+		if duration, err := time.ParseDuration(raw.InitialBackoff); err == nil && duration > 0 {
+			cfg.InitialBackoff = duration
+		} else {
+			logger.Warnf("invalid initialBackoff value [%s], using default", raw.InitialBackoff)
+		}
+	}
+
+	// Apply max backoff if valid
+	if raw.MaxBackoff != "" {
+		if duration, err := time.ParseDuration(raw.MaxBackoff); err == nil && duration > 0 {
+			cfg.MaxBackoff = duration
+		} else {
+			logger.Warnf("invalid maxBackoff value [%s], using default", raw.MaxBackoff)
+		}
+	}
+
+	// Apply backoff multiplier if valid
+	if raw.BackoffMultiplier > 0 {
+		cfg.BackoffMultiplier = raw.BackoffMultiplier
+	}
+
+	// Apply jitter factor if valid (must be between 0 and 1)
+	if raw.JitterFactor >= 0 && raw.JitterFactor <= 1.0 {
+		cfg.JitterFactor = raw.JitterFactor
+	}
+
+	return cfg
+}
 
 // Service is the interface for the auditor service
 type Service struct {
@@ -92,9 +178,11 @@ type Service struct {
 	metricsProvider metrics.Provider
 	metrics         *Metrics
 	checkService    CheckService
+	lockConfig      *LockConfig
 }
 
 // NewService creates a new auditor Service with the provided dependencies.
+// If lockConfig is nil, default lock configuration will be used.
 func NewService(
 	tmsID token.TMSID,
 	networkProvider NetworkProvider,
@@ -104,7 +192,11 @@ func NewService(
 	finalityTracer trace.Tracer,
 	metricsProvider metrics.Provider,
 	checkService CheckService,
+	lockConfig *LockConfig,
 ) *Service {
+	if lockConfig == nil {
+		lockConfig = DefaultLockConfig()
+	}
 	return &Service{
 		tmsID:           tmsID,
 		networkProvider: networkProvider,
@@ -115,6 +207,7 @@ func NewService(
 		metricsProvider: metricsProvider,
 		metrics:         newMetrics(metricsProvider),
 		checkService:    checkService,
+		lockConfig:      lockConfig,
 	}
 }
 
@@ -174,7 +267,7 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids []string) error {
 	var lastErr error
 
-	for attempt := range maxLockRetries {
+	for attempt := range a.lockConfig.MaxRetries {
 		// Attempt to acquire locks
 		err := a.auditDB.AcquireLocks(ctx, anchor, eids...)
 		if err == nil {
@@ -197,7 +290,7 @@ func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids
 		backoff := a.calculateBackoff(attempt)
 
 		logger.DebugfContext(ctx, "Lock acquisition failed (attempt %d/%d) for anchor [%s], retrying after %v: %v",
-			attempt+1, maxLockRetries, anchor, backoff, err)
+			attempt+1, a.lockConfig.MaxRetries, anchor, backoff, err)
 
 		// Wait with context cancellation support
 		timer := time.NewTimer(backoff)
@@ -211,30 +304,30 @@ func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids
 		}
 	}
 
-	return errors.WithMessagef(lastErr, "failed to acquire locks after %d attempts for anchor [%s]", maxLockRetries, anchor)
+	return errors.WithMessagef(lastErr, "failed to acquire locks after %d attempts for anchor [%s]", a.lockConfig.MaxRetries, anchor)
 }
 
 // calculateBackoff computes the backoff duration with exponential growth and randomized jitter.
 // The jitter breaks livelock symmetry when multiple auditors retry simultaneously.
 func (a *Service) calculateBackoff(attempt int) time.Duration {
 	// Calculate base delay with exponential growth
-	delay := float64(initialLockBackoff) * math.Pow(lockBackoffMultiplier, float64(attempt))
+	delay := float64(a.lockConfig.InitialBackoff) * math.Pow(a.lockConfig.BackoffMultiplier, float64(attempt))
 
 	// Cap at maximum delay
-	if delay > float64(maxLockBackoff) {
-		delay = float64(maxLockBackoff)
+	if delay > float64(a.lockConfig.MaxBackoff) {
+		delay = float64(a.lockConfig.MaxBackoff)
 	}
 
 	// Add randomized jitter to break symmetry
 	// Jitter range: delay * (1 - jitterFactor/2) to delay * (1 + jitterFactor/2)
-	jitterRange := delay * lockJitterFactor
+	jitterRange := delay * a.lockConfig.JitterFactor
 	jitter := (rand.Float64() - 0.5) * jitterRange
 
 	finalDelay := time.Duration(delay + jitter)
 
 	// Ensure non-negative delay
 	if finalDelay < 0 {
-		finalDelay = initialLockBackoff
+		finalDelay = a.lockConfig.InitialBackoff
 	}
 
 	return finalDelay

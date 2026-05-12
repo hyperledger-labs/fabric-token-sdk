@@ -132,6 +132,7 @@ func newTestService(auditDB *auditdb.StoreService, checkService auditor.CheckSer
 		nil, // finalityTracer
 		nil, // metricsProvider
 		checkService,
+		nil, // lockConfig (uses defaults)
 	)
 }
 
@@ -347,7 +348,7 @@ func TestService_Audit_TMSProviderIrrelevant(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, nil,
 		newTestStoreService(t, newFakeStore()),
-		nil, tmsProv, nil, nil, nil,
+		nil, tmsProv, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-aud-tms-err")
@@ -370,7 +371,7 @@ func TestService_Append_Error_TMSProvider(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, nil,
 		newTestStoreService(t, newFakeStore()),
-		nil, tmsProv, nil, nil, nil,
+		nil, tmsProv, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-app")
@@ -388,7 +389,7 @@ func TestService_Append_GetNetworkError(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, newFakeStore()),
-		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-net-err")
@@ -409,7 +410,7 @@ func TestService_Append_Success(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, newFakeStore()),
-		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-app-success")
@@ -432,7 +433,7 @@ func TestService_Append_AddFinalityListenerError(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, newFakeStore()),
-		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-listener-err")
@@ -461,7 +462,7 @@ func TestService_Append_AuditError(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, fakeStore),
-		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-app-err")
@@ -488,6 +489,7 @@ func TestNewServiceManager(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	assert.NotNil(t, sm)
 }
@@ -508,6 +510,7 @@ func TestServiceManager_Auditor(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
 	require.Error(t, err)
@@ -528,6 +531,7 @@ func TestServiceManager_Auditor_InitSuccess(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
 	require.NoError(t, err)
@@ -553,6 +557,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = smStoreErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
@@ -569,6 +574,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = smTokensErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
@@ -585,6 +591,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = smNetworkErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
@@ -601,6 +608,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		csp,
+		nil, // configService
 	)
 	sp.service = smCheckErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
@@ -627,6 +635,7 @@ func TestManager_GetByTMSID(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = sm
 	sp.err = nil
@@ -647,6 +656,7 @@ func TestManager_GetByTMSID(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = smSuccess
 	sp.err = nil
