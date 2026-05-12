@@ -29,3 +29,24 @@ func (m *Configuration) IsSet(key string) bool {
 func (m *Configuration) UnmarshalKey(key string, rawVal interface{}) error {
 	return m.cm.UnmarshalKey(key, rawVal)
 }
+
+// GetValidationConfig returns the validation configuration
+func (m *Configuration) GetValidationConfig() (driver.ValidationConfig, error) {
+	config := driver.ValidationConfig{
+		MaxTokenPayloadSize:  2 * 1024 * 1024,
+		MaxTokenOutputsPerTx: 1000,
+		MaxBulkDeleteSize:    10000,
+		MaxWalletIDSize:      1024,
+		MaxOwnerRawSize:      16 * 1024,
+		MaxIssuerRawSize:     16 * 1024,
+		MaxTokenRequestSize:  2 * 1024 * 1024,
+		MaxActionCount:       1000,
+	}
+	if m.cm.IsSet("validation") {
+		if err := m.cm.UnmarshalKey("validation", &config); err != nil {
+			return config, err
+		}
+	}
+
+	return config, nil
+}

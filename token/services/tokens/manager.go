@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokendb"
@@ -64,7 +65,25 @@ func NewServiceManager(
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get token cache for [%s]", tmsID)
 			}
-			tokens := NewService(tmsID, tmsProvider, networkProvider, storage, cacheInst)
+			tokens := NewService(tmsID, tmsProvider, networkProvider, storage, cacheInst, driver.ValidationConfig{
+				MaxTokenPayloadSize:  2 * 1024 * 1024,
+				MaxTokenOutputsPerTx: 1000,
+				MaxBulkDeleteSize:    10000,
+				MaxWalletIDSize:      1024,
+				MaxOwnerRawSize:      16 * 1024,
+				MaxIssuerRawSize:     16 * 1024,
+				MaxTokenRequestSize:  2 * 1024 * 1024,
+				MaxActionCount:       1000,
+			})
+			ms, err := tmsProvider.GetManagementService(token.WithTMSID(tmsID))
+			if err == nil && ms != nil {
+				if conf := ms.Configuration(); conf != nil {
+					vConfig, err := conf.GetValidationConfig()
+					if err == nil {
+						tokens.Config = vConfig
+					}
+				}
+			}
 
 			return tokens, nil
 		}),

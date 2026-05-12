@@ -242,6 +242,32 @@ func TestValidatorWithCounterfeiter(t *testing.T) {
 
 		_, _, err = v.VerifyTokenRequestFromRaw(ctx, nil, anchor, []byte("invalid"))
 		require.Error(t, err)
+
+		t.Run("MaxTokenRequestSize", func(t *testing.T) {
+			vLimit := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
+				logger, pp, des, ad, nil, nil, nil,
+			)
+			vLimit.ValidationConfig.MaxTokenRequestSize = 10
+			_, _, err = vLimit.VerifyTokenRequestFromRaw(ctx, nil, anchor, make([]byte, 11))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "token request too large")
+		})
+
+		t.Run("MaxActionCount", func(t *testing.T) {
+			vLimit := NewValidator[driver.PublicParameters, driver.Input, driver.TransferAction, driver.IssueAction, driver.Deserializer](
+				logger, pp, des, ad, nil, nil, nil,
+			)
+			vLimit.ValidationConfig.MaxActionCount = 1
+			trLarge := &driver.TokenRequest{
+				Issues:    [][]byte{[]byte("issue1")},
+				Transfers: [][]byte{[]byte("transfer1")},
+				Version:   1,
+			}
+			raw, _ := trLarge.Bytes()
+			_, _, err = vLimit.VerifyTokenRequestFromRaw(ctx, nil, anchor, raw)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "too many actions")
+		})
 	})
 }
 

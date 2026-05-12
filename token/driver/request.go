@@ -149,6 +149,18 @@ func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
 	// Store the version from the protobuf
 	r.Version = tr.Version
 
+	if len(tr.Actions) > MaxActionCount {
+		return errors.Errorf("too many actions: %d > %d", len(tr.Actions), MaxActionCount)
+	}
+
+	if len(tr.Signatures) > MaxActionCount {
+		return errors.Errorf("too many signatures: %d > %d", len(tr.Signatures), MaxActionCount)
+	}
+
+	if tr.Auditing != nil && len(tr.Auditing.Signatures) > MaxActionCount {
+		return errors.Errorf("too many auditor signatures: %d > %d", len(tr.Auditing.Signatures), MaxActionCount)
+	}
+
 	for _, action := range tr.Actions {
 		if action == nil {
 			return errors.New("nil action found")
@@ -162,12 +174,14 @@ func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
 			return errors.Errorf("unknown action type [%s]", action.Type)
 		}
 	}
+
 	for _, signature := range tr.Signatures {
 		if signature == nil || len(signature.Raw) == 0 {
 			return errors.New("nil signature found")
 		}
 		r.Signatures = append(r.Signatures, signature.Raw)
 	}
+
 	if tr.Auditing != nil {
 		r.AuditorSignatures = make([]*AuditorSignature, len(tr.Auditing.Signatures))
 		r.AuditorSignatures = slices.GenericSliceOfPointers[AuditorSignature](len(tr.Auditing.Signatures))
@@ -308,8 +322,18 @@ func (a *AuditableIdentity) ToProtos() (*request.AuditableIdentity, error) {
 }
 
 func (a *AuditableIdentity) FromProtos(auditableIdentity *request.AuditableIdentity) error {
+	if auditableIdentity == nil {
+		return errors.New("auditable identity is nil")
+	}
 	a.Identity = ToIdentity(auditableIdentity.Identity)
+	if len(a.Identity) > MaxOwnerRawSize {
+		return errors.Errorf("identity too large: %d > %d", len(a.Identity), MaxOwnerRawSize)
+	}
+
 	a.AuditInfo = auditableIdentity.AuditInfo
+	if len(a.AuditInfo) > MaxOwnerRawSize {
+		return errors.Errorf("audit info too large: %d > %d", len(a.AuditInfo), MaxOwnerRawSize)
+	}
 
 	return nil
 }
@@ -359,6 +383,9 @@ func (i *IssueOutputMetadata) FromProtos(outputsMetadata *request.OutputMetadata
 		return nil
 	}
 	i.OutputMetadata = outputsMetadata.Metadata
+	if len(i.OutputMetadata) > MaxTokenPayloadSize {
+		return errors.Errorf("output metadata too large: %d > %d", len(i.OutputMetadata), MaxTokenPayloadSize)
+	}
 	i.Receivers = slices.GenericSliceOfPointers[AuditableIdentity](len(outputsMetadata.Receivers))
 	if err := protos.FromProtosSlice(outputsMetadata.Receivers, i.Receivers); err != nil {
 		return errors.Wrap(err, "failed unmarshalling receivers metadata")
@@ -411,6 +438,16 @@ func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
 }
 
 func (i *IssueMetadata) FromProtos(issueMetadata *request.IssueMetadata) error {
+	if issueMetadata == nil {
+		return errors.New("issue metadata is nil")
+	}
+	if len(issueMetadata.Inputs) > MaxActionCount {
+		return errors.Errorf("too many issue inputs: %d > %d", len(issueMetadata.Inputs), MaxActionCount)
+	}
+
+	if len(issueMetadata.Outputs) > MaxActionCount {
+		return errors.Errorf("too many issue outputs: %d > %d", len(issueMetadata.Outputs), MaxActionCount)
+	}
 	issuer := &AuditableIdentity{}
 	if err := issuer.FromProtos(issueMetadata.Issuer); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling issuer [%v]", issueMetadata.Issuer)
@@ -507,7 +544,14 @@ func (t *TransferOutputMetadata) FromProtos(transferOutputMetadata *request.Outp
 		return nil
 	}
 	t.OutputMetadata = transferOutputMetadata.Metadata
+	if len(t.OutputMetadata) > MaxTokenPayloadSize {
+		return errors.Errorf("output metadata too large: %d > %d", len(t.OutputMetadata), MaxTokenPayloadSize)
+	}
+
 	t.OutputAuditInfo = transferOutputMetadata.AuditInfo
+	if len(t.OutputAuditInfo) > MaxOwnerRawSize {
+		return errors.Errorf("output audit info too large: %d > %d", len(t.OutputAuditInfo), MaxOwnerRawSize)
+	}
 	t.Receivers = slices.GenericSliceOfPointers[AuditableIdentity](len(transferOutputMetadata.Receivers))
 	if err := protos.FromProtosSlice(transferOutputMetadata.Receivers, t.Receivers); err != nil {
 		return errors.Wrap(err, "failed unmarshalling receivers metadata")
@@ -577,6 +621,15 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 }
 
 func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata) error {
+	if transferMetadata == nil {
+		return errors.New("transfer metadata is nil")
+	}
+	if len(transferMetadata.Inputs) > MaxActionCount {
+		return errors.Errorf("too many transfer inputs: %d > %d", len(transferMetadata.Inputs), MaxActionCount)
+	}
+	if len(transferMetadata.Outputs) > MaxActionCount {
+		return errors.Errorf("too many transfer outputs: %d > %d", len(transferMetadata.Outputs), MaxActionCount)
+	}
 	t.Inputs = slices.GenericSliceOfPointers[TransferInputMetadata](len(transferMetadata.Inputs))
 	if err := protos.FromProtosSlice(transferMetadata.Inputs, t.Inputs); err != nil {
 		return errors.Wrap(err, "failed unmarshalling inputs")
@@ -710,6 +763,10 @@ func (m *TokenRequestMetadata) FromProtos(trm *request.TokenRequestMetadata) err
 	// assert version
 	if trm.Version != ProtocolV1 {
 		return errors.Errorf("invalid token request metadata version, expected [%d], got [%d]", ProtocolV1, trm.Version)
+	}
+
+	if len(trm.Metadata) > MaxActionCount {
+		return errors.Errorf("too many action metadata: %d > %d", len(trm.Metadata), MaxActionCount)
 	}
 
 	m.Application = trm.Application
