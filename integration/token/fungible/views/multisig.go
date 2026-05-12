@@ -198,7 +198,7 @@ func (m *MultiSigAcceptSpendView) Call(context view.Context) (interface{}, error
 	sigService := tms.SigService()
 
 	matched := false
-	for i := 0; i < inputs.Count(); i++ {
+	for i := range inputs.Count() {
 		in := inputs.At(i)
 		if in.Id != nil && in.Id.Equal(request.Token.Id) {
 			matched = true
