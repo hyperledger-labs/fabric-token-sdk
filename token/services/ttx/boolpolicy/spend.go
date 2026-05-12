@@ -6,12 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 // Package boolpolicy provides a spend-coordination protocol for policy identity tokens.
 // For OR policies a single co-owner can spend unilaterally; for AND policies all
-// co-owners must endorse.  The RequestSpendView / EndorseSpendView pair mirrors the
+// co-owners must endorse. The RequestSpendView / ReceiveSpendTxView pair mirrors the
 // multisig spend protocol and is reused for the AND case.
 package boolpolicy
 
 import (
-	"context"
 	"slices"
 	"time"
 
@@ -190,22 +189,30 @@ func (c *RequestSpendView) collectAnswers(context view.Context, party view.Ident
 	ch <- &answer{response: response, party: party}
 }
 
-// EndorseSpendView is the co-owner's view: it ACKs the spend request and then
-// endorses the assembled transaction.
-type EndorseSpendView struct {
+// ReceiveSpendTxView is the co-owner's view for AND-policy spends: it ACKs
+// the SpendRequest and returns the assembled transaction received from the
+// initiator without endorsing it. The caller inspects the transaction and,
+// if the checks pass, runs ttx.NewEndorseView(tx) to produce the signature.
+//
+// Splitting receive from endorse lets the application decide which
+// business-logic checks to apply rather than baking a fixed policy into
+// the library.
+type ReceiveSpendTxView struct {
 	request *SpendRequest
 }
 
-// NewEndorseSpendView returns a new EndorseSpendView.
-func NewEndorseSpendView(request *SpendRequest) *EndorseSpendView {
-	return &EndorseSpendView{request: request}
+// NewReceiveSpendTxView returns a new ReceiveSpendTxView for the given request.
+func NewReceiveSpendTxView(request *SpendRequest) *ReceiveSpendTxView {
+	return &ReceiveSpendTxView{request: request}
 }
 
-// EndorseSpend is a convenience wrapper that runs NewEndorseSpendView.
-func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, error) {
-	resultBoxed, err := context.RunView(NewEndorseSpendView(request))
+// ReceiveSpendTx is a convenience wrapper that runs ReceiveSpendTxView and
+// returns the unsigned spend transaction so the caller can inspect it before
+// deciding whether to endorse.
+func ReceiveSpendTx(context view.Context, request *SpendRequest) (*Transaction, error) {
+	resultBoxed, err := context.RunView(NewReceiveSpendTxView(request))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to approve spend")
+		return nil, errors.Wrap(err, "failed to receive spend transaction")
 	}
 	result, ok := resultBoxed.(*ttx.Transaction)
 	if !ok {
@@ -215,8 +222,10 @@ func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, er
 	return &Transaction{Transaction: result}, nil
 }
 
-// Call implements view.View.
-func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
+// Call implements view.View. It sends the SpendResponse ACK, receives the
+// assembled transaction, and returns it without endorsing. Endorsement is
+// the caller's responsibility once any business-logic checks pass.
+func (a *ReceiveSpendTxView) Call(context view.Context) (interface{}, error) {
 	if err := session.JSON(context).Send(&SpendResponse{}); err != nil {
 		return nil, errors.Wrap(err, "failed to send spend response")
 	}
@@ -224,53 +233,6 @@ func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
 	}
-	// Reject any received tx that consumes a different token from the one this
-	// co-owner approved in SpendRequest. The same gap was tracked for the
-	// multisig variant; the policy variant has the identical issue.
-	if err := verifySpendTxMatchesRequest(context.Context(), tx, a.request); err != nil {
-		return nil, errors.Wrap(err, "rejected spend transaction")
-	}
-	if _, err = context.RunView(ttx.NewEndorseView(tx)); err != nil {
-		return nil, errors.Wrap(err, "failed to endorse transaction")
-	}
 
 	return tx, nil
-}
-
-// verifySpendTxMatchesRequest fails if the received transaction does not consume
-// exactly the token referenced by the SpendRequest.
-//
-// We use Request.Inputs (not AuditRecord) on purpose: the co-owner is not the
-// auditor and so does not have audit-level visibility into the spent tokens.
-// Inputs returns the token IDs without trying to enrich them via ListAuditTokens,
-// which is exactly what we need for the equality check.
-func verifySpendTxMatchesRequest(ctx context.Context, tx *ttx.Transaction, request *SpendRequest) error {
-	if request == nil || request.Token == nil {
-		return errors.New("spend request is missing the token to authorize")
-	}
-	inputs, err := tx.Request().Inputs(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to extract inputs from transaction")
-	}
-
-	return verifyInputIDsMatchExpected(inputs.IDs(), request.Token.Id)
-}
-
-// verifyInputIDsMatchExpected returns nil when every entry in inputIDs equals expected.
-// It is split out from verifySpendTxMatchesRequest so the comparison rule can be
-// exercised in unit tests without constructing a full ttx.Transaction.
-func verifyInputIDsMatchExpected(inputIDs []*token.ID, expected token.ID) error {
-	if len(inputIDs) == 0 {
-		return errors.Errorf("transaction has no inputs to validate against approved token [%s]", expected)
-	}
-	for _, id := range inputIDs {
-		if id == nil || !id.Equal(expected) {
-			return errors.Errorf(
-				"transaction does not match approved spend request: expected token [%s], got input [%s]",
-				expected, id,
-			)
-		}
-	}
-
-	return nil
 }

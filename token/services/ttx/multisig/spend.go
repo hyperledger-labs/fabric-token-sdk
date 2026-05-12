@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package multisig
 
 import (
-	"context"
 	"slices"
 	"time"
 
@@ -216,19 +215,32 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	answerChan <- &answer{response: response, party: party}
 }
 
-// EndorseSpendView endorses a SpendRequest
-type EndorseSpendView struct {
+// ReceiveSpendTxView is the co-owner's view: it ACKs the SpendRequest and
+// returns the assembled transaction received from the initiator without
+// endorsing it. The caller is responsible for inspecting the transaction
+// (e.g. confirming it consumes the expected token and does not include
+// other tokens owned by this node) and, if the checks pass, running
+// ttx.NewEndorseView(tx) to produce the signature.
+//
+// Splitting receive from endorse lets the application decide which
+// business-logic checks to apply rather than baking a fixed policy into
+// the library.
+type ReceiveSpendTxView struct {
 	request *SpendRequest
 }
 
-func NewEndorseSpendView(request *SpendRequest) *EndorseSpendView {
-	return &EndorseSpendView{request: request}
+// NewReceiveSpendTxView returns a new ReceiveSpendTxView for the given request.
+func NewReceiveSpendTxView(request *SpendRequest) *ReceiveSpendTxView {
+	return &ReceiveSpendTxView{request: request}
 }
 
-func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, error) {
-	resultBoxed, err := context.RunView(NewEndorseSpendView(request))
+// ReceiveSpendTx is a convenience wrapper that runs ReceiveSpendTxView and
+// returns the unsigned spend transaction so the caller can inspect it
+// before deciding whether to endorse.
+func ReceiveSpendTx(context view.Context, request *SpendRequest) (*Transaction, error) {
+	resultBoxed, err := context.RunView(NewReceiveSpendTxView(request))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to approve spend")
+		return nil, errors.Wrap(err, "failed to receive spend transaction")
 	}
 	result, ok := resultBoxed.(*ttx.Transaction)
 	if !ok {
@@ -238,76 +250,20 @@ func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, er
 	return &Transaction{Transaction: result}, nil
 }
 
-func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
-	// - send back the response
+// Call implements view.View. It sends the SpendResponse ACK, receives the
+// assembled transaction, and returns it without endorsing. Endorsement is
+// the caller's responsibility once any business-logic checks pass.
+func (a *ReceiveSpendTxView) Call(context view.Context) (interface{}, error) {
 	if err := session.JSON(context).Send(&SpendResponse{}); err != nil {
 		return nil, errors.Wrap(err, "failed to send response")
 	}
+	logger.DebugfContext(context.Context(), "spend response sent")
 
-	logger.DebugfContext(context.Context(), "endorse spend response sent")
-	// At some point, the recipient receives the token transaction that in the meantime has been assembled
 	tx, err := ttx.ReceiveTransaction(context)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
 	}
 	logger.DebugfContext(context.Context(), "multisig tx received with id [%s]", tx.ID())
 
-	// Verify the received transaction actually consumes the token this co-owner
-	// approved. Without this check, a malicious or buggy initiator could obtain
-	// approval for one token and submit a transaction spending a different one,
-	// breaking the multisig consent property.
-	if err := verifySpendTxMatchesRequest(context.Context(), tx, a.request); err != nil {
-		return nil, errors.Wrap(err, "rejected spend transaction")
-	}
-
-	// If everything is fine, the recipient accepts and sends back her signature.
-	// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
-	// This depends on the driver implementation.
-	logger.DebugfContext(context.Context(), "endorse multisig tx received with id [%s]", tx.ID())
-	_, err = context.RunView(ttx.NewEndorseView(tx))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to accept transaction")
-	}
-
-	logger.DebugfContext(context.Context(), "endorse multisig tx received with id [%s] done", tx.ID())
-
 	return tx, nil
-}
-
-// verifySpendTxMatchesRequest fails if the received transaction does not consume
-// exactly the token referenced by the SpendRequest.
-//
-// We use Request.Inputs (not AuditRecord) on purpose: the co-owner is not the
-// auditor and so does not have audit-level visibility into the spent tokens.
-// Inputs returns the token IDs without trying to enrich them via ListAuditTokens,
-// which is exactly what we need for the equality check.
-func verifySpendTxMatchesRequest(ctx context.Context, tx *ttx.Transaction, request *SpendRequest) error {
-	if request == nil || request.Token == nil {
-		return errors.New("spend request is missing the token to authorize")
-	}
-	inputs, err := tx.Request().Inputs(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to extract inputs from transaction")
-	}
-
-	return verifyInputIDsMatchExpected(inputs.IDs(), request.Token.Id)
-}
-
-// verifyInputIDsMatchExpected returns nil when every entry in inputIDs equals expected.
-// It is split out from verifySpendTxMatchesRequest so the comparison rule can be
-// exercised in unit tests without constructing a full ttx.Transaction.
-func verifyInputIDsMatchExpected(inputIDs []*token.ID, expected token.ID) error {
-	if len(inputIDs) == 0 {
-		return errors.Errorf("transaction has no inputs to validate against approved token [%s]", expected)
-	}
-	for _, id := range inputIDs {
-		if id == nil || !id.Equal(expected) {
-			return errors.Errorf(
-				"transaction does not match approved spend request: expected token [%s], got input [%s]",
-				expected, id,
-			)
-		}
-	}
-
-	return nil
 }

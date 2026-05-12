@@ -208,7 +208,7 @@ _, err = context.RunView(bptx.NewRequestSpendView(unspentToken, serviceOpts...))
 _, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
 ```
 
-Co-owners run `EndorseSpendView` (via `EndorseSpend`) on their side, which ACKs the spend request and then endorses the assembled transaction.
+Co-owners run `ReceiveSpendTxView` (via `ReceiveSpendTx`) on their side, which ACKs the spend request and returns the assembled transaction *without* endorsing it. The application then inspects the transaction (e.g. confirming it consumes the expected token and does not include other tokens owned by this node) and explicitly calls `ttx.NewEndorseView(tx)` to sign once those checks pass.
 
 #### Spend Coordination Wire Flow
 
@@ -218,7 +218,8 @@ The same coordination protocol is implemented in `token/services/ttx/multisig/sp
 sequenceDiagram
     autonumber
     participant I as Initiator (RequestSpendView)
-    participant R as Co-owner (EndorseSpendView)
+    participant R as Co-owner (ReceiveSpendTxView)
+    participant App as Co-owner application code
 
     rect rgba(230, 230, 250, 0.35)
         Note over I,R: Phase 1 - Spend approval request
@@ -231,21 +232,22 @@ sequenceDiagram
         Note over I,R: Phase 2 - Transaction assembly and delivery
         I->>I: Assemble transaction consuming SpendRequest.Token
         I->>R: Transaction (via ttx.ReceiveTransaction)
+        R-->>App: tx (returned by ReceiveSpendTxView)
     end
 
     rect rgba(240, 255, 240, 0.45)
-        Note over R: Phase 3 - Verification (required before signing)
-        R->>R: Extract input IDs from tx.Request().AuditRecord
-        alt every input id == SpendRequest.Token.Id
-            R->>R: Run EndorseView(tx) and sign
+        Note over App: Phase 3 - Business-logic checks (application owns these)
+        App->>App: Inspect tx.Request().Inputs(ctx) etc.
+        alt checks pass
+            App->>R: context.RunView(ttx.NewEndorseView(tx))
             R-->>I: Signed transaction
-        else mismatch
-            R-->>I: Reject with error; no signature is produced
+        else checks fail
+            App-->>I: Abort (no signature produced)
         end
     end
 ```
 
-The Phase 3 check is what links the artifact a co-owner approves (the `SpendRequest`) to the artifact they sign (the assembled `tx`). Without it, a co-owner who reviews and approves a spend for token `T_a` could be made to sign a transaction consuming a different token `T_b` co-owned by the same group.
+The split between Phase 2 (library receives the tx) and Phase 3 (application inspects + endorses) is deliberate: the library does not assume a single check policy. Two checks worth running in most deployments — and easy to express with `tx.Request().Inputs(ctx)` — are (a) the tx consumes the token named in the `SpendRequest`, and (b) the tx does not consume any other token owned by this node (see `extractRequiredSigners` in `endorse.go` for the ownership-check pattern). Without these, a co-owner who reviews and approves a spend for token `T_a` could be made to sign a transaction consuming a different token `T_b` co-owned by the same group.
 
 #### Wallet and Authorization
 
