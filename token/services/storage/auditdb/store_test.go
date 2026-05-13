@@ -93,7 +93,7 @@ func TestAcquireLocks_ContextCancellation(t *testing.T) {
 	cancel() // Cancel immediately
 
 	err = store.AcquireLocks(ctx2, "anchor_second", "alice")
-	assert.Error(t, err, "should fail due to context cancellation")
+	require.Error(t, err, "should fail due to context cancellation")
 	assert.Contains(t, err.Error(), "failed to acquire lock")
 
 	// Verify that the second anchor was NOT stored
@@ -119,7 +119,7 @@ func TestAcquireLocks_ContextTimeout(t *testing.T) {
 	defer cancel()
 
 	err = store.AcquireLocks(ctx2, "anchor_timeout", "bob")
-	assert.Error(t, err, "should timeout waiting for lock")
+	require.Error(t, err, "should timeout waiting for lock")
 
 	// Verify that the timeout anchor was NOT stored
 	_, ok := store.eIDsLocks.Load("anchor_timeout")
