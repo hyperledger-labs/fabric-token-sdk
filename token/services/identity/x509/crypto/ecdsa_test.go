@@ -136,9 +136,7 @@ func TestPemDecodeKey(t *testing.T) {
 		assert.True(t, ok)
 
 		// Verify the decoded key matches the original
-		assert.Equal(t, priv.D, decodedPriv.D)
-		assert.Equal(t, priv.X, decodedPriv.X)
-		assert.Equal(t, priv.Y, decodedPriv.Y)
+		assert.True(t, priv.Equal(decodedPriv))
 	})
 
 	// Test decoding a key from a raw pem certificate
@@ -151,8 +149,7 @@ func TestPemDecodeKey(t *testing.T) {
 		assert.True(t, ok)
 
 		// Verify the decoded public key matches the original
-		assert.Equal(t, priv.X, decodedPub.X)
-		assert.Equal(t, priv.Y, decodedPub.Y)
+		assert.True(t, priv.PublicKey.Equal(decodedPub))
 	})
 
 	// Serialize a public key (marshal and encode) and then test that this decodes to the original
@@ -175,8 +172,7 @@ func TestPemDecodeKey(t *testing.T) {
 		assert.True(t, ok)
 
 		// Verify the decoded public key matches the original
-		assert.Equal(t, priv.X, decodedPub.X)
-		assert.Equal(t, priv.Y, decodedPub.Y)
+		assert.True(t, priv.PublicKey.Equal(decodedPub))
 	})
 
 	// Test failure to decode an invalid raw pem key

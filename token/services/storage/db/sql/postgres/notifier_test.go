@@ -85,7 +85,7 @@ func TestNotifierSubscribeClosed(t *testing.T) {
 
 // TestNotifierClose tests that Close properly cleans up resources
 func TestNotifierClose(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec // G118: cancel is stored and called in Close
+	ctx, cancel := context.WithCancel(t.Context())
 	db := &Notifier{
 		table:            "test_table",
 		writeDB:          nil,
@@ -136,7 +136,7 @@ func TestNotifierListenerErrorChannel(t *testing.T) {
 
 // TestNotifierSubscribeAfterClose tests that Subscribe returns error when called after Close
 func TestNotifierSubscribeAfterClose(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec
+	ctx, cancel := context.WithCancel(t.Context())
 	db := &Notifier{
 		table:            "test_table",
 		writeDB:          nil,
@@ -218,7 +218,7 @@ func TestNotifierSubscriberAccessSafety(t *testing.T) {
 
 // TestNotifierConcurrentSubscribeAndClose tests concurrent Subscribe and Close operations
 func TestNotifierConcurrentSubscribeAndClose(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec
+	ctx, cancel := context.WithCancel(t.Context())
 	db := &Notifier{
 		table:   "test_table",
 		writeDB: nil,

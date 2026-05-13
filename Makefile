@@ -2,8 +2,9 @@
 FABRIC_VERSION ?= 3.1.4
 FABRIC_CA_VERSION ?= 1.5.7
 FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
-FABRIC_X_TOOLS_VERSION ?= v0.0.12
-FABRIC_X_COMMITTER_VERSION ?= 0.1.9
+
+FABRIC_X_TOOLS_VERSION ?= v0.0.17
+FABRIC_X_COMMITTER_VERSION ?= 1.0.0-alpha.1
 
 # need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
 FABRIC_BINARY_BASE=$(PWD)/../fabric
@@ -227,7 +228,7 @@ lint-auto-fix:
 # install golangci-lint
 install-linter-tool:
 	@echo "Installing golangci Linter"
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.11.4
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.12.2
 
 .PHONY: fmt
 fmt: ## Run gofmt on the entire project

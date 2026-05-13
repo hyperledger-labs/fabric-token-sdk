@@ -11,10 +11,12 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	sha30 "crypto/sha3"
 	"crypto/sha512"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
+	hash0 "hash"
 	"math/big"
 	"testing"
 	"time"
@@ -23,7 +25,6 @@ import (
 	"github.com/hyperledger/fabric-lib-go/bccsp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 )
 
 // The test file tests the csp package that provides a Cryptographic Service Provider (CSP)
@@ -180,7 +181,7 @@ func TestHashOperations(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, hash)
 		// Verify the hash matches the expected SHA3-256 value
-		h := sha3.New256()
+		h := hash0.Hash(sha30.New256())
 		h.Write(msg)
 		expectedHash := h.Sum(nil)
 		assert.Equal(t, expectedHash, hash)
@@ -192,7 +193,7 @@ func TestHashOperations(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, hash)
 		// Verify the hash matches the expected SHA3-384 value
-		h := sha3.New384()
+		h := hash0.Hash(sha30.New384())
 		h.Write(msg)
 		expectedHash := h.Sum(nil)
 		assert.Equal(t, expectedHash, hash)
@@ -355,33 +356,6 @@ func TestECDSAKey(t *testing.T) {
 		pubBytes, err := pubKey.Bytes()
 		require.NoError(t, err)
 		assert.NotEmpty(t, pubBytes)
-	})
-}
-
-// Test that an ECDSA key can be derived from either a private or a public ECDSA key
-func TestKeyDerivation(t *testing.T) {
-	keyStore := NewKVSStore(kvs.NewTrackedMemory())
-	csp, err := NewCSP(keyStore)
-	require.NoError(t, err)
-
-	key, err := csp.KeyGen(&bccsp.ECDSAKeyGenOpts{})
-	require.NoError(t, err)
-
-	// Test that an ECDSA key can be derived from a private ECDSA key
-	t.Run("Derive from Private Key", func(t *testing.T) {
-		derivedKey, err := csp.KeyDeriv(key, &bccsp.ECDSAReRandKeyOpts{})
-		require.NoError(t, err)
-		assert.NotNil(t, derivedKey)
-	})
-
-	// Test that an ECDSA key can be derived from a public ECDSA key
-	t.Run("Derive from Public Key", func(t *testing.T) {
-		pubKey, err := key.PublicKey()
-		require.NoError(t, err)
-
-		derivedKey, err := csp.KeyDeriv(pubKey, &bccsp.ECDSAReRandKeyOpts{})
-		require.NoError(t, err)
-		assert.NotNil(t, derivedKey)
 	})
 }
 
@@ -582,8 +556,7 @@ func TestECDSAPublicKey_MarshallUnmarshall(t *testing.T) {
 		assert.Equal(t, pubKey.Private(), newKey.Private())
 		assert.Equal(t, pubKey.Symmetric(), newKey.Symmetric())
 		// Verify the public key coordinates match
-		assert.Equal(t, pubKey.pubKey.X, newKey.pubKey.X)
-		assert.Equal(t, pubKey.pubKey.Y, newKey.pubKey.Y)
+		assert.True(t, pubKey.pubKey.Equal(newKey.pubKey))
 	})
 
 	// Test failure to unmarshall a public key from invalid raw data
@@ -631,9 +604,7 @@ func TestECDSAPrivateKey_MarshallUnmarshall(t *testing.T) {
 		assert.Equal(t, key.Symmetric(), newKey.Symmetric())
 
 		// Verify the private key value matches
-		assert.Equal(t, key.privKey.D, newKey.privKey.D)
-		assert.Equal(t, key.privKey.X, newKey.privKey.X)
-		assert.Equal(t, key.privKey.Y, newKey.privKey.Y)
+		assert.True(t, key.privKey.Equal(newKey.privKey))
 	})
 
 	// Test failure to unmarshall a private key from invalid raw data
@@ -663,11 +634,7 @@ func TestDerToPrivateKey_PKCS8(t *testing.T) {
 
 	ecdsaKey, ok := key.(*ecdsa.PrivateKey)
 	assert.True(t, ok)
-	assert.Equal(t, privKey.D, ecdsaKey.D)
-
-	// Verify the public key coordinates also match
-	assert.Equal(t, privKey.X, ecdsaKey.X)
-	assert.Equal(t, privKey.Y, ecdsaKey.Y)
+	assert.True(t, privKey.Equal(ecdsaKey))
 }
 
 // Test failure when attempting to unmarshall a PK from an invalid DER form

@@ -103,7 +103,7 @@ func isNilInterface(i interface{}) bool {
 	}
 	rv := reflect.ValueOf(i)
 
-	return rv.Kind() == reflect.Ptr && rv.IsNil()
+	return rv.Kind() == reflect.Pointer && rv.IsNil()
 }
 
 func InnerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {
