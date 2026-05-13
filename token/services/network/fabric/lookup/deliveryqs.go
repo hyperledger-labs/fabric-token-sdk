@@ -61,7 +61,7 @@ func (q *DeliveryScanQueryByID) queryByID(ctx context.Context, keys []driver.PKe
 	for ns, keys := range keysByNS {
 		arg, err := json.Marshal(keys)
 		if err != nil {
-			logger.Error("failed marshalling args for query by ids [%v]: [%s]", keys, err)
+			logger.Errorf("failed marshalling args for query by ids [%v]: [%s]", keys, err)
 
 			return
 		}

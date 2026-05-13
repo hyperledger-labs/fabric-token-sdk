@@ -112,7 +112,7 @@ func NewNotifier(
 	notifyOperations []driver.Operation,
 	primaryKeys ...PrimaryKey,
 ) *Notifier {
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec
+	ctx, cancel := context.WithCancel(context.Background())
 
 	// Create a real listener that implements the databaseListener interface
 	realListener := &listenerAdapter{
