@@ -10,6 +10,7 @@ import (
 	"errors"
 
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
+	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
@@ -23,7 +24,7 @@ type SDK struct {
 }
 
 func NewSDK(registry services.Registry) *SDK {
-	return &SDK{SDK: tokensdk.NewSDK(registry)}
+	return &SDK{SDK: tokensdk.NewFrom(fabricsdk.NewSDK(registry))}
 }
 
 func NewFrom(sdk dig2.SDK) *SDK {

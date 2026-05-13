@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/cmd/artifactgen/testdata"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/cmd/artifactgen/testdata"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/stretchr/testify/assert"

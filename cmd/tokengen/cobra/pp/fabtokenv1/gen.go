@@ -11,19 +11,18 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	setupv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/spf13/cobra"
 )
 
+var DriverIdentifier = string(core.DriverIdentifier(setupv1.FabTokenDriverName, setupv1.ProtocolV1))
+
 var (
-	// Driver is the Token-SDK driver to use.
-	Driver string
 	// OutputDir is the directory to output the generated files.
 	OutputDir string
 	// GenerateCCPackage indicates whether to generate the chaincode package.
@@ -53,7 +52,7 @@ func Cmd() *cobra.Command {
 }
 
 var cobraCommand = &cobra.Command{
-	Use:   fabtokenv1.DriverIdentifier,
+	Use:   DriverIdentifier,
 	Short: "Gen FabToken public parameters.",
 	Long:  `Generates FabToken public parameters.`,
 	RunE: func(cmd *cobra.Command, args []string) error {

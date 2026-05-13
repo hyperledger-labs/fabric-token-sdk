@@ -2,7 +2,7 @@
 
 `artifactgen` is a development / testing utility that reads a topology description (YAML) and generates the corresponding Fabric Smart Client + Fabric Token-SDK artifacts (crypto material, configuration, etc.).
 
-It was previously offered as the `artifacts` subcommand of [`tokengen`](../tokengen/README.md). It was split out so that the core `tokengen` binary no longer links the `integration/nwo` test framework, which trims `tokengen`'s transitive dependency surface substantially.
+It was previously offered as the `artifacts` subcommand of [`tokengen`](../../../cmd/tokengen/README.md). It was split out so that the core `tokengen` binary no longer links the `integration/nwo` test framework, which trims `tokengen`'s transitive dependency surface substantially.
 
 ## Build
 

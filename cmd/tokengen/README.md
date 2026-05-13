@@ -30,7 +30,7 @@ tokengen [command] --help
 - **`certifier-keygen`**: Generates key pairs for token certifiers.
 - **`version`**: Displays the build version information.
 
-> Topology-driven artifact generation previously offered as `tokengen artifacts` now lives in a separate binary, [`artifactgen`](../artifactgen/README.md). Splitting it keeps `tokengen`'s dependency surface small (it no longer links the `integration/nwo` test framework).
+> Topology-driven artifact generation previously offered as `tokengen artifacts` now lives in a separate binary, [`artifactgen`](../../integration/cmd/artifactgen/README.md). Splitting it keeps `tokengen`'s dependency surface small (it no longer links the `integration/nwo` test framework).
 
 ### Examples
 

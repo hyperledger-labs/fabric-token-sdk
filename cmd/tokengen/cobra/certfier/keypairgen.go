@@ -12,24 +12,28 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
 	dlogdriver "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
+	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/spf13/cobra"
+)
+
+var (
+	ZKATDLogNoGHv1DriverIdentifier = string(core.DriverIdentifier(dlognoghv1.DLogNoGHDriverName, dlognoghv1.ProtocolV1))
 )
 
 var driverName string
 var ppPath string
 var output string
-var ppmFactoryService *driver2.PPManagerFactoryService
+var ppmFactoryService *core.PPManagerFactoryService
 
-func getPPMManagerFactoryService() *driver2.PPManagerFactoryService {
+func getPPMManagerFactoryService() *core.PPManagerFactoryService {
 	if ppmFactoryService != nil {
 		return ppmFactoryService
 	}
 
-	return driver2.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlogdriver.NewPPMFactory())
+	return core.NewPPManagerFactoryService(fabtoken.NewPPMFactory(), dlogdriver.NewPPMFactory())
 }
 
 // KeyPairGenCmd returns the Cobra Command for generating a Token Certifier Key Pair.
@@ -50,7 +54,7 @@ func KeyPairGenCmd() *cobra.Command {
 	}
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
-	flags.StringVarP(&driverName, "driver", "d", zkatdlognoghv1.DriverIdentifier, "driver (dlog)")
+	flags.StringVarP(&driverName, "driver", "d", ZKATDLogNoGHv1DriverIdentifier, "driver (dlog)")
 	flags.StringVarP(&ppPath, "pppath", "p", "", "path to the public parameters file")
 	flags.StringVarP(&output, "output", "o", ".", "output folder")
 

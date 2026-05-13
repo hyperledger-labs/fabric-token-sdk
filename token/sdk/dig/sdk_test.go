@@ -4,31 +4,32 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sdk
+package sdk_test
 
 import (
 	"testing"
 
-	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	fabricsdk "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk/dig"
-	sdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
+	viewsdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/stretchr/testify/require"
 )
 
 func TestFabricWiring(t *testing.T) {
-	require.NoError(t, sdk.DryRunWiring(
-		func(sdk dig2.SDK) *SDK { return NewFrom(fabricsdk.NewFrom(sdk)) },
-		sdk.WithBool("token.enabled", true),
-		sdk.WithBool("fabric.enabled", true),
+	require.NoError(t, viewsdk.DryRunWiring(
+		func(root dig.SDK) *sdk.SDK { return sdk.NewFrom(fabricsdk.NewFrom(root)) },
+		viewsdk.WithBool("token.enabled", true),
+		viewsdk.WithBool("fabric.enabled", true),
 	))
 }
 
 func TestFabricWiring_TokenDisabled(t *testing.T) {
 	// Test with token platform disabled
-	require.NoError(t, sdk.DryRunWiring(
-		func(sdk dig2.SDK) *SDK { return NewFrom(fabricsdk.NewFrom(sdk)) },
-		sdk.WithBool("token.enabled", false),
-		sdk.WithBool("fabric.enabled", true),
+	require.NoError(t, viewsdk.DryRunWiring(
+		func(root dig.SDK) *sdk.SDK { return sdk.NewFrom(fabricsdk.NewFrom(root)) },
+		viewsdk.WithBool("token.enabled", false),
+		viewsdk.WithBool("fabric.enabled", true),
 	))
 }
 
@@ -50,16 +51,10 @@ func TestFabricWiring_TokenDisabled(t *testing.T) {
 
 func TestNewSDKExists(t *testing.T) {
 	// Verify the function exists and can be referenced
-	require.NotNil(t, NewSDK)
+	require.NotNil(t, sdk.NewSDK)
 }
 
 func TestNewFromExists(t *testing.T) {
 	// Verify the function exists and can be referenced
-	require.NotNil(t, NewFrom)
-}
-
-func TestHelperFunctionsExist(t *testing.T) {
-	// Verify helper functions exist and can be referenced
-	require.NotNil(t, connectNetworks)
-	require.NotNil(t, registerNetworkDrivers)
+	require.NotNil(t, sdk.NewFrom)
 }

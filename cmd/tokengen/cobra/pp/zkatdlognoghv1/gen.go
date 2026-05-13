@@ -16,10 +16,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	setupv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/spf13/cobra"
+)
+
+var (
+	DriverIdentifier = string(core.DriverIdentifier(setupv1.DLogNoGHDriverName, setupv1.ProtocolV1))
 )
 
 // GeneratorArgs defines the arguments for the public parameters generator.
@@ -82,7 +86,7 @@ func Cmd() *cobra.Command {
 }
 
 var cobraCommand = &cobra.Command{
-	Use:   zkatdlognoghv1.DriverIdentifier,
+	Use:   DriverIdentifier,
 	Short: "Gen ZKAT DLog public parameters.",
 	Long:  `Generates ZKAT DLog public parameters.`,
 	RunE: func(cmd *cobra.Command, args []string) error {

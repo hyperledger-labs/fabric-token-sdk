@@ -13,7 +13,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/spf13/cobra"
@@ -51,7 +50,7 @@ func UpdateCmd() *cobra.Command {
 }
 
 var cmd = &cobra.Command{
-	Use:   zkatdlognoghv1.DriverIdentifier,
+	Use:   DriverIdentifier,
 	Short: "Update certs in the public parameters file.",
 	Long:  "Update certs in the public parameters file without changing the parameters themselves.",
 	RunE: func(cmd *cobra.Command, args []string) error {

@@ -4,13 +4,14 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sdk
+package sdk_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common/mock"
 	"github.com/stretchr/testify/assert"
@@ -37,7 +38,7 @@ func TestNewAuditorCheckServiceProvider(t *testing.T) {
 		Checkers:        checkers,
 	}
 
-	provider := NewAuditorCheckServiceProvider(input)
+	provider := sdk.NewAuditorCheckServiceProvider(input)
 
 	require.NotNil(t, provider)
 	assert.IsType(t, &db.AuditorCheckServiceProvider{}, provider)
@@ -58,7 +59,7 @@ func TestNewAuditorCheckServiceProvider_EmptyCheckers(t *testing.T) {
 		Checkers:        []common.NamedChecker{},
 	}
 
-	provider := NewAuditorCheckServiceProvider(input)
+	provider := sdk.NewAuditorCheckServiceProvider(input)
 
 	require.NotNil(t, provider)
 	assert.IsType(t, &db.AuditorCheckServiceProvider{}, provider)
@@ -84,7 +85,7 @@ func TestNewAuditorCheckServiceProvider_MultipleCheckers(t *testing.T) {
 		Checkers:        checkers,
 	}
 
-	provider := NewAuditorCheckServiceProvider(input)
+	provider := sdk.NewAuditorCheckServiceProvider(input)
 
 	require.NotNil(t, provider)
 	assert.IsType(t, &db.AuditorCheckServiceProvider{}, provider)
@@ -109,7 +110,7 @@ func TestNewOwnerCheckServiceProvider(t *testing.T) {
 		Checkers:        checkers,
 	}
 
-	provider := NewOwnerCheckServiceProvider(input)
+	provider := sdk.NewOwnerCheckServiceProvider(input)
 
 	require.NotNil(t, provider)
 	assert.IsType(t, &db.OwnerCheckServiceProvider{}, provider)
@@ -130,7 +131,7 @@ func TestNewOwnerCheckServiceProvider_EmptyCheckers(t *testing.T) {
 		Checkers:        []common.NamedChecker{},
 	}
 
-	provider := NewOwnerCheckServiceProvider(input)
+	provider := sdk.NewOwnerCheckServiceProvider(input)
 
 	require.NotNil(t, provider)
 	assert.IsType(t, &db.OwnerCheckServiceProvider{}, provider)
@@ -156,7 +157,7 @@ func TestNewOwnerCheckServiceProvider_MultipleCheckers(t *testing.T) {
 		Checkers:        checkers,
 	}
 
-	provider := NewOwnerCheckServiceProvider(input)
+	provider := sdk.NewOwnerCheckServiceProvider(input)
 
 	require.NotNil(t, provider)
 	assert.IsType(t, &db.OwnerCheckServiceProvider{}, provider)
@@ -178,7 +179,7 @@ func TestNewAuditorCheckServiceProvider_WithNilProviders(t *testing.T) {
 		Checkers:        checkers,
 	}
 
-	provider := NewAuditorCheckServiceProvider(input)
+	provider := sdk.NewAuditorCheckServiceProvider(input)
 
 	require.NotNil(t, provider)
 	assert.IsType(t, &db.AuditorCheckServiceProvider{}, provider)
@@ -200,7 +201,7 @@ func TestNewOwnerCheckServiceProvider_WithNilProviders(t *testing.T) {
 		Checkers:        checkers,
 	}
 
-	provider := NewOwnerCheckServiceProvider(input)
+	provider := sdk.NewOwnerCheckServiceProvider(input)
 
 	require.NotNil(t, provider)
 	assert.IsType(t, &db.OwnerCheckServiceProvider{}, provider)

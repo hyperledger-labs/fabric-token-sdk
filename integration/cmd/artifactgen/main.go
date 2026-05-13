@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/cmd/artifactgen/gen"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/cmd/artifactgen/gen"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
