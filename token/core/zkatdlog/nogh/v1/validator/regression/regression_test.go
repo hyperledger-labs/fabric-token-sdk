@@ -11,7 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
+	"path"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -45,25 +45,25 @@ func TestRegression(t *testing.T) {
 	t.Parallel()
 	for _, root := range []string{"testdata", "testdata2", "testdata3"} {
 		for _, action := range []string{"transfers", "issues", "redeems", "swaps"} {
-			testRegressionParallel(t, filepath.Join(root, "32-BLS12_381_BBS_GURVY"), action+"_i1_o1")
-			testRegressionParallel(t, filepath.Join(root, "32-BLS12_381_BBS_GURVY"), action+"_i1_o2")
-			testRegressionParallel(t, filepath.Join(root, "32-BLS12_381_BBS_GURVY"), action+"_i2_o1")
-			testRegressionParallel(t, filepath.Join(root, "32-BLS12_381_BBS_GURVY"), action+"_i2_o2")
+			testRegressionParallel(t, path.Join(root, "32-BLS12_381_BBS_GURVY"), action+"_i1_o1")
+			testRegressionParallel(t, path.Join(root, "32-BLS12_381_BBS_GURVY"), action+"_i1_o2")
+			testRegressionParallel(t, path.Join(root, "32-BLS12_381_BBS_GURVY"), action+"_i2_o1")
+			testRegressionParallel(t, path.Join(root, "32-BLS12_381_BBS_GURVY"), action+"_i2_o2")
 
-			testRegressionParallel(t, filepath.Join(root, "64-BLS12_381_BBS_GURVY"), action+"_i1_o1")
-			testRegressionParallel(t, filepath.Join(root, "64-BLS12_381_BBS_GURVY"), action+"_i1_o2")
-			testRegressionParallel(t, filepath.Join(root, "64-BLS12_381_BBS_GURVY"), action+"_i2_o1")
-			testRegressionParallel(t, filepath.Join(root, "64-BLS12_381_BBS_GURVY"), action+"_i2_o2")
+			testRegressionParallel(t, path.Join(root, "64-BLS12_381_BBS_GURVY"), action+"_i1_o1")
+			testRegressionParallel(t, path.Join(root, "64-BLS12_381_BBS_GURVY"), action+"_i1_o2")
+			testRegressionParallel(t, path.Join(root, "64-BLS12_381_BBS_GURVY"), action+"_i2_o1")
+			testRegressionParallel(t, path.Join(root, "64-BLS12_381_BBS_GURVY"), action+"_i2_o2")
 
-			testRegressionParallel(t, filepath.Join(root, "32-BN254"), action+"_i1_o1")
-			testRegressionParallel(t, filepath.Join(root, "32-BN254"), action+"_i1_o2")
-			testRegressionParallel(t, filepath.Join(root, "32-BN254"), action+"_i2_o1")
-			testRegressionParallel(t, filepath.Join(root, "32-BN254"), action+"_i2_o2")
+			testRegressionParallel(t, path.Join(root, "32-BN254"), action+"_i1_o1")
+			testRegressionParallel(t, path.Join(root, "32-BN254"), action+"_i1_o2")
+			testRegressionParallel(t, path.Join(root, "32-BN254"), action+"_i2_o1")
+			testRegressionParallel(t, path.Join(root, "32-BN254"), action+"_i2_o2")
 
-			testRegressionParallel(t, filepath.Join(root, "64-BN254"), action+"_i1_o1")
-			testRegressionParallel(t, filepath.Join(root, "64-BN254"), action+"_i1_o2")
-			testRegressionParallel(t, filepath.Join(root, "64-BN254"), action+"_i2_o1")
-			testRegressionParallel(t, filepath.Join(root, "64-BN254"), action+"_i2_o2")
+			testRegressionParallel(t, path.Join(root, "64-BN254"), action+"_i1_o1")
+			testRegressionParallel(t, path.Join(root, "64-BN254"), action+"_i1_o2")
+			testRegressionParallel(t, path.Join(root, "64-BN254"), action+"_i2_o1")
+			testRegressionParallel(t, path.Join(root, "64-BN254"), action+"_i2_o2")
 		}
 	}
 }
@@ -79,7 +79,7 @@ func testRegressionParallel(t *testing.T, rootDir, subFolder string) {
 func testRegression(t *testing.T, rootDir, subFolder string) {
 	t.Helper()
 	t.Logf("regression test for [%s:%s]", rootDir, subFolder)
-	paramsData, err := testDataFS.ReadFile(filepath.Join(rootDir, "params.txt"))
+	paramsData, err := testDataFS.ReadFile(path.Join(rootDir, "params.txt"))
 	require.NoError(t, err)
 
 	ppRaw, err := base64.StdEncoding.DecodeString(string(paramsData))
@@ -93,7 +93,7 @@ func testRegression(t *testing.T, rootDir, subFolder string) {
 		TXID   string `json:"txid"`
 	}
 	for i := range 64 {
-		filePath := filepath.Join(
+		filePath := path.Join(
 			rootDir,
 			subFolder,
 			fmt.Sprintf("output.%d.json", i),
@@ -144,7 +144,7 @@ func TestRegressionWithMinProtocolVersionV2(t *testing.T) {
 	// Test with one representative sample from each testdata directory
 	for _, root := range []string{"testdata", "testdata2", "testdata3"} {
 		for _, variant := range []string{"32-BLS12_381_BBS_GURVY", "64-BLS12_381_BBS_GURVY", "32-BN254", "64-BN254"} {
-			testRegressionWithMinVersionParallel(t, filepath.Join(root, variant), "transfers_i1_o1")
+			testRegressionWithMinVersionParallel(t, path.Join(root, variant), "transfers_i1_o1")
 		}
 	}
 }
@@ -161,7 +161,7 @@ func testRegressionWithMinVersion(t *testing.T, rootDir, subFolder string) {
 	t.Helper()
 	t.Logf("regression test with MinProtocolVersion=V2 for [%s:%s]", rootDir, subFolder)
 
-	paramsData, err := testDataFS.ReadFile(filepath.Join(rootDir, "params.txt"))
+	paramsData, err := testDataFS.ReadFile(path.Join(rootDir, "params.txt"))
 	require.NoError(t, err)
 
 	ppRaw, err := base64.StdEncoding.DecodeString(string(paramsData))
@@ -177,7 +177,7 @@ func testRegressionWithMinVersion(t *testing.T, rootDir, subFolder string) {
 	}
 
 	// Test just the first vector - all vectors in testdata are V1
-	filePath := filepath.Join(rootDir, subFolder, "output.0.json")
+	filePath := path.Join(rootDir, subFolder, "output.0.json")
 	jsonData, err := testDataFS.ReadFile(filePath)
 	require.NoError(t, err)
 

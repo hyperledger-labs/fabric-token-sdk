@@ -72,6 +72,9 @@ type Validator[P driver.PublicParameters, T driver.Input, TA driver.TransferActi
 	// If set to a specific version (e.g., driver.ProtocolV2), only requests with that version
 	// or higher will be accepted, rejecting older protocol versions.
 	MinProtocolVersion uint32
+
+	// ValidationConfig specifies the resource limits for token requests.
+	ValidationConfig driver.ValidationConfig
 }
 
 // NewValidator returns a new Validator instance for the passed arguments.
@@ -92,6 +95,16 @@ func NewValidator[P driver.PublicParameters, T driver.Input, TA driver.TransferA
 		TransferValidators: transferValidators,
 		IssueValidators:    issueValidators,
 		AuditingValidators: auditingValidators,
+		ValidationConfig: driver.ValidationConfig{
+			MaxTokenPayloadSize:  2 * 1024 * 1024,
+			MaxTokenOutputsPerTx: 1000,
+			MaxBulkDeleteSize:    10000,
+			MaxWalletIDSize:      1024,
+			MaxOwnerRawSize:      16 * 1024,
+			MaxIssuerRawSize:     16 * 1024,
+			MaxTokenRequestSize:  2 * 1024 * 1024,
+			MaxActionCount:       1000,
+		},
 	}
 }
 
@@ -102,11 +115,20 @@ func (v *Validator[P, T, TA, IA, DS]) SetMinProtocolVersion(version uint32) {
 	v.MinProtocolVersion = version
 }
 
+// SetValidationConfig configures the validation limits for the validator.
+func (v *Validator[P, T, TA, IA, DS]) SetValidationConfig(config driver.ValidationConfig) {
+	v.ValidationConfig = config
+}
+
 // VerifyTokenRequestFromRaw verifies a token request from its raw representation.
 func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Context, getState driver.GetStateFnc, anchor driver.TokenRequestAnchor, raw []byte) ([]interface{}, driver.ValidationAttributes, error) {
 	logger.DebugfContext(ctx, "Verify token request from raw")
 	if len(raw) == 0 {
 		return nil, nil, errors.New("empty token request")
+	}
+
+	if v.ValidationConfig.MaxTokenRequestSize > 0 && len(raw) > v.ValidationConfig.MaxTokenRequestSize {
+		return nil, nil, errors.Errorf("token request too large: %d > %d", len(raw), v.ValidationConfig.MaxTokenRequestSize)
 	}
 	tr := &driver.TokenRequest{}
 	err := tr.FromBytes(raw)
@@ -114,9 +136,13 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 		return nil, nil, errors.Wrap(err, "failed to unmarshal token request")
 	}
 
+	if v.ValidationConfig.MaxActionCount > 0 && len(tr.Issues)+len(tr.Transfers) > v.ValidationConfig.MaxActionCount {
+		return nil, nil, errors.Errorf("too many actions: %d > %d", len(tr.Issues)+len(tr.Transfers), v.ValidationConfig.MaxActionCount)
+	}
+
 	// Validate protocol version
 	if tr.Version == 0 {
-		return nil, nil, driver.ErrInvalidVersion
+		tr.Version = uint32(driver.ProtocolV1)
 	}
 
 	// Enforce minimum protocol version if configured
@@ -172,6 +198,18 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequest(
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to verify issue actions [%s]", anchor)
 	}
+
+	totalOutputs := 0
+	for _, action := range ia {
+		totalOutputs += action.NumOutputs()
+	}
+	for _, action := range ta {
+		totalOutputs += action.NumOutputs()
+	}
+	if v.ValidationConfig.MaxTokenOutputsPerTx > 0 && totalOutputs > v.ValidationConfig.MaxTokenOutputsPerTx {
+		return nil, nil, errors.Errorf("too many token outputs: %d > %d", totalOutputs, v.ValidationConfig.MaxTokenOutputsPerTx)
+	}
+
 	err = v.verifyTransfers(ctx, anchor, tr, ledger, ta, signatureProvider, attributes)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to verify transfer actions [%s]", anchor)
@@ -251,6 +289,27 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyIssue(
 		MetadataCounter:   map[string]int{},
 		Attributes:        attributes,
 	}
+
+	// Check outputs
+	if v.ValidationConfig.MaxTokenPayloadSize > 0 || v.ValidationConfig.MaxOwnerRawSize > 0 {
+		outputs := action.GetOutputs()
+		for i, output := range outputs {
+			raw, err := output.Serialize()
+			if err != nil {
+				return errors.Wrapf(err, "failed to serialize output at index %d", i)
+			}
+			if v.ValidationConfig.MaxTokenPayloadSize > 0 && len(raw) > v.ValidationConfig.MaxTokenPayloadSize {
+				return errors.Errorf("output payload too large at index %d: %d > %d", i, len(raw), v.ValidationConfig.MaxTokenPayloadSize)
+			}
+			if v.ValidationConfig.MaxOwnerRawSize > 0 && len(output.GetOwner()) > v.ValidationConfig.MaxOwnerRawSize {
+				return errors.Errorf("owner raw too large at index %d: %d > %d", i, len(output.GetOwner()), v.ValidationConfig.MaxOwnerRawSize)
+			}
+		}
+	}
+	if v.ValidationConfig.MaxIssuerRawSize > 0 && len(action.GetIssuer()) > v.ValidationConfig.MaxIssuerRawSize {
+		return errors.Errorf("issuer raw too large: %d > %d", len(action.GetIssuer()), v.ValidationConfig.MaxIssuerRawSize)
+	}
+
 	for _, v := range v.IssueValidators {
 		if err := v(ctx, context); err != nil {
 			return err
@@ -314,6 +373,27 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTransfer(
 		MetadataCounter:   map[MetadataCounterID]int{},
 		Attributes:        attributes,
 	}
+
+	// Check outputs
+	if v.ValidationConfig.MaxTokenPayloadSize > 0 || v.ValidationConfig.MaxOwnerRawSize > 0 {
+		outputs := action.GetOutputs()
+		for i, output := range outputs {
+			raw, err := output.Serialize()
+			if err != nil {
+				return errors.Wrapf(err, "failed to serialize output at index %d", i)
+			}
+			if v.ValidationConfig.MaxTokenPayloadSize > 0 && len(raw) > v.ValidationConfig.MaxTokenPayloadSize {
+				return errors.Errorf("output payload too large at index %d: %d > %d", i, len(raw), v.ValidationConfig.MaxTokenPayloadSize)
+			}
+			if v.ValidationConfig.MaxOwnerRawSize > 0 && len(output.GetOwner()) > v.ValidationConfig.MaxOwnerRawSize {
+				return errors.Errorf("owner raw too large at index %d: %d > %d", i, len(output.GetOwner()), v.ValidationConfig.MaxOwnerRawSize)
+			}
+		}
+	}
+	if v.ValidationConfig.MaxIssuerRawSize > 0 && len(action.GetIssuer()) > v.ValidationConfig.MaxIssuerRawSize {
+		return errors.Errorf("issuer raw too large: %d > %d", len(action.GetIssuer()), v.ValidationConfig.MaxIssuerRawSize)
+	}
+
 	for _, v := range v.TransferValidators {
 		if err := v(ctx, context); err != nil {
 			return err

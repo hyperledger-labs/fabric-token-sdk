@@ -22,6 +22,15 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// ValidationConfig defines the limits for token service operations to prevent resource exhaustion.
+type ValidationConfig = driver.ValidationConfig
+
+// AppendRequest contains the tokens to be added and the identifiers of tokens to be deleted.
+type AppendRequest struct {
+	Tokens    []TokenToAppend
+	DeleteIDs []*token2.ID
+}
+
 var logger = logging.MustGetLogger()
 
 // MetaData defines the interface for accessing metadata associated with a token request.
@@ -85,10 +94,19 @@ type Service struct {
 	Storage *DBStorage
 	// RequestsCache provides an in-memory cache for pending token requests to optimize commit performance.
 	RequestsCache Cache
+	// Config contains the validation limits for the service.
+	Config ValidationConfig
 }
 
-func NewService(tmsID token.TMSID, TMSProvider TMSProvider, networkProvider NetworkProvider, storage *DBStorage, requestsCache Cache) *Service {
-	return &Service{tmsID: tmsID, TMSProvider: TMSProvider, NetworkProvider: networkProvider, Storage: storage, RequestsCache: requestsCache}
+func NewService(tmsID token.TMSID, TMSProvider TMSProvider, networkProvider NetworkProvider, storage *DBStorage, requestsCache Cache, config ValidationConfig) *Service {
+	return &Service{
+		tmsID:           tmsID,
+		TMSProvider:     TMSProvider,
+		NetworkProvider: networkProvider,
+		Storage:         storage,
+		RequestsCache:   requestsCache,
+		Config:          config,
+	}
 }
 
 // AppendValid extracts actions from a token request, applies them to the local storage,
@@ -125,6 +143,19 @@ func (t *Service) AppendValid(ctx context.Context, tx dbdriver.Transaction, txID
 	}
 	defer t.removeCachedTokenRequest(string(txID))
 
+	return t.Append(ctx, tx, txID, &AppendRequest{
+		Tokens:    toAppend,
+		DeleteIDs: toSpend,
+	})
+}
+
+// Append applies the passed request to the local storage.
+func (t *Service) Append(ctx context.Context, tx dbdriver.Transaction, txID token.RequestAnchor, req *AppendRequest) (err error) {
+	err = t.validateAppendRequest(req)
+	if err != nil {
+		return errors.Wrapf(err, "validation failed")
+	}
+
 	logger.DebugfContext(ctx, "transaction [%s] start db transaction", txID)
 	ts, err := t.Storage.ContinueTransaction(tx)
 	if err != nil {
@@ -142,7 +173,7 @@ func (t *Service) AppendValid(ctx context.Context, tx dbdriver.Transaction, txID
 	}()
 
 	logger.DebugfContext(ctx, "append tokens")
-	for _, tta := range toAppend {
+	for _, tta := range req.Tokens {
 		err = ts.AppendToken(ctx, tta)
 		if err != nil {
 			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
@@ -150,12 +181,55 @@ func (t *Service) AppendValid(ctx context.Context, tx dbdriver.Transaction, txID
 	}
 
 	logger.DebugfContext(ctx, "delete spend tokens")
-	err = ts.DeleteTokens(ctx, string(txID), toSpend)
+	err = ts.DeleteTokens(ctx, string(txID), req.DeleteIDs)
 	if err != nil {
 		return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 	}
 
 	logger.DebugfContext(ctx, "ready to commit")
+
+	return nil
+}
+
+func (t *Service) validateAppendRequest(req *AppendRequest) error {
+	if req == nil {
+		return errors.New("request is nil")
+	}
+
+	if len(req.Tokens) > t.Config.MaxTokenOutputsPerTx {
+		return errors.Errorf("too many token outputs: %d > %d", len(req.Tokens), t.Config.MaxTokenOutputsPerTx)
+	}
+
+	for i, tok := range req.Tokens {
+		if tok.Tok == nil {
+			return errors.Errorf("token at index %d is nil", i)
+		}
+		if len(tok.TokenOnLedger) > t.Config.MaxTokenPayloadSize {
+			return errors.Errorf("token payload too large at index %d: %d > %d", i, len(tok.TokenOnLedger), t.Config.MaxTokenPayloadSize)
+		}
+
+		if len(tok.TokenOnLedgerMetadata) > t.Config.MaxTokenPayloadSize {
+			return errors.Errorf("token metadata too large at index %d: %d > %d", i, len(tok.TokenOnLedgerMetadata), t.Config.MaxTokenPayloadSize)
+		}
+
+		// OwnerWalletID can be empty in audit/sync flows where the wallet is not local.
+
+		if len(tok.OwnerWalletID) > t.Config.MaxWalletIDSize {
+			return errors.Errorf("wallet_id too large at index %d: %d > %d", i, len(tok.OwnerWalletID), t.Config.MaxWalletIDSize)
+		}
+
+		if len(tok.Tok.Owner) > t.Config.MaxOwnerRawSize {
+			return errors.Errorf("owner_raw too large at index %d: %d > %d", i, len(tok.Tok.Owner), t.Config.MaxOwnerRawSize)
+		}
+
+		if len(tok.Issuer) > t.Config.MaxIssuerRawSize {
+			return errors.Errorf("issuer_raw too large at index %d: %d > %d", i, len(tok.Issuer), t.Config.MaxIssuerRawSize)
+		}
+	}
+
+	if len(req.DeleteIDs) > t.Config.MaxBulkDeleteSize {
+		return errors.Errorf("too many bulk deletes: %d > %d", len(req.DeleteIDs), t.Config.MaxBulkDeleteSize)
+	}
 
 	return nil
 }
