@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -83,7 +83,7 @@ func RequestTokensUpgradeForRecipient(context view.Context, issuer view.Identity
 func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, error) {
 	logger.DebugfContext(context.Context(), "Respond request recipient identity using wallet [%s]", r.Wallet)
 
-	session, err := session.NewJSON(context, context.Initiator(), r.Issuer)
+	s, err := jsession.NewJSON(context, context.Initiator(), r.Issuer)
 	if err != nil {
 		logger.Errorf("failed to get session to [%s]: [%s]", r.Issuer, err)
 
@@ -93,12 +93,12 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	// first agreement
 	agreement := &UpgradeTokensAgreement{}
 	logger.DebugfContext(context.Context(), "Send upgrade agreement")
-	err = session.SendWithContext(context.Context(), agreement)
+	err = jsession.SendTyped(s, context.Context(), agreement, jsession.TypeUpgradeAgreement)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
-	if err := session.ReceiveWithTimeout(agreement, 1*time.Minute); err != nil {
+	if err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeUpgradeAgreement, agreement, 1*time.Minute); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade agreement")
 	}
 
@@ -128,14 +128,14 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 		Proof:         proof,
 		NotAnonymous:  r.NotAnonymous,
 	}
-	err = session.SendWithContext(context.Context(), wr)
+	err = jsession.SendTyped(s, context.Context(), wr, jsession.TypeUpgradeRequest)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
-	return []interface{}{wr, session.Session()}, nil
+	return []interface{}{wr, s.Session()}, nil
 }
 
 // WithWallet sets the wallet to use to retrieve a recipient identity if it has not been passed already
@@ -209,9 +209,9 @@ func ReceiveTokensUpgradeRequest(context view.Context) (*UpgradeTokensRequest, e
 }
 
 func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, error) {
-	session := session.JSON(context)
+	s := jsession.JSON(context)
 	agreement := &UpgradeTokensAgreement{}
-	if err := session.ReceiveWithTimeout(agreement, 1*time.Minute); err != nil {
+	if err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeUpgradeAgreement, agreement, 1*time.Minute); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade request")
 	}
 	logger.DebugfContext(context.Context(), "Received upgrade request")
@@ -228,12 +228,12 @@ func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, er
 	agreement.TMSID = tms.ID()
 
 	// send the agreement back
-	if err := session.Send(agreement); err != nil {
+	if err := jsession.SendTyped(s, context.Context(), agreement, jsession.TypeUpgradeAgreement); err != nil {
 		return nil, errors.Wrapf(err, "failed to send upgrade request")
 	}
 	// receive the response
 	request := &UpgradeTokensRequest{}
-	if err := session.ReceiveWithTimeout(request, 1*time.Minute); err != nil {
+	if err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeUpgradeRequest, request, 1*time.Minute); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade request")
 	}
 

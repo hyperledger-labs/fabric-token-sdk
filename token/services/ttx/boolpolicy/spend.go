@@ -69,7 +69,8 @@ func NewReceiveSpendRequestView() *ReceiveSpendRequestView {
 // Call implements view.View.
 func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error) {
 	tx := &SpendRequest{}
-	if err := session.JSON(context).ReceiveWithTimeout(tx, time.Minute*4); err != nil {
+	s := session.JSON(context)
+	if err := session.ReceiveTypedWithTimeout(s, session.TypeSpendRequest, tx, time.Minute*4); err != nil {
 		logger.ErrorfContext(context.Context(), "failed receiving request: %s", err)
 
 		return nil, err
@@ -134,10 +135,6 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 		return nil, c.err
 	}
 	request := &SpendRequest{Token: c.unspentToken}
-	requestRaw, err := request.Bytes()
-	if err != nil {
-		return nil, err
-	}
 	tms, err := token2.GetManagementService(context, token2.WithTMSID(c.options.TMSID()))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", c.options.TMSID())
@@ -149,7 +146,7 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 		if slices.Contains(areMe, party.UniqueID()) {
 			continue
 		}
-		go c.collectAnswers(context, party, requestRaw, answerChannel)
+		go c.collectAnswers(context, party, request, answerChannel)
 		counter++
 	}
 	for range counter {
@@ -165,7 +162,7 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 	return nil, nil
 }
 
-func (c *RequestSpendView) collectAnswers(context view.Context, party view.Identity, raw []byte, ch chan *answer) {
+func (c *RequestSpendView) collectAnswers(context view.Context, party view.Identity, request *SpendRequest, ch chan *answer) {
 	defer logger.DebugfContext(context.Context(), "received response from [%v]", party)
 
 	backendSession, err := context.GetSession(c, party, context.Initiator())
@@ -175,13 +172,13 @@ func (c *RequestSpendView) collectAnswers(context view.Context, party view.Ident
 		return
 	}
 	s := session.NewFromSession(context, backendSession)
-	if err = s.SendRaw(context.Context(), raw); err != nil {
+	if err = session.SendTyped(s, context.Context(), request, session.TypeSpendRequest); err != nil {
 		ch <- &answer{err: errors.Wrapf(err, "failed to send request to [%s]", party), party: party}
 
 		return
 	}
 	response := &SpendResponse{}
-	if err := s.Receive(response); err != nil {
+	if err := session.ReceiveTyped(s, session.TypeSpendResponse, response); err != nil {
 		ch <- &answer{err: errors.Wrapf(err, "failed to receive response from [%s]", party), party: party}
 
 		return
@@ -226,7 +223,8 @@ func ReceiveSpendTx(context view.Context, request *SpendRequest) (*Transaction, 
 // assembled transaction, and returns it without endorsing. Endorsement is
 // the caller's responsibility once any business-logic checks pass.
 func (a *ReceiveSpendTxView) Call(context view.Context) (interface{}, error) {
-	if err := session.JSON(context).Send(&SpendResponse{}); err != nil {
+	s := session.JSON(context)
+	if err := session.SendTyped(s, context.Context(), &SpendResponse{}, session.TypeSpendResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to send spend response")
 	}
 	tx, err := ttx.ReceiveTransaction(context)

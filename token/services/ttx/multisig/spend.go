@@ -60,9 +60,8 @@ func NewReceiveSpendRequestView() *ReceiveSpendRequestView {
 
 func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error) {
 	tx := &SpendRequest{}
-	jsonSession := session.JSON(context)
-	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
-	if err != nil {
+	s := session.JSON(context)
+	if err := session.ReceiveTypedWithTimeout(s, session.TypeSpendRequest, tx, time.Minute*4); err != nil {
 		logger.ErrorfContext(context.Context(), "failed receiving request: %s", err)
 
 		return nil, err
@@ -124,10 +123,6 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 
 	// send Transaction to each party and wait for their responses
 	request := &SpendRequest{Token: c.unspentToken}
-	requestRaw, err := request.Bytes()
-	if err != nil {
-		return nil, err
-	}
 
 	answerChannel := make(chan *answer, len(c.parties))
 	logger.DebugfContext(context.Context(), "Notify %d parties about request", len(c.parties))
@@ -146,7 +141,7 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 
 			continue
 		}
-		go c.collectSpendRequestAnswers(context, party, requestRaw, answerChannel)
+		go c.collectSpendRequestAnswers(context, party, request, answerChannel)
 		counter++
 	}
 
@@ -175,7 +170,7 @@ func (c *RequestSpendView) WithTimeout(timeout time.Duration) *RequestSpendView 
 func (c *RequestSpendView) collectSpendRequestAnswers(
 	context view.Context,
 	party view.Identity,
-	raw []byte,
+	request *SpendRequest,
 	answerChan chan *answer) {
 	defer logger.DebugfContext(context.Context(), "received response for from [%v]", party)
 
@@ -190,9 +185,8 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	}
 	s := session.NewFromSession(context, backendSession)
 
-	// Wait to receive a Transaction back
 	logger.DebugfContext(context.Context(), "send request to [%v]", party)
-	err = s.SendRaw(context.Context(), raw)
+	err = session.SendTyped(s, context.Context(), request, session.TypeSpendRequest)
 	if err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to send request to [%s]", party),
@@ -202,7 +196,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 		return
 	}
 	response := &SpendResponse{}
-	if err := s.Receive(response); err != nil {
+	if err := session.ReceiveTyped(s, session.TypeSpendResponse, response); err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to receive response from [%s]", party),
 			party: party,
@@ -254,7 +248,8 @@ func ReceiveSpendTx(context view.Context, request *SpendRequest) (*Transaction, 
 // assembled transaction, and returns it without endorsing. Endorsement is
 // the caller's responsibility once any business-logic checks pass.
 func (a *ReceiveSpendTxView) Call(context view.Context) (interface{}, error) {
-	if err := session.JSON(context).Send(&SpendResponse{}); err != nil {
+	s := session.JSON(context)
+	if err := session.SendTyped(s, context.Context(), &SpendResponse{}, session.TypeSpendResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to send response")
 	}
 	logger.DebugfContext(context.Context(), "spend response sent")
