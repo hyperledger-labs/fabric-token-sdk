@@ -42,9 +42,8 @@ var _ = Describe("EndToEnd", func() {
 	for _, t := range integration2.AllTestTypes {
 		Describe("T1 Fungible with Auditor ne Issuer and Endorsers", t.Label, func() {
 			ts, selector := newTestSuite(t.CommType, Aries|WithEndorsers, t.ReplicationFactor, "", "alice", "bob", "charlie")
-			BeforeEach(ts.Setup)
-			AfterEach(ts.TearDown)
-			It("succeeded", Label("T1"), func() {
+			BeforeEach(func() {
+				ts.Setup()
 				time.Sleep(10 * time.Second)
 
 				pps, err := GetPublicParamsInputs(ts.II)
@@ -60,7 +59,9 @@ var _ = Describe("EndToEnd", func() {
 					},
 				))
 				Expect(err).NotTo(HaveOccurred())
-
+			})
+			AfterEach(ts.TearDown)
+			It("succeeded", Label("T1"), func() {
 				fungible.TestAll(ts.II, "auditor", nil, true, selector)
 			})
 		})
@@ -68,10 +69,11 @@ var _ = Describe("EndToEnd", func() {
 
 })
 
-func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, tokenSelector string, names ...string) (*integration.TestSuite, *token2.ReplicaSelector) {
+func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, tokenSelector string, names ...string) (*fabricxTestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := integration.NewTestSuite(func() (*integration.Infrastructure, error) {
-		i, err := integration.New(StartPortDlog(), "", topology.Topology(common.Opts{
+	ts := &fabricxTestSuite{}
+	ts.generator = func() (*integration.Infrastructure, error) {
+		return integration.New(StartPortDlog(), "", topology.Topology(common.Opts{
 			Backend:  fabricx.PlatformName, // select fabricx platform for NWO
 			CommType: commType,
 			DefaultTMSOpts: common.TMSOpts{
@@ -89,12 +91,29 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			FSCLogSpec:          "info",
 			TokenSelector:       tokenSelector,
 		})...)
-		i.RegisterPlatformFactory(fabricx.NewPlatformFactory())
-		i.RegisterPlatformFactory(token.NewPlatformFactory(i))
-		i.Generate()
-
-		return i, err
-	})
+	}
 
 	return ts, selector
+}
+
+// fabricxTestSuite extends token2.TestSuite to add fabricx platform factory registration
+type fabricxTestSuite struct {
+	generator func() (*integration.Infrastructure, error)
+	II        *integration.Infrastructure
+}
+
+func (s *fabricxTestSuite) TearDown() {
+	s.II.Stop()
+}
+
+func (s *fabricxTestSuite) Setup() {
+	// Create the integration infrastructure
+	network, err := s.generator()
+	Expect(err).NotTo(HaveOccurred())
+	s.II = network
+	// Register both fabricx and token platform factories
+	network.RegisterPlatformFactory(fabricx.NewPlatformFactory())
+	network.RegisterPlatformFactory(token.NewPlatformFactory(s.II))
+	network.Generate()
+	network.Start()
 }
