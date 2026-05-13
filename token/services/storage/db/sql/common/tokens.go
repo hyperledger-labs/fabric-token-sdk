@@ -169,7 +169,7 @@ func (db *TokenStore) UnspentTokensIterator(ctx context.Context) (tdriver.Unspen
 // append. UNION ALL is used (not UNION) to skip the per-row sort/hash
 // dedup pass; duplicates between the two branches (and within branch 1 when
 // a token has multiple ownership rows) are filtered at the iterator layer.
-func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnspentTokensIterator, error) {
+func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type, limit int) (tdriver.UnspentTokensIterator, error) {
 	tokenTable := q.Table(db.table.Tokens)
 	ownershipTable := q.Table(db.table.Ownership)
 	joinCond := cond.And(
@@ -237,6 +237,14 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	branch1.FormatTo(db.ci, sb)
 	sb.WriteString(" UNION ALL ")
 	branch2.FormatTo(db.ci, sb)
+	
+	// Add LIMIT clause if specified (for security and performance)
+	if limit > 0 {
+		sb.WriteString(" LIMIT ")
+		sb.WriteString(common3.Placeholder(db.ci, len(sb.Args())+1))
+		sb.AddArg(limit)
+	}
+	
 	query, args := sb.Build()
 
 	logging.Debug(logger, query, args)

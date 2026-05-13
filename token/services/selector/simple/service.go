@@ -47,13 +47,24 @@ func NewService(lockerProvider LockerProvider, c ConfigProvider) *SelectorServic
 		logger.Errorf("error getting selector config, using defaults. %s", err.Error())
 	}
 
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		logger.Errorf("invalid selector configuration: %s, using defaults", err.Error())
+	}
+
+	limits := cfg.GetLimits()
+
 	svc := &SelectorService{}
 	loader := &loader{
-		lockerProvider:       lockerProvider,
-		numRetries:           cfg.GetNumRetries(),
-		retryInterval:        cfg.GetRetryInterval(),
-		requestCertification: true,
-		onLockerCreated:      svc.trackLocker,
+		lockerProvider:         lockerProvider,
+		numRetries:             cfg.GetNumRetries(),
+		retryInterval:          cfg.GetRetryInterval(),
+		requestCertification:   true,
+		onLockerCreated:        svc.trackLocker,
+		maxTokensPerSelection:  limits.MaxTokensPerSelection,
+		maxLockAttempts:        limits.MaxLockAttempts,
+		maxRetryCycles:         limits.MaxRetryCycles,
+		selectionTimeout:       limits.SelectionTimeout,
 	}
 	svc.managerLazyCache = lazy.NewProviderWithKeyMapper(key, loader.load)
 
@@ -104,8 +115,8 @@ func (q *queryService) UnspentTokensIterator(ctx context.Context) (*token.Unspen
 	return q.qe.UnspentTokensIterator(ctx)
 }
 
-func (q *queryService) UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error) {
-	return q.qe.UnspentTokensIteratorBy(ctx, id, tokenType)
+func (q *queryService) UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type, limit int) (driver.UnspentTokensIterator, error) {
+	return q.qe.UnspentTokensIteratorBy(ctx, id, tokenType, limit)
 }
 
 func (q *queryService) GetTokens(ctx context.Context, inputs ...*token2.ID) ([]*token2.Token, error) {
@@ -118,6 +129,12 @@ type loader struct {
 	retryInterval        time.Duration
 	requestCertification bool
 	onLockerCreated      func(Locker)
+
+	// Resource limits
+	maxTokensPerSelection  int
+	maxLockAttempts        int
+	maxRetryCycles         int
+	selectionTimeout       time.Duration
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
@@ -142,6 +159,10 @@ func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, erro
 		s.retryInterval,
 		s.requestCertification,
 		tms.PublicParametersManager().PublicParameters().Precision(),
+		s.maxTokensPerSelection,
+		s.maxLockAttempts,
+		s.maxRetryCycles,
+		s.selectionTimeout,
 	), nil
 }
 

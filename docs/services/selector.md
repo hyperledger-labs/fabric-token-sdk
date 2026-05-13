@@ -97,7 +97,27 @@ token:
     fetcherCacheSize: 1000               # Cache size in entries (default: 0 = use fetcher default)
     fetcherCacheRefresh: 30s             # Cache refresh interval (default: 0 = use fetcher default)
     fetcherCacheMaxQueries: 100          # Max queries before cache refresh (default: 0 = use fetcher default)
+    
+    # Security: Resource limits to prevent algorithmic attacks
+    limits:
+      maxTokensPerSelection: 10000       # Max tokens to examine (default: 10000)
+      maxLockAttempts: 50000             # Max lock operations (default: 50000)
+      maxRetryCycles: 10                 # Max retry loops (default: 10)
+      maxLocksPerTransaction: 5000       # Max locks per transaction (default: 5000)
+      selectionTimeout: 30s              # Selection timeout (default: 30s)
 ```
+
+### Security Limits
+
+The selector enforces hard resource limits to prevent denial-of-service attacks. See [Security: Selector Resource Limits](../security/selector_resource_limits.md) for detailed information on:
+
+- Threat model and attack vectors
+- Detailed explanation of each limit
+- Configuration examples for different environments
+- Monitoring and alerting guidance
+- Operational procedures and tuning
+
+**Important**: All limits are enforced by default with secure values. Review the security guide before adjusting limits in production.
 
 ### Cache Configuration
 

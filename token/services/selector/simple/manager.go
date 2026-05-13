@@ -22,6 +22,12 @@ type Manager struct {
 	timeout              time.Duration
 	requestCertification bool
 	precision            uint64
+
+	// Resource limits
+	maxTokensPerSelection  int
+	maxLockAttempts        int
+	maxRetryCycles         int
+	selectionTimeout       time.Duration
 }
 
 func NewManager(
@@ -31,26 +37,38 @@ func NewManager(
 	timeout time.Duration,
 	requestCertification bool,
 	precision uint64,
+	maxTokensPerSelection int,
+	maxLockAttempts int,
+	maxRetryCycles int,
+	selectionTimeout time.Duration,
 ) *Manager {
 	return &Manager{
-		locker:               locker,
-		newQueryEngine:       newQueryEngine,
-		numRetry:             numRetry,
-		timeout:              timeout,
-		requestCertification: requestCertification,
-		precision:            precision,
+		locker:                 locker,
+		newQueryEngine:         newQueryEngine,
+		numRetry:               numRetry,
+		timeout:                timeout,
+		requestCertification:   requestCertification,
+		precision:              precision,
+		maxTokensPerSelection:  maxTokensPerSelection,
+		maxLockAttempts:        maxLockAttempts,
+		maxRetryCycles:         maxRetryCycles,
+		selectionTimeout:       selectionTimeout,
 	}
 }
 
 func (m *Manager) NewSelector(id string) (token.Selector, error) {
 	return &selector{
-		txID:                 id,
-		locker:               m.locker,
-		queryService:         m.newQueryEngine(),
-		precision:            m.precision,
-		numRetry:             m.numRetry,
-		timeout:              m.timeout,
-		requestCertification: m.requestCertification,
+		txID:                  id,
+		locker:                m.locker,
+		queryService:          m.newQueryEngine(),
+		precision:             m.precision,
+		numRetry:              m.numRetry,
+		timeout:               m.timeout,
+		requestCertification:  m.requestCertification,
+		maxTokensPerSelection: m.maxTokensPerSelection,
+		maxLockAttempts:       m.maxLockAttempts,
+		maxRetryCycles:        m.maxRetryCycles,
+		selectionTimeout:      m.selectionTimeout,
 	}, nil
 }
 
