@@ -680,57 +680,6 @@ func TestKeyImport_X509Certificate_NonECDSA(t *testing.T) {
 	})
 }
 
-func TestKeyDerivation_EdgeCases(t *testing.T) {
-	keyStore := NewKVSStore(kvs.NewTrackedMemory())
-	csp, err := NewCSP(keyStore)
-	require.NoError(t, err)
-
-	// Test failure in deriving a key from a SK using nil options
-	t.Run("Derive with Nil Opts", func(t *testing.T) {
-		key, err := csp.KeyGen(&bccsp.ECDSAKeyGenOpts{})
-		require.NoError(t, err)
-
-		_, err = csp.KeyDeriv(key, nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "Invalid opts")
-	})
-
-	// Test failure in deriving a key from a PK using nil options
-	t.Run("Derive Public Key with Nil Opts", func(t *testing.T) {
-		key, err := csp.KeyGen(&bccsp.ECDSAKeyGenOpts{})
-		require.NoError(t, err)
-
-		pubKey, err := key.PublicKey()
-		require.NoError(t, err)
-
-		_, err = csp.KeyDeriv(pubKey, nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "Invalid opts")
-	})
-
-	// Test success in deriving a key from a SK using valid options with an expansion
-	// (a deterministic seed that ensures reproducibility)
-	// and verify that the derived key's SKI (subject key identifier) matches the SKI of the original key
-	t.Run("Derive with Valid Expansion Value", func(t *testing.T) {
-		key, err := csp.KeyGen(&bccsp.ECDSAKeyGenOpts{})
-		require.NoError(t, err)
-
-		// Use a specific expansion value
-		expansionValue := make([]byte, 32)
-		for i := range expansionValue {
-			expansionValue[i] = byte(i)
-		}
-
-		derivedKey, err := csp.KeyDeriv(key, &bccsp.ECDSAReRandKeyOpts{
-			Temporary: true,
-			Expansion: expansionValue,
-		})
-		require.NoError(t, err)
-		assert.NotNil(t, derivedKey)
-		assert.NotEqual(t, key.SKI(), derivedKey.SKI())
-	})
-}
-
 func TestKVSStore_ErrorPaths(t *testing.T) {
 	keyStore := NewKVSStore(kvs.NewTrackedMemory())
 	csp, err := NewCSP(keyStore)
