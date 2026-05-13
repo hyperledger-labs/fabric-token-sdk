@@ -142,7 +142,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyTokenRequestFromRaw(ctx context.Cont
 
 	// Validate protocol version
 	if tr.Version == 0 {
-		return nil, nil, driver.ErrInvalidVersion
+		tr.Version = uint32(driver.ProtocolV1)
 	}
 
 	// Enforce minimum protocol version if configured

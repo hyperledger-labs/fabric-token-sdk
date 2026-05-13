@@ -22,11 +22,19 @@ func NewConfiguration(cm driver.Configuration) *Configuration {
 
 // IsSet checks to see if the key has been set in any of the data locations
 func (m *Configuration) IsSet(key string) bool {
+	if m.cm == nil {
+		return false
+	}
+
 	return m.cm.IsSet(key)
 }
 
 // UnmarshalKey takes a single key and unmarshals it into a Struct
 func (m *Configuration) UnmarshalKey(key string, rawVal interface{}) error {
+	if m.cm == nil {
+		return nil
+	}
+
 	return m.cm.UnmarshalKey(key, rawVal)
 }
 
@@ -42,7 +50,7 @@ func (m *Configuration) GetValidationConfig() (driver.ValidationConfig, error) {
 		MaxTokenRequestSize:  2 * 1024 * 1024,
 		MaxActionCount:       1000,
 	}
-	if m.cm.IsSet("validation") {
+	if m.cm != nil && m.cm.IsSet("validation") {
 		if err := m.cm.UnmarshalKey("validation", &config); err != nil {
 			return config, err
 		}

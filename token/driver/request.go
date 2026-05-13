@@ -141,6 +141,11 @@ func (r *TokenRequest) ToProtos() (*request.TokenRequest, error) {
 }
 
 func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
+	// Default to ProtocolV1 if version is 0 (legacy requests)
+	if tr.Version == 0 {
+		tr.Version = uint32(ProtocolV1)
+	}
+
 	// Validate version
 	if tr.Version != uint32(ProtocolV1) && tr.Version != uint32(ProtocolV2) {
 		return errors.Wrapf(ErrUnsupportedVersion, "expected [%d] or [%d], got [%d]", ProtocolV1, ProtocolV2, tr.Version)
