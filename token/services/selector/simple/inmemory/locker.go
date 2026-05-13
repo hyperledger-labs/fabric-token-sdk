@@ -56,10 +56,15 @@ type locker struct {
 	cancel                 context.CancelFunc
 	scanDone               chan struct{}
 	stopOnce               sync.Once
+	maxLocksPerTx          int // Resource limit: max locks per transaction
 }
 
 func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTimeout time.Duration) simple.Locker {
-	ctx, cancel := context.WithCancel(context.Background())
+	return NewLockerWithLimits(ttxdb, timeout, validTxEvictionTimeout, 0)
+}
+
+func NewLockerWithLimits(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTimeout time.Duration, maxLocksPerTx int) simple.Locker {
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // G118: cancel is stored and called in Stop
 	r := &locker{
 		ttxdb:                  ttxdb,
 		sleepTimeout:           timeout,
@@ -68,6 +73,7 @@ func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTim
 		validTxEvictionTimeout: validTxEvictionTimeout,
 		cancel:                 cancel,
 		scanDone:               make(chan struct{}),
+		maxLocksPerTx:          maxLocksPerTx,
 	}
 	r.start(ctx)
 
@@ -107,6 +113,23 @@ func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim b
 	// it is either not locked or we are reclaiming
 	d.lock.Lock()
 	defer d.lock.Unlock()
+
+	// Check lock count limit for this transaction (if configured)
+	if d.maxLocksPerTx > 0 {
+		txLockCount := 0
+		for _, entry := range d.locked {
+			if entry.TxID == txID {
+				txLockCount++
+			}
+		}
+		if txLockCount >= d.maxLocksPerTx {
+			return "", errors.Errorf(
+				"lock limit exceeded: transaction %s already holds %d locks (max: %d)",
+				txID, txLockCount, d.maxLocksPerTx,
+			)
+		}
+	}
+
 	e, ok := d.locked[k]
 	if ok {
 		e.LastAccess = time.Now()
