@@ -8,6 +8,7 @@ package common
 
 import (
 	"context"
+	"math/big"
 	"database/sql"
 	"fmt"
 	"runtime/debug"
@@ -315,29 +316,29 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 }
 
 // Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (uint64, error) {
+func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (*big.Int, error) {
 	return db.balance(ctx, driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	})
 }
 
-func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (uint64, error) {
+func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (*big.Int, error) {
 	query, args, err := sq.Select("SUM(amount)").
 		From(db.table.Tokens + " AS t").
 		Join(db.table.Ownership + " AS o ON t.tx_id = o.tx_id AND t.idx = o.idx").
 		Where(HasTokenDetails(opts, "t")).
 		PlaceholderFormat(db.pf).ToSql()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
 	if err != nil || sum == nil {
-		return 0, err
+		return nil, err
 	}
 
-	return *sum, nil
+	return new(big.Int).SetUint64(*sum), nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
