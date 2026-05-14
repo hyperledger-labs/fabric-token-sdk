@@ -22,6 +22,7 @@ func HasTokens(colTxID, colIdx string, ids ...*token.ID) sq.Sqlizer {
 	for i, id := range ids {
 		or[i] = sq.And{sq.Eq{colTxID: id.TxId}, sq.Eq{colIdx: id.Index}}
 	}
+
 	return or
 }
 

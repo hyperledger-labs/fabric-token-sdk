@@ -17,6 +17,7 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransactionSql(t *testing.T) {
@@ -127,7 +128,7 @@ func TestTransactionSql(t *testing.T) {
 				return
 			}
 			actualSql, actualArgs, err := evalSqlizer(sqlizer)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -244,7 +245,7 @@ func TestMovementConditions(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actualSql, actualArgs, err := evalSqlizer(HasMovementsParams(tc.params))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -327,7 +328,7 @@ func TestTokenSql(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actualSql, actualArgs, err := evalSqlizer(HasTokenDetails(tc.params, ""))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
 			assert.Equal(t, tc.expectedArgs, actualArgs)
 		})
@@ -337,7 +338,7 @@ func TestTokenSql(t *testing.T) {
 		IDs:      []*token.ID{{TxId: "a", Index: 1}},
 		WalletID: "me",
 	}, "A"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "(owner = $1 AND (wallet_id IN ($2) OR owner_wallet_id IN ($3)) AND ((A.tx_id = $4 AND A.idx = $5)) AND is_deleted = $6)", where, "join")
 	assert.Len(t, args, 6)
 }
@@ -418,7 +419,7 @@ func TestTokenSqlNoJoin(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actualSql, actualArgs, err := evalSqlizer(HasTokenDetails(tc.params, ""))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
 			assert.Equal(t, tc.expectedArgs, actualArgs)
 		})
