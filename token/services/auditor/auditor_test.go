@@ -1175,7 +1175,7 @@ func TestService_CalculateBackoff_NonNegative(t *testing.T) {
 	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
 	
 	// Test multiple attempts to ensure backoff is never negative
-	for attempt := Range 15 {
+	for attempt := range 15 {
 		backoff := svc.CalculateBackoff(attempt)
 		assert.GreaterOrEqual(t, backoff, time.Duration(0),
 			"Backoff should never be negative for attempt %d", attempt)
