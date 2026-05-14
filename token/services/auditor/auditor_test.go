@@ -1037,7 +1037,7 @@ func TestService_AcquireLocksWithRetry_ContextCancelled_DuringBackoff(t *testing
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "lock acquisition cancelled")
 	// Should have attempted at least once but not all 10 times
-	assert.Greater(t, callCount, 0, "Should attempt at least once")
+	assert.Positive(t, callCount, "Should attempt at least once")
 	assert.Less(t, callCount, 10, "Should not complete all retries due to timeout")
 }
 
@@ -1060,7 +1060,7 @@ func TestService_AcquireLocksWithRetry_ExponentialBackoff(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, 4, len(callTimes), "Should have 4 attempts")
+	require.Len(t, callTimes, 4, "Should have 4 attempts")
 
 	// Verify backoff is increasing (with some tolerance for jitter)
 	if len(callTimes) >= 3 {
@@ -1164,6 +1164,7 @@ func TestService_CalculateBackoff_Randomization(t *testing.T) {
 	for i := 1; i < len(backoffs); i++ {
 		if backoffs[i] != backoffs[0] {
 			allSame = false
+
 			break
 		}
 	}
@@ -1174,7 +1175,7 @@ func TestService_CalculateBackoff_NonNegative(t *testing.T) {
 	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
 	
 	// Test multiple attempts to ensure backoff is never negative
-	for attempt := 0; attempt < 15; attempt++ {
+	for attempt := Range 15 {
 		backoff := svc.CalculateBackoff(attempt)
 		assert.GreaterOrEqual(t, backoff, time.Duration(0),
 			"Backoff should never be negative for attempt %d", attempt)

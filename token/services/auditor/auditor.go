@@ -128,6 +128,7 @@ func LoadLockConfig(cp *config.Configuration) *LockConfig {
 	var raw lockConfigRaw
 	if err := cp.UnmarshalKey("auditor.lock", &raw); err != nil {
 		logger.Warnf("failed to unmarshal auditor lock configuration, using defaults: %v", err)
+
 		return cfg
 	}
 
@@ -197,6 +198,7 @@ func NewService(
 	if lockConfig == nil {
 		lockConfig = DefaultLockConfig()
 	}
+
 	return &Service{
 		tmsID:           tmsID,
 		networkProvider: networkProvider,
@@ -477,5 +479,6 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 
 // String returns a string representation of the wrapped token request.
 func (r *requestWrapper) String() string {
+
 	return r.r.String()
 }
