@@ -927,11 +927,13 @@ func (m *mockStoreServiceWithLockControl) AcquireLocks(ctx context.Context, anch
 	if m.acquireLocksFunc != nil {
 		return m.acquireLocksFunc(ctx, anchor, eIDs...)
 	}
+
 	return m.StoreService.AcquireLocks(ctx, anchor, eIDs...)
 }
 
 func newMockStoreServiceWithLockControl(t *testing.T, acquireFunc func(ctx context.Context, anchor string, eIDs ...string) error) *mockStoreServiceWithLockControl {
 	t.Helper()
+
 	return &mockStoreServiceWithLockControl{
 		StoreService:     newTestStoreService(t, newFakeStore()),
 		acquireLocksFunc: acquireFunc,
@@ -960,6 +962,7 @@ func TestService_AcquireLocksWithRetry_Success_AfterRetries(t *testing.T) {
 		if callCount < 3 {
 			return errors.New("lock conflict")
 		}
+
 		return nil
 	})
 	svc := newTestService(mockStore.StoreService, nil)

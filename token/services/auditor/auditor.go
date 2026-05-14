@@ -479,6 +479,5 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 
 // String returns a string representation of the wrapped token request.
 func (r *requestWrapper) String() string {
-
 	return r.r.String()
 }
