@@ -1023,6 +1023,7 @@ func TestService_AcquireLocksWithRetry_ContextCancelled_DuringBackoff(t *testing
 	callCount := 0
 	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		callCount++
+
 		return errors.New("lock conflict")
 	})
 	svc := newTestService(mockStore.StoreService, nil)
@@ -1051,6 +1052,7 @@ func TestService_AcquireLocksWithRetry_ExponentialBackoff(t *testing.T) {
 		if len(callTimes) < 4 {
 			return errors.New("lock conflict")
 		}
+
 		return nil
 	})
 	svc := newTestService(mockStore.StoreService, nil)
@@ -1081,6 +1083,7 @@ func TestService_AcquireLocksWithRetry_MultipleEnrollmentIDs(t *testing.T) {
 	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		capturedAnchor = anchor
 		capturedEIDs = eIDs
+
 		return nil
 	})
 	svc := newTestService(mockStore.StoreService, nil)
