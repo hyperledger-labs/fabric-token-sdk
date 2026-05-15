@@ -161,13 +161,13 @@ func TestIssuerWallet(t *testing.T) {
 
 		// Happy path
 		tv.IssuedBalanceReturns(500, nil)
-		bal, err := w.IssuedBalance(t.Context(), &driver.ListTokensOptions{TokenType: "USD"})
+		bal, err := w.IssuedBalance(t.Context(), &driver.BalanceOpts{TokenType: "USD"})
 		require.NoError(t, err)
 		assert.Equal(t, uint64(500), bal)
 
 		// Error propagation
 		tv.IssuedBalanceReturns(0, errors.New("db down"))
-		_, err = w.IssuedBalance(t.Context(), &driver.ListTokensOptions{})
+		_, err = w.IssuedBalance(t.Context(), &driver.BalanceOpts{})
 		require.Error(t, err)
 	})
 
@@ -199,13 +199,13 @@ func TestIssuerWallet(t *testing.T) {
 		w, tv, _ := setup()
 
 		tv.RedeemedBalanceReturns(300, nil)
-		bal, err := w.RedeemedBalance(t.Context(), &driver.ListTokensOptions{TokenType: "USD"})
+		bal, err := w.RedeemedBalance(t.Context(), &driver.BalanceOpts{TokenType: "USD"})
 		require.NoError(t, err)
 		assert.Equal(t, uint64(300), bal)
 
 		// Error propagation
 		tv.RedeemedBalanceReturns(0, errors.New("db down"))
-		_, err = w.RedeemedBalance(t.Context(), &driver.ListTokensOptions{})
+		_, err = w.RedeemedBalance(t.Context(), &driver.BalanceOpts{})
 		require.Error(t, err)
 	})
 
@@ -215,32 +215,32 @@ func TestIssuerWallet(t *testing.T) {
 		// Normal case: issued > redeemed
 		tv.IssuedBalanceReturns(1000, nil)
 		tv.RedeemedBalanceReturns(300, nil)
-		bal, err := w.OutstandingBalance(t.Context(), &driver.ListTokensOptions{TokenType: "USD"})
+		bal, err := w.OutstandingBalance(t.Context(), &driver.BalanceOpts{TokenType: "USD"})
 		require.NoError(t, err)
 		assert.Equal(t, uint64(700), bal)
 
 		// Edge case: issued == redeemed
 		tv.IssuedBalanceReturns(500, nil)
 		tv.RedeemedBalanceReturns(500, nil)
-		bal, err = w.OutstandingBalance(t.Context(), &driver.ListTokensOptions{})
+		bal, err = w.OutstandingBalance(t.Context(), &driver.BalanceOpts{})
 		require.NoError(t, err)
 		assert.Equal(t, uint64(0), bal)
 
 		// Error case: redeemed > issued
 		tv.IssuedBalanceReturns(100, nil)
 		tv.RedeemedBalanceReturns(200, nil)
-		_, err = w.OutstandingBalance(t.Context(), &driver.ListTokensOptions{})
+		_, err = w.OutstandingBalance(t.Context(), &driver.BalanceOpts{})
 		require.Error(t, err)
 
 		// Error propagation from issued
 		tv.IssuedBalanceReturns(0, errors.New("issued fail"))
-		_, err = w.OutstandingBalance(t.Context(), &driver.ListTokensOptions{})
+		_, err = w.OutstandingBalance(t.Context(), &driver.BalanceOpts{})
 		require.Error(t, err)
 
 		// Error propagation from redeemed
 		tv.IssuedBalanceReturns(1000, nil)
 		tv.RedeemedBalanceReturns(0, errors.New("redeemed fail"))
-		_, err = w.OutstandingBalance(t.Context(), &driver.ListTokensOptions{})
+		_, err = w.OutstandingBalance(t.Context(), &driver.BalanceOpts{})
 		require.Error(t, err)
 	})
 }

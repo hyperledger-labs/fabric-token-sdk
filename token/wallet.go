@@ -8,12 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"context"
-	"time"
+"context"
+"math/big"
+"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.
@@ -331,22 +332,28 @@ func (o *OwnerWallet) ListUnspentTokensIterator(ctx context.Context, opts ...Lis
 	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
-// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (o *OwnerWallet) Balance(ctx context.Context, opts ...BalanceOption) (uint64, error) {
-	compiledOpts, err := CompileBalanceOption(opts...)
-	if err != nil {
-		return 0, err
-	}
-	sum, err := o.w.Balance(ctx, compiledOpts)
-	if err != nil {
-		return 0, err
-	}
+// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
+// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
+func (o *OwnerWallet) Balance(ctx context.Context, opts ...BalanceOption) (*big.Int, error) {
+compiledOpts, err := CompileBalanceOption(opts...)
+if err != nil {
+return nil, err
+}
+driverOpts := &ListTokensOptions{
+TokenType: compiledOpts.TokenType,
+From:      compiledOpts.From,
+To:        compiledOpts.To,
+}
+sum, err := o.w.Balance(ctx, driverOpts)
+if err != nil {
+return nil, err
+}
 
-	return sum, nil
+return sum, nil
 }
 
 func (o *OwnerWallet) EnrollmentID() string {
-	return o.w.EnrollmentID()
+return o.w.EnrollmentID()
 }
 
 // RegisterRecipient register the passed recipient data.

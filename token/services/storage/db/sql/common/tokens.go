@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -366,15 +367,15 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	}), nil
 }
 
-// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (uint64, error) {
+// Balance returns the sum of the amounts, with arbitrary precision, of the tokens with type and EID equal to those passed as arguments.
+func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (*big.Int, error) {
 	return db.balance(ctx, driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	})
 }
 
-func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (uint64, error) {
+func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (*big.Int, error) {
 	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
 	query, args := q.Select().FieldsByName("SUM(amount)").
 		From(tokenTable.Join(ownershipTable, cond.And(
@@ -386,10 +387,10 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 
 	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
 	if err != nil || sum == nil {
-		return 0, err
+		return nil, err
 	}
 
-	return *sum, nil
+	return big.NewInt(0).SetUint64(*sum), nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
@@ -982,7 +983,12 @@ func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.Query
 	}
 
 	it := common.NewIterator(rows, func(td *driver.TokenDetails) error {
-		return rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &td.Amount, &td.IsSpent, &td.SpentBy, &td.StoredAt)
+		var amountRaw int64
+		if err := rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &amountRaw, &td.IsSpent, &td.SpentBy, &td.StoredAt); err != nil {
+			return err
+		}
+		td.Amount = big.NewInt(amountRaw)
+		return nil
 	})
 
 	return iterators.ReadAllValues(it)
