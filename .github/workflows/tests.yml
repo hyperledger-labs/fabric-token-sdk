@@ -150,6 +150,9 @@ jobs:
       - name: Download fabric binaries
         run: make download-fabric
 
+      - name: Install configtxgen
+        run: make configtxgen
+
       - name: Docker
         run: make docker-images
 
