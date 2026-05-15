@@ -988,6 +988,7 @@ func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.Query
 			return err
 		}
 		td.Amount = big.NewInt(amountRaw)
+
 		return nil
 	})
 
