@@ -550,7 +550,7 @@ func TestOwnerWallet_Balance(t *testing.T) {
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
 
-	balance, err := wallet.Balance(ctx, WithType("USD"))
+	balance, err := wallet.Balance(ctx, WithBalanceTokenType("USD"))
 
 	require.NoError(t, err)
 	assert.Equal(t, big.NewInt(1000), balance)
@@ -626,7 +626,7 @@ func TestIssuerWallet_ListIssuedTokens_WithSortBy(t *testing.T) {
 // time bounds through to the driver.
 func TestOwnerWallet_Balance_WithTimeRange(t *testing.T) {
 	mockOW := &mock.OwnerWallet{}
-	mockOW.BalanceReturns(uint64(500), nil)
+	mockOW.BalanceReturns(big.NewInt(500), nil)
 
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
@@ -637,7 +637,7 @@ func TestOwnerWallet_Balance_WithTimeRange(t *testing.T) {
 	balance, err := wallet.Balance(ctx, WithBalanceTokenType("USD"), WithTimeRange(&from, &to))
 
 	require.NoError(t, err)
-	assert.Equal(t, uint64(500), balance)
+	assert.Equal(t, big.NewInt(500), balance)
 
 	// Verify the compiled options include time range.
 	_, opts := mockOW.BalanceArgsForCall(0)
@@ -786,7 +786,7 @@ func TestOwnerWallet_Balance_Error(t *testing.T) {
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
 
-	balance, err := wallet.Balance(ctx, WithType("USD"))
+	balance, err := wallet.Balance(ctx, WithBalanceTokenType("USD"))
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
