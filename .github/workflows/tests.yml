@@ -175,6 +175,9 @@ jobs:
       - name: Run ${{ matrix.tests }}
 
         run: |
+          export FAB_BINS="${FAB_BINS}"
+          echo "Running integration with FAB_BINS=${FAB_BINS}"
+          ls -la "${FAB_BINS}"
           mkdir -p covdata
           GOCOVERDIR=$(realpath covdata) make integration-tests-${{ matrix.tests }}
           go tool covdata textfmt -i=covdata -o coverage.profile
