@@ -19,86 +19,82 @@ const (
 
 // InvalidAmountError indicates a token amount validation failure
 type InvalidAmountError struct {
-	Message string
-	Value   uint64
+	msg string
 }
 
 func (e *InvalidAmountError) Error() string {
-	return e.Message
+	return e.msg
+}
+
+// NewInvalidAmountError creates a new InvalidAmountError
+func NewInvalidAmountError(message string) *InvalidAmountError {
+	return &InvalidAmountError{msg: message}
 }
 
 // InvalidAddressError indicates an address validation failure
 type InvalidAddressError struct {
-	Message string
-	Address []byte
+	msg string
 }
 
 func (e *InvalidAddressError) Error() string {
-	return e.Message
+	return e.msg
+}
+
+// NewInvalidAddressError creates a new InvalidAddressError
+func NewInvalidAddressError(message string) *InvalidAddressError {
+	return &InvalidAddressError{msg: message}
 }
 
 // InvalidMetadataError indicates a metadata validation failure
 type InvalidMetadataError struct {
-	Message string
-	Key     string
+	msg string
 }
 
 func (e *InvalidMetadataError) Error() string {
-	return e.Message
+	return e.msg
+}
+
+// NewInvalidMetadataError creates a new InvalidMetadataError
+func NewInvalidMetadataError(message string) *InvalidMetadataError {
+	return &InvalidMetadataError{msg: message}
 }
 
 // InvalidTokenTypeError indicates a token type validation failure
 type InvalidTokenTypeError struct {
-	Message string
-	Type    string
+	msg string
 }
 
 func (e *InvalidTokenTypeError) Error() string {
-	return e.Message
+	return e.msg
+}
+
+// NewInvalidTokenTypeError creates a new InvalidTokenTypeError
+func NewInvalidTokenTypeError(message string) *InvalidTokenTypeError {
+	return &InvalidTokenTypeError{msg: message}
 }
 
 // ValidationError is a generic validation error
 type ValidationError struct {
-	Message string
+	msg string
 }
 
 func (e *ValidationError) Error() string {
-	return e.Message
-}
-
-// NewInvalidAmountError creates a new InvalidAmountError
-func NewInvalidAmountError(message string, value uint64) *InvalidAmountError {
-	return &InvalidAmountError{Message: message, Value: value}
-}
-
-// NewInvalidAddressError creates a new InvalidAddressError
-func NewInvalidAddressError(message string, address []byte) *InvalidAddressError {
-	return &InvalidAddressError{Message: message, Address: address}
-}
-
-// NewInvalidMetadataError creates a new InvalidMetadataError
-func NewInvalidMetadataError(message, key string) *InvalidMetadataError {
-	return &InvalidMetadataError{Message: message, Key: key}
-}
-
-// NewInvalidTokenTypeError creates a new InvalidTokenTypeError
-func NewInvalidTokenTypeError(message, tokenType string) *InvalidTokenTypeError {
-	return &InvalidTokenTypeError{Message: message, Type: tokenType}
+	return e.msg
 }
 
 // NewValidationError creates a new ValidationError
 func NewValidationError(message string) *ValidationError {
-	return &ValidationError{Message: message}
+	return &ValidationError{msg: message}
 }
 
 // ValidateAmount validates a token amount value
 func ValidateAmount(value uint64, maxValue uint64) error {
 	if value == 0 {
-		return NewInvalidAmountError("token amount must be greater than zero", value)
+		return NewInvalidAmountError("token amount must be greater than zero")
 	}
 
 	if maxValue > 0 && value > maxValue {
-		return NewInvalidAmountError("token amount exceeds maximum allowed value", value)
+		return NewInvalidAmountError("token amount exceeds maximum allowed value")
 	}
 
 	return nil
@@ -107,11 +103,11 @@ func ValidateAmount(value uint64, maxValue uint64) error {
 // ValidateAddress validates a recipient address
 func ValidateAddress(address []byte) error {
 	if len(address) == 0 {
-		return NewInvalidAddressError("address cannot be empty", nil)
+		return NewInvalidAddressError("address cannot be empty")
 	}
 
 	if len(address) > MaxAddressLength {
-		return NewInvalidAddressError("address exceeds maximum length", address)
+		return NewInvalidAddressError("address exceeds maximum length")
 	}
 
 	return nil
@@ -120,7 +116,7 @@ func ValidateAddress(address []byte) error {
 // ValidateTokenType validates a token type
 func ValidateTokenType(tokenType string) error {
 	if tokenType == "" {
-		return NewInvalidTokenTypeError("token type cannot be empty", tokenType)
+		return NewInvalidTokenTypeError("token type cannot be empty")
 	}
 
 	return nil
@@ -135,13 +131,13 @@ func ValidateMetadata(metadata map[interface{}]interface{}) error {
 	for key, value := range metadata {
 		keyStr, isString := key.(string)
 		if key == nil || (isString && keyStr == "") {
-			return NewInvalidMetadataError("metadata key cannot be empty", "")
+			return NewInvalidMetadataError("metadata key cannot be empty")
 		}
 
 		// Check size for byte slice values
 		if bytes, ok := value.([]byte); ok {
 			if len(bytes) > MaxMetadataSize {
-				return NewInvalidMetadataError("metadata value exceeds maximum size", keyStr)
+				return NewInvalidMetadataError("metadata value exceeds maximum size")
 			}
 		}
 	}

@@ -195,27 +195,23 @@ func TestValidateRedeemValue(t *testing.T) {
 
 func TestErrorTypes(t *testing.T) {
 	t.Run("InvalidAmountError", func(t *testing.T) {
-		err := NewInvalidAmountError("test message", 0)
+		err := NewInvalidAmountError("test message")
 		assert.Contains(t, err.Error(), "test message")
-		assert.Equal(t, uint64(0), err.Value)
 	})
 
 	t.Run("InvalidAddressError", func(t *testing.T) {
-		err := NewInvalidAddressError("test message", []byte("addr"))
+		err := NewInvalidAddressError("test message")
 		assert.Contains(t, err.Error(), "test message")
-		assert.Equal(t, []byte("addr"), err.Address)
 	})
 
 	t.Run("InvalidMetadataError", func(t *testing.T) {
-		err := NewInvalidMetadataError("test message", "key")
+		err := NewInvalidMetadataError("test message")
 		assert.Contains(t, err.Error(), "test message")
-		assert.Equal(t, "key", err.Key)
 	})
 
 	t.Run("InvalidTokenTypeError", func(t *testing.T) {
-		err := NewInvalidTokenTypeError("test message", "USD")
+		err := NewInvalidTokenTypeError("test message")
 		assert.Contains(t, err.Error(), "test message")
-		assert.Equal(t, "USD", err.Type)
 	})
 
 	t.Run("ValidationError", func(t *testing.T) {
