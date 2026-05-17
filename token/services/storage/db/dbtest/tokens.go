@@ -74,6 +74,7 @@ var tokensCases = []struct {
 	{"QueryTokenDetails", TQueryTokenDetails},
 	{"TTokenTypes", TTokenTypes},
 	{"ListUnspentTokensByWallets", TListUnspentTokensByWallets},
+	{"RedeemedBalance", TRedeemedBalance},
 }
 
 func TTokenTransaction(t *testing.T, db TestTokenDB) {
@@ -1183,6 +1184,123 @@ func consumeSpendableTokensIterator(t *testing.T, it tdriver.SpendableTokensIter
 	tok, err := it.Next()
 	require.NoError(t, err)
 	assert.Nil(t, tok)
+}
+
+// TRedeemedBalance tests the RedeemedBalance method which calculates the
+// total balance of issued tokens that have been redeemed (spent without a
+// successor in the token store) for a given issuer identity and token type.
+func TRedeemedBalance(t *testing.T, db TestTokenDB) {
+	t.Helper()
+	ctx := t.Context()
+
+	issuerA := tdriver.Identity([]byte{10, 20, 30})
+	issuerB := tdriver.Identity([]byte{40, 50, 60})
+
+	// Store issuer-perspective records (Issuer: true) for issuerA.
+	// These represent tokens that were issued and are tracked from the issuer's view.
+	require.NoError(t, db.StoreToken(ctx, driver2.TokenRecord{
+		TxID:           "rb-tx1",
+		Index:          0,
+		IssuerRaw:      issuerA,
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x05",
+		Type:           TST,
+		Amount:         5,
+		Issuer:         true,
+	}, nil))
+
+	require.NoError(t, db.StoreToken(ctx, driver2.TokenRecord{
+		TxID:           "rb-tx2",
+		Index:          0,
+		IssuerRaw:      issuerA,
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x03",
+		Type:           TST,
+		Amount:         3,
+		Issuer:         true,
+	}, nil))
+
+	// A different type, also issued by issuerA
+	require.NoError(t, db.StoreToken(ctx, driver2.TokenRecord{
+		TxID:           "rb-tx3",
+		Index:          0,
+		IssuerRaw:      issuerA,
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x02",
+		Type:           ABC,
+		Amount:         2,
+		Issuer:         true,
+	}, nil))
+
+	// A token issued by a different issuer (issuerB)
+	require.NoError(t, db.StoreToken(ctx, driver2.TokenRecord{
+		TxID:           "rb-tx4",
+		Index:          0,
+		IssuerRaw:      issuerB,
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x07",
+		Type:           TST,
+		Amount:         7,
+		Issuer:         true,
+	}, nil))
+
+	// Initially no tokens are redeemed — all are unspent
+	balance, err := db.RedeemedBalance(ctx, TST, issuerA, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(0), balance)
+
+	// Delete rb-tx1 without a successor in the store (simulates redemption):
+	// spent_by = "redeem-tx1" but no token with tx_id="redeem-tx1" exists.
+	require.NoError(t, db.DeleteTokens(ctx, "redeem-tx1", &token.ID{TxId: "rb-tx1", Index: 0}))
+
+	// After redeeming rb-tx1, issuerA's redeemed TST balance should be 5
+	balance, err = db.RedeemedBalance(ctx, TST, issuerA, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(5), balance)
+
+	// Redeem rb-tx2 as well
+	require.NoError(t, db.DeleteTokens(ctx, "redeem-tx2", &token.ID{TxId: "rb-tx2", Index: 0}))
+
+	// issuerA redeemed TST: 5 + 3 = 8
+	balance, err = db.RedeemedBalance(ctx, TST, issuerA, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(8), balance)
+
+	// ABC tokens for issuerA are still unspent → 0
+	balance, err = db.RedeemedBalance(ctx, ABC, issuerA, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(0), balance)
+
+	// issuerB's token was not redeemed → 0
+	balance, err = db.RedeemedBalance(ctx, TST, issuerB, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(0), balance)
+
+	// Unknown issuer returns 0
+	balance, err = db.RedeemedBalance(ctx, TST, tdriver.Identity([]byte{99}), nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(0), balance)
+
+	// Empty token type sums across all types for issuerA (only rb-tx1 and rb-tx2 deleted)
+	balance, err = db.RedeemedBalance(ctx, "", issuerA, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(8), balance)
 }
 
 func assertEqual(t *testing.T, r driver2.TokenRecord, d driver2.TokenDetails) {

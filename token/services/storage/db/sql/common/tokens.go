@@ -606,6 +606,11 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
 }
 
+// IssuedBalance returns the sum of amounts of tokens flagged as issued that have NOT been redeemed.
+// This includes both non-deleted tokens (still in circulation) and deleted tokens that were
+// transferred (spent to another token). It excludes only redeemed tokens (deleted AND without
+// a corresponding token with matching tx_id, meaning they were destroyed).
+// If tokenType is non-empty, only tokens of that type are included.
 // IssuedBalance returns the sum of amounts of non-deleted tokens flagged as issued.
 // If tokenType is non-empty, only tokens of that type are included.
 func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time) (uint64, error) {
@@ -650,6 +655,19 @@ func isNull(f common3.Field) cond.Condition {
 	return &nullCond{f: f}
 }
 
+// notNullCond is a condition that checks if a field IS NOT NULL.
+type notNullCond struct {
+	f common3.Field
+}
+
+func (c *notNullCond) WriteString(_ common3.CondInterpreter, sb common3.Builder) {
+	sb.WriteSerializables(c.f).WriteString(" IS NOT NULL")
+}
+
+func isNotNull(f common3.Field) cond.Condition {
+	return &notNullCond{f: f}
+}
+
 // ListRedeemedTokens returns issued tokens that were spent by a Redeem action.
 // A redeemed token is identified as: issuer=true, is_deleted=true, spent_by is set,
 // and the spending tx_id has NO output tokens in the tokens table (because Parse()
@@ -662,6 +680,7 @@ func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Ty
 	conds := []cond.Condition{
 		cond.CmpVal(tokTable.Field("issuer"), "=", true),
 		cond.CmpVal(tokTable.Field("is_deleted"), "=", true),
+		isNotNull(tokTable.Field("spent_by")),
 		isNull(t2.Field("tx_id")),
 	}
 	if len(tokenType) != 0 {
