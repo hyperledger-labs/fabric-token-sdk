@@ -91,6 +91,27 @@ func TestWalletBasedAuthorization(t *testing.T) {
 
 		assert.False(t, auth.Issued(context.Background(), issuer, tok))
 	})
+
+	t.Run("Issued_True_DefaultIssuerFallback", func(t *testing.T) {
+		localWS := &mock.WalletService{}
+		localAuth := &WalletBasedAuthorization{Logger: logger, PublicParameters: pp, WalletService: localWS}
+		issuer := driver.Identity("issuer-id-hsm-variant")
+		tok := &token2.Token{}
+		localWS.IssuerWalletReturnsOnCall(0, nil, errors.New("not issuer by raw identity"))
+		localWS.IssuerWalletReturnsOnCall(1, &mock.IssuerWallet{}, nil)
+
+		assert.True(t, localAuth.Issued(context.Background(), issuer, tok))
+	})
+
+	t.Run("Issued_False_EmptyIssuer_NoFallback", func(t *testing.T) {
+		localWS := &mock.WalletService{}
+		localAuth := &WalletBasedAuthorization{Logger: logger, PublicParameters: pp, WalletService: localWS}
+		issuer := driver.Identity(nil)
+		tok := &token2.Token{}
+		localWS.IssuerWalletReturns(nil, errors.New("not issuer"))
+
+		assert.False(t, localAuth.Issued(context.Background(), issuer, tok))
+	})
 }
 
 type mockAuth struct {

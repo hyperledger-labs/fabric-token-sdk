@@ -606,20 +606,18 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
 }
 
-// IssuedBalance returns the sum of amounts of tokens flagged as issued that have NOT been redeemed.
-// This includes both non-deleted tokens (still in circulation) and deleted tokens that were
-// transferred (spent to another token). It excludes only redeemed tokens (deleted AND without
-// a corresponding token with matching tx_id, meaning they were destroyed).
+// IssuedBalance returns the total amount originally issued by this issuer.
+//
+// We count only issuance roots: tokens with issuer=true that were created by transactions
+// with no input tokens in the local token table (no predecessor with spent_by = tx_id).
+// This avoids double-counting transfer lineage tokens that may carry issuer=true in some backends.
 // If tokenType is non-empty, only tokens of that type are included.
 func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time) (uint64, error) {
 	tokTable := q.Table(db.table.Tokens)
-	t2 := q.AliasedTable(db.table.Tokens, "t2")
+	pred := q.AliasedTable(db.table.Tokens, "pred")
 	conds := []cond.Condition{
 		cond.CmpVal(tokTable.Field("issuer"), "=", true),
-		cond.Or(
-			cond.CmpVal(tokTable.Field("is_deleted"), "=", false),
-			isNotNull(t2.Field("tx_id")),
-		),
+		isNull(pred.Field("tx_id")),
 	}
 	if len(tokenType) != 0 {
 		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
@@ -635,7 +633,7 @@ func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, i
 	}
 	query, args := q.Select().
 		FieldsByName(common3.FieldName("SUM(" + db.table.Tokens + ".amount)")).
-		From(tokTable.JoinAs(common3.Left, t2, cond.Cmp(t2.Field("tx_id"), "=", tokTable.Field("spent_by")))).
+		From(tokTable.JoinAs(common3.Left, pred, cond.Cmp(pred.Field("spent_by"), "=", tokTable.Field("tx_id")))).
 		Where(cond.And(conds...)).
 		Format(db.ci)
 
@@ -739,23 +737,24 @@ func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Ty
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
 }
 
-// RedeemedBalance returns the sum of amounts of issued tokens spent by a Redeem action.
-// Uses the same self-JOIN approach as ListRedeemedTokens to avoid relying on the
-// transactions table.
+// RedeemedBalance returns the amount burned by redeem operations for this issuer.
+// RedeemedBalance returns the total amount burned by redeem operations for this issuer.
+//
+// Burn tokens are stored during transaction processing with issuer=true and immediately
+// marked as deleted by their own tx (spent_by = tx_id). This self-referencing condition
+// uniquely identifies burn records.
 func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time) (uint64, error) {
 	tokTable := q.Table(db.table.Tokens)
-	t2 := q.AliasedTable(db.table.Tokens, "t2")
 	conds := []cond.Condition{
 		cond.CmpVal(tokTable.Field("issuer"), "=", true),
 		cond.CmpVal(tokTable.Field("is_deleted"), "=", true),
-		isNotNull(tokTable.Field("spent_by")),
-		isNull(t2.Field("tx_id")),
-	}
-	if len(tokenType) != 0 {
-		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
+		cond.Cmp(tokTable.Field("spent_by"), "=", tokTable.Field("tx_id")),
 	}
 	if len(issuerRaw) != 0 {
 		conds = append(conds, cond.CmpVal(tokTable.Field("issuer_raw"), "=", issuerRaw))
+	}
+	if len(tokenType) != 0 {
+		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
 	}
 	if from != nil {
 		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), ">=", from.UTC()))
@@ -765,7 +764,7 @@ func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type,
 	}
 	query, args := q.Select().
 		FieldsByName(common3.FieldName("SUM(" + db.table.Tokens + ".amount)")).
-		From(tokTable.JoinAs(common3.Left, t2, cond.Cmp(t2.Field("tx_id"), "=", tokTable.Field("spent_by")))).
+		From(tokTable).
 		Where(cond.And(conds...)).
 		Format(db.ci)
 

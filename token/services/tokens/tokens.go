@@ -426,9 +426,40 @@ func (t *Service) Parse(
 
 	// parse the outputs
 	for _, output := range os.Outputs() {
-		// if this is a redeem, then skip
+		// if this is a redeem (burn) output
 		if len(output.Token.Owner) == 0 {
-			logger.DebugfContext(ctx, "output [%s:%d] is a redeem", requestAnchor, output.Index)
+			// On the issuer node, store the burn so RedeemedBalance can track it.
+			issuerFlag := !output.Issuer.IsNone() && auth.Issued(ctx, output.Issuer, &output.Token)
+			if issuerFlag {
+				logger.DebugfContext(ctx, "output [%s:%d] is a redeem, storing for issuer tracking", requestAnchor, output.Index)
+				// Create a copy with non-nil Owner to satisfy DB NOT NULL constraint.
+				burnTok := token2.Token{
+					Owner:    []byte{},
+					Type:     output.Token.Type,
+					Quantity: output.Token.Quantity,
+				}
+				tta := TokenToAppend{
+					TxID:                  string(requestAnchor),
+					Index:                 output.Index,
+					Tok:                   &burnTok,
+					TokenOnLedger:         output.LedgerOutput,
+					TokenOnLedgerFormat:   output.LedgerOutputFormat,
+					TokenOnLedgerMetadata: output.LedgerOutputMetadata,
+					Issuer:                output.Issuer,
+					Precision:             precision,
+					Flags: Flags{
+						Mine:    false,
+						Auditor: false,
+						Issuer:  true,
+					},
+				}
+				toAppend = append(toAppend, tta)
+				// Mark the burn as immediately spent (by its own tx) so that
+				// is_deleted=true AND spent_by=tx_id uniquely identifies burns.
+				toSpend = append(toSpend, &token2.ID{TxId: string(requestAnchor), Index: output.Index})
+			} else {
+				logger.DebugfContext(ctx, "output [%s:%d] is a redeem", requestAnchor, output.Index)
+			}
 
 			continue
 		}
