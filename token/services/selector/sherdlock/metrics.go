@@ -38,9 +38,11 @@ func NewMetrics(p metrics.Provider) *Metrics {
 			LabelNames: []string{fetcherTypeLabel},
 		}),
 		SelectionDuration: p.NewHistogram(metrics.HistogramOpts{
-			Name:    "selection_duration_seconds",
-			Help:    "Duration of a token selection call in seconds",
-			Buckets: selectionDurationBuckets,
+			Name:                           "selection_duration_seconds",
+			Help:                           "Duration of a token selection call in seconds",
+			Buckets:                        selectionDurationBuckets,
+			NativeHistogramBucketFactor:    1.1,
+			NativeHistogramMaxBucketNumber: 100,
 		}),
 		SelectionOutcome: p.NewCounter(metrics.CounterOpts{
 			Name:       "selection_outcome_total",

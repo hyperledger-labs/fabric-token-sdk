@@ -12,12 +12,21 @@ The storage layer is built on a provider-based architecture that supports multip
 
 The Fabric Token SDK storage is organized into logical databases, each serving a specific role in the transaction lifecycle and identity management.
 
+### Amount Storage Strategy
+
+**All token amounts** across the storage layer are stored as `NUMERIC(78, 0)` in the database, supporting arbitrary precision integers up to 78 digits. This design choice enables:
+- Representation of token amounts exceeding the uint64 maximum value (2^64-1 ≈ 1.8×10^19)
+- Support for tokens with high precision or extremely large supply
+- Consistent handling of amounts across all tables (Tokens, Transactions, Movements)
+
+The SDK uses Go's `*big.Int` type throughout the codebase to handle these large values, with automatic conversion between database NUMERIC values and in-memory big.Int representations via the `BigInt` scanner type.
+
 ### Transaction & Audit Store (TTXDB / AuditDB)
 These tables track the lifecycle of token requests from assembly to finality. `AuditDB` uses the same schema but is isolated for compliance reporting.
 
 *   **Requests**: Tracks high-level token request state. Contains marshaled requests, current status (Pending, Confirmed, Deleted), and application/public metadata.
-*   **Transactions**: Records individual actions (Issue, Transfer, Redeem) within a request, including sender/recipient IDs and amounts.
-*   **Movements**: Aggregates net value changes per enrollment ID. Used to efficiently calculate balances and history.
+*   **Transactions**: Records individual actions (Issue, Transfer, Redeem) within a request, including sender/recipient IDs and amounts (stored as `NUMERIC(78, 0)`).
+*   **Movements**: Aggregates net value changes per enrollment ID (amounts stored as `NUMERIC(78, 0)`). Used to efficiently calculate balances and history.
 *   **Validations**: Stores cryptographic validation metadata produced during the request verification phase.
 *   **Endorsements**: Collects digital signatures from participants and auditors required for transaction finality.
 
@@ -25,6 +34,7 @@ These tables track the lifecycle of token requests from assembly to finality. `A
 This store serves as the authoritative registry for all tokens (UTXOs) known to the node.
 
 *   **Tokens**: The core UTXO registry. Stores token identifiers, amounts, types, ownership info, and ledger-specific state.
+    *   **Amount Storage**: Token amounts are stored as `NUMERIC(78, 0)` in the database, supporting arbitrary precision integers up to 78 digits. This enables representation of token amounts that exceed the uint64 maximum value (2^64-1 ≈ 1.8×10^19). The SDK uses Go's `*big.Int` type throughout the codebase to handle these large values, with automatic conversion between database NUMERIC values and in-memory big.Int representations.
 *   **TokenOwners**: A mapping table linking specific tokens to wallet identifiers for fast lookups.
 *   **PublicParameters**: A cache for the network's cryptographic public parameters and their hashes.
 *   **TokenCertifications**: Stores third-party certifications for tokens, often required by privacy-preserving drivers.

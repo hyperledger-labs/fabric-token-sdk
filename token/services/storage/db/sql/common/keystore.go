@@ -8,6 +8,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -122,7 +123,7 @@ func (db *KeystoreStore) GetRaw(key string) ([]byte, error) {
 		From(q.Table(db.table.KeyStore)).
 		Where(cond.Eq("key", key)).
 		Format(db.ci)
-	raw, err := common.QueryUnique[[]byte](db.readDB, query, args...)
+	raw, err := common.QueryUniqueContext[[]byte](context.Background(), db.readDB, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed retrieving key [%s]", key)
 	}

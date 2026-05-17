@@ -116,6 +116,43 @@ func TestRegisterRecipientIdentityFailuresAndSuccess(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// ipWithRollback embeds the generated mock and adds identity.RecipientRegistrationRollback for rollback tests.
+type ipWithRollback struct {
+	*dmock.IdentityProvider
+	rollbackCalls int
+}
+
+func (r *ipWithRollback) RollbackPartialRecipientRegistration(ctx context.Context, id driver.Identity) {
+	r.rollbackCalls++
+}
+
+func TestRegisterRecipientIdentity_MatchIdentityFailureSkipsIdentityProvider(t *testing.T) {
+	ctx := t.Context()
+	ip := &dmock.IdentityProvider{}
+	d := &dmock.Deserializer{}
+	d.MatchIdentityReturns(errors.New("mismatch"))
+	regSvc := wallet.NewService(&logging.MockLogger{}, ip, d, nil)
+
+	err := regSvc.RegisterRecipientIdentity(ctx, &driver.RecipientData{Identity: driver.Identity("id"), AuditInfo: []byte("ai")})
+	require.Error(t, err)
+	require.Zero(t, ip.RegisterRecipientIdentityCallCount())
+	require.Equal(t, 1, d.MatchIdentityCallCount())
+}
+
+func TestRegisterRecipientIdentity_RollbackWhenRegisterRecipientDataFails(t *testing.T) {
+	ctx := t.Context()
+	base := &dmock.IdentityProvider{}
+	base.RegisterRecipientIdentityReturns(nil)
+	base.RegisterRecipientDataReturns(errors.New("rrd"))
+	ip := &ipWithRollback{IdentityProvider: base}
+	d := &dmock.Deserializer{}
+	regSvc := wallet.NewService(&logging.MockLogger{}, ip, d, nil)
+
+	err := regSvc.RegisterRecipientIdentity(ctx, &driver.RecipientData{Identity: driver.Identity("id"), AuditInfo: []byte("ai")})
+	require.Error(t, err)
+	require.Equal(t, 1, ip.rollbackCalls)
+}
+
 func TestWalletAndLookupFunctions(t *testing.T) {
 	ctx := t.Context()
 	ownerReg := &wmock.RoleRegistry{}

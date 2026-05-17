@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package nfttx_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -54,7 +55,7 @@ func TestNewFilter(t *testing.T) {
 
 func TestFilterNilFilter(t *testing.T) {
 	f := nfttx.NewFilter("my-wallet", nil, 64)
-	ids, err := f.Filter(nil, "1")
+	ids, err := f.Filter(context.Background(), nil, "1")
 	require.Error(t, err)
 	assert.Nil(t, ids)
 	assert.Contains(t, err.Error(), "filter is nil")
@@ -65,7 +66,7 @@ func TestFilterIteratorError(t *testing.T) {
 	fakeQS.UnspentTokensIteratorByReturns(nil, errors.New("iterator error"))
 
 	f := nfttx.NewFilter("my-wallet", fakeQS, 64)
-	ids, err := f.Filter(&testFilter{pass: true}, "1")
+	ids, err := f.Filter(context.Background(), &testFilter{pass: true}, "1")
 	require.Error(t, err)
 	assert.Nil(t, ids)
 	assert.Contains(t, err.Error(), "token selection failed")
@@ -76,7 +77,7 @@ func TestFilterNextError(t *testing.T) {
 	fakeQS.UnspentTokensIteratorByReturns(&dummyIterator{err: errors.New("next error"), tokens: nil}, nil)
 
 	f := nfttx.NewFilter("my-wallet", fakeQS, 64)
-	ids, err := f.Filter(&testFilter{pass: true}, "1")
+	ids, err := f.Filter(context.Background(), &testFilter{pass: true}, "1")
 	require.Error(t, err)
 	assert.Nil(t, ids)
 	assert.Contains(t, err.Error(), "token selection failed")
@@ -84,7 +85,7 @@ func TestFilterNextError(t *testing.T) {
 
 func TestFilterBadQuantityTarget(t *testing.T) {
 	f := nfttx.NewFilter("my-wallet", nil, 64)
-	ids, err := f.Filter(&testFilter{pass: true}, "xyz")
+	ids, err := f.Filter(context.Background(), &testFilter{pass: true}, "xyz")
 	require.Error(t, err)
 	assert.Nil(t, ids)
 	assert.Contains(t, err.Error(), "failed to select tokens: failed to convert quantity")
@@ -100,13 +101,13 @@ func TestFilterSuccess(t *testing.T) {
 
 	f := nfttx.NewFilter("my-wallet", fakeQS, 64)
 
-	ids, err := f.Filter(&testFilter{pass: true}, "2")
+	ids, err := f.Filter(context.Background(), &testFilter{pass: true}, "2")
 	require.NoError(t, err)
 	assert.Len(t, ids, 2)
 
 	// Filter returning false should be ignored
 	fakeQS.UnspentTokensIteratorByReturns(&dummyIterator{tokens: tokens}, nil)
-	ids, err = f.Filter(&testFilter{pass: false}, "1")
+	ids, err = f.Filter(context.Background(), &testFilter{pass: false}, "1")
 	require.Error(t, err)
 	assert.Nil(t, ids)
 	assert.ErrorIs(t, err, nfttx.ErrNoResults) // Note here we use unwrapping since err could be "failed to select tokens: no results found"
@@ -120,7 +121,7 @@ func TestFilterInsufficientTokens(t *testing.T) {
 	fakeQS.UnspentTokensIteratorByReturns(&dummyIterator{tokens: tokens}, nil)
 
 	f := nfttx.NewFilter("my-wallet", fakeQS, 64)
-	ids, err := f.Filter(&testFilter{pass: true}, "2")
+	ids, err := f.Filter(context.Background(), &testFilter{pass: true}, "2")
 	require.Error(t, err)
 	assert.Nil(t, ids)
 	assert.ErrorIs(t, err, nfttx.ErrNoResults)

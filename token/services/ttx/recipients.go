@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/boolpolicy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
@@ -25,6 +26,14 @@ type MultisigRecipientData struct {
 	RecipientData *token.RecipientData
 	Nodes         []view.Identity
 	Recipients    []token.Identity
+}
+
+// PolicyRecipientData carries the composite policy identity back to each co-owner.
+type PolicyRecipientData struct {
+	RecipientData *token.RecipientData
+	Nodes         []view.Identity
+	Recipients    []token.Identity
+	Policy        string
 }
 
 type ExchangeRecipientRequest struct {
@@ -46,6 +55,8 @@ type RecipientRequest struct {
 	WalletID      []byte
 	RecipientData *RecipientData
 	MultiSig      bool
+	// Policy, when non-empty, signals that the initiator will follow up with a PolicyRecipientData message.
+	Policy string
 }
 
 func (r *RecipientRequest) Bytes() ([]byte, error) {
@@ -76,6 +87,9 @@ func (r Recipients) Identities() []view.Identity {
 type RequestRecipientIdentityView struct {
 	TMSID      token.TMSID
 	Recipients Recipients
+	// Policy, when non-empty, causes the collected identities to be wrapped
+	// as a PolicyIdentity instead of a MultiIdentity.
+	Policy string
 }
 
 // RequestRecipientIdentity executes the RequestRecipientIdentityView.
@@ -136,6 +150,37 @@ func RequestMultisigIdentity(context view.Context, ids []view.Identity, opts ...
 	return pseudonymBoxed.(view.Identity), nil
 }
 
+// RequestPolicyIdentity collects recipient identities from all the passed parties,
+// wraps them into a single PolicyIdentity governed by the given boolean policy expression,
+// and distributes the composite identity back to all participants.
+func RequestPolicyIdentity(context view.Context, policy string, ids []view.Identity, opts ...token.ServiceOption) (token.Identity, error) {
+	options, err := CompileServiceOptions(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed compiling service options")
+	}
+	recipients := make([]Recipient, len(ids))
+	for i, id := range ids {
+		recipients[i] = Recipient{
+			Identity:      id,
+			RecipientData: getRecipientData(options),
+		}
+	}
+	pseudonymBoxed, err := view3.RunViewWithTimeout(
+		context,
+		&RequestRecipientIdentityView{
+			TMSID:      options.TMSID(),
+			Recipients: recipients,
+			Policy:     policy,
+		},
+		options.Duration,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return pseudonymBoxed.(view.Identity), nil
+}
+
 func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
 	results := make([]token.Identity, len(f.Recipients))
 	local := make([]bool, len(f.Recipients))
@@ -153,7 +198,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		}
 
 		if isSameNode := w != nil; !isSameNode {
-			results[i], err = f.callWithRecipientData(context, &recipient, multiSig)
+			results[i], err = f.callWithRecipientData(context, &recipient, multiSig, f.Policy)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to get recipient identity")
 			}
@@ -179,6 +224,16 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		return results[0], nil
 	}
 
+	if f.Policy != "" {
+		// aggregate the results as a policy identity, then distribute to all participants
+		policyIdentity, err := f.aggregateAndDistributePolicy(context, tms, results, local)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to aggregate policy recipient identities")
+		}
+
+		return policyIdentity, nil
+	}
+
 	// aggregate the results as multisig identity, then distribute the aggregate results to all the participants
 	multisigIdentity, err := f.aggregateAndDistribute(context, tms, results, local)
 	if err != nil {
@@ -188,7 +243,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 	return multisigIdentity, nil
 }
 
-func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context, recipient *Recipient, multiSig bool) (token.Identity, error) {
+func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context, recipient *Recipient, multiSig bool, policy string) (token.Identity, error) {
 	logger.DebugfContext(context.Context(), "request recipient [%s] is not registered", recipient.Identity)
 	session, err := session2.NewFromInitiator(context, recipient.Identity)
 	if err != nil {
@@ -204,7 +259,8 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 		TMSID:         f.TMSID,
 		WalletID:      wID,
 		RecipientData: recipient.RecipientData,
-		MultiSig:      multiSig,
+		MultiSig:      multiSig && policy == "",
+		Policy:        policy,
 	}
 	logger.DebugfContext(context.Context(), "Send identity request to %s", wID)
 	err = session.Send(recipientRequest)
@@ -290,6 +346,55 @@ func (f *RequestRecipientIdentityView) aggregateAndDistribute(context view.Conte
 	return multisigIdentity, nil
 }
 
+func (f *RequestRecipientIdentityView) aggregateAndDistributePolicy(context view.Context, tms *token.ManagementService, recipients []token.Identity, local []bool) (token.Identity, error) {
+	// prepare policy identity
+	policyIdentity, err := boolpolicy.WrapPolicyIdentity(f.Policy, recipients...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed wrapping policy identity")
+	}
+
+	// prepare audit info
+	auditInfoForRecipients, err := tms.SigService().GetAuditInfo(context.Context(), recipients...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting token audit info")
+	}
+	auditInfo, err := boolpolicy.WrapAuditInfo(auditInfoForRecipients)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed wrapping policy audit info")
+	}
+
+	// register audit info for the recipient
+	recipientData := &token.RecipientData{
+		Identity:  policyIdentity,
+		AuditInfo: auditInfo,
+	}
+	if err = tms.WalletManager().RegisterRecipientIdentity(context.Context(), recipientData); err != nil {
+		return nil, errors.Wrapf(err, "failed registering policy recipient identity [%s]", policyIdentity)
+	}
+
+	// distribute back to all remote participants
+	prd := &PolicyRecipientData{
+		RecipientData: recipientData,
+		Nodes:         f.Recipients.Identities(),
+		Recipients:    recipients,
+		Policy:        f.Policy,
+	}
+	for i, recipient := range f.Recipients {
+		if local[i] {
+			continue
+		}
+		s, err := session2.NewJSON(context, context.Initiator(), recipient.Identity)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get session with [%s]", recipient.Identity)
+		}
+		if err = s.Send(prd); err != nil {
+			return nil, errors.Wrapf(err, "failed to send policy recipient data")
+		}
+	}
+
+	return policyIdentity, nil
+}
+
 type RespondRequestRecipientIdentityView struct {
 	Wallet string
 }
@@ -359,26 +464,40 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		recipientIdentity = recipientData.Identity
 	}
 
-	// Step 3: send the public key back to the invoker
+	// Update the endpoint resolver before sending so a local bind failure does not
+	// leave the peer with a RecipientData we never successfully wired locally.
+	resolver := endpoint.GetService(context)
+	logger.DebugfContext(context.Context(), "bind me [%s] to [%s]", context.Me(), recipientData)
+
+	if err := resolver.Bind(context.Context(), context.Me(), recipientIdentity); err != nil {
+		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
+	}
+
 	logger.DebugfContext(context.Context(), "Send recipient identity response to %s", session.Info().Caller)
 	if err := session.Send(recipientData); err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
-	// Update the Endpoint Resolver
-	resolver := endpoint.GetService(context)
-	logger.DebugfContext(context.Context(), "bind me [%s] to [%s]", context.Me(), recipientData)
-
-	err = resolver.Bind(context.Context(), context.Me(), recipientIdentity)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
-	}
-
-	if err := s.handleMultisig(context, session.Session(), tms, recipientRequest, recipientIdentity); err != nil {
-		return nil, errors.Wrapf(err, "failed to handle multisig")
+	if err := s.handleComposite(context, session.Session(), tms, recipientRequest, recipientIdentity); err != nil {
+		return nil, errors.Wrapf(err, "failed to handle composite identity")
 	}
 
 	return recipientIdentity, nil
+}
+
+// handleComposite dispatches to the appropriate composite-identity handler.
+func (s *RespondRequestRecipientIdentityView) handleComposite(
+	context view.Context,
+	session view.Session,
+	tms *token.ManagementService,
+	recipientRequest *RecipientRequest,
+	recipientIdentity token.Identity,
+) error {
+	if recipientRequest.Policy != "" {
+		return s.handlePolicy(context, session, tms, recipientRequest, recipientIdentity)
+	}
+
+	return s.handleMultisig(context, session, tms, recipientRequest, recipientIdentity)
 }
 
 func (s *RespondRequestRecipientIdentityView) handleMultisig(
@@ -462,7 +581,77 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 	for i, node := range multisigRecipientData.Nodes {
 		err = resolver.Bind(context.Context(), node, multisigRecipientData.Recipients[i])
 		if err != nil {
-			return errors.Wrapf(err, "failed to bind me to recipient identity")
+			return errors.Wrapf(err, "failed to bind node identity to recipient identity")
+		}
+	}
+
+	return nil
+}
+
+func (s *RespondRequestRecipientIdentityView) handlePolicy(
+	context view.Context,
+	session view.Session,
+	tms *token.ManagementService,
+	_ *RecipientRequest,
+	recipientIdentity token.Identity,
+) error {
+	jsonSession := session2.NewFromSession(context, session)
+
+	logger.DebugfContext(context.Context(), "Receive policy recipient data")
+	prd := &PolicyRecipientData{}
+	if err := jsonSession.Receive(prd); err != nil {
+		return errors.Wrapf(err, "failed to receive policy recipient data")
+	}
+	logger.DebugfContext(context.Context(), "Received policy recipient data")
+
+	// register the composite policy identity
+	wm := tms.WalletManager()
+	if err := wm.RegisterRecipientIdentity(context.Context(), prd.RecipientData); err != nil {
+		return errors.Wrapf(err, "failed to register policy recipient identity")
+	}
+
+	// register the component signer for the composite identity (my slot)
+	sigService := tms.SigService()
+	signer, err := sigService.GetSigner(context.Context(), recipientIdentity)
+	if err != nil {
+		return err
+	}
+	if err := sigService.RegisterSigner(context.Context(), prd.RecipientData.Identity, signer, nil); err != nil {
+		return errors.Wrapf(err, "failed to register policy signer")
+	}
+
+	// register audit info for each component identity
+	pi, ok, err := boolpolicy.Unwrap(prd.RecipientData.Identity)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unwrap policy identity")
+	}
+	if !ok {
+		return errors.Errorf("expected policy identity")
+	}
+	_, auditInfos, err := boolpolicy.UnwrapAuditInfo(prd.RecipientData.AuditInfo)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unwrap policy audit info")
+	}
+	for i, raw := range pi.Identities {
+		componentID := token.Identity(raw)
+		if componentID.Equal(recipientIdentity) {
+			continue
+		}
+		if err := wm.RegisterRecipientIdentity(context.Context(), &RecipientData{
+			Identity:               componentID,
+			AuditInfo:              auditInfos[i],
+			TokenMetadata:          prd.RecipientData.TokenMetadata,
+			TokenMetadataAuditInfo: prd.RecipientData.TokenMetadataAuditInfo,
+		}); err != nil {
+			return errors.Wrapf(err, "failed to register component identity [%d]", i)
+		}
+	}
+
+	// bind endpoint resolver for all participants
+	resolver := endpoint.GetService(context)
+	for i, node := range prd.Nodes {
+		if err := resolver.Bind(context.Context(), node, prd.Recipients[i]); err != nil {
+			return errors.Wrapf(err, "failed to bind node to recipient identity")
 		}
 	}
 
@@ -602,7 +791,10 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	}
 	other := request.RecipientData.Identity
 	if err := ts.WalletManager().RegisterRecipientIdentity(context.Context(), &RecipientData{
-		Identity: other, AuditInfo: request.RecipientData.AuditInfo, TokenMetadata: request.RecipientData.TokenMetadata,
+		Identity:               other,
+		AuditInfo:              request.RecipientData.AuditInfo,
+		TokenMetadata:          request.RecipientData.TokenMetadata,
+		TokenMetadataAuditInfo: request.RecipientData.TokenMetadataAuditInfo,
 	}); err != nil {
 		return nil, err
 	}
@@ -622,19 +814,18 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, errors.WithMessagef(err, "failed getting recipient data, wallet [%s]", w.ID())
 	}
 
-	if err := session.Send(recipientData); err != nil {
-		return nil, errors.WithMessagef(err, "failed sending recipient data, wallet [%s]", w.ID())
+	// Bind locally before sending so a bind failure does not leave the initiator
+	// with our RecipientData while this node never finished resolver wiring.
+	resolver := endpoint.GetService(context)
+	if err := resolver.Bind(context.Context(), context.Me(), recipientData.Identity); err != nil {
+		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
+	}
+	if err := resolver.Bind(context.Context(), session.Info().Caller, other); err != nil {
+		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}
 
-	// Update the Endpoint Resolver
-	resolver := endpoint.GetService(context)
-	err = resolver.Bind(context.Context(), context.Me(), recipientData.Identity)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
-	}
-	err = resolver.Bind(context.Context(), session.Info().Caller, other)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
+	if err := session.Send(recipientData); err != nil {
+		return nil, errors.WithMessagef(err, "failed sending recipient data, wallet [%s]", w.ID())
 	}
 
 	return []token.Identity{recipientData.Identity, other}, nil

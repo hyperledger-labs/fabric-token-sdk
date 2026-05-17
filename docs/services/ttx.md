@@ -100,21 +100,21 @@ sequenceDiagram
     end
 
     rect rgba(255, 245, 238, 0.5)
-        Note over R: Phase 2 - Responder decision
+        Note over R: Phase 2 - Responder decision and reply
         alt RecipientRequest.RecipientData != nil
             R->>R: Verify wallet contains RecipientData.Identity
-            R-->>I: RecipientData (echo path)
         else RecipientRequest.RecipientData == nil
             R->>R: Generate RecipientData from wallet
-            R-->>I: RecipientData (fresh data path)
         end
+        R->>R: endpoint.Bind(context.Me, RecipientData.Identity)
+        Note over R,I: Bind before send so local resolver wiring fails before the peer receives RecipientData
+        R-->>I: RecipientData (echo or fresh data path)
     end
 
     rect rgba(240, 255, 240, 0.45)
-        Note over I,R: Phase 3 - Local registration and bindings
+        Note over I,R: Phase 3 - Initiator registration and bindings
         I->>I: RegisterRecipientIdentity(RecipientData)
         I->>I: endpoint.Bind(requested FSC identity, RecipientData.Identity)
-        R->>R: endpoint.Bind(context.Me, RecipientData.Identity)
     end
 
     rect rgba(245, 245, 245, 0.55)
@@ -146,18 +146,114 @@ sequenceDiagram
         Note over R: Phase 2 - Responder processing
         R->>R: RegisterRecipientIdentity(request.RecipientData)
         R->>R: GetRecipientData(responder wallet)
+        R->>R: endpoint.Bind(context.Me, responder RecipientData.Identity)
+        R->>R: endpoint.Bind(session caller, request.RecipientData.Identity)
+        Note over R,I: Binds before send so resolver wiring fails before the initiator receives our RecipientData
         R-->>I: RecipientData(responder)
     end
 
     rect rgba(240, 255, 240, 0.45)
-        Note over I,R: Phase 3 - Local registration and bindings
+        Note over I,R: Phase 3 - Initiator registration and bindings
         I->>I: RegisterRecipientIdentity(remote RecipientData)
         I->>I: endpoint.Bind(other FSC identity, remote RecipientData.Identity)
-        R->>R: endpoint.Bind(session caller, request.RecipientData.Identity)
     end
 
     Note over I,R: Full RecipientData on wire today (responder sends local wallet RecipientData)
 ```
+
+### PolicyIdentity — Boolean-Expression-Governed Ownership
+
+The TTX service supports **PolicyIdentity** owners: tokens whose spending requires satisfying a boolean expression over a set of component identities.  This enables richer access-control than simple multisig (M-of-N) — for example, an OR clause where any single co-owner may spend unilaterally, or complex nested expressions.
+
+#### Creating a PolicyIdentity
+
+Call `RequestPolicyIdentity` (in `token/services/ttx/recipients.go`) to negotiate a composite identity from all co-owners before building the transfer:
+
+```go
+recipient, err := bptx.RequestRecipientIdentity(ctx, "$0 OR $1",
+    []view.Identity{bobFSCIdentity, charlieFSCIdentity},
+    token.WithTMSIDPointer(tmsID),
+)
+```
+
+Each co-owner's node responds with its component identity; the SDK assembles the `PolicyIdentity` envelope automatically.
+
+#### Policy Expression Syntax
+
+| Expression | Meaning |
+|:-----------|:--------|
+| `$0 OR $1` | Either component 0 **or** component 1 can spend alone. |
+| `$0 AND $1` | Both component 0 **and** component 1 must sign. |
+| `($0 OR $1) AND $2` | One of the first two parties plus party 2 must sign. |
+
+`$N` is a zero-based index into the ordered component identity list supplied when creating the token.
+
+#### Spending — OR Policy
+
+For an OR policy the initiator alone can satisfy the policy.  Pass `WithPolicySigners` to restrict signature collection to only the signing party's slot; the remaining slots are left nil (which is valid for OR branches):
+
+```go
+_, err = context.RunView(ttx.NewCollectEndorsementsView(tx,
+    ttx.WithPolicySigners(myComponentIdentity),
+))
+```
+
+#### Spending — AND Policy
+
+For an AND policy all co-owners must endorse.  Use `RequestSpendView` (in `token/services/ttx/boolpolicy/spend.go`) to notify co-owners before assembling the transaction, then collect endorsements from all components without restriction:
+
+```go
+_, err = context.RunView(bptx.NewRequestSpendView(unspentToken, serviceOpts...))
+// ... build tx ...
+_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
+```
+
+Co-owners run `ReceiveSpendTxView` (via `ReceiveSpendTx`) on their side, which ACKs the spend request and returns the assembled transaction *without* endorsing it. The application then inspects the transaction (e.g. confirming it consumes the expected token and does not include other tokens owned by this node) and explicitly calls `ttx.NewEndorseView(tx)` to sign once those checks pass.
+
+#### Spend Coordination Wire Flow
+
+The same coordination protocol is implemented in `token/services/ttx/multisig/spend.go` (for AND multisig) and in `token/services/ttx/boolpolicy/spend.go` (for AND policies). Both follow the shape below; the responder must verify that the assembled transaction actually consumes the token referenced by the `SpendRequest` it approved.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant I as Initiator (RequestSpendView)
+    participant R as Co-owner (ReceiveSpendTxView)
+    participant App as Co-owner application code
+
+    rect rgba(230, 230, 250, 0.35)
+        Note over I,R: Phase 1 - Spend approval request
+        I->>R: SpendRequest{Token: UnspentToken to spend}
+        R->>R: ReceiveSpendRequest, decide to approve
+        R-->>I: SpendResponse{}
+    end
+
+    rect rgba(255, 245, 238, 0.5)
+        Note over I,R: Phase 2 - Transaction assembly and delivery
+        I->>I: Assemble transaction consuming SpendRequest.Token
+        I->>R: Transaction (via ttx.ReceiveTransaction)
+        R-->>App: tx (returned by ReceiveSpendTxView)
+    end
+
+    rect rgba(240, 255, 240, 0.45)
+        Note over App: Phase 3 - Business-logic checks (application owns these)
+        App->>App: Inspect tx.Request().Inputs(ctx) etc.
+        alt checks pass
+            App->>R: context.RunView(ttx.NewEndorseView(tx))
+            R-->>I: Signed transaction
+        else checks fail
+            App-->>I: Abort (no signature produced)
+        end
+    end
+```
+
+The split between Phase 2 (library receives the tx) and Phase 3 (application inspects + endorses) is deliberate: the library does not assume a single check policy. Two checks worth running in most deployments — and easy to express with `tx.Request().Inputs(ctx)` — are (a) the tx consumes the token named in the `SpendRequest`, and (b) the tx does not consume any other token owned by this node (see `extractRequiredSigners` in `endorse.go` for the ownership-check pattern). Without these, a co-owner who reviews and approves a spend for token `T_a` could be made to sign a transaction consuming a different token `T_b` co-owned by the same group.
+
+#### Wallet and Authorization
+
+The `boolpolicy.OwnerWallet` (in `token/services/ttx/boolpolicy/wallet.go`) wraps a standard owner wallet and filters the token list to policy-type tokens.  `VerifyApprover` can be used to assert that a given identity is one of the named component identities before allowing a spend.
+
+The `EscrowAuth` struct (in `token/services/ttx/boolpolicy/auth.go`) implements the `Authorization` interface: `IsMine` returns true if any component identity of the policy token belongs to one of the node's owner wallets.
 
 ## Token Operations
 
@@ -178,11 +274,17 @@ Enables the transfer of token ownership. The service:
 ### Redeem
 A specialized transfer where the recipient is "hidden" or "empty," effectively removing the tokens from circulation on the ledger.
 
+Redeem supports an enhanced flow where an issuer signature is required as part of transfer validation:
+1. Add the redeem action with `tx.Redeem(...)`.
+2. If the issuer endpoint cannot be resolved automatically, pass `ttx.WithFSCIssuerIdentity(...)` so the initiator can contact the issuer for endorsement.
+3. Optionally pass `ttx.WithIssuerPublicParamsPublicKey(...)` to pin which issuer public-parameters signing key must authorize the redeem.
+4. Run `CollectEndorsementsView` to collect owner, auditor (if configured), and issuer signatures.
+
 ## Collecting Endorsements
 
 The `CollectEndorsementsView` is responsible for gathering all signatures required to make a transaction valid:
 *   **Owner Signatures**: For every token spent, the service requests a signature from the node that owns the corresponding identity.
-*   **Issuer Signatures**: For transactions involving token issuance.
+*   **Issuer Signatures**: For transactions involving token issuance and enhanced redeem flows that require issuer authorization.
 *   **Auditor Signatures**: If the TMS is configured with an auditor, the transaction must be approved via the `AuditApproveView`.
 *   **Network Endorsements**: The service delegates to the **Network Service** to obtain backend-specific endorsements (e.g., Fabric chaincode endorsements).
 

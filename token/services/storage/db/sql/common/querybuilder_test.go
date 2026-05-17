@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -17,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/test-go/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTransactionSql(t *testing.T) {
@@ -449,7 +448,7 @@ func compareArgs(t *testing.T, expected, actual []any) {
 		case *time.Time:
 			exp, _ := expected[i].(*time.Time)
 			act, _ := actual[i].(time.Time)
-			assert.True(t, exp.Equal(act), fmt.Sprintf("timestamps not equal: %v != %v", exp, act))
+			assert.True(t, exp.Equal(act), "timestamps not equal: %v != %v", exp, act)
 		default:
 			assert.EqualValues(t, expected[i], actual[i])
 		}

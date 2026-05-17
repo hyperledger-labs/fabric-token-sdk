@@ -59,7 +59,7 @@ A [Request](../token/request.go) is a ledger-agnostic blueprint for a token tran
 
 ### Core Actions
 *   **Issue**: Minting new tokens into the system.
-*   **Transfer**: Reassigning ownership of existing tokens (includes **Redeem** by transferring to a null owner).
+*   **Transfer**: Reassigning ownership of existing tokens (includes **Redeem** by transferring to a null owner; enhanced redeem flows can additionally require issuer authorization/signature).
 
 ### The Request Lifecycle
 1.  **Assemble**: Add actions to the `Request` using a TMS.

@@ -9,7 +9,6 @@ package identity
 import (
 	"context"
 	"runtime/debug"
-	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
@@ -17,13 +16,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 	"go.uber.org/zap/zapcore"
 )
 
 var (
 	// This makes sure that Provider implements driver.IdentityProvider
 	_ driver.IdentityProvider = &Provider{}
+	// This makes sure that Provider can roll back partial recipient registration
+	_ RecipientRegistrationRollback = &Provider{}
 )
 
 // StorageProvider returns storage services scoped to a specific token
@@ -85,8 +85,7 @@ type Provider struct {
 	storage                 Storage
 	deserializer            Deserializer
 
-	isMeCache cache[bool]
-	signers   cache[*SignerEntry]
+	signers cache[*SignerEntry]
 }
 
 // NewProvider returns a new instance of Provider
@@ -103,7 +102,6 @@ func NewProvider(
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		deserializer:            deserializer,
 		storage:                 storage,
-		isMeCache:               cache2.NewNoCache[bool](),
 		signers:                 secondcache.NewTyped[*SignerEntry](50),
 	}
 }
@@ -130,32 +128,13 @@ func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity,
 }
 
 // AreMe returns the hashes of the passed identities that have a signer registered before.
-// First a local cache is checked, if not found the configured storag is queried.
+// Each identity is resolved via the signer cache and configured storage.
+// There is no secondary "is me" cache: a real cache would need careful handling for
+// single-use identities (for example Idemix nyms) and is intentionally omitted here.
 func (p *Provider) AreMe(ctx context.Context, identities ...driver.Identity) []string {
 	p.Logger.DebugfContext(ctx, "identity [%s] is me?", identities)
 
-	result := make([]string, 0)
-	notFound := make([]driver.Identity, 0)
-
-	for _, id := range identities {
-		uniqueID := id.UniqueID()
-		if isMe, ok := p.isMeCache.Get(uniqueID); !ok {
-			notFound = append(notFound, id)
-		} else if isMe {
-			result = append(result, uniqueID)
-		}
-	}
-	if len(notFound) == 0 {
-		return result
-	}
-
-	found := p.areMe(ctx, notFound...)
-	for _, id := range notFound {
-		uniqueID := id.UniqueID()
-		p.isMeCache.Add(uniqueID, slices.Contains(found, uniqueID))
-	}
-
-	return append(result, found...)
+	return p.areMe(ctx, identities...)
 }
 
 // IsMe returns true if a signer was ever registered for the passed identity
@@ -175,16 +154,11 @@ func (p *Provider) GetAuditInfo(ctx context.Context, identity driver.Identity) (
 // If a signer is not found in cache,
 // this provider tries to construct an instance of driver.Signer that produces valid signatures under that identity.
 func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (driver.Signer, error) {
-	found := false
 	idHash := identity.UniqueID()
-	defer func() {
-		p.isMeCache.Add(idHash, found)
-	}()
 	signer, err := p.getSigner(ctx, identity, idHash)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 	}
-	found = true
 
 	return signer, nil
 }
@@ -219,12 +193,19 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 	return nil
 }
 
-// RegisterRecipientIdentity register the passed identity as a third-party recipient identity.
+// RegisterRecipientIdentity registers the passed identity as a third-party recipient identity.
+// The wallet layer performs matching and persistence; this provider records nothing here.
 func (p *Provider) RegisterRecipientIdentity(ctx context.Context, id driver.Identity) error {
 	p.Logger.DebugfContext(ctx, "Registering identity [%s]", id)
-	p.isMeCache.Add(id.UniqueID(), false)
 
 	return nil
+}
+
+// RollbackPartialRecipientRegistration implements RecipientRegistrationRollback.
+// This provider does not keep partial recipient-registration marks in memory;
+// the hook remains for other IdentityProvider implementations.
+func (p *Provider) RollbackPartialRecipientRegistration(ctx context.Context, id driver.Identity) {
+	p.Logger.DebugfContext(ctx, "rollback partial recipient registration for identity [%s] (no-op for this provider)", id)
 }
 
 // RegisterIdentityDescriptor stores the given identity descriptor in the configured storage.
@@ -351,9 +332,6 @@ func (p *Provider) updateCaches(descriptor *idriver.IdentityDescriptor, alias dr
 
 	// signers
 	if descriptor.Signer != nil {
-		// if the signer is set, this means that id belongs to this node
-		p.isMeCache.Add(id, true)
-
 		entry := &SignerEntry{Signer: descriptor.Signer}
 		if p.Logger.IsEnabledFor(zapcore.DebugLevel) {
 			entry.DebugStack = debug.Stack()

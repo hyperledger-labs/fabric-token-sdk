@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fsc
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -15,6 +16,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 )
+
+// TransientApprovalMetadataKey is the transient map key used to carry optional application-level
+// approval metadata from the initiator to the responder.
+const TransientApprovalMetadataKey = "approval_metadata"
 
 // RequestApprovalView is the initiator of the request approval protocol
 type RequestApprovalView struct {
@@ -26,6 +31,8 @@ type RequestApprovalView struct {
 	Nonce []byte
 	// Endorsers are the identities of the FSC node that play the role of endorser
 	Endorsers []view.Identity
+	// Metadata carries optional application-level key-value pairs forwarded to the approver via transient data.
+	Metadata driver.TransientMap
 
 	// EndorserService is the endorser service
 	EndorserService EndorserService
@@ -41,6 +48,7 @@ func NewRequestApprovalView(
 	nonce []byte,
 	endorsers []view.Identity,
 	endorserService EndorserService,
+	metadata driver.TransientMap,
 ) *RequestApprovalView {
 	return &RequestApprovalView{
 		TMSID:           TMSID,
@@ -49,6 +57,7 @@ func NewRequestApprovalView(
 		Nonce:           nonce,
 		Endorsers:       endorsers,
 		EndorserService: endorserService,
+		Metadata:        metadata,
 	}
 }
 
@@ -75,6 +84,15 @@ func (r *RequestApprovalView) Call(ctx view.Context) (any, error) {
 	}
 	if err := tx.SetTransient(TransientTokenRequestKey, r.RequestRaw); err != nil {
 		return nil, errors.WithMessagef(err, "failed to set token request transient")
+	}
+	if len(r.Metadata) > 0 {
+		metadataRaw, err := json.Marshal(r.Metadata)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to marshal approval metadata")
+		}
+		if err := tx.SetTransient(TransientApprovalMetadataKey, metadataRaw); err != nil {
+			return nil, errors.WithMessagef(err, "failed to set approval metadata transient")
+		}
 	}
 
 	logger.DebugfContext(ctx.Context(), "request endorsement on tx [%s] to [%v]...", tx.ID(), r.Endorsers)

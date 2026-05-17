@@ -9,7 +9,6 @@ package views
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -45,7 +44,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return Balance{Quantity: strconv.FormatUint(balance, 10), Type: b.Type}, nil
+	return Balance{Quantity: balance.String(), Type: b.Type}, nil
 }
 
 type BalanceViewFactory struct{}

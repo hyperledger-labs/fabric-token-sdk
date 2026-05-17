@@ -116,7 +116,7 @@ func (db *TransactionStore) GetTokenRequest(ctx context.Context, txID string) ([
 		Where(cond.Eq("tx_id", txID)).
 		Format(db.ci)
 
-	return common.QueryUnique[[]byte](db.readDB, query, args...)
+	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
 // GetTokenRequests fetches the token requests for the given tx ids in a

@@ -27,8 +27,8 @@ func NewChaincodeEndorsementService(tmsID token2.TMSID) *ChaincodeEndorsementSer
 	return &ChaincodeEndorsementService{TMSID: tmsID}
 }
 
-func (e *ChaincodeEndorsementService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
-	env, err := chaincode.NewEndorseView(
+func (e *ChaincodeEndorsementService) Endorse(context view.Context, requestRaw []byte, signer view.Identity, txID driver.TxID, metadata driver.TransientMap) (driver.Envelope, error) {
+	ev := chaincode.NewEndorseView(
 		e.TMSID.Namespace,
 		InvokeFunction,
 	).WithNetwork(
@@ -44,7 +44,11 @@ func (e *ChaincodeEndorsementService) Endorse(context view.Context, requestRaw [
 			Nonce:   txID.Nonce,
 			Creator: txID.Creator,
 		},
-	).Endorse(context)
+	)
+	for k, v := range metadata {
+		ev = ev.WithTransientEntry(k, v)
+	}
+	env, err := ev.Endorse(context)
 	if err != nil {
 		return nil, err
 	}

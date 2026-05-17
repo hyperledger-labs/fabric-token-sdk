@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/boolpolicy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -208,19 +209,13 @@ func extractRequiredSigners(ctx context.Context, sigService dep.SignatureService
 	transferSigners := request.TransferSigners()
 	res := make([]token.Identity, 0, len(issuerSigners)+len(transferSigners))
 	for _, signer := range issuerSigners {
-		multiSigners, _, _ := multisig.Unwrap(signer)
-		if len(multiSigners) != 0 {
-			res = append(res, multiSigners...)
-
+		if appendUnwrapped(&res, signer) {
 			continue
 		}
 		res = append(res, signer)
 	}
 	for _, signer := range transferSigners {
-		multiSigners, _, _ := multisig.Unwrap(signer)
-		if len(multiSigners) != 0 {
-			res = append(res, multiSigners...)
-
+		if appendUnwrapped(&res, signer) {
 			continue
 		}
 		res = append(res, signer)
@@ -233,4 +228,23 @@ func extractRequiredSigners(ctx context.Context, sigService dep.SignatureService
 	}
 
 	return subset, nil
+}
+
+// appendUnwrapped appends the component identities of a composite identity (multisig or policy)
+// to res and returns true; returns false when the identity is not a composite type.
+func appendUnwrapped(res *[]token.Identity, signer token.Identity) bool {
+	if multiSigners, _, _ := multisig.Unwrap(signer); len(multiSigners) != 0 {
+		*res = append(*res, multiSigners...)
+
+		return true
+	}
+	if pi, ok, _ := boolpolicy.Unwrap(signer); ok && pi != nil {
+		for _, b := range pi.Identities {
+			*res = append(*res, token.Identity(b))
+		}
+
+		return true
+	}
+
+	return false
 }
