@@ -218,9 +218,16 @@ func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescr
 		}
 		// StoreSignerInfo marks this identity as "mine" in the DB so that IsMe() returns true
 		// even after a process restart (GetExistingSignerInfo only sees identities written here).
+		// The alias (typed identity) must also be stored: tokens record the typed form as their
+		// owner, so IsMe(alias) must survive a restart just like IsMe(raw).
 		if identityDescriptor.Signer != nil {
 			if err := p.storage.StoreSignerInfo(ctx, identityDescriptor.Identity, identityDescriptor.SignerInfo); err != nil {
 				return errors.Wrapf(err, "failed to store signer info for identity descriptor")
+			}
+			if !alias.IsNone() {
+				if err := p.storage.StoreSignerInfo(ctx, alias, identityDescriptor.SignerInfo); err != nil {
+					return errors.Wrapf(err, "failed to store signer info for alias")
+				}
 			}
 		}
 	}
