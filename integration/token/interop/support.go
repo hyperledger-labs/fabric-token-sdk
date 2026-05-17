@@ -21,6 +21,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
+	hashescrowviews "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -320,6 +321,61 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 	}
 }
 
+func HashEscrowLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3.NodeReference, wallet string, typ token2.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, recipientHash []byte, senderHash []byte, hashFunc crypto.Hash, errorMsgs ...string) (string, []byte, []byte, []byte, []byte) {
+	result, err := network.Client(id.ReplicaName()).CallView("hashescrow.lock", common.JSONMarshall(&hashescrowviews.Lock{
+		TMSID:         tmsID,
+		Wallet:        wallet,
+		Type:          typ,
+		Amount:        amount,
+		Recipient:     network.Identity(receiver.Id()),
+		RecipientHash: recipientHash,
+		SenderHash:    senderHash,
+		HashFunc:      hashFunc,
+	}))
+	if len(errorMsgs) == 0 {
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		lockResult := &hashescrowviews.LockInfo{}
+		common.JSONUnmarshal(result.([]byte), lockResult)
+
+		common2.CheckFinality(network, receiver, lockResult.TxID, &tmsID, false)
+		common2.CheckFinality(network, auditor, lockResult.TxID, &tmsID, false)
+
+		if len(recipientHash) == 0 {
+			gomega.Expect(lockResult.RecipientPreImage).NotTo(gomega.BeNil())
+		}
+		if len(senderHash) == 0 {
+			gomega.Expect(lockResult.SenderPreImage).NotTo(gomega.BeNil())
+		}
+		gomega.Expect(lockResult.RecipientHash).NotTo(gomega.BeNil())
+		gomega.Expect(lockResult.SenderHash).NotTo(gomega.BeNil())
+		if len(recipientHash) != 0 {
+			gomega.Expect(lockResult.RecipientHash).To(gomega.BeEquivalentTo(recipientHash))
+		}
+		if len(senderHash) != 0 {
+			gomega.Expect(lockResult.SenderHash).To(gomega.BeEquivalentTo(senderHash))
+		}
+
+		return lockResult.TxID, lockResult.RecipientPreImage, lockResult.SenderPreImage, lockResult.RecipientHash, lockResult.SenderHash
+	}
+
+	gomega.Expect(err).To(gomega.HaveOccurred())
+	for _, msg := range errorMsgs {
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
+	}
+	time.Sleep(5 * time.Second)
+
+	errMsg := err.Error()
+	fmt.Printf("Got error message [%s]\n", errMsg)
+	txID := ""
+	index := strings.Index(err.Error(), "<<<[")
+	if index != -1 {
+		txID = errMsg[index+4 : index+strings.Index(err.Error()[index:], "]>>>")]
+	}
+	fmt.Printf("Got error message, extracted tx id [%s]\n", txID)
+
+	return txID, nil, nil, nil, nil
+}
+
 func HTLCReclaimAll(network *integration.Infrastructure, id *token3.NodeReference, wallet string, errorMsgs ...string) {
 	txID, err := network.Client(id.ReplicaName()).CallView("htlc.reclaimAll", common.JSONMarshall(&htlc.ReclaimAll{
 		Wallet: wallet,
@@ -402,6 +458,39 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id *token
 
 		return txID
 	}
+}
+
+func hashEscrowClaim(network *integration.Infrastructure, tmsID token.TMSID, id *token3.NodeReference, wallet string, preImage []byte, auditor *token3.NodeReference, errorMsgs ...string) string {
+	txIDBoxed, err := network.Client(id.ReplicaName()).CallView("hashescrow.claim", common.JSONMarshall(&hashescrowviews.Claim{
+		TMSID:    tmsID,
+		Wallet:   wallet,
+		PreImage: preImage,
+	}))
+	if len(errorMsgs) == 0 {
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		txID := common.JSONUnmarshalString(txIDBoxed)
+		common2.CheckFinality(network, id, txID, &tmsID, false)
+		common2.CheckFinality(network, auditor, txID, &tmsID, false)
+
+		return txID
+	}
+
+	gomega.Expect(err).To(gomega.HaveOccurred())
+	for _, msg := range errorMsgs {
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring(msg))
+	}
+	time.Sleep(5 * time.Second)
+
+	errMsg := err.Error()
+	fmt.Printf("Got error message [%s]\n", errMsg)
+	txID := ""
+	index := strings.Index(err.Error(), "<<<[")
+	if index != -1 {
+		txID = errMsg[index+4 : index+strings.Index(err.Error()[index:], "]>>>")]
+	}
+	fmt.Printf("Got error message, extracted tx id [%s]\n", txID)
+
+	return txID
 }
 
 func fastExchange(network *integration.Infrastructure, id *token3.NodeReference, recipient *token3.NodeReference, tmsID1 token.TMSID, typ1 token2.Type, amount1 uint64, tmsID2 token.TMSID, typ2 token2.Type, amount2 uint64, deadline time.Duration) {

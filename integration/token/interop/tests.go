@@ -25,6 +25,7 @@ import (
 const (
 	EUR = token3.Type("EUR")
 	USD = token3.Type("USD")
+	GBP = token3.Type("GBP")
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.ReplicaSelector) {
@@ -143,6 +144,43 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 		IDs := ListVaultUnspentTokens(network, defaultTMSID, name)
 		CheckIfExistsInVault(network, defaultTMSID, auditor, IDs)
 	}
+
+	TestHashEscrowSingleNetwork(network, sel)
+}
+
+func TestHashEscrowSingleNetwork(network *integration.Infrastructure, sel *token2.ReplicaSelector) {
+	alice := sel.Get("alice")
+	bob := sel.Get("bob")
+	auditor := sel.Get("auditor")
+
+	defaultTMSID := token.TMSID{}
+
+	IssueCash(network, "", GBP, 20, alice, auditor)
+	CheckBalance(network, alice, "", GBP, 20)
+	CheckBalance(network, bob, "", GBP, 0)
+
+	_, recipientPreImage, _, _, _ := HashEscrowLock(network, defaultTMSID, alice, "", GBP, 10, bob, auditor, nil, nil, crypto.SHA3_256)
+	CheckBalance(network, alice, "", GBP, 10)
+	CheckBalance(network, bob, "", GBP, 0)
+
+	hashEscrowClaim(network, defaultTMSID, bob, "", recipientPreImage, auditor)
+	CheckBalance(network, alice, "", GBP, 10)
+	CheckBalance(network, bob, "", GBP, 10)
+
+	hashEscrowClaim(network, defaultTMSID, bob, "", recipientPreImage, auditor, "expected only one hash escrow script to match")
+	CheckBalance(network, alice, "", GBP, 10)
+	CheckBalance(network, bob, "", GBP, 10)
+
+	_, _, senderPreImage, _, _ := HashEscrowLock(network, defaultTMSID, alice, "", GBP, 7, bob, auditor, nil, nil, crypto.SHA3_256)
+	CheckBalance(network, alice, "", GBP, 3)
+	CheckBalance(network, bob, "", GBP, 10)
+
+	hashEscrowClaim(network, defaultTMSID, bob, "", senderPreImage, auditor)
+	gomega.Eventually(CheckBalanceReturnError).WithArguments(network, alice, "", GBP, uint64(10)).WithTimeout(2 * time.Minute).WithPolling(5 * time.Second).Should(gomega.Succeed())
+	CheckBalance(network, bob, "", GBP, 10)
+
+	CheckOwnerStore(network, defaultTMSID, nil, alice, bob)
+	CheckAuditorStore(network, defaultTMSID, auditor, "", nil)
 }
 
 func TestHTLCTwoNetworks(network *integration.Infrastructure, sel *token2.ReplicaSelector) {
