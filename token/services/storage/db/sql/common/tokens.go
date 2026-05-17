@@ -611,25 +611,31 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 // transferred (spent to another token). It excludes only redeemed tokens (deleted AND without
 // a corresponding token with matching tx_id, meaning they were destroyed).
 // If tokenType is non-empty, only tokens of that type are included.
-// IssuedBalance returns the sum of amounts of non-deleted tokens flagged as issued.
-// If tokenType is non-empty, only tokens of that type are included.
 func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time) (uint64, error) {
-	conds := []cond.Condition{cond.Eq("issuer", true), cond.Eq("is_deleted", false)}
+	tokTable := q.Table(db.table.Tokens)
+	t2 := q.AliasedTable(db.table.Tokens, "t2")
+	conds := []cond.Condition{
+		cond.CmpVal(tokTable.Field("issuer"), "=", true),
+		cond.Or(
+			cond.CmpVal(tokTable.Field("is_deleted"), "=", false),
+			isNotNull(t2.Field("tx_id")),
+		),
+	}
 	if len(tokenType) != 0 {
-		conds = append(conds, cond.Eq("token_type", tokenType))
+		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
 	}
 	if len(issuerRaw) != 0 {
-		conds = append(conds, cond.Eq("issuer_raw", issuerRaw))
+		conds = append(conds, cond.CmpVal(tokTable.Field("issuer_raw"), "=", issuerRaw))
 	}
 	if from != nil {
-		conds = append(conds, cond.Gte("stored_at", from.UTC()))
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), ">=", from.UTC()))
 	}
 	if to != nil {
-		conds = append(conds, cond.Lte("stored_at", to.UTC()))
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), "<=", to.UTC()))
 	}
 	query, args := q.Select().
-		FieldsByName("SUM(amount)").
-		From(q.Table(db.table.Tokens)).
+		FieldsByName(common3.FieldName("SUM(" + db.table.Tokens + ".amount)")).
+		From(tokTable.JoinAs(common3.Left, t2, cond.Cmp(t2.Field("tx_id"), "=", tokTable.Field("spent_by")))).
 		Where(cond.And(conds...)).
 		Format(db.ci)
 
@@ -742,6 +748,7 @@ func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type,
 	conds := []cond.Condition{
 		cond.CmpVal(tokTable.Field("issuer"), "=", true),
 		cond.CmpVal(tokTable.Field("is_deleted"), "=", true),
+		isNotNull(tokTable.Field("spent_by")),
 		isNull(t2.Field("tx_id")),
 	}
 	if len(tokenType) != 0 {
