@@ -916,6 +916,12 @@ func TQueryTokenDetails(t *testing.T, db TestTokenDB) {
 	require.NoError(t, err)
 	assert.Equal(t, balance.Uint64(), res[0].Amount.Uint64())
 
+	// empty result must return zero balance (not nil)
+	balance, err = db.Balance(ctx, "nobody", "ZZZ")
+	require.NoError(t, err)
+	require.NotNil(t, balance)
+	assert.Equal(t, uint64(0), balance.Uint64())
+
 	// spent
 	require.NoError(t, db.DeleteTokens(ctx, "delby", &token.ID{TxId: "tx2", Index: 1}))
 	res, err = db.QueryTokenDetails(ctx, driver2.QueryTokenDetailsParams{})

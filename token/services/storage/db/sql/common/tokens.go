@@ -386,8 +386,11 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 		Format(db.ci)
 
 	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
-	if err != nil || sum == nil {
+	if err != nil {
 		return nil, err
+	}
+	if sum == nil {
+		return big.NewInt(0), nil
 	}
 
 	return big.NewInt(0).SetUint64(*sum), nil
