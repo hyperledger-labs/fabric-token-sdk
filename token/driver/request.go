@@ -411,7 +411,7 @@ func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
 		Issuer:       issuer,
 		Inputs:       inputs,
 		Outputs:      outputs,
-		ExtraSigners: ToProtoIdentitySlice(i.ExtraSigners),
+		ExtraSigners: ToProtoAuditableIdentitySlice(i.ExtraSigners),
 	}, nil
 }
 
@@ -431,7 +431,7 @@ func (i *IssueMetadata) FromProtos(issueMetadata *request.IssueMetadata) error {
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling output metadata")
 	}
-	i.ExtraSigners = FromProtoIdentitySlice(issueMetadata.ExtraSigners)
+	i.ExtraSigners = FromProtoAuditableIdentitySlice(issueMetadata.ExtraSigners)
 
 	return nil
 }
@@ -449,6 +449,62 @@ func (i *IssueMetadata) Receivers() []Identity {
 	}
 
 	return res
+}
+
+// Match verifies that the given action matches this metadata.
+// It performs a deep check of inputs, outputs, extra signers, and the issuer identity.
+func (i *IssueMetadata) Match(action IssueAction) error {
+	// Validate the action's structure.
+	if err := action.Validate(); err != nil {
+		return errors.Wrap(err, "failed validating issue action")
+	}
+
+	// Check that the number of inputs matches.
+	if len(i.Inputs) != action.NumInputs() {
+		return errors.Errorf("expected [%d] inputs but got [%d]", len(i.Inputs), action.NumInputs())
+	}
+
+	// Check that the number of outputs matches.
+	if len(i.Outputs) != action.NumOutputs() {
+		return errors.Errorf("expected [%d] outputs but got [%d]", len(i.Outputs), action.NumOutputs())
+	}
+
+	// Check that the extra signers match.
+	// The action returns []Identity, and metadata has []Identity (extracted from AuditableIdentity in protobuf)
+	extraSigners := action.ExtraSigners()
+	if len(i.ExtraSigners) != len(extraSigners) {
+		return errors.Errorf("expected [%d] extra signers but got [%d]", len(extraSigners), len(i.ExtraSigners))
+	}
+	for _, signer := range extraSigners {
+		found := false
+		for _, metaSigner := range i.ExtraSigners {
+			if signer.Equal(metaSigner) {
+				found = true
+
+				break
+			}
+		}
+		if !found {
+			return errors.Errorf("extra signer [%s] from action not found in metadata", signer)
+		}
+	}
+
+	// Check that the issuer identity matches.
+	// The metadata has Issuer.Identity (extracted from AuditableIdentity)
+	if !i.Issuer.Identity.Equal(action.GetIssuer()) {
+		return errors.Errorf("expected issuer [%s] but got [%s]", i.Issuer.Identity, action.GetIssuer())
+	}
+
+	return nil
+}
+
+// IsOutputAbsent returns true if the j-th output's metadata is absent (e.g., filtered out).
+func (i *IssueMetadata) IsOutputAbsent(j int) bool {
+	if j < 0 || j >= len(i.Outputs) {
+		return true
+	}
+
+	return i.Outputs[j] == nil
 }
 
 type TransferInputMetadata struct {
@@ -566,17 +622,20 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
 
-	var issuer *protosv1.Identity
+	var issuer *request.AuditableIdentity
 	if t.Issuer != nil {
-		issuer = &protosv1.Identity{
-			Raw: t.Issuer.Bytes(),
+		issuer = &request.AuditableIdentity{
+			Identity: &protosv1.Identity{
+				Raw: t.Issuer.Bytes(),
+			},
+			AuditInfo: nil, // No audit info for plain issuer identity
 		}
 	}
 
 	return &request.TransferMetadata{
 		Inputs:       inputs,
 		Outputs:      outputs,
-		ExtraSigners: ToProtoIdentitySlice(t.ExtraSigners),
+		ExtraSigners: ToProtoAuditableIdentitySlice(t.ExtraSigners),
 		Issuer:       issuer,
 	}, nil
 }
@@ -590,11 +649,11 @@ func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata
 	if err := protos.FromProtosSlice(transferMetadata.Outputs, t.Outputs); err != nil {
 		return errors.Wrap(err, "failed unmarshalling outputs")
 	}
-	t.ExtraSigners = FromProtoIdentitySlice(transferMetadata.ExtraSigners)
+	t.ExtraSigners = FromProtoAuditableIdentitySlice(transferMetadata.ExtraSigners)
 
 	t.Issuer = nil
-	if transferMetadata.Issuer != nil {
-		t.Issuer = transferMetadata.Issuer.Raw
+	if transferMetadata.Issuer != nil && transferMetadata.Issuer.Identity != nil {
+		t.Issuer = transferMetadata.Issuer.Identity.Raw
 	}
 
 	return nil
@@ -640,6 +699,63 @@ func (t *TransferMetadata) TokenIDs() []*token.ID {
 	}
 
 	return res
+}
+
+// Match verifies that the given action matches this metadata.
+// It performs a deep check of inputs, outputs, extra signers, and the issuer identity (if present).
+func (t *TransferMetadata) Match(action TransferAction) error {
+	// Validate the action's structure.
+	if err := action.Validate(); err != nil {
+		return errors.Wrap(err, "failed validating transfer action")
+	}
+
+	// Check that the number of inputs matches.
+	if len(t.Inputs) != action.NumInputs() {
+		return errors.Errorf("expected [%d] inputs but got [%d]", len(t.Inputs), action.NumInputs())
+	}
+
+	// Check that the number of outputs matches.
+	if len(t.Outputs) != action.NumOutputs() {
+		return errors.Errorf("expected [%d] outputs but got [%d]", len(t.Outputs), action.NumOutputs())
+	}
+
+	// Check that the extra signers match.
+	// The action returns []Identity, and metadata has []Identity (extracted from AuditableIdentity in protobuf)
+	extraSigners := action.ExtraSigners()
+	if len(t.ExtraSigners) != len(extraSigners) {
+		return errors.Errorf("expected [%d] extra signers but got [%d]", len(t.ExtraSigners), len(extraSigners))
+	}
+	for i, signer := range extraSigners {
+		if !signer.Equal(t.ExtraSigners[i]) {
+			return errors.Errorf("expected extra signer [%s] but got [%s]", t.ExtraSigners[i], signer)
+		}
+	}
+
+	// Check that the issuer identity matches, if present in the metadata.
+	// The metadata has Issuer (extracted from AuditableIdentity)
+	if !t.Issuer.Equal(action.GetIssuer()) {
+		return errors.Errorf("expected issuer [%s] but got [%s]", t.Issuer, action.GetIssuer().Bytes())
+	}
+
+	return nil
+}
+
+// IsOutputAbsent returns true if the j-th output's metadata is absent (e.g., filtered out).
+func (t *TransferMetadata) IsOutputAbsent(j int) bool {
+	if j < 0 || j >= len(t.Outputs) {
+		return true
+	}
+
+	return t.Outputs[j] == nil
+}
+
+// IsInputAbsent returns true if the j-th input's metadata is absent (e.g., filtered out).
+func (t *TransferMetadata) IsInputAbsent(j int) bool {
+	if j < 0 || j >= len(t.Inputs) {
+		return true
+	}
+
+	return t.Inputs[j] == nil || len(t.Inputs[j].Senders) == 0
 }
 
 // TokenRequestMetadata contains the supplementary information needed to process and interpret a TokenRequest.

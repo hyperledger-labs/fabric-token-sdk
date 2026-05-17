@@ -9,7 +9,6 @@ package token
 
 import (
 	"context"
-	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
@@ -226,38 +225,8 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 		return errors.New("can't match issue metadata to issue action: nil issue action")
 	}
 
-	// Validate the action's structure.
-	if err := action.Validate(); err != nil {
-		return errors.Wrap(err, "failed validating issue action")
-	}
-
-	// Check that the number of inputs matches.
-	if len(m.Inputs) != action.NumInputs() {
-		return errors.Errorf("expected [%d] inputs but got [%d]", len(m.Inputs), action.NumInputs())
-	}
-
-	// Check that the number of outputs matches.
-	if len(m.Outputs) != action.NumOutputs() {
-		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
-	}
-
-	// Check that the extra signers are the same.
-	extraSigners := action.a.ExtraSigners()
-	if len(m.ExtraSigners) != len(extraSigners) {
-		return errors.Errorf("expected [%d] extra signers but got [%d]", len(extraSigners), len(m.ExtraSigners))
-	}
-	for i, signer := range extraSigners {
-		if !slices.ContainsFunc(m.ExtraSigners, signer.Equal) {
-			return errors.Errorf("expected extra signer [%s] but got [%s]", signer, m.ExtraSigners[i])
-		}
-	}
-
-	// Check that the issuer identity matches.
-	if !m.Issuer.Identity.Equal(action.GetIssuer()) {
-		return errors.Errorf("expected issuer [%s] but got [%s]", m.Issuer.Identity, action.GetIssuer())
-	}
-
-	return nil
+	// Delegate to the driver's Match method
+	return m.IssueMetadata.Match(action.a)
 }
 
 // IsOutputAbsent returns true if the j-th output's metadata is absent (e.g., filtered out).
@@ -278,41 +247,11 @@ type TransferMetadata struct {
 // It performs a deep check of inputs, outputs, extra signers, and the issuer identity (if present).
 func (m *TransferMetadata) Match(action *TransferAction) error {
 	if action == nil {
-		return errors.New("can't match transfer metadata to transfer action: nil issue action")
+		return errors.New("can't match transfer metadata to transfer action: nil transfer action")
 	}
 
-	// Validate the action's structure.
-	if err := action.Validate(); err != nil {
-		return errors.Wrap(err, "failed validating issue action")
-	}
-
-	// Check that the number of inputs matches.
-	if len(m.Inputs) != action.NumInputs() {
-		return errors.Errorf("expected [%d] inputs but got [%d]", len(m.Inputs), action.NumInputs())
-	}
-
-	// Check that the number of outputs matches.
-	if len(m.Outputs) != action.NumOutputs() {
-		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
-	}
-
-	// Check that the extra signers are the same.
-	extraSigners := action.ExtraSigners()
-	if len(m.ExtraSigners) != len(extraSigners) {
-		return errors.Errorf("expected [%d] extra signers but got [%d]", len(m.ExtraSigners), len(extraSigners))
-	}
-	for i, signer := range extraSigners {
-		if !signer.Equal(m.ExtraSigners[i]) {
-			return errors.Errorf("expected extra signer [%s] but got [%s]", m.ExtraSigners[i], signer)
-		}
-	}
-
-	// Check that the issuer identity matches, if present in the metadata.
-	if !m.Issuer.Equal(action.GetIssuer()) {
-		return errors.Errorf("expected issuer [%s] but got [%s]", m.Issuer, action.GetIssuer().Bytes())
-	}
-
-	return nil
+	// Delegate to the driver's Match method
+	return m.TransferMetadata.Match(action.TransferAction)
 }
 
 // IsOutputAbsent returns true if the j-th output's metadata is absent (e.g., filtered out).

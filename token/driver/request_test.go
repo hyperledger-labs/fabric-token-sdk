@@ -421,7 +421,7 @@ func TestIssueMetadata_ToProtos(t *testing.T) {
 	assert.Len(t, proto.Outputs, 1)
 	assert.Equal(t, []byte("output1"), proto.Outputs[0].Metadata)
 	assert.Len(t, proto.ExtraSigners, 1)
-	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Raw)
+	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Identity.Raw)
 }
 
 // TestIssueMetadata_FromProtos tests conversion from protobuf
@@ -437,8 +437,8 @@ func TestIssueMetadata_FromProtos(t *testing.T) {
 		Outputs: []*request.OutputMetadata{
 			{Metadata: []byte("output1")},
 		},
-		ExtraSigners: []*driver.Identity{
-			{Raw: []byte("signer1")},
+		ExtraSigners: []*request.AuditableIdentity{
+			{Identity: &driver.Identity{Raw: []byte("signer1")}},
 		},
 	}
 
@@ -681,9 +681,9 @@ func TestTransferMetadata_ToProtos(t *testing.T) {
 	assert.Len(t, proto.Outputs, 1)
 	assert.Equal(t, []byte("output1"), proto.Outputs[0].Metadata)
 	assert.Len(t, proto.ExtraSigners, 1)
-	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Raw)
+	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Identity.Raw)
 	assert.NotNil(t, proto.Issuer)
-	assert.Equal(t, []byte("issuer1"), proto.Issuer.Raw)
+	assert.Equal(t, []byte("issuer1"), proto.Issuer.Identity.Raw)
 }
 
 // TestTransferMetadata_ToProtos_NilIssuer tests conversion with nil issuer
@@ -709,10 +709,12 @@ func TestTransferMetadata_FromProtos(t *testing.T) {
 		Outputs: []*request.OutputMetadata{
 			{Metadata: []byte("output1")},
 		},
-		ExtraSigners: []*driver.Identity{
-			{Raw: []byte("signer1")},
+		ExtraSigners: []*request.AuditableIdentity{
+			{Identity: &driver.Identity{Raw: []byte("signer1")}},
 		},
-		Issuer: &driver.Identity{Raw: []byte("issuer1")},
+		Issuer: &request.AuditableIdentity{
+			Identity: &driver.Identity{Raw: []byte("issuer1")},
+		},
 	}
 
 	tm := &TransferMetadata{}
@@ -1343,9 +1345,9 @@ func TestIssueMetadata_ToProtos_WithExtraSigners(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, proto)
 	assert.Len(t, proto.ExtraSigners, 3)
-	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Raw)
-	assert.Equal(t, []byte("signer2"), proto.ExtraSigners[1].Raw)
-	assert.Equal(t, []byte("signer3"), proto.ExtraSigners[2].Raw)
+	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Identity.Raw)
+	assert.Equal(t, []byte("signer2"), proto.ExtraSigners[1].Identity.Raw)
+	assert.Equal(t, []byte("signer3"), proto.ExtraSigners[2].Identity.Raw)
 }
 
 // TestTransferMetadata_ToProtos_WithExtraSigners tests ToProtos with extra signers
@@ -1368,10 +1370,10 @@ func TestTransferMetadata_ToProtos_WithExtraSigners(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, proto)
 	assert.Len(t, proto.ExtraSigners, 2)
-	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Raw)
-	assert.Equal(t, []byte("signer2"), proto.ExtraSigners[1].Raw)
+	assert.Equal(t, []byte("signer1"), proto.ExtraSigners[0].Identity.Raw)
+	assert.Equal(t, []byte("signer2"), proto.ExtraSigners[1].Identity.Raw)
 	assert.NotNil(t, proto.Issuer)
-	assert.Equal(t, []byte("issuer1"), proto.Issuer.Raw)
+	assert.Equal(t, []byte("issuer1"), proto.Issuer.Identity.Raw)
 }
 
 // TestTokenRequest_ToProtos_EmptyAuditorSignatures tests ToProtos with empty auditor signatures
@@ -1608,7 +1610,7 @@ func TestTransferMetadata_ToProtos_WithIssuer(t *testing.T) {
 	proto, err := meta.ToProtos()
 	require.NoError(t, err)
 	assert.NotNil(t, proto.Issuer)
-	assert.Equal(t, []byte("issuer1"), proto.Issuer.Raw)
+	assert.Equal(t, []byte("issuer1"), proto.Issuer.Identity.Raw)
 }
 
 // TestTransferMetadata_FromProtos_WithEmptySlices tests FromProtos with empty slices

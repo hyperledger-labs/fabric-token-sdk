@@ -265,10 +265,10 @@ type TransferMetadata struct {
 	Inputs []*TransferInputMetadata `protobuf:"bytes,1,rep,name=inputs,proto3" json:"inputs,omitempty"`
 	// outputs describe the newly created tokens
 	Outputs []*OutputMetadata `protobuf:"bytes,2,rep,name=outputs,proto3" json:"outputs,omitempty"`
-	// issuer is the identity that signs the transfer in redeem scenarios
-	Issuer *v1.Identity `protobuf:"bytes,3,opt,name=issuer,proto3" json:"issuer,omitempty"`
-	// extra_signers are additional identities that must sign this transfer
-	ExtraSigners  []*v1.Identity `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"`
+	// issuer is the identity that signs the transfer in redeem scenarios, with audit information
+	Issuer *AuditableIdentity `protobuf:"bytes,3,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	// extra_signers are additional identities that must sign this transfer, with their audit information
+	ExtraSigners  []*AuditableIdentity `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -317,14 +317,14 @@ func (x *TransferMetadata) GetOutputs() []*OutputMetadata {
 	return nil
 }
 
-func (x *TransferMetadata) GetIssuer() *v1.Identity {
+func (x *TransferMetadata) GetIssuer() *AuditableIdentity {
 	if x != nil {
 		return x.Issuer
 	}
 	return nil
 }
 
-func (x *TransferMetadata) GetExtraSigners() []*v1.Identity {
+func (x *TransferMetadata) GetExtraSigners() []*AuditableIdentity {
 	if x != nil {
 		return x.ExtraSigners
 	}
@@ -386,8 +386,8 @@ type IssueMetadata struct {
 	Inputs []*IssueInputMetadata `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
 	// outputs describe the newly issued tokens
 	Outputs []*OutputMetadata `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`
-	// extra_signers are additional identities that must sign this issuance
-	ExtraSigners  []*v1.Identity `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"`
+	// extra_signers are additional identities that must sign this issuance, with their audit information
+	ExtraSigners  []*AuditableIdentity `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -443,7 +443,7 @@ func (x *IssueMetadata) GetOutputs() []*OutputMetadata {
 	return nil
 }
 
-func (x *IssueMetadata) GetExtraSigners() []*v1.Identity {
+func (x *IssueMetadata) GetExtraSigners() []*AuditableIdentity {
 	if x != nil {
 		return x.ExtraSigners
 	}
@@ -967,19 +967,19 @@ const file_request_proto_rawDesc = "" +
 	"\bmetadata\x18\x01 \x01(\fR\bmetadata\x12\x1d\n" +
 	"\n" +
 	"audit_info\x18\x02 \x01(\fR\tauditInfo\x12Q\n" +
-	"\treceivers\x18\x03 \x03(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\treceivers\"\xc4\x02\n" +
+	"\treceivers\x18\x03 \x03(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\treceivers\"\xd6\x02\n" +
 	"\x10TransferMetadata\x12O\n" +
 	"\x06inputs\x18\x01 \x03(\v27.fabric_token_sdk.token.driver.v1.TransferInputMetadataR\x06inputs\x12J\n" +
-	"\aoutputs\x18\x02 \x03(\v20.fabric_token_sdk.token.driver.v1.OutputMetadataR\aoutputs\x12B\n" +
-	"\x06issuer\x18\x03 \x01(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\x06issuer\x12O\n" +
-	"\rextra_signers\x18\x04 \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\fextraSigners\"Z\n" +
+	"\aoutputs\x18\x02 \x03(\v20.fabric_token_sdk.token.driver.v1.OutputMetadataR\aoutputs\x12K\n" +
+	"\x06issuer\x18\x03 \x01(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\x06issuer\x12X\n" +
+	"\rextra_signers\x18\x04 \x03(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\fextraSigners\"Z\n" +
 	"\x12IssueInputMetadata\x12D\n" +
-	"\btoken_id\x18\x01 \x01(\v2).fabric_token_sdk.token.driver.v1.TokenIDR\atokenId\"\xc7\x02\n" +
+	"\btoken_id\x18\x01 \x01(\v2).fabric_token_sdk.token.driver.v1.TokenIDR\atokenId\"\xd0\x02\n" +
 	"\rIssueMetadata\x12K\n" +
 	"\x06issuer\x18\x01 \x01(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\x06issuer\x12L\n" +
 	"\x06inputs\x18\x02 \x03(\v24.fabric_token_sdk.token.driver.v1.IssueInputMetadataR\x06inputs\x12J\n" +
-	"\aoutputs\x18\x03 \x03(\v20.fabric_token_sdk.token.driver.v1.OutputMetadataR\aoutputs\x12O\n" +
-	"\rextra_signers\x18\x04 \x03(\v2*.fabric_token_sdk.token.driver.v1.IdentityR\fextraSigners\"\xd9\x01\n" +
+	"\aoutputs\x18\x03 \x03(\v20.fabric_token_sdk.token.driver.v1.OutputMetadataR\aoutputs\x12X\n" +
+	"\rextra_signers\x18\x04 \x03(\v23.fabric_token_sdk.token.driver.v1.AuditableIdentityR\fextraSigners\"\xd9\x01\n" +
 	"\x0eActionMetadata\x12X\n" +
 	"\x0eissue_metadata\x18\x01 \x01(\v2/.fabric_token_sdk.token.driver.v1.IssueMetadataH\x00R\rissueMetadata\x12a\n" +
 	"\x11transfer_metadata\x18\x02 \x01(\v22.fabric_token_sdk.token.driver.v1.TransferMetadataH\x00R\x10transferMetadataB\n" +
@@ -1063,13 +1063,13 @@ var file_request_proto_depIdxs = []int32{
 	1,  // 3: fabric_token_sdk.token.driver.v1.OutputMetadata.receivers:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
 	2,  // 4: fabric_token_sdk.token.driver.v1.TransferMetadata.inputs:type_name -> fabric_token_sdk.token.driver.v1.TransferInputMetadata
 	3,  // 5: fabric_token_sdk.token.driver.v1.TransferMetadata.outputs:type_name -> fabric_token_sdk.token.driver.v1.OutputMetadata
-	16, // 6: fabric_token_sdk.token.driver.v1.TransferMetadata.issuer:type_name -> fabric_token_sdk.token.driver.v1.Identity
-	16, // 7: fabric_token_sdk.token.driver.v1.TransferMetadata.extra_signers:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	1,  // 6: fabric_token_sdk.token.driver.v1.TransferMetadata.issuer:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
+	1,  // 7: fabric_token_sdk.token.driver.v1.TransferMetadata.extra_signers:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
 	17, // 8: fabric_token_sdk.token.driver.v1.IssueInputMetadata.token_id:type_name -> fabric_token_sdk.token.driver.v1.TokenID
 	1,  // 9: fabric_token_sdk.token.driver.v1.IssueMetadata.issuer:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
 	5,  // 10: fabric_token_sdk.token.driver.v1.IssueMetadata.inputs:type_name -> fabric_token_sdk.token.driver.v1.IssueInputMetadata
 	3,  // 11: fabric_token_sdk.token.driver.v1.IssueMetadata.outputs:type_name -> fabric_token_sdk.token.driver.v1.OutputMetadata
-	16, // 12: fabric_token_sdk.token.driver.v1.IssueMetadata.extra_signers:type_name -> fabric_token_sdk.token.driver.v1.Identity
+	1,  // 12: fabric_token_sdk.token.driver.v1.IssueMetadata.extra_signers:type_name -> fabric_token_sdk.token.driver.v1.AuditableIdentity
 	6,  // 13: fabric_token_sdk.token.driver.v1.ActionMetadata.issue_metadata:type_name -> fabric_token_sdk.token.driver.v1.IssueMetadata
 	4,  // 14: fabric_token_sdk.token.driver.v1.ActionMetadata.transfer_metadata:type_name -> fabric_token_sdk.token.driver.v1.TransferMetadata
 	7,  // 15: fabric_token_sdk.token.driver.v1.TokenRequestMetadata.metadata:type_name -> fabric_token_sdk.token.driver.v1.ActionMetadata

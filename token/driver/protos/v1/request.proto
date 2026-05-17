@@ -58,10 +58,10 @@ message TransferMetadata {
   repeated TransferInputMetadata inputs = 1;
   // outputs describe the newly created tokens
   repeated OutputMetadata outputs = 2;
-  // issuer is the identity that signs the transfer in redeem scenarios
-  fabric_token_sdk.token.driver.v1.Identity issuer = 3;
-  // extra_signers are additional identities that must sign this transfer
-  repeated fabric_token_sdk.token.driver.v1.Identity extra_signers = 4;
+  // issuer is the identity that signs the transfer in redeem scenarios, with audit information
+  AuditableIdentity issuer = 3;
+  // extra_signers are additional identities that must sign this transfer, with their audit information
+  repeated AuditableIdentity extra_signers = 4;
 }
 
 // IssueInputMetadata describes a token being redeemed during issuance.
@@ -78,8 +78,8 @@ message IssueMetadata {
   repeated IssueInputMetadata inputs = 2;
   // outputs describe the newly issued tokens
   repeated OutputMetadata outputs = 3;
-  // extra_signers are additional identities that must sign this issuance
-  repeated fabric_token_sdk.token.driver.v1.Identity extra_signers = 4;
+  // extra_signers are additional identities that must sign this issuance, with their audit information
+  repeated AuditableIdentity extra_signers = 4;
 }
 
 // ActionMetadata is a union type containing metadata for either an issue or transfer action.
