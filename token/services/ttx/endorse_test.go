@@ -121,8 +121,12 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 	txRaw, err := tx.Bytes()
 	require.NoError(t, err)
 
+	// Set FromRaw to simulate a transaction received from network
+	tx.FromRaw = txRaw
+
 	// first the signature request
 	signatureRequest := &ttx.SignatureRequest{
+		TX:     txRaw,
 		Signer: input.IssuerIdentity,
 	}
 	signatureRequestRaw, err := signatureRequest.Bytes()
@@ -235,6 +239,46 @@ func TestEndorseView(t *testing.T) {
 			errorContains: "signature request's signer does not match the expected signer",
 			expectErr:     ttx.ErrSignerIdentityMismatch,
 			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 0, ctx.session.SendWithContextCallCount())
+			},
+		},
+		{
+			name: "signature request transaction mismatch",
+			prepare: func() *TestEndorseViewContext {
+				c := newTestEndorseViewContext(t, nil)
+
+				// Get the original transaction bytes
+				txRaw, err := c.tx.Bytes()
+				require.NoError(t, err)
+
+				// Replace the channel with one that has a mismatched signature request
+				session := c.session
+				ch := make(chan *view.Message, 2)
+				session.ReceiveReturns(ch)
+
+				// Send signature request with DIFFERENT transaction bytes
+				differentTxBytes := []byte("different_transaction_bytes")
+				signatureRequest := &ttx.SignatureRequest{
+					TX:     differentTxBytes, // Different transaction!
+					Signer: []byte("an_issuer"),
+				}
+				signatureRequestRaw, err := signatureRequest.Bytes()
+				require.NoError(t, err)
+				ch <- &view.Message{
+					Payload: signatureRequestRaw,
+				}
+
+				// Send the original transaction
+				ch <- &view.Message{
+					Payload: txRaw,
+				}
+
+				return c
+			},
+			expectError:   true,
+			errorContains: "signature request transaction mismatch",
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				// Should not send any signature back
 				assert.Equal(t, 0, ctx.session.SendWithContextCallCount())
 			},
 		},

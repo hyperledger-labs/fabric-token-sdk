@@ -120,6 +120,14 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 			}
 		}
 
+		// Verify the transaction in the signature request matches our local transaction
+		if !bytes.Equal(signatureRequest.TX, s.tx.FromRaw) {
+			return errors.Errorf(
+				"signature request transaction mismatch for signer [%s]",
+				signerIdentity,
+			)
+		}
+
 		// check for the expected identity
 		if !signatureRequest.Signer.Equal(signerIdentity) {
 			return errors.Wrapf(
