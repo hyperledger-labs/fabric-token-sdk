@@ -10,11 +10,13 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
@@ -33,6 +35,10 @@ type Storage interface {
 	AcquireRecoveryLeadership(ctx context.Context, lockID int64) (Leadership, bool, error)
 	ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*ttxdb.TransactionRecord, error)
 	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
+	// SetStatus updates a transaction's status row. Used by the recovery loop to
+	// permanently mark orphan transactions (NotFound past grace period) as Deleted
+	// so they exit the eligible scan range and stop blocking the queue head.
+	SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error
 }
 
 //go:generate counterfeiter -o mock/handler.go -fake-name Handler . Handler
@@ -229,7 +235,7 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 
 	m.logger.Infof("claimed %d pending transaction(s) needing recovery", len(records))
 
-	work := make(chan string)
+	work := make(chan pendingTx)
 	errCh := make(chan error, len(records))
 	var workerWG sync.WaitGroup
 
@@ -238,11 +244,23 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 		go m.worker(ctx, &workerWG, work, errCh)
 	}
 
+	// ClaimPendingTransactions returns one TransactionRecord per ledger
+	// transaction row, and a single txID can produce multiple rows (one per
+	// movement/output). Dedupe by TxID before fanning out so two workers do
+	// not concurrently call Recover/SetStatus/ReleaseRecoveryClaim against
+	// the same transaction. Keep the earliest StoredAt to make the grace
+	// period decision use the row's true age.
+	seen := make(map[string]time.Time, len(records))
 	for _, record := range records {
 		if record == nil {
 			continue
 		}
-		work <- record.TxID
+		if prev, ok := seen[record.TxID]; !ok || record.Timestamp.Before(prev) {
+			seen[record.TxID] = record.Timestamp
+		}
+	}
+	for txID, storedAt := range seen {
+		work <- pendingTx{TxID: txID, StoredAt: storedAt}
 	}
 	close(work)
 
@@ -272,18 +290,26 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 	return firstErr
 }
 
-func (m *Manager) worker(ctx context.Context, wg *sync.WaitGroup, work <-chan string, errCh chan<- error) {
+// pendingTx is the unit of work passed from the sweep goroutine to recovery
+// workers. StoredAt is carried so workers can decide whether a NotFound result
+// has been around long enough to be treated as a permanent orphan.
+type pendingTx struct {
+	TxID     string
+	StoredAt time.Time
+}
+
+func (m *Manager) worker(ctx context.Context, wg *sync.WaitGroup, work <-chan pendingTx, errCh chan<- error) {
 	defer wg.Done()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case txID, ok := <-work:
+		case t, ok := <-work:
 			if !ok {
 				return
 			}
-			if err := m.recoverTransaction(ctx, txID); err != nil {
+			if err := m.recoverTransaction(ctx, t.TxID, t.StoredAt); err != nil {
 				errCh <- err
 			}
 		}
@@ -291,18 +317,49 @@ func (m *Manager) worker(ctx context.Context, wg *sync.WaitGroup, work <-chan st
 }
 
 // recoverTransaction attempts to recover a transaction using the injected handler
-// and always releases the claim with an appropriate message
-func (m *Manager) recoverTransaction(ctx context.Context, txID string) error {
+// and always releases the claim with an appropriate message.
+//
+// If the handler reports the transaction is not on the ledger and the row was
+// stored more than NotFoundGracePeriod ago, the row is force-marked Deleted to
+// prevent the queue head from being permanently blocked by orphan transactions
+// (e.g. broadcast failures whose audit log was persisted but whose tx never
+// reached the orderer). Without this, ORDER BY stored_at ASC + LIMIT BatchSize
+// would replay the same oldest-100 rows on every sweep forever.
+func (m *Manager) recoverTransaction(ctx context.Context, txID string, storedAt time.Time) error {
 	m.logger.Debugf("recovering transaction [%s]", txID)
 
 	// Attempt recovery using the injected handler
 	err := m.handler.Recover(ctx, txID)
 
+	// Residual race: SetStatus is unconditional, so an independent finality
+	// listener that confirms this tx between our claim and the write below
+	// could be overwritten by Deleted. In practice the NotFoundGracePeriod
+	// (default 30 min) makes this window vanishingly small — we only get
+	// here when the tx has been Pending for grace+ AND Recover just returned
+	// NotFound. Future hardening: replace SetStatus with an atomic
+	// "status=Pending → Deleted" CAS at the SQL layer.
+	markedDeleted := false
+	if err != nil && m.config.NotFoundGracePeriod > 0 && !storedAt.IsZero() && isNotFoundError(err) {
+		age := time.Since(storedAt)
+		if age > m.config.NotFoundGracePeriod {
+			deleteMsg := fmt.Sprintf("tx never reached ledger (NotFound after %v, grace=%v)", age.Truncate(time.Second), m.config.NotFoundGracePeriod)
+			m.logger.Warnf("recovery: marking tx [%s] as Deleted: %s", txID, deleteMsg)
+			if setErr := m.storage.SetStatus(ctx, txID, storage.Deleted, deleteMsg); setErr != nil {
+				m.logger.Errorf("recovery: failed to mark tx [%s] Deleted: %v", txID, setErr)
+			} else {
+				markedDeleted = true
+			}
+		}
+	}
+
 	// Always release the claim with appropriate message
 	var message string
-	if err != nil {
+	switch {
+	case markedDeleted:
+		message = "tx marked Deleted after NotFound grace period"
+	case err != nil:
 		message = fmt.Sprintf("recovery failed: %v", err)
-	} else {
+	default:
 		message = "recovered successfully"
 	}
 
@@ -310,13 +367,54 @@ func (m *Manager) recoverTransaction(ctx context.Context, txID string) error {
 		m.logger.Warnf("failed to release recovery claim for transaction [%s]: %v", txID, releaseErr)
 	}
 
-	if err != nil {
+	if err != nil && !markedDeleted {
 		return errors.Wrapf(err, "failed to recover transaction [%s]", txID)
+	}
+
+	if markedDeleted {
+		// Treat as resolved — no need to noisily report a "failure" the next sweep
+		// would otherwise re-encounter (the row is now status=3 and ineligible).
+		return nil
 	}
 
 	m.logger.Infof("successfully recovered transaction [%s]", txID)
 
 	return nil
+}
+
+// isNotFoundError reports whether err looks like a "transaction not found on
+// ledger" failure surfaced from the recovery handler path. Matching by string
+// is intentionally loose so the recovery loop does not pull grpc/codes or
+// the network/fabric finality wrappers into its dependency surface; upstream
+// wraps these statuses with errors.Wrapf so the substrings survive.
+//
+// Patterns covered (verified against the dev environment runtime error
+//
+//		"rpc error: code = NotFound desc = transaction ID [X]: not found in
+//		  index: tx not found"):
+//
+//	  - "code = NotFound"     — raw gRPC status text
+//	  - "not found in index"  — committer's gRPC status desc field
+//	  - "tx not found"        — FSC finality.TxNotFound sentinel appended
+//	    by fabric-x ledger.GetTransactionByID
+//	    (fabric-smart-client/platform/fabricx/core/ledger/ledger.go:64).
+//	    Stable across committer error format changes since the sentinel
+//	    is wrapped at the FSC layer, above the committer's gRPC text.
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "code = NotFound"):
+		return true
+	case strings.Contains(msg, "not found in index"):
+		return true
+	case strings.Contains(msg, "tx not found"):
+		return true
+	}
+
+	return false
 }
 
 func (m *Manager) releaseClaim(ctx context.Context, txID string, message string) error {

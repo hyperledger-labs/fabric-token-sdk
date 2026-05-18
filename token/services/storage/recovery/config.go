@@ -35,18 +35,25 @@ type Config struct {
 	AdvisoryLockID int64
 	// InstanceID identifies the current replica as the lease owner.
 	InstanceID string
+	// NotFoundGracePeriod: when GetTransactionStatus returns a NotFound error and
+	// the tx was stored more than this duration ago, the recovery loop marks the
+	// row as Deleted instead of leaving it for another retry. Prevents the queue
+	// from being permanently blocked by orphan transactions (broadcast failures
+	// that never reached the ledger). Zero disables this behaviour.
+	NotFoundGracePeriod time.Duration
 }
 
 // DefaultConfig returns the default recovery configuration
 func DefaultConfig() Config {
 	return Config{
-		Enabled:        true,
-		TTL:            30 * time.Second,
-		ScanInterval:   5 * time.Second,
-		BatchSize:      defaultBatchSize,
-		WorkerCount:    defaultWorkers,
-		LeaseDuration:  defaultLeaseDuration,
-		AdvisoryLockID: defaultLockID,
+		Enabled:             true,
+		TTL:                 30 * time.Second,
+		ScanInterval:        5 * time.Second,
+		BatchSize:           defaultBatchSize,
+		WorkerCount:         defaultWorkers,
+		LeaseDuration:       defaultLeaseDuration,
+		AdvisoryLockID:      defaultLockID,
+		NotFoundGracePeriod: 30 * time.Minute,
 	}
 }
 
@@ -88,6 +95,13 @@ func LoadConfig(cfg *config.Configuration) (Config, error) {
 	}
 	if config.InstanceID != "" {
 		result.InstanceID = config.InstanceID
+	}
+	// NotFoundGracePeriod accepts an explicit zero to disable the orphan
+	// promotion, so check IsSet rather than the Go zero value. Without this
+	// gate, setting notFoundGracePeriod: 0 in config would silently fall back
+	// to the 30 min default and the documented opt-out would be unreachable.
+	if cfg.IsSet(ConfigKeyRecovery + ".notFoundGracePeriod") {
+		result.NotFoundGracePeriod = config.NotFoundGracePeriod
 	}
 
 	return result, nil
