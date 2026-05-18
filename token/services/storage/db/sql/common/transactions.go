@@ -327,22 +327,19 @@ func (db *TransactionStore) AcquireRecoveryLeadership(ctx context.Context, lockI
 
 // ClaimPendingTransactions returns a claimed batch of Pending transactions.
 // The default SQL implementation is permissive and does not persist recovery claims.
-// Only tx_id and stored_at are projected — the recovery loop does not need the
-// rest of the row, and skipping them avoids two metadata JSON unmarshals per row.
+// tx_id and stored_at are projected directly from the requests table — the
+// transactions table is no longer joined since it carries no information
+// the recovery loop needs and adding it would re-introduce a fan-out by
+// movement/output that the caller would have to dedupe by tx_id.
 func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params dbdriver.RecoveryClaimParams) ([]*dbdriver.RecoveryClaim, error) {
-	transactionsTable, requestsTable := q.Table(db.table.Transactions), q.Table(db.table.Requests)
 	query, args := q.Select().
-		Fields(
-			transactionsTable.Field("tx_id"), transactionsTable.Field("stored_at"),
-		).
-		From(transactionsTable.Join(requestsTable,
-			cond.Cmp(transactionsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
-		).
+		FieldsByName("tx_id", "stored_at").
+		From(q.Table(db.table.Requests)).
 		Where(cond.And(
 			cond.Eq("status", dbdriver.Pending),
-			cond.Lt(common3.FieldName(db.table.Transactions+".stored_at"), params.OlderThan),
+			cond.Lt("stored_at", params.OlderThan),
 		)).
-		OrderBy(q.Asc(transactionsTable.Field("stored_at"))).
+		OrderBy(q.Asc(common3.FieldName("stored_at"))).
 		Limit(params.Limit).
 		Format(db.ci)
 

@@ -244,22 +244,14 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 		go m.worker(ctx, &workerWG, work, errCh)
 	}
 
-	// ClaimPendingTransactions returns one RecoveryClaim per ledger transaction
-	// row, and a single txID can produce multiple rows (one per movement/output).
-	// Dedupe by TxID before fanning out so two workers do not concurrently call
-	// Recover/SetStatus/ReleaseRecoveryClaim against the same transaction. Keep
-	// the claim with the earliest StoredAt so the grace period decision uses
-	// the row's true age.
-	seen := make(map[string]*ttxdb.RecoveryClaim, len(records))
-	for _, record := range records {
-		if record == nil {
+	// ClaimPendingTransactions reads directly from the requests table where
+	// tx_id is the primary key, so each claim is already unique. Fan out
+	// straight to the workers; nil entries are defensive but should never
+	// occur in practice.
+	for _, claim := range records {
+		if claim == nil {
 			continue
 		}
-		if prev, ok := seen[record.TxID]; !ok || record.StoredAt.Before(prev.StoredAt) {
-			seen[record.TxID] = record
-		}
-	}
-	for _, claim := range seen {
 		work <- claim
 	}
 	close(work)
