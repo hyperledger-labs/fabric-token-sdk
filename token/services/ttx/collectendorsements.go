@@ -332,20 +332,16 @@ func (c *CollectEndorsementsView) signRemote(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting session")
 	}
-	signatureRequestRaw, err := Marshal(signatureRequest)
-	if err != nil {
-		return nil, err
-	}
-	err = session.SendWithContext(context.Context(), signatureRequestRaw)
-	if err != nil {
+	jsonSession := session2.NewFromSession(context, session)
+	if err := session2.SendTyped(jsonSession, context.Context(), signatureRequest, session2.TypeSignatureRequest); err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
 
-	jsonSession := session2.NewFromSession(context, session)
-	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
-	if err != nil {
+	var signaturePayload SignaturePayload
+	if err := session2.ReceiveTypedWithTimeout(jsonSession, session2.TypeSignature, &signaturePayload, time.Minute); err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
+	sigma := signaturePayload.Signature
 	verifier, err := verifierGetter(context.Context(), party)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
@@ -512,17 +508,17 @@ func (c *CollectEndorsementsView) distributeTxToParty(
 	}
 	// Send the content
 	logger.DebugfContext(context.Context(), "Send transaction content")
-	err = session.SendWithContext(context.Context(), txRaw)
-	if err != nil {
+	jsonSession := session2.NewFromSession(context, session)
+	if err := session2.SendTyped(jsonSession, context.Context(), &TransactionPayload{Raw: txRaw}, session2.TypeTransaction); err != nil {
 		return errors.Wrap(err, "failed sending transaction content")
 	}
 
 	logger.DebugfContext(context.Context(), "Wait for ack")
-	jsonSession := session2.NewFromSession(context, session)
-	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
-	if err != nil {
+	var signaturePayload SignaturePayload
+	if err := session2.ReceiveTypedWithTimeout(jsonSession, session2.TypeSignature, &signaturePayload, time.Minute); err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
+	sigma := signaturePayload.Signature
 	logger.DebugfContext(context.Context(), "received ack from [%s] [%s], checking signature on [%s]",
 		entry.LongTerm, utils.Hashable(sigma).String(),
 		utils.Hashable(txRaw).String())

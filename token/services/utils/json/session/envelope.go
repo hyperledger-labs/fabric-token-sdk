@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	session "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/session"
 )
 
@@ -59,6 +60,16 @@ const (
 	// multisig/spend.go and boolpolicy/spend.go
 	TypeSpendRequest  = "spend_req"
 	TypeSpendResponse = "spend_resp"
+
+	// collectendorsements.go, endorse.go, accept.go, auditor.go, receivetx.go
+	TypeSignatureRequest    = "sig_req"
+	TypeSignature           = "signature"
+	TypeTransaction         = "transaction"
+	TypeTransactionResponse = "tx_resp"
+
+	// collectactions.go
+	TypeActions        = "actions"
+	TypeActionTransfer = "action_transfer"
 )
 
 // Sentinel errors for envelope validation.
@@ -206,6 +217,36 @@ func ReceiveTypedWithTimeoutAndMetrics(s *session.S, expectedType string, dst an
 	m.observeReceive(env)
 
 	return json.Unmarshal(env.Body, dst)
+}
+
+// SendEnvelopeOnSession wraps v in a versioned envelope and sends it on view.Session.
+func SendEnvelopeOnSession(sess view.Session, ctx context.Context, v any, msgType string) error {
+	env, err := WrapEnvelope(v, msgType)
+	if err != nil {
+		return err
+	}
+	raw, err := json.Marshal(env)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal envelope")
+	}
+
+	return sess.SendWithContext(ctx, raw)
+}
+
+// ReceiveEnvelopeFromSession receives a versioned envelope from view.Session.
+func ReceiveEnvelopeFromSession(sess view.Session, ctx context.Context, expectedType string, d time.Duration) (*Envelope, error) {
+	s := session.New(sess, ctx, JSONMarshaller{})
+
+	return receiveEnvelope(s, expectedType, d)
+}
+
+func receiveEnvelope(s *session.S, expectedType string, d time.Duration) (*Envelope, error) {
+	raw, err := s.ReceiveRawWithTimeout(d)
+	if err != nil {
+		return nil, err
+	}
+
+	return UnwrapEnvelope(raw, expectedType)
 }
 
 func classifyError(err error) string {

@@ -102,7 +102,6 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 	}
 
 	for i, signerIdentity := range requiredSigners {
-		var srRaw []byte
 		signatureRequest := &SignatureRequest{}
 
 		if i == 0 && s.tx.FromSignatureRequest != nil {
@@ -110,13 +109,8 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 		} else {
 			logger.DebugfContext(context.Context(), "receiving signature request...")
 			jsonSession := jsession.JSON(context)
-			srRaw, err = jsonSession.ReceiveRawWithTimeout(time.Minute)
-			if err != nil {
+			if err := jsession.ReceiveTypedWithTimeout(jsonSession, jsession.TypeSignatureRequest, signatureRequest, time.Minute); err != nil {
 				return errors.Wrap(err, "failed reading signature request")
-			}
-			err = Unmarshal(srRaw, signatureRequest)
-			if err != nil {
-				return errors.Wrap(err, "failed unmarshalling signature request")
 			}
 		}
 
@@ -142,7 +136,7 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 			return errors.Wrapf(err, "failed signing request")
 		}
 		logger.DebugfContext(context.Context(), "Send back signature [%s][%s]", signerIdentity, utils.Hashable(sigma))
-		err = session.SendWithContext(context.Context(), sigma)
+		err = jsession.SendEnvelopeOnSession(session, context.Context(), &SignaturePayload{Signature: sigma}, jsession.TypeSignature)
 		if err != nil {
 			return errors.Wrapf(err, "failed sending signature back")
 		}
@@ -196,7 +190,7 @@ func (s *EndorseView) ack(context view.Context, msg []byte) error {
 		return errors.WithMessagef(err, "failed to sign ack response")
 	}
 	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", utils.Hashable(sigma), defaultIdentity)
-	if err := inSession.SendWithContext(context.Context(), sigma); err != nil {
+	if err := jsession.SendEnvelopeOnSession(inSession, context.Context(), &SignaturePayload{Signature: sigma}, jsession.TypeSignature); err != nil {
 		return errors.WithMessagef(err, "failed sending ack")
 	}
 

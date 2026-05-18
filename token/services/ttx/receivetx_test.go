@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ttx_test
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/mock"
+	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -78,7 +78,7 @@ func TestReceiveTx(t *testing.T) {
 				return ctx, []ttx.TxOption{ttx.WithTimeout(1 * time.Second)}
 			},
 			expectError: true,
-			expectErr:   ttx.ErrTxUnmarshalling,
+			expectErr:   jsession.ErrInvalidEnvelope,
 		},
 		{
 			name: "valid tx payload",
@@ -120,7 +120,7 @@ func TestReceiveTx(t *testing.T) {
 				require.NoError(t, err)
 
 				ch <- &view.Message{
-					Payload: txRaw,
+					Payload: mustEnvelopeBytes(t, jsession.TypeTransaction, &ttx.TransactionPayload{Raw: txRaw}),
 				}
 
 				return ctx, []ttx.TxOption{ttx.WithTimeout(1 * time.Second)}
@@ -152,17 +152,15 @@ func TestReceiveTx(t *testing.T) {
 				tms.NewRequestReturns(req, nil)
 				tmsp := &mock2.TokenManagementServiceProvider{}
 				tmsp.TokenManagementServiceReturns(tms, nil)
-				ctx.GetServiceReturnsOnCall(0, tmsp, nil)
-
 				network := &mock2.Network{}
 				network.ComputeTxIDReturns("an_anchor")
 				np := &mock2.NetworkProvider{}
 				np.GetNetworkReturns(network, nil)
+				ctx.GetServiceReturnsOnCall(0, tmsp, nil)
 				ctx.GetServiceReturnsOnCall(1, np, nil)
 				ctx.GetServiceReturnsOnCall(2, &endpoint.Service{}, nil)
 				ctx.GetServiceReturnsOnCall(3, np, nil)
-				ctx.GetServiceReturnsOnCall(4, np, nil)
-				ctx.GetServiceReturnsOnCall(5, tmsp, nil)
+				ctx.GetServiceReturnsOnCall(4, tmsp, nil)
 
 				tx, err := ttx.NewTransaction(ctx, []byte("a_signer"))
 				require.NoError(t, err)
@@ -170,13 +168,11 @@ func TestReceiveTx(t *testing.T) {
 				require.NoError(t, err)
 
 				sr := &ttx.SignatureRequest{
-					TX: txRaw,
+					TX:     txRaw,
+					Signer: view.Identity("a_signer"),
 				}
-				srRaw, err := json.Marshal(sr)
-				require.NoError(t, err)
-
 				ch <- &view.Message{
-					Payload: srRaw,
+					Payload: mustEnvelopeBytes(t, jsession.TypeSignatureRequest, sr),
 				}
 
 				return ctx, []ttx.TxOption{ttx.WithTimeout(1 * time.Second)}

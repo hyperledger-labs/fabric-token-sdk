@@ -78,6 +78,24 @@ func TestVersionedUpgradeAgreementRoundTrip(t *testing.T) {
 	roundTripTTXMessage(t, jsession.TypeUpgradeAgreement, original, &UpgradeTokensAgreement{})
 }
 
+func TestVersionedSignatureRequestRoundTrip(t *testing.T) {
+	original := &SignatureRequest{
+		TX:     []byte("tx-bytes"),
+		Signer: view.Identity("signer"),
+	}
+	roundTripTTXMessage(t, jsession.TypeSignatureRequest, original, &SignatureRequest{})
+}
+
+func TestVersionedSignatureRoundTrip(t *testing.T) {
+	original := &SignaturePayload{Signature: []byte("sigma")}
+	roundTripTTXMessage(t, jsession.TypeSignature, original, &SignaturePayload{})
+}
+
+func TestVersionedTransactionRoundTrip(t *testing.T) {
+	original := &TransactionPayload{Raw: []byte("tx-bytes")}
+	roundTripTTXMessage(t, jsession.TypeTransaction, original, &TransactionPayload{})
+}
+
 func TestVersionedUpgradeRequestRoundTrip(t *testing.T) {
 	original := &UpgradeTokensRequest{
 		TMSID: token.TMSID{Network: "net", Channel: "ch", Namespace: "ns"},

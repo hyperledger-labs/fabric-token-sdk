@@ -106,26 +106,26 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	if err != nil {
 		return errors.Wrap(err, "failed marshalling transaction")
 	}
-	if err := session.SendRaw(context.Context(), txRaw); err != nil {
+	if err := session2.SendTyped(session, context.Context(), &TransactionPayload{Raw: txRaw}, session2.TypeTransaction); err != nil {
 		return errors.Wrap(err, "failed sending transaction")
 	}
-	if err := session.Send(c.actions); err != nil {
+	if err := session2.SendTyped(session, context.Context(), c.actions, session2.TypeActions); err != nil {
 		return errors.Wrapf(err, "failed sending actions")
 	}
-	if err := session.Send(actionTransfer); err != nil {
+	if err := session2.SendTyped(session, context.Context(), actionTransfer, session2.TypeActionTransfer); err != nil {
 		return errors.Wrapf(err, "failed sending action")
 	}
 
 	// Wait to receive a content back
-	msg, err := session.ReceiveRaw()
-	if err != nil {
+	var txResponse TransactionPayload
+	if err := session2.ReceiveTyped(session, session2.TypeTransactionResponse, &txResponse); err != nil {
 		return errors.Wrap(err, "failed reading message")
 	}
 	txPayload := &Payload{
 		Transient:    map[string][]byte{},
 		TokenRequest: token.NewRequest(nil, ""),
 	}
-	err = unmarshal(c.tx.NetworkProvider, txPayload, msg)
+	err = unmarshal(c.tx.NetworkProvider, txPayload, txResponse.Raw)
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling reply")
 	}
@@ -186,13 +186,13 @@ func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 	// actions
 	s := session2.JSON(context)
 	actions := &Actions{}
-	if err := s.Receive(actions); err != nil {
+	if err := session2.ReceiveTyped(s, session2.TypeActions, actions); err != nil {
 		return nil, errors.Wrap(err, "failed receiving actions")
 	}
 
 	// action
 	action := &ActionTransfer{}
-	if err := s.Receive(action); err != nil {
+	if err := session2.ReceiveTyped(s, session2.TypeActionTransfer, action); err != nil {
 		return nil, errors.Wrap(err, "failed receiving action")
 	}
 
@@ -216,8 +216,7 @@ func (s *collectActionsResponderView) Call(context view.Context) (interface{}, e
 		return nil, errors.Wrap(err, "failed marshalling ephemeral transaction")
 	}
 
-	err = context.Session().SendWithContext(context.Context(), response)
-	if err != nil {
+	if err := session2.SendEnvelopeOnSession(context.Session(), context.Context(), &TransactionPayload{Raw: response}, session2.TypeTransactionResponse); err != nil {
 		return nil, errors.Wrap(err, "failed sending back response")
 	}
 

@@ -395,6 +395,12 @@ func TestTypeConstants(t *testing.T) {
 		jsession.TypeUpgradeRequest,
 		jsession.TypeSpendRequest,
 		jsession.TypeSpendResponse,
+		jsession.TypeSignatureRequest,
+		jsession.TypeSignature,
+		jsession.TypeTransaction,
+		jsession.TypeTransactionResponse,
+		jsession.TypeActions,
+		jsession.TypeActionTransfer,
 	}
 	seen := make(map[string]bool, len(types))
 	for _, typ := range types {

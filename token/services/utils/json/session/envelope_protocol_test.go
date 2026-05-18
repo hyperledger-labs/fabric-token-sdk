@@ -83,6 +83,36 @@ func TestMigratedProtocolMessages_RoundTrip(t *testing.T) {
 			msgType: jsession.TypeSpendResponse,
 			payload: map[string]any{},
 		},
+		{
+			name:    "sig_req",
+			msgType: jsession.TypeSignatureRequest,
+			payload: map[string]any{"Signer": []byte("id")},
+		},
+		{
+			name:    "signature",
+			msgType: jsession.TypeSignature,
+			payload: map[string]any{"signature": []byte("sig")},
+		},
+		{
+			name:    "transaction",
+			msgType: jsession.TypeTransaction,
+			payload: map[string]any{"raw": []byte("tx")},
+		},
+		{
+			name:    "tx_resp",
+			msgType: jsession.TypeTransactionResponse,
+			payload: map[string]any{"raw": []byte("tx")},
+		},
+		{
+			name:    "actions",
+			msgType: jsession.TypeActions,
+			payload: map[string]any{"Transfers": []any{}},
+		},
+		{
+			name:    "action_transfer",
+			msgType: jsession.TypeActionTransfer,
+			payload: map[string]any{"Amount": uint64(1)},
+		},
 	}
 
 	for _, tc := range cases {
