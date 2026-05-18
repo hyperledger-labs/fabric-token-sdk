@@ -327,14 +327,13 @@ func (db *TransactionStore) AcquireRecoveryLeadership(ctx context.Context, lockI
 
 // ClaimPendingTransactions returns a claimed batch of Pending transactions.
 // The default SQL implementation is permissive and does not persist recovery claims.
-func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params dbdriver.RecoveryClaimParams) ([]*dbdriver.TransactionRecord, error) {
+// Only tx_id and stored_at are projected — the recovery loop does not need the
+// rest of the row, and skipping them avoids two metadata JSON unmarshals per row.
+func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params dbdriver.RecoveryClaimParams) ([]*dbdriver.RecoveryClaim, error) {
 	transactionsTable, requestsTable := q.Table(db.table.Transactions), q.Table(db.table.Requests)
 	query, args := q.Select().
 		Fields(
-			transactionsTable.Field("tx_id"), common3.FieldName("action_type"), common3.FieldName("sender_eid"),
-			common3.FieldName("recipient_eid"), common3.FieldName("token_type"), common3.FieldName("amount"),
-			requestsTable.Field("status"), requestsTable.Field("application_metadata"),
-			requestsTable.Field("public_metadata"), transactionsTable.Field("stored_at"),
+			transactionsTable.Field("tx_id"), transactionsTable.Field("stored_at"),
 		).
 		From(transactionsTable.Join(requestsTable,
 			cond.Cmp(transactionsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
@@ -353,19 +352,8 @@ func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params
 		return nil, err
 	}
 
-	results := common.NewIterator(rows, func(r *dbdriver.TransactionRecord) error {
-		var amount BigInt
-		var appMeta []byte
-		var pubMeta []byte
-		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amount, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
-			return err
-		}
-		r.Amount = amount.Int
-
-		return errors2.Join(
-			unmarshal(appMeta, &r.ApplicationMetadata),
-			unmarshal(pubMeta, &r.PublicMetadata),
-		)
+	results := common.NewIterator(rows, func(r *dbdriver.RecoveryClaim) error {
+		return rows.Scan(&r.TxID, &r.StoredAt)
 	})
 
 	return iterators.ReadAllPointers(results)

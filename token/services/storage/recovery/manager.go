@@ -33,7 +33,7 @@ const (
 // Storage defines the interface for querying pending transactions and transaction details
 type Storage interface {
 	AcquireRecoveryLeadership(ctx context.Context, lockID int64) (Leadership, bool, error)
-	ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*ttxdb.TransactionRecord, error)
+	ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*ttxdb.RecoveryClaim, error)
 	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
 	// SetStatus updates a transaction's status row. Used by the recovery loop to
 	// permanently mark orphan transactions (NotFound past grace period) as Deleted
@@ -244,19 +244,19 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 		go m.worker(ctx, &workerWG, work, errCh)
 	}
 
-	// ClaimPendingTransactions returns one TransactionRecord per ledger
-	// transaction row, and a single txID can produce multiple rows (one per
-	// movement/output). Dedupe by TxID before fanning out so two workers do
-	// not concurrently call Recover/SetStatus/ReleaseRecoveryClaim against
-	// the same transaction. Keep the earliest StoredAt to make the grace
-	// period decision use the row's true age.
+	// ClaimPendingTransactions returns one RecoveryClaim per ledger transaction
+	// row, and a single txID can produce multiple rows (one per movement/output).
+	// Dedupe by TxID before fanning out so two workers do not concurrently call
+	// Recover/SetStatus/ReleaseRecoveryClaim against the same transaction. Keep
+	// the earliest StoredAt to make the grace period decision use the row's
+	// true age.
 	seen := make(map[string]time.Time, len(records))
 	for _, record := range records {
 		if record == nil {
 			continue
 		}
-		if prev, ok := seen[record.TxID]; !ok || record.Timestamp.Before(prev) {
-			seen[record.TxID] = record.Timestamp
+		if prev, ok := seen[record.TxID]; !ok || record.StoredAt.Before(prev) {
+			seen[record.TxID] = record.StoredAt
 		}
 	}
 	for txID, storedAt := range seen {
