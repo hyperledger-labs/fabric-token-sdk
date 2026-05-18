@@ -191,7 +191,7 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 	RArray := make([]*mathlib.G1, p.NumberOfRounds)
 	xList := make([]*mathlib.Zr, 0, p.NumberOfRounds)
 
-	for i := uint64(0); i < p.NumberOfRounds; i++ {
+	for i := range p.NumberOfRounds {
 		// in each round the size of the vector is reduced by 2
 		n_current := len(left) / 2
 		leftIP := math.InnerProduct(left[:n_current], right[n_current:], p.Curve)
@@ -211,8 +211,8 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 		pointsR := make([]*mathlib.G1, 0, len(p.LeftGenerators)+1)
 		scalarsR := make([]*mathlib.Zr, 0, len(p.LeftGenerators)+1)
 
-		for m := 0; m < (1 << i); m++ {
-			for j := 0; j < n_current; j++ {
+		for m := range 1 << i {
+			for j := range n_current {
 				idxG_R := j + (2*m+1)*n_current
 				idxH_L := j + 2*m*n_current
 
@@ -438,27 +438,6 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 	}
 
 	return leftPrime, rightPrime
-}
-
-// reduceGenerators reduces the number of generators passed in the parameters by 1/2,
-// as a function of the old generators,  x and 1/x
-func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr, provider executor.ExecutorProvider) ([]*mathlib.G1, []*mathlib.G1) {
-	l := len(leftGen) / 2
-	// Use the Executor abstraction so that the execution strategy can be
-	// swapped without changing this function. SerialExecutor runs each task
-	// immediately with no locks or goroutine overhead.
-	exec := provider.New()
-	for i := range l {
-		exec.Submit(func() {
-			// G_i = G_i^{x_inv} * G_{i+l}^x
-			leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
-			// H_i = H_i^x * H_{i+l}^{x_inv}
-			rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
-		})
-	}
-	exec.Wait()
-
-	return leftGen[:l], rightGen[:l]
 }
 
 func CommitVector(
