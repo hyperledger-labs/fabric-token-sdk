@@ -77,7 +77,7 @@ func TestUnwrapEnvelope_MissingVersion(t *testing.T) {
 
 	_, err := jsession.UnwrapEnvelope(raw, "")
 	require.Error(t, err)
-	assert.ErrorIs(t, err, jsession.ErrMissingVersion)
+	require.ErrorIs(t, err, jsession.ErrMissingVersion)
 }
 
 func TestUnwrapEnvelope_FutureVersion(t *testing.T) {
@@ -121,7 +121,7 @@ func TestUnwrapEnvelope_TypeMismatch(t *testing.T) {
 
 	_, err := jsession.UnwrapEnvelope(raw, jsession.TypeRecipientRequest)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, jsession.ErrTypeMismatch)
+	require.ErrorIs(t, err, jsession.ErrTypeMismatch)
 }
 
 // --- Malformed JSON ---
@@ -129,7 +129,7 @@ func TestUnwrapEnvelope_TypeMismatch(t *testing.T) {
 func TestUnwrapEnvelope_MalformedJSON(t *testing.T) {
 	_, err := jsession.UnwrapEnvelope([]byte(`not json`), "")
 	require.Error(t, err)
-	assert.ErrorIs(t, err, jsession.ErrInvalidEnvelope)
+	require.ErrorIs(t, err, jsession.ErrInvalidEnvelope)
 }
 
 // --- UnwrapBody ---
@@ -160,7 +160,7 @@ func TestUnwrapBody_VersionMismatch(t *testing.T) {
 	var dst struct{}
 	err := jsession.UnwrapBody(raw, jsession.TypeUpgradeRequest, &dst)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, jsession.ErrVersionMismatch)
+	require.ErrorIs(t, err, jsession.ErrVersionMismatch)
 }
 
 // --- Envelope.Validate ---
@@ -259,7 +259,7 @@ func TestReceiveTypedWithTimeout_VersionMismatch(t *testing.T) {
 	var dst struct{}
 	err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeRecipientResponse, &dst, 1*time.Second)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, jsession.ErrVersionMismatch)
+	require.ErrorIs(t, err, jsession.ErrVersionMismatch)
 }
 
 func TestReceiveTypedWithTimeout_TypeMismatch(t *testing.T) {
@@ -279,7 +279,7 @@ func TestReceiveTypedWithTimeout_TypeMismatch(t *testing.T) {
 	var dst struct{}
 	err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeRecipientRequest, &dst, 1*time.Second)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, jsession.ErrTypeMismatch)
+	require.ErrorIs(t, err, jsession.ErrTypeMismatch)
 }
 
 func TestReceiveTypedWithTimeout_Timeout(t *testing.T) {
@@ -293,7 +293,7 @@ func TestReceiveTypedWithTimeout_Timeout(t *testing.T) {
 	var dst struct{}
 	err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeRecipientRequest, &dst, 1*time.Millisecond)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, utilsession.ErrTimeout)
+	require.ErrorIs(t, err, utilsession.ErrTimeout)
 }
 
 func TestReceiveTyped_UsesDefaultTimeout(t *testing.T) {
@@ -307,7 +307,7 @@ func TestReceiveTyped_UsesDefaultTimeout(t *testing.T) {
 	var dst struct{}
 	err := jsession.ReceiveTyped(s, jsession.TypeRecipientRequest, &dst)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, utilsession.ErrTimeout)
+	require.ErrorIs(t, err, utilsession.ErrTimeout)
 }
 
 // --- Large body ---
