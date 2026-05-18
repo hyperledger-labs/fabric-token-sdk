@@ -33,7 +33,7 @@ const (
 // Storage defines the interface for querying pending transactions and transaction details
 type Storage interface {
 	AcquireRecoveryLeadership(ctx context.Context, lockID int64) (Leadership, bool, error)
-	ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*ttxdb.TransactionRecord, error)
+	ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*ttxdb.RecoveryClaim, error)
 	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
 	// SetStatus updates a transaction's status row. Used by the recovery loop to
 	// permanently mark orphan transactions (NotFound past grace period) as Deleted
@@ -235,7 +235,7 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 
 	m.logger.Infof("claimed %d pending transaction(s) needing recovery", len(records))
 
-	work := make(chan pendingTx)
+	work := make(chan *ttxdb.RecoveryClaim)
 	errCh := make(chan error, len(records))
 	var workerWG sync.WaitGroup
 
@@ -244,23 +244,23 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 		go m.worker(ctx, &workerWG, work, errCh)
 	}
 
-	// ClaimPendingTransactions returns one TransactionRecord per ledger
-	// transaction row, and a single txID can produce multiple rows (one per
-	// movement/output). Dedupe by TxID before fanning out so two workers do
-	// not concurrently call Recover/SetStatus/ReleaseRecoveryClaim against
-	// the same transaction. Keep the earliest StoredAt to make the grace
-	// period decision use the row's true age.
-	seen := make(map[string]time.Time, len(records))
+	// ClaimPendingTransactions returns one RecoveryClaim per ledger transaction
+	// row, and a single txID can produce multiple rows (one per movement/output).
+	// Dedupe by TxID before fanning out so two workers do not concurrently call
+	// Recover/SetStatus/ReleaseRecoveryClaim against the same transaction. Keep
+	// the claim with the earliest StoredAt so the grace period decision uses
+	// the row's true age.
+	seen := make(map[string]*ttxdb.RecoveryClaim, len(records))
 	for _, record := range records {
 		if record == nil {
 			continue
 		}
-		if prev, ok := seen[record.TxID]; !ok || record.Timestamp.Before(prev) {
-			seen[record.TxID] = record.Timestamp
+		if prev, ok := seen[record.TxID]; !ok || record.StoredAt.Before(prev.StoredAt) {
+			seen[record.TxID] = record
 		}
 	}
-	for txID, storedAt := range seen {
-		work <- pendingTx{TxID: txID, StoredAt: storedAt}
+	for _, claim := range seen {
+		work <- claim
 	}
 	close(work)
 
@@ -290,26 +290,18 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 	return firstErr
 }
 
-// pendingTx is the unit of work passed from the sweep goroutine to recovery
-// workers. StoredAt is carried so workers can decide whether a NotFound result
-// has been around long enough to be treated as a permanent orphan.
-type pendingTx struct {
-	TxID     string
-	StoredAt time.Time
-}
-
-func (m *Manager) worker(ctx context.Context, wg *sync.WaitGroup, work <-chan pendingTx, errCh chan<- error) {
+func (m *Manager) worker(ctx context.Context, wg *sync.WaitGroup, work <-chan *ttxdb.RecoveryClaim, errCh chan<- error) {
 	defer wg.Done()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case t, ok := <-work:
+		case claim, ok := <-work:
 			if !ok {
 				return
 			}
-			if err := m.recoverTransaction(ctx, t.TxID, t.StoredAt); err != nil {
+			if err := m.recoverTransaction(ctx, claim.TxID, claim.StoredAt); err != nil {
 				errCh <- err
 			}
 		}

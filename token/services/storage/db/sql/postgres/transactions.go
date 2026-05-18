@@ -9,7 +9,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -113,7 +112,11 @@ func NewAuditTransactionStore(dbs *scommon.RWDB, tableNames sqlcommon.TableNames
 
 // ClaimPendingTransactions atomically claims a batch of pending transactions using PostgreSQL's UPDATE...RETURNING.
 // This ensures only one recovery instance can claim a specific transaction.
-func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params tokensdriver.RecoveryClaimParams) ([]*tokensdriver.TransactionRecord, error) {
+// The recovery loop only consumes tx_id + stored_at, so the second SELECT only
+// projects those two columns and joins transactions once (previously joined
+// both tables and unmarshalled two JSON metadata blobs per row that were then
+// discarded by the caller).
+func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params tokensdriver.RecoveryClaimParams) ([]*tokensdriver.RecoveryClaim, error) {
 	logger.Debugf("Claiming pending transactions: owner=%s, olderThan=%s, limit=%d, lease=%s",
 		params.Owner, params.OlderThan, params.Limit, params.LeaseDuration)
 
@@ -121,7 +124,7 @@ func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params
 	// This query:
 	// 1. Finds eligible pending transactions (old enough, not claimed or expired or owned by us)
 	// 2. Atomically updates them with our claim
-	// 3. Returns the full transaction details
+	// 3. Returns (tx_id, stored_at) by joining claimed rows back against the transactions table
 	// #nosec G201
 	query := fmt.Sprintf(`
 		WITH claimed_txs AS (
@@ -146,19 +149,14 @@ func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params
 			)
 			RETURNING tx_id
 		)
-		SELECT
-			t.tx_id, t.action_type, t.sender_eid, t.recipient_eid,
-			t.token_type, t.amount, r.status, r.application_metadata,
-			r.public_metadata, t.stored_at
+		SELECT t.tx_id, t.stored_at
 		FROM claimed_txs c
 		INNER JOIN %s t ON c.tx_id = t.tx_id
-		INNER JOIN %s r ON c.tx_id = r.tx_id
 		ORDER BY t.stored_at ASC`,
 		db.tables.Requests,
 		db.tables.Requests,
 		db.tables.Transactions,
 		db.tables.Transactions,
-		db.tables.Requests,
 	)
 
 	// Convert lease duration to PostgreSQL interval format
@@ -181,20 +179,8 @@ func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params
 	}
 
 	// Parse results
-	results := common.NewIterator(rows, func(r *tokensdriver.TransactionRecord) error {
-		var amount sqlcommon.BigInt
-		var appMeta []byte
-		var pubMeta []byte
-		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amount, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
-			return err
-		}
-		r.Amount = amount.Int
-
-		if err := unmarshalMetadata(appMeta, &r.ApplicationMetadata); err != nil {
-			return err
-		}
-
-		return unmarshalMetadata(pubMeta, &r.PublicMetadata)
+	results := common.NewIterator(rows, func(r *tokensdriver.RecoveryClaim) error {
+		return rows.Scan(&r.TxID, &r.StoredAt)
 	})
 
 	claimed, err := iterators.ReadAllPointers(results)
@@ -313,13 +299,4 @@ func (n *TransactionNotifier) Subscribe(callback func(tokensdriver.Operation, to
 			TxID: m["tx_id"],
 		})
 	})
-}
-
-// unmarshalMetadata unmarshals JSON metadata.
-func unmarshalMetadata(in []byte, out *map[string][]byte) error {
-	if len(in) == 0 {
-		return nil
-	}
-
-	return json.Unmarshal(in, out)
 }
