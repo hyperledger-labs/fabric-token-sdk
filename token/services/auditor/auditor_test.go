@@ -1122,9 +1122,9 @@ func TestService_AcquireLocksWithRetry_EmptyEnrollmentIDs(t *testing.T) {
 
 func TestService_CalculateBackoff_InitialAttempt(t *testing.T) {
 	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
-	
+
 	backoff := svc.CalculateBackoff(0)
-	
+
 	// First attempt should be around initialLockBackoff (10ms) with jitter
 	// Jitter is 30%, so range is roughly 8.5ms to 11.5ms
 	assert.Greater(t, backoff, 5*time.Millisecond, "Backoff should be positive")
@@ -1133,11 +1133,11 @@ func TestService_CalculateBackoff_InitialAttempt(t *testing.T) {
 
 func TestService_CalculateBackoff_ExponentialGrowth(t *testing.T) {
 	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
-	
+
 	backoff0 := svc.CalculateBackoff(0)
 	backoff1 := svc.CalculateBackoff(1)
 	backoff2 := svc.CalculateBackoff(2)
-	
+
 	// Each backoff should be roughly 2x the previous (accounting for jitter)
 	// We check that later attempts are generally larger
 	assert.Greater(t, backoff1, backoff0/2, "Backoff should grow")
@@ -1146,10 +1146,10 @@ func TestService_CalculateBackoff_ExponentialGrowth(t *testing.T) {
 
 func TestService_CalculateBackoff_MaxCap(t *testing.T) {
 	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
-	
+
 	// Test a very high attempt number
 	backoff := svc.CalculateBackoff(20)
-	
+
 	// Should be capped at maxLockBackoff (5s) plus jitter
 	// With 30% jitter, max is 5s * 1.15 = 5.75s
 	assert.LessOrEqual(t, backoff, 6*time.Second, "Backoff should be capped")
@@ -1158,13 +1158,13 @@ func TestService_CalculateBackoff_MaxCap(t *testing.T) {
 
 func TestService_CalculateBackoff_Randomization(t *testing.T) {
 	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
-	
+
 	// Generate multiple backoffs for the same attempt
 	backoffs := make([]time.Duration, 10)
 	for i := range backoffs {
 		backoffs[i] = svc.CalculateBackoff(3)
 	}
-	
+
 	// Check that we get different values (jitter is working)
 	allSame := true
 	for i := 1; i < len(backoffs); i++ {
@@ -1179,7 +1179,7 @@ func TestService_CalculateBackoff_Randomization(t *testing.T) {
 
 func TestService_CalculateBackoff_NonNegative(t *testing.T) {
 	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
-	
+
 	// Test multiple attempts to ensure backoff is never negative
 	for attempt := range 15 {
 		backoff := svc.CalculateBackoff(attempt)
