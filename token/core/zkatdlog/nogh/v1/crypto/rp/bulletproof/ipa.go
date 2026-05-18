@@ -184,25 +184,63 @@ func (p *ipaProver) Prove() (*IPA, error) {
 // of the left vector and right is a function of right vector.
 // Both vectors are committed in com which is passed as a parameter to reduce
 func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mathlib.G1, []*mathlib.G1, error) {
-	leftGen, rightGen := CloneGenerators(p.LeftGenerators, p.RightGenerators)
-
 	left := p.leftVector
 	right := p.rightVector
 
 	LArray := make([]*mathlib.G1, p.NumberOfRounds)
 	RArray := make([]*mathlib.G1, p.NumberOfRounds)
-	for i := range p.NumberOfRounds {
-		// in each round the size of the vector is reduced by 2
-		n := len(leftGen) / 2
-		leftIP := math.InnerProduct(left[:n], right[n:], p.Curve)
-		rightIP := math.InnerProduct(left[n:], right[:n], p.Curve)
-		// LArray[i] is a commitment to left[:n], right[n:] and their inner product
-		LArray[i] = CommitVectorPlusOne(left[:n], right[n:], leftGen[n:], rightGen[:n], leftIP, X, p.Curve)
-		// LArray[i].Add(X.Mul(leftIP))
+	xList := make([]*mathlib.Zr, 0, p.NumberOfRounds)
 
-		// RArray[i] is a commitment to left[n:], right[:n] and their inner product
-		RArray[i] = CommitVectorPlusOne(left[n:], right[:n], leftGen[:n], rightGen[n:], rightIP, X, p.Curve)
-		// RArray[i].Add(X.Mul(rightIP))
+	for i := uint64(0); i < p.NumberOfRounds; i++ {
+		// in each round the size of the vector is reduced by 2
+		n_current := len(left) / 2
+		leftIP := math.InnerProduct(left[:n_current], right[n_current:], p.Curve)
+		rightIP := math.InnerProduct(left[n_current:], right[:n_current], p.Curve)
+
+		var s, sInv []*mathlib.Zr
+		if i == 0 {
+			s = []*mathlib.Zr{math.One(p.Curve)}
+			sInv = []*mathlib.Zr{math.One(p.Curve)}
+		} else {
+			s, sInv = ComputeSVector(1<<i, xList, p.Curve)
+		}
+
+		pointsL := make([]*mathlib.G1, 0, len(p.LeftGenerators)+1)
+		scalarsL := make([]*mathlib.Zr, 0, len(p.LeftGenerators)+1)
+
+		pointsR := make([]*mathlib.G1, 0, len(p.LeftGenerators)+1)
+		scalarsR := make([]*mathlib.Zr, 0, len(p.LeftGenerators)+1)
+
+		for m := 0; m < (1 << i); m++ {
+			for j := 0; j < n_current; j++ {
+				idxG_R := j + (2*m+1)*n_current
+				idxH_L := j + 2*m*n_current
+
+				pointsL = append(pointsL, p.LeftGenerators[idxG_R], p.RightGenerators[idxH_L])
+				scalarsL = append(scalarsL,
+					p.Curve.ModMul(left[j], s[m], p.Curve.GroupOrder),
+					p.Curve.ModMul(right[n_current+j], sInv[m], p.Curve.GroupOrder),
+				)
+
+				idxG_L := j + 2*m*n_current
+				idxH_R := j + (2*m+1)*n_current
+
+				pointsR = append(pointsR, p.LeftGenerators[idxG_L], p.RightGenerators[idxH_R])
+				scalarsR = append(scalarsR,
+					p.Curve.ModMul(left[n_current+j], s[m], p.Curve.GroupOrder),
+					p.Curve.ModMul(right[j], sInv[m], p.Curve.GroupOrder),
+				)
+			}
+		}
+
+		pointsL = append(pointsL, X)
+		scalarsL = append(scalarsL, leftIP)
+
+		pointsR = append(pointsR, X)
+		scalarsR = append(scalarsR, rightIP)
+
+		LArray[i] = p.Curve.MultiScalarMul(pointsL, scalarsL)
+		RArray[i] = p.Curve.MultiScalarMul(pointsR, scalarsR)
 
 		// compute this round's challenge x
 		array := common.GetG1Array([]*mathlib.G1{LArray[i], RArray[i]})
@@ -211,13 +249,11 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 			return nil, nil, nil, nil, err
 		}
 		x := p.Curve.HashToZr(bytesToHash)
+		xList = append(xList, x)
 
 		// compute 1/x
 		xInv := x.Copy()
 		xInv.InvModOrder()
-
-		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
-		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv, p.Provider)
 
 		// reduce the vectors by 1/2, a function of the old vectors and x and 1/x
 		left, right = reduceVectors(left, right, x, xInv, p.Curve)
