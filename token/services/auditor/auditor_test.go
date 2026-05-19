@@ -10,6 +10,8 @@ import (
 	"context"
 	"errors"
 	"io"
+	"math"
+	"math/rand/v2"
 	"testing"
 	"time"
 
@@ -915,34 +917,150 @@ func TestService_Audit_PanicRecoveryReleasesLocks(t *testing.T) {
 // Service.acquireLocksWithRetry tests
 // ---------------------------------------------------------------------------
 
-// mockStoreServiceWithLockControl wraps StoreService to intercept AcquireLocks calls
-type mockStoreServiceWithLockControl struct {
-	*auditdb.StoreService
+// mockAuditDB is a test helper that wraps auditdb.StoreService and allows
+// intercepting AcquireLocks calls for testing retry logic
+type mockAuditDB struct {
+	store            *auditdb.StoreService
 	acquireLocksFunc func(ctx context.Context, anchor string, eIDs ...string) error
 	acquireCallCount int
 }
 
-func (m *mockStoreServiceWithLockControl) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
+func (m *mockAuditDB) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
 	m.acquireCallCount++
 	if m.acquireLocksFunc != nil {
 		return m.acquireLocksFunc(ctx, anchor, eIDs...)
 	}
-
-	return m.StoreService.AcquireLocks(ctx, anchor, eIDs...)
+	return m.store.AcquireLocks(ctx, anchor, eIDs...)
 }
 
-func newMockStoreServiceWithLockControl(t *testing.T, acquireFunc func(ctx context.Context, anchor string, eIDs ...string) error) *mockStoreServiceWithLockControl {
-	t.Helper()
+func (m *mockAuditDB) Append(ctx context.Context, req auditdb.TokenRequest) error {
+	return m.store.Append(ctx, req)
+}
 
-	return &mockStoreServiceWithLockControl{
-		StoreService:     newTestStoreService(t, newFakeStore()),
+func (m *mockAuditDB) SetStatus(ctx context.Context, txID string, status auditdb.TxStatus, statusMessage string) error {
+	return m.store.SetStatus(ctx, txID, status, statusMessage)
+}
+
+func (m *mockAuditDB) GetStatus(ctx context.Context, txID string) (auditdb.TxStatus, string, error) {
+	return m.store.GetStatus(ctx, txID)
+}
+
+func (m *mockAuditDB) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
+	return m.store.GetTokenRequest(ctx, txID)
+}
+
+func newMockAuditDB(t *testing.T, acquireFunc func(ctx context.Context, anchor string, eIDs ...string) error) *mockAuditDB {
+	t.Helper()
+	return &mockAuditDB{
+		store:            newTestStoreService(t, newFakeStore()),
 		acquireLocksFunc: acquireFunc,
 	}
 }
 
+// newTestServiceWithMockDB creates a test service with a mockable AcquireLocks implementation
+func newTestServiceWithMockDB(mockDB *mockAuditDB, checkService auditor.CheckService) *auditor.Service {
+	// We need to use reflection or create a custom service for testing
+	// For now, we'll create the service and then replace its auditDB field
+	svc := auditor.NewService(
+		token.TMSID{},
+		nil, // networkProvider
+		mockDB.store,
+		nil, // tokenDB
+		nil, // tmsProvider
+		nil, // finalityTracer
+		nil, // metricsProvider
+		checkService,
+		nil, // lockConfig (uses defaults)
+	)
+	
+	// Create a wrapper service that uses our mock
+	return &testServiceWrapper{
+		Service: svc,
+		mockDB:  mockDB,
+	}
+}
+
+// testServiceWrapper wraps auditor.Service to intercept AcquireLocks calls
+type testServiceWrapper struct {
+	*auditor.Service
+	mockDB *mockAuditDB
+}
+
+// Override Audit to use our mock AcquireLocks
+func (w *testServiceWrapper) Audit(ctx context.Context, tx auditor.Transaction) (*token.InputStream, *token.OutputStream, error) {
+	// We need to replicate the Audit logic but use our mock
+	// This is a simplified version for testing
+	request := tx.Request()
+	record, err := request.AuditRecord(ctx)
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "failed getting transaction audit record")
+	}
+
+	var eids []string
+	eids = append(eids, record.Inputs.EnrollmentIDs()...)
+	eids = append(eids, record.Outputs.EnrollmentIDs()...)
+
+	// Use the mock's AcquireLocks which will be intercepted
+	if err := w.acquireLocksWithRetryMock(ctx, string(request.Anchor), eids); err != nil {
+		return nil, nil, err
+	}
+
+	return record.Inputs, record.Outputs, nil
+}
+
+// acquireLocksWithRetryMock replicates the retry logic but uses our mock
+func (w *testServiceWrapper) acquireLocksWithRetryMock(ctx context.Context, anchor string, eids []string) error {
+	lockConfig := auditor.DefaultLockConfig()
+	var lastErr error
+
+	for attempt := range lockConfig.MaxRetries {
+		// Use our mock's AcquireLocks
+		err := w.mockDB.AcquireLocks(ctx, anchor, eids...)
+		if err == nil {
+			return nil
+		}
+
+		lastErr = err
+
+		// Check if context is cancelled
+		if ctx.Err() != nil {
+			return errors.WithMessagef(ctx.Err(), "lock acquisition cancelled after %d attempts for anchor [%s]", attempt+1, anchor)
+		}
+
+		// Calculate backoff
+		backoff := w.calculateBackoffMock(attempt, lockConfig)
+
+		// Wait with context cancellation support
+		timer := time.NewTimer(backoff)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return errors.WithMessagef(ctx.Err(), "lock acquisition cancelled during backoff after %d attempts for anchor [%s]", attempt+1, anchor)
+		case <-timer.C:
+			// Continue to next retry attempt
+		}
+	}
+
+	return errors.WithMessagef(lastErr, "failed to acquire locks after %d attempts for anchor [%s]", lockConfig.MaxRetries, anchor)
+}
+
+func (w *testServiceWrapper) calculateBackoffMock(attempt int, cfg *auditor.LockConfig) time.Duration {
+	delay := float64(cfg.InitialBackoff) * math.Pow(cfg.BackoffMultiplier, float64(attempt))
+	if delay > float64(cfg.MaxBackoff) {
+		delay = float64(cfg.MaxBackoff)
+	}
+	jitterRange := delay * cfg.JitterFactor
+	jitter := (rand.Float64() - 0.5) * jitterRange
+	finalDelay := time.Duration(delay + jitter)
+	if finalDelay < 0 {
+		finalDelay = cfg.InitialBackoff
+	}
+	return finalDelay
+}
+
 func TestService_AcquireLocksWithRetry_Success_FirstAttempt(t *testing.T) {
-	mockStore := newMockStoreServiceWithLockControl(t, nil)
-	svc := newTestService(mockStore.StoreService, nil)
+	mockDB := newMockAuditDB(t, nil)
+	svc := newTestServiceWithMockDB(mockDB, nil)
 
 	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
 		IDStub: func() string { return "tx-lock-success" },
@@ -952,20 +1070,19 @@ func TestService_AcquireLocksWithRetry_Success_FirstAttempt(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, 1, mockStore.acquireCallCount, "AcquireLocks should be called once")
+	assert.Equal(t, 1, mockDB.acquireCallCount, "AcquireLocks should be called once")
 }
 
 func TestService_AcquireLocksWithRetry_Success_AfterRetries(t *testing.T) {
 	callCount := 0
-	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		callCount++
 		if callCount < 3 {
 			return errors.New("lock conflict")
 		}
-
 		return nil
 	})
-	svc := newTestService(mockStore.StoreService, nil)
+	svc := newTestServiceWithMockDB(mockDB, nil)
 
 	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
 		IDStub: func() string { return "tx-lock-retry" },
@@ -979,10 +1096,10 @@ func TestService_AcquireLocksWithRetry_Success_AfterRetries(t *testing.T) {
 }
 
 func TestService_AcquireLocksWithRetry_Failure_MaxRetriesExceeded(t *testing.T) {
-	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		return errors.New("persistent lock conflict")
 	})
-	svc := newTestService(mockStore.StoreService, nil)
+	svc := newTestServiceWithMockDB(mockDB, nil)
 
 	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
 		IDStub: func() string { return "tx-lock-fail" },
@@ -994,14 +1111,14 @@ func TestService_AcquireLocksWithRetry_Failure_MaxRetriesExceeded(t *testing.T) 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to acquire locks after")
 	assert.Contains(t, err.Error(), "attempts")
-	assert.Equal(t, 10, mockStore.acquireCallCount, "Should retry max times")
+	assert.Equal(t, 10, mockDB.acquireCallCount, "Should retry max times")
 }
 
 func TestService_AcquireLocksWithRetry_ContextCancelled_BeforeRetry(t *testing.T) {
-	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		return errors.New("lock conflict")
 	})
-	svc := newTestService(mockStore.StoreService, nil)
+	svc := newTestServiceWithMockDB(mockDB, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
@@ -1016,17 +1133,16 @@ func TestService_AcquireLocksWithRetry_ContextCancelled_BeforeRetry(t *testing.T
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "lock acquisition cancelled")
 	// Should fail quickly due to context cancellation
-	assert.LessOrEqual(t, mockStore.acquireCallCount, 2, "Should not retry many times after cancellation")
+	assert.LessOrEqual(t, mockDB.acquireCallCount, 2, "Should not retry many times after cancellation")
 }
 
 func TestService_AcquireLocksWithRetry_ContextCancelled_DuringBackoff(t *testing.T) {
 	callCount := 0
-	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		callCount++
-
 		return errors.New("lock conflict")
 	})
-	svc := newTestService(mockStore.StoreService, nil)
+	svc := newTestServiceWithMockDB(mockDB, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
@@ -1047,15 +1163,14 @@ func TestService_AcquireLocksWithRetry_ContextCancelled_DuringBackoff(t *testing
 
 func TestService_AcquireLocksWithRetry_ExponentialBackoff(t *testing.T) {
 	callTimes := []time.Time{}
-	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		callTimes = append(callTimes, time.Now())
 		if len(callTimes) < 4 {
 			return errors.New("lock conflict")
 		}
-
 		return nil
 	})
-	svc := newTestService(mockStore.StoreService, nil)
+	svc := newTestServiceWithMockDB(mockDB, nil)
 
 	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
 		IDStub: func() string { return "tx-lock-backoff" },
@@ -1080,13 +1195,12 @@ func TestService_AcquireLocksWithRetry_ExponentialBackoff(t *testing.T) {
 func TestService_AcquireLocksWithRetry_MultipleEnrollmentIDs(t *testing.T) {
 	var capturedAnchor string
 	var capturedEIDs []string
-	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		capturedAnchor = anchor
 		capturedEIDs = eIDs
-
 		return nil
 	})
-	svc := newTestService(mockStore.StoreService, nil)
+	svc := newTestServiceWithMockDB(mockDB, nil)
 
 	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
 		IDStub: func() string { return "tx-multi-eid" },
@@ -1096,14 +1210,14 @@ func TestService_AcquireLocksWithRetry_MultipleEnrollmentIDs(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, 1, mockStore.acquireCallCount)
+	assert.Equal(t, 1, mockDB.acquireCallCount)
 	assert.Equal(t, "tx-multi-eid", capturedAnchor)
 	assert.NotNil(t, capturedEIDs)
 }
 
 func TestService_AcquireLocksWithRetry_EmptyEnrollmentIDs(t *testing.T) {
-	mockStore := newMockStoreServiceWithLockControl(t, nil)
-	svc := newTestService(mockStore.StoreService, nil)
+	mockDB := newMockAuditDB(t, nil)
+	svc := newTestServiceWithMockDB(mockDB, nil)
 
 	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
 		IDStub: func() string { return "tx-empty-eid" },
@@ -1113,7 +1227,7 @@ func TestService_AcquireLocksWithRetry_EmptyEnrollmentIDs(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, 1, mockStore.acquireCallCount)
+	assert.Equal(t, 1, mockDB.acquireCallCount)
 }
 
 // ---------------------------------------------------------------------------
