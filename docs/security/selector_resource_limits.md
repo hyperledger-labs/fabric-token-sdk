@@ -334,5 +334,4 @@ A: Currently no, limits are global. This may be added in future versions.
 ## References
 
 - [Selector Service Documentation](../services/selector.md)
-- [Security Plan](../../SECURITY_PLAN_SELECTOR_LIMITS.md)
 - [Configuration Guide](../configuration.md)
