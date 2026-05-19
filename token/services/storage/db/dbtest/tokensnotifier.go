@@ -115,7 +115,9 @@ type tokenSubscriber struct {
 }
 
 func (t *tokenSubscriber) Subscribe(f func(operation driver.Operation, vals driver.TokenRecordReference)) error {
-	return t.notifier.Subscribe(f)
+	_, err := t.notifier.Subscribe(f)
+
+	return err
 }
 
 func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {

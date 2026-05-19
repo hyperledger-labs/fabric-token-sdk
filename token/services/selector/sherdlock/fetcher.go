@@ -167,9 +167,9 @@ type tokenCache interface {
 
 // cachedFetcher eagerly fetches all the tokens from the DB at regular intervals and returns the cached result
 type cachedFetcher struct {
-	tokenDB  TokenDB
-	notifier dbdriver.TokenNotifier
-	cache    tokenCache
+	tokenDB     TokenDB
+	unsubscribe func() error // nil when no notifier is active; call on Close to silence the subscription
+	cache       tokenCache
 	// freshnessInterval is the time between periodical updates
 	freshnessInterval time.Duration
 	// maxQueriesBeforeRefresh is the number of times the fetcher will respond with the cached result before refreshing.
@@ -226,22 +226,23 @@ func NewCachedFetcher(tokenDB TokenDB, notifier dbdriver.TokenNotifier, cacheSiz
 	f.updateCond = sync.NewCond(&f.mu)
 
 	if notifier != nil {
-		if err := notifier.Subscribe(f.onTokenChange); err != nil {
+		cancel, err := notifier.Subscribe(f.onTokenChange)
+		if err != nil {
 			logger.Warnf("failed to subscribe to token notifier, falling back to time-based cache refresh: %v", err)
 		} else {
-			f.notifier = notifier
+			f.unsubscribe = cancel
 		}
 	}
 
 	return f
 }
 
-// Close unregisters all callbacks from the token notifier, releasing the subscription.
-// It should be called when the fetcher is no longer needed to prevent callback leaks
-// across TMS restarts.
+// Close silences the token notifier subscription registered by this fetcher.
+// It should be called when the fetcher is no longer needed to prevent stale
+// callbacks from firing after a TMS restart.
 func (f *cachedFetcher) Close() error {
-	if f.notifier != nil {
-		return f.notifier.UnsubscribeAll()
+	if f.unsubscribe != nil {
+		return f.unsubscribe()
 	}
 
 	return nil

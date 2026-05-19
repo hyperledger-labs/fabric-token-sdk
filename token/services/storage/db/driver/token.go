@@ -273,10 +273,10 @@ type TokenRecordReference struct {
 
 // TokenNotifier is used to subscribe to token changes in the storage.
 type TokenNotifier interface {
-	// Subscribe registers a callback function to be called when a token record is inserted, updated or deleted.
-	Subscribe(callback func(Operation, TokenRecordReference)) error
-	// UnsubscribeAll unregisters all callbacks.
-	UnsubscribeAll() error
+	// Subscribe registers a callback and returns a cancel function that unregisters
+	// only that specific callback. Calling the cancel function is safe to call multiple
+	// times and from any goroutine.
+	Subscribe(callback func(Operation, TokenRecordReference)) (func() error, error)
 }
 
 // TokenNotifierDriver is the interface for a token database driver

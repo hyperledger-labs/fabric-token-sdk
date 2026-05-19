@@ -1143,16 +1143,14 @@ type mockTokenNotifier struct {
 	callback func(dbdriver.Operation, dbdriver.TokenRecordReference)
 }
 
-func (n *mockTokenNotifier) Subscribe(cb func(dbdriver.Operation, dbdriver.TokenRecordReference)) error {
+func (n *mockTokenNotifier) Subscribe(cb func(dbdriver.Operation, dbdriver.TokenRecordReference)) (func() error, error) {
 	n.callback = cb
 
-	return nil
-}
+	return func() error {
+		n.callback = nil
 
-func (n *mockTokenNotifier) UnsubscribeAll() error {
-	n.callback = nil
-
-	return nil
+		return nil
+	}, nil
 }
 
 func (n *mockTokenNotifier) fire(op dbdriver.Operation, ref dbdriver.TokenRecordReference) {
