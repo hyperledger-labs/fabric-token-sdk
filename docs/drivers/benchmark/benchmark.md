@@ -15,6 +15,9 @@
 - [ZKAT DLog Testing Architecture](core/dlognogh/dlognogh_architecture.md) - Understanding the test layers
 - [ZKAT DLog Regression Tests](core/dlognogh/dlognogh_regression.md) - Backwards compatibility testing
 
+- [Fabtoken Benchmarks](core/fabtoken/fabtoken.md) - How to run benchmarks
+- [Fabtoken Testing Architecture](core/fabtoken/fabtoken_architecture.md) - Understanding the test layers
+
 ### Services
 
 - [Identity Service - Idemix](services/identity/idemix.md)
