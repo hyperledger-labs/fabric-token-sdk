@@ -64,21 +64,7 @@ func NewServiceManager(
 			if err != nil {
 				return nil, errors.WithMessagef(err, "failed to get token cache for [%s]", tmsID)
 			}
-			tms, err := tmsProvider.GetManagementService(token.WithTMSID(tmsID))
-			if err != nil {
-				return nil, errors.Errorf("failed to get management service for [%s]", tmsID)
-			}
-			if tms == nil {
-				return nil, errors.Errorf("failed to get management service for [%s]: nil", tmsID)
-			}
-			if tms.Configuration() == nil {
-				return nil, errors.Errorf("failed to get configuration for [%s]", tmsID)
-			}
-			vConfig, err := tms.Configuration().GetValidationConfig()
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to get validation config for [%s]", tmsID)
-			}
-			tokens := NewService(tmsID, tmsProvider, networkProvider, storage, cacheInst, vConfig)
+			tokens := NewService(tmsID, tmsProvider, networkProvider, storage, cacheInst)
 
 			return tokens, nil
 		}),

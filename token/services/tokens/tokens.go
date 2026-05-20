@@ -98,14 +98,13 @@ type Service struct {
 	Config ValidationConfig
 }
 
-func NewService(tmsID token.TMSID, TMSProvider TMSProvider, networkProvider NetworkProvider, storage *DBStorage, requestsCache Cache, config ValidationConfig) *Service {
+func NewService(tmsID token.TMSID, TMSProvider TMSProvider, networkProvider NetworkProvider, storage *DBStorage, requestsCache Cache) *Service {
 	return &Service{
 		tmsID:           tmsID,
 		TMSProvider:     TMSProvider,
 		NetworkProvider: networkProvider,
 		Storage:         storage,
 		RequestsCache:   requestsCache,
-		Config:          config,
 	}
 }
 
@@ -151,6 +150,27 @@ func (t *Service) AppendValid(ctx context.Context, tx dbdriver.Transaction, txID
 
 // Append applies the passed request to the local storage.
 func (t *Service) Append(ctx context.Context, tx dbdriver.Transaction, txID token.RequestAnchor, req *AppendRequest) (err error) {
+	if t.Config == (ValidationConfig{}) {
+		t.Config = ValidationConfig{
+			MaxTokenPayloadSize:  2 * 1024 * 1024,
+			MaxTokenOutputsPerTx: 1000,
+			MaxBulkDeleteSize:    10000,
+			MaxWalletIDSize:      1024,
+			MaxOwnerRawSize:      16 * 1024,
+			MaxIssuerRawSize:     16 * 1024,
+			MaxTokenRequestSize:  2 * 1024 * 1024,
+			MaxActionCount:       1000,
+		}
+		if t.TMSProvider != nil {
+			tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(t.tmsID))
+			if err == nil && tms != nil && tms.Configuration() != nil {
+				if vConfig, err := tms.Configuration().GetValidationConfig(); err == nil {
+					t.Config = vConfig
+				}
+			}
+		}
+	}
+
 	err = t.validateAppendRequest(req)
 	if err != nil {
 		return errors.Wrapf(err, "validation failed")
