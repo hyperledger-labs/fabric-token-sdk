@@ -70,6 +70,9 @@ const (
 	// collectactions.go
 	TypeActions        = "actions"
 	TypeActionTransfer = "action_transfer"
+
+	// interop/htlc/distribute.go
+	TypeHTLCTerms = "htlc_terms"
 )
 
 // Sentinel errors for envelope validation.

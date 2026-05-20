@@ -68,17 +68,12 @@ func NewDistributeTermsView(recipient view.Identity, terms *Terms) *DistributeTe
 }
 
 func (v *DistributeTermsView) Call(context view.Context) (interface{}, error) {
-	session, err := context.GetSession(context.Initiator(), v.recipient)
+	sess, err := context.GetSession(context.Initiator(), v.recipient)
 	if err != nil {
 		return nil, err
 	}
-	termsRaw, err := v.terms.Bytes()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling terms")
-	}
-	err = session.SendWithContext(context.Context(), termsRaw)
-	if err != nil {
-		return nil, err
+	if err := session.SendEnvelopeOnSession(sess, context.Context(), v.terms, session.TypeHTLCTerms); err != nil {
+		return nil, errors.Wrapf(err, "failed sending terms")
 	}
 
 	return nil, nil
@@ -98,7 +93,8 @@ func ReceiveTerms(context view.Context) (*Terms, error) {
 
 func (v *termsReceiverView) Call(context view.Context) (interface{}, error) {
 	terms := &Terms{}
-	if err := session.JSON(context).Receive(terms); err != nil {
+	s := session.JSON(context)
+	if err := session.ReceiveTyped(s, session.TypeHTLCTerms, terms); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling terms")
 	}
 
