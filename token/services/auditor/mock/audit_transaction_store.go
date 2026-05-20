@@ -26,18 +26,18 @@ type AuditTransactionStore struct {
 		result2 bool
 		result3 error
 	}
-	ClaimPendingTransactionsStub        func(context.Context, driver.RecoveryClaimParams) ([]*driver.TransactionRecord, error)
+	ClaimPendingTransactionsStub        func(context.Context, driver.RecoveryClaimParams) ([]*driver.RecoveryClaim, error)
 	claimPendingTransactionsMutex       sync.RWMutex
 	claimPendingTransactionsArgsForCall []struct {
 		arg1 context.Context
 		arg2 driver.RecoveryClaimParams
 	}
 	claimPendingTransactionsReturns struct {
-		result1 []*driver.TransactionRecord
+		result1 []*driver.RecoveryClaim
 		result2 error
 	}
 	claimPendingTransactionsReturnsOnCall map[int]struct {
-		result1 []*driver.TransactionRecord
+		result1 []*driver.RecoveryClaim
 		result2 error
 	}
 	CloseStub        func() error
@@ -263,7 +263,7 @@ func (fake *AuditTransactionStore) AcquireRecoveryLeadershipReturnsOnCall(i int,
 	}{result1, result2, result3}
 }
 
-func (fake *AuditTransactionStore) ClaimPendingTransactions(arg1 context.Context, arg2 driver.RecoveryClaimParams) ([]*driver.TransactionRecord, error) {
+func (fake *AuditTransactionStore) ClaimPendingTransactions(arg1 context.Context, arg2 driver.RecoveryClaimParams) ([]*driver.RecoveryClaim, error) {
 	fake.claimPendingTransactionsMutex.Lock()
 	ret, specificReturn := fake.claimPendingTransactionsReturnsOnCall[len(fake.claimPendingTransactionsArgsForCall)]
 	fake.claimPendingTransactionsArgsForCall = append(fake.claimPendingTransactionsArgsForCall, struct {
@@ -289,7 +289,7 @@ func (fake *AuditTransactionStore) ClaimPendingTransactionsCallCount() int {
 	return len(fake.claimPendingTransactionsArgsForCall)
 }
 
-func (fake *AuditTransactionStore) ClaimPendingTransactionsCalls(stub func(context.Context, driver.RecoveryClaimParams) ([]*driver.TransactionRecord, error)) {
+func (fake *AuditTransactionStore) ClaimPendingTransactionsCalls(stub func(context.Context, driver.RecoveryClaimParams) ([]*driver.RecoveryClaim, error)) {
 	fake.claimPendingTransactionsMutex.Lock()
 	defer fake.claimPendingTransactionsMutex.Unlock()
 	fake.ClaimPendingTransactionsStub = stub
@@ -302,28 +302,28 @@ func (fake *AuditTransactionStore) ClaimPendingTransactionsArgsForCall(i int) (c
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *AuditTransactionStore) ClaimPendingTransactionsReturns(result1 []*driver.TransactionRecord, result2 error) {
+func (fake *AuditTransactionStore) ClaimPendingTransactionsReturns(result1 []*driver.RecoveryClaim, result2 error) {
 	fake.claimPendingTransactionsMutex.Lock()
 	defer fake.claimPendingTransactionsMutex.Unlock()
 	fake.ClaimPendingTransactionsStub = nil
 	fake.claimPendingTransactionsReturns = struct {
-		result1 []*driver.TransactionRecord
+		result1 []*driver.RecoveryClaim
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *AuditTransactionStore) ClaimPendingTransactionsReturnsOnCall(i int, result1 []*driver.TransactionRecord, result2 error) {
+func (fake *AuditTransactionStore) ClaimPendingTransactionsReturnsOnCall(i int, result1 []*driver.RecoveryClaim, result2 error) {
 	fake.claimPendingTransactionsMutex.Lock()
 	defer fake.claimPendingTransactionsMutex.Unlock()
 	fake.ClaimPendingTransactionsStub = nil
 	if fake.claimPendingTransactionsReturnsOnCall == nil {
 		fake.claimPendingTransactionsReturnsOnCall = make(map[int]struct {
-			result1 []*driver.TransactionRecord
+			result1 []*driver.RecoveryClaim
 			result2 error
 		})
 	}
 	fake.claimPendingTransactionsReturnsOnCall[i] = struct {
-		result1 []*driver.TransactionRecord
+		result1 []*driver.RecoveryClaim
 		result2 error
 	}{result1, result2}
 }

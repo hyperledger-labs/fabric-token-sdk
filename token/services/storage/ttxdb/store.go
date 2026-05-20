@@ -95,6 +95,10 @@ const (
 // in that action.
 type TransactionRecord = dbdriver.TransactionRecord
 
+// RecoveryClaim is the minimal projection of a pending transaction row
+// returned by ClaimPendingTransactions for recovery processing.
+type RecoveryClaim = dbdriver.RecoveryClaim
+
 // MovementRecord is a record of a movement of assets.
 // Given a Token Transaction, a movement record is created for each enrollment ID that participated in the transaction
 // and each token type that was transferred.
@@ -372,7 +376,9 @@ func (d *StoreService) AcquireRecoveryLeadership(ctx context.Context, lockID int
 }
 
 // ClaimPendingTransactions returns a claimed batch of Pending transactions older than the given duration.
-func (d *StoreService) ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*TransactionRecord, error) {
+// Each returned RecoveryClaim carries the TxID and StoredAt timestamp the recovery loop needs;
+// the rest of the row is intentionally not projected from SQL.
+func (d *StoreService) ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*RecoveryClaim, error) {
 	storedBefore := time.Now().UTC().Add(-olderThan)
 	logger.DebugfContext(ctx, "claiming pending transactions stored before %s (older than %s), lease duration [%s], limit [%d], owner [%s]",
 		storedBefore, olderThan, leaseDuration, limit, owner)

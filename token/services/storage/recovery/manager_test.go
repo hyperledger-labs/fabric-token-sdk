@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/recovery"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/recovery/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
@@ -62,7 +61,7 @@ func TestManager_StartStop(t *testing.T) {
 	leadership := &mock.Leadership{}
 	leadership.CloseReturns(nil)
 	mockDB.AcquireRecoveryLeadershipReturns(leadership, true, nil)
-	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.TransactionRecord{}, nil)
+	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.RecoveryClaim{}, nil)
 
 	manager := recovery.NewManager(
 		logger,
@@ -105,10 +104,9 @@ func TestManager_RecoverTransaction(t *testing.T) {
 		InstanceID:     "test-instance",
 	}
 
-	// Create a pending transaction record
-	txRecord := &ttxdb.TransactionRecord{
-		TxID:   "tx123",
-		Status: storage.Pending,
+	// Create a pending transaction claim
+	txRecord := &ttxdb.RecoveryClaim{
+		TxID: "tx123",
 	}
 
 	leadership1 := &mock.Leadership{}
@@ -118,8 +116,8 @@ func TestManager_RecoverTransaction(t *testing.T) {
 
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadership1, true, nil)
 	mockDB.AcquireRecoveryLeadershipReturns(leadership2, true, nil)
-	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.TransactionRecord{txRecord}, nil)
-	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.TransactionRecord{}, nil)
+	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.RecoveryClaim{txRecord}, nil)
+	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.RecoveryClaim{}, nil)
 	mockHandler.RecoverReturns(nil)
 	mockDB.ReleaseRecoveryClaimReturns(nil)
 
@@ -162,10 +160,9 @@ func TestManager_SkipAlreadyRecovered(t *testing.T) {
 		InstanceID:     "test-instance",
 	}
 
-	// Create a pending transaction record
-	txRecord := &ttxdb.TransactionRecord{
-		TxID:   "tx456",
-		Status: storage.Pending,
+	// Create a pending transaction claim
+	txRecord := &ttxdb.RecoveryClaim{
+		TxID: "tx456",
 	}
 
 	leadershipA := &mock.Leadership{}
@@ -178,8 +175,8 @@ func TestManager_SkipAlreadyRecovered(t *testing.T) {
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadershipA, true, nil)
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(1, leadershipB, true, nil)
 	mockDB.AcquireRecoveryLeadershipReturns(leadershipC, true, nil)
-	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.TransactionRecord{txRecord}, nil)
-	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.TransactionRecord{}, nil)
+	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.RecoveryClaim{txRecord}, nil)
+	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.RecoveryClaim{}, nil)
 	mockHandler.RecoverReturns(nil)
 	mockDB.ReleaseRecoveryClaimReturns(nil)
 

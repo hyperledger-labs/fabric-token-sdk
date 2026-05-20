@@ -95,7 +95,9 @@ type TransactionStore interface {
 
 	// ClaimPendingTransactions atomically claims a batch of Pending transactions for recovery processing.
 	// Transactions whose recovery lease expired are eligible again.
-	ClaimPendingTransactions(ctx context.Context, params RecoveryClaimParams) ([]*TransactionRecord, error)
+	// Returns the minimal projection (TxID + StoredAt) needed by the recovery loop;
+	// callers do not need the full TransactionRecord.
+	ClaimPendingTransactions(ctx context.Context, params RecoveryClaimParams) ([]*RecoveryClaim, error)
 
 	// ReleaseRecoveryClaim clears the recovery claim metadata for the given transaction if owned by owner.
 	// The message parameter is stored for audit/debugging purposes.
@@ -122,6 +124,20 @@ type RecoveryClaimParams struct {
 	LeaseDuration time.Duration
 	Limit         int
 	Owner         string
+}
+
+// RecoveryClaim is the minimal projection of a pending transaction row
+// returned by ClaimPendingTransactions. The recovery loop only needs the
+// TxID to act on and the StoredAt timestamp to decide grace-period
+// promotions; the rest of TransactionRecord (action type, amounts,
+// metadata, ...) was always discarded by the caller, so the SQL layer
+// stops projecting it.
+type RecoveryClaim struct {
+	// TxID is the transaction ID claimed for recovery.
+	TxID string
+	// StoredAt is the storage timestamp of the underlying row (UTC), used
+	// by the recovery loop to compute row age for grace-period decisions.
+	StoredAt time.Time
 }
 
 // TransactionRecordReference contains the primary key fields of a transaction request record.
