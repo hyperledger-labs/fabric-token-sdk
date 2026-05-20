@@ -26,7 +26,7 @@ type Vault interface {
 
 type QueryEngine interface {
 	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id. Type can be empty
-	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type, limit int) (driver.UnspentTokensIterator, error)
 }
 
 type TokenVault interface {
@@ -289,7 +289,7 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 	var validIterators []driver.UnspentTokensIterator
 	var errs []error
 	for _, walletID := range walletIDs {
-		it, err := w.queryEngine.UnspentTokensIteratorBy(ctx, walletID, tokenType)
+		it, err := w.queryEngine.UnspentTokensIteratorBy(ctx, walletID, tokenType, 0)
 		if err != nil {
 			errs = append(errs, errors.WithMessagef(err, "failed to get iterator over unspent tokens for wallet id [%s]", walletID))
 

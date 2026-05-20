@@ -167,7 +167,18 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDB
 		return qs
 	}
 
-	s, _ := selector.NewManager(lock, qf, testutils.SelectorNumRetries, testutils.SelectorTimeout, false, testutils.TokenQuantityPrecision).NewSelector(testutils.TxID)
+	s, _ := selector.NewManager(
+		lock,
+		qf,
+		testutils.SelectorNumRetries,
+		testutils.SelectorTimeout,
+		false,
+		testutils.TokenQuantityPrecision,
+		0,
+		0,
+		0,
+		0,
+	).NewSelector(testutils.TxID)
 
 	return &extendedSelector{
 		Selector: s,

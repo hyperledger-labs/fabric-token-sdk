@@ -159,9 +159,9 @@ func TestConfig_DefaultValues(t *testing.T) {
 
 	t.Run("default relationships are valid", func(t *testing.T) {
 		// Verify default values satisfy validation rules
-		assert.True(t, defaultMaxLockAttempts >= defaultMaxTokensPerSelection,
+		assert.GreaterOrEqual(t, defaultMaxLockAttempts, defaultMaxTokensPerSelection,
 			"maxLockAttempts should be >= maxTokensPerSelection")
-		assert.True(t, defaultMaxLocksPerTransaction <= defaultMaxTokensPerSelection,
+		assert.LessOrEqual(t, defaultMaxLocksPerTransaction, defaultMaxTokensPerSelection,
 			"maxLocksPerTransaction should be <= maxTokensPerSelection")
 	})
 }

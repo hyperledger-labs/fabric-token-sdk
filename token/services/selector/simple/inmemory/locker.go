@@ -64,7 +64,7 @@ func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTim
 }
 
 func NewLockerWithLimits(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTimeout time.Duration, maxLocksPerTx int) simple.Locker {
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // G118: cancel is stored and called in Stop
+	ctx, cancel := context.WithCancel(context.Background())
 	r := &locker{
 		ttxdb:                  ttxdb,
 		sleepTimeout:           timeout,
