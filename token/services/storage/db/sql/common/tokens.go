@@ -141,7 +141,7 @@ func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bo
 
 // UnspentTokensIterator returns an iterator over all unspent tokens
 func (db *TokenStore) UnspentTokensIterator(ctx context.Context) (tdriver.UnspentTokensIterator, error) {
-	return db.UnspentTokensIteratorBy(ctx, "", "")
+	return db.UnspentTokensIteratorBy(ctx, "", "", 0)
 }
 
 // UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the
@@ -237,15 +237,14 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	branch1.FormatTo(db.ci, sb)
 	sb.WriteString(" UNION ALL ")
 	branch2.FormatTo(db.ci, sb)
-	
+
+	query, args := sb.Build()
+
 	// Add LIMIT clause if specified (for security and performance)
 	if limit > 0 {
-		sb.WriteString(" LIMIT ")
-		sb.WriteString(common3.Placeholder(db.ci, len(sb.Args())+1))
-		sb.AddArg(limit)
+		query += " LIMIT ?"
+		args = append(args, limit)
 	}
-	
-	query, args := sb.Build()
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
@@ -411,7 +410,7 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
 func (db *TokenStore) ListUnspentTokensBy(ctx context.Context, walletID string, typ token.Type) (*token.UnspentTokens, error) {
 	logger.DebugfContext(ctx, "list unspent token by [%s,%s]", walletID, typ)
-	it, err := db.UnspentTokensIteratorBy(ctx, walletID, typ)
+	it, err := db.UnspentTokensIteratorBy(ctx, walletID, typ, 0)
 	if err != nil {
 		return nil, err
 	}

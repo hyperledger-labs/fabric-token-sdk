@@ -73,6 +73,7 @@ func (s *selector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q 
 	if errors.Is(err, context.DeadlineExceeded) {
 		// Use original context for cleanup to ensure it completes
 		s.locker.UnlockByTxID(ctx, s.txID)
+
 		return nil, nil, errors.Errorf(
 			"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts",
 			s.selectionTimeout, s.tokensIteratedCount, s.lockAttemptsCount,
@@ -112,6 +113,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 		actualRetries++
 		if actualRetries > s.maxRetryCycles {
 			s.locker.UnlockByTxID(ctx, s.txID)
+
 			return nil, nil, errors.Errorf(
 				"token selection aborted: exceeded max retry cycles (%d) after examining %d tokens and %d lock attempts",
 				s.maxRetryCycles, s.tokensIteratedCount, s.lockAttemptsCount,
@@ -142,6 +144,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			if s.tokensIteratedCount > s.maxTokensPerSelection {
 				s.locker.UnlockIDs(ctx, toBeSpent...)
 				s.locker.UnlockIDs(ctx, toBeCertified...)
+
 				return nil, nil, errors.Errorf(
 					"token selection aborted: exceeded max token iteration limit (%d tokens)",
 					s.maxTokensPerSelection,
@@ -169,6 +172,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			if s.lockAttemptsCount > s.maxLockAttempts {
 				s.locker.UnlockIDs(ctx, toBeSpent...)
 				s.locker.UnlockIDs(ctx, toBeCertified...)
+
 				return nil, nil, errors.Errorf(
 					"token selection aborted: exceeded max lock attempts (%d) after examining %d tokens",
 					s.maxLockAttempts, s.tokensIteratedCount,

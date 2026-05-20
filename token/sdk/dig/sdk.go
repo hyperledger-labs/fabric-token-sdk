@@ -139,13 +139,15 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*ftscore.TMSProvider](), dig.As(new(ftsdriver.TokenManagerServiceProvider))),
 		p.Container().Provide(tms.NewPostInitializer),
 
-		p.Container().Provide(func(ttxStoreServiceManager ttxdb.StoreServiceManager, configService fscconfig.ConfigService) *network2.LockerProvider {
+		p.Container().Provide(func(ttxStoreServiceManager ttxdb.StoreServiceManager, configService driver.ConfigService) *network2.LockerProvider {
 			cfg, err := config.New(configService)
 			if err != nil {
 				logging.MustGetLogger().Errorf("error getting selector config for locker, using defaults: %s", err.Error())
+
 				return network2.NewLockerProvider(ttxStoreServiceManager, 2*time.Second, 5*time.Minute)
 			}
 			limits := cfg.GetLimits()
+
 			return network2.NewLockerProviderWithLimits(ttxStoreServiceManager, 2*time.Second, 5*time.Minute, limits.MaxLocksPerTransaction)
 		}, dig.As(new(simple.LockerProvider))),
 		p.Container().Provide(selectorProviders[sdriver.Driver(p.ConfigService().GetString("token.selector.driver"))], dig.As(new(token.SelectorManagerProvider))),
