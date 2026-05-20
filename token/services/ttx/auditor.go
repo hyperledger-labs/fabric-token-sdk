@@ -150,7 +150,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 
 	jsonSession := session2.NewFromSession(context, session)
 	var signaturePayload SignaturePayload
-	if err := session2.ReceiveTypedWithTimeout(jsonSession, session2.TypeSignature, &signaturePayload, time.Minute); err != nil {
+	if err := session2.ReceiveTypedWithTimeout(jsonSession, TypeSignature, &signaturePayload, time.Minute); err != nil {
 		logger.ErrorfContext(context.Context(), "failed to read audit event: %s", err)
 
 		return nil, errors.WithMessagef(err, "failed to read audit event")
@@ -182,7 +182,7 @@ func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session,
 	if err != nil {
 		return nil, err
 	}
-	err = session2.SendEnvelopeOnSession(session, context.Context(), &TransactionPayload{Raw: txRaw}, session2.TypeTransaction)
+	err = session2.SendEnvelopeOnSession(session, context.Context(), &TransactionPayload{Raw: txRaw}, TypeTransaction)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
@@ -219,7 +219,7 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 	if err != nil {
 		return nil, err
 	}
-	err = session2.SendEnvelopeOnSession(left, context.Context(), &TransactionPayload{Raw: txRaw}, session2.TypeTransaction)
+	err = session2.SendEnvelopeOnSession(left, context.Context(), &TransactionPayload{Raw: txRaw}, TypeTransaction)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
@@ -334,7 +334,7 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	}
 
 	logger.DebugfContext(context.Context(), "auditor sending sigma back", utils.Hashable(sigma))
-	if err := session2.SendEnvelopeOnSession(context.Session(), context.Context(), &SignaturePayload{Signature: sigma}, session2.TypeSignature); err != nil {
+	if err := session2.SendEnvelopeOnSession(context.Session(), context.Context(), &SignaturePayload{Signature: sigma}, TypeSignature); err != nil {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
 	logger.DebugfContext(context.Context(), "Signing and sending back transaction...done [%s]", a.tx.ID())

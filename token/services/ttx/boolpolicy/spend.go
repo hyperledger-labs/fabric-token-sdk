@@ -70,7 +70,7 @@ func NewReceiveSpendRequestView() *ReceiveSpendRequestView {
 func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error) {
 	tx := &SpendRequest{}
 	s := session.JSON(context)
-	if err := session.ReceiveTypedWithTimeout(s, session.TypeSpendRequest, tx, time.Minute*4); err != nil {
+	if err := session.ReceiveTypedWithTimeout(s, ttx.TypeSpendRequest, tx, time.Minute*4); err != nil {
 		logger.ErrorfContext(context.Context(), "failed receiving request: %s", err)
 
 		return nil, err
@@ -172,13 +172,13 @@ func (c *RequestSpendView) collectAnswers(context view.Context, party view.Ident
 		return
 	}
 	s := session.NewFromSession(context, backendSession)
-	if err = session.SendTyped(s, context.Context(), request, session.TypeSpendRequest); err != nil {
+	if err = session.SendTyped(s, context.Context(), request, ttx.TypeSpendRequest); err != nil {
 		ch <- &answer{err: errors.Wrapf(err, "failed to send request to [%s]", party), party: party}
 
 		return
 	}
 	response := &SpendResponse{}
-	if err := session.ReceiveTyped(s, session.TypeSpendResponse, response); err != nil {
+	if err := session.ReceiveTyped(s, ttx.TypeSpendResponse, response); err != nil {
 		ch <- &answer{err: errors.Wrapf(err, "failed to receive response from [%s]", party), party: party}
 
 		return
@@ -224,7 +224,7 @@ func ReceiveSpendTx(context view.Context, request *SpendRequest) (*Transaction, 
 // the caller's responsibility once any business-logic checks pass.
 func (a *ReceiveSpendTxView) Call(context view.Context) (interface{}, error) {
 	s := session.JSON(context)
-	if err := session.SendTyped(s, context.Context(), &SpendResponse{}, session.TypeSpendResponse); err != nil {
+	if err := session.SendTyped(s, context.Context(), &SpendResponse{}, ttx.TypeSpendResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to send spend response")
 	}
 	tx, err := ttx.ReceiveTransaction(context)

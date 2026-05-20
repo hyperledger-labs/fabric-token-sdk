@@ -27,7 +27,7 @@ func TestVersionedRecipientRequestRoundTrip(t *testing.T) {
 		WalletID: []byte("wallet"),
 		MultiSig: true,
 	}
-	roundTripTTXMessage(t, jsession.TypeRecipientRequest, original, &RecipientRequest{})
+	roundTripTTXMessage(t, TypeRecipientRequest, original, &RecipientRequest{})
 }
 
 func TestVersionedRecipientResponseRoundTrip(t *testing.T) {
@@ -35,7 +35,7 @@ func TestVersionedRecipientResponseRoundTrip(t *testing.T) {
 		Identity:  []byte("recipient"),
 		AuditInfo: []byte("audit"),
 	}
-	roundTripTTXMessage(t, jsession.TypeRecipientResponse, original, &RecipientData{})
+	roundTripTTXMessage(t, TypeRecipientResponse, original, &RecipientData{})
 }
 
 func TestVersionedExchangeRecipientRoundTrip(t *testing.T) {
@@ -43,7 +43,7 @@ func TestVersionedExchangeRecipientRoundTrip(t *testing.T) {
 		TMSID:    token.TMSID{Network: "net", Channel: "ch", Namespace: "ns"},
 		WalletID: []byte("wallet"),
 	}
-	roundTripTTXMessage(t, jsession.TypeExchangeRecipientRequest, original, &ExchangeRecipientRequest{})
+	roundTripTTXMessage(t, TypeExchangeRecipientRequest, original, &ExchangeRecipientRequest{})
 }
 
 func TestVersionedMultisigRecipientDataRoundTrip(t *testing.T) {
@@ -51,14 +51,14 @@ func TestVersionedMultisigRecipientDataRoundTrip(t *testing.T) {
 		RecipientData: &token.RecipientData{Identity: []byte("ms")},
 		Nodes:         []view.Identity{view.Identity("a")},
 	}
-	roundTripTTXMessage(t, jsession.TypeMultisigRecipientData, original, &MultisigRecipientData{})
+	roundTripTTXMessage(t, TypeMultisigRecipientData, original, &MultisigRecipientData{})
 }
 
 func TestVersionedPolicyRecipientDataRoundTrip(t *testing.T) {
 	original := &PolicyRecipientData{
 		RecipientData: &token.RecipientData{Identity: []byte("pol")},
 	}
-	roundTripTTXMessage(t, jsession.TypePolicyRecipientData, original, &PolicyRecipientData{})
+	roundTripTTXMessage(t, TypePolicyRecipientData, original, &PolicyRecipientData{})
 }
 
 func TestVersionedWithdrawalRequestRoundTrip(t *testing.T) {
@@ -67,7 +67,7 @@ func TestVersionedWithdrawalRequestRoundTrip(t *testing.T) {
 		TokenType: "TOK",
 		Amount:    42,
 	}
-	roundTripTTXMessage(t, jsession.TypeWithdrawalRequest, original, &WithdrawalRequest{})
+	roundTripTTXMessage(t, TypeWithdrawalRequest, original, &WithdrawalRequest{})
 }
 
 func TestVersionedUpgradeAgreementRoundTrip(t *testing.T) {
@@ -75,7 +75,7 @@ func TestVersionedUpgradeAgreementRoundTrip(t *testing.T) {
 		Challenge: []byte("challenge"),
 		TMSID:     token.TMSID{Network: "net", Channel: "ch", Namespace: "ns"},
 	}
-	roundTripTTXMessage(t, jsession.TypeUpgradeAgreement, original, &UpgradeTokensAgreement{})
+	roundTripTTXMessage(t, TypeUpgradeAgreement, original, &UpgradeTokensAgreement{})
 }
 
 func TestVersionedSignatureRequestRoundTrip(t *testing.T) {
@@ -83,17 +83,17 @@ func TestVersionedSignatureRequestRoundTrip(t *testing.T) {
 		TX:     []byte("tx-bytes"),
 		Signer: view.Identity("signer"),
 	}
-	roundTripTTXMessage(t, jsession.TypeSignatureRequest, original, &SignatureRequest{})
+	roundTripTTXMessage(t, TypeSignatureRequest, original, &SignatureRequest{})
 }
 
 func TestVersionedSignatureRoundTrip(t *testing.T) {
 	original := &SignaturePayload{Signature: []byte("sigma")}
-	roundTripTTXMessage(t, jsession.TypeSignature, original, &SignaturePayload{})
+	roundTripTTXMessage(t, TypeSignature, original, &SignaturePayload{})
 }
 
 func TestVersionedTransactionRoundTrip(t *testing.T) {
 	original := &TransactionPayload{Raw: []byte("tx-bytes")}
-	roundTripTTXMessage(t, jsession.TypeTransaction, original, &TransactionPayload{})
+	roundTripTTXMessage(t, TypeTransaction, original, &TransactionPayload{})
 }
 
 func TestVersionedUpgradeRequestRoundTrip(t *testing.T) {
@@ -103,7 +103,7 @@ func TestVersionedUpgradeRequestRoundTrip(t *testing.T) {
 			{ID: token2.ID{TxId: "tx1"}},
 		},
 	}
-	roundTripTTXMessage(t, jsession.TypeUpgradeRequest, original, &UpgradeTokensRequest{})
+	roundTripTTXMessage(t, TypeUpgradeRequest, original, &UpgradeTokensRequest{})
 }
 
 func roundTripTTXMessage(t *testing.T, msgType string, sent, received any) {

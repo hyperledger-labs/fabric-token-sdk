@@ -89,7 +89,7 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 	}
 
 	logger.DebugfContext(context.Context(), "Send withdrawal request")
-	err = jsession.SendTyped(s, context.Context(), wr, jsession.TypeWithdrawalRequest)
+	err = jsession.SendTyped(s, context.Context(), wr, TypeWithdrawalRequest)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 
@@ -173,7 +173,7 @@ func ReceiveWithdrawalRequest(context view.Context) (*WithdrawalRequest, error) 
 func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, error) {
 	s := jsession.JSON(context)
 	request := &WithdrawalRequest{}
-	if err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeWithdrawalRequest, request, 1*time.Minute); err != nil {
+	if err := jsession.ReceiveTypedWithTimeout(s, TypeWithdrawalRequest, request, 1*time.Minute); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive withdrawal request")
 	}
 

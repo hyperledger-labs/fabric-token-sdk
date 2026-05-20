@@ -93,12 +93,12 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 	// first agreement
 	agreement := &UpgradeTokensAgreement{}
 	logger.DebugfContext(context.Context(), "Send upgrade agreement")
-	err = jsession.SendTyped(s, context.Context(), agreement, jsession.TypeUpgradeAgreement)
+	err = jsession.SendTyped(s, context.Context(), agreement, TypeUpgradeAgreement)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
-	if err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeUpgradeAgreement, agreement, 1*time.Minute); err != nil {
+	if err := jsession.ReceiveTypedWithTimeout(s, TypeUpgradeAgreement, agreement, 1*time.Minute); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade agreement")
 	}
 
@@ -128,7 +128,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 		Proof:         proof,
 		NotAnonymous:  r.NotAnonymous,
 	}
-	err = jsession.SendTyped(s, context.Context(), wr, jsession.TypeUpgradeRequest)
+	err = jsession.SendTyped(s, context.Context(), wr, TypeUpgradeRequest)
 	if err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 
@@ -211,7 +211,7 @@ func ReceiveTokensUpgradeRequest(context view.Context) (*UpgradeTokensRequest, e
 func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, error) {
 	s := jsession.JSON(context)
 	agreement := &UpgradeTokensAgreement{}
-	if err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeUpgradeAgreement, agreement, 1*time.Minute); err != nil {
+	if err := jsession.ReceiveTypedWithTimeout(s, TypeUpgradeAgreement, agreement, 1*time.Minute); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade request")
 	}
 	logger.DebugfContext(context.Context(), "Received upgrade request")
@@ -228,12 +228,12 @@ func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, er
 	agreement.TMSID = tms.ID()
 
 	// send the agreement back
-	if err := jsession.SendTyped(s, context.Context(), agreement, jsession.TypeUpgradeAgreement); err != nil {
+	if err := jsession.SendTyped(s, context.Context(), agreement, TypeUpgradeAgreement); err != nil {
 		return nil, errors.Wrapf(err, "failed to send upgrade request")
 	}
 	// receive the response
 	request := &UpgradeTokensRequest{}
-	if err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeUpgradeRequest, request, 1*time.Minute); err != nil {
+	if err := jsession.ReceiveTypedWithTimeout(s, TypeUpgradeRequest, request, 1*time.Minute); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive upgrade request")
 	}
 

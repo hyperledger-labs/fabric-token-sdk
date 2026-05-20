@@ -40,41 +40,6 @@ func (e *Envelope) Validate(expectedType string) error {
 	return nil
 }
 
-// Message type constants for all JSON-typed interactive protocol messages.
-const (
-	// recipients.go
-	TypeRecipientRequest         = "recipient_req"
-	TypeRecipientResponse        = "recipient_resp"
-	TypeExchangeRecipientRequest = "exchange_req"
-	TypeExchangeRecipientResp    = "exchange_resp"
-	TypeMultisigRecipientData    = "multisig_data"
-	TypePolicyRecipientData      = "policy_data"
-
-	// withdrawal.go
-	TypeWithdrawalRequest = "withdrawal_req"
-
-	// upgrade.go
-	TypeUpgradeAgreement = "upgrade_agree"
-	TypeUpgradeRequest   = "upgrade_req"
-
-	// multisig/spend.go and boolpolicy/spend.go
-	TypeSpendRequest  = "spend_req"
-	TypeSpendResponse = "spend_resp"
-
-	// collectendorsements.go, endorse.go, accept.go, auditor.go, receivetx.go
-	TypeSignatureRequest    = "sig_req"
-	TypeSignature           = "signature"
-	TypeTransaction         = "transaction"
-	TypeTransactionResponse = "tx_resp"
-
-	// collectactions.go
-	TypeActions        = "actions"
-	TypeActionTransfer = "action_transfer"
-
-	// interop/htlc/distribute.go
-	TypeHTLCTerms = "htlc_terms"
-)
-
 // Sentinel errors for envelope validation.
 var (
 	ErrVersionMismatch    = errors.New("protocol version mismatch")
@@ -176,9 +141,9 @@ func UnwrapBody(raw []byte, expectedType string, dst any) error {
 }
 
 // SendTyped wraps v in a versioned envelope with the given message type and
-// sends it over the session.
+// sends it over the session, recording the process-wide envelope metrics.
 func SendTyped(s *session.S, ctx context.Context, v any, msgType string) error {
-	return SendTypedWithMetrics(s, ctx, v, msgType, nil)
+	return SendTypedWithMetrics(s, ctx, v, msgType, envelopeMetrics())
 }
 
 // SendTypedWithMetrics is like SendTyped but also records envelope metrics.
@@ -199,8 +164,9 @@ func ReceiveTyped(s *session.S, expectedType string, dst any) error {
 }
 
 // ReceiveTypedWithTimeout is like ReceiveTyped but with an explicit timeout.
+// It records the process-wide envelope metrics.
 func ReceiveTypedWithTimeout(s *session.S, expectedType string, dst any, d time.Duration) error {
-	return ReceiveTypedWithTimeoutAndMetrics(s, expectedType, dst, d, nil)
+	return ReceiveTypedWithTimeoutAndMetrics(s, expectedType, dst, d, envelopeMetrics())
 }
 
 // ReceiveTypedWithTimeoutAndMetrics is like ReceiveTypedWithTimeout but also
@@ -222,7 +188,8 @@ func ReceiveTypedWithTimeoutAndMetrics(s *session.S, expectedType string, dst an
 	return json.Unmarshal(env.Body, dst)
 }
 
-// SendEnvelopeOnSession wraps v in a versioned envelope and sends it on view.Session.
+// SendEnvelopeOnSession wraps v in a versioned envelope and sends it on view.Session,
+// recording the process-wide envelope metrics.
 func SendEnvelopeOnSession(sess view.Session, ctx context.Context, v any, msgType string) error {
 	env, err := WrapEnvelope(v, msgType)
 	if err != nil {
@@ -232,6 +199,7 @@ func SendEnvelopeOnSession(sess view.Session, ctx context.Context, v any, msgTyp
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal envelope")
 	}
+	envelopeMetrics().observeSend(msgType, len(env.Body))
 
 	return sess.SendWithContext(ctx, raw)
 }
@@ -249,7 +217,15 @@ func receiveEnvelope(s *session.S, expectedType string, d time.Duration) (*Envel
 		return nil, err
 	}
 
-	return UnwrapEnvelope(raw, expectedType)
+	env, err := UnwrapEnvelope(raw, expectedType)
+	if err != nil {
+		envelopeMetrics().observeError(classifyError(err))
+
+		return nil, err
+	}
+	envelopeMetrics().observeReceive(env)
+
+	return env, nil
 }
 
 func classifyError(err error) string {

@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/tokenapi"
-	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -128,11 +127,11 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 		Signer: input.IssuerIdentity,
 	}
 	ch <- &view.Message{
-		Payload: mustEnvelopeBytes(t, jsession.TypeSignatureRequest, signatureRequest),
+		Payload: mustEnvelopeBytes(t, ttx.TypeSignatureRequest, signatureRequest),
 	}
 	// then the transaction
 	ch <- &view.Message{
-		Payload: mustEnvelopeBytes(t, jsession.TypeTransaction, &ttx.TransactionPayload{Raw: txRaw}),
+		Payload: mustEnvelopeBytes(t, ttx.TypeTransaction, &ttx.TransactionPayload{Raw: txRaw}),
 	}
 
 	ctx.RunViewStub = func(v view.View, option ...view.RunViewOption) (interface{}, error) {
@@ -187,10 +186,10 @@ func TestEndorseView(t *testing.T) {
 				assert.Equal(t, 2, ctx.session.SendWithContextCallCount())
 				_, msg := ctx.session.SendWithContextArgsForCall(0)
 				var signaturePayload ttx.SignaturePayload
-				require.NoError(t, json.Unmarshal(mustUnwrapBody(t, msg, jsession.TypeSignature), &signaturePayload))
+				require.NoError(t, json.Unmarshal(mustUnwrapBody(t, msg, ttx.TypeSignature), &signaturePayload))
 				assert.Equal(t, []byte("a_token_sigma"), signaturePayload.Signature)
 				_, msg = ctx.session.SendWithContextArgsForCall(1)
-				require.NoError(t, json.Unmarshal(mustUnwrapBody(t, msg, jsession.TypeSignature), &signaturePayload))
+				require.NoError(t, json.Unmarshal(mustUnwrapBody(t, msg, ttx.TypeSignature), &signaturePayload))
 				assert.Equal(t, []byte("an_ack_signature"), signaturePayload.Signature)
 			},
 		},

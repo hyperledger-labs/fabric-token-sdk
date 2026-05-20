@@ -120,7 +120,7 @@ func TestReceiveTx(t *testing.T) {
 				require.NoError(t, err)
 
 				ch <- &view.Message{
-					Payload: mustEnvelopeBytes(t, jsession.TypeTransaction, &ttx.TransactionPayload{Raw: txRaw}),
+					Payload: mustEnvelopeBytes(t, ttx.TypeTransaction, &ttx.TransactionPayload{Raw: txRaw}),
 				}
 
 				return ctx, []ttx.TxOption{ttx.WithTimeout(1 * time.Second)}
@@ -172,7 +172,7 @@ func TestReceiveTx(t *testing.T) {
 					Signer: view.Identity("a_signer"),
 				}
 				ch <- &view.Message{
-					Payload: mustEnvelopeBytes(t, jsession.TypeSignatureRequest, sr),
+					Payload: mustEnvelopeBytes(t, ttx.TypeSignatureRequest, sr),
 				}
 
 				return ctx, []ttx.TxOption{ttx.WithTimeout(1 * time.Second)}

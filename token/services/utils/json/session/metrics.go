@@ -7,6 +7,7 @@ package session
 
 import (
 	"strconv"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 )
@@ -58,6 +59,35 @@ func NewEnvelopeMetrics(p metrics.Provider) *EnvelopeMetrics {
 		Errors:   p.NewCounter(envelopeErrorsOpts),
 		Size:     p.NewHistogram(envelopeSizeOpts),
 	}
+}
+
+// pkgMetrics holds the process-wide envelope metrics. It is registered once at
+// service startup via RegisterMetrics and read by the typed send/receive helpers
+// through envelopeMetrics(). Registering at startup (rather than per session)
+// keeps the metrics provider out of the per-message hot path.
+var (
+	pkgMetricsOnce sync.Once
+	pkgMetrics     *EnvelopeMetrics
+)
+
+// RegisterMetrics registers the envelope metrics against the given provider,
+// once per process. It is safe to call repeatedly and from multiple goroutines;
+// only the first non-nil call performs registration. Pass the metrics provider
+// already held at service construction (e.g. obtained via FSC
+// platform/view/services/metrics#GetProvider in the SDK wiring).
+func RegisterMetrics(p metrics.Provider) {
+	if p == nil {
+		return
+	}
+	pkgMetricsOnce.Do(func() {
+		pkgMetrics = NewEnvelopeMetrics(p)
+	})
+}
+
+// envelopeMetrics returns the process-wide metrics, or nil when none were
+// registered. A nil *EnvelopeMetrics is safe to use (all observe* methods no-op).
+func envelopeMetrics() *EnvelopeMetrics {
+	return pkgMetrics
 }
 
 func (m *EnvelopeMetrics) observeSend(msgType string, bodySize int) {

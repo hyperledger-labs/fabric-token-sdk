@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	utilsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/session"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/session/mock"
@@ -23,12 +24,12 @@ func TestVersionedSpendRequestRoundTrip(t *testing.T) {
 	original := &SpendRequest{
 		Token: &token.UnspentToken{Type: "TOK", Id: token.ID{TxId: "tx1"}},
 	}
-	roundTripSpendMessage(t, jsession.TypeSpendRequest, original, &SpendRequest{})
+	roundTripSpendMessage(t, ttx.TypeSpendRequest, original, &SpendRequest{})
 }
 
 func TestVersionedSpendResponseRoundTrip(t *testing.T) {
 	original := &SpendResponse{}
-	roundTripSpendMessage(t, jsession.TypeSpendResponse, original, &SpendResponse{})
+	roundTripSpendMessage(t, ttx.TypeSpendResponse, original, &SpendResponse{})
 }
 
 func roundTripSpendMessage(t *testing.T, msgType string, sent, received any) {

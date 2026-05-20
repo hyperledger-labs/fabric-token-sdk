@@ -45,7 +45,7 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		}
 		// The transaction is distributed by ttx.CollectEndorsements, which now
 		// wraps it in a versioned envelope carrying a TransactionPayload.
-		env, err := jsession.UnwrapEnvelope(msg.Payload, jsession.TypeTransaction)
+		env, err := jsession.UnwrapEnvelope(msg.Payload, ttx.TypeTransaction)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unwrapping transaction envelope")
 		}

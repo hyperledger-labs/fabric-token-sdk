@@ -20,6 +20,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Local message-type strings for exercising the generic envelope mechanism.
+// The session package no longer defines service-specific type constants, so
+// the tests use neutral values; only their distinctness matters.
+const (
+	testTypeA = "test_type_a"
+	testTypeB = "test_type_b"
+	testTypeC = "test_type_c"
+	testTypeD = "test_type_d"
+)
+
 // --- Envelope marshal / unmarshal ---
 
 func TestWrapEnvelope(t *testing.T) {
@@ -27,10 +37,10 @@ func TestWrapEnvelope(t *testing.T) {
 		Name string `json:"name"`
 	}
 
-	env, err := jsession.WrapEnvelope(&payload{Name: "alice"}, jsession.TypeRecipientRequest)
+	env, err := jsession.WrapEnvelope(&payload{Name: "alice"}, testTypeA)
 	require.NoError(t, err)
 	assert.Equal(t, jsession.CurrentVersion, env.Version)
-	assert.Equal(t, jsession.TypeRecipientRequest, env.Type)
+	assert.Equal(t, testTypeA, env.Type)
 
 	var p payload
 	require.NoError(t, json.Unmarshal(env.Body, &p))
@@ -38,7 +48,7 @@ func TestWrapEnvelope(t *testing.T) {
 }
 
 func TestWrapEnvelope_MarshalError(t *testing.T) {
-	_, err := jsession.WrapEnvelope(make(chan int), jsession.TypeRecipientRequest)
+	_, err := jsession.WrapEnvelope(make(chan int), testTypeA)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to marshal envelope body")
 }
@@ -47,27 +57,27 @@ func TestUnwrapEnvelope_Valid(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{"key": "val"})
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: jsession.CurrentVersion,
-		Type:    jsession.TypeRecipientRequest,
+		Type:    testTypeA,
 		Body:    body,
 	})
 
-	env, err := jsession.UnwrapEnvelope(raw, jsession.TypeRecipientRequest)
+	env, err := jsession.UnwrapEnvelope(raw, testTypeA)
 	require.NoError(t, err)
 	assert.Equal(t, jsession.CurrentVersion, env.Version)
-	assert.Equal(t, jsession.TypeRecipientRequest, env.Type)
+	assert.Equal(t, testTypeA, env.Type)
 }
 
 func TestUnwrapEnvelope_SkipTypeCheck(t *testing.T) {
 	body, _ := json.Marshal("hello")
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: jsession.CurrentVersion,
-		Type:    jsession.TypeWithdrawalRequest,
+		Type:    testTypeB,
 		Body:    body,
 	})
 
 	env, err := jsession.UnwrapEnvelope(raw, "")
 	require.NoError(t, err)
-	assert.Equal(t, jsession.TypeWithdrawalRequest, env.Type)
+	assert.Equal(t, testTypeB, env.Type)
 }
 
 // --- Version validation ---
@@ -83,7 +93,7 @@ func TestUnwrapEnvelope_MissingVersion(t *testing.T) {
 func TestUnwrapEnvelope_FutureVersion(t *testing.T) {
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: 99,
-		Type:    jsession.TypeRecipientRequest,
+		Type:    testTypeA,
 		Body:    json.RawMessage(`{}`),
 	})
 
@@ -115,11 +125,11 @@ func TestUnwrapEnvelope_EmptyType(t *testing.T) {
 func TestUnwrapEnvelope_TypeMismatch(t *testing.T) {
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: jsession.CurrentVersion,
-		Type:    jsession.TypeWithdrawalRequest,
+		Type:    testTypeB,
 		Body:    json.RawMessage(`{}`),
 	})
 
-	_, err := jsession.UnwrapEnvelope(raw, jsession.TypeRecipientRequest)
+	_, err := jsession.UnwrapEnvelope(raw, testTypeA)
 	require.Error(t, err)
 	require.ErrorIs(t, err, jsession.ErrTypeMismatch)
 }
@@ -141,24 +151,24 @@ func TestUnwrapBody(t *testing.T) {
 	body, _ := json.Marshal(msg{Value: 42})
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: jsession.CurrentVersion,
-		Type:    jsession.TypeUpgradeRequest,
+		Type:    testTypeC,
 		Body:    body,
 	})
 
 	var dst msg
-	require.NoError(t, jsession.UnwrapBody(raw, jsession.TypeUpgradeRequest, &dst))
+	require.NoError(t, jsession.UnwrapBody(raw, testTypeC, &dst))
 	assert.Equal(t, 42, dst.Value)
 }
 
 func TestUnwrapBody_VersionMismatch(t *testing.T) {
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: 2,
-		Type:    jsession.TypeUpgradeRequest,
+		Type:    testTypeC,
 		Body:    json.RawMessage(`{}`),
 	})
 
 	var dst struct{}
-	err := jsession.UnwrapBody(raw, jsession.TypeUpgradeRequest, &dst)
+	err := jsession.UnwrapBody(raw, testTypeC, &dst)
 	require.Error(t, err)
 	require.ErrorIs(t, err, jsession.ErrVersionMismatch)
 }
@@ -168,10 +178,10 @@ func TestUnwrapBody_VersionMismatch(t *testing.T) {
 func TestEnvelope_Validate(t *testing.T) {
 	env := &jsession.Envelope{
 		Version: jsession.CurrentVersion,
-		Type:    jsession.TypeSpendRequest,
+		Type:    testTypeD,
 	}
-	require.NoError(t, env.Validate(jsession.TypeSpendRequest))
-	require.Error(t, env.Validate(jsession.TypeSpendResponse))
+	require.NoError(t, env.Validate(testTypeD))
+	require.Error(t, env.Validate(testTypeA))
 }
 
 // --- VersionError ---
@@ -204,13 +214,13 @@ func TestSendTyped(t *testing.T) {
 	type req struct {
 		ID string `json:"id"`
 	}
-	err := jsession.SendTyped(s, t.Context(), &req{ID: "abc"}, jsession.TypeRecipientRequest)
+	err := jsession.SendTyped(s, t.Context(), &req{ID: "abc"}, testTypeA)
 	require.NoError(t, err)
 
 	var env jsession.Envelope
 	require.NoError(t, json.Unmarshal(captured, &env))
 	assert.Equal(t, jsession.CurrentVersion, env.Version)
-	assert.Equal(t, jsession.TypeRecipientRequest, env.Type)
+	assert.Equal(t, testTypeA, env.Type)
 
 	var body req
 	require.NoError(t, json.Unmarshal(env.Body, &body))
@@ -225,7 +235,7 @@ func TestReceiveTypedWithTimeout_Success(t *testing.T) {
 	body, _ := json.Marshal(resp{Name: "bob"})
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: jsession.CurrentVersion,
-		Type:    jsession.TypeRecipientResponse,
+		Type:    testTypeB,
 		Body:    body,
 	})
 
@@ -237,7 +247,7 @@ func TestReceiveTypedWithTimeout_Success(t *testing.T) {
 	s := utilsession.New(mockSession, t.Context(), jsession.JSONMarshaller{})
 
 	var dst resp
-	err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeRecipientResponse, &dst, 1*time.Second)
+	err := jsession.ReceiveTypedWithTimeout(s, testTypeB, &dst, 1*time.Second)
 	require.NoError(t, err)
 	assert.Equal(t, "bob", dst.Name)
 }
@@ -245,7 +255,7 @@ func TestReceiveTypedWithTimeout_Success(t *testing.T) {
 func TestReceiveTypedWithTimeout_VersionMismatch(t *testing.T) {
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: 99,
-		Type:    jsession.TypeRecipientResponse,
+		Type:    testTypeB,
 		Body:    json.RawMessage(`{}`),
 	})
 
@@ -257,7 +267,7 @@ func TestReceiveTypedWithTimeout_VersionMismatch(t *testing.T) {
 	s := utilsession.New(mockSession, t.Context(), jsession.JSONMarshaller{})
 
 	var dst struct{}
-	err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeRecipientResponse, &dst, 1*time.Second)
+	err := jsession.ReceiveTypedWithTimeout(s, testTypeB, &dst, 1*time.Second)
 	require.Error(t, err)
 	require.ErrorIs(t, err, jsession.ErrVersionMismatch)
 }
@@ -265,7 +275,7 @@ func TestReceiveTypedWithTimeout_VersionMismatch(t *testing.T) {
 func TestReceiveTypedWithTimeout_TypeMismatch(t *testing.T) {
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: jsession.CurrentVersion,
-		Type:    jsession.TypeWithdrawalRequest,
+		Type:    testTypeB,
 		Body:    json.RawMessage(`{}`),
 	})
 
@@ -277,7 +287,7 @@ func TestReceiveTypedWithTimeout_TypeMismatch(t *testing.T) {
 	s := utilsession.New(mockSession, t.Context(), jsession.JSONMarshaller{})
 
 	var dst struct{}
-	err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeRecipientRequest, &dst, 1*time.Second)
+	err := jsession.ReceiveTypedWithTimeout(s, testTypeA, &dst, 1*time.Second)
 	require.Error(t, err)
 	require.ErrorIs(t, err, jsession.ErrTypeMismatch)
 }
@@ -291,7 +301,7 @@ func TestReceiveTypedWithTimeout_Timeout(t *testing.T) {
 	s := utilsession.New(mockSession, t.Context(), jsession.JSONMarshaller{})
 
 	var dst struct{}
-	err := jsession.ReceiveTypedWithTimeout(s, jsession.TypeRecipientRequest, &dst, 1*time.Millisecond)
+	err := jsession.ReceiveTypedWithTimeout(s, testTypeA, &dst, 1*time.Millisecond)
 	require.Error(t, err)
 	require.ErrorIs(t, err, utilsession.ErrTimeout)
 }
@@ -305,7 +315,7 @@ func TestReceiveTyped_UsesDefaultTimeout(t *testing.T) {
 	s := utilsession.New(mockSession, t.Context(), jsession.JSONMarshaller{})
 
 	var dst struct{}
-	err := jsession.ReceiveTyped(s, jsession.TypeRecipientRequest, &dst)
+	err := jsession.ReceiveTyped(s, testTypeA, &dst)
 	require.Error(t, err)
 	require.ErrorIs(t, err, utilsession.ErrTimeout)
 }
@@ -318,14 +328,14 @@ func TestRoundTrip_LargeBody(t *testing.T) {
 		large[i] = byte(i % 256)
 	}
 
-	env, err := jsession.WrapEnvelope(large, jsession.TypeUpgradeRequest)
+	env, err := jsession.WrapEnvelope(large, testTypeC)
 	require.NoError(t, err)
 
 	raw, err := json.Marshal(env)
 	require.NoError(t, err)
 
 	var dst []byte
-	require.NoError(t, jsession.UnwrapBody(raw, jsession.TypeUpgradeRequest, &dst))
+	require.NoError(t, jsession.UnwrapBody(raw, testTypeC, &dst))
 	assert.Equal(t, large, dst)
 }
 
@@ -360,7 +370,7 @@ func TestConcurrentSendReceive(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{"k": "v"})
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: jsession.CurrentVersion,
-		Type:    jsession.TypeRecipientRequest,
+		Type:    testTypeA,
 		Body:    body,
 	})
 
@@ -368,10 +378,10 @@ func TestConcurrentSendReceive(t *testing.T) {
 	for range goroutines {
 		go func() {
 			s := utilsession.New(mockSession, t.Context(), jsession.JSONMarshaller{})
-			errs <- jsession.SendTyped(s, t.Context(), map[string]string{"k": "v"}, jsession.TypeRecipientRequest)
+			errs <- jsession.SendTyped(s, t.Context(), map[string]string{"k": "v"}, testTypeA)
 		}()
 		go func() {
-			_, err := jsession.UnwrapEnvelope(raw, jsession.TypeRecipientRequest)
+			_, err := jsession.UnwrapEnvelope(raw, testTypeA)
 			errs <- err
 		}()
 	}
@@ -380,42 +390,12 @@ func TestConcurrentSendReceive(t *testing.T) {
 	}
 }
 
-// --- Type constants exist ---
-
-func TestTypeConstants(t *testing.T) {
-	types := []string{
-		jsession.TypeRecipientRequest,
-		jsession.TypeRecipientResponse,
-		jsession.TypeExchangeRecipientRequest,
-		jsession.TypeExchangeRecipientResp,
-		jsession.TypeMultisigRecipientData,
-		jsession.TypePolicyRecipientData,
-		jsession.TypeWithdrawalRequest,
-		jsession.TypeUpgradeAgreement,
-		jsession.TypeUpgradeRequest,
-		jsession.TypeSpendRequest,
-		jsession.TypeSpendResponse,
-		jsession.TypeSignatureRequest,
-		jsession.TypeSignature,
-		jsession.TypeTransaction,
-		jsession.TypeTransactionResponse,
-		jsession.TypeActions,
-		jsession.TypeActionTransfer,
-	}
-	seen := make(map[string]bool, len(types))
-	for _, typ := range types {
-		assert.NotEmpty(t, typ)
-		assert.False(t, seen[typ], "duplicate type constant: %s", typ)
-		seen[typ] = true
-	}
-}
-
 // --- Performance benchmarks ---
 
 func BenchmarkWrapEnvelope(b *testing.B) {
 	payload := map[string]string{"name": "alice", "role": "owner"}
 	for b.Loop() {
-		_, _ = jsession.WrapEnvelope(payload, jsession.TypeRecipientRequest)
+		_, _ = jsession.WrapEnvelope(payload, testTypeA)
 	}
 }
 
@@ -423,11 +403,11 @@ func BenchmarkUnwrapEnvelope(b *testing.B) {
 	body, _ := json.Marshal(map[string]string{"name": "alice"})
 	raw, _ := json.Marshal(jsession.Envelope{
 		Version: jsession.CurrentVersion,
-		Type:    jsession.TypeRecipientRequest,
+		Type:    testTypeA,
 		Body:    body,
 	})
 	for b.Loop() {
-		_, _ = jsession.UnwrapEnvelope(raw, jsession.TypeRecipientRequest)
+		_, _ = jsession.UnwrapEnvelope(raw, testTypeA)
 	}
 }
 
@@ -437,9 +417,9 @@ func BenchmarkRoundTrip(b *testing.B) {
 		Value int    `json:"value"`
 	}
 	for b.Loop() {
-		env, _ := jsession.WrapEnvelope(&msg{Name: "alice", Value: 42}, jsession.TypeRecipientRequest)
+		env, _ := jsession.WrapEnvelope(&msg{Name: "alice", Value: 42}, testTypeA)
 		raw, _ := json.Marshal(env)
 		var dst msg
-		_ = jsession.UnwrapBody(raw, jsession.TypeRecipientRequest, &dst)
+		_ = jsession.UnwrapBody(raw, testTypeA, &dst)
 	}
 }

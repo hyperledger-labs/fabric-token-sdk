@@ -70,14 +70,14 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 	logger.DebugfContext(context.Context(), "ReceiveTransactionView: received %s, len [%d][%s]", env.Type, len(env.Body), utils.Hashable(env.Body))
 
 	switch env.Type {
-	case jsession.TypeTransaction, jsession.TypeTransactionResponse:
+	case TypeTransaction, TypeTransactionResponse:
 		var payload TransactionPayload
 		if err := json.Unmarshal(env.Body, &payload); err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling transaction payload")
 		}
 
 		return NewTransactionFromBytes(context, payload.Raw)
-	case jsession.TypeSignatureRequest:
+	case TypeSignatureRequest:
 		var signatureRequest SignatureRequest
 		if err := json.Unmarshal(env.Body, &signatureRequest); err != nil {
 			return nil, errors.Wrapf(err, "failed unmarshalling signature request")
