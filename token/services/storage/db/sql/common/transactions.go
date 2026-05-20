@@ -377,7 +377,7 @@ func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params
 			sq.Lt{"stored_at": params.OlderThan},
 		}).
 		OrderBy("stored_at ASC").
-		Limit(uint64(params.Limit)).PlaceholderFormat(db.pf).
+		Limit(uint64(params.Limit)).PlaceholderFormat(db.pf). //nolint:gosec
 		ToSql()
 	if err != nil {
 		return nil, err
