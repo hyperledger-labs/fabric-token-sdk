@@ -45,8 +45,8 @@ func (m *Configuration) GetValidationConfig() (driver.ValidationConfig, error) {
 		MaxTokenOutputsPerTx: 1000,
 		MaxBulkDeleteSize:    10000,
 		MaxWalletIDSize:      1024,
-		MaxOwnerRawSize:      16 * 1024,
-		MaxIssuerRawSize:     16 * 1024,
+		MaxOwnerRawSize:      256 * 1024,
+		MaxIssuerRawSize:     256 * 1024,
 		MaxTokenRequestSize:  2 * 1024 * 1024,
 		MaxActionCount:       1000,
 	}

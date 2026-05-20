@@ -22,9 +22,9 @@ const (
 	// MaxWalletIDSize is the maximum size of a wallet ID in bytes.
 	MaxWalletIDSize = 1024
 	// MaxOwnerRawSize is the maximum size of a raw owner identity in bytes.
-	MaxOwnerRawSize = 16 * 1024 // 16KB for Idemix
+	MaxOwnerRawSize = 256 * 1024 // 256KB for Idemix
 	// MaxIssuerRawSize is the maximum size of a raw issuer identity in bytes.
-	MaxIssuerRawSize = 16 * 1024
+	MaxIssuerRawSize = 256 * 1024
 	// MaxTokenRequestSize is the maximum size of a token request in bytes.
 	MaxTokenRequestSize = 2 * 1024 * 1024 // 2MB
 	// MaxActionCount is the maximum number of actions/signatures in a token request.

@@ -23,8 +23,8 @@ func TestValidateAppendRequest(t *testing.T) {
 			MaxTokenOutputsPerTx: 10,
 			MaxBulkDeleteSize:    5,
 			MaxWalletIDSize:      1024,
-			MaxOwnerRawSize:      16 * 1024,
-			MaxIssuerRawSize:     16 * 1024,
+			MaxOwnerRawSize:      256 * 1024,
+			MaxIssuerRawSize:     256 * 1024,
 		},
 	}
 
@@ -111,7 +111,7 @@ func TestValidateAppendRequest(t *testing.T) {
 			Tokens: []TokenToAppend{
 				{
 					Tok: &token2.Token{
-						Owner: make([]byte, 16385),
+						Owner: make([]byte, 256*1024+1),
 					},
 					OwnerWalletID: "w1",
 				},
@@ -127,7 +127,7 @@ func TestValidateAppendRequest(t *testing.T) {
 			Tokens: []TokenToAppend{
 				{
 					Tok:           &token2.Token{},
-					Issuer:        make([]byte, 16385),
+					Issuer:        make([]byte, 256*1024+1),
 					OwnerWalletID: "w1",
 				},
 			},

@@ -1,23 +1,17 @@
-# Plan: Enforce Strict Input Validation and Fix Integration Regressions
+# Implementation Plan - Optimize and Fix Validation Bounds for Idemix Identities
 
 ## Goal
-Resolve the deadlock regression introduced by direct recursive calls to `GetManagementService` within `NewServiceManager`'s lazy initialization, while preserving strict input validation, proper bounds configuration, and robust mock testing.
+Increase `MaxOwnerRawSize` and `MaxIssuerRawSize` from `16 * 1024` (16KB) to `256 * 1024` (256KB) across all configurations, validators, and driver files. This resolves the regression where standard `zkatdlog` integration tests (such as `update-t2`) fail because serialized Idemix identities, audit info, and output audit info naturally exceed the highly restrictive 16KB boundary during request unmarshaling and validation.
 
 ## Implementation Steps
-- [x] Initialize `plan.md` in project root with steps and progress.
-- [x] Refactor `tokens.go` to support lazy loading of `ValidationConfig` during `Append` rather than creation time in `NewServiceManager`.
-- [x] Revert `NewServiceManager` in `manager.go` to its original signature and initialization flow to prevent the recursive lookup deadlock.
-- [x] Ensure all local test coverage for validation passes successfully.
-- [x] Verify formatting and formatting checks with `make checks`.
-- [x] Push clean commits to Surbhi's `security/tokens-validation` branch.
-
-## Implementation Progress
-- [x] Lazy ValidationConfig resolution fully implemented.
-- [x] Lazy initialization deadlock completely eliminated.
-- [x] All unit test validation suites verified passing.
-
-## Plan Status
-✅ COMPLETE
+- [x] 1. Update `MaxOwnerRawSize` and `MaxIssuerRawSize` constants in `token/driver/validator.go` to `256 * 1024`.
+- [x] 2. Update default `MaxOwnerRawSize` and `MaxIssuerRawSize` values in `token/config.go` to `256 * 1024`.
+- [x] 3. Update default `MaxOwnerRawSize` and `MaxIssuerRawSize` values in `token/services/tokens/tokens.go` to `256 * 1024`.
+- [x] 4. Update default `MaxOwnerRawSize` and `MaxIssuerRawSize` values in `token/core/common/validator.go` to `256 * 1024`.
+- [x] 5. Update mock/validation tests in `token/services/tokens/validation_test.go` to match the new `256 * 1024` limit behavior where applicable.
+- [x] 6. Verify formatting, run code checks, and update plan progress.
 
 ## Notes & Decisions
-- Direct calls to `tmsProvider.GetManagementService` inside the `ServiceManager`'s lazy provider are recursive and trigger a Mutex deadlock because the `ManagementServiceProvider` holds the creation lock. By moving config loading lazily to `Append` execution time, we completely avoid the deadlock since the lock is released after initialization.
+- Setting the limit to `256 * 1024` (256KB) ensures all standard Idemix credentials, public keys, and zero-knowledge proof audit structures easily fit within the bounds while still offering robust protection against oversized payload resource exhaustion attacks (well below the `2 * 1024 * 1024` overall payload limit).
+
+✅ COMPLETE
