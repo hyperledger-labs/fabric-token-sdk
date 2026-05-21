@@ -210,13 +210,16 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 				tok, err := verifyIter.Next()
 				if err != nil {
 					verifyIter.Close()
+
 					return nil, nil, immediateRetries, errors.Wrapf(err, "error iterating tokens during verification")
 				}
+
 				if tok == nil {
 					break
 				}
 				if tok.Id.TxId == t.Id.TxId && tok.Id.Index == t.Id.Index {
 					found = true
+
 					break
 				}
 			}
@@ -233,6 +236,7 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 				if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
 					return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reset cache after spent token detection")
 				}
+
 				continue
 			}
 			
