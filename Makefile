@@ -243,3 +243,18 @@ update-all-deps-latest: ## Update all dependencies in all Go modules to their la
 		echo "=> Updating dependencies in $$dir"; \
 		(cd $$dir && go get ./...@latest && go mod tidy); \
 	done
+
+.PHONY: docs-install
+# Install documentation dependencies
+docs-install:
+	pip install -r requirements.txt
+
+.PHONY: docs-serve
+# Serve documentation locally for development
+docs-serve:
+	mkdocs serve
+
+.PHONY: docs-build
+# Build the static documentation site for production
+docs-build:
+	mkdocs build --strict
