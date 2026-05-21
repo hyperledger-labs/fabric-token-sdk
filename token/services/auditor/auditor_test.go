@@ -8,13 +8,14 @@ package auditor_test
 
 import (
 	"context"
-	"errors"
+	stderrors "errors"
 	"io"
 	"math"
 	"math/rand/v2"
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	drivermock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	tokenmock "github.com/hyperledger-labs/fabric-token-sdk/token/mock"
@@ -157,7 +158,7 @@ func TestService_Check_ReturnsIssues(t *testing.T) {
 }
 
 func TestService_Check_ReturnsError(t *testing.T) {
-	expectedErr := errors.New("check failed")
+	expectedErr := stderrors.New("check failed")
 	cs := &auditmock.CheckService{}
 	cs.CheckReturns(nil, expectedErr)
 	svc := newTestService(newTestStoreService(t, newFakeStore()), cs)
@@ -184,7 +185,7 @@ func TestGet_NilWallet_ReturnsNil(t *testing.T) {
 }
 
 func TestGetByTMSID_GetServiceError_ReturnsNil(t *testing.T) {
-	sp := &fakeServiceProvider{err: errors.New("registry lookup failed")}
+	sp := &fakeServiceProvider{err: stderrors.New("registry lookup failed")}
 	tmsID := token.TMSID{Network: "net", Channel: "ch", Namespace: "ns"}
 	got := auditor.GetByTMSID(sp, tmsID)
 	assert.Nil(t, got)
@@ -211,7 +212,7 @@ func TestService_SetStatus_Success(t *testing.T) {
 }
 
 func TestService_SetStatus_Error(t *testing.T) {
-	expectedErr := errors.New("db write error")
+	expectedErr := stderrors.New("db write error")
 	fakeStore := newFakeStore()
 	fakeStore.SetStatusReturns(expectedErr)
 	svc := newTestService(newTestStoreService(t, fakeStore), nil)
@@ -230,7 +231,7 @@ func TestService_GetStatus_Success(t *testing.T) {
 }
 
 func TestService_GetStatus_Error(t *testing.T) {
-	expectedErr := errors.New("db read error")
+	expectedErr := stderrors.New("db read error")
 	fakeStore := newFakeStore()
 	fakeStore.GetStatusReturns(0, "", expectedErr)
 	svc := newTestService(newTestStoreService(t, fakeStore), nil)
@@ -249,7 +250,7 @@ func TestService_GetTokenRequest_Success(t *testing.T) {
 }
 
 func TestService_GetTokenRequest_Error(t *testing.T) {
-	expectedErr := errors.New("not found")
+	expectedErr := stderrors.New("not found")
 	fakeStore := newFakeStore()
 	fakeStore.GetTokenRequestReturns(nil, expectedErr)
 	svc := newTestService(newTestStoreService(t, fakeStore), nil)
@@ -315,7 +316,7 @@ func TestService_Audit_Success(t *testing.T) {
 
 func TestService_Audit_DBCleanSuccess(t *testing.T) {
 	fakeStore := newFakeStore()
-	fakeStore.GetStatusReturns(0, "", errors.New("db status err"))
+	fakeStore.GetStatusReturns(0, "", stderrors.New("db status err"))
 
 	svc := newTestService(newTestStoreService(t, fakeStore), nil)
 	tx := &auditmock.Transaction{}
@@ -345,7 +346,7 @@ func TestService_Audit_NotUnknown(t *testing.T) {
 
 func TestService_Audit_TMSProviderIrrelevant(t *testing.T) {
 	tmsProv := &depmock.TokenManagementServiceProvider{}
-	tmsProv.TokenManagementServiceReturns(nil, errors.New("tms err"))
+	tmsProv.TokenManagementServiceReturns(nil, stderrors.New("tms err"))
 
 	svc := auditor.NewService(
 		token.TMSID{}, nil,
@@ -368,7 +369,7 @@ func TestService_Audit_TMSProviderIrrelevant(t *testing.T) {
 
 func TestService_Append_Error_TMSProvider(t *testing.T) {
 	tmsProv := &depmock.TokenManagementServiceProvider{}
-	tmsProv.TokenManagementServiceReturns(nil, errors.New("tms err"))
+	tmsProv.TokenManagementServiceReturns(nil, stderrors.New("tms err"))
 
 	svc := auditor.NewService(
 		token.TMSID{}, nil,
@@ -386,7 +387,7 @@ func TestService_Append_Error_TMSProvider(t *testing.T) {
 
 func TestService_Append_GetNetworkError(t *testing.T) {
 	netProvider := &auditmock.NetworkProvider{}
-	netProvider.GetNetworkReturns(nil, errors.New("network unavailable"))
+	netProvider.GetNetworkReturns(nil, stderrors.New("network unavailable"))
 
 	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
@@ -427,7 +428,7 @@ func TestService_Append_Success(t *testing.T) {
 
 func TestService_Append_AddFinalityListenerError(t *testing.T) {
 	fakeNet := &auditmock.Network{}
-	fakeNet.AddFinalityListenerReturns(errors.New("listener fail"))
+	fakeNet.AddFinalityListenerReturns(stderrors.New("listener fail"))
 
 	netProvider := &auditmock.NetworkProvider{}
 	netProvider.GetNetworkReturns(network.NewNetwork(fakeNet, nil), nil)
@@ -453,7 +454,7 @@ func TestService_Append_AuditError(t *testing.T) {
 	fakeStore := newFakeStore()
 	fakeStore.NewTransactionStoreTransactionStub = func() (dbdriver.TransactionStoreTransaction, error) {
 		fakeAW := &auditmock.TransactionStoreTransaction{}
-		fakeAW.CommitReturns(errors.New("db append err"))
+		fakeAW.CommitReturns(stderrors.New("db append err"))
 
 		return fakeAW, nil
 	}
@@ -498,13 +499,13 @@ func TestNewServiceManager(t *testing.T) {
 
 func TestServiceManager_Auditor(t *testing.T) {
 	netProv := &auditmock.NetworkProvider{}
-	netProv.GetNetworkReturns(nil, errors.New("net err"))
+	netProv.GetNetworkReturns(nil, stderrors.New("net err"))
 
 	ssm := &auditdbmock.AuditStoreServiceManager{}
-	ssm.StoreServiceByTMSIdReturns(nil, errors.New("db err"))
+	ssm.StoreServiceByTMSIdReturns(nil, stderrors.New("db err"))
 
 	tsm := &auditmock.TokensServiceManager{}
-	tsm.ServiceByTMSIdReturns(nil, errors.New("tok err"))
+	tsm.ServiceByTMSIdReturns(nil, stderrors.New("tok err"))
 
 	sm := auditor.NewServiceManager(
 		netProv, ssm, tsm,
@@ -930,10 +931,11 @@ func (m *mockAuditDB) AcquireLocks(ctx context.Context, anchor string, eIDs ...s
 	if m.acquireLocksFunc != nil {
 		return m.acquireLocksFunc(ctx, anchor, eIDs...)
 	}
+
 	return m.store.AcquireLocks(ctx, anchor, eIDs...)
 }
 
-func (m *mockAuditDB) Append(ctx context.Context, req auditdb.TokenRequest) error {
+func (m *mockAuditDB) Append(ctx context.Context, req *token.Request) error {
 	return m.store.Append(ctx, req)
 }
 
@@ -951,6 +953,7 @@ func (m *mockAuditDB) GetTokenRequest(ctx context.Context, txID string) ([]byte,
 
 func newMockAuditDB(t *testing.T, acquireFunc func(ctx context.Context, anchor string, eIDs ...string) error) *mockAuditDB {
 	t.Helper()
+
 	return &mockAuditDB{
 		store:            newTestStoreService(t, newFakeStore()),
 		acquireLocksFunc: acquireFunc,
@@ -958,7 +961,7 @@ func newMockAuditDB(t *testing.T, acquireFunc func(ctx context.Context, anchor s
 }
 
 // newTestServiceWithMockDB creates a test service with a mockable AcquireLocks implementation
-func newTestServiceWithMockDB(mockDB *mockAuditDB, checkService auditor.CheckService) *auditor.Service {
+func newTestServiceWithMockDB(mockDB *mockAuditDB, checkService auditor.CheckService) *testServiceWrapper {
 	// We need to use reflection or create a custom service for testing
 	// For now, we'll create the service and then replace its auditDB field
 	svc := auditor.NewService(
@@ -972,7 +975,7 @@ func newTestServiceWithMockDB(mockDB *mockAuditDB, checkService auditor.CheckSer
 		checkService,
 		nil, // lockConfig (uses defaults)
 	)
-	
+
 	// Create a wrapper service that uses our mock
 	return &testServiceWrapper{
 		Service: svc,
@@ -1035,6 +1038,7 @@ func (w *testServiceWrapper) acquireLocksWithRetryMock(ctx context.Context, anch
 		select {
 		case <-ctx.Done():
 			timer.Stop()
+
 			return errors.WithMessagef(ctx.Err(), "lock acquisition cancelled during backoff after %d attempts for anchor [%s]", attempt+1, anchor)
 		case <-timer.C:
 			// Continue to next retry attempt
@@ -1055,6 +1059,7 @@ func (w *testServiceWrapper) calculateBackoffMock(attempt int, cfg *auditor.Lock
 	if finalDelay < 0 {
 		finalDelay = cfg.InitialBackoff
 	}
+
 	return finalDelay
 }
 
@@ -1078,8 +1083,9 @@ func TestService_AcquireLocksWithRetry_Success_AfterRetries(t *testing.T) {
 	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		callCount++
 		if callCount < 3 {
-			return errors.New("lock conflict")
+			return stderrors.New("lock conflict")
 		}
+
 		return nil
 	})
 	svc := newTestServiceWithMockDB(mockDB, nil)
@@ -1097,7 +1103,7 @@ func TestService_AcquireLocksWithRetry_Success_AfterRetries(t *testing.T) {
 
 func TestService_AcquireLocksWithRetry_Failure_MaxRetriesExceeded(t *testing.T) {
 	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
-		return errors.New("persistent lock conflict")
+		return stderrors.New("persistent lock conflict")
 	})
 	svc := newTestServiceWithMockDB(mockDB, nil)
 
@@ -1116,7 +1122,7 @@ func TestService_AcquireLocksWithRetry_Failure_MaxRetriesExceeded(t *testing.T) 
 
 func TestService_AcquireLocksWithRetry_ContextCancelled_BeforeRetry(t *testing.T) {
 	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
-		return errors.New("lock conflict")
+		return stderrors.New("lock conflict")
 	})
 	svc := newTestServiceWithMockDB(mockDB, nil)
 
@@ -1140,7 +1146,8 @@ func TestService_AcquireLocksWithRetry_ContextCancelled_DuringBackoff(t *testing
 	callCount := 0
 	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		callCount++
-		return errors.New("lock conflict")
+
+		return stderrors.New("lock conflict")
 	})
 	svc := newTestServiceWithMockDB(mockDB, nil)
 
@@ -1166,8 +1173,9 @@ func TestService_AcquireLocksWithRetry_ExponentialBackoff(t *testing.T) {
 	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		callTimes = append(callTimes, time.Now())
 		if len(callTimes) < 4 {
-			return errors.New("lock conflict")
+			return stderrors.New("lock conflict")
 		}
+
 		return nil
 	})
 	svc := newTestServiceWithMockDB(mockDB, nil)
@@ -1198,6 +1206,7 @@ func TestService_AcquireLocksWithRetry_MultipleEnrollmentIDs(t *testing.T) {
 	mockDB := newMockAuditDB(t, func(ctx context.Context, anchor string, eIDs ...string) error {
 		capturedAnchor = anchor
 		capturedEIDs = eIDs
+
 		return nil
 	})
 	svc := newTestServiceWithMockDB(mockDB, nil)
