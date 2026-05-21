@@ -24,10 +24,10 @@ type Manager struct {
 	precision            uint64
 
 	// Resource limits
-	maxTokensPerSelection  int
-	maxLockAttempts        int
-	maxRetryCycles         int
-	selectionTimeout       time.Duration
+	maxTokensPerSelection int
+	maxLockAttempts       int
+	maxRetryCycles        int
+	selectionTimeout      time.Duration
 }
 
 func NewManager(
@@ -43,16 +43,16 @@ func NewManager(
 	selectionTimeout time.Duration,
 ) *Manager {
 	return &Manager{
-		locker:                 locker,
-		newQueryEngine:         newQueryEngine,
-		numRetry:               numRetry,
-		timeout:                timeout,
-		requestCertification:   requestCertification,
-		precision:              precision,
-		maxTokensPerSelection:  maxTokensPerSelection,
-		maxLockAttempts:        maxLockAttempts,
-		maxRetryCycles:         maxRetryCycles,
-		selectionTimeout:       selectionTimeout,
+		locker:                locker,
+		newQueryEngine:        newQueryEngine,
+		numRetry:              numRetry,
+		timeout:               timeout,
+		requestCertification:  requestCertification,
+		precision:             precision,
+		maxTokensPerSelection: maxTokensPerSelection,
+		maxLockAttempts:       maxLockAttempts,
+		maxRetryCycles:        maxRetryCycles,
+		selectionTimeout:      selectionTimeout,
 	}
 }
 
