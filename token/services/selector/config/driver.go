@@ -24,11 +24,11 @@ const (
 	defaultFetcherCacheMaxQueries = 0 // 0 means use fetcher default
 
 	// Security limits to prevent algorithmic attacks
-	defaultMaxTokensPerSelection    = 10000        // Max tokens to iterate per selection
-	defaultMaxLockAttempts          = 50000        // Max lock attempts per selection (5x iteration limit)
-	defaultMaxRetryCycles           = 10           // Max outer retry loops
-	defaultMaxLocksPerTransaction   = 5000         // Max concurrent locks held per transaction
-	defaultSelectionTimeout         = 30 * time.Second // Wall-clock timeout for selection
+	defaultMaxTokensPerSelection  = 10000            // Max tokens to iterate per selection
+	defaultMaxLockAttempts        = 50000            // Max lock attempts per selection (5x iteration limit)
+	defaultMaxRetryCycles         = 10               // Max outer retry loops
+	defaultMaxLocksPerTransaction = 5000             // Max concurrent locks held per transaction
+	defaultSelectionTimeout       = 30 * time.Second // Wall-clock timeout for selection
 )
 
 //go:generate counterfeiter -o mock/config_service.go -fake-name ConfigService . configService

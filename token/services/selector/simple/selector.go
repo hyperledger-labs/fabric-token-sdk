@@ -42,10 +42,10 @@ type selector struct {
 	requestCertification bool
 
 	// Resource limits to prevent algorithmic attacks
-	maxTokensPerSelection  int
-	maxLockAttempts        int
-	maxRetryCycles         int
-	selectionTimeout       time.Duration
+	maxTokensPerSelection int
+	maxLockAttempts       int
+	maxRetryCycles        int
+	selectionTimeout      time.Duration
 
 	// Resource tracking counters (reset per selection)
 	tokensIteratedCount int
