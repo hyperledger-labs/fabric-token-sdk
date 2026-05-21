@@ -76,7 +76,7 @@ func (v *DistributeTermsView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := session.SendEnvelopeOnSession(sess, context.Context(), v.terms, TypeHTLCTerms); err != nil {
+	if err := session.NewTypedSession(context, sess).SendTyped(context.Context(), v.terms, TypeHTLCTerms); err != nil {
 		return nil, errors.Wrapf(err, "failed sending terms")
 	}
 
@@ -97,8 +97,7 @@ func ReceiveTerms(context view.Context) (*Terms, error) {
 
 func (v *termsReceiverView) Call(context view.Context) (interface{}, error) {
 	terms := &Terms{}
-	s := session.JSON(context)
-	if err := session.ReceiveTyped(s, TypeHTLCTerms, terms); err != nil {
+	if err := session.NewTypedSessionFromContext(context).ReceiveTyped(TypeHTLCTerms, terms); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling terms")
 	}
 

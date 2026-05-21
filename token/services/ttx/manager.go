@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
-	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -49,11 +48,6 @@ func NewServiceManager(
 	metricsProvider metrics.Provider,
 	checkServiceProvider CheckServiceProvider,
 ) *ServiceManager {
-	// Register the interactive-protocol envelope metrics once, using the
-	// metrics provider already injected here, so the session helpers can record
-	// them without resolving a provider on the per-message path.
-	jsession.RegisterMetrics(metricsProvider)
-
 	return &ServiceManager{
 		p: lazy.NewProviderWithKeyMapper(services.Key, func(tmsID token.TMSID) (*Service, error) {
 			ttxStoreService, err := ttxStoreServiceManager.StoreServiceByTMSId(tmsID)

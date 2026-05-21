@@ -141,9 +141,9 @@ func UnwrapBody(raw []byte, expectedType string, dst any) error {
 }
 
 // SendTyped wraps v in a versioned envelope with the given message type and
-// sends it over the session, recording the process-wide envelope metrics.
+// sends it over the session. Use TypedSession.SendTyped to also record metrics.
 func SendTyped(s *session.S, ctx context.Context, v any, msgType string) error {
-	return SendTypedWithMetrics(s, ctx, v, msgType, envelopeMetrics())
+	return SendTypedWithMetrics(s, ctx, v, msgType, nil)
 }
 
 // SendTypedWithMetrics is like SendTyped but also records envelope metrics.
@@ -158,15 +158,14 @@ func SendTypedWithMetrics(s *session.S, ctx context.Context, v any, msgType stri
 }
 
 // ReceiveTyped receives a versioned envelope, validates its version and type,
-// and unmarshals the body into dst.
+// and unmarshals the body into dst. Use TypedSession.ReceiveTyped to also record metrics.
 func ReceiveTyped(s *session.S, expectedType string, dst any) error {
 	return ReceiveTypedWithTimeout(s, expectedType, dst, session.DefaultReceiveTimeout)
 }
 
 // ReceiveTypedWithTimeout is like ReceiveTyped but with an explicit timeout.
-// It records the process-wide envelope metrics.
 func ReceiveTypedWithTimeout(s *session.S, expectedType string, dst any, d time.Duration) error {
-	return ReceiveTypedWithTimeoutAndMetrics(s, expectedType, dst, d, envelopeMetrics())
+	return ReceiveTypedWithTimeoutAndMetrics(s, expectedType, dst, d, nil)
 }
 
 // ReceiveTypedWithTimeoutAndMetrics is like ReceiveTypedWithTimeout but also
@@ -188,44 +187,69 @@ func ReceiveTypedWithTimeoutAndMetrics(s *session.S, expectedType string, dst an
 	return json.Unmarshal(env.Body, dst)
 }
 
-// SendEnvelopeOnSession wraps v in a versioned envelope and sends it on view.Session,
-// recording the process-wide envelope metrics.
-func SendEnvelopeOnSession(sess view.Session, ctx context.Context, v any, msgType string) error {
-	env, err := WrapEnvelope(v, msgType)
-	if err != nil {
-		return err
-	}
-	raw, err := json.Marshal(env)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal envelope")
-	}
-	envelopeMetrics().observeSend(msgType, len(env.Body))
-
-	return sess.SendWithContext(ctx, raw)
+// TypedSession wraps a JSON session together with the envelope metrics resolved
+// from the view context, so callers send and receive versioned messages through
+// methods (and get metrics recorded) instead of static helpers.
+type TypedSession struct {
+	*session.S
+	metrics *EnvelopeMetrics
 }
 
-// ReceiveEnvelopeFromSession receives a versioned envelope from view.Session.
-func ReceiveEnvelopeFromSession(sess view.Session, ctx context.Context, expectedType string, d time.Duration) (*Envelope, error) {
-	s := session.New(sess, ctx, JSONMarshaller{})
-
-	return receiveEnvelope(s, expectedType, d)
+// NewTypedSession wraps the given view.Session, resolving the envelope metrics
+// once from the view context. Metrics are disabled when none are registered.
+func NewTypedSession(viewCtx view.Context, sess view.Session) *TypedSession {
+	return &TypedSession{S: NewFromSession(viewCtx, sess), metrics: resolveEnvelopeMetrics(viewCtx)}
 }
 
-func receiveEnvelope(s *session.S, expectedType string, d time.Duration) (*Envelope, error) {
-	raw, err := s.ReceiveRawWithTimeout(d)
+// NewTypedSessionFromContext wraps the view context's own session.
+func NewTypedSessionFromContext(viewCtx view.Context) *TypedSession {
+	return &TypedSession{S: JSON(viewCtx), metrics: resolveEnvelopeMetrics(viewCtx)}
+}
+
+// NewTypedSessionToParty opens a session to party (bound to the context's
+// initiator) and wraps it.
+func NewTypedSessionToParty(viewCtx view.Context, party view.Identity) (*TypedSession, error) {
+	s, err := viewCtx.GetSession(viewCtx.Initiator(), party)
 	if err != nil {
 		return nil, err
 	}
 
-	env, err := UnwrapEnvelope(raw, expectedType)
-	if err != nil {
-		envelopeMetrics().observeError(classifyError(err))
+	return NewTypedSession(viewCtx, s), nil
+}
 
+// NewTypedSessionForCaller opens a session to party for the given caller view
+// and wraps it.
+func NewTypedSessionForCaller(viewCtx view.Context, caller view.View, party view.Identity) (*TypedSession, error) {
+	s, err := viewCtx.GetSession(caller, party)
+	if err != nil {
 		return nil, err
 	}
-	envelopeMetrics().observeReceive(env)
 
-	return env, nil
+	return NewTypedSession(viewCtx, s), nil
+}
+
+func resolveEnvelopeMetrics(viewCtx view.Context) *EnvelopeMetrics {
+	m, err := GetEnvelopeMetrics(viewCtx)
+	if err != nil {
+		return nil
+	}
+
+	return m
+}
+
+// SendTyped wraps v in a versioned envelope and sends it, recording metrics.
+func (t *TypedSession) SendTyped(ctx context.Context, v any, msgType string) error {
+	return SendTypedWithMetrics(t.S, ctx, v, msgType, t.metrics)
+}
+
+// ReceiveTyped receives a versioned envelope into dst, recording metrics.
+func (t *TypedSession) ReceiveTyped(expectedType string, dst any) error {
+	return ReceiveTypedWithTimeoutAndMetrics(t.S, expectedType, dst, session.DefaultReceiveTimeout, t.metrics)
+}
+
+// ReceiveTypedWithTimeout receives a versioned envelope into dst with an explicit timeout, recording metrics.
+func (t *TypedSession) ReceiveTypedWithTimeout(expectedType string, dst any, d time.Duration) error {
+	return ReceiveTypedWithTimeoutAndMetrics(t.S, expectedType, dst, d, t.metrics)
 }
 
 func classifyError(err error) string {

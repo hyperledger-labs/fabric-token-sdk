@@ -91,9 +91,8 @@ func (s *AcceptView) ack(context view.Context) error {
 
 	// Ack for distribution
 	// Send the signature back
-	session := context.Session()
 	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", utils.Hashable(sigma), defaultIdentity)
-	if err := jsession.SendEnvelopeOnSession(session, context.Context(), &SignaturePayload{Signature: sigma}, TypeSignature); err != nil {
+	if err := jsession.NewTypedSessionFromContext(context).SendTyped(context.Context(), &SignaturePayload{Signature: sigma}, TypeSignature); err != nil {
 		return errors.WithMessagef(err, "failed sending ack")
 	}
 

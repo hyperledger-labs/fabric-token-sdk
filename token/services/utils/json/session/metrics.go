@@ -6,10 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 package session
 
 import (
+	"reflect"
 	"strconv"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 const (
@@ -42,8 +43,7 @@ var (
 )
 
 // EnvelopeMetrics holds the counters and histograms for envelope operations.
-// Instantiate via NewEnvelopeMetrics and pass to SendTypedWithMetrics /
-// ReceiveTypedWithMetrics. A nil *EnvelopeMetrics is safe and disables metrics.
+// A nil *EnvelopeMetrics is safe and disables metrics (all observe* methods no-op).
 type EnvelopeMetrics struct {
 	Sent     metrics.Counter
 	Received metrics.Counter
@@ -52,6 +52,8 @@ type EnvelopeMetrics struct {
 }
 
 // NewEnvelopeMetrics registers and returns metrics using the given provider.
+// It is wired into the dependency-injection container (see token/sdk/dig) so
+// that GetEnvelopeMetrics can resolve it from a view context.
 func NewEnvelopeMetrics(p metrics.Provider) *EnvelopeMetrics {
 	return &EnvelopeMetrics{
 		Sent:     p.NewCounter(envelopeSentOpts),
@@ -61,33 +63,22 @@ func NewEnvelopeMetrics(p metrics.Provider) *EnvelopeMetrics {
 	}
 }
 
-// pkgMetrics holds the process-wide envelope metrics. It is registered once at
-// service startup via RegisterMetrics and read by the typed send/receive helpers
-// through envelopeMetrics(). Registering at startup (rather than per session)
-// keeps the metrics provider out of the per-message hot path.
-var (
-	pkgMetricsOnce sync.Once
-	pkgMetrics     *EnvelopeMetrics
-)
+var envelopeMetricsType = reflect.TypeOf((*EnvelopeMetrics)(nil))
 
-// RegisterMetrics registers the envelope metrics against the given provider,
-// once per process. It is safe to call repeatedly and from multiple goroutines;
-// only the first non-nil call performs registration. Pass the metrics provider
-// already held at service construction (e.g. obtained via FSC
-// platform/view/services/metrics#GetProvider in the SDK wiring).
-func RegisterMetrics(p metrics.Provider) {
-	if p == nil {
-		return
+// GetEnvelopeMetrics resolves the *EnvelopeMetrics registered in the service
+// provider. It returns an error when no metrics are registered (e.g. in
+// lightweight test contexts), in which case callers treat metrics as disabled.
+func GetEnvelopeMetrics(sp token.ServiceProvider) (*EnvelopeMetrics, error) {
+	s, err := sp.GetService(envelopeMetricsType)
+	if err != nil {
+		return nil, err
 	}
-	pkgMetricsOnce.Do(func() {
-		pkgMetrics = NewEnvelopeMetrics(p)
-	})
-}
+	m, ok := s.(*EnvelopeMetrics)
+	if !ok {
+		panic("implementation error, type must be *EnvelopeMetrics")
+	}
 
-// envelopeMetrics returns the process-wide metrics, or nil when none were
-// registered. A nil *EnvelopeMetrics is safe to use (all observe* methods no-op).
-func envelopeMetrics() *EnvelopeMetrics {
-	return pkgMetrics
+	return m, nil
 }
 
 func (m *EnvelopeMetrics) observeSend(msgType string, bodySize int) {

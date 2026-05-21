@@ -60,8 +60,8 @@ func NewReceiveSpendRequestView() *ReceiveSpendRequestView {
 
 func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error) {
 	tx := &SpendRequest{}
-	s := session.JSON(context)
-	if err := session.ReceiveTypedWithTimeout(s, ttx.TypeSpendRequest, tx, time.Minute*4); err != nil {
+	s := session.NewTypedSessionFromContext(context)
+	if err := s.ReceiveTypedWithTimeout(ttx.TypeSpendRequest, tx, time.Minute*4); err != nil {
 		logger.ErrorfContext(context.Context(), "failed receiving request: %s", err)
 
 		return nil, err
@@ -183,10 +183,10 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 
 		return
 	}
-	s := session.NewFromSession(context, backendSession)
+	s := session.NewTypedSession(context, backendSession)
 
 	logger.DebugfContext(context.Context(), "send request to [%v]", party)
-	err = session.SendTyped(s, context.Context(), request, ttx.TypeSpendRequest)
+	err = s.SendTyped(context.Context(), request, ttx.TypeSpendRequest)
 	if err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to send request to [%s]", party),
@@ -196,7 +196,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 		return
 	}
 	response := &SpendResponse{}
-	if err := session.ReceiveTyped(s, ttx.TypeSpendResponse, response); err != nil {
+	if err := s.ReceiveTyped(ttx.TypeSpendResponse, response); err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to receive response from [%s]", party),
 			party: party,
@@ -248,8 +248,8 @@ func ReceiveSpendTx(context view.Context, request *SpendRequest) (*Transaction, 
 // assembled transaction, and returns it without endorsing. Endorsement is
 // the caller's responsibility once any business-logic checks pass.
 func (a *ReceiveSpendTxView) Call(context view.Context) (interface{}, error) {
-	s := session.JSON(context)
-	if err := session.SendTyped(s, context.Context(), &SpendResponse{}, ttx.TypeSpendResponse); err != nil {
+	s := session.NewTypedSessionFromContext(context)
+	if err := s.SendTyped(context.Context(), &SpendResponse{}, ttx.TypeSpendResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to send response")
 	}
 	logger.DebugfContext(context.Context(), "spend response sent")
