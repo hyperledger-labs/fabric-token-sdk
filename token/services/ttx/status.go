@@ -22,6 +22,8 @@ const (
 	Confirmed TxStatus = storage.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted TxStatus = storage.Deleted
+	// Orphan is the status of a transaction that never reached the ledger
+	Orphan TxStatus = storage.Orphan
 )
 
 // TxStatusMessage maps TxStatus to string

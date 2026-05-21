@@ -36,8 +36,9 @@ type Storage interface {
 	ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*ttxdb.RecoveryClaim, error)
 	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
 	// SetStatus updates a transaction's status row. Used by the recovery loop to
-	// permanently mark orphan transactions (NotFound past grace period) as Deleted
-	// so they exit the eligible scan range and stop blocking the queue head.
+	// permanently mark orphan transactions (NotFound past grace period) as Orphan
+	// so they exit the eligible scan range and stop blocking the queue head,
+	// while remaining distinguishable from txs the ledger actively rejected.
 	SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error
 }
 
@@ -304,11 +305,14 @@ func (m *Manager) worker(ctx context.Context, wg *sync.WaitGroup, work <-chan *t
 // and always releases the claim with an appropriate message.
 //
 // If the handler reports the transaction is not on the ledger and the row was
-// stored more than NotFoundGracePeriod ago, the row is force-marked Deleted to
-// prevent the queue head from being permanently blocked by orphan transactions
-// (e.g. broadcast failures whose audit log was persisted but whose tx never
-// reached the orderer). Without this, ORDER BY stored_at ASC + LIMIT BatchSize
-// would replay the same oldest-100 rows on every sweep forever.
+// stored more than NotFoundGracePeriod ago, the row is force-marked Orphan to
+// prevent the queue head from being permanently blocked by transactions that
+// never reached the ledger (e.g. broadcast failures whose audit log was
+// persisted but whose tx never reached the orderer). Without this,
+// ORDER BY stored_at ASC + LIMIT BatchSize would replay the same oldest-100
+// rows on every sweep forever. The status is deliberately distinct from
+// Deleted so operators and downstream tooling can tell broadcast losses apart
+// from txs the ledger actively rejected.
 func (m *Manager) recoverTransaction(ctx context.Context, txID string, storedAt time.Time) error {
 	m.logger.Debugf("recovering transaction [%s]", txID)
 
@@ -317,21 +321,21 @@ func (m *Manager) recoverTransaction(ctx context.Context, txID string, storedAt 
 
 	// Residual race: SetStatus is unconditional, so an independent finality
 	// listener that confirms this tx between our claim and the write below
-	// could be overwritten by Deleted. In practice the NotFoundGracePeriod
+	// could be overwritten by Orphan. In practice the NotFoundGracePeriod
 	// (default 30 min) makes this window vanishingly small — we only get
 	// here when the tx has been Pending for grace+ AND Recover just returned
 	// NotFound. Future hardening: replace SetStatus with an atomic
-	// "status=Pending → Deleted" CAS at the SQL layer.
-	markedDeleted := false
+	// "status=Pending → Orphan" CAS at the SQL layer.
+	markedOrphan := false
 	if err != nil && m.config.NotFoundGracePeriod > 0 && !storedAt.IsZero() && isNotFoundError(err) {
 		age := time.Since(storedAt)
 		if age > m.config.NotFoundGracePeriod {
-			deleteMsg := fmt.Sprintf("tx never reached ledger (NotFound after %v, grace=%v)", age.Truncate(time.Second), m.config.NotFoundGracePeriod)
-			m.logger.Warnf("recovery: marking tx [%s] as Deleted: %s", txID, deleteMsg)
-			if setErr := m.storage.SetStatus(ctx, txID, storage.Deleted, deleteMsg); setErr != nil {
-				m.logger.Errorf("recovery: failed to mark tx [%s] Deleted: %v", txID, setErr)
+			orphanMsg := fmt.Sprintf("tx never reached ledger (NotFound after %v, grace=%v)", age.Truncate(time.Second), m.config.NotFoundGracePeriod)
+			m.logger.Warnf("recovery: marking tx [%s] as Orphan: %s", txID, orphanMsg)
+			if setErr := m.storage.SetStatus(ctx, txID, storage.Orphan, orphanMsg); setErr != nil {
+				m.logger.Errorf("recovery: failed to mark tx [%s] Orphan: %v", txID, setErr)
 			} else {
-				markedDeleted = true
+				markedOrphan = true
 			}
 		}
 	}
@@ -339,8 +343,8 @@ func (m *Manager) recoverTransaction(ctx context.Context, txID string, storedAt 
 	// Always release the claim with appropriate message
 	var message string
 	switch {
-	case markedDeleted:
-		message = "tx marked Deleted after NotFound grace period"
+	case markedOrphan:
+		message = "tx marked Orphan after NotFound grace period"
 	case err != nil:
 		message = fmt.Sprintf("recovery failed: %v", err)
 	default:
@@ -351,13 +355,14 @@ func (m *Manager) recoverTransaction(ctx context.Context, txID string, storedAt 
 		m.logger.Warnf("failed to release recovery claim for transaction [%s]: %v", txID, releaseErr)
 	}
 
-	if err != nil && !markedDeleted {
+	if err != nil && !markedOrphan {
 		return errors.Wrapf(err, "failed to recover transaction [%s]", txID)
 	}
 
-	if markedDeleted {
+	if markedOrphan {
 		// Treat as resolved — no need to noisily report a "failure" the next sweep
-		// would otherwise re-encounter (the row is now status=3 and ineligible).
+		// would otherwise re-encounter (the row is now Orphan and ineligible for
+		// the Pending-only claim filter).
 		return nil
 	}
 

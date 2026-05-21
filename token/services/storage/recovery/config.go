@@ -37,9 +37,9 @@ type Config struct {
 	InstanceID string
 	// NotFoundGracePeriod: when GetTransactionStatus returns a NotFound error and
 	// the tx was stored more than this duration ago, the recovery loop marks the
-	// row as Deleted instead of leaving it for another retry. Prevents the queue
-	// from being permanently blocked by orphan transactions (broadcast failures
-	// that never reached the ledger). Zero disables this behaviour.
+	// row as Orphan instead of leaving it for another retry. Prevents the queue
+	// from being permanently blocked by transactions that never reached the
+	// ledger (broadcast failures, mempool drops). Zero disables this behaviour.
 	NotFoundGracePeriod time.Duration
 }
 
@@ -96,7 +96,7 @@ func LoadConfig(cfg *config.Configuration) (Config, error) {
 	if config.InstanceID != "" {
 		result.InstanceID = config.InstanceID
 	}
-	// NotFoundGracePeriod accepts an explicit zero to disable the orphan
+	// NotFoundGracePeriod accepts an explicit zero to disable the Orphan
 	// promotion, so check IsSet rather than the Go zero value. Without this
 	// gate, setting notFoundGracePeriod: 0 in config would silently fall back
 	// to the 30 min default and the documented opt-out would be unreachable.
