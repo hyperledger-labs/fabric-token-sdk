@@ -1,0 +1,2813 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Privacy-preserving token management for Hyperledger Fabric">
+      
+      
+        <meta name="author" content="Hyperledger Labs">
+      
+      
+        <link rel="canonical" href="https://hyperledger-labs.github.io/fabric-token-sdk/drivers/benchmark/core/dlognogh/validator_transfer_profile/">
+      
+      
+        <link rel="prev" href="../transfer_BenchmarkSender_results/">
+      
+      
+        <link rel="next" href="../../../services/identity/idemix/">
+      
+      
+      <link rel="icon" href="../../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>Validator Transfer Profile - Fabric Token SDK</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#benchmarkvalidatortransfer-performance-profile" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../../.." title="Fabric Token SDK" class="md-header__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Fabric Token SDK
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Validator Transfer Profile
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../../tokensdk/" class="md-tabs__link">
+          
+  
+  Core Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../../../fabtoken/" class="md-tabs__link">
+          
+  
+  Drivers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../../services/auditor/" class="md-tabs__link">
+          
+  
+  Services
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../../development/development/" class="md-tabs__link">
+          
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../../evolution_summary/" class="md-tabs__link">
+        
+  
+    
+  
+  Evolution
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../../.." title="Fabric Token SDK" class="md-nav__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Fabric Token SDK
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../tokensdk/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token SDK Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../tokenapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../token_sdk_usage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API Usage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../driverapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Driver API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Configuration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Services Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../upgradability/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Upgradability
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../public_parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Public Parameters Lifecycle
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../fabtoken/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Fabtoken
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../dlogwogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog (Zero-Knowledge)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../extending_validator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extending Validator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            Benchmark
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_3" id="__nav_3_5_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dlognogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dlognogh_architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dlognogh_regression/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Regression
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transfer_BenchmarkSender_results/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark Sender Results
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Validator Transfer Profile
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Validator Transfer Profile
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#test-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Configuration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-call-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Call Tree
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-flow-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution Flow Description
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution Flow Description">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-entry-point-100" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Entry Point (100%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-deserialization-019" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Deserialization (0.19%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-main-verification-9961" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Main Verification (99.61%)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Main Verification (99.61%)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-auditing-validation-060" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.1 Auditing Validation (0.60%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-action-deserialization-040" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.2 Action Deserialization (0.40%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-transfer-verification-9856-critical-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3 Transfer Verification (98.56%) - CRITICAL PATH
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.3 Transfer Verification (98.56%) - CRITICAL PATH">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#331-signature-validation-2015" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3.1 Signature Validation (20.15%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#332-zero-knowledge-proof-validation-7803-bottleneck" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3.2 Zero-Knowledge Proof Validation (78.03%) - BOTTLENECK
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#333-htlc-validation-021" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3.3 HTLC Validation (0.21%)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Summary
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-20-functions-by-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      Top 20 Functions by Time
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#time-distribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Time Distribution
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#understanding-the-timing-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding the Timing Numbers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-children-dont-always-sum-to-parent-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why Children Don't Always Sum to Parent Time
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-regenerate-this-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      How to Regenerate This Tree
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      References
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_4" id="__nav_3_5_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../services/identity/idemix/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idemix Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/auditor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Auditor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/certifier/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Certifier
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/config/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/identity/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/interop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Interop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/network-ethereum/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Ethereum
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/network-fabric/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabric
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/network-fabricx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabricx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/network/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/nfttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    NFT Tx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/recovery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Recovery
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/selector/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Selector
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/tokens/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokens
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/ttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    TTX
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Development
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/development/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/general/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    General Guidelines
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/idiomatic/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idiomatic Go
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/mock/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Mocking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/linting/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Linting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/makefile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Makefile Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/monitoring/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitoring
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/testing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Testing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/tokengen/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokengen
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/versioning/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Versioning
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/ai_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AI Agents
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/documentation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../evolution_summary/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evolution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#test-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Configuration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-call-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Call Tree
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-flow-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution Flow Description
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution Flow Description">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-entry-point-100" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Entry Point (100%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-deserialization-019" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Deserialization (0.19%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-main-verification-9961" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Main Verification (99.61%)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Main Verification (99.61%)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-auditing-validation-060" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.1 Auditing Validation (0.60%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-action-deserialization-040" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.2 Action Deserialization (0.40%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-transfer-verification-9856-critical-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3 Transfer Verification (98.56%) - CRITICAL PATH
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.3 Transfer Verification (98.56%) - CRITICAL PATH">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#331-signature-validation-2015" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3.1 Signature Validation (20.15%)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#332-zero-knowledge-proof-validation-7803-bottleneck" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3.2 Zero-Knowledge Proof Validation (78.03%) - BOTTLENECK
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#333-htlc-validation-021" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3.3 HTLC Validation (0.21%)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Summary
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-20-functions-by-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      Top 20 Functions by Time
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#time-distribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Time Distribution
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#understanding-the-timing-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding the Timing Numbers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-children-dont-always-sum-to-parent-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why Children Don't Always Sum to Parent Time
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-regenerate-this-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      How to Regenerate This Tree
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      References
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="benchmarkvalidatortransfer-performance-profile">BenchmarkValidatorTransfer - Performance Profile<a class="headerlink" href="#benchmarkvalidatortransfer-performance-profile" title="Permanent link">&para;</a></h1>
+<p>This document provides a detailed performance analysis of the validator transfer benchmark, showing the complete call hierarchy and timing breakdown for token transfer verification.</p>
+<blockquote>
+<p><strong>Note:</strong> This call tree represents a snapshot in time. After performance improvements or code changes, regenerate the tree using the BenchProf tool (see instructions at the end).</p>
+</blockquote>
+<h2 id="test-configuration">Test Configuration<a class="headerlink" href="#test-configuration" title="Permanent link">&para;</a></h2>
+<p>This profile was generated using <code>BenchmarkValidatorTransfer</code> with the following parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bits</strong></td>
+<td>32</td>
+<td>Range proof bit size</td>
+</tr>
+<tr>
+<td><strong>Curve</strong></td>
+<td>BN254</td>
+<td>Elliptic curve used for zero-knowledge proofs</td>
+</tr>
+<tr>
+<td><strong>Inputs</strong></td>
+<td>2</td>
+<td>Number of input tokens in the transfer</td>
+</tr>
+<tr>
+<td><strong>Outputs</strong></td>
+<td>2</td>
+<td>Number of output tokens in the transfer</td>
+</tr>
+<tr>
+<td><strong>Workers</strong></td>
+<td>88</td>
+<td>Parallel workers (runtime.NumCPU())</td>
+</tr>
+<tr>
+<td><strong>Signature Protocol</strong></td>
+<td>Idemix</td>
+<td>Identity-based signatures for token owners</td>
+</tr>
+<tr>
+<td><strong>Auditor Signatures</strong></td>
+<td>ECDSA (P-256)</td>
+<td>Auditor and issuer use ECDSA</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cryptographic Protocols Used:</strong>
+- <strong>Owner Signatures:</strong> Idemix (Identity Mixer) - Privacy-preserving credential system
+- <strong>Auditor/Issuer Signatures:</strong> ECDSA (Elliptic Curve Digital Signature Algorithm) on P-256 curve
+- <strong>Zero-Knowledge Proofs:</strong> Range proofs using Inner Product Arguments (IPA) on BN254 curve</p>
+<p><strong>Important:</strong> The timing values in this document are specific to this configuration. Different parameters (e.g., 4 inputs/outputs, different curve, different signature protocol) will produce different results.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p><code>VerifyTokenRequestFromRaw</code> is the entry point for validating token requests. It deserializes the raw request and delegates to the verification logic, which validates:
+1. Auditing signatures
+2. Transfer actions (signatures and zero-knowledge proofs)
+3. HTLC (Hash Time-Locked Contract) constraints</p>
+<h2 id="complete-call-tree">Complete Call Tree<a class="headerlink" href="#complete-call-tree" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>└── &gt;&gt;&gt; (*Unknown).VerifyTokenRequestFromRaw [30.850136ms, 100.00%]
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    ├── (*TokenRequest).FromBytes [59.246µs, 0.19%]
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    │   ├── (*TokenRequest).ProtoReflect [380ns, 0.00%]
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    │   ├── (*TokenRequest).Reset [6.831µs, 0.02%]
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    │   └── (*TokenRequest).FromProtos [30.835µs, 0.10%]
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    │       ├── GenericSliceOfPointers [472ns, 0.00%]
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    │       └── FromProtosSlice [604ns, 0.00%]
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    │           └── (*AuditorSignature).FromProtos [173ns, 0.00%]
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    ├── (*TokenRequest).MarshalToMessageToSign [16.121µs, 0.05%]
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    ├── NewBackend [5.258µs, 0.02%]
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    └── &gt;&gt;&gt; (*Unknown).VerifyTokenRequest [30.731184ms, 99.61%]
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        ├── (*Unknown).VerifyAuditing [186.608µs, 0.60%]
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        │   └── AuditingSignaturesValidate [185.102µs, 0.60%]
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        │       ├── (*PublicParams).Auditors x2 [3.782µs, 0.01%]
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        │       ├── (*Deserializer).GetAuditorVerifier [37.251µs, 0.12%]
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>        │       │   └── &gt;&gt;&gt; (*TypedVerifierDeserializerMultiplex).DeserializeVerifier [36.81µs, 0.12%]
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>        │       │       ├── UnmarshalTypedIdentity [13.157µs, 0.04%]
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>        │       │       └── &gt;&gt;&gt; (*TypedIdentityVerifierDeserializer).DeserializeVerifier [22.094µs, 0.07%]
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>        │       │           └── (*IdentityDeserializer).DeserializeVerifier [17.551µs, 0.06%]
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        │       │               └── DeserializeVerifier [17.236µs, 0.06%]
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>        │       │                   ├── PemDecodeKey [16.258µs, 0.05%]
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        │       │                   └── NewECDSAVerifier [416ns, 0.00%]
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        │       └── (*Backend).HasBeenSignedBy [142.667µs, 0.46%]
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>        │           ├── Base64 [230ns, 0.00%]
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>        │           └── (*ecdsaVerifier).Verify [138.394µs, 0.45%]
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>        │               └── IsLowS [422ns, 0.00%]
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>        ├── (*ActionDeserializer).DeserializeActions [122.268µs, 0.40%]
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>        │   └── (*Action).Deserialize [121.309µs, 0.39%]
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        │       ├── (*TransferAction).ProtoReflect [4.321µs, 0.01%]
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>        │       ├── (*TransferAction).Reset [175ns, 0.00%]
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>        │       ├── GenericSliceOfPointers [539ns, 0.00%]
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>        │       ├── FromProtosSlice [27.538µs, 0.09%]
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>        │       │   └── (*ActionInput).FromProtos x2 [20.819µs, 0.07%]
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>        │       │       └── FromG1Proto x2 [16.83µs, 0.05%]
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>        │       └── FromG1Proto x2 [16.643µs, 0.05%]
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>        ├── (*Unknown).verifyIssues [12.782µs, 0.04%]
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>        └── &gt;&gt;&gt; (*Unknown).verifyTransfers [30.407175ms, 98.56%]
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>            └── &gt;&gt;&gt; (*Unknown).VerifyTransfer [30.404821ms, 98.56%]
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>                ├── TransferActionValidate [33.504µs, 0.11%]
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>                │   └── (*Action).Validate [33.082µs, 0.11%]
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>                │       ├── (*Token).Validate x4 [21.93µs, 0.07%]
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>                │       └── (*Action).IsRedeem [10.309µs, 0.03%]
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>                │           └── (*Token).IsRedeem x2 [6.606µs, 0.02%]
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>                ├── &gt;&gt;&gt; TransferSignatureValidate [6.216641ms, 20.15%]
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>                │   ├── &gt;&gt;&gt; (*Deserializer).GetOwnerVerifier x2 [5.612908ms, 18.19%]
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>                │   │   └── &gt;&gt;&gt; (*TypedVerifierDeserializerMultiplex).DeserializeVerifier x2 [5.612046ms, 18.19%]
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>                │   │       ├── UnmarshalTypedIdentity x2 [25.119µs, 0.08%]
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>                │   │       └── &gt;&gt;&gt; (*TypedIdentityVerifierDeserializer).DeserializeVerifier x2 [5.584705ms, 18.10%]
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>                │   │           └── &gt;&gt;&gt; (*Deserializer).DeserializeVerifier x2 [5.580346ms, 18.09%]
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>                │   │               └── &gt;&gt;&gt; (*Deserializer).Deserialize x2 [5.579273ms, 18.09%]
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>                │   │                   └── &gt;&gt;&gt; (*Deserializer).DeserializeAgainstNymEID x2 [5.578593ms, 18.08%]
+</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>                │   │                       ├── (*SerializedIdemixIdentity).ProtoReflect x2 [568ns, 0.00%]
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>                │   │                       ├── (*SerializedIdemixIdentity).Reset x2 [5.385µs, 0.02%]
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>                │   │                       ├── NewIdentity x2 [4.647µs, 0.02%]
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>                │   │                       └── &gt;&gt;&gt; (*Identity).Validate x2 [5.542037ms, 17.96%]
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>                │   │                           └── &gt;&gt;&gt; (*Identity).verifyProof x2 [5.537436ms, 17.95%]
+</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>                │   ├── (*Backend).HasBeenSignedBy x2 [573.318µs, 1.86%]
+</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>                │   │   ├── Base64 x2 [638ns, 0.00%]
+</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>                │   │   └── (*NymSignatureVerifier).Verify x2 [571.008µs, 1.85%]
+</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>                │   └── (*PublicParams).Issuers [230ns, 0.00%]
+</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>                ├── TransferUpgradeWitnessValidate [275ns, 0.00%]
+</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>                ├── &gt;&gt;&gt; TransferZKProofValidate [24.073677ms, 78.03%]
+</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>                │   ├── (*Action).GetOutputCommitments [289ns, 0.00%]
+</span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>                │   ├── NewVerifier [6.979µs, 0.02%]
+</span><span id="__span-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>                │   │   ├── NewRangeCorrectnessVerifier [6.061µs, 0.02%]
+</span><span id="__span-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>                │   │   └── NewTypeAndSumVerifier [433ns, 0.00%]
+</span><span id="__span-0-67"><a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>                │   ├── (*Action).GetProof [2.686µs, 0.01%]
+</span><span id="__span-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>                │   └── &gt;&gt;&gt; (*Verifier).Verify [24.059524ms, 77.99%]
+</span><span id="__span-0-69"><a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>                │       ├── (*Proof).Deserialize [609.503µs, 1.98%]
+</span><span id="__span-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>                │       │   └── Unmarshal [605.941µs, 1.96%]
+</span><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a>                │       │       ├── (*TypeAndSumProof).Deserialize [125.08µs, 0.41%]
+</span><span id="__span-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a>                │       │       │   ├── NewUnmarshaller [11.102µs, 0.04%]
+</span><span id="__span-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>                │       │       │   ├── (*unmarshaller).NextG1 [14.153µs, 0.05%]
+</span><span id="__span-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a>                │       │       │   │   └── (*unmarshaller).Next [9.67µs, 0.03%]
+</span><span id="__span-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a>                │       │       │   ├── (*unmarshaller).NextZrArray x2 [42.821µs, 0.14%]
+</span><span id="__span-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a>                │       │       │   │   └── (*unmarshaller).Next x2 [5.811µs, 0.02%]
+</span><span id="__span-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a>                │       │       │   └── (*unmarshaller).NextZr x4 [55.937µs, 0.18%]
+</span><span id="__span-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>                │       │       │       └── (*unmarshaller).Next x4 [26.942µs, 0.09%]
+</span><span id="__span-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a>                │       │       └── (*RangeCorrectness).Deserialize [447.484µs, 1.45%]
+</span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a>                │       │           ├── NewArrayWithNew [3.569µs, 0.01%]
+</span><span id="__span-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a>                │       │           └── Unmarshal [439.994µs, 1.43%]
+</span><span id="__span-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a>                │       │               └── (*Unknown).Deserialize [426.14µs, 1.38%]
+</span><span id="__span-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a>                │       │                   └── UnmarshalTo [421.759µs, 1.37%]
+</span><span id="__span-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84" href="#__codelineno-0-84"></a>                │       │                       └── (*RangeProof).Deserialize x2 [392.084µs, 1.27%]
+</span><span id="__span-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85" href="#__codelineno-0-85"></a>                │       │                           └── Unmarshal x2 [391.429µs, 1.27%]
+</span><span id="__span-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86" href="#__codelineno-0-86"></a>                │       │                               ├── (*RangeProofData).Deserialize x2 [113.418µs, 0.37%]
+</span><span id="__span-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87" href="#__codelineno-0-87"></a>                │       │                               │   ├── NewUnmarshaller x2 [40.21µs, 0.13%]
+</span><span id="__span-0-88"><a id="__codelineno-0-88" name="__codelineno-0-88" href="#__codelineno-0-88"></a>                │       │                               │   ├── (*unmarshaller).NextG1 x8 [35.727µs, 0.12%]
+</span><span id="__span-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89" href="#__codelineno-0-89"></a>                │       │                               │   │   └── (*unmarshaller).Next x8 [15.964µs, 0.05%]
+</span><span id="__span-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90" href="#__codelineno-0-90"></a>                │       │                               │   └── (*unmarshaller).NextZr x6 [35.765µs, 0.12%]
+</span><span id="__span-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91" href="#__codelineno-0-91"></a>                │       │                               │       └── (*unmarshaller).Next x6 [19.288µs, 0.06%]
+</span><span id="__span-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92" href="#__codelineno-0-92"></a>                │       │                               └── (*IPA).Deserialize x2 [238.53µs, 0.77%]
+</span><span id="__span-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93" href="#__codelineno-0-93"></a>                │       │                                   ├── NewUnmarshaller x2 [56.379µs, 0.18%]
+</span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94" href="#__codelineno-0-94"></a>                │       │                                   ├── (*unmarshaller).NextZr x4 [30.527µs, 0.10%]
+</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95" href="#__codelineno-0-95"></a>                │       │                                   │   └── (*unmarshaller).Next x4 [12.233µs, 0.04%]
+</span><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96" href="#__codelineno-0-96"></a>                │       │                                   └── (*unmarshaller).NextG1Array x4 [149.945µs, 0.49%]
+</span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97" href="#__codelineno-0-97"></a>                │       │                                       └── (*unmarshaller).Next x4 [36.534µs, 0.12%]
+</span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98" href="#__codelineno-0-98"></a>                │       ├── (*Proof).Validate [132.437µs, 0.43%]
+</span><span id="__span-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99" href="#__codelineno-0-99"></a>                │       │   ├── (*TypeAndSumProof).Validate [33.52µs, 0.11%]
+</span><span id="__span-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100" href="#__codelineno-0-100"></a>                │       │   │   ├── CheckElement [7.586µs, 0.02%]
+</span><span id="__span-0-101"><a id="__codelineno-0-101" name="__codelineno-0-101" href="#__codelineno-0-101"></a>                │       │   │   │   └── isNilInterface [3.525µs, 0.01%]
+</span><span id="__span-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a>                │       │   │   ├── CheckZrElements x2 [12.717µs, 0.04%]
+</span><span id="__span-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a>                │       │   │   │   └── CheckBaseElement x4 [11.594µs, 0.04%]
+</span><span id="__span-0-104"><a id="__codelineno-0-104" name="__codelineno-0-104" href="#__codelineno-0-104"></a>                │       │   │   │       └── isNilInterface x4 [3.906µs, 0.01%]
+</span><span id="__span-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a>                │       │   │   └── CheckBaseElement x4 [9.303µs, 0.03%]
+</span><span id="__span-0-106"><a id="__codelineno-0-106" name="__codelineno-0-106" href="#__codelineno-0-106"></a>                │       │   │       └── isNilInterface x4 [3.663µs, 0.01%]
+</span><span id="__span-0-107"><a id="__codelineno-0-107" name="__codelineno-0-107" href="#__codelineno-0-107"></a>                │       │   └── (*RangeCorrectness).Validate [98.499µs, 0.32%]
+</span><span id="__span-0-108"><a id="__codelineno-0-108" name="__codelineno-0-108" href="#__codelineno-0-108"></a>                │       │       └── (*RangeProof).Validate x2 [98.038µs, 0.32%]
+</span><span id="__span-0-109"><a id="__codelineno-0-109" name="__codelineno-0-109" href="#__codelineno-0-109"></a>                │       │           ├── (*RangeProofData).Validate x2 [46.849µs, 0.15%]
+</span><span id="__span-0-110"><a id="__codelineno-0-110" name="__codelineno-0-110" href="#__codelineno-0-110"></a>                │       │           │   ├── CheckElement x8 [36.647µs, 0.12%]
+</span><span id="__span-0-111"><a id="__codelineno-0-111" name="__codelineno-0-111" href="#__codelineno-0-111"></a>                │       │           │   │   └── isNilInterface x8 [11.627µs, 0.04%]
+</span><span id="__span-0-112"><a id="__codelineno-0-112" name="__codelineno-0-112" href="#__codelineno-0-112"></a>                │       │           │   └── CheckBaseElement x6 [8.777µs, 0.03%]
+</span><span id="__span-0-113"><a id="__codelineno-0-113" name="__codelineno-0-113" href="#__codelineno-0-113"></a>                │       │           │       └── isNilInterface x6 [723ns, 0.00%]
+</span><span id="__span-0-114"><a id="__codelineno-0-114" name="__codelineno-0-114" href="#__codelineno-0-114"></a>                │       │           └── (*IPA).Validate x2 [47.213µs, 0.15%]
+</span><span id="__span-0-115"><a id="__codelineno-0-115" name="__codelineno-0-115" href="#__codelineno-0-115"></a>                │       │               └── CheckZrElements x4 [46.589µs, 0.15%]
+</span><span id="__span-0-116"><a id="__codelineno-0-116" name="__codelineno-0-116" href="#__codelineno-0-116"></a>                │       │                   └── CheckBaseElement x20 [36.425µs, 0.12%]
+</span><span id="__span-0-117"><a id="__codelineno-0-117" name="__codelineno-0-117" href="#__codelineno-0-117"></a>                │       │                       └── isNilInterface x20 [20.651µs, 0.07%]
+</span><span id="__span-0-118"><a id="__codelineno-0-118" name="__codelineno-0-118" href="#__codelineno-0-118"></a>                │       ├── (*TypeAndSumVerifier).Verify [808.481µs, 2.62%]
+</span><span id="__span-0-119"><a id="__codelineno-0-119" name="__codelineno-0-119" href="#__codelineno-0-119"></a>                │       │   ├── GetG1Array [415ns, 0.00%]
+</span><span id="__span-0-120"><a id="__codelineno-0-120" name="__codelineno-0-120" href="#__codelineno-0-120"></a>                │       │   └── (G1Array).Bytes [10.989µs, 0.04%]
+</span><span id="__span-0-121"><a id="__codelineno-0-121" name="__codelineno-0-121" href="#__codelineno-0-121"></a>                │       │       └── AppendFixed32 [4.683µs, 0.02%]
+</span><span id="__span-0-122"><a id="__codelineno-0-122" name="__codelineno-0-122" href="#__codelineno-0-122"></a>                │       └── &gt;&gt;&gt; (*RangeCorrectnessVerifier).Verify [22.497704ms, 72.93%]
+</span><span id="__span-0-123"><a id="__codelineno-0-123" name="__codelineno-0-123" href="#__codelineno-0-123"></a>                │           ├── NewRangeVerifier x2 [9.811µs, 0.03%]
+</span><span id="__span-0-124"><a id="__codelineno-0-124" name="__codelineno-0-124" href="#__codelineno-0-124"></a>                │           └── &gt;&gt;&gt; (*rangeVerifier).Verify x2 [22.486225ms, 72.89%]
+</span><span id="__span-0-125"><a id="__codelineno-0-125" name="__codelineno-0-125" href="#__codelineno-0-125"></a>                │               ├── GetG1Array x4 [13.943µs, 0.05%]
+</span><span id="__span-0-126"><a id="__codelineno-0-126" name="__codelineno-0-126" href="#__codelineno-0-126"></a>                │               ├── (G1Array).Bytes x4 [27.127µs, 0.09%]
+</span><span id="__span-0-127"><a id="__codelineno-0-127" name="__codelineno-0-127" href="#__codelineno-0-127"></a>                │               │   └── AppendFixed32 x4 [6.041µs, 0.02%]
+</span><span id="__span-0-128"><a id="__codelineno-0-128" name="__codelineno-0-128" href="#__codelineno-0-128"></a>                │               ├── Two x4 [11.136µs, 0.04%]
+</span><span id="__span-0-129"><a id="__codelineno-0-129" name="__codelineno-0-129" href="#__codelineno-0-129"></a>                │               │   └── NewCachedZrFromInt x4 [10.008µs, 0.03%]
+</span><span id="__span-0-130"><a id="__codelineno-0-130" name="__codelineno-0-130" href="#__codelineno-0-130"></a>                │               ├── Zero x2 [4.528µs, 0.01%]
+</span><span id="__span-0-131"><a id="__codelineno-0-131" name="__codelineno-0-131" href="#__codelineno-0-131"></a>                │               │   └── NewCachedZrFromInt x2 [397ns, 0.00%]
+</span><span id="__span-0-132"><a id="__codelineno-0-132" name="__codelineno-0-132" href="#__codelineno-0-132"></a>                │               ├── SumOfPowersOfTwo x2 [397ns, 0.00%]
+</span><span id="__span-0-133"><a id="__codelineno-0-133" name="__codelineno-0-133" href="#__codelineno-0-133"></a>                │               ├── One x2 [10.797µs, 0.03%]
+</span><span id="__span-0-134"><a id="__codelineno-0-134" name="__codelineno-0-134" href="#__codelineno-0-134"></a>                │               │   └── NewCachedZrFromInt x2 [5.56µs, 0.02%]
+</span><span id="__span-0-135"><a id="__codelineno-0-135" name="__codelineno-0-135" href="#__codelineno-0-135"></a>                │               └── &gt;&gt;&gt; (*rangeVerifier).verifyIPA x2 [21.119434ms, 68.46%]
+</span><span id="__span-0-136"><a id="__codelineno-0-136" name="__codelineno-0-136" href="#__codelineno-0-136"></a>                │                   ├── PowerOfTwo x64 [84.271µs, 0.27%]
+</span><span id="__span-0-137"><a id="__codelineno-0-137" name="__codelineno-0-137" href="#__codelineno-0-137"></a>                │                   ├── NewIPAVerifier x2 [7.655µs, 0.02%]
+</span><span id="__span-0-138"><a id="__codelineno-0-138" name="__codelineno-0-138" href="#__codelineno-0-138"></a>                │                   └── &gt;&gt;&gt; (*ipaVerifier).Verify x2 [5.786362ms, 18.76%]
+</span><span id="__span-0-139"><a id="__codelineno-0-139" name="__codelineno-0-139" href="#__codelineno-0-139"></a>                │                       ├── GetG1Array x12 [20.201µs, 0.07%]
+</span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140" href="#__codelineno-0-140"></a>                │                       ├── (G1Array).Bytes x12 [201.783µs, 0.65%]
+</span><span id="__span-0-141"><a id="__codelineno-0-141" name="__codelineno-0-141" href="#__codelineno-0-141"></a>                │                       │   └── AppendFixed32 x12 [57.165µs, 0.19%]
+</span><span id="__span-0-142"><a id="__codelineno-0-142" name="__codelineno-0-142" href="#__codelineno-0-142"></a>                │                       ├── MarshalStd x2 [40.911µs, 0.13%]
+</span><span id="__span-0-143"><a id="__codelineno-0-143" name="__codelineno-0-143" href="#__codelineno-0-143"></a>                │                       ├── cloneGenerators x2 [134.973µs, 0.44%]
+</span><span id="__span-0-144"><a id="__codelineno-0-144" name="__codelineno-0-144" href="#__codelineno-0-144"></a>                │                       └── &gt;&gt;&gt; computeSVector x2 [2.222623ms, 7.20%]
+</span><span id="__span-0-145"><a id="__codelineno-0-145" name="__codelineno-0-145" href="#__codelineno-0-145"></a>                │                           └── BatchInverse x4 [1.004519ms, 3.26%]
+</span><span id="__span-0-146"><a id="__codelineno-0-146" name="__codelineno-0-146" href="#__codelineno-0-146"></a>                ├── TransferHTLCValidate [65.504µs, 0.21%]
+</span><span id="__span-0-147"><a id="__codelineno-0-147" name="__codelineno-0-147" href="#__codelineno-0-147"></a>                │   ├── UnmarshalTypedIdentity x4 [53.827µs, 0.17%]
+</span><span id="__span-0-148"><a id="__codelineno-0-148" name="__codelineno-0-148" href="#__codelineno-0-148"></a>                │   └── (*Token).IsRedeem x2 [6.699µs, 0.02%]
+</span><span id="__span-0-149"><a id="__codelineno-0-149" name="__codelineno-0-149" href="#__codelineno-0-149"></a>                ├── TransferApplicationDataValidate [5.866µs, 0.02%]
+</span><span id="__span-0-150"><a id="__codelineno-0-150" name="__codelineno-0-150" href="#__codelineno-0-150"></a>                │   └── (*Action).GetMetadata [5.139µs, 0.02%]
+</span><span id="__span-0-151"><a id="__codelineno-0-151" name="__codelineno-0-151" href="#__codelineno-0-151"></a>                └── (*Action).GetMetadata [120ns, 0.00%]
+</span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> Functions marked with <code>&gt;&gt;&gt;</code> are the top 20 functions by time (see table below).</p>
+</blockquote>
+<h2 id="execution-flow-description">Execution Flow Description<a class="headerlink" href="#execution-flow-description" title="Permanent link">&para;</a></h2>
+<h3 id="1-entry-point-100">1. Entry Point (100%)<a class="headerlink" href="#1-entry-point-100" title="Permanent link">&para;</a></h3>
+<p><strong><code>VerifyTokenRequestFromRaw</code></strong> - Deserializes and validates a raw token request
+- <strong>Time:</strong> 30.850136ms (100%)
+- <strong>Purpose:</strong> Main entry point for token request validation</p>
+<h3 id="2-deserialization-019">2. Deserialization (0.19%)<a class="headerlink" href="#2-deserialization-019" title="Permanent link">&para;</a></h3>
+<p><strong><code>(*TokenRequest).FromBytes</code></strong> - Converts raw bytes to TokenRequest structure
+- <strong>Time:</strong> 59.246µs (0.19%)
+- <strong>Purpose:</strong> Parse the binary token request format</p>
+<h3 id="3-main-verification-9961">3. Main Verification (99.61%)<a class="headerlink" href="#3-main-verification-9961" title="Permanent link">&para;</a></h3>
+<p><strong><code>(*Unknown).VerifyTokenRequest</code></strong> - Orchestrates all validation checks
+- <strong>Time:</strong> 30.731184ms (99.61%)
+- <strong>Delegates to three main validation paths:</strong></p>
+<h4 id="31-auditing-validation-060">3.1 Auditing Validation (0.60%)<a class="headerlink" href="#31-auditing-validation-060" title="Permanent link">&para;</a></h4>
+<p><strong><code>(*Unknown).VerifyAuditing</code></strong> → <strong><code>AuditingSignaturesValidate</code></strong>
+- <strong>Time:</strong> 186.608µs (0.60%)
+- <strong>Purpose:</strong> Verify auditor signatures on the request
+- <strong>Key Operations:</strong>
+  - Deserialize auditor verifier (37.251µs)
+  - Verify signature (142.667µs)</p>
+<h4 id="32-action-deserialization-040">3.2 Action Deserialization (0.40%)<a class="headerlink" href="#32-action-deserialization-040" title="Permanent link">&para;</a></h4>
+<p><strong><code>(*ActionDeserializer).DeserializeActions</code></strong> → <strong><code>(*Action).Deserialize</code></strong>
+- <strong>Time:</strong> 122.268µs (0.40%)
+- <strong>Purpose:</strong> Parse transfer actions from the request</p>
+<h4 id="33-transfer-verification-9856-critical-path">3.3 Transfer Verification (98.56%) - <strong>CRITICAL PATH</strong><a class="headerlink" href="#33-transfer-verification-9856-critical-path" title="Permanent link">&para;</a></h4>
+<p><strong><code>(*Unknown).verifyTransfers</code></strong> → <strong><code>(*Unknown).VerifyTransfer</code></strong>
+- <strong>Time:</strong> 30.407175ms (98.56%)
+- <strong>Purpose:</strong> Validate each transfer action
+- <strong>Three main sub-validations:</strong></p>
+<h5 id="331-signature-validation-2015">3.3.1 Signature Validation (20.15%)<a class="headerlink" href="#331-signature-validation-2015" title="Permanent link">&para;</a></h5>
+<p><strong><code>TransferSignatureValidate</code></strong>
+- <strong>Time:</strong> 6.216641ms (20.15%)
+- <strong>Purpose:</strong> Verify sender signatures using Idemix credentials
+- <strong>Key Operations:</strong>
+  - <strong>Owner Verifier Deserialization (18.19%):</strong> Called twice (once per input)
+    - Deserialize Idemix identity (5.612908ms)
+    - Validate identity proof (5.537436ms)
+  - <strong>Signature Verification (1.86%):</strong> Called twice
+    - Verify pseudonym signature (573.318µs)</p>
+<h5 id="332-zero-knowledge-proof-validation-7803-bottleneck">3.3.2 Zero-Knowledge Proof Validation (78.03%) - <strong>BOTTLENECK</strong><a class="headerlink" href="#332-zero-knowledge-proof-validation-7803-bottleneck" title="Permanent link">&para;</a></h5>
+<p><strong><code>TransferZKProofValidate</code></strong> → <strong><code>(*Verifier).Verify</code></strong>
+- <strong>Time:</strong> 24.073677ms (78.03%)
+- <strong>Purpose:</strong> Verify zero-knowledge proofs for transfer correctness
+- <strong>Key Operations:</strong></p>
+<p><strong>a) Proof Deserialization (1.98%)</strong>
+- Deserialize type and sum proof (125.08µs)
+- Deserialize range correctness proof (447.484µs)
+  - Includes IPA (Inner Product Argument) data (238.53µs)</p>
+<p><strong>b) Type and Sum Verification (2.62%)</strong>
+- Verify token types and amounts match (808.481µs)</p>
+<p><strong>c) Range Correctness Verification (72.93%) - MAIN BOTTLENECK</strong>
+- <strong><code>(*RangeCorrectnessVerifier).Verify</code></strong> → <strong><code>(*rangeVerifier).Verify</code></strong> (called twice)
+  - <strong>Time:</strong> 22.497704ms (72.93%)
+  - <strong>Purpose:</strong> Prove values are in valid range without revealing them
+  - <strong>Main Operation:</strong> IPA Verification (68.46%)
+    - <strong><code>(*rangeVerifier).verifyIPA</code></strong> (called twice, 21.119434ms)
+      - <strong><code>(*ipaVerifier).Verify</code></strong> (called twice, 5.786362ms)
+        - Serialize generators (201.783µs)
+        - Clone generators (134.973µs)
+        - <strong>Compute S-vector (7.20%)</strong> - Most expensive operation
+          - Batch inverse computation (1.004519ms)</p>
+<h5 id="333-htlc-validation-021">3.3.3 HTLC Validation (0.21%)<a class="headerlink" href="#333-htlc-validation-021" title="Permanent link">&para;</a></h5>
+<p><strong><code>TransferHTLCValidate</code></strong>
+- <strong>Time:</strong> 65.504µs (0.21%)
+- <strong>Purpose:</strong> Validate Hash Time-Locked Contract constraints (if present)</p>
+<h2 id="performance-summary">Performance Summary<a class="headerlink" href="#performance-summary" title="Permanent link">&para;</a></h2>
+<h3 id="top-20-functions-by-time">Top 20 Functions by Time<a class="headerlink" href="#top-20-functions-by-time" title="Permanent link">&para;</a></h3>
+<p><em>Note: These functions are marked with <code>&gt;&gt;&gt;</code> in the call tree above</em></p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Total Time</th>
+<th>% of Root</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(*Unknown).VerifyTokenRequestFromRaw</code></td>
+<td>30.850136ms</td>
+<td>100.00%</td>
+</tr>
+<tr>
+<td><code>(*Unknown).VerifyTokenRequest</code></td>
+<td>30.731184ms</td>
+<td>99.61%</td>
+</tr>
+<tr>
+<td><code>(*Unknown).verifyTransfers</code></td>
+<td>30.407175ms</td>
+<td>98.56%</td>
+</tr>
+<tr>
+<td><code>(*Unknown).VerifyTransfer</code></td>
+<td>30.404821ms</td>
+<td>98.56%</td>
+</tr>
+<tr>
+<td><code>TransferZKProofValidate</code></td>
+<td>24.073677ms</td>
+<td>78.03%</td>
+</tr>
+<tr>
+<td><code>(*Verifier).Verify</code></td>
+<td>24.059524ms</td>
+<td>77.99%</td>
+</tr>
+<tr>
+<td><code>(*RangeCorrectnessVerifier).Verify</code></td>
+<td>22.497704ms</td>
+<td>72.93%</td>
+</tr>
+<tr>
+<td><code>(*rangeVerifier).Verify</code></td>
+<td>22.486225ms</td>
+<td>72.89%</td>
+</tr>
+<tr>
+<td><code>(*rangeVerifier).verifyIPA</code></td>
+<td>21.119434ms</td>
+<td>68.46%</td>
+</tr>
+<tr>
+<td><code>TransferSignatureValidate</code></td>
+<td>6.216641ms</td>
+<td>20.15%</td>
+</tr>
+<tr>
+<td><code>(*ipaVerifier).Verify</code></td>
+<td>5.786362ms</td>
+<td>18.76%</td>
+</tr>
+<tr>
+<td><code>(*TypedVerifierDeserializerMultiplex).DeserializeVerifier</code></td>
+<td>5.648856ms</td>
+<td>18.31%</td>
+</tr>
+<tr>
+<td><code>(*Deserializer).GetOwnerVerifier</code></td>
+<td>5.612908ms</td>
+<td>18.19%</td>
+</tr>
+<tr>
+<td><code>(*TypedIdentityVerifierDeserializer).DeserializeVerifier</code></td>
+<td>5.606799ms</td>
+<td>18.17%</td>
+</tr>
+<tr>
+<td><code>(*Deserializer).DeserializeVerifier</code></td>
+<td>5.580346ms</td>
+<td>18.09%</td>
+</tr>
+<tr>
+<td><code>(*Deserializer).Deserialize</code></td>
+<td>5.579273ms</td>
+<td>18.09%</td>
+</tr>
+<tr>
+<td><code>(*Deserializer).DeserializeAgainstNymEID</code></td>
+<td>5.578593ms</td>
+<td>18.08%</td>
+</tr>
+<tr>
+<td><code>(*Identity).Validate</code></td>
+<td>5.542037ms</td>
+<td>17.96%</td>
+</tr>
+<tr>
+<td><code>(*Identity).verifyProof</code></td>
+<td>5.537436ms</td>
+<td>17.95%</td>
+</tr>
+<tr>
+<td><code>computeSVector</code></td>
+<td>2.222623ms</td>
+<td>7.20%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="time-distribution">Time Distribution<a class="headerlink" href="#time-distribution" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Zero-Knowledge Proof Validation:</strong> 78.03% (24.073677ms)</li>
+<li>Range correctness: 72.93% (22.497704ms)</li>
+<li>IPA verification: 68.46% (21.119434ms)</li>
+<li><strong>Signature Validation:</strong> 20.15% (6.216641ms)</li>
+<li>Identity deserialization: 18.19% (5.612908ms)</li>
+<li>Signature verification: 1.86% (573.318µs)</li>
+<li><strong>Auditing:</strong> 0.60% (186.608µs)</li>
+<li><strong>Other:</strong> 0.82% (253.071µs)</li>
+</ol>
+<h3 id="understanding-the-timing-numbers">Understanding the Timing Numbers<a class="headerlink" href="#understanding-the-timing-numbers" title="Permanent link">&para;</a></h3>
+<p><strong>What the numbers mean:</strong></p>
+<p>Each function shows its <strong>cumulative time</strong> - the total time spent in that function INCLUDING all the work it does and all functions it calls.</p>
+<p><strong>Format:</strong> <code>FunctionName x[calls] [total_time, percentage]</code></p>
+<h3 id="why-children-dont-always-sum-to-parent-time">Why Children Don't Always Sum to Parent Time<a class="headerlink" href="#why-children-dont-always-sum-to-parent-time" title="Permanent link">&para;</a></h3>
+<p><strong>Important:</strong> When you add up all the children's times, they often DON'T equal the parent's time. This is NORMAL and EXPECTED.</p>
+<p><strong>Example from this profile:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>(*rangeVerifier).verifyIPA x2 [21.119434ms, 68.46%]
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  ├── PowerOfTwo x64 [84.271µs, 0.27%]
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  ├── NewIPAVerifier x2 [7.655µs, 0.02%]
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  └── (*ipaVerifier).Verify x2 [5.786362ms, 18.76%]
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>      ├── (G1Array).Bytes x12 [201.783µs, 0.65%]
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>      ├── MarshalStd x2 [40.911µs, 0.13%]
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>      ├── cloneGenerators x2 [134.973µs, 0.44%]
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>      └── computeSVector x2 [2.222623ms, 7.20%]
+</span></code></pre></div></p>
+<p><strong>Children sum:</strong> 0.084 + 0.008 + 5.786 + 0.202 + 0.041 + 0.135 + 2.223 = <strong>8.479ms</strong>
+<strong>Parent time:</strong> 21.119ms
+<strong>Difference:</strong> 21.119 - 8.479 = <strong>12.64ms</strong> (60% of parent's time)</p>
+<p><strong>Where's the missing 12.64ms?</strong></p>
+<p>It's spent in <code>verifyIPA</code> doing work that's NOT in instrumented child functions:
+- <strong>Cryptographic operations:</strong> Elliptic curve math, point multiplications
+- <strong>Vector operations:</strong> Computing inner products, reducing vectors
+- <strong>Hash computations:</strong> Fiat-Shamir challenges
+- <strong>Memory operations:</strong> Allocating/copying large arrays
+- <strong>Loop overhead:</strong> Multiple verification rounds
+- <strong>Inline code:</strong> Assignments, conditionals, simple math</p>
+<h2 id="how-to-regenerate-this-tree">How to Regenerate This Tree<a class="headerlink" href="#how-to-regenerate-this-tree" title="Permanent link">&para;</a></h2>
+<p>This call tree was generated using the Profiler tool. To get an updated version after code changes:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">cd</span><span class="w"> </span>/path/to/fabric-token-sdk/tools/profiler
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>./profile.sh<span class="w"> </span>BenchmarkValidatorTransfer<span class="w"> </span>-f<span class="w"> </span>VerifyTokenRequestFromRaw
+</span></code></pre></div>
+<p>For more profiler options and usage examples, see the <a href="../../../../../tools/profiler/README.md">Profiler Tool README</a>.</p>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../../../../tools/profiler/README.md">Profiler Tool</a> - Automatic profiling tool for tests and benchmarks</li>
+<li><a href="../../../../../token/core/zkatdlog/nogh/v1/validator/">Validator Implementation</a></li>
+<li><a href="../../../../../token/services/identity/idemix/">Idemix Identity</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../../../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../../../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../../../../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>

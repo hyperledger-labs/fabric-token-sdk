@@ -1,0 +1,2803 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Privacy-preserving token management for Hyperledger Fabric">
+      
+      
+        <meta name="author" content="Hyperledger Labs">
+      
+      
+        <link rel="canonical" href="https://hyperledger-labs.github.io/fabric-token-sdk/services/network-fabric/">
+      
+      
+        <link rel="prev" href="../network-ethereum/">
+      
+      
+        <link rel="next" href="../network-fabricx/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>Network Fabric - Fabric Token SDK</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#network-service-fabric-implementation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Fabric Token SDK" class="md-header__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Fabric Token SDK
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Network Fabric
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tokensdk/" class="md-tabs__link">
+          
+  
+  Core Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../drivers/fabtoken/" class="md-tabs__link">
+          
+  
+  Drivers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../auditor/" class="md-tabs__link">
+          
+  
+  Services
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/development/" class="md-tabs__link">
+          
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evolution_summary/" class="md-tabs__link">
+        
+  
+    
+  
+  Evolution
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Fabric Token SDK" class="md-nav__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Fabric Token SDK
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tokensdk/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token SDK Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tokenapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../token_sdk_usage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API Usage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../driverapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Driver API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Configuration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Services Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../upgradability/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Upgradability
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../public_parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Public Parameters Lifecycle
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/fabtoken/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Fabtoken
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/dlogwogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog (Zero-Knowledge)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/extending_validator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extending Validator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            Benchmark
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_3" id="__nav_3_5_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/dlognogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/dlognogh_architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/dlognogh_regression/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Regression
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/transfer_BenchmarkSender_results/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark Sender Results
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/validator_transfer_profile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Validator Transfer Profile
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_4" id="__nav_3_5_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/services/identity/idemix/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idemix Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../auditor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Auditor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../certifier/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Certifier
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../identity/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Interop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-ethereum/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Ethereum
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Network Fabric
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabric
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-chaincode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Chaincode
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Token Chaincode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chaincode-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chaincode Functions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chaincode-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chaincode Deployment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chaincode-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chaincode Initialization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#endorsement-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement Service
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Endorsement Service">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#endorsement-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement Process
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#endorsement-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement Policies
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#finality-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finality Management
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Finality Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#delivery-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Delivery Mode
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notification Mode
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-parameters-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Public Parameters Management
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public Parameters Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup-key-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setup Key Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#state-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      State Queries
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="State Queries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#token-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spent-status-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Spent Status Checks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finality-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finality Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#endorsement-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation Details
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Components
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transaction-id-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction ID Calculation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      See Also
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-fabricx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabricx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nfttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    NFT Tx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../recovery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Recovery
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../selector/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Selector
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tokens/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokens
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    TTX
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Development
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/development/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/general/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    General Guidelines
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/idiomatic/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idiomatic Go
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/mock/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Mocking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/linting/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Linting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/makefile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Makefile Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/monitoring/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitoring
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/testing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Testing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/tokengen/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokengen
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/versioning/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Versioning
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/ai_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AI Agents
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/documentation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evolution_summary/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evolution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-chaincode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Chaincode
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Token Chaincode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chaincode-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chaincode Functions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chaincode-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chaincode Deployment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chaincode-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Chaincode Initialization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#endorsement-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement Service
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Endorsement Service">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#endorsement-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement Process
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#endorsement-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement Policies
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#finality-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finality Management
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Finality Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#delivery-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Delivery Mode
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notification Mode
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-parameters-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Public Parameters Management
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public Parameters Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup-key-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setup Key Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#state-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      State Queries
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="State Queries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#token-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spent-status-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Spent Status Checks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finality-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finality Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#endorsement-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation Details
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Components
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transaction-id-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction ID Calculation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      See Also
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="network-service-fabric-implementation">Network Service - Fabric Implementation<a class="headerlink" href="#network-service-fabric-implementation" title="Permanent link">&para;</a></h1>
+<p>The Fabric network implementation (<a href="../../token/services/network/fabric/network.go"><code>fabric.Network</code></a>) provides integration with Hyperledger Fabric networks using the traditional chaincode-based endorsement model. It leverages the Fabric Smart Client (FSC) to interact with the underlying Hyperledger Fabric network.</p>
+<h2 id="architecture-overview">Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h2>
+<p>The Fabric implementation uses a <strong>Token Chaincode</strong> deployed on Fabric peers to handle token operations. 
+This chaincode validates token requests, manages token state, and enforces business logic.</p>
+<pre class="mermaid"><code>graph TB
+    subgraph "Application Node running FSC/FTS stack"
+        App[Application/TTX]
+        FabricNet[Fabric Network Service]
+    end
+
+    subgraph "Hyperledger Fabric Network"
+        Peer1[Peer 1&lt;br/&gt;Token Chaincode]
+        Peer2[Peer 2&lt;br/&gt;Token Chaincode]
+        Orderer[Ordering Service]
+        Ledger[Committer]
+    end
+
+    App --&gt;|1. Request Approval| FabricNet
+    FabricNet --&gt;|2. Endorse Proposal| Peer1
+    FabricNet --&gt;|2. Endorse Proposal| Peer2
+    Peer1 --&gt;|3. Endorsement| FabricNet
+    Peer2 --&gt;|3. Endorsement| FabricNet
+    FabricNet --&gt;|4. Broadcast Tx| Orderer
+    Orderer --&gt;|5. Order &amp; Distribute| Ledger
+    Ledger --&gt;|6. Finality Event| FabricNet
+    FabricNet --&gt;|7. Notify| App</code></pre>
+<h2 id="token-chaincode">Token Chaincode<a class="headerlink" href="#token-chaincode" title="Permanent link">&para;</a></h2>
+<p>The Token Chaincode (<a href="../../token/services/network/fabric/tcc/tcc.go"><code>tcc.TokenChaincode</code></a>) is a Fabric chaincode that runs on peers and handles all token-related operations.</p>
+<h3 id="chaincode-functions">Chaincode Functions<a class="headerlink" href="#chaincode-functions" title="Permanent link">&para;</a></h3>
+<p>The chaincode exposes the following functions:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Purpose</th>
+<th>Parameters</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>invoke</code></td>
+<td>Process token requests (issue, transfer, redeem)</td>
+<td>Token request (transient)</td>
+<td>Transaction envelope</td>
+</tr>
+<tr>
+<td><code>queryPublicParams</code></td>
+<td>Retrieve public parameters</td>
+<td><none></td>
+<td>Public parameters bytes</td>
+</tr>
+<tr>
+<td><code>queryTokens</code></td>
+<td>Query token state</td>
+<td>Token IDs</td>
+<td>Token data</td>
+</tr>
+<tr>
+<td><code>areTokensSpent</code></td>
+<td>Check if tokens are spent</td>
+<td>Token IDs, metadata</td>
+<td>Boolean array</td>
+</tr>
+<tr>
+<td><code>queryStates</code></td>
+<td>Query arbitrary state keys</td>
+<td>State keys</td>
+<td>State values</td>
+</tr>
+</tbody>
+</table>
+<h3 id="chaincode-deployment">Chaincode Deployment<a class="headerlink" href="#chaincode-deployment" title="Permanent link">&para;</a></h3>
+<p>The Token Chaincode must be deployed to the Fabric network before the Token SDK can operate:</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant Admin as Network Admin
+    participant Peer as Fabric Peer
+    participant Orderer as Ordering Service
+    participant Ledger as Blockchain
+
+    Admin-&gt;&gt;Peer: Package chaincode
+    Admin-&gt;&gt;Peer: Install chaincode
+    Admin-&gt;&gt;Peer: Approve chaincode definition
+    Admin-&gt;&gt;Orderer: Commit chaincode definition
+    Orderer-&gt;&gt;Ledger: Record chaincode metadata
+    Ledger--&gt;&gt;Peer: Chaincode ready
+
+    Note over Admin,Ledger: Chaincode is now available for invocation</code></pre>
+<p><strong>Deployment Steps:</strong>
+1. <strong>Package</strong>: Create chaincode package with Token Chaincode implementation
+2. <strong>Install</strong>: Install package on all endorsing peers
+3. <strong>Approve</strong>: Each organization approves the chaincode definition
+4. <strong>Commit</strong>: Commit the chaincode definition to the channel
+5. <strong>Initialize</strong>: Initialize the chaincode so it writes the selected public parameters to the ledger setup key</p>
+<h3 id="chaincode-initialization">Chaincode Initialization<a class="headerlink" href="#chaincode-initialization" title="Permanent link">&para;</a></h3>
+<p>At initialization time, the chaincode loads public parameters and persists them to the setup key on the ledger. The implementation in <a href="../../token/services/network/fabric/tcc/tcc.go"><code>tcc.TokenChaincode.Init()</code></a> calls <a href="../../token/services/network/fabric/tcc/tcc.go"><code>tcc.TokenChaincode.Params()</code></a>, which resolves the parameters using the following precedence:</p>
+<ol>
+<li><strong>File-based override</strong>: if the <code>PUBLIC_PARAMS_FILE_PATH</code> environment variable is set, <a href="../../token/services/network/fabric/tcc/tcc.go"><code>tcc.TokenChaincode.ReadParamsFromFile()</code></a> reads the raw public-parameter bytes from that file and feeds them back as a base64 string.</li>
+<li><strong>Built-in parameters</strong>: if no file is provided, <a href="../../token/services/network/fabric/tcc/params.go"><code>tcc.Params</code></a> is used. In the source tree this variable is empty by default, but packaging tools replace <a href="../../token/services/network/fabric/tcc/params.go"><code>tcc/params.go</code></a> with generated content that embeds a base64-encoded blob of the public parameters into the chaincode package itself.</li>
+<li><strong>Failure</strong>: if neither source is available, initialization fails.</li>
+</ol>
+<p>This means the token chaincode supports both models:
+- <strong>Burned into the chaincode package</strong>: the usual deployment path, where packaging injects the public parameters into <a href="../../token/services/network/fabric/tcc/params.go"><code>tcc.Params</code></a>
+- <strong>Loaded from file at runtime</strong>: an override path controlled by <code>PUBLIC_PARAMS_FILE_PATH</code></p>
+<p><code>tokengen</code> can also generate the token-chaincode package with the public parameters already embedded, by generating a replacement for <a href="../../token/services/network/fabric/tcc/params.go"><code>tcc/params.go</code></a> from the template in <a href="../../cmd/tokengen/cobra/pp/cc/params.go"><code>cc.DefaultParams</code></a> as part of <a href="../../cmd/tokengen/cobra/pp/cc/cc.go"><code>cc.GeneratePackage()</code></a>.</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Simplified initialization flow</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">cc</span><span class="w"> </span><span class="o">*</span><span class="nx">TokenChaincode</span><span class="p">)</span><span class="w"> </span><span class="nx">Init</span><span class="p">(</span><span class="nx">stub</span><span class="w"> </span><span class="nx">shim</span><span class="p">.</span><span class="nx">ChaincodeStubInterface</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">Response</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="c1">// Resolve public parameters from file override or built-in Params</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">ppRaw</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">cc</span><span class="p">.</span><span class="nx">Params</span><span class="p">(</span><span class="nx">Params</span><span class="p">)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="c1">// Write the selected parameters to the ledger setup key</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">w</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">translator</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">stub</span><span class="p">.</span><span class="nx">GetTxID</span><span class="p">(),</span><span class="w"> </span><span class="o">...</span><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">Write</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">(),</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">SetupAction</span><span class="p">{</span><span class="nx">SetupParameters</span><span class="p">:</span><span class="w"> </span><span class="nx">ppRaw</span><span class="p">})</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">shim</span><span class="p">.</span><span class="nx">Success</span><span class="p">(</span><span class="kc">nil</span><span class="p">)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">}</span>
+</span></code></pre></div>
+<h2 id="endorsement-service">Endorsement Service<a class="headerlink" href="#endorsement-service" title="Permanent link">&para;</a></h2>
+<p>The Fabric implementation supports chaincode-based endorsement through the <a href="../../token/services/network/fabric/endorsement/chaincode.go"><code>ChaincodeEndorsementService</code></a>.</p>
+<h3 id="endorsement-process">Endorsement Process<a class="headerlink" href="#endorsement-process" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant App as Application
+    participant Net as Network Service
+    participant ES as Endorsement Service
+    participant FSC as Fabric Smart Client
+    participant Peer as Fabric Peer
+
+    App-&gt;&gt;Net: RequestApproval(request)
+    Net-&gt;&gt;ES: Endorse(request, signer, txID)
+    ES-&gt;&gt;FSC: NewEndorseView(namespace, "invoke")
+    ES-&gt;&gt;FSC: WithTransient("token_request", request)
+    ES-&gt;&gt;FSC: WithSignerIdentity(signer)
+    ES-&gt;&gt;FSC: WithTxID(txID)
+    FSC-&gt;&gt;Peer: Send proposal
+    Peer-&gt;&gt;Peer: Execute chaincode
+    Peer-&gt;&gt;Peer: Generate RWSet
+    Peer-&gt;&gt;Peer: Sign endorsement
+    Peer--&gt;&gt;FSC: Endorsement response
+    FSC--&gt;&gt;ES: Transaction envelope
+    ES--&gt;&gt;Net: Endorsed envelope
+    Net--&gt;&gt;App: Endorsed envelope</code></pre>
+<h3 id="endorsement-policies">Endorsement Policies<a class="headerlink" href="#endorsement-policies" title="Permanent link">&para;</a></h3>
+<p>The chaincode endorsement follows Fabric's standard endorsement policies:</p>
+<ul>
+<li><strong>Signature Policy</strong>: Requires signatures from specific organizations</li>
+<li><strong>Channel Policy</strong>: Uses channel-level endorsement configuration</li>
+<li><strong>Chaincode Policy</strong>: Defined during chaincode deployment</li>
+</ul>
+<p>Example policy: <code>"OR('Org1MSP.peer', 'Org2MSP.peer')"</code> - requires endorsement from either Org1 or Org2.</p>
+<h2 id="finality-management">Finality Management<a class="headerlink" href="#finality-management" title="Permanent link">&para;</a></h2>
+<p>The Fabric implementation supports two modes for monitoring transaction finality:</p>
+<h3 id="delivery-mode">Delivery Mode<a class="headerlink" href="#delivery-mode" title="Permanent link">&para;</a></h3>
+<p>Uses a block delivery stream from the peer for real-time finality tracking:</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant App as Application
+    participant Net as Network Service
+    participant FM as Finality Manager
+    participant Peer as Fabric Peer
+    participant Proc as Block Processor
+
+    App-&gt;&gt;Net: AddFinalityListener(txID, listener)
+    Net-&gt;&gt;FM: Register listener
+
+    loop Block Delivery Stream
+        Peer-&gt;&gt;FM: Deliver block
+        FM-&gt;&gt;Proc: Process block (parallel)
+        Proc-&gt;&gt;Proc: Extract transactions
+        Proc-&gt;&gt;Proc: Check validation codes
+        Proc-&gt;&gt;Proc: Match registered listeners
+        Proc-&gt;&gt;Net: Notify listener(txID, status)
+        Net-&gt;&gt;App: OnStatus(txID, VALID/INVALID)
+    end</code></pre>
+<p><strong>Features:</strong>
+- Parallel block processing for high throughput
+- Configurable parallelism levels
+- LRU cache for recent transactions
+- Automatic retry on connection failures</p>
+<h3 id="notification-mode">Notification Mode<a class="headerlink" href="#notification-mode" title="Permanent link">&para;</a></h3>
+<p>Uses asynchronous event notifications from the FSC layer:</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant App as Application
+    participant Net as Network Service
+    participant FM as Finality Manager
+    participant FSC as Fabric Smart Client
+
+    App-&gt;&gt;Net: AddFinalityListener(txID, listener)
+    Net-&gt;&gt;FM: Register listener
+
+    FSC-&gt;&gt;FSC: Monitor ledger events
+    FSC-&gt;&gt;FM: Transaction event(txID, status)
+    FM-&gt;&gt;Net: Notify listener
+    Net-&gt;&gt;App: OnStatus(txID, VALID/INVALID)</code></pre>
+<h2 id="public-parameters-management">Public Parameters Management<a class="headerlink" href="#public-parameters-management" title="Permanent link">&para;</a></h2>
+<p>The Fabric implementation monitors the ledger for public parameters updates:</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant Net as Network Service
+    participant SL as Setup Listener
+    participant Ledger as Blockchain
+    participant TMS as TMS Provider
+    participant DB as Tokens Database
+
+    Note over Net,DB: Initialization
+    Net-&gt;&gt;SL: Register setup listener
+    SL-&gt;&gt;Ledger: Monitor setup key
+
+    Note over Net,DB: Update Detection
+    Ledger-&gt;&gt;SL: Setup key modified
+    SL-&gt;&gt;SL: Fetch new parameters
+    SL-&gt;&gt;TMS: Update(new params)
+    SL-&gt;&gt;DB: Persist(new params)
+
+    Note over Net,DB: SDK synchronized with new parameters</code></pre>
+<h3 id="setup-key-monitoring">Setup Key Monitoring<a class="headerlink" href="#setup-key-monitoring" title="Permanent link">&para;</a></h3>
+<p>The setup listener watches for changes to a specific ledger key that stores public parameters. This mechanism is based on delivery as the finality path, because setup-key updates are detected from committed ledger events delivered by the peer:</p>
+<ol>
+<li><strong>Key Format</strong>: Derived from namespace and setup identifier</li>
+<li><strong>Update Trigger</strong>: Any transaction that writes to the setup key</li>
+<li><strong>Validation</strong>: Parameters are validated before being applied</li>
+<li><strong>Persistence</strong>: New parameters are stored in the local database</li>
+</ol>
+<h2 id="state-queries">State Queries<a class="headerlink" href="#state-queries" title="Permanent link">&para;</a></h2>
+<p>The Fabric implementation provides efficient state querying through the chaincode:</p>
+<h3 id="token-queries">Token Queries<a class="headerlink" href="#token-queries" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant App as Application
+    participant Net as Network Service
+    participant Ledger as Ledger Service
+    participant CC as Token Chaincode
+    participant State as World State
+
+    App-&gt;&gt;Net: QueryTokens(tokenIDs)
+    Net-&gt;&gt;Ledger: GetStates(namespace, keys)
+    Ledger-&gt;&gt;CC: Query("queryTokens", tokenIDs)
+    CC-&gt;&gt;State: GetState(tokenID)
+    State--&gt;&gt;CC: Token data
+    CC--&gt;&gt;Ledger: Token data array
+    Ledger--&gt;&gt;Net: Token data
+    Net--&gt;&gt;App: Token data</code></pre>
+<h3 id="spent-status-checks">Spent Status Checks<a class="headerlink" href="#spent-status-checks" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant App as Application
+    participant Net as Network Service
+    participant CC as Token Chaincode
+    participant State as World State
+
+    App-&gt;&gt;Net: AreTokensSpent(tokenIDs)
+    Net-&gt;&gt;CC: Query("areTokensSpent", tokenIDs)
+    CC-&gt;&gt;State: GetState(spentKey)
+    State--&gt;&gt;CC: Spent markers
+    CC-&gt;&gt;CC: Check each token
+    CC--&gt;&gt;Net: Boolean array
+    Net--&gt;&gt;App: [true, false, true, ...]</code></pre>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<h3 id="basic-configuration">Basic Configuration<a class="headerlink" href="#basic-configuration" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">token</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">tms</span><span class="p">:</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">my-fabric-tms</span><span class="p">:</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">network</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fabric-network-name</span><span class="w">  </span><span class="c1"># Matches fsc.networks configuration</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-channel</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-chaincode-id</span><span class="w">    </span><span class="c1"># Token chaincode name</span>
+</span></code></pre></div>
+<h3 id="finality-configuration">Finality Configuration<a class="headerlink" href="#finality-configuration" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">token</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">finality</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">delivery</span><span class="w">  </span><span class="c1"># &quot;delivery&quot; or &quot;notification&quot;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">committer</span><span class="p">:</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">      </span><span class="nt">maxRetries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="nt">retryWaitDuration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nt">delivery</span><span class="p">:</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">mapperParallelism</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">        </span><span class="c1"># Parallel transaction mappers</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="nt">blockProcessParallelism</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">  </span><span class="c1"># Parallel block processors</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">      </span><span class="nt">lruSize</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w">                  </span><span class="c1"># Cache size for recent transactions</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="nt">listenerTimeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span><span class="w">         </span><span class="c1"># Timeout for listener notifications</span>
+</span></code></pre></div>
+<h3 id="endorsement-configuration">Endorsement Configuration<a class="headerlink" href="#endorsement-configuration" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Chaincode-based endorsement (default)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># No additional configuration needed - uses Fabric&#39;s endorsement policies</span>
+</span></code></pre></div>
+<h2 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h2>
+<h3 id="key-components">Key Components<a class="headerlink" href="#key-components" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Network</strong> (<a href="../../token/services/network/fabric/network.go"><code>fabric.Network</code></a>)</li>
+<li>Main network service implementation</li>
+<li>
+<p>Coordinates endorsement, ordering, and finality</p>
+</li>
+<li>
+<p><strong>Ledger</strong> (<a href="../../token/services/network/fabric/network.go"><code>fabric.ledger</code></a>)</p>
+</li>
+<li>Provides state query capabilities</li>
+<li>
+<p>Wraps Fabric Smart Client ledger interface</p>
+</li>
+<li>
+<p><strong>Endorsement Service</strong> (<a href="../../token/services/network/fabric/endorsement/chaincode.go"><code>endorsement.ChaincodeEndorsementService</code></a>)</p>
+</li>
+<li>Handles chaincode invocation for endorsement</li>
+<li>
+<p>Manages transient data and transaction IDs</p>
+</li>
+<li>
+<p><strong>Finality Manager</strong> (<a href="../../token/services/network/fabric/finality/"><code>finality.ListenerManager</code></a>)</p>
+</li>
+<li>Tracks transaction finality</li>
+<li>
+<p>Notifies registered listeners</p>
+</li>
+<li>
+<p><strong>Token Chaincode</strong> (<a href="../../token/services/network/fabric/tcc/tcc.go"><code>tcc.TokenChaincode</code></a>)</p>
+</li>
+<li>Validates token requests</li>
+<li>Manages token state on-chain</li>
+</ol>
+<h3 id="transaction-id-calculation">Transaction ID Calculation<a class="headerlink" href="#transaction-id-calculation" title="Permanent link">&para;</a></h3>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Fabric uses SHA256(nonce || creator) for transaction IDs</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">n</span><span class="w"> </span><span class="o">*</span><span class="nx">Network</span><span class="p">)</span><span class="w"> </span><span class="nx">ComputeTxID</span><span class="p">(</span><span class="nx">id</span><span class="w"> </span><span class="o">*</span><span class="nx">driver</span><span class="p">.</span><span class="nx">TxID</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">temp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">fabric</span><span class="p">.</span><span class="nx">TxID</span><span class="p">{</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="nx">Nonce</span><span class="p">:</span><span class="w">   </span><span class="nx">id</span><span class="p">.</span><span class="nx">Nonce</span><span class="p">,</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="nx">Creator</span><span class="p">:</span><span class="w"> </span><span class="nx">id</span><span class="p">.</span><span class="nx">Creator</span><span class="p">,</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">n</span><span class="p">.</span><span class="nx">n</span><span class="p">.</span><span class="nx">TransactionManager</span><span class="p">().</span><span class="nx">ComputeTxID</span><span class="p">(</span><span class="nx">temp</span><span class="p">)</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">}</span>
+</span></code></pre></div>
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../network/">Network Service Overview</a> - Generic network service concepts</li>
+<li><a href="../network-fabricx/">FabricX Implementation</a> - FSC-based endorsement</li>
+<li><a href="../../token/services/network/fabric/tcc/">Token Chaincode</a> - Chaincode implementation</li>
+<li><a href="../ttx/">TTX Service</a> - Token transaction orchestration</li>
+<li><a href="../../public_parameters/">Public Parameters</a> - Cryptographic setup</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>

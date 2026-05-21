@@ -1,0 +1,2965 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Privacy-preserving token management for Hyperledger Fabric">
+      
+      
+        <meta name="author" content="Hyperledger Labs">
+      
+      
+        <link rel="canonical" href="https://hyperledger-labs.github.io/fabric-token-sdk/services/identity/">
+      
+      
+        <link rel="prev" href="../config/">
+      
+      
+        <link rel="next" href="../interop/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>Identity - Fabric Token SDK</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#identity-service" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Fabric Token SDK" class="md-header__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Fabric Token SDK
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Identity
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tokensdk/" class="md-tabs__link">
+          
+  
+  Core Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../drivers/fabtoken/" class="md-tabs__link">
+          
+  
+  Drivers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../auditor/" class="md-tabs__link">
+          
+  
+  Services
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/development/" class="md-tabs__link">
+          
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evolution_summary/" class="md-tabs__link">
+        
+  
+    
+  
+  Evolution
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Fabric Token SDK" class="md-nav__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Fabric Token SDK
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tokensdk/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token SDK Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tokenapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../token_sdk_usage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API Usage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../driverapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Driver API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Configuration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Services Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../upgradability/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Upgradability
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../public_parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Public Parameters Lifecycle
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/fabtoken/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Fabtoken
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/dlogwogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog (Zero-Knowledge)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/extending_validator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extending Validator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            Benchmark
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_3" id="__nav_3_5_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/dlognogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/dlognogh_architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/dlognogh_regression/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Regression
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/transfer_BenchmarkSender_results/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark Sender Results
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/validator_transfer_profile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Validator Transfer Profile
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_4" id="__nav_3_5_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/services/identity/idemix/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idemix Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../auditor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Auditor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../certifier/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Certifier
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Identity
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Identity
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#component-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      Component Mapping
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#component-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Component Interaction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#localmembership" class="md-nav__link">
+    <span class="md-ellipsis">
+      LocalMembership
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-wiring-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Wiring Services
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Identity Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Identity Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#typedidentity" class="md-nav__link">
+    <span class="md-ellipsis">
+      TypedIdentity
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-key-managers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Key Managers
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Default Key Managers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-x509" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. X.509
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-idemix-identity-mixer" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Idemix (Identity Mixer)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-idemixnym-idemix-with-pseudonym-based-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. IdemixNym (Idemix with Pseudonym-based Identity)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-identity-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Other Identity Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Other Identity Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multisig" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multisig
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#policyidentity-boolean-expression-governed-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      PolicyIdentity (Boolean-Expression-Governed Ownership)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#htlc-hashed-time-lock-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      HTLC (Hashed Time Lock Contract)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extending-the-identity-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extending the Identity Service
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Extending the Identity Service">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-by-step-guide-introducing-a-new-identity-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step-by-Step Guide: Introducing a New Identity Type
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step-by-Step Guide: Introducing a New Identity Type">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-reserve-a-type-tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 1 — Reserve a type tag
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-define-the-wire-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 2 — Define the wire format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-implement-signature-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 3 — Implement signature verification
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-define-the-signature-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 4 — Define the signature format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-implement-the-authorization-checker" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 5 — Implement the Authorization checker
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-add-a-wallet-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 6 — Add a wallet wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-wire-the-recipient-negotiation-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 7 — Wire the recipient-negotiation protocol
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-add-integration-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 8 — Add integration views
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-9-add-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 9 — Add tests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#summary-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      Summary checklist
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Interop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-ethereum/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Ethereum
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-fabric/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabric
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-fabricx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabricx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nfttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    NFT Tx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../recovery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Recovery
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../selector/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Selector
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tokens/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokens
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    TTX
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Development
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/development/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/general/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    General Guidelines
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/idiomatic/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idiomatic Go
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/mock/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Mocking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/linting/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Linting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/makefile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Makefile Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/monitoring/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitoring
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/testing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Testing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/tokengen/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokengen
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/versioning/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Versioning
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/ai_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AI Agents
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/documentation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evolution_summary/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evolution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#component-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      Component Mapping
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#component-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Component Interaction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#localmembership" class="md-nav__link">
+    <span class="md-ellipsis">
+      LocalMembership
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-wiring-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Wiring Services
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Identity Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Identity Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#typedidentity" class="md-nav__link">
+    <span class="md-ellipsis">
+      TypedIdentity
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-key-managers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Key Managers
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Default Key Managers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-x509" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. X.509
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-idemix-identity-mixer" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Idemix (Identity Mixer)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-idemixnym-idemix-with-pseudonym-based-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. IdemixNym (Idemix with Pseudonym-based Identity)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-identity-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Other Identity Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Other Identity Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multisig" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multisig
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#policyidentity-boolean-expression-governed-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      PolicyIdentity (Boolean-Expression-Governed Ownership)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#htlc-hashed-time-lock-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      HTLC (Hashed Time Lock Contract)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extending-the-identity-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extending the Identity Service
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Extending the Identity Service">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-by-step-guide-introducing-a-new-identity-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step-by-Step Guide: Introducing a New Identity Type
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step-by-Step Guide: Introducing a New Identity Type">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-reserve-a-type-tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 1 — Reserve a type tag
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-define-the-wire-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 2 — Define the wire format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-implement-signature-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 3 — Implement signature verification
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-define-the-signature-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 4 — Define the signature format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-implement-the-authorization-checker" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 5 — Implement the Authorization checker
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-add-a-wallet-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 6 — Add a wallet wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-wire-the-recipient-negotiation-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 7 — Wire the recipient-negotiation protocol
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-add-integration-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 8 — Add integration views
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-9-add-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 9 — Add tests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#summary-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      Summary checklist
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="identity-service">Identity Service<a class="headerlink" href="#identity-service" title="Permanent link">&para;</a></h1>
+<p>The <strong>Identity Service</strong> (<code>token/services/identity</code>) is an <strong>internal infrastructure service</strong> of the Fabric Token SDK. It provides a unified interface for managing identities, signatures, and verification, operating <strong>independently</strong> of the core Fabric Smart Client (FSC) identity service. </p>
+<p>This independence ensures that token-related cryptographic material (such as Idemix pseudonyms or X.509 certificates used for token ownership) is managed according to the specific privacy and security requirements of the Token Drivers, regardless of the underlying DLT platform.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The Identity Service abstracts the complexity of different cryptographic schemes, allowing the SDK to support multiple identity types (e.g., X.509, Idemix) and different storage backends seamlessly. </p>
+<p>It is a fundamental component used by token drivers and application services (like the TTX service) to handle:
+*   <strong>Signature Management</strong>: Generating and verifying signatures for token requests.
+*   <strong>Identity Resolution</strong>: Resolving long-term identities to ephemeral pseudonyms and vice-versa.
+*   <strong>Auditability</strong>: Managing audit information to reveal the enrollment ID behind an anonymous identity (when authorized).
+*   <strong>Wallet Management</strong>: Handling identities for different roles such as Issuer, Auditor, Owner, and Certifier.</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<p>The Identity Service implements the <strong>Driver API</strong> interfaces defined in <code>token/driver/wallet.go</code>. This ensures that the Token Management System (TMS) can interact with any identity implementation through a standard set of methods.</p>
+<h3 id="component-mapping">Component Mapping<a class="headerlink" href="#component-mapping" title="Permanent link">&para;</a></h3>
+<p>The following table shows how the internal components map to the Driver API interfaces:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Component</th>
+<th style="text-align: left;">Implements Driver Interface</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>identity.Provider</code></td>
+<td style="text-align: left;"><code>driver.IdentityProvider</code></td>
+<td style="text-align: left;">Core identity management &amp; verification.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>wallet.Service</code></td>
+<td style="text-align: left;"><code>driver.WalletService</code></td>
+<td style="text-align: left;">Registry for all wallets (Owner, Issuer, etc.).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>role.LongTermOwnerWallet</code></td>
+<td style="text-align: left;"><code>driver.OwnerWallet</code></td>
+<td style="text-align: left;">Long-Term Identity-based Owner wallet functionality.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>role.AnonymousOwnerWallet</code></td>
+<td style="text-align: left;"><code>driver.OwnerWallet</code></td>
+<td style="text-align: left;">Anonymous Identity-based Owner wallet functionality.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>role.IssuerWallet</code></td>
+<td style="text-align: left;"><code>driver.IssuerWallet</code></td>
+<td style="text-align: left;">Issuer wallet functionality.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>role.AuditorWallet</code></td>
+<td style="text-align: left;"><code>driver.AuditorWallet</code></td>
+<td style="text-align: left;">Auditor wallet functionality.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>role.CertifierWallet</code></td>
+<td style="text-align: left;"><code>driver.CertifierWallet</code></td>
+<td style="text-align: left;">Certifier wallet functionality.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="component-interaction">Component Interaction<a class="headerlink" href="#component-interaction" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>classDiagram
+    direction TB
+%% Driver Interfaces
+    class IdentityProvider {
+        &lt;&lt;interface&gt;&gt;
+        +GetSigner()
+        +GetAuditInfo()
+        +IsMe()
+    }
+    class WalletService {
+        &lt;&lt;interface&gt;&gt;
+        +OwnerWallet()
+        +IssuerWallet()
+        +RegisterRecipientIdentity()
+    }
+
+%% Concrete Implementations
+    class identity_Provider["identity.Provider"] {
+        -Storage
+        -Deserializers
+        -SignerCache
+    }
+    class wallet_Service["wallet.Service"] {
+        -RoleRegistry
+        -IdentityProvider
+        -OwnerWallet
+        -IssuerWallet
+        -AuditorWallet
+        -CertifierWallet
+    }
+    class role_Role["role.Role"] {
+        -LocalMembership
+        +GetIdentityInfo()
+    }
+    class membership_KeyManagerProvider["membership.KeyManagerProvider"] {
+        &lt;&lt;interface&gt;&gt;
+        +Get() KeyManager
+    }
+
+    identity_Provider ..|&gt; IdentityProvider : Implements
+    wallet_Service ..|&gt; WalletService : Implements
+    wallet_Service --&gt; identity_Provider : Uses
+    wallet_Service --&gt; role_Role : Uses (via RoleRegistry)
+    role_Role --&gt; membership_KeyManagerProvider : Uses (via LocalMembership)
+
+    note for membership_KeyManagerProvider "Handles low-level crypto&lt;br/&gt;and identity verification"
+    note for wallet_Service "High-level management&lt;br/&gt;of wallets and roles"</code></pre>
+<h3 id="localmembership">LocalMembership<a class="headerlink" href="#localmembership" title="Permanent link">&para;</a></h3>
+<p>The <code>LocalMembership</code> component (<code>token/services/identity/membership</code>) plays a pivotal role in managing local identities for a specific role (e.g., Owner, Issuer).</p>
+<ul>
+<li><strong>Binding</strong>: Each instance is bound to a list of <strong>Key Managers</strong>.</li>
+<li><strong>Identity Wrapping</strong>: When a Key Manager generates an identity (based on the configuration), <code>LocalMembership</code> automatically wraps it using <code>WrapWithType</code>. 
+    This ensures that the generated identity carries the correct type information required by the system (as defined in <code>token/services/identity/typed.go</code>).</li>
+<li><strong>Role Implementation</strong>: <code>LocalMembership</code> serves as the foundational implementation for <code>role.Role</code>. 
+    When you interact with a Role to resolve an identity or sign a transaction, you are effectively delegating to the underlying <code>LocalMembership</code>.</li>
+</ul>
+<h3 id="example-wiring-services">Example: Wiring Services<a class="headerlink" href="#example-wiring-services" title="Permanent link">&para;</a></h3>
+<p>The following example demonstrates how these services are instantiated and wired together, as seen in the ZKATDLog driver:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">d</span><span class="w"> </span><span class="o">*</span><span class="nx">Base</span><span class="p">)</span><span class="w"> </span><span class="nx">NewWalletService</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">wallet</span><span class="p">.</span><span class="nx">Service</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="c1">// 1. Create Identity Provider</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">identityProvider</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">identity</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="c1">// 2. Initialize Membership Role Factory</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">roleFactory</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">membership</span><span class="p">.</span><span class="nx">NewRoleFactory</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="c1">// 3. Configure Key Managers (e.g. Idemix and X.509 for Owner role)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="c1">// we have one key manager to handle fabtoken tokens and one for each idemix issuer public key in the public parameters</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nx">kmps</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="nx">membership</span><span class="p">.</span><span class="nx">KeyManagerProvider</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="c1">// ... add Idemix Key Manager Providers ...</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nx">kmps</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">kmps</span><span class="p">,</span><span class="w"> </span><span class="nx">x509</span><span class="p">.</span><span class="nx">NewKeyManagerProvider</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="c1">// 4. Create and Register Roles</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nx">roles</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">role</span><span class="p">.</span><span class="nx">NewRoles</span><span class="p">()</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="c1">// Owner Role (with anonymous identities)</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">    </span><span class="nx">ownerRole</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">roleFactory</span><span class="p">.</span><span class="nx">NewRole</span><span class="p">(</span><span class="nx">identity</span><span class="p">.</span><span class="nx">OwnerRole</span><span class="p">,</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">kmps</span><span class="o">...</span><span class="p">)</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="nx">roles</span><span class="p">.</span><span class="nx">Register</span><span class="p">(</span><span class="nx">identity</span><span class="p">.</span><span class="nx">OwnerRole</span><span class="p">,</span><span class="w"> </span><span class="nx">ownerRole</span><span class="p">)</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="c1">// Issuer Role (no anonymous identities)</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">    </span><span class="nx">issuerRole</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">roleFactory</span><span class="p">.</span><span class="nx">NewRole</span><span class="p">(</span><span class="nx">identity</span><span class="p">.</span><span class="nx">IssuerRole</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nx">pp</span><span class="p">.</span><span class="nx">Issuers</span><span class="p">(),</span><span class="w"> </span><span class="nx">x509</span><span class="p">.</span><span class="nx">NewKeyManagerProvider</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">    </span><span class="nx">roles</span><span class="p">.</span><span class="nx">Register</span><span class="p">(</span><span class="nx">identity</span><span class="p">.</span><span class="nx">IssuerRole</span><span class="p">,</span><span class="w"> </span><span class="nx">issuerRole</span><span class="p">)</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">    </span><span class="c1">// ... Register Auditor and Certifier roles ...</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">    </span><span class="c1">// 5. Create Wallet Service with the registered roles</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">wallet</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">        </span><span class="nx">logger</span><span class="p">,</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">        </span><span class="nx">identityProvider</span><span class="p">,</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="w">        </span><span class="nx">deserializer</span><span class="p">,</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="w">        </span><span class="c1">// Convert the roles registry into the format expected by the wallet service</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="w">        </span><span class="nx">wallet</span><span class="p">.</span><span class="nx">Convert</span><span class="p">(</span><span class="nx">roles</span><span class="p">.</span><span class="nx">Registries</span><span class="p">(</span><span class="o">...</span><span class="p">)),</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="w">    </span><span class="p">),</span><span class="w"> </span><span class="kc">nil</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="p">}</span>
+</span></code></pre></div>
+<h2 id="identity-types">Identity Types<a class="headerlink" href="#identity-types" title="Permanent link">&para;</a></h2>
+<p>The Identity Service leverages a wrapper called <strong>TypedIdentity</strong> to support various identity schemes uniformly. 
+This allows the SDK to be extensible and capable of handling different cryptographic requirements.</p>
+<h3 id="typedidentity">TypedIdentity<a class="headerlink" href="#typedidentity" title="Permanent link">&para;</a></h3>
+<p><code>TypedIdentity</code> (defined in <code>token/services/identity/typed.go</code>) acts as a generic container. 
+It wraps the raw identity bytes with a type label, enabling the system to verify deserializers and process signatures correctly without hardcoding implementation details.</p>
+<ul>
+<li><strong>Encoding</strong>: ASN.1 encoded <code>SEQUENCE</code>.</li>
+<li><strong>Structure</strong>:<ul>
+<li><code>Type</code> (string): The identifier of the identity scheme (e.g., <code>"x509"</code>, <code>"idemix"</code>).</li>
+<li><code>Identity</code> (bytes): The raw payload of the identity, specific to the key manager.</li>
+</ul>
+</li>
+</ul>
+<h3 id="default-key-managers">Default Key Managers<a class="headerlink" href="#default-key-managers" title="Permanent link">&para;</a></h3>
+<p>The identity service includes two primary implementations for concrete identities:</p>
+<h4 id="1-x509">1. X.509<a class="headerlink" href="#1-x509" title="Permanent link">&para;</a></h4>
+<p>Standard PKIX identities.
+*   <strong>Identity (Payload)</strong>: A standard X.509 certificate.
+*   <strong>Audit Info</strong>: JSON-encoded <code>AuditInfo</code> structure containing the Enrollment ID and Revocation Handle.
+    - <code>EID</code> (string): The enrollment identifier.
+    - <code>RH</code> (bytes): The revocation handle.
+*   <strong>Encoding</strong>:
+    - <code>TypedIdentity</code> payload: Raw X.509 certificate bytes.
+    - Audit Info: JSON.
+*   <strong>Usage</strong>: Ideal for infrastructure components (nodes, services) or scenarios where anonymity is not required.
+*   <strong>Implementation</strong>: <code>token/services/identity/x509</code>.</p>
+<h4 id="2-idemix-identity-mixer">2. Idemix (Identity Mixer)<a class="headerlink" href="#2-idemix-identity-mixer" title="Permanent link">&para;</a></h4>
+<p>Advanced identity encryption based on Zero-Knowledge Proofs (ZKP).
+*   <strong>Identity (Payload)</strong>: A <strong>full Idemix signature</strong> acting as a commitment to the user's attributes. It is encoded as a Protobuf <code>SerializedIdemixIdentity</code> message.
+    - <code>NymPublicKey</code> (bytes): The pseudonym public key ($N = g^{sk} \cdot h^r$).
+    - <code>Proof</code> (bytes): A zero-knowledge proof of credential possession and nym derivation.
+    - <code>Schema</code> (string): The version of the credential schema.
+*   <strong>Audit Info</strong>: JSON-encoded <code>AuditInfo</code> structure.
+    - <code>EidNymAuditData</code>: Cryptographic data required to de-anonymize the Enrollment ID.
+    - <code>RhNymAuditData</code>: Cryptographic data required to de-anonymize the Revocation Handle.
+    - <code>Attributes</code> (array of bytes): The cleartext values of the attributes (e.g., EID at index 2, RH at index 3).
+    - <code>Schema</code> (string): The credential schema version.
+*   <strong>Encoding</strong>:
+    - <code>TypedIdentity</code> payload: Protobuf.
+    - Audit Info: JSON.
+*   <strong>Anonymity</strong>: Users can prove they hold a valid credential without revealing their actual identity.
+*   <strong>Unlinkability</strong>: Different transactions from the same user appear uncorrelated.
+*   <strong>Auditability</strong>: Authorized auditors can reveal the Enrollment ID using the audit info.
+*   <strong>Signature Format</strong>: Signatures are <strong>nym signatures</strong> (pseudonym-based) that do not carry attributes, providing unlinkability between transactions.
+*   <strong>Implementation</strong>: <code>token/services/identity/idemix</code>.</p>
+<h4 id="3-idemixnym-idemix-with-pseudonym-based-identity">3. IdemixNym (Idemix with Pseudonym-based Identity)<a class="headerlink" href="#3-idemixnym-idemix-with-pseudonym-based-identity" title="Permanent link">&para;</a></h4>
+<p>An extension of Idemix that uses a <strong>commitment to the Enrollment ID (EID)</strong> as the identity instead of the full Idemix signature.
+*   <strong>Identity (Payload)</strong>: A small <strong>Nym EID</strong> (a cryptographic commitment to the enrollment ID, $g^{sk} \cdot h^{r_{eid}}$).
+*   <strong>Audit Info</strong>: JSON-encoded structure that extends the standard Idemix <code>AuditInfo</code>.
+    - Includes all fields from Idemix <code>AuditInfo</code>.
+    - <code>IdemixSignature</code> (bytes): The full Idemix signature that would have been the identity in the standard Idemix manager.
+*   <strong>Encoding</strong>:
+    - <code>TypedIdentity</code> payload: Raw bytes of the nym.
+    - Audit Info: JSON.
+*   <strong>Signature Packaging</strong>: Signatures are wrapped in an ASN.1 <code>SEQUENCE</code> containing:
+    - <code>Creator</code> (bytes): The full Idemix signature (enabling verification against the IPK).
+    - <code>Signature</code> (bytes): The actual pseudonym signature bytes.
+*   <strong>Enhanced Privacy</strong>: The identity itself is a pseudonym (nym) rather than the full Idemix signature with attributes.
+*   <strong>Reduced Identity Size</strong>: The nym EID is significantly smaller than a full Idemix signature, reducing storage and transmission overhead.
+*   <strong>Backward Compatible Auditability</strong>: Maintains full auditability through the audit info, which contains both the nym proof and the original Idemix signature.
+*   <strong>Implementation</strong>: <code>token/services/identity/idemixnym</code>.</p>
+<p><strong>Key Differences from Standard Idemix:</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Aspect</th>
+<th style="text-align: left;">Idemix</th>
+<th style="text-align: left;">IdemixNym</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Identity (Token Owner)</strong></td>
+<td style="text-align: left;">Full Idemix signature with attributes</td>
+<td style="text-align: left;">Nym EID (commitment to enrollment ID)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Identity Payload Encoding</strong></td>
+<td style="text-align: left;">Protobuf</td>
+<td style="text-align: left;">Raw bytes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Audit Info Encoding</strong></td>
+<td style="text-align: left;">JSON</td>
+<td style="text-align: left;">JSON (extended)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Signature Encoding</strong></td>
+<td style="text-align: left;">Raw bytes</td>
+<td style="text-align: left;">ASN.1 (Creator + Signature)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Identity Size</strong></td>
+<td style="text-align: left;">Large (~several KB)</td>
+<td style="text-align: left;">Small (~32-64 bytes)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Storage Overhead</strong></td>
+<td style="text-align: left;">High</td>
+<td style="text-align: left;">Low</td>
+</tr>
+</tbody>
+</table>
+<h3 id="other-identity-types">Other Identity Types<a class="headerlink" href="#other-identity-types" title="Permanent link">&para;</a></h3>
+<p>The architecture supports specialized identity types for complex use cases:</p>
+<h4 id="multisig">Multisig<a class="headerlink" href="#multisig" title="Permanent link">&para;</a></h4>
+<p>Located in <code>token/services/identity/multisig</code>.
+*   <strong>Concept</strong>: An identity that wraps multiple sub-identities.
+*   <strong>Identity (Payload)</strong>: An ASN.1 encoded <code>MultiIdentity</code> sequence.
+    - <code>Identities</code> (array of <code>TypedIdentity</code> bytes): The constituent identities.
+*   <strong>Audit Info</strong>: JSON-encoded <code>AuditInfo</code> structure.
+    - <code>IdentityAuditInfos</code> (array of <code>IdentityAuditInfo</code>): A list of audit information blobs for each constituent identity.
+*   <strong>Encoding</strong>:
+    - <code>TypedIdentity</code> payload: ASN.1.
+    - Audit Info: JSON.
+*   <strong>Usage</strong>: Useful for requiring multiple signatures or representing a group of parties.
+*   <strong>Auditability</strong>: Aggregates audit information for all underlying identities.</p>
+<h4 id="policyidentity-boolean-expression-governed-ownership">PolicyIdentity (Boolean-Expression-Governed Ownership)<a class="headerlink" href="#policyidentity-boolean-expression-governed-ownership" title="Permanent link">&para;</a></h4>
+<p>Located in <code>token/services/identity/boolpolicy</code>.
+*   <strong>Concept</strong>: An identity whose ownership is governed by a boolean expression over a set of component identities, enabling OR-style (any one signer suffices) and AND-style (all signers required) multi-party control without a fixed M-of-N scheme.
+*   <strong>Policy Expression Syntax</strong>: A string using <code>$N</code> slot references and the operators <code>AND</code>, <code>OR</code>, and parentheses:
+    - <code>$0 OR $1</code> — either component identity 0 or 1 can satisfy ownership alone.
+    - <code>$0 AND $1</code> — both component identity 0 and 1 must sign.
+    - <code>($0 OR $1) AND $2</code> — one of the first two parties plus the third must sign.
+*   <strong>Identity (Payload)</strong>: An ASN.1-encoded <code>PolicyIdentity</code> sequence:
+    - <code>policy</code> (UTF8String): the boolean expression, e.g. <code>"$0 OR $1"</code>.
+    - <code>identities</code> (SEQUENCE OF OCTET STRING): ordered list of raw component identity bytes; <code>$N</code> indexes into this list.
+*   <strong>Audit Info</strong>: JSON-encoded <code>AuditInfo</code> structure.
+    - <code>IdentityAuditInfos</code> (array of <code>IdentityAuditInfo</code>): per-component audit info blobs in the same order as <code>identities</code>.
+*   <strong>Encoding</strong>:
+    - <code>TypedIdentity</code> payload: ASN.1 DER.
+    - Audit Info: JSON.
+*   <strong>Signature Representation</strong>: An ASN.1 <code>PolicySignature</code> (<code>SEQUENCE OF OCTET STRING</code>) where each slot corresponds to one component identity. A slot may be nil/empty when that component does not need to sign (valid for OR branches).
+*   <strong>Implementation</strong>: <code>token/services/identity/boolpolicy</code>.</p>
+<h4 id="htlc-hashed-time-lock-contract">HTLC (Hashed Time Lock Contract)<a class="headerlink" href="#htlc-hashed-time-lock-contract" title="Permanent link">&para;</a></h4>
+<p>Located in <code>token/services/identity/interop/htlc</code>.
+*   <strong>Concept</strong>: A script-based identity used primarily for interoperability mechanisms like atomic swaps.
+*   <strong>Identity (Payload)</strong>: A JSON-encoded <code>Script</code> structure defining the swap conditions.
+    - <code>Sender</code> (bytes): The wrapped identity of the sender.
+    - <code>Recipient</code> (bytes): The wrapped identity of the recipient.
+    - <code>Deadline</code> (uint64): The timeout period.
+    - <code>HashInfo</code>: Information about the hash lock.
+*   <strong>Audit Info</strong>: A JSON-encoded <code>ScriptInfo</code> structure.
+    - <code>Sender</code> (bytes): The audit info for the sender's identity.
+    - <code>Recipient</code> (bytes): The audit info for the recipient's identity.
+*   <strong>Encoding</strong>:
+    - <code>TypedIdentity</code> payload: JSON.
+    - Audit Info: JSON.
+*   <strong>Behavior</strong>: Validation involves satisfying the script conditions (e.g., providing the hash preimage).</p>
+<h2 id="extending-the-identity-service">Extending the Identity Service<a class="headerlink" href="#extending-the-identity-service" title="Permanent link">&para;</a></h2>
+<p>The Identity Service is designed to be extensible through the driver interfaces
+defined in the token SDK. Custom identity implementations can be provided by
+implementing the required identity and wallet interfaces.</p>
+<p>Typical extension scenarios include:
+- Supporting a new identity type by implementing a custom <code>KeyManager</code>
+- Customizing signature generation or verification logic within a <code>KeyManager</code>
+- Providing a custom <code>KeyManagerProvider</code> to plug new identity mechanisms into <code>LocalMembership</code></p>
+<h3 id="step-by-step-guide-introducing-a-new-identity-type">Step-by-Step Guide: Introducing a New Identity Type<a class="headerlink" href="#step-by-step-guide-introducing-a-new-identity-type" title="Permanent link">&para;</a></h3>
+<p>The steps below describe how to add a new composite identity type end-to-end, based on the pattern used for <strong>PolicyIdentity</strong> (<code>token/services/identity/boolpolicy</code>).</p>
+<h4 id="step-1-reserve-a-type-tag">Step 1 — Reserve a type tag<a class="headerlink" href="#step-1-reserve-a-type-tag" title="Permanent link">&para;</a></h4>
+<p>Add a new constant to <code>token/driver/wallet.go</code> alongside the existing tags:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="c1">// ...existing tags...</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">MyNewIdentityType</span><span class="w">       </span><span class="nx">IdentityType</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">7</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">MyNewIdentityTypeString</span><span class="w">              </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;mynew&quot;</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>The integer must be unique across all registered identity types.</p>
+<h4 id="step-2-define-the-wire-format">Step 2 — Define the wire format<a class="headerlink" href="#step-2-define-the-wire-format" title="Permanent link">&para;</a></h4>
+<p>Create a package (e.g. <code>token/services/identity/mynew/</code>) and define the identity struct. Use ASN.1 DER for structured binary data (as PolicyIdentity does) or JSON for human-readable payloads (as HTLC does):</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">MyNewIdentity</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">SomeField</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="s">`asn1:&quot;utf8&quot;`</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">Parts</span><span class="w">     </span><span class="p">[][]</span><span class="kt">byte</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">}</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">MyNewIdentity</span><span class="p">)</span><span class="w"> </span><span class="nx">Serialize</span><span class="p">()</span><span class="w"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">asn1</span><span class="p">.</span><span class="nx">Marshal</span><span class="p">(</span><span class="o">*</span><span class="nx">m</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">MyNewIdentity</span><span class="p">)</span><span class="w"> </span><span class="nx">Deserialize</span><span class="p">(</span><span class="nx">raw</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asn1</span><span class="p">.</span><span class="nx">Unmarshal</span><span class="p">(</span><span class="nx">raw</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">)</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Expose <code>Wrap</code> / <code>Unwrap</code> helpers (see <code>boolpolicy.WrapPolicyIdentity</code> / <code>boolpolicy.Unwrap</code>) that embed the serialized struct inside a <code>TypedIdentity</code> envelope with the new type tag.</p>
+<h4 id="step-3-implement-signature-verification">Step 3 — Implement signature verification<a class="headerlink" href="#step-3-implement-signature-verification" title="Permanent link">&para;</a></h4>
+<p>Add a <code>Verifier</code> that accepts the new signature format and a <code>Deserializer</code> that reconstructs a <code>Verifier</code> from raw identity bytes.  Register the deserializer via <code>des.AddTypedVerifierDeserializer(mynew.MyNewIdentityType, ...)</code> in each driver's <code>NewTokenService</code> (see <code>token/core/fabtoken/v1/driver/driver.go</code> and the zkatdlog equivalent).</p>
+<h4 id="step-4-define-the-signature-format">Step 4 — Define the signature format<a class="headerlink" href="#step-4-define-the-signature-format" title="Permanent link">&para;</a></h4>
+<p>Define a struct for the signature produced over the token request (analogous to <code>PolicySignature</code> in <code>boolpolicy/sig.go</code>). Include ASN.1 or JSON encoding helpers and a <code>JoinSignatures</code> function if multiple parties contribute partial signatures.</p>
+<h4 id="step-5-implement-the-authorization-checker">Step 5 — Implement the <code>Authorization</code> checker<a class="headerlink" href="#step-5-implement-the-authorization-checker" title="Permanent link">&para;</a></h4>
+<p>Create an <code>EscrowAuth</code> struct (see <code>token/services/ttx/boolpolicy/auth.go</code>) that implements the <code>Authorization</code> interface:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">EscrowAuth</span><span class="w"> </span><span class="kd">struct</span><span class="p">{</span><span class="w"> </span><span class="nx">WalletService</span><span class="w"> </span><span class="nx">driver</span><span class="p">.</span><span class="nx">WalletService</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">AmIAnAuditor</span><span class="p">()</span><span class="w"> </span><span class="kt">bool</span><span class="w">                                  </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">IsMine</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">tok</span><span class="w"> </span><span class="o">*</span><span class="nx">token</span><span class="p">.</span><span class="nx">Token</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">...</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">Issued</span><span class="p">(</span><span class="nx">_</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="nx">driver</span><span class="p">.</span><span class="nx">Identity</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">*</span><span class="nx">token</span><span class="p">.</span><span class="nx">Token</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">OwnerType</span><span class="p">(</span><span class="nx">raw</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">driver</span><span class="p">.</span><span class="nx">IdentityType</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="o">...</span><span class="w"> </span><span class="p">}</span>
+</span></code></pre></div>
+<p>Register it in <strong>both</strong> driver files inside <code>NewAuthorizationMultiplexer</code>:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// token/core/fabtoken/v1/driver/driver.go  (and the zkatdlog equivalent)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">authorization</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">common</span><span class="p">.</span><span class="nx">NewAuthorizationMultiplexer</span><span class="p">(</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">common</span><span class="p">.</span><span class="nx">NewTMSAuthorization</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">htlc</span><span class="p">.</span><span class="nx">NewScriptAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nx">multisig</span><span class="p">.</span><span class="nx">NewEscrowAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">boolpolicy</span><span class="p">.</span><span class="nx">NewEscrowAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nx">mynew</span><span class="p">.</span><span class="nx">NewEscrowAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span><span class="w">   </span><span class="c1">// ← add here</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">)</span>
+</span></code></pre></div>
+<h4 id="step-6-add-a-wallet-wrapper">Step 6 — Add a wallet wrapper<a class="headerlink" href="#step-6-add-a-wallet-wrapper" title="Permanent link">&para;</a></h4>
+<p>Create an <code>OwnerWallet</code> wrapper (see <code>token/services/ttx/boolpolicy/wallet.go</code>) that filters the unspent token list to tokens whose owner is the new identity type, and exposes domain-specific helpers (e.g. <code>VerifyApprover</code>).</p>
+<h4 id="step-7-wire-the-recipient-negotiation-protocol">Step 7 — Wire the recipient-negotiation protocol<a class="headerlink" href="#step-7-wire-the-recipient-negotiation-protocol" title="Permanent link">&para;</a></h4>
+<p>If the new identity requires interactive negotiation between parties to assemble the composite identity before a transfer, add a <code>RequestMyNewIdentity</code> function following the pattern of <code>ttx.RequestPolicyIdentity</code> (<code>token/services/ttx/recipients.go</code>).  The function sends a typed request, each counterparty responds with its component data, and the initiator assembles the final composite identity.</p>
+<h4 id="step-8-add-integration-views">Step 8 — Add integration views<a class="headerlink" href="#step-8-add-integration-views" title="Permanent link">&para;</a></h4>
+<p>Create initiator and responder views in the integration layer (e.g. <code>integration/token/fungible/views/mynew.go</code>) following the pattern in <code>boolpolicy.go</code>:</p>
+<ul>
+<li><strong>Lock view</strong> — transfers tokens to a recipient with the new composite identity.</li>
+<li><strong>Spend view</strong> — spends those tokens, optionally with restricted signer sets.</li>
+<li><strong>Balance view</strong> — queries the policy-owned token balance (modelled on <code>PolicyOwnedBalanceView</code>).</li>
+<li><strong>Responder views</strong> — ACK and endorse spend requests for AND-style policies.</li>
+</ul>
+<p>Register all view factories and responders in the integration SDK (<code>integration/token/fungible/sdk/party/sdk.go</code>).</p>
+<h4 id="step-9-add-tests">Step 9 — Add tests<a class="headerlink" href="#step-9-add-tests" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Unit tests</strong> for the verifier (<code>sig_test.go</code> pattern) and for <code>EscrowAuth.IsMine</code> (<code>auth_test.go</code> pattern).</li>
+<li><strong>Integration tests</strong> in <code>integration/token/fungible/tests.go</code> + the relevant <code>dlog_test.go</code> <code>Describe</code> block, following <code>TestPolicyOR</code> / <code>TestPolicyAND</code>.</li>
+</ul>
+<h4 id="summary-checklist">Summary checklist<a class="headerlink" href="#summary-checklist" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">#</th>
+<th style="text-align: left;">What</th>
+<th style="text-align: left;">Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">Reserve type tag</td>
+<td style="text-align: left;"><code>token/driver/wallet.go</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">Wire format + Wrap/Unwrap</td>
+<td style="text-align: left;"><code>token/services/identity/mynew/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">Verifier + Deserializer</td>
+<td style="text-align: left;">same package; register in both drivers</td>
+</tr>
+<tr>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">Signature format + JoinSignatures</td>
+<td style="text-align: left;">same package</td>
+</tr>
+<tr>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">EscrowAuth + register in drivers</td>
+<td style="text-align: left;"><code>token/services/ttx/mynew/auth.go</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">OwnerWallet wrapper</td>
+<td style="text-align: left;"><code>token/services/ttx/mynew/wallet.go</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">7</td>
+<td style="text-align: left;">Recipient-negotiation protocol</td>
+<td style="text-align: left;"><code>token/services/ttx/recipients.go</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">8</td>
+<td style="text-align: left;">Integration views + SDK registration</td>
+<td style="text-align: left;"><code>integration/token/fungible/views/mynew.go</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">9</td>
+<td style="text-align: left;">Unit + integration tests</td>
+<td style="text-align: left;">alongside each new file</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>

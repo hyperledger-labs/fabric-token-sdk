@@ -1,0 +1,2320 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Privacy-preserving token management for Hyperledger Fabric">
+      
+      
+        <meta name="author" content="Hyperledger Labs">
+      
+      
+        <link rel="canonical" href="https://hyperledger-labs.github.io/fabric-token-sdk/evolution_summary/">
+      
+      
+        <link rel="prev" href="../development/documentation/">
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>Evolution - Fabric Token SDK</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#evolution-of-fabric-token-sdk-v040-present" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Fabric Token SDK" class="md-header__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Fabric Token SDK
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Evolution
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tokensdk/" class="md-tabs__link">
+          
+  
+  Core Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../drivers/fabtoken/" class="md-tabs__link">
+          
+  
+  Drivers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../services/auditor/" class="md-tabs__link">
+          
+  
+  Services
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../development/development/" class="md-tabs__link">
+          
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+    
+  
+  Evolution
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Fabric Token SDK" class="md-nav__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Fabric Token SDK
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tokensdk/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token SDK Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tokenapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../token_sdk_usage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API Usage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../driverapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Driver API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Configuration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Services Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgradability/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Upgradability
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../public_parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Public Parameters Lifecycle
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/fabtoken/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Fabtoken
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/dlogwogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog (Zero-Knowledge)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/extending_validator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extending Validator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            Benchmark
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/benchmark/benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/benchmark/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_3" id="__nav_3_5_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/benchmark/core/dlognogh/dlognogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/benchmark/core/dlognogh/dlognogh_architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/benchmark/core/dlognogh/dlognogh_regression/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Regression
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/benchmark/core/dlognogh/transfer_BenchmarkSender_results/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark Sender Results
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/benchmark/core/dlognogh/validator_transfer_profile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Validator Transfer Profile
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_4" id="__nav_3_5_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/benchmark/services/identity/idemix/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idemix Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/auditor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Auditor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/certifier/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Certifier
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/config/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/identity/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/interop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Interop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/network-ethereum/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Ethereum
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/network-fabric/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabric
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/network-fabricx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabricx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/network/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/nfttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    NFT Tx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/recovery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Recovery
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/selector/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Selector
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/tokens/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokens
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/ttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    TTX
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Development
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/development/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/general/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    General Guidelines
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/idiomatic/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idiomatic Go
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/mock/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Mocking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/linting/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Linting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/makefile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Makefile Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/monitoring/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitoring
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/testing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Testing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/tokengen/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokengen
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/versioning/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Versioning
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/ai_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AI Agents
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/documentation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Evolution
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Evolution
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-refinement-common-driver-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architectural Refinement: Common Driver Framework
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#privacy-preserving-driver-evolution-zkatdlognogh" class="md-nav__link">
+    <span class="md-ellipsis">
+      Privacy-Preserving Driver Evolution: zkatdlog/nogh
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enhanced-security-protocol-v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enhanced Security: Protocol V2
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cryptographic-optimization-compressed-sigma-protocol-range-proofs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cryptographic Optimization: Compressed Sigma Protocol Range Proofs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-transaction-ttx-service-modernization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Transaction (TTX) Service Modernization
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-service-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Service Enhancements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-benchmarking-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance &amp; Benchmarking Infrastructure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#developer-experience-testing-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Developer Experience: Testing &amp; Documentation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bug-fixes-security-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      Bug Fixes &amp; Security Hardening
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#high-level-token-api-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      High-Level Token API Evolution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-management-tooling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependency Management &amp; Tooling
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-refinement-common-driver-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architectural Refinement: Common Driver Framework
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#privacy-preserving-driver-evolution-zkatdlognogh" class="md-nav__link">
+    <span class="md-ellipsis">
+      Privacy-Preserving Driver Evolution: zkatdlog/nogh
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enhanced-security-protocol-v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enhanced Security: Protocol V2
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cryptographic-optimization-compressed-sigma-protocol-range-proofs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cryptographic Optimization: Compressed Sigma Protocol Range Proofs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-transaction-ttx-service-modernization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Transaction (TTX) Service Modernization
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-service-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Service Enhancements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-benchmarking-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance &amp; Benchmarking Infrastructure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#developer-experience-testing-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Developer Experience: Testing &amp; Documentation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bug-fixes-security-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      Bug Fixes &amp; Security Hardening
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#high-level-token-api-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      High-Level Token API Evolution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-management-tooling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependency Management &amp; Tooling
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="evolution-of-fabric-token-sdk-v040-present">Evolution of Fabric Token SDK (v0.4.0 -&gt; Present)<a class="headerlink" href="#evolution-of-fabric-token-sdk-v040-present" title="Permanent link">&para;</a></h1>
+<p>Since tag <code>v0.4.0</code> (January 2025), the Fabric Token SDK has undergone a significant architectural and functional evolution, comprising over 850 commits. The evolution can be summarized in several key areas:</p>
+<h2 id="architectural-refinement-common-driver-framework">Architectural Refinement: Common Driver Framework<a class="headerlink" href="#architectural-refinement-common-driver-framework" title="Permanent link">&para;</a></h2>
+<p>The SDK has transitioned toward a more modular and robust internal driver architecture. A major shift involved moving core driver interfaces and shared logic into the <code>token/core/common/driver</code> package. This decoupling allows for more uniform driver implementations and simplifies the introduction of new token technologies.
+*   <em>See also:</em> <a href="../driverapi/"><strong>Driver API Overview</strong></a></p>
+<h2 id="privacy-preserving-driver-evolution-zkatdlognogh">Privacy-Preserving Driver Evolution: <code>zkatdlog/nogh</code><a class="headerlink" href="#privacy-preserving-driver-evolution-zkatdlognogh" title="Permanent link">&para;</a></h2>
+<p>One of the most substantial additions is the <code>nogh</code> (<strong>No Graph Hiding</strong>) variant of the <code>zkatdlog</code> driver. This variant represents an optimization and refinement of the zero-knowledge token logic, providing a more efficient way to handle private transactions by omitting graph-hiding properties. 
+*   <em>See also:</em> <a href="../drivers/dlogwogh/"><strong>DLog w/o Graph Hiding (NOGH) Driver</strong></a></p>
+<ul>
+<li><strong>Upgradability Support:</strong> The <code>nogh</code> driver explicitly supports token upgradability. <ul>
+<li><strong>In-place Upgrades:</strong> Compatible legacy tokens (like Fabtoken) can be spent directly by the <code>nogh</code> driver. The driver automatically generates Pedersen commitments and an "Upgrade Witness" on the fly, allowing for transparent migration during standard transfer operations. Criteria for compatibility include format inclusion in the driver's supported list and precision alignment (e.g., legacy precision $\le$ current max precision).</li>
+<li><strong>Burn and Re-issue:</strong> For major migrations, it implements a "Burn and Re-issue" mechanism. This is facilitated by a dedicated <code>upgrade</code> service that handles challenge-response protocols and proof verification to ensure supply consistency during migration.</li>
+<li><em>See also:</em> <a href="../upgradability/"><strong>Upgradability Guide</strong></a></li>
+</ul>
+</li>
+<li><strong>Data Model &amp; Protocol Buffers:</strong> The <code>nogh</code> driver introduces a refined data model for tokens and metadata. Tokens are represented as Pedersen commitments to the token type, value, and blinding factor. Newly defined protocol buffers support this optimized model.<ul>
+<li><em>See also:</em> <a href="../drivers/dlogwogh/#protobuf-messages"><strong>DLog Protobuf Messages</strong></a></li>
+</ul>
+</li>
+<li><strong>Driver Versioning:</strong> The implementation follows a clear versioning strategy, with the current <code>nogh</code> driver logic residing in the <code>v1</code> sub-package (<code>token/core/zkatdlog/nogh/v1</code>). This versioning ensures that future protocol changes can be introduced without breaking backward compatibility for existing ledger data.</li>
+<li><strong>Crypto &amp; Math:</strong> New <code>bls12_381_bbs</code> curve support and improved cryptographic primitives are integrated into the <code>v1</code> implementation.</li>
+<li><strong>Auditing:</strong> A dedicated auditing layer (<code>v1/audit</code>) provides necessary compliance tools for private token systems.</li>
+</ul>
+<h2 id="enhanced-security-protocol-v2">Enhanced Security: Protocol V2<a class="headerlink" href="#enhanced-security-protocol-v2" title="Permanent link">&para;</a></h2>
+<p>A major security enhancement introduced <strong>Protocol V2</strong> for token request signatures, addressing critical vulnerabilities in the original implementation:</p>
+<ul>
+<li><strong>Structured Signature Format:</strong> Protocol V2 uses ASN.1-structured messages with explicit field boundaries, eliminating boundary ambiguity attacks present in Protocol V1's simple concatenation approach.</li>
+<li><strong>Input Validation:</strong> Comprehensive validation with typed errors prevents DoS attacks through anchor size limits (128 bytes max) and ensures non-empty anchors.</li>
+<li><strong>Secure Error Handling:</strong> Binary data is hex-encoded in error messages, preventing sensitive data exposure in logs and log aggregation systems.</li>
+<li><strong>Collision Resistance:</strong> The structured format ensures different (Request, Anchor) pairs always produce different signature messages, providing tamper-evident properties.</li>
+<li>
+<p><strong>Backward Compatibility:</strong> Protocol V1 remains supported for existing deployments while Protocol V2 is recommended for all new implementations.</p>
+</li>
+<li>
+<p><em>See also:</em> <a href="../driverapi/"><strong>Protocol Versions and Signature Security</strong></a></p>
+</li>
+</ul>
+<h2 id="cryptographic-optimization-compressed-sigma-protocol-range-proofs">Cryptographic Optimization: Compressed Sigma Protocol Range Proofs<a class="headerlink" href="#cryptographic-optimization-compressed-sigma-protocol-range-proofs" title="Permanent link">&para;</a></h2>
+<p>The SDK now implements <strong>Compressed Sigma Protocol-Based Range Proofs</strong>, providing significant performance improvements for zero-knowledge range validation:</p>
+<ul>
+<li><strong>Reduced Proof Size:</strong> Compressed proofs are substantially smaller than traditional Bulletproofs, reducing on-chain storage and network bandwidth requirements.</li>
+<li><strong>Faster Verification:</strong> Optimized verification algorithms improve transaction validation throughput.</li>
+<li><strong>Configurable Executor Patterns:</strong> Introduction of <code>ExecutorProvider</code>, <code>WorkerPoolExecutor</code>, and <code>UnboundedExecutor</code> allows fine-tuned control over proof generation and verification parallelism.</li>
+<li><strong>Constructor Injection:</strong> Executor patterns are threaded through cryptographic components (<code>RangeCorrectnessProver</code>, <code>RangeCorrectnessVerifier</code>) enabling flexible performance tuning.</li>
+</ul>
+<h2 id="token-transaction-ttx-service-modernization">Token Transaction (TTX) Service Modernization<a class="headerlink" href="#token-transaction-ttx-service-modernization" title="Permanent link">&para;</a></h2>
+<p>The Token Transaction service, a core component for orchestrating token lifecycles, has been significantly refactored:</p>
+<ul>
+<li><strong>Dependency Injection Pattern:</strong> The introduction of the <code>dep/</code> sub-package in the TTX service enables better dependency management, reducing circular dependencies and drastically improving unit testability.</li>
+<li><strong>Multisig Support:</strong> New capabilities for multi-signature transactions have been introduced in <code>token/services/ttx/multisig</code>.</li>
+<li><strong>Finality Tracking:</strong> Improved transaction finality handling via the new <code>token/services/ttx/finality</code> package, including a new <code>TTXRecoveryHandler</code> for synchronous transaction recovery.</li>
+<li>
+<p><strong>Transaction Recovery:</strong> A new recovery mechanism has been introduced to automatically re-register finality listeners for pending transactions that may have lost their listeners due to node restarts or network issues. The recovery service includes:</p>
+<ul>
+<li><strong>Automatic Re-registration:</strong> Scans for pending transactions and re-establishes finality listeners on startup</li>
+<li><strong>Configurable Retry Logic:</strong> Supports exponential backoff with configurable retry limits</li>
+<li><strong>Backend-Agnostic:</strong> Works with both PostgreSQL and SQLite storage backends</li>
+<li><strong>Network Integration:</strong> Instantiated by both Fabric and FabricX network services</li>
+<li><strong>Dual Database Support:</strong> Operates on TTXDB for regular transactions and AuditDB for auditor nodes</li>
+</ul>
+</li>
+<li>
+<p><em>See also:</em> <a href="../services/ttx/"><strong>TTX Service Documentation</strong></a>, <a href="../services/recovery/"><strong>Transaction Recovery Service</strong></a></p>
+</li>
+</ul>
+<h2 id="core-service-enhancements">Core Service Enhancements<a class="headerlink" href="#core-service-enhancements" title="Permanent link">&para;</a></h2>
+<p>The SDK's foundational services have been matured:</p>
+<ul>
+<li><strong>Identity Service:</strong> Reorganized to better handle various identity types, with improved support for Idemix (privacy-preserving) and X.509 (standard) identities.<ul>
+<li><em>See also:</em> <a href="../services/identity/"><strong>Identity Service</strong></a></li>
+</ul>
+</li>
+<li><strong>Storage Service:</strong> Enhanced with more efficient and reliable ways to manage token and transaction databases, including:<ul>
+<li><strong>Database Indexing:</strong> Added missing indexes for token queries, significantly improving query performance</li>
+<li><strong>Query Enhancements:</strong> New <code>SearchDirection</code> support in <code>QueryTransactionsParams</code> for flexible result ordering</li>
+<li><strong>Recovery Service Integration:</strong> Built-in transaction recovery capabilities for handling finality listener failures</li>
+<li><em>See also:</em> <a href="../services/storage/"><strong>Storage Service</strong></a></li>
+</ul>
+</li>
+<li><strong>Network Service:</strong> Expanded to handle more complex Fabric network interactions and better integration with the Fabric Smart Client. A major change was the <strong>removal of the Orion-based implementation</strong>, which has been replaced by the introduction of <strong>FabricX support</strong>, providing a more modern and integrated approach for advanced ledger interactions.<ul>
+<li><em>See also:</em> <a href="../services/network/"><strong>Network Service</strong></a></li>
+</ul>
+</li>
+</ul>
+<h2 id="performance-benchmarking-infrastructure">Performance &amp; Benchmarking Infrastructure<a class="headerlink" href="#performance-benchmarking-infrastructure" title="Permanent link">&para;</a></h2>
+<p>Significant investments in performance measurement and optimization:</p>
+<ul>
+<li><strong>Automated Benchmarking Pipeline:</strong> New Python-based tools (<code>cmd/benchmarking/</code>) for running comprehensive performance tests and generating detailed reports.</li>
+<li><strong>Service-Layer Benchmarks:</strong> Added benchmarks for <code>IssueService</code> and <code>AuditorService</code> to measure end-to-end performance.</li>
+<li><strong>Executor-Aware Metrics:</strong> Performance metrics now track executor strategy impact, enabling data-driven optimization decisions.</li>
+<li><strong>Profiling Integration:</strong> Enhanced integration with Go's profiling tools (pprof, trace) for deep performance analysis.</li>
+<li>
+<p><strong>Benchmark Service:</strong> New dedicated service (<code>token/services/benchmark</code>) providing a flexible framework for performance testing with configurable workloads and detailed reporting.</p>
+</li>
+<li>
+<p><em>See also:</em> <a href="../services/benchmark/"><strong>Benchmark Service</strong></a>, <a href="../drivers/benchmark/benchmark/"><strong>Benchmarking Documentation</strong></a></p>
+</li>
+</ul>
+<h2 id="developer-experience-testing-documentation">Developer Experience: Testing &amp; Documentation<a class="headerlink" href="#developer-experience-testing-documentation" title="Permanent link">&para;</a></h2>
+<p>The SDK has seen a major push in both testing infrastructure and documentation:</p>
+<ul>
+<li><strong>Comprehensive Test Coverage:</strong> Massive improvements across the codebase:<ul>
+<li><code>token/services/tokens</code>: 80%+ coverage</li>
+<li><code>token/services/auditor</code>: 0% → 97.7% coverage</li>
+<li><code>token/services/certifier</code>: 41% → 62% coverage</li>
+<li><code>token/services/network</code>: 87% coverage</li>
+<li><code>token/services/ttx</code>: Comprehensive coverage with new tests</li>
+<li><code>token/services/nfttx</code>: 80% coverage</li>
+<li>Integration tests expanded for fungible, NFT, DVP, and interop scenarios</li>
+</ul>
+</li>
+<li><strong>Comprehensive Mocks:</strong> A massive addition of mocks (<code>token/core/common/driver/mock</code>, etc.) simplifies application testing and improves SDK maintainability.</li>
+<li><strong>Expanded Documentation:</strong> The <code>docs/</code> directory has been substantially populated with detailed guides on driver APIs, token SDK usage, architectural diagrams, and development best practices.</li>
+<li><strong>Integration Tests:</strong> The <code>integration/</code> tests have been expanded to cover new use cases, ensuring the stability of the evolved features.<ul>
+<li><em>See also:</em> <a href="../development/testing/"><strong>Testing Guide</strong></a></li>
+</ul>
+</li>
+</ul>
+<h2 id="bug-fixes-security-hardening">Bug Fixes &amp; Security Hardening<a class="headerlink" href="#bug-fixes-security-hardening" title="Permanent link">&para;</a></h2>
+<p>Numerous critical bug fixes and security improvements:</p>
+<ul>
+<li><strong>Asset Safety Fixes:</strong> Plugged five silent asset-safety bugs across selector, storage, and HTLC components</li>
+<li><strong>Selector Improvements:</strong> Fixed token lock leaks in sherdlock selector on bad quantity errors</li>
+<li><strong>Certifier Hardening:</strong> Enhanced request validation and prevented information leakage in certification protocol</li>
+<li><strong>Transfer Action Security:</strong> Fixed issuer identity check vulnerabilities</li>
+<li><strong>Error Handling:</strong> Replaced panics with proper error returns across multiple components, improving system stability</li>
+<li><strong>Immutability:</strong> Made operations immutable to prevent unintended state modifications</li>
+<li><strong>Hash Validation:</strong> Re-enabled <code>IsValid</code> checks with debug-level gating for better integrity verification</li>
+</ul>
+<h2 id="high-level-token-api-evolution">High-Level Token API Evolution<a class="headerlink" href="#high-level-token-api-evolution" title="Permanent link">&para;</a></h2>
+<p>The developer-facing Token API has been refined for better usability, consistency, and cross-version stability:</p>
+<ul>
+<li><strong>Ubiquitous Context Support:</strong> Almost all API methods (in <code>WalletManager</code>, <code>Vault</code>, <code>TMS</code>, etc.) now accept a <code>context.Context</code>. This enables standard Go practices for cancellation, timeouts, and request-scoped tracing.</li>
+<li><strong>Unified Option Pattern:</strong> The introduction of a centralized <code>opts.go</code> and the functional options pattern (e.g., <code>WithTMSID</code>, <code>WithDuration</code>) provides a consistent and extensible way to configure API calls.</li>
+<li><strong>New <code>TokensService</code>:</strong> A high-level service for advanced token operations, including de-obfuscation and support for the new in-place upgrade challenge/proof protocol.</li>
+<li><strong>Robust TMS Management:</strong> The <code>ManagementService</code> now performs more thorough eager initialization of its sub-services and supports dynamic cache clearing via the <code>Update</code> mechanism, facilitating seamless public parameter rotations.</li>
+<li><strong>Enhanced Querying:</strong> The <code>Vault</code> and <code>QueryEngine</code> have been expanded with new methods like <code>GetTokenOutputs</code> and <code>WhoDeletedTokens</code>, providing deeper insights into the token lifecycle on the ledger.</li>
+<li><strong>Protobuf Backed Requests:</strong> The high-level <code>Request</code> structures now leverage versioned Protobuf messages internally, ensuring that transaction blueprints created by one node version can be understood by others.</li>
+<li><strong>Improved Error Handling:</strong> Wallet methods (<code>IssuerWallet</code>, <code>AuditorWallet</code>, <code>CertifierWallet</code>, <code>OwnerWallet</code>) now return errors instead of panicking, enabling better error handling and recovery.</li>
+<li>
+<p><strong>Clone Support:</strong> Added <code>Clone()</code> methods for safe copying of critical data structures.</p>
+</li>
+<li>
+<p><em>See also:</em> <a href="../tokenapi/"><strong>Token API Documentation</strong></a></p>
+</li>
+</ul>
+<h2 id="dependency-management-tooling">Dependency Management &amp; Tooling<a class="headerlink" href="#dependency-management-tooling" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Updated Dependencies:</strong> Regular updates to OpenTelemetry, go-jose, and other critical dependencies for security and performance</li>
+<li><strong>Enhanced Linting:</strong> Upgraded to golangci-lint v2.11.4 with expanded rule sets</li>
+<li><strong>Issue Templates:</strong> New GitHub issue templates for bug reports, feature requests, and good first issues</li>
+<li><strong>Statistics Tools:</strong> New tools for generating repository statistics and analyzing contribution patterns</li>
+</ul>
+<h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>The evolution since <code>v0.4.0</code> marks the SDK's transition into a mature, production-ready, and feature-rich framework. The focus on security (Protocol V2), reliability (Recovery Service), performance (Compressed Range Proofs, Benchmarking), and quality (80%+ test coverage) has solidified its role as a robust tool for building tokenized applications on Hyperledger Fabric. The architectural clarity, optimized privacy-preserving drivers, and comprehensive developer experience through documentation and testability position the SDK for continued growth and adoption.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>

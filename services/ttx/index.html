@@ -1,0 +1,2664 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Privacy-preserving token management for Hyperledger Fabric">
+      
+      
+        <meta name="author" content="Hyperledger Labs">
+      
+      
+        <link rel="canonical" href="https://hyperledger-labs.github.io/fabric-token-sdk/services/ttx/">
+      
+      
+        <link rel="prev" href="../tokens/">
+      
+      
+        <link rel="next" href="../../development/development/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>TTX - Fabric Token SDK</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#token-transaction-ttx-service" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Fabric Token SDK" class="md-header__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Fabric Token SDK
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              TTX
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tokensdk/" class="md-tabs__link">
+          
+  
+  Core Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../drivers/fabtoken/" class="md-tabs__link">
+          
+  
+  Drivers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../auditor/" class="md-tabs__link">
+          
+  
+  Services
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/development/" class="md-tabs__link">
+          
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evolution_summary/" class="md-tabs__link">
+        
+  
+    
+  
+  Evolution
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Fabric Token SDK" class="md-nav__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Fabric Token SDK
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tokensdk/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token SDK Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tokenapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../token_sdk_usage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API Usage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../driverapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Driver API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Configuration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Services Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../upgradability/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Upgradability
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../public_parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Public Parameters Lifecycle
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/fabtoken/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Fabtoken
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/dlogwogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog (Zero-Knowledge)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/extending_validator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extending Validator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            Benchmark
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_3" id="__nav_3_5_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/dlognogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/dlognogh_architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/dlognogh_regression/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Regression
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/transfer_BenchmarkSender_results/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark Sender Results
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/core/dlognogh/validator_transfer_profile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Validator Transfer Profile
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_4" id="__nav_3_5_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/benchmark/services/identity/idemix/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idemix Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../auditor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Auditor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../certifier/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Certifier
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../identity/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Interop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-ethereum/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Ethereum
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-fabric/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabric
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-fabricx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabricx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nfttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    NFT Tx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../recovery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Recovery
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../selector/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Selector
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tokens/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokens
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    TTX
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    TTX
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#transaction-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction Lifecycle
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transaction-creation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction Creation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Identity Management
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Identity Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requesting-recipient-identities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Requesting Recipient Identities
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recipient-protocol-flows-recipientsgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recipient Protocol Flows (recipients.go)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recipient Protocol Flows (recipients.go)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requestrecipientidentityview-respondrequestrecipientidentityview" class="md-nav__link">
+    <span class="md-ellipsis">
+      RequestRecipientIdentityView / RespondRequestRecipientIdentityView
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exchangerecipientidentitiesview-respondexchangerecipientidentitiesview" class="md-nav__link">
+    <span class="md-ellipsis">
+      ExchangeRecipientIdentitiesView / RespondExchangeRecipientIdentitiesView
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#policyidentity-boolean-expression-governed-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      PolicyIdentity — Boolean-Expression-Governed Ownership
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PolicyIdentity — Boolean-Expression-Governed Ownership">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#creating-a-policyidentity" class="md-nav__link">
+    <span class="md-ellipsis">
+      Creating a PolicyIdentity
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#policy-expression-syntax" class="md-nav__link">
+    <span class="md-ellipsis">
+      Policy Expression Syntax
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spending-or-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Spending — OR Policy
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spending-and-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Spending — AND Policy
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spend-coordination-wire-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Spend Coordination Wire Flow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wallet-and-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wallet and Authorization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Operations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Token Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#issue" class="md-nav__link">
+    <span class="md-ellipsis">
+      Issue
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transfer
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redeem" class="md-nav__link">
+    <span class="md-ellipsis">
+      Redeem
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collecting-endorsements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Collecting Endorsements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#distribution-and-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      Distribution and Ordering
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#finality-and-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finality and Discovery
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Finality and Discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transaction-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction Recovery
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Development
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/development/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/general/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    General Guidelines
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/idiomatic/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idiomatic Go
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/mock/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Mocking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/linting/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Linting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/makefile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Makefile Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/monitoring/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitoring
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/testing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Testing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/tokengen/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokengen
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/versioning/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Versioning
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/ai_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AI Agents
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/documentation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evolution_summary/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evolution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#transaction-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction Lifecycle
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transaction-creation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction Creation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Identity Management
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Identity Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requesting-recipient-identities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Requesting Recipient Identities
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recipient-protocol-flows-recipientsgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recipient Protocol Flows (recipients.go)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recipient Protocol Flows (recipients.go)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requestrecipientidentityview-respondrequestrecipientidentityview" class="md-nav__link">
+    <span class="md-ellipsis">
+      RequestRecipientIdentityView / RespondRequestRecipientIdentityView
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exchangerecipientidentitiesview-respondexchangerecipientidentitiesview" class="md-nav__link">
+    <span class="md-ellipsis">
+      ExchangeRecipientIdentitiesView / RespondExchangeRecipientIdentitiesView
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#policyidentity-boolean-expression-governed-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      PolicyIdentity — Boolean-Expression-Governed Ownership
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PolicyIdentity — Boolean-Expression-Governed Ownership">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#creating-a-policyidentity" class="md-nav__link">
+    <span class="md-ellipsis">
+      Creating a PolicyIdentity
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#policy-expression-syntax" class="md-nav__link">
+    <span class="md-ellipsis">
+      Policy Expression Syntax
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spending-or-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Spending — OR Policy
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spending-and-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Spending — AND Policy
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spend-coordination-wire-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Spend Coordination Wire Flow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wallet-and-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wallet and Authorization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Operations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Token Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#issue" class="md-nav__link">
+    <span class="md-ellipsis">
+      Issue
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transfer
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#redeem" class="md-nav__link">
+    <span class="md-ellipsis">
+      Redeem
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collecting-endorsements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Collecting Endorsements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#distribution-and-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      Distribution and Ordering
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#finality-and-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finality and Discovery
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Finality and Discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transaction-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction Recovery
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="token-transaction-ttx-service">Token Transaction (TTX) Service<a class="headerlink" href="#token-transaction-ttx-service" title="Permanent link">&para;</a></h1>
+<p>The <strong>Token Transaction (TTX) Service</strong> is the primary orchestration component of the Fabric Token SDK. it provides a high-level API and a set of <a href="https://github.com/hyperledger-labs/fabric-smart-client">Fabric Smart Client (FSC)</a> Views to help developers assemble, sign, and commit token transactions in a backend-agnostic manner.</p>
+<p>The TTX service is designed with a <strong>dependency injection pattern</strong> (located in <code>token/services/ttx/dep</code>), which decouples the transaction orchestration logic from the underlying infrastructure providers like the Network Service, TMS Provider, and Storage Service.</p>
+<h2 id="transaction-lifecycle">Transaction Lifecycle<a class="headerlink" href="#transaction-lifecycle" title="Permanent link">&para;</a></h2>
+<p>The lifecycle of a token transaction typically involves the following stages, coordinated by the TTX service:</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant Initiator
+    participant Recipient
+    participant Auditor
+    participant Network as Network Service
+    participant Ledger as DLT / Ledger
+
+    box darkgreen Token SDK Stack
+        participant Initiator
+        participant Recipient
+        participant Auditor
+        participant Network
+    end
+
+    Note over Initiator: 1. Request Identities
+    Initiator-&gt;&gt;+Recipient: RequestRecipientIdentityView
+    Recipient--&gt;&gt;-Initiator: Recipient Data (Identity + Audit Info)
+
+    Note over Initiator: 2. Assemble Request
+    Initiator-&gt;&gt;+Initiator: Issue / Transfer / Redeem operations
+
+    Note over Initiator: 3. Collect Endorsements
+    Initiator-&gt;&gt;+Initiator: Sign locally
+    Initiator-&gt;&gt;+Recipient: Request Signatures (for spent tokens)
+    Recipient--&gt;&gt;-Initiator: Signature
+    Initiator-&gt;&gt;+Auditor: AuditApproveView
+    Auditor--&gt;&gt;-Initiator: Auditor Signature
+    Initiator-&gt;&gt;+Network: RequestApproval (DLT Endorsement)
+    Network--&gt;&gt;-Initiator: Endorsed Envelope
+
+    Note over Initiator: 4. Distribution &amp; Ordering
+    Initiator-&gt;&gt;+Recipient: Distribute Transaction Metadata
+    Initiator-&gt;&gt;+Network: Broadcast Transaction
+    Network-&gt;&gt;+Ledger: Submit to Orderer
+
+    Note over Initiator: 5. Finality Tracking
+    Initiator-&gt;&gt;+Network: Listen for Finality
+    Ledger--&gt;&gt;-Network: Transaction Committed
+    Network--&gt;&gt;-Initiator: Notify Finality</code></pre>
+<h2 id="transaction-creation">Transaction Creation<a class="headerlink" href="#transaction-creation" title="Permanent link">&para;</a></h2>
+<p>Transactions are instantiated via the <code>ttx.NewTransaction</code> function. A transaction is anchored to a specific <strong>Token Management System (TMS) ID</strong>, which defines the network, channel, and namespace for the transaction.</p>
+<p>When a transaction is created, it:
+*   Initializes a new <code>token.Request</code> via the TMS.
+*   Assigns a unique Transaction ID.
+*   Registers a cleanup hook in the FSC view context to ensure resources (like locked tokens) are released if the transaction fails.</p>
+<h2 id="identity-management">Identity Management<a class="headerlink" href="#identity-management" title="Permanent link">&para;</a></h2>
+<p>To issue or transfer tokens, the initiator must acquire the recipient's identity. The TTX service provides interactive protocols for this purpose.</p>
+<h3 id="requesting-recipient-identities">Requesting Recipient Identities<a class="headerlink" href="#requesting-recipient-identities" title="Permanent link">&para;</a></h3>
+<p>The <code>RequestRecipientIdentityView</code> allows an initiator to request a fresh recipient identity from a counterparty. This process ensures that:
+*   The recipient generates a fresh pseudonym (e.g., an Idemix pseudonym) to preserve privacy.
+*   The initiator receives the necessary audit information to verify the identity's validity against the TMS public parameters.
+*   Both parties update their local <code>IdentityInfo</code> stores to map the new identity to the correct FSC node.</p>
+<h3 id="recipient-protocol-flows-recipientsgo">Recipient Protocol Flows (<code>recipients.go</code>)<a class="headerlink" href="#recipient-protocol-flows-recipientsgo" title="Permanent link">&para;</a></h3>
+<p>The recipient identity protocols are implemented in <code>token/services/ttx/recipients.go</code>. The diagrams below document the on-wire messages exchanged by the initiator and responder views.
+<code>RecipientData</code> can carry <code>Identity</code>, <code>AuditInfo</code>, <code>TokenMetadata</code>, and <code>TokenMetadataAuditInfo</code>.</p>
+<p>Wire messages use JSON sessions (<code>token/services/utils/json/session</code>); the diagrams name the Go types being sent or received.</p>
+<p><strong>Response paths (today).</strong> In <code>RespondRequestRecipientIdentityView</code>, after the wallet lookup:</p>
+<ul>
+<li>If <code>recipientRequest.RecipientData != nil</code>, the responder checks <code>OwnerWallet.Contains</code> for <code>RecipientData.Identity</code>, then sends <strong>the same</strong> <code>RecipientData</code> value back on the session (echo path). The responder does <strong>not</strong> substitute wallet-held <code>AuditInfo</code> / metadata into that payload; what goes on the wire is the initiator-supplied structure (after the contains check).</li>
+<li>If <code>recipientRequest.RecipientData == nil</code>, the responder calls <code>OwnerWallet.GetRecipientData</code> and sends that <strong>wallet-produced</strong> <code>RecipientData</code> (fresh path).</li>
+</ul>
+<p>In both cases the initiator receives a full <code>RecipientData</code> over the wire. The initiator then calls <code>WalletManager.RegisterRecipientIdentity</code> with that payload and updates the endpoint resolver. <strong>Protocol hardening</strong> may replace full-object responses with a minimal acknowledgement (or another minimal wire type) so the responder does not ship an entire <code>RecipientData</code> when a slimmer response suffices; that is a separate code change from this documentation.</p>
+<p><strong>Multisig.</strong> When <code>RecipientRequest.MultiSig</code> is true, the initiator may send an additional <code>MultisigRecipientData</code> after the first exchange; the responder registers identities and updates bindings as in code.</p>
+<h4 id="requestrecipientidentityview-respondrequestrecipientidentityview"><code>RequestRecipientIdentityView</code> / <code>RespondRequestRecipientIdentityView</code><a class="headerlink" href="#requestrecipientidentityview-respondrequestrecipientidentityview" title="Permanent link">&para;</a></h4>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant I as Initiator
+    participant R as Responder
+
+    rect rgba(230, 230, 250, 0.35)
+        Note over I,R: Phase 1 - Identity request
+        I-&gt;&gt;R: RecipientRequest{TMSID, WalletID, RecipientData?, MultiSig}
+    end
+
+    rect rgba(255, 245, 238, 0.5)
+        Note over R: Phase 2 - Responder decision and reply
+        alt RecipientRequest.RecipientData != nil
+            R-&gt;&gt;R: Verify wallet contains RecipientData.Identity
+        else RecipientRequest.RecipientData == nil
+            R-&gt;&gt;R: Generate RecipientData from wallet
+        end
+        R-&gt;&gt;R: endpoint.Bind(context.Me, RecipientData.Identity)
+        Note over R,I: Bind before send so local resolver wiring fails before the peer receives RecipientData
+        R--&gt;&gt;I: RecipientData (echo or fresh data path)
+    end
+
+    rect rgba(240, 255, 240, 0.45)
+        Note over I,R: Phase 3 - Initiator registration and bindings
+        I-&gt;&gt;I: RegisterRecipientIdentity(RecipientData)
+        I-&gt;&gt;I: endpoint.Bind(requested FSC identity, RecipientData.Identity)
+    end
+
+    rect rgba(245, 245, 245, 0.55)
+        Note over I,R: Optional multisig extension
+        opt MultiSig == true
+            I--&gt;&gt;R: MultisigRecipientData{RecipientData, Nodes, Recipients}
+            R-&gt;&gt;R: RegisterRecipientIdentity(multisig data)
+            R-&gt;&gt;R: endpoint.Bind(each Node -&gt; Recipient)
+        end
+    end
+
+    Note over I,R: Full RecipientData on wire today (echo of request vs wallet-generated)</code></pre>
+<h4 id="exchangerecipientidentitiesview-respondexchangerecipientidentitiesview"><code>ExchangeRecipientIdentitiesView</code> / <code>RespondExchangeRecipientIdentitiesView</code><a class="headerlink" href="#exchangerecipientidentitiesview-respondexchangerecipientidentitiesview" title="Permanent link">&para;</a></h4>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant I as Initiator
+    participant R as Responder
+
+    rect rgba(230, 230, 250, 0.35)
+        Note over I,R: Phase 1 - Exchange request
+        I-&gt;&gt;R: ExchangeRecipientRequest{TMSID, WalletID, RecipientData(local)}
+    end
+
+    rect rgba(255, 245, 238, 0.5)
+        Note over R: Phase 2 - Responder processing
+        R-&gt;&gt;R: RegisterRecipientIdentity(request.RecipientData)
+        R-&gt;&gt;R: GetRecipientData(responder wallet)
+        R-&gt;&gt;R: endpoint.Bind(context.Me, responder RecipientData.Identity)
+        R-&gt;&gt;R: endpoint.Bind(session caller, request.RecipientData.Identity)
+        Note over R,I: Binds before send so resolver wiring fails before the initiator receives our RecipientData
+        R--&gt;&gt;I: RecipientData(responder)
+    end
+
+    rect rgba(240, 255, 240, 0.45)
+        Note over I,R: Phase 3 - Initiator registration and bindings
+        I-&gt;&gt;I: RegisterRecipientIdentity(remote RecipientData)
+        I-&gt;&gt;I: endpoint.Bind(other FSC identity, remote RecipientData.Identity)
+    end
+
+    Note over I,R: Full RecipientData on wire today (responder sends local wallet RecipientData)</code></pre>
+<h3 id="policyidentity-boolean-expression-governed-ownership">PolicyIdentity — Boolean-Expression-Governed Ownership<a class="headerlink" href="#policyidentity-boolean-expression-governed-ownership" title="Permanent link">&para;</a></h3>
+<p>The TTX service supports <strong>PolicyIdentity</strong> owners: tokens whose spending requires satisfying a boolean expression over a set of component identities.  This enables richer access-control than simple multisig (M-of-N) — for example, an OR clause where any single co-owner may spend unilaterally, or complex nested expressions.</p>
+<h4 id="creating-a-policyidentity">Creating a PolicyIdentity<a class="headerlink" href="#creating-a-policyidentity" title="Permanent link">&para;</a></h4>
+<p>Call <code>RequestPolicyIdentity</code> (in <code>token/services/ttx/recipients.go</code>) to negotiate a composite identity from all co-owners before building the transfer:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nx">recipient</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bptx</span><span class="p">.</span><span class="nx">RequestRecipientIdentity</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;$0 OR $1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="p">[]</span><span class="nx">view</span><span class="p">.</span><span class="nx">Identity</span><span class="p">{</span><span class="nx">bobFSCIdentity</span><span class="p">,</span><span class="w"> </span><span class="nx">charlieFSCIdentity</span><span class="p">},</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">token</span><span class="p">.</span><span class="nx">WithTMSIDPointer</span><span class="p">(</span><span class="nx">tmsID</span><span class="p">),</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>Each co-owner's node responds with its component identity; the SDK assembles the <code>PolicyIdentity</code> envelope automatically.</p>
+<h4 id="policy-expression-syntax">Policy Expression Syntax<a class="headerlink" href="#policy-expression-syntax" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Expression</th>
+<th style="text-align: left;">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>$0 OR $1</code></td>
+<td style="text-align: left;">Either component 0 <strong>or</strong> component 1 can spend alone.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>$0 AND $1</code></td>
+<td style="text-align: left;">Both component 0 <strong>and</strong> component 1 must sign.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>($0 OR $1) AND $2</code></td>
+<td style="text-align: left;">One of the first two parties plus party 2 must sign.</td>
+</tr>
+</tbody>
+</table>
+<p><code>$N</code> is a zero-based index into the ordered component identity list supplied when creating the token.</p>
+<h4 id="spending-or-policy">Spending — OR Policy<a class="headerlink" href="#spending-or-policy" title="Permanent link">&para;</a></h4>
+<p>For an OR policy the initiator alone can satisfy the policy.  Pass <code>WithPolicySigners</code> to restrict signature collection to only the signing party's slot; the remaining slots are left nil (which is valid for OR branches):</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">RunView</span><span class="p">(</span><span class="nx">ttx</span><span class="p">.</span><span class="nx">NewCollectEndorsementsView</span><span class="p">(</span><span class="nx">tx</span><span class="p">,</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">ttx</span><span class="p">.</span><span class="nx">WithPolicySigners</span><span class="p">(</span><span class="nx">myComponentIdentity</span><span class="p">),</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">))</span>
+</span></code></pre></div>
+<h4 id="spending-and-policy">Spending — AND Policy<a class="headerlink" href="#spending-and-policy" title="Permanent link">&para;</a></h4>
+<p>For an AND policy all co-owners must endorse.  Use <code>RequestSpendView</code> (in <code>token/services/ttx/boolpolicy/spend.go</code>) to notify co-owners before assembling the transaction, then collect endorsements from all components without restriction:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">RunView</span><span class="p">(</span><span class="nx">bptx</span><span class="p">.</span><span class="nx">NewRequestSpendView</span><span class="p">(</span><span class="nx">unspentToken</span><span class="p">,</span><span class="w"> </span><span class="nx">serviceOpts</span><span class="o">...</span><span class="p">))</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1">// ... build tx ...</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">RunView</span><span class="p">(</span><span class="nx">ttx</span><span class="p">.</span><span class="nx">NewCollectEndorsementsView</span><span class="p">(</span><span class="nx">tx</span><span class="p">))</span>
+</span></code></pre></div>
+<p>Co-owners run <code>ReceiveSpendTxView</code> (via <code>ReceiveSpendTx</code>) on their side, which ACKs the spend request and returns the assembled transaction <em>without</em> endorsing it. The application then inspects the transaction (e.g. confirming it consumes the expected token and does not include other tokens owned by this node) and explicitly calls <code>ttx.NewEndorseView(tx)</code> to sign once those checks pass.</p>
+<h4 id="spend-coordination-wire-flow">Spend Coordination Wire Flow<a class="headerlink" href="#spend-coordination-wire-flow" title="Permanent link">&para;</a></h4>
+<p>The same coordination protocol is implemented in <code>token/services/ttx/multisig/spend.go</code> (for AND multisig) and in <code>token/services/ttx/boolpolicy/spend.go</code> (for AND policies). Both follow the shape below; the responder must verify that the assembled transaction actually consumes the token referenced by the <code>SpendRequest</code> it approved.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant I as Initiator (RequestSpendView)
+    participant R as Co-owner (ReceiveSpendTxView)
+    participant App as Co-owner application code
+
+    rect rgba(230, 230, 250, 0.35)
+        Note over I,R: Phase 1 - Spend approval request
+        I-&gt;&gt;R: SpendRequest{Token: UnspentToken to spend}
+        R-&gt;&gt;R: ReceiveSpendRequest, decide to approve
+        R--&gt;&gt;I: SpendResponse{}
+    end
+
+    rect rgba(255, 245, 238, 0.5)
+        Note over I,R: Phase 2 - Transaction assembly and delivery
+        I-&gt;&gt;I: Assemble transaction consuming SpendRequest.Token
+        I-&gt;&gt;R: Transaction (via ttx.ReceiveTransaction)
+        R--&gt;&gt;App: tx (returned by ReceiveSpendTxView)
+    end
+
+    rect rgba(240, 255, 240, 0.45)
+        Note over App: Phase 3 - Business-logic checks (application owns these)
+        App-&gt;&gt;App: Inspect tx.Request().Inputs(ctx) etc.
+        alt checks pass
+            App-&gt;&gt;R: context.RunView(ttx.NewEndorseView(tx))
+            R--&gt;&gt;I: Signed transaction
+        else checks fail
+            App--&gt;&gt;I: Abort (no signature produced)
+        end
+    end</code></pre>
+<p>The split between Phase 2 (library receives the tx) and Phase 3 (application inspects + endorses) is deliberate: the library does not assume a single check policy. Two checks worth running in most deployments — and easy to express with <code>tx.Request().Inputs(ctx)</code> — are (a) the tx consumes the token named in the <code>SpendRequest</code>, and (b) the tx does not consume any other token owned by this node (see <code>extractRequiredSigners</code> in <code>endorse.go</code> for the ownership-check pattern). Without these, a co-owner who reviews and approves a spend for token <code>T_a</code> could be made to sign a transaction consuming a different token <code>T_b</code> co-owned by the same group.</p>
+<h4 id="wallet-and-authorization">Wallet and Authorization<a class="headerlink" href="#wallet-and-authorization" title="Permanent link">&para;</a></h4>
+<p>The <code>boolpolicy.OwnerWallet</code> (in <code>token/services/ttx/boolpolicy/wallet.go</code>) wraps a standard owner wallet and filters the token list to policy-type tokens.  <code>VerifyApprover</code> can be used to assert that a given identity is one of the named component identities before allowing a spend.</p>
+<p>The <code>EscrowAuth</code> struct (in <code>token/services/ttx/boolpolicy/auth.go</code>) implements the <code>Authorization</code> interface: <code>IsMine</code> returns true if any component identity of the policy token belongs to one of the node's owner wallets.</p>
+<h2 id="token-operations">Token Operations<a class="headerlink" href="#token-operations" title="Permanent link">&para;</a></h2>
+<p>The TTX service supports three primary operations through the <code>TokenRequest</code> API:</p>
+<h3 id="issue">Issue<a class="headerlink" href="#issue" title="Permanent link">&para;</a></h3>
+<p>Allows authorized issuers to create new tokens. The service:
+1.  Retrieves the issuer's identity from the internal <strong>Identity Service</strong>.
+2.  Generates an "Issue Action" using the driver-specific logic.
+3.  Adds the action and its metadata to the transaction request.</p>
+<h3 id="transfer">Transfer<a class="headerlink" href="#transfer" title="Permanent link">&para;</a></h3>
+<p>Enables the transfer of token ownership. The service:
+1.  Uses the <strong>Selector Service</strong> to pick spendable tokens (UTXOs) that cover the requested amount.
+2.  Locks the selected tokens in the local <code>TokenLocks</code> table to prevent double-spending.
+3.  Generates a "Transfer Action" that consumes the selected tokens and creates new ones for the recipients.</p>
+<h3 id="redeem">Redeem<a class="headerlink" href="#redeem" title="Permanent link">&para;</a></h3>
+<p>A specialized transfer where the recipient is "hidden" or "empty," effectively removing the tokens from circulation on the ledger.</p>
+<p>Redeem supports an enhanced flow where an issuer signature is required as part of transfer validation:
+1. Add the redeem action with <code>tx.Redeem(...)</code>.
+2. If the issuer endpoint cannot be resolved automatically, pass <code>ttx.WithFSCIssuerIdentity(...)</code> so the initiator can contact the issuer for endorsement.
+3. Optionally pass <code>ttx.WithIssuerPublicParamsPublicKey(...)</code> to pin which issuer public-parameters signing key must authorize the redeem.
+4. Run <code>CollectEndorsementsView</code> to collect owner, auditor (if configured), and issuer signatures.</p>
+<h2 id="collecting-endorsements">Collecting Endorsements<a class="headerlink" href="#collecting-endorsements" title="Permanent link">&para;</a></h2>
+<p>The <code>CollectEndorsementsView</code> is responsible for gathering all signatures required to make a transaction valid:
+*   <strong>Owner Signatures</strong>: For every token spent, the service requests a signature from the node that owns the corresponding identity.
+*   <strong>Issuer Signatures</strong>: For transactions involving token issuance and enhanced redeem flows that require issuer authorization.
+*   <strong>Auditor Signatures</strong>: If the TMS is configured with an auditor, the transaction must be approved via the <code>AuditApproveView</code>.
+*   <strong>Network Endorsements</strong>: The service delegates to the <strong>Network Service</strong> to obtain backend-specific endorsements (e.g., Fabric chaincode endorsements).</p>
+<h2 id="distribution-and-ordering">Distribution and Ordering<a class="headerlink" href="#distribution-and-ordering" title="Permanent link">&para;</a></h2>
+<p>Once fully endorsed, the transaction metadata is distributed to all recipients so they can track and spend their new tokens. The initiator then uses the <code>OrderingView</code> to broadcast the transaction envelope to the network's ordering service.</p>
+<h2 id="finality-and-discovery">Finality and Discovery<a class="headerlink" href="#finality-and-discovery" title="Permanent link">&para;</a></h2>
+<p>The <code>FinalityView</code> allows applications to wait for a transaction to be committed to the ledger. Internally, the SDK's <strong>Network Service</strong> listens for ledger events. When a transaction reaches finality, the Network Service notifies the SDK, which then updates the local <code>Transactions DB</code> and <code>Tokens DB</code> to reflect the new state.</p>
+<h3 id="transaction-recovery">Transaction Recovery<a class="headerlink" href="#transaction-recovery" title="Permanent link">&para;</a></h3>
+<p>The SDK includes an automatic recovery mechanism to handle pending transactions that may have lost their finality listeners due to node restarts, network interruptions, or other failures. 
+The recovery service is part of the <strong>Storage Service</strong> and is instantiated by the <strong>Network Service</strong> to recover transactions from either <code>TTXDB</code> (for regular transactions) or <code>AuditDB</code> (for auditor nodes).</p>
+<p>For detailed information about the recovery mechanism, see:
+- <a href="../storage/#transaction-recovery-service">Storage Service - Transaction Recovery</a>
+- <a href="../../configuration/">Configuration Guide - Recovery Parameters</a>, Section <code>Optional: token.tms.&lt;name&gt;.services.network.fabric.recovery</code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>

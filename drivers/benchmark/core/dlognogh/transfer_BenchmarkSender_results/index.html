@@ -1,0 +1,2325 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Privacy-preserving token management for Hyperledger Fabric">
+      
+      
+        <meta name="author" content="Hyperledger Labs">
+      
+      
+        <link rel="canonical" href="https://hyperledger-labs.github.io/fabric-token-sdk/drivers/benchmark/core/dlognogh/transfer_BenchmarkSender_results/">
+      
+      
+        <link rel="prev" href="../dlognogh_regression/">
+      
+      
+        <link rel="next" href="../validator_transfer_profile/">
+      
+      
+      <link rel="icon" href="../../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>Benchmark Sender Results - Fabric Token SDK</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#benchmark-results-tokencorezkatdlognoghv1transferbenchmarksender" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../../.." title="Fabric Token SDK" class="md-header__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Fabric Token SDK
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Benchmark Sender Results
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../../tokensdk/" class="md-tabs__link">
+          
+  
+  Core Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../../../fabtoken/" class="md-tabs__link">
+          
+  
+  Drivers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../../services/auditor/" class="md-tabs__link">
+          
+  
+  Services
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../../development/development/" class="md-tabs__link">
+          
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../../evolution_summary/" class="md-tabs__link">
+        
+  
+    
+  
+  Evolution
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../../.." title="Fabric Token SDK" class="md-nav__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Fabric Token SDK
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hyperledger-labs/fabric-token-sdk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hyperledger-labs/fabric-token-sdk
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../tokensdk/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token SDK Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../tokenapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../token_sdk_usage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Token API Usage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../driverapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Driver API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Configuration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Services Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../upgradability/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Upgradability
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../public_parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Public Parameters Lifecycle
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../fabtoken/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Fabtoken
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../dlogwogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog (Zero-Knowledge)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../extending_validator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extending Validator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            Benchmark
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_3" id="__nav_3_5_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Drivers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Drivers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dlognogh/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dlognogh_architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dlognogh_regression/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLog No-GH Regression
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Benchmark Sender Results
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark Sender Results
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#benchmark-results-tokencorezkatdlognoghv1transferbenchmarksender" class="md-nav__link">
+    <span class="md-ellipsis">
+      Benchmark Results: token/core/zkatdlog/nogh/v1/transfer#BenchmarkSender
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validator_transfer_profile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Validator Transfer Profile
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_4" id="__nav_3_5_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../services/identity/idemix/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idemix Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Services
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/auditor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Auditor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/benchmark/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Benchmark
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/certifier/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Certifier
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/config/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/identity/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Identity
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/interop/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Interop
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/network-ethereum/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Ethereum
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/network-fabric/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabric
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/network-fabricx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network Fabricx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/network/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Network
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/nfttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    NFT Tx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/recovery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Recovery
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/selector/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Selector
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/tokens/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokens
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../services/ttx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    TTX
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Development
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/development/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/general/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    General Guidelines
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/idiomatic/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Idiomatic Go
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/mock/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Mocking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/linting/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Linting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/makefile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Makefile Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/monitoring/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitoring
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/testing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Testing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/tokengen/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tokengen
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/versioning/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Versioning
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/ai_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AI Agents
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../development/documentation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../evolution_summary/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evolution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#benchmark-results-tokencorezkatdlognoghv1transferbenchmarksender" class="md-nav__link">
+    <span class="md-ellipsis">
+      Benchmark Results: token/core/zkatdlog/nogh/v1/transfer#BenchmarkSender
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+  <h1>Benchmark Sender Results</h1>
+
+<h2 id="benchmark-results-tokencorezkatdlognoghv1transferbenchmarksender">Benchmark Results: <code>token/core/zkatdlog/nogh/v1/transfer#BenchmarkSender</code><a class="headerlink" href="#benchmark-results-tokencorezkatdlognoghv1transferbenchmarksender" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Note</strong>: These results are based on <strong>Bulletproof</strong> range proofs (the original implementation). As of commit 586d4f58, the driver also supports <strong>CSP (Compressed Sigma Protocol)</strong> range proofs, which may show different performance characteristics. To benchmark CSP proofs, use the <code>-proof_type=csp</code> flag.</p>
+</blockquote>
+<p>The output of <code>go test</code> can be found <a href="../transfer_results.txt">here</a>.</p>
+<p>Here is the summary produced by <code>benchstat</code>.</p>
+<div class="language-shell highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>goos:<span class="w"> </span>darwin
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>goarch:<span class="w"> </span>arm64
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>pkg:<span class="w"> </span>github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>cpu:<span class="w"> </span>Apple<span class="w"> </span>M1<span class="w"> </span>Max
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">                                                                                                      </span>│<span class="w"> </span>docs/drivers/benchmark/core/dlognogh/transfer_results.txt<span class="w"> </span>│
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">                                                                                                      </span>│<span class="w">                    </span>sec/op<span class="w">                    </span>│
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">547</span>.2µ<span class="w"> </span>±<span class="w"> </span><span class="m">6</span>%
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">56</span>.35m<span class="w"> </span>±<span class="w"> </span><span class="m">3</span>%
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">84</span>.48m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">28</span>.46m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">56</span>.47m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">84</span>.29m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">28</span>.52m<span class="w"> </span>±<span class="w"> </span><span class="m">3</span>%
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">57</span>.01m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">84</span>.71m<span class="w"> </span>±<span class="w"> </span><span class="m">3</span>%
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">897</span>.9µ<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">90</span>.64m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">134</span>.1m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">45</span>.45m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">89</span>.40m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">135</span>.1m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">45</span>.91m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">90</span>.16m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">134</span>.9m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">890</span>.8µ<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">89</span>.77m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">136</span>.2m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">45</span>.80m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">90</span>.80m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">135</span>.7m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">46</span>.25m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">90</span>.37m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">135</span>.5m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">547</span>.2µ<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">109</span>.6m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">165</span>.2m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">54</span>.98m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">109</span>.6m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">164</span>.4m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">55</span>.46m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">110</span>.0m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">165</span>.0m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">886</span>.4µ<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">175</span>.0m<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">263</span>.2m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">88</span>.10m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">175</span>.1m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">262</span>.5m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">88</span>.30m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">175</span>.5m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">262</span>.3m<span class="w"> </span>±<span class="w"> </span><span class="m">3</span>%
+</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">885</span>.5µ<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">175</span>.1m<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">263</span>.9m<span class="w"> </span>±<span class="w"> </span><span class="m">5</span>%
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">93</span>.05m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">177</span>.7m<span class="w"> </span>±<span class="w"> </span><span class="m">5</span>%
+</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">280</span>.4m<span class="w"> </span>±<span class="w"> </span><span class="m">4</span>%
+</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">90</span>.38m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">180</span>.5m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">269</span>.2m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">490</span>.4µ<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">28</span>.53m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">42</span>.39m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">14</span>.69m<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">28</span>.76m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">42</span>.61m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-67"><a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">14</span>.88m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">28</span>.89m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-69"><a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">43</span>.03m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">921</span>.3µ<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">47</span>.56m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">70</span>.85m<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">24</span>.44m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">47</span>.71m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">71</span>.11m<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">24</span>.78m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">48</span>.27m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">72</span>.11m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">934</span>.9µ<span class="w"> </span>±<span class="w"> </span><span class="m">3</span>%
+</span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">47</span>.36m<span class="w"> </span>±<span class="w"> </span><span class="m">3</span>%
+</span><span id="__span-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">70</span>.86m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">24</span>.57m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">48</span>.16m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84" href="#__codelineno-0-84"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">71</span>.59m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85" href="#__codelineno-0-85"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">24</span>.99m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86" href="#__codelineno-0-86"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">48</span>.20m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87" href="#__codelineno-0-87"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">71</span>.63m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-88"><a id="__codelineno-0-88" name="__codelineno-0-88" href="#__codelineno-0-88"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">481</span>.8µ<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89" href="#__codelineno-0-89"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">54</span>.59m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90" href="#__codelineno-0-90"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">81</span>.46m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91" href="#__codelineno-0-91"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">27</span>.63m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92" href="#__codelineno-0-92"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">54</span>.78m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93" href="#__codelineno-0-93"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">81</span>.82m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94" href="#__codelineno-0-94"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">27</span>.93m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95" href="#__codelineno-0-95"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">54</span>.96m<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96" href="#__codelineno-0-96"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">81</span>.91m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97" href="#__codelineno-0-97"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">923</span>.0µ<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98" href="#__codelineno-0-98"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">89</span>.65m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99" href="#__codelineno-0-99"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">134</span>.0m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100" href="#__codelineno-0-100"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">45</span>.68m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-101"><a id="__codelineno-0-101" name="__codelineno-0-101" href="#__codelineno-0-101"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">90</span>.41m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">134</span>.4m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">46</span>.06m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-104"><a id="__codelineno-0-104" name="__codelineno-0-104" href="#__codelineno-0-104"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">90</span>.38m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">135</span>.4m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-106"><a id="__codelineno-0-106" name="__codelineno-0-106" href="#__codelineno-0-106"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">924</span>.3µ<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-107"><a id="__codelineno-0-107" name="__codelineno-0-107" href="#__codelineno-0-107"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">89</span>.67m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-108"><a id="__codelineno-0-108" name="__codelineno-0-108" href="#__codelineno-0-108"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">134</span>.2m<span class="w"> </span>±<span class="w"> </span><span class="m">1</span>%
+</span><span id="__span-0-109"><a id="__codelineno-0-109" name="__codelineno-0-109" href="#__codelineno-0-109"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">46</span>.94m<span class="w"> </span>±<span class="w"> </span><span class="m">6</span>%
+</span><span id="__span-0-110"><a id="__codelineno-0-110" name="__codelineno-0-110" href="#__codelineno-0-110"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">91</span>.80m<span class="w"> </span>±<span class="w"> </span><span class="m">4</span>%
+</span><span id="__span-0-111"><a id="__codelineno-0-111" name="__codelineno-0-111" href="#__codelineno-0-111"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">137</span>.0m<span class="w"> </span>±<span class="w"> </span><span class="m">2</span>%
+</span><span id="__span-0-112"><a id="__codelineno-0-112" name="__codelineno-0-112" href="#__codelineno-0-112"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">46</span>.98m<span class="w"> </span>±<span class="w"> </span><span class="m">7</span>%
+</span><span id="__span-0-113"><a id="__codelineno-0-113" name="__codelineno-0-113" href="#__codelineno-0-113"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">91</span>.80m<span class="w"> </span>±<span class="w"> </span><span class="m">3</span>%
+</span><span id="__span-0-114"><a id="__codelineno-0-114" name="__codelineno-0-114" href="#__codelineno-0-114"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">135</span>.0m<span class="w"> </span>±<span class="w"> </span><span class="m">3</span>%
+</span><span id="__span-0-115"><a id="__codelineno-0-115" name="__codelineno-0-115" href="#__codelineno-0-115"></a>geomean<span class="w">                                                                                                                                  </span><span class="m">45</span>.58m
+</span><span id="__span-0-116"><a id="__codelineno-0-116" name="__codelineno-0-116" href="#__codelineno-0-116"></a>
+</span><span id="__span-0-117"><a id="__codelineno-0-117" name="__codelineno-0-117" href="#__codelineno-0-117"></a><span class="w">                                                                                                      </span>│<span class="w"> </span>docs/drivers/benchmark/core/dlognogh/transfer_results.txt<span class="w"> </span>│
+</span><span id="__span-0-118"><a id="__codelineno-0-118" name="__codelineno-0-118" href="#__codelineno-0-118"></a><span class="w">                                                                                                      </span>│<span class="w">                     </span>B/op<span class="w">                     </span>│
+</span><span id="__span-0-119"><a id="__codelineno-0-119" name="__codelineno-0-119" href="#__codelineno-0-119"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">23</span>.53Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-120"><a id="__codelineno-0-120" name="__codelineno-0-120" href="#__codelineno-0-120"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">1</span>.164Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-121"><a id="__codelineno-0-121" name="__codelineno-0-121" href="#__codelineno-0-121"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">1</span>.736Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-122"><a id="__codelineno-0-122" name="__codelineno-0-122" href="#__codelineno-0-122"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">611</span>.0Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-123"><a id="__codelineno-0-123" name="__codelineno-0-123" href="#__codelineno-0-123"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">1</span>.168Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-124"><a id="__codelineno-0-124" name="__codelineno-0-124" href="#__codelineno-0-124"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">1</span>.741Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-125"><a id="__codelineno-0-125" name="__codelineno-0-125" href="#__codelineno-0-125"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">616</span>.1Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-126"><a id="__codelineno-0-126" name="__codelineno-0-126" href="#__codelineno-0-126"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">1</span>.174Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-127"><a id="__codelineno-0-127" name="__codelineno-0-127" href="#__codelineno-0-127"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">1</span>.747Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-128"><a id="__codelineno-0-128" name="__codelineno-0-128" href="#__codelineno-0-128"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">25</span>.85Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-129"><a id="__codelineno-0-129" name="__codelineno-0-129" href="#__codelineno-0-129"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">1</span>.216Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-130"><a id="__codelineno-0-130" name="__codelineno-0-130" href="#__codelineno-0-130"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">1</span>.813Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-131"><a id="__codelineno-0-131" name="__codelineno-0-131" href="#__codelineno-0-131"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">639</span>.3Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-132"><a id="__codelineno-0-132" name="__codelineno-0-132" href="#__codelineno-0-132"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">1</span>.220Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-133"><a id="__codelineno-0-133" name="__codelineno-0-133" href="#__codelineno-0-133"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">1</span>.818Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-134"><a id="__codelineno-0-134" name="__codelineno-0-134" href="#__codelineno-0-134"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">645</span>.1Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-135"><a id="__codelineno-0-135" name="__codelineno-0-135" href="#__codelineno-0-135"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">1</span>.226Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-136"><a id="__codelineno-0-136" name="__codelineno-0-136" href="#__codelineno-0-136"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">1</span>.824Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-137"><a id="__codelineno-0-137" name="__codelineno-0-137" href="#__codelineno-0-137"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">25</span>.85Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-138"><a id="__codelineno-0-138" name="__codelineno-0-138" href="#__codelineno-0-138"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">1</span>.216Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-139"><a id="__codelineno-0-139" name="__codelineno-0-139" href="#__codelineno-0-139"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">1</span>.813Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140" href="#__codelineno-0-140"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">639</span>.3Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-141"><a id="__codelineno-0-141" name="__codelineno-0-141" href="#__codelineno-0-141"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">1</span>.220Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-142"><a id="__codelineno-0-142" name="__codelineno-0-142" href="#__codelineno-0-142"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">1</span>.818Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-143"><a id="__codelineno-0-143" name="__codelineno-0-143" href="#__codelineno-0-143"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">645</span>.2Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-144"><a id="__codelineno-0-144" name="__codelineno-0-144" href="#__codelineno-0-144"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">1</span>.226Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-145"><a id="__codelineno-0-145" name="__codelineno-0-145" href="#__codelineno-0-145"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">1</span>.824Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-146"><a id="__codelineno-0-146" name="__codelineno-0-146" href="#__codelineno-0-146"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">23</span>.53Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-147"><a id="__codelineno-0-147" name="__codelineno-0-147" href="#__codelineno-0-147"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">2</span>.214Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-148"><a id="__codelineno-0-148" name="__codelineno-0-148" href="#__codelineno-0-148"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">3</span>.312Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-149"><a id="__codelineno-0-149" name="__codelineno-0-149" href="#__codelineno-0-149"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">1</span>.122Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-150"><a id="__codelineno-0-150" name="__codelineno-0-150" href="#__codelineno-0-150"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">2</span>.218Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-151"><a id="__codelineno-0-151" name="__codelineno-0-151" href="#__codelineno-0-151"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">3</span>.317Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-152"><a id="__codelineno-0-152" name="__codelineno-0-152" href="#__codelineno-0-152"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">1</span>.127Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-153"><a id="__codelineno-0-153" name="__codelineno-0-153" href="#__codelineno-0-153"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">2</span>.223Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-154"><a id="__codelineno-0-154" name="__codelineno-0-154" href="#__codelineno-0-154"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                           </span><span class="m">3</span>.322Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-155"><a id="__codelineno-0-155" name="__codelineno-0-155" href="#__codelineno-0-155"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">25</span>.85Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-156"><a id="__codelineno-0-156" name="__codelineno-0-156" href="#__codelineno-0-156"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">2</span>.302Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-157"><a id="__codelineno-0-157" name="__codelineno-0-157" href="#__codelineno-0-157"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">3</span>.442Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-158"><a id="__codelineno-0-158" name="__codelineno-0-158" href="#__codelineno-0-158"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">1</span>.167Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-159"><a id="__codelineno-0-159" name="__codelineno-0-159" href="#__codelineno-0-159"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">2</span>.307Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-160"><a id="__codelineno-0-160" name="__codelineno-0-160" href="#__codelineno-0-160"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">3</span>.448Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-161"><a id="__codelineno-0-161" name="__codelineno-0-161" href="#__codelineno-0-161"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">1</span>.173Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-162"><a id="__codelineno-0-162" name="__codelineno-0-162" href="#__codelineno-0-162"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">2</span>.313Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-163"><a id="__codelineno-0-163" name="__codelineno-0-163" href="#__codelineno-0-163"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                             </span><span class="m">3</span>.455Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-164"><a id="__codelineno-0-164" name="__codelineno-0-164" href="#__codelineno-0-164"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">25</span>.85Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-165"><a id="__codelineno-0-165" name="__codelineno-0-165" href="#__codelineno-0-165"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">2</span>.302Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-166"><a id="__codelineno-0-166" name="__codelineno-0-166" href="#__codelineno-0-166"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">3</span>.442Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-167"><a id="__codelineno-0-167" name="__codelineno-0-167" href="#__codelineno-0-167"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">1</span>.168Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-168"><a id="__codelineno-0-168" name="__codelineno-0-168" href="#__codelineno-0-168"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">2</span>.307Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-169"><a id="__codelineno-0-169" name="__codelineno-0-169" href="#__codelineno-0-169"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">3</span>.449Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170" href="#__codelineno-0-170"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">1</span>.173Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171" href="#__codelineno-0-171"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">2</span>.313Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172" href="#__codelineno-0-172"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                    </span><span class="m">3</span>.455Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173" href="#__codelineno-0-173"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">14</span>.30Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174" href="#__codelineno-0-174"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">576</span>.4Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175" href="#__codelineno-0-175"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">857</span>.8Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-176"><a id="__codelineno-0-176" name="__codelineno-0-176" href="#__codelineno-0-176"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">299</span>.1Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-177"><a id="__codelineno-0-177" name="__codelineno-0-177" href="#__codelineno-0-177"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">580</span>.7Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-178"><a id="__codelineno-0-178" name="__codelineno-0-178" href="#__codelineno-0-178"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">862</span>.9Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-179"><a id="__codelineno-0-179" name="__codelineno-0-179" href="#__codelineno-0-179"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">303</span>.4Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-180"><a id="__codelineno-0-180" name="__codelineno-0-180" href="#__codelineno-0-180"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">585</span>.1Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-181"><a id="__codelineno-0-181" name="__codelineno-0-181" href="#__codelineno-0-181"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">867</span>.3Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-182"><a id="__codelineno-0-182" name="__codelineno-0-182" href="#__codelineno-0-182"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">16</span>.51Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183" href="#__codelineno-0-183"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">632</span>.9Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184" href="#__codelineno-0-184"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">942</span>.2Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-185"><a id="__codelineno-0-185" name="__codelineno-0-185" href="#__codelineno-0-185"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">329</span>.1Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-186"><a id="__codelineno-0-186" name="__codelineno-0-186" href="#__codelineno-0-186"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">637</span>.8Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-187"><a id="__codelineno-0-187" name="__codelineno-0-187" href="#__codelineno-0-187"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">947</span>.3Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-188"><a id="__codelineno-0-188" name="__codelineno-0-188" href="#__codelineno-0-188"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">334</span>.1Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-189"><a id="__codelineno-0-189" name="__codelineno-0-189" href="#__codelineno-0-189"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">643</span>.0Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-190"><a id="__codelineno-0-190" name="__codelineno-0-190" href="#__codelineno-0-190"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">952</span>.4Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-191"><a id="__codelineno-0-191" name="__codelineno-0-191" href="#__codelineno-0-191"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">16</span>.51Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-192"><a id="__codelineno-0-192" name="__codelineno-0-192" href="#__codelineno-0-192"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">632</span>.9Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-193"><a id="__codelineno-0-193" name="__codelineno-0-193" href="#__codelineno-0-193"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">942</span>.2Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-194"><a id="__codelineno-0-194" name="__codelineno-0-194" href="#__codelineno-0-194"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">329</span>.1Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-195"><a id="__codelineno-0-195" name="__codelineno-0-195" href="#__codelineno-0-195"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">637</span>.8Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-196"><a id="__codelineno-0-196" name="__codelineno-0-196" href="#__codelineno-0-196"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">947</span>.4Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-197"><a id="__codelineno-0-197" name="__codelineno-0-197" href="#__codelineno-0-197"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">334</span>.1Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198" href="#__codelineno-0-198"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">643</span>.0Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199" href="#__codelineno-0-199"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">952</span>.4Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200" href="#__codelineno-0-200"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">14</span>.30Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201" href="#__codelineno-0-201"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">1</span>.029Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202" href="#__codelineno-0-202"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">1</span>.537Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203" href="#__codelineno-0-203"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">537</span>.6Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204" href="#__codelineno-0-204"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">1</span>.033Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205" href="#__codelineno-0-205"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">1</span>.542Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206" href="#__codelineno-0-206"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">542</span>.0Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207" href="#__codelineno-0-207"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">1</span>.038Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208" href="#__codelineno-0-208"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                          </span><span class="m">1</span>.546Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209" href="#__codelineno-0-209"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">16</span>.51Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210" href="#__codelineno-0-210"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">1</span>.126Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211" href="#__codelineno-0-211"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">1</span>.681Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-212"><a id="__codelineno-0-212" name="__codelineno-0-212" href="#__codelineno-0-212"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">589</span>.0Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-213"><a id="__codelineno-0-213" name="__codelineno-0-213" href="#__codelineno-0-213"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">1</span>.131Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-214"><a id="__codelineno-0-214" name="__codelineno-0-214" href="#__codelineno-0-214"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">1</span>.685Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-215"><a id="__codelineno-0-215" name="__codelineno-0-215" href="#__codelineno-0-215"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">594</span>.0Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-216"><a id="__codelineno-0-216" name="__codelineno-0-216" href="#__codelineno-0-216"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">1</span>.136Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-217"><a id="__codelineno-0-217" name="__codelineno-0-217" href="#__codelineno-0-217"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                            </span><span class="m">1</span>.691Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-218"><a id="__codelineno-0-218" name="__codelineno-0-218" href="#__codelineno-0-218"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">16</span>.51Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-219"><a id="__codelineno-0-219" name="__codelineno-0-219" href="#__codelineno-0-219"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">1</span>.126Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-220"><a id="__codelineno-0-220" name="__codelineno-0-220" href="#__codelineno-0-220"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">1</span>.680Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-221"><a id="__codelineno-0-221" name="__codelineno-0-221" href="#__codelineno-0-221"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">589</span>.0Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-222"><a id="__codelineno-0-222" name="__codelineno-0-222" href="#__codelineno-0-222"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">1</span>.131Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-223"><a id="__codelineno-0-223" name="__codelineno-0-223" href="#__codelineno-0-223"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">1</span>.686Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224" href="#__codelineno-0-224"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">594</span>.0Ki<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-225"><a id="__codelineno-0-225" name="__codelineno-0-225" href="#__codelineno-0-225"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">1</span>.136Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226" href="#__codelineno-0-226"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                   </span><span class="m">1</span>.691Mi<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227" href="#__codelineno-0-227"></a>geomean<span class="w">                                                                                                                                 </span><span class="m">742</span>.7Ki
+</span><span id="__span-0-228"><a id="__codelineno-0-228" name="__codelineno-0-228" href="#__codelineno-0-228"></a>
+</span><span id="__span-0-229"><a id="__codelineno-0-229" name="__codelineno-0-229" href="#__codelineno-0-229"></a><span class="w">                                                                                                      </span>│<span class="w"> </span>docs/drivers/benchmark/core/dlognogh/transfer_results.txt<span class="w"> </span>│
+</span><span id="__span-0-230"><a id="__codelineno-0-230" name="__codelineno-0-230" href="#__codelineno-0-230"></a><span class="w">                                                                                                      </span>│<span class="w">                  </span>allocs/op<span class="w">                   </span>│
+</span><span id="__span-0-231"><a id="__codelineno-0-231" name="__codelineno-0-231" href="#__codelineno-0-231"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                             </span><span class="m">436</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-232"><a id="__codelineno-0-232" name="__codelineno-0-232" href="#__codelineno-0-232"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">17</span>.51k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-233"><a id="__codelineno-0-233" name="__codelineno-0-233" href="#__codelineno-0-233"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">26</span>.06k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-234"><a id="__codelineno-0-234" name="__codelineno-0-234" href="#__codelineno-0-234"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">9</span>.028k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-235"><a id="__codelineno-0-235" name="__codelineno-0-235" href="#__codelineno-0-235"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">17</span>.58k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-236"><a id="__codelineno-0-236" name="__codelineno-0-236" href="#__codelineno-0-236"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">26</span>.14k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-237"><a id="__codelineno-0-237" name="__codelineno-0-237" href="#__codelineno-0-237"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">9</span>.102k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-238"><a id="__codelineno-0-238" name="__codelineno-0-238" href="#__codelineno-0-238"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">17</span>.65k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-239"><a id="__codelineno-0-239" name="__codelineno-0-239" href="#__codelineno-0-239"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">26</span>.22k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-240"><a id="__codelineno-0-240" name="__codelineno-0-240" href="#__codelineno-0-240"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                               </span><span class="m">427</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-241"><a id="__codelineno-0-241" name="__codelineno-0-241" href="#__codelineno-0-241"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">16</span>.56k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-242"><a id="__codelineno-0-242" name="__codelineno-0-242" href="#__codelineno-0-242"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">24</span>.65k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-243"><a id="__codelineno-0-243" name="__codelineno-0-243" href="#__codelineno-0-243"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">8</span>.550k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-244"><a id="__codelineno-0-244" name="__codelineno-0-244" href="#__codelineno-0-244"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">16</span>.63k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-245"><a id="__codelineno-0-245" name="__codelineno-0-245" href="#__codelineno-0-245"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">24</span>.73k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-246"><a id="__codelineno-0-246" name="__codelineno-0-246" href="#__codelineno-0-246"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">8</span>.623k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-247"><a id="__codelineno-0-247" name="__codelineno-0-247" href="#__codelineno-0-247"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">16</span>.70k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-248"><a id="__codelineno-0-248" name="__codelineno-0-248" href="#__codelineno-0-248"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">24</span>.80k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-249"><a id="__codelineno-0-249" name="__codelineno-0-249" href="#__codelineno-0-249"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                      </span><span class="m">427</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-250"><a id="__codelineno-0-250" name="__codelineno-0-250" href="#__codelineno-0-250"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">16</span>.57k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-251"><a id="__codelineno-0-251" name="__codelineno-0-251" href="#__codelineno-0-251"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">24</span>.65k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-252"><a id="__codelineno-0-252" name="__codelineno-0-252" href="#__codelineno-0-252"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">8</span>.551k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-253"><a id="__codelineno-0-253" name="__codelineno-0-253" href="#__codelineno-0-253"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">16</span>.64k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-254"><a id="__codelineno-0-254" name="__codelineno-0-254" href="#__codelineno-0-254"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">24</span>.73k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-255"><a id="__codelineno-0-255" name="__codelineno-0-255" href="#__codelineno-0-255"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">8</span>.625k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-256"><a id="__codelineno-0-256" name="__codelineno-0-256" href="#__codelineno-0-256"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">16</span>.71k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-257"><a id="__codelineno-0-257" name="__codelineno-0-257" href="#__codelineno-0-257"></a>Sender/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">24</span>.80k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-258"><a id="__codelineno-0-258" name="__codelineno-0-258" href="#__codelineno-0-258"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                             </span><span class="m">436</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-259"><a id="__codelineno-0-259" name="__codelineno-0-259" href="#__codelineno-0-259"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">33</span>.12k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-260"><a id="__codelineno-0-260" name="__codelineno-0-260" href="#__codelineno-0-260"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">49</span>.47k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-261"><a id="__codelineno-0-261" name="__codelineno-0-261" href="#__codelineno-0-261"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">16</span>.83k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-262"><a id="__codelineno-0-262" name="__codelineno-0-262" href="#__codelineno-0-262"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">33</span>.18k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-263"><a id="__codelineno-0-263" name="__codelineno-0-263" href="#__codelineno-0-263"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">49</span>.55k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-264"><a id="__codelineno-0-264" name="__codelineno-0-264" href="#__codelineno-0-264"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">16</span>.90k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265" href="#__codelineno-0-265"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">33</span>.26k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-266"><a id="__codelineno-0-266" name="__codelineno-0-266" href="#__codelineno-0-266"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                                            </span><span class="m">49</span>.63k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-267"><a id="__codelineno-0-267" name="__codelineno-0-267" href="#__codelineno-0-267"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                               </span><span class="m">427</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-268"><a id="__codelineno-0-268" name="__codelineno-0-268" href="#__codelineno-0-268"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">31</span>.26k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-269"><a id="__codelineno-0-269" name="__codelineno-0-269" href="#__codelineno-0-269"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">46</span>.71k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-270"><a id="__codelineno-0-270" name="__codelineno-0-270" href="#__codelineno-0-270"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">15</span>.90k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-271"><a id="__codelineno-0-271" name="__codelineno-0-271" href="#__codelineno-0-271"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">31</span>.33k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-272"><a id="__codelineno-0-272" name="__codelineno-0-272" href="#__codelineno-0-272"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">46</span>.79k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-273"><a id="__codelineno-0-273" name="__codelineno-0-273" href="#__codelineno-0-273"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">15</span>.98k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-274"><a id="__codelineno-0-274" name="__codelineno-0-274" href="#__codelineno-0-274"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">31</span>.40k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-275"><a id="__codelineno-0-275" name="__codelineno-0-275" href="#__codelineno-0-275"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                              </span><span class="m">46</span>.86k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-276"><a id="__codelineno-0-276" name="__codelineno-0-276" href="#__codelineno-0-276"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                      </span><span class="m">427</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-277"><a id="__codelineno-0-277" name="__codelineno-0-277" href="#__codelineno-0-277"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">31</span>.26k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-278"><a id="__codelineno-0-278" name="__codelineno-0-278" href="#__codelineno-0-278"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">46</span>.71k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-279"><a id="__codelineno-0-279" name="__codelineno-0-279" href="#__codelineno-0-279"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">15</span>.90k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-280"><a id="__codelineno-0-280" name="__codelineno-0-280" href="#__codelineno-0-280"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">31</span>.33k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-281"><a id="__codelineno-0-281" name="__codelineno-0-281" href="#__codelineno-0-281"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">46</span>.78k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-282"><a id="__codelineno-0-282" name="__codelineno-0-282" href="#__codelineno-0-282"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">15</span>.98k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-283"><a id="__codelineno-0-283" name="__codelineno-0-283" href="#__codelineno-0-283"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">31</span>.40k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-284"><a id="__codelineno-0-284" name="__codelineno-0-284" href="#__codelineno-0-284"></a>Sender/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                     </span><span class="m">46</span>.86k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-285"><a id="__codelineno-0-285" name="__codelineno-0-285" href="#__codelineno-0-285"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                            </span><span class="m">221</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-286"><a id="__codelineno-0-286" name="__codelineno-0-286" href="#__codelineno-0-286"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">8</span>.063k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-287"><a id="__codelineno-0-287" name="__codelineno-0-287" href="#__codelineno-0-287"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">11</span>.99k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-288"><a id="__codelineno-0-288" name="__codelineno-0-288" href="#__codelineno-0-288"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">4</span>.197k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-289"><a id="__codelineno-0-289" name="__codelineno-0-289" href="#__codelineno-0-289"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">8</span>.121k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-290"><a id="__codelineno-0-290" name="__codelineno-0-290" href="#__codelineno-0-290"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">12</span>.05k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-291"><a id="__codelineno-0-291" name="__codelineno-0-291" href="#__codelineno-0-291"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">4</span>.253k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-292"><a id="__codelineno-0-292" name="__codelineno-0-292" href="#__codelineno-0-292"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">8</span>.178k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-293"><a id="__codelineno-0-293" name="__codelineno-0-293" href="#__codelineno-0-293"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">12</span>.10k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-294"><a id="__codelineno-0-294" name="__codelineno-0-294" href="#__codelineno-0-294"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                              </span><span class="m">213</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-295"><a id="__codelineno-0-295" name="__codelineno-0-295" href="#__codelineno-0-295"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">7</span>.566k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-296"><a id="__codelineno-0-296" name="__codelineno-0-296" href="#__codelineno-0-296"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">11</span>.25k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-297"><a id="__codelineno-0-297" name="__codelineno-0-297" href="#__codelineno-0-297"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">3</span>.941k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-298"><a id="__codelineno-0-298" name="__codelineno-0-298" href="#__codelineno-0-298"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">7</span>.621k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-299"><a id="__codelineno-0-299" name="__codelineno-0-299" href="#__codelineno-0-299"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">11</span>.30k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-300"><a id="__codelineno-0-300" name="__codelineno-0-300" href="#__codelineno-0-300"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">3</span>.995k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-301"><a id="__codelineno-0-301" name="__codelineno-0-301" href="#__codelineno-0-301"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">7</span>.676k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-302"><a id="__codelineno-0-302" name="__codelineno-0-302" href="#__codelineno-0-302"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">11</span>.36k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-303"><a id="__codelineno-0-303" name="__codelineno-0-303" href="#__codelineno-0-303"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                     </span><span class="m">213</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-304"><a id="__codelineno-0-304" name="__codelineno-0-304" href="#__codelineno-0-304"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">7</span>.566k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-305"><a id="__codelineno-0-305" name="__codelineno-0-305" href="#__codelineno-0-305"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">11</span>.25k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-306"><a id="__codelineno-0-306" name="__codelineno-0-306" href="#__codelineno-0-306"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">3</span>.941k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-307"><a id="__codelineno-0-307" name="__codelineno-0-307" href="#__codelineno-0-307"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">7</span>.622k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-308"><a id="__codelineno-0-308" name="__codelineno-0-308" href="#__codelineno-0-308"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">11</span>.30k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-309"><a id="__codelineno-0-309" name="__codelineno-0-309" href="#__codelineno-0-309"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">3</span>.995k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-310"><a id="__codelineno-0-310" name="__codelineno-0-310" href="#__codelineno-0-310"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">7</span>.676k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-311"><a id="__codelineno-0-311" name="__codelineno-0-311" href="#__codelineno-0-311"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_32,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">11</span>.36k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-312"><a id="__codelineno-0-312" name="__codelineno-0-312" href="#__codelineno-0-312"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                            </span><span class="m">221</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-313"><a id="__codelineno-0-313" name="__codelineno-0-313" href="#__codelineno-0-313"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">14</span>.80k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-314"><a id="__codelineno-0-314" name="__codelineno-0-314" href="#__codelineno-0-314"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">22</span>.10k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-315"><a id="__codelineno-0-315" name="__codelineno-0-315" href="#__codelineno-0-315"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">7</span>.566k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-316"><a id="__codelineno-0-316" name="__codelineno-0-316" href="#__codelineno-0-316"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">14</span>.86k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-317"><a id="__codelineno-0-317" name="__codelineno-0-317" href="#__codelineno-0-317"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">22</span>.16k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-318"><a id="__codelineno-0-318" name="__codelineno-0-318" href="#__codelineno-0-318"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">7</span>.623k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-319"><a id="__codelineno-0-319" name="__codelineno-0-319" href="#__codelineno-0-319"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">14</span>.92k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-320"><a id="__codelineno-0-320" name="__codelineno-0-320" href="#__codelineno-0-320"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BN254,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                                           </span><span class="m">22</span>.21k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-321"><a id="__codelineno-0-321" name="__codelineno-0-321" href="#__codelineno-0-321"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                              </span><span class="m">213</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-322"><a id="__codelineno-0-322" name="__codelineno-0-322" href="#__codelineno-0-322"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">13</span>.86k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-323"><a id="__codelineno-0-323" name="__codelineno-0-323" href="#__codelineno-0-323"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">20</span>.68k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-324"><a id="__codelineno-0-324" name="__codelineno-0-324" href="#__codelineno-0-324"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">7</span>.085k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-325"><a id="__codelineno-0-325" name="__codelineno-0-325" href="#__codelineno-0-325"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">13</span>.91k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-326"><a id="__codelineno-0-326" name="__codelineno-0-326" href="#__codelineno-0-326"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">20</span>.73k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-327"><a id="__codelineno-0-327" name="__codelineno-0-327" href="#__codelineno-0-327"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">7</span>.138k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-328"><a id="__codelineno-0-328" name="__codelineno-0-328" href="#__codelineno-0-328"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">13</span>.96k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-329"><a id="__codelineno-0-329" name="__codelineno-0-329" href="#__codelineno-0-329"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                             </span><span class="m">20</span>.79k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-330"><a id="__codelineno-0-330" name="__codelineno-0-330" href="#__codelineno-0-330"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                     </span><span class="m">213</span>.0<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-331"><a id="__codelineno-0-331" name="__codelineno-0-331" href="#__codelineno-0-331"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">13</span>.85k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-332"><a id="__codelineno-0-332" name="__codelineno-0-332" href="#__codelineno-0-332"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_1,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">20</span>.68k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-333"><a id="__codelineno-0-333" name="__codelineno-0-333" href="#__codelineno-0-333"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">7</span>.085k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-334"><a id="__codelineno-0-334" name="__codelineno-0-334" href="#__codelineno-0-334"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">13</span>.91k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-335"><a id="__codelineno-0-335" name="__codelineno-0-335" href="#__codelineno-0-335"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_2,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">20</span>.74k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-336"><a id="__codelineno-0-336" name="__codelineno-0-336" href="#__codelineno-0-336"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_1<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">7</span>.139k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-337"><a id="__codelineno-0-337" name="__codelineno-0-337" href="#__codelineno-0-337"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_2<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">13</span>.96k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-338"><a id="__codelineno-0-338" name="__codelineno-0-338" href="#__codelineno-0-338"></a>VerificationSenderProof/Setup<span class="o">(</span>bits_64,_curve_BLS12_381_BBS_GURVY_FAST_RNG,_#i_3,_#o_3<span class="o">)</span>_with_1_workers<span class="w">                                    </span><span class="m">20</span>.79k<span class="w"> </span>±<span class="w"> </span><span class="m">0</span>%
+</span><span id="__span-0-339"><a id="__codelineno-0-339" name="__codelineno-0-339" href="#__codelineno-0-339"></a>geomean<span class="w">                                                                                                                                  </span><span class="m">9</span>.945k
+</span></code></pre></div>
+<blockquote>
+<p><strong>Remarks:</strong> The performance of the zero-knowledge proof verification is dominated by range proof verification.
+Therefore, we see that performance does not vary when we change the number of inputs, but it does vary greatly when we increase the number of outputs.
+Indeed, the number of range proof verification is equal to the number of the outputs. The exception is (single input, single output).
+This corresponds to a pure transfer of ownership, during which there is no range proof verification.
+The assumption is that the input is already in the correct range, and we just check equality of input and output.
+Note that this assumption is valid since tokens are created as a result of an issue or a transfer (during which the output is verified to be in the correct range).</p>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../../../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../../../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../../../../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>
