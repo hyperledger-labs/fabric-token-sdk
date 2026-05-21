@@ -56,15 +56,15 @@ func NewService(lockerProvider LockerProvider, c ConfigProvider) *SelectorServic
 
 	svc := &SelectorService{}
 	loader := &loader{
-		lockerProvider:         lockerProvider,
-		numRetries:             cfg.GetNumRetries(),
-		retryInterval:          cfg.GetRetryInterval(),
-		requestCertification:   true,
-		onLockerCreated:        svc.trackLocker,
-		maxTokensPerSelection:  limits.MaxTokensPerSelection,
-		maxLockAttempts:        limits.MaxLockAttempts,
-		maxRetryCycles:         limits.MaxRetryCycles,
-		selectionTimeout:       limits.SelectionTimeout,
+		lockerProvider:        lockerProvider,
+		numRetries:            cfg.GetNumRetries(),
+		retryInterval:         cfg.GetRetryInterval(),
+		requestCertification:  true,
+		onLockerCreated:       svc.trackLocker,
+		maxTokensPerSelection: limits.MaxTokensPerSelection,
+		maxLockAttempts:       limits.MaxLockAttempts,
+		maxRetryCycles:        limits.MaxRetryCycles,
+		selectionTimeout:      limits.SelectionTimeout,
 	}
 	svc.managerLazyCache = lazy.NewProviderWithKeyMapper(key, loader.load)
 
@@ -131,10 +131,10 @@ type loader struct {
 	onLockerCreated      func(Locker)
 
 	// Resource limits
-	maxTokensPerSelection  int
-	maxLockAttempts        int
-	maxRetryCycles         int
-	selectionTimeout       time.Duration
+	maxTokensPerSelection int
+	maxLockAttempts       int
+	maxRetryCycles        int
+	selectionTimeout      time.Duration
 }
 
 func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
