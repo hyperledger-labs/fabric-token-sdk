@@ -197,6 +197,50 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			tokensLockedByOthersExist = true
 		} else {
 			s.logger.DebugfContext(ctx, "Got the lock on token [%v]", t)
+			
+			// Verify token still exists and is unspent after acquiring lock
+			found := false
+			verifyIter, err := s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType)
+			if err != nil {
+				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to verify token after lock [%s:%s]", owner.ID(), tokenType)
+			}
+			
+			// Search for our locked token in the fresh iterator
+			for {
+				tok, err := verifyIter.Next()
+				if err != nil {
+					verifyIter.Close()
+					return nil, nil, immediateRetries, errors.Wrapf(err, "error iterating tokens during verification")
+				}
+				if tok == nil {
+					break
+				}
+				if tok.Id.TxId == t.Id.TxId && tok.Id.Index == t.Id.Index {
+					found = true
+					break
+				}
+			}
+			verifyIter.Close()
+			
+			if !found {
+				// Token was spent before lock completed - unlock and continue searching
+				s.logger.DebugfContext(ctx, "Token [%v] was spent before lock completed, unlocking and continuing", t.Id)
+				if unlockErr := s.locker.UnlockAll(ctx); unlockErr != nil {
+					s.logger.Warnf("failed to unlock after detecting spent token: %v", unlockErr)
+				}
+				tokensLockedByOthersExist = true
+				// Reset cache to continue iteration
+				if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
+					return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reset cache after spent token detection")
+				}
+				continue
+			}
+			
+			// Token verified as unspent - reset cache for next iteration
+			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
+				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reset cache after verification")
+			}
+
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
 				return nil, nil, immediateRetries, errors.Wrapf(err, "invalid token [%s] found", t.Id)
