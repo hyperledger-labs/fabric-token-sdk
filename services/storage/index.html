@@ -2304,7 +2304,7 @@
 <h3 id="transaction-audit-store-ttxdb-auditdb">Transaction &amp; Audit Store (TTXDB / AuditDB)<a class="headerlink" href="#transaction-audit-store-ttxdb-auditdb" title="Permanent link">&para;</a></h3>
 <p>These tables track the lifecycle of token requests from assembly to finality. <code>AuditDB</code> uses the same schema but is isolated for compliance reporting.</p>
 <ul>
-<li><strong>Requests</strong>: Tracks high-level token request state. Contains marshaled requests, current status (Pending, Confirmed, Deleted), and application/public metadata.</li>
+<li><strong>Requests</strong>: Tracks high-level token request state. Contains marshaled requests, current status (Pending, Confirmed, Deleted, Orphan), and application/public metadata.</li>
 <li><strong>Transactions</strong>: Records individual actions (Issue, Transfer, Redeem) within a request, including sender/recipient IDs and amounts (stored as <code>NUMERIC(78, 0)</code>).</li>
 <li><strong>Movements</strong>: Aggregates net value changes per enrollment ID (amounts stored as <code>NUMERIC(78, 0)</code>). Used to efficiently calculate balances and history.</li>
 <li><strong>Validations</strong>: Stores cryptographic validation metadata produced during the request verification phase.</li>
@@ -2378,13 +2378,14 @@ It uses a distributed locking mechanism (PostgreSQL advisory locks) to ensure on
 <h3 id="recovery-process">Recovery Process<a class="headerlink" href="#recovery-process" title="Permanent link">&para;</a></h3>
 <p>The recovery service follows this workflow:</p>
 <ol>
-<li><strong>Scan Phase</strong>: The recovery manager periodically scans the transaction database for pending transactions older than the configured TTL</li>
-<li><strong>Claim Phase</strong>: Eligible transactions are claimed by the current instance using a lease mechanism</li>
+<li><strong>Scan Phase</strong>: The recovery manager periodically scans the transaction database for pending transactions older than the configured TTL. The claim query reads only the minimum projection needed (<code>tx_id</code>, <code>stored_at</code>) and returns a lightweight <code>RecoveryClaim</code> for each row, avoiding the cost of materialising the full transaction record on every sweep.</li>
+<li><strong>Claim Phase</strong>: Eligible transactions are claimed by the current instance using a lease mechanism. On PostgreSQL this is an atomic <code>UPDATE ... RETURNING</code>; SQLite uses a non-atomic but functionally equivalent permissive claim.</li>
 <li><strong>Recovery Phase</strong>: For each claimed transaction, the recovery handler:</li>
 <li>Queries the network for the transaction's current status</li>
-<li>Based on the status (Valid, Invalid, or Busy), applies the appropriate finality logic</li>
+<li>Based on the status (Valid, Invalid, NotFound, or Busy), applies the appropriate finality logic</li>
 <li>For valid transactions, verifies the token request hash and commits to the local database</li>
-<li>For invalid transactions, marks them as deleted</li>
+<li>For invalid transactions, marks them as <code>Deleted</code></li>
+<li>For transactions whose status keeps returning <code>NotFound</code> past the configured <code>notFoundGracePeriod</code>, marks them as <code>Orphan</code>. This indicates the transaction never reached the ledger (e.g. broadcast failure, mempool drop) and prevents long-stuck rows from blocking the head of the recovery queue, while keeping them distinguishable from ledger-rejected transactions that are marked <code>Deleted</code>.</li>
 <li>For busy (pending) transactions, returns an error and the transaction remains eligible for future recovery</li>
 <li><strong>Lease Management</strong>: Claimed transactions are leased to the instance for a configured duration to prevent stuck transactions from blocking recovery</li>
 </ol>

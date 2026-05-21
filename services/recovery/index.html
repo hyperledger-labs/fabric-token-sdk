@@ -1506,6 +1506,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#transaction-status-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction Status Lifecycle
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#error-handling" class="md-nav__link">
     <span class="md-ellipsis">
       Error Handling
@@ -2175,6 +2184,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#transaction-status-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transaction Status Lifecycle
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#error-handling" class="md-nav__link">
     <span class="md-ellipsis">
       Error Handling
@@ -2278,8 +2296,9 @@
 <h3 id="storage-interface">Storage Interface<a class="headerlink" href="#storage-interface" title="Permanent link">&para;</a></h3>
 <p>The Storage interface abstracts database operations needed for recovery:
 - <code>AcquireRecoveryLeadership</code>: Obtains distributed lock for leader election
-- <code>ClaimPendingTransactions</code>: Atomically claims a batch of transactions
-- <code>ReleaseRecoveryClaim</code>: Releases claim after processing</p>
+- <code>ClaimPendingTransactions</code>: Atomically claims a batch of pending transactions, returning a lightweight <code>RecoveryClaim</code> (<code>TxID</code> + <code>StoredAt</code>) for each row — the recovery loop only needs these two fields, so the SQL projection is kept narrow
+- <code>ReleaseRecoveryClaim</code>: Releases claim after processing
+- <code>SetStatus</code>: Promotes a transaction to a terminal status. Used by the recovery loop to mark <code>NotFound</code>-past-grace-period rows as <code>Orphan</code> so they exit the eligible scan range without being conflated with ledger-rejected transactions (<code>Deleted</code>)</p>
 <h2 id="database-support">Database Support<a class="headerlink" href="#database-support" title="Permanent link">&para;</a></h2>
 <h3 id="postgresql-recommended-for-production">PostgreSQL (Recommended for Production)<a class="headerlink" href="#postgresql-recommended-for-production" title="Permanent link">&para;</a></h3>
 <p>PostgreSQL is the recommended database for production multi-instance deployments:
@@ -2304,31 +2323,33 @@
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">leaseDuration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span><span class="w">         </span><span class="c1"># Claim lease duration</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">advisoryLockID</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8389...</span><span class="w">    </span><span class="c1"># PostgreSQL lock ID</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">instanceID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">             </span><span class="c1"># Instance identifier</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">notFoundGracePeriod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30m</span><span class="w">   </span><span class="c1"># Promote NotFound rows to Orphan after this age (0 disables)</span>
 </span></code></pre></div>
 <h2 id="usage-example">Usage Example<a class="headerlink" href="#usage-example" title="Permanent link">&para;</a></h2>
 <p>Creating a recovery manager:</p>
 <div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">config</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">recovery</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">Enabled</span><span class="p">:</span><span class="w">        </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">TTL</span><span class="p">:</span><span class="w">            </span><span class="mi">30</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">ScanInterval</span><span class="p">:</span><span class="w">   </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">BatchSize</span><span class="p">:</span><span class="w">      </span><span class="mi">100</span><span class="p">,</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">WorkerCount</span><span class="p">:</span><span class="w">    </span><span class="mi">4</span><span class="p">,</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">LeaseDuration</span><span class="p">:</span><span class="w">  </span><span class="mi">30</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">AdvisoryLockID</span><span class="p">:</span><span class="w"> </span><span class="mi">8389190333894887286</span><span class="p">,</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="p">}</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nx">manager</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">recovery</span><span class="p">.</span><span class="nx">NewManager</span><span class="p">(</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nx">logger</span><span class="p">,</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nx">storage</span><span class="p">,</span><span class="w">  </span><span class="c1">// Implements Storage interface</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nx">handler</span><span class="p">,</span><span class="w">  </span><span class="c1">// Implements Handler interface</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="nx">config</span><span class="p">,</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="p">)</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="c1">// Start recovery</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">Start</span><span class="p">();</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="p">}</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="k">defer</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">Stop</span><span class="p">()</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">Enabled</span><span class="p">:</span><span class="w">             </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">TTL</span><span class="p">:</span><span class="w">                 </span><span class="mi">30</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">ScanInterval</span><span class="p">:</span><span class="w">        </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">BatchSize</span><span class="p">:</span><span class="w">           </span><span class="mi">100</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">WorkerCount</span><span class="p">:</span><span class="w">         </span><span class="mi">4</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">LeaseDuration</span><span class="p">:</span><span class="w">       </span><span class="mi">30</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">AdvisoryLockID</span><span class="p">:</span><span class="w">      </span><span class="mi">8389190333894887286</span><span class="p">,</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nx">NotFoundGracePeriod</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">}</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nx">manager</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">recovery</span><span class="p">.</span><span class="nx">NewManager</span><span class="p">(</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nx">logger</span><span class="p">,</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nx">storage</span><span class="p">,</span><span class="w">  </span><span class="c1">// Implements Storage interface</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="nx">handler</span><span class="p">,</span><span class="w">  </span><span class="c1">// Implements Handler interface</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">    </span><span class="nx">config</span><span class="p">,</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="p">)</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1">// Start recovery</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">Start</span><span class="p">();</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="p">}</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="k">defer</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">Stop</span><span class="p">()</span>
 </span></code></pre></div>
 <h2 id="implementing-a-custom-handler">Implementing a Custom Handler<a class="headerlink" href="#implementing-a-custom-handler" title="Permanent link">&para;</a></h2>
 <p>To implement a custom recovery handler:</p>
@@ -2348,17 +2369,28 @@
 <ol>
 <li>Manager acquires leadership (PostgreSQL advisory lock)</li>
 <li>Manager queries for pending transactions older than TTL</li>
-<li>Manager atomically claims a batch of transactions</li>
+<li>Manager atomically claims a batch of transactions, each returned as a <code>RecoveryClaim</code> (<code>TxID</code> + <code>StoredAt</code>)</li>
 <li>Manager distributes claimed transactions to worker pool</li>
 <li>Each worker calls <code>Handler.Recover()</code> for its transactions</li>
 <li>Handler queries network and applies finality logic</li>
+<li>If the handler reports <code>NotFound</code> and the row was stored more than <code>notFoundGracePeriod</code> ago, the manager promotes the row to <code>Orphan</code> via <code>SetStatus</code> so it exits the eligible scan range</li>
 <li>Manager releases claims with success/failure message</li>
 <li>Process repeats on next scan interval</li>
 </ol>
+<h2 id="transaction-status-lifecycle">Transaction Status Lifecycle<a class="headerlink" href="#transaction-status-lifecycle" title="Permanent link">&para;</a></h2>
+<p>A token request transitions through the following statuses as the recovery loop interacts with it:</p>
+<ul>
+<li><strong>Pending</strong>: The transaction has been submitted but its finality is not yet known. Only rows in this status are eligible for <code>ClaimPendingTransactions</code>; the claim query and its supporting partial index filter on <code>status = Pending</code>.</li>
+<li><strong>Confirmed</strong>: The transaction has been validated by the ledger and committed locally. Terminal.</li>
+<li><strong>Deleted</strong>: The transaction was actively rejected — either by the ledger (<code>network.Invalid</code>) or by local validation (token request hash mismatch via the finality listener). Terminal.</li>
+<li><strong>Orphan</strong>: The transaction never reached the ledger — the recovery loop saw a persistent <code>NotFound</code> from the network past <code>notFoundGracePeriod</code>. Terminal in this version, and intentionally distinct from <code>Deleted</code> so operators (and future replay tooling) can identify broadcast failures separately from ledger-rejected transactions.</li>
+</ul>
+<p>All three terminal statuses (<code>Confirmed</code>, <code>Deleted</code>, <code>Orphan</code>) are excluded from subsequent recovery sweeps by virtue of the <code>status = Pending</code> filter on the claim query.</p>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Transient errors</strong> (Busy status): Released gracefully, retried on next scan</li>
-<li><strong>Permanent errors</strong> (Invalid tx): Marked as Deleted in database</li>
+<li><strong>Permanent errors</strong> (Invalid tx): Marked as <code>Deleted</code> in the database</li>
+<li><strong>Orphan transactions</strong> (persistent <code>NotFound</code> past <code>notFoundGracePeriod</code>): Marked as <code>Orphan</code> to indicate the transaction never reached the ledger; distinct from <code>Deleted</code> so operators can distinguish broadcast failures from ledger-rejected transactions</li>
 <li><strong>Handler errors</strong>: Logged individually, claim released with error message</li>
 <li><strong>Network errors</strong>: Propagated to caller, claim released for retry</li>
 </ul>
