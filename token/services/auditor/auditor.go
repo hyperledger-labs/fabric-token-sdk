@@ -45,6 +45,8 @@ const (
 	Confirmed = auditdb.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted = auditdb.Deleted
+	// Orphan is the status of a transaction that never reached the ledger
+	Orphan = auditdb.Orphan
 )
 
 const txIdLabel tracing.LabelName = "tx_id"

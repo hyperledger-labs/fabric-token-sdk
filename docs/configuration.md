@@ -197,6 +197,18 @@ token:
               # This helps with debugging and tracking which instance processed which transactions.
               instanceID:
 
+              # notFoundGracePeriod is the time after which the recovery loop promotes a
+              # transaction whose status query keeps returning NotFound to the terminal
+              # Orphan status. Without this, a transaction whose audit log was persisted
+              # but whose broadcast never reached the ledger would sit at the head of the
+              # `ORDER BY stored_at ASC LIMIT batchSize` claim query forever and prevent
+              # newer rows from being scanned. Default: 30m.
+              # The promoted row is marked Orphan (not Deleted) so operators can tell
+              # broadcast failures apart from ledger-rejected transactions.
+              # Set to 0 to disable the promotion; the row stays Pending and is re-claimed
+              # on every sweep until it either resolves or an operator intervenes.
+              notFoundGracePeriod: 30m
+
       # sections dedicated to the definition of the wallets
       wallets:
         # Default cache size reference that can be used by any wallet that supports caching.
@@ -354,6 +366,7 @@ token:
               leaseDuration: 30s
               advisoryLockID: 8389190333894887286
               instanceID:
+              notFoundGracePeriod: 30m
 ```
 
 Default values:
@@ -366,6 +379,7 @@ Default values:
 - leaseDuration: 30s
 - advisoryLockID: 8389190333894887286 (`0x74746b7265636f76`)
 - instanceID: empty, auto-generated when the recovery manager starts
+- notFoundGracePeriod: 30m (set to 0 to disable promotion to Orphan)
 
 **Parameter Relationships and Tuning:**
 
@@ -374,6 +388,7 @@ Default values:
 - **The manager validates** that `ttl`, `scanInterval`, `batchSize`, `workerCount`, and `leaseDuration` are all greater than zero.
 - **`advisoryLockID`** is used to acquire PostgreSQL advisory-lock leadership so that only one replica performs a recovery sweep at a time. The default value (8389190333894887286 or 0x74746b7265636f76) represents the ASCII string "ttkrecov" (Token Transaction Recovery) encoded as a 64-bit integer.
 - **`instanceID`** is used as the lease owner identifier for claimed transactions; if omitted, the manager generates a unique UUID automatically at startup.
+- **`notFoundGracePeriod`** controls how long a transaction whose status query keeps returning `NotFound` is left in `Pending` before being promoted to the terminal `Orphan` status. This protects the recovery sweep from being permanently blocked by transactions whose audit log was persisted but whose broadcast never reached the ledger. The promoted row is marked `Orphan` rather than `Deleted` so operators can distinguish broadcast failures from ledger-rejected transactions. Raise the default if your network has long catch-up windows after committer/orderer restarts; set it to `0` to disable the promotion entirely.
 
 **Tuning Recommendations:**
 

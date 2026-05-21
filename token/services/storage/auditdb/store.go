@@ -72,6 +72,8 @@ const (
 	Confirmed = dbdriver.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted = dbdriver.Deleted
+	// Orphan is the status of a transaction that never reached the ledger
+	Orphan = dbdriver.Orphan
 )
 
 // TxStatusMessage maps TxStatus to string
