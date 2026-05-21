@@ -97,7 +97,6 @@ func (q *QueryEngine) UnspentTokensIteratorBy(ctx context.Context, id string, to
 	return q.StoreService.UnspentTokensIteratorBy(ctx, id, tokenType, limit)
 }
 
-
 // CertificationStorage manages token certifications in the database.
 type CertificationStorage struct {
 	*tokendb.StoreService
