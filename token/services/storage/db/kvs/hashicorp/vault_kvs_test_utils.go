@@ -9,17 +9,18 @@ package hashicorp
 import (
 	"fmt"
 	"net/http"
+	"net/netip"
 	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
 	vault "github.com/hashicorp/vault/api"
 	docker2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/docker"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 )
 
 const (
@@ -61,7 +62,7 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 	token := "00000000-0000-0000-0000-000000000000"
 	listenAddress := "0.0.0.0:" + portStr
 	clientAddress := "127.0.0.1:" + portStr
-	portBinding := nat.Port(fmt.Sprintf("%d/tcp", port))
+	portBinding := network.MustParsePort(fmt.Sprintf("%d/tcp", port))
 	containerConfig := &container.Config{
 		Image: ImageName,
 		Env: []string{
@@ -69,7 +70,7 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 			"VAULT_DEV_ROOT_TOKEN_ID=" + token,
 			"VAULT_DEV_LISTEN_ADDRESS=" + listenAddress,
 		},
-		ExposedPorts: map[nat.Port]struct{}{
+		ExposedPorts: network.PortSet{
 			portBinding: {},
 		},
 	}
@@ -77,10 +78,10 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 	// Define the host configuration
 	hostConfig := &container.HostConfig{
 		CapAdd: []string{"IPC_LOCK"},
-		PortBindings: nat.PortMap{ // Use nat.PortMap for port bindings
-			portBinding: []nat.PortBinding{
+		PortBindings: network.PortMap{ // Use network.PortMap for port bindings
+			portBinding: []network.PortBinding{
 				{
-					HostIP:   "0.0.0.0",
+					HostIP:   netip.MustParseAddr("0.0.0.0"),
 					HostPort: portStr,
 				},
 			},
@@ -91,17 +92,19 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 	containerName := ContainerNamePrefix + portStr
 	resp, err := cli.ContainerCreate(
 		ctx,
-		containerConfig,
-		hostConfig,
-		nil,
-		nil,
-		containerName,
+		client.ContainerCreateOptions{
+			Config:           containerConfig,
+			HostConfig:       hostConfig,
+			NetworkingConfig: nil,
+			Platform:         nil,
+			Name:             containerName,
+		},
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+	if _, err := cli.ContainerStart(ctx, resp.ID, client.ContainerStartOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -120,7 +123,7 @@ func StartHashicorpVaultContainer(t *testing.T, port int) (func(), string, strin
 
 	return func() {
 		noWaitTimeout := 0 // to not wait for the container to exit gracefully
-		if err := cli.ContainerStop(ctx, resp.ID, container.StopOptions{Timeout: &noWaitTimeout}); err != nil {
+		if _, err := cli.ContainerStop(ctx, resp.ID, client.ContainerStopOptions{Timeout: &noWaitTimeout}); err != nil {
 			logger.Errorf("failed to terminate hashicorp/vault [%s][%s]", err, string(debug.Stack()))
 		}
 		fmt.Println("Success")
