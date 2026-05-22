@@ -9,6 +9,7 @@ package pagination
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"reflect"
 	"strings"
 
@@ -38,7 +39,7 @@ type keyset[I comparable, V any] struct {
 // KeysetWithField creates a keyset pagination where the id has field name idFieldName
 func KeysetWithField[I comparable](offset, pageSize int, sqlIdName common.FieldName, idFieldName PropertyName[I]) (*keyset[I, any], error) {
 	if strings.ToUpper(string(idFieldName[0])) != string(idFieldName[0]) {
-		return nil, fmt.Errorf("must use exported field")
+		return nil, errors.New("must use exported field")
 	}
 	return Keyset(offset, pageSize, sqlIdName, idFieldName.ExtractField)
 }
@@ -67,7 +68,7 @@ func KeysetFromRaw[I comparable](raw []byte, idFieldName PropertyName[I]) (*keys
 		return nil, err
 	}
 	if strings.ToUpper(string(idFieldName[0])) != string(idFieldName[0]) {
-		return nil, fmt.Errorf("must use exported field")
+		return nil, errors.New("must use exported field")
 	}
 	k2, err := Keyset(k.Offset, k.PageSize, k.SQLIDName, idFieldName.ExtractField)
 	if err != nil {

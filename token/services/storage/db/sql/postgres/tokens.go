@@ -12,7 +12,7 @@ import (
 
 	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	
+
 	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )

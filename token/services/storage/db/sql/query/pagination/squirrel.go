@@ -26,7 +26,7 @@ func ApplyToSquirrel(p driver.Pagination, sb sq.SelectBuilder) sq.SelectBuilder 
 		return sb
 
 	case *offset:
-		sb = sb.Limit(uint64(pg.PageSize))
+		sb = sb.Limit(uint64(pg.PageSize)) //nolint:gosec
 		if pg.Offset > 0 {
 			sb = sb.Offset(uint64(pg.Offset))
 		}
@@ -48,7 +48,7 @@ func ApplyToSquirrel(p driver.Pagination, sb sq.SelectBuilder) sq.SelectBuilder 
 
 func applyKeysetSquirrel[T comparable](pg *keyset[T, any], sb sq.SelectBuilder) sq.SelectBuilder {
 	col := string(pg.SQLIDName)
-	sb = sb.OrderBy(col + " ASC").Limit(uint64(pg.PageSize))
+	sb = sb.OrderBy(col + " ASC").Limit(uint64(pg.PageSize)) //nolint:gosec
 	if pg.FirstID != pg.nilElement() {
 		sb = sb.Where(sq.Gt{col: pg.FirstID})
 	} else if pg.Offset > 0 {

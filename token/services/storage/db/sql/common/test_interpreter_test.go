@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
 )
 
 var signs = map[bool]rune{true: '+', false: '-'}

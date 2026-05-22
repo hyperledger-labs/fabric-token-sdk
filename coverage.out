@@ -1,0 +1,26 @@
+mode: set
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:34.43,36.2 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:38.35,39.11 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:40.12,41.16 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:42.14,43.18 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:44.11,45.15 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:46.10,47.71 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:53.38,54.21 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:54.21,56.15 2 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:56.15,58.4 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:60.2,62.12 2 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:66.36,68.2 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:73.64,74.22 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:74.22,76.3 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:77.2,79.12 2 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:82.13,84.55 2 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:84.55,86.3 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:86.17,87.13 1 0
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:90.2,90.57 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:90.57,92.3 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:92.17,93.13 1 0
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:95.2,96.54 2 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:96.54,98.3 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:98.17,99.13 1 0
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:105.56,107.2 1 1
+github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding/encoding.go:111.57,113.2 1 1

@@ -17,10 +17,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	dcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
 	qcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 type keystoreTables struct {

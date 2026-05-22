@@ -9,9 +9,9 @@ package common
 import (
 	"time"
 
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 

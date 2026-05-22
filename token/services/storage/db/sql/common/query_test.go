@@ -12,9 +12,9 @@ import (
 	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
 	qcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
-	
-	"github.com/stretchr/testify/assert"
+
 	common "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSelect_Compile(t *testing.T) {

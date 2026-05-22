@@ -12,10 +12,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
-	fscSqlite "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	
+	fscSqlite "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
+
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )

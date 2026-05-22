@@ -15,12 +15,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	
+
+	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
 	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
-	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
 // AuditTransactionStore wraps common.TransactionStore to add advisory lock to schema creation

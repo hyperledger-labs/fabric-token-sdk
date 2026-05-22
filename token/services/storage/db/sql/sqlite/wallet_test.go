@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"testing"
 
-	
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 

@@ -9,7 +9,7 @@ package sqlite
 import (
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/pagination"
-	
+
 	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
