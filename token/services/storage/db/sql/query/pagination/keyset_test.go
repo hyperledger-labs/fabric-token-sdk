@@ -288,5 +288,5 @@ func TestKeysetSeriliazation(t *testing.T) { //nolint:paralleltest
 
 	k2, err := pagination.KeysetFromRaw[string](buf, "StringField")
 	Expect(err).ToNot(HaveOccurred())
-	Expect(k2.Equal(page.Pagination)).To(Equal(true))
+	Expect(k2.Equal(page.Pagination)).To(BeTrue())
 }
