@@ -22,17 +22,20 @@ func NewQuery() *query {
 
 func (q *query) From(t common2.TableName) Query {
 	q.table = t
+
 	return q
 }
 
 func (q *query) Where(where cond2.Condition) whereQuery {
 	q.where = where
+
 	return q
 }
 
 func (q *query) Format(ci common2.CondInterpreter) (string, []common2.Param) {
 	sb := common2.NewBuilder()
 	q.FormatTo(ci, sb)
+
 	return sb.Build()
 }
 

@@ -26,6 +26,7 @@ func Offset(os, pageSize int) (*offset, error) {
 	if pageSize < 0 {
 		return nil, fmt.Errorf("page size shoud be grater than zero. pageSize: %d", pageSize)
 	}
+
 	return &offset{Offset: os, PageSize: pageSize}, nil
 }
 
@@ -33,6 +34,7 @@ func (p *offset) GoToOffset(os int) (driver.Pagination, error) {
 	if os < 0 {
 		return Empty(), nil
 	}
+
 	return &offset{
 		Offset:   os,
 		PageSize: p.PageSize,
@@ -41,6 +43,7 @@ func (p *offset) GoToOffset(os int) (driver.Pagination, error) {
 
 func (k *offset) Serialize() ([]byte, error) {
 	ret, err := json.Marshal(k)
+
 	return ret, err
 }
 
@@ -50,6 +53,7 @@ func OffsetFromRaw(raw []byte) (*offset, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &k, nil
 }
 

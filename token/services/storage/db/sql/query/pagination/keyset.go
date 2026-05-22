@@ -41,6 +41,7 @@ func KeysetWithField[I comparable](offset, pageSize int, sqlIdName common.FieldN
 	if strings.ToUpper(string(idFieldName[0])) != string(idFieldName[0]) {
 		return nil, errors.New("must use exported field")
 	}
+
 	return Keyset(offset, pageSize, sqlIdName, idFieldName.ExtractField)
 }
 
@@ -55,6 +56,7 @@ func KeysetWithId[I comparable, V id[I]](offset, pageSize int, sqlIdName common.
 
 func (k *keyset[I, any]) Serialize() ([]byte, error) {
 	ret, err := json.Marshal(k)
+
 	return ret, err
 }
 
@@ -76,6 +78,7 @@ func KeysetFromRaw[I comparable](raw []byte, idFieldName PropertyName[I]) (*keys
 	}
 	k2.FirstID = k.FirstID
 	k2.LastID = k.LastID
+
 	return k2, nil
 }
 
@@ -87,6 +90,7 @@ func Keyset[I comparable, V any](offset, pageSize int, sqlIdName common.FieldNam
 	if pageSize < 0 {
 		return nil, fmt.Errorf("page size must be greater than zero. pageSize: %d", pageSize)
 	}
+
 	return &keyset[I, V]{
 		Offset:    offset,
 		PageSize:  pageSize,
@@ -101,8 +105,10 @@ func nilElement[I any]() I {
 	var zero I
 	switch any(zero).(type) {
 	case int:
+
 		return any(-1).(I)
 	case string:
+
 		return any("").(I)
 	default:
 		panic("unsupported type")
@@ -127,6 +133,7 @@ func (p *keyset[I, V]) GoToOffset(offset int) (driver.Pagination, error) {
 			LastID:    p.nilElement(),
 		}, nil
 	}
+
 	return &keyset[I, V]{
 		Offset:    offset,
 		PageSize:  p.PageSize,

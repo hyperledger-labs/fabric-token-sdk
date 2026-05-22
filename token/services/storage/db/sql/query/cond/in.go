@@ -23,6 +23,7 @@ func FieldIn[V common.Param](field common.Serializable, vals ...V) Condition {
 	for i, val := range vals {
 		tuples[i] = Tuple{val}
 	}
+
 	return InTuple([]common.Serializable{field}, tuples)
 }
 

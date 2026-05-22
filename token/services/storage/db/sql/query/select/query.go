@@ -30,6 +30,7 @@ type query struct {
 func (q *query) AllFields() fieldsQuery {
 	fields := []common.Field{common.FieldName("*")}
 	q.Fields(fields...)
+
 	return q
 }
 
@@ -38,41 +39,49 @@ func (q *query) FieldsByName(names ...common.FieldName) fieldsQuery {
 	for i, n := range names {
 		fields[i] = n
 	}
+
 	return q.Fields(fields...)
 }
 
 func (q *query) Fields(fields ...common.Field) fieldsQuery {
 	q.fields = fields
+
 	return q
 }
 
 func (q *query) From(t common.JoinedTable) fromQuery {
 	q.table = t
+
 	return q
 }
 
 func (q *query) Limit(l int) limitQuery {
 	q.limit = l
+
 	return q
 }
 
 func (q *query) Offset(o int) offsetQuery {
 	q.offset = o
+
 	return q
 }
 
 func (q *query) OrderBy(os ...OrderBy) orderByQuery {
 	q.orderBy = os
+
 	return q
 }
 
 func (q *query) Where(p cond.Condition) whereQuery {
 	q.where = p
+
 	return q
 }
 
 func (q *query) Paginated(p driver.Pagination) paginatedQuery {
 	q.pagination = p
+
 	return q
 }
 
@@ -107,6 +116,7 @@ func (q *query) FormatTo(ci common.CondInterpreter, sb common.Builder) {
 func (q *query) FormatPaginated(ci common.CondInterpreter, pi common.PagInterpreter) (string, []any) {
 	sb := common.NewBuilder()
 	q.FormatPaginatedTo(ci, pi, sb)
+
 	return sb.Build()
 }
 

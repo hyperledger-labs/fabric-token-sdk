@@ -25,11 +25,13 @@ func NewQuery() *query {
 
 func (q *query) Into(table common2.TableName) Query {
 	q.table = table
+
 	return q
 }
 
 func (q *query) Fields(fields ...common2.FieldName) fieldsQuery {
 	q.fields = fields
+
 	return q
 }
 
@@ -38,6 +40,7 @@ func (q *query) Row(tuple ...common2.Param) fieldsQuery {
 		panic("wrong length")
 	}
 	q.rows = append(q.rows, tuple)
+
 	return q
 }
 
@@ -45,6 +48,7 @@ func (q *query) Rows(tuples []common2.Tuple) fieldsQuery {
 	for _, tuple := range tuples {
 		q.Row(tuple...)
 	}
+
 	return q
 }
 
@@ -54,17 +58,20 @@ func (q *query) OnConflict(fields []common2.FieldName, onConflicts ...OnConflict
 	}
 	q.conflictFields = fields
 	q.onConflicts = onConflicts
+
 	return q
 }
 
 func (q *query) OnConflictDoNothing() onConflictQuery {
 	q.ignoreConflict = true
+
 	return q
 }
 
 func (q *query) Format() (string, []common2.Param) {
 	sb := common2.NewBuilder()
 	q.FormatTo(sb)
+
 	return sb.Build()
 }
 
@@ -78,6 +85,7 @@ func (q *query) FormatTo(sb common2.Builder) {
 
 	if q.ignoreConflict {
 		sb.WriteString(" ON CONFLICT DO NOTHING")
+
 		return
 	}
 	if q.conflictFields != nil {

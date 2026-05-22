@@ -82,6 +82,7 @@ func BetweenBytes(f common.FieldName, start, end []byte) Condition {
 	if len(end) != 0 {
 		conds = append(conds, CmpVal(f, "<", end))
 	}
+
 	return And(conds...)
 }
 
@@ -105,6 +106,7 @@ func FieldBetweenTimestamps(f common.Serializable, start, end time.Time) Conditi
 	if !end.IsZero() {
 		conds = append(conds, CmpVal(f, "<=", end))
 	}
+
 	return And(conds...)
 }
 
@@ -116,5 +118,6 @@ func fieldBetween[T comparable](f common.Serializable, start, end T, isNone func
 	if !isNone(end) {
 		conds = append(conds, CmpVal(f, "<", end))
 	}
+
 	return And(conds...)
 }

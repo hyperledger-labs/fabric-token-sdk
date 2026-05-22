@@ -47,12 +47,14 @@ func (fake *SQLErrorWrapper) WrapError(arg1 error) error {
 	if specificReturn {
 		return ret.result1
 	}
+
 	return fakeReturns.result1
 }
 
 func (fake *SQLErrorWrapper) WrapErrorCallCount() int {
 	fake.wrapErrorMutex.RLock()
 	defer fake.wrapErrorMutex.RUnlock()
+
 	return len(fake.wrapErrorArgsForCall)
 }
 
@@ -66,6 +68,7 @@ func (fake *SQLErrorWrapper) WrapErrorArgsForCall(i int) error {
 	fake.wrapErrorMutex.RLock()
 	defer fake.wrapErrorMutex.RUnlock()
 	argsForCall := fake.wrapErrorArgsForCall[i]
+
 	return argsForCall.arg1
 }
 
@@ -101,6 +104,7 @@ func (fake *SQLErrorWrapper) Invocations() map[string][][]interface{} {
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
+
 	return copiedInvocations
 }
 

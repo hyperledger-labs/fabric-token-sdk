@@ -16,10 +16,13 @@ import (
 func NewPage[V any](results collections.Iterator[*V], pagination driver.Pagination) (*driver.PageIterator[*V], error) {
 	switch p := pagination.(type) {
 	case *keyset[int, interface{}]:
+
 		return newKeysetTypedPage[int, V](results, p)
 	case *keyset[string, interface{}]:
+
 		return newKeysetTypedPage[string, V](results, p)
 	case *offset, *empty, *none:
+
 		return newPage[V](results, pagination)
 	default:
 		panic("Unsupported pagination type")
@@ -46,5 +49,6 @@ func newKeysetTypedPage[I comparable, V any](results iterators.Iterator[*V], pag
 	} else {
 		p.LastID = p.idGetter(*items[len(items)-1])
 	}
+
 	return &driver.PageIterator[*V]{Items: collections.NewSliceIterator[*V](items), Pagination: p}, nil
 }

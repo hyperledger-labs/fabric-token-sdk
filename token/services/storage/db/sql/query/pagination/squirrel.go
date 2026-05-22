@@ -20,9 +20,11 @@ import (
 func ApplyToSquirrel(p driver.Pagination, sb sq.SelectBuilder) sq.SelectBuilder {
 	switch pg := p.(type) {
 	case nil:
+
 		return sb
 
 	case *none:
+
 		return sb
 
 	case *offset:
@@ -30,15 +32,19 @@ func ApplyToSquirrel(p driver.Pagination, sb sq.SelectBuilder) sq.SelectBuilder 
 		if pg.Offset > 0 {
 			sb = sb.Offset(uint64(pg.Offset))
 		}
+
 		return sb
 
 	case *keyset[string, any]:
+
 		return applyKeysetSquirrel(pg, sb)
 
 	case *keyset[int, any]:
+
 		return applyKeysetSquirrel(pg, sb)
 
 	case *empty:
+
 		return sb.Limit(0)
 
 	default:
@@ -54,5 +60,6 @@ func applyKeysetSquirrel[T comparable](pg *keyset[T, any], sb sq.SelectBuilder) 
 	} else if pg.Offset > 0 {
 		sb = sb.Offset(uint64(pg.Offset))
 	}
+
 	return sb
 }

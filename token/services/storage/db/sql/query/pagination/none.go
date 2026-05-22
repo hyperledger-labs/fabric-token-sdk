@@ -25,6 +25,7 @@ func (p *empty) Next() (driver.Pagination, error) {
 
 func (e *empty) Equal(other driver.Pagination) bool {
 	_, ok := other.(*empty)
+
 	return ok
 }
 
@@ -53,6 +54,7 @@ func (p *none) Next() (driver.Pagination, error) {
 
 func (e *none) Equal(other driver.Pagination) bool {
 	_, ok := other.(*none)
+
 	return ok
 }
 
