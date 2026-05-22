@@ -54,6 +54,7 @@ func (b *builder) Build() (string, []Param) {
 
 func (b *builder) WriteSerializables(ss ...Serializable) Builder {
 	if len(ss) == 0 {
+
 		return b
 	}
 	ss[0].WriteString(b)
@@ -61,16 +62,19 @@ func (b *builder) WriteSerializables(ss ...Serializable) Builder {
 		_, _ = b.sb.WriteString(", ")
 		s.WriteString(b)
 	}
+
 	return b
 }
 
 func (b *builder) WriteConditionSerializable(s ConditionSerializable, ci CondInterpreter) Builder {
 	s.WriteString(ci, b)
+
 	return b
 }
 
 func (b *builder) WriteTuples(tuples []Tuple) Builder {
 	if len(tuples) == 0 {
+
 		return b
 	}
 	rows, cols := len(tuples), len(tuples[0])
@@ -96,6 +100,7 @@ func (b *builder) WriteTuples(tuples []Tuple) Builder {
 		b.WriteString(")")
 		b.params = append(b.params, tuples[i]...)
 	}
+
 	return b
 }
 
