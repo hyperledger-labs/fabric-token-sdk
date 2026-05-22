@@ -83,6 +83,7 @@ func (t joinedTable) JoinAs(typ JoinType, other Table, ons ConditionSerializable
 	t.types = append(t.types, typ)
 	t.tables = append(t.tables, other)
 	t.conditions = append(t.conditions, ons)
+
 	return t
 }
 

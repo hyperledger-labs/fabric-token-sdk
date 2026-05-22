@@ -14,6 +14,7 @@ import (
 
 func Constant(s string) *constant {
 	c := constant(s)
+
 	return &c
 }
 
@@ -62,5 +63,6 @@ func newAndOr(conditions []Condition, trivialCondition Condition, operator strin
 	if len(nonTrivial) == 0 {
 		return trivialCondition
 	}
+
 	return &andOr{cs: nonTrivial, operator: fmt.Sprintf(") %s (", operator)}
 }
