@@ -1614,6 +1614,93 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#interactive-protocol-versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interactive Protocol Versioning
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interactive Protocol Versioning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#message-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Message Types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strict-mode-and-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Strict Mode and Errors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metrics
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#withdrawal-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Withdrawal Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-upgrade-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Upgrade Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#endorsement-and-signature-collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement and Signature Collection
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#auditor-approval-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Auditor Approval Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collect-actions-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Collect Actions Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#token-operations" class="md-nav__link">
     <span class="md-ellipsis">
       Token Operations
@@ -2247,6 +2334,93 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#interactive-protocol-versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interactive Protocol Versioning
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interactive Protocol Versioning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#message-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Message Types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strict-mode-and-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Strict Mode and Errors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metrics
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#withdrawal-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Withdrawal Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-upgrade-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Upgrade Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#endorsement-and-signature-collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorsement and Signature Collection
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#auditor-approval-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Auditor Approval Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collect-actions-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Collect Actions Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#token-operations" class="md-nav__link">
     <span class="md-ellipsis">
       Token Operations
@@ -2567,6 +2741,161 @@
 <h4 id="wallet-and-authorization">Wallet and Authorization<a class="headerlink" href="#wallet-and-authorization" title="Permanent link">&para;</a></h4>
 <p>The <code>boolpolicy.OwnerWallet</code> (in <code>token/services/ttx/boolpolicy/wallet.go</code>) wraps a standard owner wallet and filters the token list to policy-type tokens.  <code>VerifyApprover</code> can be used to assert that a given identity is one of the named component identities before allowing a spend.</p>
 <p>The <code>EscrowAuth</code> struct (in <code>token/services/ttx/boolpolicy/auth.go</code>) implements the <code>Authorization</code> interface: <code>IsMine</code> returns true if any component identity of the policy token belongs to one of the node's owner wallets.</p>
+<h2 id="interactive-protocol-versioning">Interactive Protocol Versioning<a class="headerlink" href="#interactive-protocol-versioning" title="Permanent link">&para;</a></h2>
+<p>Every interactive protocol message in <code>ttx</code> is wrapped in a versioned envelope defined in <code>token/services/utils/json/session/envelope.go</code>. The envelope is what each initiator/responder pair actually exchanges; the per-flow payload structs ride inside the <code>Body</code> field.</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Envelope</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">Version</span><span class="w"> </span><span class="kt">uint32</span><span class="w">          </span><span class="s">`json:&quot;v&quot;`</span><span class="w">   </span><span class="c1">// monotonic protocol version (mandatory)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">Type</span><span class="w">    </span><span class="kt">string</span><span class="w">          </span><span class="s">`json:&quot;t&quot;`</span><span class="w">   </span><span class="c1">// message-type discriminator (mandatory)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">Body</span><span class="w">    </span><span class="nx">json</span><span class="p">.</span><span class="nx">RawMessage</span><span class="w"> </span><span class="s">`json:&quot;b&quot;`</span><span class="w">   </span><span class="c1">// the actual payload</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Views send with <code>SendTyped(s, ctx, payload, TypeXxx)</code> / <code>SendEnvelopeOnSession(...)</code> and receive with <code>ReceiveTyped(s, TypeXxx, &amp;dst)</code> (and the <code>WithTimeout</code> variants). These helpers handle envelope wrapping, version/type validation, and metrics in one call so view code stays focused on the payload.</p>
+<h3 id="message-types">Message Types<a class="headerlink" href="#message-types" title="Permanent link">&para;</a></h3>
+<p>The message-type discriminators live with the service that uses them — the ttx constants in <code>token/services/ttx/protocol_messages.go</code>, and the HTLC interop one in <code>token/services/interop/htlc/distribute.go</code> — not in the generic <code>session</code> package.</p>
+<table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Value</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TypeRecipientRequest</code> / <code>TypeRecipientResponse</code></td>
+<td><code>recipient_req</code> / <code>recipient_resp</code></td>
+<td><code>recipients.go</code> request flow</td>
+</tr>
+<tr>
+<td><code>TypeExchangeRecipientRequest</code> / <code>TypeExchangeRecipientResp</code></td>
+<td><code>exchange_req</code> / <code>exchange_resp</code></td>
+<td><code>recipients.go</code> exchange flow</td>
+</tr>
+<tr>
+<td><code>TypeMultisigRecipientData</code> / <code>TypePolicyRecipientData</code></td>
+<td><code>multisig_data</code> / <code>policy_data</code></td>
+<td>recipient follow-ups for multisig / policy identities</td>
+</tr>
+<tr>
+<td><code>TypeWithdrawalRequest</code></td>
+<td><code>withdrawal_req</code></td>
+<td><code>withdrawal.go</code></td>
+</tr>
+<tr>
+<td><code>TypeUpgradeAgreement</code> / <code>TypeUpgradeRequest</code></td>
+<td><code>upgrade_agree</code> / <code>upgrade_req</code></td>
+<td><code>upgrade.go</code></td>
+</tr>
+<tr>
+<td><code>TypeSpendRequest</code> / <code>TypeSpendResponse</code></td>
+<td><code>spend_req</code> / <code>spend_resp</code></td>
+<td><code>multisig/spend.go</code>, <code>boolpolicy/spend.go</code></td>
+</tr>
+<tr>
+<td><code>TypeSignatureRequest</code> / <code>TypeSignature</code></td>
+<td><code>sig_req</code> / <code>signature</code></td>
+<td><code>collectendorsements.go</code>, <code>endorse.go</code>, <code>accept.go</code>, <code>auditor.go</code></td>
+</tr>
+<tr>
+<td><code>TypeTransaction</code> / <code>TypeTransactionResponse</code></td>
+<td><code>transaction</code> / <code>tx_resp</code></td>
+<td>tx distribution in <code>collectendorsements.go</code>, <code>auditor.go</code>, <code>collectactions.go</code>, <code>receivetx.go</code></td>
+</tr>
+<tr>
+<td><code>TypeActions</code> / <code>TypeActionTransfer</code></td>
+<td><code>actions</code> / <code>action_transfer</code></td>
+<td><code>collectactions.go</code></td>
+</tr>
+<tr>
+<td><code>TypeHTLCTerms</code> (htlc pkg)</td>
+<td><code>htlc_terms</code></td>
+<td><code>interop/htlc/distribute.go</code></td>
+</tr>
+</tbody>
+</table>
+<p>Two reusable payload structs back the byte-oriented flows: <code>TransactionPayload{Raw []byte}</code> carries a serialized transaction, and <code>SignaturePayload{Signature []byte}</code> carries a signature.</p>
+<h3 id="strict-mode-and-errors">Strict Mode and Errors<a class="headerlink" href="#strict-mode-and-errors" title="Permanent link">&para;</a></h3>
+<p>Receivers reject any envelope whose <code>Version</code> differs from <code>CurrentVersion</code>, or whose <code>Type</code> is missing or does not match the expected type — there is no silent fallback to a legacy shape. Failures surface as the sentinel errors in <code>envelope.go</code>:</p>
+<ul>
+<li><code>ErrMissingVersion</code> — <code>Version</code> is zero / absent</li>
+<li><code>ErrVersionMismatch</code> (also returned as <code>*VersionError</code> with <code>Expected</code>/<code>Received</code>) — version differs from <code>CurrentVersion</code></li>
+<li><code>ErrTypeMismatch</code> — received <code>Type</code> ≠ expected</li>
+<li><code>ErrInvalidEnvelope</code> — payload did not parse as an envelope</li>
+</ul>
+<p>All satisfy <code>errors.Is</code>. <code>VersionCompatibility</code> / <code>IsCompatible(local, remote)</code> declare which versions interoperate (v1 ↔ v1 only).</p>
+<h3 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h3>
+<p><code>EnvelopeMetrics</code> (in <code>metrics.go</code>) records per-type sent/received counters, an error counter, and a body-size histogram. It is registered once per process from the metrics provider obtained via FSC <code>platform/view/services/metrics#GetProvider</code>, resolved lazily by the session constructors (<code>JSON</code>, <code>NewFromSession</code>, …) and read by the typed send/receive helpers. A node with no metrics provider simply runs with metrics disabled.</p>
+<h2 id="withdrawal-flow">Withdrawal Flow<a class="headerlink" href="#withdrawal-flow" title="Permanent link">&para;</a></h2>
+<p>The withdrawal protocol (<code>withdrawal.go</code>) lets a wallet ask an issuer to mint tokens to a freshly generated recipient identity. Single-shot: the initiator sends a <code>WithdrawalRequest</code>; the issuer registers the recipient identity and returns the session for the subsequent issuance flow.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant I as Initiator (RequestWithdrawalView)
+    participant Iss as Issuer (ReceiveWithdrawalRequestView)
+
+    I-&gt;&gt;I: Resolve recipient identity (caller-supplied or wallet-generated)
+    I-&gt;&gt;Iss: Envelope{t:"withdrawal_req", b:WithdrawalRequest{TMSID, RecipientData, TokenType, Amount, NotAnonymous}}
+    Iss-&gt;&gt;Iss: RegisterRecipientIdentity(request.RecipientData)
+    Iss-&gt;&gt;Iss: endpoint.Bind(caller -&gt; RecipientData.Identity)
+    Note over I,Iss: Session returned to caller for the issuance/endorsement flow</code></pre>
+<h2 id="token-upgrade-flow">Token Upgrade Flow<a class="headerlink" href="#token-upgrade-flow" title="Permanent link">&para;</a></h2>
+<p>The upgrade protocol (<code>upgrade.go</code>) exchanges old-format tokens for new-format ones over two round-trips: an agreement that establishes a fresh challenge, then a request carrying the proof.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant I as Initiator (UpgradeTokensInitiatorView)
+    participant Iss as Issuer (UpgradeTokensResponderView)
+
+    I-&gt;&gt;Iss: Envelope{t:"upgrade_agree", b:UpgradeTokensAgreement{}}
+    Iss-&gt;&gt;Iss: NewUpgradeChallenge, set TMSID
+    Iss--&gt;&gt;I: Envelope{t:"upgrade_agree", b:UpgradeTokensAgreement{Challenge, TMSID}}
+    I-&gt;&gt;I: GenUpgradeProof(challenge, tokens); resolve recipient identity
+    I-&gt;&gt;Iss: Envelope{t:"upgrade_req", b:UpgradeTokensRequest{ID, TMSID, RecipientData, Tokens, Proof}}
+    Iss-&gt;&gt;Iss: Verify request.ID == challenge, verify TMS matches
+    Note over I,Iss: Responder continues with issuance; session returned to caller</code></pre>
+<p>The responder checks <code>request.ID</code> byte-for-byte against the challenge it issued, so a stale or substituted request is rejected before any proof verification.</p>
+<h2 id="endorsement-and-signature-collection">Endorsement and Signature Collection<a class="headerlink" href="#endorsement-and-signature-collection" title="Permanent link">&para;</a></h2>
+<p><code>CollectEndorsementsView</code> (<code>collectendorsements.go</code>) gathers the signatures that make a transaction valid, then distributes the assembled transaction. Two message exchanges are involved, both enveloped:</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant I as Initiator (CollectEndorsementsView)
+    participant P as Party (EndorseView)
+
+    rect rgba(230, 230, 250, 0.35)
+        Note over I,P: Signature collection (per required signer)
+        I-&gt;&gt;P: Envelope{t:"sig_req", b:SignatureRequest{TX, Signer}}
+        P-&gt;&gt;P: Verify expected identity, sign
+        P--&gt;&gt;I: Envelope{t:"signature", b:SignaturePayload{Signature}}
+    end
+
+    rect rgba(240, 255, 240, 0.45)
+        Note over I,P: Transaction distribution (per recipient)
+        I-&gt;&gt;P: Envelope{t:"transaction", b:TransactionPayload{Raw}}
+        P-&gt;&gt;P: ReceiveTransaction, AcceptView checks + signs ack
+        P--&gt;&gt;I: Envelope{t:"signature", b:SignaturePayload{Signature}}
+    end</code></pre>
+<p><code>EndorseView</code> (<code>endorse.go</code>) is the responder for the signature-request leg; <code>AcceptView</code> (<code>accept.go</code>) responds to the transaction-distribution leg with a signed acknowledgement. <code>ReceiveTransactionView</code> (<code>receivetx.go</code>) unwraps the envelope and accepts <code>TypeTransaction</code>, <code>TypeTransactionResponse</code>, or <code>TypeSignatureRequest</code>.</p>
+<h2 id="auditor-approval-flow">Auditor Approval Flow<a class="headerlink" href="#auditor-approval-flow" title="Permanent link">&para;</a></h2>
+<p><code>AuditingViewInitiator</code> (<code>auditor.go</code>) sends the assembled transaction to the auditor and waits for the auditor's signature; <code>AuditApproveView</code> audits, signs, and returns it.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant I as Initiator (AuditingViewInitiator)
+    participant A as Auditor (AuditApproveView)
+
+    I-&gt;&gt;A: Envelope{t:"transaction", b:TransactionPayload{Raw}}
+    A-&gt;&gt;A: ReceiveTransaction, Append audit records, sign
+    A--&gt;&gt;I: Envelope{t:"signature", b:SignaturePayload{Signature}}
+    I-&gt;&gt;I: Verify auditor signature</code></pre>
+<h2 id="collect-actions-flow">Collect Actions Flow<a class="headerlink" href="#collect-actions-flow" title="Permanent link">&para;</a></h2>
+<p><code>collectActionsView</code> (<code>collectactions.go</code>) drives a transfer where the action originates with a remote party: it ships the transaction and the requested actions, and receives the assembled transaction back.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant I as Initiator (collectActionsView)
+    participant R as Responder (receiveActionsView / collectActionsResponderView)
+
+    I-&gt;&gt;R: Envelope{t:"transaction", b:TransactionPayload{Raw}}
+    I-&gt;&gt;R: Envelope{t:"actions", b:Actions}
+    I-&gt;&gt;R: Envelope{t:"action_transfer", b:ActionTransfer}
+    R-&gt;&gt;R: Receive transaction, actions, action; assemble
+    R--&gt;&gt;I: Envelope{t:"tx_resp", b:TransactionPayload{Raw}}</code></pre>
 <h2 id="token-operations">Token Operations<a class="headerlink" href="#token-operations" title="Permanent link">&para;</a></h2>
 <p>The TTX service supports three primary operations through the <code>TokenRequest</code> API:</p>
 <h3 id="issue">Issue<a class="headerlink" href="#issue" title="Permanent link">&para;</a></h3>
