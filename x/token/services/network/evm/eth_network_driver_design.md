@@ -199,7 +199,7 @@ address admin;
 
 **Signature Verification Logic**:
 1. Recover signer address from each signature using `ecrecover`
-2. Verify each recovered address is in the endorser set
+2. Verify each recovered address is unique and in the endorser set
 3. Check that number of valid signatures meets threshold
 4. Return true if all checks pass
 
