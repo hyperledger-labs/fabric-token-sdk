@@ -10,7 +10,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
+	
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
@@ -21,7 +21,7 @@ func mockTransactionsStore(db *sql.DB) *common2.TransactionStore {
 		Requests:              "REQUESTS",
 		Validations:           "VALIDATIONS",
 		TransactionEndorseAck: "TRANSACTION_ENDORSE_ACK",
-	}, postgres.NewConditionInterpreter(), postgres.NewPaginationInterpreter())
+	}, NewConditionInterpreter(), NewPaginationInterpreter())
 
 	return store
 }

@@ -8,8 +8,8 @@ package sqlite
 
 import (
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/pagination"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/pagination"
+	
 	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
@@ -19,9 +19,9 @@ type (
 )
 
 func NewAuditTransactionStore(dbs *common2.RWDB, tableNames common3.TableNames) (*AuditTransactionStore, error) {
-	return common3.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
+	return common3.NewAuditTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, NewConditionInterpreter(), pagination.NewDefaultInterpreter())
 }
 
 func NewTransactionStore(dbs *common2.RWDB, tableNames common3.TableNames) (*OwnerTransactionStore, error) {
-	return common3.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, sqlite.NewConditionInterpreter(), pagination.NewDefaultInterpreter())
+	return common3.NewOwnerTransactionStore(dbs.ReadDB, dbs.WriteDB, tableNames, NewConditionInterpreter(), pagination.NewDefaultInterpreter())
 }

@@ -15,10 +15,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
+	
+	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
 	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
@@ -72,8 +72,8 @@ func NewTransactionStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.Tab
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
-		postgres.NewConditionInterpreter(),
-		postgres.NewPaginationInterpreter(),
+		NewConditionInterpreter(),
+		NewPaginationInterpreter(),
 		notifier,
 		recoveryLeaderFactory,
 	)
@@ -96,8 +96,8 @@ func NewAuditTransactionStore(dbs *scommon.RWDB, tableNames sqlcommon.TableNames
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
-		postgres.NewConditionInterpreter(),
-		postgres.NewPaginationInterpreter(),
+		NewConditionInterpreter(),
+		NewPaginationInterpreter(),
 	)
 	if err != nil {
 		return nil, err
@@ -205,7 +205,7 @@ func (db *TransactionStore) ReleaseRecoveryClaim(ctx context.Context, txID strin
 				cond.Eq("tx_id", txID),
 				cond.Eq("recovery_claimed_by", owner),
 			)).
-			Format(postgres.NewConditionInterpreter())
+			Format(NewConditionInterpreter())
 	} else {
 		query, args = q.Update(db.tables.Requests).
 			Set("recovery_claimed_by", nil).
@@ -214,7 +214,7 @@ func (db *TransactionStore) ReleaseRecoveryClaim(ctx context.Context, txID strin
 				cond.Eq("tx_id", txID),
 				cond.Eq("recovery_claimed_by", owner),
 			)).
-			Format(postgres.NewConditionInterpreter())
+			Format(NewConditionInterpreter())
 	}
 
 	logger.Debug(query, args)
@@ -248,7 +248,7 @@ func (db *TransactionStore) CleanupExpiredClaims(ctx context.Context) (int, erro
 		Set("recovery_claimed_by", nil).
 		Set("recovery_claim_expires_at", nil).
 		Where(cond.Lt("recovery_claim_expires_at", common3.FieldName("NOW()"))).
-		Format(postgres.NewConditionInterpreter())
+		Format(NewConditionInterpreter())
 
 	logger.Debug(query, args)
 

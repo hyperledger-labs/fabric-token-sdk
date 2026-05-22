@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
+	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
+	
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
@@ -333,7 +333,7 @@ func TestTokenSql(t *testing.T) {
 
 func evalCondition(condition cond.Condition) (string, []common2.Param) {
 	sb := common2.NewBuilder()
-	condition.WriteString(sqlite.NewConditionInterpreter(), sb)
+	condition.WriteString(newTestInterpreter(), sb)
 	actualSql, actualArgs := sb.Build()
 
 	return actualSql, actualArgs
