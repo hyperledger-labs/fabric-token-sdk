@@ -26,9 +26,17 @@ import (
 // AuditTransactionStore wraps common.TransactionStore to add advisory lock to schema creation
 type AuditTransactionStore struct {
 	*sqlcommon.TransactionStore
-	writeDB *sql.DB
-	lockID  int64
+	writeDB        *sql.DB
+	lockID         int64
+	eidLeasesTable string
 }
+
+// WriteDB returns the underlying write *sql.DB.
+// Used by the auditor distributed locker to share the connection pool.
+func (s *AuditTransactionStore) WriteDB() *sql.DB { return s.writeDB }
+
+// EIDLeasesTable returns the formatted table name for auditor EID leases.
+func (s *AuditTransactionStore) EIDLeasesTable() string { return s.eidLeasesTable }
 
 // GetSchema overrides the base GetSchema to prefix with advisory lock
 func (s *AuditTransactionStore) GetSchema() string {
@@ -107,6 +115,7 @@ func NewAuditTransactionStore(dbs *scommon.RWDB, tableNames sqlcommon.TableNames
 		TransactionStore: baseStore,
 		writeDB:          dbs.WriteDB,
 		lockID:           createTableLockID("audittx"),
+		eidLeasesTable:   tableNames.EIDLeases,
 	}, nil
 }
 

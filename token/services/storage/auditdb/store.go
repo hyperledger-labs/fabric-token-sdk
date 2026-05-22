@@ -10,20 +10,21 @@ import (
 	"context"
 	"reflect"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
+	fsccommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
-	"golang.org/x/sync/semaphore"
 )
 
 var (
@@ -43,8 +44,36 @@ type tokenRequest interface {
 //go:generate counterfeiter -o mock/audit_store_service_manager.go --fake-name AuditStoreServiceManager . StoreServiceManager
 type StoreServiceManager db.StoreServiceManager[*StoreService]
 
+type auditManager struct {
+	lazy.Provider[token.TMSID, *StoreService]
+}
+
+func (m *auditManager) StoreServiceByTMSId(id token.TMSID) (*StoreService, error) {
+	return m.Get(id)
+}
+
 func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
-	return db.NewStoreServiceManager(cp, "auditdb.persistence", drivers.NewAuditTransaction, NewStoreService)
+	return &auditManager{
+		Provider: lazy.NewProviderWithKeyMapper(services.Key, func(tmsID token.TMSID) (*StoreService, error) {
+			cfg, err := cp.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
+			if err != nil {
+				return nil, err
+			}
+			store, err := drivers.NewAuditTransaction(fsccommon.GetPersistenceName(cfg, "auditdb.persistence"), tmsID.Network, tmsID.Channel, tmsID.Namespace)
+			if err != nil {
+				return nil, err
+			}
+			lockerCfg := DefaultLockerConfig()
+			_ = cfg.UnmarshalKey("auditor.locker", &lockerCfg)
+
+			locker, err := NewLockerFromConfig(lockerCfg, store)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to create auditor locker for tms [%s]", tmsID)
+			}
+
+			return NewStoreService(store, WithLocker(locker))
+		}),
+	}
 }
 
 func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) (*StoreService, error) {
@@ -132,20 +161,33 @@ type Wallet interface {
 // StoreService is a database that stores token transactions related information
 type StoreService struct {
 	*common.StatusSupport
-	db        dbdriver.AuditTransactionStore
-	eIDsLocks sync.Map
+	db     dbdriver.AuditTransactionStore
+	locker Locker
 
 	// status related fields
 	pendingTXs []string
 }
 
-func NewStoreService(p dbdriver.AuditTransactionStore) (*StoreService, error) {
-	return &StoreService{
+// StoreServiceOption configures a StoreService at construction time.
+type StoreServiceOption func(*StoreService)
+
+// WithLocker replaces the default in-memory Locker.
+func WithLocker(l Locker) StoreServiceOption {
+	return func(s *StoreService) { s.locker = l }
+}
+
+func NewStoreService(p dbdriver.AuditTransactionStore, opts ...StoreServiceOption) (*StoreService, error) {
+	s := &StoreService{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,
-		eIDsLocks:     sync.Map{},
+		locker:        newMemoryLocker(),
 		pendingTXs:    make([]string, 0, 10000),
-	}, nil
+	}
+	for _, o := range opts {
+		o(s)
+	}
+
+	return s, nil
 }
 
 func (d *StoreService) NewTransaction() (dbdriver.TransactionStoreTransaction, error) {
@@ -177,6 +219,9 @@ func (d *StoreService) Append(ctx context.Context, req tokenRequest) error {
 	}
 
 	logger.DebugfContext(ctx, "storing new records... [%d,%d,%d]", len(raw), len(mov), len(txs))
+	if err := d.locker.AssertLocksHeld(ctx, string(record.Anchor)); err != nil {
+		return errors.WithMessagef(err, "locks lost before write for request [%s]", req)
+	}
 	w, err := d.db.NewTransactionStoreTransaction()
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
@@ -286,66 +331,20 @@ func (d *StoreService) GetTokenRequests(ctx context.Context, txIDs []string) (ma
 // or times out before all locks can be acquired. This prevents indefinite blocking and enables fast failure
 // in case of lock contention or deadlock scenarios.
 func (d *StoreService) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
-	// This implementation allows concurrent calls to AcquireLocks such that if two
-	// or more calls involve non-overlapping enrollment IDs, both calls will succeed.
-	// To achieve this, we first remove any duplicates from the list of enrollment IDs.
-	// Next, we sort this list. Sorting ensures that two concurrent invocations of
-	// AcquireLocks with intersecting sets of enrollment IDs do not result in a deadlock.
-	// For example, consider a scenario where one invocation attempts to lock (Alice, Bob)
-	// and another tries to lock (Bob, Alice).
-	// Without sorting, these two calls could deadlock. Sorting prevents this issue.
-	dedup := deduplicateAndSort(eIDs)
-	logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
-
-	acquired := []string{}
-	for _, id := range dedup {
-		// Use semaphore with weight 1 to act as a mutex, but with context support
-		sem, _ := d.eIDsLocks.LoadOrStore(id, semaphore.NewWeighted(1))
-
-		// Acquire respects context cancellation and deadlines without spawning goroutines
-		if err := sem.(*semaphore.Weighted).Acquire(ctx, 1); err != nil {
-			// Context cancelled or timed out - rollback already acquired locks
-			logger.WarnfContext(ctx, "Failed to acquire lock for enrollment ID [%s] due to context cancellation, rolling back %d acquired locks", id, len(acquired))
-			for _, acquiredID := range acquired {
-				if s, ok := d.eIDsLocks.Load(acquiredID); ok {
-					s.(*semaphore.Weighted).Release(1)
-				}
-			}
-
-			return errors.Wrapf(err, "failed to acquire lock for enrollment ID [%s]", id)
-		}
-		acquired = append(acquired, id)
-		logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment id done", anchor, id)
+	logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment ids", anchor, eIDs)
+	if err := d.locker.AcquireLocks(ctx, anchor, eIDs...); err != nil {
+		return err
 	}
-
-	// Store anchor mapping only after successfully acquiring all locks
-	d.eIDsLocks.Store(anchor, dedup)
-	logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
+	logger.DebugfContext(ctx, "Acquire locks for [%s] enrollment ids...done", anchor)
 
 	return nil
 }
 
 // ReleaseLocks releases the locks associated to the passed anchor
 func (d *StoreService) ReleaseLocks(ctx context.Context, anchor string) {
-	dedupBoxed, ok := d.eIDsLocks.LoadAndDelete(anchor)
-	if !ok {
-		logger.DebugfContext(ctx, "nothing to release for [%s] ", anchor)
-
-		return
-	}
-	dedup := dedupBoxed.([]string)
-	logger.DebugfContext(ctx, "Release locks for [%s:%v] enrollment ids", anchor, dedup)
-	for _, id := range dedup {
-		sem, ok := d.eIDsLocks.Load(id)
-		if !ok {
-			logger.Warnf("unlock for enrollment id [%s:%s] not possible, lock never acquired", anchor, id)
-
-			continue
-		}
-		logger.DebugfContext(ctx, "unlock lock for [%s:%v] enrollment id done", anchor, id)
-		sem.(*semaphore.Weighted).Release(1)
-	}
-	logger.DebugfContext(ctx, "Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
+	logger.DebugfContext(ctx, "Release locks for [%s]", anchor)
+	d.locker.ReleaseLocks(ctx, anchor)
+	logger.DebugfContext(ctx, "Release locks for [%s]...done", anchor)
 }
 
 // AcquireRecoveryLeadership tries to acquire the DB-backed recovery leadership lease.
