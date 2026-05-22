@@ -158,7 +158,7 @@ func (db *Notifier) dispatch(operation driver.Operation, m map[driver.ColumnKey]
 	copy(subscribers, db.subscribers)
 	db.mu.RUnlock()
 
-	logger.Infof("dispatching to [%d] subscribers", len(subscribers))
+	logger.Debugf("dispatching to [%d] subscribers", len(subscribers))
 	for _, callback := range subscribers {
 		if callback == nil {
 			logger.Errorf("a nil callback found for [%s], skip it", db.table)
@@ -399,7 +399,7 @@ func (h *notificationHandler) HandleNotification(ctx context.Context, notificati
 
 		return nil
 	}
-	logger.InfofContext(ctx, "new event received on table [%s]: %s", notification.Channel, notification.Payload)
+	logger.DebugfContext(ctx, "new event received on table [%s]: %s", notification.Channel, notification.Payload)
 	op, vals, err := h.parsePayload(notification.Payload)
 	if err != nil {
 		logger.Errorf("failed parsing payload [%s]: %s", notification.Payload, err.Error())
