@@ -210,7 +210,7 @@ func TestComputeSVector_InverseProperty(t *testing.T) {
 			require.Len(t, s, n)
 			require.Len(t, sInv, n)
 
-			for i := 0; i < n; i++ {
+			for i := range n {
 				product := curve.ModMul(s[i], sInv[i], curve.GroupOrder)
 				assert.True(t, product.Equals(one),
 					"s[%d]*sInv[%d] should be 1 (got %s)", i, i, product)
@@ -264,10 +264,10 @@ func TestComputeSVector_DefinitionConsistency(t *testing.T) {
 			s, sInv := bulletproof.ComputeSVector(n, challenges, curve)
 
 			// Check each entry against the definition.
-			for i := 0; i < n; i++ {
+			for i := range n {
 				expected := math2.One(curve)
 				expectedInv := math2.One(curve)
-				for r := 0; r < rounds; r++ {
+				for r := range rounds {
 					bitPos := rounds - 1 - r
 					if (i>>bitPos)&1 == 1 {
 						expected = curve.ModMul(expected, challenges[r], curve.GroupOrder)
@@ -326,13 +326,13 @@ func TestComputeSVector_ConsistencyWithFoldReduction(t *testing.T) {
 			for i := range gens {
 				gens[i] = generators[i].Copy()
 			}
-			for r := 0; r < rounds; r++ {
+			for r := range rounds {
 				half := len(gens) / 2
 				x := challenges[r]
 				xInv := x.Copy()
 				xInv.InvModOrder()
 				folded := make([]*math.G1, half)
-				for i := 0; i < half; i++ {
+				for i := range half {
 					// G_i' = G_i · xInv + G_{i+half} · x
 					folded[i] = gens[i].Mul2(xInv, gens[i+half], x)
 				}
@@ -392,8 +392,8 @@ func TestCloneGenerators_NilSlices(t *testing.T) {
 
 	require.NotNil(t, leftGen, "left generators should not be nil")
 	require.NotNil(t, rightGen, "right generators should not be nil")
-	assert.Len(t, leftGen, 0)
-	assert.Len(t, rightGen, 0)
+	assert.Empty(t, leftGen)
+	assert.Empty(t, rightGen)
 }
 
 // TestComputeSVector_KnownValues verifies ComputeSVector against a manually
@@ -443,7 +443,7 @@ func TestComputeSVector_DeterministicOutput(t *testing.T) {
 	s1, sInv1 := bulletproof.ComputeSVector(n, challenges, curve)
 	s2, sInv2 := bulletproof.ComputeSVector(n, challenges, curve)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		assert.True(t, s1[i].Equals(s2[i]), "s[%d] should be deterministic", i)
 		assert.True(t, sInv1[i].Equals(sInv2[i]), "sInv[%d] should be deterministic", i)
 	}
