@@ -94,7 +94,7 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 
 	logger.DebugfContext(context.Context(), "expect [%d] requests to sign for tx id [%s]", len(requiredSigners), s.tx.ID())
 
-	session := context.Session()
+	typedSession := jsession.NewTypedSessionFromContext(context)
 
 	tokenRequestToSign, err := s.tx.TokenRequest.MarshalToSign()
 	if err != nil {
@@ -102,21 +102,14 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 	}
 
 	for i, signerIdentity := range requiredSigners {
-		var srRaw []byte
 		signatureRequest := &SignatureRequest{}
 
 		if i == 0 && s.tx.FromSignatureRequest != nil {
 			signatureRequest = s.tx.FromSignatureRequest
 		} else {
 			logger.DebugfContext(context.Context(), "receiving signature request...")
-			jsonSession := jsession.JSON(context)
-			srRaw, err = jsonSession.ReceiveRawWithTimeout(time.Minute)
-			if err != nil {
+			if err := typedSession.ReceiveTypedWithTimeout(TypeSignatureRequest, signatureRequest, time.Minute); err != nil {
 				return errors.Wrap(err, "failed reading signature request")
-			}
-			err = Unmarshal(srRaw, signatureRequest)
-			if err != nil {
-				return errors.Wrap(err, "failed unmarshalling signature request")
 			}
 		}
 
@@ -142,7 +135,7 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 			return errors.Wrapf(err, "failed signing request")
 		}
 		logger.DebugfContext(context.Context(), "Send back signature [%s][%s]", signerIdentity, utils.Hashable(sigma))
-		err = session.SendWithContext(context.Context(), sigma)
+		err = typedSession.SendTyped(context.Context(), &SignaturePayload{Signature: sigma}, TypeSignature)
 		if err != nil {
 			return errors.Wrapf(err, "failed sending signature back")
 		}
@@ -196,7 +189,7 @@ func (s *EndorseView) ack(context view.Context, msg []byte) error {
 		return errors.WithMessagef(err, "failed to sign ack response")
 	}
 	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", utils.Hashable(sigma), defaultIdentity)
-	if err := inSession.SendWithContext(context.Context(), sigma); err != nil {
+	if err := jsession.NewTypedSession(context, inSession).SendTyped(context.Context(), &SignaturePayload{Signature: sigma}, TypeSignature); err != nil {
 		return errors.WithMessagef(err, "failed sending ack")
 	}
 

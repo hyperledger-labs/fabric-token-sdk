@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	session "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/session"
 )
 
@@ -38,28 +39,6 @@ func (e *Envelope) Validate(expectedType string) error {
 
 	return nil
 }
-
-// Message type constants for all JSON-typed interactive protocol messages.
-const (
-	// recipients.go
-	TypeRecipientRequest         = "recipient_req"
-	TypeRecipientResponse        = "recipient_resp"
-	TypeExchangeRecipientRequest = "exchange_req"
-	TypeExchangeRecipientResp    = "exchange_resp"
-	TypeMultisigRecipientData    = "multisig_data"
-	TypePolicyRecipientData      = "policy_data"
-
-	// withdrawal.go
-	TypeWithdrawalRequest = "withdrawal_req"
-
-	// upgrade.go
-	TypeUpgradeAgreement = "upgrade_agree"
-	TypeUpgradeRequest   = "upgrade_req"
-
-	// multisig/spend.go and boolpolicy/spend.go
-	TypeSpendRequest  = "spend_req"
-	TypeSpendResponse = "spend_resp"
-)
 
 // Sentinel errors for envelope validation.
 var (
@@ -162,7 +141,7 @@ func UnwrapBody(raw []byte, expectedType string, dst any) error {
 }
 
 // SendTyped wraps v in a versioned envelope with the given message type and
-// sends it over the session.
+// sends it over the session. Use TypedSession.SendTyped to also record metrics.
 func SendTyped(s *session.S, ctx context.Context, v any, msgType string) error {
 	return SendTypedWithMetrics(s, ctx, v, msgType, nil)
 }
@@ -179,7 +158,7 @@ func SendTypedWithMetrics(s *session.S, ctx context.Context, v any, msgType stri
 }
 
 // ReceiveTyped receives a versioned envelope, validates its version and type,
-// and unmarshals the body into dst.
+// and unmarshals the body into dst. Use TypedSession.ReceiveTyped to also record metrics.
 func ReceiveTyped(s *session.S, expectedType string, dst any) error {
 	return ReceiveTypedWithTimeout(s, expectedType, dst, session.DefaultReceiveTimeout)
 }
@@ -206,6 +185,71 @@ func ReceiveTypedWithTimeoutAndMetrics(s *session.S, expectedType string, dst an
 	m.observeReceive(env)
 
 	return json.Unmarshal(env.Body, dst)
+}
+
+// TypedSession wraps a JSON session together with the envelope metrics resolved
+// from the view context, so callers send and receive versioned messages through
+// methods (and get metrics recorded) instead of static helpers.
+type TypedSession struct {
+	*session.S
+	metrics *EnvelopeMetrics
+}
+
+// NewTypedSession wraps the given view.Session, resolving the envelope metrics
+// once from the view context. Metrics are disabled when none are registered.
+func NewTypedSession(viewCtx view.Context, sess view.Session) *TypedSession {
+	return &TypedSession{S: NewFromSession(viewCtx, sess), metrics: resolveEnvelopeMetrics(viewCtx)}
+}
+
+// NewTypedSessionFromContext wraps the view context's own session.
+func NewTypedSessionFromContext(viewCtx view.Context) *TypedSession {
+	return &TypedSession{S: JSON(viewCtx), metrics: resolveEnvelopeMetrics(viewCtx)}
+}
+
+// NewTypedSessionToParty opens a session to party (bound to the context's
+// initiator) and wraps it.
+func NewTypedSessionToParty(viewCtx view.Context, party view.Identity) (*TypedSession, error) {
+	s, err := viewCtx.GetSession(viewCtx.Initiator(), party)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTypedSession(viewCtx, s), nil
+}
+
+// NewTypedSessionForCaller opens a session to party for the given caller view
+// and wraps it.
+func NewTypedSessionForCaller(viewCtx view.Context, caller view.View, party view.Identity) (*TypedSession, error) {
+	s, err := viewCtx.GetSession(caller, party)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTypedSession(viewCtx, s), nil
+}
+
+func resolveEnvelopeMetrics(viewCtx view.Context) *EnvelopeMetrics {
+	m, err := GetEnvelopeMetrics(viewCtx)
+	if err != nil {
+		return nil
+	}
+
+	return m
+}
+
+// SendTyped wraps v in a versioned envelope and sends it, recording metrics.
+func (t *TypedSession) SendTyped(ctx context.Context, v any, msgType string) error {
+	return SendTypedWithMetrics(t.S, ctx, v, msgType, t.metrics)
+}
+
+// ReceiveTyped receives a versioned envelope into dst, recording metrics.
+func (t *TypedSession) ReceiveTyped(expectedType string, dst any) error {
+	return ReceiveTypedWithTimeoutAndMetrics(t.S, expectedType, dst, session.DefaultReceiveTimeout, t.metrics)
+}
+
+// ReceiveTypedWithTimeout receives a versioned envelope into dst with an explicit timeout, recording metrics.
+func (t *TypedSession) ReceiveTypedWithTimeout(expectedType string, dst any, d time.Duration) error {
+	return ReceiveTypedWithTimeoutAndMetrics(t.S, expectedType, dst, d, t.metrics)
 }
 
 func classifyError(err error) string {

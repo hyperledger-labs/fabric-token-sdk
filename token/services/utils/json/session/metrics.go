@@ -6,9 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 package session
 
 import (
+	"reflect"
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 const (
@@ -41,8 +43,7 @@ var (
 )
 
 // EnvelopeMetrics holds the counters and histograms for envelope operations.
-// Instantiate via NewEnvelopeMetrics and pass to SendTypedWithMetrics /
-// ReceiveTypedWithMetrics. A nil *EnvelopeMetrics is safe and disables metrics.
+// A nil *EnvelopeMetrics is safe and disables metrics (all observe* methods no-op).
 type EnvelopeMetrics struct {
 	Sent     metrics.Counter
 	Received metrics.Counter
@@ -51,6 +52,8 @@ type EnvelopeMetrics struct {
 }
 
 // NewEnvelopeMetrics registers and returns metrics using the given provider.
+// It is wired into the dependency-injection container (see token/sdk/dig) so
+// that GetEnvelopeMetrics can resolve it from a view context.
 func NewEnvelopeMetrics(p metrics.Provider) *EnvelopeMetrics {
 	return &EnvelopeMetrics{
 		Sent:     p.NewCounter(envelopeSentOpts),
@@ -58,6 +61,24 @@ func NewEnvelopeMetrics(p metrics.Provider) *EnvelopeMetrics {
 		Errors:   p.NewCounter(envelopeErrorsOpts),
 		Size:     p.NewHistogram(envelopeSizeOpts),
 	}
+}
+
+var envelopeMetricsType = reflect.TypeOf((*EnvelopeMetrics)(nil))
+
+// GetEnvelopeMetrics resolves the *EnvelopeMetrics registered in the service
+// provider. It returns an error when no metrics are registered (e.g. in
+// lightweight test contexts), in which case callers treat metrics as disabled.
+func GetEnvelopeMetrics(sp token.ServiceProvider) (*EnvelopeMetrics, error) {
+	s, err := sp.GetService(envelopeMetricsType)
+	if err != nil {
+		return nil, err
+	}
+	m, ok := s.(*EnvelopeMetrics)
+	if !ok {
+		panic("implementation error, type must be *EnvelopeMetrics")
+	}
+
+	return m, nil
 }
 
 func (m *EnvelopeMetrics) observeSend(msgType string, bodySize int) {

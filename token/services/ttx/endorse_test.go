@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package ttx_test
 
 import (
+	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -88,17 +90,6 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 	}
 	tms.NewRequestReturns(req, nil)
 
-	ctx := &mock2.Context{}
-	ctx.SessionReturns(session)
-	ctx.ContextReturns(t.Context())
-	ctx.GetServiceReturnsOnCall(0, tmsp, nil)
-	ctx.GetServiceReturnsOnCall(1, np, nil)
-	ctx.GetServiceReturnsOnCall(2, &endpoint.Service{}, nil)
-	ctx.GetServiceReturnsOnCall(3, np, nil)
-	ctx.GetServiceReturnsOnCall(4, tmsp, nil)
-	tx, err := ttx.NewTransaction(ctx, []byte("a_signer"))
-	require.NoError(t, err)
-
 	storage := &mock2.Storage{}
 	storage.AppendReturns(nil)
 	storageProvider := &mock2.StorageProvider{}
@@ -109,14 +100,42 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 	nis.SignReturns([]byte("an_ack_signature"), nil)
 	networkIdentityProvider.GetSignerReturns(nis, nil)
 
+	// Resolve services by their requested type rather than by call order, so the
+	// stub is robust to additional GetService lookups (e.g. envelope metrics).
+	getService := func(v interface{}) (interface{}, error) {
+		rt, ok := v.(reflect.Type)
+		if !ok {
+			return nil, errors.Errorf("unexpected service request [%T]", v)
+		}
+		switch rt.String() {
+		case "*dep.TokenManagementServiceProvider":
+			return tmsp, nil
+		case "*dep.NetworkProvider":
+			return np, nil
+		case "*dep.NetworkIdentityProvider":
+			return networkIdentityProvider, nil
+		case "*endpoint.Service":
+			return &endpoint.Service{}, nil
+		case "*ttx.StorageProvider":
+			return storageProvider, nil
+		case "*session.EnvelopeMetrics":
+			return nil, errors.New("envelope metrics not registered in test")
+		default:
+			return nil, errors.Errorf("unexpected service request [%s]", rt.String())
+		}
+	}
+
+	ctx := &mock2.Context{}
+	ctx.SessionReturns(session)
+	ctx.ContextReturns(t.Context())
+	ctx.GetServiceStub = getService
+	tx, err := ttx.NewTransaction(ctx, []byte("a_signer"))
+	require.NoError(t, err)
+
 	ctx = &mock2.Context{}
 	ctx.SessionReturns(session)
 	ctx.ContextReturns(t.Context())
-	ctx.GetServiceReturnsOnCall(0, storageProvider, nil)
-	ctx.GetServiceReturnsOnCall(1, np, nil)
-	ctx.GetServiceReturnsOnCall(2, tmsp, nil)
-	ctx.GetServiceReturnsOnCall(3, networkIdentityProvider, nil)
-	ctx.GetServiceReturnsOnCall(4, storageProvider, nil)
+	ctx.GetServiceStub = getService
 
 	txRaw, err := tx.Bytes()
 	require.NoError(t, err)
@@ -125,14 +144,12 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 	signatureRequest := &ttx.SignatureRequest{
 		Signer: input.IssuerIdentity,
 	}
-	signatureRequestRaw, err := signatureRequest.Bytes()
-	require.NoError(t, err)
 	ch <- &view.Message{
-		Payload: signatureRequestRaw,
+		Payload: mustEnvelopeBytes(t, ttx.TypeSignatureRequest, signatureRequest),
 	}
 	// then the transaction
 	ch <- &view.Message{
-		Payload: txRaw,
+		Payload: mustEnvelopeBytes(t, ttx.TypeTransaction, &ttx.TransactionPayload{Raw: txRaw}),
 	}
 
 	ctx.RunViewStub = func(v view.View, option ...view.RunViewOption) (interface{}, error) {
@@ -186,9 +203,12 @@ func TestEndorseView(t *testing.T) {
 			verify: func(ctx *TestEndorseViewContext, _ any) {
 				assert.Equal(t, 2, ctx.session.SendWithContextCallCount())
 				_, msg := ctx.session.SendWithContextArgsForCall(0)
-				assert.Equal(t, []byte("a_token_sigma"), msg)
+				var signaturePayload ttx.SignaturePayload
+				require.NoError(t, json.Unmarshal(mustUnwrapBody(t, msg, ttx.TypeSignature), &signaturePayload))
+				assert.Equal(t, []byte("a_token_sigma"), signaturePayload.Signature)
 				_, msg = ctx.session.SendWithContextArgsForCall(1)
-				assert.Equal(t, []byte("an_ack_signature"), msg)
+				require.NoError(t, json.Unmarshal(mustUnwrapBody(t, msg, ttx.TypeSignature), &signaturePayload))
+				assert.Equal(t, []byte("an_ack_signature"), signaturePayload.Signature)
 			},
 		},
 		{

@@ -245,7 +245,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 
 func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context, recipient *Recipient, multiSig bool, policy string) (token.Identity, error) {
 	logger.DebugfContext(context.Context(), "request recipient [%s] is not registered", recipient.Identity)
-	session, err := session2.NewFromInitiator(context, recipient.Identity)
+	session, err := session2.NewTypedSessionToParty(context, recipient.Identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session with [%s]", recipient.Identity)
 	}
@@ -263,14 +263,14 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 		Policy:        policy,
 	}
 	logger.DebugfContext(context.Context(), "Send identity request to %s", wID)
-	err = session.Send(recipientRequest)
+	err = session.SendTyped(context.Context(), recipientRequest, TypeRecipientRequest)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient request")
 	}
 
 	logger.DebugfContext(context.Context(), "Receive identity response")
 	recipientData := &RecipientData{}
-	err = session.ReceiveWithTimeout(recipientData, 10*time.Second)
+	err = session.ReceiveTypedWithTimeout(TypeRecipientResponse, recipientData, 10*time.Second)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 	}
@@ -333,11 +333,11 @@ func (f *RequestRecipientIdentityView) aggregateAndDistribute(context view.Conte
 		if local[i] {
 			continue
 		}
-		session, err := session2.NewJSON(context, context.Initiator(), recipient.Identity)
+		session, err := session2.NewTypedSessionForCaller(context, context.Initiator(), recipient.Identity)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get session with [%s]", recipient.Identity)
 		}
-		err = session.Send(mrd)
+		err = session.SendTyped(context.Context(), mrd, TypeMultisigRecipientData)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to send recipient request")
 		}
@@ -383,11 +383,11 @@ func (f *RequestRecipientIdentityView) aggregateAndDistributePolicy(context view
 		if local[i] {
 			continue
 		}
-		s, err := session2.NewJSON(context, context.Initiator(), recipient.Identity)
+		s, err := session2.NewTypedSessionForCaller(context, context.Initiator(), recipient.Identity)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get session with [%s]", recipient.Identity)
 		}
-		if err = s.Send(prd); err != nil {
+		if err = s.SendTyped(context.Context(), prd, TypePolicyRecipientData); err != nil {
 			return nil, errors.Wrapf(err, "failed to send policy recipient data")
 		}
 	}
@@ -422,9 +422,9 @@ func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet str
 }
 
 func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	session := session2.JSON(context)
+	session := session2.NewTypedSessionFromContext(context)
 	recipientRequest := &RecipientRequest{}
-	if err := session.Receive(recipientRequest); err != nil {
+	if err := session.ReceiveTyped(TypeRecipientRequest, recipientRequest); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive recipient request")
 	}
 
@@ -474,7 +474,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	}
 
 	logger.DebugfContext(context.Context(), "Send recipient identity response to %s", session.Info().Caller)
-	if err := session.Send(recipientData); err != nil {
+	if err := session.SendTyped(context.Context(), recipientData, TypeRecipientResponse); err != nil {
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
@@ -513,11 +513,11 @@ func (s *RespondRequestRecipientIdentityView) handleMultisig(
 		return nil
 	}
 
-	jsonSession := session2.NewFromSession(context, session)
+	jsonSession := session2.NewTypedSession(context, session)
 
 	logger.DebugfContext(context.Context(), "Receive multisig")
 	multisigRecipientData := &MultisigRecipientData{}
-	err := jsonSession.Receive(multisigRecipientData)
+	err := jsonSession.ReceiveTyped(TypeMultisigRecipientData, multisigRecipientData)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal multisig recipient data")
 	}
@@ -595,11 +595,11 @@ func (s *RespondRequestRecipientIdentityView) handlePolicy(
 	_ *RecipientRequest,
 	recipientIdentity token.Identity,
 ) error {
-	jsonSession := session2.NewFromSession(context, session)
+	jsonSession := session2.NewTypedSession(context, session)
 
 	logger.DebugfContext(context.Context(), "Receive policy recipient data")
 	prd := &PolicyRecipientData{}
-	if err := jsonSession.Receive(prd); err != nil {
+	if err := jsonSession.ReceiveTyped(TypePolicyRecipientData, prd); err != nil {
 		return errors.Wrapf(err, "failed to receive policy recipient data")
 	}
 	logger.DebugfContext(context.Context(), "Received policy recipient data")
@@ -708,7 +708,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 
 		return []view.Identity{me, other}, nil
 	} else {
-		session, err := session2.NewFromInitiator(context, f.Other)
+		session, err := session2.NewTypedSessionToParty(context, f.Other)
 		if err != nil {
 			return nil, err
 		}
@@ -727,13 +727,13 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			WalletID:      f.Other,
 			RecipientData: localRecipientData,
 		}
-		if err := session.Send(request); err != nil {
+		if err := session.SendTyped(context.Context(), request, TypeExchangeRecipientRequest); err != nil {
 			return nil, err
 		}
 
 		// Wait to receive a *token.RecipientData
 		remoteRecipientData := &token.RecipientData{}
-		err = session.Receive(remoteRecipientData)
+		err = session.ReceiveTyped(TypeExchangeRecipientResp, remoteRecipientData)
 		if err != nil {
 			return nil, err
 		}
@@ -777,11 +777,11 @@ func RespondExchangeRecipientIdentities(context view.Context) (view.Identity, vi
 }
 
 func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
-	session := session2.JSON(context)
+	session := session2.NewTypedSessionFromContext(context)
 
 	// other
 	request := &ExchangeRecipientRequest{}
-	if err := session.Receive(request); err != nil {
+	if err := session.ReceiveTyped(TypeExchangeRecipientRequest, request); err != nil {
 		return nil, err
 	}
 
@@ -824,7 +824,7 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, errors.WithMessagef(err, "failed binding recipient data, wallet [%s]", w.ID())
 	}
 
-	if err := session.Send(recipientData); err != nil {
+	if err := session.SendTyped(context.Context(), recipientData, TypeExchangeRecipientResp); err != nil {
 		return nil, errors.WithMessagef(err, "failed sending recipient data, wallet [%s]", w.ID())
 	}
 

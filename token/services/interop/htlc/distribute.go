@@ -17,6 +17,10 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// TypeHTLCTerms is the envelope message-type discriminator for the HTLC Terms
+// exchange. It lives with the htlc service rather than the generic session package.
+const TypeHTLCTerms = "htlc_terms"
+
 // Terms contains the details of the htlc to be examined
 type Terms struct {
 	ReclamationDeadline time.Duration
@@ -68,17 +72,12 @@ func NewDistributeTermsView(recipient view.Identity, terms *Terms) *DistributeTe
 }
 
 func (v *DistributeTermsView) Call(context view.Context) (interface{}, error) {
-	session, err := context.GetSession(context.Initiator(), v.recipient)
+	sess, err := context.GetSession(context.Initiator(), v.recipient)
 	if err != nil {
 		return nil, err
 	}
-	termsRaw, err := v.terms.Bytes()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling terms")
-	}
-	err = session.SendWithContext(context.Context(), termsRaw)
-	if err != nil {
-		return nil, err
+	if err := session.NewTypedSession(context, sess).SendTyped(context.Context(), v.terms, TypeHTLCTerms); err != nil {
+		return nil, errors.Wrapf(err, "failed sending terms")
 	}
 
 	return nil, nil
@@ -98,7 +97,7 @@ func ReceiveTerms(context view.Context) (*Terms, error) {
 
 func (v *termsReceiverView) Call(context view.Context) (interface{}, error) {
 	terms := &Terms{}
-	if err := session.JSON(context).Receive(terms); err != nil {
+	if err := session.NewTypedSessionFromContext(context).ReceiveTyped(TypeHTLCTerms, terms); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling terms")
 	}
 

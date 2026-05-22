@@ -58,6 +58,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/auditor"
 	wrapper2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/wrapper"
+	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/dig"
 )
@@ -206,6 +207,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(digutils.Identity[*db.OwnerCheckServiceProvider](), dig.As(new(ttx.CheckServiceProvider))),
 		p.Container().Provide(ttx.NewServiceManager),
 		p.Container().Provide(ttx.NewMetrics),
+		p.Container().Provide(jsession.NewEnvelopeMetrics),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
@@ -240,6 +242,7 @@ func (p *SDK) Install() error {
 		digutils.Register[driver.ConfigService](p.Container()),
 		digutils.Register[*identity.DBStorageProvider](p.Container()),
 		digutils.Register[*ttx.Metrics](p.Container()),
+		digutils.Register[*jsession.EnvelopeMetrics](p.Container()),
 		digutils.Register[*auditor.ServiceManager](p.Container()),
 		digutils.Register[*ftsconfig.Service](p.Container()),
 		digutils.Register[*ttx.ServiceManager](p.Container()),

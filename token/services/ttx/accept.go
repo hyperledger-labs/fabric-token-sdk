@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 )
 
 // AcceptView is used to accept tokens without the need to generate any signature.
@@ -90,9 +91,8 @@ func (s *AcceptView) ack(context view.Context) error {
 
 	// Ack for distribution
 	// Send the signature back
-	session := context.Session()
 	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", utils.Hashable(sigma), defaultIdentity)
-	if err := session.SendWithContext(context.Context(), sigma); err != nil {
+	if err := jsession.NewTypedSessionFromContext(context).SendTyped(context.Context(), &SignaturePayload{Signature: sigma}, TypeSignature); err != nil {
 		return errors.WithMessagef(err, "failed sending ack")
 	}
 

@@ -255,6 +255,152 @@ The `boolpolicy.OwnerWallet` (in `token/services/ttx/boolpolicy/wallet.go`) wrap
 
 The `EscrowAuth` struct (in `token/services/ttx/boolpolicy/auth.go`) implements the `Authorization` interface: `IsMine` returns true if any component identity of the policy token belongs to one of the node's owner wallets.
 
+## Interactive Protocol Versioning
+
+Every interactive protocol message in `ttx` is wrapped in a versioned envelope defined in `token/services/utils/json/session/envelope.go`. The envelope is what each initiator/responder pair actually exchanges; the per-flow payload structs ride inside the `Body` field.
+
+```go
+type Envelope struct {
+    Version uint32          `json:"v"`   // monotonic protocol version (mandatory)
+    Type    string          `json:"t"`   // message-type discriminator (mandatory)
+    Body    json.RawMessage `json:"b"`   // the actual payload
+}
+```
+
+Views send with `SendTyped(s, ctx, payload, TypeXxx)` / `SendEnvelopeOnSession(...)` and receive with `ReceiveTyped(s, TypeXxx, &dst)` (and the `WithTimeout` variants). These helpers handle envelope wrapping, version/type validation, and metrics in one call so view code stays focused on the payload.
+
+### Message Types
+
+The message-type discriminators live with the service that uses them — the ttx constants in `token/services/ttx/protocol_messages.go`, and the HTLC interop one in `token/services/interop/htlc/distribute.go` — not in the generic `session` package.
+
+| Constant | Value | Used by |
+|----------|-------|---------|
+| `TypeRecipientRequest` / `TypeRecipientResponse` | `recipient_req` / `recipient_resp` | `recipients.go` request flow |
+| `TypeExchangeRecipientRequest` / `TypeExchangeRecipientResp` | `exchange_req` / `exchange_resp` | `recipients.go` exchange flow |
+| `TypeMultisigRecipientData` / `TypePolicyRecipientData` | `multisig_data` / `policy_data` | recipient follow-ups for multisig / policy identities |
+| `TypeWithdrawalRequest` | `withdrawal_req` | `withdrawal.go` |
+| `TypeUpgradeAgreement` / `TypeUpgradeRequest` | `upgrade_agree` / `upgrade_req` | `upgrade.go` |
+| `TypeSpendRequest` / `TypeSpendResponse` | `spend_req` / `spend_resp` | `multisig/spend.go`, `boolpolicy/spend.go` |
+| `TypeSignatureRequest` / `TypeSignature` | `sig_req` / `signature` | `collectendorsements.go`, `endorse.go`, `accept.go`, `auditor.go` |
+| `TypeTransaction` / `TypeTransactionResponse` | `transaction` / `tx_resp` | tx distribution in `collectendorsements.go`, `auditor.go`, `collectactions.go`, `receivetx.go` |
+| `TypeActions` / `TypeActionTransfer` | `actions` / `action_transfer` | `collectactions.go` |
+| `TypeHTLCTerms` (htlc pkg) | `htlc_terms` | `interop/htlc/distribute.go` |
+
+Two reusable payload structs back the byte-oriented flows: `TransactionPayload{Raw []byte}` carries a serialized transaction, and `SignaturePayload{Signature []byte}` carries a signature.
+
+### Strict Mode and Errors
+
+Receivers reject any envelope whose `Version` differs from `CurrentVersion`, or whose `Type` is missing or does not match the expected type — there is no silent fallback to a legacy shape. Failures surface as the sentinel errors in `envelope.go`:
+
+- `ErrMissingVersion` — `Version` is zero / absent
+- `ErrVersionMismatch` (also returned as `*VersionError` with `Expected`/`Received`) — version differs from `CurrentVersion`
+- `ErrTypeMismatch` — received `Type` ≠ expected
+- `ErrInvalidEnvelope` — payload did not parse as an envelope
+
+All satisfy `errors.Is`. `VersionCompatibility` / `IsCompatible(local, remote)` declare which versions interoperate (v1 ↔ v1 only).
+
+### Metrics
+
+`EnvelopeMetrics` (in `metrics.go`) records per-type sent/received counters, an error counter, and a body-size histogram. It is registered once per process from the metrics provider obtained via FSC `platform/view/services/metrics#GetProvider`, resolved lazily by the session constructors (`JSON`, `NewFromSession`, …) and read by the typed send/receive helpers. A node with no metrics provider simply runs with metrics disabled.
+
+## Withdrawal Flow
+
+The withdrawal protocol (`withdrawal.go`) lets a wallet ask an issuer to mint tokens to a freshly generated recipient identity. Single-shot: the initiator sends a `WithdrawalRequest`; the issuer registers the recipient identity and returns the session for the subsequent issuance flow.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant I as Initiator (RequestWithdrawalView)
+    participant Iss as Issuer (ReceiveWithdrawalRequestView)
+
+    I->>I: Resolve recipient identity (caller-supplied or wallet-generated)
+    I->>Iss: Envelope{t:"withdrawal_req", b:WithdrawalRequest{TMSID, RecipientData, TokenType, Amount, NotAnonymous}}
+    Iss->>Iss: RegisterRecipientIdentity(request.RecipientData)
+    Iss->>Iss: endpoint.Bind(caller -> RecipientData.Identity)
+    Note over I,Iss: Session returned to caller for the issuance/endorsement flow
+```
+
+## Token Upgrade Flow
+
+The upgrade protocol (`upgrade.go`) exchanges old-format tokens for new-format ones over two round-trips: an agreement that establishes a fresh challenge, then a request carrying the proof.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant I as Initiator (UpgradeTokensInitiatorView)
+    participant Iss as Issuer (UpgradeTokensResponderView)
+
+    I->>Iss: Envelope{t:"upgrade_agree", b:UpgradeTokensAgreement{}}
+    Iss->>Iss: NewUpgradeChallenge, set TMSID
+    Iss-->>I: Envelope{t:"upgrade_agree", b:UpgradeTokensAgreement{Challenge, TMSID}}
+    I->>I: GenUpgradeProof(challenge, tokens); resolve recipient identity
+    I->>Iss: Envelope{t:"upgrade_req", b:UpgradeTokensRequest{ID, TMSID, RecipientData, Tokens, Proof}}
+    Iss->>Iss: Verify request.ID == challenge, verify TMS matches
+    Note over I,Iss: Responder continues with issuance; session returned to caller
+```
+
+The responder checks `request.ID` byte-for-byte against the challenge it issued, so a stale or substituted request is rejected before any proof verification.
+
+## Endorsement and Signature Collection
+
+`CollectEndorsementsView` (`collectendorsements.go`) gathers the signatures that make a transaction valid, then distributes the assembled transaction. Two message exchanges are involved, both enveloped:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant I as Initiator (CollectEndorsementsView)
+    participant P as Party (EndorseView)
+
+    rect rgba(230, 230, 250, 0.35)
+        Note over I,P: Signature collection (per required signer)
+        I->>P: Envelope{t:"sig_req", b:SignatureRequest{TX, Signer}}
+        P->>P: Verify expected identity, sign
+        P-->>I: Envelope{t:"signature", b:SignaturePayload{Signature}}
+    end
+
+    rect rgba(240, 255, 240, 0.45)
+        Note over I,P: Transaction distribution (per recipient)
+        I->>P: Envelope{t:"transaction", b:TransactionPayload{Raw}}
+        P->>P: ReceiveTransaction, AcceptView checks + signs ack
+        P-->>I: Envelope{t:"signature", b:SignaturePayload{Signature}}
+    end
+```
+
+`EndorseView` (`endorse.go`) is the responder for the signature-request leg; `AcceptView` (`accept.go`) responds to the transaction-distribution leg with a signed acknowledgement. `ReceiveTransactionView` (`receivetx.go`) unwraps the envelope and accepts `TypeTransaction`, `TypeTransactionResponse`, or `TypeSignatureRequest`.
+
+## Auditor Approval Flow
+
+`AuditingViewInitiator` (`auditor.go`) sends the assembled transaction to the auditor and waits for the auditor's signature; `AuditApproveView` audits, signs, and returns it.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant I as Initiator (AuditingViewInitiator)
+    participant A as Auditor (AuditApproveView)
+
+    I->>A: Envelope{t:"transaction", b:TransactionPayload{Raw}}
+    A->>A: ReceiveTransaction, Append audit records, sign
+    A-->>I: Envelope{t:"signature", b:SignaturePayload{Signature}}
+    I->>I: Verify auditor signature
+```
+
+## Collect Actions Flow
+
+`collectActionsView` (`collectactions.go`) drives a transfer where the action originates with a remote party: it ships the transaction and the requested actions, and receives the assembled transaction back.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant I as Initiator (collectActionsView)
+    participant R as Responder (receiveActionsView / collectActionsResponderView)
+
+    I->>R: Envelope{t:"transaction", b:TransactionPayload{Raw}}
+    I->>R: Envelope{t:"actions", b:Actions}
+    I->>R: Envelope{t:"action_transfer", b:ActionTransfer}
+    R->>R: Receive transaction, actions, action; assemble
+    R-->>I: Envelope{t:"tx_resp", b:TransactionPayload{Raw}}
+```
+
 ## Token Operations
 
 The TTX service supports three primary operations through the `TokenRequest` API:

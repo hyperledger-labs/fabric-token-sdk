@@ -96,7 +96,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	party := actionTransfer.From
 	logger.DebugfContext(context.Context(), "collect remote from [%s]", party)
 
-	session, err := session2.NewJSON(context, context.Initiator(), party)
+	ts, err := session2.NewTypedSessionForCaller(context, context.Initiator(), party)
 	if err != nil {
 		return errors.Wrap(err, "failed getting session")
 	}
@@ -106,26 +106,26 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	if err != nil {
 		return errors.Wrap(err, "failed marshalling transaction")
 	}
-	if err := session.SendRaw(context.Context(), txRaw); err != nil {
+	if err := ts.SendTyped(context.Context(), &TransactionPayload{Raw: txRaw}, TypeTransaction); err != nil {
 		return errors.Wrap(err, "failed sending transaction")
 	}
-	if err := session.Send(c.actions); err != nil {
+	if err := ts.SendTyped(context.Context(), c.actions, TypeActions); err != nil {
 		return errors.Wrapf(err, "failed sending actions")
 	}
-	if err := session.Send(actionTransfer); err != nil {
+	if err := ts.SendTyped(context.Context(), actionTransfer, TypeActionTransfer); err != nil {
 		return errors.Wrapf(err, "failed sending action")
 	}
 
 	// Wait to receive a content back
-	msg, err := session.ReceiveRaw()
-	if err != nil {
+	var txResponse TransactionPayload
+	if err := ts.ReceiveTyped(TypeTransactionResponse, &txResponse); err != nil {
 		return errors.Wrap(err, "failed reading message")
 	}
 	txPayload := &Payload{
 		Transient:    map[string][]byte{},
 		TokenRequest: token.NewRequest(nil, ""),
 	}
-	err = unmarshal(c.tx.NetworkProvider, txPayload, msg)
+	err = unmarshal(c.tx.NetworkProvider, txPayload, txResponse.Raw)
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling reply")
 	}
@@ -184,15 +184,15 @@ func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// actions
-	s := session2.JSON(context)
+	ts := session2.NewTypedSessionFromContext(context)
 	actions := &Actions{}
-	if err := s.Receive(actions); err != nil {
+	if err := ts.ReceiveTyped(TypeActions, actions); err != nil {
 		return nil, errors.Wrap(err, "failed receiving actions")
 	}
 
 	// action
 	action := &ActionTransfer{}
-	if err := s.Receive(action); err != nil {
+	if err := ts.ReceiveTyped(TypeActionTransfer, action); err != nil {
 		return nil, errors.Wrap(err, "failed receiving action")
 	}
 
@@ -216,8 +216,7 @@ func (s *collectActionsResponderView) Call(context view.Context) (interface{}, e
 		return nil, errors.Wrap(err, "failed marshalling ephemeral transaction")
 	}
 
-	err = context.Session().SendWithContext(context.Context(), response)
-	if err != nil {
+	if err := session2.NewTypedSessionFromContext(context).SendTyped(context.Context(), &TransactionPayload{Raw: response}, TypeTransactionResponse); err != nil {
 		return nil, errors.Wrap(err, "failed sending back response")
 	}
 
