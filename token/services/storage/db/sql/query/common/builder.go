@@ -32,16 +32,19 @@ func (b *builder) WriteParam(v Param) Builder {
 	_, _ = b.sb.WriteString(strconv.Itoa(*b.pc))
 	*b.pc++
 	b.params = append(b.params, v)
+
 	return b
 }
 
 func (b *builder) WriteString(s string) Builder {
 	_, _ = b.sb.WriteString(s)
+
 	return b
 }
 
 func (b *builder) WriteRune(r rune) Builder {
 	b.sb.WriteRune(r)
+
 	return b
 }
 
