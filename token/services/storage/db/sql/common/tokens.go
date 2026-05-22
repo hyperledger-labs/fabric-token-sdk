@@ -338,6 +338,7 @@ func (db *TokenStore) UnsupportedTokensIteratorBy(ctx context.Context, walletID 
 	logger.DebugfContext(ctx, "after filtering we have [%v]", includeFormats)
 
 	// now, select the tokens with the list of ledger tokens
+
 	return db.queryLedgerTokens(ctx, driver.QueryTokenDetailsParams{
 		WalletID:           walletID,
 		TokenType:          tokenType,
@@ -938,6 +939,7 @@ func (db *TokenStore) StorePublicParams(ctx context.Context, raw []byte) error {
 	if pps, err := db.PublicParamsByHash(ctx, rawHash); err == nil && len(pps) > 0 {
 		logger.DebugfContext(ctx, "public params [%s] already in the database", logging.Base64(rawHash))
 		// no need to update the public parameters
+
 		return nil
 	}
 

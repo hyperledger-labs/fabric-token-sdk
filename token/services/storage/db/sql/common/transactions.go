@@ -312,6 +312,7 @@ func (db *TransactionStore) QueryTokenRequests(ctx context.Context, params dbdri
 		return nil, err
 	}
 	// TODO: AF remove r.TokenRequest. Not used
+
 	return common.NewIterator(rows, func(r *dbdriver.TokenRequestRecord) error { return rows.Scan(&r.TxID, &r.TokenRequest, &r.Status) }), nil
 }
 
@@ -625,6 +626,7 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 	}
 	if len(rs) == 0 {
 		// nothing to do here
+
 		return nil
 	}
 

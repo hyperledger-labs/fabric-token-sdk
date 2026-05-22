@@ -38,6 +38,7 @@ func (b *BigInt) Scan(value interface{}) error {
 
 		return nil
 	default:
+
 		return fmt.Errorf("cannot scan type %T into BigInt", value)
 	}
 

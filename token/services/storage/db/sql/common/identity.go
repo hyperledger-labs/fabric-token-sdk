@@ -442,6 +442,7 @@ func (db *IdentityStore) registerIdentityDescriptor(
 	}
 	if exists {
 		// no need to continue
+
 		return nil
 	}
 

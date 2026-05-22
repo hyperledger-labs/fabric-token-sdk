@@ -91,6 +91,7 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 		}
 		if bytes.Equal(rawFromDB, raw) {
 			// It might be that this key was already inserted before. The node is restarting, for example.
+
 			return nil
 		}
 

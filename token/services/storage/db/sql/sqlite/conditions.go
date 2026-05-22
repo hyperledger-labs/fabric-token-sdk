@@ -25,6 +25,7 @@ func (i *interpreter) TimeOffset(duration time.Duration, sb common2.Builder) {
 	sb.WriteString("datetime('now'")
 	if duration == 0 {
 		sb.WriteRune(')')
+
 		return
 	}
 	sb.WriteString(", '").
@@ -39,6 +40,7 @@ func (i *interpreter) InTuple(fields []common2.Serializable, vals []common2.Tupl
 	}
 	if len(vals) == 1 && len(fields) == 1 {
 		sb.WriteConditionSerializable(cond.CmpVal(fields[0], "=", vals[0][0]), i)
+
 		return
 	}
 	sb.WriteString("(").

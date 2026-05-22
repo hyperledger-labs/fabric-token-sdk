@@ -84,6 +84,7 @@ func NewTokenStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableName
 	}
 
 	// Wrap with postgres-specific store that adds advisory lock to schema
+
 	return &TokenStore{
 		TokenStore: baseStore,
 		writeDB:    dbs.WriteDB,
