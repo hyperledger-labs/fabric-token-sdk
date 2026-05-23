@@ -229,8 +229,10 @@ func TestNotifierConcurrentSubscribeAndClose(t *testing.T) {
 				defer ticker.Stop()
 				select {
 				case <-ctx.Done():
+
 					return ctx.Err()
 				case <-ticker.C:
+
 					return nil
 				}
 			},

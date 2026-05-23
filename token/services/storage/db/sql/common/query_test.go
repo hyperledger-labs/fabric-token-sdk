@@ -9,10 +9,11 @@ package common_test
 import (
 	"testing"
 
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	qcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
+	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
+	qcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
+
+	common "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +23,7 @@ func TestSelect_Compile(t *testing.T) {
 		FieldsByName("id", "name").
 		From(q.Table("users")).
 		Where(cond.Eq("id", 1)).
-		Format(sqlite.NewConditionInterpreter())
+		Format(common.NewTestInterpreter())
 	assert.Equal(t, "SELECT id, name FROM users WHERE id = $1", query)
 	assert.Equal(t, 1, args[0])
 
@@ -30,7 +31,7 @@ func TestSelect_Compile(t *testing.T) {
 	query, args = q.SelectDistinct().
 		FieldsByName("email_id").
 		From(q.Table("customers")).
-		Format(sqlite.NewConditionInterpreter())
+		Format(common.NewTestInterpreter())
 	assert.Equal(t, "SELECT DISTINCT email_id FROM customers", query)
 	assert.Empty(t, args)
 
@@ -38,7 +39,7 @@ func TestSelect_Compile(t *testing.T) {
 	query, args = q.Select().
 		AllFields().
 		From(q.Table("users")).
-		Format(sqlite.NewConditionInterpreter())
+		Format(common.NewTestInterpreter())
 	assert.Equal(t, "SELECT * FROM users", query)
 	assert.Empty(t, args)
 }
@@ -60,7 +61,7 @@ func TestUpdate_Compile(t *testing.T) {
 		Set("name", "TheName").
 		Set("age", 16).
 		Where(cond.Eq("id", 1)).
-		Format(sqlite.NewConditionInterpreter())
+		Format(common.NewTestInterpreter())
 	assert.Equal(t, "UPDATE users SET name = $1, age = $2 WHERE id = $3", query)
 	assert.Equal(t, "TheName", args[0])
 	assert.Equal(t, 16, args[1])
@@ -71,7 +72,7 @@ func TestDelete_Compile(t *testing.T) {
 	// Simple DELETE
 	query, args := q.DeleteFrom("users").
 		Where(cond.Eq("id", 1)).
-		Format(sqlite.NewConditionInterpreter())
+		Format(common.NewTestInterpreter())
 	assert.Equal(t, "DELETE FROM users WHERE id = $1", query)
 	assert.Equal(t, 1, args[0])
 }
@@ -81,7 +82,7 @@ func TestDelete_Compile(t *testing.T) {
 // numbering continuing across branches and args concatenated in order.
 // This is the pattern used by UnspentTokensIteratorBy.
 func TestUnionAll_Compile(t *testing.T) {
-	ci := sqlite.NewConditionInterpreter()
+	ci := common.NewTestInterpreter()
 
 	branch1 := q.Select().
 		FieldsByName("id", "name").
