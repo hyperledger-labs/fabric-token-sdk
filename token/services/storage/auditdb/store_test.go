@@ -13,12 +13,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker/memory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func newTestStore() *StoreService {
-	return &StoreService{locker: newMemoryLocker()}
+	return &StoreService{locker: memory.New()}
 }
 
 func TestAcquireLocks_Success(t *testing.T) {
@@ -237,3 +238,16 @@ func TestAcquireAndReleaseLocks_Integration(t *testing.T) {
 
 	store.ReleaseLocks(ctx, "anchor_integration2")
 }
+
+func TestStoreService_WithLocker(t *testing.T) {
+	custom := &stubLocker{}
+	s, err := NewStoreService(nil, WithLocker(custom))
+	require.NoError(t, err)
+	require.NotNil(t, s)
+}
+
+type stubLocker struct{}
+
+func (s *stubLocker) AcquireLocks(context.Context, string, ...string) error { return nil }
+func (s *stubLocker) ReleaseLocks(context.Context, string)                  {}
+func (s *stubLocker) AssertLocksHeld(context.Context, string) error         { return nil }

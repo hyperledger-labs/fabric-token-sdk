@@ -9,12 +9,10 @@ package auditdb
 import (
 	"context"
 	"reflect"
-	"slices"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	cdriver "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	fsccommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -24,6 +22,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
 
@@ -52,7 +52,7 @@ func (m *auditManager) StoreServiceByTMSId(id token.TMSID) (*StoreService, error
 	return m.Get(id)
 }
 
-func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
+func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver, replicaID locker.ReplicaIDProvider) StoreServiceManager {
 	return &auditManager{
 		Provider: lazy.NewProviderWithKeyMapper(services.Key, func(tmsID token.TMSID) (*StoreService, error) {
 			cfg, err := cp.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace)
@@ -66,12 +66,12 @@ func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) Sto
 			lockerCfg := DefaultLockerConfig()
 			_ = cfg.UnmarshalKey("auditor.locker", &lockerCfg)
 
-			locker, err := NewLockerFromConfig(lockerCfg, store)
+			l, err := locker.NewFromConfig(lockerCfg, store, replicaID)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to create auditor locker for tms [%s]", tmsID)
 			}
 
-			return NewStoreService(store, WithLocker(locker))
+			return NewStoreService(store, WithLocker(l))
 		}),
 	}
 }
@@ -180,7 +180,7 @@ func NewStoreService(p dbdriver.AuditTransactionStore, opts ...StoreServiceOptio
 	s := &StoreService{
 		StatusSupport: common.NewStatusSupport(),
 		db:            p,
-		locker:        newMemoryLocker(),
+		locker:        memory.New(),
 		pendingTXs:    make([]string, 0, 10000),
 	}
 	for _, o := range opts {
@@ -392,8 +392,5 @@ func (d *StoreService) ReleaseRecoveryClaim(ctx context.Context, txID string, ow
 
 // deduplicateAndSort removes duplicate entries from a slice and sort it
 func deduplicateAndSort(source []string) []string {
-	slice := collections.NewSet(source...).ToSlice()
-	slices.Sort(slice)
-
-	return slice
+	return locker.DeduplicateAndSort(source)
 }

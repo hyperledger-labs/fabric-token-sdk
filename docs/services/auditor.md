@@ -51,3 +51,45 @@ sequenceDiagram
 Auditors use specialized wallets (Auditor Wallets) managed by the **Identity Service**. These wallets contain the cryptographic keys necessary to "open" the commitments and proofs found in privacy-preserving token transactions.
 
 The service provides the `AuditApproveView`, which auditors use to respond to incoming audit requests. This view automates the verification and signing process, ensuring that the auditor only approves transactions that are fully compliant with the system's public parameters.
+
+## Distributed EID Locking
+
+When multiple auditor replicas share the same AuditDB (PostgreSQL), concurrent processing of the same enrollment IDs (EIDs) must be serialized. The **auditor locker** (`token/services/storage/auditdb/locker`) coordinates exclusive access to EIDs during audit record writes.
+
+### Architecture
+
+| Package | Role |
+|---------|------|
+| `auditdb/locker/memory` | In-process semaphores for single-replica deployments |
+| `auditdb/locker/postgres` | Lease-table locking backed by PostgreSQL |
+| `auditdb/locker` | Factory, configuration, and DI wiring |
+
+The locker is injected into `auditdb.StoreService` at startup. Before appending audit records, the store calls `AssertLocksHeld` to verify leases are still valid.
+
+### Configuration
+
+Configure under `token.tms.<name>.auditor.locker` (see [Configuration](../configuration.md#optional-tokentmsnameauditorlocker)):
+
+```yaml
+token:
+  tms:
+    mytms:
+      auditor:
+        locker:
+          backend: postgres   # use "memory" (default) for single replica
+          postgres:
+            ttl: 30s
+            acquireBackoff: 100ms
+            acquireDeadline: 1m
+            heartbeat: 10s
+            owner:            # optional; defaults to the FSC node ID
+```
+
+**Backend selection:**
+
+| Backend | Use case | Database |
+|---------|----------|----------|
+| `memory` | Single replica | Any |
+| `postgres` | Multi-replica | PostgreSQL only |
+
+The Postgres backend creates an `eid_leases` table (prefixed per TMS persistence settings) and uses lease rows with heartbeat renewal. The replica owner defaults to the FSC config provider node `ID()` when `owner` is empty.

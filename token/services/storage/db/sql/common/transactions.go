@@ -49,6 +49,8 @@ type TransactionStore struct {
 	readDB                *sql.DB
 	writeDB               *sql.DB
 	table                 transactionTables
+	tablePrefix           string
+	tableParams           []string
 	ci                    common3.CondInterpreter
 	pi                    common3.PagInterpreter
 	notifier              dbdriver.TransactionNotifier
@@ -57,6 +59,8 @@ type TransactionStore struct {
 
 func newTransactionStore(
 	readDB, writeDB *sql.DB,
+	tablePrefix string,
+	tableParams []string,
 	tables transactionTables,
 	ci common3.CondInterpreter,
 	pi common3.PagInterpreter,
@@ -67,6 +71,8 @@ func newTransactionStore(
 		readDB:                readDB,
 		writeDB:               writeDB,
 		table:                 tables,
+		tablePrefix:           tablePrefix,
+		tableParams:           tableParams,
 		ci:                    ci,
 		pi:                    pi,
 		notifier:              notifier,
@@ -74,12 +80,22 @@ func newTransactionStore(
 	}
 }
 
+// PrefixedTableName returns the formatted table name for the given logical name.
+func (s *TransactionStore) PrefixedTableName(name string) string {
+	nc, err := ncProvider.GetFormatter(s.tablePrefix)
+	if err != nil {
+		return name
+	}
+
+	return nc.MustFormat(name, s.tableParams...)
+}
+
 func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
 	return NewOwnerTransactionStore(readDB, writeDB, tables, ci, pi)
 }
 
 func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
-	return newTransactionStore(readDB, writeDB, transactionTables{
+	return newTransactionStore(readDB, writeDB, tables.Prefix, tables.Params, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
@@ -96,7 +112,7 @@ func NewTransactionStoreWithNotifierAndRecovery(
 	notifier dbdriver.TransactionNotifier,
 	recoveryLeaderFactory func(context.Context, *sql.DB, int64) (dbdriver.RecoveryLeadership, bool, error),
 ) (*TransactionStore, error) {
-	return newTransactionStore(readDB, writeDB, transactionTables{
+	return newTransactionStore(readDB, writeDB, tables.Prefix, tables.Params, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,

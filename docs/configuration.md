@@ -477,7 +477,7 @@ Default values:
 - postgres.acquireBackoff: 100ms
 - postgres.acquireDeadline: 1m
 - postgres.heartbeat: 10s
-- postgres.owner: empty, auto-generated UUID at startup
+- postgres.owner: empty, defaults to the FSC node ID (`config.Provider.ID()`)
 
 **Backend Selection:**
 

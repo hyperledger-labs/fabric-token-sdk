@@ -13,11 +13,12 @@ import (
 
 type set struct {
 	field common2.FieldName
-	value common2.Param
+	value common2.Serializable
 }
 
 func (s set) WriteString(sb common2.Builder) {
-	sb.WriteSerializables(s.field).WriteString(" = ").WriteParam(s.value)
+	sb.WriteSerializables(s.field).WriteString(" = ")
+	s.value.WriteString(sb)
 }
 
 type query struct {
@@ -37,9 +38,23 @@ func (q *query) Update(t common2.TableName) Query {
 }
 
 func (q *query) Set(field common2.FieldName, value common2.Param) setQuery {
-	q.sets = append(q.sets, set{field: field, value: value})
+	q.sets = append(q.sets, set{field: field, value: common2.Bind(value)})
 
 	return q
+}
+
+func (q *query) SetIntervalFromNow(field common2.FieldName, ttl common2.Param) setQuery {
+	q.sets = append(q.sets, set{field: field, value: intervalFromNow{ttl: ttl}})
+
+	return q
+}
+
+type intervalFromNow struct {
+	ttl common2.Param
+}
+
+func (i intervalFromNow) WriteString(sb common2.Builder) {
+	sb.WriteString("NOW() + ").WriteParam(i.ttl).WriteString("::interval")
 }
 
 func (q *query) Where(where cond2.Condition) whereQuery {

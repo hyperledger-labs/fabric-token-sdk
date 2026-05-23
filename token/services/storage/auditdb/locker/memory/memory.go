@@ -4,32 +4,33 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package auditdb
+package memory
 
 import (
 	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker/dedup"
 	"golang.org/x/sync/semaphore"
 )
 
-// memoryLocker is the default in-memory Locker. It uses weighted semaphores
+// Locker is the default in-memory Locker. It uses weighted semaphores
 // (weight 1) so that AcquireLocks respects context cancellation and deadlines.
 // Suitable for single-replica deployments.
-type memoryLocker struct {
+type Locker struct {
 	locks sync.Map
 }
 
-func newMemoryLocker() Locker {
-	return &memoryLocker{}
+func New() *Locker {
+	return &Locker{}
 }
 
-func (m *memoryLocker) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
-	dedup := deduplicateAndSort(eIDs)
+func (m *Locker) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
+	deduped := dedup.AndSort(eIDs)
 
-	acquired := make([]string, 0, len(dedup))
-	for _, id := range dedup {
+	acquired := make([]string, 0, len(deduped))
+	for _, id := range deduped {
 		sem, _ := m.locks.LoadOrStore(id, semaphore.NewWeighted(1))
 		if err := sem.(*semaphore.Weighted).Acquire(ctx, 1); err != nil {
 			for _, aid := range acquired {
@@ -43,18 +44,18 @@ func (m *memoryLocker) AcquireLocks(ctx context.Context, anchor string, eIDs ...
 		acquired = append(acquired, id)
 	}
 
-	m.locks.Store(anchor, dedup)
+	m.locks.Store(anchor, deduped)
 
 	return nil
 }
 
-func (m *memoryLocker) ReleaseLocks(_ context.Context, anchor string) {
+func (m *Locker) ReleaseLocks(_ context.Context, anchor string) {
 	dedupBoxed, ok := m.locks.LoadAndDelete(anchor)
 	if !ok {
 		return
 	}
-	dedup := dedupBoxed.([]string)
-	for _, id := range dedup {
+	deduped := dedupBoxed.([]string)
+	for _, id := range deduped {
 		lock, ok := m.locks.Load(id)
 		if !ok {
 			continue
@@ -63,8 +64,6 @@ func (m *memoryLocker) ReleaseLocks(_ context.Context, anchor string) {
 	}
 }
 
-// AssertLocksHeld is a no-op for the memory locker. Semaphores cannot be
-// "lost" the way a Postgres lease can expire, so the check is always satisfied.
-func (m *memoryLocker) AssertLocksHeld(_ context.Context, _ string) error {
+func (m *Locker) AssertLocksHeld(_ context.Context, _ string) error {
 	return nil
 }

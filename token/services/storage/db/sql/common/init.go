@@ -17,6 +17,8 @@ var logger = logging.MustGetLogger()
 var ncProvider = db.NewTableNameCreator("fsc")
 
 type TableNames struct {
+	Prefix                 string
+	Params                 []string
 	Movements              string
 	Transactions           string
 	Requests               string
@@ -44,6 +46,8 @@ func GetTableNames(prefix string, params ...string) (TableNames, error) {
 	}
 
 	return TableNames{
+		Prefix:                 prefix,
+		Params:                 params,
 		Movements:              nc.MustFormat("movements", params...),
 		Transactions:           nc.MustFormat("txs", params...),
 		TransactionEndorseAck:  nc.MustFormat("tx_ends", params...),
