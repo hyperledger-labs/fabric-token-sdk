@@ -183,7 +183,7 @@ func TestVerifyRecipientAttestation_EmptySignature(t *testing.T) {
 	rd := &RecipientData{Identity: view.Identity("alice")}
 
 	err := verifyRecipientAttestation(t.Context(), nil, []byte("nonce"), rd, nil, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = verifyRecipientAttestation(t.Context(), nil, []byte("nonce"), rd, nil, false)
 	require.Error(t, err)
