@@ -68,7 +68,7 @@ The locker is injected into `auditdb.StoreService` at startup. Before appending 
 
 ### Configuration
 
-Configure under `token.tms.<name>.auditor.locker` (see [Configuration](../configuration.md#optional-tokentmsnameauditorlocker)):
+Configure under `token.tms.<name>.auditor.locker` (see [Configuration](../configuration.md#optional-tokentmsauditorlocker)):
 
 ```yaml
 token:
