@@ -221,6 +221,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 			return err
 		case <-timer.C:
 		case <-db.ctx.Done():
+
 			return db.ctx.Err()
 		}
 	}
@@ -237,6 +238,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 		return err
 	default:
 		// No error, return nil
+
 		return nil
 	}
 }
@@ -285,6 +287,7 @@ func (db *Notifier) GetSchema() string {
 
 	// We use unquoted identifiers for the trigger and table name to match how tables are created
 	// in the TokenStore. This allows Postgres to handle case-insensitivity consistently.
+
 	return fmt.Sprintf(`
 	SELECT pg_advisory_xact_lock(%d);
 	CREATE OR REPLACE FUNCTION %s() RETURNS TRIGGER AS $$

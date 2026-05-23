@@ -17,10 +17,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	dcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	qcommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
+	qcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
 )
 
 type keystoreTables struct {
@@ -91,6 +91,7 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 		}
 		if bytes.Equal(rawFromDB, raw) {
 			// It might be that this key was already inserted before. The node is restarting, for example.
+
 			return nil
 		}
 
