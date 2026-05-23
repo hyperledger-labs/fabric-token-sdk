@@ -448,7 +448,7 @@ Default values:
 
 ---
 
-### Optional: token.tms.\<name\>.auditor.locker
+### Optional: token.tms.<name>.auditor.locker
 
 Controls the distributed locking strategy used by the auditor to serialise
 concurrent access to enrollment IDs (EIDs) when processing audit records.
