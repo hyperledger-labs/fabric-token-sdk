@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
@@ -304,17 +305,14 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 		return nil, errors.New("responder returned empty recipient data on fresh path")
 	}
 
-	// Verify key-ownership attestation
 	tms, err := token.GetManagementService(context, token.WithTMSID(f.TMSID))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
 	}
-	verifier, err := tms.SigService().OwnerVerifier(context.Context(), recipientData.Identity)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get verifier for recipient identity")
-	}
-	if err = verifier.Verify(buildAttestationMessage(nonce, recipientData.Identity), resp.Signature); err != nil {
-		return nil, errors.Wrapf(err, "recipient key-ownership attestation failed")
+
+	// Verify key-ownership attestation when the responder could sign locally.
+	if err = verifyRecipientAttestation(context.Context(), tms, nonce, recipientData, resp.Signature, recipient.RecipientData != nil); err != nil {
+		return nil, err
 	}
 
 	wm := tms.WalletManager()
@@ -501,15 +499,10 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		recipientIdentity = recipientData.Identity
 	}
 
-	// Sign nonce || identity to prove key ownership.
-	// Use the wallet's signer (not SigService) so remote wallets can delegate.
-	signer, err := w.GetSigner(context.Context(), recipientIdentity)
+	// Sign nonce || identity to prove key ownership when the key is local.
+	sig, err := signRecipientAttestation(context.Context(), w, recipientRequest.Nonce, recipientIdentity, !isEcho)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get signer for recipient identity")
-	}
-	sig, err := signer.Sign(buildAttestationMessage(recipientRequest.Nonce, recipientIdentity))
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to sign attestation")
+		return nil, err
 	}
 
 	// Bind before send
@@ -878,15 +871,10 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, errors.WithMessagef(err, "failed getting recipient data, wallet [%s]", w.ID())
 	}
 
-	// Sign nonce || identity to prove key ownership.
-	// Use the wallet signer so remote wallets can delegate signing.
-	signer, err := w.GetSigner(context.Context(), recipientData.Identity)
+	// Sign nonce || identity to prove key ownership when the key is local.
+	sig, err := signRecipientAttestation(context.Context(), w, request.Nonce, recipientData.Identity, true)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get signer for exchange recipient identity")
-	}
-	sig, err := signer.Sign(buildAttestationMessage(request.Nonce, recipientData.Identity))
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to sign exchange attestation")
+		return nil, err
 	}
 
 	// Bind locally before sending
@@ -907,6 +895,48 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	}
 
 	return []token.Identity{recipientData.Identity, other}, nil
+}
+
+func signRecipientAttestation(ctx context.Context, w *token.OwnerWallet, nonce []byte, identity view.Identity, freshPath bool) ([]byte, error) {
+	if w.Remote() {
+		if freshPath {
+			return nil, errors.Errorf("remote wallet [%s] cannot attest fresh recipient identity locally", w.ID())
+		}
+
+		return nil, nil
+	}
+
+	signer, err := w.GetSigner(ctx, identity)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get signer for recipient identity")
+	}
+	sig, err := signer.Sign(buildAttestationMessage(nonce, identity))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to sign attestation")
+	}
+
+	return sig, nil
+}
+
+func verifyRecipientAttestation(ctx context.Context, tms *token.ManagementService, nonce []byte, recipientData *RecipientData, signature []byte, echoPath bool) error {
+	if len(signature) == 0 {
+		if echoPath {
+			// Remote wallets on the responder node cannot sign locally; membership was checked there.
+			return nil
+		}
+
+		return errors.New("responder returned empty signature on fresh path")
+	}
+
+	verifier, err := tms.SigService().OwnerVerifier(ctx, recipientData.Identity)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get verifier for recipient identity")
+	}
+	if err = verifier.Verify(buildAttestationMessage(nonce, recipientData.Identity), signature); err != nil {
+		return errors.Wrapf(err, "recipient key-ownership attestation failed")
+	}
+
+	return nil
 }
 
 func getRecipientData(opts *token.ServiceOptions) *RecipientData {

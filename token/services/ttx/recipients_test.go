@@ -178,3 +178,14 @@ func TestGetRecipientWalletID(t *testing.T) {
 		assert.Equal(t, "my-wallet-id", getRecipientWalletID(opts))
 	})
 }
+
+func TestVerifyRecipientAttestation_EmptySignature(t *testing.T) {
+	rd := &RecipientData{Identity: view.Identity("alice")}
+
+	err := verifyRecipientAttestation(t.Context(), nil, []byte("nonce"), rd, nil, true)
+	assert.NoError(t, err)
+
+	err = verifyRecipientAttestation(t.Context(), nil, []byte("nonce"), rd, nil, false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "empty signature on fresh path")
+}
