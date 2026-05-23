@@ -18,10 +18,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker/dedup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker/errs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker/id"
+	pgcond "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/postgres"
 	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
 	qcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
-	pgcond "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/postgres"
 )
 
 var logger = logging.MustGetLogger()

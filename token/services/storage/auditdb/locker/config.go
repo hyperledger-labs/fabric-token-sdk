@@ -23,7 +23,7 @@ const (
 // Config is the top-level configuration for the auditor EID locker.
 // It is read from the TMS configuration under the key "auditor.locker".
 type Config struct {
-	Backend  Backend                `yaml:"backend"`
+	Backend  Backend               `yaml:"backend"`
 	Postgres lockerpostgres.Config `yaml:"postgres"`
 }
 

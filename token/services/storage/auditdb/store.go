@@ -18,12 +18,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/multiplexed"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
 
