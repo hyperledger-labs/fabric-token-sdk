@@ -389,8 +389,3 @@ func (d *StoreService) ReleaseRecoveryClaim(ctx context.Context, txID string, ow
 
 	return nil
 }
-
-// deduplicateAndSort removes duplicate entries from a slice and sort it
-func deduplicateAndSort(source []string) []string {
-	return locker.DeduplicateAndSort(source)
-}
