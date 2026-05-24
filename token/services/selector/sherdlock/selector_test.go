@@ -36,7 +36,7 @@ func TestSelectorUnit(t *testing.T) {
 				Quantity: "100",
 			}, nil)
 			mockIt.NextReturnsOnCall(1, nil, nil)
-			
+
 			return mockIt, nil
 		}
 		mockLocker.TryLockReturns(true)
