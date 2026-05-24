@@ -27,15 +27,18 @@ func TestSelectorUnit(t *testing.T) {
 		mockLocker := &mocks.FakeTokenLocker{}
 		s := sherdlock.NewSelector(sherdlock.Logger(), mockFetcher, mockLocker, 64, metrics)
 
-		mockIt := &mocks.FakeIterator[*token2.UnspentTokenInWallet]{}
-		mockIt.NextReturnsOnCall(0, &token2.UnspentTokenInWallet{
-			Id:       token2.ID{TxId: "tx1", Index: 0},
-			Type:     "ABC",
-			Quantity: "100",
-		}, nil)
-		mockIt.NextReturnsOnCall(1, nil, nil)
-
-		mockFetcher.UnspentTokensIteratorByReturns(mockIt, nil)
+		// Use a stub to return fresh iterators on each call
+		mockFetcher.UnspentTokensIteratorByStub = func(ctx context.Context, walletID string, tokenType token2.Type) (sherdlock.Iterator[*token2.UnspentTokenInWallet], error) {
+			mockIt := &mocks.FakeIterator[*token2.UnspentTokenInWallet]{}
+			mockIt.NextReturnsOnCall(0, &token2.UnspentTokenInWallet{
+				Id:       token2.ID{TxId: "tx1", Index: 0},
+				Type:     "ABC",
+				Quantity: "100",
+			}, nil)
+			mockIt.NextReturnsOnCall(1, nil, nil)
+			
+			return mockIt, nil
+		}
 		mockLocker.TryLockReturns(true)
 
 		tokens, sum, err := s.Select(t.Context(), &unitTestMockOwnerFilter{id: "alice"}, "50", "ABC")
