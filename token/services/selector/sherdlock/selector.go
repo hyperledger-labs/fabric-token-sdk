@@ -197,14 +197,14 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			tokensLockedByOthersExist = true
 		} else {
 			s.logger.DebugfContext(ctx, "Got the lock on token [%v]", t)
-			
+
 			// Verify token still exists and is unspent after acquiring lock
 			found := false
 			verifyIter, err := s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType)
 			if err != nil {
 				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to verify token after lock [%s:%s]", owner.ID(), tokenType)
 			}
-			
+
 			// Search for our locked token in the fresh iterator
 			for {
 				tok, err := verifyIter.Next()
@@ -224,7 +224,7 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 				}
 			}
 			verifyIter.Close()
-			
+
 			if !found {
 				// Token was spent before lock completed - unlock and continue searching
 				s.logger.DebugfContext(ctx, "Token [%v] was spent before lock completed, unlocking and continuing", t.Id)
@@ -239,7 +239,7 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 
 				continue
 			}
-			
+
 			// Token verified as unspent - reset cache for next iteration
 			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
 				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reset cache after verification")
