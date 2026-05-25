@@ -738,6 +738,11 @@ func (r *Request) extractTransferOutputs(ctx context.Context, i int, counter uin
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
 		}
+		// For redeem outputs, the per-output metadata does not carry the issuer identity.
+		// Fall back to the action-level issuer (set only for redeem transfers).
+		if issuer.IsNone() && !transferAction.GetIssuer().IsNone() {
+			issuer = transferAction.GetIssuer()
+		}
 		if noOutputForRecipient {
 			outputs = append(outputs, &Output{
 				Token:                *tok,
