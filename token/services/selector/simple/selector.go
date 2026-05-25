@@ -198,7 +198,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 
 			return nil, nil, errors.WithMessagef(
 				token.SelectorInsufficientFunds,
-				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum.Decimal(), tokenType,
+				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested", sum.Decimal(), tokenType, target.Decimal(),
 			)
 		}
 
