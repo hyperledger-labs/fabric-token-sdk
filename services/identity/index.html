@@ -1334,6 +1334,54 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="1. X.509">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#expected-folder-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Expected Folder Structure
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Expected Folder Structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#directory-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Directory Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#detailed-structure-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Detailed Structure Components
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-key-store-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Key Store Directory
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2258,6 +2306,54 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="1. X.509">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#expected-folder-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Expected Folder Structure
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Expected Folder Structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#directory-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Directory Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#detailed-structure-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Detailed Structure Components
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-key-store-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Key Store Directory
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2650,6 +2746,27 @@ It wraps the raw identity bytes with a type label, enabling the system to verify
     - Audit Info: JSON.
 *   <strong>Usage</strong>: Ideal for infrastructure components (nodes, services) or scenarios where anonymity is not required.
 *   <strong>Implementation</strong>: <code>token/services/identity/x509</code>.</p>
+<h5 id="expected-folder-structure">Expected Folder Structure<a class="headerlink" href="#expected-folder-structure" title="Permanent link">&para;</a></h5>
+<p>The X.509 Key Manager expects a specific folder structure when loading configurations from a local directory. It supports loading public signing certificates and, optionally, private keys for signing capabilities.</p>
+<h6 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h6>
+<p>The cryptographic materials are stored in standard PEM format. By default, the directory layout is as follows:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&lt;dir&gt;/
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── signcerts/
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│   └── &lt;cert&gt;.pem          # Public signing certificate (X.509 PEM format)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>└── keystore/
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    └── priv_sk             # (Optional) Private key file (PEM format)
+</span></code></pre></div></p>
+<h6 id="detailed-structure-components">Detailed Structure Components<a class="headerlink" href="#detailed-structure-components" title="Permanent link">&para;</a></h6>
+<ul>
+<li><strong><code>signcerts/</code> (Required)</strong>: This folder must contain at least one PEM-encoded X.509 certificate. The Key Manager loads the first valid PEM certificate found in this directory as the public identity/signer.</li>
+<li><strong><code>keystore/</code> (Optional)</strong>: This folder holds the corresponding private key. </li>
+<li>The private key file <strong>must</strong> be named exactly <code>priv_sk</code>.</li>
+<li>The private key file can be in standard PEM formats such as <code>PRIVATE KEY</code>, <code>RSA PRIVATE KEY</code>, or <code>EC PRIVATE KEY</code>.</li>
+<li>If the private key is present, the loaded <code>KeyManager</code> operates in <strong>signing mode</strong> (capable of generating signatures).</li>
+<li>If the private key is absent, the <code>KeyManager</code> operates in <strong>verifying-only mode</strong> (only capable of verifying signatures).</li>
+</ul>
+<h6 id="custom-key-store-directory">Custom Key Store Directory<a class="headerlink" href="#custom-key-store-directory" title="Permanent link">&para;</a></h6>
+<p>While <code>keystore</code> is the default directory name for the private key, a custom keystore directory name can be passed as an argument when initializing the key manager (e.g. to load <code>priv_sk</code> from <code>&lt;dir&gt;/&lt;custom-keystore-name&gt;/priv_sk</code>).</p>
 <h4 id="2-idemix-identity-mixer">2. Idemix (Identity Mixer)<a class="headerlink" href="#2-idemix-identity-mixer" title="Permanent link">&para;</a></h4>
 <p>Advanced identity encryption based on Zero-Knowledge Proofs (ZKP).
 *   <strong>Identity (Payload)</strong>: A <strong>full Idemix signature</strong> acting as a commitment to the user's attributes. It is encoded as a Protobuf <code>SerializedIdemixIdentity</code> message.
@@ -2785,25 +2902,25 @@ implementing the required identity and wallet interfaces.</p>
 <p>The steps below describe how to add a new composite identity type end-to-end, based on the pattern used for <strong>PolicyIdentity</strong> (<code>token/services/identity/boolpolicy</code>).</p>
 <h4 id="step-1-reserve-a-type-tag">Step 1 — Reserve a type tag<a class="headerlink" href="#step-1-reserve-a-type-tag" title="Permanent link">&para;</a></h4>
 <p>Add a new constant to <code>token/driver/wallet.go</code> alongside the existing tags:</p>
-<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="c1">// ...existing tags...</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">MyNewIdentityType</span><span class="w">       </span><span class="nx">IdentityType</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">7</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">MyNewIdentityTypeString</span><span class="w">              </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;mynew&quot;</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="c1">// ...existing tags...</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">MyNewIdentityType</span><span class="w">       </span><span class="nx">IdentityType</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">7</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nx">MyNewIdentityTypeString</span><span class="w">              </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;mynew&quot;</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>The integer must be unique across all registered identity types.</p>
 <h4 id="step-2-define-the-wire-format">Step 2 — Define the wire format<a class="headerlink" href="#step-2-define-the-wire-format" title="Permanent link">&para;</a></h4>
 <p>Create a package (e.g. <code>token/services/identity/mynew/</code>) and define the identity struct. Use ASN.1 DER for structured binary data (as PolicyIdentity does) or JSON for human-readable payloads (as HTLC does):</p>
-<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">MyNewIdentity</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">SomeField</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="s">`asn1:&quot;utf8&quot;`</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">Parts</span><span class="w">     </span><span class="p">[][]</span><span class="kt">byte</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">}</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">MyNewIdentity</span><span class="p">)</span><span class="w"> </span><span class="nx">Serialize</span><span class="p">()</span><span class="w"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">asn1</span><span class="p">.</span><span class="nx">Marshal</span><span class="p">(</span><span class="o">*</span><span class="nx">m</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">MyNewIdentity</span><span class="p">)</span><span class="w"> </span><span class="nx">Deserialize</span><span class="p">(</span><span class="nx">raw</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asn1</span><span class="p">.</span><span class="nx">Unmarshal</span><span class="p">(</span><span class="nx">raw</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">)</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">}</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">MyNewIdentity</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">SomeField</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="s">`asn1:&quot;utf8&quot;`</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">Parts</span><span class="w">     </span><span class="p">[][]</span><span class="kt">byte</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">MyNewIdentity</span><span class="p">)</span><span class="w"> </span><span class="nx">Serialize</span><span class="p">()</span><span class="w"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">asn1</span><span class="p">.</span><span class="nx">Marshal</span><span class="p">(</span><span class="o">*</span><span class="nx">m</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">MyNewIdentity</span><span class="p">)</span><span class="w"> </span><span class="nx">Deserialize</span><span class="p">(</span><span class="nx">raw</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asn1</span><span class="p">.</span><span class="nx">Unmarshal</span><span class="p">(</span><span class="nx">raw</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">)</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>Expose <code>Wrap</code> / <code>Unwrap</code> helpers (see <code>boolpolicy.WrapPolicyIdentity</code> / <code>boolpolicy.Unwrap</code>) that embed the serialized struct inside a <code>TypedIdentity</code> envelope with the new type tag.</p>
 <h4 id="step-3-implement-signature-verification">Step 3 — Implement signature verification<a class="headerlink" href="#step-3-implement-signature-verification" title="Permanent link">&para;</a></h4>
@@ -2812,21 +2929,21 @@ implementing the required identity and wallet interfaces.</p>
 <p>Define a struct for the signature produced over the token request (analogous to <code>PolicySignature</code> in <code>boolpolicy/sig.go</code>). Include ASN.1 or JSON encoding helpers and a <code>JoinSignatures</code> function if multiple parties contribute partial signatures.</p>
 <h4 id="step-5-implement-the-authorization-checker">Step 5 — Implement the <code>Authorization</code> checker<a class="headerlink" href="#step-5-implement-the-authorization-checker" title="Permanent link">&para;</a></h4>
 <p>Create an <code>EscrowAuth</code> struct (see <code>token/services/ttx/boolpolicy/auth.go</code>) that implements the <code>Authorization</code> interface:</p>
-<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">EscrowAuth</span><span class="w"> </span><span class="kd">struct</span><span class="p">{</span><span class="w"> </span><span class="nx">WalletService</span><span class="w"> </span><span class="nx">driver</span><span class="p">.</span><span class="nx">WalletService</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">AmIAnAuditor</span><span class="p">()</span><span class="w"> </span><span class="kt">bool</span><span class="w">                                  </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">IsMine</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">tok</span><span class="w"> </span><span class="o">*</span><span class="nx">token</span><span class="p">.</span><span class="nx">Token</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">...</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">Issued</span><span class="p">(</span><span class="nx">_</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="nx">driver</span><span class="p">.</span><span class="nx">Identity</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">*</span><span class="nx">token</span><span class="p">.</span><span class="nx">Token</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">OwnerType</span><span class="p">(</span><span class="nx">raw</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">driver</span><span class="p">.</span><span class="nx">IdentityType</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="o">...</span><span class="w"> </span><span class="p">}</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">EscrowAuth</span><span class="w"> </span><span class="kd">struct</span><span class="p">{</span><span class="w"> </span><span class="nx">WalletService</span><span class="w"> </span><span class="nx">driver</span><span class="p">.</span><span class="nx">WalletService</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">AmIAnAuditor</span><span class="p">()</span><span class="w"> </span><span class="kt">bool</span><span class="w">                                  </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">IsMine</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">tok</span><span class="w"> </span><span class="o">*</span><span class="nx">token</span><span class="p">.</span><span class="nx">Token</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">...</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">Issued</span><span class="p">(</span><span class="nx">_</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="nx">driver</span><span class="p">.</span><span class="nx">Identity</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">*</span><span class="nx">token</span><span class="p">.</span><span class="nx">Token</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">EscrowAuth</span><span class="p">)</span><span class="w"> </span><span class="nx">OwnerType</span><span class="p">(</span><span class="nx">raw</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">driver</span><span class="p">.</span><span class="nx">IdentityType</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="o">...</span><span class="w"> </span><span class="p">}</span>
 </span></code></pre></div>
 <p>Register it in <strong>both</strong> driver files inside <code>NewAuthorizationMultiplexer</code>:</p>
-<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// token/core/fabtoken/v1/driver/driver.go  (and the zkatdlog equivalent)</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">authorization</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">common</span><span class="p">.</span><span class="nx">NewAuthorizationMultiplexer</span><span class="p">(</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">common</span><span class="p">.</span><span class="nx">NewTMSAuthorization</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">htlc</span><span class="p">.</span><span class="nx">NewScriptAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nx">multisig</span><span class="p">.</span><span class="nx">NewEscrowAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">boolpolicy</span><span class="p">.</span><span class="nx">NewEscrowAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nx">mynew</span><span class="p">.</span><span class="nx">NewEscrowAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span><span class="w">   </span><span class="c1">// ← add here</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// token/core/fabtoken/v1/driver/driver.go  (and the zkatdlog equivalent)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">authorization</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">common</span><span class="p">.</span><span class="nx">NewAuthorizationMultiplexer</span><span class="p">(</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">common</span><span class="p">.</span><span class="nx">NewTMSAuthorization</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">htlc</span><span class="p">.</span><span class="nx">NewScriptAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nx">multisig</span><span class="p">.</span><span class="nx">NewEscrowAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nx">boolpolicy</span><span class="p">.</span><span class="nx">NewEscrowAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nx">mynew</span><span class="p">.</span><span class="nx">NewEscrowAuth</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span><span class="w">   </span><span class="c1">// ← add here</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">)</span>
 </span></code></pre></div>
 <h4 id="step-6-add-a-wallet-wrapper">Step 6 — Add a wallet wrapper<a class="headerlink" href="#step-6-add-a-wallet-wrapper" title="Permanent link">&para;</a></h4>
 <p>Create an <code>OwnerWallet</code> wrapper (see <code>token/services/ttx/boolpolicy/wallet.go</code>) that filters the unspent token list to tokens whose owner is the new identity type, and exposes domain-specific helpers (e.g. <code>VerifyApprover</code>).</p>
