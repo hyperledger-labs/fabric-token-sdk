@@ -167,6 +167,30 @@ Standard PKIX identities.
 *   **Usage**: Ideal for infrastructure components (nodes, services) or scenarios where anonymity is not required.
 *   **Implementation**: `token/services/identity/x509`.
 
+##### Expected Folder Structure
+The X.509 Key Manager expects a specific folder structure when loading configurations from a local directory. It supports loading public signing certificates and, optionally, private keys for signing capabilities.
+
+###### Directory Structure
+The cryptographic materials are stored in standard PEM format. By default, the directory layout is as follows:
+```text
+<dir>/
+├── signcerts/
+│   └── <cert>.pem          # Public signing certificate (X.509 PEM format)
+└── keystore/
+    └── priv_sk             # (Optional) Private key file (PEM format)
+```
+
+###### Detailed Structure Components
+- **`signcerts/` (Required)**: This folder must contain at least one PEM-encoded X.509 certificate. The Key Manager loads the first valid PEM certificate found in this directory as the public identity/signer.
+- **`keystore/` (Optional)**: This folder holds the corresponding private key. 
+  - The private key file **must** be named exactly `priv_sk`.
+  - The private key file can be in standard PEM formats such as `PRIVATE KEY`, `RSA PRIVATE KEY`, or `EC PRIVATE KEY`.
+  - If the private key is present, the loaded `KeyManager` operates in **signing mode** (capable of generating signatures).
+  - If the private key is absent, the `KeyManager` operates in **verifying-only mode** (only capable of verifying signatures).
+
+###### Custom Key Store Directory
+While `keystore` is the default directory name for the private key, a custom keystore directory name can be passed as an argument when initializing the key manager (e.g. to load `priv_sk` from `<dir>/<custom-keystore-name>/priv_sk`).
+
 #### 2. Idemix (Identity Mixer)
 Advanced identity encryption based on Zero-Knowledge Proofs (ZKP).
 *   **Identity (Payload)**: A **full Idemix signature** acting as a commitment to the user's attributes. It is encoded as a Protobuf `SerializedIdemixIdentity` message.
