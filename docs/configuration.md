@@ -209,6 +209,29 @@ token:
               # on every sweep until it either resolves or an operator intervenes.
               notFoundGracePeriod: 30m
 
+      # auditor-specific settings
+      auditor:
+        # locker configures the distributed locking strategy for the auditor's
+        # enrollment-ID (EID) locks. These locks serialise concurrent access
+        # to the same EIDs across replicas when processing audit records.
+        locker:
+          # backend selects the Locker implementation.
+          #   "memory"   – in-process mutex (default, single-replica only)
+          #   "postgres" – PostgreSQL lease-table (multi-replica)
+          backend: memory
+          # postgres section is read only when backend == "postgres".
+          postgres:
+            # ttl is the lease duration for each EID lock row.
+            ttl: 30s
+            # acquireBackoff is the wait between retry attempts when a lock is contended.
+            acquireBackoff: 100ms
+            # acquireDeadline is the total time allowed to acquire all EID locks.
+            acquireDeadline: 1m
+            # heartbeat is the interval at which held leases are renewed (~TTL/3).
+            heartbeat: 10s
+            # owner identifies this replica. Auto-generated at startup if empty.
+            owner:
+
       # sections dedicated to the definition of the wallets
       wallets:
         # Default cache size reference that can be used by any wallet that supports caching.
@@ -422,3 +445,49 @@ Default values:
 - `workerCount` affects CPU and network utilization during recovery sweeps
 - `batchSize` affects memory usage and the duration of each recovery sweep
 - The relationship `scanInterval < ttl` ensures timely detection without premature recovery
+
+---
+
+### Optional: token.tms.<name>.auditor.locker
+
+Controls the distributed locking strategy used by the auditor to serialise
+concurrent access to enrollment IDs (EIDs) when processing audit records.
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  tms:
+    <name>:
+      auditor:
+        locker:
+          backend: memory
+          postgres:
+            ttl: 30s
+            acquireBackoff: 100ms
+            acquireDeadline: 1m
+            heartbeat: 10s
+            owner:
+```
+
+Default values:
+
+- backend: `memory` (in-process mutex, single-replica only)
+- postgres.ttl: 30s
+- postgres.acquireBackoff: 100ms
+- postgres.acquireDeadline: 1m
+- postgres.heartbeat: 10s
+- postgres.owner: empty, defaults to the FSC node ID (`config.Provider.ID()`)
+
+**Backend Selection:**
+
+| Backend    | Use case                      | Database requirement |
+|------------|-------------------------------|----------------------|
+| `memory`   | Single-replica deployments    | Any (SQLite, Postgres) |
+| `postgres` | Multi-replica deployments     | PostgreSQL only        |
+
+**Notes:**
+- The `postgres` backend uses a dedicated lease table (created automatically) with row-level locking, heartbeat renewal, and automatic expiry. It relies on PostgreSQL-specific SQL features (`ON CONFLICT DO UPDATE … RETURNING`, `::interval` casts, `TIMESTAMPTZ`).
+- The `memory` backend uses in-process semaphores and provides no cross-replica coordination. It is suitable for single-node or development setups.
+- When using `postgres`, all auditor replicas must share the same PostgreSQL database so that EID locks are globally visible.
+- Set `heartbeat` to roughly `ttl / 3` to ensure leases are renewed well before expiry.

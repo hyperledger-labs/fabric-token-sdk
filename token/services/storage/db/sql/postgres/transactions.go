@@ -30,6 +30,10 @@ type AuditTransactionStore struct {
 	lockID  int64
 }
 
+// WriteDB returns the underlying write *sql.DB.
+// Used by the auditor distributed locker to share the connection pool.
+func (s *AuditTransactionStore) WriteDB() *sql.DB { return s.writeDB }
+
 // GetSchema overrides the base GetSchema to prefix with advisory lock
 func (s *AuditTransactionStore) GetSchema() string {
 	baseSchema := s.TransactionStore.GetSchema()

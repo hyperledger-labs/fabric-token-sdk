@@ -36,6 +36,48 @@ func (b *builder) WriteParam(v Param) Builder {
 	return b
 }
 
+// BindParams registers parameters and advances the placeholder counter without writing to the query.
+func (b *builder) BindParams(vs ...Param) Builder {
+	for _, v := range vs {
+		b.params = append(b.params, v)
+		*b.pc++
+	}
+
+	return b
+}
+
+func (b *builder) WriteParamRef(n int) Builder {
+	b.sb.WriteRune('$')
+	_, _ = b.sb.WriteString(strconv.Itoa(n))
+
+	return b
+}
+
+func (b *builder) WriteValueTuples(tuples [][]Serializable) Builder {
+	if len(tuples) == 0 {
+		return b
+	}
+	cols := len(tuples[0])
+	for i, tuple := range tuples {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteRune('(')
+		for j, cell := range tuple {
+			if j > 0 {
+				b.WriteString(", ")
+			}
+			cell.WriteString(b)
+		}
+		b.WriteRune(')')
+		if len(tuple) != cols {
+			panic("wrong length")
+		}
+	}
+
+	return b
+}
+
 func (b *builder) WriteString(s string) Builder {
 	_, _ = b.sb.WriteString(s)
 
