@@ -1181,6 +1181,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#distributed-eid-locking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Distributed EID Locking
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Distributed EID Locking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1928,6 +1961,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#distributed-eid-locking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Distributed EID Locking
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Distributed EID Locking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1988,6 +2054,70 @@ It allows authorized auditors to inspect token transactions.</p>
 <h2 id="audit-management">Audit Management<a class="headerlink" href="#audit-management" title="Permanent link">&para;</a></h2>
 <p>Auditors use specialized wallets (Auditor Wallets) managed by the <strong>Identity Service</strong>. These wallets contain the cryptographic keys necessary to "open" the commitments and proofs found in privacy-preserving token transactions.</p>
 <p>The service provides the <code>AuditApproveView</code>, which auditors use to respond to incoming audit requests. This view automates the verification and signing process, ensuring that the auditor only approves transactions that are fully compliant with the system's public parameters.</p>
+<h2 id="distributed-eid-locking">Distributed EID Locking<a class="headerlink" href="#distributed-eid-locking" title="Permanent link">&para;</a></h2>
+<p>When multiple auditor replicas share the same AuditDB (PostgreSQL), concurrent processing of the same enrollment IDs (EIDs) must be serialized. The <strong>auditor locker</strong> (<code>token/services/storage/auditdb/locker</code>) coordinates exclusive access to EIDs during audit record writes.</p>
+<h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auditdb/locker/memory</code></td>
+<td>In-process semaphores for single-replica deployments</td>
+</tr>
+<tr>
+<td><code>auditdb/locker/postgres</code></td>
+<td>Lease-table locking backed by PostgreSQL</td>
+</tr>
+<tr>
+<td><code>auditdb/locker</code></td>
+<td>Factory, configuration, and DI wiring</td>
+</tr>
+</tbody>
+</table>
+<p>The locker is injected into <code>auditdb.StoreService</code> at startup. Before appending audit records, the store calls <code>AssertLocksHeld</code> to verify leases are still valid.</p>
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
+<p>Configure under <code>token.tms.&lt;name&gt;.auditor.locker</code> (see <a href="../../configuration/#optional-tokentmsauditorlocker">Configuration</a>):</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">token</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">tms</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">mytms</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">auditor</span><span class="p">:</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="nt">locker</span><span class="p">:</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">          </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span><span class="w">   </span><span class="c1"># use &quot;memory&quot; (default) for single replica</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">          </span><span class="nt">postgres</span><span class="p">:</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">            </span><span class="nt">ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">            </span><span class="nt">acquireBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100ms</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">            </span><span class="nt">acquireDeadline</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1m</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">            </span><span class="nt">heartbeat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">            </span><span class="nt">owner</span><span class="p">:</span><span class="w">            </span><span class="c1"># optional; defaults to the FSC node ID</span>
+</span></code></pre></div>
+<p><strong>Backend selection:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Use case</th>
+<th>Database</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>memory</code></td>
+<td>Single replica</td>
+<td>Any</td>
+</tr>
+<tr>
+<td><code>postgres</code></td>
+<td>Multi-replica</td>
+<td>PostgreSQL only</td>
+</tr>
+</tbody>
+</table>
+<p>The Postgres backend creates an <code>eid_leases</code> table (prefixed per TMS persistence settings) and uses lease rows with heartbeat renewal. The replica owner defaults to the FSC config provider node <code>ID()</code> when <code>owner</code> is empty.</p>
 
 
 
