@@ -150,8 +150,11 @@ jobs:
       - name: Download fabric binaries
         run: make download-fabric
 
-      - name: Docker
-        run: make docker-images
+      - name: Install Docker
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y docker.io
+          sudo systemctl start docker
 
       - name: Fabric-x setup
         if: startsWith(matrix.tests, 'fabricx')
