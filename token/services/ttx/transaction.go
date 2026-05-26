@@ -153,6 +153,8 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 }
 
 // NewTransactionFromBytes unmarshals the given bytes into a Transaction, if possible.
+// For transactions received from the network, it validates that all wallet IDs (enrollment IDs)
+// referenced in the transaction correspond to registered wallets before accepting the transaction.
 func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, error) {
 	provider, err := dep.GetNetworkProvider(context)
 	if err != nil {
@@ -178,6 +180,12 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	// check transaction id
 	if payload.ID != string(payload.TokenRequest.ID()) {
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", payload.ID, payload.TokenRequest.ID())
+	}
+
+	// Validate wallet IDs for transactions received from the network
+	// This prevents malformed records from corrupting vault state and audit trails
+	if err := validateTransactionWalletIDs(context.Context(), tms, payload.TokenRequest); err != nil {
+		return nil, errors.WithMessagef(err, "wallet validation failed for transaction [%s]", payload.ID)
 	}
 
 	// finalize
@@ -458,4 +466,71 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	//	}
 	// }
 	// return nil
+}
+
+// validateTransactionWalletIDs validates that all enrollment IDs (wallet IDs) in the transaction
+// correspond to registered wallets. This is a structural invariant check that prevents malformed
+// records from being written to the database when receiving transactions from the network.
+//
+// The validation is "cheap" - it only checks if wallet IDs exist in the registry, not performing
+// expensive consistency sweeps. Empty enrollment IDs are allowed (e.g., for redeem/issue operations).
+func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementServiceWithExtensions, req *token.Request) error {
+	// Extract inputs and outputs to get enrollment IDs
+	ins, outs, _, err := req.InputsAndOutputs(ctx)
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting inputs and outputs for wallet validation")
+	}
+
+	// Collect all unique enrollment IDs from inputs and outputs
+	eids := make(map[string]bool)
+	for _, eid := range ins.EnrollmentIDs() {
+		if eid != "" {
+			eids[eid] = true
+		}
+	}
+	for _, eid := range outs.EnrollmentIDs() {
+		if eid != "" {
+			eids[eid] = true
+		}
+	}
+
+	// If no enrollment IDs to validate, we're done
+	if len(eids) == 0 {
+		logger.DebugfContext(ctx, "no enrollment IDs to validate in transaction")
+		return nil
+	}
+
+	// Get wallet service to retrieve registered wallet IDs
+	walletService := tms.WalletManager()
+	if walletService == nil {
+		logger.DebugfContext(ctx, "wallet service not available, skipping wallet ID validation")
+		return nil
+	}
+
+	// Get registered owner wallet IDs
+	registeredWallets, err := walletService.OwnerWalletIDs(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve registered wallet IDs")
+	}
+
+	// Build a set of registered wallet IDs for O(1) lookup
+	walletSet := make(map[string]bool, len(registeredWallets))
+	for _, wid := range registeredWallets {
+		walletSet[wid] = true
+	}
+
+	// Validate each enrollment ID
+	var invalidEIDs []string
+	for eid := range eids {
+		if !walletSet[eid] {
+			invalidEIDs = append(invalidEIDs, eid)
+		}
+	}
+
+	if len(invalidEIDs) > 0 {
+		return errors.Errorf("invalid wallet IDs (enrollment IDs not registered): %v", invalidEIDs)
+	}
+
+	logger.DebugfContext(ctx, "validated %d unique enrollment IDs successfully", len(eids))
+	return nil
 }
