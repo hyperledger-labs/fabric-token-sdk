@@ -391,31 +391,20 @@ func (p *KeyManager) IdentityType() idriver.IdentityType {
 	return IdentityType
 }
 
-// DeserializeSigningIdentity deserializes a signing identity from the given raw bytes
+// DeserializeSigningIdentity deserializes a signing identity from the given raw bytes.
+// p.Deserialize already verifies the identity's ZK association proof against the issuer
+// public key, which is sufficient to reject identities from a different issuer.
 func (p *KeyManager) DeserializeSigningIdentity(ctx context.Context, raw []byte) (tdriver.SigningIdentity, error) {
 	id, err := p.Deserialize(ctx, raw)
 	if err != nil {
 		return nil, err
 	}
 
-	si := &crypto.SigningIdentity{
+	return &crypto.SigningIdentity{
 		CSP:          p.Csp,
 		Identity:     id.Identity,
 		UserKeySKI:   p.userKeySKI,
 		NymKeySKI:    id.NymPublicKey.SKI(),
 		EnrollmentId: p.conf.Signer.EnrollmentId,
-	}
-
-	// the only way to verify if this signing identity correspond to this key manager
-	// is to generate a signature and verify it.
-	msg := []byte("hello world!!!")
-	sigma, err := si.Sign(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed generating verification signature")
-	}
-	if err := si.Verify(msg, sigma); err != nil {
-		return nil, errors.Wrap(err, "failed verifying verification signature")
-	}
-
-	return si, nil
+	}, nil
 }

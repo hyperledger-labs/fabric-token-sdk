@@ -254,7 +254,10 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			continue
 		}
 
-		// Case: there is a signer locally bound to the party, use it to generate the signature
+		// Case: there is a signer locally bound to the party, use it to generate the signature.
+		// GetSigner() is cheap: DeserializeSigningIdentity no longer runs a sign-and-verify
+		// round-trip, so calling it for remote identities (which fail quickly with a cache miss
+		// and a CSP key-not-found) is not expensive.
 		if signer, err := c.tx.TokenService().SigService().GetSigner(context.Context(), signerIdentity); err == nil {
 			logger.DebugfContext(context.Context(), "found signer for party [%s], request local signature", signerIdentity)
 			sigma, err := c.signLocal(context.Context(), signerIdentity, signer, requestRaw)
