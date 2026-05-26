@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"context"
+	"encoding/asn1"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
@@ -45,7 +46,8 @@ type ExchangeRecipientRequest struct {
 }
 
 // ExchangeRecipientResponse carries the responder's identity material together
-// with a key-ownership attestation (signature over nonce || identity).
+// with a key-ownership attestation: a signature over the request-bound
+// attestation message (see buildAttestationMessage).
 type ExchangeRecipientResponse struct {
 	RecipientData *RecipientData
 	Signature     []byte
@@ -72,7 +74,8 @@ type RecipientRequest struct {
 // RecipientResponse is the response for single-recipient identity requests.
 // On the echo path (initiator supplied RecipientData), RecipientData is nil
 // and the initiator uses its own copy; on the fresh path RecipientData carries
-// the full identity material. Signature covers nonce || identity.
+// the full identity material. Signature covers the request-bound attestation
+// message (see buildAttestationMessage).
 type RecipientResponse struct {
 	RecipientData *RecipientData
 	Signature     []byte
@@ -311,7 +314,11 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	}
 
 	// Verify key-ownership attestation when the responder could sign locally.
-	if err = verifyRecipientAttestation(context.Context(), tms, nonce, recipientData, resp.Signature, recipient.RecipientData != nil); err != nil {
+	message, err := buildAttestationMessage(recipientRequest.TMSID, recipientRequest.WalletID, recipientData.Identity, recipientRequest.MultiSig, recipientRequest.Policy, recipientRequest.Nonce, session.Info().ID, context.ID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to build attestation message")
+	}
+	if err = verifyRecipientAttestation(context.Context(), tms, message, recipientData, resp.Signature, recipient.RecipientData != nil); err != nil {
 		return nil, err
 	}
 
@@ -499,8 +506,12 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		recipientIdentity = recipientData.Identity
 	}
 
-	// Sign nonce || identity to prove key ownership when the key is local.
-	sig, err := signRecipientAttestation(context.Context(), w, recipientRequest.Nonce, recipientIdentity, !isEcho)
+	// Sign the request-bound attestation to prove key ownership when the key is local.
+	message, err := buildAttestationMessage(recipientRequest.TMSID, recipientRequest.WalletID, recipientIdentity, recipientRequest.MultiSig, recipientRequest.Policy, recipientRequest.Nonce, session.Info().ID, context.ID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to build attestation message")
+	}
+	sig, err := signRecipientAttestation(context.Context(), w, message, recipientIdentity, !isEcho)
 	if err != nil {
 		return nil, err
 	}
@@ -793,7 +804,11 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get verifier for exchange recipient")
 		}
-		if err = verifier.Verify(buildAttestationMessage(nonce, resp.RecipientData.Identity), resp.Signature); err != nil {
+		message, err := buildAttestationMessage(request.TMSID, request.WalletID, resp.RecipientData.Identity, false, "", request.Nonce, session.Info().ID, context.ID())
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to build attestation message")
+		}
+		if err = verifier.Verify(message, resp.Signature); err != nil {
 			return nil, errors.Wrapf(err, "exchange recipient key-ownership attestation failed")
 		}
 
@@ -871,8 +886,12 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, errors.WithMessagef(err, "failed getting recipient data, wallet [%s]", w.ID())
 	}
 
-	// Sign nonce || identity to prove key ownership when the key is local.
-	sig, err := signRecipientAttestation(context.Context(), w, request.Nonce, recipientData.Identity, true)
+	// Sign the request-bound attestation to prove key ownership when the key is local.
+	message, err := buildAttestationMessage(request.TMSID, request.WalletID, recipientData.Identity, false, "", request.Nonce, session.Info().ID, context.ID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to build attestation message")
+	}
+	sig, err := signRecipientAttestation(context.Context(), w, message, recipientData.Identity, true)
 	if err != nil {
 		return nil, err
 	}
@@ -897,7 +916,50 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	return []token.Identity{recipientData.Identity, other}, nil
 }
 
-func signRecipientAttestation(ctx context.Context, w *token.OwnerWallet, nonce []byte, identity view.Identity, freshPath bool) ([]byte, error) {
+// recipientAttestation is the canonical structure a responder signs to prove
+// ownership of the recipient private key and to bind that proof to one specific
+// protocol run. It captures every field of the originating request, plus the
+// session and context identifiers, so a signature can neither be replayed nor
+// transplanted onto a different request, session, or context.
+//
+// The bytes are DER-encoded with encoding/asn1: tag-length-value framing makes
+// every field boundary explicit, which removes the concatenation ambiguity that
+// a flat nonce||identity message allows (e.g. "AB"||"CD" and "ABC"||"D" yield
+// the same bytes). That is the extension/field-boundary attack this guards
+// against.
+type recipientAttestation struct {
+	Network   string `asn1:"utf8"`
+	Channel   string `asn1:"utf8"`
+	Namespace string `asn1:"utf8"`
+	WalletID  []byte
+	Identity  []byte
+	MultiSig  bool
+	Policy    string `asn1:"utf8"`
+	Nonce     []byte
+	SessionID string `asn1:"utf8"`
+	ContextID string `asn1:"utf8"`
+}
+
+// buildAttestationMessage assembles the DER-encoded bytes a responder signs (and
+// an initiator verifies) for a recipient identity request. Both sides observe
+// the same session and context identifiers (carried in the message header), so
+// they reconstruct identical bytes independently.
+func buildAttestationMessage(tmsID token.TMSID, walletID []byte, identity view.Identity, multiSig bool, policy string, nonce []byte, sessionID, contextID string) ([]byte, error) {
+	return asn1.Marshal(recipientAttestation{
+		Network:   tmsID.Network,
+		Channel:   tmsID.Channel,
+		Namespace: tmsID.Namespace,
+		WalletID:  walletID,
+		Identity:  identity,
+		MultiSig:  multiSig,
+		Policy:    policy,
+		Nonce:     nonce,
+		SessionID: sessionID,
+		ContextID: contextID,
+	})
+}
+
+func signRecipientAttestation(ctx context.Context, w *token.OwnerWallet, message []byte, identity view.Identity, freshPath bool) ([]byte, error) {
 	if w.Remote() {
 		if freshPath {
 			return nil, errors.Errorf("remote wallet [%s] cannot attest fresh recipient identity locally", w.ID())
@@ -910,7 +972,7 @@ func signRecipientAttestation(ctx context.Context, w *token.OwnerWallet, nonce [
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get signer for recipient identity")
 	}
-	sig, err := signer.Sign(buildAttestationMessage(nonce, identity))
+	sig, err := signer.Sign(message)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to sign attestation")
 	}
@@ -918,7 +980,7 @@ func signRecipientAttestation(ctx context.Context, w *token.OwnerWallet, nonce [
 	return sig, nil
 }
 
-func verifyRecipientAttestation(ctx context.Context, tms *token.ManagementService, nonce []byte, recipientData *RecipientData, signature []byte, echoPath bool) error {
+func verifyRecipientAttestation(ctx context.Context, tms *token.ManagementService, message []byte, recipientData *RecipientData, signature []byte, echoPath bool) error {
 	if len(signature) == 0 {
 		if echoPath {
 			// Remote wallets on the responder node cannot sign locally; membership was checked there.
@@ -932,7 +994,7 @@ func verifyRecipientAttestation(ctx context.Context, tms *token.ManagementServic
 	if err != nil {
 		return errors.Wrapf(err, "failed to get verifier for recipient identity")
 	}
-	if err = verifier.Verify(buildAttestationMessage(nonce, recipientData.Identity), signature); err != nil {
+	if err = verifier.Verify(message, signature); err != nil {
 		return errors.Wrapf(err, "recipient key-ownership attestation failed")
 	}
 

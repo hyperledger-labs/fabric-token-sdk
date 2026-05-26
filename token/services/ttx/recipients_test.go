@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -182,10 +183,68 @@ func TestGetRecipientWalletID(t *testing.T) {
 func TestVerifyRecipientAttestation_EmptySignature(t *testing.T) {
 	rd := &RecipientData{Identity: view.Identity("alice")}
 
-	err := verifyRecipientAttestation(t.Context(), nil, []byte("nonce"), rd, nil, true)
+	err := verifyRecipientAttestation(t.Context(), nil, []byte("message"), rd, nil, true)
 	require.NoError(t, err)
 
-	err = verifyRecipientAttestation(t.Context(), nil, []byte("nonce"), rd, nil, false)
+	err = verifyRecipientAttestation(t.Context(), nil, []byte("message"), rd, nil, false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "empty signature on fresh path")
+}
+
+func TestRecipientResponse_JSONRoundTrip_FreshPath(t *testing.T) {
+	original := &RecipientResponse{
+		RecipientData: &RecipientData{
+			Identity:               view.Identity("alice"),
+			AuditInfo:              []byte("audit"),
+			TokenMetadata:          []byte("meta"),
+			TokenMetadataAuditInfo: []byte("meta-audit"),
+		},
+		Signature: []byte("sig"),
+	}
+	raw, err := json.Marshal(original)
+	require.NoError(t, err)
+
+	decoded := &RecipientResponse{}
+	require.NoError(t, json.Unmarshal(raw, decoded))
+
+	require.NotNil(t, decoded.RecipientData)
+	assert.Equal(t, original.RecipientData.Identity, decoded.RecipientData.Identity)
+	assert.Equal(t, original.RecipientData.AuditInfo, decoded.RecipientData.AuditInfo)
+	assert.Equal(t, original.Signature, decoded.Signature)
+}
+
+func TestRecipientResponse_JSONRoundTrip_EchoPath(t *testing.T) {
+	original := &RecipientResponse{Signature: []byte("sig-only")}
+	raw, err := json.Marshal(original)
+	require.NoError(t, err)
+
+	decoded := &RecipientResponse{}
+	require.NoError(t, json.Unmarshal(raw, decoded))
+
+	assert.Nil(t, decoded.RecipientData, "echo path response must have nil RecipientData")
+	assert.Equal(t, original.Signature, decoded.Signature)
+}
+
+func TestExchangeRecipientResponse_JSONRoundTrip(t *testing.T) {
+	original := &ExchangeRecipientResponse{
+		RecipientData: &RecipientData{
+			Identity:  view.Identity("bob"),
+			AuditInfo: []byte("bob-audit"),
+		},
+		Signature: []byte("exchange-sig"),
+	}
+	raw, err := json.Marshal(original)
+	require.NoError(t, err)
+
+	decoded := &ExchangeRecipientResponse{}
+	require.NoError(t, json.Unmarshal(raw, decoded))
+
+	require.NotNil(t, decoded.RecipientData)
+	assert.Equal(t, original.RecipientData.Identity, decoded.RecipientData.Identity)
+	assert.Equal(t, original.Signature, decoded.Signature)
+}
+
+func TestRecipientResponse_MalformedJSON(t *testing.T) {
+	decoded := &RecipientResponse{}
+	require.Error(t, json.Unmarshal([]byte("not json {{"), decoded))
 }
