@@ -59,6 +59,7 @@ type StubbornSelector struct {
 
 func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	start := time.Now()
+	var lastErr error
 	for retriesAfterBackoff := 0; retriesAfterBackoff <= m.maxRetriesAfterBackoff; retriesAfterBackoff++ {
 		if tokens, quantity, err := m.selectWithoutMetrics(ctx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
 			m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
@@ -71,6 +72,8 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 			}
 
 			return tokens, quantity, err
+		} else {
+			lastErr = err
 		}
 		var backoffDuration time.Duration
 		if m.backoffInterval > 0 {
@@ -94,6 +97,11 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 	m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
 	m.metrics.SelectionOutcome.With(outcomeLabel, "locked_funds").Add(1)
 
+	// Preserve the detailed error message from the last attempt
+	if lastErr != nil {
+		
+		return nil, nil, errors.Wrapf(lastErr, "aborted too many times and no other process unlocked or added tokens")
+	}
 	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
 
