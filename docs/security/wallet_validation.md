@@ -190,4 +190,3 @@ Potential improvements:
 - [Storage Service](../services/storage.md)
 - [Identity Service](../services/identity.md)
 - [Transaction Flow](../services/ttx.md)
-- [Security Best Practices](./README.md)
