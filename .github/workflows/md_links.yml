@@ -12,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Install Chrome for Puppeteer
+        run: npx puppeteer browsers install chrome
+      
       - name: Run linkspector
         uses: umbrelladocs/action-linkspector@v1
         with:
