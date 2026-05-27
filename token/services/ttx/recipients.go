@@ -53,10 +53,12 @@ type ExchangeRecipientResponse struct {
 	Signature     []byte
 }
 
+// Bytes serializes the ExchangeRecipientRequest to bytes.
 func (r *ExchangeRecipientRequest) Bytes() ([]byte, error) {
 	return Marshal(r)
 }
 
+// FromBytes deserializes the ExchangeRecipientRequest from bytes.
 func (r *ExchangeRecipientRequest) FromBytes(raw []byte) error {
 	return Unmarshal(raw, r)
 }
@@ -81,10 +83,12 @@ type RecipientResponse struct {
 	Signature     []byte
 }
 
+// Bytes serializes the RecipientRequest to bytes.
 func (r *RecipientRequest) Bytes() ([]byte, error) {
 	return Marshal(r)
 }
 
+// FromBytes deserializes the RecipientRequest from bytes.
 func (r *RecipientRequest) FromBytes(raw []byte) error {
 	return Unmarshal(raw, r)
 }
@@ -97,6 +101,7 @@ type Recipient struct {
 
 type Recipients []Recipient
 
+// Identities extracts and returns all recipient identities from the Recipients slice.
 func (r Recipients) Identities() []view.Identity {
 	ids := make([]view.Identity, len(r))
 	for i, recipient := range r {

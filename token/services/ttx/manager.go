@@ -22,10 +22,13 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// StoreServiceManager manages transaction store services for different TMS instances.
 type StoreServiceManager = ttxdb.StoreServiceManager
 
+// TokensServiceManager manages token services for different TMS instances.
 type TokensServiceManager services.ServiceManager[*tokens.Service]
 
+// CheckServiceProvider provides health check services for transaction and token databases.
 type CheckServiceProvider interface {
 	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Service) (CheckService, error)
 }
