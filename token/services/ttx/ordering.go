@@ -28,6 +28,8 @@ func NewOrderingView(tx *Transaction, opts ...TxOption) *orderingView {
 	return NewOrderingViewWithOpts(append([]TxOption{WithTransactions(tx)}, opts...)...)
 }
 
+// NewOrderingViewWithOpts creates a new ordering view with the provided transaction options.
+// This is a lower-level constructor that allows passing options directly without a transaction instance.
 func NewOrderingViewWithOpts(opts ...TxOption) *orderingView {
 	return &orderingView{opts: opts}
 }
@@ -67,6 +69,8 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	return nil, nil
 }
 
+// broadcast sends the transaction envelope to the network's ordering service for inclusion in the ledger.
+// Returns an error if the transaction is nil, the network is not found, or the broadcast fails.
 func (o *orderingView) broadcast(context view.Context, transaction *Transaction) error {
 	if transaction == nil {
 		return errors.Errorf("transaction is nil")

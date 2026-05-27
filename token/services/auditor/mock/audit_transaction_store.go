@@ -191,6 +191,17 @@ type AuditTransactionStore struct {
 	setStatusReturnsOnCall map[int]struct {
 		result1 error
 	}
+	PrefixedTableNameStub        func(string) string
+	prefixedTableNameMutex       sync.RWMutex
+	prefixedTableNameArgsForCall []struct {
+		arg1 string
+	}
+	prefixedTableNameReturns struct {
+		result1 string
+	}
+	prefixedTableNameReturnsOnCall map[int]struct {
+		result1 string
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -1026,6 +1037,67 @@ func (fake *AuditTransactionStore) SetStatusReturnsOnCall(i int, result1 error) 
 	}
 	fake.setStatusReturnsOnCall[i] = struct {
 		result1 error
+	}{result1}
+}
+
+func (fake *AuditTransactionStore) PrefixedTableName(arg1 string) string {
+	fake.prefixedTableNameMutex.Lock()
+	ret, specificReturn := fake.prefixedTableNameReturnsOnCall[len(fake.prefixedTableNameArgsForCall)]
+	fake.prefixedTableNameArgsForCall = append(fake.prefixedTableNameArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.PrefixedTableNameStub
+	fakeReturns := fake.prefixedTableNameReturns
+	fake.recordInvocation("PrefixedTableName", []interface{}{arg1})
+	fake.prefixedTableNameMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameCallCount() int {
+	fake.prefixedTableNameMutex.RLock()
+	defer fake.prefixedTableNameMutex.RUnlock()
+	return len(fake.prefixedTableNameArgsForCall)
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameCalls(stub func(string) string) {
+	fake.prefixedTableNameMutex.Lock()
+	defer fake.prefixedTableNameMutex.Unlock()
+	fake.PrefixedTableNameStub = stub
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameArgsForCall(i int) string {
+	fake.prefixedTableNameMutex.RLock()
+	defer fake.prefixedTableNameMutex.RUnlock()
+	argsForCall := fake.prefixedTableNameArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameReturns(result1 string) {
+	fake.prefixedTableNameMutex.Lock()
+	defer fake.prefixedTableNameMutex.Unlock()
+	fake.PrefixedTableNameStub = nil
+	fake.prefixedTableNameReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameReturnsOnCall(i int, result1 string) {
+	fake.prefixedTableNameMutex.Lock()
+	defer fake.prefixedTableNameMutex.Unlock()
+	fake.PrefixedTableNameStub = nil
+	if fake.prefixedTableNameReturnsOnCall == nil {
+		fake.prefixedTableNameReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.prefixedTableNameReturnsOnCall[i] = struct {
+		result1 string
 	}{result1}
 }
 

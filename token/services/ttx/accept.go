@@ -99,6 +99,8 @@ func (s *AcceptView) ack(context view.Context) error {
 	return nil
 }
 
+// cacheRequest stores the token request in the tokens database for faster future lookups.
+// Caching failures are logged as warnings but don't cause the operation to fail.
 func (s *AcceptView) cacheRequest(context view.Context) error {
 	// cache the token request into the tokens db
 	t, err := tokens.GetService(context, s.tx.TMSID())

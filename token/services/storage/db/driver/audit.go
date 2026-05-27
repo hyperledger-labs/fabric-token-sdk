@@ -62,4 +62,8 @@ type AuditTransactionStore interface {
 	// ReleaseRecoveryClaim clears the recovery claim metadata for the given transaction if owned by owner.
 	// The message parameter is stored for audit/debugging purposes.
 	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
+
+	// PrefixedTableName returns the formatted table name for the given logical table name,
+	// following the persistence naming rules of this store.
+	PrefixedTableName(name string) string
 }

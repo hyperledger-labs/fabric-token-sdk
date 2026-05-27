@@ -56,6 +56,9 @@ type PagInterpreter interface {
 // Builder is the string builder
 type Builder interface {
 	WriteParam(Param) Builder
+	BindParams(...Param) Builder
+	WriteParamRef(int) Builder
+	WriteValueTuples([][]Serializable) Builder
 	WriteTuples([]Tuple) Builder
 	WriteString(string) Builder
 	WriteRune(rune) Builder
