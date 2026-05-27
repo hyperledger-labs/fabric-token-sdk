@@ -497,6 +497,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 	// If no enrollment IDs to validate, we're done
 	if len(eids) == 0 {
 		logger.DebugfContext(ctx, "no enrollment IDs to validate in transaction")
+
 		return nil
 	}
 
@@ -504,6 +505,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 	walletService := tms.WalletManager()
 	if walletService == nil {
 		logger.DebugfContext(ctx, "wallet service not available, skipping wallet ID validation")
+
 		return nil
 	}
 
@@ -528,6 +530,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 	}
 
 	if len(invalidEIDs) > 0 {
+
 		return errors.Errorf("invalid wallet IDs (enrollment IDs not registered): %v", invalidEIDs)
 	}
 
