@@ -26,24 +26,47 @@ func TestVersionedRecipientRequestRoundTrip(t *testing.T) {
 		TMSID:    token.TMSID{Network: "net", Channel: "ch", Namespace: "ns"},
 		WalletID: []byte("wallet"),
 		MultiSig: true,
+		Nonce:    []byte("test-nonce-32bytes-padding-xxxxx"),
 	}
 	roundTripTTXMessage(t, TypeRecipientRequest, original, &RecipientRequest{})
 }
 
 func TestVersionedRecipientResponseRoundTrip(t *testing.T) {
-	original := &RecipientData{
-		Identity:  []byte("recipient"),
-		AuditInfo: []byte("audit"),
+	original := &RecipientResponse{
+		RecipientData: &RecipientData{
+			Identity:  []byte("recipient"),
+			AuditInfo: []byte("audit"),
+		},
+		Signature: []byte("sig-bytes"),
 	}
-	roundTripTTXMessage(t, TypeRecipientResponse, original, &RecipientData{})
+	roundTripTTXMessage(t, TypeRecipientResponse, original, &RecipientResponse{})
+}
+
+func TestVersionedRecipientResponseAckRoundTrip(t *testing.T) {
+	original := &RecipientResponse{
+		Signature: []byte("sig-bytes"),
+	}
+	roundTripTTXMessage(t, TypeRecipientResponse, original, &RecipientResponse{})
 }
 
 func TestVersionedExchangeRecipientRoundTrip(t *testing.T) {
 	original := &ExchangeRecipientRequest{
 		TMSID:    token.TMSID{Network: "net", Channel: "ch", Namespace: "ns"},
 		WalletID: []byte("wallet"),
+		Nonce:    []byte("exchange-nonce-32bytes-pad-xxxxx"),
 	}
 	roundTripTTXMessage(t, TypeExchangeRecipientRequest, original, &ExchangeRecipientRequest{})
+}
+
+func TestVersionedExchangeRecipientResponseRoundTrip(t *testing.T) {
+	original := &ExchangeRecipientResponse{
+		RecipientData: &RecipientData{
+			Identity:  []byte("responder"),
+			AuditInfo: []byte("audit"),
+		},
+		Signature: []byte("exchange-sig"),
+	}
+	roundTripTTXMessage(t, TypeExchangeRecipientResp, original, &ExchangeRecipientResponse{})
 }
 
 func TestVersionedMultisigRecipientDataRoundTrip(t *testing.T) {
