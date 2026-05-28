@@ -150,8 +150,7 @@ jobs:
       - name: Download fabric binaries
         run: make download-fabric
 
-      - name: Docker
-        run: make docker-images
+# Docker is available on GitHub Actions runners; no manual install needed
 
       - name: Fabric-x setup
         if: startsWith(matrix.tests, 'fabricx')
