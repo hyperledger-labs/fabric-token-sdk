@@ -40,7 +40,7 @@ func NewDLogPublicParamsGenerator(defaultCurveID math3.CurveID, version driver.T
 	}
 }
 
-func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error) {
+func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...any) ([]byte, error) {
 	if len(args) != 2 {
 		return nil, errors.Errorf("invalid number of arguments, expected 2, got %d", len(args))
 	}

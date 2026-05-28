@@ -18,7 +18,7 @@ type ValidateConfiguration interface {
 	IsSet(key string) bool
 	// UnmarshalKey takes a single key and unmarshals it into a struct.
 	// The key must be relative to the TMS this configuration refers to.
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 	// GetString returns the value associated with the key as a string
 	GetString(key string) string
 	// GetBool returns the value associated with the key as a bool

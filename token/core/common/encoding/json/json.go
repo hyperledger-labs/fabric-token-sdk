@@ -12,7 +12,7 @@ import (
 )
 
 // Unmarshal is json.Unmarshal with unknown fields disallowed.
-func Unmarshal(data []byte, v interface{}) error {
+func Unmarshal(data []byte, v any) error {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 

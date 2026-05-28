@@ -32,7 +32,7 @@ var (
 )
 
 type Provider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 	GetString(key string) string
 	IsSet(key string) bool
 	TranslatePath(path string) string
@@ -204,10 +204,10 @@ type loader struct {
 
 func (m *loader) load() (map[string]*Configuration, error) {
 	// load
-	var boxedConfig map[interface{}]interface{}
+	var boxedConfig map[any]any
 	if err := m.cp.UnmarshalKey(TMSPath, &boxedConfig); err != nil {
 		logger.Debugf("cannot unmarshal token-sdk configurations from [%s], try empty map: [%v]", TMSPath, err)
-		boxedConfig = map[interface{}]interface{}{}
+		boxedConfig = map[any]any{}
 	}
 	if boxedConfig == nil {
 		logger.Debugf("token-sdk configurations from [%s] is nil, return empty map", TMSPath)

@@ -36,7 +36,7 @@ func NewViewRunner(runner runner.SuiteRunner, userProvider *ViewUserProvider, lo
 }
 
 type viewClient interface {
-	CallView(fid string, in []byte) (interface{}, error)
+	CallView(fid string, in []byte) (any, error)
 }
 
 func (r *viewRunner) Start(ctx context.Context) error {

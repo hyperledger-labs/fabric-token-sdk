@@ -29,7 +29,7 @@ func NewRegisterView(network string, channel string, namespace string, wallet st
 	return &RegisterView{Network: network, Channel: channel, Namespace: namespace, Wallet: wallet}
 }
 
-func (r *RegisterView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterView) Call(context view.Context) (any, error) {
 	// If the tms does not support graph hiding, skip
 	tms, err := token.GetManagementService(
 		context,

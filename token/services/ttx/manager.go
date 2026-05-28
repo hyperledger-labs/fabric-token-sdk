@@ -104,7 +104,7 @@ func (m *ServiceManager) CacheRequest(ctx context.Context, tmsID token.TMSID, re
 	return service.CacheRequest(ctx, request)
 }
 
-var managerType = reflect.TypeOf((*ServiceManager)(nil))
+var managerType = reflect.TypeFor[*ServiceManager]()
 
 // Get returns the Service instance for the passed TMS
 func Get(sp token.ServiceProvider, tms dep.TokenManagementService) *Service {

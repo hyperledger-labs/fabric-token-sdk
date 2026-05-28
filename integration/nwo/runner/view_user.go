@@ -85,7 +85,7 @@ type viewUser struct {
 	tracer     trace.Tracer
 }
 
-func (u *viewUser) CallView(fid string, in []byte) (interface{}, error) {
+func (u *viewUser) CallView(fid string, in []byte) (any, error) {
 	return u.client.CallView(fid, in)
 }
 
@@ -151,7 +151,7 @@ func (u *viewUser) GetBalance() (api3.Amount, api3.Error) {
 	return q.ToBigInt().Uint64(), nil
 }
 
-func (u *viewUser) callView(fid string, input interface{}) (interface{}, error) {
+func (u *viewUser) callView(fid string, input any) (any, error) {
 	marshaled, err := json.Marshal(input)
 	if err != nil {
 		return nil, err

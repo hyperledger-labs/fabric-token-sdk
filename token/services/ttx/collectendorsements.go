@@ -9,6 +9,7 @@ package ttx
 import (
 	"context"
 	"encoding/json"
+	maps0 "maps"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -91,7 +92,7 @@ func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *Colle
 // 3. Before completing, all recipients receive the approved transaction.
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
-func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error) {
+func (c *CollectEndorsementsView) Call(context view.Context) (any, error) {
 	metrics := GetMetrics(context)
 	start := time.Now()
 
@@ -763,9 +764,7 @@ func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identi
 func mergeSigmas(maps ...map[string][]byte) map[string][]byte {
 	merged := make(map[string][]byte)
 	for _, m := range maps {
-		for k, v := range m {
-			merged[k] = v
-		}
+		maps0.Copy(merged, m)
 	}
 
 	return merged

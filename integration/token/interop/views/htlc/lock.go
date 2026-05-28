@@ -52,7 +52,7 @@ type LockView struct {
 	*Lock
 }
 
-func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
+func (hv *LockView) Call(context view.Context) (res any, err error) {
 	var tx *htlc.Transaction
 	defer func() {
 		if e := recover(); e != nil {
@@ -141,7 +141,7 @@ func (p *LockViewFactory) NewView(in []byte) (view.View, error) {
 type LockAcceptView struct {
 }
 
-func (h *LockAcceptView) Call(context view.Context) (interface{}, error) {
+func (h *LockAcceptView) Call(context view.Context) (any, error) {
 	// The recipient of a token responds, as first operation,
 	// to a request for a recipient identity.
 	// The recipient can do that by using the following code.

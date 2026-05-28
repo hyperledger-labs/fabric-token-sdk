@@ -815,11 +815,9 @@ func TestCachedFetcher_Update_ThunderingHerd(t *testing.T) {
 	// Start multiple concurrent reads
 	var wg sync.WaitGroup
 	for range 10 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, _ = fetcher.UnspentTokensIteratorBy(ctx, "wallet1", "USD")
-		}()
+		})
 	}
 
 	// Wait for at least one to start the DB call
@@ -1071,11 +1069,9 @@ func TestCachedFetcher_UpdateDoesNotBlockReaders(t *testing.T) {
 	var readerWg sync.WaitGroup
 
 	// Start update in background (it will block on DB call)
-	readerWg.Add(1)
-	go func() {
-		defer readerWg.Done()
+	readerWg.Go(func() {
 		fetcher.update(ctx)
-	}()
+	})
 
 	// Wait for the background update to actually reach the DB call
 	select {

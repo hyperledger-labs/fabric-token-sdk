@@ -39,7 +39,7 @@ type WithdrawalInitiatorView struct {
 	*Withdrawal
 }
 
-func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error) {
+func (i *WithdrawalInitiatorView) Call(context view.Context) (any, error) {
 	// First the initiator send a withdrawal request to the issuer.
 	// If the initiator has already some recipient data, it uses that directly
 	var id view.Identity
@@ -67,7 +67,7 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 	// The initiator becomes a responder.
 	// This is a trick to the reuse the same API independently of the role a party plays.
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(
-		func(context view.Context) (interface{}, error) {
+		func(context view.Context) (any, error) {
 			// At some point, the recipient receives the token transaction that in the meantime has been assembled
 			tx, err := ttx.ReceiveTransaction(context)
 			assert.NoError(err, "failed to receive tokens")
@@ -111,14 +111,14 @@ type WithdrawalResponderView struct {
 	Auditor string
 }
 
-func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error) {
+func (p *WithdrawalResponderView) Call(context view.Context) (any, error) {
 	// First the issuer receives the withdrawal request
 	issueRequest, err := ttx.ReceiveWithdrawalRequest(context)
 	assert.NoError(err, "failed to receive withdrawal request")
 
 	// Now we have an inversion of roles. The issuer becomes an initiator.
 	// This is a trick to reuse the code used in IssueCashView
-	return context.RunView(nil, view.AsInitiator(), view.WithViewCall(func(context view.Context) (interface{}, error) {
+	return context.RunView(nil, view.AsInitiator(), view.WithViewCall(func(context view.Context) (any, error) {
 		// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
 		// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
 		// have been issued already including the current request.

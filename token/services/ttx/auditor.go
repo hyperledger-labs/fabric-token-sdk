@@ -141,7 +141,7 @@ func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *R
 
 // Call registers the audit view as a responder for AuditingViewInitiator requests.
 // This allows the auditor to respond to audit requests from transaction initiators.
-func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterAuditorView) Call(context view.Context) (any, error) {
 	// register responder
 	if err := view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
 		return nil, errors.Wrapf(err, "failed to register auditor view")
@@ -169,7 +169,7 @@ func newAuditingViewInitiator(tx *Transaction, local, skipAuditorSignatureVerifi
 // Call initiates an auditing session (local or remote), sends the transaction to the auditor,
 // receives the auditor's signature, verifies it, and adds it to the transaction.
 // Returns the session used for communication.
-func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
+func (a *AuditingViewInitiator) Call(context view.Context) (any, error) {
 	var err error
 	var session view.Session
 
@@ -337,7 +337,7 @@ func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveV
 // 3. Sending the signature back to the initiator
 // 4. Caching the token request for faster future lookups
 // 5. Recording metrics for the approval process
-func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
+func (a *AuditApproveView) Call(context view.Context) (any, error) {
 	start := time.Now()
 	// Append audit records
 	if err := auditor.Get(context, a.w).Append(context.Context(), a.tx); err != nil {

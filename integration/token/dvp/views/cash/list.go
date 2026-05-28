@@ -28,7 +28,7 @@ type ListUnspentTokensView struct {
 	*ListUnspentTokens
 }
 
-func (p *ListUnspentTokensView) Call(context view.Context) (interface{}, error) {
+func (p *ListUnspentTokensView) Call(context view.Context) (any, error) {
 	// Tokens owner by identities in this wallet will be listed
 	wallet := ttx.GetWallet(context, p.Wallet)
 	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)

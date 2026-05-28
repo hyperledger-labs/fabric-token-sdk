@@ -331,12 +331,12 @@ func prepareInputsForZKTransfer(pp *v1.PublicParams, numInputs uint64, numOutput
 
 	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedersenGenerators, c)
 	intw := make([]*token.Metadata, len(inValues))
-	for i := 0; i < len(intw); i++ {
+	for i := range intw {
 		intw[i] = &token.Metadata{BlindingFactor: inBF[i], Value: c.NewZrFromUint64(inValues[i]), Type: ttype}
 	}
 
 	outtw := make([]*token.Metadata, len(outValues))
-	for i := 0; i < len(outtw); i++ {
+	for i := range outtw {
 		outtw[i] = &token.Metadata{BlindingFactor: outBF[i], Value: c.NewZrFromUint64(outValues[i]), Type: ttype}
 	}
 
@@ -368,12 +368,12 @@ func prepareInvalidInputsForZKTransfer(pp *v1.PublicParams) ([]*token.Metadata, 
 
 	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedersenGenerators, c)
 	intw := make([]*token.Metadata, len(inValues))
-	for i := 0; i < len(intw); i++ {
+	for i := range intw {
 		intw[i] = &token.Metadata{BlindingFactor: inBF[i], Value: c.NewZrFromUint64(inValues[i]), Type: ttype}
 	}
 
 	outtw := make([]*token.Metadata, len(outValues))
-	for i := 0; i < len(outtw); i++ {
+	for i := range outtw {
 		outtw[i] = &token.Metadata{BlindingFactor: outBF[i], Value: c.NewZrFromUint64(outValues[i]), Type: ttype}
 	}
 

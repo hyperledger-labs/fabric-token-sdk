@@ -392,7 +392,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	generators := make([]*mathlib.G1, len(leftGen)+len(rightGen)+len(proof.L)+len(proof.R)+1)
 	scalars := make([]*mathlib.Zr, len(generators))
 	s, sInv := ComputeSVector(1<<v.NumberOfRounds, xList, v.Curve)
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		s[i] = v.Curve.ModMul(s[i], proof.Left, v.Curve.GroupOrder)
 		sInv[i] = v.Curve.ModMul(sInv[i], proof.Right, v.Curve.GroupOrder)
 	}

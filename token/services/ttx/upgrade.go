@@ -74,13 +74,13 @@ func RequestTokensUpgradeForRecipient(context view.Context, issuer view.Identity
 	if err != nil {
 		return nil, nil, err
 	}
-	result := resultBoxed.([]interface{})
+	result := resultBoxed.([]any)
 	ir := result[0].(*UpgradeTokensRequest)
 
 	return ir.RecipientData.Identity, result[1].(view.Session), nil
 }
 
-func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, error) {
+func (r *UpgradeTokensInitiatorView) Call(context view.Context) (any, error) {
 	logger.DebugfContext(context.Context(), "Respond request recipient identity using wallet [%s]", r.Wallet)
 
 	s, err := jsession.NewTypedSessionForCaller(context, context.Initiator(), r.Issuer)
@@ -135,7 +135,7 @@ func (r *UpgradeTokensInitiatorView) Call(context view.Context) (interface{}, er
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
-	return []interface{}{wr, s.Session()}, nil
+	return []any{wr, s.Session()}, nil
 }
 
 // WithWallet sets the wallet to use to retrieve a recipient identity if it has not been passed already
@@ -165,9 +165,8 @@ func (r *UpgradeTokensInitiatorView) getRecipientData(context view.Context) (*to
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to get token management service")
 		}
-		tmsID := tms.ID()
 
-		return &tmsID, r.RecipientData, nil
+		return new(tms.ID()), r.RecipientData, nil
 	}
 
 	w := GetWallet(
@@ -186,9 +185,8 @@ func (r *UpgradeTokensInitiatorView) getRecipientData(context view.Context) (*to
 
 		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
 	}
-	tmsID := w.TMS().ID()
 
-	return &tmsID, recipientData, nil
+	return new(w.TMS().ID()), recipientData, nil
 }
 
 // UpgradeTokensResponderView this is the view used by the issuer to receive a upgrade request
@@ -208,7 +206,7 @@ func ReceiveTokensUpgradeRequest(context view.Context) (*UpgradeTokensRequest, e
 	return ir, nil
 }
 
-func (r *UpgradeTokensResponderView) Call(context view.Context) (interface{}, error) {
+func (r *UpgradeTokensResponderView) Call(context view.Context) (any, error) {
 	s := jsession.NewTypedSessionFromContext(context)
 	agreement := &UpgradeTokensAgreement{}
 	if err := s.ReceiveTypedWithTimeout(TypeUpgradeAgreement, agreement, 1*time.Minute); err != nil {

@@ -35,7 +35,7 @@ const (
 func WithHash(hash []byte) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = map[interface{}]interface{}{}
+			o.Attributes = map[any]any{}
 		}
 		o.Attributes["htlc.hash"] = hash
 
@@ -47,7 +47,7 @@ func WithHash(hash []byte) token.TransferOption {
 func WithHashFunc(hashFunc crypto.Hash) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = map[interface{}]interface{}{}
+			o.Attributes = map[any]any{}
 		}
 		o.Attributes["htlc.hashFunc"] = hashFunc
 
@@ -59,7 +59,7 @@ func WithHashFunc(hashFunc crypto.Hash) token.TransferOption {
 func WithHashEncoding(encoding encoding.Encoding) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = map[interface{}]interface{}{}
+			o.Attributes = map[any]any{}
 		}
 		o.Attributes["htlc.hashEncoding"] = encoding
 

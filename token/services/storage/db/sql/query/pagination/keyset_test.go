@@ -25,7 +25,7 @@ type dbResult struct {
 	NonComparableField any
 }
 
-func setupPaginationWithLastId() *driver.PageIterator[*interface{}] {
+func setupPaginationWithLastId() *driver.PageIterator[*any] {
 	p := utils.MustGet(pagination.KeysetWithField[string](200, 10, "col_id", "StringField"))
 	query, args := q.Select().
 		FieldsByName("field1").

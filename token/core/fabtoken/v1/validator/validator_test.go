@@ -972,10 +972,7 @@ func BenchmarkValidatorTransfer(b *testing.B) {
 		b.Run(tc.Name, func(b *testing.B) {
 			n := int(benchmark2.SetupSamples()) // #nosec G115
 			if n == 0 {
-				n = b.N
-				if n > 1000 {
-					n = 1000
-				}
+				n = min(b.N, 1000)
 			}
 			env, err := newBenchmarkValidatorEnv(n, tc.BenchmarkCase, false)
 			require.NoError(b, err)
@@ -1029,10 +1026,7 @@ func BenchmarkValidatorIssue(b *testing.B) {
 		b.Run(tc.Name, func(b *testing.B) {
 			n := int(benchmark2.SetupSamples()) // #nosec G115
 			if n == 0 {
-				n = b.N
-				if n > 1000 {
-					n = 1000
-				}
+				n = min(b.N, 1000)
 			}
 			env, err := newBenchmarkValidatorEnv(n, tc.BenchmarkCase, true)
 			require.NoError(b, err)

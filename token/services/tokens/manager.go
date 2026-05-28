@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 )
 
-var managerType = reflect.TypeOf((*ServiceManager)(nil))
+var managerType = reflect.TypeFor[*ServiceManager]()
 
 // StoreServiceManager defines the interface for obtaining a token database store service by TMS ID.
 type StoreServiceManager = tokendb.StoreServiceManager

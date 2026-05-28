@@ -27,7 +27,7 @@ func (m *BCCSP) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (dk bccsp.Key, er
 	panic("implement me")
 }
 
-func (m *BCCSP) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Key, err error) {
+func (m *BCCSP) KeyImport(raw any, opts bccsp.KeyImportOpts) (k bccsp.Key, err error) {
 	// TODO implement me
 	panic("implement me")
 }

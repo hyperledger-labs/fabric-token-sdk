@@ -14,7 +14,7 @@ import (
 
 type AcceptIssuedHouseView struct{}
 
-func (a *AcceptIssuedHouseView) Call(context view.Context) (interface{}, error) {
+func (a *AcceptIssuedHouseView) Call(context view.Context) (any, error) {
 	// The recipient of a token (issued or transfer) responds, as first operation,
 	// to a request for a recipient.
 	// The recipient can do that by using the following code.
@@ -55,7 +55,7 @@ func (a *AcceptIssuedHouseView) Call(context view.Context) (interface{}, error) 
 
 type AcceptTransferHouseView struct{}
 
-func (a AcceptTransferHouseView) Call(context view.Context) (interface{}, error) {
+func (a AcceptTransferHouseView) Call(context view.Context) (any, error) {
 	// The recipient of a token (issued or transfer) responds, as first operation,
 	// to a request for a recipient.
 	// The recipient can do that by using the following code.

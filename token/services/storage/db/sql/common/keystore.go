@@ -65,7 +65,7 @@ func (db *KeystoreStore) Close() error {
 	return dcommon.Close(db.readDB, db.writeDB)
 }
 
-func (db *KeystoreStore) Put(key string, state interface{}) error {
+func (db *KeystoreStore) Put(key string, state any) error {
 	if state == nil {
 		return errors.New("cannot store nil state")
 	}
@@ -101,7 +101,7 @@ func (db *KeystoreStore) Put(key string, state interface{}) error {
 	return err
 }
 
-func (db *KeystoreStore) Get(key string, state interface{}) error {
+func (db *KeystoreStore) Get(key string, state any) error {
 	raw, err := db.GetRaw(key)
 	if err != nil {
 		return err
