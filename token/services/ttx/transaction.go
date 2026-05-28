@@ -528,12 +528,12 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 			invalidEIDs = append(invalidEIDs, eid)
 		}
 	}
-
+	
 	if len(invalidEIDs) > 0 {
-
 		return errors.Errorf("invalid wallet IDs (enrollment IDs not registered): %v", invalidEIDs)
 	}
 
 	logger.DebugfContext(ctx, "validated %d unique enrollment IDs successfully", len(eids))
+
 	return nil
 }
