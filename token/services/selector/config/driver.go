@@ -146,6 +146,31 @@ func (c *Config) GetLimits() Limits {
 	return limits
 }
 
+// GetMaxTokensPerSelection returns the maximum number of tokens to iterate per selection
+func (c *Config) GetMaxTokensPerSelection() int {
+	return c.GetLimits().MaxTokensPerSelection
+}
+
+// GetMaxLockAttempts returns the maximum number of lock attempts per selection
+func (c *Config) GetMaxLockAttempts() int {
+	return c.GetLimits().MaxLockAttempts
+}
+
+// GetMaxRetryCycles returns the maximum number of outer retry loops
+func (c *Config) GetMaxRetryCycles() int {
+	return c.GetLimits().MaxRetryCycles
+}
+
+// GetMaxLocksPerTransaction returns the maximum number of concurrent locks per transaction
+func (c *Config) GetMaxLocksPerTransaction() int {
+	return c.GetLimits().MaxLocksPerTransaction
+}
+
+// GetSelectionTimeout returns the wall-clock timeout for selection operations
+func (c *Config) GetSelectionTimeout() time.Duration {
+	return c.GetLimits().SelectionTimeout
+}
+
 // Validate checks that the configuration is valid
 func (c *Config) Validate() error {
 	limits := c.GetLimits()

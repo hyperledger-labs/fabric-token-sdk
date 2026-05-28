@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock_test
 
 import (
+	"time"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
@@ -21,7 +22,7 @@ func TestManagerUnit(t *testing.T) {
 	mockLocker := &mocks.FakeLocker{}
 	_, metrics := setupMetricsMocks()
 
-	mgr := sherdlock.NewManager(mockFetcher, mockLocker, 64, 0, 0, 0, 0, metrics)
+	mgr := sherdlock.NewManager(mockFetcher, mockLocker, 64, 0, 0, 0, 0, 10000, 50000, 10, 30*time.Second, metrics)
 	require.NotNil(t, mgr)
 
 	t.Run("NewSelector", func(t *testing.T) {

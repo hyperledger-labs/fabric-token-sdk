@@ -44,6 +44,10 @@ func NewManager(
 	maxRetriesAfterBackOff int,
 	leaseExpiry time.Duration,
 	leaseCleanupTickPeriod time.Duration,
+	maxTokensPerSelection int,
+	maxLockAttempts int,
+	maxRetryCycles int,
+	selectionTimeout time.Duration,
 	m *Metrics,
 ) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,7 +59,7 @@ func NewManager(
 		cancel:                 cancel,
 		cleanerDone:            make(chan struct{}),
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (TokenSelectorUnlocker, error) {
-			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, m), nil
+			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, maxTokensPerSelection, maxLockAttempts, maxRetryCycles, selectionTimeout, m), nil
 		}),
 	}
 	if leaseCleanupTickPeriod > 0 && leaseExpiry > 0 {
