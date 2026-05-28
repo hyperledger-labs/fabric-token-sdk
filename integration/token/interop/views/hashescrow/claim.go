@@ -28,7 +28,7 @@ type ClaimView struct {
 	*Claim
 }
 
-func (r *ClaimView) Call(ctx view.Context) (res interface{}, err error) {
+func (r *ClaimView) Call(ctx view.Context) (res any, err error) {
 	var tx *hashescrow.Transaction
 	defer func() {
 		if e := recover(); e != nil {

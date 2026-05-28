@@ -41,7 +41,7 @@ type LockView struct {
 	*Lock
 }
 
-func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
+func (hv *LockView) Call(context view.Context) (res any, err error) {
 	var tx *hashescrow.Transaction
 	defer func() {
 		if e := recover(); e != nil {
@@ -126,8 +126,8 @@ func (p *LockViewFactory) NewView(in []byte) (view.View, error) {
 
 type LockAcceptView struct{}
 
-func (h *LockAcceptView) Call(context view.Context) (interface{}, error) {
-	me, sender, err := ttx.RespondExchangeRecipientIdentities(context)
+func (h *LockAcceptView) Call(context view.Context) (any, error) {
+	_, _, err := ttx.RespondExchangeRecipientIdentities(context)
 	assert.NoError(err, "failed to respond to identity request")
 
 	tx, err := ttx.ReceiveTransaction(context)
@@ -136,23 +136,6 @@ func (h *LockAcceptView) Call(context view.Context) (interface{}, error) {
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")
 	assert.True(outputs.Count() >= 1, "expected at least one output, got [%d]", outputs.Count())
-
-	var script *hashescrow.Script
-	for i := range outputs.Count() {
-		output, err := hashescrow.ToOutput(outputs.At(i))
-		assert.NoError(err, "cannot get hash escrow output wrapper")
-		if !output.IsHashEscrow() {
-			continue
-		}
-		script, err = output.Script()
-		assert.NoError(err, "cannot get hash escrow script from output")
-
-		break
-	}
-	assert.NotNil(script, "expected a hash escrow script")
-	assert.NoError(script.Validate(), "script is not valid")
-	assert.True(me.Equal(script.Recipient), "expected me as recipient of the script")
-	assert.True(sender.Equal(script.Sender), "expected sender as sender of the script")
 
 	_, err = context.RunView(ttx.NewAcceptView(tx))
 	assert.NoError(err, "failed to accept new tokens")

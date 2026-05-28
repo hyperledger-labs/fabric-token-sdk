@@ -38,7 +38,7 @@ func WithHash(hash []byte) token.TransferOption {
 func WithRecipientHash(hash []byte) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = map[interface{}]interface{}{}
+			o.Attributes = map[any]any{}
 		}
 		o.Attributes["hashescrow.recipientHash"] = hash
 
@@ -50,7 +50,7 @@ func WithRecipientHash(hash []byte) token.TransferOption {
 func WithSenderHash(hash []byte) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = map[interface{}]interface{}{}
+			o.Attributes = map[any]any{}
 		}
 		o.Attributes["hashescrow.senderHash"] = hash
 
@@ -62,7 +62,7 @@ func WithSenderHash(hash []byte) token.TransferOption {
 func WithHashFunc(hashFunc crypto.Hash) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = map[interface{}]interface{}{}
+			o.Attributes = map[any]any{}
 		}
 		o.Attributes["hashescrow.hashFunc"] = hashFunc
 
@@ -74,7 +74,7 @@ func WithHashFunc(hashFunc crypto.Hash) token.TransferOption {
 func WithHashEncoding(enc encoding.Encoding) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = map[interface{}]interface{}{}
+			o.Attributes = map[any]any{}
 		}
 		o.Attributes["hashescrow.hashEncoding"] = enc
 
