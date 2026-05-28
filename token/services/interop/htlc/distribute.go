@@ -71,7 +71,7 @@ func NewDistributeTermsView(recipient view.Identity, terms *Terms) *DistributeTe
 	}
 }
 
-func (v *DistributeTermsView) Call(context view.Context) (interface{}, error) {
+func (v *DistributeTermsView) Call(context view.Context) (any, error) {
 	sess, err := context.GetSession(context.Initiator(), v.recipient)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func ReceiveTerms(context view.Context) (*Terms, error) {
 	return terms.(*Terms), nil
 }
 
-func (v *termsReceiverView) Call(context view.Context) (interface{}, error) {
+func (v *termsReceiverView) Call(context view.Context) (any, error) {
 	terms := &Terms{}
 	if err := session.NewTypedSessionFromContext(context).ReceiveTyped(TypeHTLCTerms, terms); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling terms")

@@ -78,7 +78,7 @@ type ServiceOptions struct {
 	// PublicParams contains the public params to use to instantiate the driver
 	PublicParams []byte
 	// Params is used to store any application specific parameter
-	Params map[string]interface{}
+	Params map[string]any
 }
 
 func (o ServiceOptions) String() string {

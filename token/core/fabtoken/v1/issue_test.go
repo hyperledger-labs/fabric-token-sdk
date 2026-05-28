@@ -146,7 +146,7 @@ func TestIssue(t *testing.T) {
 		des.GetAuditInfoReturns([]byte("audit"), nil)
 
 		opts := &driver.IssueOptions{
-			Attributes: map[interface{}]interface{}{"key": "value"},
+			Attributes: map[any]any{"key": "value"},
 		}
 		action, _, err := service.Issue(ctx, issuer, tokenType, values, owners, opts)
 		require.NoError(t, err)
@@ -199,10 +199,7 @@ func BenchmarkIssueServiceIssue(b *testing.B) {
 		b.Run(tc.Name, func(b *testing.B) {
 			n := int(benchmark2.SetupSamples()) // #nosec G115
 			if n == 0 {
-				n = b.N
-				if n > 1000 {
-					n = 1000
-				}
+				n = min(b.N, 1000)
 			}
 			env, err := newBenchmarkIssueEnv(n, tc.BenchmarkCase)
 			require.NoError(b, err)

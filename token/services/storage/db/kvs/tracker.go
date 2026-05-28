@@ -13,15 +13,15 @@ import (
 
 // Backend interface for key-value storage
 type Backend interface {
-	Put(ctx context.Context, id string, value interface{}) error
-	Get(ctx context.Context, id string, entry interface{}) error
+	Put(ctx context.Context, id string, value any) error
+	Get(ctx context.Context, id string, entry any) error
 	Close() error
 }
 
 // KeyValuePair stores tracking info
 type KeyValuePair struct {
 	Key   string
-	Value interface{}
+	Value any
 	Error string
 }
 
@@ -57,7 +57,7 @@ func NewTrackedMemoryFrom(backend Backend) *TrackedKVS {
 	}
 }
 
-func (f *TrackedKVS) Put(id string, entry interface{}) error {
+func (f *TrackedKVS) Put(id string, entry any) error {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -68,7 +68,7 @@ func (f *TrackedKVS) Put(id string, entry interface{}) error {
 	return err
 }
 
-func (f *TrackedKVS) Get(id string, entry interface{}) error {
+func (f *TrackedKVS) Get(id string, entry any) error {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 

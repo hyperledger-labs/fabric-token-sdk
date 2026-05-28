@@ -31,7 +31,7 @@ func NewReceiveTransactionView(network string) *receiveTransactionView {
 	return &receiveTransactionView{network: network}
 }
 
-func (f *receiveTransactionView) Call(context view.Context) (interface{}, error) {
+func (f *receiveTransactionView) Call(context view.Context) (any, error) {
 	// Wait to receive a transaction back
 	ch := context.Session().Receive()
 

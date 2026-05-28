@@ -116,7 +116,7 @@ func TestTransferService(t *testing.T) {
 		}
 		ppm.PublicParametersReturns(pp)
 
-		action, metadata, err := s.Transfer(ctx, "", nil, ids, outputs, &driver.TransferOptions{Attributes: make(map[interface{}]interface{})})
+		action, metadata, err := s.Transfer(ctx, "", nil, ids, outputs, &driver.TransferOptions{Attributes: make(map[any]any)})
 		require.NoError(t, err)
 		assert.NotNil(t, action)
 		assert.NotNil(t, metadata)
@@ -253,7 +253,7 @@ func TestTransferService(t *testing.T) {
 		}
 
 		opts := &driver.TransferOptions{
-			Attributes: map[interface{}]interface{}{
+			Attributes: map[any]any{
 				ttx.IssuerFSCIdentityKey: "invalid identity type",
 			},
 		}
@@ -321,10 +321,7 @@ func BenchmarkTransferServiceTransfer(b *testing.B) {
 		b.Run(tc.Name, func(b *testing.B) {
 			n := int(benchmark2.SetupSamples()) // #nosec G115
 			if n == 0 {
-				n = b.N
-				if n > 1000 {
-					n = 1000
-				}
+				n = min(b.N, 1000)
 			}
 			env, err := newBenchmarkTransferEnv(n, tc.BenchmarkCase)
 			require.NoError(b, err)

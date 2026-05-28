@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	managerType = reflect.TypeOf((*StoreServiceManager)(nil))
+	managerType = reflect.TypeFor[*StoreServiceManager]()
 	logger      = logging.MustGetLogger()
 )
 

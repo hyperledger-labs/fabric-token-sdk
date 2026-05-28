@@ -38,7 +38,7 @@ type GetEnrollmentIDView struct {
 	*GetEnrollmentID
 }
 
-func (r *GetEnrollmentIDView) Call(context view.Context) (interface{}, error) {
+func (r *GetEnrollmentIDView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, ServiceOpts(r.TMSID)...)
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
@@ -66,7 +66,7 @@ type CheckPublicParamsMatchView struct {
 	*CheckPublicParamsMatch
 }
 
-func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, error) {
+func (p *CheckPublicParamsMatchView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
 	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS")
@@ -123,7 +123,7 @@ type WhoDeletedTokenView struct {
 	*WhoDeletedToken
 }
 
-func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
+func (w *WhoDeletedTokenView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(w.TMSID))
 	assert.NoError(err, "failed to lookup TMS [%s]", w.TMSID)
 	assert.NotNil(tms, "failed to get TMS [%s]", w.TMSID)
@@ -154,7 +154,7 @@ type GetPublicParamsView struct {
 	*GetPublicParams
 }
 
-func (p *GetPublicParamsView) Call(context view.Context) (interface{}, error) {
+func (p *GetPublicParamsView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(p.TMSID))
 	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS")
@@ -187,7 +187,7 @@ type UpdatePublicParamsView struct {
 	*UpdatePublicParams
 }
 
-func (p *UpdatePublicParamsView) Call(context view.Context) (interface{}, error) {
+func (p *UpdatePublicParamsView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, ServiceOpts(&p.TMSID)...)
 	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS")
@@ -219,7 +219,7 @@ type DoesWalletExistView struct {
 	*DoesWalletExist
 }
 
-func (p *DoesWalletExistView) Call(context view.Context) (interface{}, error) {
+func (p *DoesWalletExistView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(p.TMSID))
 	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS")
@@ -267,7 +267,7 @@ type TxStatusView struct {
 	*TxStatus
 }
 
-func (p *TxStatusView) Call(context view.Context) (interface{}, error) {
+func (p *TxStatusView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(p.TMSID))
 	assert.NoError(err, "failed to lookup TMS [%s]", p.TMSID)
 	assert.NotNil(tms, "failed to get TMS [%s]", p.TMSID)

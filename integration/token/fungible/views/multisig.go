@@ -42,7 +42,7 @@ type MultiSigLockView struct {
 	*MultiSigLock
 }
 
-func (lv *MultiSigLockView) Call(context view.Context) (txID interface{}, err error) {
+func (lv *MultiSigLockView) Call(context view.Context) (txID any, err error) {
 	// As a first step operation, the sender contacts the escrow FSC nodes
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
@@ -122,7 +122,7 @@ type MultiSigSpendView struct {
 	*MultiSigSpend
 }
 
-func (r *MultiSigSpendView) Call(context view.Context) (res interface{}, err error) {
+func (r *MultiSigSpendView) Call(context view.Context) (res any, err error) {
 	serviceOpts := ServiceOpts(r.TMSID)
 	recipient, err := ttx.RequestRecipientIdentity(context, r.Recipient, serviceOpts...)
 	assert.NoError(err, "failed getting recipient")
@@ -171,7 +171,7 @@ func (p *MultiSigSpendViewFactory) NewView(in []byte) (view.View, error) {
 
 type MultiSigAcceptSpendView struct{}
 
-func (m *MultiSigAcceptSpendView) Call(context view.Context) (interface{}, error) {
+func (m *MultiSigAcceptSpendView) Call(context view.Context) (any, error) {
 	// receive the request to spend a multi-sig token
 	request, err := multisig.ReceiveSpendRequest(context)
 	assert.NoError(err, "failed receiving spend request")

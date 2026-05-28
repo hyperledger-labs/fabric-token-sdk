@@ -210,7 +210,7 @@ func CompileServiceOptions(opts ...token.ServiceOption) (*token.ServiceOptions, 
 func WithRecipientData(recipientData *RecipientData) token.ServiceOption {
 	return func(options *token.ServiceOptions) error {
 		if options.Params == nil {
-			options.Params = map[string]interface{}{}
+			options.Params = map[string]any{}
 		}
 		options.Params["RecipientData"] = recipientData
 
@@ -225,7 +225,7 @@ func WithRecipientWalletID(walletID string) token.ServiceOption {
 			return nil
 		}
 		if options.Params == nil {
-			options.Params = map[string]interface{}{}
+			options.Params = map[string]any{}
 		}
 		options.Params["RecipientWalletID"] = walletID
 

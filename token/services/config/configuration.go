@@ -71,7 +71,7 @@ func (m *Configuration) TranslatePath(path string) string {
 }
 
 // UnmarshalKey takes a single key and unmarshals it into a Struct
-func (m *Configuration) UnmarshalKey(key string, rawVal interface{}) error {
+func (m *Configuration) UnmarshalKey(key string, rawVal any) error {
 	return m.cp.UnmarshalKey(config.Join(TMSPath, m.keyID, key), rawVal)
 }
 

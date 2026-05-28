@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -60,8 +61,8 @@ type TransactionRecord struct {
 }
 
 type Stream interface {
-	Recv(m interface{}) error
-	Send(m interface{}) error
+	Recv(m any) error
+	Send(m any) error
 	Result() ([]byte, error)
 }
 
@@ -1208,7 +1209,7 @@ func getIdentity(identities []topology.Identity, id string) []byte {
 	return nil
 }
 
-func JSONUnmarshalFloat64(v interface{}) float64 {
+func JSONUnmarshalFloat64(v any) float64 {
 	var s float64
 	switch v := v.(type) {
 	case []byte:
@@ -1315,14 +1316,7 @@ func CheckOwnerWalletIDs(network *integration.Infrastructure, owner *token3.Node
 	var wIDs []string
 	common.JSONUnmarshal(idsBoxed.([]byte), &wIDs)
 	for _, wID := range ids {
-		found := false
-		for _, expectedWID := range wIDs {
-			if expectedWID == wID {
-				found = true
-
-				break
-			}
-		}
+		found := slices.Contains(wIDs, wID)
 		gomega.Expect(found).To(gomega.BeTrue(), "[%s] is not in [%v]", wID, wIDs)
 	}
 }

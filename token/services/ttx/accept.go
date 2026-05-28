@@ -32,7 +32,7 @@ func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *AcceptView {
 }
 
 // Call accepts the tokens created by the transaction this view has been created with.
-func (s *AcceptView) Call(context view.Context) (interface{}, error) {
+func (s *AcceptView) Call(context view.Context) (any, error) {
 	// validate inputs
 	if s.tx == nil {
 		return nil, errors.WithMessagef(ErrInvalidInput, "transaction is nil")

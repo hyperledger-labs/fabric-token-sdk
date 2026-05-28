@@ -184,7 +184,7 @@ func TestResponderRegistryMock_HelperMethods(t *testing.T) {
 
 	// RegisterResponderCalls — installs a stub.
 	stubCalled := false
-	m.RegisterResponderCalls(func(_ view.View, _ interface{}) error {
+	m.RegisterResponderCalls(func(_ view.View, _ any) error {
 		stubCalled = true
 
 		return nil

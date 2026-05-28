@@ -191,7 +191,7 @@ func TestTMSProvider(t *testing.T) {
 
 			tmsConfig := &drivermock.Configuration{}
 			configService.ConfigurationForReturns(tmsConfig, nil)
-			tmsConfig.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			tmsConfig.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if key == "publicParameters" {
 					rawVal.(*core.PublicParameters).Path = ppPath
 				}
@@ -210,7 +210,7 @@ func TestTMSProvider(t *testing.T) {
 
 			// Error case: ReadFile fails (e.g. path does not exist).
 			opts.Network = "n4-err2"
-			tmsConfig.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			tmsConfig.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if key == "publicParameters" {
 					rawVal.(*core.PublicParameters).Path = "non-existent"
 				}
@@ -222,7 +222,7 @@ func TestTMSProvider(t *testing.T) {
 
 			// Error case: Path is empty in configuration.
 			opts.Network = "n4-empty"
-			tmsConfig.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			tmsConfig.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if key == "publicParameters" {
 					rawVal.(*core.PublicParameters).Path = ""
 				}

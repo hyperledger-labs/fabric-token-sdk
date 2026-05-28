@@ -48,7 +48,7 @@ func loggerName(parts ...string) string {
 
 // Debug is a workaround to reduce memory allocation when debug is disabled.
 // Indeed, the fabric logger performs an operation that allocate memory before checking the log level.
-func Debug(logger Logger, params ...interface{}) {
+func Debug(logger Logger, params ...any) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debug(params...)
 	}

@@ -49,7 +49,7 @@ func NewCollectActionsView(tx *Transaction, actions ...*ActionTransfer) *collect
 	}
 }
 
-func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
+func (c *collectActionsView) Call(context view.Context) (any, error) {
 	ts, err := token.GetManagementService(context, token.WithChannel(c.tx.Channel()))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
@@ -165,12 +165,12 @@ func ReceiveAction(context view.Context) (*Transaction, *ActionTransfer, error) 
 	if err != nil {
 		return nil, nil, err
 	}
-	result := res.([]interface{})
+	result := res.([]any)
 
 	return result[0].(*Transaction), result[1].(*ActionTransfer), nil
 }
 
-func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
+func (r *receiveActionsView) Call(context view.Context) (any, error) {
 	// transaction
 	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
 	if err != nil {
@@ -196,7 +196,7 @@ func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrap(err, "failed receiving action")
 	}
 
-	return []interface{}{cctx, action}, nil
+	return []any{cctx, action}, nil
 }
 
 type collectActionsResponderView struct {
@@ -210,7 +210,7 @@ func NewCollectActionsResponderView(tx *Transaction, action *ActionTransfer) *co
 	return &collectActionsResponderView{tx: tx, action: action}
 }
 
-func (s *collectActionsResponderView) Call(context view.Context) (interface{}, error) {
+func (s *collectActionsResponderView) Call(context view.Context) (any, error) {
 	response, err := s.tx.Bytes()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshalling ephemeral transaction")

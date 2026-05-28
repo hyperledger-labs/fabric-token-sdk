@@ -26,7 +26,7 @@ const (
 
 //go:generate counterfeiter -o mock/config_service.go -fake-name ConfigService . configService
 type configService interface {
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 }
 
 type Config struct {

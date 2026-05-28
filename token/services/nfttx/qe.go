@@ -54,7 +54,7 @@ func NewQueryExecutor(sp token.ServiceProvider, wallet string, precision uint64,
 	}, nil
 }
 
-func (s *QueryExecutor) QueryByKey(ctx context.Context, state interface{}, key string, value string) error {
+func (s *QueryExecutor) QueryByKey(ctx context.Context, state any, key string, value string) error {
 	ids, err := s.Filter(ctx, &jsonFilter{
 		q:     gojsonq.New(),
 		key:   key,

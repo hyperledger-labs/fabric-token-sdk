@@ -43,7 +43,7 @@ func NewEndorseView(tx *Transaction) *EndorseView {
 // - Reception of the endorsed transaction
 // - Acknowledgement of the reception of the endorsed transaction
 // - Finalization
-func (s *EndorseView) Call(context view.Context) (interface{}, error) {
+func (s *EndorseView) Call(context view.Context) (any, error) {
 	// validate input
 	if s.tx == nil {
 		return nil, errors.Wrapf(ErrInvalidInput, "transaction is nil")

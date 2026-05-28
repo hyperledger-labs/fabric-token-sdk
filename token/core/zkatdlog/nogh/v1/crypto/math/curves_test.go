@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package math
 
 import (
+	"maps"
 	"testing"
 
 	mathlib "github.com/IBM/mathlib"
@@ -122,23 +123,17 @@ func snapshotCaches() (map[mathlib.CurveID]map[uint64]*mathlib.Zr, map[mathlib.C
 	s := make(map[mathlib.CurveID]map[uint64]*mathlib.Zr)
 	for k, vv := range valueCache {
 		m := make(map[uint64]*mathlib.Zr, len(vv))
-		for kk, v := range vv {
-			m[kk] = v
-		}
+		maps.Copy(m, vv)
 		v[k] = m
 	}
 	for k, vv := range powerCache {
 		m := make(map[uint64]*mathlib.Zr, len(vv))
-		for kk, v := range vv {
-			m[kk] = v
-		}
+		maps.Copy(m, vv)
 		p[k] = m
 	}
 	for k, vv := range sumOfPowerCache {
 		m := make(map[uint64]*mathlib.Zr, len(vv))
-		for kk, v := range vv {
-			m[kk] = v
-		}
+		maps.Copy(m, vv)
 		s[k] = m
 	}
 

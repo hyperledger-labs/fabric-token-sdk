@@ -63,7 +63,7 @@ func NewEnvelopeMetrics(p metrics.Provider) *EnvelopeMetrics {
 	}
 }
 
-var envelopeMetricsType = reflect.TypeOf((*EnvelopeMetrics)(nil))
+var envelopeMetricsType = reflect.TypeFor[*EnvelopeMetrics]()
 
 // GetEnvelopeMetrics resolves the *EnvelopeMetrics registered in the service
 // provider. It returns an error when no metrics are registered (e.g. in

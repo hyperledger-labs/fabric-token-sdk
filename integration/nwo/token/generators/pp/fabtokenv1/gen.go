@@ -32,7 +32,7 @@ func NewFabTokenPublicParamsGenerator(version driver.TokenDriverVersion) *FabTok
 	}
 }
 
-func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error) {
+func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *topology.Wallets, args ...any) ([]byte, error) {
 	precision := setup.DefaultPrecision
 	if len(args) == 2 {
 		// First is empty

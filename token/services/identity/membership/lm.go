@@ -882,7 +882,7 @@ func (t *TypedSignerDeserializer) DeserializeSigner(ctx context.Context, _ idriv
 	return t.KeyManager.DeserializeSigner(ctx, raw)
 }
 
-func marshalOpts(opts interface{}) (optsRaw []byte, err error) {
+func marshalOpts(opts any) (optsRaw []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("panic caught while marshalling identity options: %v", r)

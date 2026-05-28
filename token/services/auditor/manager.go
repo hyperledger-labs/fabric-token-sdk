@@ -105,7 +105,7 @@ func (cm *ServiceManager) Auditor(tmsID token.TMSID) (*Service, error) {
 	return cm.p.Get(tmsID)
 }
 
-var managerType = reflect.TypeOf((*ServiceManager)(nil))
+var managerType = reflect.TypeFor[*ServiceManager]()
 
 // Get returns the Service instance for the passed auditor wallet
 func Get(sp token.ServiceProvider, w *token.AuditorWallet) *Service {

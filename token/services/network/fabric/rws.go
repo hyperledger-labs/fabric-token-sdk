@@ -39,7 +39,7 @@ func (rwset *RWSWrapper) Done() {
 	rwset.r.Done()
 }
 
-func (rwset *RWSWrapper) Equals(r interface{}, namespace string) error {
+func (rwset *RWSWrapper) Equals(r any, namespace string) error {
 	switch t := r.(type) {
 	case *RWSWrapper:
 		return rwset.r.Equals(t.r, namespace)
