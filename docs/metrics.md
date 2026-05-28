@@ -10,6 +10,11 @@ for the high-level monitoring setup, and [drivers/metrics.md](drivers/metrics.md
 for the design of the driver-service decorator layer summarized in
 [Driver services](#driver-services) below.
 
+A ready-to-import Grafana dashboard covering all the metrics in this document
+is available at [monitoring/grafana/token-sdk.json](monitoring/grafana/token-sdk.json)
+(see [monitoring/grafana/README.md](monitoring/grafana/README.md) for import
+instructions and the panel layout).
+
 Metric types follow Prometheus conventions:
 
 - **Counter** — monotonically increasing total.
@@ -149,6 +154,12 @@ The metrics above concentrate on transaction processing (driver services, the tt
 lifecycle, finality, auditing, selection). Several layers are currently
 uninstrumented. The items below are ordered by impact.
 
+> Note: the Fabric Smart Client already instruments view execution (per-view
+> count and duration) at the platform layer. The suggestions below intentionally
+> stay domain-specific (per-store / per-operation / per-phase counters) so they
+> add semantics the FSC view instrumentation cannot infer, rather than
+> duplicating it.
+
 ### 1. Storage / persistence layer (highest priority)
 
 `token/services/storage/...` (token DB, transaction DB, identity/wallet DB,
@@ -164,7 +175,13 @@ Recommended:
 - `storage_operation_duration_seconds{store, operation, backend}` — histogram.
 - `storage_errors_total{store, operation, backend}` — counter.
 
-Write-rate counters here also provide the natural signal for detecting anomalous
+These complement, rather than duplicate, what the database backend already
+exposes (e.g. `pg_stat_statements` via `postgres_exporter`). The SDK-level
+metrics carry semantic labels the DB layer cannot infer without per-query
+parsing — `store=tokendb, operation=write` instead of an opaque
+`INSERT INTO tokens` row count — and they are the only source of metrics when
+the backend is sqlite or another embedded store with no exporter. Write-rate
+counters here also provide the natural signal for detecting anomalous
 token-insertion activity, which application-level metrics cannot currently see.
 
 ### 2. Distributed lock manager
@@ -183,28 +200,30 @@ Recommended:
   (the postgres locker already detects lease loss via `ErrLockLost`).
 - `auditor_locks_held` — gauge of currently held anchors.
 
-### 3. Standard Fabric network / approval path
+### 3. Endorser / approval path (standard Fabric network)
 
-Only the Fabric-X finality queue is instrumented. The standard Fabric network
-service path (request-approval / broadcast / finality) has no counters or
-latency histograms of its own; the ttx layer only times ordering via
+Only the Fabric-X finality queue is instrumented. The standard Fabric endorser
+path — `EndorserService` in `token/services/network/fabric/endorsement/provider.go`
+(`ReceiveTx`, `Endorse`, `CollectEndorsements`) and `RequestApprovalView` in
+`token/services/network/fabric/endorsement/fsc/initiator.go` — emits no
+domain-specific metrics. The ttx layer only times ordering via
 `ordering_duration_seconds`.
 
-Recommended: request-approval and broadcast counters, durations, and error
-counters for the Fabric network driver, mirroring the Fabric-X queue metrics.
+Recommended (per-operation semantic counters, not generic view timing — FSC
+already covers that):
 
-### 4. Validation / double-spend
+- `endorser_requests_total{operation, result}` — counter (operation =
+  receive_tx / endorse / collect_endorsements; result = success / failure).
+- `endorser_operation_duration_seconds{operation}` — histogram.
+- `approval_requests_total{result}` and `approval_request_duration_seconds`
+  for `RequestApprovalView`, labelled by `network`/`channel`/`namespace` like
+  the other lifecycle counters.
 
-Token-request validation (`token/services/...` validators) is not instrumented.
+Note: double-spend is enforced at commit time by Fabric / the token chaincode,
+not by the SDK validators, so it does not belong on this list as an SDK-level
+metric.
 
-Recommended:
-
-- `validation_invocations_total` and `validation_failures_total{reason}` —
-  counters.
-- `validation_duration_seconds` — histogram.
-- A dedicated double-spend / duplicate-detection counter.
-
-### 5. Transaction-level failure counter
+### 4. Transaction-level failure counter
 
 The lifecycle exposes `endorsed`, `audit_approved`, and `accepted` counters but
 no symmetric failure counter; failures are only visible indirectly through
@@ -214,7 +233,7 @@ Recommended: `transactions_failed_total{phase, reason}` with the same
 `network`/`channel`/`namespace` labels as the other lifecycle counters, so success
 and failure rates can be compared directly.
 
-### 6. Wallet / identity resolution
+### 5. Wallet / identity resolution
 
 Only cache fill levels are gauged (`cache_level`, `recipient_data_cache_level`).
 There are no counters for wallet lookups or signer/verifier resolution, so cache
