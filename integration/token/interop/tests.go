@@ -175,7 +175,7 @@ func TestHashEscrowSingleNetwork(network *integration.Infrastructure, sel *token
 	CheckBalance(network, alice, "", GBP, 3)
 	CheckBalance(network, bob, "", GBP, 10)
 
-	hashEscrowClaim(network, defaultTMSID, bob, "", senderPreImage, auditor)
+	hashEscrowClaim(network, defaultTMSID, alice, "", senderPreImage, auditor)
 	gomega.Eventually(CheckBalanceReturnError).WithArguments(network, alice, "", GBP, uint64(10)).WithTimeout(2 * time.Minute).WithPolling(5 * time.Second).Should(gomega.Succeed())
 	CheckBalance(network, bob, "", GBP, 10)
 
