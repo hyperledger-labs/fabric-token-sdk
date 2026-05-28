@@ -8,8 +8,6 @@ package auditor
 
 import (
 	"context"
-	"math"
-	"math/rand/v2"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -25,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -267,72 +266,26 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 // to prevent livelock conditions when multiple auditors compete for the same enrollment IDs.
 // This implements the mitigation strategy for deadlock/livelock prevention.
 func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids []string) error {
-	var lastErr error
+	// Create a retry runner with jitter support
+	retryRunner := utils.NewRetryRunnerWithJitter(
+		logger,
+		a.lockConfig.MaxRetries,
+		a.lockConfig.InitialBackoff,
+		a.lockConfig.MaxBackoff,
+		a.lockConfig.BackoffMultiplier,
+		a.lockConfig.JitterFactor,
+	)
 
-	for attempt := range a.lockConfig.MaxRetries {
-		// Attempt to acquire locks
-		err := a.auditDB.AcquireLocks(ctx, anchor, eids...)
-		if err == nil {
-			// Success
-			if attempt > 0 {
-				logger.DebugfContext(ctx, "Lock acquisition succeeded on attempt %d for anchor [%s]", attempt+1, anchor)
-			}
+	// Use the retry runner to acquire locks
+	err := retryRunner.RunWithContext(ctx, func() error {
+		return a.auditDB.AcquireLocks(ctx, anchor, eids...)
+	})
 
-			return nil
-		}
-
-		lastErr = err
-
-		// Check if context is cancelled - don't retry if so
-		if ctx.Err() != nil {
-			return errors.WithMessagef(ctx.Err(), "lock acquisition cancelled after %d attempts for anchor [%s]", attempt+1, anchor)
-		}
-
-		// Calculate backoff with exponential growth and randomized jitter
-		backoff := a.calculateBackoff(attempt)
-
-		logger.DebugfContext(ctx, "Lock acquisition failed (attempt %d/%d) for anchor [%s], retrying after %v: %v",
-			attempt+1, a.lockConfig.MaxRetries, anchor, backoff, err)
-
-		// Wait with context cancellation support
-		timer := time.NewTimer(backoff)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-
-			return errors.WithMessagef(ctx.Err(), "lock acquisition cancelled during backoff after %d attempts for anchor [%s]", attempt+1, anchor)
-		case <-timer.C:
-			// Continue to next retry attempt
-		}
+	if err != nil {
+		return errors.WithMessagef(err, "failed to acquire locks for anchor [%s]", anchor)
 	}
 
-	return errors.WithMessagef(lastErr, "failed to acquire locks after %d attempts for anchor [%s]", a.lockConfig.MaxRetries, anchor)
-}
-
-// calculateBackoff computes the backoff duration with exponential growth and randomized jitter.
-// The jitter breaks livelock symmetry when multiple auditors retry simultaneously.
-func (a *Service) calculateBackoff(attempt int) time.Duration {
-	// Calculate base delay with exponential growth
-	delay := float64(a.lockConfig.InitialBackoff) * math.Pow(a.lockConfig.BackoffMultiplier, float64(attempt))
-
-	// Cap at maximum delay
-	if delay > float64(a.lockConfig.MaxBackoff) {
-		delay = float64(a.lockConfig.MaxBackoff)
-	}
-
-	// Add randomized jitter to break symmetry
-	// Jitter range: delay * (1 - jitterFactor/2) to delay * (1 + jitterFactor/2)
-	jitterRange := delay * a.lockConfig.JitterFactor
-	jitter := (rand.Float64() - 0.5) * jitterRange
-
-	finalDelay := time.Duration(delay + jitter)
-
-	// Ensure non-negative delay
-	if finalDelay < 0 {
-		finalDelay = a.lockConfig.InitialBackoff
-	}
-
-	return finalDelay
+	return nil
 }
 
 // Append adds the passed transaction to the auditor database.
