@@ -57,7 +57,7 @@ type TokenDB interface {
 //
 //go:generate counterfeiter -o mocks/config_provider.go -fake-name FakeConfigProvider . ConfigProvider
 type ConfigProvider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 }
 
 type TMS interface {

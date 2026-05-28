@@ -22,11 +22,11 @@ import (
 
 // mockServiceProvider mocks ServiceProvider interface
 type mockServiceProvider struct {
-	service interface{}
+	service any
 	err     error
 }
 
-func (m *mockServiceProvider) GetService(v interface{}) (interface{}, error) {
+func (m *mockServiceProvider) GetService(v any) (any, error) {
 	if m.err != nil {
 		return nil, m.err
 	}

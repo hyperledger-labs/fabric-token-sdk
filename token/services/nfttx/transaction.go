@@ -73,7 +73,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	return &Transaction{Transaction: cctx}, nil
 }
 
-func (t *Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recipient view.Identity, opts ...token.IssueOption) error {
+func (t *Transaction) Issue(wallet *token.IssuerWallet, state any, recipient view.Identity, opts ...token.IssueOption) error {
 	// set state id first
 	_, err := t.setStateID(state)
 	if err != nil {
@@ -90,7 +90,7 @@ func (t *Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recip
 	return t.Transaction.Issue(wallet, recipient, stateJSONStr, 1, opts...)
 }
 
-func (t *Transaction) Transfer(wallet *OwnerWallet, state interface{}, recipient view.Identity, opts ...token.TransferOption) error {
+func (t *Transaction) Transfer(wallet *OwnerWallet, state any, recipient view.Identity, opts ...token.TransferOption) error {
 	// marshal state to json
 	stateJSON, err := marshaller.Marshal(state)
 	if err != nil {
@@ -110,7 +110,7 @@ func (t *Transaction) Outputs() (*OutputStream, error) {
 	return &OutputStream{OutputStream: os}, nil
 }
 
-func (t *Transaction) setStateID(s interface{}) (string, error) {
+func (t *Transaction) setStateID(s any) (string, error) {
 	logger.Debugf("setStateID %v...", s)
 	defer logger.Debugf("setStateID...done")
 	var key string

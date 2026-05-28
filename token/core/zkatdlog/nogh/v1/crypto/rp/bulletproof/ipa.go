@@ -184,25 +184,63 @@ func (p *ipaProver) Prove() (*IPA, error) {
 // of the left vector and right is a function of right vector.
 // Both vectors are committed in com which is passed as a parameter to reduce
 func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mathlib.G1, []*mathlib.G1, error) {
-	leftGen, rightGen := CloneGenerators(p.LeftGenerators, p.RightGenerators)
-
 	left := p.leftVector
 	right := p.rightVector
 
 	LArray := make([]*mathlib.G1, p.NumberOfRounds)
 	RArray := make([]*mathlib.G1, p.NumberOfRounds)
+	xList := make([]*mathlib.Zr, 0, p.NumberOfRounds)
+
 	for i := range p.NumberOfRounds {
 		// in each round the size of the vector is reduced by 2
-		n := len(leftGen) / 2
-		leftIP := math.InnerProduct(left[:n], right[n:], p.Curve)
-		rightIP := math.InnerProduct(left[n:], right[:n], p.Curve)
-		// LArray[i] is a commitment to left[:n], right[n:] and their inner product
-		LArray[i] = CommitVectorPlusOne(left[:n], right[n:], leftGen[n:], rightGen[:n], leftIP, X, p.Curve)
-		// LArray[i].Add(X.Mul(leftIP))
+		n_current := len(left) / 2
+		leftIP := math.InnerProduct(left[:n_current], right[n_current:], p.Curve)
+		rightIP := math.InnerProduct(left[n_current:], right[:n_current], p.Curve)
 
-		// RArray[i] is a commitment to left[n:], right[:n] and their inner product
-		RArray[i] = CommitVectorPlusOne(left[n:], right[:n], leftGen[:n], rightGen[n:], rightIP, X, p.Curve)
-		// RArray[i].Add(X.Mul(rightIP))
+		var s, sInv []*mathlib.Zr
+		if i == 0 {
+			s = []*mathlib.Zr{math.One(p.Curve)}
+			sInv = []*mathlib.Zr{math.One(p.Curve)}
+		} else {
+			s, sInv = ComputeSVector(1<<i, xList, p.Curve)
+		}
+
+		pointsL := make([]*mathlib.G1, 0, len(p.LeftGenerators)+1)
+		scalarsL := make([]*mathlib.Zr, 0, len(p.LeftGenerators)+1)
+
+		pointsR := make([]*mathlib.G1, 0, len(p.LeftGenerators)+1)
+		scalarsR := make([]*mathlib.Zr, 0, len(p.LeftGenerators)+1)
+
+		for m := range 1 << i {
+			for j := range n_current {
+				idxG_R := j + (2*m+1)*n_current
+				idxH_L := j + 2*m*n_current
+
+				pointsL = append(pointsL, p.LeftGenerators[idxG_R], p.RightGenerators[idxH_L])
+				scalarsL = append(scalarsL,
+					p.Curve.ModMul(left[j], s[m], p.Curve.GroupOrder),
+					p.Curve.ModMul(right[n_current+j], sInv[m], p.Curve.GroupOrder),
+				)
+
+				idxG_L := j + 2*m*n_current
+				idxH_R := j + (2*m+1)*n_current
+
+				pointsR = append(pointsR, p.LeftGenerators[idxG_L], p.RightGenerators[idxH_R])
+				scalarsR = append(scalarsR,
+					p.Curve.ModMul(left[n_current+j], s[m], p.Curve.GroupOrder),
+					p.Curve.ModMul(right[j], sInv[m], p.Curve.GroupOrder),
+				)
+			}
+		}
+
+		pointsL = append(pointsL, X)
+		scalarsL = append(scalarsL, leftIP)
+
+		pointsR = append(pointsR, X)
+		scalarsR = append(scalarsR, rightIP)
+
+		LArray[i] = p.Curve.MultiScalarMul(pointsL, scalarsL)
+		RArray[i] = p.Curve.MultiScalarMul(pointsR, scalarsR)
 
 		// compute this round's challenge x
 		array := common.GetG1Array([]*mathlib.G1{LArray[i], RArray[i]})
@@ -211,13 +249,11 @@ func (p *ipaProver) reduce(X, com *mathlib.G1) (*mathlib.Zr, *mathlib.Zr, []*mat
 			return nil, nil, nil, nil, err
 		}
 		x := p.Curve.HashToZr(bytesToHash)
+		xList = append(xList, x)
 
 		// compute 1/x
 		xInv := x.Copy()
 		xInv.InvModOrder()
-
-		// reduce the generators by 1/2, as a function of the old generators and x and 1/x
-		leftGen, rightGen = reduceGenerators(leftGen, rightGen, x, xInv, p.Provider)
 
 		// reduce the vectors by 1/2, a function of the old vectors and x and 1/x
 		left, right = reduceVectors(left, right, x, xInv, p.Curve)
@@ -356,7 +392,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	generators := make([]*mathlib.G1, len(leftGen)+len(rightGen)+len(proof.L)+len(proof.R)+1)
 	scalars := make([]*mathlib.Zr, len(generators))
 	s, sInv := ComputeSVector(1<<v.NumberOfRounds, xList, v.Curve)
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		s[i] = v.Curve.ModMul(s[i], proof.Left, v.Curve.GroupOrder)
 		sInv[i] = v.Curve.ModMul(sInv[i], proof.Right, v.Curve.GroupOrder)
 	}
@@ -402,27 +438,6 @@ func reduceVectors(left, right []*mathlib.Zr, x, xInv *mathlib.Zr, c *mathlib.Cu
 	}
 
 	return leftPrime, rightPrime
-}
-
-// reduceGenerators reduces the number of generators passed in the parameters by 1/2,
-// as a function of the old generators,  x and 1/x
-func reduceGenerators(leftGen, rightGen []*mathlib.G1, x, xInv *mathlib.Zr, provider executor.ExecutorProvider) ([]*mathlib.G1, []*mathlib.G1) {
-	l := len(leftGen) / 2
-	// Use the Executor abstraction so that the execution strategy can be
-	// swapped without changing this function. SerialExecutor runs each task
-	// immediately with no locks or goroutine overhead.
-	exec := provider.New()
-	for i := range l {
-		exec.Submit(func() {
-			// G_i = G_i^{x_inv} * G_{i+l}^x
-			leftGen[i].Mul2InPlace(xInv, leftGen[i+l], x)
-			// H_i = H_i^x * H_{i+l}^{x_inv}
-			rightGen[i].Mul2InPlace(x, rightGen[i+l], xInv)
-		})
-	}
-	exec.Wait()
-
-	return leftGen[:l], rightGen[:l]
 }
 
 func CommitVector(
@@ -478,12 +493,29 @@ func CloneGenerators(LeftGenerators, RightGenerators []*mathlib.G1) ([]*mathlib.
 	return leftGen, rightGen
 }
 
-// ComputeSVector computes the s vector and its entry-wise inverse of s as detailed below:
-// b(i,j) = 1 if (logn - j)^{th} bit of i-1 is 1, else its -1
-// s[i] = \prod_{j=1}^{\log n} x_j^{bits(i,j)}
-// sInv[i] = s[i].Inverse
-// Input: n, challenges = [x_1,\ldots,x_{\log n}]
-// Returns (s, sInv) where sInv[i] = s[i]^{-1}, computed via batch inversion.
+// ComputeSVector computes the s vector and its entry-wise inverse using
+// a dual-butterfly (doubling) recurrence in O(n) multiplications.
+//
+// Each entry is defined as:
+//
+//	s[i] = ∏_{r=0}^{k-1} (bit(i, k-1-r) == 1 ? x_r : x_r^{-1})
+//	sInv[i] = s[i]^{-1}
+//
+// where k = log₂(n) and x_r = challenges[r].
+//
+// The butterfly builds both vectors simultaneously:
+//
+//	Round r: for each existing entry i in [0, 2^r):
+//	  s[i + 2^r]    = s[i]    · x_{k-1-r}        (bit set → challenge)
+//	  s[i]          = s[i]    · x_{k-1-r}^{-1}    (bit unset → inverse)
+//	  sInv[i + 2^r] = sInv[i] · x_{k-1-r}^{-1}   (swapped)
+//	  sInv[i]       = sInv[i] · x_{k-1-r}         (swapped)
+//
+// This replaces the previous O(n·log n) nested-loop implementation and
+// eliminates the final BatchInverse call for sInv.
+//
+// Input: n, challenges = [x_0, …, x_{k-1}] where n = 2^k.
+// Returns (s, sInv) where sInv[i] = s[i]^{-1}.
 func ComputeSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) ([]*mathlib.Zr, []*mathlib.Zr) {
 	log2n := len(challenges)
 
@@ -492,40 +524,36 @@ func ComputeSVector(n int, challenges []*mathlib.Zr, curve *mathlib.Curve) ([]*m
 		panic("n must equal 2^(number of challenges)")
 	}
 
-	// Precompute challenge inverses (log2n inversions instead of O(n*log2n))
+	// Precompute challenge inverses: O(log n) with a single field inversion.
 	challengeInvs := math.BatchInverse(challenges, curve)
 
+	// Pre-allocate both vectors. Entries [1..n-1] are initialised to zero
+	// so that ModMulInPlace can write into them without prior allocation.
 	s := make([]*mathlib.Zr, n)
-
-	for i := 1; i <= n; i++ {
-		// Start with s_i = 1
-		si := math.One(curve)
-
-		// Compute product over j=1 to log2(n).
-		// At round j the generator fold splits on bit (log2n - j) of the
-		// 0-based index: first half (bit=0) picks up x_j^{-1}, second
-		// half (bit=1) picks up x_j — matching reduceGenerators.
-		for j := 1; j <= log2n; j++ {
-			bitPosition := log2n - j
-			iMinus1 := i - 1
-			bitIsSet := (iMinus1 >> bitPosition) & 1
-
-			var factor *mathlib.Zr
-			if bitIsSet == 1 {
-				// second half at round j => x_j
-				factor = challenges[j-1]
-			} else {
-				// first half at round j => x_j^{-1}
-				factor = challengeInvs[j-1]
-			}
-
-			// Multiply: s_i *= factor
-			si = curve.ModMul(si, factor, curve.GroupOrder)
-		}
-
-		s[i-1] = si
+	sInv := make([]*mathlib.Zr, n)
+	s[0] = math.One(curve)
+	sInv[0] = math.One(curve)
+	for i := 1; i < n; i++ {
+		s[i] = curve.NewZrFromInt(0)
+		sInv[i] = curve.NewZrFromInt(0)
 	}
-	sInv := math.BatchInverse(s, curve)
+
+	// Dual butterfly: O(n) total multiplications.
+	for r := range log2n {
+		halfLen := 1 << r
+		c := challenges[log2n-1-r]
+		cInv := challengeInvs[log2n-1-r]
+		for i := range halfLen {
+			// s: bit set → challenge, bit unset → inverse.
+			// Compute s[i+halfLen] BEFORE mutating s[i].
+			curve.ModMulInPlace(s[i+halfLen], s[i], c, curve.GroupOrder)
+			s[i] = curve.ModMul(s[i], cInv, curve.GroupOrder)
+
+			// sInv: factors are swapped relative to s.
+			curve.ModMulInPlace(sInv[i+halfLen], sInv[i], cInv, curve.GroupOrder)
+			sInv[i] = curve.ModMul(sInv[i], c, curve.GroupOrder)
+		}
+	}
 
 	return s, sInv
 }

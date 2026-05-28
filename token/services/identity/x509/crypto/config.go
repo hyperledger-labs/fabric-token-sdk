@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/pkcs11"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/protos-go/config"
-	"github.com/mitchellh/mapstructure"
 )
 
 type (
@@ -75,7 +75,7 @@ type KeyIDMapping struct {
 }
 
 // ToBCCSPOpts converts the passed opts to `config.BCCSP`
-func ToBCCSPOpts(boxed interface{}) (*BCCSP, error) {
+func ToBCCSPOpts(boxed any) (*BCCSP, error) {
 	opts := &Opts{}
 	config := &mapstructure.DecoderConfig{
 		WeaklyTypedInput: true, // allow pin to be a string

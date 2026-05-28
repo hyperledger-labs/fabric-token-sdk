@@ -2,6 +2,7 @@
 package mock
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
@@ -9,11 +10,12 @@ import (
 )
 
 type Selector struct {
-	FilterStub        func(nfttx.Filter, string) ([]*token.ID, error)
+	FilterStub        func(context.Context, nfttx.Filter, string) ([]*token.ID, error)
 	filterMutex       sync.RWMutex
 	filterArgsForCall []struct {
-		arg1 nfttx.Filter
-		arg2 string
+		arg1 context.Context
+		arg2 nfttx.Filter
+		arg3 string
 	}
 	filterReturns struct {
 		result1 []*token.ID
@@ -27,19 +29,20 @@ type Selector struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Selector) Filter(arg1 nfttx.Filter, arg2 string) ([]*token.ID, error) {
+func (fake *Selector) Filter(arg1 context.Context, arg2 nfttx.Filter, arg3 string) ([]*token.ID, error) {
 	fake.filterMutex.Lock()
 	ret, specificReturn := fake.filterReturnsOnCall[len(fake.filterArgsForCall)]
 	fake.filterArgsForCall = append(fake.filterArgsForCall, struct {
-		arg1 nfttx.Filter
-		arg2 string
-	}{arg1, arg2})
+		arg1 context.Context
+		arg2 nfttx.Filter
+		arg3 string
+	}{arg1, arg2, arg3})
 	stub := fake.FilterStub
 	fakeReturns := fake.filterReturns
-	fake.recordInvocation("Filter", []interface{}{arg1, arg2})
+	fake.recordInvocation("Filter", []interface{}{arg1, arg2, arg3})
 	fake.filterMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -53,17 +56,17 @@ func (fake *Selector) FilterCallCount() int {
 	return len(fake.filterArgsForCall)
 }
 
-func (fake *Selector) FilterCalls(stub func(nfttx.Filter, string) ([]*token.ID, error)) {
+func (fake *Selector) FilterCalls(stub func(context.Context, nfttx.Filter, string) ([]*token.ID, error)) {
 	fake.filterMutex.Lock()
 	defer fake.filterMutex.Unlock()
 	fake.FilterStub = stub
 }
 
-func (fake *Selector) FilterArgsForCall(i int) (nfttx.Filter, string) {
+func (fake *Selector) FilterArgsForCall(i int) (context.Context, nfttx.Filter, string) {
 	fake.filterMutex.RLock()
 	defer fake.filterMutex.RUnlock()
 	argsForCall := fake.filterArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *Selector) FilterReturns(result1 []*token.ID, result2 error) {

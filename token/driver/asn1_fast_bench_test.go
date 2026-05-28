@@ -350,5 +350,3 @@ func BenchmarkManySmallItems_Std(b *testing.B) {
 		}
 	}
 }
-
-// Made with Bob

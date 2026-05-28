@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	serviceProviderType = reflect.TypeOf((*ServiceProvider)(nil))
+	serviceProviderType = reflect.TypeFor[*ServiceProvider]()
 )
 
 //go:generate counterfeiter -o mock/service.go -fake-name AuditService . Service

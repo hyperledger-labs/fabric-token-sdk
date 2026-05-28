@@ -55,10 +55,28 @@ func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*Auditor, err
 	return NewAuditorFromTMSID(sp, w.TMS().ID())
 }
 
+// Validate checks if the token request in the transaction is valid according to audit rules.
+// It delegates to the underlying audit service for validation.
 func (a *Auditor) Validate(tx *Transaction) error {
 	return a.Service.Validate(tx.Context, tx.TokenRequest)
 }
 
+// Audit extracts the list of inputs and outputs from the passed transaction.
+// In addition, Audit acquires locks on the enrollment IDs involved in the transaction.
+// The caller MUST call Release() to unlock these enrollment IDs after processing.
+//
+// IMPORTANT: The defer Release() statement MUST be placed immediately after checking
+// the error returned by Audit(). This ensures locks are released even if subsequent
+// operations fail. Example:
+//
+//	inputs, outputs, err := auditor.Audit(ctx, tx)
+//	if err != nil {
+//	    return errors.Wrap(err, "audit failed")
+//	}
+//	defer auditor.Release(ctx, tx)
+//
+// Note: The semaphore-based locking mechanism handles context cancellation during
+// lock acquisition, ensuring proper cleanup in case of timeouts or cancellations.
 func (a *Auditor) Audit(ctx context.Context, tx *Transaction) (*token.InputStream, *token.OutputStream, error) {
 	return a.Service.Audit(ctx, tx)
 }
@@ -88,19 +106,27 @@ func (a *Auditor) SetStatus(ctx context.Context, txID string, status storage.TxS
 	return a.StoreService.SetStatus(ctx, txID, status, message)
 }
 
+// GetTokenRequest retrieves the serialized token request for the given transaction ID.
+// Returns an error if the transaction is not found in the audit database.
 func (a *Auditor) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
 	return a.Service.GetTokenRequest(ctx, txID)
 }
 
+// Check performs a health check on the auditor service and returns any issues found.
+// It delegates to the underlying audit service for the check.
 func (a *Auditor) Check(ctx context.Context) ([]string, error) {
 	return a.Service.Check(ctx)
 }
 
+// RegisterAuditorView is a view that registers an auditor responder view for handling
+// audit requests from token transaction initiators.
 type RegisterAuditorView struct {
 	TMSID     token.TMSID
 	AuditView view.View
 }
 
+// NewRegisterAuditorView creates a new RegisterAuditorView with the provided audit view
+// and service options. Returns nil if the options cannot be compiled.
 func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *RegisterAuditorView {
 	options, err := token.CompileServiceOptions(opts...)
 	if err != nil {
@@ -113,7 +139,9 @@ func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *R
 	}
 }
 
-func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
+// Call registers the audit view as a responder for AuditingViewInitiator requests.
+// This allows the auditor to respond to audit requests from transaction initiators.
+func (r *RegisterAuditorView) Call(context view.Context) (any, error) {
 	// register responder
 	if err := view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
 		return nil, errors.Wrapf(err, "failed to register auditor view")
@@ -122,17 +150,26 @@ func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	return nil, nil
 }
 
+// AuditingViewInitiator is a view that initiates an auditing session with an auditor.
+// It sends the transaction to the auditor and receives back a signature.
+// The local flag indicates whether the auditor is the same as the initiator (self-audit).
 type AuditingViewInitiator struct {
 	tx                               *Transaction
 	local                            bool
 	skipAuditorSignatureVerification bool
 }
 
+// newAuditingViewInitiator creates a new AuditingViewInitiator for the given transaction.
+// The local parameter indicates if this is a self-audit scenario.
+// The skipAuditorSignatureVerification parameter allows bypassing signature verification for testing.
 func newAuditingViewInitiator(tx *Transaction, local, skipAuditorSignatureVerification bool) *AuditingViewInitiator {
 	return &AuditingViewInitiator{tx: tx, local: local, skipAuditorSignatureVerification: skipAuditorSignatureVerification}
 }
 
-func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
+// Call initiates an auditing session (local or remote), sends the transaction to the auditor,
+// receives the auditor's signature, verifies it, and adds it to the transaction.
+// Returns the session used for communication.
+func (a *AuditingViewInitiator) Call(context view.Context) (any, error) {
 	var err error
 	var session view.Session
 
@@ -148,13 +185,13 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	// Receive signature
 	logger.DebugfContext(context.Context(), "Receiving signature for [%s]", a.tx.ID())
 
-	jsonSession := session2.NewFromSession(context, session)
-	signature, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
-	if err != nil {
+	var signaturePayload SignaturePayload
+	if err := session2.NewTypedSession(context, session).ReceiveTypedWithTimeout(TypeSignature, &signaturePayload, time.Minute); err != nil {
 		logger.ErrorfContext(context.Context(), "failed to read audit event: %s", err)
 
 		return nil, errors.WithMessagef(err, "failed to read audit event")
 	}
+	signature := signaturePayload.Signature
 	logger.DebugfContext(context.Context(), "reply received from %s", a.tx.Opts.Auditor)
 
 	auditorIdentity, err := a.verifyAuditorSignature(context, signature)
@@ -169,6 +206,8 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	return session, nil
 }
 
+// startRemote establishes a remote session with the auditor and sends the transaction.
+// This is used when the auditor is a different node than the transaction initiator.
 func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session, error) {
 	logger.DebugfContext(context.Context(), "Starting remote auditing session with [%s] for [%s]", a.tx.Opts.Auditor.UniqueID(), a.tx.ID())
 	session, err := context.GetSession(a, a.tx.Opts.Auditor)
@@ -181,7 +220,7 @@ func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session,
 	if err != nil {
 		return nil, err
 	}
-	err = session.SendWithContext(context.Context(), txRaw)
+	err = session2.NewTypedSession(context, session).SendTyped(context.Context(), &TransactionPayload{Raw: txRaw}, TypeTransaction)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
@@ -189,6 +228,12 @@ func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session,
 	return session, nil
 }
 
+// startLocal creates a local bidirectional channel for self-auditing scenarios.
+// This is used when the auditor is the same node as the transaction initiator (e.g., an issuer
+// that is also an auditor). Since FSC doesn't support opening sessions to self, this creates
+// a fake bidirectional channel to simulate the communication between initiator and responder.
+// The responder view is executed in a separate goroutine using the right side of the channel,
+// while the initiator uses the left side.
 func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, error) {
 	logger.DebugfContext(context.Context(), "Starting local auditing for %s", a.tx.ID())
 
@@ -218,7 +263,7 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 	if err != nil {
 		return nil, err
 	}
-	err = left.SendWithContext(context.Context(), txRaw)
+	err = session2.NewTypedSession(context, left).SendTyped(context.Context(), &TransactionPayload{Raw: txRaw}, TypeTransaction)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
@@ -234,6 +279,11 @@ func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, 
 	return left, nil
 }
 
+// verifyAuditorSignature verifies that the received signature is valid and was created by
+// one of the authorized auditors listed in the public parameters. It marshals the transaction
+// for auditing, then iterates through all registered auditors to find one whose signature
+// verifies correctly. Returns the identity of the auditor who signed, or an error if no
+// valid signature is found. Signature verification can be skipped for testing purposes.
 func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, signature []byte) (token.Identity, error) {
 	logger.DebugfContext(context.Context(), "Validate auditing")
 
@@ -268,16 +318,26 @@ func (a *AuditingViewInitiator) verifyAuditorSignature(context view.Context, sig
 	return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", utils.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 }
 
+// AuditApproveView is a responder view that handles audit approval requests.
+// It audits the transaction, appends audit records to the database, signs the transaction,
+// and sends the signature back to the initiator.
 type AuditApproveView struct {
 	w  *token.AuditorWallet
 	tx *Transaction
 }
 
+// NewAuditApproveView creates a new AuditApproveView for the given auditor wallet and transaction.
 func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveView {
 	return &AuditApproveView{w: w, tx: tx}
 }
 
-func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
+// Call processes the audit approval by:
+// 1. Appending audit records to the database (with lock acquisition/release)
+// 2. Signing the transaction with the auditor's key
+// 3. Sending the signature back to the initiator
+// 4. Caching the token request for faster future lookups
+// 5. Recording metrics for the approval process
+func (a *AuditApproveView) Call(context view.Context) (any, error) {
 	start := time.Now()
 	// Append audit records
 	if err := auditor.Get(context, a.w).Append(context.Context(), a.tx); err != nil {
@@ -309,6 +369,8 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	return nil, nil
 }
 
+// signAndSendBack retrieves the auditor's identity and signing key, marshals the transaction
+// for auditing, signs it, and sends the signature back to the initiator through the session.
 func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	logger.DebugfContext(context.Context(), "Signing and sending back transaction... [%s]", a.tx.ID())
 	// Sign
@@ -333,7 +395,7 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	}
 
 	logger.DebugfContext(context.Context(), "auditor sending sigma back", utils.Hashable(sigma))
-	if err := context.Session().SendWithContext(context.Context(), sigma); err != nil {
+	if err := session2.NewTypedSessionFromContext(context).SendTyped(context.Context(), &SignaturePayload{Signature: sigma}, TypeSignature); err != nil {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
 	logger.DebugfContext(context.Context(), "Signing and sending back transaction...done [%s]", a.tx.ID())

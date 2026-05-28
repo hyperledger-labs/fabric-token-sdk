@@ -63,11 +63,11 @@ type TMS struct {
 	// A transient TMS is not deployed on the network
 	Transient bool
 
-	TokenTopology   TokenTopology          `yaml:"-"`
-	FSCNodes        []*node.Node           `yaml:"-"`
-	BackendTopology BackedTopology         `yaml:"-"`
-	BackendParams   map[string]interface{} `yaml:"-"`
-	Wallets         *Wallets               `yaml:"-"`
+	TokenTopology   TokenTopology  `yaml:"-"`
+	FSCNodes        []*node.Node   `yaml:"-"`
+	BackendTopology BackedTopology `yaml:"-"`
+	BackendParams   map[string]any `yaml:"-"`
+	Wallets         *Wallets       `yaml:"-"`
 }
 
 func (t *TMS) AddAuditor(auditor *node.Node) *TMS {

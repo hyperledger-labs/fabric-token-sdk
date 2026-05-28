@@ -24,8 +24,8 @@ type KeyEntry struct {
 }
 
 type KVS interface {
-	Put(id string, state interface{}) error
-	Get(id string, state interface{}) error
+	Put(id string, state any) error
+	Get(id string, state any) error
 }
 
 type KVSStore struct {

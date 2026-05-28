@@ -55,9 +55,15 @@ type AuditTransactionStore interface {
 
 	// ClaimPendingTransactions atomically claims a batch of Pending transactions for recovery processing.
 	// Transactions whose recovery lease expired are eligible again.
-	ClaimPendingTransactions(ctx context.Context, params RecoveryClaimParams) ([]*TransactionRecord, error)
+	// Returns the minimal projection (TxID + StoredAt) needed by the recovery loop;
+	// callers do not need the full TransactionRecord.
+	ClaimPendingTransactions(ctx context.Context, params RecoveryClaimParams) ([]*RecoveryClaim, error)
 
 	// ReleaseRecoveryClaim clears the recovery claim metadata for the given transaction if owned by owner.
 	// The message parameter is stored for audit/debugging purposes.
 	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
+
+	// PrefixedTableName returns the formatted table name for the given logical table name,
+	// following the persistence naming rules of this store.
+	PrefixedTableName(name string) string
 }

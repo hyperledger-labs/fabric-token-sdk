@@ -15,8 +15,8 @@ import (
 type KVS interface {
 	Exists(ctx context.Context, id string) bool
 	GetExisting(ctx context.Context, ids ...string) []string
-	Put(ctx context.Context, id string, state interface{}) error
-	Get(ctx context.Context, id string, state interface{}) error
+	Put(ctx context.Context, id string, state any) error
+	Get(ctx context.Context, id string, state any) error
 	GetByPartialCompositeID(ctx context.Context, prefix string, attrs []string) (kvs.Iterator, error)
 	Close() error
 }

@@ -9,6 +9,7 @@ package token
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -27,16 +28,6 @@ func TestWithType(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, token.Type("USD"), opts.TokenType)
-}
-
-// TestWithContext verifies WithContext option sets context
-func TestWithContext(t *testing.T) {
-	opts := &ListTokensOptions{}
-	ctx := context.Background()
-	err := WithContext(ctx)(opts)
-
-	require.NoError(t, err)
-	assert.Equal(t, ctx, opts.Context)
 }
 
 // TestWalletManager_RegisterOwnerIdentity verifies owner identity registration
@@ -326,28 +317,14 @@ func TestCompileListTokensOption(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, token.Type("USD"), opts.TokenType)
-	assert.NotNil(t, opts.Context)
 }
 
-type contextKey string
-
-// TestCompileListTokensOption_WithContext verifies context is set
-func TestCompileListTokensOption_WithContext(t *testing.T) {
-	ctx := context.WithValue(context.Background(), contextKey("key"), "value")
-	opts, err := CompileListTokensOption(
-		WithContext(ctx),
-	)
-
-	require.NoError(t, err)
-	assert.Equal(t, ctx, opts.Context)
-}
-
-// TestCompileListTokensOption_DefaultContext verifies default context
+// TestCompileListTokensOption_DefaultContext verifies options compile with no args
 func TestCompileListTokensOption_DefaultContext(t *testing.T) {
 	opts, err := CompileListTokensOption()
 
 	require.NoError(t, err)
-	assert.NotNil(t, opts.Context)
+	assert.NotNil(t, opts)
 }
 
 // TestAuditorWallet_GetAuditorIdentity verifies GetAuditorIdentity
@@ -543,7 +520,7 @@ func TestOwnerWallet_ListUnspentTokens(t *testing.T) {
 
 	wallet := &OwnerWallet{w: mockOW}
 
-	tokens, err := wallet.ListUnspentTokens(WithType("USD"))
+	tokens, err := wallet.ListUnspentTokens(context.Background(), WithType("USD"))
 
 	require.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
@@ -557,7 +534,7 @@ func TestOwnerWallet_ListUnspentTokensIterator(t *testing.T) {
 
 	wallet := &OwnerWallet{w: mockOW}
 
-	iterator, err := wallet.ListUnspentTokensIterator(WithType("USD"))
+	iterator, err := wallet.ListUnspentTokensIterator(context.Background(), WithType("USD"))
 
 	require.NoError(t, err)
 	assert.NotNil(t, iterator)
@@ -567,7 +544,7 @@ func TestOwnerWallet_ListUnspentTokensIterator(t *testing.T) {
 // TestOwnerWallet_Balance verifies Balance
 func TestOwnerWallet_Balance(t *testing.T) {
 	mockOW := &mock.OwnerWallet{}
-	mockOW.BalanceReturns(uint64(1000), nil)
+	mockOW.BalanceReturns(big.NewInt(1000), nil)
 
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
@@ -575,7 +552,7 @@ func TestOwnerWallet_Balance(t *testing.T) {
 	balance, err := wallet.Balance(ctx, WithType("USD"))
 
 	require.NoError(t, err)
-	assert.Equal(t, uint64(1000), balance)
+	assert.Equal(t, big.NewInt(1000), balance)
 }
 
 // TestOwnerWallet_RegisterRecipient verifies RegisterRecipient
@@ -732,7 +709,7 @@ func TestOwnerWallet_ListUnspentTokens_Error(t *testing.T) {
 
 	wallet := &OwnerWallet{w: mockOW}
 
-	tokens, err := wallet.ListUnspentTokens(WithType("USD"))
+	tokens, err := wallet.ListUnspentTokens(context.Background(), WithType("USD"))
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
@@ -747,7 +724,7 @@ func TestOwnerWallet_ListUnspentTokensIterator_Error(t *testing.T) {
 
 	wallet := &OwnerWallet{w: mockOW}
 
-	iterator, err := wallet.ListUnspentTokensIterator(WithType("USD"))
+	iterator, err := wallet.ListUnspentTokensIterator(context.Background(), WithType("USD"))
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
@@ -758,7 +735,7 @@ func TestOwnerWallet_ListUnspentTokensIterator_Error(t *testing.T) {
 func TestOwnerWallet_Balance_Error(t *testing.T) {
 	mockOW := &mock.OwnerWallet{}
 	expectedErr := errors.New("failed to get balance")
-	mockOW.BalanceReturns(0, expectedErr)
+	mockOW.BalanceReturns(big.NewInt(0), expectedErr)
 
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
@@ -767,7 +744,7 @@ func TestOwnerWallet_Balance_Error(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
-	assert.Equal(t, uint64(0), balance)
+	assert.Nil(t, balance)
 }
 
 // TestIssuerWallet_ListIssuedTokens_Error verifies error handling

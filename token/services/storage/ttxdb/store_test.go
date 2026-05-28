@@ -54,11 +54,11 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
 	wg.Add(n)
 	for i := range n {
 		go func(i int) {
-			assert.NoError(t, db1.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			assert.NoError(t, db1.AddTransactionEndorsementAck(ctx, "1", fmt.Appendf(nil, "alice_%d", i), fmt.Appendf(nil, "sigma_%d", i)))
 			acks, err := db1.GetTransactionEndorsementAcks(ctx, "1")
 			assert.NoError(t, err)
 			assert.NotEmpty(t, acks)
-			assert.NoError(t, db2.AddTransactionEndorsementAck(ctx, "2", []byte(fmt.Sprintf("bob_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			assert.NoError(t, db2.AddTransactionEndorsementAck(ctx, "2", fmt.Appendf(nil, "bob_%d", i), fmt.Appendf(nil, "sigma_%d", i)))
 			acks, err = db2.GetTransactionEndorsementAcks(ctx, "2")
 			assert.NoError(t, err)
 			assert.NotEmpty(t, acks)
@@ -72,14 +72,14 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.StoreService) {
 	require.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := range n {
-		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
+		assert.Equal(t, fmt.Appendf(nil, "sigma_%d", i), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
 	}
 
 	acks, err = db2.GetTransactionEndorsementAcks(ctx, "2")
 	require.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := range n {
-		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("bob_%d", i)).String()])
+		assert.Equal(t, fmt.Appendf(nil, "sigma_%d", i), acks[token.Identity(fmt.Sprintf("bob_%d", i)).String()])
 	}
 }
 

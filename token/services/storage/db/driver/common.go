@@ -64,6 +64,8 @@ const (
 	Confirmed = driver2.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted = driver2.Deleted
+	// Orphan is the status of a transaction that never reached the ledger
+	Orphan = driver2.Orphan
 )
 
 // TxStatusMessage maps TxStatus to string
@@ -72,6 +74,7 @@ var TxStatusMessage = map[TxStatus]string{
 	Pending:   "Pending",
 	Confirmed: "Confirmed",
 	Deleted:   "Deleted",
+	Orphan:    "Orphan",
 }
 
 // MovementRecord is a record of a movement of assets.

@@ -27,7 +27,7 @@ type vault interface {
 }
 
 type selector interface {
-	Filter(filter Filter, q string) ([]*token2.ID, error)
+	Filter(ctx context.Context, filter Filter, q string) ([]*token2.ID, error)
 }
 
 type QueryExecutor struct {
@@ -54,8 +54,8 @@ func NewQueryExecutor(sp token.ServiceProvider, wallet string, precision uint64,
 	}, nil
 }
 
-func (s *QueryExecutor) QueryByKey(ctx context.Context, state interface{}, key string, value string) error {
-	ids, err := s.Filter(&jsonFilter{
+func (s *QueryExecutor) QueryByKey(ctx context.Context, state any, key string, value string) error {
+	ids, err := s.Filter(ctx, &jsonFilter{
 		q:     gojsonq.New(),
 		key:   key,
 		value: value,

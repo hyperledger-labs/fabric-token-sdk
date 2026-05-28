@@ -34,7 +34,7 @@ type ScanView struct {
 	*Scan
 }
 
-func (s *ScanView) Call(context view.Context) (interface{}, error) {
+func (s *ScanView) Call(context view.Context) (any, error) {
 	opts := []token.ServiceOption{
 		token.WithTMSID(s.TMSID),
 	}

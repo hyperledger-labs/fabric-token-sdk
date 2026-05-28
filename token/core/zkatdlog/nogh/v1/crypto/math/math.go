@@ -97,13 +97,13 @@ func CheckBaseElement[E BaseElement](element E, curveID mathlib.CurveID) (err er
 	return nil
 }
 
-func isNilInterface(i interface{}) bool {
+func isNilInterface(i any) bool {
 	if i == nil {
 		return true
 	}
 	rv := reflect.ValueOf(i)
 
-	return rv.Kind() == reflect.Ptr && rv.IsNil()
+	return rv.Kind() == reflect.Pointer && rv.IsNil()
 }
 
 func InnerProduct(left []*mathlib.Zr, right []*mathlib.Zr, c *mathlib.Curve) *mathlib.Zr {

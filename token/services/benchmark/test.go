@@ -75,10 +75,12 @@ func (test *Test[T]) GoBenchmark(b *testing.B, newEnv func(*Case) (T, error), wo
 	for _, tc := range test.TestCases {
 		b.Run(tc.Name, func(b *testing.B) {
 			n := SetupSamples()
-			envs := make([]T, 0, n)
 			if n == 0 {
-				n = uint(b.N) // #nosec G115
+				n = min(
+					// #nosec G115
+					uint(b.N), 1000)
 			}
+			envs := make([]T, 0, n)
 			if n > 0 {
 				for range n {
 					e, err := newEnv(tc.BenchmarkCase)
@@ -111,10 +113,12 @@ func (test *Test[T]) GoBenchmarkParallel(b *testing.B, newEnv func(*Case) (T, er
 
 	for _, tc := range test.TestCases {
 		n := SetupSamples()
-		envs := make([]T, 0, n)
 		if n == 0 {
-			n = uint(b.N) // #nosec G115
+			n = min(
+				// #nosec G115
+				uint(b.N), 1000)
 		}
+		envs := make([]T, 0, n)
 		if n > 0 {
 			for range n {
 				e, err := newEnv(tc.BenchmarkCase)

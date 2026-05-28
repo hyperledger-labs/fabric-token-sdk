@@ -42,7 +42,7 @@ type RedeemView struct {
 	*Redeem
 }
 
-func (t *RedeemView) Call(context view.Context) (interface{}, error) {
+func (t *RedeemView) Call(context view.Context) (any, error) {
 	// The sender directly prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
@@ -126,7 +126,7 @@ func (p *RedeemViewFactory) NewView(in []byte) (view.View, error) {
 
 type IssuerRedeemAcceptView struct{}
 
-func (a *IssuerRedeemAcceptView) Call(context view.Context) (interface{}, error) {
+func (a *IssuerRedeemAcceptView) Call(context view.Context) (any, error) {
 	// Verify Token Request against Metadata
 	tx, err := ttx.ReceiveTransaction(context)
 	if err != nil {

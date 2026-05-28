@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package metrics
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"strings"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var logger = logging.MustGetLogger()
@@ -19,6 +19,8 @@ const (
 	NetworkLabel   MetricLabel = "network"
 	ChannelLabel   MetricLabel = "channel"
 	NamespaceLabel MetricLabel = "namespace"
+
+	PrometheusAlreadyRegisteredErrorMessage = "duplicate metrics collector registration attempted"
 )
 
 type tmsProvider struct {
@@ -64,7 +66,7 @@ func recoverFromDuplicate(recovered any) {
 		// Registered successfully
 		return
 	}
-	if err, ok := recovered.(error); ok && errors.Is(err, &prometheus.AlreadyRegisteredError{}) {
+	if err, ok := recovered.(error); ok && strings.Contains(err.Error(), PrometheusAlreadyRegisteredErrorMessage) {
 		// Different TMS's try to register the same metric
 		logger.Warnf("Recovered from panic: %v\n", err)
 

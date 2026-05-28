@@ -8,6 +8,7 @@ package role
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
@@ -34,7 +35,7 @@ type UnspentTokensIterator = driver.UnspentTokensIterator
 //go:generate counterfeiter -o mock/otv.go -fake-name OwnerTokenVault . OwnerTokenVault
 type OwnerTokenVault interface {
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (UnspentTokensIterator, error)
-	Balance(ctx context.Context, id string, tokenType token.Type) (uint64, error)
+	Balance(ctx context.Context, id string, tokenType token.Type) (*big.Int, error)
 }
 
 // IdentityProvider is a type alias for IdentityProvider. It exposes
@@ -364,8 +365,8 @@ func (w *LongTermOwnerWallet) GetSigner(ctx context.Context, identity Identity) 
 
 // ListTokens returns all unspent tokens for the wallet matching the
 // provided listing options.
-func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
-	it, err := w.TokenVault.UnspentTokensIteratorBy(opts.Context, w.WalletID, opts.TokenType)
+func (w *LongTermOwnerWallet) ListTokens(ctx context.Context, opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
+	it, err := w.TokenVault.UnspentTokensIteratorBy(ctx, w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -378,11 +379,12 @@ func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token
 }
 
 // Balance returns the on-chain balance for the wallet for the given token
-// type in the listing options.
-func (w *LongTermOwnerWallet) Balance(ctx context.Context, opts *driver.ListTokensOptions) (uint64, error) {
+// type in the listing options. The result is returned as a *big.Int to support
+// arbitrary precision and prevent overflow.
+func (w *LongTermOwnerWallet) Balance(ctx context.Context, opts *driver.ListTokensOptions) (*big.Int, error) {
 	balance, err := w.TokenVault.Balance(ctx, w.WalletID, opts.TokenType)
 	if err != nil {
-		return 0, errors.Wrap(err, "token selection failed")
+		return nil, errors.Wrap(err, "token selection failed")
 	}
 
 	return balance, nil
@@ -390,8 +392,8 @@ func (w *LongTermOwnerWallet) Balance(ctx context.Context, opts *driver.ListToke
 
 // ListTokensIterator returns an iterator to scan unspent tokens instead of
 // materializing them in memory.
-func (w *LongTermOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
-	it, err := w.TokenVault.UnspentTokensIteratorBy(opts.Context, w.WalletID, opts.TokenType)
+func (w *LongTermOwnerWallet) ListTokensIterator(ctx context.Context, opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
+	it, err := w.TokenVault.UnspentTokensIteratorBy(ctx, w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}

@@ -105,14 +105,14 @@ func TestIsNil(t *testing.T) {
 	})
 
 	t.Run("nil interface", func(t *testing.T) {
-		var iface interface{}
+		var iface any
 		// Note: A nil interface{} is not detected as nil by reflection
 		// because it's not a pointer/slice/map/chan/func type
 		assert.False(t, IsNil(iface))
 	})
 
 	t.Run("non-nil interface", func(t *testing.T) {
-		var iface interface{} = "test"
+		var iface any = "test"
 		assert.False(t, IsNil(iface))
 	})
 

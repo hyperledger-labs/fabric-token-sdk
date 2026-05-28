@@ -31,13 +31,13 @@ type ListUnspentTokensView struct {
 	*ListUnspentTokens
 }
 
-func (p *ListUnspentTokensView) Call(context view.Context) (interface{}, error) {
+func (p *ListUnspentTokensView) Call(context view.Context) (any, error) {
 	// Tokens owner by identities in this wallet will be listed
 	wallet := ttx.GetWallet(context, p.Wallet, ServiceOpts(p.TMSID)...)
 	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)
 
 	// Return the list of unspent tokens by type
-	return wallet.ListUnspentTokens(ttx.WithType(p.TokenType), token.WithContext(context.Context()))
+	return wallet.ListUnspentTokens(context.Context(), ttx.WithType(p.TokenType))
 }
 
 type ListUnspentTokensViewFactory struct{}
@@ -52,7 +52,7 @@ func (i *ListUnspentTokensViewFactory) NewView(in []byte) (view.View, error) {
 
 type ListOwnerWalletIDsView struct{}
 
-func (p *ListOwnerWalletIDsView) Call(context view.Context) (interface{}, error) {
+func (p *ListOwnerWalletIDsView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context)
 	assert.NoError(err)
 

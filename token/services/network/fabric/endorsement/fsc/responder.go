@@ -8,6 +8,7 @@ package fsc
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
@@ -36,6 +37,7 @@ type Request struct {
 	RequestRaw       []byte
 	Actions          []any
 	Meta             map[string][]byte
+	ApprovalMetadata map[string][]byte
 	Tms              *token2.ManagementService
 	PublicParamsHash tdriver.PPHash
 }
@@ -114,10 +116,10 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 
 	// validate transient
 
-	// check the number of transient keys
+	// check the number of transient keys: 2 required (tmsID + token_request) plus 1 optional (approval_metadata)
 	var tmsID token2.TMSID
-	if len(tx.Transaction.Transient()) != 2 {
-		return nil, errors.Wrapf(ErrInvalidTransient, "invalid number of transient field, expected 2, got %d", len(tx.Transaction.Transient()))
+	if n := len(tx.Transaction.Transient()); n < 2 || n > 3 {
+		return nil, errors.Wrapf(ErrInvalidTransient, "invalid number of transient fields, expected 2 or 3, got %d", n)
 	}
 
 	// TMS ID
@@ -140,6 +142,14 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 	requestRaw := tx.GetTransient(TransientTokenRequestKey)
 	if len(requestRaw) == 0 {
 		return nil, errors.Wrapf(ErrInvalidTransient, "empty token request")
+	}
+
+	// approval metadata (optional)
+	var approvalMetadata map[string][]byte
+	if raw := tx.GetTransient(TransientApprovalMetadataKey); len(raw) > 0 {
+		if err := json.Unmarshal(raw, &approvalMetadata); err != nil {
+			return nil, errors.Wrapf(ErrInvalidTransient, "failed to unmarshal approval metadata")
+		}
 	}
 
 	// request anchor
@@ -183,6 +193,7 @@ func (r *RequestApprovalResponderView) receive(ctx view.Context) (*Request, erro
 		TMSID:            tmsID,
 		RequestRaw:       requestRaw,
 		Anchor:           requestAnchor,
+		ApprovalMetadata: approvalMetadata,
 		Tms:              tms,
 		PublicParamsHash: tms.PublicParametersManager().PublicParamsHash(),
 	}, nil
