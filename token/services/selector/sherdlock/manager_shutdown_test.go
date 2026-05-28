@@ -30,14 +30,7 @@ func TestManager_Stop(t *testing.T) {
 		}
 
 		m := NewManager(
-			mockFetcher,
-			mockLocker,
-			100,
-			time.Second,
-			5,
-			10*time.Minute,
-			20*time.Millisecond,
-			NewMetrics(&disabled.Provider{}),
+			mockFetcher, mockLocker, 100, time.Second, 5, 10*time.Minute, 20*time.Millisecond, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
 		)
 
 		// Wait for at least one cleanup to confirm the cleaner is running.
@@ -73,14 +66,7 @@ func TestManager_Stop(t *testing.T) {
 		mockLocker.cleanupFunc = func(ctx context.Context, expiry time.Duration) error { return nil }
 
 		m := NewManager(
-			mockFetcher,
-			mockLocker,
-			100,
-			time.Second,
-			5,
-			10*time.Minute,
-			20*time.Millisecond,
-			NewMetrics(&disabled.Provider{}),
+			mockFetcher, mockLocker, 100, time.Second, 5, 10*time.Minute, 20*time.Millisecond, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
 		)
 
 		// Must not panic or deadlock when called multiple times.
@@ -95,14 +81,7 @@ func TestManager_Stop(t *testing.T) {
 
 		// Zero leaseExpiry means cleaner goroutine is never launched.
 		m := NewManager(
-			mockFetcher,
-			mockLocker,
-			100,
-			time.Second,
-			5,
-			0,
-			time.Minute,
-			NewMetrics(&disabled.Provider{}),
+			mockFetcher, mockLocker, 100, time.Second, 5, 0, time.Minute, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
 		)
 
 		// Must return immediately without blocking.

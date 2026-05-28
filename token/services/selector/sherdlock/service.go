@@ -43,6 +43,10 @@ func NewService(
 		numRetries:                   cfg.GetNumRetries(),
 		leaseExpiry:                  cfg.GetLeaseExpiry(),
 		leaseCleanupTickPeriod:       cfg.GetLeaseCleanupTickPeriod(),
+		maxTokensPerSelection:        cfg.GetMaxTokensPerSelection(),
+		maxLockAttempts:              cfg.GetMaxLockAttempts(),
+		maxRetryCycles:               cfg.GetMaxRetryCycles(),
+		selectionTimeout:             cfg.GetSelectionTimeout(),
 		metrics:                      NewMetrics(metricsProvider),
 		onCreate:                     svc.trackManager,
 	}
@@ -93,6 +97,10 @@ type loader struct {
 	retryInterval                time.Duration
 	leaseExpiry                  time.Duration
 	leaseCleanupTickPeriod       time.Duration
+	maxTokensPerSelection        int
+	maxLockAttempts              int
+	maxRetryCycles               int
+	selectionTimeout             time.Duration
 	metrics                      *Metrics
 	onCreate                     func(*Manager)
 }
@@ -123,6 +131,10 @@ func (s *loader) loadTMS(tms TMS) (token.SelectorManager, error) {
 		s.numRetries,
 		s.leaseExpiry,
 		s.leaseCleanupTickPeriod,
+		s.maxTokensPerSelection,
+		s.maxLockAttempts,
+		s.maxRetryCycles,
+		s.selectionTimeout,
 		s.metrics,
 	)
 	if s.onCreate != nil {

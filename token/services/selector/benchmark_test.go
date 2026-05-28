@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -188,7 +189,7 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDB
 
 func NewSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 	return &extendedSelector{
-		Selector: sherdlock.NewSherdSelector(testutils.TxID, sherdlock.NewLazyFetcher(qs), inmemory2.NewLocker(lock), testutils.TokenQuantityPrecision, sherdlock.NoBackoff, testutils.SelectorNumRetries, sherdlock.NewMetrics(&disabled.Provider{})),
+		Selector: sherdlock.NewSherdSelector(testutils.TxID, sherdlock.NewLazyFetcher(qs), inmemory2.NewLocker(lock), testutils.TokenQuantityPrecision, sherdlock.NoBackoff, testutils.SelectorNumRetries, 10000, 50000, 10, 30*time.Second, sherdlock.NewMetrics(&disabled.Provider{})),
 		Lock:     nil,
 	}, nil
 }
