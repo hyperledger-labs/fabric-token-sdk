@@ -66,6 +66,7 @@ func NewRetryRunnerWithJitter(logger logging2.Logger, maxTimes int, initialDelay
 	if maxDelay <= 0 {
 		maxDelay = defaultMaxDelay
 	}
+	
 	return &retryRunner{
 		initialDelay:      initialDelay,
 		maxDelay:          maxDelay,
