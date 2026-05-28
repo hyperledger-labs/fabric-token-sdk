@@ -175,6 +175,7 @@ func TestHashEscrowSingleNetwork(network *integration.Infrastructure, sel *token
 	gomega.Eventually(CheckBalanceReturnError).WithArguments(network, alice, "", GBP, uint64(10)).WithTimeout(2 * time.Minute).WithPolling(5 * time.Second).Should(gomega.Succeed())
 	CheckBalance(network, bob, "", GBP, 10)
 
+	<-time.After(30 * time.Second)
 	CheckOwnerStore(network, defaultTMSID, nil, alice, bob)
 	CheckAuditorStore(network, defaultTMSID, auditor, "", nil)
 
