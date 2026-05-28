@@ -97,12 +97,16 @@ func TestResolveRecipientForPreImage(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	k := ClaimKey([]byte{0x01, 0x02})
-	require.Equal(t, "hashescrow.cpi0102", k)
+	recipientHash := []byte{0x01, 0x02}
+	senderHash := []byte{0x03, 0x04}
 
-	k = LockKey([]byte{0x0a})
-	require.Equal(t, "hashescrow.lh0a", k)
+	k := ClaimKey(recipientHash, senderHash)
+	require.Contains(t, k, "hashescrow.cm:")
 
-	v := LockValue([]byte{0x0a, 0x0b})
-	require.Equal(t, []byte("0a0b"), v)
+	k = LockKey(recipientHash, senderHash)
+	require.Contains(t, k, "hashescrow.lh:")
+
+	v, err := LockValue(recipientHash, senderHash)
+	require.NoError(t, err)
+	require.NotEmpty(t, v)
 }

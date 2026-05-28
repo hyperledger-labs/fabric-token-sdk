@@ -25,13 +25,13 @@ type PreImageSelector struct {
 func (f *PreImageSelector) Filter(tok *token.UnspentToken, script *Script) (bool, error) {
 	logger.Debugf("token [%s,%s,%s,%s] contains a hash escrow script? Yes", tok.Id, view.Identity(tok.Owner).UniqueID(), tok.Type, tok.Quantity)
 
-	_, image, err := script.ResolveRecipientForPreImage(f.preImage)
+	_, resolvedHash, _, err := script.ResolveOwnerAndHashForPreimage(f.preImage)
 	if err != nil {
 		logger.Debugf("hash escrow script does not match pre-image [%s]: [%s]", logging.Base64(f.preImage), err)
 
 		return false, nil
 	}
-	logger.Debugf("hash escrow script matches pre-image [%s] with image [%s]", logging.Base64(f.preImage), logging.Base64(image))
+	logger.Debugf("hash escrow script matches pre-image [%s] with hash [%s]", logging.Base64(f.preImage), logging.Base64(resolvedHash))
 
 	return true, nil
 }
@@ -44,7 +44,7 @@ func IsScript(selector SelectFunction) iterators.Predicate[*token.UnspentToken] 
 
 			return false
 		}
-		if owner.Type != ScriptType {
+		if owner.Type != HashEscrow {
 			return false
 		}
 

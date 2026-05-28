@@ -27,7 +27,7 @@ func ToInput(i *token.Input) (*Input, error) {
 
 	return &Input{
 		Input:        i,
-		isHashEscrow: owner.Type == ScriptType,
+		isHashEscrow: owner.Type == HashEscrow,
 	}, nil
 }
 
@@ -44,8 +44,8 @@ func (i *Input) Script() (*Script, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
-	if owner.Type != ScriptType {
-		return nil, errors.Errorf("invalid identity type, expected [%s], got [%s]", ScriptType, owner.Type)
+	if owner.Type != HashEscrow {
+		return nil, errors.Errorf("invalid identity type, expected [%s], got [%s]", HashEscrow, owner.Type)
 	}
 	script := &Script{}
 	err = json.Unmarshal(owner.Identity, script)
@@ -69,7 +69,7 @@ func ToOutput(i *token.Output) (*Output, error) {
 
 	return &Output{
 		Output:       i,
-		isHashEscrow: owner.Type == ScriptType,
+		isHashEscrow: owner.Type == HashEscrow,
 	}, nil
 }
 
@@ -86,8 +86,8 @@ func (o *Output) Script() (*Script, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
-	if owner.Type != ScriptType {
-		return nil, errors.Errorf("invalid identity type, expected [%s], got [%s]", ScriptType, owner.Type)
+	if owner.Type != HashEscrow {
+		return nil, errors.Errorf("invalid identity type, expected [%s], got [%s]", HashEscrow, owner.Type)
 	}
 	script := &Script{}
 	err = json.Unmarshal(owner.Identity, script)

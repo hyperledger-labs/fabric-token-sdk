@@ -34,40 +34,24 @@ func TestRecipientAsScript(t *testing.T) {
 	sender := []byte("sender")
 	recipient := []byte("recipient")
 
-	raw, preimages, script, err := tx.recipientAsScript(sender, recipient, []byte("recipient-hash"), []byte("sender-hash"), crypto.SHA256, encoding.Base64)
+	raw, script, err := tx.recipientAsScript(sender, recipient, []byte("recipient-hash"), []byte("sender-hash"), crypto.SHA256, encoding.Base64)
 	require.NoError(t, err)
-	require.Empty(t, preimages.Recipient)
-	require.Empty(t, preimages.Sender)
 	require.NotNil(t, raw)
 	require.Equal(t, sender, []byte(script.Sender))
 	require.Equal(t, recipient, []byte(script.Recipient))
 	require.Equal(t, []byte("recipient-hash"), script.RecipientHashInfo.Hash)
 	require.Equal(t, []byte("sender-hash"), script.SenderHashInfo.Hash)
-
-	raw, preimages, script, err = tx.recipientAsScript(sender, recipient, nil, nil, crypto.SHA256, encoding.Base64)
-	require.NoError(t, err)
-	require.NotNil(t, raw)
-	require.NotEmpty(t, preimages.Recipient)
-	require.NotEmpty(t, preimages.Sender)
-	require.NotEmpty(t, script.RecipientHashInfo.Hash)
-	require.NotEmpty(t, script.SenderHashInfo.Hash)
 }
 
-func TestRecipientAsScriptBadEncoding(t *testing.T) {
+func TestRecipientAsScriptBadHashInfo(t *testing.T) {
 	tx := &Transaction{}
-	_, _, _, err := tx.recipientAsScript(
+	_, _, err := tx.recipientAsScript(
 		[]byte("sender"),
 		[]byte("recipient"),
-		nil,
-		nil,
+		[]byte("recipient-hash"),
+		[]byte("sender-hash"),
 		crypto.SHA256,
 		encoding.Encoding(999),
 	)
-	require.EqualError(t, err, "failed preparing recipient hash info: hashEncoding.New() returned nil")
-}
-
-func TestCreateNonce(t *testing.T) {
-	nonce, err := CreateNonce()
-	require.NoError(t, err)
-	require.Len(t, nonce, 24)
+	require.Error(t, err)
 }

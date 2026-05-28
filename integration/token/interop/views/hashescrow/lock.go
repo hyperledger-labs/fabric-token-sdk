@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -33,11 +32,9 @@ type Lock struct {
 }
 
 type LockInfo struct {
-	TxID              string
-	RecipientPreImage []byte
-	SenderPreImage    []byte
-	RecipientHash     []byte
-	SenderHash        []byte
+	TxID          string
+	RecipientHash []byte
+	SenderHash    []byte
 }
 
 type LockView struct {
@@ -75,7 +72,7 @@ func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
 	senderWallet := hashescrow.GetWallet(context, hv.Wallet, token.WithTMSID(hv.TMSID))
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", hv.Wallet)
 
-	preImages, err := tx.LockWithPreImages(
+	_, err = tx.Lock(
 		context.Context(),
 		senderWallet,
 		me,
@@ -85,7 +82,6 @@ func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
 		hashescrow.WithRecipientHash(hv.RecipientHash),
 		hashescrow.WithSenderHash(hv.SenderHash),
 		hashescrow.WithHashFunc(hv.HashFunc),
-		hashescrow.WithHashEncoding(encoding.None),
 	)
 	assert.NoError(err, "failed adding a hash escrow lock operation")
 
@@ -112,11 +108,9 @@ func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
 	assert.NotNil(script, "expected a hash escrow script output")
 
 	return &LockInfo{
-		TxID:              tx.ID(),
-		RecipientPreImage: preImages.Recipient,
-		SenderPreImage:    preImages.Sender,
-		RecipientHash:     script.RecipientHashInfo.Hash,
-		SenderHash:        script.SenderHashInfo.Hash,
+		TxID:          tx.ID(),
+		RecipientHash: script.RecipientHashInfo.Hash,
+		SenderHash:    script.SenderHashInfo.Hash,
 	}, nil
 }
 

@@ -52,27 +52,37 @@ func (s *Script) Validate() error {
 	return nil
 }
 
-// ResolveRecipientForPreImage resolves the output recipient from the provided pre-image.
+// ResolveOwnerAndHashForPreimage resolves the output owner from the provided pre-image.
 // If the pre-image matches the recipient hash, recipient receives the token.
 // If the pre-image matches the sender hash, sender receives the token.
+func (s *Script) ResolveOwnerAndHashForPreimage(preimage []byte) (view.Identity, []byte, string, error) {
+	recipientHash, err := s.RecipientHashInfo.Image(preimage)
+	if err != nil {
+		return nil, nil, "", errors.WithMessage(err, "failed computing recipient hash")
+	}
+	if err := s.RecipientHashInfo.Compare(recipientHash); err == nil {
+		return s.Recipient, recipientHash, "recipient", nil
+	}
+
+	senderHash, err := s.SenderHashInfo.Image(preimage)
+	if err != nil {
+		return nil, nil, "", errors.WithMessage(err, "failed computing sender hash")
+	}
+	if err := s.SenderHashInfo.Compare(senderHash); err == nil {
+		return s.Sender, senderHash, "sender", nil
+	}
+
+	return nil, nil, "", errors.New("preimage does not match any hashescrow hash")
+}
+
+// ResolveRecipientForPreImage is kept for backward compatibility with existing call sites.
 func (s *Script) ResolveRecipientForPreImage(preImage []byte) (view.Identity, []byte, error) {
-	recipientImage, err := s.RecipientHashInfo.Image(preImage)
+	owner, hash, _, err := s.ResolveOwnerAndHashForPreimage(preImage)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "failed computing recipient hash image")
-	}
-	if err := s.RecipientHashInfo.Compare(recipientImage); err == nil {
-		return s.Recipient, recipientImage, nil
+		return nil, nil, err
 	}
 
-	senderImage, err := s.SenderHashInfo.Image(preImage)
-	if err != nil {
-		return nil, nil, errors.WithMessage(err, "failed computing sender hash image")
-	}
-	if err := s.SenderHashInfo.Compare(senderImage); err == nil {
-		return s.Sender, senderImage, nil
-	}
-
-	return nil, nil, errors.New("preimage does not match any hashescrow hash")
+	return owner, hash, nil
 }
 
 func (s *Script) FromBytes(raw []byte) error {
@@ -101,8 +111,8 @@ func (s *ScriptAuth) IsMine(ctx context.Context, tok *token3.Token) (string, []s
 
 		return "", nil, false
 	}
-	if owner.Type != ScriptType {
-		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, ScriptType)
+	if owner.Type != HashEscrow {
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, HashEscrow)
 
 		return "", nil, false
 	}

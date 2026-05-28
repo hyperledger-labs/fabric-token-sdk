@@ -8,6 +8,7 @@ package interop
 
 import (
 	"crypto"
+	"crypto/rand"
 	"fmt"
 	"strconv"
 	"strings"
@@ -322,6 +323,31 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 }
 
 func HashEscrowLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3.NodeReference, wallet string, typ token2.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, recipientHash []byte, senderHash []byte, hashFunc crypto.Hash, errorMsgs ...string) (string, []byte, []byte, []byte, []byte) {
+	if hashFunc == 0 {
+		hashFunc = crypto.SHA256
+	}
+
+	var recipientPreImage []byte
+	var senderPreImage []byte
+	if len(recipientHash) == 0 {
+		recipientPreImage = make([]byte, 24)
+		_, err := rand.Read(recipientPreImage)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		h := hashFunc.New()
+		_, err = h.Write(recipientPreImage)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		recipientHash = h.Sum(nil)
+	}
+	if len(senderHash) == 0 {
+		senderPreImage = make([]byte, 24)
+		_, err := rand.Read(senderPreImage)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		h := hashFunc.New()
+		_, err = h.Write(senderPreImage)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		senderHash = h.Sum(nil)
+	}
+
 	result, err := network.Client(id.ReplicaName()).CallView("hashescrow.lock", common.JSONMarshall(&hashescrowviews.Lock{
 		TMSID:         tmsID,
 		Wallet:        wallet,
@@ -340,22 +366,12 @@ func HashEscrowLock(network *integration.Infrastructure, tmsID token.TMSID, id *
 		common2.CheckFinality(network, receiver, lockResult.TxID, &tmsID, false)
 		common2.CheckFinality(network, auditor, lockResult.TxID, &tmsID, false)
 
-		if len(recipientHash) == 0 {
-			gomega.Expect(lockResult.RecipientPreImage).NotTo(gomega.BeNil())
-		}
-		if len(senderHash) == 0 {
-			gomega.Expect(lockResult.SenderPreImage).NotTo(gomega.BeNil())
-		}
 		gomega.Expect(lockResult.RecipientHash).NotTo(gomega.BeNil())
 		gomega.Expect(lockResult.SenderHash).NotTo(gomega.BeNil())
-		if len(recipientHash) != 0 {
-			gomega.Expect(lockResult.RecipientHash).To(gomega.BeEquivalentTo(recipientHash))
-		}
-		if len(senderHash) != 0 {
-			gomega.Expect(lockResult.SenderHash).To(gomega.BeEquivalentTo(senderHash))
-		}
+		gomega.Expect(lockResult.RecipientHash).To(gomega.BeEquivalentTo(recipientHash))
+		gomega.Expect(lockResult.SenderHash).To(gomega.BeEquivalentTo(senderHash))
 
-		return lockResult.TxID, lockResult.RecipientPreImage, lockResult.SenderPreImage, lockResult.RecipientHash, lockResult.SenderHash
+		return lockResult.TxID, recipientPreImage, senderPreImage, lockResult.RecipientHash, lockResult.SenderHash
 	}
 
 	gomega.Expect(err).To(gomega.HaveOccurred())

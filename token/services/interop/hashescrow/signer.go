@@ -51,7 +51,7 @@ func (cv *ClaimVerifier) Verify(tokenRequestAndTxID, claimSignature []byte) erro
 	if cv.Script == nil {
 		return errors.New("invalid claim verifier, script is nil")
 	}
-	if _, _, err = cv.Script.ResolveRecipientForPreImage(sig.Preimage); err != nil {
+	if _, _, _, err = cv.Script.ResolveOwnerAndHashForPreimage(sig.Preimage); err != nil {
 		return errors.WithMessage(err, "preimage does not unlock hash escrow script")
 	}
 
