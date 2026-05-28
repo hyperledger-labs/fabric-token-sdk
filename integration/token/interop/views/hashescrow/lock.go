@@ -91,26 +91,10 @@ func (hv *LockView) Call(context view.Context) (res any, err error) {
 	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx.Transaction))
 	assert.NoError(err, "failed to commit hash escrow transaction")
 
-	outputs, err := tx.Outputs()
-	assert.NoError(err, "failed getting outputs")
-	var script *hashescrow.Script
-	for i := range outputs.Count() {
-		output, err := hashescrow.ToOutput(outputs.At(i))
-		assert.NoError(err, "cannot get hash escrow output wrapper")
-		if !output.IsHashEscrow() {
-			continue
-		}
-		script, err = output.Script()
-		assert.NoError(err, "cannot get hash escrow script from output")
-
-		break
-	}
-	assert.NotNil(script, "expected a hash escrow script output")
-
 	return &LockInfo{
 		TxID:          tx.ID(),
-		RecipientHash: script.RecipientHashInfo.Hash,
-		SenderHash:    script.SenderHashInfo.Hash,
+		RecipientHash: hv.RecipientHash,
+		SenderHash:    hv.SenderHash,
 	}, nil
 }
 
