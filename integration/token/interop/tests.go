@@ -168,6 +168,7 @@ func TestHashEscrowSingleNetwork(network *integration.Infrastructure, sel *token
 	CheckBalance(network, bob, "", GBP, 10)
 
 	hashEscrowClaim(network, defaultTMSID, bob, "", recipientPreImage, auditor, "expected only one hash escrow script to match")
+	PruneInvalidUnspentTokens(network, defaultTMSID, auditor, alice, bob)
 	CheckBalance(network, alice, "", GBP, 10)
 	CheckBalance(network, bob, "", GBP, 10)
 
