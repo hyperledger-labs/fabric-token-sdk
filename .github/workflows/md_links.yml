@@ -13,11 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Chrome for Puppeteer
-        run: npx puppeteer browsers install chrome
-      
       - name: Run linkspector
         uses: umbrelladocs/action-linkspector@v1
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         with:
           github_token: ${{ secrets.github_token }}
           reporter: github-pr-review
