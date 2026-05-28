@@ -8,6 +8,7 @@ package hashescrow
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
@@ -15,8 +16,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+var logger = logging.MustGetLogger()
 
 type Claim struct {
 	TMSID    token.TMSID
@@ -47,9 +53,21 @@ func (r *ClaimView) Call(ctx view.Context) (res any, err error) {
 	claimWallet := hashescrow.GetWallet(ctx, r.Wallet, token.WithTMSID(r.TMSID))
 	assert.NotNil(claimWallet, "wallet [%s] not found", r.Wallet)
 
-	matched, err := hashescrow.Wallet(claimWallet).ListByPreImage(ctx.Context(), r.PreImage)
+	var matched *token2.UnspentTokens
+	runner := utils.NewRetryRunner(logger, 10, 2*time.Second, false)
+	err = runner.RunWithContext(ctx.Context(), func() error {
+		var err error
+		matched, err = hashescrow.Wallet(claimWallet).ListByPreImage(ctx.Context(), r.PreImage)
+		if err != nil {
+			return errors.Wrap(err, "failed looking up hash escrow script")
+		}
+		if matched.Count() != 1 {
+			return errors.Errorf("expected only one hash escrow script to match [%s], got [%d]", view.Identity(r.PreImage), matched.Count())
+		}
+
+		return nil
+	})
 	assert.NoError(err, "failed looking up hash escrow script")
-	assert.True(matched.Count() == 1, "expected only one hash escrow script to match [%s], got [%d]", view.Identity(r.PreImage), matched.Count())
 
 	idProvider, err := id.GetProvider(ctx)
 	assert.NoError(err, "failed getting id provider")
