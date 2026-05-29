@@ -92,7 +92,7 @@ func (r *ClaimView) Call(ctx view.Context) (res any, err error) {
 	_, err = ctx.RunView(ttx.NewCollectEndorsementsView(tx.Transaction))
 	assert.NoError(err, "failed to collect endorsements on hash escrow transaction")
 
-	assert.NoError(distributeClaimToCounterparty(ctx, r, tx, script, claimOwner), "failed distributing hash escrow claim transaction")
+	assert.NoError(distributeClaimToCounterparty(ctx, tx, script, claimOwner), "failed distributing hash escrow claim transaction")
 
 	_, err = ctx.RunView(ttx.NewOrderingAndFinalityView(tx.Transaction))
 	assert.NoError(err, "failed to commit hash escrow transaction")
@@ -117,7 +117,7 @@ func scriptFromToken(tok *token2.UnspentToken) (*hashescrow.Script, error) {
 	return script, nil
 }
 
-func distributeClaimToCounterparty(ctx view.Context, initiator view.View, tx *hashescrow.Transaction, script *hashescrow.Script, claimOwner view.Identity) error {
+func distributeClaimToCounterparty(ctx view.Context, tx *hashescrow.Transaction, script *hashescrow.Script, claimOwner view.Identity) error {
 	counterparty := script.Sender
 	if claimOwner.Equal(script.Sender) {
 		counterparty = script.Recipient
@@ -129,11 +129,6 @@ func distributeClaimToCounterparty(ctx view.Context, initiator view.View, tx *ha
 		return nil
 	}
 
-	session, err := ctx.GetSession(initiator, counterparty)
-	if err != nil {
-		return errors.Wrap(err, "failed getting counterparty session")
-	}
-
 	// The observer only needs token records; the submitter keeps the envelope for ordering.
 	envelope := tx.Envelope
 	tx.Envelope = nil
@@ -143,33 +138,55 @@ func distributeClaimToCounterparty(ctx view.Context, initiator view.View, tx *ha
 		return errors.Wrap(err, "failed marshalling claim transaction")
 	}
 
-	if err := session.SendWithContext(ctx.Context(), txRaw); err != nil {
-		return errors.Wrap(err, "failed sending claim transaction")
+	_, err = ctx.RunView(&ClaimDistributionView{
+		Counterparty: counterparty,
+		TxRaw:        txRaw,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type ClaimDistributionView struct {
+	Counterparty view.Identity
+	TxRaw        []byte
+}
+
+func (v *ClaimDistributionView) Call(ctx view.Context) (any, error) {
+	session, err := ctx.GetSession(v, v.Counterparty)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting counterparty session")
+	}
+
+	if err := session.SendWithContext(ctx.Context(), v.TxRaw); err != nil {
+		return nil, errors.Wrap(err, "failed sending claim transaction")
 	}
 
 	jsonSession := session2.NewFromSession(ctx, session)
 	ack, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
 	if err != nil {
-		return errors.Wrap(err, "failed receiving claim transaction acknowledgement")
+		return nil, errors.Wrap(err, "failed receiving claim transaction acknowledgement")
 	}
 
-	longTerm, _, _, err := endpoint.GetService(ctx).Resolve(ctx.Context(), counterparty)
+	longTerm, _, _, err := endpoint.GetService(ctx).Resolve(ctx.Context(), v.Counterparty)
 	if err != nil {
-		return errors.Wrap(err, "failed resolving counterparty long-term identity")
+		return nil, errors.Wrap(err, "failed resolving counterparty long-term identity")
 	}
 	sigService, err := sig.GetService(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed getting signature service")
+		return nil, errors.Wrap(err, "failed getting signature service")
 	}
 	verifier, err := sigService.GetVerifier(longTerm)
 	if err != nil {
-		return errors.Wrap(err, "failed getting counterparty verifier")
+		return nil, errors.Wrap(err, "failed getting counterparty verifier")
 	}
-	if err := verifier.Verify(txRaw, ack); err != nil {
-		return errors.Wrap(err, "failed verifying claim transaction acknowledgement")
+	if err := verifier.Verify(v.TxRaw, ack); err != nil {
+		return nil, errors.Wrap(err, "failed verifying claim transaction acknowledgement")
 	}
 
-	return nil
+	return nil, nil
 }
 
 type ClaimAcceptView struct{}

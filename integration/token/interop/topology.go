@@ -248,6 +248,7 @@ func addAlice(fscTopology *fsc.Topology) *node.Node {
 		RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{}).
 		RegisterResponder(&hashescrow.LockAcceptView{}, &hashescrow.LockView{}).
 		RegisterResponder(&hashescrow.ClaimAcceptView{}, &hashescrow.ClaimView{}).
+		RegisterResponder(&hashescrow.ClaimAcceptView{}, &hashescrow.ClaimDistributionView{}).
 		RegisterViewFactory("hashescrow.lock", &hashescrow.LockViewFactory{}).
 		RegisterViewFactory("hashescrow.claim", &hashescrow.ClaimViewFactory{}).
 		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
@@ -271,6 +272,7 @@ func addBob(fscTopology *fsc.Topology) *node.Node {
 		RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{}).
 		RegisterResponder(&hashescrow.LockAcceptView{}, &hashescrow.LockView{}).
 		RegisterResponder(&hashescrow.ClaimAcceptView{}, &hashescrow.ClaimView{}).
+		RegisterResponder(&hashescrow.ClaimAcceptView{}, &hashescrow.ClaimDistributionView{}).
 		RegisterViewFactory("hashescrow.lock", &hashescrow.LockViewFactory{}).
 		RegisterViewFactory("hashescrow.claim", &hashescrow.ClaimViewFactory{}).
 		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
