@@ -134,7 +134,11 @@ func distributeClaimToCounterparty(ctx view.Context, initiator view.View, tx *ha
 		return errors.Wrap(err, "failed getting counterparty session")
 	}
 
+	// The observer only needs token records; the submitter keeps the envelope for ordering.
+	envelope := tx.Envelope
+	tx.Envelope = nil
 	txRaw, err := tx.Bytes()
+	tx.Envelope = envelope
 	if err != nil {
 		return errors.Wrap(err, "failed marshalling claim transaction")
 	}
