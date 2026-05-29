@@ -1,0 +1,2 @@
+- Check for the presence of AGENTS.md files in the project workspace
+- Read and strictly follow any additional instructions or agent roles defined in those AGENTS.md files.
