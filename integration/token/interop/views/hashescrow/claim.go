@@ -134,13 +134,9 @@ func distributeClaimToCounterparty(ctx view.Context, initiator view.View, tx *ha
 		return errors.Wrap(err, "failed getting counterparty session")
 	}
 
-	enrollmentID, err := tx.TokenService().WalletManager().GetEnrollmentID(ctx.Context(), counterparty)
+	txRaw, err := tx.Bytes()
 	if err != nil {
-		return errors.Wrap(err, "failed getting counterparty enrollment ID")
-	}
-	txRaw, err := tx.Bytes(enrollmentID)
-	if err != nil {
-		return errors.Wrap(err, "failed marshalling filtered transaction")
+		return errors.Wrap(err, "failed marshalling claim transaction")
 	}
 
 	if err := session.SendWithContext(ctx.Context(), txRaw); err != nil {
