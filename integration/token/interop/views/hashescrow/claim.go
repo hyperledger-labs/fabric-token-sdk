@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package hashescrow
 
 import (
+	"encoding/asn1"
 	"encoding/json"
 	"time"
 
@@ -129,11 +130,7 @@ func distributeClaimToCounterparty(ctx view.Context, tx *hashescrow.Transaction,
 		return nil
 	}
 
-	// The observer only needs token records; the submitter keeps the envelope for ordering.
-	envelope := tx.Envelope
-	tx.Envelope = nil
-	txRaw, err := tx.Bytes()
-	tx.Envelope = envelope
+	txRaw, err := transactionBytesWithoutEnvelope(tx)
 	if err != nil {
 		return errors.Wrap(err, "failed marshalling claim transaction")
 	}
@@ -144,6 +141,52 @@ func distributeClaimToCounterparty(ctx view.Context, tx *hashescrow.Transaction,
 	})
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func transactionBytesWithoutEnvelope(tx *hashescrow.Transaction) ([]byte, error) {
+	// The observer only needs token records; the submitter keeps the envelope for ordering.
+	payload := tx.Payload
+	envelope := payload.Envelope
+	payload.Envelope = nil
+	defer func() {
+		payload.Envelope = envelope
+	}()
+
+	txRaw, err := tx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := assertNoEnvelope(txRaw); err != nil {
+		return nil, err
+	}
+
+	return txRaw, nil
+}
+
+type transactionSer struct {
+	Nonce        []byte
+	Creator      []byte
+	ID           string
+	Network      string
+	Channel      string
+	Namespace    string
+	Signer       []byte
+	Transient    []byte
+	TokenRequest []byte
+	Envelope     []byte
+}
+
+func assertNoEnvelope(txRaw []byte) error {
+	var ser transactionSer
+	if _, err := asn1.Unmarshal(txRaw, &ser); err != nil {
+		return errors.Wrap(err, "failed checking serialized claim transaction")
+	}
+	if len(ser.Envelope) != 0 {
+		return errors.Errorf("expected claim observer transaction without envelope, got envelope length [%d]", len(ser.Envelope))
 	}
 
 	return nil
