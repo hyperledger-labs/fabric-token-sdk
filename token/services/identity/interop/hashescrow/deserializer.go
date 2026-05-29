@@ -68,7 +68,7 @@ func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ identity.
 		return nil, errors.Wrapf(err, "failed to unmarshal hash escrow script")
 	}
 
-	return []driver.Identity{script.Recipient}, nil
+	return []driver.Identity{script.Sender, script.Recipient}, nil
 }
 
 func (t *TypedIdentityDeserializer) GetAuditInfo(ctx context.Context, id driver.Identity, typ identity.Type, raw []byte, p driver.AuditInfoProvider) ([]byte, error) {

@@ -111,8 +111,9 @@ func TestTypedIdentityDeserializerRecipientsAndAuditInfo(t *testing.T) {
 
 	ids, err := d.Recipients(nil, he.ScriptType, raw)
 	require.NoError(t, err)
-	require.Len(t, ids, 1)
-	require.Equal(t, identity.Identity("r"), ids[0])
+	require.Len(t, ids, 2)
+	require.Equal(t, identity.Identity("s"), ids[0])
+	require.Equal(t, identity.Identity("r"), ids[1])
 
 	p := &driverMock.AuditInfoProvider{}
 	p.GetAuditInfoReturnsOnCall(0, nil, errors.New("nope"))
