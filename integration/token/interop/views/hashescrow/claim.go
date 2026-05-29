@@ -192,6 +192,24 @@ func assertNoEnvelope(txRaw []byte) error {
 	return nil
 }
 
+func stripEnvelope(txRaw []byte) ([]byte, error) {
+	var ser transactionSer
+	if _, err := asn1.Unmarshal(txRaw, &ser); err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling serialized claim transaction")
+	}
+	if len(ser.Envelope) == 0 {
+		return txRaw, nil
+	}
+
+	ser.Envelope = nil
+	stripped, err := asn1.Marshal(ser)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed marshalling claim transaction without envelope")
+	}
+
+	return stripped, nil
+}
+
 type ClaimDistributionView struct {
 	Counterparty view.Identity
 	TxRaw        []byte
@@ -235,7 +253,7 @@ func (v *ClaimDistributionView) Call(ctx view.Context) (any, error) {
 type ClaimAcceptView struct{}
 
 func (h *ClaimAcceptView) Call(context view.Context) (any, error) {
-	tx, err := ttx.ReceiveTransaction(context)
+	tx, err := receiveClaimTransaction(context)
 	assert.NoError(err, "failed to receive hash escrow claim transaction")
 
 	_, err = context.RunView(ttx.NewAcceptView(tx))
@@ -245,6 +263,28 @@ func (h *ClaimAcceptView) Call(context view.Context) (any, error) {
 	assert.NoError(err, "hash escrow claim transaction was not committed")
 
 	return tx.ID(), nil
+}
+
+func receiveClaimTransaction(context view.Context) (*ttx.Transaction, error) {
+	txRaw, err := session2.JSON(context).ReceiveRawWithTimeout(4 * time.Minute)
+	if err != nil {
+		return nil, err
+	}
+
+	txRaw, err = stripEnvelope(txRaw)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := ttx.NewTransactionFromBytes(context, txRaw)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.IsValid(context.Context()); err != nil {
+		return nil, errors.Wrapf(err, "invalid transaction %s", tx.ID())
+	}
+
+	return tx, nil
 }
 
 type ClaimViewFactory struct{}
