@@ -24,49 +24,50 @@ Regression tests ensure **backwards compatibility** of the ZK-ATDLOG validator b
 
 ```
 testdata/
-├── zero/
-│   ├── 32-BLS12_381_BBS_GURVY/     # 32-bit range proofs, BLS12_381 curve
-│   │   ├── params.txt              # Base64-encoded public parameters
-│   │   ├── transfers_i1_o1/        # Transfer: 1 input, 1 output
-│   │   │   └── testdata.json       # Aggregated test cases (64 cases)
-│   │   ├── transfers_i1_o2/        # Transfer: 1 input, 2 outputs
-│   │   │   └── testdata.json
-│   │   ├── transfers_i2_o1/        # Transfer: 2 inputs, 1 output
-│   │   │   └── testdata.json
-│   │   ├── transfers_i2_o2/        # Transfer: 2 inputs, 2 outputs
-│   │   │   └── testdata.json
-│   │   ├── issues_i1_o1/           # Issue operations
-│   │   │   └── testdata.json
-│   │   ├── redeems_i1_o1/          # Redeem operations
-│   │   │   └── testdata.json
-│   │   └── swaps_i1_o1/            # Swap operations
-│   │       └── testdata.json
-│   ├── 32-BN254/                   # 32-bit range proofs, BN254 curve
-│   ├── 64-BLS12_381_BBS_GURVY/     # 64-bit range proofs, BLS12_381 curve
-│   └── 64-BN254/                   # 64-bit range proofs, BN254 curve
+└── zero/
+    ├── 32-BLS12_381_BBS_GURVY/     # 32-bit range proofs, BLS12_381 curve
+    │   ├── params.txt              # Base64-encoded public parameters
+    │   └── testdata.json           # All test cases for this configuration
+    ├── 32-BN254/                   # 32-bit range proofs, BN254 curve
+    │   ├── params.txt
+    │   └── testdata.json
+    ├── 64-BLS12_381_BBS_GURVY/     # 64-bit range proofs, BLS12_381 curve
+    │   ├── params.txt
+    │   └── testdata.json
+    └── 64-BN254/                   # 64-bit range proofs, BN254 curve
+        ├── params.txt
+        └── testdata.json
 ```
 
 ### Test Vector Format
 
-Each `testdata.json` file contains an aggregated map of 64 test cases:
+Each `testdata.json` file contains all test cases for a configuration with labeled keys:
+
 ```json
 {
-  "0": {
+  "transfers_i1_o1_0": {
     "req_raw": "<base64-encoded token request>",
     "txid": "<transaction ID>",
     "metadata": "<base64-encoded metadata>",
     "inputs": [[<serialized-token-bytes>], [...]]
   },
-  "1": {
-    "req_raw": "...",
-    "txid": "...",
-    "metadata": "...",
-    "inputs": [[...], [...]]
-  },
+  "transfers_i1_o1_1": { ... },
   ...
-  "63": { ... }
+  "transfers_i1_o1_63": { ... },
+  "transfers_i1_o2_0": { ... },
+  ...
+  "issues_i1_o1_0": { ... },
+  ...
+  "redeems_i2_o2_63": { ... },
+  "swaps_i2_o2_63": { ... }
 }
 ```
+
+**Key Format:** `<action>_i<inputs>_o<outputs>_<index>`
+- `action`: One of `transfers`, `issues`, `redeems`, `swaps`
+- `inputs`: Number of input tokens (1 or 2)
+- `outputs`: Number of output tokens (1 or 2)
+- `index`: Test case number (0-63)
 
 **Fields:**
 - `req_raw`: Base64-encoded serialized token request
@@ -112,8 +113,9 @@ The regression suite tests:
 - **4 Action Types**: transfers, issues, redeems, swaps
 - **4 Input/Output Combinations**: i1_o1, i1_o2, i2_o1, i2_o2
 - **4 Configurations**: 2 bit sizes (32, 64) × 2 curves (BLS12_381, BN254)
-- **64 Test Cases per Configuration**: Each `testdata.json` contains 64 test cases
-- **Total Test Vectors**: 4,096 test cases across all configurations
+- **64 Test Cases per Combination**: 64 vectors for each action/input/output combination
+- **1,024 Test Cases per Configuration**: 4 actions × 4 combinations × 64 vectors
+- **Total Test Vectors**: 4,096 test cases across all configurations (4 configs × 1,024 cases)
 
 ## Generating New Test Data
 

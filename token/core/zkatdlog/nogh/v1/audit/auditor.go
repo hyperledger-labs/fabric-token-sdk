@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
@@ -77,19 +78,6 @@ func NewInspectableToken(
 	}, nil
 }
 
-// TokenDataOpening contains the opening of the TokenData.
-// TokenData is a Pedersen commitment to token type and Value.
-type TokenDataOpening struct {
-	TokenType token2.Type
-	Value     *math.Zr
-	BF        *math.Zr
-}
-
-// OwnerOpening contains the information that allows the auditor to identify the owner.
-type OwnerOpening struct {
-	OwnerInfo []byte
-}
-
 // Auditor inspects zkat tokens and their owners.
 type Auditor struct {
 	Logger logging.Logger
@@ -114,7 +102,7 @@ func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatc
 }
 
 // Check validates TokenRequest against TokenRequestMetadata.
-// It de-obfuscates issue and transfer requests and verifies their validity.
+// It ensures complete 1:1 correspondence between actions and metadata, then validates each action.
 func (a *Auditor) Check(
 	ctx context.Context,
 	tokenRequest *driver.TokenRequest,
@@ -122,56 +110,318 @@ func (a *Auditor) Check(
 	inputTokens [][]*token.Token,
 	txID driver.TokenRequestAnchor,
 ) error {
-	// TODO: inputTokens should be checked against the actions
-	// De-obfuscate issue requests
-	issues := tokenRequest.GetIssues()
-	a.Logger.DebugfContext(ctx, "Get audit info for %d issues", len(issues))
+	// Step 1: Validate structural correspondence between request and metadata
+	if err := a.validateStructure(tokenRequest, tokenRequestMetadata, txID); err != nil {
+		return errors.Wrapf(err, "structural validation failed for [%s]", txID)
+	}
 
-	// Extract issue metadata
-	issueMetadata := make([]*driver.IssueMetadata, 0)
-	for _, action := range tokenRequestMetadata.Actions {
-		if action.IssueMetadata != nil {
-			issueMetadata = append(issueMetadata, action.IssueMetadata)
+	// Step 2: Process each action in order, matching with its metadata
+	transferIndex := 0
+	for i, action := range tokenRequest.Actions {
+		metadata := tokenRequestMetadata.Actions[i]
+
+		// Verify ActionID matches position
+		if metadata.ActionID != uint32(i) {
+			return errors.Errorf("action at index [%d] has mismatched ActionID [%d] for tx [%s]", i, metadata.ActionID, txID)
+		}
+
+		// Process based on action type
+		switch action.Type {
+		case request.ActionType_ACTION_TYPE_ISSUE:
+			if metadata.IssueMetadata == nil {
+				return errors.Errorf("action at index [%d] is ISSUE but metadata has no IssueMetadata for tx [%s]", i, txID)
+			}
+			if err := a.checkIssueAction(ctx, action.Raw, metadata.IssueMetadata, i); err != nil {
+				return errors.Wrapf(err, "failed checking issue action at index [%d] for tx [%s]", i, txID)
+			}
+
+		case request.ActionType_ACTION_TYPE_TRANSFER:
+			if metadata.TransferMetadata == nil {
+				return errors.Errorf("action at index [%d] is TRANSFER but metadata has no TransferMetadata for tx [%s]", i, txID)
+			}
+			// Get input tokens for this transfer
+			var transferInputs []*token.Token
+			if transferIndex < len(inputTokens) {
+				transferInputs = inputTokens[transferIndex]
+			}
+			if err := a.checkTransferAction(ctx, action.Raw, metadata.TransferMetadata, transferInputs); err != nil {
+				return errors.Wrapf(err, "failed checking transfer action at index [%d] for tx [%s]", i, txID)
+			}
+			transferIndex++
+
+		default:
+			return errors.Errorf("unknown action type [%s] at index [%d] for tx [%s]", action.Type, i, txID)
 		}
 	}
 
-	outputsFromIssue, identitiesFromIssue, err := a.GetAuditInfoForIssues(issues, issueMetadata)
-	if err != nil {
-		return errors.Wrapf(err, "failed getting audit info for issues for [%s]", txID)
+	return nil
+}
+
+// validateStructure ensures complete structural correspondence between TokenRequest and TokenRequestMetadata.
+// It validates that action counts match, ActionIDs are correct, and action types align with metadata types.
+func (a *Auditor) validateStructure(
+	tokenRequest *driver.TokenRequest,
+	tokenRequestMetadata *driver.TokenRequestMetadata,
+	txID driver.TokenRequestAnchor,
+) error {
+	// Validate action count matches metadata count
+	if len(tokenRequest.Actions) != len(tokenRequestMetadata.Actions) {
+		return errors.Errorf(
+			"action count mismatch: request has [%d] actions but metadata has [%d] actions for tx [%s]",
+			len(tokenRequest.Actions),
+			len(tokenRequestMetadata.Actions),
+			txID,
+		)
 	}
-	// check validity of issue requests
-	a.Logger.DebugfContext(ctx, "Check %d issue outputs", len(outputsFromIssue))
-	err = a.CheckIssueRequests(ctx, outputsFromIssue, txID)
-	if err != nil {
-		return errors.Wrapf(err, "failed checking issues for [%s]", txID)
+
+	// Validate each action has corresponding metadata with correct type
+	for i, action := range tokenRequest.Actions {
+		if action == nil {
+			return errors.Errorf("action at index [%d] is nil for tx [%s]", i, txID)
+		}
+
+		metadata := tokenRequestMetadata.Actions[i]
+		if metadata == nil {
+			return errors.Errorf("metadata at index [%d] is nil for tx [%s]", i, txID)
+		}
+
+		// Verify ActionID matches position
+		if metadata.ActionID != uint32(i) {
+			return errors.Errorf(
+				"metadata at index [%d] has incorrect ActionID [%d] for tx [%s]",
+				i,
+				metadata.ActionID,
+				txID,
+			)
+		}
+
+		// Verify action type matches metadata type
+		switch action.Type {
+		case request.ActionType_ACTION_TYPE_ISSUE:
+			if metadata.IssueMetadata == nil {
+				return errors.Errorf(
+					"action at index [%d] is ISSUE but metadata has no IssueMetadata for tx [%s]",
+					i,
+					txID,
+				)
+			}
+			if metadata.TransferMetadata != nil {
+				return errors.Errorf(
+					"action at index [%d] is ISSUE but metadata also has TransferMetadata for tx [%s]",
+					i,
+					txID,
+				)
+			}
+
+		case request.ActionType_ACTION_TYPE_TRANSFER:
+			if metadata.TransferMetadata == nil {
+				return errors.Errorf(
+					"action at index [%d] is TRANSFER but metadata has no TransferMetadata for tx [%s]",
+					i,
+					txID,
+				)
+			}
+			if metadata.IssueMetadata != nil {
+				return errors.Errorf(
+					"action at index [%d] is TRANSFER but metadata also has IssueMetadata for tx [%s]",
+					i,
+					txID,
+				)
+			}
+
+		default:
+			return errors.Errorf(
+				"action at index [%d] has unknown type [%s] for tx [%s]",
+				i,
+				action.Type,
+				txID,
+			)
+		}
 	}
-	// verify issuer identities
-	for i, id := range identitiesFromIssue {
-		err = a.InspectIdentity(ctx, a.InfoMatcher, &id, i)
+
+	return nil
+}
+
+// checkIssueAction validates a single issue action against its metadata.
+// It uses IssueMetadata.Match to validate structural correspondence, then validates token commitments and identities.
+func (a *Auditor) checkIssueAction(
+	ctx context.Context,
+	rawAction []byte,
+	metadata *driver.IssueMetadata,
+	actionIndex int,
+) error {
+	// Deserialize the issue action
+	ia := &issue.Action{}
+	if err := ia.Deserialize(rawAction); err != nil {
+		return errors.Wrapf(err, "failed to deserialize issue action")
+	}
+
+	// Use IssueMetadata.Match to validate structural correspondence
+	// This validates all fields including issuer, inputs, outputs, extra signers, and proofs
+	if err := metadata.Match(ia); err != nil {
+		return errors.Wrapf(err, "issue action does not match metadata")
+	}
+
+	// Create inspectable tokens and validate commitments
+	for i, output := range ia.Outputs {
+		if output == nil {
+			return errors.Errorf("output at index [%d] is nil", i)
+		}
+
+		outputMetadata := metadata.Outputs[i]
+		if outputMetadata == nil {
+			return errors.Errorf("output metadata at index [%d] is nil", i)
+		}
+
+		// Issue actions cannot redeem tokens
+		if output.IsRedeem() {
+			return errors.Errorf("issue action cannot redeem tokens")
+		}
+
+		// Validate receiver exists
+		if len(outputMetadata.Receivers) == 0 || outputMetadata.Receivers[0] == nil {
+			return errors.Errorf("output at index [%d] must have at least one receiver", i)
+		}
+
+		// Deserialize token metadata
+		tokenMetadata := &token.Metadata{}
+		if err := tokenMetadata.Deserialize(outputMetadata.OutputMetadata); err != nil {
+			return errors.Wrapf(err, "failed to deserialize token metadata at index [%d]", i)
+		}
+
+		// Create inspectable token
+		inspectable, err := NewInspectableToken(
+			output,
+			outputMetadata.Receivers[0].AuditInfo,
+			tokenMetadata.Type,
+			tokenMetadata.Value,
+			tokenMetadata.BlindingFactor,
+		)
 		if err != nil {
-			return errors.Wrapf(err, "failed checking identity for issue [%s]", txID)
+			return errors.Wrapf(err, "failed to create inspectable token at index [%d]", i)
 		}
-	}
-	// De-obfuscate transfer requests
-	transfers := tokenRequest.GetTransfers()
-	a.Logger.DebugfContext(ctx, "Get audit info for %d transfers", len(transfers))
 
-	// Extract transfer metadata
-	transferMetadata := make([]*driver.TransferMetadata, 0)
-	for _, action := range tokenRequestMetadata.Actions {
-		if action.TransferMetadata != nil {
-			transferMetadata = append(transferMetadata, action.TransferMetadata)
+		// Validate output commitment and identity
+		if err := a.InspectOutput(ctx, inspectable, i); err != nil {
+			return errors.Wrapf(err, "failed inspecting output at index [%d]", i)
 		}
 	}
 
-	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfers(transfers, transferMetadata, inputTokens)
-	if err != nil {
-		return errors.Wrapf(err, "failed getting audit info for transfers for [%s]", txID)
+	// Validate issuer identity
+	issuerIdentity := InspectableIdentity{
+		Identity:         ia.Issuer,
+		IdentityFromMeta: metadata.Issuer.Identity,
+		AuditInfo:        metadata.Issuer.AuditInfo,
 	}
-	// check validity of transfer requests
-	a.Logger.DebugfContext(ctx, "Check %d transfer outputs", len(outputsFromTransfer))
-	if err := a.CheckTransferRequests(ctx, auditableInputs, outputsFromTransfer, txID); err != nil {
-		return errors.Wrapf(err, "failed checking transfers [%s]", txID)
+	if err := a.InspectIdentity(ctx, a.InfoMatcher, &issuerIdentity, actionIndex); err != nil {
+		return errors.Wrapf(err, "failed checking issuer identity")
+	}
+
+	return nil
+}
+
+// checkTransferAction validates a single transfer action against its metadata.
+// It validates all fields correspond, then validates token commitments and identities.
+func (a *Auditor) checkTransferAction(
+	ctx context.Context,
+	rawAction []byte,
+	metadata *driver.TransferMetadata,
+	inputTokens []*token.Token,
+) error {
+	// Deserialize the transfer action
+	ta := &transfer.Action{}
+	if err := ta.Deserialize(rawAction); err != nil {
+		return errors.Wrapf(err, "failed to deserialize transfer action")
+	}
+
+	// Use TransferMetadata.Match to validate structural correspondence
+	// This validates all fields including issuer, inputs, outputs, extra signers, and proofs
+	if err := metadata.Match(ta); err != nil {
+		return errors.Wrapf(err, "transfer action does not match metadata")
+	}
+
+	// Validate input tokens match metadata
+	if len(inputTokens) != len(metadata.Inputs) {
+		return errors.Errorf(
+			"transfer has [%d] input tokens but metadata has [%d] inputs",
+			len(inputTokens),
+			len(metadata.Inputs),
+		)
+	}
+
+	// Validate and inspect inputs
+	for i, inputToken := range inputTokens {
+		if inputToken == nil {
+			return errors.Errorf("input token at index [%d] is nil", i)
+		}
+
+		inputMetadata := metadata.Inputs[i]
+		if inputMetadata == nil || len(inputMetadata.Senders) == 0 || inputMetadata.Senders[0] == nil {
+			return errors.Errorf("invalid metadata for input at index [%d]", i)
+		}
+
+		// Create inspectable token for input (only need audit info for sender)
+		inspectable, err := NewInspectableToken(
+			inputToken,
+			inputMetadata.Senders[0].AuditInfo,
+			"",  // Type not needed for input validation
+			nil, // Value not needed for input validation
+			nil, // BlindingFactor not needed for input validation
+		)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create inspectable token for input at index [%d]", i)
+		}
+
+		// Validate sender identity
+		if !inspectable.Identity.Identity.IsNone() {
+			if err := a.InspectIdentity(ctx, a.InfoMatcher, &inspectable.Identity, i); err != nil {
+				return errors.Wrapf(err, "failed inspecting input sender at index [%d]", i)
+			}
+		}
+	}
+
+	// Validate outputs match metadata
+	if len(ta.Outputs) != len(metadata.Outputs) {
+		return errors.Errorf(
+			"transfer action has [%d] outputs but metadata has [%d] outputs",
+			len(ta.Outputs),
+			len(metadata.Outputs),
+		)
+	}
+
+	// Validate and inspect outputs
+	for i, output := range ta.Outputs {
+		if output == nil {
+			return errors.Errorf("output at index [%d] is nil", i)
+		}
+
+		outputMetadata := metadata.Outputs[i]
+		if outputMetadata == nil {
+			return errors.Errorf("output metadata at index [%d] is nil", i)
+		}
+
+		// Deserialize token metadata
+		tokenMetadata := &token.Metadata{}
+		if err := tokenMetadata.Deserialize(outputMetadata.OutputMetadata); err != nil {
+			return errors.Wrapf(err, "failed to deserialize token metadata at index [%d]", i)
+		}
+
+		// Create inspectable token
+		inspectable, err := NewInspectableToken(
+			output,
+			outputMetadata.OutputAuditInfo,
+			tokenMetadata.Type,
+			tokenMetadata.Value,
+			tokenMetadata.BlindingFactor,
+		)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create inspectable token at index [%d]", i)
+		}
+
+		// Validate output commitment and identity
+		if err := a.InspectOutput(ctx, inspectable, i); err != nil {
+			return errors.Wrapf(err, "failed inspecting output at index [%d]", i)
+		}
 	}
 
 	return nil
