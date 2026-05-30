@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/audit/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
@@ -363,7 +362,7 @@ func TestAuditor_Check_Errors(t *testing.T) {
 		_, _, auditor := setupAuditorTest(t)
 		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte{1, 2, 3}}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: &driver.IssueMetadata{}}}}, nil, "1")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed getting audit info for issues")
+		require.Contains(t, err.Error(), "failed checking issue action")
 	})
 
 	// Check issue request validation error tests that an error is returned when an issue request
@@ -375,7 +374,7 @@ func TestAuditor_Check_Errors(t *testing.T) {
 		raw, _ := ia.Serialize()
 		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: meta}}}, nil, "1")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed checking issues")
+		require.Contains(t, err.Error(), "failed inspecting output")
 	})
 
 	// Check issue identity validation error tests that an error is returned when an issue identity
@@ -387,7 +386,7 @@ func TestAuditor_Check_Errors(t *testing.T) {
 		raw, _ := ia.Serialize()
 		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: meta}}}, nil, "1")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed checking identity for issue")
+		require.Contains(t, err.Error(), "failed checking issuer identity")
 	})
 
 	// Check transfer audit info error tests that an error is returned when audit information for
@@ -396,7 +395,230 @@ func TestAuditor_Check_Errors(t *testing.T) {
 		_, _, auditor := setupAuditorTest(t)
 		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte{1, 2, 3}}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: &driver.TransferMetadata{}}}}, nil, "1")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed getting audit info for transfers")
+		require.Contains(t, err.Error(), "failed checking transfer action")
+	})
+}
+
+// TestAuditor_StructuralValidation tests the new structural validation that ensures
+// complete 1:1 correspondence between actions and metadata.
+func TestAuditor_StructuralValidation(t *testing.T) {
+	// Test action count mismatch
+	t.Run("action count mismatch", func(t *testing.T) {
+		_, _, auditor := setupAuditorTest(t)
+		// Request has 2 actions but metadata has only 1
+		err := auditor.Check(
+			t.Context(),
+			&driver.TokenRequest{
+				Actions: []*driver.TypedAction{
+					{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte{1}},
+					{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte{2}},
+				},
+			},
+			&driver.TokenRequestMetadata{
+				Actions: []*driver.ActionMetadataEntry{
+					{ActionID: 0, IssueMetadata: &driver.IssueMetadata{}},
+				},
+			},
+			nil,
+			"1",
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "action count mismatch")
+		require.Contains(t, err.Error(), "request has [2] actions but metadata has [1] actions")
+	})
+
+	// Test ActionID mismatch
+	t.Run("ActionID mismatch", func(t *testing.T) {
+		_, _, auditor := setupAuditorTest(t)
+		// ActionID is 5 but should be 0
+		err := auditor.Check(
+			t.Context(),
+			&driver.TokenRequest{
+				Actions: []*driver.TypedAction{
+					{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte{1}},
+				},
+			},
+			&driver.TokenRequestMetadata{
+				Actions: []*driver.ActionMetadataEntry{
+					{ActionID: 5, IssueMetadata: &driver.IssueMetadata{}},
+				},
+			},
+			nil,
+			"1",
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "incorrect ActionID")
+		require.Contains(t, err.Error(), "[5]")
+	})
+
+	// Test action type mismatch - ISSUE action with TransferMetadata
+	t.Run("ISSUE action with TransferMetadata", func(t *testing.T) {
+		_, _, auditor := setupAuditorTest(t)
+		err := auditor.Check(
+			t.Context(),
+			&driver.TokenRequest{
+				Actions: []*driver.TypedAction{
+					{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte{1}},
+				},
+			},
+			&driver.TokenRequestMetadata{
+				Actions: []*driver.ActionMetadataEntry{
+					{ActionID: 0, TransferMetadata: &driver.TransferMetadata{}},
+				},
+			},
+			nil,
+			"1",
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "ISSUE but metadata has no IssueMetadata")
+	})
+
+	// Test action type mismatch - TRANSFER action with IssueMetadata
+	t.Run("TRANSFER action with IssueMetadata", func(t *testing.T) {
+		_, _, auditor := setupAuditorTest(t)
+		err := auditor.Check(
+			t.Context(),
+			&driver.TokenRequest{
+				Actions: []*driver.TypedAction{
+					{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte{1}},
+				},
+			},
+			&driver.TokenRequestMetadata{
+				Actions: []*driver.ActionMetadataEntry{
+					{ActionID: 0, IssueMetadata: &driver.IssueMetadata{}},
+				},
+			},
+			nil,
+			"1",
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "TRANSFER but metadata has no TransferMetadata")
+	})
+
+	// Test metadata has both IssueMetadata and TransferMetadata
+	t.Run("metadata has both types", func(t *testing.T) {
+		_, _, auditor := setupAuditorTest(t)
+		err := auditor.Check(
+			t.Context(),
+			&driver.TokenRequest{
+				Actions: []*driver.TypedAction{
+					{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte{1}},
+				},
+			},
+			&driver.TokenRequestMetadata{
+				Actions: []*driver.ActionMetadataEntry{
+					{
+						ActionID:         0,
+						IssueMetadata:    &driver.IssueMetadata{},
+						TransferMetadata: &driver.TransferMetadata{},
+					},
+				},
+			},
+			nil,
+			"1",
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "also has TransferMetadata")
+	})
+
+	// Test nil action
+	t.Run("nil action", func(t *testing.T) {
+		_, _, auditor := setupAuditorTest(t)
+		err := auditor.Check(
+			t.Context(),
+			&driver.TokenRequest{
+				Actions: []*driver.TypedAction{nil},
+			},
+			&driver.TokenRequestMetadata{
+				Actions: []*driver.ActionMetadataEntry{
+					{ActionID: 0, IssueMetadata: &driver.IssueMetadata{}},
+				},
+			},
+			nil,
+			"1",
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "action at index [0] is nil")
+	})
+
+	// Test nil metadata
+	t.Run("nil metadata", func(t *testing.T) {
+		_, _, auditor := setupAuditorTest(t)
+		err := auditor.Check(
+			t.Context(),
+			&driver.TokenRequest{
+				Actions: []*driver.TypedAction{
+					{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte{1}},
+				},
+			},
+			&driver.TokenRequestMetadata{
+				Actions: []*driver.ActionMetadataEntry{nil},
+			},
+			nil,
+			"1",
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "metadata at index [0] is nil")
+	})
+
+	// Test correct ordering with multiple actions
+	t.Run("correct ordering with multiple actions", func(t *testing.T) {
+		_, pp, auditor := setupAuditorTest(t)
+		// Create valid issue and transfer
+		ia, issueMeta := createIssue(t, pp)
+		ta, transferMeta, tokens := createTransfer(t, pp)
+
+		issueRaw, err := ia.Serialize()
+		require.NoError(t, err)
+		transferRaw, err := ta.Serialize()
+		require.NoError(t, err)
+
+		// Test with correct order: issue then transfer
+		err = auditor.Check(
+			t.Context(),
+			&driver.TokenRequest{
+				Actions: []*driver.TypedAction{
+					{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: issueRaw},
+					{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: transferRaw},
+				},
+			},
+			&driver.TokenRequestMetadata{
+				Actions: []*driver.ActionMetadataEntry{
+					{ActionID: 0, IssueMetadata: issueMeta},
+					{ActionID: 1, TransferMetadata: transferMeta},
+				},
+			},
+			tokens,
+			"1",
+		)
+		require.NoError(t, err)
+	})
+
+	// Test wrong ActionID sequence
+	t.Run("wrong ActionID sequence", func(t *testing.T) {
+		_, pp, auditor := setupAuditorTest(t)
+		ia, issueMeta := createIssue(t, pp)
+		issueRaw, err := ia.Serialize()
+		require.NoError(t, err)
+
+		// ActionID should be 0 but is 1
+		err = auditor.Check(
+			t.Context(),
+			&driver.TokenRequest{
+				Actions: []*driver.TypedAction{
+					{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: issueRaw},
+				},
+			},
+			&driver.TokenRequestMetadata{
+				Actions: []*driver.ActionMetadataEntry{
+					{ActionID: 1, IssueMetadata: issueMeta},
+				},
+			},
+			nil,
+			"1",
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "incorrect ActionID [1]")
 	})
 }
 
@@ -582,20 +804,19 @@ func prepareTransfer(t *testing.T, pp *v1.PublicParams, id driver.Identity) (*tr
 func createIssue(t *testing.T, pp *v1.PublicParams) (*issue.Action, *driver.IssueMetadata) {
 	t.Helper()
 	id, auditInfo := getIdemixInfo(t, "./testdata/bls12_381_bbs/idemix")
-	c := math.Curves[pp.Curve]
-	value := c.NewZrFromInt(100)
-	bf := c.NewRandomZr(nil)
-	ttype := token3.Type("ABC")
-	com := commit([]*math.Zr{c.HashToZr([]byte(ttype)), value, bf}, pp.PedersenGenerators, c)
 
-	ia := &issue.Action{
-		Issuer:    id,
-		Outputs:   []*token.Token{{Owner: id, Data: com}},
-		ProofType: rp.RangeProofType,
-	}
+	// Create a fake signer for the issuer
+	fakeSigner := &mock.SigningIdentity{}
+	fakeSigner.SerializeReturns(id, nil)
 
-	meta := &token.Metadata{Type: ttype, Value: value, BlindingFactor: bf}
-	metaRaw, err := meta.Serialize()
+	// Use the proper Issuer to generate an issue action with proofs
+	issuer := issue.NewIssuer(token3.Type("ABC"), fakeSigner, pp)
+	ia, tokenMetas, err := issuer.GenerateZKIssue([]uint64{100}, [][]byte{id})
+	require.NoError(t, err)
+	require.Len(t, tokenMetas, 1)
+
+	// Serialize the token metadata
+	metaRaw, err := tokenMetas[0].Serialize()
 	require.NoError(t, err)
 
 	auditInfoRaw, err := auditInfo.Bytes()

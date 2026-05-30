@@ -39,28 +39,20 @@ func main() {
 	}
 
 	for k, configuration := range configurations.Configurations {
-		// generate the validator env for transfer
+		// Create output directory for this configuration
+		configDir := filepath.Join(rootDir, k)
+		if err := os.MkdirAll(configDir, 0o755); err != nil {
+			panic(err)
+		}
+
+		// Create a single map to collect all test cases for this configuration
+		allTestCases := make(map[string]*testutils.TestCase)
+
+		// Mutex to protect concurrent map writes
+		var mu sync.Mutex
+
+		// Generate test cases for all combinations
 		for _, testCase := range testCases {
-			transferOutputDir := filepath.Join(rootDir, k, fmt.Sprintf("transfers_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs))
-			issueOutputDir := filepath.Join(rootDir, k, fmt.Sprintf("issues_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs))
-			redeemOutputDir := filepath.Join(rootDir, k, fmt.Sprintf("redeems_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs))
-			swapOutputDir := filepath.Join(rootDir, k, fmt.Sprintf("swaps_i%d_o%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs))
-
-			for _, path := range []string{transferOutputDir, redeemOutputDir, swapOutputDir, issueOutputDir} {
-				if err := os.MkdirAll(path, 0o755); err != nil {
-					panic(err)
-				}
-			}
-
-			// Create maps to collect all test cases
-			transferCases := make(map[string]*testutils.TestCase)
-			issueCases := make(map[string]*testutils.TestCase)
-			redeemCases := make(map[string]*testutils.TestCase)
-			swapCases := make(map[string]*testutils.TestCase)
-
-			// Mutex to protect concurrent map writes
-			var mu sync.Mutex
-
 			// Create worker pool with number of CPUs
 			numWorkers := runtime.NumCPU()
 			taskChan := make(chan int, 64)
@@ -86,7 +78,7 @@ func main() {
 							panic(err)
 						}
 
-						// Convert to test cases
+						// Convert to test cases with labeled keys
 						transferCase, err := env.TransferToTestCase()
 						if err != nil {
 							panic(err)
@@ -104,12 +96,17 @@ func main() {
 							panic(err)
 						}
 
-						// Store in maps with mutex protection
+						// Store in map with labeled keys
 						mu.Lock()
-						transferCases[fmt.Sprintf("%d", i)] = transferCase
-						issueCases[fmt.Sprintf("%d", i)] = issueCase
-						redeemCases[fmt.Sprintf("%d", i)] = redeemCase
-						swapCases[fmt.Sprintf("%d", i)] = swapCase
+						transferKey := fmt.Sprintf("transfers_i%d_o%d_%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs, i)
+						issueKey := fmt.Sprintf("issues_i%d_o%d_%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs, i)
+						redeemKey := fmt.Sprintf("redeems_i%d_o%d_%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs, i)
+						swapKey := fmt.Sprintf("swaps_i%d_o%d_%d", testCase.BenchmarkCase.NumInputs, testCase.BenchmarkCase.NumOutputs, i)
+
+						allTestCases[transferKey] = transferCase
+						allTestCases[issueKey] = issueCase
+						allTestCases[redeemKey] = redeemCase
+						allTestCases[swapKey] = swapCase
 						mu.Unlock()
 					}
 				}()
@@ -123,21 +120,12 @@ func main() {
 
 			// Wait for all tasks to complete
 			wg.Wait()
+		}
 
-			// Write aggregated files
-			log.Println("writing aggregated files to disk...")
-			if err := testutils.SaveAggregatedToFile(filepath.Join(transferOutputDir, "testdata.json"), transferCases); err != nil {
-				panic(err)
-			}
-			if err := testutils.SaveAggregatedToFile(filepath.Join(issueOutputDir, "testdata.json"), issueCases); err != nil {
-				panic(err)
-			}
-			if err := testutils.SaveAggregatedToFile(filepath.Join(redeemOutputDir, "testdata.json"), redeemCases); err != nil {
-				panic(err)
-			}
-			if err := testutils.SaveAggregatedToFile(filepath.Join(swapOutputDir, "testdata.json"), swapCases); err != nil {
-				panic(err)
-			}
+		// Write single aggregated file for this configuration
+		log.Printf("writing aggregated file for configuration %s...\n", k)
+		if err := testutils.SaveAggregatedToFile(filepath.Join(configDir, "testdata.json"), allTestCases); err != nil {
+			panic(err)
 		}
 	}
 }
