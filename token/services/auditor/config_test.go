@@ -29,8 +29,8 @@ func TestLoadLockConfig_NoConfiguration(t *testing.T) {
 	assert.Equal(t, 10, cfg.MaxRetries)
 	assert.Equal(t, 10*time.Millisecond, cfg.InitialBackoff)
 	assert.Equal(t, 5*time.Second, cfg.MaxBackoff)
-	assert.Equal(t, 2.0, cfg.BackoffMultiplier)
-	assert.Equal(t, 0.3, cfg.JitterFactor)
+	assert.InEpsilon(t, 2.0, cfg.BackoffMultiplier, 0.0001)
+	assert.InEpsilon(t, 0.3, cfg.JitterFactor, 0.0001)
 }
 
 // TestLoadLockConfig_UnmarshalError verifies that when unmarshaling fails,
@@ -61,6 +61,7 @@ func TestLoadLockConfig_ValidConfiguration(t *testing.T) {
 			raw.BackoffMultiplier = 3.0
 			raw.JitterFactor = 0.5
 		}
+
 		return nil
 	}
 
@@ -70,8 +71,8 @@ func TestLoadLockConfig_ValidConfiguration(t *testing.T) {
 	assert.Equal(t, 20, cfg.MaxRetries)
 	assert.Equal(t, 50*time.Millisecond, cfg.InitialBackoff)
 	assert.Equal(t, 10*time.Second, cfg.MaxBackoff)
-	assert.Equal(t, 3.0, cfg.BackoffMultiplier)
-	assert.Equal(t, 0.5, cfg.JitterFactor)
+	assert.InEpsilon(t, 3.0, cfg.BackoffMultiplier, 0.0001)
+	assert.InEpsilon(t, 0.5, cfg.JitterFactor, 0.0001)
 }
 
 // TestLoadLockConfig_InvalidMaxRetries verifies that invalid MaxRetries
@@ -93,6 +94,7 @@ func TestLoadLockConfig_InvalidMaxRetries(t *testing.T) {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.MaxRetries = tt.maxRetries
 				}
+
 				return nil
 			}
 
@@ -124,6 +126,7 @@ func TestLoadLockConfig_InvalidInitialBackoff(t *testing.T) {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.InitialBackoff = tt.initialBackoff
 				}
+				
 				return nil
 			}
 
@@ -191,7 +194,7 @@ func TestLoadLockConfig_InvalidBackoffMultiplier(t *testing.T) {
 			cfg := auditor.LoadLockConfig(cp)
 
 			// Should use default value (2.0)
-			assert.Equal(t, 2.0, cfg.BackoffMultiplier)
+			assert.InEpsilon(t, 2.0, cfg.BackoffMultiplier, 0.0001)
 		})
 	}
 }
@@ -221,7 +224,7 @@ func TestLoadLockConfig_InvalidJitterFactor(t *testing.T) {
 			cfg := auditor.LoadLockConfig(cp)
 
 			// Should use default value (0.3)
-			assert.Equal(t, 0.3, cfg.JitterFactor)
+			assert.InEpsilon(t, 0.3, cfg.JitterFactor, 0.0001)
 		})
 	}
 }
@@ -246,11 +249,11 @@ func TestLoadLockConfig_PartialConfiguration(t *testing.T) {
 	require.NotNil(t, cfg)
 	// Applied values
 	assert.Equal(t, 15, cfg.MaxRetries)
-	assert.Equal(t, 0.7, cfg.JitterFactor)
+	assert.InEpsilon(t, 0.7, cfg.JitterFactor, 0.0001)
 	// Default values for unset fields
 	assert.Equal(t, 10*time.Millisecond, cfg.InitialBackoff)
 	assert.Equal(t, 5*time.Second, cfg.MaxBackoff)
-	assert.Equal(t, 2.0, cfg.BackoffMultiplier)
+	assert.InEpsilon(t, 2.0, cfg.BackoffMultiplier, 0.0001)
 }
 
 // TestLoadLockConfig_BoundaryValues verifies that boundary values
@@ -277,7 +280,7 @@ func TestLoadLockConfig_BoundaryValues(t *testing.T) {
 
 			cfg := auditor.LoadLockConfig(cp)
 
-			assert.Equal(t, tt.jitterFactor, cfg.JitterFactor)
+			assert.InEpsilon(t, tt.jitterFactor, cfg.JitterFactor, 0.0001)
 		})
 	}
 }
@@ -291,8 +294,8 @@ func TestDefaultLockConfig(t *testing.T) {
 	assert.Equal(t, 10, cfg.MaxRetries)
 	assert.Equal(t, 10*time.Millisecond, cfg.InitialBackoff)
 	assert.Equal(t, 5*time.Second, cfg.MaxBackoff)
-	assert.Equal(t, 2.0, cfg.BackoffMultiplier)
-	assert.Equal(t, 0.3, cfg.JitterFactor)
+	assert.InEpsilon(t, 2.0, cfg.BackoffMultiplier, 0.0001)
+	assert.InEpsilon(t, 0.3, cfg.JitterFactor, 0.0001)
 }
 
 // TestLoadLockConfigFromConfiguration_WithMockProvider verifies that
@@ -385,8 +388,8 @@ func TestLoadLockConfigFromConfiguration_WithMockProvider(t *testing.T) {
 			assert.Equal(t, tt.expectedConfig.MaxRetries, cfg.MaxRetries)
 			assert.Equal(t, tt.expectedConfig.InitialBackoff, cfg.InitialBackoff)
 			assert.Equal(t, tt.expectedConfig.MaxBackoff, cfg.MaxBackoff)
-			assert.Equal(t, tt.expectedConfig.BackoffMultiplier, cfg.BackoffMultiplier)
-			assert.Equal(t, tt.expectedConfig.JitterFactor, cfg.JitterFactor)
+			assert.InEpsilon(t, tt.expectedConfig.BackoffMultiplier, cfg.BackoffMultiplier, 0.0001)
+			assert.InEpsilon(t, tt.expectedConfig.JitterFactor, cfg.JitterFactor, 0.0001)
 		})
 	}
 }
