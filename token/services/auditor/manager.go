@@ -85,7 +85,7 @@ func NewServiceManager(
 			var lockConfig *LockConfig
 			if configService != nil {
 				if tmsConfig, err := configService.ConfigurationFor(tmsID.Network, tmsID.Channel, tmsID.Namespace); err == nil {
-					lockConfig = LoadLockConfig(tmsConfig)
+					lockConfig = LoadLockConfigFromConfiguration(tmsConfig)
 				} else {
 					logger.Warnf("failed to get configuration for [%s], using default lock config: %v", tmsID, err)
 					lockConfig = DefaultLockConfig()

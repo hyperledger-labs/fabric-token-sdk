@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
@@ -70,67 +69,6 @@ type NetworkProvider interface {
 
 type CheckService interface {
 	Check(ctx context.Context) ([]string, error)
-}
-
-// lockConfigRaw is used to unmarshal lock configuration from YAML
-type lockConfigRaw struct {
-	MaxRetries        int     `yaml:"maxRetries"`
-	InitialBackoff    string  `yaml:"initialBackoff"`
-	MaxBackoff        string  `yaml:"maxBackoff"`
-	BackoffMultiplier float64 `yaml:"backoffMultiplier"`
-	JitterFactor      float64 `yaml:"jitterFactor"`
-}
-
-// LoadLockConfig loads lock configuration from the configuration provider.
-// If configuration is not found or invalid, returns default configuration.
-func LoadLockConfig(cp *config.Configuration) *LockConfig {
-	cfg := DefaultLockConfig()
-
-	if !cp.IsSet("auditor.lock") {
-		return cfg
-	}
-
-	var raw lockConfigRaw
-	if err := cp.UnmarshalKey("auditor.lock", &raw); err != nil {
-		logger.Warnf("failed to unmarshal auditor lock configuration, using defaults: %v", err)
-
-		return cfg
-	}
-
-	// Apply max retries if valid
-	if raw.MaxRetries > 0 {
-		cfg.MaxRetries = raw.MaxRetries
-	}
-
-	// Apply initial backoff if valid
-	if raw.InitialBackoff != "" {
-		if duration, err := time.ParseDuration(raw.InitialBackoff); err == nil && duration > 0 {
-			cfg.InitialBackoff = duration
-		} else {
-			logger.Warnf("invalid initialBackoff value [%s], using default", raw.InitialBackoff)
-		}
-	}
-
-	// Apply max backoff if valid
-	if raw.MaxBackoff != "" {
-		if duration, err := time.ParseDuration(raw.MaxBackoff); err == nil && duration > 0 {
-			cfg.MaxBackoff = duration
-		} else {
-			logger.Warnf("invalid maxBackoff value [%s], using default", raw.MaxBackoff)
-		}
-	}
-
-	// Apply backoff multiplier if valid
-	if raw.BackoffMultiplier > 0 {
-		cfg.BackoffMultiplier = raw.BackoffMultiplier
-	}
-
-	// Apply jitter factor if valid (must be between 0 and 1)
-	if raw.JitterFactor >= 0 && raw.JitterFactor <= 1.0 {
-		cfg.JitterFactor = raw.JitterFactor
-	}
-
-	return cfg
 }
 
 // Service is the interface for the auditor service
