@@ -103,10 +103,10 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 					m.logger.Errorf("failed to unlock tokens after timeout: %s", unlockErr)
 				}
 				m.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
-
-				return nil, nil, errors.Errorf(
-					"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts",
-					m.selectionTimeout, m.tokensIteratedCount, m.lockAttemptsCount,
+	
+				return nil, nil, fmt.Errorf(
+					"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts: %w",
+					m.selectionTimeout, m.tokensIteratedCount, m.lockAttemptsCount, err,
 				)
 			}
 
@@ -135,9 +135,9 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 			m.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
 
 			if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
-				return nil, nil, errors.Errorf(
-					"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts",
-					m.selectionTimeout, m.tokensIteratedCount, m.lockAttemptsCount,
+				return nil, nil, fmt.Errorf(
+					"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts: %w",
+					m.selectionTimeout, m.tokensIteratedCount, m.lockAttemptsCount, timeoutCtx.Err(),
 				)
 			}
 
@@ -197,9 +197,9 @@ func (s *Selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 		s.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
 		s.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
 
-		return nil, nil, errors.Errorf(
-			"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts",
-			s.selectionTimeout, s.tokensIteratedCount, s.lockAttemptsCount,
+		return nil, nil, fmt.Errorf(
+			"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts: %w",
+			s.selectionTimeout, s.tokensIteratedCount, s.lockAttemptsCount, err,
 		)
 	}
 
