@@ -167,20 +167,13 @@ func testRegression(t *testing.T, configDir string) {
 			err = requestMetadata.FromBytes(metadataRaw)
 			require.NoError(t, err, "failed to unmarshal metadata for test case %s", testCaseKey)
 
-			// Deserialize inputs if available
-			var inputTokens [][]*tokn.Token
-			if tokenData.Inputs != nil {
-				inputTokens, err = deserializeInputs(tokenData.Inputs, pp)
-				require.NoError(t, err, "failed to deserialize inputs for test case %s", testCaseKey)
-			}
-
 			// Deserialize token request for auditor check
 			tokenRequest := &driver.TokenRequest{}
 			err = tokenRequest.FromBytes(reqRaw)
 			require.NoError(t, err, "failed to deserialize token request for test case %s", testCaseKey)
 
-			// Perform auditor check with inputs
-			err = auditor.Check(t.Context(), tokenRequest, requestMetadata, inputTokens, driver.TokenRequestAnchor(tokenData.TXID))
+			// Perform auditor check
+			err = auditor.Check(t.Context(), tokenRequest, requestMetadata, driver.TokenRequestAnchor(tokenData.TXID))
 			require.NoError(t, err, "auditor check failed for token request for test case %s", testCaseKey)
 		}
 	}
@@ -228,6 +221,8 @@ func createAuditor(pp tcc.PublicParameters) *audit.Auditor {
 }
 
 // deserializeInputs deserializes input tokens from the serialized format
+//
+//nolint:unused
 func deserializeInputs(serializedInputs [][][]byte, pp tcc.PublicParameters) ([][]*tokn.Token, error) {
 	var res [][]*tokn.Token
 

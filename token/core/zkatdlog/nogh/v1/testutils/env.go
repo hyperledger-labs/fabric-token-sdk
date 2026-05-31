@@ -456,7 +456,7 @@ func prepareIssueRequest(pp *v1setup.PublicParams, auditor *audit.Auditor, setup
 	}
 
 	// Auditor check
-	err = auditor.Check(context.Background(), ir, requestMetadata, nil, "1")
+	err = auditor.Check(context.Background(), ir, requestMetadata, "1")
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "auditor check failed")
 	}
@@ -585,7 +585,7 @@ func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1setup.PublicParams, au
 	for i := range benchCase.NumInputs {
 		tokns[1] = append(tokns[1], inputsForTransfer2[i])
 	}
-	err = auditor.Check(context.Background(), ar, metadata, tokns, "2")
+	err = auditor.Check(context.Background(), ar, metadata, "2")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -843,7 +843,7 @@ func prepareTransfer(
 			{ActionID: 0, TransferMetadata: transferMetadata},
 		},
 	}
-	err = auditor.Check(context.Background(), tr, tokenRequestMetadata, tokns, "1")
+	err = auditor.Check(context.Background(), tr, tokenRequestMetadata, "1")
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

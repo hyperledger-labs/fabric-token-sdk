@@ -884,7 +884,7 @@ For implementation details, see [`validator/validator.go`](../../token/core/zkat
 
 ### 9.2 Auditor Service
 
-**Implementation**: [`audit/`](../../token/core/zkatdlog/nogh/v1/audit/) and [`auditor.go`](../../token/core/zkatdlog/nogh/v1/auditor.go)
+**Implementation**: [`audit/auditor.go`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go) and [`auditor.go`](../../token/core/zkatdlog/nogh/v1/auditor.go)
 
 The auditor service enables authorized auditors to inspect private transactions and verify compliance without compromising the privacy of non-audited users.
 
@@ -897,24 +897,55 @@ Auditors receive cleartext metadata (via transient data) that includes:
 - Issuer information
 
 The auditor verifies that:
-1. Commitments match the cleartext metadata
-2. Proofs are valid
-3. Balance is preserved
-4. All parties are properly authorized
+1. **Structural Correspondence**: Actions and metadata have 1:1 correspondence with correct types
+2. **Commitment Validity**: Token commitments match the cleartext metadata (Pedersen commitments)
+3. **Identity Verification**: Audit info correctly corresponds to identities via `InfoMatcher`
+4. **Recipient Matching**: Recipients extracted from owners match metadata receivers
+5. **Authorization**: All parties (issuers, senders, receivers) are properly identified
 
 #### 9.2.2 Auditor Validation
 
-The `AuditorCheck` method performs the following:
+The [`Auditor.Check()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:110) method performs comprehensive validation in two phases:
 
-1. **Deserialize Actions**: Parse the token request into structured actions
-2. **Load Input Tokens**: Retrieve the commitments of input tokens from the ledger
-3. **Verify Metadata**: Check that cleartext metadata matches the commitments
-4. **Validate Proofs**: Verify zero-knowledge proofs using the cleartext values
-5. **Check Authorization**: Ensure all participants are properly identified
+**Phase 1: Structural Validation** ([`validateStructure()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:158))
+- Validates action count matches metadata count
+- Verifies ActionIDs are sequential and correct
+- Ensures action types align with metadata types (no mixed types)
+- Confirms metadata exclusivity (IssueMetadata XOR TransferMetadata)
+
+**Phase 2: Semantic Validation** (per action type)
+
+For **Issue Actions** ([`checkIssueAction()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:243)):
+1. Uses `IssueMetadata.Match()` to validate structural correspondence
+2. Validates inputs via [`validateIssueInputs()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:277):
+   - Checks TokenID matches for upgrade scenarios
+3. Validates outputs via [`validateIssueOutputs()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:306):
+   - Verifies no redeem outputs in issue actions
+   - Recomputes Pedersen commitments from cleartext (type, value, blinding factor)
+   - Validates commitments match token data
+   - Validates receivers via [`validateOutputReceivers()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:517)
+4. Validates issuer identity via [`validateIssuer()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:355)
+
+For **Transfer Actions** ([`checkTransferAction()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:369)):
+1. Uses `TransferMetadata.Match()` to validate structural correspondence
+2. Validates inputs via [`validateTransferInputs()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:397):
+   - Ensures exactly one sender per input
+   - Verifies sender identity matches token owner
+   - Validates TokenID matches
+   - Inspects sender identity via `InfoMatcher`
+3. Validates outputs via [`validateTransferOutputs()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:476):
+   - Validates receivers for non-redeem outputs
+   - Recomputes Pedersen commitments from cleartext
+   - Validates commitments match token data
+
+**Common Validation Methods**:
+- [`validateOutputReceivers()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:517): Extracts recipients from owner, validates count matches, verifies identity matching (with configurable empty identity handling)
+- [`InspectOutput()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:580): Recomputes and verifies Pedersen commitments
+- [`InspectIdentity()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go:603): Verifies audit info matches identity via `InfoMatcher.MatchIdentity()`
 
 **Privacy Guarantee**: Only authorized auditors with the correct audit keys can decrypt the metadata. The ledger itself stores only commitments, preserving privacy for all other participants.
 
-For implementation details, see [`auditor.go`](../../token/core/zkatdlog/nogh/v1/auditor.go).
+For implementation details, see [`audit/auditor.go`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go).
     IS->>IS: Create IssueAction with Inputs
     IS-->>C: (IssueAction, Metadata)
 ```
