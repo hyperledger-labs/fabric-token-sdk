@@ -103,7 +103,7 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 					m.logger.Errorf("failed to unlock tokens after timeout: %s", unlockErr)
 				}
 				m.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
-	
+
 				return nil, nil, fmt.Errorf(
 					"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts: %w",
 					m.selectionTimeout, m.tokensIteratedCount, m.lockAttemptsCount, err,
