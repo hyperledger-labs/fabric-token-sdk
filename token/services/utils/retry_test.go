@@ -647,10 +647,7 @@ func TestNewRetryRunnerWithJitter_ExcessiveJitterFactor(t *testing.T) {
 
 	// With max jitter (1.0), delays should vary within ±50% of base
 	for i, d := range delays {
-		baseDelay := 100 * time.Millisecond * time.Duration(1<<i)
-		if baseDelay > 10*time.Second {
-			baseDelay = 10 * time.Second
-		}
+		baseDelay := min(100*time.Millisecond*time.Duration(1<<i), 10*time.Second)
 
 		// Should not exceed bounds of 1.0 jitter factor
 		minDelay := time.Duration(float64(baseDelay) * 0.25)
@@ -807,10 +804,7 @@ func TestNewRetryRunnerWithJitter_JitterBehavior(t *testing.T) {
 	// For each delay, verify it's within reasonable bounds
 	for i, d := range delays {
 		// Calculate expected base delay (without jitter)
-		baseDelay := 100 * time.Millisecond * time.Duration(1<<i)
-		if baseDelay > 10*time.Second {
-			baseDelay = 10 * time.Second
-		}
+		baseDelay := min(100*time.Millisecond*time.Duration(1<<i), 10*time.Second)
 
 		// With 50% jitter, delay should be in range [base*0.75, base*1.25]
 		minDelay := time.Duration(float64(baseDelay) * 0.5)  // 75% - 25% tolerance
@@ -932,10 +926,7 @@ func TestNewRetryRunnerWithJitter_MaxJitter(t *testing.T) {
 	// With jitterFactor=1.0, delays can vary by ±50% of base
 	// Base delays: 100ms, 200ms, 400ms, 800ms, 1600ms, 3200ms, 6400ms, 10s (capped)
 	for i, d := range delays {
-		baseDelay := 100 * time.Millisecond * time.Duration(1<<i)
-		if baseDelay > 10*time.Second {
-			baseDelay = 10 * time.Second
-		}
+		baseDelay := min(100*time.Millisecond*time.Duration(1<<i), 10*time.Second)
 
 		// With 100% jitter, delay should be in range [base*0.5, base*1.5]
 		minDelay := time.Duration(float64(baseDelay) * 0.25) // 50% - 25% tolerance

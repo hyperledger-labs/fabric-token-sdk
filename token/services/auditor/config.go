@@ -21,7 +21,7 @@ type ConfigProvider interface {
 	// IsSet checks if a configuration key exists
 	IsSet(key string) bool
 	// UnmarshalKey unmarshals a configuration key into the provided struct
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 }
 
 const (
@@ -128,7 +128,7 @@ func (c *configAdapter) IsSet(key string) bool {
 	return c.Configuration.IsSet(key)
 }
 
-func (c *configAdapter) UnmarshalKey(key string, rawVal interface{}) error {
+func (c *configAdapter) UnmarshalKey(key string, rawVal any) error {
 	return c.Configuration.UnmarshalKey(key, rawVal)
 }
 

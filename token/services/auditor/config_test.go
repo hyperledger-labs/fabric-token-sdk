@@ -53,7 +53,7 @@ func TestLoadLockConfig_UnmarshalError(t *testing.T) {
 func TestLoadLockConfig_ValidConfiguration(t *testing.T) {
 	cp := &mock.ConfigProvider{}
 	cp.IsSetReturns(true)
-	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 			raw.MaxRetries = 20
 			raw.InitialBackoff = "50ms"
@@ -90,7 +90,7 @@ func TestLoadLockConfig_InvalidMaxRetries(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cp := &mock.ConfigProvider{}
 			cp.IsSetReturns(true)
-			cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.MaxRetries = tt.maxRetries
 				}
@@ -122,11 +122,11 @@ func TestLoadLockConfig_InvalidInitialBackoff(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cp := &mock.ConfigProvider{}
 			cp.IsSetReturns(true)
-			cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.InitialBackoff = tt.initialBackoff
 				}
-				
+
 				return nil
 			}
 
@@ -154,7 +154,7 @@ func TestLoadLockConfig_InvalidMaxBackoff(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cp := &mock.ConfigProvider{}
 			cp.IsSetReturns(true)
-			cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.MaxBackoff = tt.maxBackoff
 				}
@@ -184,7 +184,7 @@ func TestLoadLockConfig_InvalidBackoffMultiplier(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cp := &mock.ConfigProvider{}
 			cp.IsSetReturns(true)
-			cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.BackoffMultiplier = tt.backoffMultiplier
 				}
@@ -214,7 +214,7 @@ func TestLoadLockConfig_InvalidJitterFactor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cp := &mock.ConfigProvider{}
 			cp.IsSetReturns(true)
-			cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.JitterFactor = tt.jitterFactor
 				}
@@ -234,7 +234,7 @@ func TestLoadLockConfig_InvalidJitterFactor(t *testing.T) {
 func TestLoadLockConfig_PartialConfiguration(t *testing.T) {
 	cp := &mock.ConfigProvider{}
 	cp.IsSetReturns(true)
-	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 			// Only set MaxRetries and JitterFactor
 			raw.MaxRetries = 15
@@ -271,7 +271,7 @@ func TestLoadLockConfig_BoundaryValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cp := &mock.ConfigProvider{}
 			cp.IsSetReturns(true)
-			cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.JitterFactor = tt.jitterFactor
 				}
@@ -311,7 +311,7 @@ func TestLoadLockConfigFromConfiguration_WithMockProvider(t *testing.T) {
 			name: "valid configuration is applied",
 			setupMock: func(cp *mock.ConfigProvider) {
 				cp.IsSetReturns(true)
-				cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+				cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 					if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 						raw.MaxRetries = 20
 						raw.InitialBackoff = "50ms"
@@ -334,7 +334,7 @@ func TestLoadLockConfigFromConfiguration_WithMockProvider(t *testing.T) {
 			name: "partial configuration with defaults",
 			setupMock: func(cp *mock.ConfigProvider) {
 				cp.IsSetReturns(true)
-				cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+				cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 					if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 						raw.MaxRetries = 15
 						raw.JitterFactor = 0.7
@@ -355,13 +355,13 @@ func TestLoadLockConfigFromConfiguration_WithMockProvider(t *testing.T) {
 			name: "invalid values use defaults",
 			setupMock: func(cp *mock.ConfigProvider) {
 				cp.IsSetReturns(true)
-				cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+				cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 					if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
-						raw.MaxRetries = -5              // invalid
-						raw.InitialBackoff = "invalid"   // invalid
-						raw.MaxBackoff = "-10s"          // invalid
-						raw.BackoffMultiplier = 0.0      // invalid
-						raw.JitterFactor = 2.0           // invalid (>1.0)
+						raw.MaxRetries = -5            // invalid
+						raw.InitialBackoff = "invalid" // invalid
+						raw.MaxBackoff = "-10s"        // invalid
+						raw.BackoffMultiplier = 0.0    // invalid
+						raw.JitterFactor = 2.0         // invalid (>1.0)
 					}
 					return nil
 				}
