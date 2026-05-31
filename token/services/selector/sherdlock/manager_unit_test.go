@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package sherdlock_test
 
 import (
-	"time"
 	"testing"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock/mocks"
