@@ -443,6 +443,8 @@ func (i *IssueInputMetadata) FromProtos(issueInputMetadata *request.IssueInputMe
 // IssueOutputMetadata is the metadata of an output in an issue action
 type IssueOutputMetadata struct {
 	OutputMetadata []byte
+	// OutputAuditInfo, for each output owner we have audit info
+	OutputAuditInfo []byte
 	// Receivers, for each output we have a receiver
 	Receivers []*AuditableIdentity
 }
@@ -455,6 +457,7 @@ func (i *IssueOutputMetadata) ToProtos() (*request.OutputMetadata, error) {
 
 	return &request.OutputMetadata{
 		Metadata:  i.OutputMetadata,
+		AuditInfo: i.OutputAuditInfo,
 		Receivers: receivers,
 	}, nil
 }
@@ -464,6 +467,7 @@ func (i *IssueOutputMetadata) FromProtos(outputsMetadata *request.OutputMetadata
 		return nil
 	}
 	i.OutputMetadata = outputsMetadata.Metadata
+	i.OutputAuditInfo = outputsMetadata.AuditInfo
 	i.Receivers = slices.GenericSliceOfPointers[AuditableIdentity](len(outputsMetadata.Receivers))
 	if err := protos.FromProtosSlice(outputsMetadata.Receivers, i.Receivers); err != nil {
 		return errors.Wrap(err, "failed unmarshalling receivers metadata")
