@@ -216,7 +216,7 @@ type ClaimDistributionView struct {
 }
 
 func (v *ClaimDistributionView) Call(ctx view.Context) (any, error) {
-	session, err := ctx.GetSession(v, v.Counterparty)
+	session, err := ctx.GetSession(ctx.Initiator(), v.Counterparty)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting counterparty session")
 	}
