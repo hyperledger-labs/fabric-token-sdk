@@ -158,6 +158,7 @@ func TestLoadLockConfig_InvalidMaxBackoff(t *testing.T) {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.MaxBackoff = tt.maxBackoff
 				}
+
 				return nil
 			}
 
@@ -188,6 +189,7 @@ func TestLoadLockConfig_InvalidBackoffMultiplier(t *testing.T) {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.BackoffMultiplier = tt.backoffMultiplier
 				}
+
 				return nil
 			}
 
@@ -218,6 +220,7 @@ func TestLoadLockConfig_InvalidJitterFactor(t *testing.T) {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.JitterFactor = tt.jitterFactor
 				}
+
 				return nil
 			}
 
@@ -241,6 +244,7 @@ func TestLoadLockConfig_PartialConfiguration(t *testing.T) {
 			raw.JitterFactor = 0.7
 			// Leave others as zero values
 		}
+
 		return nil
 	}
 
@@ -275,6 +279,7 @@ func TestLoadLockConfig_BoundaryValues(t *testing.T) {
 				if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
 					raw.JitterFactor = tt.jitterFactor
 				}
+
 				return nil
 			}
 
@@ -319,6 +324,7 @@ func TestLoadLockConfigFromConfiguration_WithMockProvider(t *testing.T) {
 						raw.BackoffMultiplier = 3.0
 						raw.JitterFactor = 0.5
 					}
+
 					return nil
 				}
 			},
@@ -340,6 +346,7 @@ func TestLoadLockConfigFromConfiguration_WithMockProvider(t *testing.T) {
 						raw.JitterFactor = 0.7
 						// Leave others as zero values to test defaults
 					}
+
 					return nil
 				}
 			},
@@ -363,6 +370,7 @@ func TestLoadLockConfigFromConfiguration_WithMockProvider(t *testing.T) {
 						raw.BackoffMultiplier = 0.0    // invalid
 						raw.JitterFactor = 2.0         // invalid (>1.0)
 					}
+
 					return nil
 				}
 			},
