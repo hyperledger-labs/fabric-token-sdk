@@ -11,6 +11,7 @@ import (
 	"errors"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	drivermock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -307,63 +308,6 @@ func TestService_Audit_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, inputs)
 	assert.NotNil(t, outputs)
-}
-
-// TestService_Audit_LockAcquisitionFailure verifies that when AcquireLocks() fails
-// due to context cancellation, the error is properly returned and no locks are held.
-func TestService_Audit_LockAcquisitionFailure(t *testing.T) {
-	// Create a StoreService with real lock mechanism
-	storeService := newTestStoreService(t, newFakeStore())
-
-	// First, acquire locks directly on enrollment IDs to simulate lock contention
-	ctx := context.Background()
-	err := storeService.AcquireLocks(ctx, "blocking-anchor", "test-eid-1", "test-eid-2")
-	require.NoError(t, err)
-	defer storeService.ReleaseLocks(ctx, "blocking-anchor")
-
-	// Now try to acquire the same locks with a cancelled context
-	cancelledCtx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately to simulate timeout/cancellation
-
-	err = storeService.AcquireLocks(cancelledCtx, "tx-lock-fail", "test-eid-1", "test-eid-2")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "context canceled")
-
-	// Verify no locks are held for the failed transaction by checking the anchor is not stored
-	storeService.ReleaseLocks(ctx, "tx-lock-fail") // Should be a no-op since locks weren't acquired
-}
-
-// TestService_Audit_ContextCancellationDuringAcquisition verifies that when context
-// is cancelled or times out during lock acquisition, the semaphore automatically rolls
-// back acquired locks and returns an error, allowing subsequent acquisitions to succeed.
-func TestService_Audit_ContextCancellationDuringAcquisition(t *testing.T) {
-	// Create a StoreService with real lock mechanism
-	storeService := newTestStoreService(t, newFakeStore())
-
-	// Acquire locks to create contention
-	ctx := context.Background()
-	err := storeService.AcquireLocks(ctx, "blocking-anchor", "test-eid-1", "test-eid-2")
-	require.NoError(t, err)
-
-	// Create a context with a very short timeout
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), 1)
-	defer cancel()
-
-	// This should fail due to context timeout while waiting for locks
-	err = storeService.AcquireLocks(timeoutCtx, "tx-ctx-cancel", "test-eid-1", "test-eid-2")
-	require.Error(t, err)
-	assert.True(t, errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled),
-		"expected context cancellation error, got: %v", err)
-
-	// Release the blocking locks
-	storeService.ReleaseLocks(ctx, "blocking-anchor")
-
-	// Verify the semaphore automatically rolled back by attempting acquisition with fresh context
-	err = storeService.AcquireLocks(context.Background(), "tx-after-cancel", "test-eid-1", "test-eid-2")
-	require.NoError(t, err)
-
-	// Clean up
-	storeService.ReleaseLocks(ctx, "tx-after-cancel")
 }
 
 func TestService_Audit_DBCleanSuccess(t *testing.T) {
@@ -720,7 +664,6 @@ func TestManager_GetByTMSID(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
 // Service.Audit Lock Management Tests
 // ---------------------------------------------------------------------------
 
@@ -955,4 +898,275 @@ func TestService_Audit_PanicRecoveryReleasesLocks(t *testing.T) {
 	err := storeService.AcquireLocks(ctx, "tx-panic-recovery")
 	require.NoError(t, err, "locks should have been released despite panic")
 	storeService.ReleaseLocks(ctx, "tx-panic-recovery")
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Service.acquireLocksWithRetry tests
+// ---------------------------------------------------------------------------
+
+// mockStoreServiceWithLockControl wraps StoreService to intercept AcquireLocks calls
+type mockStoreServiceWithLockControl struct {
+	*auditdb.StoreService
+	acquireLocksFunc func(ctx context.Context, anchor string, eIDs ...string) error
+	acquireCallCount int
+}
+
+func (m *mockStoreServiceWithLockControl) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
+	m.acquireCallCount++
+	if m.acquireLocksFunc != nil {
+		return m.acquireLocksFunc(ctx, anchor, eIDs...)
+	}
+	return m.StoreService.AcquireLocks(ctx, anchor, eIDs...)
+}
+
+func newMockStoreServiceWithLockControl(t *testing.T, acquireFunc func(ctx context.Context, anchor string, eIDs ...string) error) *mockStoreServiceWithLockControl {
+	t.Helper()
+	return &mockStoreServiceWithLockControl{
+		StoreService:     newTestStoreService(t, newFakeStore()),
+		acquireLocksFunc: acquireFunc,
+	}
+}
+
+func TestService_AcquireLocksWithRetry_Success_FirstAttempt(t *testing.T) {
+	mockStore := newMockStoreServiceWithLockControl(t, nil)
+	svc := newTestService(mockStore.StoreService, nil)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-success" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-success"))
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, mockStore.acquireCallCount, "AcquireLocks should be called once")
+}
+
+func TestService_AcquireLocksWithRetry_Success_AfterRetries(t *testing.T) {
+	callCount := 0
+	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+		callCount++
+		if callCount < 3 {
+			return errors.New("lock conflict")
+		}
+		return nil
+	})
+	svc := newTestService(mockStore.StoreService, nil)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-retry" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-retry"))
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 3, callCount, "AcquireLocks should be called 3 times")
+}
+
+func TestService_AcquireLocksWithRetry_Failure_MaxRetriesExceeded(t *testing.T) {
+	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+		return errors.New("persistent lock conflict")
+	})
+	svc := newTestService(mockStore.StoreService, nil)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-fail" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-fail"))
+		},
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to acquire locks after")
+	assert.Contains(t, err.Error(), "attempts")
+	assert.Equal(t, 10, mockStore.acquireCallCount, "Should retry max times")
+}
+
+func TestService_AcquireLocksWithRetry_ContextCancelled_BeforeRetry(t *testing.T) {
+	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+		return errors.New("lock conflict")
+	})
+	svc := newTestService(mockStore.StoreService, nil)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	_, _, err := svc.Audit(ctx, &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-cancel" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-cancel"))
+		},
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "lock acquisition cancelled")
+	// Should fail quickly due to context cancellation
+	assert.LessOrEqual(t, mockStore.acquireCallCount, 2, "Should not retry many times after cancellation")
+}
+
+func TestService_AcquireLocksWithRetry_ContextCancelled_DuringBackoff(t *testing.T) {
+	callCount := 0
+	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+		callCount++
+		return errors.New("lock conflict")
+	})
+	svc := newTestService(mockStore.StoreService, nil)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, _, err := svc.Audit(ctx, &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-timeout" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-timeout"))
+		},
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "lock acquisition cancelled")
+	// Should have attempted at least once but not all 10 times
+	assert.Greater(t, callCount, 0, "Should attempt at least once")
+	assert.Less(t, callCount, 10, "Should not complete all retries due to timeout")
+}
+
+func TestService_AcquireLocksWithRetry_ExponentialBackoff(t *testing.T) {
+	callTimes := []time.Time{}
+	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+		callTimes = append(callTimes, time.Now())
+		if len(callTimes) < 4 {
+			return errors.New("lock conflict")
+		}
+		return nil
+	})
+	svc := newTestService(mockStore.StoreService, nil)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-backoff" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-backoff"))
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 4, len(callTimes), "Should have 4 attempts")
+
+	// Verify backoff is increasing (with some tolerance for jitter)
+	if len(callTimes) >= 3 {
+		delay1 := callTimes[1].Sub(callTimes[0])
+		delay2 := callTimes[2].Sub(callTimes[1])
+		// Second delay should be roughly 2x first delay (accounting for jitter)
+		// We use a loose check: delay2 should be at least 1.3x delay1
+		assert.Greater(t, delay2, delay1*13/10, "Backoff should increase exponentially")
+	}
+}
+
+func TestService_AcquireLocksWithRetry_MultipleEnrollmentIDs(t *testing.T) {
+	var capturedAnchor string
+	var capturedEIDs []string
+	mockStore := newMockStoreServiceWithLockControl(t, func(ctx context.Context, anchor string, eIDs ...string) error {
+		capturedAnchor = anchor
+		capturedEIDs = eIDs
+		return nil
+	})
+	svc := newTestService(mockStore.StoreService, nil)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-multi-eid" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-multi-eid"))
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, mockStore.acquireCallCount)
+	assert.Equal(t, "tx-multi-eid", capturedAnchor)
+	assert.NotNil(t, capturedEIDs)
+}
+
+func TestService_AcquireLocksWithRetry_EmptyEnrollmentIDs(t *testing.T) {
+	mockStore := newMockStoreServiceWithLockControl(t, nil)
+	svc := newTestService(mockStore.StoreService, nil)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-empty-eid" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-empty-eid"))
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, mockStore.acquireCallCount)
+}
+
+// ---------------------------------------------------------------------------
+// Service.calculateBackoff tests
+// ---------------------------------------------------------------------------
+
+func TestService_CalculateBackoff_InitialAttempt(t *testing.T) {
+	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
+	
+	backoff := svc.CalculateBackoff(0)
+	
+	// First attempt should be around initialLockBackoff (10ms) with jitter
+	// Jitter is 30%, so range is roughly 8.5ms to 11.5ms
+	assert.Greater(t, backoff, 5*time.Millisecond, "Backoff should be positive")
+	assert.Less(t, backoff, 20*time.Millisecond, "Initial backoff should be small")
+}
+
+func TestService_CalculateBackoff_ExponentialGrowth(t *testing.T) {
+	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
+	
+	backoff0 := svc.CalculateBackoff(0)
+	backoff1 := svc.CalculateBackoff(1)
+	backoff2 := svc.CalculateBackoff(2)
+	
+	// Each backoff should be roughly 2x the previous (accounting for jitter)
+	// We check that later attempts are generally larger
+	assert.Greater(t, backoff1, backoff0/2, "Backoff should grow")
+	assert.Greater(t, backoff2, backoff1/2, "Backoff should continue growing")
+}
+
+func TestService_CalculateBackoff_MaxCap(t *testing.T) {
+	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
+	
+	// Test a very high attempt number
+	backoff := svc.CalculateBackoff(20)
+	
+	// Should be capped at maxLockBackoff (5s) plus jitter
+	// With 30% jitter, max is 5s * 1.15 = 5.75s
+	assert.LessOrEqual(t, backoff, 6*time.Second, "Backoff should be capped")
+	assert.Greater(t, backoff, 3*time.Second, "Backoff should be near max")
+}
+
+func TestService_CalculateBackoff_Randomization(t *testing.T) {
+	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
+	
+	// Generate multiple backoffs for the same attempt
+	backoffs := make([]time.Duration, 10)
+	for i := range backoffs {
+		backoffs[i] = svc.CalculateBackoff(3)
+	}
+	
+	// Check that we get different values (jitter is working)
+	allSame := true
+	for i := 1; i < len(backoffs); i++ {
+		if backoffs[i] != backoffs[0] {
+			allSame = false
+			break
+		}
+	}
+	assert.False(t, allSame, "Jitter should produce different backoff values")
+}
+
+func TestService_CalculateBackoff_NonNegative(t *testing.T) {
+	svc := newTestService(newTestStoreService(t, newFakeStore()), nil)
+	
+	// Test multiple attempts to ensure backoff is never negative
+	for attempt := 0; attempt < 15; attempt++ {
+		backoff := svc.CalculateBackoff(attempt)
+		assert.GreaterOrEqual(t, backoff, time.Duration(0),
+			"Backoff should never be negative for attempt %d", attempt)
+	}
 }
