@@ -295,4 +295,100 @@ func TestDefaultLockConfig(t *testing.T) {
 	assert.Equal(t, 0.3, cfg.JitterFactor)
 }
 
+// TestLoadLockConfigFromConfiguration_WithMockProvider verifies that
+// LoadLockConfigFromConfiguration correctly works with the ConfigProvider interface.
+// This test simulates the behavior in manager.go where configuration is loaded.
+func TestLoadLockConfigFromConfiguration_WithMockProvider(t *testing.T) {
+	tests := []struct {
+		name           string
+		setupMock      func(*mock.ConfigProvider)
+		expectedConfig *auditor.LockConfig
+	}{
+		{
+			name: "valid configuration is applied",
+			setupMock: func(cp *mock.ConfigProvider) {
+				cp.IsSetReturns(true)
+				cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+					if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
+						raw.MaxRetries = 20
+						raw.InitialBackoff = "50ms"
+						raw.MaxBackoff = "10s"
+						raw.BackoffMultiplier = 3.0
+						raw.JitterFactor = 0.5
+					}
+					return nil
+				}
+			},
+			expectedConfig: &auditor.LockConfig{
+				MaxRetries:        20,
+				InitialBackoff:    50 * time.Millisecond,
+				MaxBackoff:        10 * time.Second,
+				BackoffMultiplier: 3.0,
+				JitterFactor:      0.5,
+			},
+		},
+		{
+			name: "partial configuration with defaults",
+			setupMock: func(cp *mock.ConfigProvider) {
+				cp.IsSetReturns(true)
+				cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+					if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
+						raw.MaxRetries = 15
+						raw.JitterFactor = 0.7
+						// Leave others as zero values to test defaults
+					}
+					return nil
+				}
+			},
+			expectedConfig: &auditor.LockConfig{
+				MaxRetries:        15,
+				InitialBackoff:    10 * time.Millisecond, // default
+				MaxBackoff:        5 * time.Second,       // default
+				BackoffMultiplier: 2.0,                   // default
+				JitterFactor:      0.7,
+			},
+		},
+		{
+			name: "invalid values use defaults",
+			setupMock: func(cp *mock.ConfigProvider) {
+				cp.IsSetReturns(true)
+				cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+					if raw, ok := rawVal.(*auditor.LockConfigRaw); ok {
+						raw.MaxRetries = -5              // invalid
+						raw.InitialBackoff = "invalid"   // invalid
+						raw.MaxBackoff = "-10s"          // invalid
+						raw.BackoffMultiplier = 0.0      // invalid
+						raw.JitterFactor = 2.0           // invalid (>1.0)
+					}
+					return nil
+				}
+			},
+			expectedConfig: &auditor.LockConfig{
+				MaxRetries:        10,                    // default
+				InitialBackoff:    10 * time.Millisecond, // default
+				MaxBackoff:        5 * time.Second,       // default
+				BackoffMultiplier: 2.0,                   // default
+				JitterFactor:      0.3,                   // default
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cp := &mock.ConfigProvider{}
+			tt.setupMock(cp)
+
+			// Use LoadLockConfig directly with the mock
+			cfg := auditor.LoadLockConfig(cp)
+
+			require.NotNil(t, cfg)
+			assert.Equal(t, tt.expectedConfig.MaxRetries, cfg.MaxRetries)
+			assert.Equal(t, tt.expectedConfig.InitialBackoff, cfg.InitialBackoff)
+			assert.Equal(t, tt.expectedConfig.MaxBackoff, cfg.MaxBackoff)
+			assert.Equal(t, tt.expectedConfig.BackoffMultiplier, cfg.BackoffMultiplier)
+			assert.Equal(t, tt.expectedConfig.JitterFactor, cfg.JitterFactor)
+		})
+	}
+}
+
 // Made with Bob
