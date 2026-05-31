@@ -70,7 +70,7 @@ type StubbornSelector struct {
 
 func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	start := time.Now()
-	
+
 	// Reset resource tracking counters for this selection
 	m.tokensIteratedCount = 0
 	m.lockAttemptsCount = 0
@@ -96,7 +96,7 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 
 		if tokens, quantity, err := m.selectWithoutMetrics(timeoutCtx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
 			m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
-			
+
 			// Check if we hit the timeout
 			if errors.Is(err, context.DeadlineExceeded) {
 				if unlockErr := m.locker.UnlockAll(ctx); unlockErr != nil {
@@ -177,7 +177,7 @@ func NewSelector(logger logging.Logger, tokenDB TokenFetcher, lockDB TokenLocker
 
 func (s *Selector) Select(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	start := time.Now()
-	
+
 	// Reset resource tracking counters for this selection
 	s.tokensIteratedCount = 0
 	s.lockAttemptsCount = 0
@@ -187,7 +187,7 @@ func (s *Selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 	defer cancel()
 
 	ids, quantity, immediateRetries, err := s.selectInternal(timeoutCtx, owner, q, tokenType)
-	
+
 	// Check if we hit the timeout
 	if errors.Is(err, context.DeadlineExceeded) {
 		// Use original context for cleanup to ensure it completes
