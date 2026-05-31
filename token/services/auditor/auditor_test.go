@@ -1237,9 +1237,3 @@ func TestService_AcquireLocksWithRetry_EmptyEnrollmentIDs(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, mockDB.acquireCallCount)
 }
-
-// ---------------------------------------------------------------------------
-// Service.calculateBackoff tests
-// ---------------------------------------------------------------------------
-// NOTE: Backoff calculation tests have been moved to token/services/utils/retry_test.go
-// since the logic is now handled by the RetryRunner in the utils package.
