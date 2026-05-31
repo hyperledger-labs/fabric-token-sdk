@@ -8,6 +8,8 @@ package auditor
 
 import (
 	"context"
+	"math"
+	"math/rand/v2"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -70,6 +72,15 @@ type CheckService interface {
 	Check(ctx context.Context) ([]string, error)
 }
 
+const (
+	// Lock acquisition retry configuration constants
+	maxLockRetries        = 10                    // Maximum number of retry attempts
+	initialLockBackoff    = 10 * time.Millisecond // Initial backoff delay
+	maxLockBackoff        = 5 * time.Second       // Maximum backoff delay
+	lockBackoffMultiplier = 2.0                   // Exponential backoff multiplier
+	lockJitterFactor      = 0.3                   // Randomization factor (30%)
+)
+
 // Service is the interface for the auditor service
 type Service struct {
 	tmsID           token.TMSID
@@ -113,7 +124,8 @@ func (a *Service) Validate(ctx context.Context, request *token.Request) error {
 }
 
 // Audit extracts the list of inputs and outputs from the passed transaction.
-// In addition, Audit acquires locks on the enrollment IDs involved in the transaction.
+// In addition, the Audit locks the enrollment named ids with retry logic and exponential backoff
+// to prevent livelock conditions.
 // The caller MUST call Release() to unlock these enrollment IDs after processing.
 //
 // IMPORTANT: The defer Release() statement MUST be placed immediately after checking
@@ -141,16 +153,88 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 	var eids []string
 	eids = append(eids, record.Inputs.EnrollmentIDs()...)
 	eids = append(eids, record.Outputs.EnrollmentIDs()...)
-	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks", tx.ID())
-	if err := a.auditDB.AcquireLocks(ctx, string(request.Anchor), eids...); err != nil {
-		a.metrics.AuditLockConflicts.Add(1)
 
+	// Acquire locks with retry and exponential backoff to prevent livelock
+	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks with retry", tx.ID())
+	if err := a.acquireLocksWithRetry(ctx, string(request.Anchor), eids); err != nil {
+		a.metrics.AuditLockConflicts.Add(1)
 		return nil, nil, err
 	}
+
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks done", tx.ID())
 	a.metrics.AuditDuration.Observe(time.Since(start).Seconds())
 
 	return record.Inputs, record.Outputs, nil
+}
+
+// acquireLocksWithRetry attempts to acquire locks with exponential backoff and randomized jitter
+// to prevent livelock conditions when multiple auditors compete for the same enrollment IDs.
+// This implements the mitigation strategy for deadlock/livelock prevention.
+func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids []string) error {
+	var lastErr error
+
+	for attempt := 0; attempt < maxLockRetries; attempt++ {
+		// Attempt to acquire locks
+		err := a.auditDB.AcquireLocks(ctx, anchor, eids...)
+		if err == nil {
+			// Success
+			if attempt > 0 {
+				logger.DebugfContext(ctx, "Lock acquisition succeeded on attempt %d for anchor [%s]", attempt+1, anchor)
+			}
+			return nil
+		}
+
+		lastErr = err
+
+		// Check if context is cancelled - don't retry if so
+		if ctx.Err() != nil {
+			return errors.WithMessagef(ctx.Err(), "lock acquisition cancelled after %d attempts for anchor [%s]", attempt+1, anchor)
+		}
+
+		// Calculate backoff with exponential growth and randomized jitter
+		backoff := a.calculateBackoff(attempt)
+
+		logger.DebugfContext(ctx, "Lock acquisition failed (attempt %d/%d) for anchor [%s], retrying after %v: %v",
+			attempt+1, maxLockRetries, anchor, backoff, err)
+
+		// Wait with context cancellation support
+		timer := time.NewTimer(backoff)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return errors.WithMessagef(ctx.Err(), "lock acquisition cancelled during backoff after %d attempts for anchor [%s]", attempt+1, anchor)
+		case <-timer.C:
+			// Continue to next retry attempt
+		}
+	}
+
+	return errors.WithMessagef(lastErr, "failed to acquire locks after %d attempts for anchor [%s]", maxLockRetries, anchor)
+}
+
+// calculateBackoff computes the backoff duration with exponential growth and randomized jitter.
+// The jitter breaks livelock symmetry when multiple auditors retry simultaneously.
+func (a *Service) calculateBackoff(attempt int) time.Duration {
+	// Calculate base delay with exponential growth
+	delay := float64(initialLockBackoff) * math.Pow(lockBackoffMultiplier, float64(attempt))
+
+	// Cap at maximum delay
+	if delay > float64(maxLockBackoff) {
+		delay = float64(maxLockBackoff)
+	}
+
+	// Add randomized jitter to break symmetry
+	// Jitter range: delay * (1 - jitterFactor/2) to delay * (1 + jitterFactor/2)
+	jitterRange := delay * lockJitterFactor
+	jitter := (rand.Float64() - 0.5) * jitterRange
+
+	finalDelay := time.Duration(delay + jitter)
+
+	// Ensure non-negative delay
+	if finalDelay < 0 {
+		finalDelay = initialLockBackoff
+	}
+
+	return finalDelay
 }
 
 // Append adds the passed transaction to the auditor database.
