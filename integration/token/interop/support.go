@@ -9,6 +9,7 @@ package interop
 import (
 	"crypto"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -197,14 +198,7 @@ func CheckOwnerStore(network *integration.Infrastructure, tmsID token.TMSID, exp
 
 			gomega.Expect(errorMessages).To(gomega.HaveLen(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), id, errorMessages)
 			for _, expectedError := range expectedErrors {
-				found := false
-				for _, message := range errorMessages {
-					if message == expectedError {
-						found = true
-
-						break
-					}
-				}
+				found := slices.Contains(errorMessages, expectedError)
 				gomega.Expect(found).To(gomega.BeTrue(), "cannot find error message [%s] in [% v]", expectedError, errorMessages)
 			}
 		}

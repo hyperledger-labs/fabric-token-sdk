@@ -15,6 +15,9 @@ import (
 type Query interface {
 	// Set specifies a column to update
 	Set(common.FieldName, common.Param) setQuery
+
+	// SetIntervalFromNow sets a column to NOW() + $<ttl>::interval (Postgres).
+	SetIntervalFromNow(common.FieldName, common.Param) setQuery
 }
 
 // setQuery is the query state after a SET

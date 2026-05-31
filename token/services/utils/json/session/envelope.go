@@ -9,11 +9,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	session "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/session"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/session"
 )
 
 // CurrentVersion is the protocol version stamped on every outgoing envelope.
@@ -80,13 +81,8 @@ func IsCompatible(local, remote uint32) bool {
 	if !ok {
 		return false
 	}
-	for _, v := range compatible {
-		if v == remote {
-			return true
-		}
-	}
 
-	return false
+	return slices.Contains(compatible, remote)
 }
 
 // WrapEnvelope marshals v into an Envelope with the given message type.

@@ -42,6 +42,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	auditdblocker "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb/locker"
 	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/memory"
@@ -108,7 +109,7 @@ func (p *SDK) Install() error {
 		// config service
 		p.Container().Provide(
 			digutils.Identity[*fscconfig.Provider](),
-			dig.As(new(ftsconfig.Provider), new(sherdlock.ConfigProvider), new(simple.ConfigProvider)),
+			dig.As(new(ftsconfig.Provider), new(sherdlock.ConfigProvider), new(simple.ConfigProvider), new(auditdblocker.ReplicaIDProvider)),
 		),
 		p.Container().Provide(ftsconfig.NewService),
 		p.Container().Provide(tms.NewConfigServiceWrapper),

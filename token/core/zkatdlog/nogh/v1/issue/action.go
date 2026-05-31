@@ -337,7 +337,7 @@ func (i *Action) Deserialize(raw []byte) error {
 // GetCommitments returns the Pedersen commitments of (type, value) for each output.
 func (i *Action) GetCommitments() ([]*math.G1, error) {
 	com := make([]*math.G1, len(i.Outputs))
-	for j := 0; j < len(com); j++ {
+	for j := range com {
 		if i.Outputs[j] == nil {
 			return nil, ErrNilOutput
 		}

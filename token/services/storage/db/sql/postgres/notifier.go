@@ -191,9 +191,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 	db.startOnce.Do(func() {
 		justStarted = true
 		logger.Debugf("First subscription for notifier of [%s]. Notifier starts listening...", db.table)
-		db.listenerWg.Add(1)
-		go func() {
-			defer db.listenerWg.Done()
+		db.listenerWg.Go(func() {
 			if err := db.listener.Listen(db.ctx); err != nil {
 				// Send error to both the error channel and log it
 				select {
@@ -203,7 +201,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 				}
 				logger.Errorf("notifier listen for [%s] failed: %s", db.table, err.Error())
 			}
-		}()
+		})
 	})
 
 	if justStarted {

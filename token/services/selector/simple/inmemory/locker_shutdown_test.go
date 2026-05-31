@@ -137,11 +137,9 @@ func TestLocker_ConcurrentStopAndLock(t *testing.T) {
 		}(i)
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		d.Stop()
-	}()
+	})
 
 	done := make(chan struct{})
 	go func() {

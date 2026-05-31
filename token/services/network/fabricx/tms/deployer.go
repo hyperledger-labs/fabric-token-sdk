@@ -157,7 +157,7 @@ func (s *deployerService) createPublicParametersTx(ppRaw []byte, namespaceID cdr
 
 // GetTMSDeployerService returns the DeployerService instance from the service provider.
 func GetTMSDeployerService(sp services.Provider) (DeployerService, error) {
-	s, err := sp.GetService(reflect.TypeOf((*DeployerService)(nil)))
+	s, err := sp.GetService(reflect.TypeFor[*DeployerService]())
 	if err != nil {
 		return nil, err
 	}

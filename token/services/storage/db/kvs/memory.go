@@ -31,11 +31,11 @@ type kvsAdapter struct {
 	kvs KVS
 }
 
-func (k *kvsAdapter) Put(id string, state interface{}) error {
+func (k *kvsAdapter) Put(id string, state any) error {
 	return k.kvs.Put(context.Background(), id, state)
 }
 
-func (k *kvsAdapter) Get(id string, state interface{}) error {
+func (k *kvsAdapter) Get(id string, state any) error {
 	return k.kvs.Get(context.Background(), id, state)
 }
 

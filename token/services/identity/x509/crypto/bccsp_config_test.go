@@ -160,10 +160,10 @@ func TestMarshalConfig(t *testing.T) {
 func TestToBCCSPOpts(t *testing.T) {
 	// Test creating BCCSP options structure from a specified string map
 	t.Run("Valid Options", func(t *testing.T) {
-		input := map[string]interface{}{
-			"BCCSP": map[string]interface{}{
+		input := map[string]any{
+			"BCCSP": map[string]any{
 				"Default": "SW",
-				"SW": map[string]interface{}{
+				"SW": map[string]any{
 					"Hash":     "SHA2",
 					"Security": 256,
 				},
@@ -178,7 +178,7 @@ func TestToBCCSPOpts(t *testing.T) {
 	// Test that reating BCCSP options structure from an empty string map
 	// results in a nil options object
 	t.Run("Empty Options", func(t *testing.T) {
-		opts, err := ToBCCSPOpts(map[string]interface{}{})
+		opts, err := ToBCCSPOpts(map[string]any{})
 		require.NoError(t, err)
 		assert.Nil(t, opts)
 	})
@@ -344,7 +344,7 @@ func TestGetDefaultBCCSP_WithNilKeyStore(t *testing.T) {
 func TestToBCCSPOpts_EdgeCases(t *testing.T) {
 	// Test that creating bccsp options from an empty map works but returns nil
 	t.Run("Empty Map", func(t *testing.T) {
-		opts, err := ToBCCSPOpts(map[string]interface{}{})
+		opts, err := ToBCCSPOpts(map[string]any{})
 		require.NoError(t, err)
 		assert.Nil(t, opts)
 	})
@@ -352,10 +352,10 @@ func TestToBCCSPOpts_EdgeCases(t *testing.T) {
 	// Test that creating bccsp options using a map creates the BCCSP options object
 	// with the expected fields
 	t.Run("With BCCSP Config", func(t *testing.T) {
-		input := map[string]interface{}{
-			"BCCSP": map[string]interface{}{
+		input := map[string]any{
+			"BCCSP": map[string]any{
 				"Default": "SW",
-				"SW": map[string]interface{}{
+				"SW": map[string]any{
 					"Hash":     "SHA2",
 					"Security": 256,
 				},

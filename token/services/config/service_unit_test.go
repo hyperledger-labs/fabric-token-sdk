@@ -45,9 +45,9 @@ func TestLookupNamespace(t *testing.T) {
 	tmsID1 := driver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"}
 	tmsID2 := driver.TMSID{Network: "n2", Channel: "c2", Namespace: "ns2"}
 
-	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if key == TMSPath {
-			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
+			*rawVal.(*map[any]any) = map[any]any{
 				"id1": nil,
 				"id2": nil,
 			}
@@ -80,9 +80,9 @@ func TestLookupNamespace(t *testing.T) {
 
 	// Test Case: Multiple Hits
 	tmsID3 := driver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns3"}
-	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if key == TMSPath {
-			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
+			*rawVal.(*map[any]any) = map[any]any{
 				"id1": nil,
 				"id3": nil,
 			}
@@ -116,9 +116,9 @@ func TestConfigurationFor(t *testing.T) {
 	s := config.NewService(cp)
 
 	tmsID1 := driver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"}
-	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if key == TMSPath {
-			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
+			*rawVal.(*map[any]any) = map[any]any{
 				"id1": nil,
 			}
 
@@ -172,9 +172,9 @@ func TestAddConfiguration(t *testing.T) {
 
 	// Test Case: Already Exists
 	// Initial state has "new" (id1 in previous tests, but let's use "new_id" here)
-	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if key == TMSPath {
-			*rawVal.(*map[interface{}]interface{}) = map[interface{}]interface{}{
+			*rawVal.(*map[any]any) = map[any]any{
 				"new_id": nil,
 			}
 

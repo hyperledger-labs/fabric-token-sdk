@@ -30,7 +30,7 @@ type ReclaimAllView struct {
 	*ReclaimAll
 }
 
-func (r *ReclaimAllView) Call(context view.Context) (interface{}, error) {
+func (r *ReclaimAllView) Call(context view.Context) (any, error) {
 	// The sender will select tokens owned by this wallet
 	senderWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", r.Wallet)
@@ -90,7 +90,7 @@ type ReclaimByHashView struct {
 	*ReclaimByHash
 }
 
-func (r *ReclaimByHashView) Call(context view.Context) (interface{}, error) {
+func (r *ReclaimByHashView) Call(context view.Context) (any, error) {
 	// The sender will select tokens owned by this wallet
 	senderWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", r.Wallet)
@@ -150,7 +150,7 @@ type CheckExistenceReceivedExpiredByHashView struct {
 	*CheckExistenceReceivedExpiredByHash
 }
 
-func (r *CheckExistenceReceivedExpiredByHashView) Call(context view.Context) (interface{}, error) {
+func (r *CheckExistenceReceivedExpiredByHashView) Call(context view.Context) (any, error) {
 	// The sender will select tokens owned by this wallet
 	senderWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", r.Wallet)

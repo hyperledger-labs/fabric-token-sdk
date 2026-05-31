@@ -32,7 +32,7 @@ func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *AcceptView {
 }
 
 // Call accepts the tokens created by the transaction this view has been created with.
-func (s *AcceptView) Call(context view.Context) (interface{}, error) {
+func (s *AcceptView) Call(context view.Context) (any, error) {
 	// validate inputs
 	if s.tx == nil {
 		return nil, errors.WithMessagef(ErrInvalidInput, "transaction is nil")
@@ -99,6 +99,8 @@ func (s *AcceptView) ack(context view.Context) error {
 	return nil
 }
 
+// cacheRequest stores the token request in the tokens database for faster future lookups.
+// Caching failures are logged as warnings but don't cause the operation to fail.
 func (s *AcceptView) cacheRequest(context view.Context) error {
 	// cache the token request into the tokens db
 	t, err := tokens.GetService(context, s.tx.TMSID())

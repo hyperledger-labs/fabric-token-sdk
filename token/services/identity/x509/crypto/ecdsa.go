@@ -129,13 +129,13 @@ func ToLowS(k *ecdsa.PublicKey, s *big.Int) (*big.Int, bool, error) {
 }
 
 // PemDecodeKey takes bytes and returns a Go key
-func PemDecodeKey(keyBytes []byte) (interface{}, error) {
+func PemDecodeKey(keyBytes []byte) (any, error) {
 	block, _ := pem.Decode(keyBytes)
 	if block == nil {
 		return nil, errors.New("bytes are not PEM encoded")
 	}
 
-	var key interface{}
+	var key any
 	var err error
 	switch block.Type {
 	case "PRIVATE KEY":

@@ -39,3 +39,15 @@ func (o onConflictKeep) WriteString(sb common.Builder) {
 		WriteString("=excluded.").
 		WriteSerializables(o.field)
 }
+
+type excludedField struct{ field common.FieldName }
+
+// Excluded references the proposed insertion row in an ON CONFLICT DO UPDATE clause.
+func Excluded(field common.FieldName) common.Serializable {
+	return excludedField{field: field}
+}
+
+func (e excludedField) WriteString(sb common.Builder) {
+	sb.WriteString("excluded.").
+		WriteSerializables(e.field)
+}

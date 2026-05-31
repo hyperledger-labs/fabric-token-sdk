@@ -35,7 +35,7 @@ type ListIssuedTokensView struct {
 	*ListIssuedTokens
 }
 
-func (p *ListIssuedTokensView) Call(context view.Context) (interface{}, error) {
+func (p *ListIssuedTokensView) Call(context view.Context) (any, error) {
 	// Tokens issued by identities in this wallet will be listed
 	wallet := ttx.GetIssuerWallet(context, p.Wallet, ServiceOpts(p.TMSID)...)
 	if wallet == nil {
@@ -67,7 +67,7 @@ type ListAuditedTransactionsView struct {
 	*ListAuditedTransactions
 }
 
-func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, error) {
+func (p *ListAuditedTransactionsView) Call(context view.Context) (any, error) {
 	// Tokens issued by identities in this wallet will be listed
 	w := ttx.MyAuditorWallet(context)
 	if w == nil {
@@ -116,7 +116,7 @@ type ListAcceptedTransactionsView struct {
 	*ListAcceptedTransactions
 }
 
-func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, error) {
+func (p *ListAcceptedTransactionsView) Call(context view.Context) (any, error) {
 	// Get query executor
 	tms, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
 	assert.NoError(err, "failed getting management service")
@@ -159,7 +159,7 @@ type TransactionInfoView struct {
 	*TransactionInfo
 }
 
-func (t *TransactionInfoView) Call(context view.Context) (interface{}, error) {
+func (t *TransactionInfoView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, ServiceOpts(t.TMSID)...)
 	assert.NoError(err, "failed getting management service")
 	owner := ttx.NewOwner(context, tms)

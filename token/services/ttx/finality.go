@@ -50,7 +50,7 @@ func NewFinalityWithOpts(opts ...TxOption) *finalityView {
 // Call executes the view.
 // The view does the following: It waits for the finality of the passed transaction.
 // If the transaction is final, the vault is updated.
-func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
+func (f *finalityView) Call(ctx view.Context) (any, error) {
 	// Compile options
 	options, err := CompileOpts(f.opts...)
 	if err != nil {
@@ -73,7 +73,7 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 	return f.call(ctx, txID, tmsID, timeout)
 }
 
-func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (interface{}, error) {
+func (f *finalityView) call(ctx view.Context, txID string, tmsID token.TMSID, timeout time.Duration) (any, error) {
 	// Validate inputs
 	if txID == "" {
 		return nil, errors.Wrapf(ErrInvalidInput, "transaction ID cannot be empty")

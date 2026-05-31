@@ -603,7 +603,7 @@ func createInputs(t *testing.T, pp *v1.PublicParams, id driver.Identity) ([]*tok
 	require.NoError(t, err)
 	ttype := c.HashToZr([]byte("ABC"))
 
-	for i := 0; i < len(inputs); i++ {
+	for i := range inputs {
 		infos[i] = &token.Metadata{}
 		infos[i].BlindingFactor = c.NewRandomZr(rand)
 		infos[i].Value = values[i]

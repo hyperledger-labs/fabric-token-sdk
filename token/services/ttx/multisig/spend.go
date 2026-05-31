@@ -58,7 +58,7 @@ func NewReceiveSpendRequestView() *ReceiveSpendRequestView {
 	return &ReceiveSpendRequestView{}
 }
 
-func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error) {
+func (f *ReceiveSpendRequestView) Call(context view.Context) (any, error) {
 	tx := &SpendRequest{}
 	s := session.NewTypedSessionFromContext(context)
 	if err := s.ReceiveTypedWithTimeout(ttx.TypeSpendRequest, tx, time.Minute*4); err != nil {
@@ -116,7 +116,7 @@ func NewRequestSpendView(unspentToken *token.UnspentToken, opts ...token2.Servic
 	}
 }
 
-func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
+func (c *RequestSpendView) Call(context view.Context) (any, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
@@ -247,7 +247,7 @@ func ReceiveSpendTx(context view.Context, request *SpendRequest) (*Transaction, 
 // Call implements view.View. It sends the SpendResponse ACK, receives the
 // assembled transaction, and returns it without endorsing. Endorsement is
 // the caller's responsibility once any business-logic checks pass.
-func (a *ReceiveSpendTxView) Call(context view.Context) (interface{}, error) {
+func (a *ReceiveSpendTxView) Call(context view.Context) (any, error) {
 	s := session.NewTypedSessionFromContext(context)
 	if err := s.SendTyped(context.Context(), &SpendResponse{}, ttx.TypeSpendResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to send response")

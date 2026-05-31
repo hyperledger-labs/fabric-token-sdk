@@ -77,7 +77,7 @@ type fakeViewManager struct {
 	failErr error // if set, next InitiateView returns this error
 }
 
-func (f *fakeViewManager) InitiateView(v view.View) (interface{}, error) {
+func (f *fakeViewManager) InitiateView(v view.View) (any, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -404,7 +404,7 @@ type countingViewManager struct {
 	counter *atomic.Int32
 }
 
-func (c *countingViewManager) InitiateView(v view.View) (interface{}, error) {
+func (c *countingViewManager) InitiateView(v view.View) (any, error) {
 	result, err := c.inner.InitiateView(v)
 	if err == nil {
 		c.counter.Add(1)
@@ -423,7 +423,7 @@ func (e *fakeTokenEvent) Topic() string {
 	return tokens.AddToken
 }
 
-func (e *fakeTokenEvent) Message() interface{} {
+func (e *fakeTokenEvent) Message() any {
 	return tokens.TokenMessage{
 		TxID:  e.txID,
 		Index: e.index,

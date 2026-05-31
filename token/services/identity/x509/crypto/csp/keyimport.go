@@ -18,7 +18,7 @@ import (
 
 type ecdsaPKIXPublicKeyImportOptsKeyImporter struct{}
 
-func (*ecdsaPKIXPublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
+func (*ecdsaPKIXPublicKeyImportOptsKeyImporter) KeyImport(raw any, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
 	der, ok := raw.([]byte)
 	if !ok {
 		return nil, errors.New("invalid raw material, expected byte array")
@@ -43,7 +43,7 @@ func (*ecdsaPKIXPublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts 
 
 type ecdsaPrivateKeyImportOptsKeyImporter struct{}
 
-func (*ecdsaPrivateKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
+func (*ecdsaPrivateKeyImportOptsKeyImporter) KeyImport(raw any, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
 	der, ok := raw.([]byte)
 	if !ok {
 		return nil, errors.New("invalid raw material, expected byte array")
@@ -68,7 +68,7 @@ func (*ecdsaPrivateKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bcc
 
 type ecdsaGoPublicKeyImportOptsKeyImporter struct{}
 
-func (*ecdsaGoPublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
+func (*ecdsaGoPublicKeyImportOptsKeyImporter) KeyImport(raw any, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
 	lowLevelKey, ok := raw.(*ecdsa.PublicKey)
 	if !ok {
 		return nil, errors.New("invalid raw material, expected *ecdsa.PublicKey")
@@ -81,7 +81,7 @@ type x509PublicKeyImportOptsKeyImporter struct {
 	csp *sw.CSP
 }
 
-func (ki *x509PublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
+func (ki *x509PublicKeyImportOptsKeyImporter) KeyImport(raw any, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
 	x509Cert, ok := raw.(*x509.Certificate)
 	if !ok {
 		return nil, errors.New("invalid raw material, expected *x509.Certificate")
@@ -91,7 +91,7 @@ func (ki *x509PublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bc
 
 	switch pk := pk.(type) {
 	case *ecdsa.PublicKey:
-		return ki.csp.KeyImporters[reflect.TypeOf(&bccsp.ECDSAGoPublicKeyImportOpts{})].KeyImport(
+		return ki.csp.KeyImporters[reflect.TypeFor[*bccsp.ECDSAGoPublicKeyImportOpts]()].KeyImport(
 			pk,
 			&bccsp.ECDSAGoPublicKeyImportOpts{Temporary: opts.Ephemeral()})
 	default:

@@ -74,7 +74,7 @@ func TestConfiguration_UnmarshalKey_Error(t *testing.T) {
 	mockCM := &mock.Configuration{}
 	config := NewConfiguration(mockCM)
 
-	var target interface{}
+	var target any
 	expectedErr := errors.New("unmarshal error")
 	mockCM.UnmarshalKeyReturns(expectedErr)
 

@@ -34,7 +34,7 @@ type StreamExternalWalletMsg struct {
 }
 
 // NewStreamExternalWalletMsg creates a new root message for the given type and value
-func NewStreamExternalWalletMsg(Type StreamExternalWalletMsgType, v interface{}) (*StreamExternalWalletMsg, error) {
+func NewStreamExternalWalletMsg(Type StreamExternalWalletMsgType, v any) (*StreamExternalWalletMsg, error) {
 	var raw []byte
 	if v != nil {
 		var err error
