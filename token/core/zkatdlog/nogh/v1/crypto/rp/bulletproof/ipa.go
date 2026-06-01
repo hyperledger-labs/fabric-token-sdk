@@ -81,10 +81,10 @@ func (ipa *IPA) Validate(curve mathlib.CurveID) error {
 	if ipa.R == nil {
 		return errors.New("invalid IPA proof: nil R")
 	}
-	if err := math.CheckZrElements(ipa.L, curve, uint64(len(ipa.L))); err != nil {
+	if err := math.CheckElements(ipa.L, curve, uint64(len(ipa.L))); err != nil {
 		return errors.Wrapf(err, "invalid IPA proof: invalid L elements")
 	}
-	if err := math.CheckZrElements(ipa.R, curve, uint64(len(ipa.R))); err != nil {
+	if err := math.CheckElements(ipa.R, curve, uint64(len(ipa.R))); err != nil {
 		return errors.Wrapf(err, "invalid IPA proof: invalid R elements")
 	}
 
