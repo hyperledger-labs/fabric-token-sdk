@@ -284,8 +284,8 @@ func TestLoadLockConfig_BoundaryValues(t *testing.T) {
 			}
 
 			cfg := auditor.LoadLockConfig(cp)
-
-			assert.InEpsilon(t, tt.jitterFactor, cfg.JitterFactor, 0.0001)
+	
+			assert.Equal(t, tt.jitterFactor, cfg.JitterFactor)
 		})
 	}
 }
