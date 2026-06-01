@@ -123,20 +123,20 @@ func (s *loader) loadTMS(tms TMS) (token.SelectorManager, error) {
 		return nil, errors.Errorf("failed to create token fetcher: %v", err)
 	}
 
-	mgr := NewManager(
-		fetcher,
-		tokenLockStoreService,
-		pp.Precision(),
-		s.retryInterval,
-		s.numRetries,
-		s.leaseExpiry,
-		s.leaseCleanupTickPeriod,
-		s.maxTokensPerSelection,
-		s.maxLockAttempts,
-		s.maxRetryCycles,
-		s.selectionTimeout,
-		s.metrics,
-	)
+	mgr := NewManager(&Config{
+		Fetcher:                fetcher,
+		Locker:                 tokenLockStoreService,
+		Precision:              pp.Precision(),
+		Backoff:                s.retryInterval,
+		MaxRetriesAfterBackOff: s.numRetries,
+		LeaseExpiry:            s.leaseExpiry,
+		LeaseCleanupTickPeriod: s.leaseCleanupTickPeriod,
+		MaxTokensPerSelection:  s.maxTokensPerSelection,
+		MaxLockAttempts:        s.maxLockAttempts,
+		MaxRetryCycles:         s.maxRetryCycles,
+		SelectionTimeout:       s.selectionTimeout,
+		Metrics:                s.metrics,
+	})
 	if s.onCreate != nil {
 		s.onCreate(mgr)
 	}

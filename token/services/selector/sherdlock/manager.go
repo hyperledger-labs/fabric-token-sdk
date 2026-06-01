@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 )
 
+<<<<<<< HEAD
 const (
 	// stopTimeout is the maximum time to wait for the cleaner goroutine to stop during shutdown.
 	// This prevents indefinite blocking if the goroutine fails to exit cleanly.
@@ -24,6 +25,23 @@ const (
 )
 
 var ErrTimeout = errors.New("timeout occurred")
+=======
+// Config holds all configuration parameters for the Manager
+type Config struct {
+	Fetcher                TokenFetcher
+	Locker                 Locker
+	Precision              uint64
+	Backoff                time.Duration
+	MaxRetriesAfterBackOff int
+	LeaseExpiry            time.Duration
+	LeaseCleanupTickPeriod time.Duration
+	MaxTokensPerSelection  int
+	MaxLockAttempts        int
+	MaxRetryCycles         int
+	SelectionTimeout       time.Duration
+	Metrics                *Metrics
+}
+>>>>>>> a32362fd (use config struct)
 
 type Manager struct {
 	selectorCache          lazy2.Provider[transaction.ID, TokenSelectorUnlocker]
@@ -36,33 +54,20 @@ type Manager struct {
 	stopOnce               sync.Once
 }
 
-func NewManager(
-	fetcher TokenFetcher,
-	locker Locker,
-	precision uint64,
-	backoff time.Duration,
-	maxRetriesAfterBackOff int,
-	leaseExpiry time.Duration,
-	leaseCleanupTickPeriod time.Duration,
-	maxTokensPerSelection int,
-	maxLockAttempts int,
-	maxRetryCycles int,
-	selectionTimeout time.Duration,
-	m *Metrics,
-) *Manager {
+func NewManager(cfg *Config) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 	mgr := &Manager{
-		locker:                 locker,
-		leaseExpiry:            leaseExpiry,
-		leaseCleanupTickPeriod: leaseCleanupTickPeriod,
-		metrics:                m,
+		locker:                 cfg.Locker,
+		leaseExpiry:            cfg.LeaseExpiry,
+		leaseCleanupTickPeriod: cfg.LeaseCleanupTickPeriod,
+		metrics:                cfg.Metrics,
 		cancel:                 cancel,
 		cleanerDone:            make(chan struct{}),
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (TokenSelectorUnlocker, error) {
-			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, maxTokensPerSelection, maxLockAttempts, maxRetryCycles, selectionTimeout, m), nil
+			return NewSherdSelector(txID, cfg.Fetcher, cfg.Locker, cfg.Precision, cfg.Backoff, cfg.MaxRetriesAfterBackOff, cfg.MaxTokensPerSelection, cfg.MaxLockAttempts, cfg.MaxRetryCycles, cfg.SelectionTimeout, cfg.Metrics), nil
 		}),
 	}
-	if leaseCleanupTickPeriod > 0 && leaseExpiry > 0 {
+	if cfg.LeaseCleanupTickPeriod > 0 && cfg.LeaseExpiry > 0 {
 		go mgr.cleaner(ctx)
 	} else {
 		close(mgr.cleanerDone)
