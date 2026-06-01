@@ -107,7 +107,20 @@ func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (tes
 
 	m := NewMetrics(&disabled.Provider{})
 	fetcher := newMixedFetcher(tokenDB.(dbtest.TestTokenDB), m, 0, 0, 0)
-	manager := NewManager(fetcher, lockDB, testutils.TokenQuantityPrecision, backoff, maxRetries, 0, 0, 10000, 50000, 10, 30*time.Second, m)
+	manager := NewManager(&Config{
+		Fetcher:                fetcher,
+		Locker:                 lockDB,
+		Precision:              testutils.TokenQuantityPrecision,
+		Backoff:                backoff,
+		MaxRetriesAfterBackOff: maxRetries,
+		LeaseExpiry:            0,
+		LeaseCleanupTickPeriod: 0,
+		MaxTokensPerSelection:  10000,
+		MaxLockAttempts:        50000,
+		MaxRetryCycles:         10,
+		SelectionTimeout:       30 * time.Second,
+		Metrics:                m,
+	})
 
 	return testutils.NewEnhancedManager(manager, tokenDB.(dbtest.TestTokenDB)), nil
 }
@@ -132,10 +145,20 @@ func TestNewManager(t *testing.T) {
 		mockFetcher := &mockTokenFetcher{}
 		mockLocker := &mockLocker{}
 
-		m := NewManager(
-			mockFetcher, mockLocker, 100, time.Second, 5, 10*time.Minute, time.Minute, 10000, 50000, 10, 30*time.Second,
-			NewMetrics(&disabled.Provider{}),
-		)
+		m := NewManager(&Config{
+			Fetcher:                mockFetcher,
+			Locker:                 mockLocker,
+			Precision:              100,
+			Backoff:                time.Second,
+			MaxRetriesAfterBackOff: 5,
+			LeaseExpiry:            10 * time.Minute,
+			LeaseCleanupTickPeriod: time.Minute,
+			MaxTokensPerSelection:  10000,
+			MaxLockAttempts:        50000,
+			MaxRetryCycles:         10,
+			SelectionTimeout:       30 * time.Second,
+			Metrics:                NewMetrics(&disabled.Provider{}),
+		})
 
 		assert.NotNil(t, m)
 		assert.Equal(t, mockLocker, m.locker)
@@ -147,10 +170,20 @@ func TestNewManager(t *testing.T) {
 		mockFetcher := &mockTokenFetcher{}
 		mockLocker := &mockLocker{}
 
-		m := NewManager(
-			mockFetcher, mockLocker, 100, time.Second, 5, 0, // zero lease expiry
-			time.Minute, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-		)
+		m := NewManager(&Config{
+			Fetcher:                mockFetcher,
+			Locker:                 mockLocker,
+			Precision:              100,
+			Backoff:                time.Second,
+			MaxRetriesAfterBackOff: 5,
+			LeaseExpiry:            0,
+			LeaseCleanupTickPeriod: time.Minute,
+			MaxTokensPerSelection:  10000,
+			MaxLockAttempts:        50000,
+			MaxRetryCycles:         10,
+			SelectionTimeout:       30 * time.Second,
+			Metrics:                NewMetrics(&disabled.Provider{}),
+		})
 
 		assert.NotNil(t, m)
 		// Cleaner should not be started
@@ -160,10 +193,20 @@ func TestNewManager(t *testing.T) {
 		mockFetcher := &mockTokenFetcher{}
 		mockLocker := &mockLocker{}
 
-		m := NewManager(
-			mockFetcher, mockLocker, 100, time.Second, 5, 10*time.Minute, 0, 10000, 50000, 10, 30*time.Second, // zero cleanup tick period
-			NewMetrics(&disabled.Provider{}),
-		)
+		m := NewManager(&Config{
+			Fetcher:                mockFetcher,
+			Locker:                 mockLocker,
+			Precision:              100,
+			Backoff:                time.Second,
+			MaxRetriesAfterBackOff: 5,
+			LeaseExpiry:            10 * time.Minute,
+			LeaseCleanupTickPeriod: 0,
+			MaxTokensPerSelection:  10000,
+			MaxLockAttempts:        50000,
+			MaxRetryCycles:         10,
+			SelectionTimeout:       30 * time.Second,
+			Metrics:                NewMetrics(&disabled.Provider{}),
+		})
 
 		assert.NotNil(t, m)
 		// Cleaner should not be started
@@ -174,9 +217,20 @@ func TestManager_NewSelector(t *testing.T) {
 	mockFetcher := &mockTokenFetcher{}
 	mockLocker := &mockLocker{}
 
-	m := NewManager(
-		mockFetcher, mockLocker, 100, time.Second, 5, 0, 0, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-	)
+	m := NewManager(&Config{
+		Fetcher:                mockFetcher,
+		Locker:                 mockLocker,
+		Precision:              100,
+		Backoff:                time.Second,
+		MaxRetriesAfterBackOff: 5,
+		LeaseExpiry:            0,
+		LeaseCleanupTickPeriod: 0,
+		MaxTokensPerSelection:  10000,
+		MaxLockAttempts:        50000,
+		MaxRetryCycles:         10,
+		SelectionTimeout:       30 * time.Second,
+		Metrics:                NewMetrics(&disabled.Provider{}),
+	})
 
 	t.Run("creates new selector for transaction ID", func(t *testing.T) {
 		txID := transaction.ID("tx1")
@@ -215,9 +269,20 @@ func TestManager_Unlock(t *testing.T) {
 	mockFetcher := &mockTokenFetcher{}
 	mockLocker := &mockLocker{}
 
-	m := NewManager(
-		mockFetcher, mockLocker, 100, time.Second, 5, 0, 0, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-	)
+	m := NewManager(&Config{
+		Fetcher:                mockFetcher,
+		Locker:                 mockLocker,
+		Precision:              100,
+		Backoff:                time.Second,
+		MaxRetriesAfterBackOff: 5,
+		LeaseExpiry:            0,
+		LeaseCleanupTickPeriod: 0,
+		MaxTokensPerSelection:  10000,
+		MaxLockAttempts:        50000,
+		MaxRetryCycles:         10,
+		SelectionTimeout:       30 * time.Second,
+		Metrics:                NewMetrics(&disabled.Provider{}),
+	})
 
 	t.Run("calls locker UnlockByTxID", func(t *testing.T) {
 		txID := transaction.ID("tx1")
@@ -256,9 +321,20 @@ func TestManager_Close(t *testing.T) {
 	mockFetcher := &mockTokenFetcher{}
 	mockLocker := &mockLocker{}
 
-	m := NewManager(
-		mockFetcher, mockLocker, 100, time.Second, 5, 0, 0, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-	)
+	m := NewManager(&Config{
+		Fetcher:                mockFetcher,
+		Locker:                 mockLocker,
+		Precision:              100,
+		Backoff:                time.Second,
+		MaxRetriesAfterBackOff: 5,
+		LeaseExpiry:            0,
+		LeaseCleanupTickPeriod: 0,
+		MaxTokensPerSelection:  10000,
+		MaxLockAttempts:        50000,
+		MaxRetryCycles:         10,
+		SelectionTimeout:       30 * time.Second,
+		Metrics:                NewMetrics(&disabled.Provider{}),
+	})
 
 	t.Run("closes existing selector", func(t *testing.T) {
 		txID := transaction.ID("tx1")
@@ -311,10 +387,20 @@ func TestManager_Cleaner(t *testing.T) {
 		}
 
 		// Short tick period for testing
-		m := NewManager(
-			mockFetcher, mockLocker, 100, time.Second, 5, 10*time.Minute, 50*time.Millisecond, 10000, 50000, 10, 30*time.Second, // Short period for testing
-			NewMetrics(&disabled.Provider{}),
-		)
+		m := NewManager(&Config{
+			Fetcher:                mockFetcher,
+			Locker:                 mockLocker,
+			Precision:              100,
+			Backoff:                time.Second,
+			MaxRetriesAfterBackOff: 5,
+			LeaseExpiry:            10 * time.Minute,
+			LeaseCleanupTickPeriod: 50 * time.Millisecond,
+			MaxTokensPerSelection:  10000,
+			MaxLockAttempts:        50000,
+			MaxRetryCycles:         10,
+			SelectionTimeout:       30 * time.Second,
+			Metrics:                NewMetrics(&disabled.Provider{}),
+		})
 
 		// Wait for at least 2 cleanup calls
 		select {
@@ -344,9 +430,20 @@ func TestManager_Cleaner(t *testing.T) {
 			return errors.New("cleanup error")
 		}
 
-		m := NewManager(
-			mockFetcher, mockLocker, 100, time.Second, 5, 10*time.Minute, 50*time.Millisecond, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-		)
+		m := NewManager(&Config{
+			Fetcher:                mockFetcher,
+			Locker:                 mockLocker,
+			Precision:              100,
+			Backoff:                time.Second,
+			MaxRetriesAfterBackOff: 5,
+			LeaseExpiry:            10 * time.Minute,
+			LeaseCleanupTickPeriod: 50 * time.Millisecond,
+			MaxTokensPerSelection:  10000,
+			MaxLockAttempts:        50000,
+			MaxRetryCycles:         10,
+			SelectionTimeout:       30 * time.Second,
+			Metrics:                NewMetrics(&disabled.Provider{}),
+		})
 
 		// Wait for cleanup call (should not panic despite error)
 		select {
@@ -365,9 +462,20 @@ func TestManager_NewSelector_Concurrent(t *testing.T) {
 	mockFetcher := &mockTokenFetcher{}
 	mockLocker := &mockLocker{}
 
-	m := NewManager(
-		mockFetcher, mockLocker, 100, time.Second, 5, 0, 0, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-	)
+	m := NewManager(&Config{
+		Fetcher:                mockFetcher,
+		Locker:                 mockLocker,
+		Precision:              100,
+		Backoff:                time.Second,
+		MaxRetriesAfterBackOff: 5,
+		LeaseExpiry:            0,
+		LeaseCleanupTickPeriod: 0,
+		MaxTokensPerSelection:  10000,
+		MaxLockAttempts:        50000,
+		MaxRetryCycles:         10,
+		SelectionTimeout:       30 * time.Second,
+		Metrics:                NewMetrics(&disabled.Provider{}),
+	})
 
 	t.Run("handles concurrent selector creation", func(t *testing.T) {
 		txID := transaction.ID("concurrent-tx")
@@ -405,9 +513,20 @@ func TestManager_Close_Concurrent(t *testing.T) {
 	mockFetcher := &mockTokenFetcher{}
 	mockLocker := &mockLocker{}
 
-	m := NewManager(
-		mockFetcher, mockLocker, 100, time.Second, 5, 0, 0, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-	)
+	m := NewManager(&Config{
+		Fetcher:                mockFetcher,
+		Locker:                 mockLocker,
+		Precision:              100,
+		Backoff:                time.Second,
+		MaxRetriesAfterBackOff: 5,
+		LeaseExpiry:            0,
+		LeaseCleanupTickPeriod: 0,
+		MaxTokensPerSelection:  10000,
+		MaxLockAttempts:        50000,
+		MaxRetryCycles:         10,
+		SelectionTimeout:       30 * time.Second,
+		Metrics:                NewMetrics(&disabled.Provider{}),
+	})
 
 	t.Run("handles concurrent close attempts", func(t *testing.T) {
 		txID := transaction.ID("close-tx")
@@ -447,9 +566,20 @@ func TestManager_Unlock_EdgeCases(t *testing.T) {
 	mockFetcher := &mockTokenFetcher{}
 	mockLocker := &mockLocker{}
 
-	m := NewManager(
-		mockFetcher, mockLocker, 100, time.Second, 5, 0, 0, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-	)
+	m := NewManager(&Config{
+		Fetcher:                mockFetcher,
+		Locker:                 mockLocker,
+		Precision:              100,
+		Backoff:                time.Second,
+		MaxRetriesAfterBackOff: 5,
+		LeaseExpiry:            0,
+		LeaseCleanupTickPeriod: 0,
+		MaxTokensPerSelection:  10000,
+		MaxLockAttempts:        50000,
+		MaxRetryCycles:         10,
+		SelectionTimeout:       30 * time.Second,
+		Metrics:                NewMetrics(&disabled.Provider{}),
+	})
 
 	t.Run("handles empty transaction ID", func(t *testing.T) {
 		txID := transaction.ID("")
@@ -494,9 +624,20 @@ func TestManager_Cleaner_EdgeCases(t *testing.T) {
 		}
 
 		// Very short tick period for testing
-		m := NewManager(
-			mockFetcher, mockLocker, 100, time.Second, 5, 10*time.Minute, 10*time.Millisecond, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-		)
+		m := NewManager(&Config{
+			Fetcher:                mockFetcher,
+			Locker:                 mockLocker,
+			Precision:              100,
+			Backoff:                time.Second,
+			MaxRetriesAfterBackOff: 5,
+			LeaseExpiry:            10 * time.Minute,
+			LeaseCleanupTickPeriod: 10 * time.Millisecond,
+			MaxTokensPerSelection:  10000,
+			MaxLockAttempts:        50000,
+			MaxRetryCycles:         10,
+			SelectionTimeout:       30 * time.Second,
+			Metrics:                NewMetrics(&disabled.Provider{}),
+		})
 
 		// Wait for a few cleanup cycles
 		time.Sleep(50 * time.Millisecond)
@@ -524,9 +665,20 @@ func TestManager_Cleaner_EdgeCases(t *testing.T) {
 			return nil
 		}
 
-		NewManager(
-			mockFetcher, mockLocker, 100, time.Second, 5, expectedExpiry, 10*time.Millisecond, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-		)
+		NewManager(&Config{
+			Fetcher:                mockFetcher,
+			Locker:                 mockLocker,
+			Precision:              100,
+			Backoff:                time.Second,
+			MaxRetriesAfterBackOff: 5,
+			LeaseExpiry:            expectedExpiry,
+			LeaseCleanupTickPeriod: 10 * time.Millisecond,
+			MaxTokensPerSelection:  10000,
+			MaxLockAttempts:        50000,
+			MaxRetryCycles:         10,
+			SelectionTimeout:       30 * time.Second,
+			Metrics:                NewMetrics(&disabled.Provider{}),
+		})
 
 		// Wait for cleanup call
 		select {
@@ -555,9 +707,20 @@ func TestManager_NewSelector_WithDifferentPrecisions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := NewManager(
-				mockFetcher, mockLocker, tc.precision, time.Second, 5, 0, 0, 10000, 50000, 10, 30*time.Second, NewMetrics(&disabled.Provider{}),
-			)
+			m := NewManager(&Config{
+				Fetcher:                mockFetcher,
+				Locker:                 mockLocker,
+				Precision:              tc.precision,
+				Backoff:                time.Second,
+				MaxRetriesAfterBackOff: 5,
+				LeaseExpiry:            0,
+				LeaseCleanupTickPeriod: 0,
+				MaxTokensPerSelection:  10000,
+				MaxLockAttempts:        50000,
+				MaxRetryCycles:         10,
+				SelectionTimeout:       30 * time.Second,
+				Metrics:                NewMetrics(&disabled.Provider{}),
+			})
 
 			selector, err := m.NewSelector("test-" + tc.name)
 

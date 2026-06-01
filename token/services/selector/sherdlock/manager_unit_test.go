@@ -22,7 +22,20 @@ func TestManagerUnit(t *testing.T) {
 	mockLocker := &mocks.FakeLocker{}
 	_, metrics := setupMetricsMocks()
 
-	mgr := sherdlock.NewManager(mockFetcher, mockLocker, 64, 0, 0, 0, 0, 10000, 50000, 10, 30*time.Second, metrics)
+	mgr := sherdlock.NewManager(&sherdlock.Config{
+		Fetcher:                mockFetcher,
+		Locker:                 mockLocker,
+		Precision:              64,
+		Backoff:                0,
+		MaxRetriesAfterBackOff: 0,
+		LeaseExpiry:            0,
+		LeaseCleanupTickPeriod: 0,
+		MaxTokensPerSelection:  10000,
+		MaxLockAttempts:        50000,
+		MaxRetryCycles:         10,
+		SelectionTimeout:       30 * time.Second,
+		Metrics:                metrics,
+	})
 	require.NotNil(t, mgr)
 
 	t.Run("NewSelector", func(t *testing.T) {
