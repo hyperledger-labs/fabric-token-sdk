@@ -110,6 +110,13 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 				)
 			}
 
+			// Unlock on any error (except success)
+			if err != nil {
+				if unlockErr := m.locker.UnlockAll(ctx); unlockErr != nil {
+					m.logger.Errorf("failed to unlock tokens after selection error: %s", unlockErr)
+				}
+			}
+
 			if err == nil {
 				m.metrics.SelectionOutcome.With(outcomeLabel, "success").Add(1)
 			} else if errors.Is(err, token.SelectorInsufficientFunds) {
@@ -224,14 +231,10 @@ func (s *Selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 }
 
 // selectWithoutMetrics is used by StubbornSelector to avoid double-counting metrics.
+// Note: Does not call UnlockAll on error - the caller is responsible for cleanup.
+// This avoids attempting to unlock with a cancelled context.
 func (s *Selector) selectWithoutMetrics(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	ids, quantity, _, err := s.selectInternal(ctx, owner, q, tokenType)
-	if err != nil {
-		if err2 := s.locker.UnlockAll(ctx); err2 != nil {
-			s.logger.Warnf("failed to unlock tokens after selection error: %v", err2)
-		}
-	}
-
 	return ids, quantity, err
 }
 
