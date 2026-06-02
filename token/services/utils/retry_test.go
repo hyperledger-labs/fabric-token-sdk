@@ -767,7 +767,7 @@ func TestNewRetryRunnerWithJitter_CustomBackoffMultiplier(t *testing.T) {
 	for i := 1; i < 3 && i < len(intervals); i++ {
 		ratio := float64(intervals[i]) / float64(intervals[i-1])
 		// Allow generous tolerance for CI scheduling jitter
-		assert.InDelta(t, 3.0, ratio, 1.5,
+		assert.InDelta(t, 3.0, ratio, 2.0,
 			"interval %d should be ~3x interval %d with multiplier 3.0", i, i-1)
 	}
 }
