@@ -173,7 +173,7 @@ func testRegression(t *testing.T, configDir string) {
 			require.NoError(t, err, "failed to deserialize token request for test case %s", testCaseKey)
 
 			// Perform auditor check
-			err = auditor.Check(t.Context(), tokenRequest, requestMetadata, driver.TokenRequestAnchor(tokenData.TXID))
+			err = auditor.Check(t.Context(), tokenRequest, requestMetadata, driver.TokenRequestAnchor(tokenData.TXID), nil)
 			require.NoError(t, err, "auditor check failed for token request for test case %s", testCaseKey)
 		}
 	}

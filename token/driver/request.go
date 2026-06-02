@@ -606,7 +606,7 @@ func (i *IssueMetadata) IsOutputAbsent(j int) bool {
 
 type TransferInputMetadata struct {
 	TokenID *token.ID
-	Senders []*AuditableIdentity // TODO: Senders looks like to be superfluous, remove it if not necessary.
+	Senders []*AuditableIdentity
 }
 
 func (t *TransferInputMetadata) ToProtos() (*request.TransferInputMetadata, error) {

@@ -14,6 +14,7 @@ import (
 	v1driver "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	issue_pkg "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -111,6 +112,7 @@ func NewAuditCheckSetup(conf *SetupConfiguration) (*AuditCheckSetup, error) {
 		logging.MustGetLogger(),
 		ppm,
 		deserializer,
+		&mock.QueryEngine{},
 		noop.NewTracerProvider(),
 	)
 
