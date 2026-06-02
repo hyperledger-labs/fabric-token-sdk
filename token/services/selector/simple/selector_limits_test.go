@@ -136,11 +136,10 @@ func TestSelector_TokenIterationLimit(t *testing.T) {
 			locker:                newMockLocker(),
 			queryService:          &mockQueryService{tokens: tokens},
 			precision:             64,
-			numRetry:              3,
+			maxRetries:            3,
 			timeout:               time.Millisecond,
 			maxTokensPerSelection: 50, // Limit to 50 tokens
 			maxLockAttempts:       1000,
-			maxRetryCycles:        10,
 			selectionTimeout:      time.Second,
 		}
 
@@ -168,11 +167,10 @@ func TestSelector_TokenIterationLimit(t *testing.T) {
 			locker:                newMockLocker(),
 			queryService:          &mockQueryService{tokens: tokens},
 			precision:             64,
-			numRetry:              3,
+			maxRetries:            3,
 			timeout:               time.Millisecond,
 			maxTokensPerSelection: 50,
 			maxLockAttempts:       1000,
-			maxRetryCycles:        10,
 			selectionTimeout:      time.Second,
 		}
 
@@ -206,11 +204,10 @@ func TestSelector_LockAttemptLimit(t *testing.T) {
 			locker:                locker,
 			queryService:          &mockQueryService{tokens: tokens},
 			precision:             64,
-			numRetry:              3,
+			maxRetries:            3,
 			timeout:               time.Millisecond,
 			maxTokensPerSelection: 1000,
 			maxLockAttempts:       20, // Limit to 20 lock attempts
-			maxRetryCycles:        10,
 			selectionTimeout:      time.Second,
 		}
 
@@ -223,8 +220,8 @@ func TestSelector_LockAttemptLimit(t *testing.T) {
 	})
 }
 
-func TestSelector_RetryCycleLimit(t *testing.T) {
-	t.Run("aborts when exceeding max retry cycles", func(t *testing.T) {
+func TestSelector_RetryLimit(t *testing.T) {
+	t.Run("aborts when exceeding max retries", func(t *testing.T) {
 		// Create tokens that will cause retries (insufficient funds)
 		tokens := []*token2.UnspentToken{
 			{
@@ -238,11 +235,10 @@ func TestSelector_RetryCycleLimit(t *testing.T) {
 			locker:                newMockLocker(),
 			queryService:          &mockQueryService{tokens: tokens},
 			precision:             64,
-			numRetry:              100, // High numRetry but limited by maxRetryCycles
+			maxRetries:            3, // Limit to 3 retries
 			timeout:               time.Millisecond,
 			maxTokensPerSelection: 1000,
 			maxLockAttempts:       1000,
-			maxRetryCycles:        3, // Limit to 3 retry cycles
 			selectionTimeout:      time.Second,
 		}
 
@@ -251,7 +247,7 @@ func TestSelector_RetryCycleLimit(t *testing.T) {
 
 		_, _, err := s.Select(ctx, filter, "1000", "USD") // Request more than available
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "exceeded max retry cycles")
+		assert.Contains(t, err.Error(), "exceeded max retries")
 	})
 }
 
@@ -270,11 +266,10 @@ func TestSelector_ResourceTracking(t *testing.T) {
 			locker:                newMockLocker(),
 			queryService:          &mockQueryService{tokens: tokens},
 			precision:             64,
-			numRetry:              3,
+			maxRetries:            3,
 			timeout:               time.Millisecond,
 			maxTokensPerSelection: 1000,
 			maxLockAttempts:       1000,
-			maxRetryCycles:        10,
 			selectionTimeout:      time.Second,
 		}
 

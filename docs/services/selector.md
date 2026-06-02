@@ -90,7 +90,6 @@ Configure the selector service in your `core.yaml`:
 token:
   selector:
     driver: sherdlock                    # Selection strategy (default: sherdlock)
-    numRetries: 3                        # Retry attempts for token selection (default: 3)
     retryInterval: 5s                    # Wait time between retries (default: 5s)
     leaseExpiry: 3m                      # Lock expiration time (default: 3m)
     leaseCleanupTickPeriod: 1m           # Lock cleanup interval (default: 1m)
@@ -100,11 +99,11 @@ token:
     
     # Security: Resource limits to prevent algorithmic attacks
     limits:
-      maxTokensPerSelection: 10000       # Max tokens to examine (default: 10000)
-      maxLockAttempts: 50000             # Max lock operations (default: 50000)
-      maxRetryCycles: 10                 # Max retry loops (default: 10)
-      maxLocksPerTransaction: 5000       # Max locks per transaction (default: 5000)
-      selectionTimeout: 30s              # Selection timeout (default: 30s)
+      maxTokensPerSelection: 10000       # Max tokens to examine per selection (default: 10000)
+      maxLockAttempts: 50000             # Max lock operations per selection (default: 50000)
+      maxRetries: 3                     # Max retry cycles before giving up (default: 3)
+      maxLocksPerTransaction: 5000       # Max concurrent locks per transaction (default: 5000)
+      selectionTimeout: 30s              # Wall-clock timeout for selection (default: 30s)
 ```
 
 ### Security Limits
