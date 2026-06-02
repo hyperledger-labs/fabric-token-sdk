@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"

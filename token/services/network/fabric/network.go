@@ -172,12 +172,12 @@ func (l *ledger) TransferMetadataKey(k string) (string, error) {
 
 // ViewManager models the interface for initiating FSC views.
 type ViewManager interface {
-	InitiateView(ctx context.Context, view view.View) (interface{}, error)
+	InitiateView(ctx context.Context, view view.View) (any, error)
 }
 
 // ViewRegistry models the interface for registering view responders.
 type ViewRegistry interface {
-	RegisterResponder(responder view.View, initiatedBy interface{}) error
+	RegisterResponder(responder view.View, initiatedBy any) error
 }
 
 // EndorsementService models the interface for transaction endorsement.
@@ -323,7 +323,7 @@ func (n *Network) Connect(ns string) (opts []token2.ServiceOption, err error) {
 }
 
 // Broadcast sends a transaction envelope to the ordering service.
-func (n *Network) Broadcast(ctx context.Context, blob interface{}) error {
+func (n *Network) Broadcast(ctx context.Context, blob any) error {
 	return n.n.Ordering().Broadcast(ctx, blob)
 }
 
@@ -333,13 +333,13 @@ func (n *Network) NewEnvelope() driver.Envelope {
 }
 
 // RequestApproval requests an endorsement for a token request.
-func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
+func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID, metadata driver.TransientMap) (driver.Envelope, error) {
 	endorsement, err := n.endorsementServiceProvider.Get(tms.ID())
 	if err != nil {
 		return nil, errors.Wrapf(err, "network not connected [%s]", tms.ID())
 	}
 
-	return endorsement.Endorse(context, requestRaw, signer, txID)
+	return endorsement.Endorse(context, requestRaw, signer, txID, metadata)
 }
 
 // ComputeTxID calculates the Fabric transaction ID based on creator and nonce.
@@ -618,6 +618,6 @@ type transactionDB interface {
 	GetTokenRequest(ctx context.Context, txID string) ([]byte, error)
 	SetStatus(ctx context.Context, txID string, status storage.TxStatus, message string) error
 	AcquireRecoveryLeadership(ctx context.Context, lockID int64) (recovery.Leadership, bool, error)
-	ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*ttxdb.TransactionRecord, error)
+	ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*ttxdb.RecoveryClaim, error)
 	ReleaseRecoveryClaim(ctx context.Context, txID string, owner string, message string) error
 }

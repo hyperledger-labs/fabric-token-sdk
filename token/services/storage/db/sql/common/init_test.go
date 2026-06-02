@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/test-go/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
 )
 
@@ -19,6 +19,8 @@ func TestGetTableNames(t *testing.T) {
 	names, err := GetTableNames("")
 	require.NoError(t, err)
 	assert.Equal(t, TableNames{ //nolint:gosec
+		Prefix:                 "",
+		Params:                 nil,
 		Movements:              "fsc_movements",
 		Transactions:           "fsc_txs",
 		Requests:               "fsc_requests",
@@ -34,6 +36,7 @@ func TestGetTableNames(t *testing.T) {
 		Signers:                "fsc_id_signers",
 		TokenLocks:             "fsc_tkn_locks",
 		KeyStore:               "fsc_key_store",
+		EIDLeases:              "fsc_eid_leases",
 	}, names)
 
 	names, err = GetTableNames("valid_prefix")

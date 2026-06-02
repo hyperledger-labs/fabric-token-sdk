@@ -9,11 +9,11 @@ package marshaller
 import "encoding/json"
 
 // Marshal marshals the given object
-func Marshal(v interface{}) ([]byte, error) {
+func Marshal(v any) ([]byte, error) {
 	return json.Marshal(v)
 }
 
 // Unmarshal unmarshalls the given bytes into the given object
-func Unmarshal(data []byte, v interface{}) error {
+func Unmarshal(data []byte, v any) error {
 	return json.Unmarshal(data, v)
 }

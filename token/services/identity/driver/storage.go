@@ -27,12 +27,12 @@ type Keystore interface {
 	// Put stores the given key under the provided id. Implementations MUST
 	// overwrite any existing value for the id and return a non-nil error on
 	// failure.
-	Put(id string, key interface{}) error
+	Put(id string, key any) error
 
 	// Get retrieves the key stored under the provided id and populates the
 	// provided `key` parameter.
 	// If no entry exists for id, implementations should return an error describing the missing entry.
-	Get(id string, key interface{}) error
+	Get(id string, key any) error
 	// Close closes the store
 	Close() error
 }

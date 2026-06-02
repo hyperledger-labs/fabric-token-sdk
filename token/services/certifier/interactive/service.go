@@ -26,7 +26,7 @@ type Backend interface {
 
 //go:generate counterfeiter -o mock/responder_registry.go -fake-name ResponderRegistryMock . ResponderRegistry
 type ResponderRegistry interface {
-	RegisterResponder(responder view.View, initiatedBy interface{}) error
+	RegisterResponder(responder view.View, initiatedBy any) error
 }
 
 type CertificationService struct {
@@ -66,7 +66,7 @@ func (c *CertificationService) SetWallet(tms *token2.ManagementService, wallet s
 	c.wallets[tms.Network()+":"+tms.Channel()+":"+tms.Namespace()] = wallet
 }
 
-func (c *CertificationService) Call(context view.Context) (interface{}, error) {
+func (c *CertificationService) Call(context view.Context) (any, error) {
 	// 1. receive request
 	logger.Debugf("receive certification request [%s]", context.ID())
 	s := session.JSON(context)
@@ -196,7 +196,7 @@ func NewCertificationRequestView(network, channel, ns string, certifier view.Ide
 	}
 }
 
-func (i *CertificationRequestView) Call(context view.Context) (interface{}, error) {
+func (i *CertificationRequestView) Call(context view.Context) (any, error) {
 	if len(i.ids) == 0 {
 		return nil, errors.Errorf("certification request has no token IDs")
 	}

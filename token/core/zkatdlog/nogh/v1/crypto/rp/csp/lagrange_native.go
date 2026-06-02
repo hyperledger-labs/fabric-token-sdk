@@ -7,85 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package csp
 
 import (
-	"math/big"
-
 	mathlib "github.com/IBM/mathlib"
 	bls12381fr "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 )
-
-// gnarkFr is the pointer constraint satisfied by gnark-crypto fr.Element types
-// such as bls12-381/fr.Element and bn254/fr.Element.
-//
-// The convention for all methods follows gnark-crypto: the receiver is the
-// output, e.g. z.Mul(x, y) sets z = x·y and returns z.
-type gnarkFr[T any] interface {
-	*T
-	SetBigInt(*big.Int) *T
-	BigInt(*big.Int) *big.Int
-	Add(*T, *T) *T
-	Sub(*T, *T) *T
-	Mul(*T, *T) *T
-	SetInt64(int64) *T
-	SetOne() *T
-	SetZero() *T
-	Inverse(*T) *T
-}
-
-// nativeElem allocates and returns a new zero-valued field element of type E.
-func nativeElem[T any, E gnarkFr[T]]() E { return E(new(T)) }
-
-// nativeFromZr converts *mathlib.Zr to a native field element via big.Int.
-// Only one big.Int conversion happens here.
-func nativeFromZr[T any, E gnarkFr[T]](z *mathlib.Zr) E {
-	e := nativeElem[T, E]()
-	e.SetBigInt(z.BigInt())
-
-	return e
-}
-
-// nativeToZr converts a native field element back to *mathlib.Zr via big.Int.
-func nativeToZr[T any, E gnarkFr[T]](e E, curve *mathlib.Curve) *mathlib.Zr {
-	var bi big.Int
-	e.BigInt(&bi)
-
-	return curve.NewZrFromBigInt(&bi)
-}
-
-// nativeBatchInverse computes the modular inverse of every element in elems
-// using Montgomery's batch-inversion trick: 2(n-1) multiplications + 1 inversion.
-// A zero input element yields a zero output.
-func nativeBatchInverse[T any, E gnarkFr[T]](elems []E) []E {
-	n := len(elems)
-	if n == 0 {
-		return nil
-	}
-
-	// prefix[i] = elems[0] · elems[1] · … · elems[i]
-	prefix := make([]T, n)
-	prefix[0] = *elems[0]
-	for i := 1; i < n; i++ {
-		E(&prefix[i]).Mul(E(&prefix[i-1]), elems[i])
-	}
-
-	// acc = prefix[n-1]^{-1}
-	var acc T
-	E(&acc).Inverse(E(&prefix[n-1]))
-
-	// Unwind: result[i] = acc · prefix[i-1], then acc ← acc · elems[i]
-	result := make([]T, n)
-	resultE := make([]E, n)
-	for i := range result {
-		resultE[i] = E(&result[i])
-	}
-	for i := n - 1; i > 0; i-- {
-		resultE[i].Mul(E(&acc), E(&prefix[i-1]))
-		E(&acc).Mul(E(&acc), elems[i])
-	}
-	result[0] = acc
-
-	return resultE
-}
 
 // getLagrangeMultipliersNative is the native fr.Element implementation of
 // getLagrangeMultipliers. Conversions between mathlib.Zr and fr.Element occur
@@ -94,11 +20,11 @@ func nativeBatchInverse[T any, E gnarkFr[T]](elems []E) []E {
 //
 // The denominator inverses d_i^{-1} = (∏_{j≠i}(i-j))^{-1} depend only on n,
 // not on c, so they are retrieved from the cache (computed once per n).
-func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve, denomInvs []E) ([]*mathlib.Zr, error) {
+func getLagrangeMultipliersNative[T any, E math2.GnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve, denomInvs []E) ([]*mathlib.Zr, error) {
 	m := int(n) + 1 // #nosec G115
 
 	// Convert c once.
-	cE := nativeFromZr[T, E](c)
+	cE := math2.NativeFromZr[T, E](c)
 
 	// cMinusJ[j] = c - j  for j = 0..n
 	cMinusJ := make([]T, m)
@@ -129,7 +55,7 @@ func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, 
 	for i := range m {
 		var prod T
 		E(&prod).Mul(numersE[i], denomInvs[i])
-		result[i] = nativeToZr[T, E](E(&prod), curve)
+		result[i] = math2.NativeToZr[T, E](E(&prod), curve)
 	}
 
 	return result, nil
@@ -138,10 +64,10 @@ func getLagrangeMultipliersNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, 
 // getLagrangeMultipliersPartialNative is the native fr.Element implementation of
 // getLagrangeMultipliersPartial. Same boundary-only conversion strategy.
 // Denominator inverses are retrieved from the cache.
-func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve, denomInvs []E) ([]*mathlib.Zr, error) {
+func getLagrangeMultipliersPartialNative[T any, E math2.GnarkFr[T]](n uint64, c *mathlib.Zr, curve *mathlib.Curve, denomInvs []E) ([]*mathlib.Zr, error) {
 	total := 2*int(n) + 1 // #nosec G115 // all evaluation points: 0..2n
 
-	cE := nativeFromZr[T, E](c)
+	cE := math2.NativeFromZr[T, E](c)
 
 	// cMinusJ[j] = c - j  for j = 0..2n
 	cMinusJ := make([]T, total)
@@ -180,7 +106,7 @@ func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathl
 	for k := range relevant {
 		var prod T
 		E(&prod).Mul(numersE[k], denomInvs[k])
-		result[k] = nativeToZr[T, E](E(&prod), curve)
+		result[k] = math2.NativeToZr[T, E](E(&prod), curve)
 	}
 
 	return result, nil
@@ -188,7 +114,7 @@ func getLagrangeMultipliersPartialNative[T any, E gnarkFr[T]](n uint64, c *mathl
 
 // interpolateNative is the native fr.Element implementation of interpolate.
 // Denominator inverses are retrieved from the cache.
-func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve, denomInvs []E) ([]*mathlib.Zr, error) {
+func interpolateNative[T any, E math2.GnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr, curve *mathlib.Curve, denomInvs []E) ([]*mathlib.Zr, error) {
 	m := int(n) + 1 // #nosec G115
 
 	// Convert all input values to native elements once.
@@ -226,7 +152,7 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 			pxE.Mul(pxE, xMinusJE[j])
 		}
 
-		xMinusJInvs := nativeBatchInverse[T, E](xMinusJE)
+		xMinusJInvs := math2.NativeBatchInverse[T, E](xMinusJE)
 
 		var val T
 		valE := E(&val)
@@ -238,7 +164,7 @@ func interpolateNative[T any, E gnarkFr[T]](n uint64, valuesOverN []*mathlib.Zr,
 			liE.Mul(liE, valsE[i])
 			valE.Add(valE, liE)
 		}
-		result[x] = nativeToZr[T, E](valE, curve)
+		result[x] = math2.NativeToZr[T, E](valE, curve)
 	}
 
 	return result, nil

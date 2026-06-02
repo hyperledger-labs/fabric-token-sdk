@@ -56,13 +56,14 @@ type Network interface {
 	Connect(ns string) ([]token2.ServiceOption, error)
 
 	// Broadcast submits a transaction or data blob to the network's ordering service.
-	Broadcast(ctx context.Context, blob interface{}) error
+	Broadcast(ctx context.Context, blob any) error
 
 	// NewEnvelope creates a new, empty transaction envelope specific to the backend.
 	NewEnvelope() Envelope
 
 	// RequestApproval requests an endorsement for a token request from the network's approval service.
-	RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID TxID) (Envelope, error)
+	// metadata carries optional application-level key-value pairs forwarded to the approver.
+	RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID TxID, metadata TransientMap) (Envelope, error)
 
 	// ComputeTxID calculates the ledger-specific transaction ID from an abstract TxID.
 	ComputeTxID(id *TxID) string

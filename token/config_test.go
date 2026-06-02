@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewConfiguration verifies Configuration constructor
@@ -74,7 +74,7 @@ func TestConfiguration_UnmarshalKey_Error(t *testing.T) {
 	mockCM := &mock.Configuration{}
 	config := NewConfiguration(mockCM)
 
-	var target interface{}
+	var target any
 	expectedErr := errors.New("unmarshal error")
 	mockCM.UnmarshalKeyReturns(expectedErr)
 

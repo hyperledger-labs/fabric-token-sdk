@@ -70,7 +70,7 @@ func TestConfiguration_Serialize(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed unmarshalling key")
 
 	// Test Success
-	cp.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		*rawVal.(*map[string]any) = map[string]any{"key": "value"}
 
 		return nil

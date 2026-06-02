@@ -23,7 +23,7 @@ type Config interface {
 	// TranslatePath translates the passed path relative to the config path.
 	TranslatePath(path string) string
 	// UnmarshalKey unmarshals the configuration value associated with the key into rawVal.
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 }
 
 // NamedFactory associates a token driver identifier with its corresponding driver factory.

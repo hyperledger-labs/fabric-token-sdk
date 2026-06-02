@@ -107,14 +107,9 @@ func TestStoreIdentity(t *testing.T, store walletStoreConstructor) {
 	walletID := driver.WalletID("my wallet")
 	roleID := 5
 
-	mockDB.
-		ExpectQuery("SELECT wallet_id FROM WALLETS WHERE \\(identity_hash = \\$1\\) AND \\(wallet_id = \\$2\\) AND \\(role_id = \\$3\\)").
-		WithArgs(tokenID.UniqueID(), walletID, roleID).
-		WillReturnRows(mockDB.NewRows([]string{"wallet_id"}))
-
 	mockDB.ExpectExec("INSERT INTO WALLETS "+
 		"\\(identity_hash, meta, wallet_id, role_id, created_at, enrollment_id\\) "+
-		"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6\\)").
+		"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6\\) ON CONFLICT DO NOTHING").
 		WithArgs(tokenID.UniqueID(), []uint8(nil), walletID, roleID, sqlmock.AnyArg(), eID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -122,4 +117,38 @@ func TestStoreIdentity(t *testing.T, store walletStoreConstructor) {
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+}
+
+func TestStoreIdentityIdempotent(t *testing.T, store walletStoreConstructor) {
+	gomega.RegisterTestingT(t)
+	db, mockDB, err := sqlmock.New()
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+	tokenID := token.Identity([]byte("1234"))
+	eID := "5678"
+	walletID := driver.WalletID("my wallet")
+	roleID := 5
+
+	insertQuery := "INSERT INTO WALLETS " +
+		"\\(identity_hash, meta, wallet_id, role_id, created_at, enrollment_id\\) " +
+		"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6\\) ON CONFLICT DO NOTHING"
+
+	// First call: row inserted (1 row affected)
+	mockDB.ExpectExec(insertQuery).
+		WithArgs(tokenID.UniqueID(), []uint8(nil), walletID, roleID, sqlmock.AnyArg(), eID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// Second call: conflict, 0 rows affected — must still return nil
+	mockDB.ExpectExec(insertQuery).
+		WithArgs(tokenID.UniqueID(), []uint8(nil), walletID, roleID, sqlmock.AnyArg(), eID).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	s := store(db)
+	err = s.StoreIdentity(t.Context(), tokenID, eID, walletID, roleID, nil)
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+	err = s.StoreIdentity(t.Context(), tokenID, eID, walletID, roleID, nil)
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 }

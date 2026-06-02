@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package ttx
 
+import "github.com/hyperledger-labs/fabric-token-sdk/token"
+
 // EndorsementsOpts is used to configure the CollectEndorsementsView
 type EndorsementsOpts struct {
 	// SkipAuditing set it to true to skip the auditing phase
@@ -18,6 +20,14 @@ type EndorsementsOpts struct {
 	SkipDistributeEnv bool
 	// External Signers
 	ExternalWalletSigners map[string]ExternalWalletSigner
+	// PolicySigners, when non-nil, restricts signature collection for policy
+	// identities to the listed component identities.  Component identities not
+	// in the list produce a nil slot in the PolicySignature, which is valid for
+	// OR branches.  When nil, all component identities are contacted (default).
+	PolicySigners []token.Identity
+	// ApprovalMetadata carries optional application-level metadata forwarded to approvers.
+	// Each driver decides how to deliver this information to the approver backend.
+	ApprovalMetadata map[string][]byte
 }
 
 func (o *EndorsementsOpts) ExternalWalletSigner(id string) ExternalWalletSigner {
@@ -79,12 +89,34 @@ func WithSkipDistributeEnv() EndorsementsOpt {
 	}
 }
 
+// WithPolicySigners restricts signature collection for PolicyIdentity owners to
+// the given component identities.  Unlisted components produce nil slots in the
+// PolicySignature, satisfying OR branches without contacting the other parties.
+func WithPolicySigners(signers ...token.Identity) EndorsementsOpt {
+	return func(o *EndorsementsOpts) error {
+		o.PolicySigners = append(o.PolicySigners, signers...)
+
+		return nil
+	}
+}
+
 func WithExternalWalletSigner(walletID string, ews ExternalWalletSigner) EndorsementsOpt {
 	return func(o *EndorsementsOpts) error {
 		if o.ExternalWalletSigners == nil {
 			o.ExternalWalletSigners = map[string]ExternalWalletSigner{}
 		}
 		o.ExternalWalletSigners[walletID] = ews
+
+		return nil
+	}
+}
+
+// WithApprovalMetadata attaches application-level metadata to be forwarded to the approver.
+// Each key-value pair is delivered to the approver backend in a driver-specific way
+// (e.g. transient data for Fabric FSC endorsement, extra transient entries for chaincode).
+func WithApprovalMetadata(metadata map[string][]byte) EndorsementsOpt {
+	return func(o *EndorsementsOpts) error {
+		o.ApprovalMetadata = metadata
 
 		return nil
 	}

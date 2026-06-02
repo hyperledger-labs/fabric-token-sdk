@@ -9,6 +9,7 @@ package translator
 import (
 	"context"
 	"crypto/sha256"
+	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -195,7 +196,7 @@ func (t *Translator) AreTokensSpent(ctx context.Context, ids []string, graphHidi
 	return res, nil
 }
 
-func (t *Translator) checkProcess(action interface{}) error {
+func (t *Translator) checkProcess(action any) error {
 	if err := t.checkAction(action); err != nil {
 		return err
 	}
@@ -203,7 +204,7 @@ func (t *Translator) checkProcess(action interface{}) error {
 	return nil
 }
 
-func (t *Translator) checkAction(tokenAction interface{}) error {
+func (t *Translator) checkAction(tokenAction any) error {
 	switch action := tokenAction.(type) {
 	case IssueAction:
 		return t.checkIssue(action)
@@ -240,7 +241,7 @@ func (t *Translator) checkTransfer(transferAction TransferAction) error {
 	return nil
 }
 
-func (t *Translator) commitProcess(ctx context.Context, action interface{}) error {
+func (t *Translator) commitProcess(ctx context.Context, action any) error {
 	logger.DebugfContext(ctx, "committing action with txID '%s'", t.TxID)
 	err := t.commitAction(ctx, action)
 	if err != nil {
@@ -254,7 +255,7 @@ func (t *Translator) commitProcess(ctx context.Context, action interface{}) erro
 	return nil
 }
 
-func (t *Translator) commitAction(ctx context.Context, tokenAction interface{}) (err error) {
+func (t *Translator) commitAction(ctx context.Context, tokenAction any) (err error) {
 	switch action := tokenAction.(type) {
 	case IssueAction:
 		err = t.commitIssueAction(ctx, action)
@@ -509,10 +510,8 @@ func (t *Translator) spendInputs(ctx context.Context, action ActionWithInputs) e
 
 func (t *Translator) appendSpentID(id string) error {
 	// check first it is already in the list
-	for _, d := range t.SpentIDs {
-		if d == id {
-			return errors.Errorf("[%s] already spent", id)
-		}
+	if slices.Contains(t.SpentIDs, id) {
+		return errors.Errorf("[%s] already spent", id)
 	}
 	t.SpentIDs = append(t.SpentIDs, id)
 

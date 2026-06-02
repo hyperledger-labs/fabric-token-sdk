@@ -58,11 +58,10 @@ func NewReceiveSpendRequestView() *ReceiveSpendRequestView {
 	return &ReceiveSpendRequestView{}
 }
 
-func (f *ReceiveSpendRequestView) Call(context view.Context) (interface{}, error) {
+func (f *ReceiveSpendRequestView) Call(context view.Context) (any, error) {
 	tx := &SpendRequest{}
-	jsonSession := session.JSON(context)
-	err := jsonSession.ReceiveWithTimeout(tx, time.Minute*4)
-	if err != nil {
+	s := session.NewTypedSessionFromContext(context)
+	if err := s.ReceiveTypedWithTimeout(ttx.TypeSpendRequest, tx, time.Minute*4); err != nil {
 		logger.ErrorfContext(context.Context(), "failed receiving request: %s", err)
 
 		return nil, err
@@ -117,17 +116,13 @@ func NewRequestSpendView(unspentToken *token.UnspentToken, opts ...token2.Servic
 	}
 }
 
-func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
+func (c *RequestSpendView) Call(context view.Context) (any, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
 
 	// send Transaction to each party and wait for their responses
 	request := &SpendRequest{Token: c.unspentToken}
-	requestRaw, err := request.Bytes()
-	if err != nil {
-		return nil, err
-	}
 
 	answerChannel := make(chan *answer, len(c.parties))
 	logger.DebugfContext(context.Context(), "Notify %d parties about request", len(c.parties))
@@ -146,7 +141,7 @@ func (c *RequestSpendView) Call(context view.Context) (interface{}, error) {
 
 			continue
 		}
-		go c.collectSpendRequestAnswers(context, party, requestRaw, answerChannel)
+		go c.collectSpendRequestAnswers(context, party, request, answerChannel)
 		counter++
 	}
 
@@ -175,7 +170,7 @@ func (c *RequestSpendView) WithTimeout(timeout time.Duration) *RequestSpendView 
 func (c *RequestSpendView) collectSpendRequestAnswers(
 	context view.Context,
 	party view.Identity,
-	raw []byte,
+	request *SpendRequest,
 	answerChan chan *answer) {
 	defer logger.DebugfContext(context.Context(), "received response for from [%v]", party)
 
@@ -188,11 +183,10 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 
 		return
 	}
-	s := session.NewFromSession(context, backendSession)
+	s := session.NewTypedSession(context, backendSession)
 
-	// Wait to receive a Transaction back
 	logger.DebugfContext(context.Context(), "send request to [%v]", party)
-	err = s.SendRaw(context.Context(), raw)
+	err = s.SendTyped(context.Context(), request, ttx.TypeSpendRequest)
 	if err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to send request to [%s]", party),
@@ -202,7 +196,7 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 		return
 	}
 	response := &SpendResponse{}
-	if err := s.Receive(response); err != nil {
+	if err := s.ReceiveTyped(ttx.TypeSpendResponse, response); err != nil {
 		answerChan <- &answer{
 			err:   errors.Wrapf(err, "failed to receive response from [%s]", party),
 			party: party,
@@ -215,19 +209,32 @@ func (c *RequestSpendView) collectSpendRequestAnswers(
 	answerChan <- &answer{response: response, party: party}
 }
 
-// EndorseSpendView endorses a SpendRequest
-type EndorseSpendView struct {
+// ReceiveSpendTxView is the co-owner's view: it ACKs the SpendRequest and
+// returns the assembled transaction received from the initiator without
+// endorsing it. The caller is responsible for inspecting the transaction
+// (e.g. confirming it consumes the expected token and does not include
+// other tokens owned by this node) and, if the checks pass, running
+// ttx.NewEndorseView(tx) to produce the signature.
+//
+// Splitting receive from endorse lets the application decide which
+// business-logic checks to apply rather than baking a fixed policy into
+// the library.
+type ReceiveSpendTxView struct {
 	request *SpendRequest
 }
 
-func NewEndorseSpendView(request *SpendRequest) *EndorseSpendView {
-	return &EndorseSpendView{request: request}
+// NewReceiveSpendTxView returns a new ReceiveSpendTxView for the given request.
+func NewReceiveSpendTxView(request *SpendRequest) *ReceiveSpendTxView {
+	return &ReceiveSpendTxView{request: request}
 }
 
-func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, error) {
-	resultBoxed, err := context.RunView(NewEndorseSpendView(request))
+// ReceiveSpendTx is a convenience wrapper that runs ReceiveSpendTxView and
+// returns the unsigned spend transaction so the caller can inspect it
+// before deciding whether to endorse.
+func ReceiveSpendTx(context view.Context, request *SpendRequest) (*Transaction, error) {
+	resultBoxed, err := context.RunView(NewReceiveSpendTxView(request))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to approve spend")
+		return nil, errors.Wrap(err, "failed to receive spend transaction")
 	}
 	result, ok := resultBoxed.(*ttx.Transaction)
 	if !ok {
@@ -237,32 +244,21 @@ func EndorseSpend(context view.Context, request *SpendRequest) (*Transaction, er
 	return &Transaction{Transaction: result}, nil
 }
 
-func (a *EndorseSpendView) Call(context view.Context) (interface{}, error) {
-	// - send back the response
-	if err := session.JSON(context).Send(&SpendResponse{}); err != nil {
+// Call implements view.View. It sends the SpendResponse ACK, receives the
+// assembled transaction, and returns it without endorsing. Endorsement is
+// the caller's responsibility once any business-logic checks pass.
+func (a *ReceiveSpendTxView) Call(context view.Context) (any, error) {
+	s := session.NewTypedSessionFromContext(context)
+	if err := s.SendTyped(context.Context(), &SpendResponse{}, ttx.TypeSpendResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to send response")
 	}
+	logger.DebugfContext(context.Context(), "spend response sent")
 
-	logger.DebugfContext(context.Context(), "endorse spend response sent")
-	// At some point, the recipient receives the token transaction that in the meantime has been assembled
 	tx, err := ttx.ReceiveTransaction(context)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
 	}
 	logger.DebugfContext(context.Context(), "multisig tx received with id [%s]", tx.ID())
-
-	// TODO: check tx matches request
-
-	// If everything is fine, the recipient accepts and sends back her signature.
-	// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
-	// This depends on the driver implementation.
-	logger.DebugfContext(context.Context(), "endorse multisig tx received with id [%s]", tx.ID())
-	_, err = context.RunView(ttx.NewEndorseView(tx))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to accept transaction")
-	}
-
-	logger.DebugfContext(context.Context(), "endorse multisig tx received with id [%s] done", tx.ID())
 
 	return tx, nil
 }

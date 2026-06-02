@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/thedevsaddam/gojsonq"
+	"github.com/tidwall/gjson"
 )
 
 var (
@@ -27,7 +27,7 @@ type vault interface {
 }
 
 type selector interface {
-	Filter(filter Filter, q string) ([]*token2.ID, error)
+	Filter(ctx context.Context, filter Filter, q string) ([]*token2.ID, error)
 }
 
 type QueryExecutor struct {
@@ -54,9 +54,8 @@ func NewQueryExecutor(sp token.ServiceProvider, wallet string, precision uint64,
 	}, nil
 }
 
-func (s *QueryExecutor) QueryByKey(ctx context.Context, state interface{}, key string, value string) error {
-	ids, err := s.Filter(&jsonFilter{
-		q:     gojsonq.New(),
+func (s *QueryExecutor) QueryByKey(ctx context.Context, state any, key string, value string) error {
+	ids, err := s.Filter(ctx, &jsonFilter{
 		key:   key,
 		value: value,
 	}, "1")
@@ -92,7 +91,6 @@ func (s *QueryExecutor) QueryByKey(ctx context.Context, state interface{}, key s
 }
 
 type jsonFilter struct {
-	q          *gojsonq.JSONQ
 	key, value string
 }
 
@@ -104,10 +102,9 @@ func (j *jsonFilter) ContainsToken(token *token2.UnspentToken) bool {
 		return false
 	}
 	logger.Debugf("decoded token type [%s]", string(decoded))
-	jq := j.q.FromString(string(decoded))
-	res := jq.Find(j.key)
-	if v, ok := res.(string); ok {
-		return v == j.value
+	res := gjson.Get(string(decoded), j.key)
+	if res.Type == gjson.String {
+		return res.String() == j.value
 	}
 	logger.Debugf("res [%s] for [%s,%s]", res, j.key, j.value)
 

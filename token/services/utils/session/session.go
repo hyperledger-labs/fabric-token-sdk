@@ -50,11 +50,11 @@ func New(s Session, ctx context.Context, m Marshaller) *S {
 	return &S{s: s, ctx: ctx, marshaller: m}
 }
 
-func (j *S) Receive(state interface{}) error {
+func (j *S) Receive(state any) error {
 	return j.ReceiveWithTimeout(state, DefaultReceiveTimeout)
 }
 
-func (j *S) ReceiveWithTimeout(state interface{}, d time.Duration) error {
+func (j *S) ReceiveWithTimeout(state any, d time.Duration) error {
 	raw, err := j.ReceiveRawWithTimeout(d)
 	if err != nil {
 		return err
@@ -104,11 +104,11 @@ func (j *S) ReceiveRawWithTimeout(d time.Duration) ([]byte, error) {
 	}
 }
 
-func (j *S) Send(state interface{}) error {
+func (j *S) Send(state any) error {
 	return j.SendWithContext(j.ctx, state)
 }
 
-func (j *S) SendWithContext(ctx context.Context, state interface{}) error {
+func (j *S) SendWithContext(ctx context.Context, state any) error {
 	v, err := j.marshaller.Marshal(state)
 	if err != nil {
 		return err

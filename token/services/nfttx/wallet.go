@@ -21,7 +21,7 @@ type OwnerWallet struct {
 	Precision uint64
 }
 
-func (o *OwnerWallet) QueryByKey(ctx context.Context, state interface{}, key string, value string) error {
+func (o *OwnerWallet) QueryByKey(ctx context.Context, state any, key string, value string) error {
 	qe, err := NewQueryExecutor(o.ServiceProvider, o.ID(), o.Precision)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to create query executor")

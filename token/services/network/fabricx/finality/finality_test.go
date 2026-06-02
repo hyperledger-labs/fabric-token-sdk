@@ -747,11 +747,9 @@ func TestOnlyOnceListener_Concurrent(t *testing.T) {
 	// Call OnStatus concurrently
 	var wg sync.WaitGroup
 	for range 10 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			wrappedListener.OnStatus(ctx, txID, fdriver.Valid, "")
-		}()
+		})
 	}
 	wg.Wait()
 

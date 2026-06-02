@@ -3,15 +3,15 @@ package mock
 
 import (
 	"context"
+	"math/big"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type OwnerTokenVault struct {
-	BalanceStub        func(context.Context, string, token.Type) (uint64, error)
+	BalanceStub        func(context.Context, string, token.Type) (*big.Int, error)
 	balanceMutex       sync.RWMutex
 	balanceArgsForCall []struct {
 		arg1 context.Context
@@ -19,14 +19,14 @@ type OwnerTokenVault struct {
 		arg3 token.Type
 	}
 	balanceReturns struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}
 	balanceReturnsOnCall map[int]struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}
-	UnspentTokensIteratorByStub        func(context.Context, string, token.Type) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorByStub        func(context.Context, string, token.Type) (role.UnspentTokensIterator, error)
 	unspentTokensIteratorByMutex       sync.RWMutex
 	unspentTokensIteratorByArgsForCall []struct {
 		arg1 context.Context
@@ -34,18 +34,18 @@ type OwnerTokenVault struct {
 		arg3 token.Type
 	}
 	unspentTokensIteratorByReturns struct {
-		result1 driver.UnspentTokensIterator
+		result1 role.UnspentTokensIterator
 		result2 error
 	}
 	unspentTokensIteratorByReturnsOnCall map[int]struct {
-		result1 driver.UnspentTokensIterator
+		result1 role.UnspentTokensIterator
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *OwnerTokenVault) Balance(arg1 context.Context, arg2 string, arg3 token.Type) (uint64, error) {
+func (fake *OwnerTokenVault) Balance(arg1 context.Context, arg2 string, arg3 token.Type) (*big.Int, error) {
 	fake.balanceMutex.Lock()
 	ret, specificReturn := fake.balanceReturnsOnCall[len(fake.balanceArgsForCall)]
 	fake.balanceArgsForCall = append(fake.balanceArgsForCall, struct {
@@ -72,7 +72,7 @@ func (fake *OwnerTokenVault) BalanceCallCount() int {
 	return len(fake.balanceArgsForCall)
 }
 
-func (fake *OwnerTokenVault) BalanceCalls(stub func(context.Context, string, token.Type) (uint64, error)) {
+func (fake *OwnerTokenVault) BalanceCalls(stub func(context.Context, string, token.Type) (*big.Int, error)) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = stub
@@ -85,33 +85,33 @@ func (fake *OwnerTokenVault) BalanceArgsForCall(i int) (context.Context, string,
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *OwnerTokenVault) BalanceReturns(result1 uint64, result2 error) {
+func (fake *OwnerTokenVault) BalanceReturns(result1 *big.Int, result2 error) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = nil
 	fake.balanceReturns = struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *OwnerTokenVault) BalanceReturnsOnCall(i int, result1 uint64, result2 error) {
+func (fake *OwnerTokenVault) BalanceReturnsOnCall(i int, result1 *big.Int, result2 error) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = nil
 	if fake.balanceReturnsOnCall == nil {
 		fake.balanceReturnsOnCall = make(map[int]struct {
-			result1 uint64
+			result1 *big.Int
 			result2 error
 		})
 	}
 	fake.balanceReturnsOnCall[i] = struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *OwnerTokenVault) UnspentTokensIteratorBy(arg1 context.Context, arg2 string, arg3 token.Type) (driver.UnspentTokensIterator, error) {
+func (fake *OwnerTokenVault) UnspentTokensIteratorBy(arg1 context.Context, arg2 string, arg3 token.Type) (role.UnspentTokensIterator, error) {
 	fake.unspentTokensIteratorByMutex.Lock()
 	ret, specificReturn := fake.unspentTokensIteratorByReturnsOnCall[len(fake.unspentTokensIteratorByArgsForCall)]
 	fake.unspentTokensIteratorByArgsForCall = append(fake.unspentTokensIteratorByArgsForCall, struct {
@@ -138,7 +138,7 @@ func (fake *OwnerTokenVault) UnspentTokensIteratorByCallCount() int {
 	return len(fake.unspentTokensIteratorByArgsForCall)
 }
 
-func (fake *OwnerTokenVault) UnspentTokensIteratorByCalls(stub func(context.Context, string, token.Type) (driver.UnspentTokensIterator, error)) {
+func (fake *OwnerTokenVault) UnspentTokensIteratorByCalls(stub func(context.Context, string, token.Type) (role.UnspentTokensIterator, error)) {
 	fake.unspentTokensIteratorByMutex.Lock()
 	defer fake.unspentTokensIteratorByMutex.Unlock()
 	fake.UnspentTokensIteratorByStub = stub
@@ -151,28 +151,28 @@ func (fake *OwnerTokenVault) UnspentTokensIteratorByArgsForCall(i int) (context.
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *OwnerTokenVault) UnspentTokensIteratorByReturns(result1 driver.UnspentTokensIterator, result2 error) {
+func (fake *OwnerTokenVault) UnspentTokensIteratorByReturns(result1 role.UnspentTokensIterator, result2 error) {
 	fake.unspentTokensIteratorByMutex.Lock()
 	defer fake.unspentTokensIteratorByMutex.Unlock()
 	fake.UnspentTokensIteratorByStub = nil
 	fake.unspentTokensIteratorByReturns = struct {
-		result1 driver.UnspentTokensIterator
+		result1 role.UnspentTokensIterator
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *OwnerTokenVault) UnspentTokensIteratorByReturnsOnCall(i int, result1 driver.UnspentTokensIterator, result2 error) {
+func (fake *OwnerTokenVault) UnspentTokensIteratorByReturnsOnCall(i int, result1 role.UnspentTokensIterator, result2 error) {
 	fake.unspentTokensIteratorByMutex.Lock()
 	defer fake.unspentTokensIteratorByMutex.Unlock()
 	fake.UnspentTokensIteratorByStub = nil
 	if fake.unspentTokensIteratorByReturnsOnCall == nil {
 		fake.unspentTokensIteratorByReturnsOnCall = make(map[int]struct {
-			result1 driver.UnspentTokensIterator
+			result1 role.UnspentTokensIterator
 			result2 error
 		})
 	}
 	fake.unspentTokensIteratorByReturnsOnCall[i] = struct {
-		result1 driver.UnspentTokensIterator
+		result1 role.UnspentTokensIterator
 		result2 error
 	}{result1, result2}
 }

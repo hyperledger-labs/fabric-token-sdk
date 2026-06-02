@@ -164,6 +164,7 @@ func TestEndorsementsOpts_ExternalWalletSigner_NilMap(t *testing.T) {
 func TestCompileCollectEndorsementsOpts_AllOptions(t *testing.T) {
 	signer := &mock.ExternalWalletSigner{}
 	walletID := "wallet-all"
+	metadata := map[string][]byte{"k": []byte("v")}
 
 	opts, err := ttx.CompileCollectEndorsementsOpts(
 		ttx.WithSkipAuditing(),
@@ -171,6 +172,7 @@ func TestCompileCollectEndorsementsOpts_AllOptions(t *testing.T) {
 		ttx.WithSkipApproval(),
 		ttx.WithSkipDistributeEnv(),
 		ttx.WithExternalWalletSigner(walletID, signer),
+		ttx.WithApprovalMetadata(metadata),
 	)
 
 	require.NoError(t, err)
@@ -180,6 +182,7 @@ func TestCompileCollectEndorsementsOpts_AllOptions(t *testing.T) {
 	assert.True(t, opts.SkipDistributeEnv)
 	require.NotNil(t, opts.ExternalWalletSigners)
 	assert.Equal(t, signer, opts.ExternalWalletSigners[walletID])
+	assert.Equal(t, metadata, opts.ApprovalMetadata)
 }
 
 // TestCompileCollectEndorsementsOpts_PartialOptions verifies partial option combinations.
@@ -208,6 +211,41 @@ func TestEndorsementsOpts_ExternalWalletSigner_EmptyID(t *testing.T) {
 
 	result := opts.ExternalWalletSigner("")
 	assert.Equal(t, signer, result)
+}
+
+// TestWithApprovalMetadata verifies the WithApprovalMetadata option sets the metadata map.
+func TestWithApprovalMetadata(t *testing.T) {
+	metadata := map[string][]byte{
+		"key1": []byte("value1"),
+		"key2": []byte("value2"),
+	}
+
+	opts, err := ttx.CompileCollectEndorsementsOpts(
+		ttx.WithApprovalMetadata(metadata),
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, metadata, opts.ApprovalMetadata)
+}
+
+// TestWithApprovalMetadata_Nil verifies nil metadata is accepted without error.
+func TestWithApprovalMetadata_Nil(t *testing.T) {
+	opts, err := ttx.CompileCollectEndorsementsOpts(
+		ttx.WithApprovalMetadata(nil),
+	)
+
+	require.NoError(t, err)
+	assert.Nil(t, opts.ApprovalMetadata)
+}
+
+// TestWithApprovalMetadata_Empty verifies an empty metadata map is accepted.
+func TestWithApprovalMetadata_Empty(t *testing.T) {
+	opts, err := ttx.CompileCollectEndorsementsOpts(
+		ttx.WithApprovalMetadata(map[string][]byte{}),
+	)
+
+	require.NoError(t, err)
+	assert.Empty(t, opts.ApprovalMetadata)
 }
 
 // TestWithExternalWalletSigner_NilSigner verifies nil signer can be set.

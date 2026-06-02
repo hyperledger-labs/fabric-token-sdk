@@ -12,12 +12,21 @@ The storage layer is built on a provider-based architecture that supports multip
 
 The Fabric Token SDK storage is organized into logical databases, each serving a specific role in the transaction lifecycle and identity management.
 
+### Amount Storage Strategy
+
+**All token amounts** across the storage layer are stored as `NUMERIC(78, 0)` in the database, supporting arbitrary precision integers up to 78 digits. This design choice enables:
+- Representation of token amounts exceeding the uint64 maximum value (2^64-1 ≈ 1.8×10^19)
+- Support for tokens with high precision or extremely large supply
+- Consistent handling of amounts across all tables (Tokens, Transactions, Movements)
+
+The SDK uses Go's `*big.Int` type throughout the codebase to handle these large values, with automatic conversion between database NUMERIC values and in-memory big.Int representations via the `BigInt` scanner type.
+
 ### Transaction & Audit Store (TTXDB / AuditDB)
 These tables track the lifecycle of token requests from assembly to finality. `AuditDB` uses the same schema but is isolated for compliance reporting.
 
-*   **Requests**: Tracks high-level token request state. Contains marshaled requests, current status (Pending, Confirmed, Deleted), and application/public metadata.
-*   **Transactions**: Records individual actions (Issue, Transfer, Redeem) within a request, including sender/recipient IDs and amounts.
-*   **Movements**: Aggregates net value changes per enrollment ID. Used to efficiently calculate balances and history.
+*   **Requests**: Tracks high-level token request state. Contains marshaled requests, current status (Pending, Confirmed, Deleted, Orphan), and application/public metadata.
+*   **Transactions**: Records individual actions (Issue, Transfer, Redeem) within a request, including sender/recipient IDs and amounts (stored as `NUMERIC(78, 0)`).
+*   **Movements**: Aggregates net value changes per enrollment ID (amounts stored as `NUMERIC(78, 0)`). Used to efficiently calculate balances and history.
 *   **Validations**: Stores cryptographic validation metadata produced during the request verification phase.
 *   **Endorsements**: Collects digital signatures from participants and auditors required for transaction finality.
 
@@ -25,6 +34,7 @@ These tables track the lifecycle of token requests from assembly to finality. `A
 This store serves as the authoritative registry for all tokens (UTXOs) known to the node.
 
 *   **Tokens**: The core UTXO registry. Stores token identifiers, amounts, types, ownership info, and ledger-specific state.
+    *   **Amount Storage**: Token amounts are stored as `NUMERIC(78, 0)` in the database, supporting arbitrary precision integers up to 78 digits. This enables representation of token amounts that exceed the uint64 maximum value (2^64-1 ≈ 1.8×10^19). The SDK uses Go's `*big.Int` type throughout the codebase to handle these large values, with automatic conversion between database NUMERIC values and in-memory big.Int representations.
 *   **TokenOwners**: A mapping table linking specific tokens to wallet identifiers for fast lookups.
 *   **PublicParameters**: A cache for the network's cryptographic public parameters and their hashes.
 *   **TokenCertifications**: Stores third-party certifications for tokens, often required by privacy-preserving drivers.
@@ -102,13 +112,14 @@ It uses a distributed locking mechanism (PostgreSQL advisory locks) to ensure on
 
 The recovery service follows this workflow:
 
-1. **Scan Phase**: The recovery manager periodically scans the transaction database for pending transactions older than the configured TTL
-2. **Claim Phase**: Eligible transactions are claimed by the current instance using a lease mechanism
+1. **Scan Phase**: The recovery manager periodically scans the transaction database for pending transactions older than the configured TTL. The claim query reads only the minimum projection needed (`tx_id`, `stored_at`) and returns a lightweight `RecoveryClaim` for each row, avoiding the cost of materialising the full transaction record on every sweep.
+2. **Claim Phase**: Eligible transactions are claimed by the current instance using a lease mechanism. On PostgreSQL this is an atomic `UPDATE ... RETURNING`; SQLite uses a non-atomic but functionally equivalent permissive claim.
 3. **Recovery Phase**: For each claimed transaction, the recovery handler:
    - Queries the network for the transaction's current status
-   - Based on the status (Valid, Invalid, or Busy), applies the appropriate finality logic
+   - Based on the status (Valid, Invalid, NotFound, or Busy), applies the appropriate finality logic
    - For valid transactions, verifies the token request hash and commits to the local database
-   - For invalid transactions, marks them as deleted
+   - For invalid transactions, marks them as `Deleted`
+   - For transactions whose status keeps returning `NotFound` past the configured `notFoundGracePeriod`, marks them as `Orphan`. This indicates the transaction never reached the ledger (e.g. broadcast failure, mempool drop) and prevents long-stuck rows from blocking the head of the recovery queue, while keeping them distinguishable from ledger-rejected transactions that are marked `Deleted`.
    - For busy (pending) transactions, returns an error and the transaction remains eligible for future recovery
 4. **Lease Management**: Claimed transactions are leased to the instance for a configured duration to prevent stuck transactions from blocking recovery
 

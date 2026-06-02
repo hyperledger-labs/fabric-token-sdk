@@ -22,6 +22,9 @@ const (
 	TokenNamespace = "tns"
 )
 
+// Payload contains the core data of a token transaction including the transaction ID,
+// signer identity, token request, and network envelope. It represents the serializable
+// portion of a transaction that can be transmitted over the network.
 type Payload struct {
 	TxID      network.TxID
 	ID        string
@@ -421,6 +424,9 @@ func (t *Transaction) TMSID() token.TMSID {
 	return t.tmsID
 }
 
+// appendPayload merges the given payload into this transaction by copying its token request
+// and transient data. This is used internally for transaction composition.
+// TODO: This implementation is incomplete and needs to be enhanced to properly merge all payload components.
 func (t *Transaction) appendPayload(payload *Payload) error {
 	// TODO: change this
 	t.TokenRequest = payload.TokenRequest

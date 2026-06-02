@@ -19,7 +19,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
-	pp2 "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	topology3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
@@ -269,7 +268,7 @@ func (p *GenericBackend) Fabric(tms *topology3.TMS) fabricPlatform {
 func PublicParamsTemplate(ppRaw []byte) *bytes.Buffer {
 	t, err := template.New("node").Funcs(template.FuncMap{
 		"Params": func() string { return base64.StdEncoding.EncodeToString(ppRaw) },
-	}).Parse(pp2.DefaultParams)
+	}).Parse(DefaultParams)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	paramsFile := bytes.NewBuffer(nil)
 	err = t.Execute(io.MultiWriter(paramsFile), nil)

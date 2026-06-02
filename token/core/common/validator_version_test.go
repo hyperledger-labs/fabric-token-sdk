@@ -143,5 +143,3 @@ func TestMinProtocolVersionLogic(t *testing.T) {
 		})
 	}
 }
-
-// Made with Bob

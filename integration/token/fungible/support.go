@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -60,8 +61,8 @@ type TransactionRecord struct {
 }
 
 type Stream interface {
-	Recv(m interface{}) error
-	Send(m interface{}) error
+	Recv(m any) error
+	Send(m any) error
 	Result() ([]byte, error)
 }
 
@@ -299,6 +300,26 @@ func CheckBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeR
 		expectedQ := token.NewQuantityFromUInt64(expected)
 		g.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 	}).WithArguments(network, ref, wallet, typ, expected, tmsID).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
+}
+
+func CheckPolicyOwnedBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
+	CheckPolicyOwnedBalanceForTMSID(network, ref, wallet, typ, expected, nil)
+}
+
+func CheckPolicyOwnedBalanceForTMSID(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64, tmsID *token2.TMSID) {
+	res, err := network.Client(ref.ReplicaName()).CallView("PolicyOwnedBalance", common.JSONMarshall(&views.PolicyOwnedBalanceQuery{
+		Wallet: wallet,
+		Type:   typ,
+		TMSID:  tmsID,
+	}))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	b := &views.Balance{}
+	common.JSONUnmarshal(res.([]byte), b)
+	gomega.Expect(b.Type).To(gomega.BeEquivalentTo(typ))
+	q, err := token.ToQuantity(b.Quantity, 64)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	expectedQ := token.NewQuantityFromUInt64(expected)
+	gomega.Expect(expectedQ.Cmp(q)).To(gomega.BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
 func CheckCoOwnedBalance(network *integration.Infrastructure, ref *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
@@ -1188,7 +1209,7 @@ func getIdentity(identities []topology.Identity, id string) []byte {
 	return nil
 }
 
-func JSONUnmarshalFloat64(v interface{}) float64 {
+func JSONUnmarshalFloat64(v any) float64 {
 	var s float64
 	switch v := v.(type) {
 	case []byte:
@@ -1295,14 +1316,7 @@ func CheckOwnerWalletIDs(network *integration.Infrastructure, owner *token3.Node
 	var wIDs []string
 	common.JSONUnmarshal(idsBoxed.([]byte), &wIDs)
 	for _, wID := range ids {
-		found := false
-		for _, expectedWID := range wIDs {
-			if expectedWID == wID {
-				found = true
-
-				break
-			}
-		}
+		found := slices.Contains(wIDs, wID)
 		gomega.Expect(found).To(gomega.BeTrue(), "[%s] is not in [%v]", wID, wIDs)
 	}
 }
@@ -1488,6 +1502,74 @@ func MultiSigSpendCashForTMSID(network *integration.Infrastructure, sender *toke
 	txID := common.JSONUnmarshalString(txidBoxed)
 
 	return txID
+}
+
+// PolicyLockCash locks amount tokens of the given type into a policy identity
+// composed of the given receivers and governed by the boolean policy expression.
+func PolicyLockCash(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, policy string, receivers []*token3.NodeReference, auditor *token3.NodeReference) string {
+	return PolicyLockCashForTMSID(network, sender, wallet, typ, amount, policy, receivers, auditor, nil)
+}
+
+// PolicyLockCashForTMSID is like PolicyLockCash but pins a specific TMSID.
+func PolicyLockCashForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, amount uint64, policy string, receivers []*token3.NodeReference, auditor *token3.NodeReference, tmsID *token2.TMSID) string {
+	parties := make([]view.Identity, len(receivers))
+	for i, r := range receivers {
+		parties[i] = network.Identity(r.Id())
+	}
+	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("PolicyLock", common.JSONMarshall(&views.PolicyLock{
+		Auditor:       auditor.Id(),
+		Wallet:        wallet,
+		Type:          typ,
+		Amount:        amount,
+		Policy:        policy,
+		PolicyParties: parties,
+		TMSID:         tmsID,
+	}))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	return common.JSONUnmarshalString(txidBoxed)
+}
+
+// PolicySpendCashOR spends a policy token using only the sender as the signing
+// component identity (OR-policy optimisation: no co-owner coordination needed).
+func PolicySpendCashOR(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, receiver *token3.NodeReference, auditor *token3.NodeReference) string {
+	return PolicySpendCashORForTMSID(network, sender, wallet, typ, receiver, auditor, nil)
+}
+
+// PolicySpendCashORForTMSID is like PolicySpendCashOR but pins a specific TMSID.
+func PolicySpendCashORForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, receiver *token3.NodeReference, auditor *token3.NodeReference, tmsID *token2.TMSID) string {
+	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("PolicySpend", common.JSONMarshall(&views.PolicySpend{
+		Auditor:   auditor.Id(),
+		Wallet:    wallet,
+		TMSID:     tmsID,
+		Recipient: network.Identity(receiver.Id()),
+		TokenType: typ,
+		Signers:   []view.Identity{network.Identity(sender.Id())},
+	}))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	return common.JSONUnmarshalString(txidBoxed)
+}
+
+// PolicySpendCashAND spends a policy token that requires all co-owners to sign,
+// coordinating with them via RequestSpendView before collecting endorsements.
+func PolicySpendCashAND(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, receiver *token3.NodeReference, auditor *token3.NodeReference) string {
+	return PolicySpendCashANDForTMSID(network, sender, wallet, typ, receiver, auditor, nil)
+}
+
+// PolicySpendCashANDForTMSID is like PolicySpendCashAND but pins a specific TMSID.
+func PolicySpendCashANDForTMSID(network *integration.Infrastructure, sender *token3.NodeReference, wallet string, typ token.Type, receiver *token3.NodeReference, auditor *token3.NodeReference, tmsID *token2.TMSID) string {
+	txidBoxed, err := network.Client(sender.ReplicaName()).CallView("PolicySpend", common.JSONMarshall(&views.PolicySpend{
+		Auditor:   auditor.Id(),
+		Wallet:    wallet,
+		TMSID:     tmsID,
+		Recipient: network.Identity(receiver.Id()),
+		TokenType: typ,
+		// Signers is nil: all co-owners are contacted and must sign.
+	}))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	return common.JSONUnmarshalString(txidBoxed)
 }
 
 func BindIssuerNetworkAndSigningIdentities(network *integration.Infrastructure, issuer *token3.NodeReference, issuerPublicKey []byte, onNodes ...*token3.NodeReference) {

@@ -21,7 +21,7 @@ type (
 	StoreServiceManager db.StoreServiceManager[*StoreService]
 )
 
-var managerType = reflect.TypeOf((*StoreServiceManager)(nil))
+var managerType = reflect.TypeFor[*StoreServiceManager]()
 
 func NewStoreServiceManager(cp db.ConfigService, drivers multiplexed.Driver) StoreServiceManager {
 	return db.NewStoreServiceManager(cp, "tokendb.persistence", drivers.NewToken, newStoreService)

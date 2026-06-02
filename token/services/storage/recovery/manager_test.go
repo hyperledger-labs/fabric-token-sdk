@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package recovery_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -62,7 +63,7 @@ func TestManager_StartStop(t *testing.T) {
 	leadership := &mock.Leadership{}
 	leadership.CloseReturns(nil)
 	mockDB.AcquireRecoveryLeadershipReturns(leadership, true, nil)
-	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.TransactionRecord{}, nil)
+	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.RecoveryClaim{}, nil)
 
 	manager := recovery.NewManager(
 		logger,
@@ -105,10 +106,9 @@ func TestManager_RecoverTransaction(t *testing.T) {
 		InstanceID:     "test-instance",
 	}
 
-	// Create a pending transaction record
-	txRecord := &ttxdb.TransactionRecord{
-		TxID:   "tx123",
-		Status: storage.Pending,
+	// Create a pending transaction claim
+	txRecord := &ttxdb.RecoveryClaim{
+		TxID: "tx123",
 	}
 
 	leadership1 := &mock.Leadership{}
@@ -118,8 +118,8 @@ func TestManager_RecoverTransaction(t *testing.T) {
 
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadership1, true, nil)
 	mockDB.AcquireRecoveryLeadershipReturns(leadership2, true, nil)
-	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.TransactionRecord{txRecord}, nil)
-	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.TransactionRecord{}, nil)
+	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.RecoveryClaim{txRecord}, nil)
+	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.RecoveryClaim{}, nil)
 	mockHandler.RecoverReturns(nil)
 	mockDB.ReleaseRecoveryClaimReturns(nil)
 
@@ -162,10 +162,9 @@ func TestManager_SkipAlreadyRecovered(t *testing.T) {
 		InstanceID:     "test-instance",
 	}
 
-	// Create a pending transaction record
-	txRecord := &ttxdb.TransactionRecord{
-		TxID:   "tx456",
-		Status: storage.Pending,
+	// Create a pending transaction claim
+	txRecord := &ttxdb.RecoveryClaim{
+		TxID: "tx456",
 	}
 
 	leadershipA := &mock.Leadership{}
@@ -178,8 +177,8 @@ func TestManager_SkipAlreadyRecovered(t *testing.T) {
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadershipA, true, nil)
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(1, leadershipB, true, nil)
 	mockDB.AcquireRecoveryLeadershipReturns(leadershipC, true, nil)
-	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.TransactionRecord{txRecord}, nil)
-	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.TransactionRecord{}, nil)
+	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.RecoveryClaim{txRecord}, nil)
+	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.RecoveryClaim{}, nil)
 	mockHandler.RecoverReturns(nil)
 	mockDB.ReleaseRecoveryClaimReturns(nil)
 
@@ -202,6 +201,109 @@ func TestManager_SkipAlreadyRecovered(t *testing.T) {
 
 	// Verify Recover was called only once (not on subsequent scans because claim was released)
 	assert.Equal(t, 1, mockHandler.RecoverCallCount())
+}
+
+// TestManager_PromoteOrphanOnNotFoundPastGracePeriod verifies that when the
+// recovery handler returns a NotFound-shaped error and the row was stored more
+// than NotFoundGracePeriod ago, the manager promotes the tx to storage.Orphan
+// (not storage.Deleted) so it stops blocking the sweep queue while staying
+// distinguishable from txs the ledger actively rejected.
+func TestManager_PromoteOrphanOnNotFoundPastGracePeriod(t *testing.T) {
+	logger := logging.MustGetLogger()
+	mockDB := &mock.Storage{}
+	mockHandler := &mock.Handler{}
+	config := recovery.Config{
+		Enabled:             true,
+		TTL:                 100 * time.Millisecond,
+		ScanInterval:        100 * time.Millisecond,
+		BatchSize:           100,
+		WorkerCount:         1,
+		LeaseDuration:       time.Second,
+		AdvisoryLockID:      1,
+		InstanceID:          "test-instance",
+		NotFoundGracePeriod: 10 * time.Millisecond,
+	}
+
+	// stored_at well beyond the 10ms grace period so the promotion fires.
+	txRecord := &ttxdb.RecoveryClaim{
+		TxID:     "txOrphan",
+		StoredAt: time.Now().Add(-time.Hour),
+	}
+
+	leadership1 := &mock.Leadership{}
+	leadership1.CloseReturns(nil)
+	leadership2 := &mock.Leadership{}
+	leadership2.CloseReturns(nil)
+
+	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadership1, true, nil)
+	mockDB.AcquireRecoveryLeadershipReturns(leadership2, true, nil)
+	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.RecoveryClaim{txRecord}, nil)
+	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.RecoveryClaim{}, nil)
+	// Match isNotFoundError: "tx not found" is the FSC sentinel substring.
+	mockHandler.RecoverReturns(errors.New("rpc error: code = NotFound desc = tx not found"))
+	mockDB.ReleaseRecoveryClaimReturns(nil)
+	mockDB.SetStatusReturns(nil)
+
+	manager := recovery.NewManager(logger, mockDB, mockHandler, config)
+
+	require.NoError(t, manager.Start())
+	// Wait for the initial sweep (jitter up to 1s + handler invocation).
+	time.Sleep(1300 * time.Millisecond)
+	_ = manager.Stop()
+
+	require.GreaterOrEqual(t, mockHandler.RecoverCallCount(), 1)
+	require.Equal(t, 1, mockDB.SetStatusCallCount(), "expected exactly one SetStatus call for the orphan promotion")
+
+	_, gotTxID, gotStatus, gotMsg := mockDB.SetStatusArgsForCall(0)
+	assert.Equal(t, "txOrphan", gotTxID)
+	assert.Equal(t, storage.Orphan, gotStatus, "orphan path must promote to storage.Orphan, not storage.Deleted")
+	assert.Contains(t, gotMsg, "tx never reached ledger")
+}
+
+// TestManager_NoPromotionWhenGracePeriodDisabled verifies that NotFoundGracePeriod=0
+// disables the orphan promotion entirely, even when the row is old and the
+// handler returns NotFound. This is the documented opt-out from
+// recovery.Config.NotFoundGracePeriod.
+func TestManager_NoPromotionWhenGracePeriodDisabled(t *testing.T) {
+	logger := logging.MustGetLogger()
+	mockDB := &mock.Storage{}
+	mockHandler := &mock.Handler{}
+	config := recovery.Config{
+		Enabled:             true,
+		TTL:                 100 * time.Millisecond,
+		ScanInterval:        100 * time.Millisecond,
+		BatchSize:           100,
+		WorkerCount:         1,
+		LeaseDuration:       time.Second,
+		AdvisoryLockID:      1,
+		InstanceID:          "test-instance",
+		NotFoundGracePeriod: 0,
+	}
+
+	txRecord := &ttxdb.RecoveryClaim{
+		TxID:     "txStillPending",
+		StoredAt: time.Now().Add(-time.Hour),
+	}
+
+	leadership1 := &mock.Leadership{}
+	leadership1.CloseReturns(nil)
+	leadership2 := &mock.Leadership{}
+	leadership2.CloseReturns(nil)
+
+	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadership1, true, nil)
+	mockDB.AcquireRecoveryLeadershipReturns(leadership2, true, nil)
+	mockDB.ClaimPendingTransactionsReturnsOnCall(0, []*ttxdb.RecoveryClaim{txRecord}, nil)
+	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.RecoveryClaim{}, nil)
+	mockHandler.RecoverReturns(errors.New("rpc error: code = NotFound desc = tx not found"))
+	mockDB.ReleaseRecoveryClaimReturns(nil)
+
+	manager := recovery.NewManager(logger, mockDB, mockHandler, config)
+
+	require.NoError(t, manager.Start())
+	time.Sleep(1300 * time.Millisecond)
+	_ = manager.Stop()
+
+	assert.Equal(t, 0, mockDB.SetStatusCallCount(), "grace period disabled should never call SetStatus")
 }
 
 func TestDefaultConfig(t *testing.T) {

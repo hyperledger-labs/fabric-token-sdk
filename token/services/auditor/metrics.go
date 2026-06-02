@@ -33,6 +33,8 @@ type Metrics struct {
 	ReleasesTotal metrics.Counter
 }
 
+// newMetrics creates a new Metrics instance with the provided metrics provider.
+// If no provider is given, a no-op provider is used that discards all observations.
 func newMetrics(p metrics.Provider) *Metrics {
 	if p == nil {
 		p = &noopProvider{}
@@ -40,18 +42,22 @@ func newMetrics(p metrics.Provider) *Metrics {
 
 	return &Metrics{
 		AuditDuration: p.NewHistogram(metrics.HistogramOpts{
-			Name:    "auditor_audit_duration_seconds",
-			Help:    "Histogram of Audit() processing time per transaction (including lock acquisition), in seconds",
-			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			Name:                           "auditor_audit_duration_seconds",
+			Help:                           "Histogram of Audit() processing time per transaction (including lock acquisition), in seconds",
+			Buckets:                        []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			NativeHistogramBucketFactor:    1.1,
+			NativeHistogramMaxBucketNumber: 100,
 		}),
 		AuditLockConflicts: p.NewCounter(metrics.CounterOpts{
 			Name: "auditor_audit_lock_conflicts_total",
 			Help: "Total number of Audit() calls that failed to acquire enrollment-ID locks",
 		}),
 		AppendDuration: p.NewHistogram(metrics.HistogramOpts{
-			Name:    "auditor_append_duration_seconds",
-			Help:    "Histogram of Append() processing time per transaction, in seconds",
-			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			Name:                           "auditor_append_duration_seconds",
+			Help:                           "Histogram of Append() processing time per transaction, in seconds",
+			Buckets:                        []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+			NativeHistogramBucketFactor:    1.1,
+			NativeHistogramMaxBucketNumber: 100,
 		}),
 		AppendErrors: p.NewCounter(metrics.CounterOpts{
 			Name: "auditor_append_errors_total",
@@ -67,24 +73,40 @@ func newMetrics(p metrics.Provider) *Metrics {
 // noopProvider discards all observations. Used when no provider is configured.
 type noopProvider struct{}
 
+// NewCounter creates a no-op counter that discards all observations.
 func (p *noopProvider) NewCounter(_ metrics.CounterOpts) metrics.Counter { return &noopCounter{} }
-func (p *noopProvider) NewGauge(_ metrics.GaugeOpts) metrics.Gauge       { return &noopGauge{} }
+
+// NewGauge creates a no-op gauge that discards all observations.
+func (p *noopProvider) NewGauge(_ metrics.GaugeOpts) metrics.Gauge { return &noopGauge{} }
+
+// NewHistogram creates a no-op histogram that discards all observations.
 func (p *noopProvider) NewHistogram(_ metrics.HistogramOpts) metrics.Histogram {
 	return &noopHistogram{}
 }
 
 type noopCounter struct{}
 
+// With returns the counter itself, ignoring label values.
 func (c *noopCounter) With(_ ...string) metrics.Counter { return c }
-func (c *noopCounter) Add(delta float64)                { _ = delta }
+
+// Add discards the delta value without recording it.
+func (c *noopCounter) Add(delta float64) { _ = delta }
 
 type noopGauge struct{}
 
+// With returns the gauge itself, ignoring label values.
 func (g *noopGauge) With(_ ...string) metrics.Gauge { return g }
-func (g *noopGauge) Add(delta float64)              { _ = delta }
-func (g *noopGauge) Set(val float64)                { _ = val }
+
+// Add discards the delta value without recording it.
+func (g *noopGauge) Add(delta float64) { _ = delta }
+
+// Set discards the value without recording it.
+func (g *noopGauge) Set(val float64) { _ = val }
 
 type noopHistogram struct{}
 
+// With returns the histogram itself, ignoring label values.
 func (h *noopHistogram) With(_ ...string) metrics.Histogram { return h }
-func (h *noopHistogram) Observe(val float64)                { _ = val }
+
+// Observe discards the value without recording it.
+func (h *noopHistogram) Observe(val float64) { _ = val }

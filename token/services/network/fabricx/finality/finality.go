@@ -40,7 +40,7 @@ const (
 //go:generate counterfeiter -o mock/cs.go -fake-name ConfigService . ConfigService
 type ConfigService interface {
 	// UnmarshalKey unmarshals the configuration value for the given key into rawVal
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 }
 
 // QueryService models the FabricX query service needed by the NSListenerManager

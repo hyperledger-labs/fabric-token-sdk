@@ -48,7 +48,7 @@ func TestWithFSCIssuerIdentity_NilAttributes(t *testing.T) {
 func TestWithFSCIssuerIdentity_ExistingAttributes(t *testing.T) {
 	issuerIdentity := view.Identity("issuer-identity-789")
 	opts := &token.TransferOptions{
-		Attributes: map[interface{}]interface{}{
+		Attributes: map[any]any{
 			"existing-key": "existing-value",
 		},
 	}
@@ -63,7 +63,7 @@ func TestWithFSCIssuerIdentity_ExistingAttributes(t *testing.T) {
 // TestGetFSCIssuerIdentityFromOpts_Success verifies successful identity extraction.
 func TestGetFSCIssuerIdentityFromOpts_Success(t *testing.T) {
 	issuerIdentity := view.Identity("issuer-identity-abc")
-	attributes := map[interface{}]interface{}{
+	attributes := map[any]any{
 		ttx.IssuerFSCIdentityKey: issuerIdentity,
 	}
 
@@ -83,7 +83,7 @@ func TestGetFSCIssuerIdentityFromOpts_NilAttributes(t *testing.T) {
 
 // TestGetFSCIssuerIdentityFromOpts_MissingKey verifies missing key returns nil.
 func TestGetFSCIssuerIdentityFromOpts_MissingKey(t *testing.T) {
-	attributes := map[interface{}]interface{}{
+	attributes := map[any]any{
 		"other-key": "other-value",
 	}
 
@@ -95,7 +95,7 @@ func TestGetFSCIssuerIdentityFromOpts_MissingKey(t *testing.T) {
 
 // TestGetFSCIssuerIdentityFromOpts_WrongType verifies error on wrong type.
 func TestGetFSCIssuerIdentityFromOpts_WrongType(t *testing.T) {
-	attributes := map[interface{}]interface{}{
+	attributes := map[any]any{
 		ttx.IssuerFSCIdentityKey: "not-an-identity",
 	}
 
@@ -109,7 +109,7 @@ func TestGetFSCIssuerIdentityFromOpts_WrongType(t *testing.T) {
 
 // TestGetFSCIssuerIdentityFromOpts_WrongTypeInt verifies error on integer type.
 func TestGetFSCIssuerIdentityFromOpts_WrongTypeInt(t *testing.T) {
-	attributes := map[interface{}]interface{}{
+	attributes := map[any]any{
 		ttx.IssuerFSCIdentityKey: 123,
 	}
 
@@ -151,7 +151,7 @@ func TestWithIssuerPublicParamsPublicKey_NilAttributes(t *testing.T) {
 func TestWithIssuerPublicParamsPublicKey_ExistingAttributes(t *testing.T) {
 	publicKey := view.Identity("public-key-789")
 	opts := &token.TransferOptions{
-		Attributes: map[interface{}]interface{}{
+		Attributes: map[any]any{
 			"existing-key": "existing-value",
 		},
 	}
@@ -166,7 +166,7 @@ func TestWithIssuerPublicParamsPublicKey_ExistingAttributes(t *testing.T) {
 // TestGetIssuerPublicParamsPublicKeyFromOpts_Success verifies successful key extraction.
 func TestGetIssuerPublicParamsPublicKeyFromOpts_Success(t *testing.T) {
 	publicKey := view.Identity("public-key-abc")
-	attributes := map[interface{}]interface{}{
+	attributes := map[any]any{
 		ttx.IssuerPublicParamsPublicKey: publicKey,
 	}
 
@@ -186,7 +186,7 @@ func TestGetIssuerPublicParamsPublicKeyFromOpts_NilAttributes(t *testing.T) {
 
 // TestGetIssuerPublicParamsPublicKeyFromOpts_MissingKey verifies missing key returns nil.
 func TestGetIssuerPublicParamsPublicKeyFromOpts_MissingKey(t *testing.T) {
-	attributes := map[interface{}]interface{}{
+	attributes := map[any]any{
 		"other-key": "other-value",
 	}
 
@@ -198,7 +198,7 @@ func TestGetIssuerPublicParamsPublicKeyFromOpts_MissingKey(t *testing.T) {
 
 // TestGetIssuerPublicParamsPublicKeyFromOpts_WrongType verifies error on wrong type.
 func TestGetIssuerPublicParamsPublicKeyFromOpts_WrongType(t *testing.T) {
-	attributes := map[interface{}]interface{}{
+	attributes := map[any]any{
 		ttx.IssuerPublicParamsPublicKey: "not-a-key",
 	}
 
@@ -212,7 +212,7 @@ func TestGetIssuerPublicParamsPublicKeyFromOpts_WrongType(t *testing.T) {
 
 // TestGetIssuerPublicParamsPublicKeyFromOpts_WrongTypeStruct verifies error on struct type.
 func TestGetIssuerPublicParamsPublicKeyFromOpts_WrongTypeStruct(t *testing.T) {
-	attributes := map[interface{}]interface{}{
+	attributes := map[any]any{
 		ttx.IssuerPublicParamsPublicKey: struct{}{},
 	}
 

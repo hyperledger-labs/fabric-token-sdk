@@ -35,7 +35,7 @@ type IssueCashView struct {
 	*IssueCash
 }
 
-func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
+func (p *IssueCashView) Call(context view.Context) (any, error) {
 	// As a first step operation, the issuer contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knows already which

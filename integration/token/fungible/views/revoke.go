@@ -24,7 +24,7 @@ type RevokeUserView struct {
 	*RevokeUser
 }
 
-func (u *RevokeUserView) Call(context view.Context) (interface{}, error) {
+func (u *RevokeUserView) Call(context view.Context) (any, error) {
 	rh := utils.Hashable(u.RH).String()
 	logger.Infof("revoke [%s][%s]", u.RH, rh)
 	kvsInstance := GetKVS(context)
@@ -58,7 +58,7 @@ type GetRevocationHandleView struct {
 	*GetRevocationHandle
 }
 
-func (r *GetRevocationHandle) Call(context view.Context) (interface{}, error) {
+func (r *GetRevocationHandle) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)

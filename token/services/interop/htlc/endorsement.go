@@ -7,11 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
 )
 
 // NewCollectEndorsementsView returns an instance of the ttx collectEndorsementsView struct
@@ -29,7 +31,7 @@ func NewReceiveTransactionView(network string) *receiveTransactionView {
 	return &receiveTransactionView{network: network}
 }
 
-func (f *receiveTransactionView) Call(context view.Context) (interface{}, error) {
+func (f *receiveTransactionView) Call(context view.Context) (any, error) {
 	// Wait to receive a transaction back
 	ch := context.Session().Receive()
 
@@ -41,7 +43,17 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		if msg.Status == view.ERROR {
 			return nil, errors.New(string(msg.Payload))
 		}
-		tx, err := NewTransactionFromBytes(context, f.network, f.channel, msg.Payload)
+		// The transaction is distributed by ttx.CollectEndorsements, which now
+		// wraps it in a versioned envelope carrying a TransactionPayload.
+		env, err := jsession.UnwrapEnvelope(msg.Payload, ttx.TypeTransaction)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed unwrapping transaction envelope")
+		}
+		var payload ttx.TransactionPayload
+		if err := json.Unmarshal(env.Body, &payload); err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling transaction payload")
+		}
+		tx, err := NewTransactionFromBytes(context, f.network, f.channel, payload.Raw)
 		if err != nil {
 			return nil, err
 		}

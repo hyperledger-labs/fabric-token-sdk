@@ -3,6 +3,7 @@ package mock
 
 import (
 	"context"
+	"math/big"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -10,18 +11,18 @@ import (
 )
 
 type OwnerWallet struct {
-	BalanceStub        func(context.Context, *driver.ListTokensOptions) (uint64, error)
+	BalanceStub        func(context.Context, *driver.ListTokensOptions) (*big.Int, error)
 	balanceMutex       sync.RWMutex
 	balanceArgsForCall []struct {
 		arg1 context.Context
 		arg2 *driver.ListTokensOptions
 	}
 	balanceReturns struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}
 	balanceReturnsOnCall map[int]struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}
 	ContainsStub        func(context.Context, driver.Identity) bool
@@ -148,10 +149,11 @@ type OwnerWallet struct {
 	iDReturnsOnCall map[int]struct {
 		result1 string
 	}
-	ListTokensStub        func(*driver.ListTokensOptions) (*token.UnspentTokens, error)
+	ListTokensStub        func(context.Context, *driver.ListTokensOptions) (*token.UnspentTokens, error)
 	listTokensMutex       sync.RWMutex
 	listTokensArgsForCall []struct {
-		arg1 *driver.ListTokensOptions
+		arg1 context.Context
+		arg2 *driver.ListTokensOptions
 	}
 	listTokensReturns struct {
 		result1 *token.UnspentTokens
@@ -161,10 +163,11 @@ type OwnerWallet struct {
 		result1 *token.UnspentTokens
 		result2 error
 	}
-	ListTokensIteratorStub        func(*driver.ListTokensOptions) (driver.UnspentTokensIterator, error)
+	ListTokensIteratorStub        func(context.Context, *driver.ListTokensOptions) (driver.UnspentTokensIterator, error)
 	listTokensIteratorMutex       sync.RWMutex
 	listTokensIteratorArgsForCall []struct {
-		arg1 *driver.ListTokensOptions
+		arg1 context.Context
+		arg2 *driver.ListTokensOptions
 	}
 	listTokensIteratorReturns struct {
 		result1 driver.UnspentTokensIterator
@@ -200,7 +203,7 @@ type OwnerWallet struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *OwnerWallet) Balance(arg1 context.Context, arg2 *driver.ListTokensOptions) (uint64, error) {
+func (fake *OwnerWallet) Balance(arg1 context.Context, arg2 *driver.ListTokensOptions) (*big.Int, error) {
 	fake.balanceMutex.Lock()
 	ret, specificReturn := fake.balanceReturnsOnCall[len(fake.balanceArgsForCall)]
 	fake.balanceArgsForCall = append(fake.balanceArgsForCall, struct {
@@ -226,7 +229,7 @@ func (fake *OwnerWallet) BalanceCallCount() int {
 	return len(fake.balanceArgsForCall)
 }
 
-func (fake *OwnerWallet) BalanceCalls(stub func(context.Context, *driver.ListTokensOptions) (uint64, error)) {
+func (fake *OwnerWallet) BalanceCalls(stub func(context.Context, *driver.ListTokensOptions) (*big.Int, error)) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = stub
@@ -239,28 +242,28 @@ func (fake *OwnerWallet) BalanceArgsForCall(i int) (context.Context, *driver.Lis
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *OwnerWallet) BalanceReturns(result1 uint64, result2 error) {
+func (fake *OwnerWallet) BalanceReturns(result1 *big.Int, result2 error) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = nil
 	fake.balanceReturns = struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *OwnerWallet) BalanceReturnsOnCall(i int, result1 uint64, result2 error) {
+func (fake *OwnerWallet) BalanceReturnsOnCall(i int, result1 *big.Int, result2 error) {
 	fake.balanceMutex.Lock()
 	defer fake.balanceMutex.Unlock()
 	fake.BalanceStub = nil
 	if fake.balanceReturnsOnCall == nil {
 		fake.balanceReturnsOnCall = make(map[int]struct {
-			result1 uint64
+			result1 *big.Int
 			result2 error
 		})
 	}
 	fake.balanceReturnsOnCall[i] = struct {
-		result1 uint64
+		result1 *big.Int
 		result2 error
 	}{result1, result2}
 }
@@ -881,18 +884,19 @@ func (fake *OwnerWallet) IDReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
-func (fake *OwnerWallet) ListTokens(arg1 *driver.ListTokensOptions) (*token.UnspentTokens, error) {
+func (fake *OwnerWallet) ListTokens(arg1 context.Context, arg2 *driver.ListTokensOptions) (*token.UnspentTokens, error) {
 	fake.listTokensMutex.Lock()
 	ret, specificReturn := fake.listTokensReturnsOnCall[len(fake.listTokensArgsForCall)]
 	fake.listTokensArgsForCall = append(fake.listTokensArgsForCall, struct {
-		arg1 *driver.ListTokensOptions
-	}{arg1})
+		arg1 context.Context
+		arg2 *driver.ListTokensOptions
+	}{arg1, arg2})
 	stub := fake.ListTokensStub
 	fakeReturns := fake.listTokensReturns
-	fake.recordInvocation("ListTokens", []interface{}{arg1})
+	fake.recordInvocation("ListTokens", []interface{}{arg1, arg2})
 	fake.listTokensMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -906,17 +910,17 @@ func (fake *OwnerWallet) ListTokensCallCount() int {
 	return len(fake.listTokensArgsForCall)
 }
 
-func (fake *OwnerWallet) ListTokensCalls(stub func(*driver.ListTokensOptions) (*token.UnspentTokens, error)) {
+func (fake *OwnerWallet) ListTokensCalls(stub func(context.Context, *driver.ListTokensOptions) (*token.UnspentTokens, error)) {
 	fake.listTokensMutex.Lock()
 	defer fake.listTokensMutex.Unlock()
 	fake.ListTokensStub = stub
 }
 
-func (fake *OwnerWallet) ListTokensArgsForCall(i int) *driver.ListTokensOptions {
+func (fake *OwnerWallet) ListTokensArgsForCall(i int) (context.Context, *driver.ListTokensOptions) {
 	fake.listTokensMutex.RLock()
 	defer fake.listTokensMutex.RUnlock()
 	argsForCall := fake.listTokensArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *OwnerWallet) ListTokensReturns(result1 *token.UnspentTokens, result2 error) {
@@ -945,18 +949,19 @@ func (fake *OwnerWallet) ListTokensReturnsOnCall(i int, result1 *token.UnspentTo
 	}{result1, result2}
 }
 
-func (fake *OwnerWallet) ListTokensIterator(arg1 *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
+func (fake *OwnerWallet) ListTokensIterator(arg1 context.Context, arg2 *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
 	fake.listTokensIteratorMutex.Lock()
 	ret, specificReturn := fake.listTokensIteratorReturnsOnCall[len(fake.listTokensIteratorArgsForCall)]
 	fake.listTokensIteratorArgsForCall = append(fake.listTokensIteratorArgsForCall, struct {
-		arg1 *driver.ListTokensOptions
-	}{arg1})
+		arg1 context.Context
+		arg2 *driver.ListTokensOptions
+	}{arg1, arg2})
 	stub := fake.ListTokensIteratorStub
 	fakeReturns := fake.listTokensIteratorReturns
-	fake.recordInvocation("ListTokensIterator", []interface{}{arg1})
+	fake.recordInvocation("ListTokensIterator", []interface{}{arg1, arg2})
 	fake.listTokensIteratorMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -970,17 +975,17 @@ func (fake *OwnerWallet) ListTokensIteratorCallCount() int {
 	return len(fake.listTokensIteratorArgsForCall)
 }
 
-func (fake *OwnerWallet) ListTokensIteratorCalls(stub func(*driver.ListTokensOptions) (driver.UnspentTokensIterator, error)) {
+func (fake *OwnerWallet) ListTokensIteratorCalls(stub func(context.Context, *driver.ListTokensOptions) (driver.UnspentTokensIterator, error)) {
 	fake.listTokensIteratorMutex.Lock()
 	defer fake.listTokensIteratorMutex.Unlock()
 	fake.ListTokensIteratorStub = stub
 }
 
-func (fake *OwnerWallet) ListTokensIteratorArgsForCall(i int) *driver.ListTokensOptions {
+func (fake *OwnerWallet) ListTokensIteratorArgsForCall(i int) (context.Context, *driver.ListTokensOptions) {
 	fake.listTokensIteratorMutex.RLock()
 	defer fake.listTokensIteratorMutex.RUnlock()
 	argsForCall := fake.listTokensIteratorArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *OwnerWallet) ListTokensIteratorReturns(result1 driver.UnspentTokensIterator, result2 error) {

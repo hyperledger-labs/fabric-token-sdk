@@ -21,9 +21,11 @@ var (
 		LabelNames: []string{"network", "channel", "namespace", "method"},
 	}
 	transferDurationOpts = HistogramOpts{
-		Name:       "transfer_service_duration_seconds",
-		Help:       "Duration of TransferService method calls in seconds",
-		LabelNames: []string{"network", "channel", "namespace", "method"},
+		Name:                           "transfer_service_duration_seconds",
+		Help:                           "Duration of TransferService method calls in seconds",
+		LabelNames:                     []string{"network", "channel", "namespace", "method"},
+		NativeHistogramBucketFactor:    1.1,
+		NativeHistogramMaxBucketNumber: 100,
 	}
 	transferErrorsOpts = CounterOpts{
 		Name:       "transfer_service_errors_total",

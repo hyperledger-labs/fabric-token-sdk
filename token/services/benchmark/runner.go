@@ -304,10 +304,7 @@ func RunBenchmark[T any](
 
 	runtime.ReadMemStats(&memAfter)
 
-	goroutinesCreated := peakGoroutines.Load() - goroutineBaseline
-	if goroutinesCreated < 0 {
-		goroutinesCreated = 0
-	}
+	goroutinesCreated := max(peakGoroutines.Load()-goroutineBaseline, 0)
 
 	return analyzeResults(cfg, workerResults, memBytes, memAllocs, memBefore, memAfter, globalDuration, timeline, goroutinesCreated)
 }
@@ -720,7 +717,7 @@ func (r Result) printAnalysis(w *tabwriter.Writer, cvPct float64, tailRatio floa
 
 // --- HELPER FUNCTIONS ---
 
-func writef(w *tabwriter.Writer, format string, a ...interface{}) {
+func writef(w *tabwriter.Writer, format string, a ...any) {
 	_, _ = fmt.Fprintf(w, format, a...)
 }
 
@@ -833,10 +830,7 @@ func printSparkline(w *tabwriter.Writer, timeline []TimePoint) {
 			continue
 		}
 		ratio := p.OpsSec / maxOps
-		idx := int(ratio * float64(len(blocks)-1))
-		if idx < 0 {
-			idx = 0
-		}
+		idx := max(int(ratio*float64(len(blocks)-1)), 0)
 		if idx >= len(blocks) {
 			idx = len(blocks) - 1
 		}

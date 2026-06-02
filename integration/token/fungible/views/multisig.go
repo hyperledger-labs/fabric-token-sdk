@@ -42,7 +42,7 @@ type MultiSigLockView struct {
 	*MultiSigLock
 }
 
-func (lv *MultiSigLockView) Call(context view.Context) (txID interface{}, err error) {
+func (lv *MultiSigLockView) Call(context view.Context) (txID any, err error) {
 	// As a first step operation, the sender contacts the escrow FSC nodes
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
@@ -122,7 +122,7 @@ type MultiSigSpendView struct {
 	*MultiSigSpend
 }
 
-func (r *MultiSigSpendView) Call(context view.Context) (res interface{}, err error) {
+func (r *MultiSigSpendView) Call(context view.Context) (res any, err error) {
 	serviceOpts := ServiceOpts(r.TMSID)
 	recipient, err := ttx.RequestRecipientIdentity(context, r.Recipient, serviceOpts...)
 	assert.NoError(err, "failed getting recipient")
@@ -171,7 +171,7 @@ func (p *MultiSigSpendViewFactory) NewView(in []byte) (view.View, error) {
 
 type MultiSigAcceptSpendView struct{}
 
-func (m *MultiSigAcceptSpendView) Call(context view.Context) (interface{}, error) {
+func (m *MultiSigAcceptSpendView) Call(context view.Context) (any, error) {
 	// receive the request to spend a multi-sig token
 	request, err := multisig.ReceiveSpendRequest(context)
 	assert.NoError(err, "failed receiving spend request")
@@ -179,9 +179,42 @@ func (m *MultiSigAcceptSpendView) Call(context view.Context) (interface{}, error
 	// inspect the request
 	assert.NotNil(request.Token, "request doesn't contain a token")
 
-	// approve
-	tx, err := multisig.EndorseSpend(context, request)
-	assert.NoError(err, "failed approving spend")
+	// receive the assembled tx (without endorsing) so we can inspect it
+	tx, err := multisig.ReceiveSpendTx(context, request)
+	assert.NoError(err, "failed receiving spend transaction")
+
+	// Business-logic checks live here. The library deliberately does not
+	// enforce a fixed policy; each application decides what its co-owners
+	// will sign. Two checks that make sense for most deployments:
+	//   1. the tx consumes the token named in SpendRequest;
+	//   2. the tx does not consume any other token owned by this node
+	//      (otherwise the initiator could piggy-back unauthorised inputs).
+	inputs, err := tx.Request().Inputs(context.Context())
+	assert.NoError(err, "failed reading inputs from received tx")
+	assert.True(inputs.Count() > 0, "received tx has no inputs")
+
+	tms, err := token2.GetManagementService(context, token2.WithTMSID(tx.TMSID()))
+	assert.NoError(err, "failed getting tms for received tx")
+	sigService := tms.SigService()
+
+	matched := false
+	for i := range inputs.Count() {
+		in := inputs.At(i)
+		if in.Id != nil && in.Id.Equal(request.Token.Id) {
+			matched = true
+
+			continue
+		}
+		// Any other input must NOT belong to this responder.
+		if len(in.Owner) != 0 && sigService.IsMe(context.Context(), in.Owner) {
+			assert.Fail("received tx consumes additional token [%s] owned by this responder", in.Id)
+		}
+	}
+	assert.True(matched, "received tx does not consume the token named in SpendRequest")
+
+	// Checks passed — endorse explicitly.
+	_, err = context.RunView(ttx.NewEndorseView(tx.Transaction))
+	assert.NoError(err, "failed to endorse spend transaction")
 
 	// Sanity checks:
 	// - the transaction is in pending state

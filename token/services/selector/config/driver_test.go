@@ -232,13 +232,13 @@ func TestConfig_GetFetcherCacheMaxQueries(t *testing.T) {
 func TestNew(t *testing.T) {
 	tests := []struct {
 		name         string
-		mockConfig   map[string]interface{}
+		mockConfig   map[string]any
 		unmarshalErr error
 		expectError  bool
 	}{
 		{
 			name: "successful config parsing",
-			mockConfig: map[string]interface{}{
+			mockConfig: map[string]any{
 				"token.selector": &Config{
 					Driver:                 driver.Sherdlock,
 					RetryInterval:          5 * time.Second,
@@ -252,12 +252,12 @@ func TestNew(t *testing.T) {
 		},
 		{
 			name:        "empty config",
-			mockConfig:  map[string]interface{}{},
+			mockConfig:  map[string]any{},
 			expectError: false,
 		},
 		{
 			name:         "unmarshal error",
-			mockConfig:   map[string]interface{}{},
+			mockConfig:   map[string]any{},
 			unmarshalErr: errors.New("unmarshal failed"),
 			expectError:  true,
 		},
@@ -266,7 +266,7 @@ func TestNew(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockSvc := &mock.ConfigService{}
-			mockSvc.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+			mockSvc.UnmarshalKeyStub = func(key string, rawVal any) error {
 				if tt.unmarshalErr != nil {
 					return tt.unmarshalErr
 				}

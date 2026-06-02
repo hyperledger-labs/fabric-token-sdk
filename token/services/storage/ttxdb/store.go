@@ -28,7 +28,7 @@ import (
 type StoreServiceManager db.StoreServiceManager[*StoreService]
 
 var (
-	managerType = reflect.TypeOf((*StoreServiceManager)(nil))
+	managerType = reflect.TypeFor[*StoreServiceManager]()
 	logger      = logging.MustGetLogger()
 )
 
@@ -61,6 +61,8 @@ const (
 	Confirmed = dbdriver.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted = dbdriver.Deleted
+	// Orphan is the status of a transaction that never reached the ledger
+	Orphan = dbdriver.Orphan
 )
 
 // TxStatusMessage maps TxStatus to string
@@ -94,6 +96,10 @@ const (
 // The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
 // in that action.
 type TransactionRecord = dbdriver.TransactionRecord
+
+// RecoveryClaim is the minimal projection of a pending transaction row
+// returned by ClaimPendingTransactions for recovery processing.
+type RecoveryClaim = dbdriver.RecoveryClaim
 
 // MovementRecord is a record of a movement of assets.
 // Given a Token Transaction, a movement record is created for each enrollment ID that participated in the transaction
@@ -372,7 +378,9 @@ func (d *StoreService) AcquireRecoveryLeadership(ctx context.Context, lockID int
 }
 
 // ClaimPendingTransactions returns a claimed batch of Pending transactions older than the given duration.
-func (d *StoreService) ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*TransactionRecord, error) {
+// Each returned RecoveryClaim carries the TxID and StoredAt timestamp the recovery loop needs;
+// the rest of the row is intentionally not projected from SQL.
+func (d *StoreService) ClaimPendingTransactions(ctx context.Context, olderThan time.Duration, leaseDuration time.Duration, limit int, owner string) ([]*RecoveryClaim, error) {
 	storedBefore := time.Now().UTC().Add(-olderThan)
 	logger.DebugfContext(ctx, "claiming pending transactions stored before %s (older than %s), lease duration [%s], limit [%d], owner [%s]",
 		storedBefore, olderThan, leaseDuration, limit, owner)

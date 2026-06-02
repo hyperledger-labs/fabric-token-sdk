@@ -49,7 +49,7 @@ func makePopulatedQueryEngine(items []*token.UnspentToken) *mock.QueryEngineMock
 type unknownTopicEvent struct{}
 
 func (e *unknownTopicEvent) Topic() string { return "unregistered-topic" }
-func (e *unknownTopicEvent) Message() interface{} {
+func (e *unknownTopicEvent) Message() any {
 	return tokens.TokenMessage{TxID: "tx-unk", Index: 0}
 }
 
@@ -57,8 +57,8 @@ func (e *unknownTopicEvent) Message() interface{} {
 // tokens.TokenMessage, exercising the first early-return path in OnReceive.
 type wrongMsgTypeEvent struct{}
 
-func (e *wrongMsgTypeEvent) Topic() string        { return tokens.AddToken }
-func (e *wrongMsgTypeEvent) Message() interface{} { return 42 }
+func (e *wrongMsgTypeEvent) Topic() string { return tokens.AddToken }
+func (e *wrongMsgTypeEvent) Message() any  { return 42 }
 
 // ---------------------------------------------------------------------------
 // NewCertificationClient — notifier path
