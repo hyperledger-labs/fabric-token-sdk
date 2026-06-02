@@ -87,6 +87,7 @@ func (c *Config) GetNumRetries() int {
 	if c.NumRetries > 0 {
 		return c.NumRetries
 	}
+
 	return c.GetLimits().MaxRetries
 }
 
