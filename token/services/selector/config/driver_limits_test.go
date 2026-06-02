@@ -21,7 +21,7 @@ func TestConfig_GetLimits(t *testing.T) {
 
 		assert.Equal(t, defaultMaxTokensPerSelection, limits.MaxTokensPerSelection)
 		assert.Equal(t, defaultMaxLockAttempts, limits.MaxLockAttempts)
-		assert.Equal(t, defaultMaxRetryCycles, limits.MaxRetryCycles)
+		assert.Equal(t, defaultMaxRetries, limits.MaxRetries)
 		assert.Equal(t, defaultMaxLocksPerTransaction, limits.MaxLocksPerTransaction)
 		assert.Equal(t, defaultSelectionTimeout, limits.SelectionTimeout)
 	})
@@ -31,7 +31,7 @@ func TestConfig_GetLimits(t *testing.T) {
 			Limits: Limits{
 				MaxTokensPerSelection:  5000,
 				MaxLockAttempts:        25000,
-				MaxRetryCycles:         5,
+				MaxRetries:             5,
 				MaxLocksPerTransaction: 2500,
 				SelectionTimeout:       15 * time.Second,
 			},
@@ -40,7 +40,7 @@ func TestConfig_GetLimits(t *testing.T) {
 
 		assert.Equal(t, 5000, limits.MaxTokensPerSelection)
 		assert.Equal(t, 25000, limits.MaxLockAttempts)
-		assert.Equal(t, 5, limits.MaxRetryCycles)
+		assert.Equal(t, 5, limits.MaxRetries)
 		assert.Equal(t, 2500, limits.MaxLocksPerTransaction)
 		assert.Equal(t, 15*time.Second, limits.SelectionTimeout)
 	})
@@ -50,7 +50,7 @@ func TestConfig_GetLimits(t *testing.T) {
 			Limits: Limits{
 				MaxTokensPerSelection:  0,
 				MaxLockAttempts:        0,
-				MaxRetryCycles:         0,
+				MaxRetries:             0,
 				MaxLocksPerTransaction: 0,
 				SelectionTimeout:       0,
 			},
@@ -59,9 +59,42 @@ func TestConfig_GetLimits(t *testing.T) {
 
 		assert.Equal(t, defaultMaxTokensPerSelection, limits.MaxTokensPerSelection)
 		assert.Equal(t, defaultMaxLockAttempts, limits.MaxLockAttempts)
-		assert.Equal(t, defaultMaxRetryCycles, limits.MaxRetryCycles)
+		assert.Equal(t, defaultMaxRetries, limits.MaxRetries)
 		assert.Equal(t, defaultMaxLocksPerTransaction, limits.MaxLocksPerTransaction)
 		assert.Equal(t, defaultSelectionTimeout, limits.SelectionTimeout)
+	})
+	
+	t.Run("backward compatibility: uses deprecated MaxRetryCycles", func(t *testing.T) {
+		cfg := &Config{
+			Limits: Limits{
+				MaxRetryCycles: 7, // Deprecated field
+			},
+		}
+		limits := cfg.GetLimits()
+
+		assert.Equal(t, 7, limits.MaxRetries, "should use deprecated MaxRetryCycles value")
+	})
+	
+	t.Run("backward compatibility: uses deprecated NumRetries", func(t *testing.T) {
+		cfg := &Config{
+			NumRetries: 8, // Deprecated field
+		}
+		limits := cfg.GetLimits()
+
+		assert.Equal(t, 8, limits.MaxRetries, "should use deprecated NumRetries value")
+	})
+	
+	t.Run("backward compatibility: MaxRetries takes precedence", func(t *testing.T) {
+		cfg := &Config{
+			NumRetries: 8,
+			Limits: Limits{
+				MaxRetries:     5,
+				MaxRetryCycles: 7,
+			},
+		}
+		limits := cfg.GetLimits()
+
+		assert.Equal(t, 5, limits.MaxRetries, "MaxRetries should take precedence over deprecated fields")
 	})
 }
 
@@ -91,7 +124,7 @@ func TestConfig_Validate(t *testing.T) {
 			Limits: Limits{
 				MaxTokensPerSelection:  10000,
 				MaxLockAttempts:        5000, // Less than MaxTokensPerSelection
-				MaxRetryCycles:         10,
+				MaxRetries:             10,
 				MaxLocksPerTransaction: 5000,
 				SelectionTimeout:       30 * time.Second,
 			},
@@ -107,7 +140,7 @@ func TestConfig_Validate(t *testing.T) {
 			Limits: Limits{
 				MaxTokensPerSelection:  5000,
 				MaxLockAttempts:        25000,
-				MaxRetryCycles:         10,
+				MaxRetries:             10,
 				MaxLocksPerTransaction: 10000, // Greater than MaxTokensPerSelection
 				SelectionTimeout:       30 * time.Second,
 			},
@@ -123,7 +156,7 @@ func TestConfig_Validate(t *testing.T) {
 			Limits: Limits{
 				MaxTokensPerSelection:  5000,
 				MaxLockAttempts:        5000,
-				MaxRetryCycles:         5,
+				MaxRetries:             5,
 				MaxLocksPerTransaction: 5000,
 				SelectionTimeout:       30 * time.Second,
 			},
@@ -137,7 +170,7 @@ func TestConfig_Validate(t *testing.T) {
 			Limits: Limits{
 				MaxTokensPerSelection:  1,
 				MaxLockAttempts:        1,
-				MaxRetryCycles:         1,
+				MaxRetries:             1,
 				MaxLocksPerTransaction: 1,
 				SelectionTimeout:       1 * time.Nanosecond,
 			},
@@ -152,7 +185,7 @@ func TestConfig_DefaultValues(t *testing.T) {
 		// Verify defaults are set to secure values
 		assert.Equal(t, 10000, defaultMaxTokensPerSelection, "default max tokens should be 10k")
 		assert.Equal(t, 50000, defaultMaxLockAttempts, "default max lock attempts should be 50k")
-		assert.Equal(t, 10, defaultMaxRetryCycles, "default max retry cycles should be 10")
+		assert.Equal(t, 10, defaultMaxRetries, "default max retries should be 10")
 		assert.Equal(t, 5000, defaultMaxLocksPerTransaction, "default max locks per tx should be 5k")
 		assert.Equal(t, 30*time.Second, defaultSelectionTimeout, "default timeout should be 30s")
 	})

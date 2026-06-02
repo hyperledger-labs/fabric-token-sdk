@@ -37,14 +37,13 @@ type selector struct {
 	queryService QueryService
 	precision    uint64
 
-	numRetry             int
+	maxRetries           int
 	timeout              time.Duration
 	requestCertification bool
 
 	// Resource limits to prevent algorithmic attacks
 	maxTokensPerSelection int
 	maxLockAttempts       int
-	maxRetryCycles        int
 	selectionTimeout      time.Duration
 
 	// Resource tracking counters (reset per selection)
@@ -111,12 +110,12 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 	for {
 		// Check retry cycle limit
 		actualRetries++
-		if actualRetries > s.maxRetryCycles {
+		if actualRetries > s.maxRetries {
 			s.locker.UnlockByTxID(ctx, s.txID)
 
 			return nil, nil, errors.Errorf(
-				"token selection aborted: exceeded max retry cycles (%d) after examining %d tokens and %d lock attempts",
-				s.maxRetryCycles, s.tokensIteratedCount, s.lockAttemptsCount,
+				"token selection aborted: exceeded max retries (%d) after examining %d tokens and %d lock attempts",
+				s.maxRetries, s.tokensIteratedCount, s.lockAttemptsCount,
 			)
 		}
 
@@ -124,7 +123,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			unspentTokens.Close()
 		}
 		logger.DebugfContext(ctx, "start token selection, iteration [%d/%d] (tokens examined: %d, lock attempts: %d)",
-			actualRetries, s.maxRetryCycles, s.tokensIteratedCount, s.lockAttemptsCount)
+			actualRetries, s.maxRetries, s.tokensIteratedCount, s.lockAttemptsCount)
 		unspentTokens, err = s.queryService.UnspentTokensIteratorBy(ctx, id, tokenType, s.maxTokensPerSelection)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")
@@ -137,7 +136,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 		toBeSpent = nil
 		var toBeCertified []*token2.ID
 
-		reclaim := s.numRetry == 1 || actualRetries > 1
+		reclaim := s.maxRetries == 1 || actualRetries > 1
 		for {
 			// Check token iteration limit
 			s.tokensIteratedCount++
@@ -237,7 +236,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			logger.DebugfContext(ctx, "token selection: sufficient funds but partially locked")
 		}
 
-		if actualRetries >= s.numRetry {
+		if actualRetries >= s.maxRetries {
 			// it is time to fail but how?
 			if concurrencyIssue {
 				logger.DebugfContext(ctx, "concurrency issue, some of the tokens might not exist anymore")
