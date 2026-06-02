@@ -236,7 +236,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 			logger.DebugfContext(ctx, "token selection: sufficient funds but partially locked")
 		}
 
-		if actualRetries >= s.maxRetries {
+		if actualRetries > s.maxRetries {
 			// it is time to fail but how?
 			if concurrencyIssue {
 				logger.DebugfContext(ctx, "concurrency issue, some of the tokens might not exist anymore")

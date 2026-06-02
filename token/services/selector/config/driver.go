@@ -25,7 +25,7 @@ const (
 	// Security limits to prevent algorithmic attacks
 	defaultMaxTokensPerSelection  = 10000            // Max tokens to iterate per selection
 	defaultMaxLockAttempts        = 50000            // Max lock attempts per selection (5x iteration limit)
-	defaultMaxRetries             = 3                // Max outer retry loops
+	defaultMaxRetries             = 10               // Max outer retry loops
 	defaultMaxLocksPerTransaction = 5000             // Max concurrent locks held per transaction
 	defaultSelectionTimeout       = 30 * time.Second // Wall-clock timeout for selection
 )
