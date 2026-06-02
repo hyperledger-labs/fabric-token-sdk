@@ -235,6 +235,7 @@ func (s *Selector) Select(ctx context.Context, owner token.OwnerFilter, q string
 // This avoids attempting to unlock with a cancelled context.
 func (s *Selector) selectWithoutMetrics(ctx context.Context, owner token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
 	ids, quantity, _, err := s.selectInternal(ctx, owner, q, tokenType)
+	
 	return ids, quantity, err
 }
 
