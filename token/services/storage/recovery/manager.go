@@ -234,7 +234,7 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 		return nil
 	}
 
-	m.logger.Infof("claimed %d pending transaction(s) needing recovery", len(records))
+	m.logger.Debugf("claimed %d pending transaction(s) needing recovery", len(records))
 
 	work := make(chan *ttxdb.RecoveryClaim)
 	errCh := make(chan error, len(records))
@@ -277,7 +277,7 @@ func (m *Manager) recoverTransactions(ctx context.Context) error {
 	if failures > 0 {
 		m.logger.Warnf("completed recovery sweep: claimed=%d, succeeded=%d, failed=%d", len(records), len(records)-failures, failures)
 	} else {
-		m.logger.Infof("completed recovery sweep: claimed=%d, all succeeded", len(records))
+		m.logger.Debugf("completed recovery sweep: claimed=%d, all succeeded", len(records))
 	}
 
 	return firstErr

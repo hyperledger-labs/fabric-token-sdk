@@ -136,7 +136,7 @@ func (h *TTXRecoveryHandler) applyFinalityLogic(ctx context.Context, txID string
 	default:
 		// Transaction is not yet finalized (Busy or Unknown status)
 		// This is a normal transient state - don't treat as error to avoid unnecessary claim churn
-		h.logger.Infof("transaction [%s] has status [%d], not yet finalized - will retry on next scan", txID, status)
+		h.logger.Debugf("transaction [%s] has status [%d], not yet finalized - will retry on next scan", txID, status)
 
 		// Return nil to release claim gracefully without error
 		// The transaction will be picked up again on the next scan after TTL expires

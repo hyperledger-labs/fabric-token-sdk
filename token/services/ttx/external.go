@@ -161,7 +161,7 @@ func (s *StreamExternalWalletSignerClient) init() {
 				s.input <- req
 			}
 		case Done:
-			logger.Infof("no more signatures required")
+			logger.Debugf("no more signatures required")
 			close(s.input)
 
 			return
