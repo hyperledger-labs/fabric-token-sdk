@@ -77,9 +77,10 @@ func (m *mockIterator) Next() (*token2.UnspentToken, error) {
 
 // mockLocker implements Locker for testing
 type mockLocker struct {
-	locked      map[token2.ID]string
-	lockCount   int
-	maxLockFail int // Fail after this many lock attempts
+	locked         map[token2.ID]string
+	lockCount      int
+	maxLockFail    int  // Fail after this many lock attempts
+	rejectReclaims bool // Reject reclaim attempts
 }
 
 func newMockLocker() *mockLocker {
@@ -93,6 +94,14 @@ func (m *mockLocker) Lock(ctx context.Context, id *token2.ID, txID string, recla
 	if m.maxLockFail > 0 && m.lockCount > m.maxLockFail {
 		return "", assert.AnError
 	}
+	
+	// Check if already locked by a different transaction
+	if existingTxID, exists := m.locked[*id]; exists && existingTxID != txID {
+		if !reclaim || m.rejectReclaims {
+			return "", assert.AnError // Lock conflict
+		}
+	}
+	
 	m.locked[*id] = txID
 
 	return "", nil
@@ -222,17 +231,30 @@ func TestSelector_LockAttemptLimit(t *testing.T) {
 
 func TestSelector_RetryLimit(t *testing.T) {
 	t.Run("aborts when exceeding max retries", func(t *testing.T) {
-		// Create tokens that will cause retries (insufficient funds)
+		// Create tokens with sufficient funds
 		tokens := []*token2.UnspentToken{
 			{
-				Id:       token2.ID{TxId: "tx", Index: 0},
-				Quantity: "10",
+				Id:       token2.ID{TxId: "tx1", Index: 0},
+				Quantity: "500",
+			},
+			{
+				Id:       token2.ID{TxId: "tx2", Index: 0},
+				Quantity: "500",
 			},
 		}
 
+		// Pre-lock all tokens with a different transaction to simulate contention
+		locker := newMockLocker()
+		locker.rejectReclaims = true // Prevent reclaiming locks even with reclaim=true
+		ctx := context.Background()
+		_, err := locker.Lock(ctx, &tokens[0].Id, "other-tx", false)
+		require.NoError(t, err)
+		_, err2 := locker.Lock(ctx, &tokens[1].Id, "other-tx", false)
+		require.NoError(t, err2)
+
 		s := &selector{
 			txID:                  "test-tx",
-			locker:                newMockLocker(),
+			locker:                locker,
 			queryService:          &mockQueryService{tokens: tokens},
 			precision:             64,
 			maxRetries:            3, // Limit to 3 retries
@@ -242,10 +264,9 @@ func TestSelector_RetryLimit(t *testing.T) {
 			selectionTimeout:      time.Second,
 		}
 
-		ctx := context.Background()
 		filter := &mockOwnerFilter{id: "alice"}
 
-		_, _, err := s.Select(ctx, filter, "1000", "USD") // Request more than available
+		_, _, err = s.Select(ctx, filter, "100", "USD") // Request less than available but all tokens are locked
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "exceeded max retries")
 	})
