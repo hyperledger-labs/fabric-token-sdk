@@ -99,9 +99,9 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 
 	// Preserve the detailed error message from the last attempt
 	if lastErr != nil {
-		
 		return nil, nil, errors.Wrapf(lastErr, "aborted too many times and no other process unlocked or added tokens")
 	}
+
 	return nil, nil, errors.Wrapf(token.SelectorInsufficientFunds, "aborted too many times and no other process unlocked or added tokens")
 }
 
