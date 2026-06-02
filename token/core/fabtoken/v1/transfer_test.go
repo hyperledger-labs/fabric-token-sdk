@@ -267,8 +267,91 @@ func TestTransferService(t *testing.T) {
 		tl := &MockTokenLoader{}
 		des := &mock.Deserializer{}
 		s := v1.NewTransferService(logger, ppm, ws, tl, des)
+
+		// Test nil transfer action should return error
 		err := s.VerifyTransfer(ctx, nil, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nil transfer action")
+
+		// Test with valid transfer action (balanced inputs and outputs)
+		action := &actions.TransferAction{
+			Inputs: []*actions.TransferActionInput{
+				{
+					ID: &token.ID{TxId: "tx1", Index: 0},
+					Input: &actions.Output{
+						Owner:    []byte("owner1"),
+						Type:     "type1",
+						Quantity: "10",
+					},
+				},
+			},
+			Outputs: []*actions.Output{
+				{
+					Owner:    []byte("owner2"),
+					Type:     "type1",
+					Quantity: "10",
+				},
+			},
+		}
+		err = s.VerifyTransfer(ctx, action, nil)
 		require.NoError(t, err)
+
+		// Test with unbalanced inputs and outputs (should fail)
+		actionUnbalanced := &actions.TransferAction{
+			Inputs: []*actions.TransferActionInput{
+				{
+					ID: &token.ID{TxId: "tx1", Index: 0},
+					Input: &actions.Output{
+						Owner:    []byte("owner1"),
+						Type:     "type1",
+						Quantity: "100",
+					},
+				},
+			},
+			Outputs: []*actions.Output{
+				{
+					Owner:    []byte("owner2"),
+					Type:     "type1",
+					Quantity: "50",
+				},
+			},
+		}
+		err = s.VerifyTransfer(ctx, actionUnbalanced, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does not match")
+
+		// Test with different token types (should fail)
+		actionTypeMismatch := &actions.TransferAction{
+			Inputs: []*actions.TransferActionInput{
+				{
+					ID: &token.ID{TxId: "tx1", Index: 0},
+					Input: &actions.Output{
+						Owner:    []byte("owner1"),
+						Type:     "USD",
+						Quantity: "10",
+					},
+				},
+			},
+			Outputs: []*actions.Output{
+				{
+					Owner:    []byte("owner2"),
+					Type:     "EUR", // Different type
+					Quantity: "10",
+				},
+			},
+		}
+		err = s.VerifyTransfer(ctx, actionTypeMismatch, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "token type")
+
+		// Test with empty inputs (should fail validation)
+		actionEmptyInputs := &actions.TransferAction{
+			Inputs:  []*actions.TransferActionInput{},
+			Outputs: []*actions.Output{},
+		}
+		err = s.VerifyTransfer(ctx, actionEmptyInputs, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid")
 	})
 
 	t.Run("DeserializeTransferAction", func(t *testing.T) {

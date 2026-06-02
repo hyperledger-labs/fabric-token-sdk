@@ -183,7 +183,142 @@ func (s *TransferService) Transfer(ctx context.Context, anchor driver.TokenReque
 
 // VerifyTransfer checks the outputs in the TransferAction against the passed tokenInfos
 func (s *TransferService) VerifyTransfer(ctx context.Context, tr driver.TransferAction, outputMetadata []*driver.TransferOutputMetadata) error {
-	// TODO:
+	if tr == nil {
+		return errors.New("nil transfer action")
+	}
+
+	// Type assertion to get the concrete type
+	action, ok := tr.(*actions.TransferAction)
+	if !ok {
+		return errors.New("expected *fabtoken.TransferAction")
+	}
+
+	// Validate the transfer action structure
+	if err := action.Validate(); err != nil {
+		return errors.Wrap(err, "invalid transfer action")
+	}
+
+	// Verify output count matches metadata count (if metadata is provided)
+	if outputMetadata != nil && len(outputMetadata) > 0 && len(action.Outputs) != len(outputMetadata) {
+		return errors.Errorf("number of outputs [%d] does not match number of metadata entries [%d]", len(action.Outputs), len(outputMetadata))
+	}
+
+	// Get precision for quantity calculations
+	var precision uint64 = 64 // default precision
+	if s.PublicParametersManager != nil && s.PublicParametersManager.PublicParameters() != nil {
+		precision = s.PublicParametersManager.PublicParameters().Precision()
+	}
+
+	// Calculate input sum
+	inputSum, err := calculateInputSum(action.Inputs, precision)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate input sum")
+	}
+
+	// Calculate output sum
+	outputSum, err := calculateOutputSum(action.Outputs, precision)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate output sum")
+	}
+
+	// Verify input sum equals output sum (conservation of value)
+	cmp := inputSum.Cmp(outputSum)
+	if cmp != 0 {
+		// Check if difference is due to redeem (redeem outputs have empty owner)
+		if action.IsRedeem() {
+			s.Logger.DebugfContext(ctx, "redeem detected, input sum [%s] output sum [%s]", inputSum.Decimal(), outputSum.Decimal())
+		} else {
+			return errors.Errorf("input sum [%s] does not match output sum [%s]", inputSum.Decimal(), outputSum.Decimal())
+		}
+	}
+
+	// Verify token types match across inputs and outputs
+	if err := verifyTokenTypes(action.Inputs, action.Outputs); err != nil {
+		return errors.Wrap(err, "token type mismatch")
+	}
+
+	// Verify each output has valid data
+	for i, output := range action.Outputs {
+		if output == nil {
+			return errors.Errorf("nil output at index [%d]", i)
+		}
+		if err := output.Validate(false); err != nil {
+			return errors.Wrapf(err, "invalid output at index [%d]", i)
+		}
+	}
+
+	s.Logger.DebugfContext(ctx, "transfer verified successfully: inputs=%d, outputs=%d, sum=%s", len(action.Inputs), len(action.Outputs), inputSum.Decimal())
+
+	return nil
+}
+
+// calculateInputSum calculates the total quantity of all inputs
+func calculateInputSum(inputs []*actions.TransferActionInput, precision uint64) (token.Quantity, error) {
+	sum := token.NewZeroQuantity(precision)
+	for _, in := range inputs {
+		if in == nil || in.Input == nil {
+			continue
+		}
+		q, err := token.ToQuantity(in.Input.Quantity, precision)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse quantity from input")
+		}
+		sum, err = sum.Add(q)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to add input quantity")
+		}
+	}
+	return sum, nil
+}
+
+// calculateOutputSum calculates the total quantity of all outputs
+func calculateOutputSum(outputs []*actions.Output, precision uint64) (token.Quantity, error) {
+	sum := token.NewZeroQuantity(precision)
+	for _, out := range outputs {
+		if out == nil {
+			continue
+		}
+		q, err := token.ToQuantity(out.Quantity, precision)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse quantity from output")
+		}
+		sum, err = sum.Add(q)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to add output quantity")
+		}
+	}
+	return sum, nil
+}
+
+// verifyTokenTypes ensures all inputs and outputs have the same token type
+func verifyTokenTypes(inputs []*actions.TransferActionInput, outputs []*actions.Output) error {
+	if len(inputs) == 0 || len(outputs) == 0 {
+		return nil
+	}
+
+	// Get the first input's type
+	var expectedType token.Type
+	for _, in := range inputs {
+		if in != nil && in.Input != nil {
+			expectedType = in.Input.Type
+			break
+		}
+	}
+
+	// Verify all inputs have the same type
+	for i, in := range inputs {
+		if in != nil && in.Input != nil && in.Input.Type != expectedType {
+			return errors.Errorf("input at index [%d] has different type [%s] than expected [%s]", i, in.Input.Type, expectedType)
+		}
+	}
+
+	// Verify all outputs have the same type as inputs
+	for i, out := range outputs {
+		if out != nil && out.Type != expectedType {
+			return errors.Errorf("output at index [%d] has different type [%s] than expected [%s]", i, out.Type, expectedType)
+		}
+	}
+
 	return nil
 }
 
