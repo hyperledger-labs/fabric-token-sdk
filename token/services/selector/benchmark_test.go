@@ -175,8 +175,8 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDB
 		testutils.SelectorTimeout,
 		false,
 		testutils.TokenQuantityPrecision,
-		10000, // maxTokensPerSelection
-		50000, // maxLockAttempts
+		10000,          // maxTokensPerSelection
+		50000,          // maxLockAttempts
 		30*time.Second, // selectionTimeout
 	).NewSelector(testutils.TxID)
 

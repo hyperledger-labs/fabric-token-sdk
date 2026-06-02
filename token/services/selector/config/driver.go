@@ -25,7 +25,7 @@ const (
 	// Security limits to prevent algorithmic attacks
 	defaultMaxTokensPerSelection  = 10000            // Max tokens to iterate per selection
 	defaultMaxLockAttempts        = 50000            // Max lock attempts per selection (5x iteration limit)
-	defaultMaxRetries             = 3               // Max outer retry loops
+	defaultMaxRetries             = 3                // Max outer retry loops
 	defaultMaxLocksPerTransaction = 5000             // Max concurrent locks held per transaction
 	defaultSelectionTimeout       = 30 * time.Second // Wall-clock timeout for selection
 )
@@ -42,7 +42,7 @@ type Limits struct {
 	MaxRetries             int           `yaml:"maxRetries,omitempty"`
 	MaxLocksPerTransaction int           `yaml:"maxLocksPerTransaction,omitempty"`
 	SelectionTimeout       time.Duration `yaml:"selectionTimeout,omitempty"`
-	
+
 	// Deprecated: Use MaxRetries instead
 	MaxRetryCycles int `yaml:"maxRetryCycles,omitempty"`
 }
@@ -56,7 +56,7 @@ type Config struct {
 	FetcherCacheRefresh    time.Duration `yaml:"fetcherCacheRefresh,omitempty"`
 	FetcherCacheMaxQueries int           `yaml:"fetcherCacheMaxQueries,omitempty"`
 	Limits                 Limits        `yaml:"limits,omitempty"`
-	
+
 	// Deprecated: Use Limits.MaxRetries instead
 	NumRetries int `yaml:"numRetries,omitempty"`
 }
@@ -139,7 +139,7 @@ func (c *Config) GetLimits() Limits {
 	if limits.MaxLockAttempts <= 0 {
 		limits.MaxLockAttempts = defaultMaxLockAttempts
 	}
-	
+
 	// Handle MaxRetries with backward compatibility
 	if limits.MaxRetries <= 0 {
 		// Check deprecated fields for backward compatibility
@@ -151,7 +151,7 @@ func (c *Config) GetLimits() Limits {
 			limits.MaxRetries = defaultMaxRetries
 		}
 	}
-	
+
 	if limits.MaxLocksPerTransaction <= 0 {
 		limits.MaxLocksPerTransaction = defaultMaxLocksPerTransaction
 	}
