@@ -94,14 +94,14 @@ func (m *mockLocker) Lock(ctx context.Context, id *token2.ID, txID string, recla
 	if m.maxLockFail > 0 && m.lockCount > m.maxLockFail {
 		return "", assert.AnError
 	}
-	
+
 	// Check if already locked by a different transaction
 	if existingTxID, exists := m.locked[*id]; exists && existingTxID != txID {
 		if !reclaim || m.rejectReclaims {
 			return "", assert.AnError // Lock conflict
 		}
 	}
-	
+
 	m.locked[*id] = txID
 
 	return "", nil
