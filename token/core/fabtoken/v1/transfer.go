@@ -267,6 +267,7 @@ func calculateInputSum(inputs []*actions.TransferActionInput, precision uint64) 
 			return nil, errors.Wrapf(err, "failed to add input quantity")
 		}
 	}
+
 	return sum, nil
 }
 
@@ -286,6 +287,7 @@ func calculateOutputSum(outputs []*actions.Output, precision uint64) (token.Quan
 			return nil, errors.Wrapf(err, "failed to add output quantity")
 		}
 	}
+
 	return sum, nil
 }
 
@@ -300,6 +302,7 @@ func verifyTokenTypes(inputs []*actions.TransferActionInput, outputs []*actions.
 	for _, in := range inputs {
 		if in != nil && in.Input != nil {
 			expectedType = in.Input.Type
+
 			break
 		}
 	}
