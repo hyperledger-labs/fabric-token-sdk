@@ -57,7 +57,7 @@ func NewDriver(config driver3.Config) *Driver {
 // NewDriverWithDbProvider returns a new Driver for Postgres using the given database provider.
 func NewDriverWithDbProvider(config driver3.Config, dbProvider fscPostgres.DbProvider) *Driver {
 	d := &Driver{
-		cp: fscPostgres.NewConfigProvider(common.NewConfig(config)),
+		cp: &tlsConfigProvider{wrapped: fscPostgres.NewConfigProvider(common.NewConfig(config)), config: config},
 	}
 
 	d.TokenLock = newProviderWithKeyMapper(dbProvider, NewTokenLockStore, "tokenlock")
