@@ -23,7 +23,7 @@ import (
 const (
 	// shutdownTimeout is the maximum time to wait for the runner to complete shutdown.
 	// This prevents indefinite blocking if the runner fails to stop cleanly.
-	shutdownTimeout = 10 * time.Second
+	shutdownTimeout = 20 * time.Second
 )
 
 // SuiteRunner executes test suites
@@ -67,7 +67,7 @@ func (r *BaseRunner) ShutDown() error {
 		return errors.New("runner already down")
 	default:
 		r.logger.Infof("Sending command to shut down runner...")
-		close(r.shutdown)
+		r.shutdown <- struct{}{}
 		r.logger.Infof("Waiting for runner to shut down...")
 		select {
 		case <-r.done:
@@ -95,7 +95,9 @@ func (r *BaseRunner) Start(ctx context.Context) error {
 	go r.printTPS()
 
 	go func() {
-		defer close(r.done)
+		defer func() {
+			r.done <- struct{}{}
+		}()
 		r.logger.Infof("Start suite executions")
 		for {
 			select {
@@ -109,7 +111,7 @@ func (r *BaseRunner) Start(ctx context.Context) error {
 					r.executeSuite(suite)
 				case <-ctx.Done():
 					r.logger.Infof("Context canceled. Shutting down...")
-					close(r.shutdown)
+					r.shutdown <- struct{}{}
 
 					return
 				case <-r.shutdown:
