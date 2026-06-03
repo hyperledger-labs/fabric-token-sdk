@@ -21,7 +21,7 @@ func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
 	t.Helper()
 	for _, c := range tokenLockDBCases {
 		driver := cfgProvider(c.Name)
-		
+
 		// Create token store first to ensure the tokens table exists
 		// This is required because token locks now have a foreign key constraint
 		// referencing the tokens table
@@ -29,7 +29,7 @@ func TokenLocksTest(t *testing.T, cfgProvider cfgProvider) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		
+
 		tokenLockDB, err := driver.NewTokenLock("", c.Name)
 		if err != nil {
 			utils.IgnoreError(tokenDB.Close)
@@ -59,7 +59,7 @@ var tokenLockDBCases = []struct {
 
 func TestFully(t *testing.T, tokenLockDB driver3.TokenLockStore, tokenTransactionDB driver3.TokenTransactionStore) {
 	ctx := t.Context()
-	
+
 	// First, create a token request in the transaction store
 	tx, err := tokenTransactionDB.NewTransactionStoreTransaction()
 	require.NoError(t, err)
@@ -73,11 +73,11 @@ func TestFully(t *testing.T, tokenLockDB driver3.TokenLockStore, tokenTransactio
 	// In a real scenario, tokens must be created in the token store before they can be locked.
 	// This test demonstrates that attempting to lock a non-existent token is now properly rejected.
 	err = tokenLockDB.Lock(ctx, &token.ID{TxId: "apple", Index: 0}, "pineapple")
-	
+
 	// The lock should fail because the token doesn't exist in the tokens table
 	// This validates that the foreign key constraint is working correctly
 	require.Error(t, err, "Lock should fail for non-existent token due to foreign key constraint")
-	
+
 	// Cleanup should still work even if no locks exist
 	require.NoError(t, tokenLockDB.Cleanup(ctx, 1*time.Second))
 }
