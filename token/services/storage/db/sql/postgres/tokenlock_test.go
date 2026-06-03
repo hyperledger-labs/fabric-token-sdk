@@ -27,6 +27,7 @@ func mockTokenLockStorePostgress(db *sql.DB) *TokenLockStore {
 
 	store, _ := NewTokenLockStore(&dbs, common3.TableNames{
 		TokenLocks: "TOKEN_LOCKS",
+		Tokens:     "TOKENS",
 		Requests:   "REQUESTS",
 	})
 
@@ -40,6 +41,7 @@ func mockTokenLockStore(db *sql.DB) *common3.TokenLockStore {
 
 	store, _ := NewTokenLockStore(&dbs, common3.TableNames{
 		TokenLocks: "TOKEN_LOCKS",
+		Tokens:     "TOKENS",
 		Requests:   "REQUESTS",
 	})
 
