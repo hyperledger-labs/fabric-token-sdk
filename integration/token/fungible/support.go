@@ -189,16 +189,28 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor *toke
 	for i, tx := range txs {
 		fmt.Printf("tx %d: %+v\n", i, tx)
 		fmt.Printf("expected %d: %+v\n", i, expected[i])
-		txExpected := expected[i]
-		gomega.Expect(tx.TokenType).To(gomega.Equal(txExpected.TokenType), "tx [%d][%s] expected token type [%v], got [%v]", i, tx.TxID, txExpected.TokenType, tx.TokenType)
-		gomega.Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(gomega.BeTrue(), "tx [%d][%s] expected sender [%v], got [%v]", i, tx.TxID, txExpected.SenderEID, tx.SenderEID)
-		gomega.Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(gomega.BeTrue(), "tx [%d][%s] tx.RecipientEID: %s, txExpected.RecipientEID: %s", i, tx.TxID, tx.RecipientEID, txExpected.RecipientEID)
-		gomega.Expect(tx.ActionType).To(gomega.Equal(txExpected.ActionType), "tx [%d][%s] expected transaction type [%v], got [%v]", i, tx.TxID, txExpected.ActionType, tx.ActionType)
-		gomega.Expect(tx.Amount).To(gomega.Equal(txExpected.Amount), "tx [%d][%s] expected amount [%v], got [%v]", i, tx.TxID, txExpected.Amount, tx.Amount)
-		if len(txExpected.TxID) != 0 {
-			gomega.Expect(txExpected.TxID).To(gomega.Equal(tx.TxID), "tx [%d][%s] expected id [%s], got [%s]", i, tx.TxID, txExpected.TxID, tx.TxID)
+	}
+	// Records from the same transaction share a stored_at timestamp; their
+	// order within that group is undefined, so match each group as a set.
+	for lo := 0; lo < len(txs); {
+		hi := lo + 1
+		for hi < len(txs) && txs[hi].Timestamp.Equal(txs[lo].Timestamp) {
+			hi++
 		}
-		gomega.Expect(tx.Status).To(gomega.Equal(txExpected.Status), "tx [%d][%s] expected status [%v], got [%v]", i, tx.TxID, txExpected.Status, tx.Status)
+		matched := make([]bool, hi-lo)
+		for _, txExpected := range expected[lo:hi] {
+			found := false
+			for k := range hi - lo {
+				if !matched[k] && matchTransactionRecord(txs[lo+k], txExpected, lo+k) == nil {
+					matched[k] = true
+					found = true
+
+					break
+				}
+			}
+			gomega.Expect(found).To(gomega.BeTrue(), "no audited transaction matches expected [%+v] within stored_at group [%d:%d), got [%+v]", txExpected, lo, hi, txs[lo:hi])
+		}
+		lo = hi
 	}
 }
 
