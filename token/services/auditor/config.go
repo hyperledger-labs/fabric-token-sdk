@@ -137,5 +137,3 @@ func (c *configAdapter) UnmarshalKey(key string, rawVal any) error {
 func LoadLockConfigFromConfiguration(cp *config.Configuration) *LockConfig {
 	return LoadLockConfig(&configAdapter{cp})
 }
-
-// Made with Bob
