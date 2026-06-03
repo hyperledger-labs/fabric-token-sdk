@@ -17,6 +17,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 )
 
+const (
+	// stopTimeout is the maximum time to wait for the cleaner goroutine to stop during shutdown.
+	// This prevents indefinite blocking if the goroutine fails to exit cleanly.
+	stopTimeout = 5 * time.Second
+)
+
 type Manager struct {
 	selectorCache          lazy2.Provider[transaction.ID, TokenSelectorUnlocker]
 	locker                 Locker
@@ -99,6 +105,11 @@ func (m *Manager) cleaner(ctx context.Context) {
 func (m *Manager) Stop() {
 	m.stopOnce.Do(func() {
 		m.cancel()
-		<-m.cleanerDone
+		select {
+		case <-m.cleanerDone:
+			logger.Debugf("cleaner goroutine stopped successfully")
+		case <-time.After(stopTimeout):
+			logger.Warnf("cleaner goroutine did not stop within timeout")
+		}
 	})
 }
