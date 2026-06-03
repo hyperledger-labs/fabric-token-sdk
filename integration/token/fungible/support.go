@@ -200,10 +200,11 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor *toke
 		matched := make([]bool, hi-lo)
 		for _, txExpected := range expected[lo:hi] {
 			found := false
-			for k := 0; k < hi-lo; k++ {
+			for k := range hi - lo {
 				if !matched[k] && matchTransactionRecord(txs[lo+k], txExpected, lo+k) == nil {
 					matched[k] = true
 					found = true
+
 					break
 				}
 			}
