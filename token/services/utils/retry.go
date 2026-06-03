@@ -141,7 +141,7 @@ func (f *retryRunner) RunWithContext(ctx context.Context, runner func() error) e
 			errs = append(errs, err)
 		}
 		delay := f.nextDelay(i)
-		f.logger.Warnf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
+		f.logger.Debugf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
 		select {
 		case <-time.After(delay):
 		case <-ctx.Done():
@@ -179,8 +179,8 @@ func (f *retryRunner) RunWithErrorsContext(ctx context.Context, runner func() (b
 			errs = append(errs, err)
 		}
 		delay := f.nextDelay(i)
-		f.logger.Warnf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
-		select {
+		f.logger.Debugf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
+		select:
 		case <-time.After(delay):
 		case <-ctx.Done():
 			return ctx.Err()
