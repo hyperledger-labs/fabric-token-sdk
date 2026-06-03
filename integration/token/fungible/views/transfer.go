@@ -290,11 +290,11 @@ func (t *TransferWithSelectorView) Call(context view.Context) (any, error) {
 
 			// Select the request amount of tokens of the given type
 			ids, sum, err = selector.Select(context.Context(), ttx.GetWallet(context, t.Wallet), amount.Decimal(), t.Type)
-			
+
 			// If an error occurs and retry has been asked, then wait first a bit
 			if err != nil && t.Retry {
 				time.Sleep(10 * time.Second)
-				
+
 				continue
 			}
 
