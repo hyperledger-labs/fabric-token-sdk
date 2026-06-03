@@ -284,6 +284,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (any, error) {
 				if t.Retry {
 					time.Sleep(10 * time.Second)
 				}
+
 				continue
 			}
 
@@ -293,6 +294,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (any, error) {
 			// If an error occurs and retry has been asked, then wait first a bit
 			if err != nil && t.Retry {
 				time.Sleep(10 * time.Second)
+				
 				continue
 			}
 
