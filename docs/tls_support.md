@@ -1,4 +1,3 @@
-/*
 TLS Support Documentation
 ----------------------
 
@@ -58,7 +57,7 @@ go test -v ./token/services/storage/db/sql/postgres/...
 
 ## References
 - PostgreSQL documentation on SSL: https://www.postgresql.org/docs/current/ssl-tcp.html
-- pgx/v5 TLS handling: https://github.com/jackc/pgx/tree/v5
+- pgx/v5 TLS handling: https://github.com/jackc/pgx
 
 ---
 *This documentation was added in PR #1746 (branch `chore/tls-support`).*

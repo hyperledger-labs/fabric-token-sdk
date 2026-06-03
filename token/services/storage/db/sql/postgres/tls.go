@@ -9,6 +9,7 @@ package postgres
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"os"
 
@@ -22,13 +23,13 @@ import (
 
 // TLSConfig defines the configuration parameters for securing database connections.
 type TLSConfig struct {
-	Enabled      bool   `mapstructure:"enabled" yaml:"enabled" json:"enabled"`
-	ServerName   string `mapstructure:"server_name" yaml:"server_name" json:"server_name"`
-	CertPath     string `mapstructure:"cert_path" yaml:"cert_path" json:"cert_path"`
-	KeyPath      string `mapstructure:"key_path" yaml:"key_path" json:"key_path"`
-	ClientCACert string `mapstructure:"client_ca_cert" yaml:"client_ca_cert" json:"client_ca_cert"`
-	RootCertPath string `mapstructure:"root_cert_path" yaml:"root_cert_path" json:"root_cert_path"`
-	SSLMode      string `mapstructure:"ssl_mode" yaml:"ssl_mode" json:"ssl_mode"`
+	Enabled      bool   `json:"enabled"        mapstructure:"enabled"        yaml:"enabled"`
+	ServerName   string `json:"server_name"    mapstructure:"server_name"    yaml:"server_name"`
+	CertPath     string `json:"cert_path"      mapstructure:"cert_path"      yaml:"cert_path"`
+	KeyPath      string `json:"key_path"       mapstructure:"key_path"       yaml:"key_path"`
+	ClientCACert string `json:"client_ca_cert" mapstructure:"client_ca_cert" yaml:"client_ca_cert"`
+	RootCertPath string `json:"root_cert_path" mapstructure:"root_cert_path" yaml:"root_cert_path"`
+	SSLMode      string `json:"ssl_mode"       mapstructure:"ssl_mode"       yaml:"ssl_mode"`
 }
 
 // tlsConfigProvider wraps configProvider to handle TLS database option unmarshalling.
@@ -93,7 +94,7 @@ func createTLSConnConfig(dataSource string, tlsCfg TLSConfig) (*pgx.ConnConfig, 
 		}
 		caCertPool := x509.NewCertPool()
 		if !caCertPool.AppendCertsFromPEM(caCert) {
-			return nil, fmt.Errorf("failed to append root certificate from PEM")
+			return nil, errors.New("failed to append root certificate from PEM")
 		}
 		tlsConfig.RootCAs = caCertPool
 	}
@@ -120,7 +121,7 @@ func createTLSConnConfig(dataSource string, tlsCfg TLSConfig) (*pgx.ConnConfig, 
 
 		tlsConfig.VerifyConnection = func(cs tls.ConnectionState) error {
 			if len(cs.PeerCertificates) == 0 {
-				return fmt.Errorf("no peer certificates presented")
+				return errors.New("no peer certificates presented")
 			}
 			opts := x509.VerifyOptions{
 				DNSName: "",
@@ -133,6 +134,7 @@ func createTLSConnConfig(dataSource string, tlsCfg TLSConfig) (*pgx.ConnConfig, 
 				}
 			}
 			_, err := cs.PeerCertificates[0].Verify(opts)
+
 			return err
 		}
 		connConfig.TLSConfig = tlsConfig
@@ -158,5 +160,6 @@ func RegisterTLSConnection(dataSource string, tlsCfg TLSConfig) (string, error) 
 	}
 
 	connStr := stdlib.RegisterConnConfig(connConfig)
+
 	return connStr, nil
 }

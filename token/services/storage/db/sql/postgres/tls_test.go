@@ -38,14 +38,16 @@ type mockConfig struct {
 
 func (m *mockConfig) IsSet(key string) bool {
 	_, ok := m.values[key]
+
 	return ok
 }
 
-func (m *mockConfig) UnmarshalKey(key string, rawVal interface{}) error {
+func (m *mockConfig) UnmarshalKey(key string, rawVal any) error {
 	val, ok := m.values[key]
 	if !ok {
 		return nil
 	}
+
 	return mapstructure.Decode(val, rawVal)
 }
 
@@ -58,6 +60,8 @@ func (m *mockConfigProvider) GetOpts(name driver2.PersistenceName, params ...str
 }
 
 func generateSelfSignedCert(t *testing.T, tempDir string) (string, string) {
+	t.Helper()
+
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
@@ -114,6 +118,7 @@ func TestRegisterTLSConnection(t *testing.T) {
 				SSLMode: "disable",
 			},
 			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
+				t.Helper()
 				require.NoError(t, err)
 				assert.Nil(t, connConfig.TLSConfig)
 			},
@@ -125,6 +130,7 @@ func TestRegisterTLSConnection(t *testing.T) {
 				SSLMode: "require",
 			},
 			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
+				t.Helper()
 				require.NoError(t, err)
 				require.NotNil(t, connConfig.TLSConfig)
 				assert.False(t, connConfig.TLSConfig.InsecureSkipVerify)
@@ -139,6 +145,7 @@ func TestRegisterTLSConnection(t *testing.T) {
 				ServerName: "custom.domain",
 			},
 			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
+				t.Helper()
 				require.NoError(t, err)
 				require.NotNil(t, connConfig.TLSConfig)
 				assert.False(t, connConfig.TLSConfig.InsecureSkipVerify)
@@ -155,6 +162,7 @@ func TestRegisterTLSConnection(t *testing.T) {
 				KeyPath:      keyPath,
 			},
 			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
+				t.Helper()
 				require.NoError(t, err)
 				require.NotNil(t, connConfig.TLSConfig)
 				assert.False(t, connConfig.TLSConfig.InsecureSkipVerify)
@@ -177,7 +185,8 @@ func TestRegisterTLSConnection(t *testing.T) {
 				SSLMode: "invalid-mode",
 			},
 			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
-				assert.Error(t, err)
+				t.Helper()
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "unsupported ssl mode")
 			},
 		},
@@ -189,7 +198,8 @@ func TestRegisterTLSConnection(t *testing.T) {
 				RootCertPath: filepath.Join(tempDir, "nonexistent.pem"),
 			},
 			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
-				assert.Error(t, err)
+				t.Helper()
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "failed to read root certificate")
 			},
 		},
@@ -202,7 +212,8 @@ func TestRegisterTLSConnection(t *testing.T) {
 				KeyPath:  filepath.Join(tempDir, "nonexistent.pem"),
 			},
 			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
-				assert.Error(t, err)
+				t.Helper()
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "failed to load client key pair")
 			},
 		},
