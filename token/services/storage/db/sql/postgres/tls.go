@@ -71,12 +71,11 @@ func (p *tlsConfigProvider) GetOpts(name driver2.PersistenceName, params ...stri
 	return opts, nil
 }
 
-// RegisterTLSConnection parses the datasource string, configures standard Go TLS,
-// and registers the customized pgx connection with the stdlib driver.
-func RegisterTLSConnection(dataSource string, tlsCfg TLSConfig) (string, error) {
+// createTLSConnConfig parses the datasource string and configures standard Go TLS.
+func createTLSConnConfig(dataSource string, tlsCfg TLSConfig) (*pgx.ConnConfig, error) {
 	connConfig, err := pgx.ParseConfig(dataSource)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse database datasource: %w", err)
+		return nil, fmt.Errorf("failed to parse database datasource: %w", err)
 	}
 
 	tlsConfig := &tls.Config{}
@@ -90,11 +89,11 @@ func RegisterTLSConnection(dataSource string, tlsCfg TLSConfig) (string, error) 
 	if tlsCfg.RootCertPath != "" {
 		caCert, err := os.ReadFile(tlsCfg.RootCertPath)
 		if err != nil {
-			return "", fmt.Errorf("failed to read root certificate: %w", err)
+			return nil, fmt.Errorf("failed to read root certificate: %w", err)
 		}
 		caCertPool := x509.NewCertPool()
 		if !caCertPool.AppendCertsFromPEM(caCert) {
-			return "", fmt.Errorf("failed to append root certificate from PEM")
+			return nil, fmt.Errorf("failed to append root certificate from PEM")
 		}
 		tlsConfig.RootCAs = caCertPool
 	}
@@ -102,7 +101,7 @@ func RegisterTLSConnection(dataSource string, tlsCfg TLSConfig) (string, error) 
 	if tlsCfg.CertPath != "" && tlsCfg.KeyPath != "" {
 		cert, err := tls.LoadX509KeyPair(tlsCfg.CertPath, tlsCfg.KeyPath)
 		if err != nil {
-			return "", fmt.Errorf("failed to load client key pair: %w", err)
+			return nil, fmt.Errorf("failed to load client key pair: %w", err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
@@ -111,14 +110,14 @@ func RegisterTLSConnection(dataSource string, tlsCfg TLSConfig) (string, error) 
 	switch sslMode {
 	case "disable":
 		connConfig.TLSConfig = nil
-		return dataSource, nil
 	case "allow", "prefer":
 		connConfig.TLSConfig = tlsConfig
 	case "require":
-		tlsConfig.InsecureSkipVerify = true
+		// 'require' mode enforces TLS handshake; verification follows default behavior
 		connConfig.TLSConfig = tlsConfig
 	case "verify-ca":
-		tlsConfig.InsecureSkipVerify = true
+		// 'verify-ca' mode uses provided CA for verification
+
 		tlsConfig.VerifyConnection = func(cs tls.ConnectionState) error {
 			if len(cs.PeerCertificates) == 0 {
 				return fmt.Errorf("no peer certificates presented")
@@ -138,10 +137,24 @@ func RegisterTLSConnection(dataSource string, tlsCfg TLSConfig) (string, error) 
 		}
 		connConfig.TLSConfig = tlsConfig
 	case "verify-full", "":
-		tlsConfig.InsecureSkipVerify = false
+		// tlsConfig.InsecureSkipVerify defaults to false; no need to set explicitly
 		connConfig.TLSConfig = tlsConfig
 	default:
-		return "", fmt.Errorf("unsupported ssl mode: %s", sslMode)
+		return nil, fmt.Errorf("unsupported ssl mode: %s", sslMode)
+	}
+
+	return connConfig, nil
+}
+
+// RegisterTLSConnection parses the datasource string, configures standard Go TLS,
+// and registers the customized pgx connection with the stdlib driver.
+func RegisterTLSConnection(dataSource string, tlsCfg TLSConfig) (string, error) {
+	connConfig, err := createTLSConnConfig(dataSource, tlsCfg)
+	if err != nil {
+		return "", err
+	}
+	if tlsCfg.SSLMode == "disable" {
+		return dataSource, nil
 	}
 
 	connStr := stdlib.RegisterConnConfig(connConfig)

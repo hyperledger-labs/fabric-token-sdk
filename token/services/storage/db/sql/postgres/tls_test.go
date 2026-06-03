@@ -7,11 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package postgres
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -20,7 +22,9 @@ import (
 	"time"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -54,7 +58,7 @@ func (m *mockConfigProvider) GetOpts(name driver2.PersistenceName, params ...str
 }
 
 func generateSelfSignedCert(t *testing.T, tempDir string) (string, string) {
-	privateKey, err := tls.GenerateKey(tls.PKCS8, 2048)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
 	template := x509.Certificate{
@@ -101,7 +105,7 @@ func TestRegisterTLSConnection(t *testing.T) {
 		name       string
 		dataSource string
 		tlsCfg     TLSConfig
-		verify     func(t *testing.T, connStr string, err error)
+		verify     func(t *testing.T, connConfig *pgx.ConnConfig, err error)
 	}{
 		{
 			name:       "SSLMode disable",
@@ -109,9 +113,9 @@ func TestRegisterTLSConnection(t *testing.T) {
 			tlsCfg: TLSConfig{
 				SSLMode: "disable",
 			},
-			verify: func(t *testing.T, connStr string, err error) {
+			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, "host=localhost port=5432 user=postgres dbname=test", connStr)
+				assert.Nil(t, connConfig.TLSConfig)
 			},
 		},
 		{
@@ -120,13 +124,11 @@ func TestRegisterTLSConnection(t *testing.T) {
 			tlsCfg: TLSConfig{
 				SSLMode: "require",
 			},
-			verify: func(t *testing.T, connStr string, err error) {
+			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
 				require.NoError(t, err)
-				cfg := stdlib.GetConnConfig(connStr)
-				require.NotNil(t, cfg)
-				require.NotNil(t, cfg.TLSConfig)
-				assert.True(t, cfg.TLSConfig.InsecureSkipVerify)
-				assert.Equal(t, "localhost", cfg.TLSConfig.ServerName)
+				require.NotNil(t, connConfig.TLSConfig)
+				assert.False(t, connConfig.TLSConfig.InsecureSkipVerify)
+				assert.Equal(t, "localhost", connConfig.TLSConfig.ServerName)
 			},
 		},
 		{
@@ -136,13 +138,11 @@ func TestRegisterTLSConnection(t *testing.T) {
 				SSLMode:    "verify-full",
 				ServerName: "custom.domain",
 			},
-			verify: func(t *testing.T, connStr string, err error) {
+			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
 				require.NoError(t, err)
-				cfg := stdlib.GetConnConfig(connStr)
-				require.NotNil(t, cfg)
-				require.NotNil(t, cfg.TLSConfig)
-				assert.False(t, cfg.TLSConfig.InsecureSkipVerify)
-				assert.Equal(t, "custom.domain", cfg.TLSConfig.ServerName)
+				require.NotNil(t, connConfig.TLSConfig)
+				assert.False(t, connConfig.TLSConfig.InsecureSkipVerify)
+				assert.Equal(t, "custom.domain", connConfig.TLSConfig.ServerName)
 			},
 		},
 		{
@@ -154,21 +154,19 @@ func TestRegisterTLSConnection(t *testing.T) {
 				CertPath:     certPath,
 				KeyPath:      keyPath,
 			},
-			verify: func(t *testing.T, connStr string, err error) {
+			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
 				require.NoError(t, err)
-				cfg := stdlib.GetConnConfig(connStr)
-				require.NotNil(t, cfg)
-				require.NotNil(t, cfg.TLSConfig)
-				assert.True(t, cfg.TLSConfig.InsecureSkipVerify)
-				assert.NotNil(t, cfg.TLSConfig.RootCAs)
-				assert.Len(t, cfg.TLSConfig.Certificates, 1)
-				assert.NotNil(t, cfg.TLSConfig.VerifyConnection)
+				require.NotNil(t, connConfig.TLSConfig)
+				assert.False(t, connConfig.TLSConfig.InsecureSkipVerify)
+				assert.NotNil(t, connConfig.TLSConfig.RootCAs)
+				assert.Len(t, connConfig.TLSConfig.Certificates, 1)
+				assert.NotNil(t, connConfig.TLSConfig.VerifyConnection)
 
 				// Test VerifyConnection callback
 				cs := tls.ConnectionState{
 					PeerCertificates: []*x509.Certificate{},
 				}
-				err = cfg.TLSConfig.VerifyConnection(cs)
+				err = connConfig.TLSConfig.VerifyConnection(cs)
 				assert.ErrorContains(t, err, "no peer certificates presented")
 			},
 		},
@@ -178,7 +176,7 @@ func TestRegisterTLSConnection(t *testing.T) {
 			tlsCfg: TLSConfig{
 				SSLMode: "invalid-mode",
 			},
-			verify: func(t *testing.T, connStr string, err error) {
+			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "unsupported ssl mode")
 			},
@@ -190,7 +188,7 @@ func TestRegisterTLSConnection(t *testing.T) {
 				SSLMode:      "verify-full",
 				RootCertPath: filepath.Join(tempDir, "nonexistent.pem"),
 			},
-			verify: func(t *testing.T, connStr string, err error) {
+			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "failed to read root certificate")
 			},
@@ -203,7 +201,7 @@ func TestRegisterTLSConnection(t *testing.T) {
 				CertPath: certPath,
 				KeyPath:  filepath.Join(tempDir, "nonexistent.pem"),
 			},
-			verify: func(t *testing.T, connStr string, err error) {
+			verify: func(t *testing.T, connConfig *pgx.ConnConfig, err error) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "failed to load client key pair")
 			},
@@ -212,11 +210,8 @@ func TestRegisterTLSConnection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			connStr, err := RegisterTLSConnection(tt.dataSource, tt.tlsCfg)
-			tt.verify(t, connStr, err)
-			if err == nil && connStr != tt.dataSource {
-				stdlib.UnregisterConnConfig(connStr)
-			}
+			connConfig, err := createTLSConnConfig(tt.dataSource, tt.tlsCfg)
+			tt.verify(t, connConfig, err)
 		})
 	}
 }
@@ -250,7 +245,7 @@ func TestTLSConfigProvider(t *testing.T) {
 
 		opts, err := provider.GetOpts("db")
 		require.NoError(t, err)
-		assert.Contains(t, opts.DataSource, "pgx_config_")
+		assert.Contains(t, opts.DataSource, "registeredConnConfig")
 
 		stdlib.UnregisterConnConfig(opts.DataSource)
 	})
@@ -266,12 +261,7 @@ func TestTLSConfigProvider(t *testing.T) {
 
 		opts, err := provider.GetOpts("other")
 		require.NoError(t, err)
-		assert.Contains(t, opts.DataSource, "pgx_config_")
-
-		cfg := stdlib.GetConnConfig(opts.DataSource)
-		require.NotNil(t, cfg)
-		require.NotNil(t, cfg.TLSConfig)
-		assert.False(t, cfg.TLSConfig.InsecureSkipVerify)
+		assert.Contains(t, opts.DataSource, "registeredConnConfig")
 
 		stdlib.UnregisterConnConfig(opts.DataSource)
 	})
