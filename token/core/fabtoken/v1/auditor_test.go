@@ -8,6 +8,7 @@ package v1_test
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
@@ -15,8 +16,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 // BenchmarkAuditorServiceCheck benchmarks the AuditorCheck method of the AuditorService.
@@ -94,21 +97,48 @@ func newBenchmarkAuditEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkAudi
 }
 
 func newAuditEnv(benchmarkCase *benchmark2.Case) (*auditEnv, error) {
-	as := v1.NewAuditorService()
+	// Create mock dependencies
+	logger := logging.MustGetLogger("test")
+	deserializer := &mockDeserializer{}
+	queryEngine := &mockQueryEngine{}
+	tracerProvider := noop.NewTracerProvider()
 
-	// In fabtoken, AuditorCheck is a no-op, but we still populate the structures
-	// to match the expected usage pattern and ensure deserialization works if ever added.
+	as := v1.NewAuditorService(logger, deserializer, queryEngine, tracerProvider)
 
+	// Create test data structures
 	issueAction := &actions.IssueAction{
 		Issuer: []byte("issuer"),
 	}
+
+	// Create outputs with proper metadata
+	var outputsMetadata []*driver.IssueOutputMetadata
 	for i := range benchmarkCase.NumOutputs {
 		issueAction.Outputs = append(issueAction.Outputs, &actions.Output{
 			Owner:    []byte("owner"),
 			Type:     "ABC",
 			Quantity: token.NewQuantityFromUInt64(uint64(i)*10 + 10).Hex(),
 		})
+
+		// Create proper metadata for each output
+		metadata := &actions.OutputMetadata{
+			Issuer: []byte("issuer"),
+		}
+		metadataBytes, err := metadata.Serialize()
+		if err != nil {
+			return nil, err
+		}
+
+		outputsMetadata = append(outputsMetadata, &driver.IssueOutputMetadata{
+			OutputMetadata: metadataBytes,
+			Receivers: []*driver.AuditableIdentity{
+				{
+					Identity:  []byte("owner"),
+					AuditInfo: []byte("audit-info"),
+				},
+			},
+		})
 	}
+
 	rawAction, err := issueAction.Serialize()
 	if err != nil {
 		return nil, err
@@ -129,17 +159,7 @@ func newAuditEnv(benchmarkCase *benchmark2.Case) (*auditEnv, error) {
 						Identity:  []byte("issuer"),
 						AuditInfo: []byte("audit-info"),
 					},
-					Outputs: []*driver.IssueOutputMetadata{
-						{
-							OutputMetadata: []byte("token-metadata"),
-							Receivers: []*driver.AuditableIdentity{
-								{
-									Identity:  []byte("owner"),
-									AuditInfo: []byte("audit-info"),
-								},
-							},
-						},
-					},
+					Outputs: outputsMetadata,
 				},
 			},
 		},
@@ -151,4 +171,107 @@ func newAuditEnv(benchmarkCase *benchmark2.Case) (*auditEnv, error) {
 		metadata: metadata,
 		anchor:   "benchmark-anchor",
 	}, nil
+}
+
+// mockDeserializer is a simple mock for testing
+type mockDeserializer struct{}
+
+func (m *mockDeserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	return nil, nil
+}
+
+func (m *mockDeserializer) GetOwnerVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	return nil, nil
+}
+
+func (m *mockDeserializer) GetIssuerVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	return nil, nil
+}
+
+func (m *mockDeserializer) GetAuditorVerifier(ctx context.Context, id driver.Identity) (driver.Verifier, error) {
+	return nil, nil
+}
+
+func (m *mockDeserializer) GetAuditInfo(ctx context.Context, id driver.Identity, p driver.AuditInfoProvider) ([]byte, error) {
+	return nil, nil
+}
+
+func (m *mockDeserializer) GetAuditInfoMatcher(ctx context.Context, id driver.Identity, auditInfo []byte) (driver.Matcher, error) {
+	return nil, nil
+}
+
+func (m *mockDeserializer) Recipients(id driver.Identity) ([]driver.Identity, error) {
+	return []driver.Identity{id}, nil
+}
+
+func (m *mockDeserializer) MatchIdentity(ctx context.Context, id driver.Identity, ai []byte) error {
+	return nil
+}
+
+// mockQueryEngine is a simple mock for testing
+type mockQueryEngine struct{}
+
+func (m *mockQueryEngine) IsPending(ctx context.Context, id *token.ID) (bool, error) {
+	return false, nil
+}
+
+func (m *mockQueryEngine) IsMine(ctx context.Context, id *token.ID) (bool, error) {
+	return false, nil
+}
+
+func (m *mockQueryEngine) UnspentTokensIterator(ctx context.Context) (driver.UnspentTokensIterator, error) {
+	return nil, nil
+}
+
+func (m *mockQueryEngine) UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error) {
+	return nil, nil
+}
+
+func (m *mockQueryEngine) UnspentLedgerTokensIteratorBy(ctx context.Context) (driver.LedgerTokensIterator, error) {
+	return nil, nil
+}
+
+func (m *mockQueryEngine) ListUnspentTokens(ctx context.Context) (*token.UnspentTokens, error) {
+	return nil, nil
+}
+
+func (m *mockQueryEngine) ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]*token.Token, error) {
+	// Return empty list for benchmark tests (no audit tokens needed for issue actions)
+	return make([]*token.Token, len(ids)), nil
+}
+
+func (m *mockQueryEngine) ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error) {
+	return nil, nil
+}
+
+func (m *mockQueryEngine) PublicParams(ctx context.Context) ([]byte, error) {
+	return nil, nil
+}
+
+func (m *mockQueryEngine) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*token.Token, error) {
+	return nil, nil
+}
+
+func (m *mockQueryEngine) GetTokenOutputs(ctx context.Context, ids []*token.ID, callback driver.QueryCallbackFunc) error {
+	return nil
+}
+
+func (m *mockQueryEngine) GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error) {
+	return make([][]byte, len(ids)), make([][]byte, len(ids)), make([]token.Format, len(ids)), nil
+}
+
+func (m *mockQueryEngine) Balance(ctx context.Context, id string, tokenType token.Type) (*big.Int, error) {
+	return nil, nil
+}
+
+func (m *mockQueryEngine) GetStatus(ctx context.Context, txID string) (int, string, error) {
+	return 0, "", nil
+}
+
+func (m *mockQueryEngine) GetTokenMetadata(ctx context.Context, ids []*token.ID) ([][]byte, error) {
+	return make([][]byte, len(ids)), nil
+}
+
+func (m *mockQueryEngine) WhoDeletedTokens(ctx context.Context, inputs ...*token.ID) ([]string, []bool, error) {
+	return make([]string, len(inputs)), make([]bool, len(inputs)), nil
 }

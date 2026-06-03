@@ -12,6 +12,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
@@ -157,82 +158,7 @@ func (a *Auditor) validateStructure(
 	tokenRequestMetadata *driver.TokenRequestMetadata,
 	txID driver.TokenRequestAnchor,
 ) error {
-	// Validate action count matches metadata count
-	if len(tokenRequest.Actions) != len(tokenRequestMetadata.Actions) {
-		return errors.Errorf(
-			"action count mismatch: request has [%d] actions but metadata has [%d] actions for tx [%s]",
-			len(tokenRequest.Actions),
-			len(tokenRequestMetadata.Actions),
-			txID,
-		)
-	}
-
-	// Validate each action has corresponding metadata with correct type
-	for i, action := range tokenRequest.Actions {
-		if action == nil {
-			return errors.Errorf("action at index [%d] is nil for tx [%s]", i, txID)
-		}
-
-		metadata := tokenRequestMetadata.Actions[i]
-		if metadata == nil {
-			return errors.Errorf("metadata at index [%d] is nil for tx [%s]", i, txID)
-		}
-
-		// Verify ActionID matches position
-		if metadata.ActionID != uint32(i) {
-			return errors.Errorf(
-				"metadata at index [%d] has incorrect ActionID [%d] for tx [%s]",
-				i,
-				metadata.ActionID,
-				txID,
-			)
-		}
-
-		// Verify action type matches metadata type
-		switch action.Type {
-		case request.ActionType_ACTION_TYPE_ISSUE:
-			if metadata.IssueMetadata == nil {
-				return errors.Errorf(
-					"action at index [%d] is ISSUE but metadata has no IssueMetadata for tx [%s]",
-					i,
-					txID,
-				)
-			}
-			if metadata.TransferMetadata != nil {
-				return errors.Errorf(
-					"action at index [%d] is ISSUE but metadata also has TransferMetadata for tx [%s]",
-					i,
-					txID,
-				)
-			}
-
-		case request.ActionType_ACTION_TYPE_TRANSFER:
-			if metadata.TransferMetadata == nil {
-				return errors.Errorf(
-					"action at index [%d] is TRANSFER but metadata has no TransferMetadata for tx [%s]",
-					i,
-					txID,
-				)
-			}
-			if metadata.IssueMetadata != nil {
-				return errors.Errorf(
-					"action at index [%d] is TRANSFER but metadata also has IssueMetadata for tx [%s]",
-					i,
-					txID,
-				)
-			}
-
-		default:
-			return errors.Errorf(
-				"action at index [%d] has unknown type [%s] for tx [%s]",
-				i,
-				action.Type,
-				txID,
-			)
-		}
-	}
-
-	return nil
+	return common.ValidateStructure(tokenRequest, tokenRequestMetadata, txID)
 }
 
 // checkIssueAction validates a single issue action against its metadata.
@@ -596,163 +522,14 @@ func (a *Auditor) validateOutputReceivers(
 // validateIssueActionTokenTypes ensures all inputs and outputs in an issue action have the same token type.
 // It also validates that input tokens exist in the auditTokens map.
 func (a *Auditor) validateIssueActionTokenTypes(metadata *driver.IssueMetadata, auditTokens map[*token2.ID]*token2.Token) error {
-	var actionTokenType token2.Type
-
-	// Validate and extract token type from inputs (if any exist)
-	for i, inputMetadata := range metadata.Inputs {
-		if inputMetadata == nil {
-			continue
-		}
-
-		// Verify input token exists in auditTokens map
-		if inputMetadata.TokenID != nil {
-			inputToken, exists := auditTokens[inputMetadata.TokenID]
-			if !exists {
-				return errors.Errorf("input token [%s:%d] at index [%d] not found in audit tokens",
-					inputMetadata.TokenID.TxId, inputMetadata.TokenID.Index, i)
-			}
-
-			// For issue inputs (token upgrades/conversions), we get the type from the audit token
-			if inputToken != nil && inputToken.Type != "" {
-				if actionTokenType == "" {
-					actionTokenType = inputToken.Type
-				} else if actionTokenType != inputToken.Type {
-					return errors.Errorf(
-						"token type mismatch in issue action: input [%d] has type [%s] but expected [%s]",
-						i, inputToken.Type, actionTokenType,
-					)
-				}
-			}
-		}
-	}
-
-	// Extract and validate token type from outputs
-	for i, outputMetadata := range metadata.Outputs {
-		if outputMetadata == nil {
-			return errors.Errorf("output metadata at index [%d] is nil", i)
-		}
-
-		// Deserialize token metadata to get the type
-		tokenMetadata := &token.Metadata{}
-		if err := tokenMetadata.Deserialize(outputMetadata.OutputMetadata); err != nil {
-			return errors.Wrapf(err, "failed to deserialize token metadata at output [%d]", i)
-		}
-
-		// Set or validate token type
-		if actionTokenType == "" {
-			actionTokenType = tokenMetadata.Type
-		} else if actionTokenType != tokenMetadata.Type {
-			return errors.Errorf(
-				"token type mismatch in issue action: output [%d] has type [%s] but expected [%s]",
-				i, tokenMetadata.Type, actionTokenType,
-			)
-		}
-	}
-
-	return nil
+	return common.ValidateIssueActionTokenTypes(metadata, auditTokens)
 }
 
 // validateTransferActionTokenTypes ensures all inputs and outputs in a transfer action have the same token type.
 // It also validates that input tokens exist and that the sum of input values equals the sum of output values
 // (only when audit tokens are provided).
 func (a *Auditor) validateTransferActionTokenTypes(metadata *driver.TransferMetadata, auditTokens map[*token2.ID]*token2.Token) error {
-	var actionTokenType token2.Type
-	const precision = 64 // Standard precision for token quantities
-	inputSum := token2.NewZeroQuantity(precision)
-	outputSum := token2.NewZeroQuantity(precision)
-	hasAuditTokens := len(auditTokens) > 0 // Track if we have audit tokens available
-
-	// Validate and extract token type from inputs
-	for i, inputMetadata := range metadata.Inputs {
-		if inputMetadata == nil {
-			return errors.Errorf("input metadata at index [%d] is nil", i)
-		}
-
-		// TokenID is required
-		if inputMetadata.TokenID == nil {
-			return errors.Errorf("input at index [%d] has nil TokenID", i)
-		}
-
-		// If audit tokens are available, verify input token exists and validate type
-		if hasAuditTokens {
-			inputToken, exists := auditTokens[inputMetadata.TokenID]
-			if !exists {
-				return errors.Errorf("input token [%s:%d] at index [%d] not found in audit tokens",
-					inputMetadata.TokenID.TxId, inputMetadata.TokenID.Index, i)
-			}
-
-			if inputToken == nil {
-				return errors.Errorf("input token [%s:%d] at index [%d] is nil in audit tokens",
-					inputMetadata.TokenID.TxId, inputMetadata.TokenID.Index, i)
-			}
-
-			// Validate and accumulate token type
-			if actionTokenType == "" {
-				actionTokenType = inputToken.Type
-			} else if actionTokenType != inputToken.Type {
-				return errors.Errorf(
-					"token type mismatch in transfer action: input [%d] has type [%s] but expected [%s]",
-					i, inputToken.Type, actionTokenType,
-				)
-			}
-
-			// Accumulate input value
-			inputQty, err := token2.ToQuantity(inputToken.Quantity, precision)
-			if err != nil {
-				return errors.Wrapf(err, "failed to convert input quantity at index [%d]", i)
-			}
-			inputSum, err = inputSum.Add(inputQty)
-			if err != nil {
-				return errors.Wrapf(err, "failed to add input quantity at index [%d]", i)
-			}
-		}
-	}
-
-	// Extract and validate token type from outputs (including redeem outputs)
-	for i, outputMetadata := range metadata.Outputs {
-		if outputMetadata == nil {
-			return errors.Errorf("output metadata at index [%d] is nil", i)
-		}
-
-		// Deserialize token metadata to get the type and value
-		tokenMetadata := &token.Metadata{}
-		if err := tokenMetadata.Deserialize(outputMetadata.OutputMetadata); err != nil {
-			return errors.Wrapf(err, "failed to deserialize token metadata at output [%d]", i)
-		}
-
-		// Validate token type
-		if actionTokenType == "" {
-			actionTokenType = tokenMetadata.Type
-		} else if actionTokenType != tokenMetadata.Type {
-			return errors.Errorf(
-				"token type mismatch in transfer action: output [%d] has type [%s] but expected [%s]",
-				i, tokenMetadata.Type, actionTokenType,
-			)
-		}
-
-		// Accumulate output value
-		if tokenMetadata.Value != nil {
-			// Convert Zr to hex string format (with 0x prefix) for ToQuantity
-			outputQty, err := token2.ToQuantity("0x"+tokenMetadata.Value.String(), precision)
-			if err != nil {
-				return errors.Wrapf(err, "failed to convert output quantity at index [%d]", i)
-			}
-			outputSum, err = outputSum.Add(outputQty)
-			if err != nil {
-				return errors.Wrapf(err, "failed to add output quantity at index [%d]", i)
-			}
-		}
-	}
-
-	// Validate sum of inputs equals sum of outputs (only if we have audit tokens)
-	if hasAuditTokens && inputSum.Cmp(outputSum) != 0 {
-		return errors.Errorf(
-			"value mismatch in transfer action: sum of inputs [%s] does not equal sum of outputs [%s]",
-			inputSum.Decimal(), outputSum.Decimal(),
-		)
-	}
-
-	return nil
+	return common.ValidateTransferActionTokenTypes(metadata, auditTokens, true)
 }
 
 // InspectOutput verifies that the commitments in an output token of a given index
