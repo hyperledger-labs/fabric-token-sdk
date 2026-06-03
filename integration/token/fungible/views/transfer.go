@@ -260,33 +260,51 @@ func (t *TransferWithSelectorView) Call(context view.Context) (any, error) {
 	assert.NoError(err, "failed to convert to quantity")
 
 	if len(t.TokenIDs) == 0 {
-		// The sender uses the default token selector each transaction comes equipped with
-		selector, err := tx.Selector()
-		defer func() {
-			if err := tx.CloseSelector(); err != nil {
-				logger.Errorf("failed closing selector [%s]", err)
-			}
-		}()
-		assert.NoError(err, "failed getting token selector")
-
 		// The sender tries to select the requested amount of tokens of the passed type.
 		// If a failure happens, the sender retries up to 5 times, waiting 10 seconds after each failure.
 		// This is just an example, any other policy can be implemented.
 		var ids []*token.ID
 		var sum token.Quantity
 
-		for range 5 {
-			// Select the request amount of tokens of the given type
-			ids, sum, err = selector.Select(context.Context(), ttx.GetWallet(context, t.Wallet), amount.Decimal(), t.Type)
-			// If an error occurs and retry has been asked, then wait first a bit
-			if err != nil && t.Retry {
-				time.Sleep(10 * time.Second)
+		for i := range 5 {
+			// Close previous selector before creating a new one (except on first iteration)
+			if i > 0 {
+				if err := tx.CloseSelector(); err != nil {
+					logger.Warnf("failed closing selector on retry %d: %s", i, err)
+				}
+			}
 
+			// Get a fresh selector for each retry attempt to avoid stale lock state
+			selector, err := tx.Selector()
+			if err != nil {
+				logger.Errorf("failed getting token selector on attempt %d: %s", i+1, err)
+				if i == 4 { // Last attempt
+					assert.NoError(err, "failed getting token selector")
+				}
+				if t.Retry {
+					time.Sleep(10 * time.Second)
+				}
 				continue
 			}
 
+			// Select the request amount of tokens of the given type
+			ids, sum, err = selector.Select(context.Context(), ttx.GetWallet(context, t.Wallet), amount.Decimal(), t.Type)
+			
+			// If an error occurs and retry has been asked, then wait first a bit
+			if err != nil && t.Retry {
+				time.Sleep(10 * time.Second)
+				continue
+			}
+
+			// Success or non-retryable error - break out
 			break
 		}
+
+		// Always close the selector when done with all attempts
+		if closeErr := tx.CloseSelector(); closeErr != nil {
+			logger.Warnf("failed closing selector after all attempts: %s", closeErr)
+		}
+
 		if err != nil {
 			// If finally not enough tokens were available, the sender can check what was the cause of the error:
 			switch {
