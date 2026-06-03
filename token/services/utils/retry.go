@@ -180,7 +180,7 @@ func (f *retryRunner) RunWithErrorsContext(ctx context.Context, runner func() (b
 		}
 		delay := f.nextDelay(i)
 		f.logger.Debugf("Will retry iteration [%d] after a delay of [%v]. %d errors returned so far", i+1, delay, len(errs))
-		select:
+		select {
 		case <-time.After(delay):
 		case <-ctx.Done():
 			return ctx.Err()
