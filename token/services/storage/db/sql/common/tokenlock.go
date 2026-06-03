@@ -25,6 +25,7 @@ import (
 
 type tokenLockTables struct {
 	TokenLocks string
+	Tokens     string
 	Requests   string
 }
 
@@ -52,6 +53,7 @@ func NewTokenLockStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.Co
 		writeDB,
 		tokenLockTables{
 			TokenLocks: tables.TokenLocks,
+			Tokens:     tables.Tokens,
 			Requests:   tables.Requests,
 		},
 		ci), nil
@@ -91,9 +93,11 @@ func (db *TokenLockStore) GetSchema() string {
 			idx INT NOT NULL,
 			consumer_tx_id TEXT NOT NULL,
 			created_at TIMESTAMP NOT NULL,
-			PRIMARY KEY(tx_id, idx)
+			PRIMARY KEY(tx_id, idx),
+			FOREIGN KEY (tx_id, idx) REFERENCES %s (tx_id, idx)
 		);`,
 		db.Table.TokenLocks,
+		db.Table.Tokens,
 	)
 }
 
