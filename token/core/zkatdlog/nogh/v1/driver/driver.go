@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/boolpolicy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
@@ -150,6 +151,7 @@ func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (drive
 		common.NewTMSAuthorization(logger, ppm.PublicParams(), ws),
 		htlc.NewScriptAuth(ws),
 		multisig.NewEscrowAuth(ws),
+		boolpolicy.NewEscrowAuth(ws),
 	)
 
 	tokensService, err := v1token.NewTokensService(logger, ppm, deserializer)

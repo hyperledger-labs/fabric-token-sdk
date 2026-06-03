@@ -15,11 +15,11 @@ package driver
 //   - CacheSize: per-identity cache size used by the identity service; 0 means no cache
 //   - Opts: provider-specific options (opaque)
 type ConfiguredIdentity struct {
-	ID        string      `yaml:"id"`
-	Default   bool        `yaml:"default,omitempty"`
-	Path      string      `yaml:"path"`
-	CacheSize int         `yaml:"cacheSize"`
-	Opts      interface{} `yaml:"opts,omitempty"`
+	ID        string `yaml:"id"`
+	Default   bool   `yaml:"default,omitempty"`
+	Path      string `yaml:"path"`
+	CacheSize int    `yaml:"cacheSize"`
+	Opts      any    `yaml:"opts,omitempty"`
 }
 
 // String returns the identity's ID and satisfies fmt.Stringer.

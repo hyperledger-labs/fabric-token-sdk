@@ -25,7 +25,7 @@ type AuditView struct {
 	*token.TMSID
 }
 
-func (a *AuditView) Call(context view.Context) (interface{}, error) {
+func (a *AuditView) Call(context view.Context) (any, error) {
 	logger.Debugf("AuditView: [%s]", context.ID())
 	tx, err := ttx.ReceiveTransaction(context, TxOpts(a.TMSID, ttx.WithNoTransactionVerification())...)
 
@@ -189,7 +189,7 @@ type RegisterAuditorView struct {
 	*RegisterAuditor
 }
 
-func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterAuditorView) Call(context view.Context) (any, error) {
 	return context.RunView(ttx.NewRegisterAuditorView(
 		&AuditView{r.TMSID},
 		ServiceOpts(r.TMSID)...,
@@ -219,7 +219,7 @@ type CurrentHoldingView struct {
 	*CurrentHolding
 }
 
-func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
+func (r *CurrentHoldingView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NoError(err)
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
@@ -260,7 +260,7 @@ type CurrentSpendingView struct {
 	*CurrentSpending
 }
 
-func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
+func (r *CurrentSpendingView) Call(context view.Context) (any, error) {
 	w := ttx.MyAuditorWallet(context, ServiceOpts(r.TMSID)...)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
@@ -297,7 +297,7 @@ type SetTransactionAuditStatusView struct {
 	*SetTransactionAuditStatus
 }
 
-func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{}, error) {
+func (r *SetTransactionAuditStatusView) Call(context view.Context) (any, error) {
 	w := ttx.MyAuditorWallet(context)
 	assert.NotNil(w, "failed getting default auditor wallet")
 

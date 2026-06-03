@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/boolpolicy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
@@ -42,7 +43,7 @@ func NewEndorseView(tx *Transaction) *EndorseView {
 // - Reception of the endorsed transaction
 // - Acknowledgement of the reception of the endorsed transaction
 // - Finalization
-func (s *EndorseView) Call(context view.Context) (interface{}, error) {
+func (s *EndorseView) Call(context view.Context) (any, error) {
 	// validate input
 	if s.tx == nil {
 		return nil, errors.Wrapf(ErrInvalidInput, "transaction is nil")
@@ -93,7 +94,7 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 
 	logger.DebugfContext(context.Context(), "expect [%d] requests to sign for tx id [%s]", len(requiredSigners), s.tx.ID())
 
-	session := context.Session()
+	typedSession := jsession.NewTypedSessionFromContext(context)
 
 	tokenRequestToSign, err := s.tx.TokenRequest.MarshalToSign()
 	if err != nil {
@@ -101,21 +102,14 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 	}
 
 	for i, signerIdentity := range requiredSigners {
-		var srRaw []byte
 		signatureRequest := &SignatureRequest{}
 
 		if i == 0 && s.tx.FromSignatureRequest != nil {
 			signatureRequest = s.tx.FromSignatureRequest
 		} else {
 			logger.DebugfContext(context.Context(), "receiving signature request...")
-			jsonSession := jsession.JSON(context)
-			srRaw, err = jsonSession.ReceiveRawWithTimeout(time.Minute)
-			if err != nil {
+			if err := typedSession.ReceiveTypedWithTimeout(TypeSignatureRequest, signatureRequest, time.Minute); err != nil {
 				return errors.Wrap(err, "failed reading signature request")
-			}
-			err = Unmarshal(srRaw, signatureRequest)
-			if err != nil {
-				return errors.Wrap(err, "failed unmarshalling signature request")
 			}
 		}
 
@@ -141,7 +135,7 @@ func (s *EndorseView) handleSignatureRequests(context view.Context) error {
 			return errors.Wrapf(err, "failed signing request")
 		}
 		logger.DebugfContext(context.Context(), "Send back signature [%s][%s]", signerIdentity, utils.Hashable(sigma))
-		err = session.SendWithContext(context.Context(), sigma)
+		err = typedSession.SendTyped(context.Context(), &SignaturePayload{Signature: sigma}, TypeSignature)
 		if err != nil {
 			return errors.Wrapf(err, "failed sending signature back")
 		}
@@ -195,7 +189,7 @@ func (s *EndorseView) ack(context view.Context, msg []byte) error {
 		return errors.WithMessagef(err, "failed to sign ack response")
 	}
 	logger.DebugfContext(context.Context(), "ack response: [%s] from [%s]", utils.Hashable(sigma), defaultIdentity)
-	if err := inSession.SendWithContext(context.Context(), sigma); err != nil {
+	if err := jsession.NewTypedSession(context, inSession).SendTyped(context.Context(), &SignaturePayload{Signature: sigma}, TypeSignature); err != nil {
 		return errors.WithMessagef(err, "failed sending ack")
 	}
 
@@ -208,19 +202,13 @@ func extractRequiredSigners(ctx context.Context, sigService dep.SignatureService
 	transferSigners := request.TransferSigners()
 	res := make([]token.Identity, 0, len(issuerSigners)+len(transferSigners))
 	for _, signer := range issuerSigners {
-		multiSigners, _, _ := multisig.Unwrap(signer)
-		if len(multiSigners) != 0 {
-			res = append(res, multiSigners...)
-
+		if appendUnwrapped(&res, signer) {
 			continue
 		}
 		res = append(res, signer)
 	}
 	for _, signer := range transferSigners {
-		multiSigners, _, _ := multisig.Unwrap(signer)
-		if len(multiSigners) != 0 {
-			res = append(res, multiSigners...)
-
+		if appendUnwrapped(&res, signer) {
 			continue
 		}
 		res = append(res, signer)
@@ -233,4 +221,23 @@ func extractRequiredSigners(ctx context.Context, sigService dep.SignatureService
 	}
 
 	return subset, nil
+}
+
+// appendUnwrapped appends the component identities of a composite identity (multisig or policy)
+// to res and returns true; returns false when the identity is not a composite type.
+func appendUnwrapped(res *[]token.Identity, signer token.Identity) bool {
+	if multiSigners, _, _ := multisig.Unwrap(signer); len(multiSigners) != 0 {
+		*res = append(*res, multiSigners...)
+
+		return true
+	}
+	if pi, ok, _ := boolpolicy.Unwrap(signer); ok && pi != nil {
+		for _, b := range pi.Identities {
+			*res = append(*res, token.Identity(b))
+		}
+
+		return true
+	}
+
+	return false
 }

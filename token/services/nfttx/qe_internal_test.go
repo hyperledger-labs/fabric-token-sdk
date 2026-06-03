@@ -14,7 +14,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/thedevsaddam/gojsonq"
 )
 
 type House struct {
@@ -37,7 +36,6 @@ func TestJsonFilter(t *testing.T) {
 
 	// hit
 	f := &jsonFilter{
-		q:     gojsonq.New(),
 		key:   "LinearID",
 		value: "hello world",
 	}
@@ -45,7 +43,6 @@ func TestJsonFilter(t *testing.T) {
 
 	// no hit
 	f = &jsonFilter{
-		q:     gojsonq.New(),
 		key:   "LinearID",
 		value: "pineapple",
 	}
@@ -58,6 +55,6 @@ func TestContainsToken_DecodeError(t *testing.T) {
 	assert.False(t, f.ContainsToken(tok))
 
 	tok2 := &token2.UnspentToken{Type: token2.Type(base64.StdEncoding.EncodeToString([]byte(`{"LinearID": 100}`)))}
-	f2 := &jsonFilter{q: gojsonq.New(), key: "LinearID", value: "100"}
+	f2 := &jsonFilter{key: "LinearID", value: "100"}
 	assert.False(t, f2.ContainsToken(tok2))
 }

@@ -12,7 +12,7 @@ import (
 
 	scommon "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
+
 	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
@@ -76,7 +76,7 @@ func NewTokenStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableName
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
-		postgres.NewConditionInterpreter(),
+		NewConditionInterpreter(),
 		notifier,
 	)
 	if err != nil {
@@ -84,6 +84,7 @@ func NewTokenStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableName
 	}
 
 	// Wrap with postgres-specific store that adds advisory lock to schema
+
 	return &TokenStore{
 		TokenStore: baseStore,
 		writeDB:    dbs.WriteDB,

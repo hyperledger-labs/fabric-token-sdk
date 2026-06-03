@@ -25,7 +25,7 @@ type RegisterCertifierView struct {
 	*RegisterCertifier
 }
 
-func (r *RegisterCertifierView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterCertifierView) Call(context view.Context) (any, error) {
 	return context.RunView(certifier.NewRegisterView(r.Network, r.Channel, r.Namespace, r.Wallet))
 }
 

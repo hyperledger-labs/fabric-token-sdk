@@ -85,7 +85,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	var ppRaw []byte
 	ppGenerator := p.TokenPlatform.GetPublicParamsGenerators(tms.Driver)
 	gomega.Expect(ppGenerator).NotTo(gomega.BeNil(), "No public params generator for driver %s", tms.Driver)
-	args := []interface{}{root}
+	args := []any{root}
 	for _, arg := range tms.PublicParamsGenArgs {
 		args = append(args, arg)
 	}

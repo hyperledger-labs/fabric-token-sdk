@@ -12,6 +12,7 @@ import (
 	mathlib "github.com/IBM/mathlib"
 	bls12381fr "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 )
 
 // lagrangeDenomCache caches the precomputed denominator inverses for Lagrange
@@ -92,7 +93,7 @@ func getOrComputeDenomInvsBN254(n uint64, partial bool) []*bn254fr.Element {
 //	total = 2n+1 evaluation points {0,...,2n}
 //	relevant indices = {0, n+1, ..., 2n}  (n+1 entries)
 //	d_k = ∏_{j=0, j≠relevant[k]}^{2n} (relevant[k]-j)
-func computeDenomInvs[T any, E gnarkFr[T]](n uint64, partial bool) []E {
+func computeDenomInvs[T any, E math2.GnarkFr[T]](n uint64, partial bool) []E {
 	if !partial {
 		m := int(n) + 1 // #nosec G115
 		denoms := make([]T, m)
@@ -111,7 +112,7 @@ func computeDenomInvs[T any, E gnarkFr[T]](n uint64, partial bool) []E {
 			}
 		}
 
-		return nativeBatchInverse[T, E](denomsE)
+		return math2.NativeBatchInverse[T, E](denomsE)
 	}
 
 	// Partial: relevant indices are {0, n+1, ..., 2n}.
@@ -138,5 +139,5 @@ func computeDenomInvs[T any, E gnarkFr[T]](n uint64, partial bool) []E {
 		}
 	}
 
-	return nativeBatchInverse[T, E](denomsE)
+	return math2.NativeBatchInverse[T, E](denomsE)
 }

@@ -170,5 +170,3 @@ func appendLength(buf []byte, length int) []byte {
 
 	return append(buf, 0x84, lengthBytes[0], lengthBytes[1], lengthBytes[2], lengthBytes[3])
 }
-
-// Made with Bob

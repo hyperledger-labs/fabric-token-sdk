@@ -84,6 +84,10 @@ func (m *mockProvider) NewHistogram(opts HistogramOpts) Histogram {
 	return m.histogram
 }
 
+func TestPrometheusAlreadyRegisteredErrorMessage(t *testing.T) {
+	assert.Equal(t, PrometheusAlreadyRegisteredErrorMessage, (&prometheus.AlreadyRegisteredError{}).Error())
+}
+
 func TestTMSProvider(t *testing.T) {
 	tmsID := token.TMSID{
 		Network:   "my-network",

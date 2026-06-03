@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger/fabric-lib-go/bccsp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewSKIBasedSigner(t *testing.T) {

@@ -13,7 +13,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common/mock"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/multiplexed"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
+
+	fscSqlite "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 	dbtest2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
@@ -43,7 +44,7 @@ func TestKeyStore(t *testing.T) {
 }
 
 func sqliteCfg(tempDir string, name string) *mock.ConfigProvider {
-	return multiplexed.MockTypeConfig(sqlite.Persistence, sqlite.Config{
+	return multiplexed.MockTypeConfig(fscSqlite.Persistence, fscSqlite.Config{
 		DataSource:   fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")),
 		TablePrefix:  name,
 		MaxOpenConns: 10,

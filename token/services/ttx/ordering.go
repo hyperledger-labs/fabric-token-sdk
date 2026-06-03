@@ -28,6 +28,8 @@ func NewOrderingView(tx *Transaction, opts ...TxOption) *orderingView {
 	return NewOrderingViewWithOpts(append([]TxOption{WithTransactions(tx)}, opts...)...)
 }
 
+// NewOrderingViewWithOpts creates a new ordering view with the provided transaction options.
+// This is a lower-level constructor that allows passing options directly without a transaction instance.
 func NewOrderingViewWithOpts(opts ...TxOption) *orderingView {
 	return &orderingView{opts: opts}
 }
@@ -35,7 +37,7 @@ func NewOrderingViewWithOpts(opts ...TxOption) *orderingView {
 // Call execute the view.
 // The view does the following:
 // 1. It broadcasts the token transaction to the proper backend.
-func (o *orderingView) Call(context view.Context) (interface{}, error) {
+func (o *orderingView) Call(context view.Context) (any, error) {
 	start := time.Now()
 	// Compile options
 	options, err := CompileOpts(o.opts...)
@@ -67,6 +69,8 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	return nil, nil
 }
 
+// broadcast sends the transaction envelope to the network's ordering service for inclusion in the ledger.
+// Returns an error if the transaction is nil, the network is not found, or the broadcast fails.
 func (o *orderingView) broadcast(context view.Context, transaction *Transaction) error {
 	if transaction == nil {
 		return errors.Errorf("transaction is nil")
@@ -109,7 +113,7 @@ func NewOrderingAndFinalityWithTimeoutView(tx *Transaction, timeout time.Duratio
 // 1. It broadcasts the token transaction to the proper backend.
 // 2. It waits for finality of the token transaction.
 // It returns in case the operation is not completed before the passed timeout.
-func (o *orderingAndFinalityView) Call(ctx view.Context) (interface{}, error) {
+func (o *orderingAndFinalityView) Call(ctx view.Context) (any, error) {
 	if _, err := ctx.RunView(NewOrderingView(o.tx)); err != nil {
 		return nil, err
 	}

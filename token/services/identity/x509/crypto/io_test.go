@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func writeTempFile(t *testing.T, content []byte) string {

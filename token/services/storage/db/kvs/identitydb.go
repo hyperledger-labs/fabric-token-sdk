@@ -300,5 +300,5 @@ func (w *IdentityConfigurationsIterator) Close() {
 }
 
 func mergeIDURL(id string, url string) string {
-	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s%s", id, url)))
+	return base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s%s", id, url))
 }

@@ -39,7 +39,7 @@ type CheckTTXDBView struct {
 	*CheckTTXDB
 }
 
-func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
+func (m *CheckTTXDBView) Call(context view.Context) (any, error) {
 	// prepare
 	defaultOwnerWallet := htlc.GetWallet(context, "", token.WithTMSID(m.TMSID))
 	if defaultOwnerWallet != nil {
@@ -84,7 +84,7 @@ type PruneInvalidUnspentTokensView struct {
 	*PruneInvalidUnspentTokens
 }
 
-func (p *PruneInvalidUnspentTokensView) Call(context view.Context) (interface{}, error) {
+func (p *PruneInvalidUnspentTokensView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(p.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "cannot find tms [%s]", p.TMSID)
@@ -112,7 +112,7 @@ type ListVaultUnspentTokensView struct {
 	*ListVaultUnspentTokens
 }
 
-func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, error) {
+func (l *ListVaultUnspentTokensView) Call(context view.Context) (any, error) {
 	net, err := token.GetManagementService(context, token.WithTMSID(l.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(net, "cannot find tms [%s]", l.TMSID)
@@ -139,7 +139,7 @@ type CheckIfExistsInVaultView struct {
 	*CheckIfExistsInVault
 }
 
-func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, error) {
+func (c *CheckIfExistsInVaultView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(c.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "cannot find tms [%s]", c.TMSID)

@@ -13,7 +13,7 @@ import (
 
 type Config interface {
 	TranslatePath(path string) string
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 }
 
 type Wallets struct {

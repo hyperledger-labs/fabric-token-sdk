@@ -12,6 +12,8 @@ package token
 
 import (
 	"context"
+	"maps"
+	"slices"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
@@ -57,7 +59,7 @@ type RecipientData = driver.RecipientData
 // IssueOptions contains optional parameters for token issuance operations.
 type IssueOptions struct {
 	// Attributes is a container of generic options that might be driver specific
-	Attributes map[interface{}]interface{}
+	Attributes map[any]any
 }
 
 // compileIssueOptions aggregates multiple IssueOption functions into a single IssueOptions struct.
@@ -76,10 +78,10 @@ func compileIssueOptions(opts ...IssueOption) (*IssueOptions, error) {
 type IssueOption func(*IssueOptions) error
 
 // WithIssueAttribute adds a custom attribute to an issue operation.
-func WithIssueAttribute(attr, value interface{}) IssueOption {
+func WithIssueAttribute(attr, value any) IssueOption {
 	return func(o *IssueOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = map[interface{}]interface{}{}
+			o.Attributes = map[any]any{}
 		}
 		o.Attributes[attr] = value
 
@@ -95,7 +97,7 @@ func WithIssueMetadata(key string, value []byte) IssueOption {
 // TransferOptions contains optional parameters for token transfer operations.
 type TransferOptions struct {
 	// Attributes is a container of generic options that might be driver specific
-	Attributes map[interface{}]interface{}
+	Attributes map[any]any
 	// Selector is the custom token selector to use. If nil, the default will be used.
 	Selector Selector
 	// TokenIDs to transfer. If empty, the tokens will be selected.
@@ -157,10 +159,10 @@ func WithTokenIDs(ids ...*token.ID) TransferOption {
 }
 
 // WithTransferAttribute adds a custom attribute to a transfer operation.
-func WithTransferAttribute(attr, value interface{}) TransferOption {
+func WithTransferAttribute(attr, value any) TransferOption {
 	return func(o *TransferOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = make(map[interface{}]interface{})
+			o.Attributes = make(map[any]any)
 		}
 		o.Attributes[attr] = value
 
@@ -376,6 +378,8 @@ func (r *Request) Transfer(ctx context.Context, wallet *OwnerWallet, typ token.T
 		if v > maxTokenValue {
 			return nil, errors.Errorf("value at index %d exceeds max token value [%d]", i, maxTokenValue)
 		}
+	if slices.Contains(values, 0) {
+		return nil, errors.Errorf("value is zero")
 	}
 
 	// Validate owners match values length
@@ -1011,9 +1015,7 @@ func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyAct
 		if err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
 		}
-		for k, v := range issueAction.GetMetadata() {
-			attributes[k] = v
-		}
+		maps.Copy(attributes, issueAction.GetMetadata())
 
 		// get metadata for action
 		issueMeta, err := meta.Issue(i)
@@ -1051,9 +1053,7 @@ func (r *Request) inputsAndOutputs(ctx context.Context, failOnMissing, verifyAct
 		if err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
 		}
-		for k, v := range transferAction.GetMetadata() {
-			attributes[k] = v
-		}
+		maps.Copy(attributes, transferAction.GetMetadata())
 		// get metadata for action
 		transferMeta, err := meta.Transfer(i)
 		if err != nil {

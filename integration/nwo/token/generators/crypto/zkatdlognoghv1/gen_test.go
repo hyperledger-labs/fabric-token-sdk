@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 //go:generate counterfeiter -o mock/token_platform.go -fake-name TokenPlatform . tokenPlatform

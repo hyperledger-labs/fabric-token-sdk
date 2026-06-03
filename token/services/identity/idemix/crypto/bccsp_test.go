@@ -27,7 +27,7 @@ func newMockKVS() *mockKVS {
 	}
 }
 
-func (m *mockKVS) Get(key string, value interface{}) error {
+func (m *mockKVS) Get(key string, value any) error {
 	if val, ok := m.data[key]; ok {
 		// Copy the value to the provided interface
 		if ptr, ok := value.(*[]byte); ok {
@@ -38,7 +38,7 @@ func (m *mockKVS) Get(key string, value interface{}) error {
 	return nil
 }
 
-func (m *mockKVS) Put(key string, value interface{}) error {
+func (m *mockKVS) Put(key string, value any) error {
 	if bytes, ok := value.([]byte); ok {
 		m.data[key] = bytes
 	}

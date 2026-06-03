@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 // TestValidator_UnmarshalActions verifies unmarshaling token actions from raw bytes
@@ -24,7 +24,7 @@ func TestValidator_UnmarshalActions(t *testing.T) {
 
 	raw := []byte("some_raw_data")
 
-	expectedActions := []interface{}{"action1", "action2"}
+	expectedActions := []any{"action1", "action2"}
 	mockValidator := validator.backend.(*mock.Validator)
 	mockValidator.UnmarshalActionsReturns(expectedActions, nil)
 
@@ -43,7 +43,7 @@ func TestValidator_UnmarshallAndVerify(t *testing.T) {
 	raw := []byte("some_raw_data")
 	anchor := "some_anchor"
 
-	expectedActions := []interface{}{"action1", "action2"}
+	expectedActions := []any{"action1", "action2"}
 	mockValidator := validator.backend.(*mock.Validator)
 	mockValidator.VerifyTokenRequestFromRawReturns(expectedActions, nil, nil)
 
@@ -62,7 +62,7 @@ func TestValidator_UnmarshallAndVerifyWithMetadata(t *testing.T) {
 	raw := []byte("some_raw_data")
 	anchor := "some_anchor"
 
-	expectedActions := []interface{}{"action1", "action2"}
+	expectedActions := []any{"action1", "action2"}
 	expectedMetadata := map[string][]byte{"key1": []byte("value1"), "key2": []byte("value2")}
 	mockValidator := validator.backend.(*mock.Validator)
 	mockValidator.VerifyTokenRequestFromRawReturns(expectedActions, expectedMetadata, nil)

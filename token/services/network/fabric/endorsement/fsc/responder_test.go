@@ -191,7 +191,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid number of transient field",
+			name: "invalid number of transient fields",
 			setup: func() *MockNewRequestApprovalResponderView {
 				m := mockNewRequestApprovalResponderView(t, nil)
 				m.fabricTx.TransientReturns(map[string][]byte{
@@ -202,7 +202,7 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			},
 			expectError:      true,
 			expectErrorType:  fsc.ErrReceivedProposal,
-			expectErrContain: "invalid number of transient field, expected 2, got 1",
+			expectErrContain: "invalid number of transient fields, expected 2 or 3, got 1",
 			verify: func(m *MockNewRequestApprovalResponderView, res any) {
 				assert.Equal(t, 0, m.rws.DoneCallCount())
 			},
@@ -616,6 +616,44 @@ func TestRequestApprovalResponderView(t *testing.T) {
 			expectError: false,
 			verify: func(m *MockNewRequestApprovalResponderView, res any) {
 				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "success with approval metadata",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				metadataRaw, err := json.Marshal(map[string][]byte{"info": []byte("extra")})
+				require.NoError(t, err)
+				m.fabricTx.TransientReturns(map[string][]byte{
+					fsc.TransientTMSIDKey:            m.tmsIDRaw,
+					fsc.TransientTokenRequestKey:     []byte("a_token_request"),
+					fsc.TransientApprovalMetadataKey: metadataRaw,
+				})
+
+				return m
+			},
+			expectError: false,
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 1, m.rws.DoneCallCount())
+			},
+		},
+		{
+			name: "invalid approval metadata encoding",
+			setup: func() *MockNewRequestApprovalResponderView {
+				m := mockNewRequestApprovalResponderView(t, nil)
+				m.fabricTx.TransientReturns(map[string][]byte{
+					fsc.TransientTMSIDKey:            m.tmsIDRaw,
+					fsc.TransientTokenRequestKey:     []byte("a_token_request"),
+					fsc.TransientApprovalMetadataKey: []byte("not-valid-json"),
+				})
+
+				return m
+			},
+			expectError:      true,
+			expectErrorType:  fsc.ErrReceivedProposal,
+			expectErrContain: "failed to unmarshal approval metadata",
+			verify: func(m *MockNewRequestApprovalResponderView, res any) {
+				assert.Equal(t, 0, m.rws.DoneCallCount())
 			},
 		},
 	}

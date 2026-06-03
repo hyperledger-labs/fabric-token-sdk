@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +32,7 @@ func TestStubbornSelector_ContextCancellation(t *testing.T) {
 					Quantity: "100",
 				}
 
-				return collections.NewSliceIterator([]*token2.UnspentTokenInWallet{tok}), nil
+				return iterators.Slice([]*token2.UnspentTokenInWallet{tok}), nil
 			},
 		}
 
@@ -83,7 +83,7 @@ func TestSelector_UnlockAllOnQuantityParseError(t *testing.T) {
 					Quantity: "not-a-number",
 				}
 
-				return collections.NewSliceIterator([]*token2.UnspentTokenInWallet{tok}), nil
+				return iterators.Slice([]*token2.UnspentTokenInWallet{tok}), nil
 			},
 		}
 
@@ -96,7 +96,7 @@ func TestSelector_UnlockAllOnQuantityParseError(t *testing.T) {
 		m := NewMetrics(&disabled.Provider{})
 		sel := NewSelector(logger, mockFetcher, mockLck, 64, m)
 
-		_, _, err := sel.Select(context.Background(), &ownerFilter{id: "wallet1"}, "100", "USD")
+		_, _, err := sel.Select(t.Context(), &ownerFilter{id: "wallet1"}, "100", "USD")
 
 		require.Error(t, err)
 		assert.True(t, unlockAllCalled, "UnlockAll must be called when ToQuantity fails after TryLock")

@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -20,13 +21,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -131,7 +132,7 @@ func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bo
 		Limit(1).
 		Format(db.ci)
 
-	id, err := common.QueryUnique[string](db.readDB, query, args...)
+	id, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
 
 	logger.DebugfContext(ctx, "token [%s:%d] is mine [%s]", txID, index, id)
 
@@ -143,34 +144,159 @@ func (db *TokenStore) UnspentTokensIterator(ctx context.Context) (tdriver.Unspen
 	return db.UnspentTokensIteratorBy(ctx, "", "")
 }
 
-// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
-// The token type can be empty. In that case, tokens of any type are returned.
+// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the
+// passed wallet id and of the passed type. Empty tokenType returns all types.
+//
+// Implemented as a single SQL with two UNION ALL branches so each side can
+// use its own index, instead of a cross-table OR predicate that PostgreSQL
+// cannot resolve with the partial index on (owner_wallet_id, token_type)
+// WHERE is_deleted=false AND owner=true:
+//
+//  1. tokens directly owned: filters tokens.owner_wallet_id, hits the partial
+//     index in microseconds. Joins ownership by primary key to preserve the
+//     pre-PR semantic that a token must have at least one ownership row to
+//     be visible (StoreToken can persist a tokens row without an ownership
+//     row when the owners slice is empty, and the original INNER JOIN
+//     intentionally excluded those).
+//  2. tokens reachable via the ownership-delegation table: joins ownership
+//     -> tokens by primary key. Returns zero rows when delegation is not
+//     configured, at which point that branch is essentially free.
+//
+// Both branches share a single SQL statement and therefore a single
+// connection from the pool, which avoids the deadlock that would arise if
+// two concurrent QueryContexts each tried to acquire a second connection.
+// PostgreSQL 9.6+ may also execute the branches in parallel via parallel
+// append. UNION ALL is used (not UNION) to skip the per-row sort/hash
+// dedup pass; duplicates between the two branches (and within branch 1 when
+// a token has multiple ownership rows) are filtered at the iterator layer.
 func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID string, tokenType token.Type) (tdriver.UnspentTokensIterator, error) {
-	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
-	query, args := q.Select().
+	tokenTable := q.Table(db.table.Tokens)
+	ownershipTable := q.Table(db.table.Ownership)
+	joinCond := cond.And(
+		cond.Cmp(tokenTable.Field("tx_id"), "=", ownershipTable.Field("tx_id")),
+		cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx")),
+	)
+
+	// branch 1: filter by tokens.owner_wallet_id only (planner can pick the
+	// partial index on tokens), but JOIN ownership so a tokens row without
+	// any ownership row is excluded — matching the pre-PR INNER JOIN.
+	branch1Conds := []cond.Condition{
+		cond.Eq("owner", true),
+		cond.Eq("is_deleted", false),
+	}
+	if len(walletID) > 0 {
+		branch1Conds = append(branch1Conds, cond.Eq("owner_wallet_id", walletID))
+	}
+	if len(tokenType) > 0 {
+		branch1Conds = append(branch1Conds, cond.Eq("token_type", tokenType))
+	}
+	// Both branches select ownership.wallet_id as the trailing column. It
+	// isn't part of the iterator output but is used as the dedup key so a
+	// (token, ownership) pair appearing in both branches (when walletID
+	// matches both tokens.owner_wallet_id and ownership.wallet_id of the
+	// same row) is emitted once. Pre-PR semantics yield one row per
+	// matching (token, ownership) pair, including duplicates per token
+	// when multiple ownership rows match (e.g. shared-ownership tokens).
+	branch1 := q.Select().
 		Fields(
-			tokenTable.Field("tx_id"), tokenTable.Field("idx"), common3.FieldName("owner_raw"),
-			common3.FieldName("token_type"), common3.FieldName("quantity"),
+			tokenTable.Field("tx_id"), tokenTable.Field("idx"),
+			common3.FieldName("owner_raw"), common3.FieldName("token_type"), common3.FieldName("quantity"),
+			ownershipTable.Field("wallet_id"),
 		).
-		From(tokenTable.Join(ownershipTable, cond.And(
-			cond.Cmp(tokenTable.Field("tx_id"), "=", ownershipTable.Field("tx_id")),
-			cond.Cmp(tokenTable.Field("idx"), "=", ownershipTable.Field("idx"))),
-		)).
-		Where(HasTokenDetails(driver.QueryTokenDetailsParams{
-			WalletID:  walletID,
-			TokenType: tokenType,
-		}, tokenTable)).
-		Format(db.ci)
+		From(tokenTable.Join(ownershipTable, joinCond)).
+		Where(cond.And(branch1Conds...))
+
+	// branch 2: filter by ownership.wallet_id. `wallet_id` is the unique
+	// unqualified column on the ownership side of the join (tokens has
+	// owner_wallet_id, not wallet_id), so the condition resolves
+	// unambiguously to ownership.wallet_id.
+	branch2Conds := []cond.Condition{
+		cond.Eq("owner", true),
+		cond.Eq("is_deleted", false),
+		cond.Eq("wallet_id", walletID),
+	}
+	if len(tokenType) > 0 {
+		branch2Conds = append(branch2Conds, cond.Eq("token_type", tokenType))
+	}
+	branch2 := q.Select().
+		Fields(
+			tokenTable.Field("tx_id"), tokenTable.Field("idx"),
+			common3.FieldName("owner_raw"), common3.FieldName("token_type"), common3.FieldName("quantity"),
+			ownershipTable.Field("wallet_id"),
+		).
+		From(tokenTable.Join(ownershipTable, joinCond)).
+		Where(cond.And(branch2Conds...))
+
+	// Combine both branches into one statement using a shared builder so
+	// the placeholder counter (`$1`, `$2`, ...) keeps incrementing across
+	// branches; each branch's args are appended in order. SQLite rejects
+	// parenthesised SELECT operands around UNION, so emit unwrapped form
+	// (PostgreSQL accepts both). Neither branch has ORDER BY / LIMIT, so
+	// dropping the parens does not change binding.
+	sb := common3.NewBuilder()
+	branch1.FormatTo(db.ci, sb)
+	sb.WriteString(" UNION ALL ")
+	branch2.FormatTo(db.ci, sb)
+	query, args := sb.Build()
 
 	logging.Debug(logger, query, args)
 	rows, err := db.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error querying unspent tokens for wallet [%s] type [%s]", walletID, tokenType)
 	}
 
-	return common.NewIterator(rows, func(r *token.UnspentToken) error {
-		return rows.Scan(&r.Id.TxId, &r.Id.Index, &r.Owner, &r.Type, &r.Quantity)
-	}), nil
+	return &dedupedTokenRowsIterator{
+		rows: rows,
+		seen: make(map[string]struct{}),
+	}, nil
+}
+
+// dedupedTokenRowsIterator yields one (token, ownership.wallet_id) pair per
+// (tx_id, idx, ownership.wallet_id) tuple. UNION ALL between branches 1 and
+// 2 can emit the same (token, ownership) row twice when walletID matches
+// both tokens.owner_wallet_id and ownership.wallet_id of the same row;
+// pre-PR behaviour was a single row in that case. Distinct (token,
+// ownership) pairs (e.g. shared-ownership tokens with multiple wallets in
+// the ownership table) are preserved — they have different keys.
+//
+// The trailing wallet_id column is read for the dedup key only and is not
+// surfaced on token.UnspentToken. ownership.wallet_id can be NULL when the
+// LEFT JOIN finds no matching ownership row (a tokens row with
+// owner_wallet_id set but no entry in the ownership table — StoreToken
+// allows that when owners is empty), so it is scanned as sql.NullString.
+type dedupedTokenRowsIterator struct {
+	rows *sql.Rows
+	seen map[string]struct{}
+}
+
+func (it *dedupedTokenRowsIterator) Close() {
+	_ = it.rows.Close()
+}
+
+func (it *dedupedTokenRowsIterator) Next() (*token.UnspentToken, error) {
+	for it.rows.Next() {
+		var t token.UnspentToken
+		var ownerID sql.NullString
+		if err := it.rows.Scan(&t.Id.TxId, &t.Id.Index, &t.Owner, &t.Type, &t.Quantity, &ownerID); err != nil {
+			return nil, err
+		}
+		// "\x00" prefix on a Valid wallet_id can never collide with the
+		// empty-string value used for NULL because the prefix is reserved
+		// here; without it, NULL and "" would share a key.
+		var ownerKey string
+		if ownerID.Valid {
+			ownerKey = "\x00" + ownerID.String
+		}
+		key := fmt.Sprintf("%s:%d:%s", t.Id.TxId, t.Id.Index, ownerKey)
+		if _, dup := it.seen[key]; dup {
+			continue
+		}
+		it.seen[key] = struct{}{}
+
+		return &t, nil
+	}
+
+	return nil, nil
 }
 
 // SpendableTokensIteratorBy returns the minimum information about the tokens needed for the selector
@@ -212,6 +338,7 @@ func (db *TokenStore) UnsupportedTokensIteratorBy(ctx context.Context, walletID 
 	logger.DebugfContext(ctx, "after filtering we have [%v]", includeFormats)
 
 	// now, select the tokens with the list of ledger tokens
+
 	return db.queryLedgerTokens(ctx, driver.QueryTokenDetailsParams{
 		WalletID:           walletID,
 		TokenType:          tokenType,
@@ -238,15 +365,16 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	}), nil
 }
 
-// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
-func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (uint64, error) {
+// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
+// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
+func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (*big.Int, error) {
 	return db.balance(ctx, driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
 		TokenType: typ,
 	})
 }
 
-func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (uint64, error) {
+func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetailsParams) (*big.Int, error) {
 	tokenTable, ownershipTable := q.Table(db.table.Tokens), q.Table(db.table.Ownership)
 	query, args := q.Select().FieldsByName("SUM(amount)").
 		From(tokenTable.Join(ownershipTable, cond.And(
@@ -256,12 +384,20 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 		Where(HasTokenDetails(opts, tokenTable)).
 		Format(db.ci)
 
-	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
-	if err != nil || sum == nil {
-		return 0, err
+	var sum BigInt
+	err := db.readDB.QueryRowContext(ctx, query, args...).Scan(&sum)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return big.NewInt(0), nil
+		}
+
+		return nil, err
+	}
+	if sum.Int == nil {
+		return big.NewInt(0), nil
 	}
 
-	return *sum, nil
+	return sum.Int, nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
@@ -708,7 +844,13 @@ func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.Query
 	}
 
 	it := common.NewIterator(rows, func(td *driver.TokenDetails) error {
-		return rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &td.Amount, &td.IsSpent, &td.SpentBy, &td.StoredAt)
+		var amount BigInt
+		if err := rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &amount, &td.IsSpent, &td.SpentBy, &td.StoredAt); err != nil {
+			return err
+		}
+		td.Amount = amount.Int
+
+		return nil
 	})
 
 	return iterators.ReadAllValues(it)
@@ -797,6 +939,7 @@ func (db *TokenStore) StorePublicParams(ctx context.Context, raw []byte) error {
 	if pps, err := db.PublicParamsByHash(ctx, rawHash); err == nil && len(pps) > 0 {
 		logger.DebugfContext(ctx, "public params [%s] already in the database", logging.Base64(rawHash))
 		// no need to update the public parameters
+
 		return nil
 	}
 
@@ -818,7 +961,7 @@ func (db *TokenStore) PublicParams(ctx context.Context) ([]byte, error) {
 		Limit(1).
 		Format(db.ci)
 
-	return common.QueryUnique[[]byte](db.readDB, query, args...)
+	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
 func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PPHash) ([]byte, error) {
@@ -828,7 +971,7 @@ func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PP
 		Where(cond.Eq("raw_hash", rawHash)).
 		Format(db.ci)
 
-	return common.QueryUnique[[]byte](db.readDB, query, args...)
+	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 }
 
 func (db *TokenStore) StoreCertifications(ctx context.Context, certifications map[*token.ID][]byte) error {
@@ -866,7 +1009,7 @@ func (db *TokenStore) ExistsCertification(ctx context.Context, tokenID *token.ID
 		Where(HasTokens("tx_id", "idx", tokenID)).
 		Format(db.ci)
 
-	certification, err := common.QueryUnique[[]byte](db.readDB, query, args...)
+	certification, err := common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 	if err != nil {
 		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
 
@@ -948,7 +1091,7 @@ func (db *TokenStore) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL,
 			idx INT NOT NULL,
-			amount BIGINT NOT NULL,
+			amount NUMERIC(78, 0) NOT NULL,
 			token_type TEXT NOT NULL,
 			quantity TEXT NOT NULL,
 			issuer_raw BYTEA,

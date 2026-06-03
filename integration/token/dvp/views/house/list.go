@@ -23,7 +23,7 @@ type GetHouseView struct {
 	*GetHouse
 }
 
-func (p *GetHouseView) Call(context view.Context) (interface{}, error) {
+func (p *GetHouseView) Call(context view.Context) (any, error) {
 	wallet := nfttx.MyWallet(context)
 	assert.NotNil(wallet, "wallet is nil")
 

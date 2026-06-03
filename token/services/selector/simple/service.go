@@ -23,7 +23,7 @@ import (
 var logger = logging.MustGetLogger()
 
 type ConfigProvider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 }
 
 type LockerProvider interface {
@@ -89,8 +89,8 @@ func (s *SelectorService) trackLocker(l Locker) {
 }
 
 type Cache interface {
-	Get(key string) (interface{}, bool)
-	Add(key string, value interface{})
+	Get(key string) (any, bool)
+	Add(key string, value any)
 }
 
 type queryService struct {

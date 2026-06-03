@@ -16,12 +16,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
 )
 
 type walletTables struct {
@@ -60,7 +60,7 @@ func (db *WalletStore) GetWalletID(ctx context.Context, identity token.Identity,
 		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("role_id", roleID))).
 		Format(db.ci)
 
-	result, err := common.QueryUnique[driver.WalletID](db.readDB, query, args...)
+	result, err := common.QueryUniqueContext[driver.WalletID](ctx, db.readDB, query, args...)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed getting wallet id for identity [%v]", idHash)
 	}
@@ -87,14 +87,10 @@ func (db *WalletStore) GetWalletIDs(ctx context.Context, roleID int) ([]driver.W
 }
 
 func (db *WalletStore) StoreIdentity(ctx context.Context, identity token.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
-	// TODO AF Use upsert
-	if db.IdentityExists(ctx, identity, wID, roleID) {
-		return nil
-	}
-
 	query, args := q.InsertInto(db.table.Wallets).
 		Fields("identity_hash", "meta", "wallet_id", "role_id", "created_at", "enrollment_id").
 		Row(identity.UniqueID(), meta, wID, roleID, time.Now().UTC(), eID).
+		OnConflictDoNothing().
 		Format()
 	logging.Debug(logger, query)
 
@@ -114,7 +110,7 @@ func (db *WalletStore) LoadMeta(ctx context.Context, identity token.Identity, wI
 		From(q.Table(db.table.Wallets)).
 		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("wallet_id", wID), cond.Eq("role_id", roleID))).
 		Format(db.ci)
-	result, err := common.QueryUnique[[]byte](db.readDB, query, args...)
+	result, err := common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed loading meta for id [%v]", idHash)
 	}
@@ -130,7 +126,7 @@ func (db *WalletStore) IdentityExists(ctx context.Context, identity token.Identi
 		From(q.Table(db.table.Wallets)).
 		Where(cond.And(cond.Eq("identity_hash", idHash), cond.Eq("wallet_id", wID), cond.Eq("role_id", roleID))).
 		Format(db.ci)
-	result, err := common.QueryUnique[driver.WalletID](db.readDB, query, args...)
+	result, err := common.QueryUniqueContext[driver.WalletID](ctx, db.readDB, query, args...)
 	if err != nil {
 		logger.Errorf("failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
 	}

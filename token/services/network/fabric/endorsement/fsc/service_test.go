@@ -32,7 +32,7 @@ func TestNewEndorsementService(t *testing.T) {
 		config := &mock2.Configuration{}
 		config.GetBoolReturns(true)
 		config.GetStringReturns(fsc.AllPolicy)
-		config.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		config.UnmarshalKeyStub = func(key string, rawVal any) error {
 			if key == fsc.EndorsersKey {
 				*rawVal.(*[]string) = []string{"endorser1", "endorser2"}
 			}
@@ -82,7 +82,7 @@ func TestNewEndorsementService(t *testing.T) {
 		config := &mock2.Configuration{}
 		config.GetBoolReturns(false)
 		config.GetStringReturns(fsc.OneOutNPolicy)
-		config.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		config.UnmarshalKeyStub = func(key string, rawVal any) error {
 			if key == fsc.EndorsersKey {
 				*rawVal.(*[]string) = []string{"endorser1"}
 			}
@@ -129,7 +129,7 @@ func TestNewEndorsementService(t *testing.T) {
 		config := &mock2.Configuration{}
 		config.GetBoolReturns(false)
 		config.GetStringReturns("")
-		config.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		config.UnmarshalKeyStub = func(key string, rawVal any) error {
 			if key == fsc.EndorsersKey {
 				*rawVal.(*[]string) = []string{"endorser1"}
 			}
@@ -165,7 +165,7 @@ func TestNewEndorsementService(t *testing.T) {
 	t.Run("failed to enable tx processing", func(t *testing.T) {
 		config := &mock2.Configuration{}
 		config.GetBoolReturns(true)
-		config.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		config.UnmarshalKeyStub = func(key string, rawVal any) error {
 			if key == fsc.EndorsersKey {
 				*rawVal.(*[]string) = []string{"endorser1"}
 			}
@@ -199,7 +199,7 @@ func TestNewEndorsementService(t *testing.T) {
 	t.Run("failed to register responder", func(t *testing.T) {
 		config := &mock2.Configuration{}
 		config.GetBoolReturns(true)
-		config.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		config.UnmarshalKeyStub = func(key string, rawVal any) error {
 			if key == fsc.EndorsersKey {
 				*rawVal.(*[]string) = []string{"endorser1"}
 			}
@@ -257,7 +257,7 @@ func TestNewEndorsementService(t *testing.T) {
 	t.Run("no endorsers found", func(t *testing.T) {
 		config := &mock2.Configuration{}
 		config.GetBoolReturns(false)
-		config.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		config.UnmarshalKeyStub = func(key string, rawVal any) error {
 			if key == fsc.EndorsersKey {
 				*rawVal.(*[]string) = []string{}
 			}
@@ -287,7 +287,7 @@ func TestNewEndorsementService(t *testing.T) {
 	t.Run("endorser identity not found", func(t *testing.T) {
 		config := &mock2.Configuration{}
 		config.GetBoolReturns(false)
-		config.UnmarshalKeyStub = func(key string, rawVal interface{}) error {
+		config.UnmarshalKeyStub = func(key string, rawVal any) error {
 			if key == fsc.EndorsersKey {
 				*rawVal.(*[]string) = []string{"unknown_endorser"}
 			}
@@ -346,7 +346,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.NoError(t, err)
 		require.NotNil(t, env)
@@ -374,7 +374,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.NoError(t, err)
 		require.NotNil(t, env)
@@ -397,7 +397,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		env, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.NoError(t, err)
 		require.NotNil(t, env)
@@ -419,7 +419,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		_, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		_, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to request approval")
@@ -441,7 +441,7 @@ func TestEndorsementService_Endorse(t *testing.T) {
 			EndorserService: &mock.EndorserService{},
 		}
 
-		_, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{})
+		_, err := service.Endorse(ctx, []byte("request"), []byte("signer"), driver.TxID{}, nil)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "expected driver.Envelope")
@@ -466,7 +466,7 @@ type mockViewRegistry struct {
 	registerResponderError  error
 }
 
-func (m *mockViewRegistry) RegisterResponder(responder view.View, initiatedBy interface{}) error {
+func (m *mockViewRegistry) RegisterResponder(responder view.View, initiatedBy any) error {
 	m.registerResponderCalled = true
 
 	return m.registerResponderError
@@ -474,11 +474,11 @@ func (m *mockViewRegistry) RegisterResponder(responder view.View, initiatedBy in
 
 type mockViewManager struct {
 	initiateViewCalled bool
-	initiateViewResult interface{}
+	initiateViewResult any
 	initiateViewError  error
 }
 
-func (m *mockViewManager) InitiateView(ctx context.Context, view view.View) (interface{}, error) {
+func (m *mockViewManager) InitiateView(ctx context.Context, view view.View) (any, error) {
 	m.initiateViewCalled = true
 
 	return m.initiateViewResult, m.initiateViewError

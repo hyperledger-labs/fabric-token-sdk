@@ -8,7 +8,6 @@ package views
 
 import (
 	"encoding/json"
-	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
@@ -40,7 +39,7 @@ type BalanceView struct {
 	*Balance
 }
 
-func (b *BalanceView) Call(context view.Context) (interface{}, error) {
+func (b *BalanceView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(b.TMSID))
 	assert.NoError(err, "failed getting management service")
 	wallet, err := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
@@ -67,7 +66,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to compute the sum of the htlc expired tokens")
 
 	return BalanceResult{
-		Quantity: strconv.FormatUint(balance, 10),
+		Quantity: balance.String(),
 		Locked:   lockedSum.Decimal(),
 		Expired:  expiredSum.Decimal(),
 		Type:     b.Type,

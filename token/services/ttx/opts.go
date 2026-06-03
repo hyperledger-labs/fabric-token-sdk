@@ -15,6 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
+// TxOptions contains configuration options for token transactions including auditor selection,
+// TMS identification, verification settings, timeouts, and transaction identifiers.
 type TxOptions struct {
 	Auditor                   view.Identity
 	TMSID                     token.TMSID
@@ -28,6 +30,8 @@ type TxOptions struct {
 	AnonymousTransaction      bool
 }
 
+// CompileOpts applies all provided transaction options and returns the compiled TxOptions.
+// Returns an error if any option fails to apply.
 func CompileOpts(opts ...TxOption) (*TxOptions, error) {
 	txOptions := &TxOptions{}
 	for _, opt := range opts {
@@ -39,8 +43,12 @@ func CompileOpts(opts ...TxOption) (*TxOptions, error) {
 	return txOptions, nil
 }
 
+// TxOption is a function that modifies TxOptions. It follows the functional options pattern
+// for flexible and extensible configuration of token transactions.
 type TxOption func(*TxOptions) error
 
+// WithAuditor sets the auditor identity for the transaction. The auditor will validate
+// and sign the transaction before it's submitted to the network.
 func WithAuditor(auditor view.Identity) TxOption {
 	return func(o *TxOptions) error {
 		o.Auditor = auditor
@@ -49,6 +57,7 @@ func WithAuditor(auditor view.Identity) TxOption {
 	}
 }
 
+// WithNetwork sets the network identifier for the transaction's TMS.
 func WithNetwork(network string) TxOption {
 	return func(o *TxOptions) error {
 		o.TMSID.Network = network
@@ -57,6 +66,7 @@ func WithNetwork(network string) TxOption {
 	}
 }
 
+// WithChannel sets the channel identifier for the transaction's TMS.
 func WithChannel(channel string) TxOption {
 	return func(o *TxOptions) error {
 		o.TMSID.Channel = channel
@@ -65,6 +75,7 @@ func WithChannel(channel string) TxOption {
 	}
 }
 
+// WithNamespace sets the namespace identifier for the transaction's TMS.
 func WithNamespace(namespace string) TxOption {
 	return func(o *TxOptions) error {
 		o.TMSID.Namespace = namespace
@@ -114,6 +125,8 @@ func WithTMSIDPointer(id *token.TMSID) TxOption {
 	}
 }
 
+// WithNoTransactionVerification disables transaction verification when receiving transactions.
+// This should only be used in trusted environments or for testing purposes.
 func WithNoTransactionVerification() TxOption {
 	return func(o *TxOptions) error {
 		o.NoTransactionVerification = true
@@ -122,6 +135,7 @@ func WithNoTransactionVerification() TxOption {
 	}
 }
 
+// WithTimeout sets the overall timeout for transaction operations.
 func WithTimeout(timeout time.Duration) TxOption {
 	return func(o *TxOptions) error {
 		o.Timeout = timeout
@@ -142,6 +156,7 @@ func WithPollingTimeout(timeout time.Duration) TxOption {
 	}
 }
 
+// WithTxID sets a specific transaction ID for the transaction.
 func WithTxID(txID string) TxOption {
 	return func(o *TxOptions) error {
 		o.TxID = txID
@@ -150,6 +165,7 @@ func WithTxID(txID string) TxOption {
 	}
 }
 
+// WithTransactions sets an existing transaction to be used in the options.
 func WithTransactions(tx *Transaction) TxOption {
 	return func(o *TxOptions) error {
 		o.Transaction = tx
@@ -158,6 +174,8 @@ func WithTransactions(tx *Transaction) TxOption {
 	}
 }
 
+// WithNetworkTxID sets the network-specific transaction ID for the transaction.
+// This allows using a pre-existing network transaction ID instead of generating a new one.
 func WithNetworkTxID(id network.TxID) TxOption {
 	return func(o *TxOptions) error {
 		o.NetworkTxID = id
@@ -175,7 +193,8 @@ func WithAnonymousTransaction(v bool) TxOption {
 	}
 }
 
-// CompileServiceOptions compiles the service options
+// CompileServiceOptions applies all provided service options and returns the compiled ServiceOptions.
+// Returns an error if any option fails to apply.
 func CompileServiceOptions(opts ...token.ServiceOption) (*token.ServiceOptions, error) {
 	txOptions := &token.ServiceOptions{}
 	for _, opt := range opts {
@@ -191,7 +210,7 @@ func CompileServiceOptions(opts ...token.ServiceOption) (*token.ServiceOptions, 
 func WithRecipientData(recipientData *RecipientData) token.ServiceOption {
 	return func(options *token.ServiceOptions) error {
 		if options.Params == nil {
-			options.Params = map[string]interface{}{}
+			options.Params = map[string]any{}
 		}
 		options.Params["RecipientData"] = recipientData
 
@@ -206,7 +225,7 @@ func WithRecipientWalletID(walletID string) token.ServiceOption {
 			return nil
 		}
 		if options.Params == nil {
-			options.Params = map[string]interface{}{}
+			options.Params = map[string]any{}
 		}
 		options.Params["RecipientWalletID"] = walletID
 
@@ -214,6 +233,8 @@ func WithRecipientWalletID(walletID string) token.ServiceOption {
 	}
 }
 
+// getRecipientWalletID extracts the recipient wallet ID from service options.
+// Returns an empty string if the wallet ID is not set.
 func getRecipientWalletID(opts *token.ServiceOptions) string {
 	wBoxed, ok := opts.Params["RecipientWalletID"]
 	if !ok {

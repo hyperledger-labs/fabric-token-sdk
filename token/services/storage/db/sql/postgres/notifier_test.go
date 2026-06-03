@@ -85,7 +85,7 @@ func TestNotifierSubscribeClosed(t *testing.T) {
 
 // TestNotifierClose tests that Close properly cleans up resources
 func TestNotifierClose(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec // G118: cancel is stored and called in Close
+	ctx, cancel := context.WithCancel(t.Context())
 	db := &Notifier{
 		table:            "test_table",
 		writeDB:          nil,
@@ -136,7 +136,7 @@ func TestNotifierListenerErrorChannel(t *testing.T) {
 
 // TestNotifierSubscribeAfterClose tests that Subscribe returns error when called after Close
 func TestNotifierSubscribeAfterClose(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec
+	ctx, cancel := context.WithCancel(t.Context())
 	db := &Notifier{
 		table:            "test_table",
 		writeDB:          nil,
@@ -187,9 +187,7 @@ func TestNotifierSubscriberAccessSafety(t *testing.T) {
 	subscriptionsPerGoroutine := 100
 
 	for range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range subscriptionsPerGoroutine {
 				_ = db.Subscribe(func(operation driver.Operation, m map[driver.ColumnKey]string) {
 					mutex.Lock()
@@ -197,7 +195,7 @@ func TestNotifierSubscriberAccessSafety(t *testing.T) {
 					mutex.Unlock()
 				})
 			}
-		}()
+		})
 	}
 
 	// Wait for all subscriptions to complete
@@ -218,7 +216,7 @@ func TestNotifierSubscriberAccessSafety(t *testing.T) {
 
 // TestNotifierConcurrentSubscribeAndClose tests concurrent Subscribe and Close operations
 func TestNotifierConcurrentSubscribeAndClose(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec
+	ctx, cancel := context.WithCancel(t.Context())
 	db := &Notifier{
 		table:   "test_table",
 		writeDB: nil,
@@ -229,8 +227,10 @@ func TestNotifierConcurrentSubscribeAndClose(t *testing.T) {
 				defer ticker.Stop()
 				select {
 				case <-ctx.Done():
+
 					return ctx.Err()
 				case <-ticker.C:
+
 					return nil
 				}
 			},
@@ -250,23 +250,19 @@ func TestNotifierConcurrentSubscribeAndClose(t *testing.T) {
 
 	// Start goroutines that repeatedly subscribe
 	for range numSubscribeGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range 10 {
 				_ = db.Subscribe(func(operation driver.Operation, m map[driver.ColumnKey]string) {})
 				time.Sleep(1 * time.Millisecond)
 			}
-		}()
+		})
 	}
 
 	// Start a goroutine that closes the notifier after a short delay
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		time.Sleep(30 * time.Millisecond) // Wait for some subscriptions to happen
 		_ = db.Close()
-	}()
+	})
 
 	// Wait for all goroutines to complete
 	wg.Wait()

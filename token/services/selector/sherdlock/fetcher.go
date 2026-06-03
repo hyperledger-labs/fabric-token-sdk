@@ -217,6 +217,9 @@ func NewCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 }
 
 // finishUpdate signals completion and releases the lock.
+// finishUpdate releases the update lock and signals all waiting goroutines.
+// finishUpdate cleans up after an update operation: marks updating as complete,
+// broadcasts to waiting goroutines, and releases the lock.
 // Must be called while holding f.mu.
 func (f *cachedFetcher) finishUpdate() {
 	f.isUpdating = false
@@ -264,6 +267,8 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
 		f.completeUpdate()
+		f.mu.Lock()
+		f.finishUpdate()
 
 		return
 	}
@@ -273,6 +278,8 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	if err != nil {
 		logger.Warnf("Failed to group tokens from iterator: %v", err)
 		f.completeUpdate()
+		f.mu.Lock()
+		f.finishUpdate()
 
 		return
 	}

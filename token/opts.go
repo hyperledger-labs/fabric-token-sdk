@@ -26,7 +26,7 @@ type ServiceOptions struct {
 	// PublicParams contains the public params to use to instantiate the driver
 	PublicParams []byte
 	// Params is used to store any application specific parameter
-	Params map[string]interface{}
+	Params map[string]any
 	// Initiator is the view initiating the service
 	Initiator view.View
 	// Duration is the duration a given operation should take

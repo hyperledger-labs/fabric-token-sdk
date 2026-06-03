@@ -9,6 +9,7 @@ package ttx
 import (
 	"context"
 	"encoding/json"
+	maps0 "maps"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -18,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/boolpolicy"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -26,6 +28,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// distributionListEntry represents a party in the transaction distribution list,
+// containing their identity information and role (auditor or participant).
 type distributionListEntry struct {
 	IsMe     bool
 	LongTerm view.Identity
@@ -36,13 +40,17 @@ type distributionListEntry struct {
 
 //go:generate counterfeiter -o dep/mock/external_wallet_signer.go -fake-name ExternalWalletSigner . ExternalWalletSigner
 
+// ExternalWalletSigner defines the interface for signing with external wallets
+// that are not managed by the local node.
 type ExternalWalletSigner interface {
 	Sign(party view.Identity, message []byte) ([]byte, error)
 	Done() error
 }
 
+// verifierGetterFunc is a function type for retrieving a verifier for a given identity.
 type verifierGetterFunc func(ctx context.Context, identity view.Identity) (token.Verifier, error)
 
+// SignatureRequest represents a request for a party to sign a transaction.
 type SignatureRequest struct {
 	TX     []byte
 	Signer view.Identity
@@ -84,7 +92,7 @@ func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *Colle
 // 3. Before completing, all recipients receive the approved transaction.
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
-func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error) {
+func (c *CollectEndorsementsView) Call(context view.Context) (any, error) {
 	metrics := GetMetrics(context)
 	start := time.Now()
 
@@ -155,6 +163,8 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	return nil, nil
 }
 
+// requestSignaturesOnIssues collects signatures from all issuers involved in the transaction's issue operations.
+// It delegates to requestSignatures with the appropriate issuer verifier function.
 func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
 	logger.DebugfContext(context.Context(), "collecting signature on [%d] request issue", len(c.tx.TokenRequest.Metadata.Issues))
 
@@ -166,6 +176,8 @@ func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context
 	)
 }
 
+// requestSignaturesOnTransfers collects signatures from all owners involved in the transaction's transfer operations.
+// It delegates to requestSignatures with the appropriate owner verifier function.
 func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
 	logger.DebugfContext(context.Context(), "collecting signature on [%d] request transfer", len(c.tx.TokenRequest.Metadata.Transfers))
 
@@ -177,6 +189,14 @@ func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 	)
 }
 
+// requestSignatures collects signatures from the specified signers for the token request.
+// It handles multiple signature scenarios:
+// - Multi-signature identities: recursively collects signatures from all component signers
+// - Policy identities: collects signatures from policy components (respecting WithPolicySigners if set)
+// - Local signers: generates signatures using locally available signing keys
+// - External wallet signers: delegates signing to external wallet providers
+// - Remote signers: requests signatures from remote parties via network sessions
+// Returns a map of signer identity unique IDs to their signatures.
 func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, verifierGetter verifierGetterFunc, context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
 	logger.DebugfContext(context.Context(), "Request %d signatures", len(signers))
 	requestRaw, err := c.tx.TokenRequest.MarshalToSign()
@@ -224,6 +244,57 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			continue
 		}
 
+		// Case: the identity is a policy identity
+		pi, ok, err := boolpolicy.Unwrap(signerIdentity)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unwrapping policy identity [%s]", signerIdentity)
+		}
+		if ok {
+			componentIDs := make([]token.Identity, len(pi.Identities))
+			for idx, b := range pi.Identities {
+				componentIDs[idx] = b
+			}
+			// collectIDs is the subset we actually request signatures from.
+			// If the caller supplied WithPolicySigners, only contact those
+			// components; the absent slots stay nil in the PolicySignature,
+			// which satisfies OR branches without unnecessary network calls.
+			collectIDs := c.policyCollectIDs(componentIDs)
+			logger.DebugfContext(context.Context(), "found policy identity [%s], collecting signatures from [%d/%d] components", signerIdentity, len(collectIDs), len(componentIDs))
+			componentSigmas, err := c.requestSignatures(collectIDs, verifierGetter, context, externalWallets)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed requesting policy signatures")
+			}
+			sigma, err := boolpolicy.JoinSignatures(componentIDs, componentSigmas)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed joining policy signatures")
+			}
+			sigmas[signerIdentity.UniqueID()] = sigma
+
+			continue
+		}
+
+		// Case: there is a wallet bound to the party with an external signer registered,
+		// the signature is generated externally. Probing the wallet first lets callers
+		// who have explicitly registered an ExternalWalletSigner short-circuit in O(1),
+		// avoiding the x509 parse + BCCSP key load that GetSigner runs for identities
+		// whose private key is held outside the local BCCSP (e.g. in an external KMS).
+		if w, err := c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), signerIdentity); err == nil {
+			if ews := c.Opts.ExternalWalletSigner(w.ID()); ews != nil {
+				logger.DebugfContext(context.Context(), "found wallet for party [%s], request external signature", signerIdentity)
+				externalWallets[w.ID()] = ews
+				sigma, err := c.signExternal(context.Context(), signerIdentity, ews, requestRaw)
+				if err != nil {
+					return nil, errors.WithMessagef(err, "failed signing external for party [%s]", signerIdentity)
+				}
+				sigmas[signerIdentity.UniqueID()] = sigma
+
+				continue
+			}
+			// wallet exists but no ExternalWalletSigner registered; fall through to the
+			// local-signer path. ExternalWalletSigner registration is an explicit opt-in,
+			// not a strict requirement.
+		}
+
 		// Case: there is a signer locally bound to the party, use it to generate the signature
 		if signer, err := c.tx.TokenService().SigService().GetSigner(context.Context(), signerIdentity); err == nil {
 			logger.DebugfContext(context.Context(), "found signer for party [%s], request local signature", signerIdentity)
@@ -236,23 +307,6 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			continue
 		} else {
 			logger.DebugfContext(context.Context(), "failed to find a signer for party [%s]: [%s]", signerIdentity, err)
-		}
-
-		// Case: there is a wallet bound to the party but the signer is not local, the signature is generated externally
-		if w, err := c.tx.TokenService().WalletManager().OwnerWallet(context.Context(), signerIdentity); err == nil {
-			logger.DebugfContext(context.Context(), "found wallet for party [%s], request external signature", signerIdentity)
-			ews := c.Opts.ExternalWalletSigner(w.ID())
-			if ews == nil {
-				return nil, errors.Errorf("no external wallet signer found for [%s][%s]", w.ID(), signerIdentity)
-			}
-			externalWallets[w.ID()] = ews
-			sigma, err := c.signExternal(context.Context(), signerIdentity, ews, requestRaw)
-			if err != nil {
-				return nil, errors.WithMessagef(err, "failed signing external for party [%s]", signerIdentity)
-			}
-			sigmas[signerIdentity.UniqueID()] = sigma
-
-			continue
 		}
 
 		// Case: the signature must be generated by a remote party
@@ -268,6 +322,8 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 	return sigmas, nil
 }
 
+// signLocal generates a signature using a locally available signer for the given party.
+// This is used when the signing key is available on the local node.
 func (c *CollectEndorsementsView) signLocal(ctx context.Context, party view.Identity, signer token.Signer, requestRaw []byte) ([]byte, error) {
 	logger.DebugfContext(ctx, "signing [request_hash=%s][tx_id=%s][nonce=%s]", utils.Hashable(requestRaw), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
 
@@ -280,6 +336,9 @@ func (c *CollectEndorsementsView) signLocal(ctx context.Context, party view.Iden
 	return sigma, nil
 }
 
+// signExternal generates a signature using an external wallet signer for the given party.
+// This is used when the wallet exists locally but the signing key is managed externally
+// (e.g., hardware security module, remote signing service).
 func (c *CollectEndorsementsView) signExternal(ctx context.Context, party view.Identity, signer ExternalWalletSigner, requestRaw []byte) ([]byte, error) {
 	logger.DebugfContext(ctx, "signing [request=%s][tx_id=%s][nonce=%s]", utils.Hashable(requestRaw), c.tx.ID(), logging.Base64(c.tx.TxID.Nonce))
 	sigma, err := signer.Sign(party, requestRaw)
@@ -291,6 +350,9 @@ func (c *CollectEndorsementsView) signExternal(ctx context.Context, party view.I
 	return sigma, nil
 }
 
+// signRemote requests a signature from a remote party by opening a network session,
+// sending the signature request, receiving the signature, and verifying it.
+// This is used when the signing party is on a different node.
 func (c *CollectEndorsementsView) signRemote(
 	context view.Context,
 	party view.Identity,
@@ -302,20 +364,16 @@ func (c *CollectEndorsementsView) signRemote(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting session")
 	}
-	signatureRequestRaw, err := Marshal(signatureRequest)
-	if err != nil {
-		return nil, err
-	}
-	err = session.SendWithContext(context.Context(), signatureRequestRaw)
-	if err != nil {
+	ts := session2.NewTypedSession(context, session)
+	if err := ts.SendTyped(context.Context(), signatureRequest, TypeSignatureRequest); err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction content")
 	}
 
-	jsonSession := session2.NewFromSession(context, session)
-	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
-	if err != nil {
+	var signaturePayload SignaturePayload
+	if err := ts.ReceiveTypedWithTimeout(TypeSignature, &signaturePayload, time.Minute); err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
+	sigma := signaturePayload.Signature
 	verifier, err := verifierGetter(context.Context(), party)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
@@ -332,6 +390,9 @@ func (c *CollectEndorsementsView) signRemote(
 	return sigma, nil
 }
 
+// requestApproval invokes the token chaincode to collect endorsements on the token request
+// and prepare the transaction envelope. It marshals the token request, calls the network's
+// RequestApproval method, and stores the resulting envelope in the transaction.
 func (c *CollectEndorsementsView) requestApproval(context view.Context) (*network.Envelope, error) {
 	requestRaw, err := c.tx.TokenRequest.RequestToBytes()
 	if err != nil {
@@ -346,6 +407,7 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 		requestRaw,
 		c.tx.Signer,
 		c.tx.TxID,
+		c.Opts.ApprovalMetadata,
 	)
 	if err != nil {
 		return nil, err
@@ -355,6 +417,10 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 	return env, nil
 }
 
+// requestAudit requests auditing of the transaction from the configured auditor.
+// If no auditor is specified in the transaction options but auditors are defined in
+// the public parameters, a warning is logged. Returns the list of auditors that
+// were contacted (empty if auditing was skipped).
 func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Identity, error) {
 	auditors := c.tx.TokenService().PublicParametersManager().PublicParameters().Auditors()
 	logger.DebugfContext(context.Context(), "# auditors in public parameters [%d]", len(auditors))
@@ -383,6 +449,8 @@ func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Ide
 	return nil, nil
 }
 
+// cleanupAudit closes the auditor session if one was opened during the audit process.
+// This should be called after the transaction has been fully endorsed and distributed.
 func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 	if !c.tx.Opts.Auditor.IsNone() {
 		session, err := c.getSession(context, c.tx.Opts.Auditor)
@@ -395,6 +463,9 @@ func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 	return nil
 }
 
+// distributeTxToParties distributes the endorsed transaction to all parties in the distribution list.
+// It filters metadata by enrollment ID for each recipient (except auditors who receive full metadata),
+// stores transaction records locally, and collects acknowledgment signatures from each party.
 func (c *CollectEndorsementsView) distributeTxToParties(context view.Context, distributionList []view.Identity, auditors []view.Identity) error {
 	logger.DebugfContext(context.Context(), "Start distribute to parties")
 	if c.Opts.SkipDistributeEnv {
@@ -468,6 +539,10 @@ func (c *CollectEndorsementsView) distributeTxToParties(context view.Context, di
 	return nil
 }
 
+// distributeTxToParty sends the transaction to a single party, waits for their acknowledgment,
+// verifies the acknowledgment signature, and records it in the transaction database.
+// The txRaw parameter should contain the transaction bytes filtered by the party's enrollment ID
+// (unless the party is an auditor, in which case it contains the full transaction).
 func (c *CollectEndorsementsView) distributeTxToParty(
 	context view.Context,
 	entry *distributionListEntry,
@@ -481,17 +556,17 @@ func (c *CollectEndorsementsView) distributeTxToParty(
 	}
 	// Send the content
 	logger.DebugfContext(context.Context(), "Send transaction content")
-	err = session.SendWithContext(context.Context(), txRaw)
-	if err != nil {
+	ts := session2.NewTypedSession(context, session)
+	if err := ts.SendTyped(context.Context(), &TransactionPayload{Raw: txRaw}, TypeTransaction); err != nil {
 		return errors.Wrap(err, "failed sending transaction content")
 	}
 
 	logger.DebugfContext(context.Context(), "Wait for ack")
-	jsonSession := session2.NewFromSession(context, session)
-	sigma, err := jsonSession.ReceiveRawWithTimeout(time.Minute)
-	if err != nil {
+	var signaturePayload SignaturePayload
+	if err := ts.ReceiveTypedWithTimeout(TypeSignature, &signaturePayload, time.Minute); err != nil {
 		return errors.Wrapf(err, "failed reading message on session [%s]", session.Info().ID)
 	}
+	sigma := signaturePayload.Signature
 	logger.DebugfContext(context.Context(), "received ack from [%s] [%s], checking signature on [%s]",
 		entry.LongTerm, utils.Hashable(sigma).String(),
 		utils.Hashable(txRaw).String())
@@ -518,6 +593,14 @@ func (c *CollectEndorsementsView) distributeTxToParty(
 	return nil
 }
 
+// prepareDistributionList processes the raw distribution list and auditors list to create
+// a compressed list of unique parties to distribute the transaction to. It:
+// - Unwraps multi-signature and policy identities into their component identities
+// - Resolves long-term identities for remote parties
+// - Extracts enrollment IDs for non-local parties
+// - Removes duplicates based on long-term identity
+// - Marks which parties are local (isMe) and which are auditors
+// Returns a deduplicated list of distribution entries with all necessary metadata.
 func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, auditors []view.Identity, distributionList []view.Identity) ([]distributionListEntry, error) {
 	// Compress distributionList by removing duplicates
 
@@ -534,9 +617,23 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 		}
 		if ok {
 			allIds = append(allIds, multiSigners...)
-		} else {
-			allIds = append(allIds, id)
+
+			continue
 		}
+
+		pi, ok, err := boolpolicy.Unwrap(id)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unwrapping policy identity [%s]", id)
+		}
+		if ok {
+			for _, b := range pi.Identities {
+				allIds = append(allIds, token.Identity(b))
+			}
+
+			continue
+		}
+
+		allIds = append(allIds, id)
 	}
 	distributionList = allIds
 	allIds = append(allIds, auditors...)
@@ -649,6 +746,8 @@ func (c *CollectEndorsementsView) prepareDistributionList(context view.Context, 
 	return distributionListCompressed, nil
 }
 
+// getSession retrieves an existing session for the given party from the cache,
+// or creates a new session if one doesn't exist.
 func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identity) (view.Session, error) {
 	s, ok := c.sessions[p.UniqueID()]
 	if ok {
@@ -660,17 +759,19 @@ func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identi
 	return context.GetSession(context.Initiator(), p)
 }
 
+// mergeSigmas merges multiple signature maps into a single map.
+// If the same key appears in multiple maps, the last occurrence wins.
 func mergeSigmas(maps ...map[string][]byte) map[string][]byte {
 	merged := make(map[string][]byte)
 	for _, m := range maps {
-		for k, v := range m {
-			merged[k] = v
-		}
+		maps0.Copy(merged, m)
 	}
 
 	return merged
 }
 
+// IssueDistributionList extracts all parties involved in issue operations from the token request.
+// Returns a list containing all issuers and receivers from all issue actions.
 func IssueDistributionList(r *token.Request) []view.Identity {
 	distributionList := make([]view.Identity, 0)
 	for _, issue := range r.Issues() {
@@ -681,6 +782,8 @@ func IssueDistributionList(r *token.Request) []view.Identity {
 	return distributionList
 }
 
+// TransferDistributionList extracts all parties involved in transfer operations from the token request.
+// Returns a list containing all senders and receivers from all transfer actions.
 func TransferDistributionList(r *token.Request) []view.Identity {
 	distributionList := make([]view.Identity, 0)
 	for _, transfer := range r.Transfers() {
@@ -689,6 +792,27 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 	}
 
 	return distributionList
+}
+
+// policyCollectIDs returns the subset of componentIDs to collect signatures from.
+// When WithPolicySigners was supplied, only those matching identities are returned;
+// otherwise all components are returned (the default, AND-safe behaviour).
+func (c *CollectEndorsementsView) policyCollectIDs(componentIDs []token.Identity) []token.Identity {
+	if len(c.Opts.PolicySigners) == 0 {
+		return componentIDs
+	}
+	allowed := make(map[string]struct{}, len(c.Opts.PolicySigners))
+	for _, id := range c.Opts.PolicySigners {
+		allowed[id.UniqueID()] = struct{}{}
+	}
+	filtered := make([]token.Identity, 0, len(c.Opts.PolicySigners))
+	for _, id := range componentIDs {
+		if _, ok := allowed[id.UniqueID()]; ok {
+			filtered = append(filtered, id)
+		}
+	}
+
+	return filtered
 }
 
 // CleanupExternalWallets calls Done() on all external wallets to signal completion

@@ -112,7 +112,7 @@ func NewNotifier(
 	notifyOperations []driver.Operation,
 	primaryKeys ...PrimaryKey,
 ) *Notifier {
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec
+	ctx, cancel := context.WithCancel(context.Background())
 
 	// Create a real listener that implements the databaseListener interface
 	realListener := &listenerAdapter{
@@ -191,9 +191,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 	db.startOnce.Do(func() {
 		justStarted = true
 		logger.Debugf("First subscription for notifier of [%s]. Notifier starts listening...", db.table)
-		db.listenerWg.Add(1)
-		go func() {
-			defer db.listenerWg.Done()
+		db.listenerWg.Go(func() {
 			if err := db.listener.Listen(db.ctx); err != nil {
 				// Send error to both the error channel and log it
 				select {
@@ -203,7 +201,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 				}
 				logger.Errorf("notifier listen for [%s] failed: %s", db.table, err.Error())
 			}
-		}()
+		})
 	})
 
 	if justStarted {
@@ -221,6 +219,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 			return err
 		case <-timer.C:
 		case <-db.ctx.Done():
+
 			return db.ctx.Err()
 		}
 	}
@@ -237,6 +236,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 		return err
 	default:
 		// No error, return nil
+
 		return nil
 	}
 }
@@ -285,6 +285,7 @@ func (db *Notifier) GetSchema() string {
 
 	// We use unquoted identifiers for the trigger and table name to match how tables are created
 	// in the TokenStore. This allows Postgres to handle case-insensitivity consistently.
+
 	return fmt.Sprintf(`
 	SELECT pg_advisory_xact_lock(%d);
 	CREATE OR REPLACE FUNCTION %s() RETURNS TRIGGER AS $$

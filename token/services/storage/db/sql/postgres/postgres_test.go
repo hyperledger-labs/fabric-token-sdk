@@ -11,10 +11,11 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common/mock"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/multiplexed"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
+
+	fscPostgres "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
 	dbtest2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTokens(t *testing.T) {
@@ -60,7 +61,7 @@ func TestKeyStore(t *testing.T) {
 }
 
 func postgresCfg(pgConnStr string, name string) *mock.ConfigProvider {
-	return multiplexed.MockTypeConfig(postgres.Persistence, postgres.Config{
+	return multiplexed.MockTypeConfig(fscPostgres.Persistence, fscPostgres.Config{
 		DataSource:   pgConnStr,
 		TablePrefix:  name,
 		MaxOpenConns: 10,
@@ -69,8 +70,8 @@ func postgresCfg(pgConnStr string, name string) *mock.ConfigProvider {
 
 func startContainer(t *testing.T) (func(), string) {
 	t.Helper()
-	cfg := postgres.DefaultConfig(postgres.WithDBName("test-db"))
-	terminate, _, err := postgres.StartPostgres(t.Context(), cfg, nil)
+	cfg := fscPostgres.DefaultConfig(fscPostgres.WithDBName("test-db"))
+	terminate, _, err := fscPostgres.StartPostgres(t.Context(), cfg, nil)
 	require.NoError(t, err)
 
 	return terminate, cfg.DataSource()

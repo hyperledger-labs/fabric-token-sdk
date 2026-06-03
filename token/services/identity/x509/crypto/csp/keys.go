@@ -12,7 +12,7 @@ import (
 	"errors"
 )
 
-func derToPrivateKey(der []byte) (key interface{}, err error) {
+func derToPrivateKey(der []byte) (key any, err error) {
 	if key, err = x509.ParsePKCS1PrivateKey(der); err == nil {
 		return key, nil
 	}
@@ -33,7 +33,7 @@ func derToPrivateKey(der []byte) (key interface{}, err error) {
 	return nil, errors.New("invalid key type. The DER must contain an ecdsa.PrivateKey")
 }
 
-func derToPublicKey(raw []byte) (pub interface{}, err error) {
+func derToPublicKey(raw []byte) (pub any, err error) {
 	if len(raw) == 0 {
 		return nil, errors.New("invalid DER. It must be different from nil")
 	}

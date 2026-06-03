@@ -17,9 +17,6 @@ import (
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -27,6 +24,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	cache2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 )
@@ -235,7 +235,7 @@ func (db *IdentityStore) ConfigurationExists(ctx context.Context, id, typ, url s
 		From(q.Table(db.table.IdentityConfigurations)).
 		Where(cond.And(cond.Eq("id", id), cond.Eq("type", typ), cond.Eq("url", url))).
 		Format(db.ci)
-	result, err := common.QueryUnique[string](db.readDB, query, args...)
+	result, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s:%s]", id, typ, url)
 	}
@@ -269,7 +269,7 @@ func (db *IdentityStore) GetAuditInfo(ctx context.Context, id []byte) ([]byte, e
 			Where(cond.Eq("identity_hash", h)).
 			Format(db.ci)
 
-		return common.QueryUnique[[]byte](db.readDB, query, args...)
+		return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
 	})
 
 	return value, err
@@ -442,6 +442,7 @@ func (db *IdentityStore) registerIdentityDescriptor(
 	}
 	if exists {
 		// no need to continue
+
 		return nil
 	}
 

@@ -820,6 +820,9 @@ func TestCachedFetcher_Update_ThunderingHerd(t *testing.T) {
 			defer wg.Done()
 			_, _ = fetcher.UnspentTokensIteratorBy(ctx, "wallet1", "USD")
 		}()
+		wg.Go(func() {
+			_, _ = fetcher.UnspentTokensIteratorBy(ctx, "wallet1", "USD")
+		})
 	}
 
 	// Wait for at least one to start the DB call
@@ -1076,6 +1079,9 @@ func TestCachedFetcher_UpdateDoesNotBlockReaders(t *testing.T) {
 		defer readerWg.Done()
 		fetcher.update(ctx)
 	}()
+	readerWg.Go(func() {
+		fetcher.update(ctx)
+	})
 
 	// Wait for the background update to actually reach the DB call
 	select {
