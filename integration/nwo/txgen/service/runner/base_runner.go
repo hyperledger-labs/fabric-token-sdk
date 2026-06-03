@@ -20,12 +20,6 @@ import (
 	"github.com/sourcegraph/conc"
 )
 
-const (
-	// shutdownTimeout is the maximum time to wait for the runner to complete shutdown.
-	// This prevents indefinite blocking if the runner fails to stop cleanly.
-	shutdownTimeout = 20 * time.Second
-)
-
 // SuiteRunner executes test suites
 type SuiteRunner interface {
 	// Start initializes the users and waits for new suites
@@ -72,10 +66,6 @@ func (r *BaseRunner) ShutDown() error {
 		select {
 		case <-r.done:
 			r.logger.Infof("Runner successfully shut down")
-		case <-time.After(shutdownTimeout):
-			r.logger.Warnf("Runner did not shut down within timeout")
-
-			return errors.New("runner shutdown timeout")
 		}
 
 		return nil
