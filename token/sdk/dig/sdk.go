@@ -20,6 +20,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	fscconfig "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
+	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/dig"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	ftscore "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -37,6 +40,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/uniqueness"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/config"
 	sdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
@@ -60,8 +64,6 @@ import (
 	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/auditor"
 	wrapper2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/wrapper"
 	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/dig"
 )
 
 var logger = logging.MustGetLogger()
@@ -209,6 +211,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(ttx.NewServiceManager),
 		p.Container().Provide(ttx.NewMetrics),
 		p.Container().Provide(jsession.NewEnvelopeMetrics),
+		p.Container().Provide(uniqueness.NewMemoryService),
 	)
 	if err != nil {
 		return errors.WithMessagef(err, "failed setting up dig container")
@@ -229,6 +232,7 @@ func (p *SDK) Install() error {
 	// Backward compatibility with SP
 	err = errors2.Join(
 		digutils.Register[*kvs.KVS](p.Container()),
+		digutils.Register[*uniqueness.Service](p.Container()),
 		digutils.Register[*ftscore.TokenDriverService](p.Container()),
 		digutils.Register[*ftscore.ValidatorDriverService](p.Container()),
 		digutils.Register[*network.Provider](p.Container()),
@@ -310,7 +314,8 @@ func registerNetworkDrivers(in struct {
 	dig.In
 	NetworkProvider *network.Provider
 	Drivers         []driver3.Driver `group:"network-drivers"`
-}) {
+},
+) {
 	for _, d := range in.Drivers {
 		in.NetworkProvider.RegisterDriver(d)
 	}
