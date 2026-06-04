@@ -709,8 +709,12 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 		}()
 	}
 	for _, transfer := range transferErrors {
-		err := <-transfer
-		gomega.Expect(err).ToNot(gomega.HaveOccurred())
+		select {
+		case err := <-transfer:
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+		case <-time.After(1 * time.Minute):
+			gomega.Expect(false).To(gomega.BeTrue(), "timeout waiting for transfer result")
+		}
 	}
 	CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
 
@@ -754,7 +758,12 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// collect the errors, and check that they are all nil, and one of them is the error we expect.
 	var errs []error
 	for _, transfer := range transferErrors2 {
-		errs = append(errs, <-transfer)
+		select {
+		case err := <-transfer:
+			errs = append(errs, err)
+		case <-time.After(1 * time.Minute):
+			gomega.Expect(false).To(gomega.BeTrue(), "timeout waiting for transfer result")
+		}
 	}
 	gomega.Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(gomega.BeTrue())
 	var errStr string

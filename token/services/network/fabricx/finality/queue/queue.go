@@ -200,6 +200,7 @@ func (eq *EventQueue) EnqueueBlocking(ctx context.Context, event Event) error {
 
 // Shutdown gracefully stops the event queue by setting the closed flag,
 // signaling workers to stop, and waiting for them to finish within the timeout.
+// A zero timeout means wait indefinitely for workers to finish.
 func (eq *EventQueue) Shutdown(timeout time.Duration) error {
 	var shutdownErr error
 	eq.shutdownOnce.Do(func() {

@@ -27,6 +27,8 @@ type TxFinality struct {
 	Timeout time.Duration
 }
 
+const defaultFinalityTimeout = 5 * time.Minute
+
 type TxFinalityView struct {
 	*TxFinality
 }
@@ -37,6 +39,11 @@ func (r *TxFinalityView) Call(context view.Context) (any, error) {
 		tmsID = *r.TMSID
 	}
 
+	effectiveTimeout := r.Timeout
+	if effectiveTimeout <= 0 {
+		effectiveTimeout = defaultFinalityTimeout
+	}
+
 	errs := make(chan error, 2)
 
 	// Listen for finality from vault
@@ -44,20 +51,29 @@ func (r *TxFinalityView) Call(context view.Context) (any, error) {
 	assert.NoError(err)
 	nw := network.GetInstance(context, tms.Network(), tms.Channel())
 	assert.NotNil(nw)
-	assert.NoError(nw.AddFinalityListener(tms.Namespace(), r.TxID, newFinalityListener(r.Timeout, errs)))
+	assert.NoError(nw.AddFinalityListener(tms.Namespace(), r.TxID, newFinalityListener(effectiveTimeout, errs)))
 
 	// Listen for finality from DBs
 	go func() {
-		_, err := context.RunView(ttx.NewFinalityWithOpts(ttx.WithTxID(r.TxID), ttx.WithTMSID(tms.ID()), ttx.WithTimeout(r.Timeout)))
+		_, err := context.RunView(ttx.NewFinalityWithOpts(ttx.WithTxID(r.TxID), ttx.WithTMSID(tms.ID()), ttx.WithTimeout(effectiveTimeout)))
 		errs <- err
 	}()
 
-	// When both arrive, return
-	if err := <-errs; err != nil {
-		return nil, err
+	select {
+	case err := <-errs:
+		if err != nil {
+			return nil, err
+		}
+	case <-time.After(effectiveTimeout):
+		return nil, errors.New("timeout waiting for finality")
 	}
 
-	return nil, <-errs
+	select {
+	case err := <-errs:
+		return nil, err
+	case <-time.After(effectiveTimeout):
+		return nil, errors.New("timeout waiting for finality")
+	}
 }
 
 type TxFinalityViewFactory struct{}
@@ -77,9 +93,7 @@ type finalityListener struct {
 func newFinalityListener(timeout time.Duration, errs chan error) *finalityListener {
 	var once sync.Once
 
-	if timeout > 0 {
-		time.AfterFunc(timeout, func() { once.Do(func() { errs <- errors.New("timeout exceeded") }) })
-	}
+	time.AfterFunc(timeout, func() { once.Do(func() { errs <- errors.New("timeout exceeded") }) })
 
 	return &finalityListener{
 		success: func() { once.Do(func() { errs <- nil }) },
