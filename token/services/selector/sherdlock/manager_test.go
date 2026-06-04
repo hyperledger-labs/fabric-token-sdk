@@ -9,6 +9,8 @@ package sherdlock
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -31,6 +33,11 @@ import (
 // Package sherdlock_test validates selector manager lifecycle, concurrency, and lock cleanup.
 // Tests cover: selector creation/caching, concurrent operations, unlock behavior, lease cleanup,
 // and various precision configurations.
+
+// benchSeedCounter generates globally unique seed TX IDs across all benchmark calibration calls.
+// Go's benchmark framework calls each sub-benchmark function multiple times (increasing N rounds),
+// so without unique IDs the same tx-ids would hit duplicate key errors on re-entry.
+var benchSeedCounter atomic.Uint64
 
 func TestSufficientTokensOneReplica(t *testing.T) {
 	replicas, terminate := startManagers(t, 1, NoBackoff, 5)
@@ -82,7 +89,7 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 	replicas := make([]testutils.EnhancedManager, number)
 
 	for i := range number {
-		replica, err := createManager(pgConnStr, backoff, maxRetries)
+		replica, err := createManager(pgConnStr, "test", backoff, maxRetries)
 		require.NoError(t, err)
 		replicas[i] = replica
 	}
@@ -90,9 +97,9 @@ func startManagers(t *testing.T, number int, backoff time.Duration, maxRetries i
 	return replicas, terminate
 }
 
-func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
+func createManager(pgConnStr string, tablePrefix string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
 	d := postgres.NewDriverWithDbProvider(multiplexed.MockTypeConfig(postgres2.Persistence, postgres2.Config{
-		TablePrefix:  "test",
+		TablePrefix:  tablePrefix,
 		DataSource:   pgConnStr,
 		MaxOpenConns: 10,
 	}), &dbProvider{})
@@ -106,7 +113,7 @@ func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (tes
 	}
 
 	m := NewMetrics(&disabled.Provider{})
-	fetcher := newMixedFetcher(tokenDB.(dbtest.TestTokenDB), m, 0, 0, 0)
+	fetcher := NewMixedFetcher(tokenDB.(dbtest.TestTokenDB), nil, m, 0, 0, 0)
 	manager := NewManager(fetcher, lockDB, testutils.TokenQuantityPrecision, backoff, maxRetries, 0, 0, m)
 
 	return testutils.NewEnhancedManager(manager, tokenDB.(dbtest.TestTokenDB)), nil
@@ -125,7 +132,147 @@ type dbProvider struct{}
 
 func (p *dbProvider) Get(opts postgres2.Opts) (*common.RWDB, error) { return postgres2.Open(opts) }
 
-// Unit Tests for Manager
+// createManagerWithNotifier creates a manager that wires the real Postgres token notifier
+// into the mixed fetcher so the cache reacts to DB writes via LISTEN/NOTIFY.
+func createManagerWithNotifier(pgConnStr string, tablePrefix string, backoff time.Duration, maxRetries int) (testutils.EnhancedManager, error) {
+	d := postgres.NewDriverWithDbProvider(multiplexed.MockTypeConfig(postgres2.Persistence, postgres2.Config{
+		TablePrefix:  tablePrefix,
+		DataSource:   pgConnStr,
+		MaxOpenConns: 10,
+	}), &dbProvider{})
+	lockDB, err := d.NewTokenLock("")
+	if err != nil {
+		return nil, err
+	}
+	tokenDB, err := d.NewToken("")
+	if err != nil {
+		return nil, errors.Join(err, lockDB.Close())
+	}
+
+	notifier, err := tokenDB.Notifier()
+	if err != nil {
+		return nil, errors.Join(err, lockDB.Close(), tokenDB.Close())
+	}
+
+	m := NewMetrics(&disabled.Provider{})
+	fetcher := NewMixedFetcher(tokenDB.(dbtest.TestTokenDB), notifier, m, 0, 0, 0)
+	manager := NewManager(fetcher, lockDB, testutils.TokenQuantityPrecision, backoff, maxRetries, 0, 0, m)
+
+	return testutils.NewEnhancedManager(manager, tokenDB.(dbtest.TestTokenDB)), nil
+}
+
+// BenchmarkSelectorWithConcurrentWrites measures selector throughput under concurrent
+// DB inserts across a range of write rates and compares the LISTEN/NOTIFY-driven
+// cache against the time-based lazy baseline. Six sub-benchmarks are produced:
+//
+//	write_rate_10wps_notifier   / write_rate_10wps_lazy
+//	write_rate_100wps_notifier  / write_rate_100wps_lazy
+//	write_rate_1000wps_notifier / write_rate_1000wps_lazy
+//
+// This covers the workload described in #884 (CBDC-style high-TPS) and makes the
+// trade-off between the surgical-update path and the time-based path visible.
+func BenchmarkSelectorWithConcurrentWrites(b *testing.B) {
+	b.Helper()
+	cfg := postgres2.DefaultConfig(postgres2.WithDBName("BenchmarkSelectorWithConcurrentWrites"))
+	terminate, _, err := postgres2.StartPostgres(b.Context(), cfg, nil)
+	require.NoError(b, err)
+	defer terminate()
+
+	for _, writeRate := range []int{10, 100, 1000} {
+		b.Run(fmt.Sprintf("write_rate_%dwps_notifier", writeRate), func(b *testing.B) {
+			runSelectorBench(b, cfg.DataSource(), writeRate, true)
+		})
+		b.Run(fmt.Sprintf("write_rate_%dwps_lazy", writeRate), func(b *testing.B) {
+			runSelectorBench(b, cfg.DataSource(), writeRate, false)
+		})
+	}
+}
+
+// runSelectorBench runs one selector benchmark cell.
+// writeRateWPS controls how many token inserts per second the background writer
+// drives; notifierEnabled selects the LISTEN/NOTIFY cache path vs. the lazy
+// time-based fallback.
+func runSelectorBench(b *testing.B, pgConnStr string, writeRateWPS int, notifierEnabled bool) {
+	b.Helper()
+
+	// Each sub-benchmark gets its own table prefix so concurrent/repeated runs
+	// don't collide on seed inserts from a previous rate or notifier variant.
+	// Table prefix only allows letters and underscores, so spell out the rate.
+	rateNames := map[int]string{10: "ten", 100: "hundred", 1000: "thousand"}
+	kind := "lazy"
+	if notifierEnabled {
+		kind = "notifier"
+	}
+	tablePrefix := "b_" + kind + "_" + rateNames[writeRateWPS]
+
+	var replica testutils.EnhancedManager
+	var err error
+	if notifierEnabled {
+		replica, err = createManagerWithNotifier(pgConnStr, tablePrefix, NoBackoff, 3)
+	} else {
+		replica, err = createManager(pgConnStr, tablePrefix, NoBackoff, 3)
+	}
+	require.NoError(b, err)
+
+	ctx := b.Context()
+
+	const walletID = "bench-wallet"
+	const currency = "USD"
+	var insertIdx atomic.Uint64
+	storeOne := func(txID string, idx uint64, qty string) error {
+		return replica.UpdateTokens(nil, []token2.UnspentToken{{
+			Id:       token2.ID{TxId: txID, Index: idx},
+			Owner:    []byte(walletID),
+			Type:     currency,
+			Quantity: qty,
+		}})
+	}
+
+	// Pre-populate with enough tokens to keep the selector busy.
+	// Use globally unique IDs so repeated calibration calls (launch loops with increasing N)
+	// never collide on the same primary key.
+	seedBase := benchSeedCounter.Add(50)
+	for i := range uint64(50) {
+		err := storeOne(fmt.Sprintf("seed-tx-%d", seedBase-50+i), 0, "0x64" /* 100 */)
+		require.NoError(b, err)
+	}
+
+	// Background writer: drives inserts at the requested rate.
+	writeInterval := time.Duration(1000/writeRateWPS) * time.Millisecond
+	stopWriters := make(chan struct{})
+	var writerWg sync.WaitGroup
+	writerWg.Add(1)
+	go func() {
+		defer writerWg.Done()
+		ticker := time.NewTicker(writeInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopWriters:
+				return
+			case <-ticker.C:
+				n := insertIdx.Add(1)
+				_ = storeOne(fmt.Sprintf("write-tx-%d", n), 0, "0x64")
+			}
+		}
+	}()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		txID := fmt.Sprintf("bench-tx-%d", insertIdx.Add(1))
+		sel, err := replica.NewSelector(txID)
+		require.NoError(b, err)
+		defer func() { _ = replica.Close(txID) }()
+		filter := &testutils.TokenFilter{Wallet: []byte(walletID)}
+		for pb.Next() {
+			_, _, _ = sel.Select(ctx, filter, "0x01", currency)
+		}
+	})
+	b.StopTimer()
+
+	close(stopWriters)
+	writerWg.Wait()
+}
 
 func TestNewManager(t *testing.T) {
 	t.Run("creates manager with valid parameters", func(t *testing.T) {

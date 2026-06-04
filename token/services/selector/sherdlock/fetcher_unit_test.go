@@ -21,7 +21,7 @@ func TestFetcherProviderUnit(t *testing.T) {
 	mockSSM := &mocks.FakeTokenDBStoreServiceManager{}
 	metricsProvider, _ := setupMetricsMocks()
 
-	provider := sherdlock.NewFetcherProvider(mockSSM, metricsProvider, sherdlock.Mixed, 0, 0, 0)
+	provider := sherdlock.NewFetcherProvider(mockSSM, metricsProvider, sherdlock.Mixed, 0, 0, 0, false)
 
 	t.Run("GetFetcher_Error", func(t *testing.T) {
 		mockSSM.StoreServiceByTMSIdReturns(nil, errors.New("ssm error"))

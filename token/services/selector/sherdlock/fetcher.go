@@ -19,8 +19,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokendb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
+	utilcache "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/cache"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -39,7 +40,7 @@ const (
 	Cached   FetcherStrategy = "cached"
 )
 
-type fetchFunc func(db *tokendb.StoreService, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) TokenFetcher
+type fetchFunc func(db *tokendb.StoreService, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int, notifierDisabled bool) TokenFetcher
 
 type fetcherProvider struct {
 	tokenStoreServiceManager tokendb.StoreServiceManager
@@ -48,16 +49,26 @@ type fetcherProvider struct {
 	cacheSize                int64
 	freshnessInterval        time.Duration
 	maxQueries               int
+	notifierDisabled         bool
 }
 
 var fetchers = map[FetcherStrategy]fetchFunc{
-	Mixed: func(db *tokendb.StoreService, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) TokenFetcher {
-		return newMixedFetcher(db, m, cacheSize, freshnessInterval, maxQueries)
+	Mixed: func(db *tokendb.StoreService, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int, notifierDisabled bool) TokenFetcher {
+		var notifier dbdriver.TokenNotifier
+		if !notifierDisabled && db != nil && db.TokenStore != nil {
+			var err error
+			notifier, err = db.Notifier()
+			if err != nil {
+				logger.Warnf("token notifier unavailable, falling back to time-based cache refresh: %v", err)
+			}
+		}
+
+		return NewMixedFetcher(db, notifier, m, cacheSize, freshnessInterval, maxQueries)
 	},
 }
 
 // NewFetcherProvider creates a new fetcher provider with the specified strategy and configuration.
-func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, metricsProvider metrics.Provider, strategy FetcherStrategy, cacheSize int64, freshnessInterval time.Duration, maxQueries int) *fetcherProvider {
+func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, metricsProvider metrics.Provider, strategy FetcherStrategy, cacheSize int64, freshnessInterval time.Duration, maxQueries int, notifierDisabled bool) *fetcherProvider {
 	fetcher, ok := fetchers[strategy]
 	if !ok {
 		panic("undefined fetcher strategy: " + strategy)
@@ -70,6 +81,7 @@ func NewFetcherProvider(storeServiceManager tokendb.StoreServiceManager, metrics
 		cacheSize:                cacheSize,
 		freshnessInterval:        freshnessInterval,
 		maxQueries:               maxQueries,
+		notifierDisabled:         notifierDisabled,
 	}
 }
 
@@ -80,7 +92,7 @@ func (p *fetcherProvider) GetFetcher(tmsID token.TMSID) (TokenFetcher, error) {
 		return nil, err
 	}
 
-	return p.fetch(tokenDB, p.metrics, p.cacheSize, p.freshnessInterval, p.maxQueries), nil
+	return p.fetch(tokenDB, p.metrics, p.cacheSize, p.freshnessInterval, p.maxQueries, p.notifierDisabled), nil
 }
 
 // mixedFetcher combines both eager and lazy strategies
@@ -94,12 +106,17 @@ type mixedFetcher struct {
 }
 
 // NewMixedFetcher creates a fetcher that combines eager (cached) and lazy (on-demand) strategies.
-func NewMixedFetcher(tokenDB TokenDB, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) *mixedFetcher {
+func NewMixedFetcher(tokenDB TokenDB, notifier dbdriver.TokenNotifier, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) *mixedFetcher {
 	return &mixedFetcher{
 		lazyFetcher:  NewLazyFetcher(tokenDB),
-		eagerFetcher: NewCachedFetcher(tokenDB, cacheSize, freshnessInterval, maxQueries),
+		eagerFetcher: NewCachedFetcher(tokenDB, notifier, cacheSize, freshnessInterval, maxQueries),
 		m:            m,
 	}
+}
+
+// Close releases the notifier subscription held by the underlying cached fetcher.
+func (f *mixedFetcher) Close() error {
+	return f.eagerFetcher.Close()
 }
 
 // UnspentTokensIteratorBy returns an iterator for unspent tokens, trying cached results first, falling back to database query.
@@ -118,11 +135,6 @@ func (f *mixedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID str
 	f.m.UnspentTokensInvocations.With(fetcherTypeLabel, lazy).Add(1)
 
 	return f.lazyFetcher.UnspentTokensIteratorBy(ctx, walletID, currency)
-}
-
-// newMixedFetcher is an internal alias for NewMixedFetcher.
-func newMixedFetcher(tokenDB TokenDB, m *Metrics, cacheSize int64, freshnessInterval time.Duration, maxQueries int) *mixedFetcher {
-	return NewMixedFetcher(tokenDB, m, cacheSize, freshnessInterval, maxQueries)
 }
 
 // lazyFetcher only looks up the results when requested
@@ -146,22 +158,18 @@ func (f *lazyFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	return collections.NewPermutatedIterator[token2.UnspentTokenInWallet](it)
 }
 
-type permutatableIterator[T any] interface {
-	iterators.Iterator[T]
-	NewPermutation() iterators.Iterator[T]
-}
-
 type tokenCache interface {
-	Get(key string) (permutatableIterator[*token2.UnspentTokenInWallet], bool)
-	Add(key string, value permutatableIterator[*token2.UnspentTokenInWallet])
+	Get(key string) ([]*token2.UnspentTokenInWallet, bool)
+	Add(key string, value []*token2.UnspentTokenInWallet)
 	Delete(key string)
 	Clear()
 }
 
 // cachedFetcher eagerly fetches all the tokens from the DB at regular intervals and returns the cached result
 type cachedFetcher struct {
-	tokenDB TokenDB
-	cache   tokenCache
+	tokenDB     TokenDB
+	unsubscribe func() error // nil when no notifier is active; call on Close to silence the subscription
+	cache       tokenCache
 	// freshnessInterval is the time between periodical updates
 	freshnessInterval time.Duration
 	// maxQueriesBeforeRefresh is the number of times the fetcher will respond with the cached result before refreshing.
@@ -177,10 +185,14 @@ type cachedFetcher struct {
 	// updateCond allows goroutines to wait for an in-progress update to complete.
 	updateCond *sync.Cond
 	mu         sync.RWMutex
+	// dirty is set to 1 by the token DB notifier whenever a token is written or deleted,
+	// forcing the next query to bypass the freshness interval and refresh from the DB.
+	dirty atomic.Int32
 }
 
 // NewCachedFetcher creates a fetcher that maintains a periodically refreshed cache of all tokens.
-func NewCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
+// If notifier is non-nil, the cache is also invalidated immediately on any token DB write or delete.
+func NewCachedFetcher(tokenDB TokenDB, notifier dbdriver.TokenNotifier, cacheSize int64, freshnessInterval time.Duration, maxQueriesBeforeRefresh int) *cachedFetcher {
 	// Use defaults if values are not provided (zero values)
 	if freshnessInterval <= 0 {
 		freshnessInterval = defaultCacheFreshnessInterval
@@ -195,9 +207,9 @@ func NewCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 	// If cacheSize <= 0, use default size; otherwise use custom size
 	// Both use the same default NumCounters and BufferItems
 	if cacheSize <= 0 {
-		ristrettoCache, err = cache.NewDefaultRistrettoCache[permutatableIterator[*token2.UnspentTokenInWallet]]()
+		ristrettoCache, err = utilcache.NewDefaultRistrettoCache[[]*token2.UnspentTokenInWallet]()
 	} else {
-		ristrettoCache, err = cache.NewRistrettoCacheWithSize[permutatableIterator[*token2.UnspentTokenInWallet]](cacheSize)
+		ristrettoCache, err = utilcache.NewRistrettoCacheWithSize[[]*token2.UnspentTokenInWallet](cacheSize)
 	}
 
 	if err != nil {
@@ -213,7 +225,33 @@ func NewCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 	}
 	f.updateCond = sync.NewCond(&f.mu)
 
+	if notifier != nil {
+		cancel, err := notifier.Subscribe(f.onTokenChange)
+		if err != nil {
+			logger.Warnf("failed to subscribe to token notifier, falling back to time-based cache refresh: %v", err)
+		} else {
+			f.unsubscribe = cancel
+		}
+	}
+
 	return f
+}
+
+// Close silences the token notifier subscription registered by this fetcher.
+// It should be called when the fetcher is no longer needed to prevent stale
+// callbacks from firing after a TMS restart.
+func (f *cachedFetcher) Close() error {
+	if f.unsubscribe != nil {
+		return f.unsubscribe()
+	}
+
+	return nil
+}
+
+// onTokenChange is the callback registered with the token DB notifier.
+// Any token DB change marks the cache dirty, forcing a full refresh on the next query.
+func (f *cachedFetcher) onTokenChange(_ dbdriver.Operation, _ dbdriver.TokenRecordReference) {
+	f.dirty.Store(1)
 }
 
 // finishUpdate releases the update lock and signals all waiting goroutines.
@@ -249,6 +287,9 @@ func (f *cachedFetcher) update(ctx context.Context) {
 
 		return
 	}
+	// Clear dirty before fetching so notifications that arrive during the DB call
+	// will re-set the flag and trigger another refresh on the next query.
+	f.dirty.Store(0)
 	logger.DebugfContext(ctx, "Renew token cache")
 	f.isUpdating = true
 
@@ -258,6 +299,7 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	it, err := f.tokenDB.SpendableTokensIteratorBy(ctx, "", "")
 	if err != nil {
 		logger.Warnf("Failed to get token iterator: %v", err)
+		f.dirty.Store(1)
 		f.mu.Lock()
 		f.finishUpdate()
 
@@ -268,6 +310,7 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	m, err := f.groupTokensByKey(ctx, it)
 	if err != nil {
 		logger.Warnf("Failed to group tokens from iterator: %v", err)
+		f.dirty.Store(1)
 		f.mu.Lock()
 		f.finishUpdate()
 
@@ -316,7 +359,7 @@ func (f *cachedFetcher) updateCache(ctx context.Context, tokensByKey map[string]
 	// Step 1: Add/update new entries first
 	newKeys := make(map[string]struct{}, len(tokensByKey))
 	for key, toks := range tokensByKey {
-		f.cache.Add(key, iterators.Slice(toks))
+		f.cache.Add(key, toks)
 		newKeys[key] = struct{}{}
 	}
 
@@ -348,10 +391,10 @@ func (f *cachedFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID st
 		f.mu.RLock()
 	}
 
-	it, ok := f.cache.Get(tokenKey(walletID, currency))
+	toks, ok := f.cache.Get(tokenKey(walletID, currency))
 	f.mu.RUnlock()
 	if ok {
-		return it.NewPermutation(), nil
+		return iterators.Slice(toks).NewPermutation(), nil
 	}
 	logger.DebugfContext(ctx, "No tokens found in cache for [%s]. Returning empty iterator.", tokenKey(walletID, currency))
 
@@ -363,8 +406,11 @@ func (f *cachedFetcher) isCacheOverused() bool {
 	return atomic.LoadUint32(&f.queriesResponded) >= f.maxQueriesBeforeRefresh
 }
 
-// isCacheStale checks if the cache has exceeded its freshness interval.
+// isCacheStale checks if the cache has exceeded its freshness interval or was marked dirty by a DB notification.
 func (f *cachedFetcher) isCacheStale() bool {
+	if f.dirty.Load() == 1 {
+		return true
+	}
 	lastFetched := atomic.LoadInt64(&f.lastFetched)
 	if lastFetched == 0 {
 		return true

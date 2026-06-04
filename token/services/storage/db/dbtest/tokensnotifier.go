@@ -46,12 +46,16 @@ func TTokenNotifier(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier)
 	require.NoError(t, err)
 
 	tr := driver.TokenRecord{
-		TxID:           "tx-notify-1",
-		Index:          0,
-		IssuerRaw:      []byte{},
-		OwnerRaw:       []byte{1, 2, 3},
-		OwnerType:      "idemix",
-		OwnerIdentity:  []byte{},
+		TxID:          "tx-notify-1",
+		Index:         0,
+		IssuerRaw:     []byte{},
+		OwnerRaw:      []byte{1, 2, 3},
+		OwnerType:     "idemix",
+		OwnerIdentity: []byte{},
+		// OwnerWalletID must be set on the record so the tokens table row carries
+		// it; the trigger reads owner_wallet_id from that row, not from the
+		// separate ownership table populated by the owners slice.
+		OwnerWalletID:  "alice",
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
@@ -67,8 +71,11 @@ func TTokenNotifier(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier)
 	values := result.Values()
 	require.Equal(t, driver.Insert, values[0].Op)
 	require.Equal(t, driver.TokenRecordReference{
-		TxID:  tr.TxID,
-		Index: tr.Index,
+		TxID:     tr.TxID,
+		Index:    tr.Index,
+		WalletID: "alice",
+		Type:     tr.Type,
+		Quantity: tr.Quantity,
 	}, values[0].Val)
 }
 
@@ -112,7 +119,9 @@ type tokenSubscriber struct {
 }
 
 func (t *tokenSubscriber) Subscribe(f func(operation driver.Operation, vals driver.TokenRecordReference)) error {
-	return t.notifier.Subscribe(f)
+	_, err := t.notifier.Subscribe(f)
+
+	return err
 }
 
 func TSubscribeStore(t *testing.T, db TestTokenDB, notifier driver.TokenNotifier) {

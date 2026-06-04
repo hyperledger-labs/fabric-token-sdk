@@ -305,10 +305,21 @@ func (db *Notifier) GetSchema() string {
 			-- Forming the Output as notification.
 			-- We use json_build_array for robust encoding of primary key values.
 			output = json_build_array(TG_OP, %s)::text;
-			
+
+			-- Guard against the 8000-byte Postgres NOTIFY payload limit.
+			-- Log a warning and skip the notification rather than raising an
+			-- exception: this trigger runs AFTER ... FOR EACH ROW in the same
+			-- transaction as the original INSERT/DELETE, so RAISE EXCEPTION would
+			-- abort the business write. Skipping the notification is safe because
+			-- the subscriber falls back to the time-based freshness interval.
+			IF octet_length(output) > 8000 THEN
+				RAISE WARNING 'pg_notify payload exceeds 8000 bytes (%%), skipping notification', octet_length(output);
+				RETURN NULL;
+			END IF;
+
 			-- Calling the pg_notify with output as payload
 			PERFORM pg_notify('%s',output);
-			
+
 			-- Returning null because it is an after trigger.
 			RETURN NULL;
 			END;
