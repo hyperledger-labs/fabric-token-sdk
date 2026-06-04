@@ -59,7 +59,7 @@ func (p *IssueHouseView) Call(context view.Context) (any, error) {
 		Valuation: p.Valuation,
 	}
 	// The issuer enforce uniqueness of the token by computing a unique identifier for the passed house.
-	uniqueID, err := uniqueness.GetService(context).ComputeID(h.Address)
+	uniqueID, err := uniqueness.GetService(context).ComputeID(context.Context(), h.Address)
 	assert.NoError(err, "failed computing unique ID")
 
 	err = tx.Issue(wallet, h, recipient, nfttx.WithUniqueID(uniqueID))
