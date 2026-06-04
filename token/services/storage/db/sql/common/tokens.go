@@ -231,14 +231,18 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	// the placeholder counter (`$1`, `$2`, ...) keeps incrementing across
 	// branches; each branch's args are appended in order. SQLite rejects
 	// parenthesised SELECT operands around UNION, so emit unwrapped form
-	// (PostgreSQL accepts both). Neither branch has ORDER BY / LIMIT, so
-	// dropping the parens does not change binding.
+	// (PostgreSQL accepts both). ORDER BY and LIMIT are applied to the
+	// entire UNION result set.
 	sb := common3.NewBuilder()
 	branch1.FormatTo(db.ci, sb)
 	sb.WriteString(" UNION ALL ")
 	branch2.FormatTo(db.ci, sb)
 
 	query, args := sb.Build()
+
+	// Order by quantity descending to get largest tokens first
+	// This helps the selector reach the target amount with fewer tokens
+	query += " ORDER BY quantity DESC"
 
 	// Add LIMIT clause if specified (for security and performance)
 	if limit > 0 {
