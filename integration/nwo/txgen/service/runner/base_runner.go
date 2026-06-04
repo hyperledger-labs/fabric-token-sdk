@@ -31,6 +31,8 @@ type SuiteRunner interface {
 }
 
 // BaseRunner runs sequentially the suites passed using PushSuites
+const shutdownWaitTimeout = 30 * time.Second
+
 type BaseRunner struct {
 	logger          logging.Logger
 	intermediary    *user.IntermediaryClient
@@ -63,10 +65,13 @@ func (r *BaseRunner) ShutDown() error {
 		r.logger.Infof("Sending command to shut down runner...")
 		close(r.shutdown)
 		r.logger.Infof("Waiting for runner to shut down...")
-		<-r.done
-		r.logger.Infof("Runner successfully shut down")
-
-		return nil
+		select {
+		case <-r.done:
+			r.logger.Infof("Runner successfully shut down")
+			return nil
+		case <-time.After(shutdownWaitTimeout):
+			return errors.New("timeout waiting for runner to shut down")
+		}
 	}
 }
 

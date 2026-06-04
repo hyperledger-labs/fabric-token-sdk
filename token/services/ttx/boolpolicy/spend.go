@@ -97,6 +97,7 @@ type RequestSpendView struct {
 	unspentToken *token.UnspentToken
 	parties      []view.Identity
 	options      *token2.ServiceOptions
+	timeout      time.Duration
 
 	err error
 }
@@ -149,17 +150,37 @@ func (c *RequestSpendView) Call(context view.Context) (any, error) {
 		go c.collectAnswers(context, party, request, answerChannel)
 		counter++
 	}
-	for range counter {
-		a := <-answerChannel
-		if a.err != nil {
-			return nil, errors.Wrapf(a.err, "failure from [%s]", a.party)
-		}
-		if a.response.Err != nil {
-			return nil, errors.Wrapf(a.response.Err, "failure from [%s]", a.party)
+	for i := 0; i < counter; i++ {
+		if c.timeout > 0 {
+			select {
+			case a := <-answerChannel:
+				if a.err != nil {
+					return nil, errors.Wrapf(a.err, "failure from [%s]", a.party)
+				}
+				if a.response.Err != nil {
+					return nil, errors.Wrapf(a.response.Err, "failure from [%s]", a.party)
+				}
+			case <-time.After(c.timeout):
+				return nil, errors.New("timeout waiting for spend answers")
+			}
+		} else {
+			a := <-answerChannel
+			if a.err != nil {
+				return nil, errors.Wrapf(a.err, "failure from [%s]", a.party)
+			}
+			if a.response.Err != nil {
+				return nil, errors.Wrapf(a.response.Err, "failure from [%s]", a.party)
+			}
 		}
 	}
 
 	return nil, nil
+}
+
+func (c *RequestSpendView) WithTimeout(timeout time.Duration) *RequestSpendView {
+	c.timeout = timeout
+
+	return c
 }
 
 func (c *RequestSpendView) collectAnswers(context view.Context, party view.Identity, request *SpendRequest, ch chan *answer) {

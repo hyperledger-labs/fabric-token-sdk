@@ -17,6 +17,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 )
 
+const stopWaitTimeout = 5 * time.Second
+
 type Manager struct {
 	selectorCache          lazy2.Provider[transaction.ID, TokenSelectorUnlocker]
 	locker                 Locker
@@ -99,6 +101,10 @@ func (m *Manager) cleaner(ctx context.Context) {
 func (m *Manager) Stop() {
 	m.stopOnce.Do(func() {
 		m.cancel()
-		<-m.cleanerDone
+		select {
+		case <-m.cleanerDone:
+		case <-time.After(stopWaitTimeout):
+			logger.Warnf("timeout waiting for cleaner goroutine to stop")
+		}
 	})
 }

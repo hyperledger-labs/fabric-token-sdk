@@ -145,16 +145,30 @@ func (c *RequestSpendView) Call(context view.Context) (any, error) {
 		counter++
 	}
 
-	for range counter {
+	for i := 0; i < counter; i++ {
 		logger.DebugfContext(context.Context(), "Wait for answer")
-		// TODO: put a timeout
-		a := <-answerChannel
-		logger.DebugfContext(context.Context(), "Received answer")
-		if a.err != nil {
-			return nil, errors.Wrapf(a.err, "got failure [%s] from [%s]", a.party.String(), a.err)
-		}
-		if a.response.Err != nil {
-			return nil, errors.Wrapf(a.response.Err, "got failure [%s] from [%s]", a.party.String(), a.response.Err)
+		if c.timeout > 0 {
+			select {
+			case a := <-answerChannel:
+				logger.DebugfContext(context.Context(), "Received answer")
+				if a.err != nil {
+					return nil, errors.Wrapf(a.err, "got failure [%s] from [%s]", a.party.String(), a.err)
+				}
+				if a.response.Err != nil {
+					return nil, errors.Wrapf(a.response.Err, "got failure [%s] from [%s]", a.party.String(), a.response.Err)
+				}
+			case <-time.After(c.timeout):
+				return nil, errors.New("timeout waiting for spend answers")
+			}
+		} else {
+			a := <-answerChannel
+			logger.DebugfContext(context.Context(), "Received answer")
+			if a.err != nil {
+				return nil, errors.Wrapf(a.err, "got failure [%s] from [%s]", a.party.String(), a.err)
+			}
+			if a.response.Err != nil {
+				return nil, errors.Wrapf(a.response.Err, "got failure [%s] from [%s]", a.party.String(), a.response.Err)
+			}
 		}
 	}
 

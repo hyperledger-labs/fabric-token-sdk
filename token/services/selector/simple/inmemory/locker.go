@@ -20,6 +20,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const stopWaitTimeout = 5 * time.Second
+
 var (
 	logger             = logging.MustGetLogger()
 	AlreadyLockedError = errors.New("already locked")
@@ -70,7 +72,11 @@ func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTim
 func (d *locker) Stop() {
 	d.stopOnce.Do(func() {
 		d.cancel()
-		<-d.scanDone
+		select {
+		case <-d.scanDone:
+		case <-time.After(stopWaitTimeout):
+			logger.Warnf("timeout waiting for scan goroutine to stop")
+		}
 	})
 }
 
