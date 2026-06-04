@@ -1328,12 +1328,12 @@ func (r *Request) BindTo(ctx context.Context, binder Binder, identity Identity) 
 
 		// extra signers
 		for _, eid := range transfer.ExtraSigners {
-			if w := r.TokenService.WalletManager().Wallet(ctx, eid); w != nil {
+			if w := r.TokenService.WalletManager().Wallet(ctx, eid.Identity); w != nil {
 				// this is me, skip
 				continue
 			}
-			r.TokenService.logger.DebugfContext(ctx, "bind extra signer [%s] to [%s]", eid, identity)
-			if err := binder.Bind(ctx, identity, eid); err != nil {
+			r.TokenService.logger.DebugfContext(ctx, "bind extra signer [%s] to [%s]", eid.Identity, identity)
+			if err := binder.Bind(ctx, identity, eid.Identity); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
 		}
@@ -1363,10 +1363,15 @@ func (r *Request) Issues() []*Issue {
 	var issues []*Issue
 	for _, action := range r.Metadata.Actions {
 		if action.IssueMetadata != nil {
+			// Convert []AuditableIdentity to []Identity for ExtraSigners
+			extraSigners := make([]Identity, len(action.IssueMetadata.ExtraSigners))
+			for i, es := range action.IssueMetadata.ExtraSigners {
+				extraSigners[i] = es.Identity
+			}
 			issues = append(issues, &Issue{
 				Issuer:       action.IssueMetadata.Issuer.Identity,
 				Receivers:    action.IssueMetadata.Receivers(),
-				ExtraSigners: action.IssueMetadata.ExtraSigners,
+				ExtraSigners: extraSigners,
 			})
 		}
 	}
@@ -1379,11 +1384,16 @@ func (r *Request) Transfers() []*Transfer {
 	var transfers []*Transfer
 	for _, action := range r.Metadata.Actions {
 		if action.TransferMetadata != nil {
+			// Convert []AuditableIdentity to []Identity for ExtraSigners
+			extraSigners := make([]Identity, len(action.TransferMetadata.ExtraSigners))
+			for i, es := range action.TransferMetadata.ExtraSigners {
+				extraSigners[i] = es.Identity
+			}
 			transfers = append(transfers, &Transfer{
 				Senders:      action.TransferMetadata.Senders(),
 				Receivers:    action.TransferMetadata.Receivers(),
-				ExtraSigners: action.TransferMetadata.ExtraSigners,
-				Issuer:       action.TransferMetadata.Issuer,
+				ExtraSigners: extraSigners,
+				Issuer:       action.TransferMetadata.Issuer.Identity,
 			})
 		}
 	}

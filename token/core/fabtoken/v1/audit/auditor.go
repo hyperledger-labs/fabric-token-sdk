@@ -26,14 +26,16 @@ type Auditor struct {
 	Logger       logging.Logger
 	Tracer       trace.Tracer
 	Deserializer driver.Deserializer
+	Precision    uint64
 }
 
 // NewAuditor creates a new Auditor for fabtoken validation.
-func NewAuditor(logger logging.Logger, tracer trace.Tracer, deserializer driver.Deserializer) *Auditor {
+func NewAuditor(logger logging.Logger, tracer trace.Tracer, deserializer driver.Deserializer, precision uint64) *Auditor {
 	return &Auditor{
 		Logger:       logger,
 		Tracer:       tracer,
 		Deserializer: deserializer,
+		Precision:    precision,
 	}
 }
 
@@ -46,6 +48,16 @@ func (a *Auditor) Check(
 	txID driver.TokenRequestAnchor,
 	auditTokens map[*token.ID]*token.Token,
 ) error {
+	if tokenRequest == nil {
+		return errors.Errorf("tokenRequest cannot be nil for tx [%s]", txID)
+	}
+	if tokenRequestMetadata == nil {
+		return errors.Errorf("tokenRequestMetadata cannot be nil for tx [%s]", txID)
+	}
+	if auditTokens == nil {
+		return errors.Errorf("auditTokens cannot be nil for tx [%s]", txID)
+	}
+
 	// Validate structural correspondence between request and metadata
 	if err := a.validateStructure(tokenRequest, tokenRequestMetadata, txID); err != nil {
 		return errors.Wrapf(err, "structural validation failed for [%s]", txID)
@@ -147,5 +159,5 @@ func (a *Auditor) validateIssueActionTokenTypes(metadata *driver.IssueMetadata, 
 func (a *Auditor) validateTransferActionTokenTypes(metadata *driver.TransferMetadata, auditTokens map[*token.ID]*token.Token) error {
 	// For fabtoken, we don't validate value sums because outputs are in cleartext
 	// and validated by the action's Match() method
-	return common.ValidateTransferActionTokenTypes(metadata, auditTokens, false)
+	return common.ValidateTransferActionTokenTypes(metadata, auditTokens, false, a.Precision)
 }

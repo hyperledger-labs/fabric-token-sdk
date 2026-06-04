@@ -98,7 +98,7 @@ func NewEnv(benchCase *benchmark2.Case, configurations *benchmark.SetupConfigura
 	if err != nil {
 		return nil, err
 	}
-	auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, deserializer, pp.PedersenGenerators, c)
+	auditor = audit.NewAuditor(logging.MustGetLogger(), &noop.Tracer{}, deserializer, pp.PedersenGenerators, c, 64)
 
 	engine = validator.New(
 		logging.MustGetLogger(),
@@ -809,7 +809,9 @@ func prepareTransfer(
 		if transferAction, ok := transfer2.(*transfer.Action); ok {
 			transferAction.Issuer = issuerIdentity
 		}
-		transferMetadata.Issuer = issuerIdentity
+		transferMetadata.Issuer = driver.AuditableIdentity{
+			Identity: issuerIdentity,
+		}
 	}
 
 	// Serialize the transfer action

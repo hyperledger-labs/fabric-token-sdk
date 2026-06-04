@@ -494,7 +494,7 @@ type IssueMetadata struct {
 	Outputs []*IssueOutputMetadata
 	// ExtraSigners is the list of extra identities that are not part of the issue action per se
 	// but needs to sign the request
-	ExtraSigners []Identity
+	ExtraSigners []AuditableIdentity
 }
 
 func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
@@ -510,12 +510,16 @@ func (i *IssueMetadata) ToProtos() (*request.IssueMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
+	extraSigners, err := ToProtoAuditableIdentitySliceFromAuditable(i.ExtraSigners)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling extra signers")
+	}
 
 	return &request.IssueMetadata{
 		Issuer:       issuer,
 		Inputs:       inputs,
 		Outputs:      outputs,
-		ExtraSigners: ToProtoAuditableIdentitySlice(i.ExtraSigners),
+		ExtraSigners: extraSigners,
 	}, nil
 }
 
@@ -535,7 +539,10 @@ func (i *IssueMetadata) FromProtos(issueMetadata *request.IssueMetadata) error {
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling output metadata")
 	}
-	i.ExtraSigners = FromProtoAuditableIdentitySlice(issueMetadata.ExtraSigners)
+	i.ExtraSigners, err = FromProtoAuditableIdentitySliceToAuditable(issueMetadata.ExtraSigners)
+	if err != nil {
+		return errors.Wrap(err, "failed unmarshalling extra signers")
+	}
 
 	return nil
 }
@@ -574,13 +581,15 @@ func (i *IssueMetadata) Match(action IssueAction) error {
 	}
 
 	// Check that the extra signers match.
-	// The action returns []Identity, and metadata has []Identity (extracted from AuditableIdentity in protobuf)
+	// The action returns []Identity, and metadata has []AuditableIdentity
 	extraSigners := action.ExtraSigners()
 	if len(i.ExtraSigners) != len(extraSigners) {
 		return errors.Errorf("expected [%d] extra signers but got [%d]", len(extraSigners), len(i.ExtraSigners))
 	}
 	for _, signer := range extraSigners {
-		found := slices0.ContainsFunc(i.ExtraSigners, signer.Equal)
+		found := slices0.ContainsFunc(i.ExtraSigners, func(a AuditableIdentity) bool {
+			return signer.Equal(a.Identity)
+		})
 		if !found {
 			return errors.Errorf("extra signer [%s] from action not found in metadata", signer)
 		}
@@ -694,9 +703,9 @@ type TransferMetadata struct {
 	Outputs []*TransferOutputMetadata
 	// ExtraSigners is the list of extra identities that are not part of the transfer action per se
 	// but needs to sign the request
-	ExtraSigners []Identity
+	ExtraSigners []AuditableIdentity
 	// Issuer contains the identity of the issuer to sign the transfer action
-	Issuer Identity
+	Issuer AuditableIdentity
 }
 
 // TokenIDAt returns the TokenID at the given index.
@@ -718,21 +727,23 @@ func (t *TransferMetadata) ToProtos() (*request.TransferMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling outputs")
 	}
+	extraSigners, err := ToProtoAuditableIdentitySliceFromAuditable(t.ExtraSigners)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling extra signers")
+	}
 
 	var issuer *request.AuditableIdentity
-	if t.Issuer != nil {
-		issuer = &request.AuditableIdentity{
-			Identity: &protosv1.Identity{
-				Raw: t.Issuer.Bytes(),
-			},
-			AuditInfo: nil, // No audit info for plain issuer identity
+	if t.Issuer.Identity != nil {
+		issuer, err = t.Issuer.ToProtos()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed marshalling issuer")
 		}
 	}
 
 	return &request.TransferMetadata{
 		Inputs:       inputs,
 		Outputs:      outputs,
-		ExtraSigners: ToProtoAuditableIdentitySlice(t.ExtraSigners),
+		ExtraSigners: extraSigners,
 		Issuer:       issuer,
 	}, nil
 }
@@ -746,11 +757,17 @@ func (t *TransferMetadata) FromProtos(transferMetadata *request.TransferMetadata
 	if err := protos.FromProtosSlice(transferMetadata.Outputs, t.Outputs); err != nil {
 		return errors.Wrap(err, "failed unmarshalling outputs")
 	}
-	t.ExtraSigners = FromProtoAuditableIdentitySlice(transferMetadata.ExtraSigners)
+	var err error
+	t.ExtraSigners, err = FromProtoAuditableIdentitySliceToAuditable(transferMetadata.ExtraSigners)
+	if err != nil {
+		return errors.Wrap(err, "failed unmarshalling extra signers")
+	}
 
-	t.Issuer = nil
-	if transferMetadata.Issuer != nil && transferMetadata.Issuer.Identity != nil {
-		t.Issuer = transferMetadata.Issuer.Identity.Raw
+	t.Issuer = AuditableIdentity{}
+	if transferMetadata.Issuer != nil {
+		if err := t.Issuer.FromProtos(transferMetadata.Issuer); err != nil {
+			return errors.Wrap(err, "failed unmarshalling issuer")
+		}
 	}
 
 	return nil
@@ -817,21 +834,21 @@ func (t *TransferMetadata) Match(action TransferAction) error {
 	}
 
 	// Check that the extra signers match.
-	// The action returns []Identity, and metadata has []Identity (extracted from AuditableIdentity in protobuf)
+	// The action returns []Identity, and metadata has []AuditableIdentity
 	extraSigners := action.ExtraSigners()
 	if len(t.ExtraSigners) != len(extraSigners) {
 		return errors.Errorf("expected [%d] extra signers but got [%d]", len(t.ExtraSigners), len(extraSigners))
 	}
 	for i, signer := range extraSigners {
-		if !signer.Equal(t.ExtraSigners[i]) {
-			return errors.Errorf("expected extra signer [%s] but got [%s]", t.ExtraSigners[i], signer)
+		if !signer.Equal(t.ExtraSigners[i].Identity) {
+			return errors.Errorf("expected extra signer [%s] but got [%s]", t.ExtraSigners[i].Identity, signer)
 		}
 	}
 
 	// Check that the issuer identity matches, if present in the metadata.
-	// The metadata has Issuer (extracted from AuditableIdentity)
-	if !t.Issuer.Equal(action.GetIssuer()) {
-		return errors.Errorf("expected issuer [%s] but got [%s]", t.Issuer, action.GetIssuer().Bytes())
+	// The metadata has Issuer as AuditableIdentity
+	if !t.Issuer.Identity.Equal(action.GetIssuer()) {
+		return errors.Errorf("expected issuer [%s] but got [%s]", t.Issuer.Identity, action.GetIssuer().Bytes())
 	}
 
 	return nil

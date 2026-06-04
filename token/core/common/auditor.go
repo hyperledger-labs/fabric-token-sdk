@@ -26,6 +26,10 @@ func ExtractTokenIDsAndCheckDuplicates(
 	metadata *driver.TokenRequestMetadata,
 	anchor driver.TokenRequestAnchor,
 ) ([]*token.ID, error) {
+	if metadata == nil {
+		return nil, errors.Errorf("metadata cannot be nil for tx [%s]", anchor)
+	}
+
 	tokenIDMap := make(map[string]*token.ID)
 	var tokenIDs []*token.ID
 
@@ -73,6 +77,9 @@ func ExtractTokenIDsAndCheckDuplicates(
 //
 // The returned map uses token ID pointers as keys, allowing callers to efficiently look up
 // tokens by their ID during validation.
+//
+// IMPORTANT: This function always returns a non-nil map (possibly empty) to ensure
+// validation logic can distinguish between "no tokens requested" and "tokens not found".
 func RetrieveAuditTokens(
 	ctx context.Context,
 	logger logging.Logger,
@@ -80,8 +87,15 @@ func RetrieveAuditTokens(
 	tokenIDs []*token.ID,
 	anchor driver.TokenRequestAnchor,
 ) (map[*token.ID]*token.Token, error) {
+	if logger == nil {
+		return nil, errors.Errorf("logger cannot be nil for tx [%s]", anchor)
+	}
+	if queryEngine == nil {
+		return nil, errors.Errorf("queryEngine cannot be nil for tx [%s]", anchor)
+	}
+
 	if len(tokenIDs) == 0 {
-		return nil, nil
+		return make(map[*token.ID]*token.Token), nil
 	}
 
 	logger.DebugfContext(ctx, "[%s] retrieving [%d] audit tokens...", anchor, len(tokenIDs))
@@ -116,6 +130,13 @@ func ValidateStructure(
 	tokenRequestMetadata *driver.TokenRequestMetadata,
 	txID driver.TokenRequestAnchor,
 ) error {
+	if tokenRequest == nil {
+		return errors.Errorf("tokenRequest cannot be nil for tx [%s]", txID)
+	}
+	if tokenRequestMetadata == nil {
+		return errors.Errorf("tokenRequestMetadata cannot be nil for tx [%s]", txID)
+	}
+
 	// Validate action count matches metadata count
 	if len(tokenRequest.Actions) != len(tokenRequestMetadata.Actions) {
 		return errors.Errorf(
@@ -207,6 +228,13 @@ func ValidateIssueActionTokenTypes(
 	metadata *driver.IssueMetadata,
 	auditTokens map[*token.ID]*token.Token,
 ) error {
+	if metadata == nil {
+		return errors.Errorf("metadata cannot be nil for issue action validation")
+	}
+	if auditTokens == nil {
+		return errors.Errorf("auditTokens cannot be nil for issue action validation")
+	}
+
 	var actionTokenType token.Type
 
 	// Validate and extract token type from inputs (if any exist)
@@ -247,9 +275,10 @@ func ValidateIssueActionTokenTypes(
 // It also validates that input tokens exist in the auditTokens map.
 //
 // When validateValueSum is true (for privacy-preserving tokens like zkatdlog), this also validates
-// that the sum of input values equals the sum of output values.
+// that the sum of input values equals the sum of output values using the provided precision.
 //
 // For transfer actions, this validates that:
+// - auditTokens map is non-empty (required for validation)
 // - All input tokens exist in the audit token map
 // - All inputs have the same token type
 // - All outputs have the same token type as the inputs
@@ -260,11 +289,21 @@ func ValidateTransferActionTokenTypes(
 	metadata *driver.TransferMetadata,
 	auditTokens map[*token.ID]*token.Token,
 	validateValueSum bool,
+	precision uint64,
 ) error {
+	if metadata == nil {
+		return errors.Errorf("metadata cannot be nil for transfer action validation")
+	}
+	// auditTokens must always be non-empty for transfer validation
+	if auditTokens == nil {
+		return errors.Errorf("auditTokens cannot be nil for transfer action validation")
+	}
+	if len(auditTokens) == 0 {
+		return errors.Errorf("auditTokens cannot be empty for transfer action validation")
+	}
+
 	var actionTokenType token.Type
-	const precision = 64 // Standard precision for token quantities
 	var inputSum token.Quantity
-	hasAuditTokens := len(auditTokens) > 0 // Track if we have audit tokens available
 
 	if validateValueSum {
 		inputSum = token.NewZeroQuantity(precision)
@@ -281,39 +320,37 @@ func ValidateTransferActionTokenTypes(
 			return errors.Errorf("input at index [%d] has nil TokenID", i)
 		}
 
-		// If audit tokens are available, verify input token exists and validate type
-		if hasAuditTokens {
-			inputToken, exists := auditTokens[inputMetadata.TokenID]
-			if !exists {
-				return errors.Errorf("input token [%s:%d] at index [%d] not found in audit tokens",
-					inputMetadata.TokenID.TxId, inputMetadata.TokenID.Index, i)
-			}
+		// Verify input token exists and validate type
+		inputToken, exists := auditTokens[inputMetadata.TokenID]
+		if !exists {
+			return errors.Errorf("input token [%s:%d] at index [%d] not found in audit tokens",
+				inputMetadata.TokenID.TxId, inputMetadata.TokenID.Index, i)
+		}
 
-			if inputToken == nil {
-				return errors.Errorf("input token [%s:%d] at index [%d] is nil in audit tokens",
-					inputMetadata.TokenID.TxId, inputMetadata.TokenID.Index, i)
-			}
+		if inputToken == nil {
+			return errors.Errorf("input token [%s:%d] at index [%d] is nil in audit tokens",
+				inputMetadata.TokenID.TxId, inputMetadata.TokenID.Index, i)
+		}
 
-			// Validate and accumulate token type
-			if actionTokenType == "" {
-				actionTokenType = inputToken.Type
-			} else if actionTokenType != inputToken.Type {
-				return errors.Errorf(
-					"token type mismatch in transfer action: input [%d] has type [%s] but expected [%s]",
-					i, inputToken.Type, actionTokenType,
-				)
-			}
+		// Validate and accumulate token type
+		if actionTokenType == "" {
+			actionTokenType = inputToken.Type
+		} else if actionTokenType != inputToken.Type {
+			return errors.Errorf(
+				"token type mismatch in transfer action: input [%d] has type [%s] but expected [%s]",
+				i, inputToken.Type, actionTokenType,
+			)
+		}
 
-			// Accumulate input value if validation is requested
-			if validateValueSum {
-				inputQty, err := token.ToQuantity(inputToken.Quantity, precision)
-				if err != nil {
-					return errors.Wrapf(err, "failed to convert input quantity at index [%d]", i)
-				}
-				inputSum, err = inputSum.Add(inputQty)
-				if err != nil {
-					return errors.Wrapf(err, "failed to add input quantity at index [%d]", i)
-				}
+		// Accumulate input value if validation is requested
+		if validateValueSum {
+			inputQty, err := token.ToQuantity(inputToken.Quantity, precision)
+			if err != nil {
+				return errors.Wrapf(err, "failed to convert input quantity at index [%d]", i)
+			}
+			inputSum, err = inputSum.Add(inputQty)
+			if err != nil {
+				return errors.Wrapf(err, "failed to add input quantity at index [%d]", i)
 			}
 		}
 	}

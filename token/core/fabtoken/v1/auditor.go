@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/audit"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"go.opentelemetry.io/otel/trace"
@@ -20,24 +21,27 @@ import (
 
 // AuditorService is a service that handles auditing of token requests.
 type AuditorService struct {
-	Logger       logging.Logger
-	Deserializer driver.Deserializer
-	QueryEngine  driver.QueryEngine
-	tracer       trace.Tracer
+	Logger                  logging.Logger
+	PublicParametersManager common.PublicParametersManager[*setup.PublicParams]
+	Deserializer            driver.Deserializer
+	QueryEngine             driver.QueryEngine
+	tracer                  trace.Tracer
 }
 
 // NewAuditorService returns a new instance of AuditorService.
 func NewAuditorService(
 	logger logging.Logger,
+	publicParametersManager common.PublicParametersManager[*setup.PublicParams],
 	deserializer driver.Deserializer,
 	queryEngine driver.QueryEngine,
 	tracerProvider trace.TracerProvider,
 ) *AuditorService {
 	return &AuditorService{
-		Logger:       logger,
-		Deserializer: deserializer,
-		QueryEngine:  queryEngine,
-		tracer:       tracerProvider.Tracer("auditor_service", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
+		Logger:                  logger,
+		PublicParametersManager: publicParametersManager,
+		Deserializer:            deserializer,
+		QueryEngine:             queryEngine,
+		tracer:                  tracerProvider.Tracer("auditor_service", tracing.WithMetricsOpts(tracing.MetricsOpts{})),
 	}
 }
 
@@ -59,7 +63,8 @@ func (s *AuditorService) AuditorCheck(ctx context.Context, request *driver.Token
 		return err
 	}
 
-	auditor := audit.NewAuditor(s.Logger, s.tracer, s.Deserializer)
+	pp := s.PublicParametersManager.PublicParams()
+	auditor := audit.NewAuditor(s.Logger, s.tracer, s.Deserializer, pp.Precision())
 	s.Logger.DebugfContext(ctx, "Start auditor check")
 	err = auditor.Check(
 		ctx,

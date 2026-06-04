@@ -13,7 +13,9 @@ import (
 
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
@@ -99,11 +101,17 @@ func newBenchmarkAuditEnv(n int, benchmarkCase *benchmark2.Case) (*benchmarkAudi
 func newAuditEnv(benchmarkCase *benchmark2.Case) (*auditEnv, error) {
 	// Create mock dependencies
 	logger := logging.MustGetLogger("test")
+	mockPPM := &mock.PublicParamsManager{}
+	pp := &setup.PublicParams{
+		QuantityPrecision: 64,
+	}
+	mockPPM.PublicParametersReturns(pp)
+	publicParamsManager := &mockAuditorPublicParamsManager{PublicParamsManager: mockPPM}
 	deserializer := &mockDeserializer{}
 	queryEngine := &mockQueryEngine{}
 	tracerProvider := noop.NewTracerProvider()
 
-	as := v1.NewAuditorService(logger, deserializer, queryEngine, tracerProvider)
+	as := v1.NewAuditorService(logger, publicParamsManager, deserializer, queryEngine, tracerProvider)
 
 	// Create test data structures
 	issueAction := &actions.IssueAction{
@@ -246,6 +254,15 @@ func (m *mockQueryEngine) ListHistoryIssuedTokens(ctx context.Context) (*token.I
 
 func (m *mockQueryEngine) PublicParams(ctx context.Context) ([]byte, error) {
 	return nil, nil
+}
+
+// mockAuditorPublicParamsManager wraps the generated mock to provide the PublicParams method
+type mockAuditorPublicParamsManager struct {
+	*mock.PublicParamsManager
+}
+
+func (m *mockAuditorPublicParamsManager) PublicParams() *setup.PublicParams {
+	return m.PublicParameters().(*setup.PublicParams)
 }
 
 func (m *mockQueryEngine) GetTokens(ctx context.Context, inputs ...*token.ID) ([]*token.Token, error) {

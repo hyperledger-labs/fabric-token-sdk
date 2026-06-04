@@ -159,7 +159,8 @@ func TestRetrieveAuditTokens(t *testing.T) {
 
 		tokens, err := RetrieveAuditTokens(ctx, logger, qe, nil, anchor)
 		require.NoError(t, err)
-		assert.Nil(t, tokens)
+		assert.NotNil(t, tokens)
+		assert.Empty(t, tokens)
 		assert.Equal(t, 0, qe.ListAuditTokensCallCount())
 	})
 
@@ -432,7 +433,8 @@ func TestValidateIssueActionTokenTypes(t *testing.T) {
 			Inputs: []*driver.IssueInputMetadata{},
 		}
 
-		err := ValidateIssueActionTokenTypes(metadata, nil)
+		// Empty audit tokens map is acceptable for issue actions with no inputs
+		err := ValidateIssueActionTokenTypes(metadata, make(map[*token.ID]*token.Token))
 		require.NoError(t, err)
 	})
 
@@ -550,7 +552,7 @@ func TestValidateTransferActionTokenTypes(t *testing.T) {
 			id1: tok1,
 		}
 
-		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false)
+		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false, 64)
 		require.NoError(t, err)
 	})
 
@@ -568,28 +570,42 @@ func TestValidateTransferActionTokenTypes(t *testing.T) {
 			id1: tok1,
 		}
 
-		err := ValidateTransferActionTokenTypes(metadata, auditTokens, true)
+		err := ValidateTransferActionTokenTypes(metadata, auditTokens, true, 64)
 		require.NoError(t, err)
 	})
 
 	t.Run("NilInputMetadata", func(t *testing.T) {
+		id1 := &token.ID{TxId: "tx1", Index: 0}
+		tok1 := &token.Token{Type: "USD", Quantity: "100"}
+
 		metadata := &driver.TransferMetadata{
 			Inputs: []*driver.TransferInputMetadata{nil},
 		}
 
-		err := ValidateTransferActionTokenTypes(metadata, nil, false)
+		auditTokens := map[*token.ID]*token.Token{
+			id1: tok1,
+		}
+
+		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false, 64)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "input metadata at index [0] is nil")
 	})
 
 	t.Run("NilTokenID", func(t *testing.T) {
+		id1 := &token.ID{TxId: "tx1", Index: 0}
+		tok1 := &token.Token{Type: "USD", Quantity: "100"}
+
 		metadata := &driver.TransferMetadata{
 			Inputs: []*driver.TransferInputMetadata{
 				{TokenID: nil},
 			},
 		}
 
-		err := ValidateTransferActionTokenTypes(metadata, nil, false)
+		auditTokens := map[*token.ID]*token.Token{
+			id1: tok1,
+		}
+
+		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false, 64)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "has nil TokenID")
 	})
@@ -610,7 +626,7 @@ func TestValidateTransferActionTokenTypes(t *testing.T) {
 			id2: tok2, // Only id2 is present
 		}
 
-		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false)
+		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false, 64)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not found in audit tokens")
 	})
@@ -628,7 +644,7 @@ func TestValidateTransferActionTokenTypes(t *testing.T) {
 			id1: nil, // Nil token
 		}
 
-		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false)
+		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false, 64)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "is nil in audit tokens")
 	})
@@ -651,12 +667,12 @@ func TestValidateTransferActionTokenTypes(t *testing.T) {
 			id2: tok2,
 		}
 
-		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false)
+		err := ValidateTransferActionTokenTypes(metadata, auditTokens, false, 64)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "token type mismatch")
 	})
 
-	t.Run("NoAuditTokens_NoError", func(t *testing.T) {
+	t.Run("NilAuditTokens_Error", func(t *testing.T) {
 		id1 := &token.ID{TxId: "tx1", Index: 0}
 
 		metadata := &driver.TransferMetadata{
@@ -665,8 +681,24 @@ func TestValidateTransferActionTokenTypes(t *testing.T) {
 			},
 		}
 
-		// No audit tokens provided - validation should pass
-		err := ValidateTransferActionTokenTypes(metadata, nil, false)
-		require.NoError(t, err)
+		// Nil audit tokens should return error
+		err := ValidateTransferActionTokenTypes(metadata, nil, false, 64)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "auditTokens cannot be nil")
+	})
+
+	t.Run("EmptyAuditTokens_Error", func(t *testing.T) {
+		id1 := &token.ID{TxId: "tx1", Index: 0}
+
+		metadata := &driver.TransferMetadata{
+			Inputs: []*driver.TransferInputMetadata{
+				{TokenID: id1},
+			},
+		}
+
+		// Empty audit tokens should return error
+		err := ValidateTransferActionTokenTypes(metadata, make(map[*token.ID]*token.Token), false, 64)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "auditTokens cannot be empty")
 	})
 }

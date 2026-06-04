@@ -96,16 +96,19 @@ type Auditor struct {
 	PedersenParams []*math.G1
 	// Elliptic curve
 	Curve *math.Curve
+	// Precision for token quantities
+	Precision uint64
 }
 
 // NewAuditor creates a new Auditor.
-func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatcher, pp []*math.G1, c *math.Curve) *Auditor {
+func NewAuditor(logger logging.Logger, tracer trace.Tracer, infoMatcher InfoMatcher, pp []*math.G1, c *math.Curve, precision uint64) *Auditor {
 	return &Auditor{
 		Logger:         logger,
 		Tracer:         tracer,
 		InfoMatcher:    infoMatcher,
 		PedersenParams: pp,
 		Curve:          c,
+		Precision:      precision,
 	}
 }
 
@@ -121,6 +124,16 @@ func (a *Auditor) Check(
 	txID driver.TokenRequestAnchor,
 	auditTokens map[*token2.ID]*token2.Token,
 ) error {
+	if tokenRequest == nil {
+		return errors.Errorf("tokenRequest cannot be nil for tx [%s]", txID)
+	}
+	if tokenRequestMetadata == nil {
+		return errors.Errorf("tokenRequestMetadata cannot be nil for tx [%s]", txID)
+	}
+	if auditTokens == nil {
+		return errors.Errorf("auditTokens cannot be nil for tx [%s]", txID)
+	}
+
 	// Validate structural correspondence between request and metadata
 	// This includes action counts, ActionIDs, and metadata type alignment
 	if err := a.validateStructure(tokenRequest, tokenRequestMetadata, txID); err != nil {
@@ -529,7 +542,7 @@ func (a *Auditor) validateIssueActionTokenTypes(metadata *driver.IssueMetadata, 
 // It also validates that input tokens exist and that the sum of input values equals the sum of output values
 // (only when audit tokens are provided).
 func (a *Auditor) validateTransferActionTokenTypes(metadata *driver.TransferMetadata, auditTokens map[*token2.ID]*token2.Token) error {
-	return common.ValidateTransferActionTokenTypes(metadata, auditTokens, true)
+	return common.ValidateTransferActionTokenTypes(metadata, auditTokens, true, a.Precision)
 }
 
 // InspectOutput verifies that the commitments in an output token of a given index

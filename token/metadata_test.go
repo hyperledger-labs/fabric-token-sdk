@@ -254,10 +254,14 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 			action: &token.TransferAction{transferActionWithIssuer},
 			meta: &token.TransferMetadata{
 				&driver.TransferMetadata{
-					Issuer:       mockIssuer,
-					Inputs:       []*driver.TransferInputMetadata{{}},
-					Outputs:      []*driver.TransferOutputMetadata{{}},
-					ExtraSigners: []token.Identity{signer1},
+					Issuer: driver.AuditableIdentity{
+						Identity: mockIssuer,
+					},
+					Inputs:  []*driver.TransferInputMetadata{{}},
+					Outputs: []*driver.TransferOutputMetadata{{}},
+					ExtraSigners: []driver.AuditableIdentity{
+						{Identity: signer1},
+					},
 				},
 			},
 			wantErr: false,
@@ -315,7 +319,7 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 				&driver.TransferMetadata{
 					Inputs:       []*driver.TransferInputMetadata{{}},
 					Outputs:      []*driver.TransferOutputMetadata{{}},
-					ExtraSigners: []token.Identity{},
+					ExtraSigners: []driver.AuditableIdentity{},
 				},
 			},
 			wantErr:       true,
@@ -326,9 +330,11 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 			action: &token.TransferAction{transferActionWithIssuer},
 			meta: &token.TransferMetadata{
 				&driver.TransferMetadata{
-					Inputs:       []*driver.TransferInputMetadata{{}},
-					Outputs:      []*driver.TransferOutputMetadata{{}},
-					ExtraSigners: []token.Identity{token.Identity("other")},
+					Inputs:  []*driver.TransferInputMetadata{{}},
+					Outputs: []*driver.TransferOutputMetadata{{}},
+					ExtraSigners: []driver.AuditableIdentity{
+						{Identity: token.Identity("other")},
+					},
 				},
 			},
 			wantErr:       true,
@@ -339,10 +345,14 @@ func TestMetadata_TestMatchTransferAction(t *testing.T) {
 			action: &token.TransferAction{transferActionWithIssuer},
 			meta: &token.TransferMetadata{
 				&driver.TransferMetadata{
-					Issuer:       token.Identity("other"),
-					Inputs:       []*driver.TransferInputMetadata{{}},
-					Outputs:      []*driver.TransferOutputMetadata{{}},
-					ExtraSigners: []token.Identity{signer1},
+					Issuer: driver.AuditableIdentity{
+						Identity: token.Identity("other"),
+					},
+					Inputs:  []*driver.TransferInputMetadata{{}},
+					Outputs: []*driver.TransferOutputMetadata{{}},
+					ExtraSigners: []driver.AuditableIdentity{
+						{Identity: signer1},
+					},
 				},
 			},
 			wantErr:       true,
@@ -539,10 +549,12 @@ func TestIssueMetadata_Match(t *testing.T) {
 			name: "match",
 			meta: &token.IssueMetadata{
 				IssueMetadata: &driver.IssueMetadata{
-					Issuer:       driver.AuditableIdentity{Identity: issuer1},
-					Inputs:       []*driver.IssueInputMetadata{{}},
-					Outputs:      []*driver.IssueOutputMetadata{{}},
-					ExtraSigners: []token.Identity{signer1},
+					Issuer:  driver.AuditableIdentity{Identity: issuer1},
+					Inputs:  []*driver.IssueInputMetadata{{}},
+					Outputs: []*driver.IssueOutputMetadata{{}},
+					ExtraSigners: []driver.AuditableIdentity{
+						{Identity: signer1},
+					},
 				},
 			},
 			action:  token.NewIssueAction(action),
@@ -600,7 +612,7 @@ func TestIssueMetadata_Match(t *testing.T) {
 				IssueMetadata: &driver.IssueMetadata{
 					Inputs:       []*driver.IssueInputMetadata{{}},
 					Outputs:      []*driver.IssueOutputMetadata{{}},
-					ExtraSigners: []token.Identity{},
+					ExtraSigners: []driver.AuditableIdentity{},
 				},
 			},
 			action:        token.NewIssueAction(action),
@@ -611,9 +623,11 @@ func TestIssueMetadata_Match(t *testing.T) {
 			name: "mismatch extra signers",
 			meta: &token.IssueMetadata{
 				IssueMetadata: &driver.IssueMetadata{
-					Inputs:       []*driver.IssueInputMetadata{{}},
-					Outputs:      []*driver.IssueOutputMetadata{{}},
-					ExtraSigners: []token.Identity{token.Identity("other")},
+					Inputs:  []*driver.IssueInputMetadata{{}},
+					Outputs: []*driver.IssueOutputMetadata{{}},
+					ExtraSigners: []driver.AuditableIdentity{
+						{Identity: token.Identity("other")},
+					},
 				},
 			},
 			action:        token.NewIssueAction(action),
@@ -624,10 +638,12 @@ func TestIssueMetadata_Match(t *testing.T) {
 			name: "mismatch issuer",
 			meta: &token.IssueMetadata{
 				IssueMetadata: &driver.IssueMetadata{
-					Issuer:       driver.AuditableIdentity{Identity: issuer2},
-					Inputs:       []*driver.IssueInputMetadata{{}},
-					Outputs:      []*driver.IssueOutputMetadata{{}},
-					ExtraSigners: []token.Identity{signer1},
+					Issuer:  driver.AuditableIdentity{Identity: issuer2},
+					Inputs:  []*driver.IssueInputMetadata{{}},
+					Outputs: []*driver.IssueOutputMetadata{{}},
+					ExtraSigners: []driver.AuditableIdentity{
+						{Identity: signer1},
+					},
 				},
 			},
 			action:        token.NewIssueAction(action),

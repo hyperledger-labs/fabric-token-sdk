@@ -469,7 +469,9 @@ func TestIssueMetadata_ToProtos(t *testing.T) {
 		Outputs: []*IssueOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		ExtraSigners: []Identity{Identity("signer1")},
+		ExtraSigners: []AuditableIdentity{
+			{Identity: Identity("signer1"), AuditInfo: []byte("signer1_audit")},
+		},
 	}
 
 	proto, err := im.ToProtos()
@@ -514,7 +516,8 @@ func TestIssueMetadata_FromProtos(t *testing.T) {
 	assert.Len(t, im.Outputs, 1)
 	assert.Equal(t, []byte("output1"), im.Outputs[0].OutputMetadata)
 	assert.Len(t, im.ExtraSigners, 1)
-	assert.Equal(t, Identity("signer1"), im.ExtraSigners[0])
+	assert.Equal(t, Identity("signer1"), im.ExtraSigners[0].Identity)
+	assert.Nil(t, im.ExtraSigners[0].AuditInfo)
 }
 
 // TestTransferInputMetadata_ToProtos tests conversion to protobuf
@@ -730,8 +733,13 @@ func TestTransferMetadata_ToProtos(t *testing.T) {
 		Outputs: []*TransferOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		ExtraSigners: []Identity{Identity("signer1")},
-		Issuer:       Identity("issuer1"),
+		ExtraSigners: []AuditableIdentity{
+			{Identity: Identity("signer1"), AuditInfo: []byte("signer1_audit")},
+		},
+		Issuer: AuditableIdentity{
+			Identity:  Identity("issuer1"),
+			AuditInfo: []byte("issuer1_audit"),
+		},
 	}
 
 	proto, err := tm.ToProtos()
@@ -753,7 +761,7 @@ func TestTransferMetadata_ToProtos_NilIssuer(t *testing.T) {
 	tm := &TransferMetadata{
 		Inputs:  []*TransferInputMetadata{},
 		Outputs: []*TransferOutputMetadata{},
-		Issuer:  nil,
+		Issuer:  AuditableIdentity{},
 	}
 
 	proto, err := tm.ToProtos()
@@ -788,8 +796,10 @@ func TestTransferMetadata_FromProtos(t *testing.T) {
 	assert.Len(t, tm.Outputs, 1)
 	assert.Equal(t, []byte("output1"), tm.Outputs[0].OutputMetadata)
 	assert.Len(t, tm.ExtraSigners, 1)
-	assert.Equal(t, Identity("signer1"), tm.ExtraSigners[0])
-	assert.Equal(t, Identity("issuer1"), tm.Issuer)
+	assert.Equal(t, Identity("signer1"), tm.ExtraSigners[0].Identity)
+	assert.Nil(t, tm.ExtraSigners[0].AuditInfo)
+	assert.Equal(t, Identity("issuer1"), tm.Issuer.Identity)
+	assert.Nil(t, tm.Issuer.AuditInfo)
 }
 
 // TestTransferMetadata_FromProtos_NilIssuer tests conversion with nil issuer
@@ -803,7 +813,8 @@ func TestTransferMetadata_FromProtos_NilIssuer(t *testing.T) {
 	tm := &TransferMetadata{}
 	err := tm.FromProtos(proto)
 	require.NoError(t, err)
-	assert.Nil(t, tm.Issuer)
+	assert.Nil(t, tm.Issuer.Identity)
+	assert.Nil(t, tm.Issuer.AuditInfo)
 }
 
 func TestTokenRequestMetadataSerialization(t *testing.T) {
@@ -837,9 +848,9 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 							},
 						},
 					},
-					ExtraSigners: []Identity{
-						[]byte("issue_extra_signer1"),
-						[]byte("issue_extra_signer2"),
+					ExtraSigners: []AuditableIdentity{
+						{Identity: []byte("issue_extra_signer1")},
+						{Identity: []byte("issue_extra_signer2")},
 					},
 				},
 			},
@@ -894,11 +905,13 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 							},
 						},
 					},
-					ExtraSigners: []Identity{
-						[]byte("extra_signer1"),
-						[]byte("extra_signer2"),
+					ExtraSigners: []AuditableIdentity{
+						{Identity: []byte("extra_signer1")},
+						{Identity: []byte("extra_signer2")},
 					},
-					Issuer: Identity([]byte("issuer")),
+					Issuer: AuditableIdentity{
+						Identity: Identity([]byte("issuer")),
+					},
 				},
 			},
 		},
@@ -1408,10 +1421,10 @@ func TestIssueMetadata_ToProtos_WithExtraSigners(t *testing.T) {
 		Outputs: []*IssueOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		ExtraSigners: []Identity{
-			Identity("signer1"),
-			Identity("signer2"),
-			Identity("signer3"),
+		ExtraSigners: []AuditableIdentity{
+			{Identity: Identity("signer1"), AuditInfo: []byte("signer1_audit")},
+			{Identity: Identity("signer2"), AuditInfo: []byte("signer2_audit")},
+			{Identity: Identity("signer3"), AuditInfo: []byte("signer3_audit")},
 		},
 	}
 
@@ -1433,11 +1446,14 @@ func TestTransferMetadata_ToProtos_WithExtraSigners(t *testing.T) {
 		Outputs: []*TransferOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		ExtraSigners: []Identity{
-			Identity("signer1"),
-			Identity("signer2"),
+		ExtraSigners: []AuditableIdentity{
+			{Identity: Identity("signer1"), AuditInfo: []byte("signer1_audit")},
+			{Identity: Identity("signer2"), AuditInfo: []byte("signer2_audit")},
 		},
-		Issuer: Identity("issuer1"),
+		Issuer: AuditableIdentity{
+			Identity:  Identity("issuer1"),
+			AuditInfo: []byte("issuer1_audit"),
+		},
 	}
 
 	proto, err := tm.ToProtos()
@@ -1735,7 +1751,9 @@ func TestTransferMetadata_ToProtos_WithIssuer(t *testing.T) {
 		Outputs: []*TransferOutputMetadata{
 			{OutputMetadata: []byte("output1")},
 		},
-		Issuer: Identity("issuer1"),
+		Issuer: AuditableIdentity{
+			Identity: Identity("issuer1"),
+		},
 	}
 
 	proto, err := meta.ToProtos()

@@ -511,6 +511,7 @@ func setupAuditorTest(t *testing.T) (*mock.SigningIdentity, *v1.PublicParams, *a
 		deserializer,
 		pp.PedersenGenerators,
 		math.Curves[pp.Curve],
+		64,
 	)
 	fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
 

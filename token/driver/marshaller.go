@@ -83,3 +83,29 @@ func FromProtoAuditableIdentitySlice(identities []*request.AuditableIdentity) []
 
 	return res
 }
+
+// ToProtoAuditableIdentitySliceFromAuditable converts []AuditableIdentity to []*request.AuditableIdentity
+func ToProtoAuditableIdentitySliceFromAuditable(identities []AuditableIdentity) ([]*request.AuditableIdentity, error) {
+	res := make([]*request.AuditableIdentity, len(identities))
+	for i, id := range identities {
+		proto, err := id.ToProtos()
+		if err != nil {
+			return nil, err
+		}
+		res[i] = proto
+	}
+
+	return res, nil
+}
+
+// FromProtoAuditableIdentitySliceToAuditable converts []*request.AuditableIdentity to []AuditableIdentity
+func FromProtoAuditableIdentitySliceToAuditable(identities []*request.AuditableIdentity) ([]AuditableIdentity, error) {
+	res := make([]AuditableIdentity, len(identities))
+	for i, id := range identities {
+		if err := res[i].FromProtos(id); err != nil {
+			return nil, err
+		}
+	}
+
+	return res, nil
+}

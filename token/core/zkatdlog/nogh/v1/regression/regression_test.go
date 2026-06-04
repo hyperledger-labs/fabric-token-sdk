@@ -217,6 +217,7 @@ func createAuditor(pp tcc.PublicParameters) *audit.Auditor {
 		deserializer,
 		v1pp.PedersenGenerators,
 		c,
+		64,
 	)
 }
 
