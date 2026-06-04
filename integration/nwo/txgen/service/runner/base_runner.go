@@ -63,10 +63,8 @@ func (r *BaseRunner) ShutDown() error {
 		r.logger.Infof("Sending command to shut down runner...")
 		r.shutdown <- struct{}{}
 		r.logger.Infof("Waiting for runner to shut down...")
-		select {
-		case <-r.done:
-			r.logger.Infof("Runner successfully shut down")
-		}
+		<-r.done
+		r.logger.Infof("Runner successfully shut down")
 
 		return nil
 	}
