@@ -158,7 +158,7 @@ func (db *Notifier) dispatch(operation driver.Operation, m map[driver.ColumnKey]
 	copy(subscribers, db.subscribers)
 	db.mu.RUnlock()
 
-	logger.Infof("dispatching to [%d] subscribers", len(subscribers))
+	logger.Debugf("dispatching to [%d] subscribers", len(subscribers))
 	for _, callback := range subscribers {
 		if callback == nil {
 			logger.Errorf("a nil callback found for [%s], skip it", db.table)
@@ -191,9 +191,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 	db.startOnce.Do(func() {
 		justStarted = true
 		logger.Debugf("First subscription for notifier of [%s]. Notifier starts listening...", db.table)
-		db.listenerWg.Add(1)
-		go func() {
-			defer db.listenerWg.Done()
+		db.listenerWg.Go(func() {
 			if err := db.listener.Listen(db.ctx); err != nil {
 				// Send error to both the error channel and log it
 				select {
@@ -203,7 +201,7 @@ func (db *Notifier) Subscribe(callback driver.TriggerCallback) error {
 				}
 				logger.Errorf("notifier listen for [%s] failed: %s", db.table, err.Error())
 			}
-		}()
+		})
 	})
 
 	if justStarted {
@@ -401,7 +399,7 @@ func (h *notificationHandler) HandleNotification(ctx context.Context, notificati
 
 		return nil
 	}
-	logger.InfofContext(ctx, "new event received on table [%s]: %s", notification.Channel, notification.Payload)
+	logger.DebugfContext(ctx, "new event received on table [%s]: %s", notification.Channel, notification.Payload)
 	op, vals, err := h.parsePayload(notification.Payload)
 	if err != nil {
 		logger.Errorf("failed parsing payload [%s]: %s", notification.Payload, err.Error())

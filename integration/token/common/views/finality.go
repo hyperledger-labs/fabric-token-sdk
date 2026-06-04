@@ -31,7 +31,7 @@ type TxFinalityView struct {
 	*TxFinality
 }
 
-func (r *TxFinalityView) Call(context view.Context) (interface{}, error) {
+func (r *TxFinalityView) Call(context view.Context) (any, error) {
 	var tmsID token.TMSID
 	if r.TMSID != nil {
 		tmsID = *r.TMSID

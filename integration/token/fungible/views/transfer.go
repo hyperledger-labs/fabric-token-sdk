@@ -76,7 +76,7 @@ type TransferView struct {
 	*Transfer
 }
 
-func (t *TransferView) Call(context view.Context) (txID interface{}, err error) {
+func (t *TransferView) Call(context view.Context) (txID any, err error) {
 	// As a first step operation, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
@@ -229,7 +229,7 @@ type TransferWithSelectorView struct {
 	*Transfer
 }
 
-func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, error) {
+func (t *TransferWithSelectorView) Call(context view.Context) (any, error) {
 	// As a first step operation, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
@@ -396,7 +396,7 @@ type PrepareTransferView struct {
 	*Transfer
 }
 
-func (t *PrepareTransferView) Call(context view.Context) (interface{}, error) {
+func (t *PrepareTransferView) Call(context view.Context) (any, error) {
 	// As a first step operation, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
@@ -473,7 +473,7 @@ type BroadcastPreparedTransferView struct {
 	*BroadcastPreparedTransfer
 }
 
-func (t *BroadcastPreparedTransferView) Call(context view.Context) (interface{}, error) {
+func (t *BroadcastPreparedTransferView) Call(context view.Context) (any, error) {
 	tx, err := ttx.NewTransactionFromBytes(context, t.Tx)
 	assert.NoError(err, "failed unmarshalling transaction")
 
@@ -511,7 +511,7 @@ type TokenSelectorUnlockView struct {
 	*TokenSelectorUnlock
 }
 
-func (t *TokenSelectorUnlockView) Call(context view.Context) (interface{}, error) {
+func (t *TokenSelectorUnlockView) Call(context view.Context) (any, error) {
 	tms, err := token2.GetManagementService(context)
 	assert.NoError(err, "failed getting management service")
 	sm, err := tms.SelectorManager()
@@ -542,7 +542,7 @@ type FinalityWithTimeoutView struct {
 	*FinalityWithTimeout
 }
 
-func (r *FinalityWithTimeoutView) Call(ctx view.Context) (interface{}, error) {
+func (r *FinalityWithTimeoutView) Call(ctx view.Context) (any, error) {
 	tx, err := ttx.NewTransactionFromBytes(ctx, r.Tx)
 	assert.NoError(err, "failed unmarshalling transaction")
 
@@ -570,7 +570,7 @@ type MaliciousTransferView struct {
 	*Transfer
 }
 
-func (t *MaliciousTransferView) Call(context view.Context) (txID interface{}, err error) {
+func (t *MaliciousTransferView) Call(context view.Context) (txID any, err error) {
 	// As a first step operation, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which

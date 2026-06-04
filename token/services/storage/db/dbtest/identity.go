@@ -189,7 +189,7 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 	wg.Wait()
 
 	for i := range n {
-		alice := []byte(fmt.Sprintf("alice_%d", i))
+		alice := fmt.Appendf(nil, "alice_%d", i)
 		exists, err := db.SignerInfoExists(t.Context(), alice)
 		require.NoError(t, err, "failed to check signer info existence for [%s]", alice)
 		assert.True(t, exists)
@@ -200,8 +200,8 @@ func TSignerInfoConcurrent(t *testing.T, db driver.IdentityStore) {
 func tSignerInfo(t *testing.T, db driver.IdentityStore, index int) {
 	t.Helper()
 	ctx := t.Context()
-	alice := []byte(fmt.Sprintf("alice_%d", index))
-	bob := []byte(fmt.Sprintf("bob_%d", index))
+	alice := fmt.Appendf(nil, "alice_%d", index)
+	bob := fmt.Appendf(nil, "bob_%d", index)
 	signerInfo := []byte("signer_info")
 	assert.NoError(t, db.StoreSignerInfo(ctx, alice, signerInfo))
 	exists, err := db.SignerInfoExists(ctx, alice)

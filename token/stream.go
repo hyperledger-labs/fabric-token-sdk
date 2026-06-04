@@ -125,7 +125,7 @@ func (o *OutputStream) ByEnrollmentID(id string) *OutputStream {
 
 // EnrollmentIDs returns the enrollment IDs of the outputs in the OutputStream.
 func (o *OutputStream) EnrollmentIDs() []string {
-	duplicates := map[string]interface{}{}
+	duplicates := map[string]any{}
 	var eIDs []string
 	for _, output := range o.outputs {
 		if len(output.EnrollmentID) == 0 {
@@ -142,7 +142,7 @@ func (o *OutputStream) EnrollmentIDs() []string {
 
 // TokenTypes returns the token types of the outputs in the OutputStream.
 func (o *OutputStream) TokenTypes() []token.Type {
-	duplicates := map[token.Type]interface{}{}
+	duplicates := map[token.Type]any{}
 	var types []token.Type
 	for _, output := range o.outputs {
 		if _, ok := duplicates[output.Type]; !ok {
@@ -157,7 +157,7 @@ func (o *OutputStream) TokenTypes() []token.Type {
 // RevocationHandles returns the Revocation Handles of the owners of the outputs.
 // It might be empty, if not available.
 func (o *OutputStream) RevocationHandles() []string {
-	duplicates := map[string]interface{}{}
+	duplicates := map[string]any{}
 	var rIDs []string
 	for _, output := range o.outputs {
 		rh := output.RevocationHandler
@@ -274,7 +274,7 @@ func (is *InputStream) IDs() []*token.ID {
 // EnrollmentIDs returns the enrollment IDs of the owners of the inputs.
 // It might be empty, if not available.
 func (is *InputStream) EnrollmentIDs() []string {
-	duplicates := map[string]interface{}{}
+	duplicates := map[string]any{}
 	var eIDs []string
 	for _, input := range is.inputs {
 		if len(input.EnrollmentID) == 0 {
@@ -294,7 +294,7 @@ func (is *InputStream) EnrollmentIDs() []string {
 // RevocationHandles returns the Revocation Handles of the owners of the inputs.
 // It might be empty, if not available.
 func (is *InputStream) RevocationHandles() []string {
-	duplicates := map[string]interface{}{}
+	duplicates := map[string]any{}
 	var rIDs []string
 	for _, input := range is.inputs {
 		rh := input.RevocationHandler
@@ -313,7 +313,7 @@ func (is *InputStream) RevocationHandles() []string {
 
 // TokenTypes returns the token types of the inputs.
 func (is *InputStream) TokenTypes() []token.Type {
-	duplicates := map[token.Type]interface{}{}
+	duplicates := map[token.Type]any{}
 	var types []token.Type
 	for _, input := range is.inputs {
 		_, ok := duplicates[input.Type]

@@ -1388,7 +1388,7 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 		return errors.Wrapf(err, "error setting spendable flag to true for token types [%v]", formats)
 	} else {
 		rows, _ := res.RowsAffected()
-		logger.InfofContext(ctx, "rows affected [%d]", rows)
+		logger.DebugfContext(ctx, "rows affected [%d]", rows)
 	}
 
 	return nil

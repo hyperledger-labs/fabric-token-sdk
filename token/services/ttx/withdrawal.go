@@ -59,13 +59,13 @@ func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, w
 	if err != nil {
 		return nil, nil, err
 	}
-	result := resultBoxed.([]interface{})
+	result := resultBoxed.([]any)
 	ir := result[0].(*WithdrawalRequest)
 
 	return ir.RecipientData.Identity, result[1].(view.Session), nil
 }
 
-func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) {
+func (r *RequestWithdrawalView) Call(context view.Context) (any, error) {
 	logger.DebugfContext(context.Context(), "Respond request recipient identity using wallet [%s]", r.Wallet)
 
 	tmsID, recipientData, err := r.getRecipientIdentity(context)
@@ -96,7 +96,7 @@ func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 
-	return []interface{}{wr, s.Session()}, nil
+	return []any{wr, s.Session()}, nil
 }
 
 // WithWallet sets the wallet to use to retrieve a recipient identity if it has not been passed already
@@ -126,9 +126,8 @@ func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*tok
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "tms not found for [%s]", r.TMSID)
 		}
-		tmsID := tms.ID()
 
-		return &tmsID, r.RecipientData, nil
+		return new(tms.ID()), r.RecipientData, nil
 	}
 
 	w := GetWallet(
@@ -148,9 +147,7 @@ func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*tok
 		return nil, nil, errors.Wrapf(err, "failed to get recipient data")
 	}
 
-	tmsID := w.TMS().ID()
-
-	return &tmsID, recipientData, nil
+	return new(w.TMS().ID()), recipientData, nil
 }
 
 // ReceiveWithdrawalRequestView this is the view used by the issuer to receive a withdrawal request
@@ -170,7 +167,7 @@ func ReceiveWithdrawalRequest(context view.Context) (*WithdrawalRequest, error) 
 	return ir, nil
 }
 
-func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, error) {
+func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (any, error) {
 	s := jsession.NewTypedSessionFromContext(context)
 	request := &WithdrawalRequest{}
 	if err := s.ReceiveTypedWithTimeout(TypeWithdrawalRequest, request, 1*time.Minute); err != nil {

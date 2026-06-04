@@ -25,7 +25,7 @@ type RegisterIssuerIdentityView struct {
 	*RegisterIssuerWallet
 }
 
-func (r *RegisterIssuerIdentityView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterIssuerIdentityView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
@@ -55,7 +55,7 @@ type RegisterOwnerIdentityView struct {
 	*RegisterOwnerIdentity
 }
 
-func (r *RegisterOwnerIdentityView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterOwnerIdentityView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
@@ -86,7 +86,7 @@ type RegisterRecipientDataView struct {
 	*RegisterRecipientData
 }
 
-func (r *RegisterRecipientDataView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterRecipientDataView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)

@@ -258,12 +258,12 @@ func prepareIOCProver(tb testing.TB, pp []*math.G1, c *math.Curve) (*transfer.Ty
 	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp, c)
 
 	intw := make([]*token.Metadata, len(inValues))
-	for i := 0; i < len(intw); i++ {
+	for i := range intw {
 		intw[i] = &token.Metadata{BlindingFactor: inBF[i], Value: c.NewZrFromUint64(inValues[i]), Type: ttype}
 	}
 
 	outtw := make([]*token.Metadata, len(outValues))
-	for i := 0; i < len(outtw); i++ {
+	for i := range outtw {
 		outtw[i] = &token.Metadata{BlindingFactor: outBF[i], Value: c.NewZrFromUint64(outValues[i]), Type: ttype}
 	}
 	typeBlindingFactor := c.NewRandomZr(rand)
@@ -277,13 +277,13 @@ func prepareInputsOutputs(inValues, outValues []uint64, inBF, outBF []*math.Zr, 
 	inputs := make([]*math.G1, len(inValues))
 	outputs := make([]*math.G1, len(outValues))
 
-	for i := 0; i < len(inputs); i++ {
+	for i := range inputs {
 		inputs[i] = pp[0].Mul(c.HashToZr([]byte(ttype)))
 		inputs[i].Add(pp[1].Mul(c.NewZrFromInt(int64(inValues[i])))) // #nosec G115
 		inputs[i].Add(pp[2].Mul(inBF[i]))
 	}
 
-	for i := 0; i < len(outputs); i++ {
+	for i := range outputs {
 		outputs[i] = pp[0].Mul(c.HashToZr([]byte(ttype)))
 		outputs[i].Add(pp[1].Mul(c.NewZrFromInt(int64(outValues[i])))) // #nosec G115
 		outputs[i].Add(pp[2].Mul(outBF[i]))

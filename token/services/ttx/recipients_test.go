@@ -134,7 +134,7 @@ func TestGetRecipientData(t *testing.T) {
 
 	t.Run("missing key returns nil", func(t *testing.T) {
 		opts := &token.ServiceOptions{
-			Params: map[string]interface{}{
+			Params: map[string]any{
 				"SomeOtherKey": "value",
 			},
 		}
@@ -147,7 +147,7 @@ func TestGetRecipientData(t *testing.T) {
 			AuditInfo: []byte("audit"),
 		}
 		opts := &token.ServiceOptions{
-			Params: map[string]interface{}{
+			Params: map[string]any{
 				"RecipientData": rd,
 			},
 		}
@@ -163,7 +163,7 @@ func TestGetRecipientWalletID(t *testing.T) {
 
 	t.Run("missing key returns empty string", func(t *testing.T) {
 		opts := &token.ServiceOptions{
-			Params: map[string]interface{}{
+			Params: map[string]any{
 				"SomeOtherKey": "value",
 			},
 		}
@@ -172,7 +172,7 @@ func TestGetRecipientWalletID(t *testing.T) {
 
 	t.Run("key present returns wallet id", func(t *testing.T) {
 		opts := &token.ServiceOptions{
-			Params: map[string]interface{}{
+			Params: map[string]any{
 				"RecipientWalletID": "my-wallet-id",
 			},
 		}

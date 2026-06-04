@@ -102,7 +102,7 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 
 	// Resolve services by their requested type rather than by call order, so the
 	// stub is robust to additional GetService lookups (e.g. envelope metrics).
-	getService := func(v interface{}) (interface{}, error) {
+	getService := func(v any) (any, error) {
 		rt, ok := v.(reflect.Type)
 		if !ok {
 			return nil, errors.Errorf("unexpected service request [%T]", v)
@@ -152,7 +152,7 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 		Payload: mustEnvelopeBytes(t, ttx.TypeTransaction, &ttx.TransactionPayload{Raw: txRaw}),
 	}
 
-	ctx.RunViewStub = func(v view.View, option ...view.RunViewOption) (interface{}, error) {
+	ctx.RunViewStub = func(v view.View, option ...view.RunViewOption) (any, error) {
 		return v.Call(ctx)
 	}
 

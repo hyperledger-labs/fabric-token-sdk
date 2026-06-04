@@ -21,8 +21,8 @@ import (
 
 type KVS interface {
 	Exists(ctx context.Context, k string) bool
-	Get(ctx context.Context, k string, v interface{}) error
-	Put(ctx context.Context, k string, key interface{}) error
+	Get(ctx context.Context, k string, v any) error
+	Put(ctx context.Context, k string, key any) error
 }
 
 // Service is a uniqueness service.
@@ -35,7 +35,7 @@ type Service struct {
 }
 
 // ComputeID computes the unique ID of the given object.
-func (s *Service) ComputeID(state interface{}) (string, error) {
+func (s *Service) ComputeID(state any) (string, error) {
 	if state == nil {
 		return "", errors.New("state is nil")
 	}

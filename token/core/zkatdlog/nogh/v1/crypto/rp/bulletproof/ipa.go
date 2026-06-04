@@ -81,10 +81,10 @@ func (ipa *IPA) Validate(curve mathlib.CurveID) error {
 	if ipa.R == nil {
 		return errors.New("invalid IPA proof: nil R")
 	}
-	if err := math.CheckZrElements(ipa.L, curve, uint64(len(ipa.L))); err != nil {
+	if err := math.CheckElements(ipa.L, curve, uint64(len(ipa.L))); err != nil {
 		return errors.Wrapf(err, "invalid IPA proof: invalid L elements")
 	}
-	if err := math.CheckZrElements(ipa.R, curve, uint64(len(ipa.R))); err != nil {
+	if err := math.CheckElements(ipa.R, curve, uint64(len(ipa.R))); err != nil {
 		return errors.Wrapf(err, "invalid IPA proof: invalid R elements")
 	}
 
@@ -392,7 +392,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	generators := make([]*mathlib.G1, len(leftGen)+len(rightGen)+len(proof.L)+len(proof.R)+1)
 	scalars := make([]*mathlib.Zr, len(generators))
 	s, sInv := ComputeSVector(1<<v.NumberOfRounds, xList, v.Curve)
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		s[i] = v.Curve.ModMul(s[i], proof.Left, v.Curve.GroupOrder)
 		sInv[i] = v.Curve.ModMul(sInv[i], proof.Right, v.Curve.GroupOrder)
 	}

@@ -488,7 +488,7 @@ func (t *Action) GetProof() []byte {
 // GetOutputCommitments returns the cryptographic commitments of the outputs
 func (t *Action) GetOutputCommitments() []*math.G1 {
 	com := make([]*math.G1, len(t.Outputs))
-	for i := 0; i < len(com); i++ {
+	for i := range com {
 		com[i] = t.Outputs[i].Data
 	}
 

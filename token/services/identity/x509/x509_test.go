@@ -386,8 +386,8 @@ func TestKeyManagerProvider_Get(t *testing.T) {
 			return path
 		})
 
-		opts := map[string]interface{}{
-			"BCCSP": map[string]interface{}{
+		opts := map[string]any{
+			"BCCSP": map[string]any{
 				"Default": "SW",
 			},
 		}

@@ -37,7 +37,7 @@ func NewOrderingViewWithOpts(opts ...TxOption) *orderingView {
 // Call execute the view.
 // The view does the following:
 // 1. It broadcasts the token transaction to the proper backend.
-func (o *orderingView) Call(context view.Context) (interface{}, error) {
+func (o *orderingView) Call(context view.Context) (any, error) {
 	start := time.Now()
 	// Compile options
 	options, err := CompileOpts(o.opts...)
@@ -113,7 +113,7 @@ func NewOrderingAndFinalityWithTimeoutView(tx *Transaction, timeout time.Duratio
 // 1. It broadcasts the token transaction to the proper backend.
 // 2. It waits for finality of the token transaction.
 // It returns in case the operation is not completed before the passed timeout.
-func (o *orderingAndFinalityView) Call(ctx view.Context) (interface{}, error) {
+func (o *orderingAndFinalityView) Call(ctx view.Context) (any, error) {
 	if _, err := ctx.RunView(NewOrderingView(o.tx)); err != nil {
 		return nil, err
 	}

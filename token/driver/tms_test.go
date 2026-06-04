@@ -130,7 +130,7 @@ func TestServiceOptions_String_EmptyFields(t *testing.T) {
 // TestServiceOptions_ParamAsString tests retrieving string parameter
 func TestServiceOptions_ParamAsString(t *testing.T) {
 	opts := ServiceOptions{
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"key1": "value1",
 			"key2": "value2",
 		},
@@ -159,7 +159,7 @@ func TestServiceOptions_ParamAsString_NilParams(t *testing.T) {
 // TestServiceOptions_ParamAsString_KeyNotFound tests behavior when key doesn't exist
 func TestServiceOptions_ParamAsString_KeyNotFound(t *testing.T) {
 	opts := ServiceOptions{
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"key1": "value1",
 		},
 	}
@@ -172,7 +172,7 @@ func TestServiceOptions_ParamAsString_KeyNotFound(t *testing.T) {
 // TestServiceOptions_ParamAsString_WrongType tests error when value is not a string
 func TestServiceOptions_ParamAsString_WrongType(t *testing.T) {
 	opts := ServiceOptions{
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"key1": 123,
 			"key2": true,
 			"key3": []byte("bytes"),
@@ -195,7 +195,7 @@ func TestServiceOptions_ParamAsString_WrongType(t *testing.T) {
 // TestServiceOptions_ParamAsString_EmptyString tests retrieving empty string value
 func TestServiceOptions_ParamAsString_EmptyString(t *testing.T) {
 	opts := ServiceOptions{
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"key1": "",
 		},
 	}
@@ -231,7 +231,7 @@ func TestTMSID_StructFields(t *testing.T) {
 // TestServiceOptions_AllFields tests ServiceOptions with all fields populated
 func TestServiceOptions_AllFields(t *testing.T) {
 	publicParams := []byte("test-params")
-	params := map[string]interface{}{
+	params := map[string]any{
 		"key1": "value1",
 		"key2": 123,
 	}
@@ -268,7 +268,7 @@ func TestServiceOptions_ZeroValue(t *testing.T) {
 // TestServiceOptions_ParamAsString_MultipleTypes tests various non-string types
 func TestServiceOptions_ParamAsString_MultipleTypes(t *testing.T) {
 	opts := ServiceOptions{
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"int":     42,
 			"float":   3.14,
 			"bool":    false,
@@ -330,12 +330,12 @@ func TestTMSID_Equal_AllEmpty(t *testing.T) {
 func TestServiceOptions_ParamsMap(t *testing.T) {
 	testCases := []struct {
 		name   string
-		params map[string]interface{}
+		params map[string]any
 	}{
 		{"nil map", nil},
-		{"empty map", map[string]interface{}{}},
-		{"single entry", map[string]interface{}{"key": "value"}},
-		{"multiple entries", map[string]interface{}{
+		{"empty map", map[string]any{}},
+		{"single entry", map[string]any{"key": "value"}},
+		{"multiple entries", map[string]any{
 			"string": "value",
 			"int":    42,
 			"bool":   true,

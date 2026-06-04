@@ -38,28 +38,28 @@ func NewCSP(keyStore bccsp.KeyStore) (*CSP, error) {
 
 	err = errors2.Join(
 		// Set the Signers
-		base.AddWrapper(reflect.TypeOf(&ecdsaPrivateKey{}), &ecdsaSigner{}),
+		base.AddWrapper(reflect.TypeFor[*ecdsaPrivateKey](), &ecdsaSigner{}),
 		// Set the Verifiers
-		base.AddWrapper(reflect.TypeOf(&ecdsaPrivateKey{}), &ecdsaPrivateKeyVerifier{}),
-		base.AddWrapper(reflect.TypeOf(&ecdsaPublicKey{}), &ecdsaPublicKeyKeyVerifier{}),
+		base.AddWrapper(reflect.TypeFor[*ecdsaPrivateKey](), &ecdsaPrivateKeyVerifier{}),
+		base.AddWrapper(reflect.TypeFor[*ecdsaPublicKey](), &ecdsaPublicKeyKeyVerifier{}),
 
 		// Set the Hashers
-		base.AddWrapper(reflect.TypeOf(&bccsp.SHAOpts{}), &hasher{hash: sha256.New}),
-		base.AddWrapper(reflect.TypeOf(&bccsp.SHA256Opts{}), &hasher{hash: sha256.New}),
-		base.AddWrapper(reflect.TypeOf(&bccsp.SHA384Opts{}), &hasher{hash: sha512.New384}),
-		base.AddWrapper(reflect.TypeOf(&bccsp.SHA3_256Opts{}), &hasher{hash: sha3.New256}),
-		base.AddWrapper(reflect.TypeOf(&bccsp.SHA3_384Opts{}), &hasher{hash: sha3.New384}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.SHAOpts](), &hasher{hash: sha256.New}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.SHA256Opts](), &hasher{hash: sha256.New}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.SHA384Opts](), &hasher{hash: sha512.New384}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.SHA3_256Opts](), &hasher{hash: sha3.New256}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.SHA3_384Opts](), &hasher{hash: sha3.New384}),
 
 		// Set the key generators
-		base.AddWrapper(reflect.TypeOf(&bccsp.ECDSAKeyGenOpts{}), &ecdsaKeyGenerator{curve: elliptic.P256()}),
-		base.AddWrapper(reflect.TypeOf(&bccsp.ECDSAP256KeyGenOpts{}), &ecdsaKeyGenerator{curve: elliptic.P256()}),
-		base.AddWrapper(reflect.TypeOf(&bccsp.ECDSAP384KeyGenOpts{}), &ecdsaKeyGenerator{curve: elliptic.P384()}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.ECDSAKeyGenOpts](), &ecdsaKeyGenerator{curve: elliptic.P256()}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.ECDSAP256KeyGenOpts](), &ecdsaKeyGenerator{curve: elliptic.P256()}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.ECDSAP384KeyGenOpts](), &ecdsaKeyGenerator{curve: elliptic.P384()}),
 
 		// Set the key importers
-		base.AddWrapper(reflect.TypeOf(&bccsp.ECDSAPKIXPublicKeyImportOpts{}), &ecdsaPKIXPublicKeyImportOptsKeyImporter{}),
-		base.AddWrapper(reflect.TypeOf(&bccsp.ECDSAPrivateKeyImportOpts{}), &ecdsaPrivateKeyImportOptsKeyImporter{}),
-		base.AddWrapper(reflect.TypeOf(&bccsp.ECDSAGoPublicKeyImportOpts{}), &ecdsaGoPublicKeyImportOptsKeyImporter{}),
-		base.AddWrapper(reflect.TypeOf(&bccsp.X509PublicKeyImportOpts{}), &x509PublicKeyImportOptsKeyImporter{csp: base}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.ECDSAPKIXPublicKeyImportOpts](), &ecdsaPKIXPublicKeyImportOptsKeyImporter{}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.ECDSAPrivateKeyImportOpts](), &ecdsaPrivateKeyImportOptsKeyImporter{}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.ECDSAGoPublicKeyImportOpts](), &ecdsaGoPublicKeyImportOptsKeyImporter{}),
+		base.AddWrapper(reflect.TypeFor[*bccsp.X509PublicKeyImportOpts](), &x509PublicKeyImportOptsKeyImporter{csp: base}),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed instantiating base crypto csp")

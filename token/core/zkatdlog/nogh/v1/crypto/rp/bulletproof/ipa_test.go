@@ -48,7 +48,7 @@ func newIpaSetup(curveID math.CurveID) (*ipaSetup, error) {
 	com := curve.NewG1()
 	Q := curve.GenG1
 
-	for i := 0; i < len(left); i++ {
+	for i := range left {
 		leftGens[i] = curve.HashToG1([]byte(strconv.Itoa(i)))
 		rightGens[i] = curve.HashToG1([]byte(strconv.Itoa(i + 1)))
 		left[i] = curve.NewRandomZr(rand)

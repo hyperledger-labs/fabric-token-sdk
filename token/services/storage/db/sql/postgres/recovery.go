@@ -65,7 +65,7 @@ func NewAdvisoryLock(ctx context.Context, db *sql.DB, lockID int64) (*AdvisoryLo
 		return nil, false, nil
 	}
 
-	logger.Infof("Acquired advisory lock %d", lockID)
+	logger.Debugf("Acquired advisory lock %d", lockID)
 
 	return &AdvisoryLock{
 		db:     db,
@@ -89,7 +89,7 @@ func (l *AdvisoryLock) Close() error {
 	if err != nil {
 		l.logger.Warnf("Failed to explicitly release advisory lock %d: %v (will auto-release on connection close)", l.lockID, err)
 	} else {
-		l.logger.Infof("Released advisory lock %d", l.lockID)
+		l.logger.Debugf("Released advisory lock %d", l.lockID)
 	}
 
 	// Close the connection (this also releases the lock if unlock failed)

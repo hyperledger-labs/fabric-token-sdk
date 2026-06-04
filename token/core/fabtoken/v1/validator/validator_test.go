@@ -477,6 +477,33 @@ func TestTransferSignatureValidate(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed deserializing issuer")
 	})
 
+	t.Run("SameOwnerCachesVerifier", func(t *testing.T) {
+		deserializer := &mock.Deserializer{}
+		sigProvider := &mock.SignatureProvider{}
+		ta := &actions.TransferAction{
+			Inputs: []*actions.TransferActionInput{
+				{Input: &actions.Output{Owner: []byte("owner1")}},
+				{Input: &actions.Output{Owner: []byte("owner1")}},
+				{Input: &actions.Output{Owner: []byte("owner1")}},
+			},
+			Outputs: []*actions.Output{
+				{Owner: []byte("owner2")},
+			},
+		}
+		deserializer.GetOwnerVerifierReturns(&mock.Verifier{}, nil)
+		sigProvider.HasBeenSignedByReturns([]byte("sig"), nil)
+		c := &validator.Context{
+			TransferAction:    ta,
+			Deserializer:      deserializer,
+			SignatureProvider: sigProvider,
+			Logger:            logger,
+			PP:                pp,
+		}
+		err := validator.TransferSignatureValidate(ctx, c)
+		require.NoError(t, err)
+		assert.Equal(t, 1, deserializer.GetOwnerVerifierCallCount(), "GetOwnerVerifier should be called only once for repeated same owner")
+	})
+
 	t.Run("RedeemIssuerSignatureError", func(t *testing.T) {
 		deserializer := &mock.Deserializer{}
 		sigProvider := &mock.SignatureProvider{}
@@ -972,10 +999,7 @@ func BenchmarkValidatorTransfer(b *testing.B) {
 		b.Run(tc.Name, func(b *testing.B) {
 			n := int(benchmark2.SetupSamples()) // #nosec G115
 			if n == 0 {
-				n = b.N
-				if n > 1000 {
-					n = 1000
-				}
+				n = min(b.N, 1000)
 			}
 			env, err := newBenchmarkValidatorEnv(n, tc.BenchmarkCase, false)
 			require.NoError(b, err)
@@ -1029,10 +1053,7 @@ func BenchmarkValidatorIssue(b *testing.B) {
 		b.Run(tc.Name, func(b *testing.B) {
 			n := int(benchmark2.SetupSamples()) // #nosec G115
 			if n == 0 {
-				n = b.N
-				if n > 1000 {
-					n = 1000
-				}
+				n = min(b.N, 1000)
 			}
 			env, err := newBenchmarkValidatorEnv(n, tc.BenchmarkCase, true)
 			require.NoError(b, err)

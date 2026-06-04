@@ -208,7 +208,7 @@ func RequestPolicyIdentity(context view.Context, policy string, ids []view.Ident
 	return pseudonymBoxed.(view.Identity), nil
 }
 
-func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
+func (f *RequestRecipientIdentityView) Call(context view.Context) (any, error) {
 	results := make([]token.Identity, len(f.Recipients))
 	local := make([]bool, len(f.Recipients))
 	var err error
@@ -468,7 +468,7 @@ func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet str
 	return id.(view.Identity), nil
 }
 
-func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
+func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (any, error) {
 	session := session2.NewTypedSessionFromContext(context)
 	recipientRequest := &RecipientRequest{}
 	if err := session.ReceiveTyped(TypeRecipientRequest, recipientRequest); err != nil {
@@ -745,7 +745,7 @@ func ExchangeRecipientIdentities(context view.Context, walletID string, recipien
 	return ids.([]view.Identity)[0], ids.([]view.Identity)[1], nil
 }
 
-func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
+func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (any, error) {
 	ts, err := token.GetManagementService(context, token.WithTMSID(f.TMSID))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get token management service")
@@ -852,7 +852,7 @@ func RespondExchangeRecipientIdentities(context view.Context) (view.Identity, vi
 	return ids.([]view.Identity)[0], ids.([]view.Identity)[1], nil
 }
 
-func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
+func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (any, error) {
 	session := session2.NewTypedSessionFromContext(context)
 
 	request := &ExchangeRecipientRequest{}

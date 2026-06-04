@@ -83,7 +83,7 @@ type SetKVSEntryView struct {
 	*KVSEntry
 }
 
-func (s *SetKVSEntryView) Call(context view.Context) (interface{}, error) {
+func (s *SetKVSEntryView) Call(context view.Context) (any, error) {
 	assert.NoError(GetKVS(context).Put(context.Context(), s.Key, s.Value), "failed to put in KVS [%s:%s]", s.Key, s.Value)
 
 	return nil, nil
@@ -109,7 +109,7 @@ type SetSpendableFlagView struct {
 	*SetSpendableFlag
 }
 
-func (s *SetSpendableFlagView) Call(context view.Context) (interface{}, error) {
+func (s *SetSpendableFlagView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(s.TMSID))
 	assert.NoError(err, "failed getting management service")
 	assert.NotNil(tms, "failed getting token management service [%s]", s.TMSID)

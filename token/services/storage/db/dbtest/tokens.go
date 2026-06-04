@@ -751,7 +751,7 @@ func TCertification(t *testing.T, db TestTokenDB) {
 			}
 
 			assert.NoError(t, db.StoreCertifications(ctx, map[*token.ID][]byte{
-				tokenID: []byte(fmt.Sprintf("certification_%d", i)),
+				tokenID: fmt.Appendf(nil, "certification_%d", i),
 			}))
 			assert.True(t, db.ExistsCertification(ctx, tokenID))
 			certifications, err := db.GetCertifications(ctx, []*token.ID{tokenID})

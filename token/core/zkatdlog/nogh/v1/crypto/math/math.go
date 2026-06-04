@@ -97,7 +97,7 @@ func CheckBaseElement[E BaseElement](element E, curveID mathlib.CurveID) (err er
 	return nil
 }
 
-func isNilInterface(i interface{}) bool {
+func isNilInterface(i any) bool {
 	if i == nil {
 		return true
 	}

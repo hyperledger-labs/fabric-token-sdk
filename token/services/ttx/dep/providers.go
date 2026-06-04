@@ -18,11 +18,11 @@ import (
 )
 
 var (
-	networkProviderType         = reflect.TypeOf((*NetworkProvider)(nil))
-	tmsProviderType             = reflect.TypeOf((*TokenManagementServiceProvider)(nil))
-	networkIdentityProviderType = reflect.TypeOf((*NetworkIdentityProvider)(nil))
-	transactionDBProviderType   = reflect.TypeOf((*TransactionDBProvider)(nil))
-	auditDBProviderType         = reflect.TypeOf((*AuditDBProvider)(nil))
+	networkProviderType         = reflect.TypeFor[*NetworkProvider]()
+	tmsProviderType             = reflect.TypeFor[*TokenManagementServiceProvider]()
+	networkIdentityProviderType = reflect.TypeFor[*NetworkIdentityProvider]()
+	transactionDBProviderType   = reflect.TypeFor[*TransactionDBProvider]()
+	auditDBProviderType         = reflect.TypeFor[*AuditDBProvider]()
 )
 
 // Network defines the subset of function of the network service needed by the ttx service.

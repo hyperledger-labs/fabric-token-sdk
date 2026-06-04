@@ -18,7 +18,7 @@ type BigInt struct {
 }
 
 // Scan implements the sql.Scanner interface for reading from the DB
-func (b *BigInt) Scan(value interface{}) error {
+func (b *BigInt) Scan(value any) error {
 	if value == nil {
 		b.Int = new(big.Int)
 		b.SetInt64(0)

@@ -15,10 +15,10 @@ import (
 // NewPage creates a new page where the id is a string
 func NewPage[V any](results collections.Iterator[*V], pagination driver.Pagination) (*driver.PageIterator[*V], error) {
 	switch p := pagination.(type) {
-	case *keyset[int, interface{}]:
+	case *keyset[int, any]:
 
 		return newKeysetTypedPage[int, V](results, p)
-	case *keyset[string, interface{}]:
+	case *keyset[string, any]:
 
 		return newKeysetTypedPage[string, V](results, p)
 	case *offset, *empty, *none:
@@ -35,7 +35,7 @@ func newPage[V any](results iterators.Iterator[*V], pagination driver.Pagination
 
 // NewTypedPage creates a new page from the results and the previous pagination
 func newKeysetTypedPage[I comparable, V any](results iterators.Iterator[*V], pagination driver.Pagination) (*driver.PageIterator[*V], error) {
-	p, ok := pagination.(*keyset[I, interface{}])
+	p, ok := pagination.(*keyset[I, any])
 	if !ok {
 		return nil, nil
 	}

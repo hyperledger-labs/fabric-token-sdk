@@ -20,7 +20,7 @@ type Configuration interface {
 
 	// UnmarshalKey decodes the configuration value associated with a key into a provided struct or interface.
 	// The key is typically relative to the TMS configuration block.
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 
 	// GetString retrieves the value for a key as a string.
 	GetString(key string) string

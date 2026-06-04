@@ -46,7 +46,7 @@ type PolicyLockView struct {
 }
 
 // Call implements view.View.
-func (lv *PolicyLockView) Call(context view.Context) (interface{}, error) {
+func (lv *PolicyLockView) Call(context view.Context) (any, error) {
 	// Collect a policy identity from all co-owner parties.
 	recipient, err := bptx.RequestRecipientIdentity(context, lv.Policy, lv.PolicyParties, token2.WithTMSIDPointer(lv.TMSID))
 	assert.NoError(err, "failed requesting policy recipient identity")
@@ -129,7 +129,7 @@ type PolicySpendView struct {
 }
 
 // Call implements view.View.
-func (r *PolicySpendView) Call(context view.Context) (interface{}, error) {
+func (r *PolicySpendView) Call(context view.Context) (any, error) {
 	serviceOpts := ServiceOpts(r.TMSID)
 	recipient, err := ttx.RequestRecipientIdentity(context, r.Recipient, serviceOpts...)
 	assert.NoError(err, "failed getting recipient")
@@ -188,7 +188,7 @@ func (f *PolicySpendViewFactory) NewView(in []byte) (view.View, error) {
 type PolicyAcceptSpendView struct{}
 
 // Call implements view.View.
-func (m *PolicyAcceptSpendView) Call(context view.Context) (interface{}, error) {
+func (m *PolicyAcceptSpendView) Call(context view.Context) (any, error) {
 	request, err := bptx.ReceiveSpendRequest(context)
 	assert.NoError(err, "failed receiving policy spend request")
 	assert.NotNil(request.Token, "request doesn't contain a token")
@@ -259,7 +259,7 @@ type PolicyOwnedBalanceView struct {
 }
 
 // Call implements view.View.
-func (b *PolicyOwnedBalanceView) Call(context view.Context) (interface{}, error) {
+func (b *PolicyOwnedBalanceView) Call(context view.Context) (any, error) {
 	tms, err := token2.GetManagementService(context, ServiceOpts(b.TMSID)...)
 	if err != nil {
 		return nil, fmt.Errorf("failed getting management service: %w", err)

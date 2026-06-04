@@ -14,7 +14,7 @@ import (
 )
 
 // UnmarshalWithDisallowUnknownFields is json.Unmarshal with unknown fields disallowed.
-func UnmarshalWithDisallowUnknownFields(data []byte, v interface{}) error {
+func UnmarshalWithDisallowUnknownFields(data []byte, v any) error {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 

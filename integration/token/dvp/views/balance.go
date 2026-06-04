@@ -31,7 +31,7 @@ type BalanceView struct {
 	*BalanceQuery
 }
 
-func (b *BalanceView) Call(context view.Context) (interface{}, error) {
+func (b *BalanceView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(b.TMSID))
 	assert.NoError(err)
 	wallet, err := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)
