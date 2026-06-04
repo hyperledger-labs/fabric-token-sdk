@@ -66,18 +66,16 @@ func TestFully(t *testing.T, tokenLockDB driver3.TokenLockStore, tokenTransactio
 	require.NoError(t, tx.AddTokenRequest(ctx, "apple", []byte("apple_tx_content"), nil, nil, driver2.PPHash("tr")))
 	require.NoError(t, tx.Commit())
 
-	// Note: The Lock operation will fail with a foreign key constraint error if the token
-	// doesn't exist in the tokens table. This is the expected behavior after adding the
-	// foreign key constraint to enforce referential integrity.
-	//
-	// In a real scenario, tokens must be created in the token store before they can be locked.
-	// This test demonstrates that attempting to lock a non-existent token is now properly rejected.
+	// Lock a token - this will succeed even if the token doesn't exist in the tokens table
+	// because we removed the foreign key constraint to avoid schema initialization order issues.
+	// In production, the application logic ensures tokens exist before they are locked.
 	err = tokenLockDB.Lock(ctx, &token.ID{TxId: "apple", Index: 0}, "pineapple")
+	require.NoError(t, err, "Lock should succeed")
 
-	// The lock should fail because the token doesn't exist in the tokens table
-	// This validates that the foreign key constraint is working correctly
-	require.Error(t, err, "Lock should fail for non-existent token due to foreign key constraint")
+	// Unlock the token by transaction ID
+	err = tokenLockDB.UnlockByTxID(ctx, "pineapple")
+	require.NoError(t, err, "Unlock should succeed")
 
-	// Cleanup should still work even if no locks exist
+	// Cleanup should work correctly
 	require.NoError(t, tokenLockDB.Cleanup(ctx, 1*time.Second))
 }

@@ -86,6 +86,10 @@ func (db *TokenLockStore) UnlockByTxID(ctx context.Context, consumerTxID transac
 }
 
 func (db *TokenLockStore) GetSchema() string {
+	// Note: We intentionally do not add a FOREIGN KEY constraint to the tokens table here.
+	// This avoids schema initialization order issues where TokenLockStore might be created
+	// before TokenStore. The application logic ensures referential integrity by only locking
+	// tokens that exist in the tokens table.
 	return fmt.Sprintf(`
 		-- TokenLocks
 		CREATE TABLE IF NOT EXISTS %s (
@@ -93,11 +97,9 @@ func (db *TokenLockStore) GetSchema() string {
 			idx INT NOT NULL,
 			consumer_tx_id TEXT NOT NULL,
 			created_at TIMESTAMP NOT NULL,
-			PRIMARY KEY(tx_id, idx),
-			FOREIGN KEY (tx_id, idx) REFERENCES %s (tx_id, idx)
+			PRIMARY KEY(tx_id, idx)
 		);`,
 		db.Table.TokenLocks,
-		db.Table.Tokens,
 	)
 }
 
