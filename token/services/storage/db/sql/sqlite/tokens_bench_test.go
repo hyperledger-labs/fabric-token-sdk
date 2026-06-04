@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
-	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 	driver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 	tokentype "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	_ "modernc.org/sqlite"
 )
@@ -53,16 +53,16 @@ func seedBenchTokens(b *testing.B, store *sqlcommon.TokenStore, n int) {
 	ctx := context.Background()
 	for i := range n {
 		rec := driver.TokenRecord{
-			TxID:          fmt.Sprintf("tx%d", i),
-			Index:         0,
-			OwnerRaw:      []byte("wallet0"),
-			OwnerType:     "idemix",
-			OwnerIdentity: []byte("wallet0"),
-			OwnerWalletID: "wallet0",
-			Ledger:        []byte("ledger"),
+			TxID:           fmt.Sprintf("tx%d", i),
+			Index:          0,
+			OwnerRaw:       []byte("wallet0"),
+			OwnerType:      "idemix",
+			OwnerIdentity:  []byte("wallet0"),
+			OwnerWalletID:  "wallet0",
+			Ledger:         []byte("ledger"),
 			LedgerMetadata: []byte("meta"),
-			Quantity:      "0x64",
-			Type:          tokentype.Type("GOLD"),
+			Quantity:       "0x64",
+			Type:           tokentype.Type("GOLD"),
 		}
 		if err := store.StoreToken(ctx, rec, []string{"wallet0"}); err != nil {
 			b.Fatalf("seed failed at i=%d: %v", i, err)
