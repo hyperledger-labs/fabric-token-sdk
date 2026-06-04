@@ -190,17 +190,18 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 	if len(tokenType) > 0 {
 		branch1Conds = append(branch1Conds, cond.Eq("token_type", tokenType))
 	}
-	// Both branches select ownership.wallet_id as the trailing column. It
-	// isn't part of the iterator output but is used as the dedup key so a
-	// (token, ownership) pair appearing in both branches (when walletID
-	// matches both tokens.owner_wallet_id and ownership.wallet_id of the
-	// same row) is emitted once. Pre-PR semantics yield one row per
-	// matching (token, ownership) pair, including duplicates per token
-	// when multiple ownership rows match (e.g. shared-ownership tokens).
+	// Both branches select amount and ownership.wallet_id as trailing columns.
+	// amount is used for ORDER BY (numeric sorting), and wallet_id is used as
+	// the dedup key so a (token, ownership) pair appearing in both branches
+	// (when walletID matches both tokens.owner_wallet_id and ownership.wallet_id
+	// of the same row) is emitted once. Pre-PR semantics yield one row per
+	// matching (token, ownership) pair, including duplicates per token when
+	// multiple ownership rows match (e.g. shared-ownership tokens).
 	branch1 := q.Select().
 		Fields(
 			tokenTable.Field("tx_id"), tokenTable.Field("idx"),
 			common3.FieldName("owner_raw"), common3.FieldName("token_type"), common3.FieldName("quantity"),
+			tokenTable.Field("amount"),
 			ownershipTable.Field("wallet_id"),
 		).
 		From(tokenTable.Join(ownershipTable, joinCond)).
@@ -222,6 +223,7 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 		Fields(
 			tokenTable.Field("tx_id"), tokenTable.Field("idx"),
 			common3.FieldName("owner_raw"), common3.FieldName("token_type"), common3.FieldName("quantity"),
+			tokenTable.Field("amount"),
 			ownershipTable.Field("wallet_id"),
 		).
 		From(tokenTable.Join(ownershipTable, joinCond)).
@@ -240,9 +242,10 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 
 	query, args := sb.Build()
 
-	// Order by quantity descending to get largest tokens first
+	// Order by amount descending to get largest tokens first
 	// This helps the selector reach the target amount with fewer tokens
-	query += " ORDER BY quantity DESC"
+	// Using 'amount' (NUMERIC) instead of 'quantity' (TEXT) for proper numeric sorting
+	query += " ORDER BY amount DESC"
 
 	// Add LIMIT clause if specified (for security and performance)
 	if limit > 0 {
@@ -270,11 +273,12 @@ func (db *TokenStore) UnspentTokensIteratorBy(ctx context.Context, walletID stri
 // ownership) pairs (e.g. shared-ownership tokens with multiple wallets in
 // the ownership table) are preserved — they have different keys.
 //
-// The trailing wallet_id column is read for the dedup key only and is not
-// surfaced on token.UnspentToken. ownership.wallet_id can be NULL when the
-// LEFT JOIN finds no matching ownership row (a tokens row with
-// owner_wallet_id set but no entry in the ownership table — StoreToken
-// allows that when owners is empty), so it is scanned as sql.NullString.
+// The amount column is used for ORDER BY (numeric sorting) but not surfaced
+// in the output. The trailing wallet_id column is read for the dedup key only
+// and is not surfaced on token.UnspentToken. ownership.wallet_id can be NULL
+// when the LEFT JOIN finds no matching ownership row (a tokens row with
+// owner_wallet_id set but no entry in the ownership table — StoreToken allows
+// that when owners is empty), so it is scanned as sql.NullString.
 type dedupedTokenRowsIterator struct {
 	rows *sql.Rows
 	seen map[string]struct{}
@@ -288,7 +292,8 @@ func (it *dedupedTokenRowsIterator) Next() (*token.UnspentToken, error) {
 	for it.rows.Next() {
 		var t token.UnspentToken
 		var ownerID sql.NullString
-		if err := it.rows.Scan(&t.Id.TxId, &t.Id.Index, &t.Owner, &t.Type, &t.Quantity, &ownerID); err != nil {
+		var amount string // amount field for ORDER BY, not used in output
+		if err := it.rows.Scan(&t.Id.TxId, &t.Id.Index, &t.Owner, &t.Type, &t.Quantity, &amount, &ownerID); err != nil {
 			return nil, err
 		}
 		// "\x00" prefix on a Valid wallet_id can never collide with the
