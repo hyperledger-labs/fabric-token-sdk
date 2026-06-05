@@ -455,8 +455,8 @@ func prepareIssueRequest(pp *v1setup.PublicParams, auditor *audit.Auditor, setup
 		},
 	}
 
-	// Auditor check
-	err = auditor.Check(context.Background(), ir, requestMetadata, "1", nil)
+	// Auditor check - issues have no inputs, so pass empty map
+	err = auditor.Check(context.Background(), ir, requestMetadata, "1", map[*token2.ID]*token2.Token{})
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "auditor check failed")
 	}
@@ -585,7 +585,31 @@ func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1setup.PublicParams, au
 	for i := range benchCase.NumInputs {
 		tokns[1] = append(tokns[1], inputsForTransfer2[i])
 	}
-	err = auditor.Check(context.Background(), ar, metadata, "2", nil)
+
+	// Build auditTokens map from both transfers' inputs
+	auditTokens := make(map[*token2.ID]*token2.Token)
+	// Add inputs from first transfer
+	for i, inputMeta := range trmetadata1.Actions[0].TransferMetadata.Inputs {
+		if inputMeta.TokenID != nil {
+			auditTokens[inputMeta.TokenID] = &token2.Token{
+				Type:     "ABC",
+				Quantity: token2.NewQuantityFromUInt64(uint64(i*10 + 500)).Hex(),
+				Owner:    inputsForTransfer1[i].Owner,
+			}
+		}
+	}
+	// Add inputs from second transfer
+	for i, inputMeta := range trmetadata2.Actions[0].TransferMetadata.Inputs {
+		if inputMeta.TokenID != nil {
+			auditTokens[inputMeta.TokenID] = &token2.Token{
+				Type:     "ABC",
+				Quantity: token2.NewQuantityFromUInt64(uint64(i*10 + 500)).Hex(),
+				Owner:    inputsForTransfer2[i].Owner,
+			}
+		}
+	}
+
+	err = auditor.Check(context.Background(), ar, metadata, "2", auditTokens)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -658,10 +682,12 @@ func prepareTransfer(
 
 	// prepare inputs
 	inValues := make([]*math.Zr, benchCase.NumInputs)
+	inValuesUint64 := make([]uint64, benchCase.NumInputs)
 	sumInputs := uint64(0)
 	for i := range inValues {
 		v := uint64(i*10 + 500)
 		sumInputs += v
+		inValuesUint64[i] = v
 		inValues[i] = math2.NewCachedZrFromInt(c, v)
 	}
 
@@ -845,7 +871,18 @@ func prepareTransfer(
 			{ActionID: 0, TransferMetadata: transferMetadata},
 		},
 	}
-	err = auditor.Check(context.Background(), tr, tokenRequestMetadata, "1", nil)
+
+	// Build auditTokens map from input tokens
+	auditTokens := make(map[*token2.ID]*token2.Token)
+	for i, tok := range tokens {
+		auditTokens[ids[i]] = &token2.Token{
+			Type:     "ABC",
+			Quantity: token2.NewQuantityFromUInt64(inValuesUint64[i]).Hex(),
+			Owner:    tok.Owner,
+		}
+	}
+
+	err = auditor.Check(context.Background(), tr, tokenRequestMetadata, "1", auditTokens)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

@@ -172,8 +172,61 @@ func testRegression(t *testing.T, configDir string) {
 			err = tokenRequest.FromBytes(reqRaw)
 			require.NoError(t, err, "failed to deserialize token request for test case %s", testCaseKey)
 
-			// Perform auditor check
-			err = auditor.Check(t.Context(), tokenRequest, requestMetadata, driver.TokenRequestAnchor(tokenData.TXID), nil)
+			// Build auditTokens map from stored inputs and metadata
+			auditTokens := make(map[*tk.ID]*tk.Token)
+			if len(tokenData.Inputs) > 0 {
+				// Process each action's inputs
+				for actionIdx, actionInputs := range tokenData.Inputs {
+					if actionIdx >= len(requestMetadata.Actions) {
+						continue
+					}
+					actionMetadata := requestMetadata.Actions[actionIdx]
+
+					// Get the appropriate metadata based on action type
+					var inputMetadataList []*driver.TransferInputMetadata
+					if actionMetadata.TransferMetadata != nil {
+						inputMetadataList = actionMetadata.TransferMetadata.Inputs
+					}
+
+					// Process each input in this action
+					for inputIdx, inputRaw := range actionInputs {
+						if inputRaw == nil {
+							continue
+						}
+
+						// Deserialize the token
+						tok := &tokn.Token{}
+						if err := tok.Deserialize(inputRaw); err != nil {
+							require.NoError(t, err, "failed to deserialize input token [%d][%d] for test case %s", actionIdx, inputIdx, testCaseKey)
+						}
+
+						// Get token ID from metadata
+						var tokenID *tk.ID
+						if inputIdx < len(inputMetadataList) && inputMetadataList[inputIdx].TokenID != nil {
+							tokenID = inputMetadataList[inputIdx].TokenID
+						} else {
+							// Fallback: create a token ID from indices
+							tokenID = &tk.ID{
+								TxId:  tokenData.TXID,
+								Index: uint64(inputIdx),
+							}
+						}
+
+						// Add to auditTokens map
+						// Note: We use "ABC" as default type and "0" as quantity since we don't have
+						// the actual values in the serialized token. The auditor will validate
+						// the token commitments, not these placeholder values.
+						auditTokens[tokenID] = &tk.Token{
+							Type:     "ABC",
+							Quantity: "0",
+							Owner:    tok.Owner,
+						}
+					}
+				}
+			}
+
+			// Perform auditor check with auditTokens
+			err = auditor.Check(t.Context(), tokenRequest, requestMetadata, driver.TokenRequestAnchor(tokenData.TXID), auditTokens)
 			require.NoError(t, err, "auditor check failed for token request for test case %s", testCaseKey)
 		}
 	}
