@@ -38,13 +38,14 @@ func TestAuditor(t *testing.T) {
 	// audit information is computed correctly tests a successful audit of a valid transfer request.
 	t.Run("audit information is computed correctly", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, metadata, _ := createTransfer(t, pp)
+		transfer, metadata, inputs := createTransfer(t, pp)
 		raw, err := transfer.Serialize()
 		require.NoError(t, err)
 
-		// Create audit tokens map from inputs - we need to get the token metadata from somewhere
-		// For now, pass nil since the test was working before with nil
-		err = auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}}, "1", nil)
+		// Build auditTokens map from inputs
+		auditTokens := buildAuditTokensFromInputs(t, metadata, inputs)
+
+		err = auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}}, "1", auditTokens)
 		require.NoError(t, err)
 	})
 
@@ -52,14 +53,18 @@ func TestAuditor(t *testing.T) {
 	// does not match the commitment in the transfer output.
 	t.Run("token info does not match output", func(t *testing.T) {
 		fakeSigningIdentity, pp, auditor := setupAuditorTest(t)
-		transfer, metadata, _ := createTransferWithBogusOutput(t, pp)
+		transfer, metadata, inputs := createTransferWithBogusOutput(t, pp)
 		raw, err := transfer.Serialize()
 		require.NoError(t, err)
+
+		// Build auditTokens map from inputs
+		auditTokens := buildAuditTokensFromInputs(t, metadata, inputs)
+
 		err = auditor.Check(
 			t.Context(),
 			&driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}},
 			&driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}},
-			"1", nil,
+			"1", auditTokens,
 		)
 		require.Error(t, err)
 		require.Equal(t, 0, fakeSigningIdentity.SignCallCount())
@@ -69,13 +74,17 @@ func TestAuditor(t *testing.T) {
 	// does not match the input token's owner identity.
 	t.Run("sender audit info does not match input", func(t *testing.T) {
 		fakeSigningIdentity, pp, auditor := setupAuditorTest(t)
-		transfer, metadata, _ := createTransfer(t, pp)
+		transfer, metadata, inputs := createTransfer(t, pp)
 		// test idemix info
 		_, auditInfoRaw := getIdemixInfo(t, "./testdata/bls12_381_bbs/idemix")
 		metadata.Inputs[0].Senders[0].AuditInfo = auditInfoRaw
 		raw, err := transfer.Serialize()
 		require.NoError(t, err)
-		err = auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}}, "1", nil)
+
+		// Build auditTokens map from inputs
+		auditTokens := buildAuditTokensFromInputs(t, metadata, inputs)
+
+		err = auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}}, "1", auditTokens)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "owner at index [0] does not match the provided opening")
 		require.NotContains(t, err.Error(), "attribute mistmatch")
@@ -86,13 +95,17 @@ func TestAuditor(t *testing.T) {
 	// audit information does not match the output token's owner identity.
 	t.Run("recipient audit info does not match output", func(t *testing.T) {
 		fakeSigningIdentity, pp, auditor := setupAuditorTest(t)
-		transfer, metadata, _ := createTransfer(t, pp)
+		transfer, metadata, inputs := createTransfer(t, pp)
 		// test idemix info
 		_, auditInfoRaw := getIdemixInfo(t, "./testdata/bls12_381_bbs/idemix")
 		metadata.Outputs[0].OutputAuditInfo = auditInfoRaw
 		raw, err := transfer.Serialize()
 		require.NoError(t, err)
-		err = auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}}, "1", nil)
+
+		// Build auditTokens map from inputs
+		auditTokens := buildAuditTokensFromInputs(t, metadata, inputs)
+
+		err = auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}}, "1", auditTokens)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "owner at index [0] does not match the provided opening")
 		require.Contains(t, err.Error(), "does not match the provided opening")
@@ -105,7 +118,8 @@ func TestAuditor(t *testing.T) {
 		ia, metadata := createIssue(t, pp)
 		raw, err := ia.Serialize()
 		require.NoError(t, err)
-		err = auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: metadata}}}, "1", nil)
+		// Issues have no inputs, so pass empty map
+		err = auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: metadata}}}, "1", map[*token3.ID]*token3.Token{})
 		require.NoError(t, err)
 	})
 }
@@ -169,7 +183,7 @@ func TestAuditor_Check_Errors(t *testing.T) {
 	// issues cannot be retrieved.
 	t.Run("Check issue audit info error", func(t *testing.T) {
 		_, _, auditor := setupAuditorTest(t)
-		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte{1, 2, 3}}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: &driver.IssueMetadata{}}}}, "1", nil)
+		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte{1, 2, 3}}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: &driver.IssueMetadata{}}}}, "1", map[*token3.ID]*token3.Token{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed checking issue action")
 	})
@@ -181,7 +195,7 @@ func TestAuditor_Check_Errors(t *testing.T) {
 		ia, meta := createIssue(t, pp)
 		ia.Outputs[0].Data = pp.PedersenGenerators[0] // wrong data
 		raw, _ := ia.Serialize()
-		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: meta}}}, "1", nil)
+		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: meta}}}, "1", map[*token3.ID]*token3.Token{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "output at index [0] does not match the provided opening")
 	})
@@ -193,7 +207,7 @@ func TestAuditor_Check_Errors(t *testing.T) {
 		ia, meta := createIssue(t, pp)
 		meta.Issuer.AuditInfo = []byte("wrong")
 		raw, _ := ia.Serialize()
-		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: meta}}}, "1", nil)
+		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: raw}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, IssueMetadata: meta}}}, "1", map[*token3.ID]*token3.Token{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed checking issuer identity")
 	})
@@ -202,7 +216,7 @@ func TestAuditor_Check_Errors(t *testing.T) {
 	// transfers cannot be retrieved.
 	t.Run("Check transfer audit info error", func(t *testing.T) {
 		_, _, auditor := setupAuditorTest(t)
-		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte{1, 2, 3}}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: &driver.TransferMetadata{}}}}, "1", nil)
+		err := auditor.Check(t.Context(), &driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte{1, 2, 3}}}}, &driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: &driver.TransferMetadata{}}}}, "1", map[*token3.ID]*token3.Token{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed checking transfer action")
 	})
@@ -228,7 +242,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 					{ActionID: 0, IssueMetadata: &driver.IssueMetadata{}},
 				},
 			},
-			"1", nil,
+			"1", map[*token3.ID]*token3.Token{},
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "action count mismatch")
@@ -251,7 +265,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 					{ActionID: 5, IssueMetadata: &driver.IssueMetadata{}},
 				},
 			},
-			"1", nil,
+			"1", map[*token3.ID]*token3.Token{},
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "incorrect ActionID")
@@ -273,7 +287,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 					{ActionID: 0, TransferMetadata: &driver.TransferMetadata{}},
 				},
 			},
-			"1", nil,
+			"1", map[*token3.ID]*token3.Token{},
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "ISSUE but metadata has no IssueMetadata")
@@ -294,7 +308,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 					{ActionID: 0, IssueMetadata: &driver.IssueMetadata{}},
 				},
 			},
-			"1", nil,
+			"1", map[*token3.ID]*token3.Token{},
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "TRANSFER but metadata has no TransferMetadata")
@@ -319,7 +333,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 					},
 				},
 			},
-			"1", nil,
+			"1", map[*token3.ID]*token3.Token{},
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "also has TransferMetadata")
@@ -338,7 +352,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 					{ActionID: 0, IssueMetadata: &driver.IssueMetadata{}},
 				},
 			},
-			"1", nil,
+			"1", map[*token3.ID]*token3.Token{},
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "action at index [0] is nil")
@@ -357,7 +371,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 			&driver.TokenRequestMetadata{
 				Actions: []*driver.ActionMetadataEntry{nil},
 			},
-			"1", nil,
+			"1", map[*token3.ID]*token3.Token{},
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "metadata at index [0] is nil")
@@ -368,12 +382,15 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
 		// Create valid issue and transfer
 		ia, issueMeta := createIssue(t, pp)
-		ta, transferMeta, _ := createTransfer(t, pp)
+		ta, transferMeta, inputs := createTransfer(t, pp)
 
 		issueRaw, err := ia.Serialize()
 		require.NoError(t, err)
 		transferRaw, err := ta.Serialize()
 		require.NoError(t, err)
+
+		// Build auditTokens map from transfer inputs
+		auditTokens := buildAuditTokensFromInputs(t, transferMeta, inputs)
 
 		// Test with correct order: issue then transfer
 		err = auditor.Check(
@@ -390,7 +407,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 					{ActionID: 1, TransferMetadata: transferMeta},
 				},
 			},
-			"1", nil,
+			"1", auditTokens,
 		)
 		require.NoError(t, err)
 	})
@@ -415,7 +432,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 					{ActionID: 1, IssueMetadata: issueMeta},
 				},
 			},
-			"1", nil,
+			"1", map[*token3.ID]*token3.Token{},
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "incorrect ActionID [1]")
@@ -423,7 +440,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 	// Test sender count validation - multiple senders
 	t.Run("multiple senders in input metadata", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, metadata, _ := createTransfer(t, pp)
+		transfer, metadata, inputs := createTransfer(t, pp)
 
 		// Add a second sender to the first input
 		id2, auditInfoRaw2 := getIdemixInfo(t, "./testdata/bls12_381_bbs/idemix")
@@ -434,11 +451,15 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 
 		raw, err := transfer.Serialize()
 		require.NoError(t, err)
+
+		// Build auditTokens map from inputs
+		auditTokens := buildAuditTokensFromInputs(t, metadata, inputs)
+
 		err = auditor.Check(
 			t.Context(),
 			&driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}},
 			&driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}},
-			"1", nil,
+			"1", auditTokens,
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must have exactly one sender")
@@ -448,18 +469,22 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 	// Test sender count validation - no senders
 	t.Run("no senders in input metadata", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, metadata, _ := createTransfer(t, pp)
+		transfer, metadata, inputs := createTransfer(t, pp)
 
 		// Remove all senders from the first input
 		metadata.Inputs[0].Senders = []*driver.AuditableIdentity{}
 
 		raw, err := transfer.Serialize()
 		require.NoError(t, err)
+
+		// Build auditTokens map from inputs
+		auditTokens := buildAuditTokensFromInputs(t, metadata, inputs)
+
 		err = auditor.Check(
 			t.Context(),
 			&driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}},
 			&driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}},
-			"1", nil,
+			"1", auditTokens,
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must have exactly one sender")
@@ -469,7 +494,7 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 	// Test sender identity mismatch
 	t.Run("sender identity does not match token owner", func(t *testing.T) {
 		_, pp, auditor := setupAuditorTest(t)
-		transfer, metadata, _ := createTransfer(t, pp)
+		transfer, metadata, inputs := createTransfer(t, pp)
 
 		// Change the sender identity to a different one
 		id2, auditInfoRaw2 := getIdemixInfo(t, "./testdata/bls12_381_bbs/idemix")
@@ -480,11 +505,15 @@ func TestAuditor_StructuralValidation(t *testing.T) {
 
 		raw, err := transfer.Serialize()
 		require.NoError(t, err)
+
+		// Build auditTokens map from inputs
+		auditTokens := buildAuditTokensFromInputs(t, metadata, inputs)
+
 		err = auditor.Check(
 			t.Context(),
 			&driver.TokenRequest{Actions: []*driver.TypedAction{{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: raw}}},
 			&driver.TokenRequestMetadata{Actions: []*driver.ActionMetadataEntry{{ActionID: 0, TransferMetadata: metadata}}},
-			"1", nil,
+			"1", auditTokens,
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "sender identity at index [0] does not match token owner")
@@ -713,4 +742,29 @@ func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) *math.G1 {
 	}
 
 	return com
+}
+
+// buildAuditTokensFromInputs creates an auditTokens map from transfer inputs and metadata
+func buildAuditTokensFromInputs(t *testing.T, metadata *driver.TransferMetadata, inputs [][]*token.Token) map[*token3.ID]*token3.Token {
+	t.Helper()
+	auditTokens := make(map[*token3.ID]*token3.Token)
+
+	// Process each action's inputs (in this case, just one action)
+	if len(inputs) > 0 && len(metadata.Inputs) > 0 {
+		for i, tok := range inputs[0] {
+			if i >= len(metadata.Inputs) {
+				break
+			}
+			tokenID := metadata.Inputs[i].TokenID
+			if tokenID != nil {
+				auditTokens[tokenID] = &token3.Token{
+					Type:     "ABC",
+					Quantity: "0", // Placeholder - actual value not needed for these tests
+					Owner:    tok.Owner,
+				}
+			}
+		}
+	}
+
+	return auditTokens
 }
