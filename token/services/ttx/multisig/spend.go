@@ -147,9 +147,13 @@ func (c *RequestSpendView) Call(context view.Context) (any, error) {
 
 	for range counter {
 		logger.DebugfContext(context.Context(), "Wait for answer")
-		// TODO: put a timeout
-		a := <-answerChannel
-		logger.DebugfContext(context.Context(), "Received answer")
+		var a *answer
+		select {
+		case a = <-answerChannel:
+			logger.DebugfContext(context.Context(), "Received answer")
+		case <-context.Context().Done():
+			return nil, errors.Wrapf(context.Context().Err(), "context cancelled while waiting for multisig answer")
+		}
 		if a.err != nil {
 			return nil, errors.Wrapf(a.err, "got failure [%s] from [%s]", a.party.String(), a.err)
 		}
