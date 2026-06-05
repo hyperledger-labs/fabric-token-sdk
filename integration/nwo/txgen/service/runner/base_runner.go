@@ -61,7 +61,7 @@ func (r *BaseRunner) ShutDown() error {
 		return errors.New("runner already down")
 	default:
 		r.logger.Infof("Sending command to shut down runner...")
-		r.shutdown <- struct{}{}
+		close(r.shutdown)
 		r.logger.Infof("Waiting for runner to shut down...")
 		<-r.done
 		r.logger.Infof("Runner successfully shut down")
@@ -83,9 +83,7 @@ func (r *BaseRunner) Start(ctx context.Context) error {
 	go r.printTPS()
 
 	go func() {
-		defer func() {
-			r.done <- struct{}{}
-		}()
+		defer close(r.done)
 		r.logger.Infof("Start suite executions")
 		for {
 			select {
@@ -99,7 +97,7 @@ func (r *BaseRunner) Start(ctx context.Context) error {
 					r.executeSuite(suite)
 				case <-ctx.Done():
 					r.logger.Infof("Context canceled. Shutting down...")
-					r.shutdown <- struct{}{}
+					close(r.shutdown)
 
 					return
 				case <-r.shutdown:

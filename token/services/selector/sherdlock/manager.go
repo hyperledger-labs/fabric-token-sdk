@@ -20,8 +20,10 @@ import (
 const (
 	// stopTimeout is the maximum time to wait for the cleaner goroutine to stop during shutdown.
 	// This prevents indefinite blocking if the goroutine fails to exit cleanly.
-	stopTimeout = 5 * time.Second
+	stopTimeout = 10 * time.Second
 )
+
+var ErrTimeout = errors.New("timeout occurred")
 
 type Manager struct {
 	selectorCache          lazy2.Provider[transaction.ID, TokenSelectorUnlocker]
@@ -102,14 +104,18 @@ func (m *Manager) cleaner(ctx context.Context) {
 }
 
 // Stop cancels the cleaner goroutine and waits for it to exit.
-func (m *Manager) Stop() {
+func (m *Manager) Stop() error {
+	var err error
 	m.stopOnce.Do(func() {
 		m.cancel()
 		select {
 		case <-m.cleanerDone:
 			logger.Debugf("cleaner goroutine stopped successfully")
 		case <-time.After(stopTimeout):
+			err = ErrTimeout
 			logger.Warnf("cleaner goroutine did not stop within timeout")
 		}
 	})
+
+	return err
 }

@@ -37,6 +37,6 @@ func TestManagerUnit(t *testing.T) {
 	})
 
 	t.Run("Stop", func(t *testing.T) {
-		mgr.Stop()
+		require.NoError(t, mgr.Stop())
 	})
 }

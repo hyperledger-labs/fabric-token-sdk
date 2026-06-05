@@ -32,7 +32,7 @@ type LockerProvider interface {
 
 // stoppable is implemented by lockers that have a lifecycle (e.g. inmemory.locker).
 type stoppable interface {
-	Stop()
+	Stop() error
 }
 
 type SelectorService struct {
@@ -76,7 +76,9 @@ func (s *SelectorService) Shutdown() {
 	s.mu.Unlock()
 
 	for _, l := range lockers {
-		l.Stop()
+		if err := l.Stop(); err != nil {
+			logger.Warnf("failed stopping locker: %s", err)
+		}
 	}
 }
 
