@@ -173,6 +173,7 @@ type LocalMembership struct {
 
 	localIdentitiesMutex      sync.RWMutex
 	localIdentities           []*LocalIdentity
+	cachedDefaultIdentifier   string
 	localIdentitiesByName     map[string][]LocalIdentityWithPriority
 	localIdentitiesByIdentity map[string]*LocalIdentity
 	localIdentitiesByConfig   map[string]*LocalIdentity
@@ -338,6 +339,7 @@ func (l *LocalMembership) Load(ctx context.Context, identities []idriver.Configu
 	// init fields
 	l.targetIdentities = targets
 	l.localIdentities = make([]*LocalIdentity, 0)
+	l.cachedDefaultIdentifier = ""
 	l.localIdentitiesByName = make(map[string][]LocalIdentityWithPriority, 0)
 	l.localIdentitiesByConfig = make(map[string]*LocalIdentity, 0)
 
@@ -395,6 +397,8 @@ func (l *LocalMembership) Load(ctx context.Context, identities []idriver.Configu
 				l.logger.Warnf("no default identity can be set among the available identities [%d]", len(l.localIdentities))
 			} else {
 				defaultIdentity.Default = true
+				// firstDefaultIdentifier already honors the anonymity mode, so this is selectable.
+				l.cachedDefaultIdentifier = defaultIdentity.Name
 			}
 			l.logger.Warnf("default identity is [%s]", l.getDefaultIdentifier())
 		} else {
@@ -476,19 +480,9 @@ func (l *LocalMembership) handleConfig(id, typ, url string) {
 }
 
 // getDefaultIdentifier returns the name of the current default identity (may return empty string).
+// The value is cached (see cachedDefaultIdentifier); maintained by addLocalIdentity and Load.
 func (l *LocalMembership) getDefaultIdentifier() string {
-	for _, li := range l.localIdentities {
-		// if we are in anonymous mode skip non-anonymous identities
-		if l.anonymous && !li.Anonymous {
-			continue
-		}
-
-		if li.Default {
-			return li.Name
-		}
-	}
-
-	return ""
+	return l.cachedDefaultIdentifier
 }
 
 // firstDefaultIdentifier returns the first identity that can be used as default under the current
@@ -701,6 +695,12 @@ func (l *LocalMembership) addLocalIdentity(ctx context.Context, config *Identity
 		l.logger.Infof("set default identity to [%s]", name)
 		for _, li := range l.localIdentities {
 			li.Default = false
+		}
+		// Keep the cached default in sync; empty if not selectable under anonymity mode.
+		if !l.anonymous || localIdentity.Anonymous {
+			l.cachedDefaultIdentifier = name
+		} else {
+			l.cachedDefaultIdentifier = ""
 		}
 	}
 
