@@ -198,5 +198,3 @@ func TestConfig_DefaultValues(t *testing.T) {
 			"maxLocksPerTransaction should be <= maxTokensPerSelection")
 	})
 }
-
-// Made with Bob
