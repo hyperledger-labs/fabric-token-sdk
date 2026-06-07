@@ -312,5 +312,3 @@ func TestSelector_ResourceTracking(t *testing.T) {
 		assert.Equal(t, firstLockCount, s.lockAttemptsCount, "lock attempt count should be same for identical selections")
 	})
 }
-
-// Made with Bob
