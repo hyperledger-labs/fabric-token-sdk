@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
 )
 
-<<<<<<< HEAD
 const (
 	// stopTimeout is the maximum time to wait for the cleaner goroutine to stop during shutdown.
 	// This prevents indefinite blocking if the goroutine fails to exit cleanly.
@@ -25,7 +24,7 @@ const (
 )
 
 var ErrTimeout = errors.New("timeout occurred")
-=======
+
 // Config holds all configuration parameters for the Manager
 type Config struct {
 	Fetcher                TokenFetcher
@@ -41,7 +40,6 @@ type Config struct {
 	SelectionTimeout       time.Duration
 	Metrics                *Metrics
 }
->>>>>>> a32362fd (use config struct)
 
 type Manager struct {
 	selectorCache          lazy2.Provider[transaction.ID, TokenSelectorUnlocker]
