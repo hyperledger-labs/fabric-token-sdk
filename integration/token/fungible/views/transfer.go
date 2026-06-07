@@ -94,8 +94,8 @@ func (t *TransferView) Call(context view.Context) (txID any, err error) {
 	for _, action := range t.TransferAction {
 		actionRecipient, err := ttx.RequestRecipientIdentity(context, action.Recipient, ServiceOpts(t.TMSID)...)
 		assert.NoError(err, "failed getting recipient")
-		eID, err := wm.GetEnrollmentID(context.Context(), recipient)
-		assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
+		eID, err := wm.GetEnrollmentID(context.Context(), actionRecipient)
+		assert.NoError(err, "failed to get enrollment id for recipient [%s]", actionRecipient)
 		assert.True(strings.HasPrefix(eID, t.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, t.RecipientEID)
 		additionalRecipients = append(additionalRecipients, actionRecipient)
 	}
