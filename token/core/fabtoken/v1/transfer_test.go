@@ -116,7 +116,7 @@ func TestTransferService(t *testing.T) {
 		}
 		ppm.PublicParametersReturns(pp)
 
-		action, metadata, err := s.Transfer(ctx, "", nil, ids, outputs, &driver.TransferOptions{Attributes: make(map[any]any)})
+		action, metadata, err := s.Transfer(ctx, "", nil, ids, outputs, &driver.TransferOptions{Attributes: make(map[string]any)})
 		require.NoError(t, err)
 		assert.NotNil(t, action)
 		assert.NotNil(t, metadata)
@@ -253,7 +253,7 @@ func TestTransferService(t *testing.T) {
 		}
 
 		opts := &driver.TransferOptions{
-			Attributes: map[any]any{
+			Attributes: map[string]any{
 				ttx.IssuerFSCIdentityKey: "invalid identity type",
 			},
 		}
