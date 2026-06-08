@@ -47,7 +47,7 @@ func TestLookupNamespace(t *testing.T) {
 
 	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if key == TMSPath {
-			*rawVal.(*map[any]any) = map[any]any{
+			*rawVal.(*map[string]any) = map[string]any{
 				"id1": nil,
 				"id2": nil,
 			}
@@ -82,7 +82,7 @@ func TestLookupNamespace(t *testing.T) {
 	tmsID3 := driver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns3"}
 	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if key == TMSPath {
-			*rawVal.(*map[any]any) = map[any]any{
+			*rawVal.(*map[string]any) = map[string]any{
 				"id1": nil,
 				"id3": nil,
 			}
@@ -118,7 +118,7 @@ func TestConfigurationFor(t *testing.T) {
 	tmsID1 := driver.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"}
 	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if key == TMSPath {
-			*rawVal.(*map[any]any) = map[any]any{
+			*rawVal.(*map[string]any) = map[string]any{
 				"id1": nil,
 			}
 
@@ -174,7 +174,7 @@ func TestAddConfiguration(t *testing.T) {
 	// Initial state has "new" (id1 in previous tests, but let's use "new_id" here)
 	cp.UnmarshalKeyStub = func(key string, rawVal any) error {
 		if key == TMSPath {
-			*rawVal.(*map[any]any) = map[any]any{
+			*rawVal.(*map[string]any) = map[string]any{
 				"new_id": nil,
 			}
 

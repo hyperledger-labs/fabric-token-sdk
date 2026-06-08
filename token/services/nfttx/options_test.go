@@ -18,7 +18,7 @@ func TestWithUniqueID(t *testing.T) {
 	opt := WithUniqueID("my-id")
 
 	opts := &token.IssueOptions{
-		Attributes: make(map[any]any),
+		Attributes: make(map[string]any),
 	}
 	err := opt(opts)
 	require.NoError(t, err)

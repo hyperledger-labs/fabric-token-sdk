@@ -58,7 +58,7 @@ type RecipientData = driver.RecipientData
 // IssueOptions contains optional parameters for token issuance operations.
 type IssueOptions struct {
 	// Attributes is a container of generic options that might be driver specific
-	Attributes map[any]any
+	Attributes map[string]any
 }
 
 // compileIssueOptions aggregates multiple IssueOption functions into a single IssueOptions struct.
@@ -77,10 +77,10 @@ func compileIssueOptions(opts ...IssueOption) (*IssueOptions, error) {
 type IssueOption func(*IssueOptions) error
 
 // WithIssueAttribute adds a custom attribute to an issue operation.
-func WithIssueAttribute(attr, value any) IssueOption {
+func WithIssueAttribute(attr string, value any) IssueOption {
 	return func(o *IssueOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = map[any]any{}
+			o.Attributes = map[string]any{}
 		}
 		o.Attributes[attr] = value
 
@@ -96,7 +96,7 @@ func WithIssueMetadata(key string, value []byte) IssueOption {
 // TransferOptions contains optional parameters for token transfer operations.
 type TransferOptions struct {
 	// Attributes is a container of generic options that might be driver specific
-	Attributes map[any]any
+	Attributes map[string]any
 	// Selector is the custom token selector to use. If nil, the default will be used.
 	Selector Selector
 	// TokenIDs to transfer. If empty, the tokens will be selected.
@@ -158,10 +158,10 @@ func WithTokenIDs(ids ...*token.ID) TransferOption {
 }
 
 // WithTransferAttribute adds a custom attribute to a transfer operation.
-func WithTransferAttribute(attr, value any) TransferOption {
+func WithTransferAttribute(attr string, value any) TransferOption {
 	return func(o *TransferOptions) error {
 		if o.Attributes == nil {
-			o.Attributes = make(map[any]any)
+			o.Attributes = make(map[string]any)
 		}
 		o.Attributes[attr] = value
 

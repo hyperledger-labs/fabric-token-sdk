@@ -58,8 +58,8 @@ func NewSuiteExecutor(config UserProviderConfig) (*SuiteExecutor, error) {
 		}),
 		s.C.Provide(digutils.Identity[*web2.Server](), dig.As(new(operations.Server))),
 		s.C.Provide(operations.NewOperationSystem),
-		s.C.Provide(func(o *operations.Options, l operations.OperationsLogger) metrics.Provider {
-			return operations.NewMetricsProvider(o.Metrics, l, true)
+		s.C.Provide(func(o *operations.Options) metrics.Provider {
+			return operations.NewMetricsProvider(o.Metrics, true)
 		}),
 		s.C.Provide(func(mp metrics.Provider) (trace.TracerProvider, error) {
 			tp, err := tracing.NewProviderFromConfig(tracing.Config{
