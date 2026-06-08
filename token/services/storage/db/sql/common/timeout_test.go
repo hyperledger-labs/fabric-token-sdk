@@ -160,5 +160,3 @@ func TestContextInheritance(t *testing.T) {
 	_, ok := timeoutCtx.Deadline()
 	assert.True(t, ok, "Timeout context should have a deadline")
 }
-
-// Made with Bob
