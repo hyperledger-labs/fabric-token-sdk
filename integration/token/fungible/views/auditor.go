@@ -30,6 +30,7 @@ func (a *AuditView) Call(context view.Context) (any, error) {
 	tx, err := ttx.ReceiveTransaction(context, TxOpts(a.TMSID, ttx.WithNoTransactionVerification())...)
 
 	assert.NoError(err, "failed receiving transaction")
+	assert.NotNil(tx, "received transaction is nil")
 	logger.Debugf("AuditView: [%s]", tx.ID())
 
 	w := ttx.MyAuditorWallet(context, ServiceOpts(a.TMSID)...)
