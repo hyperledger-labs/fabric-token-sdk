@@ -6,7 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package topology
 
-import "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+import (
+	"maps"
+
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+)
 
 type Options struct {
 	Mapping map[string]any
@@ -144,19 +148,21 @@ func ToOptions(o *node.Options) *Options {
 	if ok {
 		return res
 	}
-	mapping, ok := opt.(map[any]any)
-	if ok {
-		return Convert(mapping)
+	if mapping, ok := opt.(map[string]any); ok {
+		opts := Convert(mapping)
+		o.Mapping["token"] = opts
+
+		return opts
 	}
 	panic("invalid options")
 }
 
-func Convert(m map[any]any) *Options {
+func Convert(m map[string]any) *Options {
 	opts := &Options{
 		Mapping: map[string]any{},
 	}
-	for k, v := range m["mapping"].(map[any]any) {
-		opts.Mapping[k.(string)] = v
+	if mapping, ok := m["mapping"].(map[string]any); ok {
+		maps.Copy(opts.Mapping, mapping)
 	}
 
 	return opts
