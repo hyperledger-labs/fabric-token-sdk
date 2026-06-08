@@ -36,6 +36,7 @@ func WithShortTimeout(ctx context.Context, config *DBTimeoutConfig) (context.Con
 	if config == nil {
 		config = DefaultDBTimeoutConfig()
 	}
+
 	return context.WithTimeout(ctx, config.ShortOpTimeout)
 }
 
@@ -45,6 +46,7 @@ func WithMediumTimeout(ctx context.Context, config *DBTimeoutConfig) (context.Co
 	if config == nil {
 		config = DefaultDBTimeoutConfig()
 	}
+
 	return context.WithTimeout(ctx, config.MediumOpTimeout)
 }
 
@@ -54,6 +56,7 @@ func WithLongTimeout(ctx context.Context, config *DBTimeoutConfig) (context.Cont
 	if config == nil {
 		config = DefaultDBTimeoutConfig()
 	}
+
 	return context.WithTimeout(ctx, config.LongOpTimeout)
 }
 
@@ -62,5 +65,3 @@ func WithLongTimeout(ctx context.Context, config *DBTimeoutConfig) (context.Cont
 func WithCustomTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(ctx, timeout)
 }
-
-// Made with Bob
