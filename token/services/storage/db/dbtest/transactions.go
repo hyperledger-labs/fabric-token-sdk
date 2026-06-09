@@ -554,7 +554,7 @@ func TAllowsSameTxID(t *testing.T, db driver3.TokenTransactionStore) {
 		TokenType:           "magic",
 		ApplicationMetadata: map[string][]byte{},
 		Amount:              big.NewInt(1),
-		Timestamp:           time.Now(),
+		Timestamp:           time.Now().Add(2 * time.Second),
 	}
 	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
