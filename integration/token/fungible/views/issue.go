@@ -52,14 +52,22 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
 	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient, ServiceOpts(p.TMSID, ttx.WithRecipientWalletID(p.RecipientWalletID))...)
-	assert.NoError(err, "failed getting recipient identity")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting recipient identity")
+	}
 
 	// match recipient EID
 	tms, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
-	assert.NoError(err)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting management service")
+	}
 	eID, err := tms.WalletManager().GetEnrollmentID(context.Context(), recipient)
-	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
-	assert.True(strings.HasPrefix(eID, p.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get enrollment id for recipient [%s]", recipient)
+	}
+	if !strings.HasPrefix(eID, p.RecipientEID) {
+		return nil, errors.Errorf("recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
+	}
 
 	// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
 	// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
