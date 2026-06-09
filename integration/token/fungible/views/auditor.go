@@ -35,6 +35,9 @@ func (a *AuditView) Call(context view.Context) (any, error) {
 
 	w := ttx.MyAuditorWallet(context, ServiceOpts(a.TMSID)...)
 	assert.NotNil(w, "failed getting default auditor wallet")
+	if w == nil {
+		return nil, errors.Errorf("auditor wallet is nil")
+	}
 
 	// Validate
 	logger.Debugf("AuditView: get auditor [%s]", tx.ID())
@@ -154,6 +157,10 @@ func (a *AuditView) Call(context view.Context) (any, error) {
 	}
 
 	kvsInstance := GetKVS(context)
+	assert.NotNil(kvsInstance, "failed getting KVS instance")
+	if kvsInstance == nil {
+		return nil, errors.Errorf("KVS instance is nil")
+	}
 
 	for _, rID := range inputs.RevocationHandles() {
 		rh := utils.Hashable(rID).String()

@@ -68,7 +68,10 @@ func TxOpts(tmsId *token.TMSID, opts ...ttx.TxOption) []ttx.TxOption {
 func GetKVS(sp services.Provider) *kvs.KVS {
 	kvss, err := sp.GetService(&kvs.KVS{})
 	if err != nil {
-		panic(err)
+		return nil
+	}
+	if kvss == nil {
+		return nil
 	}
 
 	return kvss.(*kvs.KVS)
