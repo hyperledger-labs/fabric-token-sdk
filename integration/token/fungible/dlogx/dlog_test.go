@@ -90,8 +90,8 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			TokenSelector:       tokenSelector,
 		})...)
 		i.RegisterPlatformFactory(fabricx.NewPlatformFactory())
-		i.RegisterPlatformFactory(token.NewPlatformFactory(i))
-		i.Generate()
+		// Note: token.NewPlatformFactory is registered in TestSuite.Setup()
+		// Note: i.Generate() is called in TestSuite.Setup()
 
 		return i, err
 	})
