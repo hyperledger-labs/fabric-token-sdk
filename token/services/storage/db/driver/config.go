@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 type ConfigProvider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 	GetString(key string) string
 	GetBool(key string) bool
 	IsSet(key string) bool

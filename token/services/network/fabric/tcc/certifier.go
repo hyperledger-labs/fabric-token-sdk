@@ -27,7 +27,7 @@ func NewGetTokensView(channel string, namespace string, ids ...*token2.ID) *GetT
 	return &GetTokenView{Channel: channel, Namespace: namespace, IDs: ids}
 }
 
-func (r *GetTokenView) Call(context view.Context) (interface{}, error) {
+func (r *GetTokenView) Call(context view.Context) (any, error) {
 	if len(r.IDs) == 0 {
 		return nil, errors.Errorf("no token ids provided")
 	}

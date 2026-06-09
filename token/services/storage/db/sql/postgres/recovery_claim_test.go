@@ -8,6 +8,7 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -49,8 +50,10 @@ func TestClaimPendingTransactions_Atomic(t *testing.T) {
 	oldTime := now.Add(-10 * time.Minute)
 
 	// Add 5 pending transactions
+	txIDs := make([]string, 0, 5)
 	for i := range 5 {
 		txID := "tx" + string(rune('1'+i))
+		txIDs = append(txIDs, txID)
 		err = aw.AddTokenRequest(ctx, txID, []byte("request"), nil, nil, []byte("hash"))
 		require.NoError(t, err)
 
@@ -68,6 +71,7 @@ func TestClaimPendingTransactions_Atomic(t *testing.T) {
 
 	err = aw.Commit()
 	require.NoError(t, err)
+	ageRequests(t, ctx, store1, oldTime, txIDs...)
 
 	// Both instances try to claim the same transactions
 	params := tokensdriver.RecoveryClaimParams{
@@ -128,6 +132,7 @@ func TestClaimPendingTransactions_Lease(t *testing.T) {
 
 	err = aw.Commit()
 	require.NoError(t, err)
+	ageRequests(t, ctx, store, oldTime, txID)
 
 	// Claim with very short lease
 	params := tokensdriver.RecoveryClaimParams{
@@ -196,6 +201,7 @@ func TestClaimPendingTransactions_Idempotent(t *testing.T) {
 
 	err = aw.Commit()
 	require.NoError(t, err)
+	ageRequests(t, ctx, store, oldTime, txID)
 
 	// Claim transaction
 	params := tokensdriver.RecoveryClaimParams{
@@ -238,8 +244,10 @@ func TestClaimPendingTransactions_Limit(t *testing.T) {
 	now := time.Now().UTC()
 	oldTime := now.Add(-10 * time.Minute)
 
+	txIDs := make([]string, 0, 10)
 	for i := range 10 {
 		txID := "tx" + string(rune('0'+i))
+		txIDs = append(txIDs, txID)
 		err = aw.AddTokenRequest(ctx, txID, []byte("request"), nil, nil, []byte("hash"))
 		require.NoError(t, err)
 
@@ -257,6 +265,9 @@ func TestClaimPendingTransactions_Limit(t *testing.T) {
 
 	err = aw.Commit()
 	require.NoError(t, err)
+	for i, txID := range txIDs {
+		ageRequests(t, ctx, store, oldTime.Add(time.Duration(i)*time.Second), txID)
+	}
 
 	// Claim with limit of 3
 	params := tokensdriver.RecoveryClaimParams{
@@ -317,6 +328,7 @@ func TestReleaseRecoveryClaim(t *testing.T) {
 
 	err = aw.Commit()
 	require.NoError(t, err)
+	ageRequests(t, ctx, store, oldTime, txID)
 
 	// Claim transaction
 	params := tokensdriver.RecoveryClaimParams{
@@ -381,6 +393,7 @@ func TestReleaseRecoveryClaim_WrongOwner(t *testing.T) {
 
 	err = aw.Commit()
 	require.NoError(t, err)
+	ageRequests(t, ctx, store, oldTime, txID)
 
 	// Claim transaction
 	params := tokensdriver.RecoveryClaimParams{
@@ -427,8 +440,10 @@ func TestCleanupExpiredClaims(t *testing.T) {
 	now := time.Now().UTC()
 	oldTime := now.Add(-10 * time.Minute)
 
+	txIDs := make([]string, 0, 3)
 	for i := range 3 {
 		txID := "tx" + string(rune('1'+i))
+		txIDs = append(txIDs, txID)
 		err = aw.AddTokenRequest(ctx, txID, []byte("request"), nil, nil, []byte("hash"))
 		require.NoError(t, err)
 
@@ -446,6 +461,7 @@ func TestCleanupExpiredClaims(t *testing.T) {
 
 	err = aw.Commit()
 	require.NoError(t, err)
+	ageRequests(t, ctx, store, oldTime, txIDs...)
 
 	// Claim with very short lease
 	params := tokensdriver.RecoveryClaimParams{
@@ -472,4 +488,19 @@ func TestCleanupExpiredClaims(t *testing.T) {
 	claimed, err = store.ClaimPendingTransactions(ctx, params)
 	require.NoError(t, err)
 	require.Len(t, claimed, 3, "Should be able to claim after cleanup")
+}
+
+func ageRequests(t *testing.T, ctx context.Context, store *TransactionStore, storedAt time.Time, txIDs ...string) {
+	t.Helper()
+
+	// #nosec G201 -- table name comes from the test-created store.
+	query := fmt.Sprintf("UPDATE %s SET stored_at = $1 WHERE tx_id = $2", store.tables.Requests)
+	for _, txID := range txIDs {
+		result, err := store.writeDB.ExecContext(ctx, query, storedAt, txID)
+		require.NoError(t, err)
+
+		rowsAffected, err := result.RowsAffected()
+		require.NoError(t, err)
+		require.EqualValues(t, 1, rowsAffected)
+	}
 }

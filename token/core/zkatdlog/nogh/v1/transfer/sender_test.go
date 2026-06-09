@@ -353,7 +353,7 @@ func newSenderEnvWithProofType(pp *v1.PublicParams, numInputs int, numOutputs in
 	sumInputs := int64(0)
 	for i := range numInputs {
 		signers[i] = fakeSigningIdentity
-		fakeSigningIdentity.SignReturnsOnCall(i, []byte(fmt.Sprintf("signer[%d]", i)), nil)
+		fakeSigningIdentity.SignReturnsOnCall(i, fmt.Appendf(nil, "signer[%d]", i), nil)
 		v := int64(i*10 + 10)
 		sumInputs += v
 		invalues[i] = c.NewZrFromInt(v)
@@ -363,7 +363,7 @@ func newSenderEnvWithProofType(pp *v1.PublicParams, numInputs int, numOutputs in
 	inputs := prepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
 
 	for i := range numInputs {
-		tokens[i] = &token.Token{Data: inputs[i], Owner: []byte(fmt.Sprintf("alice-%d", i))}
+		tokens[i] = &token.Token{Data: inputs[i], Owner: fmt.Appendf(nil, "alice-%d", i)}
 		inputInf[i] = &token.Metadata{Type: "ABC", Value: invalues[i], BlindingFactor: inBF[i]}
 	}
 

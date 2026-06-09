@@ -415,7 +415,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	// if p.Value is within the authorized range, then L_iR_i =0 and L_i-R_i-1 = 0
 	// the inner product <left, right> = p.Value*z^2+t1x+t2x^2+f(z, y)
 	// f(z, y) = \sum (z-z^2)*y^i - z^3*2^i
-	for i := 0; i < len(left); i++ {
+	for i := range left {
 		// compute (L_i-z) + xU_i
 		left[i] = p.Curve.ModAddMul2(leftPrime[i], one, x, randomLeft[i], p.Curve.GroupOrder)
 		// compute y^i((R_i+z)+xV_i)+2^iz^2
@@ -547,7 +547,7 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	ipy := math2.Zero(v.Curve)
 	ip2 := math2.SumOfPowersOfTwo(v.Curve, uint64(len(yPow)))
 	// 2^i
-	for i := 0; i < len(yPow); i++ {
+	for i := range yPow {
 		// y^i
 		if i == 0 {
 			yPow[0] = math2.One(v.Curve)

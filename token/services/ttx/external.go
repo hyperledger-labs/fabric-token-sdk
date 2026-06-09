@@ -34,7 +34,7 @@ type StreamExternalWalletMsg struct {
 }
 
 // NewStreamExternalWalletMsg creates a new root message for the given type and value
-func NewStreamExternalWalletMsg(Type StreamExternalWalletMsgType, v interface{}) (*StreamExternalWalletMsg, error) {
+func NewStreamExternalWalletMsg(Type StreamExternalWalletMsgType, v any) (*StreamExternalWalletMsg, error) {
 	var raw []byte
 	if v != nil {
 		var err error
@@ -161,7 +161,7 @@ func (s *StreamExternalWalletSignerClient) init() {
 				s.input <- req
 			}
 		case Done:
-			logger.Infof("no more signatures required")
+			logger.Debugf("no more signatures required")
 			close(s.input)
 
 			return

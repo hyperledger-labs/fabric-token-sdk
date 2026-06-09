@@ -357,5 +357,3 @@ func TestFastMarshalDeterministic(t *testing.T) {
 	assert.True(t, bytes.Equal(result1, result2))
 	assert.True(t, bytes.Equal(result2, result3))
 }
-
-// Made with Bob

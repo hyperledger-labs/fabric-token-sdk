@@ -23,7 +23,7 @@ import (
 var logger = logging.MustGetLogger()
 
 type ConfigProvider interface {
-	UnmarshalKey(key string, rawVal interface{}) error
+	UnmarshalKey(key string, rawVal any) error
 }
 
 type LockerProvider interface {
@@ -32,7 +32,7 @@ type LockerProvider interface {
 
 // stoppable is implemented by lockers that have a lifecycle (e.g. inmemory.locker).
 type stoppable interface {
-	Stop()
+	Stop() error
 }
 
 type SelectorService struct {
@@ -76,7 +76,9 @@ func (s *SelectorService) Shutdown() {
 	s.mu.Unlock()
 
 	for _, l := range lockers {
-		l.Stop()
+		if err := l.Stop(); err != nil {
+			logger.Warnf("failed stopping locker: %s", err)
+		}
 	}
 }
 
@@ -89,8 +91,8 @@ func (s *SelectorService) trackLocker(l Locker) {
 }
 
 type Cache interface {
-	Get(key string) (interface{}, bool)
-	Add(key string, value interface{})
+	Get(key string) (any, bool)
+	Add(key string, value any)
 }
 
 type queryService struct {

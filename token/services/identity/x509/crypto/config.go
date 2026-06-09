@@ -75,7 +75,7 @@ type KeyIDMapping struct {
 }
 
 // ToBCCSPOpts converts the passed opts to `config.BCCSP`
-func ToBCCSPOpts(boxed interface{}) (*BCCSP, error) {
+func ToBCCSPOpts(boxed any) (*BCCSP, error) {
 	opts := &Opts{}
 	config := &mapstructure.DecoderConfig{
 		WeaklyTypedInput: true, // allow pin to be a string

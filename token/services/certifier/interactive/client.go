@@ -43,7 +43,7 @@ type CertificationStorage interface {
 
 //go:generate counterfeiter -o mock/view_manager.go -fake-name ViewManagerMock . ViewManager
 type ViewManager interface {
-	InitiateView(view view.View) (interface{}, error)
+	InitiateView(view view.View) (any, error)
 }
 
 // CertificationClient scans the vault for tokens not yet certified and requests certification.
@@ -147,7 +147,7 @@ func (cc *CertificationClient) RequestCertification(ctx context.Context, ids ...
 		return nil
 	}
 
-	var resultBoxed interface{}
+	var resultBoxed any
 	var err error
 	labels := []string{"channel", cc.channel, "namespace", cc.namespace}
 
@@ -223,23 +223,16 @@ func (cc *CertificationClient) Scan() error {
 // It must be called before the client processes any tokens.
 func (cc *CertificationClient) Start() {
 	for range cc.workers {
-		cc.wg.Add(1)
-
-		go func() {
-			defer cc.wg.Done()
-
+		cc.wg.Go(func() {
 			for batch := range cc.batches {
 				cc.processBatch(batch)
 			}
-		}()
+		})
 	}
 
-	cc.wg.Add(1)
-
-	go func() {
-		defer cc.wg.Done()
+	cc.wg.Go(func() {
 		cc.accumulatorCutter()
-	}()
+	})
 }
 
 // Stop signals the client to shut down and waits for all goroutines to finish.

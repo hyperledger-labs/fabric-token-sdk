@@ -431,7 +431,7 @@ func shortenPath(p string) string {
 	return p
 }
 
-func writef(w *tabwriter.Writer, format string, a ...interface{}) {
+func writef(w *tabwriter.Writer, format string, a ...any) {
 	_, _ = fmt.Fprintf(w, format, a...)
 }
 

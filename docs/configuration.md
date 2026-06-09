@@ -197,6 +197,41 @@ token:
               # This helps with debugging and tracking which instance processed which transactions.
               instanceID:
 
+              # notFoundGracePeriod is the time after which the recovery loop promotes a
+              # transaction whose status query keeps returning NotFound to the terminal
+              # Orphan status. Without this, a transaction whose audit log was persisted
+              # but whose broadcast never reached the ledger would sit at the head of the
+              # `ORDER BY stored_at ASC LIMIT batchSize` claim query forever and prevent
+              # newer rows from being scanned. Default: 30m.
+              # The promoted row is marked Orphan (not Deleted) so operators can tell
+              # broadcast failures apart from ledger-rejected transactions.
+              # Set to 0 to disable the promotion; the row stays Pending and is re-claimed
+              # on every sweep until it either resolves or an operator intervenes.
+              notFoundGracePeriod: 30m
+
+      # auditor-specific settings
+      auditor:
+        # locker configures the distributed locking strategy for the auditor's
+        # enrollment-ID (EID) locks. These locks serialise concurrent access
+        # to the same EIDs across replicas when processing audit records.
+        locker:
+          # backend selects the Locker implementation.
+          #   "memory"   – in-process mutex (default, single-replica only)
+          #   "postgres" – PostgreSQL lease-table (multi-replica)
+          backend: memory
+          # postgres section is read only when backend == "postgres".
+          postgres:
+            # ttl is the lease duration for each EID lock row.
+            ttl: 30s
+            # acquireBackoff is the wait between retry attempts when a lock is contended.
+            acquireBackoff: 100ms
+            # acquireDeadline is the total time allowed to acquire all EID locks.
+            acquireDeadline: 1m
+            # heartbeat is the interval at which held leases are renewed (~TTL/3).
+            heartbeat: 10s
+            # owner identifies this replica. Auto-generated at startup if empty.
+            owner:
+
       # sections dedicated to the definition of the wallets
       wallets:
         # Default cache size reference that can be used by any wallet that supports caching.
@@ -257,6 +292,31 @@ token:
                   Security: 256
                 SW:
                   Hash: SHA2
+      # Auditor lock configuration for enrollment ID locking during audit operations
+      # These settings control the retry behavior when multiple auditors compete for locks
+      auditor:
+        lock:
+          # maxRetries is the maximum number of retry attempts for lock acquisition
+          # Default: 10
+          maxRetries: 10
+          
+          # initialBackoff is the initial backoff delay before the first retry
+          # Default: 10ms
+          initialBackoff: 10ms
+          
+          # maxBackoff is the maximum backoff delay between retries
+          # Default: 5s
+          maxBackoff: 5s
+          
+          # backoffMultiplier is the exponential backoff multiplier
+          # Each retry delay is multiplied by this factor
+          # Default: 2.0
+          backoffMultiplier: 2.0
+          
+          # jitterFactor is the randomization factor to prevent thundering herd (0.0 to 1.0)
+          # Adds random jitter to break symmetry when multiple auditors retry simultaneously
+          # Default: 0.3 (30%)
+          jitterFactor: 0.3
                   Security: 256
 ```
 
@@ -354,6 +414,7 @@ token:
               leaseDuration: 30s
               advisoryLockID: 8389190333894887286
               instanceID:
+              notFoundGracePeriod: 30m
 ```
 
 Default values:
@@ -366,6 +427,7 @@ Default values:
 - leaseDuration: 30s
 - advisoryLockID: 8389190333894887286 (`0x74746b7265636f76`)
 - instanceID: empty, auto-generated when the recovery manager starts
+- notFoundGracePeriod: 30m (set to 0 to disable promotion to Orphan)
 
 **Parameter Relationships and Tuning:**
 
@@ -374,6 +436,7 @@ Default values:
 - **The manager validates** that `ttl`, `scanInterval`, `batchSize`, `workerCount`, and `leaseDuration` are all greater than zero.
 - **`advisoryLockID`** is used to acquire PostgreSQL advisory-lock leadership so that only one replica performs a recovery sweep at a time. The default value (8389190333894887286 or 0x74746b7265636f76) represents the ASCII string "ttkrecov" (Token Transaction Recovery) encoded as a 64-bit integer.
 - **`instanceID`** is used as the lease owner identifier for claimed transactions; if omitted, the manager generates a unique UUID automatically at startup.
+- **`notFoundGracePeriod`** controls how long a transaction whose status query keeps returning `NotFound` is left in `Pending` before being promoted to the terminal `Orphan` status. This protects the recovery sweep from being permanently blocked by transactions whose audit log was persisted but whose broadcast never reached the ledger. The promoted row is marked `Orphan` rather than `Deleted` so operators can distinguish broadcast failures from ledger-rejected transactions. Raise the default if your network has long catch-up windows after committer/orderer restarts; set it to `0` to disable the promotion entirely.
 
 **Tuning Recommendations:**
 
@@ -381,6 +444,57 @@ Default values:
    - Increase `batchSize` to 200-500 to process more transactions per sweep
    - Increase `workerCount` to 8-16 to improve parallel processing
    - Decrease `scanInterval` to 2-3s for faster recovery detection
+
+---
+
+### Optional: token.tms.<name>.auditor.lock
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  tms:
+    <name>:
+      auditor:
+        lock:
+          maxRetries: 10
+          initialBackoff: 10ms
+          maxBackoff: 5s
+          backoffMultiplier: 2.0
+          jitterFactor: 0.3
+```
+
+Default values:
+
+- maxRetries: 10
+- initialBackoff: 10ms
+- maxBackoff: 5s
+- backoffMultiplier: 2.0
+- jitterFactor: 0.3
+
+**Parameter Descriptions:**
+
+- **maxRetries**: Maximum number of retry attempts when acquiring locks on enrollment IDs during audit operations
+- **initialBackoff**: Initial delay before the first retry attempt
+- **maxBackoff**: Maximum delay between retry attempts (exponential backoff is capped at this value)
+- **backoffMultiplier**: Factor by which the backoff delay increases after each retry (exponential growth)
+- **jitterFactor**: Randomization factor (0.0 to 1.0) added to backoff delays to prevent multiple auditors from retrying simultaneously (prevents thundering herd problem)
+
+**Tuning Recommendations:**
+
+1. **For High-Contention Environments:**
+   - Increase `maxRetries` to 15-20 to handle more lock conflicts
+   - Increase `maxBackoff` to 10s to spread out retry attempts
+   - Keep `jitterFactor` at 0.3 or higher to maintain randomization
+
+2. **For Low-Latency Requirements:**
+   - Decrease `initialBackoff` to 5ms for faster initial retries
+   - Decrease `maxBackoff` to 2s to avoid long waits
+   - Increase `backoffMultiplier` to 3.0 for faster exponential growth
+
+3. **For Resource-Constrained Environments:**
+   - Decrease `maxRetries` to 5 to fail faster
+   - Keep default backoff settings to balance retry attempts with resource usage
 
 2. **For Resource-Constrained Environments:**
    - Decrease `batchSize` to 50 to reduce memory usage
@@ -407,3 +521,49 @@ Default values:
 - `workerCount` affects CPU and network utilization during recovery sweeps
 - `batchSize` affects memory usage and the duration of each recovery sweep
 - The relationship `scanInterval < ttl` ensures timely detection without premature recovery
+
+---
+
+### Optional: token.tms.<name>.auditor.locker
+
+Controls the distributed locking strategy used by the auditor to serialise
+concurrent access to enrollment IDs (EIDs) when processing audit records.
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  tms:
+    <name>:
+      auditor:
+        locker:
+          backend: memory
+          postgres:
+            ttl: 30s
+            acquireBackoff: 100ms
+            acquireDeadline: 1m
+            heartbeat: 10s
+            owner:
+```
+
+Default values:
+
+- backend: `memory` (in-process mutex, single-replica only)
+- postgres.ttl: 30s
+- postgres.acquireBackoff: 100ms
+- postgres.acquireDeadline: 1m
+- postgres.heartbeat: 10s
+- postgres.owner: empty, defaults to the FSC node ID (`config.Provider.ID()`)
+
+**Backend Selection:**
+
+| Backend    | Use case                      | Database requirement |
+|------------|-------------------------------|----------------------|
+| `memory`   | Single-replica deployments    | Any (SQLite, Postgres) |
+| `postgres` | Multi-replica deployments     | PostgreSQL only        |
+
+**Notes:**
+- The `postgres` backend uses a dedicated lease table (created automatically) with row-level locking, heartbeat renewal, and automatic expiry. It relies on PostgreSQL-specific SQL features (`ON CONFLICT DO UPDATE … RETURNING`, `::interval` casts, `TIMESTAMPTZ`).
+- The `memory` backend uses in-process semaphores and provides no cross-replica coordination. It is suitable for single-node or development setups.
+- When using `postgres`, all auditor replicas must share the same PostgreSQL database so that EID locks are globally visible.
+- Set `heartbeat` to roughly `ttl / 3` to ensure leases are renewed well before expiry.

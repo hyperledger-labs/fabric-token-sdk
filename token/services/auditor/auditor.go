@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -45,6 +46,8 @@ const (
 	Confirmed = auditdb.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted = auditdb.Deleted
+	// Orphan is the status of a transaction that never reached the ledger
+	Orphan = auditdb.Orphan
 )
 
 const txIdLabel tracing.LabelName = "tx_id"
@@ -79,9 +82,11 @@ type Service struct {
 	metricsProvider metrics.Provider
 	metrics         *Metrics
 	checkService    CheckService
+	lockConfig      *LockConfig
 }
 
 // NewService creates a new auditor Service with the provided dependencies.
+// If lockConfig is nil, default lock configuration will be used.
 func NewService(
 	tmsID token.TMSID,
 	networkProvider NetworkProvider,
@@ -91,7 +96,12 @@ func NewService(
 	finalityTracer trace.Tracer,
 	metricsProvider metrics.Provider,
 	checkService CheckService,
+	lockConfig *LockConfig,
 ) *Service {
+	if lockConfig == nil {
+		lockConfig = DefaultLockConfig()
+	}
+
 	return &Service{
 		tmsID:           tmsID,
 		networkProvider: networkProvider,
@@ -102,6 +112,7 @@ func NewService(
 		metricsProvider: metricsProvider,
 		metrics:         newMetrics(metricsProvider),
 		checkService:    checkService,
+		lockConfig:      lockConfig,
 	}
 }
 
@@ -111,8 +122,23 @@ func (a *Service) Validate(ctx context.Context, request *token.Request) error {
 }
 
 // Audit extracts the list of inputs and outputs from the passed transaction.
-// In addition, the Audit locks the enrollment named ids.
-// Release must be invoked in case
+// In addition, the Audit locks the enrollment named ids with retry logic and exponential backoff
+// to prevent livelock conditions.
+// The caller MUST call Release() to unlock these enrollment IDs after processing.
+//
+// IMPORTANT: The defer Release() statement MUST be placed immediately after checking
+// the error returned by Audit(). This ensures locks are released even if subsequent
+// operations fail. Example:
+//
+//	inputs, outputs, err := auditor.Audit(ctx, tx)
+//	if err != nil {
+//	    return errors.Wrap(err, "audit failed")
+//	}
+//	defer auditor.Release(ctx, tx)
+//
+// Note: The semaphore-based locking mechanism handles context cancellation during
+// lock acquisition (see PR #1616), ensuring proper cleanup in case of timeouts or
+// cancellations.
 func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream, *token.OutputStream, error) {
 	start := time.Now()
 	logger.DebugfContext(ctx, "audit transaction [%s]....", tx.ID())
@@ -125,16 +151,45 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 	var eids []string
 	eids = append(eids, record.Inputs.EnrollmentIDs()...)
 	eids = append(eids, record.Outputs.EnrollmentIDs()...)
-	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks", tx.ID())
-	if err := a.auditDB.AcquireLocks(ctx, string(request.Anchor), eids...); err != nil {
+
+	// Acquire locks with retry and exponential backoff to prevent livelock
+	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks with retry", tx.ID())
+	if err := a.acquireLocksWithRetry(ctx, string(request.Anchor), eids); err != nil {
 		a.metrics.AuditLockConflicts.Add(1)
 
 		return nil, nil, err
 	}
+
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks done", tx.ID())
 	a.metrics.AuditDuration.Observe(time.Since(start).Seconds())
 
 	return record.Inputs, record.Outputs, nil
+}
+
+// acquireLocksWithRetry attempts to acquire locks with exponential backoff and randomized jitter
+// to prevent livelock conditions when multiple auditors compete for the same enrollment IDs.
+// This implements the mitigation strategy for deadlock/livelock prevention.
+func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids []string) error {
+	// Create a retry runner with jitter support
+	retryRunner := utils.NewRetryRunnerWithJitter(
+		logger,
+		a.lockConfig.MaxRetries,
+		a.lockConfig.InitialBackoff,
+		a.lockConfig.MaxBackoff,
+		a.lockConfig.BackoffMultiplier,
+		a.lockConfig.JitterFactor,
+	)
+
+	// Use the retry runner to acquire locks
+	err := retryRunner.RunWithContext(ctx, func() error {
+		return a.auditDB.AcquireLocks(ctx, anchor, eids...)
+	})
+
+	if err != nil {
+		return errors.WithMessagef(err, "failed to acquire locks for anchor [%s]", anchor)
+	}
+
+	return nil
 }
 
 // Append adds the passed transaction to the auditor database.
@@ -201,6 +256,7 @@ func (a *Service) GetTokenRequest(ctx context.Context, txID string) ([]byte, err
 	return a.auditDB.GetTokenRequest(ctx, txID)
 }
 
+// Check performs a health check on the auditor service and returns any issues found.
 func (a *Service) Check(ctx context.Context) ([]string, error) {
 	return a.checkService.Check(ctx)
 }
@@ -210,22 +266,30 @@ type requestWrapper struct {
 	tms dep.TokenManagementService
 }
 
+// newRequestWrapper creates a new requestWrapper that wraps a token request with its associated
+// token management service for enhanced audit record processing.
 func newRequestWrapper(r *token.Request, tms dep.TokenManagementService) *requestWrapper {
 	return &requestWrapper{r: r, tms: tms}
 }
 
+// ID returns the unique identifier (anchor) of the wrapped token request.
 func (r *requestWrapper) ID() token.RequestAnchor {
 	return r.r.ID()
 }
 
+// Bytes returns the serialized byte representation of the wrapped token request.
 func (r *requestWrapper) Bytes() ([]byte, error) { return r.r.Bytes() }
 
+// AllApplicationMetadata returns all application-specific metadata associated with the token request.
 func (r *requestWrapper) AllApplicationMetadata() map[string][]byte {
 	return r.r.AllApplicationMetadata()
 }
 
+// PublicParamsHash returns the hash of the public parameters used in the token request.
 func (r *requestWrapper) PublicParamsHash() token.PPHash { return r.r.PublicParamsHash() }
 
+// AuditRecord retrieves the audit record for the wrapped token request and completes any
+// inputs with missing enrollment IDs by querying the token vault.
 func (r *requestWrapper) AuditRecord(ctx context.Context) (*token.AuditRecord, error) {
 	record, err := r.r.AuditRecord(ctx)
 	if err != nil {
@@ -238,6 +302,9 @@ func (r *requestWrapper) AuditRecord(ctx context.Context) (*token.AuditRecord, e
 	return record, nil
 }
 
+// completeInputsWithEmptyEID fills in missing enrollment ID information for inputs in the audit record
+// by querying the token vault. This is necessary when inputs don't have enrollment IDs explicitly set.
+// It uses the first output's enrollment ID as the target and retrieves token details from the vault.
 func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record *token.AuditRecord) error {
 	filter := record.Inputs.ByEnrollmentID("")
 	if filter.Count() == 0 {
@@ -267,6 +334,7 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 	return nil
 }
 
+// String returns a string representation of the wrapped token request.
 func (r *requestWrapper) String() string {
 	return r.r.String()
 }

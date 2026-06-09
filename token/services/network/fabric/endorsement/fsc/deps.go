@@ -63,11 +63,11 @@ type IdentityProvider interface {
 }
 
 type ViewManager interface {
-	InitiateView(ctx context.Context, view view.View) (interface{}, error)
+	InitiateView(ctx context.Context, view view.View) (any, error)
 }
 
 type ViewRegistry interface {
-	RegisterResponder(responder view.View, initiatedBy interface{}) error
+	RegisterResponder(responder view.View, initiatedBy any) error
 }
 
 // NamespaceTxProcessor models a namespace transaction processor.

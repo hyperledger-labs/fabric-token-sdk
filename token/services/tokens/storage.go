@@ -296,6 +296,6 @@ func (t *TokenProcessorEvent) Topic() string {
 }
 
 // Message returns the event's payload.
-func (t *TokenProcessorEvent) Message() interface{} {
+func (t *TokenProcessorEvent) Message() any {
 	return t.message
 }

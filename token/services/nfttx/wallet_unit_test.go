@@ -31,7 +31,7 @@ func (m *mockTMSProvider) GetManagementService(opts ...token.ServiceOption) (*to
 
 func getFakeCtx() *mock.Context {
 	fakeCtx := &mock.Context{}
-	fakeCtx.GetServiceCalls(func(v interface{}) (interface{}, error) {
+	fakeCtx.GetServiceCalls(func(v any) (any, error) {
 		if _, ok := v.(*token.ManagementServiceProvider); ok {
 			return &mockTMSProvider{}, nil
 		}
@@ -80,7 +80,7 @@ func (d *dummyTMSProviderSuccess) Update(opts driver.ServiceOptions) error {
 func getErrorCtx() *mock.Context {
 	fakeCtx := &mock.Context{}
 	p := token.NewManagementServiceProvider(&dummyTMSProvider{}, &dummyNormalizer{}, nil, nil, nil)
-	fakeCtx.GetServiceCalls(func(v interface{}) (interface{}, error) {
+	fakeCtx.GetServiceCalls(func(v any) (any, error) {
 		if _, ok := v.(*token.ManagementServiceProvider); ok {
 			return p, nil
 		}
@@ -97,7 +97,7 @@ func getSuccessCtx() *mock.Context {
 	mockVP.VaultReturns(&driver_mock.Vault{}, nil)
 
 	p := token.NewManagementServiceProvider(&dummyTMSProviderSuccess{}, &dummyNormalizer{}, mockVP, nil, nil)
-	fakeCtx.GetServiceCalls(func(v interface{}) (interface{}, error) {
+	fakeCtx.GetServiceCalls(func(v any) (any, error) {
 		if _, ok := v.(*token.ManagementServiceProvider); ok {
 			return p, nil
 		}

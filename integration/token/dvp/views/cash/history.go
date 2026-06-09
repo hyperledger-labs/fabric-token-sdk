@@ -28,7 +28,7 @@ type ListIssuedTokensView struct {
 	*ListIssuedTokens
 }
 
-func (p *ListIssuedTokensView) Call(context view.Context) (interface{}, error) {
+func (p *ListIssuedTokensView) Call(context view.Context) (any, error) {
 	// Tokens issued by identities in this wallet will be listed
 	wallet := ttx.GetIssuerWallet(context, p.Wallet)
 	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)

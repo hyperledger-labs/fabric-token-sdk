@@ -37,7 +37,7 @@ func (o *OutputStream) ByEnrollmentID(id string) *OutputStream {
 	return &OutputStream{OutputStream: o.OutputStream.ByEnrollmentID(id)}
 }
 
-func (o *OutputStream) StateAt(index int, state interface{}) error {
+func (o *OutputStream) StateAt(index int, state any) error {
 	output := o.At(index)
 	decoded, err := base64.StdEncoding.DecodeString(string(output.Type))
 	if err != nil {

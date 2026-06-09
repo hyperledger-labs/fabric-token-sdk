@@ -122,6 +122,7 @@ tidy:
 	cd token/services/storage/db/kvs/hashicorp; go mod tidy
 	cd cmd/artifactgen; go mod tidy
 	cd cmd/tokengen; go mod tidy
+	cd cmd/token_validation_service; go mod tidy
 
 .PHONY: clean
 # clean up docker artifacts and generated files
@@ -242,3 +243,18 @@ update-all-deps-latest: ## Update all dependencies in all Go modules to their la
 		echo "=> Updating dependencies in $$dir"; \
 		(cd $$dir && go get ./...@latest && go mod tidy); \
 	done
+
+.PHONY: docs-install
+# Install documentation dependencies
+docs-install:
+	pip install -r requirements.txt
+
+.PHONY: docs-serve
+# Serve documentation locally for development
+docs-serve:
+	mkdocs serve
+
+.PHONY: docs-build
+# Build the static documentation site for production
+docs-build:
+	mkdocs build --strict

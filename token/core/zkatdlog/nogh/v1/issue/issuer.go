@@ -83,7 +83,7 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*Action, []*
 
 	// Prepare metadata for each issued token.
 	inf := make([]*token.Metadata, len(values))
-	for j := 0; j < len(inf); j++ {
+	for j := range inf {
 		inf[j] = &token.Metadata{
 			Type:           i.Type,
 			Value:          tw[j].Value,

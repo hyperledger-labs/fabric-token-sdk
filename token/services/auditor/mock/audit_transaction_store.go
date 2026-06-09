@@ -26,18 +26,18 @@ type AuditTransactionStore struct {
 		result2 bool
 		result3 error
 	}
-	ClaimPendingTransactionsStub        func(context.Context, driver.RecoveryClaimParams) ([]*driver.TransactionRecord, error)
+	ClaimPendingTransactionsStub        func(context.Context, driver.RecoveryClaimParams) ([]*driver.RecoveryClaim, error)
 	claimPendingTransactionsMutex       sync.RWMutex
 	claimPendingTransactionsArgsForCall []struct {
 		arg1 context.Context
 		arg2 driver.RecoveryClaimParams
 	}
 	claimPendingTransactionsReturns struct {
-		result1 []*driver.TransactionRecord
+		result1 []*driver.RecoveryClaim
 		result2 error
 	}
 	claimPendingTransactionsReturnsOnCall map[int]struct {
-		result1 []*driver.TransactionRecord
+		result1 []*driver.RecoveryClaim
 		result2 error
 	}
 	CloseStub        func() error
@@ -191,6 +191,17 @@ type AuditTransactionStore struct {
 	setStatusReturnsOnCall map[int]struct {
 		result1 error
 	}
+	PrefixedTableNameStub        func(string) string
+	prefixedTableNameMutex       sync.RWMutex
+	prefixedTableNameArgsForCall []struct {
+		arg1 string
+	}
+	prefixedTableNameReturns struct {
+		result1 string
+	}
+	prefixedTableNameReturnsOnCall map[int]struct {
+		result1 string
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -263,7 +274,7 @@ func (fake *AuditTransactionStore) AcquireRecoveryLeadershipReturnsOnCall(i int,
 	}{result1, result2, result3}
 }
 
-func (fake *AuditTransactionStore) ClaimPendingTransactions(arg1 context.Context, arg2 driver.RecoveryClaimParams) ([]*driver.TransactionRecord, error) {
+func (fake *AuditTransactionStore) ClaimPendingTransactions(arg1 context.Context, arg2 driver.RecoveryClaimParams) ([]*driver.RecoveryClaim, error) {
 	fake.claimPendingTransactionsMutex.Lock()
 	ret, specificReturn := fake.claimPendingTransactionsReturnsOnCall[len(fake.claimPendingTransactionsArgsForCall)]
 	fake.claimPendingTransactionsArgsForCall = append(fake.claimPendingTransactionsArgsForCall, struct {
@@ -289,7 +300,7 @@ func (fake *AuditTransactionStore) ClaimPendingTransactionsCallCount() int {
 	return len(fake.claimPendingTransactionsArgsForCall)
 }
 
-func (fake *AuditTransactionStore) ClaimPendingTransactionsCalls(stub func(context.Context, driver.RecoveryClaimParams) ([]*driver.TransactionRecord, error)) {
+func (fake *AuditTransactionStore) ClaimPendingTransactionsCalls(stub func(context.Context, driver.RecoveryClaimParams) ([]*driver.RecoveryClaim, error)) {
 	fake.claimPendingTransactionsMutex.Lock()
 	defer fake.claimPendingTransactionsMutex.Unlock()
 	fake.ClaimPendingTransactionsStub = stub
@@ -302,28 +313,28 @@ func (fake *AuditTransactionStore) ClaimPendingTransactionsArgsForCall(i int) (c
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *AuditTransactionStore) ClaimPendingTransactionsReturns(result1 []*driver.TransactionRecord, result2 error) {
+func (fake *AuditTransactionStore) ClaimPendingTransactionsReturns(result1 []*driver.RecoveryClaim, result2 error) {
 	fake.claimPendingTransactionsMutex.Lock()
 	defer fake.claimPendingTransactionsMutex.Unlock()
 	fake.ClaimPendingTransactionsStub = nil
 	fake.claimPendingTransactionsReturns = struct {
-		result1 []*driver.TransactionRecord
+		result1 []*driver.RecoveryClaim
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *AuditTransactionStore) ClaimPendingTransactionsReturnsOnCall(i int, result1 []*driver.TransactionRecord, result2 error) {
+func (fake *AuditTransactionStore) ClaimPendingTransactionsReturnsOnCall(i int, result1 []*driver.RecoveryClaim, result2 error) {
 	fake.claimPendingTransactionsMutex.Lock()
 	defer fake.claimPendingTransactionsMutex.Unlock()
 	fake.ClaimPendingTransactionsStub = nil
 	if fake.claimPendingTransactionsReturnsOnCall == nil {
 		fake.claimPendingTransactionsReturnsOnCall = make(map[int]struct {
-			result1 []*driver.TransactionRecord
+			result1 []*driver.RecoveryClaim
 			result2 error
 		})
 	}
 	fake.claimPendingTransactionsReturnsOnCall[i] = struct {
-		result1 []*driver.TransactionRecord
+		result1 []*driver.RecoveryClaim
 		result2 error
 	}{result1, result2}
 }
@@ -1026,6 +1037,67 @@ func (fake *AuditTransactionStore) SetStatusReturnsOnCall(i int, result1 error) 
 	}
 	fake.setStatusReturnsOnCall[i] = struct {
 		result1 error
+	}{result1}
+}
+
+func (fake *AuditTransactionStore) PrefixedTableName(arg1 string) string {
+	fake.prefixedTableNameMutex.Lock()
+	ret, specificReturn := fake.prefixedTableNameReturnsOnCall[len(fake.prefixedTableNameArgsForCall)]
+	fake.prefixedTableNameArgsForCall = append(fake.prefixedTableNameArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.PrefixedTableNameStub
+	fakeReturns := fake.prefixedTableNameReturns
+	fake.recordInvocation("PrefixedTableName", []interface{}{arg1})
+	fake.prefixedTableNameMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameCallCount() int {
+	fake.prefixedTableNameMutex.RLock()
+	defer fake.prefixedTableNameMutex.RUnlock()
+	return len(fake.prefixedTableNameArgsForCall)
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameCalls(stub func(string) string) {
+	fake.prefixedTableNameMutex.Lock()
+	defer fake.prefixedTableNameMutex.Unlock()
+	fake.PrefixedTableNameStub = stub
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameArgsForCall(i int) string {
+	fake.prefixedTableNameMutex.RLock()
+	defer fake.prefixedTableNameMutex.RUnlock()
+	argsForCall := fake.prefixedTableNameArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameReturns(result1 string) {
+	fake.prefixedTableNameMutex.Lock()
+	defer fake.prefixedTableNameMutex.Unlock()
+	fake.PrefixedTableNameStub = nil
+	fake.prefixedTableNameReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *AuditTransactionStore) PrefixedTableNameReturnsOnCall(i int, result1 string) {
+	fake.prefixedTableNameMutex.Lock()
+	defer fake.prefixedTableNameMutex.Unlock()
+	fake.PrefixedTableNameStub = nil
+	if fake.prefixedTableNameReturnsOnCall == nil {
+		fake.prefixedTableNameReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.prefixedTableNameReturnsOnCall[i] = struct {
+		result1 string
 	}{result1}
 }
 

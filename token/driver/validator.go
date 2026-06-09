@@ -84,7 +84,7 @@ type ValidationConfig struct {
 type Validator interface {
 	// UnmarshalActions reconstructs the individual actions (issue, transfer, etc.)
 	// from their serialized representation in a token request.
-	UnmarshalActions(raw []byte) ([]interface{}, error)
+	UnmarshalActions(raw []byte) ([]any, error)
 
 	// VerifyTokenRequestFromRaw validates a marshalled token request against the provided ledger state and anchor.
 	// It performs a comprehensive check of all actions and signatures within the request.
@@ -92,7 +92,7 @@ type Validator interface {
 	// - The list of unmarshalled actions.
 	// - A map of validation attributes (driver-specific) containing additional details about the request.
 	// - An error if the validation fails.
-	VerifyTokenRequestFromRaw(ctx context.Context, getState GetStateFnc, anchor TokenRequestAnchor, raw []byte) ([]interface{}, ValidationAttributes, error)
+	VerifyTokenRequestFromRaw(ctx context.Context, getState GetStateFnc, anchor TokenRequestAnchor, raw []byte) ([]any, ValidationAttributes, error)
 
 	// SetMinProtocolVersion configures the minimum protocol version that this validator will accept.
 	// Token requests with a protocol version below this minimum will be rejected during validation.

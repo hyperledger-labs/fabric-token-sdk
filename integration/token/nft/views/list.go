@@ -23,7 +23,7 @@ type GetHouseView struct {
 	*GetHouse
 }
 
-func (p *GetHouseView) Call(context view.Context) (interface{}, error) {
+func (p *GetHouseView) Call(context view.Context) (any, error) {
 	house := &House{}
 	wallet := nfttx.MyWallet(context)
 	assert.NoError(wallet.QueryByKey(context.Context(), house, "LinearID", p.HouseID), "failed loading house with id %s", p.HouseID)

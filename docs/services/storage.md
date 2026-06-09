@@ -24,7 +24,7 @@ The SDK uses Go's `*big.Int` type throughout the codebase to handle these large 
 ### Transaction & Audit Store (TTXDB / AuditDB)
 These tables track the lifecycle of token requests from assembly to finality. `AuditDB` uses the same schema but is isolated for compliance reporting.
 
-*   **Requests**: Tracks high-level token request state. Contains marshaled requests, current status (Pending, Confirmed, Deleted), and application/public metadata.
+*   **Requests**: Tracks high-level token request state. Contains marshaled requests, current status (Pending, Confirmed, Deleted, Orphan), and application/public metadata.
 *   **Transactions**: Records individual actions (Issue, Transfer, Redeem) within a request, including sender/recipient IDs and amounts (stored as `NUMERIC(78, 0)`).
 *   **Movements**: Aggregates net value changes per enrollment ID (amounts stored as `NUMERIC(78, 0)`). Used to efficiently calculate balances and history.
 *   **Validations**: Stores cryptographic validation metadata produced during the request verification phase.
@@ -112,13 +112,14 @@ It uses a distributed locking mechanism (PostgreSQL advisory locks) to ensure on
 
 The recovery service follows this workflow:
 
-1. **Scan Phase**: The recovery manager periodically scans the transaction database for pending transactions older than the configured TTL
-2. **Claim Phase**: Eligible transactions are claimed by the current instance using a lease mechanism
+1. **Scan Phase**: The recovery manager periodically scans the transaction database for pending transactions older than the configured TTL. The claim query reads only the minimum projection needed (`tx_id`, `stored_at`) and returns a lightweight `RecoveryClaim` for each row, avoiding the cost of materialising the full transaction record on every sweep.
+2. **Claim Phase**: Eligible transactions are claimed by the current instance using a lease mechanism. On PostgreSQL this is an atomic `UPDATE ... RETURNING`; SQLite uses a non-atomic but functionally equivalent permissive claim.
 3. **Recovery Phase**: For each claimed transaction, the recovery handler:
    - Queries the network for the transaction's current status
-   - Based on the status (Valid, Invalid, or Busy), applies the appropriate finality logic
+   - Based on the status (Valid, Invalid, NotFound, or Busy), applies the appropriate finality logic
    - For valid transactions, verifies the token request hash and commits to the local database
-   - For invalid transactions, marks them as deleted
+   - For invalid transactions, marks them as `Deleted`
+   - For transactions whose status keeps returning `NotFound` past the configured `notFoundGracePeriod`, marks them as `Orphan`. This indicates the transaction never reached the ledger (e.g. broadcast failure, mempool drop) and prevents long-stuck rows from blocking the head of the recovery queue, while keeping them distinguishable from ledger-rejected transactions that are marked `Deleted`.
    - For busy (pending) transactions, returns an error and the transaction remains eligible for future recovery
 4. **Lease Management**: Claimed transactions are leased to the instance for a configured duration to prevent stuck transactions from blocking recovery
 

@@ -30,11 +30,7 @@ func (m *Configuration) IsSet(key string) bool {
 }
 
 // UnmarshalKey takes a single key and unmarshals it into a Struct
-func (m *Configuration) UnmarshalKey(key string, rawVal interface{}) error {
-	if m.cm == nil {
-		return nil
-	}
-
+func (m *Configuration) UnmarshalKey(key string, rawVal any) error {
 	return m.cm.UnmarshalKey(key, rawVal)
 }
 

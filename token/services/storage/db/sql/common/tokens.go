@@ -21,13 +21,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -338,6 +338,7 @@ func (db *TokenStore) UnsupportedTokensIteratorBy(ctx context.Context, walletID 
 	logger.DebugfContext(ctx, "after filtering we have [%v]", includeFormats)
 
 	// now, select the tokens with the list of ledger tokens
+
 	return db.queryLedgerTokens(ctx, driver.QueryTokenDetailsParams{
 		WalletID:           walletID,
 		TokenType:          tokenType,
@@ -938,6 +939,7 @@ func (db *TokenStore) StorePublicParams(ctx context.Context, raw []byte) error {
 	if pps, err := db.PublicParamsByHash(ctx, rawHash); err == nil && len(pps) > 0 {
 		logger.DebugfContext(ctx, "public params [%s] already in the database", logging.Base64(rawHash))
 		// no need to update the public parameters
+
 		return nil
 	}
 
@@ -1386,7 +1388,7 @@ func (t *TokenTransaction) SetSpendableBySupportedTokenFormats(ctx context.Conte
 		return errors.Wrapf(err, "error setting spendable flag to true for token types [%v]", formats)
 	} else {
 		rows, _ := res.RowsAffected()
-		logger.InfofContext(ctx, "rows affected [%d]", rows)
+		logger.DebugfContext(ctx, "rows affected [%d]", rows)
 	}
 
 	return nil

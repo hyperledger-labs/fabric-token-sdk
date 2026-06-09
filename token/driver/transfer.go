@@ -15,7 +15,7 @@ import (
 // TransferOptions models the options that can be passed to the transfer command
 type TransferOptions struct {
 	// Attributes is a container of generic options that might be driver specific
-	Attributes map[interface{}]interface{}
+	Attributes map[any]any
 }
 
 //go:generate counterfeiter -o mock/ts.go -fake-name TransferService . TransferService

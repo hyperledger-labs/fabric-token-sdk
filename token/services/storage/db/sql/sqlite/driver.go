@@ -14,41 +14,42 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
+	fscSqlite "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
+
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
 )
 
 type configProvider interface {
-	GetOpts(name driver2.PersistenceName, params ...string) (*sqlite.Config, error)
+	GetOpts(name driver2.PersistenceName, params ...string) (*fscSqlite.Config, error)
 }
 
 type Driver struct {
 	cp configProvider
 
-	TokenLock lazy.Provider[sqlite.Config, *TokenLockStore]
-	Wallet    lazy.Provider[sqlite.Config, *WalletStore]
-	Identity  lazy.Provider[sqlite.Config, *IdentityStore]
-	Token     lazy.Provider[sqlite.Config, *TokenStore]
-	AuditTx   lazy.Provider[sqlite.Config, *AuditTransactionStore]
-	OwnerTx   lazy.Provider[sqlite.Config, *OwnerTransactionStore]
-	KeyStore  lazy.Provider[sqlite.Config, *KeystoreStore]
+	TokenLock lazy.Provider[fscSqlite.Config, *TokenLockStore]
+	Wallet    lazy.Provider[fscSqlite.Config, *WalletStore]
+	Identity  lazy.Provider[fscSqlite.Config, *IdentityStore]
+	Token     lazy.Provider[fscSqlite.Config, *TokenStore]
+	AuditTx   lazy.Provider[fscSqlite.Config, *AuditTransactionStore]
+	OwnerTx   lazy.Provider[fscSqlite.Config, *OwnerTransactionStore]
+	KeyStore  lazy.Provider[fscSqlite.Config, *KeystoreStore]
 }
 
-func NewNamedDriver(config driver3.Config, dbProvider sqlite.DbProvider) driver3.NamedDriver {
+func NewNamedDriver(config driver3.Config, dbProvider fscSqlite.DbProvider) driver3.NamedDriver {
 	return driver3.NamedDriver{
-		Name:   sqlite.Persistence,
+		Name:   fscSqlite.Persistence,
 		Driver: NewDriverWithDbProvider(config, dbProvider),
 	}
 }
 
 func NewDriver(config driver3.Config) *Driver {
-	return NewDriverWithDbProvider(config, sqlite.NewDbProvider())
+	return NewDriverWithDbProvider(config, fscSqlite.NewDbProvider())
 }
 
-func NewDriverWithDbProvider(config driver3.Config, dbProvider sqlite.DbProvider) *Driver {
+func NewDriverWithDbProvider(config driver3.Config, dbProvider fscSqlite.DbProvider) *Driver {
 	d := &Driver{
-		cp: sqlite.NewConfigProvider(common.NewConfig(config)),
+		cp: fscSqlite.NewConfigProvider(common.NewConfig(config)),
 	}
 
 	d.TokenLock = newProviderWithKeyMapper(dbProvider, NewTokenLockStore)
@@ -62,9 +63,9 @@ func NewDriverWithDbProvider(config driver3.Config, dbProvider sqlite.DbProvider
 	return d
 }
 
-func newIdentityStoreProvider(dbProvider sqlite.DbProvider) lazy.Provider[sqlite.Config, *IdentityStore] {
-	return lazy.NewProviderWithKeyMapper(key, func(o sqlite.Config) (*IdentityStore, error) {
-		opts := sqlite.Opts{
+func newIdentityStoreProvider(dbProvider fscSqlite.DbProvider) lazy.Provider[fscSqlite.Config, *IdentityStore] {
+	return lazy.NewProviderWithKeyMapper(key, func(o fscSqlite.Config) (*IdentityStore, error) {
+		opts := fscSqlite.Opts{
 			DataSource:      o.DataSource,
 			SkipPragmas:     o.SkipPragmas,
 			MaxOpenConns:    o.MaxOpenConns,
@@ -89,8 +90,8 @@ func newIdentityStoreProvider(dbProvider sqlite.DbProvider) lazy.Provider[sqlite
 			tableNames,
 			secondcache.NewTyped[bool](5000),
 			secondcache.NewTyped[[]byte](5000),
-			sqlite.NewConditionInterpreter(),
-			&sqlite.ErrorMapper{},
+			NewConditionInterpreter(),
+			&fscSqlite.ErrorMapper{},
 			nil,
 		)
 		if err != nil {
@@ -169,9 +170,9 @@ func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...str
 	return d.OwnerTx.Get(*opts)
 }
 
-func newProviderWithKeyMapper[V common.DBObject](dbProvider sqlite.DbProvider, constructor common2.PersistenceConstructor[V]) lazy.Provider[sqlite.Config, V] {
-	return lazy.NewProviderWithKeyMapper(key, func(o sqlite.Config) (V, error) {
-		opts := sqlite.Opts{
+func newProviderWithKeyMapper[V common.DBObject](dbProvider fscSqlite.DbProvider, constructor common2.PersistenceConstructor[V]) lazy.Provider[fscSqlite.Config, V] {
+	return lazy.NewProviderWithKeyMapper(key, func(o fscSqlite.Config) (V, error) {
+		opts := fscSqlite.Opts{
 			DataSource:      o.DataSource,
 			SkipPragmas:     o.SkipPragmas,
 			MaxOpenConns:    o.MaxOpenConns,
@@ -203,6 +204,6 @@ func newProviderWithKeyMapper[V common.DBObject](dbProvider sqlite.DbProvider, c
 	})
 }
 
-func key(k sqlite.Config) string {
+func key(k fscSqlite.Config) string {
 	return "sqlite" + k.DataSource + k.TablePrefix + strings.Join(k.TableNameParams, "_")
 }

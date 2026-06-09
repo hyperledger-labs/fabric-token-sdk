@@ -51,7 +51,7 @@ type Token struct {
 
 type IssuedToken struct {
 	// Id is used to uniquely identify the token in the ledger
-	Id ID `json:"id,omitempty" protobuf:"bytes,1,opt,name=id,proto3"`
+	Id ID `json:"id" protobuf:"bytes,1,opt,name=id,proto3"`
 	// Owner is the token owner
 	Owner []byte `json:"owner,omitempty" protobuf:"bytes,1,opt,name=owner,proto3"`
 	// Type is the type of the token

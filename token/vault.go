@@ -30,6 +30,8 @@ const (
 	Confirmed = driver.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted = driver.Deleted
+	// Orphan is the status of a transaction that never reached the ledger
+	Orphan = driver.Orphan
 )
 
 // QueryEngine models a token query engine

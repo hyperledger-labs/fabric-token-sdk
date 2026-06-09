@@ -17,7 +17,7 @@ import (
 
 type BuyHouseView struct{}
 
-func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
+func (b *BuyHouseView) Call(context view.Context) (any, error) {
 	// Respond to a request for an identity to transfer the house
 	meHouse, err := nfttx.RespondRequestRecipientIdentity(context)
 	assert.NoError(err, "failed to respond to identity request")

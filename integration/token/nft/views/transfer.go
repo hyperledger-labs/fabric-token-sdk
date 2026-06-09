@@ -29,7 +29,7 @@ type TransferHouseView struct {
 	*Transfer
 }
 
-func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
+func (d *TransferHouseView) Call(context view.Context) (any, error) {
 	// Prepare a new token transaction.
 	idProvider, err := id.GetProvider(context)
 	assert.NoError(err, "failed getting id provider")

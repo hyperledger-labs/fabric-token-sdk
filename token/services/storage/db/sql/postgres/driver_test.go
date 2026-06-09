@@ -90,5 +90,3 @@ CREATE INDEX IF NOT EXISTS idx1 ON table1(id);`
 	require.Contains(t, result, "CREATE TABLE IF NOT EXISTS table2")
 	require.Contains(t, result, "CREATE INDEX IF NOT EXISTS idx1")
 }
-
-// Made with Bob

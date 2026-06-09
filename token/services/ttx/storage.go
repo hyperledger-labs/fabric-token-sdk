@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-var storageProviderType = reflect.TypeOf((*StorageProvider)(nil))
+var storageProviderType = reflect.TypeFor[*StorageProvider]()
 
 //go:generate counterfeiter -o dep/mock/storage.go -fake-name Storage . Storage
 

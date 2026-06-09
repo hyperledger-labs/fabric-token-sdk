@@ -22,10 +22,13 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// StoreServiceManager manages transaction store services for different TMS instances.
 type StoreServiceManager = ttxdb.StoreServiceManager
 
+// TokensServiceManager manages token services for different TMS instances.
 type TokensServiceManager services.ServiceManager[*tokens.Service]
 
+// CheckServiceProvider provides health check services for transaction and token databases.
 type CheckServiceProvider interface {
 	CheckService(id token.TMSID, adb *ttxdb.StoreService, tdb *tokens.Service) (CheckService, error)
 }
@@ -101,7 +104,7 @@ func (m *ServiceManager) CacheRequest(ctx context.Context, tmsID token.TMSID, re
 	return service.CacheRequest(ctx, request)
 }
 
-var managerType = reflect.TypeOf((*ServiceManager)(nil))
+var managerType = reflect.TypeFor[*ServiceManager]()
 
 // Get returns the Service instance for the passed TMS
 func Get(sp token.ServiceProvider, tms dep.TokenManagementService) *Service {

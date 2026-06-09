@@ -38,7 +38,7 @@ type TokenPlatform interface {
 type PublicParamsGenerator interface {
 	// Generate generates the public parameters for the given TMS, wallets, and any additional relevant argument.
 	// It returns the public parameters and any error.
-	Generate(tms *topology.TMS, wallets *topology.Wallets, args ...interface{}) ([]byte, error)
+	Generate(tms *topology.TMS, wallets *topology.Wallets, args ...any) ([]byte, error)
 }
 
 // CryptoMaterialGenerator models the crypto material generator

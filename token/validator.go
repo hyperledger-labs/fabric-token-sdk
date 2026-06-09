@@ -26,18 +26,18 @@ func NewValidator(backend driver.Validator) *Validator {
 }
 
 // UnmarshalActions returns the actions contained in the serialized token request
-func (c *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
+func (c *Validator) UnmarshalActions(raw []byte) ([]any, error) {
 	return c.backend.UnmarshalActions(raw)
 }
 
 // UnmarshallAndVerify unmarshalls the token request and verifies it against the passed ledger and anchor
-func (c *Validator) UnmarshallAndVerify(ctx context.Context, ledger Ledger, anchor RequestAnchor, raw []byte) ([]interface{}, error) {
+func (c *Validator) UnmarshallAndVerify(ctx context.Context, ledger Ledger, anchor RequestAnchor, raw []byte) ([]any, error) {
 	actions, _, err := c.backend.VerifyTokenRequestFromRaw(ctx, ledger.GetState, anchor, raw)
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]interface{}, len(actions))
+	res := make([]any, len(actions))
 	copy(res, actions)
 
 	return res, nil
@@ -45,13 +45,13 @@ func (c *Validator) UnmarshallAndVerify(ctx context.Context, ledger Ledger, anch
 
 // UnmarshallAndVerifyWithMetadata behaves as UnmarshallAndVerify. In addition, it returns the metadata extracts from the token request
 // in the form of map.
-func (c *Validator) UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger Ledger, anchor RequestAnchor, raw []byte) ([]interface{}, map[string][]byte, error) {
+func (c *Validator) UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger Ledger, anchor RequestAnchor, raw []byte) ([]any, map[string][]byte, error) {
 	actions, meta, err := c.backend.VerifyTokenRequestFromRaw(ctx, ledger.GetState, anchor, raw)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	res := make([]interface{}, len(actions))
+	res := make([]any, len(actions))
 	copy(res, actions)
 
 	return res, meta, nil

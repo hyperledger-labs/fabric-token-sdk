@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"encoding/json"
 	"runtime/debug"
 	"time"
 
@@ -29,15 +30,10 @@ func NewReceiveTransactionView(opts ...TxOption) *ReceiveTransactionView {
 	}
 }
 
-// Call listens to a message from the context's session containing a transaction.
-// The transaction can be received in two forms:
-// - The serialization of the Transaction struct, or
-// - The serialization of a SignatureRequest.
-// The view first tries to deserialize directly as Transaction.
-// If a failure happens, then the view tries to deserialize as SignatureRequest.
-// If no timeout is specified via the opts, 1 minutes is used as default
-func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {
-	// options
+// Call listens to a versioned envelope from the context's session and returns a transaction.
+// Supported message types are TypeTransaction, TypeTransactionResponse, and TypeSignatureRequest.
+// If no timeout is specified via the opts, 4 minutes is used as default.
+func (f *ReceiveTransactionView) Call(context view.Context) (any, error) {
 	options, err := CompileOpts(f.opts...)
 	if err != nil {
 		return nil, errors.Join(err, ErrFailedCompilingOptions)
@@ -46,9 +42,8 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 		options.Timeout = time.Minute * 4
 	}
 
-	// run
 	jsonSession := jsession.JSON(context)
-	msg, err := jsonSession.ReceiveRawWithTimeout(options.Timeout)
+	raw, err := jsonSession.ReceiveRawWithTimeout(options.Timeout)
 	if err != nil {
 		if errors.Is(err, utilsession.ErrTimeout) {
 			return nil, errors.Join(err, ErrTimeout)
@@ -57,41 +52,39 @@ func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error)
 
 		return nil, err
 	}
-	logger.DebugfContext(context.Context(), "ReceiveTransactionView: received transaction, len [%d][%s]", len(msg), utils.Hashable(msg))
-
-	if len(msg) == 0 {
+	if len(raw) == 0 {
 		info := context.Session().Info()
 		logger.ErrorfContext(context.Context(), "received empty message, session closed [%s:%v]: [%s]", info.ID, info.Closed, string(debug.Stack()))
 
 		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
 	}
-	tx, err := NewTransactionFromBytes(context, msg)
+
+	env, err := jsession.UnwrapEnvelope(raw, "")
 	if err != nil {
-		logger.WarnfContext(context.Context(), "failed creating transaction from bytes: [%v], try to unmarshal as signature request...", err)
-		// try to unmarshal as SignatureRequest
-		var err2 error
-		tx, err2 = f.unmarshalAsSignatureRequest(context, msg)
-		if err2 != nil {
-			return nil, errors.Wrap(errors.Join(err, err2), "failed to receive transaction")
+		return nil, err
+	}
+	if len(env.Body) == 0 {
+		return nil, errors.Errorf("received empty envelope body")
+	}
+
+	logger.DebugfContext(context.Context(), "ReceiveTransactionView: received %s, len [%d][%s]", env.Type, len(env.Body), utils.Hashable(env.Body))
+
+	switch env.Type {
+	case TypeTransaction, TypeTransactionResponse:
+		var payload TransactionPayload
+		if err := json.Unmarshal(env.Body, &payload); err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling transaction payload")
 		}
-	}
 
-	return tx, nil
-}
+		return NewTransactionFromBytes(context, payload.Raw)
+	case TypeSignatureRequest:
+		var signatureRequest SignatureRequest
+		if err := json.Unmarshal(env.Body, &signatureRequest); err != nil {
+			return nil, errors.Wrapf(err, "failed unmarshalling signature request")
+		}
 
-func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Context, raw []byte) (*Transaction, error) {
-	signatureRequest := &SignatureRequest{}
-	err := Unmarshal(raw, signatureRequest)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed unmarshalling signature request, got [%s]", string(raw))
+		return NewTransactionFromSignatureRequest(context, &signatureRequest)
+	default:
+		return nil, errors.Join(errors.Errorf("unexpected message type [%s]", env.Type), jsession.ErrTypeMismatch)
 	}
-	if len(signatureRequest.TX) == 0 {
-		return nil, errors.Wrap(err, "no transaction received")
-	}
-	tx, err := NewTransactionFromSignatureRequest(context, signatureRequest)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to receive transaction")
-	}
-
-	return tx, nil
 }

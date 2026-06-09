@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"slices"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	nodepkg "github.com/hyperledger-labs/fabric-smart-client/pkg/node"
@@ -59,14 +61,7 @@ func (t *Topology) DefaultChannel() string {
 }
 
 func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel string, driver string) *topology.TMS {
-	found := false
-	for _, s := range Drivers {
-		if driver == s {
-			found = true
-
-			break
-		}
-	}
+	found := slices.Contains(Drivers, driver)
 	if !found {
 		gomega.Expect(found).To(gomega.BeTrue(), "Driver [%s] not recognized", driver)
 	}
@@ -80,7 +75,7 @@ func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel
 		Namespace:       ttx.TokenNamespace,
 		Driver:          driver,
 		Certifiers:      []string{},
-		BackendParams:   map[string]interface{}{},
+		BackendParams:   map[string]any{},
 		TokenTopology:   t,
 		FSCNodes:        nodes,
 	}

@@ -8,10 +8,12 @@ package auditor_test
 
 import (
 	"context"
-	"errors"
 	"io"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	drivermock "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	tokenmock "github.com/hyperledger-labs/fabric-token-sdk/token/mock"
@@ -131,6 +133,7 @@ func newTestService(auditDB *auditdb.StoreService, checkService auditor.CheckSer
 		nil, // finalityTracer
 		nil, // metricsProvider
 		checkService,
+		nil, // lockConfig (uses defaults)
 	)
 }
 
@@ -346,7 +349,7 @@ func TestService_Audit_TMSProviderIrrelevant(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, nil,
 		newTestStoreService(t, newFakeStore()),
-		nil, tmsProv, nil, nil, nil,
+		nil, tmsProv, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-aud-tms-err")
@@ -369,7 +372,7 @@ func TestService_Append_Error_TMSProvider(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, nil,
 		newTestStoreService(t, newFakeStore()),
-		nil, tmsProv, nil, nil, nil,
+		nil, tmsProv, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-app")
@@ -387,7 +390,7 @@ func TestService_Append_GetNetworkError(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, newFakeStore()),
-		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-net-err")
@@ -408,7 +411,7 @@ func TestService_Append_Success(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, newFakeStore()),
-		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-app-success")
@@ -431,7 +434,7 @@ func TestService_Append_AddFinalityListenerError(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, newFakeStore()),
-		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-listener-err")
@@ -460,7 +463,7 @@ func TestService_Append_AuditError(t *testing.T) {
 	svc := auditor.NewService(
 		token.TMSID{}, netProvider,
 		newTestStoreService(t, fakeStore),
-		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil,
+		nil, &depmock.TokenManagementServiceProvider{}, nil, nil, nil, nil,
 	)
 	tx := &auditmock.Transaction{}
 	tx.IDReturns("tx-app-err")
@@ -487,6 +490,7 @@ func TestNewServiceManager(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	assert.NotNil(t, sm)
 }
@@ -507,6 +511,7 @@ func TestServiceManager_Auditor(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
 	require.Error(t, err)
@@ -527,6 +532,7 @@ func TestServiceManager_Auditor_InitSuccess(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	a, err := sm.Auditor(token.TMSID{Network: "n1", Channel: "c1", Namespace: "ns1"})
 	require.NoError(t, err)
@@ -552,6 +558,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = smStoreErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
@@ -568,6 +575,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = smTokensErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
@@ -584,6 +592,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = smNetworkErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
@@ -600,6 +609,7 @@ func TestManager_GetByTMSID_ClosureErrors(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		csp,
+		nil, // configService
 	)
 	sp.service = smCheckErr
 	assert.Nil(t, auditor.GetByTMSID(sp, token.TMSID{}))
@@ -626,6 +636,7 @@ func TestManager_GetByTMSID(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = sm
 	sp.err = nil
@@ -646,6 +657,7 @@ func TestManager_GetByTMSID(t *testing.T) {
 		noop.NewTracerProvider(),
 		nil,
 		&auditmock.CheckServiceProvider{},
+		nil, // configService
 	)
 	sp.service = smSuccess
 	sp.err = nil
@@ -661,4 +673,491 @@ func TestManager_GetByTMSID(t *testing.T) {
 	assert.Panics(t, func() {
 		auditor.Get(sp, w)
 	})
+}
+
+// Service.Audit Lock Management Tests
+// ---------------------------------------------------------------------------
+
+// TestService_Audit_LocksReleasedOnAuditRecordError verifies that when Audit() fails
+// before lock acquisition (during AuditRecord()), no locks are held and Release() is safe.
+// Audit() acquires locks ONLY after successful AuditRecord(), so early failures don't leak locks.
+func TestService_Audit_LocksReleasedOnAuditRecordError(t *testing.T) {
+	// Create a TMS that will fail on AuditRecord by returning nil public parameters
+	mockTMS := &drivermock.TokenManagerService{}
+	mockPPM := &drivermock.PublicParamsManager{}
+	mockPPM.PublicParametersReturns(nil) // This will cause AuditRecord to fail
+	mockTMS.PublicParamsManagerReturns(mockPPM)
+	mockTMS.ValidatorReturns(&drivermock.Validator{}, nil)
+	mockTMS.TokensServiceReturns(&drivermock.TokensService{})
+	mockTMS.WalletServiceReturns(&drivermock.WalletService{})
+
+	mockVP := &tokenmock.VaultProvider{}
+	mockV := &drivermock.Vault{}
+	mockV.QueryEngineReturns(&drivermock.QueryEngine{})
+	mockVP.VaultReturns(mockV, nil)
+
+	badTMS, err := token.NewManagementService(
+		token.TMSID{}, mockTMS, logging.MustGetLogger("test"), mockVP, nil, nil,
+	)
+	require.NoError(t, err)
+
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-audit-record-err")
+	tx.RequestReturns(token.NewRequest(badTMS, token.RequestAnchor("tx-audit-record-err")))
+
+	// Audit should fail
+	_, _, err = svc.Audit(context.Background(), tx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed getting transaction audit record")
+
+	// Release should be safe to call even though Audit failed
+	assert.NotPanics(t, func() {
+		svc.Release(context.Background(), tx)
+	})
+
+	// Verify no locks are held by trying to acquire the same anchor
+	ctx := context.Background()
+	err = storeService.AcquireLocks(ctx, "tx-audit-record-err")
+	require.NoError(t, err, "should be able to acquire locks since Audit failed")
+	storeService.ReleaseLocks(ctx, "tx-audit-record-err")
+}
+
+// TestService_Audit_LocksAcquiredOnSuccess verifies successful Audit() acquires locks,
+// Release() frees them, and Release() is idempotent (safe to call multiple times).
+func TestService_Audit_LocksAcquiredOnSuccess(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-audit-success")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-audit-success")))
+
+	ctx := context.Background()
+
+	// Audit should succeed
+	inputs, outputs, err := svc.Audit(ctx, tx)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs)
+	assert.NotNil(t, outputs)
+
+	// Verify Release is safe to call
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+
+	// Verify Release is idempotent
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+}
+
+// TestService_Audit_ContextCancellationBeforeLockAcquisition verifies context cancellation
+// doesn't leak locks. Semaphore auto-rolls back partially acquired locks (PR #1616).
+// Release() is always safe regardless of Audit() outcome.
+func TestService_Audit_ContextCancellationBeforeLockAcquisition(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-ctx-cancel")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-ctx-cancel")))
+
+	// Use a cancelled context
+	cancelledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	// Audit may fail due to context cancellation (depending on timing)
+	// or succeed if AuditRecord completes before cancellation check
+	_, _, _ = svc.Audit(cancelledCtx, tx)
+	// We don't assert error here as it depends on timing
+
+	// Release should always be safe to call
+	assert.NotPanics(t, func() {
+		svc.Release(context.Background(), tx)
+	})
+
+	// Verify we can acquire locks after (no locks were leaked)
+	ctx := context.Background()
+	err := storeService.AcquireLocks(ctx, "tx-ctx-cancel")
+	require.NoError(t, err, "should be able to acquire locks")
+	storeService.ReleaseLocks(ctx, "tx-ctx-cancel")
+}
+
+// TestService_Audit_MultipleAuditsSequential verifies sequential audits work correctly:
+// first Audit() acquires locks, Release() frees them, second Audit() succeeds.
+func TestService_Audit_MultipleAuditsSequential(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	ctx := context.Background()
+
+	// First audit
+	tx1 := &auditmock.Transaction{}
+	tx1.IDReturns("tx-audit-1")
+	tx1.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-audit-1")))
+
+	inputs1, outputs1, err := svc.Audit(ctx, tx1)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs1)
+	assert.NotNil(t, outputs1)
+
+	// Release first audit's locks
+	svc.Release(ctx, tx1)
+
+	// Second audit should succeed
+	tx2 := &auditmock.Transaction{}
+	tx2.IDReturns("tx-audit-2")
+	tx2.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-audit-2")))
+
+	inputs2, outputs2, err := svc.Audit(ctx, tx2)
+	require.NoError(t, err)
+	assert.NotNil(t, inputs2)
+	assert.NotNil(t, outputs2)
+
+	// Clean up
+	svc.Release(ctx, tx2)
+}
+
+// TestService_Audit_ReleaseIdempotency verifies Release() is idempotent - can be called
+// multiple times safely without panics (handles error paths, defer, retry logic).
+func TestService_Audit_ReleaseIdempotency(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-release-idempotent")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-release-idempotent")))
+
+	// Audit to acquire locks
+	_, _, err := svc.Audit(context.Background(), tx)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// First release should work
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+
+	// Second release should also be safe (no-op)
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+
+	// Third release should still be safe
+	assert.NotPanics(t, func() {
+		svc.Release(ctx, tx)
+	})
+}
+
+// TestService_Audit_ReleaseWithoutAudit verifies Release() is safe to call without
+// prior Audit() (handles defer in error paths where Audit() never ran or failed early).
+func TestService_Audit_ReleaseWithoutAudit(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-no-audit")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-no-audit")))
+
+	// Release without Audit should be safe
+	assert.NotPanics(t, func() {
+		svc.Release(context.Background(), tx)
+	})
+}
+
+// TestService_Audit_PanicRecoveryReleasesLocks verifies defer Release() executes even
+// when code panics, preventing lock leaks. Demonstrates correct pattern:
+//
+//	defer auditor.Release(ctx, tx)  // MUST be after error check
+func TestService_Audit_PanicRecoveryReleasesLocks(t *testing.T) {
+	storeService := newTestStoreService(t, newFakeStore())
+	svc := newTestService(storeService, nil)
+
+	tx := &auditmock.Transaction{}
+	tx.IDReturns("tx-panic-recovery")
+	tx.RequestReturns(token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-panic-recovery")))
+
+	ctx := context.Background()
+
+	// Simulate code that panics after Audit but has defer Release
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Panic recovered as expected
+				assert.Equal(t, "simulated panic", r)
+			}
+		}()
+
+		// Audit succeeds and acquires locks
+		inputs, outputs, err := svc.Audit(ctx, tx)
+		require.NoError(t, err)
+		assert.NotNil(t, inputs)
+		assert.NotNil(t, outputs)
+
+		// Defer Release - this should execute even if panic occurs
+		defer svc.Release(ctx, tx)
+
+		// Simulate panic in subsequent processing
+		panic("simulated panic")
+	}()
+
+	// Verify locks were released by attempting to acquire them
+	err := storeService.AcquireLocks(ctx, "tx-panic-recovery")
+	require.NoError(t, err, "locks should have been released despite panic")
+	storeService.ReleaseLocks(ctx, "tx-panic-recovery")
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Service.acquireLocksWithRetry tests
+// ---------------------------------------------------------------------------
+
+// mockAuditLocker is a test helper that allows intercepting AcquireLocks calls
+// to simulate different lock acquisition scenarios (success, failure, retries)
+type mockAuditLocker struct {
+	acquireLocksFunc func(ctx context.Context, anchor string, eIDs ...string) error
+	acquireCallCount int
+	mu               sync.Mutex
+}
+
+func (m *mockAuditLocker) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
+	m.mu.Lock()
+	m.acquireCallCount++
+	m.mu.Unlock()
+
+	if m.acquireLocksFunc != nil {
+		return m.acquireLocksFunc(ctx, anchor, eIDs...)
+	}
+
+	return nil
+}
+
+func (m *mockAuditLocker) ReleaseLocks(ctx context.Context, anchor string) {}
+
+func (m *mockAuditLocker) AssertLocksHeld(ctx context.Context, anchor string) error {
+	return nil
+}
+
+func (m *mockAuditLocker) GetCallCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.acquireCallCount
+}
+
+func newMockAuditLocker(acquireFunc func(ctx context.Context, anchor string, eIDs ...string) error) *mockAuditLocker {
+	return &mockAuditLocker{
+		acquireLocksFunc: acquireFunc,
+	}
+}
+
+// newTestServiceWithMockLocker creates a test service with a mockable locker
+func newTestServiceWithMockLocker(t *testing.T, mockLocker *mockAuditLocker) *auditor.Service {
+	t.Helper()
+
+	// Create a real store service with our mock locker
+	fakeStore := newFakeStore()
+	storeService, err := auditdb.NewStoreService(fakeStore, auditdb.WithLocker(mockLocker))
+	require.NoError(t, err)
+
+	// Create the auditor service with the store that uses our mock locker
+	return auditor.NewService(
+		token.TMSID{},
+		nil, // networkProvider
+		storeService,
+		nil, // tokenDB
+		nil, // tmsProvider
+		nil, // finalityTracer
+		nil, // metricsProvider
+		nil, // checkService
+		nil, // lockConfig (uses defaults)
+	)
+}
+
+func TestService_AcquireLocksWithRetry_Success_FirstAttempt(t *testing.T) {
+	// Mock locker that succeeds on first attempt
+	mockLocker := newMockAuditLocker(nil)
+	svc := newTestServiceWithMockLocker(t, mockLocker)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-success" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-success"))
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, mockLocker.GetCallCount(), "AcquireLocks should be called once")
+}
+
+func TestService_AcquireLocksWithRetry_Success_AfterRetries(t *testing.T) {
+	// Mock locker that fails twice then succeeds
+	callCount := 0
+	mockLocker := newMockAuditLocker(func(ctx context.Context, anchor string, eIDs ...string) error {
+		callCount++
+		if callCount < 3 {
+			return auditdb.ErrLockContention
+		}
+
+		return nil
+	})
+	svc := newTestServiceWithMockLocker(t, mockLocker)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-retry" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-retry"))
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 3, mockLocker.GetCallCount(), "AcquireLocks should be called 3 times")
+}
+
+func TestService_AcquireLocksWithRetry_Failure_MaxRetriesExceeded(t *testing.T) {
+	// Mock locker that always fails
+	mockLocker := newMockAuditLocker(func(ctx context.Context, anchor string, eIDs ...string) error {
+		return auditdb.ErrLockContention
+	})
+	svc := newTestServiceWithMockLocker(t, mockLocker)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-fail" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-fail"))
+		},
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to acquire locks")
+	assert.Equal(t, 10, mockLocker.GetCallCount(), "Should retry max times (default is 10)")
+}
+
+func TestService_AcquireLocksWithRetry_ContextCancelled_BeforeRetry(t *testing.T) {
+	// Mock locker that always fails
+	mockLocker := newMockAuditLocker(func(ctx context.Context, anchor string, eIDs ...string) error {
+		return auditdb.ErrLockContention
+	})
+	svc := newTestServiceWithMockLocker(t, mockLocker)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	_, _, err := svc.Audit(ctx, &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-cancel" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-cancel"))
+		},
+	})
+
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, context.Canceled), "Should return context.Canceled error")
+	// Should fail quickly due to context cancellation
+	assert.LessOrEqual(t, mockLocker.GetCallCount(), 2, "Should not retry many times after cancellation")
+}
+
+func TestService_AcquireLocksWithRetry_ContextCancelled_DuringBackoff(t *testing.T) {
+	// Mock locker that always fails
+	mockLocker := newMockAuditLocker(func(ctx context.Context, anchor string, eIDs ...string) error {
+		return auditdb.ErrLockContention
+	})
+	svc := newTestServiceWithMockLocker(t, mockLocker)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, _, err := svc.Audit(ctx, &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-timeout" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-timeout"))
+		},
+	})
+
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, context.DeadlineExceeded), "Should return context.DeadlineExceeded error")
+	// Should have attempted at least once but not all 10 times
+	callCount := mockLocker.GetCallCount()
+	assert.Positive(t, callCount, "Should attempt at least once")
+	assert.Less(t, callCount, 10, "Should not complete all retries due to timeout")
+}
+
+func TestService_AcquireLocksWithRetry_ExponentialBackoff(t *testing.T) {
+	// Track call times to verify exponential backoff
+	var callTimes []time.Time
+	var mu sync.Mutex
+	mockLocker := newMockAuditLocker(func(ctx context.Context, anchor string, eIDs ...string) error {
+		mu.Lock()
+		callTimes = append(callTimes, time.Now())
+		count := len(callTimes)
+		mu.Unlock()
+
+		if count < 4 {
+			return auditdb.ErrLockContention
+		}
+
+		return nil
+	})
+	svc := newTestServiceWithMockLocker(t, mockLocker)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-lock-backoff" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-lock-backoff"))
+		},
+	})
+
+	require.NoError(t, err)
+	require.Len(t, callTimes, 4, "Should have 4 attempts")
+
+	// Verify backoff is increasing (with some tolerance for jitter)
+	if len(callTimes) >= 3 {
+		delay1 := callTimes[1].Sub(callTimes[0])
+		delay2 := callTimes[2].Sub(callTimes[1])
+		// Second delay should be roughly 2x first delay (accounting for jitter)
+		// We use a loose check: delay2 should be at least 1.3x delay1
+		assert.Greater(t, delay2, delay1*13/10, "Backoff should increase exponentially")
+	}
+}
+
+func TestService_AcquireLocksWithRetry_MultipleEnrollmentIDs(t *testing.T) {
+	var capturedAnchor string
+	var acquireCalled bool
+	mockLocker := newMockAuditLocker(func(ctx context.Context, anchor string, eIDs ...string) error {
+		capturedAnchor = anchor
+		acquireCalled = true
+
+		return nil
+	})
+	svc := newTestServiceWithMockLocker(t, mockLocker)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-multi-eid" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-multi-eid"))
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, mockLocker.GetCallCount())
+	assert.Equal(t, "tx-multi-eid", capturedAnchor)
+	assert.True(t, acquireCalled, "AcquireLocks should be called")
+}
+
+func TestService_AcquireLocksWithRetry_EmptyEnrollmentIDs(t *testing.T) {
+	mockLocker := newMockAuditLocker(nil)
+	svc := newTestServiceWithMockLocker(t, mockLocker)
+
+	_, _, err := svc.Audit(context.Background(), &auditmock.Transaction{
+		IDStub: func() string { return "tx-empty-eid" },
+		RequestStub: func() *token.Request {
+			return token.NewRequest(newTestManagementService(t), token.RequestAnchor("tx-empty-eid"))
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, mockLocker.GetCallCount())
 }

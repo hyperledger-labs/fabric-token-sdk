@@ -30,6 +30,8 @@ func NewOwner(sp token.ServiceProvider, tms dep.TokenManagementService) *TxOwner
 	return NewTxOwner(tms, backend)
 }
 
+// NewTxOwner creates a new TxOwner with the given token management service and backend service.
+// This is a lower-level constructor used internally when the backend service is already available.
 func NewTxOwner(tms dep.TokenManagementService, backend *Service) *TxOwner {
 	return &TxOwner{
 		tms:                     tms,
@@ -64,14 +66,21 @@ func (a *TxOwner) GetStatus(ctx context.Context, txID string) (TxStatus, string,
 	return a.owner.GetStatus(ctx, txID)
 }
 
+// GetTokenRequest retrieves the serialized token request for the given transaction ID.
+// Returns an error if the transaction is not found in the database.
 func (a *TxOwner) GetTokenRequest(ctx context.Context, txID string) ([]byte, error) {
 	return a.owner.GetTokenRequest(ctx, txID)
 }
 
+// Check performs a health check on the owner service and returns any issues found.
+// It delegates to the underlying service for the check.
 func (a *TxOwner) Check(ctx context.Context) ([]string, error) {
 	return a.owner.Check(ctx)
 }
 
+// appendTransactionEndorseAck records an endorsement acknowledgment signature from a party
+// for the given transaction. This is used internally during transaction distribution to
+// track which parties have acknowledged receipt of the transaction.
 func (a *TxOwner) appendTransactionEndorseAck(ctx context.Context, tx *Transaction, id view.Identity, sigma []byte) error {
 	return a.owner.AppendTransactionEndorseAck(ctx, tx.ID(), id, sigma)
 }
