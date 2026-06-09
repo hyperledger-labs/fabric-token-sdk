@@ -6,7 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package topology
 
-import "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+import (
+	"fmt"
+
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+)
 
 type Options struct {
 	Mapping map[string]any
@@ -144,18 +148,50 @@ func ToOptions(o *node.Options) *Options {
 	if ok {
 		return res
 	}
-	mapping, ok := opt.(map[any]any)
-	if ok {
+
+	// Handle map[any]any
+	if mapping, ok := opt.(map[any]any); ok {
 		return Convert(mapping)
 	}
-	panic("invalid options")
+
+	// Handle map[string]any from JSON/YAML unmarshaling
+	if mapping, ok := opt.(map[string]any); ok {
+		anyMapping := make(map[any]any)
+		for k, v := range mapping {
+			anyMapping[k] = v
+		}
+
+		return Convert(anyMapping)
+	}
+
+	panic(fmt.Sprintf("invalid options type: %T", opt))
 }
 
 func Convert(m map[any]any) *Options {
 	opts := &Options{
 		Mapping: map[string]any{},
 	}
-	for k, v := range m["mapping"].(map[any]any) {
+
+	// Handle both nested "mapping" key and direct mapping
+	var source map[any]any
+	if mappingVal, ok := m["mapping"]; ok {
+		if nestedMap, ok := mappingVal.(map[any]any); ok {
+			source = nestedMap
+		} else if nestedMap, ok := mappingVal.(map[string]any); ok {
+			// Convert map[string]any to map[any]any
+			source = make(map[any]any)
+			for k, v := range nestedMap {
+				source[k] = v
+			}
+		} else {
+			panic(fmt.Sprintf("invalid nested mapping type: %T", mappingVal))
+		}
+	} else {
+		// Use the entire map if no "mapping" key exists
+		source = m
+	}
+
+	for k, v := range source {
 		opts.Mapping[k.(string)] = v
 	}
 
