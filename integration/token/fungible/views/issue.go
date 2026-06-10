@@ -98,11 +98,16 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	var tx *ttx.Transaction
 	var auditorID view.Identity
 	idProvider, err := id.GetProvider(context)
-	assert.NoError(err, "failed getting id provider")
+	if err != nil {
+		return nil, fmt.Errorf("failed getting id provider: %w", err)
+	}
 	if len(p.Auditor) == 0 {
 		auditorID = idProvider.DefaultIdentity()
 	} else {
 		auditorID = idProvider.Identity(p.Auditor)
+	}
+	if len(auditorID) == 0 {
+		return nil, fmt.Errorf("failed to get auditor identity: auditor identity is nil or empty for auditor [%s]", p.Auditor)
 	}
 	opts := TxOpts(p.TMSID, ttx.WithAuditor(auditorID))
 	if p.Anonymous {
@@ -136,6 +141,15 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	if p.SkipAuditorSignatureVerification {
 		eOpts = append(eOpts, ttx.WithSkipAuditorSignatureVerification())
 	}
+
+	// Validate transaction and auditor before collecting endorsements
+	if tx == nil {
+		return nil, fmt.Errorf("transaction is nil before collecting endorsements")
+	}
+	if len(auditorID) == 0 {
+		return nil, fmt.Errorf("auditor identity is invalid before collecting endorsements")
+	}
+
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, eOpts...))
 	assert.NoError(err, "failed to sign issue transaction for "+tx.ID())
 
