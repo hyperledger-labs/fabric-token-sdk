@@ -1,0 +1,5 @@
+go fix ./...
+~/go/bin/golangci-lint run --timeout=30m
+grep -r 'Made with Bob' .
+
+

@@ -249,6 +249,6 @@ Potential improvements:
 
 ## References
 
-- [Security Plan](../../SECURITY_PLAN_DB_TIMEOUTS.md)
 - [Context Package Documentation](https://pkg.go.dev/context)
+- [Hyperledger Security Policy](../../SECURITY.md)
 - [Database Best Practices](../development/storage.md)
