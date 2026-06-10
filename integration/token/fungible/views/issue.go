@@ -8,7 +8,6 @@ package views
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -67,7 +66,7 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 		return nil, fmt.Errorf("failed to get enrollment id for recipient [%s]: %w", recipient, err)
 	}
 	if !strings.HasPrefix(eID, p.RecipientEID) {
-		return nil, errors.New(fmt.Sprintf("recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID))
+		return nil, fmt.Errorf("recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
 	}
 
 	// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
