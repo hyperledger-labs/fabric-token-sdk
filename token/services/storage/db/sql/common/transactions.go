@@ -393,11 +393,11 @@ func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, tx
 		Format()
 
 	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
-	
+
 	// Apply short timeout for endorsement ack storage
 	timeoutCtx, cancel := WithShortTimeout(ctx, nil)
 	defer cancel()
-	
+
 	if _, err = db.writeDB.ExecContext(timeoutCtx, query, args...); err != nil {
 		return ttxDBError(err)
 	}
@@ -449,7 +449,7 @@ func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status d
 	// Apply short timeout for status update
 	timeoutCtx, cancel := WithShortTimeout(ctx, nil)
 	defer cancel()
-	
+
 	var err error
 	if len(message) != 0 {
 		query, args := q.Update(db.table.Requests).
@@ -611,11 +611,11 @@ func (w *TransactionStoreTransaction) AddTransaction(ctx context.Context, rs ...
 		Rows(rows).
 		Format()
 	logging.Debug(logger, query, args)
-	
+
 	// Apply medium timeout for batch transaction record insertion
 	timeoutCtx, cancel := WithMediumTimeout(ctx, nil)
 	defer cancel()
-	
+
 	_, err := w.txn.ExecContext(timeoutCtx, query, args...)
 
 	return ttxDBError(err)
@@ -646,11 +646,11 @@ func (w *TransactionStoreTransaction) AddTokenRequest(ctx context.Context, txID 
 		Row(txID, tr, dbdriver.Pending, "", ja, jp, ppHash, time.Now().UTC()).
 		Format()
 	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(publicMetadata), len(ppHash))
-	
+
 	// Apply medium timeout for token request insertion
 	timeoutCtx, cancel := WithMediumTimeout(ctx, nil)
 	defer cancel()
-	
+
 	_, err = w.txn.ExecContext(timeoutCtx, query, args...)
 
 	return ttxDBError(err)
@@ -685,11 +685,11 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 		Rows(rows).
 		Format()
 	logging.Debug(logger, query, args)
-	
+
 	// Apply medium timeout for batch movement record insertion
 	timeoutCtx, cancel := WithMediumTimeout(ctx, nil)
 	defer cancel()
-	
+
 	_, err := w.txn.ExecContext(timeoutCtx, query, args...)
 
 	return ttxDBError(err)
