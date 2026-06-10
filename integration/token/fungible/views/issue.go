@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -20,7 +21,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 // IssueCash contains the input information to issue a token
@@ -57,20 +57,20 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	// identity the recipient wants to use.
 	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient, ServiceOpts(p.TMSID, ttx.WithRecipientWalletID(p.RecipientWalletID))...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed getting recipient identity")
+		return nil, fmt.Errorf("failed getting recipient identity: %w", err)
 	}
 
 	// match recipient EID
 	tms, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed getting management service")
+		return nil, fmt.Errorf("failed getting management service: %w", err)
 	}
 	eID, err := tms.WalletManager().GetEnrollmentID(context.Context(), recipient)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get enrollment id for recipient [%s]", recipient)
+		return nil, fmt.Errorf("failed to get enrollment id for recipient [%s]: %w", recipient, err)
 	}
 	if !strings.HasPrefix(eID, p.RecipientEID) {
-		return nil, errors.Errorf("recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
+		return nil, errors.New(fmt.Sprintf("recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID))
 	}
 
 	// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
