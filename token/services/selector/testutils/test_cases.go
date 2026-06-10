@@ -118,7 +118,7 @@ func TestInsufficientTokensManyReplicas(t *testing.T, replicas []EnhancedManager
 	// After insufficient token selections, some tokens should remain
 	// The test creates 100 CHF (50 tokens * 2 CHF each) and requests 240 CHF total
 	// Since there are insufficient tokens, some selections will fail and tokens will remain
-	assert.Greater(t, sum.Cmp(newToken(0)), 0, "Expected remaining tokens after failed selections")
+	assert.Positive(t, sum.Cmp(newToken(0)), "Expected remaining tokens after failed selections")
 }
 
 // Enhanced manager
