@@ -149,7 +149,9 @@ func (t *TransferView) Call(context view.Context) (txID any, err error) {
 		token2.WithTokenIDs(t.TokenIDs...),
 		token2.WithRestRecipientIdentity(t.SenderChangeRecipientData),
 	)
-	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
+	}
 
 	// add additional transfers
 	logger.DebugfContext(context.Context(), "Append additional actions")
@@ -166,7 +168,9 @@ func (t *TransferView) Call(context view.Context) (txID any, err error) {
 			[]view.Identity{additionalRecipients[i]},
 			opts...,
 		)
-		assert.NoError(err, "failed adding transfer action [%d:%s]", action.Amount, action.Recipient)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed adding transfer action [%d:%s]", action.Amount, action.Recipient)
+		}
 	}
 
 	if t.FailToRelease {
