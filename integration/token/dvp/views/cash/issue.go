@@ -8,7 +8,7 @@ package cash
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	"github.com/LFDT-Panurus/panurus/token/services/ttx"
 	"github.com/LFDT-Panurus/panurus/token/token"
@@ -48,7 +48,7 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	assert.NoError(err, "failed getting identity provider")
 	auditorID := idProvider.Identity("auditor")
 	if auditorID == nil {
-		return nil, fmt.Errorf("failed to get auditor identity: auditor identity is nil for auditor [auditor]")
+		return nil, errors.New("failed to get auditor identity: auditor identity is nil for auditor [auditor]")
 	}
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
