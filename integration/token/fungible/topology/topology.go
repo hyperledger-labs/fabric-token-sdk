@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabricx"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabricx/extensions/scv2"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
@@ -150,7 +149,6 @@ func Topology(opts common.Opts) []api.Topology {
 		endorserTemplate.AddOptions(
 			fabric.WithOrganization("Org1"),
 			fabric2.WithEndorserRole(),
-			scv2.WithApproverRole(),
 		)
 		endorserTemplate.RegisterViewFactory("TMSDeploy", &tmsdeploy.ViewFactory{})
 		fscTopology.AddNodeFromTemplate("endorser-1", endorserTemplate).AddOptions(opts.ReplicationOpts.For("endorser-1")...)
@@ -161,6 +159,10 @@ func Topology(opts common.Opts) []api.Topology {
 			endorserIDs = append(endorserIDs, "endorser-2", "endorser-3")
 		}
 	}
+
+	// Add bootstrap node before creating node list
+	bootstrapNode := fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
+	fscTopology.SetBootstrapNode(bootstrapNode)
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.TokenSelector = opts.TokenSelector
@@ -176,7 +178,6 @@ func Topology(opts common.Opts) []api.Topology {
 	}
 	fabric2.SetOrgs(tms, "Org1")
 	nodeList := fscTopology.ListNodes()
-	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 
 	if !opts.NoAuditor {
 		tms.AddAuditor(auditor)

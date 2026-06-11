@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/node"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
@@ -90,8 +89,8 @@ func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, token
 			TokenSelector:       tokenSelector,
 		})...)
 		i.RegisterPlatformFactory(fabricx.NewPlatformFactory())
-		i.RegisterPlatformFactory(token.NewPlatformFactory(i))
-		i.Generate()
+		// Note: token.NewPlatformFactory is registered in TestSuite.Setup()
+		// Note: i.Generate() is called in TestSuite.Setup()
 
 		return i, err
 	})
