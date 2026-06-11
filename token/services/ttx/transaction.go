@@ -543,6 +543,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 		}
 
 		// Get the enrollment ID for this wallet's identity
+		// WalletManager.GetEnrollmentID internally handles getting audit info
 		eid, err := walletService.GetEnrollmentID(ctx, identity)
 		if err != nil {
 			// Skip if we can't get the enrollment ID
