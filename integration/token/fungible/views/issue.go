@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -144,10 +145,10 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 
 	// Validate transaction and auditor before collecting endorsements
 	if tx == nil {
-		return nil, fmt.Errorf("transaction is nil before collecting endorsements")
+		return nil, errors.New("transaction is nil before collecting endorsements")
 	}
 	if len(auditorID) == 0 {
-		return nil, fmt.Errorf("auditor identity is invalid before collecting endorsements")
+		return nil, errors.New("auditor identity is invalid before collecting endorsements")
 	}
 
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, eOpts...))

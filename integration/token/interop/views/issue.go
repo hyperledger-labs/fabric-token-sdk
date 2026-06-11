@@ -8,7 +8,7 @@ package views
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
@@ -54,7 +54,7 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	assert.NoError(err, "failed getting id provider")
 	auditorID := idProvider.Identity("auditor") // Retrieve the auditor's FSC node identity
 	if auditorID == nil {
-		return nil, fmt.Errorf("failed to get auditor identity: auditor identity is nil for auditor [auditor]")
+		return nil, errors.New("failed to get auditor identity: auditor identity is nil for auditor [auditor]")
 	}
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
