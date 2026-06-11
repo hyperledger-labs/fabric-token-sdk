@@ -150,7 +150,7 @@ func (t *TransferView) Call(context view.Context) (txID any, err error) {
 		token2.WithRestRecipientIdentity(t.SenderChangeRecipientData),
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
+		return nil, errors.Wrapf(err, "failed adding transfer action [amount: %d, recipient: %s]", t.Amount, recipient.String())
 	}
 
 	// add additional transfers
@@ -169,7 +169,7 @@ func (t *TransferView) Call(context view.Context) (txID any, err error) {
 			opts...,
 		)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed adding transfer action [%d:%s]", action.Amount, action.Recipient)
+			return nil, errors.Wrapf(err, "failed adding transfer action [amount: %d, recipient: %s]", action.Amount, additionalRecipients[i].String())
 		}
 	}
 
@@ -635,7 +635,7 @@ func (t *MaliciousTransferView) Call(context view.Context) (txID any, err error)
 		token2.WithTokenIDs(t.TokenIDs...),
 		token2.WithRestRecipientIdentity(t.SenderChangeRecipientData),
 	)
-	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
+	assert.NoError(err, "failed adding transfer action [amount: %d, recipient: %s]", t.Amount, recipient.String())
 
 	// The sender is ready to collect all the required signatures.
 	// In this case, the sender's and the auditor's signatures.
@@ -679,7 +679,7 @@ func (t *MaliciousTransferView) Call(context view.Context) (txID any, err error)
 		[]uint64{t.Amount},
 		[]view.Identity{self},
 	)
-	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
+	assert.NoError(err, "failed adding transfer action [amount: %d, recipient: %s]", t.Amount, self.String())
 
 	endorserOpts = append(endorserOpts, ttx.WithSkipDistributeEnv())
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx2, endorserOpts...))
