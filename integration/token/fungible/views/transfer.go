@@ -282,8 +282,13 @@ func (t *TransferWithSelectorView) Call(context view.Context) (any, error) {
 		for range 5 {
 			// Select the request amount of tokens of the given type
 			ids, sum, err = selector.Select(context.Context(), ttx.GetWallet(context, t.Wallet), amount.Decimal(), t.Type)
-			// If an error occurs and retry has been asked, then wait first a bit
-			if err != nil && t.Retry {
+			// Retry only for transient contention-style failures.
+			// Permanent failures such as insufficient funds must surface immediately,
+			// otherwise this view can loop until the test times out.
+			if err != nil && t.Retry &&
+				(errors.HasCause(err, token2.SelectorSufficientButLockedFunds) ||
+					errors.HasCause(err, token2.SelectorSufficientButNotCertifiedFunds) ||
+					errors.HasCause(err, token2.SelectorSufficientFundsButConcurrencyIssue)) {
 				time.Sleep(10 * time.Second)
 
 				continue
