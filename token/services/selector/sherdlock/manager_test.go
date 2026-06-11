@@ -96,13 +96,13 @@ func createManager(pgConnStr string, backoff time.Duration, maxRetries int) (tes
 		DataSource:   pgConnStr,
 		MaxOpenConns: 10,
 	}), &dbProvider{})
-	
+
 	// Create Token DB first (this creates test_tokens table)
 	tokenDB, err := d.NewToken("")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create Lock DB after (this creates test_token_locks table with FK to test_tokens)
 	lockDB, err := d.NewTokenLock("")
 	if err != nil {
