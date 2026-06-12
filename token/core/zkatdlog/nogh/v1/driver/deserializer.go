@@ -16,9 +16,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
+	hashescrow2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
@@ -46,6 +48,7 @@ func NewDeserializer(pp *v1.PublicParams) (*Deserializer, error) {
 	}
 	des.AddTypedVerifierDeserializer(x509.IdentityType, deserializer.NewTypedIdentityVerifierDeserializer(&x509.IdentityDeserializer{}, &x509.AuditMatcherDeserializer{}))
 	des.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(des))
+	des.AddTypedVerifierDeserializer(hashescrow2.ScriptType, hashescrow.NewTypedIdentityDeserializer(des))
 	des.AddTypedVerifierDeserializer(multisig.Multisig, multisig.NewTypedIdentityDeserializer(des, des))
 	des.AddTypedVerifierDeserializer(boolpolicy.Policy, boolpolicy.NewTypedIdentityDeserializer(des, des))
 
@@ -93,6 +96,7 @@ func NewEIDRHDeserializer() *EIDRHDeserializer {
 	d.AddDeserializer(idemixnym.IdentityType, &idemixnym.AuditInfoDeserializer{})
 	d.AddDeserializer(x509.IdentityType, &x509.AuditInfoDeserializer{})
 	d.AddDeserializer(htlc2.ScriptType, htlc.NewAuditDeserializer(d))
+	d.AddDeserializer(hashescrow2.ScriptType, hashescrow.NewAuditDeserializer(d))
 	d.AddDeserializer(multisig.Multisig, &multisig.AuditInfoDeserializer{})
 	d.AddDeserializer(boolpolicy.Policy, &boolpolicy.AuditInfoDeserializer{})
 

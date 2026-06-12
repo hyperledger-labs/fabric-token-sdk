@@ -73,6 +73,8 @@ func TypeToString(t driver.IdentityType) string {
 		return tdriver.MultiSigIdentityTypeString
 	case tdriver.HTLCScriptIdentityType:
 		return tdriver.HTLCScriptIdentityTypeString
+	case tdriver.HashEscrowIdentityType:
+		return tdriver.HashEscrowIdentityTypeString
 	default:
 		return fmt.Sprintf("Type (%d)", t)
 	}

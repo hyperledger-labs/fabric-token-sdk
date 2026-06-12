@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
@@ -68,26 +69,40 @@ func (a *AuditView) Call(context view.Context) (any, error) {
 	for i := range inputs.Count() {
 		input, err := htlc.ToInput(inputs.At(i))
 		assert.NoError(err, "cannot get htlc input wrapper")
-		if !input.IsHTLC() {
-			continue
+		if input.IsHTLC() {
+			// check script details, for example make sure the hash is set
+			script, err := input.Script()
+			assert.NoError(err, "cannot get htlc script from input")
+			assert.True(len(script.HashInfo.Hash) > 0, "hash is not set")
 		}
-		// check script details, for example make sure the hash is set
-		script, err := input.Script()
-		assert.NoError(err, "cannot get htlc script from input")
-		assert.True(len(script.HashInfo.Hash) > 0, "hash is not set")
+
+		hashEscrowInput, err := hashescrow.ToInput(inputs.At(i))
+		assert.NoError(err, "cannot get hash escrow input wrapper")
+		if hashEscrowInput.IsHashEscrow() {
+			hashEscrowScript, err := hashEscrowInput.Script()
+			assert.NoError(err, "cannot get hash escrow script from input")
+			assert.NoError(hashEscrowScript.Validate(), "hash escrow script is not valid")
+		}
 	}
 
 	now := time.Now()
 	for i := range outputs.Count() {
 		output, err := htlc.ToOutput(outputs.At(i))
 		assert.NoError(err, "cannot get htlc output wrapper")
-		if !output.IsHTLC() {
-			continue
+		if output.IsHTLC() {
+			// check script details
+			script, err := output.Script()
+			assert.NoError(err, "cannot get htlc script from output")
+			assert.NoError(script.Validate(now), "script is not valid")
 		}
-		// check script details
-		script, err := output.Script()
-		assert.NoError(err, "cannot get htlc script from output")
-		assert.NoError(script.Validate(now), "script is not valid")
+
+		hashEscrowOutput, err := hashescrow.ToOutput(outputs.At(i))
+		assert.NoError(err, "cannot get hash escrow output wrapper")
+		if hashEscrowOutput.IsHashEscrow() {
+			hashEscrowScript, err := hashEscrowOutput.Script()
+			assert.NoError(err, "cannot get hash escrow script from output")
+			assert.NoError(hashEscrowScript.Validate(), "hash escrow script is not valid")
+		}
 	}
 
 	return context.RunView(ttx.NewAuditApproveView(w, tx))

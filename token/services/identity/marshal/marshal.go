@@ -131,6 +131,9 @@ func DecodeIdentity(b []byte) (Result, error) {
 		case driver.HTLCScriptIdentityTypeString:
 			r.Int32 = driver.HTLCScriptIdentityType
 			r.IsInt = true
+		case driver.HashEscrowIdentityTypeString:
+			r.Int32 = driver.HashEscrowIdentityType
+			r.IsInt = true
 		}
 	}
 

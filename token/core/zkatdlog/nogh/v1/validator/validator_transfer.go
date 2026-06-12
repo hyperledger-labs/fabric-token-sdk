@@ -17,7 +17,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	hashescrow2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/hashescrow"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -209,6 +211,77 @@ func TransferHTLCValidate(c context.Context, ctx *Context) error {
 
 			continue
 		}
+	}
+
+	return nil
+}
+
+// TransferHashEscrowValidate validates the HashEscrow scripts in the transfer action.
+func TransferHashEscrowValidate(c context.Context, ctx *Context) error {
+	for i, in := range ctx.InputTokens {
+		owner, err := identity.UnmarshalTypedIdentity(in.Owner)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal owner of input token")
+		}
+		if owner.Type != hashescrow.HashEscrow {
+			continue
+		}
+		if len(ctx.InputTokens) != 1 || len(ctx.TransferAction.GetOutputs()) != 1 {
+			return ErrInvalidHTLCAction
+		}
+
+		out, ok := ctx.TransferAction.GetOutputs()[0].(*token.Token)
+		if !ok || out == nil {
+			return ErrHTLCOutputNotFound
+		}
+
+		script, err := hashescrow2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner)
+		if err != nil {
+			return errors.Wrap(err, "failed to verify transfer from hash escrow script")
+		}
+		sigma := ctx.Signatures[i]
+		claim, err := hashescrow2.ClaimFromSignature(sigma)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to parse hash escrow claim signature")
+		}
+		resolvedOwner, _, claimedBy, err := hashescrow2.ResolveOwnerAndHash(script, claim.Preimage)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to resolve hash escrow claim")
+		}
+		if !identity.Identity(resolvedOwner).Equal(out.Owner) {
+			return errors.New("invalid transfer action: output owner does not match hash escrow recipient resolved from preimage")
+		}
+		metadataKey, err := hashescrow2.ClaimMetadataCheck(ctx.TransferAction, script, claim.Preimage, claimedBy)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to check hash escrow claim metadata")
+		}
+		ctx.CountMetadataKey(metadataKey)
+	}
+
+	for _, o := range ctx.TransferAction.Outputs {
+		if o.IsRedeem() {
+			continue
+		}
+		owner, err := identity.UnmarshalTypedIdentity(o.Owner)
+		if err != nil {
+			return err
+		}
+		if owner.Type != hashescrow.HashEscrow {
+			continue
+		}
+		script := &hashescrow.Script{}
+		err = script.FromBytes(owner.Identity)
+		if err != nil {
+			return err
+		}
+		if err := script.Validate(); err != nil {
+			return errors.WithMessagef(err, "hash escrow script invalid")
+		}
+		metadataKey, err := hashescrow2.LockMetadataCheck(ctx.TransferAction, script)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to check hash escrow lock metadata")
+		}
+		ctx.CountMetadataKey(metadataKey)
 	}
 
 	return nil
