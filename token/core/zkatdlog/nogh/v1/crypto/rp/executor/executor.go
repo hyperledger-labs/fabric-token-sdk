@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package rp
+package executor
 
 import (
 	"runtime"
@@ -51,11 +51,9 @@ type UnboundedExecutor struct {
 }
 
 func (e *UnboundedExecutor) Submit(task func()) {
-	e.wg.Add(1)
-	go func() {
-		defer e.wg.Done()
+	e.wg.Go(func() {
 		task()
-	}()
+	})
 }
 
 func (e *UnboundedExecutor) Wait() { e.wg.Wait() }

@@ -20,12 +20,12 @@ type fakeConfig struct {
 	id driver.TMSID
 }
 
-func (f *fakeConfig) ID() driver.TMSID                                  { return f.id }
-func (f *fakeConfig) IsSet(key string) bool                             { return false }
-func (f *fakeConfig) UnmarshalKey(key string, rawVal interface{}) error { return nil }
-func (f *fakeConfig) GetString(key string) string                       { return "" }
-func (f *fakeConfig) GetBool(key string) bool                           { return false }
-func (f *fakeConfig) TranslatePath(path string) string                  { return path }
+func (f *fakeConfig) ID() driver.TMSID                          { return f.id }
+func (f *fakeConfig) IsSet(key string) bool                     { return false }
+func (f *fakeConfig) UnmarshalKey(key string, rawVal any) error { return nil }
+func (f *fakeConfig) GetString(key string) string               { return "" }
+func (f *fakeConfig) GetBool(key string) bool                   { return false }
+func (f *fakeConfig) TranslatePath(path string) string          { return path }
 
 type fakeConfigService struct {
 	configs []driver.Configuration

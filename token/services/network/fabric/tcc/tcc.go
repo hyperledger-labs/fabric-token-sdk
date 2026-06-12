@@ -54,7 +54,7 @@ func (a *SetupAction) GetSetupParameters() ([]byte, error) {
 //go:generate counterfeiter -o mock/validator.go -fake-name Validator . Validator
 
 type Validator interface {
-	UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger token.Ledger, anchor token.RequestAnchor, raw []byte) ([]interface{}, map[string][]byte, error)
+	UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger token.Ledger, anchor token.RequestAnchor, raw []byte) ([]any, map[string][]byte, error)
 }
 
 //go:generate counterfeiter -o mock/public_parameters_manager.go -fake-name PublicParametersManager . PublicParametersManager

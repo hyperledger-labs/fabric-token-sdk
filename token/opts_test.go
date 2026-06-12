@@ -34,7 +34,7 @@ func TestServiceOptions_TMSID(t *testing.T) {
 // TestServiceOptions_ParamAsString_Success verifies successful string parameter retrieval
 func TestServiceOptions_ParamAsString_Success(t *testing.T) {
 	opts := ServiceOptions{
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"key1": "value1",
 			"key2": "value2",
 		},
@@ -48,7 +48,7 @@ func TestServiceOptions_ParamAsString_Success(t *testing.T) {
 // TestServiceOptions_ParamAsString_NotFound verifies empty string for missing key
 func TestServiceOptions_ParamAsString_NotFound(t *testing.T) {
 	opts := ServiceOptions{
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"key1": "value1",
 		},
 	}
@@ -70,7 +70,7 @@ func TestServiceOptions_ParamAsString_NilParams(t *testing.T) {
 // TestServiceOptions_ParamAsString_WrongType verifies error for non-string value
 func TestServiceOptions_ParamAsString_WrongType(t *testing.T) {
 	opts := ServiceOptions{
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"key1": 123,
 		},
 	}
@@ -234,7 +234,7 @@ func (m *mockPublicParamsFetcher) Fetch() ([]byte, error) {
 
 type mockView struct{}
 
-func (m *mockView) Call(view.Context) (interface{}, error) {
+func (m *mockView) Call(view.Context) (any, error) {
 	return nil, nil
 }
 

@@ -554,7 +554,7 @@ func TAllowsSameTxID(t *testing.T, db driver3.TokenTransactionStore) {
 		TokenType:           "magic",
 		ApplicationMetadata: map[string][]byte{},
 		Amount:              big.NewInt(1),
-		Timestamp:           time.Now(),
+		Timestamp:           time.Now().Add(2 * time.Second),
 	}
 	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
@@ -977,7 +977,7 @@ func TEndorserAcks(t *testing.T, db driver3.TokenTransactionStore) {
 	wg.Add(n)
 	for i := range n {
 		go func(i int) {
-			assert.NoError(t, db.AddTransactionEndorsementAck(ctx, "1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			assert.NoError(t, db.AddTransactionEndorsementAck(ctx, "1", fmt.Appendf(nil, "alice_%d", i), fmt.Appendf(nil, "sigma_%d", i)))
 			acks, err := db.GetTransactionEndorsementAcks(ctx, "1")
 			assert.NoError(t, err)
 			assert.NotEmpty(t, acks)
@@ -990,7 +990,7 @@ func TEndorserAcks(t *testing.T, db driver3.TokenTransactionStore) {
 	require.NoError(t, err)
 	assert.Len(t, acks, n)
 	for i := range n {
-		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
+		assert.Equal(t, fmt.Appendf(nil, "sigma_%d", i), acks[token.Identity(fmt.Sprintf("alice_%d", i)).String()])
 	}
 }
 

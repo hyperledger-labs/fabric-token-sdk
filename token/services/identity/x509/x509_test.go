@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestAuditInfo(t *testing.T) {
@@ -386,8 +386,8 @@ func TestKeyManagerProvider_Get(t *testing.T) {
 			return path
 		})
 
-		opts := map[string]interface{}{
-			"BCCSP": map[string]interface{}{
+		opts := map[string]any{
+			"BCCSP": map[string]any{
 				"Default": "SW",
 			},
 		}

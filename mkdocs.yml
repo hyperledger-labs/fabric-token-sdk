@@ -1,0 +1,123 @@
+site_name: Fabric Token SDK
+site_url: https://hyperledger-labs.github.io/fabric-token-sdk/
+site_description: Privacy-preserving token management for Hyperledger Fabric
+site_author: Hyperledger Labs
+repo_url: https://github.com/hyperledger-labs/fabric-token-sdk
+repo_name: hyperledger-labs/fabric-token-sdk
+edit_uri: edit/main/docs/
+
+validation:
+  links:
+    not_found: info
+    anchors: info
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.expand
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: README.md
+  - Core Concepts:
+      - Token SDK Overview: tokensdk.md
+      - Token API: tokenapi.md
+      - Token API Usage: token_sdk_usage.md
+      - Driver API: driverapi.md
+      - Configuration: configuration.md
+      - Services Overview: services.md
+      - Upgradability: upgradability.md
+      - Public Parameters Lifecycle: public_parameters.md
+  - Drivers:
+      - Fabtoken: drivers/fabtoken.md
+      - DLog (Zero-Knowledge): drivers/dlogwogh.md
+      - Extending Validator: drivers/extending_validator.md
+      - Metrics: drivers/metrics.md
+      - Benchmark:
+          - Overview: drivers/benchmark/benchmark.md
+          - Tools: drivers/benchmark/tools.md
+          - Core Drivers:
+              - DLog No-GH Overview: drivers/benchmark/core/dlognogh/dlognogh.md
+              - DLog No-GH Architecture: drivers/benchmark/core/dlognogh/dlognogh_architecture.md
+              - DLog No-GH Regression: drivers/benchmark/core/dlognogh/dlognogh_regression.md
+              - Benchmark Sender Results: drivers/benchmark/core/dlognogh/transfer_BenchmarkSender_results.md
+              - Validator Transfer Profile: drivers/benchmark/core/dlognogh/validator_transfer_profile.md
+          - Services:
+              - Idemix Identity: drivers/benchmark/services/identity/idemix.md
+  - Services:
+      - Auditor: services/auditor.md
+      - Benchmark: services/benchmark.md
+      - Certifier: services/certifier.md
+      - Config: services/config.md
+      - Identity: services/identity.md
+      - Interop: services/interop.md
+      - Network Ethereum: services/network-ethereum.md
+      - Network Fabric: services/network-fabric.md
+      - Network Fabricx: services/network-fabricx.md
+      - Network: services/network.md
+      - NFT Tx: services/nfttx.md
+      - Recovery: services/recovery.md
+      - Selector: services/selector.md
+      - Storage: services/storage.md
+      - Tokens: services/tokens.md
+      - TTX: services/ttx.md
+  - Development:
+      - Overview: development/development.md
+      - General Guidelines: development/general.md
+      - Idiomatic Go: development/idiomatic.md
+      - Mocking: development/mock.md
+      - Linting: development/linting.md
+      - Makefile Guide: development/makefile.md
+      - Monitoring: development/monitoring.md
+      - Storage: development/storage.md
+      - Testing: development/testing.md
+      - Tokengen: development/tokengen.md
+      - Tools: development/tools.md
+      - Versioning: development/versioning.md
+      - AI Agents: development/ai_agents.md
+      - Documentation: development/documentation.md
+  - Evolution: evolution_summary.md

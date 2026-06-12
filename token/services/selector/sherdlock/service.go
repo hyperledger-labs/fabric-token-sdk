@@ -67,7 +67,9 @@ func (s *SelectorService) Shutdown() {
 	s.mu.Unlock()
 
 	for _, m := range managers {
-		m.Stop()
+		if err := m.Stop(); err != nil {
+			logger.Errorf("error shutting down sherdlock service manager: %s", err)
+		}
 	}
 }
 

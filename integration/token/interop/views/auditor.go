@@ -25,7 +25,7 @@ const (
 
 type AuditView struct{}
 
-func (a *AuditView) Call(context view.Context) (interface{}, error) {
+func (a *AuditView) Call(context view.Context) (any, error) {
 	tx, err := ttx.ReceiveTransaction(context)
 	assert.NoError(err, "failed receiving transaction")
 
@@ -116,7 +116,7 @@ type RegisterAuditorView struct {
 	*RegisterAuditor
 }
 
-func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterAuditorView) Call(context view.Context) (any, error) {
 	return context.RunView(ttx.NewRegisterAuditorView(
 		&AuditView{},
 		token.WithTMSID(r.TMSID),

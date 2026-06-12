@@ -31,7 +31,7 @@ type SellHouseView struct {
 	*Sell
 }
 
-func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
+func (d *SellHouseView) Call(context view.Context) (any, error) {
 	// Prepare a new token transaction.
 	// It will contain two legs:
 	// 1. The first leg will be used to transfer the house to the buyer.

@@ -32,7 +32,7 @@ type IssueHouseView struct {
 	*IssueHouse
 }
 
-func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
+func (p *IssueHouseView) Call(context view.Context) (any, error) {
 	// As a first step operation, the issuer contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which

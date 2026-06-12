@@ -20,6 +20,12 @@ import (
 
 var logger = logging.MustGetLogger()
 
+const (
+	// defaultShutdownTimeout is the default maximum time to wait for workers to finish during shutdown
+	// when no explicit timeout is provided. This prevents indefinite blocking if workers fail to stop.
+	defaultShutdownTimeout = 10 * time.Second
+)
+
 var (
 	// ErrQueueClosed is returned when an event is added to a closed queue
 	ErrQueueClosed = errors.New("queue is closed")
@@ -78,7 +84,7 @@ func NewEventQueue(cfg Config) (*EventQueue, error) {
 		return nil, errors.New("queue size must be greater than 0")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // G118: cancel is stored and called in Stop
+	ctx, cancel := context.WithCancel(context.Background())
 	eq := &EventQueue{
 		workers: cfg.Workers,
 		events:  make(chan Event, cfg.QueueSize),
@@ -225,17 +231,15 @@ func (eq *EventQueue) Shutdown(timeout time.Duration) error {
 			close(done)
 		}()
 
-		if timeout > 0 {
-			select {
-			case <-done:
-				logger.Info("All workers shut down gracefully")
-			case <-time.After(timeout):
-				shutdownErr = ErrShutdownTimeout
-				logger.Warnf("Shutdown timeout exceeded")
-			}
-		} else {
-			<-done
+		if timeout == 0 {
+			timeout = defaultShutdownTimeout
+		}
+		select {
+		case <-done:
 			logger.Info("All workers shut down gracefully")
+		case <-time.After(timeout):
+			shutdownErr = ErrShutdownTimeout
+			logger.Warnf("Shutdown timeout exceeded")
 		}
 	})
 

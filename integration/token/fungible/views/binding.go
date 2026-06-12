@@ -23,7 +23,7 @@ type SetBindingView struct {
 	*Binding
 }
 
-func (s *SetBindingView) Call(context view.Context) (interface{}, error) {
+func (s *SetBindingView) Call(context view.Context) (any, error) {
 	es := endpoint.GetService(context)
 	if err := es.Bind(context.Context(), s.FSCNodeIdentity, s.Alias); err != nil {
 		return nil, errors.Wrap(err, `failed to bind fsc node identity`)

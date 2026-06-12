@@ -30,6 +30,8 @@ const (
 	Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted
+	// Orphan is the status of a transaction that never reached the ledger (e.g. broadcast failure, mempool drop)
+	Orphan
 )
 
 //go:generate counterfeiter -o mock/uti.go -fake-name UnspentTokensIterator . UnspentTokensIterator

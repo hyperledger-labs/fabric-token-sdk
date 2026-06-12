@@ -39,7 +39,7 @@ type BalanceView struct {
 	*Balance
 }
 
-func (b *BalanceView) Call(context view.Context) (interface{}, error) {
+func (b *BalanceView) Call(context view.Context) (any, error) {
 	tms, err := token.GetManagementService(context, token.WithTMSID(b.TMSID))
 	assert.NoError(err, "failed getting management service")
 	wallet, err := tms.WalletManager().OwnerWallet(context.Context(), b.Wallet)

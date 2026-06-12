@@ -93,7 +93,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 		return nil, nil, errors.Wrap(err, "failed to produce transfer action")
 	}
 	inf := make([]*token.Metadata, len(owners))
-	for i := 0; i < len(inf); i++ {
+	for i := range inf {
 		inf[i] = &token.Metadata{
 			Type:           s.InputInformation[0].Type,
 			Value:          outtw[i].Value,
@@ -108,7 +108,7 @@ func (s *Sender) GenerateZKTransfer(ctx context.Context, values []uint64, owners
 func (s *Sender) SignTokenActions(raw []byte) ([][]byte, error) {
 	signatures := make([][]byte, len(s.Signers))
 	var err error
-	for i := 0; i < len(signatures); i++ {
+	for i := range signatures {
 		signatures[i], err = s.Signers[i].Sign(raw)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to sign token requests")

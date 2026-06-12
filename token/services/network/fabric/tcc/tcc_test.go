@@ -74,7 +74,7 @@ var _ = Describe("ccvalidator", func() {
 				fakestub.GetTransientReturns(map[string][]byte{"token_request": []byte("token request")}, nil)
 				fakestub.GetStateReturnsOnCall(0, []byte("pp"), nil)
 				fakestub.GetStateReturnsOnCall(1, nil, nil)
-				fakeValidator.UnmarshallAndVerifyWithMetadataReturns([]interface{}{}, nil, nil)
+				fakeValidator.UnmarshallAndVerifyWithMetadataReturns([]any{}, nil, nil)
 			})
 			It("succeeds", func() {
 				response := chaincode.Invoke(fakestub)

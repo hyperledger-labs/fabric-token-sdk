@@ -28,7 +28,7 @@ const (
 func WithStartingTransaction(txID string) token.ServiceOption {
 	return func(o *token.ServiceOptions) error {
 		if o.Params == nil {
-			o.Params = map[string]interface{}{}
+			o.Params = map[string]any{}
 		}
 		o.Params[ScanForPreImageStartingTransaction] = txID
 
@@ -41,7 +41,7 @@ func WithStartingTransaction(txID string) token.ServiceOption {
 func WithStopOnLastTransaction() token.ServiceOption {
 	return func(o *token.ServiceOptions) error {
 		if o.Params == nil {
-			o.Params = map[string]interface{}{}
+			o.Params = map[string]any{}
 		}
 		o.Params[StopScanningOnLastTransaction] = True
 

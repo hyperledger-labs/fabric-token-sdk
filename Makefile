@@ -2,8 +2,9 @@
 FABRIC_VERSION ?= 3.1.4
 FABRIC_CA_VERSION ?= 1.5.7
 FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
-FABRIC_X_TOOLS_VERSION ?= v0.0.12
-FABRIC_X_COMMITTER_VERSION ?= 0.1.9
+
+FABRIC_X_TOOLS_VERSION ?= v0.0.17
+FABRIC_X_COMMITTER_VERSION ?= 1.0.0
 
 # need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
 FABRIC_BINARY_BASE=$(PWD)/../fabric
@@ -121,6 +122,7 @@ tidy:
 	cd token/services/storage/db/kvs/hashicorp; go mod tidy
 	cd cmd/artifactgen; go mod tidy
 	cd cmd/tokengen; go mod tidy
+	cd cmd/token_validation_service; go mod tidy
 
 .PHONY: clean
 # clean up docker artifacts and generated files
@@ -227,7 +229,7 @@ lint-auto-fix:
 # install golangci-lint
 install-linter-tool:
 	@echo "Installing golangci Linter"
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.11.4
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(HOME)/go/bin v2.12.2
 
 .PHONY: fmt
 fmt: ## Run gofmt on the entire project
@@ -241,3 +243,18 @@ update-all-deps-latest: ## Update all dependencies in all Go modules to their la
 		echo "=> Updating dependencies in $$dir"; \
 		(cd $$dir && go get ./...@latest && go mod tidy); \
 	done
+
+.PHONY: docs-install
+# Install documentation dependencies
+docs-install:
+	pip install -r requirements.txt
+
+.PHONY: docs-serve
+# Serve documentation locally for development
+docs-serve:
+	mkdocs serve
+
+.PHONY: docs-build
+# Build the static documentation site for production
+docs-build:
+	mkdocs build --strict

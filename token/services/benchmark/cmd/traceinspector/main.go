@@ -130,10 +130,7 @@ func (r *Result) printBlockingSummary() {
 	if len(blockedList) == 0 {
 		fmt.Println("  None with measurable blocking.")
 	} else {
-		limit := 5
-		if len(blockedList) < limit {
-			limit = len(blockedList)
-		}
+		limit := min(len(blockedList), 5)
 		for i := range limit {
 			e := blockedList[i]
 			fmt.Printf("  G%d: %v blocked (most time on: %s)\n    Created at: %s\n", e.ID, e.Duration, e.Reason, e.Stack)
@@ -179,10 +176,7 @@ func (r *Result) printCPUSummary() {
 	if len(cpuList) == 0 {
 		fmt.Println("  No goroutines with measurable CPU time.")
 	} else {
-		limit := 5
-		if len(cpuList) < limit {
-			limit = len(cpuList)
-		}
+		limit := min(len(cpuList), 5)
 		for i := range limit {
 			e := cpuList[i]
 			fmt.Printf("  G%d: CPU=%v (run=%v, sys=%v), lifetime≈%v, avg run-q wait≈%v\n    Created at: %s\n",

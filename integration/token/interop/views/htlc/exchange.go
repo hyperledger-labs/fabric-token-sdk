@@ -48,7 +48,7 @@ type FastExchangeInitiatorView struct {
 	*FastExchange
 }
 
-func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, error) {
+func (v *FastExchangeInitiatorView) Call(context view.Context) (any, error) {
 	// Preliminary:
 	// 1. Exchange recipient identities
 	// 2. Agree on the terms
@@ -77,7 +77,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 	var preImage []byte
 	idProvider, err := id.GetProvider(context)
 	assert.NoError(err, "failed getting id provider")
-	_, err = view2.RunCall(context, func(context view.Context) (interface{}, error) {
+	_, err = view2.RunCall(context, func(context view.Context) (any, error) {
 		tx, err := htlc.NewAnonymousTransaction(
 			context,
 			ttx.WithAuditor(idProvider.Identity("auditor")),
@@ -114,7 +114,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 	session, err := context.GetSession(context.Initiator(), v.Recipient)
 	assert.NoError(err, "failed to get the session")
 	_, err = view2.AsResponder(context, session,
-		func(context view.Context) (interface{}, error) {
+		func(context view.Context) (any, error) {
 			tx, err := htlc.ReceiveTransaction(context)
 			assert.NoError(err, "failed to receive tokens")
 
@@ -166,7 +166,7 @@ func (f *FastExchangeInitiatorViewFactory) NewView(in []byte) (view.View, error)
 
 type FastExchangeResponderView struct{}
 
-func (v *FastExchangeResponderView) Call(ctx view.Context) (interface{}, error) {
+func (v *FastExchangeResponderView) Call(ctx view.Context) (any, error) {
 	// Preliminary:
 	// 1. Exchange recipient identities
 	// 2. Agree on the terms
@@ -207,7 +207,7 @@ func (v *FastExchangeResponderView) Call(ctx view.Context) (interface{}, error) 
 	// Initiate Responder's Leg
 	idProvider, err := id.GetProvider(ctx)
 	assert.NoError(err, "failed getting id provider")
-	_, err = view2.AsInitiatorCall(ctx, v, func(ctx view.Context) (interface{}, error) {
+	_, err = view2.AsInitiatorCall(ctx, v, func(ctx view.Context) (any, error) {
 		tx, err := htlc.NewAnonymousTransaction(
 			ctx,
 			ttx.WithAuditor(idProvider.Identity("auditor")),

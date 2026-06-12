@@ -21,15 +21,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	q "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/common"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/cond"
-	_select "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/select"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
+	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
+	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
+	_select "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/select"
 )
 
 // maxAmountBits is the maximum bit length supported by NUMERIC(78, 0).
@@ -49,6 +49,8 @@ type TransactionStore struct {
 	readDB                *sql.DB
 	writeDB               *sql.DB
 	table                 transactionTables
+	tablePrefix           string
+	tableParams           []string
 	ci                    common3.CondInterpreter
 	pi                    common3.PagInterpreter
 	notifier              dbdriver.TransactionNotifier
@@ -57,6 +59,8 @@ type TransactionStore struct {
 
 func newTransactionStore(
 	readDB, writeDB *sql.DB,
+	tablePrefix string,
+	tableParams []string,
 	tables transactionTables,
 	ci common3.CondInterpreter,
 	pi common3.PagInterpreter,
@@ -67,6 +71,8 @@ func newTransactionStore(
 		readDB:                readDB,
 		writeDB:               writeDB,
 		table:                 tables,
+		tablePrefix:           tablePrefix,
+		tableParams:           tableParams,
 		ci:                    ci,
 		pi:                    pi,
 		notifier:              notifier,
@@ -74,12 +80,22 @@ func newTransactionStore(
 	}
 }
 
+// PrefixedTableName returns the formatted table name for the given logical name.
+func (s *TransactionStore) PrefixedTableName(name string) string {
+	nc, err := ncProvider.GetFormatter(s.tablePrefix)
+	if err != nil {
+		return name
+	}
+
+	return nc.MustFormat(name, s.tableParams...)
+}
+
 func NewAuditTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
 	return NewOwnerTransactionStore(readDB, writeDB, tables, ci, pi)
 }
 
 func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, pi common3.PagInterpreter) (*TransactionStore, error) {
-	return newTransactionStore(readDB, writeDB, transactionTables{
+	return newTransactionStore(readDB, writeDB, tables.Prefix, tables.Params, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
@@ -96,7 +112,7 @@ func NewTransactionStoreWithNotifierAndRecovery(
 	notifier dbdriver.TransactionNotifier,
 	recoveryLeaderFactory func(context.Context, *sql.DB, int64) (dbdriver.RecoveryLeadership, bool, error),
 ) (*TransactionStore, error) {
-	return newTransactionStore(readDB, writeDB, transactionTables{
+	return newTransactionStore(readDB, writeDB, tables.Prefix, tables.Params, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
@@ -312,6 +328,7 @@ func (db *TransactionStore) QueryTokenRequests(ctx context.Context, params dbdri
 		return nil, err
 	}
 	// TODO: AF remove r.TokenRequest. Not used
+
 	return common.NewIterator(rows, func(r *dbdriver.TokenRequestRecord) error { return rows.Scan(&r.TxID, &r.TokenRequest, &r.Status) }), nil
 }
 
@@ -327,23 +344,19 @@ func (db *TransactionStore) AcquireRecoveryLeadership(ctx context.Context, lockI
 
 // ClaimPendingTransactions returns a claimed batch of Pending transactions.
 // The default SQL implementation is permissive and does not persist recovery claims.
-func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params dbdriver.RecoveryClaimParams) ([]*dbdriver.TransactionRecord, error) {
-	transactionsTable, requestsTable := q.Table(db.table.Transactions), q.Table(db.table.Requests)
+// tx_id and stored_at are projected directly from the requests table — the
+// transactions table is no longer joined since it carries no information
+// the recovery loop needs and adding it would re-introduce a fan-out by
+// movement/output that the caller would have to dedupe by tx_id.
+func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params dbdriver.RecoveryClaimParams) ([]*dbdriver.RecoveryClaim, error) {
 	query, args := q.Select().
-		Fields(
-			transactionsTable.Field("tx_id"), common3.FieldName("action_type"), common3.FieldName("sender_eid"),
-			common3.FieldName("recipient_eid"), common3.FieldName("token_type"), common3.FieldName("amount"),
-			requestsTable.Field("status"), requestsTable.Field("application_metadata"),
-			requestsTable.Field("public_metadata"), transactionsTable.Field("stored_at"),
-		).
-		From(transactionsTable.Join(requestsTable,
-			cond.Cmp(transactionsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
-		).
+		FieldsByName("tx_id", "stored_at").
+		From(q.Table(db.table.Requests)).
 		Where(cond.And(
 			cond.Eq("status", dbdriver.Pending),
-			cond.Lt(common3.FieldName(db.table.Transactions+".stored_at"), params.OlderThan),
+			cond.Lt("stored_at", params.OlderThan),
 		)).
-		OrderBy(q.Asc(transactionsTable.Field("stored_at"))).
+		OrderBy(q.Asc(common3.FieldName("stored_at"))).
 		Limit(params.Limit).
 		Format(db.ci)
 
@@ -353,19 +366,8 @@ func (db *TransactionStore) ClaimPendingTransactions(ctx context.Context, params
 		return nil, err
 	}
 
-	results := common.NewIterator(rows, func(r *dbdriver.TransactionRecord) error {
-		var amount BigInt
-		var appMeta []byte
-		var pubMeta []byte
-		if err := rows.Scan(&r.TxID, &r.ActionType, &r.SenderEID, &r.RecipientEID, &r.TokenType, &amount, &r.Status, &appMeta, &pubMeta, &r.Timestamp); err != nil {
-			return err
-		}
-		r.Amount = amount.Int
-
-		return errors2.Join(
-			unmarshal(appMeta, &r.ApplicationMetadata),
-			unmarshal(pubMeta, &r.PublicMetadata),
-		)
+	results := common.NewIterator(rows, func(r *dbdriver.RecoveryClaim) error {
+		return rows.Scan(&r.TxID, &r.StoredAt)
 	})
 
 	return iterators.ReadAllPointers(results)
@@ -495,6 +497,7 @@ func (db *TransactionStore) GetSchema() string {
 			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+		CREATE INDEX IF NOT EXISTS idx_storedat_%s ON %s ( stored_at DESC );
 
 		-- movements
 		CREATE TABLE IF NOT EXISTS %s (
@@ -526,7 +529,7 @@ func (db *TransactionStore) GetSchema() string {
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 		`,
 		db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests,
-		db.table.Transactions, db.table.Requests, db.table.Transactions, db.table.Transactions,
+		db.table.Transactions, db.table.Requests, db.table.Transactions, db.table.Transactions, db.table.Transactions, db.table.Transactions,
 		db.table.Movements, db.table.Requests, db.table.Movements, db.table.Movements, db.table.Movements, db.table.Movements,
 		db.table.Validations, db.table.Requests,
 		db.table.TransactionEndorseAck, db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
@@ -640,6 +643,7 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 	}
 	if len(rs) == 0 {
 		// nothing to do here
+
 		return nil
 	}
 

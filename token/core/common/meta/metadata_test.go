@@ -13,11 +13,10 @@ import (
 )
 
 func TestActionMetadata(t *testing.T) {
-	attrs := map[interface{}]interface{}{
+	attrs := map[string]any{
 		"TransferMetadataPrefixfoo": []byte("bar"),
 		"TransferMetadataPrefixbaz": []byte("qux"),
 		"IssueMetadataPrefixabc":    []byte("def"),
-		123:                         []byte("should be ignored"),
 		"TransferMetadataPrefixbad": "not a []byte", // should be ignored
 	}
 
@@ -36,7 +35,7 @@ func TestActionMetadata(t *testing.T) {
 	assert.Equal(t, expectedIssue, issue)
 
 	// Test ActionMetadata directly with a custom prefix
-	attrs2 := map[interface{}]interface{}{
+	attrs2 := map[string]any{
 		"CustomPrefixkey": []byte("val"),
 		"CustomPrefixx":   []byte("y"),
 		"OtherPrefixz":    []byte("should be ignored"),
@@ -49,6 +48,6 @@ func TestActionMetadata(t *testing.T) {
 	assert.Equal(t, expectedCustom, custom)
 
 	// Test empty attrs
-	empty := ActionMetadata(map[interface{}]interface{}{}, "AnyPrefix")
+	empty := ActionMetadata(map[string]any{}, "AnyPrefix")
 	assert.Empty(t, empty)
 }

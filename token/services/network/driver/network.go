@@ -56,7 +56,7 @@ type Network interface {
 	Connect(ns string) ([]token2.ServiceOption, error)
 
 	// Broadcast submits a transaction or data blob to the network's ordering service.
-	Broadcast(ctx context.Context, blob interface{}) error
+	Broadcast(ctx context.Context, blob any) error
 
 	// NewEnvelope creates a new, empty transaction envelope specific to the backend.
 	NewEnvelope() Envelope

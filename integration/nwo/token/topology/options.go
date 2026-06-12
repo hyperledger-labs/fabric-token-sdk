@@ -6,10 +6,14 @@ SPDX-License-Identifier: Apache-2.0
 
 package topology
 
-import "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+import (
+	"maps"
+
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+)
 
 type Options struct {
-	Mapping map[string]interface{}
+	Mapping map[string]any
 }
 
 func (o *Options) Certifier() bool {
@@ -35,7 +39,7 @@ func (o *Options) Issuers() []string {
 		return res
 	}
 	res = []string{}
-	for _, v := range boxed.([]interface{}) {
+	for _, v := range boxed.([]any) {
 		res = append(res, v.(string))
 	}
 
@@ -56,7 +60,7 @@ func (o *Options) Owners() []string {
 		return res
 	}
 	res = []string{}
-	for _, v := range boxed.([]interface{}) {
+	for _, v := range boxed.([]any) {
 		res = append(res, v.(string))
 	}
 
@@ -137,27 +141,25 @@ func (o *Options) IsUseHSMForAuditor() bool {
 func ToOptions(o *node.Options) *Options {
 	opt, ok := o.Mapping["token"]
 	if !ok {
-		opt = &Options{Mapping: map[string]interface{}{}}
+		opt = &Options{Mapping: map[string]any{}}
 		o.Mapping["token"] = opt
 	}
 	res, ok := opt.(*Options)
 	if ok {
 		return res
 	}
-	mapping, ok := opt.(map[interface{}]interface{})
+	mapping, ok := opt.(map[string]any)
 	if ok {
 		return Convert(mapping)
 	}
 	panic("invalid options")
 }
 
-func Convert(m map[interface{}]interface{}) *Options {
+func Convert(m map[string]any) *Options {
 	opts := &Options{
-		Mapping: map[string]interface{}{},
+		Mapping: map[string]any{},
 	}
-	for k, v := range m["mapping"].(map[interface{}]interface{}) {
-		opts.Mapping[k.(string)] = v
-	}
+	maps.Copy(opts.Mapping, m["mapping"].(map[string]any))
 
 	return opts
 }

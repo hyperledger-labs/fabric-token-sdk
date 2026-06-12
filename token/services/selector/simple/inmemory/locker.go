@@ -25,6 +25,14 @@ var (
 	AlreadyLockedError = errors.New("already locked")
 )
 
+const (
+	// stopTimeout is the maximum time to wait for the scan goroutine to stop during shutdown.
+	// This prevents indefinite blocking if the goroutine fails to exit cleanly.
+	stopTimeout = 10 * time.Second
+)
+
+var ErrTimeout = errors.New("timeout occurred")
+
 type TXStatusProvider interface {
 	GetStatus(ctx context.Context, txID string) (ttxdb.TxStatus, string, error)
 }
@@ -51,7 +59,7 @@ type locker struct {
 }
 
 func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTimeout time.Duration) simple.Locker {
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // G118: cancel is stored and called in Stop
+	ctx, cancel := context.WithCancel(context.Background())
 	r := &locker{
 		ttxdb:                  ttxdb,
 		sleepTimeout:           timeout,
@@ -67,11 +75,20 @@ func NewLocker(ttxdb TXStatusProvider, timeout time.Duration, validTxEvictionTim
 }
 
 // Stop cancels the scan goroutine and waits for it to exit.
-func (d *locker) Stop() {
+func (d *locker) Stop() error {
+	var err error
 	d.stopOnce.Do(func() {
 		d.cancel()
-		<-d.scanDone
+		select {
+		case <-d.scanDone:
+			logger.Debugf("scan goroutine stopped successfully")
+		case <-time.After(stopTimeout):
+			err = ErrTimeout
+			logger.Warnf("scan goroutine did not stop within timeout")
+		}
 	})
+
+	return err
 }
 
 func (d *locker) Lock(ctx context.Context, id *token2.ID, txID string, reclaim bool) (string, error) {

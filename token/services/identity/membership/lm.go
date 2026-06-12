@@ -23,7 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 )
 
 const (
@@ -376,7 +376,7 @@ func (l *LocalMembership) Load(ctx context.Context, identities []idriver.Configu
 
 	// load identities from configuration
 	for i, identityConfiguration := range ics {
-		l.logger.Infof("load identity configuration [%+v]", identityConfiguration)
+		l.logger.Debugf("load identity configuration [%+v]", identityConfiguration)
 		if err := l.registerIdentityConfiguration(ctx, &identityConfiguration, defaults[i]); err != nil {
 			// we log the error so the user can fix it but it shouldn't stop the loading of the service.
 			l.logger.Errorf("failed loading identity with err [%s]", err)
@@ -426,7 +426,7 @@ func (l *LocalMembership) subscribeNotifier() error {
 	}
 
 	err = notifier.Subscribe(func(operation idriver.Operation, record idriver.IdentityConfigurationRecord) {
-		l.logger.Infof("received notification: [%v][%v]", operation, record)
+		l.logger.Debugf("received notification: [%v][%v]", operation, record)
 		// we care only about insertions in the identity configurations table
 		if operation != idriver.Insert {
 			return
@@ -469,7 +469,7 @@ func (l *LocalMembership) handleConfig(id, typ, url string) {
 		return
 	}
 
-	l.logger.Infof("load identity configuration [%+v]", config)
+	l.logger.Debugf("load identity configuration [%+v]", config)
 	if err := l.registerIdentityConfiguration(context.Background(), config, false); err != nil {
 		l.logger.Errorf("failed loading identity with err [%s]", err)
 	}
@@ -763,7 +763,7 @@ func (l *LocalMembership) refreshAndGet(ctx context.Context, label string) *Loca
 			continue
 		}
 
-		l.logger.InfofContext(ctx, "load identity configuration [%+v]", identityConfiguration)
+		l.logger.DebugfContext(ctx, "load identity configuration [%+v]", identityConfiguration)
 		if err := l.registerIdentityConfiguration(ctx, &identityConfiguration, false); err != nil {
 			l.logger.ErrorfContext(ctx, "failed loading identity with err [%s]", err)
 		}
@@ -882,7 +882,7 @@ func (t *TypedSignerDeserializer) DeserializeSigner(ctx context.Context, _ idriv
 	return t.KeyManager.DeserializeSigner(ctx, raw)
 }
 
-func marshalOpts(opts interface{}) (optsRaw []byte, err error) {
+func marshalOpts(opts any) (optsRaw []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("panic caught while marshalling identity options: %v", r)

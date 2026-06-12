@@ -25,7 +25,7 @@ type View struct {
 	*Deploy
 }
 
-func (f *View) Call(ctx view.Context) (interface{}, error) {
+func (f *View) Call(ctx view.Context) (any, error) {
 	deployerService, err := tms.GetTMSDeployerService(ctx)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "deployer service not found")

@@ -86,7 +86,7 @@ func (c *ristrettoCache[T]) GetOrLoad(key string, loader func() (T, error)) (T, 
 	}
 
 	// If not found, use singleflight to prevent thundering herds.
-	res, err, _ := c.sfg.Do(key, func() (interface{}, error) {
+	res, err, _ := c.sfg.Do(key, func() (any, error) {
 		newValue, loadErr := loader()
 		if loadErr != nil {
 			return nil, loadErr
