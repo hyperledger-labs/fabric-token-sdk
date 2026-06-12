@@ -3,7 +3,7 @@ module github.com/hyperledger-labs/fabric-token-sdk/cmd/token_validation_service
 go 1.26.3
 
 require (
-	github.com/hyperledger-labs/fabric-smart-client v0.12.0
+	github.com/hyperledger-labs/fabric-smart-client v0.12.1
 	github.com/hyperledger-labs/fabric-token-sdk v0.0.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/grpc v1.81.1
@@ -209,7 +209,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 	modernc.org/libc v1.72.3 // indirect

@@ -5,7 +5,7 @@ go 1.26.3
 replace github.com/hyperledger-labs/fabric-token-sdk => ./../../
 
 require (
-	github.com/hyperledger-labs/fabric-smart-client v0.12.0
+	github.com/hyperledger-labs/fabric-smart-client v0.12.1
 	github.com/hyperledger-labs/fabric-token-sdk v0.10.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0

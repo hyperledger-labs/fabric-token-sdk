@@ -944,8 +944,8 @@ github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/J
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huin/goupnp v1.3.0 h1:UvLUlWDNpoUdYzb2TCn+MuTWtcjXKSza2n6CBdQ0xXc=
 github.com/huin/goupnp v1.3.0/go.mod h1:gnGPsThkYa7bFi/KWmEysQRf48l2dvR5bxr2OFckNX8=
-github.com/hyperledger-labs/fabric-smart-client v0.12.0 h1:7rHU0WYjceXohTEj73s4Ffpb2y9b7+1NN1liNoFBKFg=
-github.com/hyperledger-labs/fabric-smart-client v0.12.0/go.mod h1:pB3X30TuOh0T7UmDW37/Kam60ALndD+D+eO3K5Ft7Qg=
+github.com/hyperledger-labs/fabric-smart-client v0.12.1 h1:wnJ0AI50qdAZAVtOru21mPe9fTOmbOkKGY5Wz0Dafk4=
+github.com/hyperledger-labs/fabric-smart-client v0.12.1/go.mod h1:pB3X30TuOh0T7UmDW37/Kam60ALndD+D+eO3K5Ft7Qg=
 github.com/hyperledger/aries-bbs-go v0.0.0-20240528091251-e950615f2e45 h1:M8w6X6pHeH0B/VfI9wMZ+hg+IyZ9NX+SaB7tbxNIRVs=
 github.com/hyperledger/aries-bbs-go v0.0.0-20240528091251-e950615f2e45/go.mod h1:Kofn6A6WWea1ZM8Rys5aBW9dszwJ7Ywa0kyyYL0TPYw=
 github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 h1:B1Nt8hKb//KvgGRprk0h1t4lCnwhE9/ryb1WqfZbV+M=
