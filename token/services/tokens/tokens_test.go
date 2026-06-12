@@ -24,6 +24,7 @@ func TestParse(t *testing.T) {
 	ts := &tokens.Service{
 		TMSProvider: nil,
 		Storage:     &tokens.DBStorage{},
+		Config:      driver.ValidationConfig{},
 	}
 	md := &mock.FakeMetaData{}
 

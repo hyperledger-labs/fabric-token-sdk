@@ -241,9 +241,17 @@ func (t *ManagementService) init() error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get validator")
 	}
-	t.validator = &Validator{backend: validator}
 	t.auth = &Authorization{Authorization: t.tms.Authorization()}
 	t.conf = NewConfiguration(t.tms.Configuration())
+	if validator != nil {
+		t.validator = &Validator{backend: validator}
+		vConfig, err := t.conf.GetValidationConfig()
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get validation config")
+		}
+		t.validator.SetValidationConfig(vConfig)
+	}
+
 	t.tokensService = &TokensService{ts: t.tms.TokensService(), tus: t.tms.TokensUpgradeService()}
 	t.publicParametersManager = &PublicParametersManager{
 		ppm: t.tms.PublicParamsManager(),

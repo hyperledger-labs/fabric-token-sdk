@@ -23,11 +23,10 @@ func TestMinProtocolVersionEnforcement(t *testing.T) {
 		expectedError      string
 	}{
 		{
-			name:               "Version 0 is always invalid",
+			name:               "Version 0 is treated as V1",
 			minProtocolVersion: 0,
 			requestVersion:     0,
-			shouldFail:         true,
-			expectedError:      "invalid token request: protocol version cannot be 0",
+			shouldFail:         false,
 		},
 		{
 			name:               "No minimum version set - accepts V1",
@@ -42,11 +41,10 @@ func TestMinProtocolVersionEnforcement(t *testing.T) {
 			shouldFail:         false,
 		},
 		{
-			name:               "Minimum V1 - rejects version 0",
+			name:               "Minimum V1 - accepts version 0 (as V1)",
 			minProtocolVersion: driver.ProtocolV1,
 			requestVersion:     0,
-			shouldFail:         true,
-			expectedError:      "invalid token request: protocol version cannot be 0",
+			shouldFail:         false,
 		},
 		{
 			name:               "Minimum V1 - accepts V1",
@@ -61,11 +59,11 @@ func TestMinProtocolVersionEnforcement(t *testing.T) {
 			shouldFail:         false,
 		},
 		{
-			name:               "Minimum V2 - rejects version 0",
+			name:               "Minimum V2 - rejects version 0 (as V1)",
 			minProtocolVersion: driver.ProtocolV2,
 			requestVersion:     0,
 			shouldFail:         true,
-			expectedError:      "invalid token request: protocol version cannot be 0",
+			expectedError:      "token request protocol version [1] is below minimum required version [2]",
 		},
 		{
 			name:               "Minimum V2 - rejects V1",
@@ -87,11 +85,13 @@ func TestMinProtocolVersionEnforcement(t *testing.T) {
 			// Test the version check logic directly
 			var err error
 
-			// First check: version 0 is always invalid
-			if tt.requestVersion == 0 {
-				err = assert.AnError // Simulate the error that would be returned
-			} else if tt.minProtocolVersion > 0 && tt.requestVersion < tt.minProtocolVersion {
-				// Second check: enforce minimum version if configured
+			reqVersion := tt.requestVersion
+			if reqVersion == 0 {
+				reqVersion = 1
+			}
+
+			if tt.minProtocolVersion > 0 && reqVersion < tt.minProtocolVersion {
+				// Enforce minimum version if configured
 				err = assert.AnError
 			}
 
@@ -113,13 +113,13 @@ func TestMinProtocolVersionLogic(t *testing.T) {
 		shouldPass     bool
 		reason         string
 	}{
-		{"V0 always invalid", 0, 0, false, "version 0 is invalid"},
+		{"V0 treated as V1", 0, 0, true, ""},
 		{"No min, V1 request", 0, driver.ProtocolV1, true, ""},
 		{"No min, V2 request", 0, driver.ProtocolV2, true, ""},
-		{"Min V1, V0 request", driver.ProtocolV1, 0, false, "version 0 is invalid"},
+		{"Min V1, V0 request (as V1)", driver.ProtocolV1, 0, true, ""},
 		{"Min V1, V1 request", driver.ProtocolV1, driver.ProtocolV1, true, ""},
 		{"Min V1, V2 request", driver.ProtocolV1, driver.ProtocolV2, true, ""},
-		{"Min V2, V0 request", driver.ProtocolV2, 0, false, "version 0 is invalid"},
+		{"Min V2, V0 request (as V1)", driver.ProtocolV2, 0, false, "below minimum"},
 		{"Min V2, V1 request", driver.ProtocolV2, driver.ProtocolV1, false, "below minimum"},
 		{"Min V2, V2 request", driver.ProtocolV2, driver.ProtocolV2, true, ""},
 	}
@@ -129,13 +129,13 @@ func TestMinProtocolVersionLogic(t *testing.T) {
 			// Simulate the version check logic
 			var passes bool
 
-			// First check: version 0 is always invalid
-			if tt.requestVersion == 0 {
-				passes = false
-			} else {
-				// Second check: enforce minimum version if configured
-				passes = tt.minVersion == 0 || tt.requestVersion >= tt.minVersion
+			reqVersion := tt.requestVersion
+			if reqVersion == 0 {
+				reqVersion = 1
 			}
+
+			// Enforce minimum version if configured
+			passes = tt.minVersion == 0 || reqVersion >= tt.minVersion
 
 			assert.Equal(t, tt.shouldPass, passes,
 				"Version check logic mismatch: min=%d, request=%d, reason=%s",
