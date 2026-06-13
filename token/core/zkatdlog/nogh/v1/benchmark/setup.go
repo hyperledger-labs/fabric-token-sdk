@@ -492,7 +492,7 @@ type Signer struct {
 	SK     *ecdsa.PrivateKey
 	Signer driver.Signer
 
-	ID        []byte
+	ID        driver.Identity
 	AuditInfo []byte
 }
 

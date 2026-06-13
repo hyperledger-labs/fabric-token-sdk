@@ -166,8 +166,9 @@ func (c *CollectEndorsementsView) Call(context view.Context) (any, error) {
 // requestSignaturesOnIssues collects signatures from all issuers involved in the transaction's issue operations.
 // It delegates to requestSignatures with the appropriate issuer verifier function.
 func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
-	logger.DebugfContext(context.Context(), "collecting signature on [%d] request issue", len(c.tx.TokenRequest.Metadata.Issues))
+	logger.DebugfContext(context.Context(), "collecting signature on [%d] request issue", c.tx.TokenRequest.Metadata.NumIssues())
 
+	// Use IssueSigners() - the action context is preserved in metadata and used by SetSignatures()
 	return c.requestSignatures(
 		c.tx.TokenRequest.IssueSigners(),
 		c.tx.TokenService().SigService().IssuerVerifier,
@@ -179,8 +180,9 @@ func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context
 // requestSignaturesOnTransfers collects signatures from all owners involved in the transaction's transfer operations.
 // It delegates to requestSignatures with the appropriate owner verifier function.
 func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
-	logger.DebugfContext(context.Context(), "collecting signature on [%d] request transfer", len(c.tx.TokenRequest.Metadata.Transfers))
+	logger.DebugfContext(context.Context(), "collecting signature on [%d] request transfer", c.tx.TokenRequest.Metadata.NumTransfers())
 
+	// Use TransferSigners() - the action context is preserved in metadata and used by SetSignatures()
 	return c.requestSignatures(
 		c.tx.TokenRequest.TransferSigners(),
 		c.tx.TokenService().SigService().OwnerVerifier,

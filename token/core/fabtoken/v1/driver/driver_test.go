@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 // TestNewDriver tests the creation of a new fabtoken driver.
@@ -37,7 +38,7 @@ func TestNewDriver(t *testing.T) {
 
 	factory := driver.NewTokenDriver(
 		metricsProvider,
-		nil,
+		noop.NewTracerProvider(),
 		configService,
 		storageProvider,
 		identityProvider,
@@ -62,7 +63,7 @@ func TestNewTokenService(t *testing.T) {
 
 	d := driver.NewTokenDriver(
 		metricsProvider,
-		nil,
+		noop.NewTracerProvider(),
 		configService,
 		storageProvider,
 		identityProvider,

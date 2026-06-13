@@ -23,19 +23,21 @@ type ValidateAuditingFunc = common.ValidateAuditingFunc[*setup.PublicParams, *ac
 type ActionDeserializer struct{}
 
 func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*actions.IssueAction, []*actions.TransferAction, error) {
-	issueActions := make([]*actions.IssueAction, len(tr.Issues))
-	for i := range len(tr.Issues) {
+	issues := tr.GetIssues()
+	issueActions := make([]*actions.IssueAction, len(issues))
+	for i := range issues {
 		ia := &actions.IssueAction{}
-		if err := ia.Deserialize(tr.Issues[i]); err != nil {
+		if err := ia.Deserialize(issues[i]); err != nil {
 			return nil, nil, err
 		}
 		issueActions[i] = ia
 	}
 
-	transferActions := make([]*actions.TransferAction, len(tr.Transfers))
-	for i := range len(tr.Transfers) {
+	transfers := tr.GetTransfers()
+	transferActions := make([]*actions.TransferAction, len(transfers))
+	for i := range transfers {
 		ta := &actions.TransferAction{}
-		if err := ta.Deserialize(tr.Transfers[i]); err != nil {
+		if err := ta.Deserialize(transfers[i]); err != nil {
 			return nil, nil, err
 		}
 		transferActions[i] = ta

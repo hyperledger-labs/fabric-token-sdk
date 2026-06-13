@@ -40,10 +40,12 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
-						AuditorSignatures: []*driver.AuditorSignature{
+						Signatures: []*driver.RequestSignature{
 							{
-								Identity:  driver.Identity("auditor"),
-								Signature: []byte("auditor's signature"),
+								Auditor: &driver.AuditorSignature{
+									Identity:  driver.Identity("auditor"),
+									Signature: []byte("auditor's signature"),
+								},
 							},
 						},
 					},
@@ -74,10 +76,12 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
-						AuditorSignatures: []*driver.AuditorSignature{
+						Signatures: []*driver.RequestSignature{
 							{
-								Identity:  driver.Identity("auditor2"),
-								Signature: []byte("auditor 2's signature"),
+								Auditor: &driver.AuditorSignature{
+									Identity:  driver.Identity("auditor2"),
+									Signature: []byte("auditor 2's signature"),
+								},
 							},
 						},
 					},
@@ -98,10 +102,12 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
-						AuditorSignatures: []*driver.AuditorSignature{
+						Signatures: []*driver.RequestSignature{
 							{
-								Identity:  driver.Identity("auditor"),
-								Signature: []byte("auditor's signature"),
+								Auditor: &driver.AuditorSignature{
+									Identity:  driver.Identity("auditor"),
+									Signature: []byte("auditor's signature"),
+								},
 							},
 						},
 					},
@@ -127,7 +133,7 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				return &TestContext{
 					PP: pp,
 					TokenRequest: &driver.TokenRequest{
-						AuditorSignatures: nil,
+						Signatures: nil,
 					},
 					Deserializer:      des,
 					SignatureProvider: sp,
@@ -152,10 +158,12 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				return &TestContext{
 						PP: pp,
 						TokenRequest: &driver.TokenRequest{
-							AuditorSignatures: []*driver.AuditorSignature{
+							Signatures: []*driver.RequestSignature{
 								{
-									Identity:  auditor,
-									Signature: []byte("auditor's signature"),
+									Auditor: &driver.AuditorSignature{
+										Identity:  auditor,
+										Signature: []byte("auditor's signature"),
+									},
 								},
 							},
 						},
@@ -188,10 +196,12 @@ func TestAuditingSignaturesValidate(t *testing.T) {
 				return &TestContext{
 						PP: pp,
 						TokenRequest: &driver.TokenRequest{
-							AuditorSignatures: []*driver.AuditorSignature{
+							Signatures: []*driver.RequestSignature{
 								{
-									Identity:  auditor,
-									Signature: []byte("auditor's signature"),
+									Auditor: &driver.AuditorSignature{
+										Identity:  auditor,
+										Signature: []byte("auditor's signature"),
+									},
 								},
 							},
 						},
