@@ -39,7 +39,7 @@ func (b *BalanceView) Call(context view.Context) (any, error) {
 		return nil, fmt.Errorf("wallet %s not found: %w", b.Wallet, err)
 	}
 
-	balance, err := wallet.Balance(context.Context(), token.WithType(b.Type))
+	balance, err := wallet.Balance(context.Context(), token.WithBalanceTokenType(b.Type))
 	if err != nil {
 		return nil, err
 	}

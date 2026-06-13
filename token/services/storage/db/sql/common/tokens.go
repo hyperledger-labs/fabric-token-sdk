@@ -38,6 +38,7 @@ type tokenTables struct {
 	PublicParams   string
 	Certifications string
 	Requests       string
+	Transactions   string
 }
 
 type TokenStore struct {
@@ -68,6 +69,7 @@ func NewTokenStoreWithNotifier(readDB, writeDB *sql.DB, tables TableNames, ci co
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
 		Requests:       tables.Requests,
+		Transactions:   tables.Transactions,
 	}, ci, notifier), nil
 }
 
@@ -132,7 +134,7 @@ func (db *TokenStore) IsMine(ctx context.Context, txID string, index uint64) (bo
 		Limit(1).
 		Format(db.ci)
 
-	id, err := common.QueryUniqueContext[string](ctx, db.readDB, query, args...)
+	id, err := common.QueryUnique[string](db.readDB, query, args...)
 
 	logger.DebugfContext(ctx, "token [%s:%d] is mine [%s]", txID, index, id)
 
@@ -365,8 +367,7 @@ func (db *TokenStore) queryLedgerTokens(ctx context.Context, details driver.Quer
 	}), nil
 }
 
-// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
-// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
+// Balance returns the sum of the amounts, with arbitrary precision, of the tokens with type and EID equal to those passed as arguments.
 func (db *TokenStore) Balance(ctx context.Context, walletID string, typ token.Type) (*big.Int, error) {
 	return db.balance(ctx, driver.QueryTokenDetailsParams{
 		WalletID:  walletID,
@@ -384,20 +385,15 @@ func (db *TokenStore) balance(ctx context.Context, opts driver.QueryTokenDetails
 		Where(HasTokenDetails(opts, tokenTable)).
 		Format(db.ci)
 
-	var sum BigInt
-	err := db.readDB.QueryRowContext(ctx, query, args...).Scan(&sum)
+	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return big.NewInt(0), nil
-		}
-
 		return nil, err
 	}
-	if sum.Int == nil {
+	if sum == nil {
 		return big.NewInt(0), nil
 	}
 
-	return sum.Int, nil
+	return big.NewInt(0).SetUint64(*sum), nil
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
@@ -608,6 +604,177 @@ func (db *TokenStore) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 	}
 
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
+}
+
+// IssuedBalance returns the total amount originally issued by this issuer.
+//
+// We count only issuance roots: tokens with issuer=true that were created by transactions
+// with no input tokens in the local token table (no predecessor with spent_by = tx_id).
+// This avoids double-counting transfer lineage tokens that may carry issuer=true in some backends.
+// If tokenType is non-empty, only tokens of that type are included.
+func (db *TokenStore) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time) (uint64, error) {
+	tokTable := q.Table(db.table.Tokens)
+	pred := q.AliasedTable(db.table.Tokens, "pred")
+	conds := []cond.Condition{
+		cond.CmpVal(tokTable.Field("issuer"), "=", true),
+		isNull(pred.Field("tx_id")),
+	}
+	if len(tokenType) != 0 {
+		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
+	}
+	if len(issuerRaw) != 0 {
+		conds = append(conds, cond.CmpVal(tokTable.Field("issuer_raw"), "=", issuerRaw))
+	}
+	if from != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), ">=", from.UTC()))
+	}
+	if to != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), "<=", to.UTC()))
+	}
+	query, args := q.Select().
+		FieldsByName(common3.FieldName("SUM(" + db.table.Tokens + ".amount)")).
+		From(tokTable.JoinAs(common3.Left, pred, cond.Cmp(pred.Field("spent_by"), "=", tokTable.Field("tx_id")))).
+		Where(cond.And(conds...)).
+		Format(db.ci)
+
+	logging.Debug(logger, query, args)
+	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
+	if err != nil || sum == nil {
+		return 0, err
+	}
+
+	return *sum, nil
+}
+
+// nullCond is a condition that checks if a field IS NULL.
+type nullCond struct {
+	f common3.Field
+}
+
+func (c *nullCond) WriteString(_ common3.CondInterpreter, sb common3.Builder) {
+	sb.WriteSerializables(c.f).WriteString(" IS NULL")
+}
+
+func isNull(f common3.Field) cond.Condition {
+	return &nullCond{f: f}
+}
+
+// notNullCond is a condition that checks if a field IS NOT NULL.
+type notNullCond struct {
+	f common3.Field
+}
+
+func (c *notNullCond) WriteString(_ common3.CondInterpreter, sb common3.Builder) {
+	sb.WriteSerializables(c.f).WriteString(" IS NOT NULL")
+}
+
+func isNotNull(f common3.Field) cond.Condition {
+	return &notNullCond{f: f}
+}
+
+// ListRedeemedTokens returns issued tokens that were spent by a Redeem action.
+// A redeemed token is identified as: issuer=true, is_deleted=true, spent_by is set,
+// and the spending tx_id has NO output tokens in the tokens table (because Parse()
+// skips redeem outputs with empty owner). This avoids relying on the transactions
+// table, which may not have entries on the issuer node.
+func (db *TokenStore) ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time, sortBy tdriver.SortField, sortDirection tdriver.SortDirection) (*token.IssuedTokens, error) {
+	tokTable := q.Table(db.table.Tokens)
+	// Alias the same tokens table to check for output tokens of the spending tx.
+	t2 := q.AliasedTable(db.table.Tokens, "t2")
+	conds := []cond.Condition{
+		cond.CmpVal(tokTable.Field("issuer"), "=", true),
+		cond.CmpVal(tokTable.Field("is_deleted"), "=", true),
+		isNotNull(tokTable.Field("spent_by")),
+		isNull(t2.Field("tx_id")),
+	}
+	if len(tokenType) != 0 {
+		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
+	}
+	if len(issuerRaw) != 0 {
+		conds = append(conds, cond.CmpVal(tokTable.Field("issuer_raw"), "=", issuerRaw))
+	}
+	if from != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), ">=", from.UTC()))
+	}
+	if to != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), "<=", to.UTC()))
+	}
+	sel := q.Select().
+		Fields(
+			tokTable.Field("tx_id"), tokTable.Field("idx"),
+			tokTable.Field("owner_raw"), tokTable.Field("token_type"),
+			tokTable.Field("quantity"), tokTable.Field("issuer_raw"),
+			tokTable.Field("is_deleted"), tokTable.Field("spent_by"),
+		).
+		From(tokTable.JoinAs(common3.Left, t2, cond.Cmp(t2.Field("tx_id"), "=", tokTable.Field("spent_by")))).
+		Where(cond.And(conds...))
+	var query string
+	var args []any
+	if sortBy == tdriver.SortByQuantity {
+		if sortDirection == tdriver.SortDescending {
+			query, args = sel.OrderBy(q.Desc(tokTable.Field("amount"))).Format(db.ci)
+		} else {
+			query, args = sel.OrderBy(q.Asc(tokTable.Field("amount"))).Format(db.ci)
+		}
+	} else {
+		query, args = sel.Format(db.ci)
+	}
+
+	logging.Debug(logger, query, args)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	it := common.NewIterator(rows, func(tok *token.IssuedToken) error {
+		return rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner, &tok.Type, &tok.Quantity, &tok.Issuer, &tok.IsSpent, &tok.SpentBy)
+	})
+	tokens, err := iterators.ReadAllPointers(it)
+	if err != nil {
+		return nil, err
+	}
+
+	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
+}
+
+// RedeemedBalance returns the amount burned by redeem operations for this issuer.
+// RedeemedBalance returns the total amount burned by redeem operations for this issuer.
+//
+// Burn tokens are stored during transaction processing with issuer=true and immediately
+// marked as deleted by their own tx (spent_by = tx_id). This self-referencing condition
+// uniquely identifies burn records.
+func (db *TokenStore) RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw tdriver.Identity, from, to *time.Time) (uint64, error) {
+	tokTable := q.Table(db.table.Tokens)
+	conds := []cond.Condition{
+		cond.CmpVal(tokTable.Field("issuer"), "=", true),
+		cond.CmpVal(tokTable.Field("is_deleted"), "=", true),
+		cond.Cmp(tokTable.Field("spent_by"), "=", tokTable.Field("tx_id")),
+	}
+	if len(issuerRaw) != 0 {
+		conds = append(conds, cond.CmpVal(tokTable.Field("issuer_raw"), "=", issuerRaw))
+	}
+	if len(tokenType) != 0 {
+		conds = append(conds, cond.CmpVal(tokTable.Field("token_type"), "=", tokenType))
+	}
+	if from != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), ">=", from.UTC()))
+	}
+	if to != nil {
+		conds = append(conds, cond.CmpVal(tokTable.Field("stored_at"), "<=", to.UTC()))
+	}
+	query, args := q.Select().
+		FieldsByName(common3.FieldName("SUM(" + db.table.Tokens + ".amount)")).
+		From(tokTable).
+		Where(cond.And(conds...)).
+		Format(db.ci)
+
+	logging.Debug(logger, query, args)
+	sum, err := common.QueryUnique[*uint64](db.readDB, query, args...)
+	if err != nil || sum == nil {
+		return 0, err
+	}
+
+	return *sum, nil
 }
 
 func (db *TokenStore) GetTokenOutputs(ctx context.Context, ids []*token.ID, callback tdriver.QueryCallbackFunc) error {
@@ -844,11 +1011,11 @@ func (db *TokenStore) QueryTokenDetails(ctx context.Context, params driver.Query
 	}
 
 	it := common.NewIterator(rows, func(td *driver.TokenDetails) error {
-		var amount BigInt
-		if err := rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &amount, &td.IsSpent, &td.SpentBy, &td.StoredAt); err != nil {
+		var amountRaw int64
+		if err := rows.Scan(&td.TxID, &td.Index, &td.OwnerIdentity, &td.OwnerType, &td.OwnerEnrollment, &td.Type, &amountRaw, &td.IsSpent, &td.SpentBy, &td.StoredAt); err != nil {
 			return err
 		}
-		td.Amount = amount.Int
+		td.Amount = big.NewInt(amountRaw)
 
 		return nil
 	})
@@ -961,7 +1128,7 @@ func (db *TokenStore) PublicParams(ctx context.Context) ([]byte, error) {
 		Limit(1).
 		Format(db.ci)
 
-	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
 func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PPHash) ([]byte, error) {
@@ -971,7 +1138,7 @@ func (db *TokenStore) PublicParamsByHash(ctx context.Context, rawHash tdriver.PP
 		Where(cond.Eq("raw_hash", rawHash)).
 		Format(db.ci)
 
-	return common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+	return common.QueryUnique[[]byte](db.readDB, query, args...)
 }
 
 func (db *TokenStore) StoreCertifications(ctx context.Context, certifications map[*token.ID][]byte) error {
@@ -1009,7 +1176,7 @@ func (db *TokenStore) ExistsCertification(ctx context.Context, tokenID *token.ID
 		Where(HasTokens("tx_id", "idx", tokenID)).
 		Format(db.ci)
 
-	certification, err := common.QueryUniqueContext[[]byte](ctx, db.readDB, query, args...)
+	certification, err := common.QueryUnique[[]byte](db.readDB, query, args...)
 	if err != nil {
 		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
 
@@ -1091,7 +1258,7 @@ func (db *TokenStore) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL,
 			idx INT NOT NULL,
-			amount NUMERIC(78, 0) NOT NULL,
+			amount BIGINT NOT NULL,
 			token_type TEXT NOT NULL,
 			quantity TEXT NOT NULL,
 			issuer_raw BYTEA,

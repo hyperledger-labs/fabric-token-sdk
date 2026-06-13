@@ -123,6 +123,24 @@ func (q *QueryEngine) ListHistoryIssuedTokens(ctx context.Context) (*token.Issue
 	return q.qe.ListHistoryIssuedTokens(ctx)
 }
 
+// IssuedBalance returns the total amount of tokens issued by the given issuer that have not been redeemed,
+// optionally filtered by token type and time range.
+func (q *QueryEngine) IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time) (uint64, error) {
+	return q.qe.IssuedBalance(ctx, tokenType, issuerRaw, from, to)
+}
+
+// ListRedeemedTokens returns the list of redeemed tokens originally issued by the given issuer,
+// optionally filtered by token type, time range, and sorted by the specified field and direction.
+func (q *QueryEngine) ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time, sortBy driver.SortField, sortDirection driver.SortDirection) (*token.IssuedTokens, error) {
+	return q.qe.ListRedeemedTokens(ctx, tokenType, issuerRaw, from, to, sortBy, sortDirection)
+}
+
+// RedeemedBalance returns the total amount of redeemed tokens originally issued by the given issuer,
+// optionally filtered by token type and time range.
+func (q *QueryEngine) RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time) (uint64, error) {
+	return q.qe.RedeemedBalance(ctx, tokenType, issuerRaw, from, to)
+}
+
 // PublicParams returns the public parameters stored in the vault
 func (q *QueryEngine) PublicParams(ctx context.Context) ([]byte, error) {
 	return q.qe.PublicParams(ctx)

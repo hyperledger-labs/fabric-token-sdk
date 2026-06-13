@@ -47,7 +47,7 @@ func (b *BalanceView) Call(context view.Context) (any, error) {
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
 
 	// owned
-	balance, err := wallet.Balance(context.Context(), token.WithType(b.Type))
+	balance, err := wallet.Balance(context.Context(), token.WithBalanceTokenType(b.Type))
 	assert.NoError(err, "failed to get unspent tokens")
 
 	htlcWallet := htlc.Wallet(context, wallet)

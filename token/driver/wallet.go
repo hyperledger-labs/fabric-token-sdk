@@ -9,6 +9,7 @@ package driver
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -69,10 +70,51 @@ type RecipientData struct {
 	TokenMetadataAuditInfo []byte
 }
 
+// SortField specifies which field to use for ordering token results.
+type SortField int
+
+const (
+	// SortByDefault leaves ordering to the database default.
+	SortByDefault SortField = iota
+	// SortByQuantity orders results by token quantity (amount).
+	SortByQuantity
+)
+
+// SortDirection specifies ascending or descending order.
+type SortDirection int
+
+const (
+	// SortAscending orders results from smallest to largest.
+	SortAscending SortDirection = iota
+	// SortDescending orders results from largest to smallest.
+	SortDescending
+)
+
 // ListTokensOptions contains options that can be used to list tokens from a wallet
 type ListTokensOptions struct {
 	// TokenType is the type of token to list
 	TokenType token.Type
+	// SortBy specifies which field to use for ordering the results.
+	SortBy SortField
+	// SortDirection specifies ascending or descending order.
+	SortDirection SortDirection
+	// From, if non-nil, restricts results to tokens stored at or after this time.
+	From *time.Time
+	// To, if non-nil, restricts results to tokens stored at or before this time.
+	To *time.Time
+}
+
+// BalanceOpts contains options for balance queries (methods that return a
+// scalar total). Sort fields are intentionally omitted because balance
+// results are single numbers, not ordered lists.
+type BalanceOpts struct {
+	// TokenType restricts the balance computation to tokens of this type.
+	// An empty value means all token types.
+	TokenType token.Type
+	// From, if non-nil, restricts the computation to tokens stored at or after this time.
+	From *time.Time
+	// To, if non-nil, restricts the computation to tokens stored at or before this time.
+	To *time.Time
 }
 
 // Wallet models a generic wallet
@@ -124,8 +166,7 @@ type OwnerWallet interface {
 	// ListTokensIterator returns an iterator of unspent tokens owned by this wallet filtered using the passed options.
 	ListTokensIterator(ctx context.Context, opts *ListTokensOptions) (UnspentTokensIterator, error)
 
-	// Balance returns the sum of the amounts of the tokens with type and EID equal to those passed as arguments.
-	// The result is returned as a *big.Int to support arbitrary precision and prevent overflow.
+	// Balance returns the sun of the amounts, with 64 bits of precision, of the tokens with type and EID equal to those passed as arguments.
 	Balance(ctx context.Context, opts *ListTokensOptions) (*big.Int, error)
 
 	// EnrollmentID returns the enrollment ID of the owner wallet
@@ -151,6 +192,18 @@ type IssuerWallet interface {
 
 	// HistoryTokens returns the list of tokens issued by this wallet filtered using the passed options.
 	HistoryTokens(ctx context.Context, opts *ListTokensOptions) (*token.IssuedTokens, error)
+
+	// IssuedBalance returns the total amount of tokens issued by this wallet (not yet redeemed).
+	IssuedBalance(ctx context.Context, opts *BalanceOpts) (uint64, error)
+
+	// RedeemedTokens returns the list of redeemed tokens that were originally issued by this wallet.
+	RedeemedTokens(ctx context.Context, opts *ListTokensOptions) (*token.IssuedTokens, error)
+
+	// RedeemedBalance returns the total amount of redeemed tokens that were originally issued by this wallet.
+	RedeemedBalance(ctx context.Context, opts *BalanceOpts) (uint64, error)
+
+	// OutstandingBalance returns the net amount still in circulation: IssuedBalance − RedeemedBalance.
+	OutstandingBalance(ctx context.Context, opts *BalanceOpts) (uint64, error)
 }
 
 // AuditorWallet models the wallet of an auditor

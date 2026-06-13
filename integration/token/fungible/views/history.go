@@ -181,3 +181,85 @@ func (p *TransactionInfoViewFactory) NewView(in []byte) (view.View, error) {
 
 	return f, nil
 }
+
+// IssuerBalanceQuery contains the input parameters for issuer balance views.
+type IssuerBalanceQuery struct {
+	Wallet    string
+	TokenType token2.Type
+	TMSID     *token.TMSID
+}
+
+// IssuedBalanceView returns the total amount of non-redeemed tokens issued by the given wallet.
+type IssuedBalanceView struct {
+	*IssuerBalanceQuery
+}
+
+func (p *IssuedBalanceView) Call(context view.Context) (interface{}, error) {
+	wallet := ttx.GetIssuerWallet(context, p.Wallet, ServiceOpts(p.TMSID)...)
+	if wallet == nil {
+		return nil, errors.Errorf("wallet [%s] not found", p.Wallet)
+	}
+
+	return wallet.IssuedBalance(context.Context(), token.WithBalanceTokenType(p.TokenType))
+}
+
+type IssuedBalanceViewFactory struct{}
+
+func (f *IssuedBalanceViewFactory) NewView(in []byte) (view.View, error) {
+	v := &IssuedBalanceView{IssuerBalanceQuery: &IssuerBalanceQuery{}}
+	if err := json.Unmarshal(in, v.IssuerBalanceQuery); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling input")
+	}
+
+	return v, nil
+}
+
+// RedeemedBalanceView returns the total amount of redeemed tokens originally issued by the given wallet.
+type RedeemedBalanceView struct {
+	*IssuerBalanceQuery
+}
+
+func (p *RedeemedBalanceView) Call(context view.Context) (interface{}, error) {
+	wallet := ttx.GetIssuerWallet(context, p.Wallet, ServiceOpts(p.TMSID)...)
+	if wallet == nil {
+		return nil, errors.Errorf("wallet [%s] not found", p.Wallet)
+	}
+
+	return wallet.RedeemedBalance(context.Context(), token.WithBalanceTokenType(p.TokenType))
+}
+
+type RedeemedBalanceViewFactory struct{}
+
+func (f *RedeemedBalanceViewFactory) NewView(in []byte) (view.View, error) {
+	v := &RedeemedBalanceView{IssuerBalanceQuery: &IssuerBalanceQuery{}}
+	if err := json.Unmarshal(in, v.IssuerBalanceQuery); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling input")
+	}
+
+	return v, nil
+}
+
+// OutstandingBalanceView returns IssuedBalance − RedeemedBalance for the given wallet.
+type OutstandingBalanceView struct {
+	*IssuerBalanceQuery
+}
+
+func (p *OutstandingBalanceView) Call(context view.Context) (interface{}, error) {
+	wallet := ttx.GetIssuerWallet(context, p.Wallet, ServiceOpts(p.TMSID)...)
+	if wallet == nil {
+		return nil, errors.Errorf("wallet [%s] not found", p.Wallet)
+	}
+
+	return wallet.OutstandingBalance(context.Context(), token.WithBalanceTokenType(p.TokenType))
+}
+
+type OutstandingBalanceViewFactory struct{}
+
+func (f *OutstandingBalanceViewFactory) NewView(in []byte) (view.View, error) {
+	v := &OutstandingBalanceView{IssuerBalanceQuery: &IssuerBalanceQuery{}}
+	if err := json.Unmarshal(in, v.IssuerBalanceQuery); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling input")
+	}
+
+	return v, nil
+}

@@ -85,6 +85,62 @@ type IssuerWallet struct {
 	iDReturnsOnCall map[int]struct {
 		result1 string
 	}
+	IssuedBalanceStub        func(context.Context, *driver.BalanceOpts) (uint64, error)
+	issuedBalanceMutex       sync.RWMutex
+	issuedBalanceArgsForCall []struct {
+		arg1 context.Context
+		arg2 *driver.BalanceOpts
+	}
+	issuedBalanceReturns struct {
+		result1 uint64
+		result2 error
+	}
+	issuedBalanceReturnsOnCall map[int]struct {
+		result1 uint64
+		result2 error
+	}
+	OutstandingBalanceStub        func(context.Context, *driver.BalanceOpts) (uint64, error)
+	outstandingBalanceMutex       sync.RWMutex
+	outstandingBalanceArgsForCall []struct {
+		arg1 context.Context
+		arg2 *driver.BalanceOpts
+	}
+	outstandingBalanceReturns struct {
+		result1 uint64
+		result2 error
+	}
+	outstandingBalanceReturnsOnCall map[int]struct {
+		result1 uint64
+		result2 error
+	}
+	RedeemedBalanceStub        func(context.Context, *driver.BalanceOpts) (uint64, error)
+	redeemedBalanceMutex       sync.RWMutex
+	redeemedBalanceArgsForCall []struct {
+		arg1 context.Context
+		arg2 *driver.BalanceOpts
+	}
+	redeemedBalanceReturns struct {
+		result1 uint64
+		result2 error
+	}
+	redeemedBalanceReturnsOnCall map[int]struct {
+		result1 uint64
+		result2 error
+	}
+	RedeemedTokensStub        func(context.Context, *driver.ListTokensOptions) (*token.IssuedTokens, error)
+	redeemedTokensMutex       sync.RWMutex
+	redeemedTokensArgsForCall []struct {
+		arg1 context.Context
+		arg2 *driver.ListTokensOptions
+	}
+	redeemedTokensReturns struct {
+		result1 *token.IssuedTokens
+		result2 error
+	}
+	redeemedTokensReturnsOnCall map[int]struct {
+		result1 *token.IssuedTokens
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -458,6 +514,266 @@ func (fake *IssuerWallet) IDReturnsOnCall(i int, result1 string) {
 	fake.iDReturnsOnCall[i] = struct {
 		result1 string
 	}{result1}
+}
+
+func (fake *IssuerWallet) IssuedBalance(arg1 context.Context, arg2 *driver.BalanceOpts) (uint64, error) {
+	fake.issuedBalanceMutex.Lock()
+	ret, specificReturn := fake.issuedBalanceReturnsOnCall[len(fake.issuedBalanceArgsForCall)]
+	fake.issuedBalanceArgsForCall = append(fake.issuedBalanceArgsForCall, struct {
+		arg1 context.Context
+		arg2 *driver.BalanceOpts
+	}{arg1, arg2})
+	stub := fake.IssuedBalanceStub
+	fakeReturns := fake.issuedBalanceReturns
+	fake.recordInvocation("IssuedBalance", []interface{}{arg1, arg2})
+	fake.issuedBalanceMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *IssuerWallet) IssuedBalanceCallCount() int {
+	fake.issuedBalanceMutex.RLock()
+	defer fake.issuedBalanceMutex.RUnlock()
+	return len(fake.issuedBalanceArgsForCall)
+}
+
+func (fake *IssuerWallet) IssuedBalanceCalls(stub func(context.Context, *driver.BalanceOpts) (uint64, error)) {
+	fake.issuedBalanceMutex.Lock()
+	defer fake.issuedBalanceMutex.Unlock()
+	fake.IssuedBalanceStub = stub
+}
+
+func (fake *IssuerWallet) IssuedBalanceArgsForCall(i int) (context.Context, *driver.BalanceOpts) {
+	fake.issuedBalanceMutex.RLock()
+	defer fake.issuedBalanceMutex.RUnlock()
+	argsForCall := fake.issuedBalanceArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *IssuerWallet) IssuedBalanceReturns(result1 uint64, result2 error) {
+	fake.issuedBalanceMutex.Lock()
+	defer fake.issuedBalanceMutex.Unlock()
+	fake.IssuedBalanceStub = nil
+	fake.issuedBalanceReturns = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *IssuerWallet) IssuedBalanceReturnsOnCall(i int, result1 uint64, result2 error) {
+	fake.issuedBalanceMutex.Lock()
+	defer fake.issuedBalanceMutex.Unlock()
+	fake.IssuedBalanceStub = nil
+	if fake.issuedBalanceReturnsOnCall == nil {
+		fake.issuedBalanceReturnsOnCall = make(map[int]struct {
+			result1 uint64
+			result2 error
+		})
+	}
+	fake.issuedBalanceReturnsOnCall[i] = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *IssuerWallet) OutstandingBalance(arg1 context.Context, arg2 *driver.BalanceOpts) (uint64, error) {
+	fake.outstandingBalanceMutex.Lock()
+	ret, specificReturn := fake.outstandingBalanceReturnsOnCall[len(fake.outstandingBalanceArgsForCall)]
+	fake.outstandingBalanceArgsForCall = append(fake.outstandingBalanceArgsForCall, struct {
+		arg1 context.Context
+		arg2 *driver.BalanceOpts
+	}{arg1, arg2})
+	stub := fake.OutstandingBalanceStub
+	fakeReturns := fake.outstandingBalanceReturns
+	fake.recordInvocation("OutstandingBalance", []interface{}{arg1, arg2})
+	fake.outstandingBalanceMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *IssuerWallet) OutstandingBalanceCallCount() int {
+	fake.outstandingBalanceMutex.RLock()
+	defer fake.outstandingBalanceMutex.RUnlock()
+	return len(fake.outstandingBalanceArgsForCall)
+}
+
+func (fake *IssuerWallet) OutstandingBalanceCalls(stub func(context.Context, *driver.BalanceOpts) (uint64, error)) {
+	fake.outstandingBalanceMutex.Lock()
+	defer fake.outstandingBalanceMutex.Unlock()
+	fake.OutstandingBalanceStub = stub
+}
+
+func (fake *IssuerWallet) OutstandingBalanceArgsForCall(i int) (context.Context, *driver.BalanceOpts) {
+	fake.outstandingBalanceMutex.RLock()
+	defer fake.outstandingBalanceMutex.RUnlock()
+	argsForCall := fake.outstandingBalanceArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *IssuerWallet) OutstandingBalanceReturns(result1 uint64, result2 error) {
+	fake.outstandingBalanceMutex.Lock()
+	defer fake.outstandingBalanceMutex.Unlock()
+	fake.OutstandingBalanceStub = nil
+	fake.outstandingBalanceReturns = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *IssuerWallet) OutstandingBalanceReturnsOnCall(i int, result1 uint64, result2 error) {
+	fake.outstandingBalanceMutex.Lock()
+	defer fake.outstandingBalanceMutex.Unlock()
+	fake.OutstandingBalanceStub = nil
+	if fake.outstandingBalanceReturnsOnCall == nil {
+		fake.outstandingBalanceReturnsOnCall = make(map[int]struct {
+			result1 uint64
+			result2 error
+		})
+	}
+	fake.outstandingBalanceReturnsOnCall[i] = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *IssuerWallet) RedeemedBalance(arg1 context.Context, arg2 *driver.BalanceOpts) (uint64, error) {
+	fake.redeemedBalanceMutex.Lock()
+	ret, specificReturn := fake.redeemedBalanceReturnsOnCall[len(fake.redeemedBalanceArgsForCall)]
+	fake.redeemedBalanceArgsForCall = append(fake.redeemedBalanceArgsForCall, struct {
+		arg1 context.Context
+		arg2 *driver.BalanceOpts
+	}{arg1, arg2})
+	stub := fake.RedeemedBalanceStub
+	fakeReturns := fake.redeemedBalanceReturns
+	fake.recordInvocation("RedeemedBalance", []interface{}{arg1, arg2})
+	fake.redeemedBalanceMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *IssuerWallet) RedeemedBalanceCallCount() int {
+	fake.redeemedBalanceMutex.RLock()
+	defer fake.redeemedBalanceMutex.RUnlock()
+	return len(fake.redeemedBalanceArgsForCall)
+}
+
+func (fake *IssuerWallet) RedeemedBalanceCalls(stub func(context.Context, *driver.BalanceOpts) (uint64, error)) {
+	fake.redeemedBalanceMutex.Lock()
+	defer fake.redeemedBalanceMutex.Unlock()
+	fake.RedeemedBalanceStub = stub
+}
+
+func (fake *IssuerWallet) RedeemedBalanceArgsForCall(i int) (context.Context, *driver.BalanceOpts) {
+	fake.redeemedBalanceMutex.RLock()
+	defer fake.redeemedBalanceMutex.RUnlock()
+	argsForCall := fake.redeemedBalanceArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *IssuerWallet) RedeemedBalanceReturns(result1 uint64, result2 error) {
+	fake.redeemedBalanceMutex.Lock()
+	defer fake.redeemedBalanceMutex.Unlock()
+	fake.RedeemedBalanceStub = nil
+	fake.redeemedBalanceReturns = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *IssuerWallet) RedeemedBalanceReturnsOnCall(i int, result1 uint64, result2 error) {
+	fake.redeemedBalanceMutex.Lock()
+	defer fake.redeemedBalanceMutex.Unlock()
+	fake.RedeemedBalanceStub = nil
+	if fake.redeemedBalanceReturnsOnCall == nil {
+		fake.redeemedBalanceReturnsOnCall = make(map[int]struct {
+			result1 uint64
+			result2 error
+		})
+	}
+	fake.redeemedBalanceReturnsOnCall[i] = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *IssuerWallet) RedeemedTokens(arg1 context.Context, arg2 *driver.ListTokensOptions) (*token.IssuedTokens, error) {
+	fake.redeemedTokensMutex.Lock()
+	ret, specificReturn := fake.redeemedTokensReturnsOnCall[len(fake.redeemedTokensArgsForCall)]
+	fake.redeemedTokensArgsForCall = append(fake.redeemedTokensArgsForCall, struct {
+		arg1 context.Context
+		arg2 *driver.ListTokensOptions
+	}{arg1, arg2})
+	stub := fake.RedeemedTokensStub
+	fakeReturns := fake.redeemedTokensReturns
+	fake.recordInvocation("RedeemedTokens", []interface{}{arg1, arg2})
+	fake.redeemedTokensMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *IssuerWallet) RedeemedTokensCallCount() int {
+	fake.redeemedTokensMutex.RLock()
+	defer fake.redeemedTokensMutex.RUnlock()
+	return len(fake.redeemedTokensArgsForCall)
+}
+
+func (fake *IssuerWallet) RedeemedTokensCalls(stub func(context.Context, *driver.ListTokensOptions) (*token.IssuedTokens, error)) {
+	fake.redeemedTokensMutex.Lock()
+	defer fake.redeemedTokensMutex.Unlock()
+	fake.RedeemedTokensStub = stub
+}
+
+func (fake *IssuerWallet) RedeemedTokensArgsForCall(i int) (context.Context, *driver.ListTokensOptions) {
+	fake.redeemedTokensMutex.RLock()
+	defer fake.redeemedTokensMutex.RUnlock()
+	argsForCall := fake.redeemedTokensArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *IssuerWallet) RedeemedTokensReturns(result1 *token.IssuedTokens, result2 error) {
+	fake.redeemedTokensMutex.Lock()
+	defer fake.redeemedTokensMutex.Unlock()
+	fake.RedeemedTokensStub = nil
+	fake.redeemedTokensReturns = struct {
+		result1 *token.IssuedTokens
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *IssuerWallet) RedeemedTokensReturnsOnCall(i int, result1 *token.IssuedTokens, result2 error) {
+	fake.redeemedTokensMutex.Lock()
+	defer fake.redeemedTokensMutex.Unlock()
+	fake.RedeemedTokensStub = nil
+	if fake.redeemedTokensReturnsOnCall == nil {
+		fake.redeemedTokensReturnsOnCall = make(map[int]struct {
+			result1 *token.IssuedTokens
+			result2 error
+		})
+	}
+	fake.redeemedTokensReturnsOnCall[i] = struct {
+		result1 *token.IssuedTokens
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *IssuerWallet) Invocations() map[string][][]interface{} {

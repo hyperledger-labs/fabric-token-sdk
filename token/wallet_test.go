@@ -11,6 +11,7 @@ import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -549,7 +550,7 @@ func TestOwnerWallet_Balance(t *testing.T) {
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
 
-	balance, err := wallet.Balance(ctx, WithType("USD"))
+	balance, err := wallet.Balance(ctx, WithBalanceTokenType("USD"))
 
 	require.NoError(t, err)
 	assert.Equal(t, big.NewInt(1000), balance)
@@ -598,6 +599,51 @@ func TestIssuerWallet_ListIssuedTokens(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
+}
+
+// TestIssuerWallet_ListIssuedTokens_WithSortBy verifies that WithSortBy passes the sort
+// field and direction through to the driver.
+func TestIssuerWallet_ListIssuedTokens_WithSortBy(t *testing.T) {
+	mockIW := &mock.IssuerWallet{}
+	expectedTokens := &token.IssuedTokens{}
+	mockIW.HistoryTokensReturns(expectedTokens, nil)
+
+	wallet := &IssuerWallet{w: mockIW}
+	ctx := context.Background()
+
+	tokens, err := wallet.ListIssuedTokens(ctx, WithType("USD"), WithSortBy(driver.SortByQuantity, driver.SortDescending))
+
+	require.NoError(t, err)
+	assert.Equal(t, expectedTokens, tokens)
+
+	// Verify the compiled options include sort fields.
+	_, opts := mockIW.HistoryTokensArgsForCall(0)
+	assert.Equal(t, driver.SortByQuantity, opts.SortBy)
+	assert.Equal(t, driver.SortDescending, opts.SortDirection)
+}
+
+// TestOwnerWallet_Balance_WithTimeRange verifies that WithTimeRange passes the
+// time bounds through to the driver.
+func TestOwnerWallet_Balance_WithTimeRange(t *testing.T) {
+	mockOW := &mock.OwnerWallet{}
+	mockOW.BalanceReturns(big.NewInt(500), nil)
+
+	wallet := &OwnerWallet{w: mockOW}
+	ctx := context.Background()
+
+	from := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2025, 12, 31, 23, 59, 59, 0, time.UTC)
+
+	balance, err := wallet.Balance(ctx, WithBalanceTokenType("USD"), WithTimeRange(&from, &to))
+
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(500), balance)
+
+	// Verify the compiled options include time range.
+	_, opts := mockOW.BalanceArgsForCall(0)
+	assert.Equal(t, &from, opts.From)
+	assert.Equal(t, &to, opts.To)
+	assert.Equal(t, token.Type("USD"), opts.TokenType)
 }
 
 // TestWalletManager_OwnerWalletIDs_Error verifies error handling
@@ -740,7 +786,7 @@ func TestOwnerWallet_Balance_Error(t *testing.T) {
 	wallet := &OwnerWallet{w: mockOW}
 	ctx := context.Background()
 
-	balance, err := wallet.Balance(ctx, WithType("USD"))
+	balance, err := wallet.Balance(ctx, WithBalanceTokenType("USD"))
 
 	require.Error(t, err)
 	assert.Equal(t, expectedErr, err)
