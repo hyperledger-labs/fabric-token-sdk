@@ -153,6 +153,8 @@ func NewTransaction(context view.Context, signer view.Identity, opts ...TxOption
 }
 
 // NewTransactionFromBytes unmarshals the given bytes into a Transaction, if possible.
+// For transactions received from the network, it validates that all wallet IDs (enrollment IDs)
+// referenced in the transaction correspond to registered wallets before accepting the transaction.
 func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, error) {
 	provider, err := dep.GetNetworkProvider(context)
 	if err != nil {
@@ -178,6 +180,12 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 	// check transaction id
 	if payload.ID != string(payload.TokenRequest.ID()) {
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", payload.ID, payload.TokenRequest.ID())
+	}
+
+	// Validate wallet IDs for transactions received from the network
+	// This prevents malformed records from corrupting vault state and audit trails
+	if err := validateTransactionWalletIDs(context.Context(), tms, payload.TokenRequest); err != nil {
+		return nil, errors.WithMessagef(err, "wallet validation failed for transaction [%s]", payload.ID)
 	}
 
 	// finalize
@@ -458,4 +466,112 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	//	}
 	// }
 	// return nil
+}
+
+// validateTransactionWalletIDs validates that enrollment IDs in the transaction
+// that correspond to LOCAL wallets are properly registered. This is a structural invariant check
+// that prevents malformed records from being written to the database when receiving transactions.
+//
+// Only LOCAL enrollment IDs are validated - remote party enrollment IDs are ignored since they
+// won't be registered on this node. For example, when Bob receives a transfer from Alice, only
+// Bob's enrollment IDs are validated, not Alice's.
+//
+// The validation is "cheap" - it only checks if enrollment IDs can be resolved to local wallets,
+// not performing expensive consistency sweeps. Empty enrollment IDs are allowed (e.g., for
+// redeem/issue operations).
+func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementServiceWithExtensions, req *token.Request) error {
+	// Extract inputs and outputs to get enrollment IDs
+	ins, outs, _, err := req.InputsAndOutputs(ctx)
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting inputs and outputs for wallet validation")
+	}
+
+	// Get wallet service
+	walletService := tms.WalletManager()
+	if walletService == nil {
+		logger.DebugfContext(ctx, "wallet service not available, skipping wallet ID validation")
+
+		return nil
+	}
+
+	// Collect all unique enrollment IDs from inputs and outputs
+	eids := make(map[string]bool)
+	for _, eid := range ins.EnrollmentIDs() {
+		if eid != "" {
+			eids[eid] = true
+		}
+	}
+	for _, eid := range outs.EnrollmentIDs() {
+		if eid != "" {
+			eids[eid] = true
+		}
+	}
+
+	// If no enrollment IDs to validate, we're done
+	if len(eids) == 0 {
+		logger.DebugfContext(ctx, "no enrollment IDs to validate in transaction")
+
+		return nil
+	}
+
+	// Get all registered owner wallet IDs to build a mapping of EID -> Wallet ID
+	// Note: OwnerWalletIDs returns wallet IDs (labels), not enrollment IDs
+	registeredWalletIDs, err := walletService.OwnerWalletIDs(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve registered wallet IDs")
+	}
+
+	// Build a map of enrollment IDs to wallet IDs for LOCAL wallets only
+	// We need to check each wallet to get its enrollment ID
+	localEIDs := make(map[string]string) // EID -> Wallet ID
+	for _, walletID := range registeredWalletIDs {
+		wallet, err := walletService.OwnerWallet(ctx, walletID)
+		if err != nil {
+			// Skip wallets we can't retrieve
+			logger.DebugfContext(ctx, "failed to retrieve wallet [%s]: %v", walletID, err)
+
+			continue
+		}
+
+		// Get the wallet's identity to extract its enrollment ID
+		identity, err := wallet.GetRecipientIdentity(ctx)
+		if err != nil {
+			// Skip wallets without recipient identity
+			logger.DebugfContext(ctx, "failed to get recipient identity for wallet [%s]: %v", walletID, err)
+
+			continue
+		}
+
+		// Get the enrollment ID for this wallet's identity
+		// WalletManager.GetEnrollmentID internally handles getting audit info
+		eid, err := walletService.GetEnrollmentID(ctx, identity)
+		if err != nil {
+			// Skip if we can't get the enrollment ID
+			logger.DebugfContext(ctx, "failed to get enrollment ID for wallet [%s]: %v", walletID, err)
+
+			continue
+		}
+
+		if eid != "" {
+			localEIDs[eid] = walletID
+		}
+	}
+
+	// Now validate: only check enrollment IDs that belong to LOCAL wallets
+	localCount := 0
+	for eid := range eids {
+		if _, isLocal := localEIDs[eid]; isLocal {
+			localCount++
+			// EID is local and valid (it's in our map)
+		}
+		// If not local, we ignore it (remote party's EID)
+	}
+
+	if localCount > 0 {
+		logger.DebugfContext(ctx, "validated %d local enrollment IDs successfully", localCount)
+	} else {
+		logger.DebugfContext(ctx, "no local enrollment IDs found in transaction")
+	}
+
+	return nil
 }

@@ -8,6 +8,7 @@ package cash
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
@@ -45,9 +46,13 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	// and specify the auditor that must be contacted to approve the operation
 	idProvider, err := id.GetProvider(context)
 	assert.NoError(err, "failed getting identity provider")
+	auditorID := idProvider.Identity("auditor")
+	if auditorID == nil {
+		return nil, errors.New("failed to get auditor identity: auditor identity is nil for auditor [auditor]")
+	}
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(idProvider.Identity("auditor")),
+		ttx.WithAuditor(auditorID),
 	)
 	assert.NoError(err, "failed creating issue transaction")
 
