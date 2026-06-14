@@ -138,7 +138,15 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 
 		reclaim := s.maxRetries == 1 || actualRetries > 1
 		for {
-			// Check token iteration limit
+			t, err := unspentTokens.Next()
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "token selection failed")
+			}
+			if t == nil {
+				break
+			}
+
+			// Check token iteration limit (only count actual tokens, not nil)
 			s.tokensIteratedCount++
 			if s.tokensIteratedCount > s.maxTokensPerSelection {
 				s.locker.UnlockIDs(ctx, toBeSpent...)
@@ -148,14 +156,6 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 					"token selection aborted: exceeded max token iteration limit (%d tokens)",
 					s.maxTokensPerSelection,
 				)
-			}
-
-			t, err := unspentTokens.Next()
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "token selection failed")
-			}
-			if t == nil {
-				break
 			}
 
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
