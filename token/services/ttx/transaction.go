@@ -475,8 +475,8 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 // The validation strategy is:
 // 1. Build a set of all enrollment IDs registered on this node (local EIDs)
 // 2. For each enrollment ID in the transaction:
-//    - If it's in the local set: it's valid (registered locally)
-//    - If it's NOT in the local set: it's assumed to be a remote party's EID, so we ignore it
+//   - If it's in the local set: it's valid (registered locally)
+//   - If it's NOT in the local set: it's assumed to be a remote party's EID, so we ignore it
 //
 // This approach ensures we only validate OUR wallets, not remote parties' wallets.
 // Empty enrollment IDs are allowed (e.g., for issuers in issue operations).
