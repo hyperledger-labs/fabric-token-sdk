@@ -472,106 +472,108 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 // that correspond to LOCAL wallets are properly registered. This is a structural invariant check
 // that prevents malformed records from being written to the database when receiving transactions.
 //
-// Only LOCAL enrollment IDs are validated - remote party enrollment IDs are ignored since they
-// won't be registered on this node. For example, when Bob receives a transfer from Alice, only
-// Bob's enrollment IDs are validated, not Alice's.
+// The validation strategy is:
+// 1. Build a set of all enrollment IDs registered on this node (local EIDs)
+// 2. For each enrollment ID in the transaction:
+//    - If it's in the local set: it's valid (registered locally)
+//    - If it's NOT in the local set: it's assumed to be a remote party's EID, so we ignore it
 //
-// The validation is "cheap" - it only checks if enrollment IDs can be resolved to local wallets,
-// not performing expensive consistency sweeps. Empty enrollment IDs are allowed (e.g., for
-// redeem/issue operations).
+// This approach ensures we only validate OUR wallets, not remote parties' wallets.
+// Empty enrollment IDs are allowed (e.g., for issuers in issue operations).
 func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementServiceWithExtensions, req *token.Request) error {
+	// Get wallet service
+	walletService := tms.WalletManager()
+	if walletService == nil {
+		logger.DebugfContext(ctx, "wallet service not available, skipping wallet ID validation")
+		return nil
+	}
+
 	// Extract inputs and outputs to get enrollment IDs
 	ins, outs, _, err := req.InputsAndOutputs(ctx)
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting inputs and outputs for wallet validation")
 	}
 
-	// Get wallet service
-	walletService := tms.WalletManager()
-	if walletService == nil {
-		logger.DebugfContext(ctx, "wallet service not available, skipping wallet ID validation")
-
-		return nil
-	}
-
-	// Collect all unique enrollment IDs from inputs and outputs
-	eids := make(map[string]bool)
+	// Collect all unique enrollment IDs from inputs and outputs (excluding empty strings)
+	txEIDs := make(map[string]bool)
 	for _, eid := range ins.EnrollmentIDs() {
 		if eid != "" {
-			eids[eid] = true
+			txEIDs[eid] = true
 		}
 	}
 	for _, eid := range outs.EnrollmentIDs() {
 		if eid != "" {
-			eids[eid] = true
+			txEIDs[eid] = true
 		}
 	}
 
 	// If no enrollment IDs to validate, we're done
-	if len(eids) == 0 {
+	if len(txEIDs) == 0 {
 		logger.DebugfContext(ctx, "no enrollment IDs to validate in transaction")
-
 		return nil
 	}
 
-	// Get all registered owner wallet IDs to build a mapping of EID -> Wallet ID
-	// Note: OwnerWalletIDs returns wallet IDs (labels), not enrollment IDs
+	// Get all registered owner wallet IDs
 	registeredWalletIDs, err := walletService.OwnerWalletIDs(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve registered wallet IDs")
 	}
 
-	// Build a map of enrollment IDs to wallet IDs for LOCAL wallets only
-	// We need to check each wallet to get its enrollment ID
-	localEIDs := make(map[string]string) // EID -> Wallet ID
+	// Build a set of LOCAL enrollment IDs by querying each registered wallet
+	localEIDs := make(map[string]bool)
 	for _, walletID := range registeredWalletIDs {
 		wallet, err := walletService.OwnerWallet(ctx, walletID)
-		if err != nil {
-			// Skip wallets we can't retrieve
+		if err != nil || wallet == nil {
+			// Skip wallets we can't retrieve - log but don't fail
 			logger.DebugfContext(ctx, "failed to retrieve wallet [%s]: %v", walletID, err)
-
 			continue
 		}
 
 		// Get the wallet's identity to extract its enrollment ID
 		identity, err := wallet.GetRecipientIdentity(ctx)
-		if err != nil {
-			// Skip wallets without recipient identity
+		if err != nil || len(identity) == 0 {
+			// Skip wallets without recipient identity - log but don't fail
 			logger.DebugfContext(ctx, "failed to get recipient identity for wallet [%s]: %v", walletID, err)
-
 			continue
 		}
 
 		// Get the enrollment ID for this wallet's identity
-		// WalletManager.GetEnrollmentID internally handles getting audit info
 		eid, err := walletService.GetEnrollmentID(ctx, identity)
 		if err != nil {
-			// Skip if we can't get the enrollment ID
+			// Skip if we can't get the enrollment ID - log but don't fail
 			logger.DebugfContext(ctx, "failed to get enrollment ID for wallet [%s]: %v", walletID, err)
-
 			continue
 		}
 
 		if eid != "" {
-			localEIDs[eid] = walletID
+			localEIDs[eid] = true
 		}
 	}
 
-	// Now validate: only check enrollment IDs that belong to LOCAL wallets
-	localCount := 0
-	for eid := range eids {
+	// Validate: Check if any transaction EIDs are local but NOT in our registered set
+	// This would indicate a malformed transaction referencing a non-existent local wallet
+	localValidCount := 0
+	remoteCount := 0
+
+	for eid := range txEIDs {
 		if _, isLocal := localEIDs[eid]; isLocal {
-			localCount++
-			// EID is local and valid (it's in our map)
+			// EID is local and valid (registered)
+			localValidCount++
+		} else {
+			// EID is not in our local set - could be:
+			// 1. A remote party's EID (valid - we don't validate remote parties)
+			// 2. A malformed local EID (invalid - but we can't distinguish without more context)
+			//
+			// Since we can't reliably distinguish between remote and malformed local EIDs,
+			// we assume it's remote and allow it. The alternative would be to reject all
+			// transactions with unknown EIDs, which would break legitimate cross-party transactions.
+			remoteCount++
 		}
-		// If not local, we ignore it (remote party's EID)
 	}
 
-	if localCount > 0 {
-		logger.DebugfContext(ctx, "validated %d local enrollment IDs successfully", localCount)
-	} else {
-		logger.DebugfContext(ctx, "no local enrollment IDs found in transaction")
-	}
+	logger.DebugfContext(ctx, "wallet validation: %d local EIDs validated, %d assumed remote", localValidCount, remoteCount)
 
+	// Note: We don't reject transactions with unknown EIDs because they could be remote parties.
+	// The validation only ensures that LOCAL wallets referenced in the transaction are registered.
 	return nil
 }
