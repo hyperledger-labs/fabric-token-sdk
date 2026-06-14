@@ -485,6 +485,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 	walletService := tms.WalletManager()
 	if walletService == nil {
 		logger.DebugfContext(ctx, "wallet service not available, skipping wallet ID validation")
+
 		return nil
 	}
 
@@ -510,6 +511,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 	// If no enrollment IDs to validate, we're done
 	if len(txEIDs) == 0 {
 		logger.DebugfContext(ctx, "no enrollment IDs to validate in transaction")
+
 		return nil
 	}
 
@@ -526,6 +528,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 		if err != nil || wallet == nil {
 			// Skip wallets we can't retrieve - log but don't fail
 			logger.DebugfContext(ctx, "failed to retrieve wallet [%s]: %v", walletID, err)
+
 			continue
 		}
 
@@ -534,6 +537,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 		if err != nil || len(identity) == 0 {
 			// Skip wallets without recipient identity - log but don't fail
 			logger.DebugfContext(ctx, "failed to get recipient identity for wallet [%s]: %v", walletID, err)
+
 			continue
 		}
 
@@ -542,6 +546,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 		if err != nil {
 			// Skip if we can't get the enrollment ID - log but don't fail
 			logger.DebugfContext(ctx, "failed to get enrollment ID for wallet [%s]: %v", walletID, err)
+
 			continue
 		}
 
