@@ -249,15 +249,6 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 	}
 	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(s.precision), collections.NewSet[*token2.ID](), true, 0
 	for {
-		// Check token iteration limit
-		s.tokensIteratedCount++
-		if s.tokensIteratedCount > s.maxTokensPerSelection {
-			return nil, nil, immediateRetries, errors.Errorf(
-				"token selection aborted: exceeded max token iteration limit (%d tokens)",
-				s.maxTokensPerSelection,
-			)
-		}
-
 		if t, err := s.cache.Next(); err != nil {
 			return nil, nil, immediateRetries, errors.Wrapf(err, "failed to get tokens for [%s:%s]", owner.ID(), tokenType)
 		} else if t == nil {
@@ -290,6 +281,15 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			immediateRetries++
 			tokensLockedByOthersExist = false
 		} else {
+			// Check token iteration limit (only count actual tokens, not nil)
+			s.tokensIteratedCount++
+			if s.tokensIteratedCount > s.maxTokensPerSelection {
+				return nil, nil, immediateRetries, errors.Errorf(
+					"token selection aborted: exceeded max token iteration limit (%d tokens)",
+					s.maxTokensPerSelection,
+				)
+			}
+
 			// Check lock attempt limit
 			s.lockAttemptsCount++
 			if s.lockAttemptsCount > s.maxLockAttempts {
