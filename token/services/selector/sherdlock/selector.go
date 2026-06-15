@@ -251,7 +251,7 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 	// Initialize cache on first use if not already set
 	if s.cache == nil {
 		s.logger.DebugfContext(ctx, "Initializing token cache for first selection")
-		if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
+		if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType, 0); err != nil {
 			return nil, nil, 0, errors.Wrapf(err, "failed to initialize token cache for [%s:%s]", owner.ID(), tokenType)
 		}
 	}
@@ -288,7 +288,7 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			}
 
 			s.logger.DebugfContext(ctx, "Fetch all non-deleted tokens from the DB and refresh the token cache.")
-			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType); err != nil {
+			if s.cache, err = s.fetcher.UnspentTokensIteratorBy(ctx, owner.ID(), tokenType, 0); err != nil {
 				return nil, nil, immediateRetries, errors.Wrapf(err, "failed to reload tokens for retry %d [%s:%s]", immediateRetries, owner.ID(), tokenType)
 			}
 

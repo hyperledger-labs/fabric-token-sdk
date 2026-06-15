@@ -90,7 +90,7 @@ func TestStubbornSelectorUnit(t *testing.T) {
 		mockLocker := &mocks.FakeTokenLocker{}
 		s := sherdlock.NewStubbornSelector(sherdlock.Logger(), mockFetcher, mockLocker, 64, 100*time.Millisecond, 2, 10000, 50000, 10, 30*time.Second, metrics)
 
-		mockFetcher.UnspentTokensIteratorByStub = func(ctx context.Context, walletID string, tokenType token2.Type) (sherdlock.Iterator[*token2.UnspentTokenInWallet], error) {
+		mockFetcher.UnspentTokensIteratorByStub = func(ctx context.Context, walletID string, tokenType token2.Type, limit int) (sherdlock.Iterator[*token2.UnspentTokenInWallet], error) {
 			mockIt := &mocks.FakeIterator[*token2.UnspentTokenInWallet]{}
 			mockIt.NextReturnsOnCall(0, &token2.UnspentTokenInWallet{
 				Id:       token2.ID{TxId: "tx1", Index: 0},
@@ -132,7 +132,7 @@ func TestStubbornSelectorUnit(t *testing.T) {
 		mockFetcher := &mocks.FakeTokenFetcher{}
 		mockLocker := &mocks.FakeTokenLocker{}
 
-		mockFetcher.UnspentTokensIteratorByStub = func(ctx context.Context, walletID string, tokenType token2.Type) (sherdlock.Iterator[*token2.UnspentTokenInWallet], error) {
+		mockFetcher.UnspentTokensIteratorByStub = func(ctx context.Context, walletID string, tokenType token2.Type, limit int) (sherdlock.Iterator[*token2.UnspentTokenInWallet], error) {
 			it := &mocks.FakeIterator[*token2.UnspentTokenInWallet]{}
 			it.NextReturnsOnCall(0, &token2.UnspentTokenInWallet{
 				Id:       token2.ID{TxId: "tx1", Index: 0},

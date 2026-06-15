@@ -736,7 +736,7 @@ type mockTokenFetcher struct {
 	unspentTokensIteratorByFunc func(ctx context.Context, walletID string, currency token2.Type) (Iterator[*token2.UnspentTokenInWallet], error)
 }
 
-func (m *mockTokenFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type) (Iterator[*token2.UnspentTokenInWallet], error) {
+func (m *mockTokenFetcher) UnspentTokensIteratorBy(ctx context.Context, walletID string, currency token2.Type, limit int) (Iterator[*token2.UnspentTokenInWallet], error) {
 	if m.unspentTokensIteratorByFunc != nil {
 		return m.unspentTokensIteratorByFunc(ctx, walletID, currency)
 	}
