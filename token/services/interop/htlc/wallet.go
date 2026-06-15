@@ -33,9 +33,33 @@ type TokenVault interface {
 	DeleteTokens(ctx context.Context, toDelete ...*token2.ID) error
 }
 
+// walletIDProvider abstracts wallet-id derivation for HTLC queries.
+type walletIDProvider interface {
+	BaseID() string
+	SenderID(context.Context) string
+	RecipientID(context.Context) string
+}
+
+type tokenOwnerWalletIDProvider struct {
+	wallet *token.OwnerWallet
+}
+
+func (p *tokenOwnerWalletIDProvider) BaseID() string {
+	return p.wallet.ID()
+}
+
+func (p *tokenOwnerWalletIDProvider) SenderID(ctx context.Context) string {
+	return senderWallet(ctx, p.wallet)
+}
+
+func (p *tokenOwnerWalletIDProvider) RecipientID(ctx context.Context) string {
+	return recipientWallet(ctx, p.wallet)
+}
+
 // OwnerWallet is a combination of a wallet and a query service
 type OwnerWallet struct {
 	wallet      *token.OwnerWallet
+	walletIDs   walletIDProvider
 	queryEngine QueryEngine
 	vault       TokenVault
 	bufferSize  uint32
@@ -249,18 +273,30 @@ func (w *OwnerWallet) filter(ctx context.Context, tokenType token2.Type, sender 
 }
 
 func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type, sender bool, selector SelectFunction) (iterators.Iterator[*token2.UnspentToken], error) {
-	var walletID string
-	if sender {
-		walletID = senderWallet(ctx, w.wallet)
-	} else {
-		walletID = recipientWallet(ctx, w.wallet)
-	}
-	it, err := w.queryEngine.UnspentTokensIteratorBy(ctx, walletID, tokenType)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
+	provider := w.walletIDs
+	if provider == nil {
+		provider = &tokenOwnerWalletIDProvider{wallet: w.wallet}
 	}
 
-	return iterators.Filter(it, IsScript(selector)), nil
+	walletIDs := []string{provider.BaseID()}
+	if sender {
+		walletIDs = append(walletIDs, provider.SenderID(ctx))
+	} else {
+		walletIDs = append(walletIDs, provider.RecipientID(ctx))
+	}
+
+	var errs []error
+	for _, walletID := range walletIDs {
+		it, err := w.queryEngine.UnspentTokensIteratorBy(ctx, walletID, tokenType)
+		if err != nil {
+			errs = append(errs, errors.WithMessagef(err, "failed to get iterator over unspent tokens for wallet id [%s]", walletID))
+			continue
+		}
+
+		return iterators.Filter(it, IsScript(selector)), nil
+	}
+
+	return nil, errors.Join(errs...)
 }
 
 // GetWallet returns the wallet whose id is the passed id
