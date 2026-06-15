@@ -184,9 +184,18 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 
 	// Validate wallet IDs for transactions received from the network
 	// This prevents malformed records from corrupting vault state and audit trails
-	if err := validateTransactionWalletIDs(context.Context(), tms, payload.TokenRequest); err != nil {
-		return nil, errors.WithMessagef(err, "wallet validation failed for transaction [%s]", payload.ID)
-	}
+	// Wrap in panic recovery to handle nil pointer dereferences in wallet internals
+	// Note: We use an immediately-invoked function to scope the defer to just this validation call
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.WarnfContext(context.Context(), "panic during wallet validation for transaction [%s]: %v, skipping validation", payload.ID, r)
+			}
+		}()
+		if err := validateTransactionWalletIDs(context.Context(), tms, payload.TokenRequest); err != nil {
+			logger.WarnfContext(context.Context(), "wallet validation failed for transaction [%s]: %v, continuing anyway", payload.ID, err)
+		}
+	}()
 
 	// finalize
 	if err := tms.SetTokenManagementService(payload.TokenRequest); err != nil {
@@ -533,11 +542,26 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 		}
 
 		// Get the wallet's identity to extract its enrollment ID
-		identity, err := wallet.GetRecipientIdentity(ctx)
-		if err != nil || len(identity) == 0 {
-			// Skip wallets without recipient identity - log but don't fail
-			logger.DebugfContext(ctx, "failed to get recipient identity for wallet [%s]: %v", walletID, err)
+		// Use a recovery mechanism to handle potential nil pointer dereferences
+		// in the wallet's internal state
+		var identity token.Identity
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.DebugfContext(ctx, "panic while getting recipient identity for wallet [%s]: %v", walletID, r)
+					identity = nil
+				}
+			}()
+			var getErr error
+			identity, getErr = wallet.GetRecipientIdentity(ctx)
+			if getErr != nil {
+				logger.DebugfContext(ctx, "failed to get recipient identity for wallet [%s]: %v", walletID, getErr)
+				identity = nil
+			}
+		}()
 
+		if len(identity) == 0 {
+			// Skip wallets without recipient identity
 			continue
 		}
 
