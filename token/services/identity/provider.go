@@ -8,7 +8,6 @@ package identity
 
 import (
 	"context"
-	"fmt"
 	"runtime/debug"
 	"time"
 
@@ -150,10 +149,8 @@ func (p *Provider) RegisterRecipientData(ctx context.Context, data *driver.Recip
 	}
 
 	err = p.storage.StoreIdentityData(ctx, data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
-	if err != nil {
-		return fmt.Errorf("failed to store identity data: %w", err)
-	}
-	return nil
+
+	return err
 }
 
 // RegisterSigner registers a Signer and a Verifier for passed identity.
@@ -182,11 +179,8 @@ func (p *Provider) RegisterSigner(ctx context.Context, identity driver.Identity,
 	}
 
 	err = p.RegisterIdentityDescriptor(ctx, identityDescriptor, nil)
-	if err != nil {
-		return fmt.Errorf("failed to register identity descriptor: %w", err)
-	}
 
-	return nil
+	return err
 }
 
 // AreMe returns the hashes of the passed identities that have a signer registered before.
@@ -236,11 +230,8 @@ func (p *Provider) GetAuditInfo(ctx context.Context, identity driver.Identity) (
 	}
 
 	res, err = p.storage.GetAuditInfo(ctx, identity)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get audit info: %w", err)
-	}
 
-	return res, nil
+	return res, err
 }
 
 // GetSigner returns a Signer for passed identity.
@@ -264,10 +255,10 @@ func (p *Provider) GetSigner(ctx context.Context, identity driver.Identity) (sig
 	idHash := identity.UniqueID()
 	signer, err = p.getSigner(ctx, identity, idHash)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable: %w", identity.String(), err)
+		err = errors.Wrapf(err, "failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 	}
 
-	return signer, nil
+	return signer, err
 }
 
 // GetEIDAndRH returns both enrollment ID and revocation handle
@@ -285,11 +276,8 @@ func (p *Provider) GetEIDAndRH(ctx context.Context, identity driver.Identity, au
 	}
 
 	eid, rh, err = p.enrollmentIDUnmarshaler.GetEIDAndRH(ctx, identity, auditInfo)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get EID and RH: %w", err)
-	}
 
-	return eid, rh, nil
+	return eid, rh, err
 }
 
 // GetEnrollmentID extracts the enrollment ID from the passed audit info
@@ -307,11 +295,8 @@ func (p *Provider) GetEnrollmentID(ctx context.Context, identity driver.Identity
 	}
 
 	eid, err = p.enrollmentIDUnmarshaler.GetEnrollmentID(ctx, identity, auditInfo)
-	if err != nil {
-		return "", fmt.Errorf("failed to get enrollment ID: %w", err)
-	}
 
-	return eid, nil
+	return eid, err
 }
 
 // GetRevocationHandler extracts the revocation handler from the passed audit info
@@ -329,11 +314,8 @@ func (p *Provider) GetRevocationHandler(ctx context.Context, identity driver.Ide
 	}
 
 	rh, err = p.enrollmentIDUnmarshaler.GetRevocationHandler(ctx, identity, auditInfo)
-	if err != nil {
-		return "", fmt.Errorf("failed to get revocation handler: %w", err)
-	}
 
-	return rh, nil
+	return rh, err
 }
 
 // Bind binds longTerm to the passed ephemeral identities.
@@ -355,8 +337,9 @@ func (p *Provider) Bind(ctx context.Context, longTerm driver.Identity, ephemeral
 			// no action required
 			continue
 		}
-		if err := p.Binder.Bind(ctx, longTerm, identity); err != nil {
-			return fmt.Errorf("failed to bind identity: %w", err)
+		err = p.Binder.Bind(ctx, longTerm, identity)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -415,8 +398,11 @@ func (p *Provider) RegisterIdentityDescriptor(ctx context.Context, identityDescr
 
 	// register in the Storage
 	if !identityDescriptor.Ephemeral {
-		if err := p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias); err != nil {
-			return fmt.Errorf("failed to register identity descriptor: %w", err)
+		err = p.storage.RegisterIdentityDescriptor(ctx, identityDescriptor, alias)
+		if err != nil {
+			err = errors.Wrapf(err, "failed to register identity descriptor")
+
+			return err
 		}
 	}
 

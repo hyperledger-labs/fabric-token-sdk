@@ -75,7 +75,7 @@ func (circuitBreaker *CircuitBreaker) Allow() bool {
 // RecordFailure increments the failure count and opens the circuit if the threshold is reached.
 func (circuitBreaker *CircuitBreaker) RecordFailure() {
 	count := atomic.AddInt64(&circuitBreaker.failureCount, 1)
-	if count >= circuitBreaker.threshold {
+	if count == circuitBreaker.threshold {
 		circuitBreaker.Lock()
 		circuitBreaker.open = true
 		circuitBreaker.lastFailure = time.Now()
