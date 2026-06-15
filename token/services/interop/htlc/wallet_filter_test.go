@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/LFDT-Panurus/panurus/token/driver"
+	drivermock "github.com/LFDT-Panurus/panurus/token/driver/mock"
 	"github.com/LFDT-Panurus/panurus/token/services/identity/marshal"
 	"github.com/LFDT-Panurus/panurus/token/services/interop/encoding"
 	token2 "github.com/LFDT-Panurus/panurus/token/token"
@@ -203,11 +204,13 @@ func TestOwnerWalletFilterIteratorFallsBackToBaseWalletID(t *testing.T) {
 			iter := &drivermock.UnspentTokensIterator{}
 			iter.NextReturnsOnCall(0, expectedToken, nil)
 			iter.NextReturnsOnCall(1, nil, nil) // End of iteration
+			
 			return iter, nil
 		case "htlc.recipientwallet1":
 			return nil, errors.New("wallet id not found")
 		default:
 			t.Fatalf("unexpected wallet id lookup: %s", walletID)
+			
 			return nil, nil
 		}
 	}
@@ -231,7 +234,7 @@ func TestOwnerWalletFilterIteratorFallsBackToBaseWalletID(t *testing.T) {
 		if tok == nil {
 			break
 		}
-		
+
 		tokens = append(tokens, tok)
 	}
 	it.Close()
