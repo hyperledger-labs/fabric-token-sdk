@@ -102,6 +102,9 @@ func (wm *WalletManager) OwnerWallet(ctx context.Context, id WalletLookupID) (*O
 	if err != nil {
 		return nil, err
 	}
+	if w == nil {
+		return nil, errors.Errorf("wallet not found for id [%s]", id)
+	}
 
 	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}, nil
 }
@@ -113,6 +116,9 @@ func (wm *WalletManager) IssuerWallet(ctx context.Context, id WalletLookupID) (*
 	w, err := wm.walletService.IssuerWallet(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if w == nil {
+		return nil, errors.Errorf("issuer wallet not found for id [%s]", id)
 	}
 
 	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}, nil
@@ -126,6 +132,9 @@ func (wm *WalletManager) AuditorWallet(ctx context.Context, id WalletLookupID) (
 	if err != nil {
 		return nil, err
 	}
+	if w == nil {
+		return nil, errors.Errorf("auditor wallet not found for id [%s]", id)
+	}
 
 	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}, nil
 }
@@ -137,6 +146,9 @@ func (wm *WalletManager) CertifierWallet(ctx context.Context, id WalletLookupID)
 	w, err := wm.walletService.CertifierWallet(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if w == nil {
+		return nil, errors.Errorf("certifier wallet not found for id [%s]", id)
 	}
 
 	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}, nil
