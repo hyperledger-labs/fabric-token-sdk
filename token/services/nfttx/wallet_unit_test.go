@@ -61,7 +61,14 @@ type dummyTMSProviderSuccess struct{}
 
 func (d *dummyTMSProviderSuccess) GetTokenManagerService(opts driver.ServiceOptions) (driver.TokenManagerService, error) {
 	mockTMS := &driver_mock.TokenManagerService{}
-	mockTMS.WalletServiceReturns(&driver_mock.WalletService{})
+	
+	// Configure WalletService mock to return wallet instances
+	mockWS := &driver_mock.WalletService{}
+	mockWS.OwnerWalletReturns(&driver_mock.OwnerWallet{}, nil)
+	mockWS.IssuerWalletReturns(&driver_mock.IssuerWallet{}, nil)
+	mockWS.AuditorWalletReturns(&driver_mock.AuditorWallet{}, nil)
+	
+	mockTMS.WalletServiceReturns(mockWS)
 	mockTMS.ValidatorReturns(&driver_mock.Validator{}, nil)
 	mockAuth := &driver_mock.Authorization{}
 	mockTMS.AuthorizationReturns(mockAuth)
