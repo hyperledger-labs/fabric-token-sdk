@@ -247,7 +247,7 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 	if err != nil {
 		return nil, nil, 0, errors.Wrapf(err, "failed to create quantity")
 	}
-	
+
 	// Initialize cache on first use if not already set
 	if s.cache == nil {
 		s.logger.DebugfContext(ctx, "Initializing token cache for first selection")
@@ -255,14 +255,14 @@ func (s *Selector) selectInternal(ctx context.Context, owner token.OwnerFilter, 
 			return nil, nil, 0, errors.Wrapf(err, "failed to initialize token cache for [%s:%s]", owner.ID(), tokenType)
 		}
 	}
-	
+
 	sum, selected, tokensLockedByOthersExist, immediateRetries := token2.NewZeroQuantity(s.precision), collections.NewSet[*token2.ID](), true, 0
 	for {
 		// Double-check cache is not nil (defensive programming against race conditions)
 		if s.cache == nil {
 			return nil, nil, immediateRetries, errors.Errorf("token cache is nil, selector may have been closed concurrently")
 		}
-		
+
 		if t, err := s.cache.Next(); err != nil {
 			return nil, nil, immediateRetries, errors.Wrapf(err, "failed to get tokens for [%s:%s]", owner.ID(), tokenType)
 		} else if t == nil {
