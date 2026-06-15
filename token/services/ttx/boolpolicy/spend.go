@@ -150,7 +150,13 @@ func (c *RequestSpendView) Call(context view.Context) (any, error) {
 		counter++
 	}
 	for range counter {
-		a := <-answerChannel
+		var a *answer
+		select {
+		case a = <-answerChannel:
+			// Received answer from party
+		case <-context.Context().Done():
+			return nil, errors.Wrapf(context.Context().Err(), "context cancelled while waiting for answer from party")
+		}
 		if a.err != nil {
 			return nil, errors.Wrapf(a.err, "failure from [%s]", a.party)
 		}

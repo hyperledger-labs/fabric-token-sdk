@@ -292,6 +292,31 @@ token:
                   Security: 256
                 SW:
                   Hash: SHA2
+      # Auditor lock configuration for enrollment ID locking during audit operations
+      # These settings control the retry behavior when multiple auditors compete for locks
+      auditor:
+        lock:
+          # maxRetries is the maximum number of retry attempts for lock acquisition
+          # Default: 10
+          maxRetries: 10
+          
+          # initialBackoff is the initial backoff delay before the first retry
+          # Default: 10ms
+          initialBackoff: 10ms
+          
+          # maxBackoff is the maximum backoff delay between retries
+          # Default: 5s
+          maxBackoff: 5s
+          
+          # backoffMultiplier is the exponential backoff multiplier
+          # Each retry delay is multiplied by this factor
+          # Default: 2.0
+          backoffMultiplier: 2.0
+          
+          # jitterFactor is the randomization factor to prevent thundering herd (0.0 to 1.0)
+          # Adds random jitter to break symmetry when multiple auditors retry simultaneously
+          # Default: 0.3 (30%)
+          jitterFactor: 0.3
                   Security: 256
 ```
 
@@ -419,6 +444,57 @@ Default values:
    - Increase `batchSize` to 200-500 to process more transactions per sweep
    - Increase `workerCount` to 8-16 to improve parallel processing
    - Decrease `scanInterval` to 2-3s for faster recovery detection
+
+---
+
+### Optional: token.tms.<name>.auditor.lock
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  tms:
+    <name>:
+      auditor:
+        lock:
+          maxRetries: 10
+          initialBackoff: 10ms
+          maxBackoff: 5s
+          backoffMultiplier: 2.0
+          jitterFactor: 0.3
+```
+
+Default values:
+
+- maxRetries: 10
+- initialBackoff: 10ms
+- maxBackoff: 5s
+- backoffMultiplier: 2.0
+- jitterFactor: 0.3
+
+**Parameter Descriptions:**
+
+- **maxRetries**: Maximum number of retry attempts when acquiring locks on enrollment IDs during audit operations
+- **initialBackoff**: Initial delay before the first retry attempt
+- **maxBackoff**: Maximum delay between retry attempts (exponential backoff is capped at this value)
+- **backoffMultiplier**: Factor by which the backoff delay increases after each retry (exponential growth)
+- **jitterFactor**: Randomization factor (0.0 to 1.0) added to backoff delays to prevent multiple auditors from retrying simultaneously (prevents thundering herd problem)
+
+**Tuning Recommendations:**
+
+1. **For High-Contention Environments:**
+   - Increase `maxRetries` to 15-20 to handle more lock conflicts
+   - Increase `maxBackoff` to 10s to spread out retry attempts
+   - Keep `jitterFactor` at 0.3 or higher to maintain randomization
+
+2. **For Low-Latency Requirements:**
+   - Decrease `initialBackoff` to 5ms for faster initial retries
+   - Decrease `maxBackoff` to 2s to avoid long waits
+   - Increase `backoffMultiplier` to 3.0 for faster exponential growth
+
+3. **For Resource-Constrained Environments:**
+   - Decrease `maxRetries` to 5 to fail faster
+   - Keep default backoff settings to balance retry attempts with resource usage
 
 2. **For Resource-Constrained Environments:**
    - Decrease `batchSize` to 50 to reduce memory usage

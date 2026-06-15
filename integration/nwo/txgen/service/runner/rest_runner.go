@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
 
 	"github.com/gin-gonic/gin"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 )
 
 // RestRunner enhances the BaseRunner by adding a REST server to accept new suites

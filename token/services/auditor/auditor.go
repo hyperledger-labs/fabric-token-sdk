@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -81,9 +82,11 @@ type Service struct {
 	metricsProvider metrics.Provider
 	metrics         *Metrics
 	checkService    CheckService
+	lockConfig      *LockConfig
 }
 
 // NewService creates a new auditor Service with the provided dependencies.
+// If lockConfig is nil, default lock configuration will be used.
 func NewService(
 	tmsID token.TMSID,
 	networkProvider NetworkProvider,
@@ -93,7 +96,12 @@ func NewService(
 	finalityTracer trace.Tracer,
 	metricsProvider metrics.Provider,
 	checkService CheckService,
+	lockConfig *LockConfig,
 ) *Service {
+	if lockConfig == nil {
+		lockConfig = DefaultLockConfig()
+	}
+
 	return &Service{
 		tmsID:           tmsID,
 		networkProvider: networkProvider,
@@ -104,6 +112,7 @@ func NewService(
 		metricsProvider: metricsProvider,
 		metrics:         newMetrics(metricsProvider),
 		checkService:    checkService,
+		lockConfig:      lockConfig,
 	}
 }
 
@@ -113,7 +122,8 @@ func (a *Service) Validate(ctx context.Context, request *token.Request) error {
 }
 
 // Audit extracts the list of inputs and outputs from the passed transaction.
-// In addition, Audit acquires locks on the enrollment IDs involved in the transaction.
+// In addition, the Audit locks the enrollment named ids with retry logic and exponential backoff
+// to prevent livelock conditions.
 // The caller MUST call Release() to unlock these enrollment IDs after processing.
 //
 // IMPORTANT: The defer Release() statement MUST be placed immediately after checking
@@ -141,16 +151,45 @@ func (a *Service) Audit(ctx context.Context, tx Transaction) (*token.InputStream
 	var eids []string
 	eids = append(eids, record.Inputs.EnrollmentIDs()...)
 	eids = append(eids, record.Outputs.EnrollmentIDs()...)
-	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks", tx.ID())
-	if err := a.auditDB.AcquireLocks(ctx, string(request.Anchor), eids...); err != nil {
+
+	// Acquire locks with retry and exponential backoff to prevent livelock
+	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks with retry", tx.ID())
+	if err := a.acquireLocksWithRetry(ctx, string(request.Anchor), eids); err != nil {
 		a.metrics.AuditLockConflicts.Add(1)
 
 		return nil, nil, err
 	}
+
 	logger.DebugfContext(ctx, "audit transaction [%s], acquire locks done", tx.ID())
 	a.metrics.AuditDuration.Observe(time.Since(start).Seconds())
 
 	return record.Inputs, record.Outputs, nil
+}
+
+// acquireLocksWithRetry attempts to acquire locks with exponential backoff and randomized jitter
+// to prevent livelock conditions when multiple auditors compete for the same enrollment IDs.
+// This implements the mitigation strategy for deadlock/livelock prevention.
+func (a *Service) acquireLocksWithRetry(ctx context.Context, anchor string, eids []string) error {
+	// Create a retry runner with jitter support
+	retryRunner := utils.NewRetryRunnerWithJitter(
+		logger,
+		a.lockConfig.MaxRetries,
+		a.lockConfig.InitialBackoff,
+		a.lockConfig.MaxBackoff,
+		a.lockConfig.BackoffMultiplier,
+		a.lockConfig.JitterFactor,
+	)
+
+	// Use the retry runner to acquire locks
+	err := retryRunner.RunWithContext(ctx, func() error {
+		return a.auditDB.AcquireLocks(ctx, anchor, eids...)
+	})
+
+	if err != nil {
+		return errors.WithMessagef(err, "failed to acquire locks for anchor [%s]", anchor)
+	}
+
+	return nil
 }
 
 // Append adds the passed transaction to the auditor database.

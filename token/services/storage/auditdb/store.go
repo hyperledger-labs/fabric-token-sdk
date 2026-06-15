@@ -330,6 +330,8 @@ func (d *StoreService) GetTokenRequests(ctx context.Context, txIDs []string) (ma
 // The function respects context cancellation and deadlines, returning an error if the context is cancelled
 // or times out before all locks can be acquired. This prevents indefinite blocking and enables fast failure
 // in case of lock contention or deadlock scenarios.
+// The implementation provides deadlock prevention through deterministic lock ordering (sorted by enrollment ID).
+// Livelock prevention is handled by the caller through retry logic with exponential backoff.
 func (d *StoreService) AcquireLocks(ctx context.Context, anchor string, eIDs ...string) error {
 	logger.DebugfContext(ctx, "Acquire locks for [%s:%v] enrollment ids", anchor, eIDs)
 	if err := d.locker.AcquireLocks(ctx, anchor, eIDs...); err != nil {

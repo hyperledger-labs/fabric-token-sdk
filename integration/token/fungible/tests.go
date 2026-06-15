@@ -43,6 +43,10 @@ const (
 	// FabTokenNamespace is the default name for the namespace where the token chaincode is deployed when using the fabtoken driver
 	// #nosec G101  no passwords here
 	FabTokenNamespace = "fabtoken_token_chaincode"
+
+	// transferTimeout is the maximum time to wait for a transfer operation to complete in tests.
+	// This generous timeout accounts for variable CI environment performance.
+	transferTimeout = 60 * time.Second
 )
 
 var AuditedTransactions = []TransactionRecord{
@@ -709,7 +713,13 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 		}()
 	}
 	for _, transfer := range transferErrors {
-		err := <-transfer
+		var err error
+		select {
+		case err = <-transfer:
+			// Received transfer result
+		case <-time.After(transferTimeout):
+			gomega.Expect(false).To(gomega.BeTrue(), "timeout waiting for transfer to complete")
+		}
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}
 	CheckBalanceAndHolding(network, bob, "", "EUR", 2820-sum, auditor)
@@ -754,7 +764,14 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// collect the errors, and check that they are all nil, and one of them is the error we expect.
 	var errs []error
 	for _, transfer := range transferErrors2 {
-		errs = append(errs, <-transfer)
+		var err error
+		select {
+		case err = <-transfer:
+			// Received transfer result
+		case <-time.After(transferTimeout):
+			gomega.Expect(false).To(gomega.BeTrue(), "timeout waiting for transfer to complete")
+		}
+		errs = append(errs, err)
 	}
 	gomega.Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(gomega.BeTrue())
 	var errStr string

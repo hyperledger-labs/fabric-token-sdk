@@ -146,7 +146,7 @@ func TestIssue(t *testing.T) {
 		des.GetAuditInfoReturns([]byte("audit"), nil)
 
 		opts := &driver.IssueOptions{
-			Attributes: map[any]any{"key": "value"},
+			Attributes: map[string]any{"key": "value"},
 		}
 		action, _, err := service.Issue(ctx, issuer, tokenType, values, owners, opts)
 		require.NoError(t, err)
