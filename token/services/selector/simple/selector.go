@@ -259,7 +259,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 
 			// funds are insufficient
 			logger.DebugfContext(ctx, "token selection: it is time to fail but how, insufficient funds")
-	
+
 			return nil, nil, errors.WithMessagef(
 				token.SelectorInsufficientFunds,
 				"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked",
