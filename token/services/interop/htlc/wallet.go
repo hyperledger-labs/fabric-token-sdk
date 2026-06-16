@@ -299,10 +299,12 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 		}
 
 		logger.Debugf("[HTLC filterIterator] Successfully got iterator for wallet ID: %s", walletID)
+		
 		return iterators.Filter(it, IsScript(selector)), nil
 	}
 
 	logger.Debugf("[HTLC filterIterator] No valid iterator found, errors: %v", errs)
+
 	return nil, errors.Join(errs...)
 }
 
