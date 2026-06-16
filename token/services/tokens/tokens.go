@@ -99,13 +99,44 @@ type Service struct {
 }
 
 func NewService(tmsID token.TMSID, TMSProvider TMSProvider, networkProvider NetworkProvider, storage *DBStorage, requestsCache Cache) *Service {
-	return &Service{
+	s := &Service{
 		tmsID:           tmsID,
 		TMSProvider:     TMSProvider,
 		NetworkProvider: networkProvider,
 		Storage:         storage,
 		RequestsCache:   requestsCache,
+		Config: ValidationConfig{
+			MaxTokenPayloadSize:  2 * 1024 * 1024,
+			MaxTokenOutputsPerTx: 1000,
+			MaxBulkDeleteSize:    10000,
+			MaxWalletIDSize:      1024,
+			MaxOwnerRawSize:      256 * 1024,
+			MaxIssuerRawSize:     256 * 1024,
+			MaxTokenRequestSize:  2 * 1024 * 1024,
+			MaxActionCount:       1000,
+		},
 	}
+
+	if TMSProvider != nil {
+		tms, err := TMSProvider.GetManagementService(token.WithTMSID(tmsID))
+		if err == nil && tms != nil && tms.Configuration() != nil {
+			if vConfig, err := tms.Configuration().GetValidationConfig(); err == nil {
+				s.Config = vConfig
+			} else {
+				logger.Warnf("failed reading validation config, falling back to default values: %s", err)
+			}
+		} else {
+			if err != nil {
+				logger.Warnf("failed getting token management service [%s], falling back to default validation config: %s", tmsID, err)
+			} else {
+				logger.Warnf("token management service or configuration is nil for [%s], falling back to default validation config", tmsID)
+			}
+		}
+	} else {
+		logger.Warnf("TMSProvider is nil, falling back to default validation config")
+	}
+
+	return s
 }
 
 // AppendValid extracts actions from a token request, applies them to the local storage,
@@ -150,27 +181,6 @@ func (t *Service) AppendValid(ctx context.Context, tx dbdriver.Transaction, txID
 
 // Append applies the passed request to the local storage.
 func (t *Service) Append(ctx context.Context, tx dbdriver.Transaction, txID token.RequestAnchor, req *AppendRequest) (err error) {
-	if t.Config == (ValidationConfig{}) {
-		t.Config = ValidationConfig{
-			MaxTokenPayloadSize:  2 * 1024 * 1024,
-			MaxTokenOutputsPerTx: 1000,
-			MaxBulkDeleteSize:    10000,
-			MaxWalletIDSize:      1024,
-			MaxOwnerRawSize:      256 * 1024,
-			MaxIssuerRawSize:     256 * 1024,
-			MaxTokenRequestSize:  2 * 1024 * 1024,
-			MaxActionCount:       1000,
-		}
-		if t.TMSProvider != nil {
-			tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(t.tmsID))
-			if err == nil && tms != nil && tms.Configuration() != nil {
-				if vConfig, err := tms.Configuration().GetValidationConfig(); err == nil {
-					t.Config = vConfig
-				}
-			}
-		}
-	}
-
 	err = t.validateAppendRequest(req)
 	if err != nil {
 		return errors.Wrapf(err, "validation failed")
