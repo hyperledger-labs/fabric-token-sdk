@@ -16,6 +16,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+
 type QueryService interface {
 	UnspentTokensIterator(ctx context.Context) (*token.UnspentTokensIterator, error)
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type, limit int) (driver.UnspentTokensIterator, error)
