@@ -46,9 +46,12 @@ func (b *BalanceView) Call(context view.Context) (any, error) {
 	assert.NoError(err, "failed to get wallet [%s]", b.Wallet)
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
 
+	logger.Debugf("[BalanceView] Checking balance for wallet [%s] (ID: %s), type [%s]", b.Wallet, wallet.ID(), b.Type)
+
 	// owned
 	balance, err := wallet.Balance(context.Context(), token.WithType(b.Type))
 	assert.NoError(err, "failed to get unspent tokens")
+	logger.Debugf("[BalanceView] Wallet [%s] balance: %s", wallet.ID(), balance.String())
 
 	htlcWallet := htlc.Wallet(context, wallet)
 	// locked
@@ -56,6 +59,7 @@ func (b *BalanceView) Call(context view.Context) (any, error) {
 	assert.NoError(err, "failed to get locked tokens")
 	lockedSum, err := iterators.Reduce(lockedToTokens, token2.ToQuantitySum(precision))
 	assert.NoError(err, "failed to compute the sum of the htlc locked tokens")
+	logger.Debugf("[BalanceView] Wallet [%s] locked tokens sum: %s", wallet.ID(), lockedSum.Decimal())
 
 	// expired
 	err = htlcWallet.DeleteExpiredReceivedTokens(context, token.WithType(b.Type))
@@ -64,6 +68,7 @@ func (b *BalanceView) Call(context view.Context) (any, error) {
 	assert.NoError(err, "failed to get expired tokens")
 	expiredSum, err := iterators.Reduce(expiredTokens, token2.ToQuantitySum(precision))
 	assert.NoError(err, "failed to compute the sum of the htlc expired tokens")
+	logger.Debugf("[BalanceView] Wallet [%s] expired tokens sum: %s", wallet.ID(), expiredSum.Decimal())
 
 	return BalanceResult{
 		Quantity: balance.String(),

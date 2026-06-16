@@ -285,18 +285,24 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 		walletIDs = append(walletIDs, provider.RecipientID(ctx))
 	}
 
+	logger.Debugf("[HTLC filterIterator] Querying tokens for wallet IDs: %v, tokenType: %s, sender: %v", walletIDs, tokenType, sender)
+
 	var errs []error
 	for _, walletID := range walletIDs {
+		logger.Debugf("[HTLC filterIterator] Trying wallet ID: %s", walletID)
 		it, err := w.queryEngine.UnspentTokensIteratorBy(ctx, walletID, tokenType)
 		if err != nil {
+			logger.Debugf("[HTLC filterIterator] Failed to get iterator for wallet ID [%s]: %v", walletID, err)
 			errs = append(errs, errors.WithMessagef(err, "failed to get iterator over unspent tokens for wallet id [%s]", walletID))
 
 			continue
 		}
 
+		logger.Debugf("[HTLC filterIterator] Successfully got iterator for wallet ID: %s", walletID)
 		return iterators.Filter(it, IsScript(selector)), nil
 	}
 
+	logger.Debugf("[HTLC filterIterator] No valid iterator found, errors: %v", errs)
 	return nil, errors.Join(errs...)
 }
 
