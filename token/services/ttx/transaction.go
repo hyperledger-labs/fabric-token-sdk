@@ -541,39 +541,9 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 			continue
 		}
 
-		// Get the wallet's identity to extract its enrollment ID
-		// Use a recovery mechanism to handle potential nil pointer dereferences
-		// in the wallet's internal state
-		var identity token.Identity
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					logger.DebugfContext(ctx, "panic while getting recipient identity for wallet [%s]: %v", walletID, r)
-					identity = nil
-				}
-			}()
-			var getErr error
-			identity, getErr = wallet.GetRecipientIdentity(ctx)
-			if getErr != nil {
-				logger.DebugfContext(ctx, "failed to get recipient identity for wallet [%s]: %v", walletID, getErr)
-				identity = nil
-			}
-		}()
-
-		if len(identity) == 0 {
-			// Skip wallets without recipient identity
-			continue
-		}
-
-		// Get the enrollment ID for this wallet's identity
-		eid, err := walletService.GetEnrollmentID(ctx, identity)
-		if err != nil {
-			// Skip if we can't get the enrollment ID - log but don't fail
-			logger.DebugfContext(ctx, "failed to get enrollment ID for wallet [%s]: %v", walletID, err)
-
-			continue
-		}
-
+		// Get the enrollment ID directly from the wallet without generating new identities
+		// This is much more efficient and avoids side effects for anonymous wallets
+		eid := wallet.EnrollmentID()
 		if eid != "" {
 			localEIDs[eid] = true
 		}
