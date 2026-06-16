@@ -565,7 +565,7 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 		for eid := range txEIDs {
 			eids = append(eids, eid)
 		}
-		
+
 		return eids
 	}())
 
