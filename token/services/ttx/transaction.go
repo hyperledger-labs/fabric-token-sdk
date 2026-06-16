@@ -192,8 +192,11 @@ func NewTransactionFromBytes(context view.Context, raw []byte) (*Transaction, er
 				logger.WarnfContext(context.Context(), "panic during wallet validation for transaction [%s]: %v, skipping validation", payload.ID, r)
 			}
 		}()
+		logger.DebugfContext(context.Context(), "[WalletValidation] Starting validation for transaction [%s]", payload.ID)
 		if err := validateTransactionWalletIDs(context.Context(), tms, payload.TokenRequest); err != nil {
 			logger.WarnfContext(context.Context(), "wallet validation failed for transaction [%s]: %v, continuing anyway", payload.ID, err)
+		} else {
+			logger.DebugfContext(context.Context(), "[WalletValidation] Validation completed successfully for transaction [%s]", payload.ID)
 		}
 	}()
 
@@ -532,11 +535,12 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 
 	// Build a set of LOCAL enrollment IDs by querying each registered wallet
 	localEIDs := make(map[string]bool)
+	logger.DebugfContext(ctx, "[WalletValidation] Found %d registered wallet IDs: %v", len(registeredWalletIDs), registeredWalletIDs)
 	for _, walletID := range registeredWalletIDs {
 		wallet, err := walletService.OwnerWallet(ctx, walletID)
 		if err != nil || wallet == nil {
 			// Skip wallets we can't retrieve - log but don't fail
-			logger.DebugfContext(ctx, "failed to retrieve wallet [%s]: %v", walletID, err)
+			logger.DebugfContext(ctx, "[WalletValidation] Failed to retrieve wallet [%s]: %v", walletID, err)
 
 			continue
 		}
@@ -544,20 +548,31 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 		// Get the enrollment ID directly from the wallet without generating new identities
 		// This is much more efficient and avoids side effects for anonymous wallets
 		eid := wallet.EnrollmentID()
+		logger.DebugfContext(ctx, "[WalletValidation] Wallet [%s] has enrollment ID: %s", walletID, eid)
 		if eid != "" {
 			localEIDs[eid] = true
 		}
 	}
+	logger.DebugfContext(ctx, "[WalletValidation] Built local EID map with %d entries", len(localEIDs))
 
 	// Validate: Check if any transaction EIDs are local but NOT in our registered set
 	// This would indicate a malformed transaction referencing a non-existent local wallet
 	localValidCount := 0
 	remoteCount := 0
 
+	logger.DebugfContext(ctx, "[WalletValidation] Transaction has %d unique EIDs: %v", len(txEIDs), func() []string {
+		eids := make([]string, 0, len(txEIDs))
+		for eid := range txEIDs {
+			eids = append(eids, eid)
+		}
+		return eids
+	}())
+
 	for eid := range txEIDs {
 		if _, isLocal := localEIDs[eid]; isLocal {
 			// EID is local and valid (registered)
 			localValidCount++
+			logger.DebugfContext(ctx, "[WalletValidation] EID [%s] is LOCAL and valid", eid)
 		} else {
 			// EID is not in our local set - could be:
 			// 1. A remote party's EID (valid - we don't validate remote parties)
@@ -567,10 +582,11 @@ func validateTransactionWalletIDs(ctx context.Context, tms dep.TokenManagementSe
 			// we assume it's remote and allow it. The alternative would be to reject all
 			// transactions with unknown EIDs, which would break legitimate cross-party transactions.
 			remoteCount++
+			logger.DebugfContext(ctx, "[WalletValidation] EID [%s] is assumed REMOTE", eid)
 		}
 	}
 
-	logger.DebugfContext(ctx, "wallet validation: %d local EIDs validated, %d assumed remote", localValidCount, remoteCount)
+	logger.DebugfContext(ctx, "[WalletValidation] Summary: %d local EIDs validated, %d assumed remote", localValidCount, remoteCount)
 
 	// Note: We don't reject transactions with unknown EIDs because they could be remote parties.
 	// The validation only ensures that LOCAL wallets referenced in the transaction are registered.
