@@ -290,7 +290,7 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 		it, err := w.queryEngine.UnspentTokensIteratorBy(ctx, walletID, tokenType)
 		if err != nil {
 			errs = append(errs, errors.WithMessagef(err, "failed to get iterator over unspent tokens for wallet id [%s]", walletID))
-			
+
 			continue
 		}
 

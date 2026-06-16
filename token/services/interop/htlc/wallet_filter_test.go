@@ -204,13 +204,13 @@ func TestOwnerWalletFilterIteratorFallsBackToBaseWalletID(t *testing.T) {
 			iter := &drivermock.UnspentTokensIterator{}
 			iter.NextReturnsOnCall(0, expectedToken, nil)
 			iter.NextReturnsOnCall(1, nil, nil) // End of iteration
-			
+
 			return iter, nil
 		case "htlc.recipientwallet1":
 			return nil, errors.New("wallet id not found")
 		default:
 			t.Fatalf("unexpected wallet id lookup: %s", walletID)
-			
+
 			return nil, nil
 		}
 	}
