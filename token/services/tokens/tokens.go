@@ -9,6 +9,7 @@ package tokens
 import (
 	"context"
 	"runtime/debug"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -95,7 +96,8 @@ type Service struct {
 	// RequestsCache provides an in-memory cache for pending token requests to optimize commit performance.
 	RequestsCache Cache
 	// Config contains the validation limits for the service.
-	Config ValidationConfig
+	Config     ValidationConfig
+	configOnce sync.Once
 }
 
 func NewService(tmsID token.TMSID, TMSProvider TMSProvider, networkProvider NetworkProvider, storage *DBStorage, requestsCache Cache) *Service {
@@ -117,26 +119,30 @@ func NewService(tmsID token.TMSID, TMSProvider TMSProvider, networkProvider Netw
 		},
 	}
 
-	if TMSProvider != nil {
-		tms, err := TMSProvider.GetManagementService(token.WithTMSID(tmsID))
-		if err == nil && tms != nil && tms.Configuration() != nil {
-			if vConfig, err := tms.Configuration().GetValidationConfig(); err == nil {
-				s.Config = vConfig
+	return s
+}
+
+func (t *Service) loadConfig() {
+	t.configOnce.Do(func() {
+		if t.TMSProvider != nil {
+			tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(t.tmsID))
+			if err == nil && tms != nil && tms.Configuration() != nil {
+				if vConfig, err := tms.Configuration().GetValidationConfig(); err == nil {
+					t.Config = vConfig
+				} else {
+					logger.Warnf("failed reading validation config, falling back to default values: %s", err)
+				}
 			} else {
-				logger.Warnf("failed reading validation config, falling back to default values: %s", err)
+				if err != nil {
+					logger.Warnf("failed getting token management service [%s], falling back to default validation config: %s", t.tmsID, err)
+				} else {
+					logger.Warnf("token management service or configuration is nil for [%s], falling back to default validation config", t.tmsID)
+				}
 			}
 		} else {
-			if err != nil {
-				logger.Warnf("failed getting token management service [%s], falling back to default validation config: %s", tmsID, err)
-			} else {
-				logger.Warnf("token management service or configuration is nil for [%s], falling back to default validation config", tmsID)
-			}
+			logger.Warnf("TMSProvider is nil, falling back to default validation config")
 		}
-	} else {
-		logger.Warnf("TMSProvider is nil, falling back to default validation config")
-	}
-
-	return s
+	})
 }
 
 // AppendValid extracts actions from a token request, applies them to the local storage,
@@ -225,6 +231,8 @@ func (t *Service) validateAppendRequest(req *AppendRequest) error {
 	if req == nil {
 		return errors.New("request is nil")
 	}
+
+	t.loadConfig()
 
 	if len(req.Tokens) > t.Config.MaxTokenOutputsPerTx {
 		return errors.Errorf("too many token outputs: %d > %d", len(req.Tokens), t.Config.MaxTokenOutputsPerTx)
