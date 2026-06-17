@@ -287,6 +287,8 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 
 	logger.Debugf("[HTLC filterIterator] Querying tokens for wallet IDs: %v, tokenType: %s, sender: %v", walletIDs, tokenType, sender)
 
+	// Collect all valid iterators from all wallet IDs
+	var validIterators []driver.UnspentTokensIterator
 	var errs []error
 	for _, walletID := range walletIDs {
 		logger.Debugf("[HTLC filterIterator] Trying wallet ID: %s", walletID)
@@ -294,18 +296,59 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 		if err != nil {
 			logger.Debugf("[HTLC filterIterator] Failed to get iterator for wallet ID [%s]: %v", walletID, err)
 			errs = append(errs, errors.WithMessagef(err, "failed to get iterator over unspent tokens for wallet id [%s]", walletID))
-
 			continue
 		}
 
 		logger.Debugf("[HTLC filterIterator] Successfully got iterator for wallet ID: %s", walletID)
-
-		return iterators.Filter(it, IsScript(selector)), nil
+		validIterators = append(validIterators, it)
 	}
 
-	logger.Debugf("[HTLC filterIterator] No valid iterator found, errors: %v", errs)
+	// If no valid iterators found, return error
+	if len(validIterators) == 0 {
+		logger.Debugf("[HTLC filterIterator] No valid iterator found, errors: %v", errs)
+		return nil, errors.Join(errs...)
+	}
 
-	return nil, errors.Join(errs...)
+	// If only one iterator, return it directly with filter
+	if len(validIterators) == 1 {
+		logger.Debugf("[HTLC filterIterator] Returning single iterator with filter")
+		return iterators.Filter(validIterators[0], IsScript(selector)), nil
+	}
+
+	// Multiple iterators: chain them together
+	logger.Debugf("[HTLC filterIterator] Chaining %d iterators together", len(validIterators))
+	chainedIterator := &chainedIterator{iterators: validIterators, currentIndex: 0}
+	return iterators.Filter(chainedIterator, IsScript(selector)), nil
+}
+
+// chainedIterator chains multiple iterators together
+type chainedIterator struct {
+	iterators    []driver.UnspentTokensIterator
+	currentIndex int
+}
+
+func (c *chainedIterator) Next() (*token2.UnspentToken, error) {
+	for c.currentIndex < len(c.iterators) {
+		token, err := c.iterators[c.currentIndex].Next()
+		if err != nil {
+			// Move to next iterator on error
+			c.currentIndex++
+			continue
+		}
+		if token != nil {
+			return token, nil
+		}
+		// Current iterator exhausted, move to next
+		c.currentIndex++
+	}
+	// All iterators exhausted
+	return nil, nil
+}
+
+func (c *chainedIterator) Close() {
+	for _, it := range c.iterators {
+		it.Close()
+	}
 }
 
 // GetWallet returns the wallet whose id is the passed id
