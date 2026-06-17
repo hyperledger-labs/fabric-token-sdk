@@ -296,6 +296,7 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 		if err != nil {
 			logger.Debugf("[HTLC filterIterator] Failed to get iterator for wallet ID [%s]: %v", walletID, err)
 			errs = append(errs, errors.WithMessagef(err, "failed to get iterator over unspent tokens for wallet id [%s]", walletID))
+
 			continue
 		}
 
@@ -306,18 +307,21 @@ func (w *OwnerWallet) filterIterator(ctx context.Context, tokenType token2.Type,
 	// If no valid iterators found, return error
 	if len(validIterators) == 0 {
 		logger.Debugf("[HTLC filterIterator] No valid iterator found, errors: %v", errs)
+
 		return nil, errors.Join(errs...)
 	}
 
 	// If only one iterator, return it directly with filter
 	if len(validIterators) == 1 {
 		logger.Debugf("[HTLC filterIterator] Returning single iterator with filter")
+
 		return iterators.Filter(validIterators[0], IsScript(selector)), nil
 	}
 
 	// Multiple iterators: chain them together
 	logger.Debugf("[HTLC filterIterator] Chaining %d iterators together", len(validIterators))
 	chainedIterator := &chainedIterator{iterators: validIterators, currentIndex: 0}
+
 	return iterators.Filter(chainedIterator, IsScript(selector)), nil
 }
 
@@ -333,6 +337,7 @@ func (c *chainedIterator) Next() (*token2.UnspentToken, error) {
 		if err != nil {
 			// Move to next iterator on error
 			c.currentIndex++
+
 			continue
 		}
 		if token != nil {
