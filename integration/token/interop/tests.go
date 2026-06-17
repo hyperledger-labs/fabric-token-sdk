@@ -28,26 +28,19 @@ const (
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.ReplicaSelector) {
-	fmt.Println("[TEST] ========== TestHTLCSingleNetwork: Starting ==========")
 	alice := sel.Get("alice")
 	bob := sel.Get("bob")
 	issuer := sel.Get("issuer")
 	auditor := sel.Get("auditor")
-	fmt.Printf("[TEST] TestHTLCSingleNetwork: Got nodes - alice=%s, bob=%s, issuer=%s, auditor=%s\n",
-		alice.Id(), bob.Id(), issuer.Id(), auditor.Id())
 
 	// give some time to the nodes to get the public parameters
-	fmt.Println("[TEST] TestHTLCSingleNetwork: Waiting 10 seconds for public parameters...")
 	time.Sleep(10 * time.Second)
 
 	defaultTMSID := token.TMSID{}
-	fmt.Println("[TEST] TestHTLCSingleNetwork: Registering auditor...")
 	RegisterAuditor(network)
 
-	fmt.Println("[TEST] TestHTLCSingleNetwork: Step 1 - Issue 110 USD to alice")
 	IssueCash(network, "", USD, 110, alice, alice)
 	CheckBalanceWithLockedAndHolding(network, alice, "", USD, 110, 0, 0, -1)
-	fmt.Println("[TEST] TestHTLCSingleNetwork: Step 2 - Issue 10 USD to alice")
 	IssueCash(network, "", USD, 10, alice, alice)
 	CheckBalanceWithLockedAndHolding(network, alice, "", USD, 120, 0, 0, -1)
 
@@ -81,20 +74,15 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.Repl
 	CheckBalanceWithLockedAndHolding(network, bob, "", EUR, 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, bob, "", USD, 0, 0, 0, -1)
 
-	fmt.Println("[TEST] TestHTLCSingleNetwork: Step 3 - Restarting nodes...")
 	Restart(network, issuer, auditor, alice, bob)
-	fmt.Println("[TEST] TestHTLCSingleNetwork: Step 4 - Re-registering auditor after restart...")
 	RegisterAuditor(network)
 
 	// htlc (lock, failing claim, reclaim)
-	fmt.Println("[TEST] TestHTLCSingleNetwork: Step 5 - HTLC Lock: alice locks 10 USD for bob with 10s deadline")
 	_, preImage, _ := HTLCLock(network, token.TMSID{}, alice, "", USD, 10, bob, auditor, 10*time.Second, nil, crypto.SHA512)
-	fmt.Println("[TEST] TestHTLCSingleNetwork: Step 6 - Checking balances after lock...")
 	CheckBalanceWithLockedAndHolding(network, alice, "", USD, 110, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, alice, "", EUR, 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, bob, "", EUR, 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, bob, "", USD, 0, 10, 0, -1)
-	fmt.Println("[TEST] TestHTLCSingleNetwork: Step 7 - Waiting 15 seconds for HTLC to expire...")
 	time.Sleep(15 * time.Second)
 	CheckBalanceWithLockedAndHolding(network, alice, "", USD, 110, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, alice, "", EUR, 0, 0, 0, -1)
