@@ -318,7 +318,7 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 		}
 
 		fmt.Printf("[TEST] HTLCLock: Completed successfully - TxID=%s\n", lockResult.TxID)
-		
+
 		return lockResult.TxID, lockResult.PreImage, lockResult.Hash
 	} else {
 		gomega.Expect(err).To(gomega.HaveOccurred())
