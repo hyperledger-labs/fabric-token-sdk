@@ -54,7 +54,7 @@ func newTestSuiteSingleFabric(commType fsc.P2PCommunicationType, factor int, nam
 		ReplicationOpts: opts,
 		DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: fabtokenv1.DriverIdentifier},
 		SDKs:            []nodepkg.SDK{&ffabtoken.SDK{}},
-		FSCLogSpec:      "info",
+		FSCLogSpec:      "debug",
 	}))
 
 	return ts, selector

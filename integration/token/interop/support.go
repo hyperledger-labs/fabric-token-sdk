@@ -29,16 +29,20 @@ import (
 )
 
 func RegisterAuditor(network *integration.Infrastructure, opts ...token.ServiceOption) {
+	fmt.Println("[TEST] RegisterAuditor: Starting...")
 	options, err := token.CompileServiceOptions(opts...)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
+	fmt.Printf("[TEST] RegisterAuditor: Calling view with TMSID: %v\n", options.TMSID())
 	_, err = network.Client("auditor").CallView("registerAuditor", common.JSONMarshall(&views2.RegisterAuditor{
 		TMSID: options.TMSID(),
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	fmt.Println("[TEST] RegisterAuditor: Completed successfully")
 }
 
 func IssueCash(network *integration.Infrastructure, wallet string, typ token2.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference) string {
+	fmt.Printf("[TEST] IssueCash: Starting - wallet=%s, type=%s, amount=%d, receiver=%s\n", wallet, typ, amount, receiver.Id())
 	txid, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
 		IssuerWallet: wallet,
 		TokenType:    typ,
@@ -47,7 +51,9 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ token2.Ty
 	}))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	txID := common.JSONUnmarshalString(txid)
+	fmt.Printf("[TEST] IssueCash: Transaction ID: %s, checking finality...\n", txID)
 	common2.CheckFinality(network, receiver, txID, nil, false)
+	fmt.Printf("[TEST] IssueCash: Completed successfully for txID=%s\n", txID)
 	common2.CheckFinality(network, auditor, txID, nil, false)
 
 	return common.JSONUnmarshalString(txid)
@@ -137,8 +143,11 @@ func CheckHolding(network *integration.Infrastructure, id *token3.NodeReference,
 }
 
 func CheckBalanceWithLocked(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, expectedLocked uint64, expectedExpired uint64, opts ...token.ServiceOption) {
+	fmt.Printf("[TEST] CheckBalanceWithLocked: Starting - id=%s, wallet=%s, type=%s, expected=%d, expectedLocked=%d, expectedExpired=%d\n",
+		id.Id(), wallet, typ, expected, expectedLocked, expectedExpired)
 	opt, err := token.CompileServiceOptions(opts...)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to compile options [%v]", opts)
+	fmt.Printf("[TEST] CheckBalanceWithLocked: Calling balance view on %s...\n", id.ReplicaName())
 	resBoxed, err := network.Client(id.ReplicaName()).CallView("balance", common.JSONMarshall(&views2.Balance{
 		Wallet: wallet,
 		Type:   typ,
@@ -156,9 +165,11 @@ func CheckBalanceWithLocked(network *integration.Infrastructure, id *token3.Node
 	expired, err := strconv.ParseUint(result.Expired, 10, 64)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
+	fmt.Printf("[TEST] CheckBalanceWithLocked: Got balance=%d, locked=%d, expired=%d\n", balance, locked, expired)
 	gomega.Expect(balance).To(gomega.Equal(expected), "expected [%d], got [%d]", expected, balance)                       // #nosec G115
 	gomega.Expect(locked).To(gomega.Equal(expectedLocked), "expected locked [%d], got [%d]", expectedLocked, locked)      // #nosec G115
 	gomega.Expect(expired).To(gomega.Equal(expectedExpired), "expected expired [%d], got [%d]", expectedExpired, expired) // #nosec G115
+	fmt.Printf("[TEST] CheckBalanceWithLocked: Validation passed\n")
 }
 
 func CheckBalanceAndHolding(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token2.Type, expected uint64, opts ...token.ServiceOption) {
@@ -256,17 +267,25 @@ func CheckIfExistsInVault(network *integration.Infrastructure, tmsID token.TMSID
 }
 
 func Restart(network *integration.Infrastructure, ids ...*token3.NodeReference) {
+	fmt.Printf("[TEST] Restart: Starting restart of %d nodes...\n", len(ids))
 	for _, id := range ids {
+		fmt.Printf("[TEST] Restart: Stopping node %s...\n", id.Id())
 		network.StopFSCNode(id.Id())
 	}
+	fmt.Println("[TEST] Restart: Waiting 10 seconds after stopping nodes...")
 	time.Sleep(10 * time.Second)
 	for _, id := range ids {
+		fmt.Printf("[TEST] Restart: Starting node %s...\n", id.Id())
 		network.StartFSCNode(id.Id())
 	}
+	fmt.Println("[TEST] Restart: Waiting 10 seconds after starting nodes...")
 	time.Sleep(10 * time.Second)
+	fmt.Println("[TEST] Restart: Completed successfully")
 }
 
 func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3.NodeReference, wallet string, typ token2.Type, amount uint64, receiver *token3.NodeReference, auditor *token3.NodeReference, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) (string, []byte, []byte) {
+	fmt.Printf("[TEST] HTLCLock: Starting - sender=%s, wallet=%s, type=%s, amount=%d, receiver=%s, deadline=%v\n",
+		id.Id(), wallet, typ, amount, receiver.Id(), deadline)
 	result, err := network.Client(id.ReplicaName()).CallView("htlc.lock", common.JSONMarshall(&htlc.Lock{
 		TMSID:               tmsID,
 		ReclamationDeadline: deadline,
@@ -278,11 +297,16 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 		HashFunc:            hashFunc,
 	}))
 	if len(errorMsgs) == 0 {
+		fmt.Println("[TEST] HTLCLock: View call completed, checking for errors...")
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		fmt.Println("[TEST] HTLCLock: No errors, unmarshalling result...")
 		lockResult := &htlc.LockInfo{}
 		common.JSONUnmarshal(result.([]byte), lockResult)
+		fmt.Printf("[TEST] HTLCLock: Lock result - TxID=%s\n", lockResult.TxID)
 
+		fmt.Printf("[TEST] HTLCLock: Checking finality for receiver %s...\n", receiver.Id())
 		common2.CheckFinality(network, receiver, lockResult.TxID, &tmsID, false)
+		fmt.Printf("[TEST] HTLCLock: Checking finality for auditor %s...\n", auditor.Id())
 		common2.CheckFinality(network, auditor, lockResult.TxID, &tmsID, false)
 
 		if len(hash) == 0 {
@@ -293,6 +317,7 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id *token3
 			gomega.Expect(lockResult.Hash).To(gomega.BeEquivalentTo(hash))
 		}
 
+		fmt.Printf("[TEST] HTLCLock: Completed successfully - TxID=%s\n", lockResult.TxID)
 		return lockResult.TxID, lockResult.PreImage, lockResult.Hash
 	} else {
 		gomega.Expect(err).To(gomega.HaveOccurred())
