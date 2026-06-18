@@ -66,7 +66,7 @@ func TestValidateAppendRequest(t *testing.T) {
 		req := &AppendRequest{
 			Tokens: []TokenToAppend{
 				{
-					Tok:           &token2.Token{},
+					Tok:           &token2.Token{Owner: []byte("owner1")},
 					TokenOnLedger: make([]byte, 1025),
 					OwnerWalletID: "w1",
 				},
@@ -81,7 +81,7 @@ func TestValidateAppendRequest(t *testing.T) {
 		req := &AppendRequest{
 			Tokens: []TokenToAppend{
 				{
-					Tok:                   &token2.Token{},
+					Tok:                   &token2.Token{Owner: []byte("owner1")},
 					TokenOnLedgerMetadata: make([]byte, 1025),
 					OwnerWalletID:         "w1",
 				},
@@ -96,7 +96,7 @@ func TestValidateAppendRequest(t *testing.T) {
 		req := &AppendRequest{
 			Tokens: []TokenToAppend{
 				{
-					Tok:           &token2.Token{},
+					Tok:           &token2.Token{Owner: []byte("owner1")},
 					OwnerWalletID: strings.Repeat("a", 1025),
 				},
 			},
@@ -104,6 +104,20 @@ func TestValidateAppendRequest(t *testing.T) {
 		err := s.validateAppendRequest(req)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "wallet_id too large")
+	})
+
+	t.Run("OwnerMissing", func(t *testing.T) {
+		req := &AppendRequest{
+			Tokens: []TokenToAppend{
+				{
+					Tok:           &token2.Token{},
+					OwnerWalletID: "w1",
+				},
+			},
+		}
+		err := s.validateAppendRequest(req)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "owner is missing at index 0")
 	})
 
 	t.Run("OwnerRawTooLarge", func(t *testing.T) {
@@ -126,7 +140,7 @@ func TestValidateAppendRequest(t *testing.T) {
 		req := &AppendRequest{
 			Tokens: []TokenToAppend{
 				{
-					Tok:           &token2.Token{},
+					Tok:           &token2.Token{Owner: []byte("owner1")},
 					Issuer:        make([]byte, 256*1024+1),
 					OwnerWalletID: "w1",
 				},

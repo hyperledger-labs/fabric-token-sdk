@@ -256,6 +256,10 @@ func (t *Service) validateAppendRequest(req *AppendRequest) error {
 			return errors.Errorf("wallet_id too large at index %d: %d > %d", i, len(tok.OwnerWalletID), t.Config.MaxWalletIDSize)
 		}
 
+		if len(tok.Tok.Owner) == 0 {
+			return errors.Errorf("owner is missing at index %d", i)
+		}
+
 		if len(tok.Tok.Owner) > t.Config.MaxOwnerRawSize {
 			return errors.Errorf("owner_raw too large at index %d: %d > %d", i, len(tok.Tok.Owner), t.Config.MaxOwnerRawSize)
 		}
