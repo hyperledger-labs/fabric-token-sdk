@@ -62,14 +62,30 @@ func (s *selector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q 
 	s.lockAttemptsCount = 0
 
 	// Create timeout context if configured
-	timeoutCtx, cancel := context.WithTimeout(ctx, s.selectionTimeout)
-	defer cancel()
+	// Only apply timeout if it won't interfere with retry logic
+	// The timeout must be significantly larger than the total retry time: maxRetries * retryInterval
+	var timeoutCtx context.Context
+	var cancel context.CancelFunc
+
+	// Calculate minimum time needed for retries (with 3x safety margin)
+	minRequiredTimeout := time.Duration(s.maxRetries) * s.timeout * 3
+
+	// Only apply timeout if it's set and won't interfere with retries
+	if s.selectionTimeout > 0 && s.selectionTimeout > minRequiredTimeout {
+		timeoutCtx, cancel = context.WithTimeout(ctx, s.selectionTimeout)
+		defer cancel()
+	} else {
+		// Don't apply timeout - let retry logic handle it
+		timeoutCtx = ctx
+		cancel = func() {} // no-op cancel
+		defer cancel()
+	}
 
 	// Use timeout context for selection
 	result, quantity, err := s.selectByID(timeoutCtx, ownerFilter, q, tokenType)
 
 	// Check if we hit the timeout
-	if errors.Is(err, context.DeadlineExceeded) {
+	if s.selectionTimeout > 0 && errors.Is(err, context.DeadlineExceeded) {
 		// Use original context for cleanup to ensure it completes
 		s.locker.UnlockByTxID(ctx, s.txID)
 
