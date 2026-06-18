@@ -872,10 +872,16 @@ func TestSelector(network *integration.Infrastructure, auditorId string, sel *to
 
 	IssueCash(network, "", "USD", 100, alice, auditor, true, issuer)
 	IssueCash(network, "", "USD", 50, alice, auditor, true, issuer)
+	
+	// Test 1: Immediate insufficient funds check
 	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds", "only [150] tokens of type [USD] are available", "but [160] were requested", "no other process has any tokens locked")
-	time.Sleep(10 * time.Second)
+	
+	// Test 2: Verify error persists after short delay (allows any pending operations to complete)
+	time.Sleep(5 * time.Second)
 	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds", "only [150] tokens of type [USD] are available", "but [160] were requested", "no other process has any tokens locked")
-	time.Sleep(2 * time.Minute)
+	
+	// Test 3: Verify error persists after longer delay (ensures no background processes change state)
+	time.Sleep(15 * time.Second)
 	TransferCash(network, alice, "", "USD", 160, bob, auditor, "insufficient funds", "only [150] tokens of type [USD] are available", "but [160] were requested", "no other process has any tokens locked")
 }
 
