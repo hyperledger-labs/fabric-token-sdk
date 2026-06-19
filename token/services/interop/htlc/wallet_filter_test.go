@@ -197,7 +197,7 @@ func TestOwnerWalletFilterIteratorFallsBackToBaseWalletID(t *testing.T) {
 		Recipient: []byte("r"),
 		Deadline:  time.Now().Add(time.Hour),
 	})
-	qe.UnspentTokensIteratorByStub = func(_ context.Context, walletID string, tokenType token2.Type) (driver.UnspentTokensIterator, error) {
+	qe.UnspentTokensIteratorByStub = func(_ context.Context, walletID string, tokenType token2.Type, _ int) (driver.UnspentTokensIterator, error) {
 		require.Equal(t, token2.Type("USD"), tokenType)
 		switch walletID {
 		case "wallet1":
