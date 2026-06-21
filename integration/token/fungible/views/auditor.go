@@ -163,7 +163,6 @@ func (a *AuditView) Call(context view.Context) (any, error) {
 	}
 
 	kvsInstance := GetKVS(context)
-	assert.NotNil(kvsInstance, "failed getting KVS instance")
 	if kvsInstance == nil {
 		return nil, errors.Errorf("KVS instance is nil")
 	}
