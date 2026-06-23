@@ -13,8 +13,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/recovery"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/recovery/mock"
+	recovery2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/recovery"
+	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/recovery/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,9 +22,9 @@ import (
 
 func TestNewManager(t *testing.T) {
 	logger := logging.MustGetLogger()
-	mockDB := &mock.Storage{}
-	mockHandler := &mock.Handler{}
-	config := recovery.Config{
+	mockDB := &mock2.Storage{}
+	mockHandler := &mock2.Handler{}
+	config := recovery2.Config{
 		Enabled:        true,
 		TTL:            30 * time.Second,
 		ScanInterval:   30 * time.Second,
@@ -35,7 +35,7 @@ func TestNewManager(t *testing.T) {
 		InstanceID:     "test-instance",
 	}
 
-	manager := recovery.NewManager(
+	manager := recovery2.NewManager(
 		logger,
 		mockDB,
 		mockHandler,
@@ -47,9 +47,9 @@ func TestNewManager(t *testing.T) {
 
 func TestManager_StartStop(t *testing.T) {
 	logger := logging.MustGetLogger()
-	mockDB := &mock.Storage{}
-	mockHandler := &mock.Handler{}
-	config := recovery.Config{
+	mockDB := &mock2.Storage{}
+	mockHandler := &mock2.Handler{}
+	config := recovery2.Config{
 		Enabled:        true,
 		TTL:            100 * time.Millisecond,
 		ScanInterval:   100 * time.Millisecond,
@@ -60,12 +60,12 @@ func TestManager_StartStop(t *testing.T) {
 		InstanceID:     "test-instance",
 	}
 
-	leadership := &mock.Leadership{}
+	leadership := &mock2.Leadership{}
 	leadership.CloseReturns(nil)
 	mockDB.AcquireRecoveryLeadershipReturns(leadership, true, nil)
 	mockDB.ClaimPendingTransactionsReturns([]*ttxdb.RecoveryClaim{}, nil)
 
-	manager := recovery.NewManager(
+	manager := recovery2.NewManager(
 		logger,
 		mockDB,
 		mockHandler,
@@ -93,9 +93,9 @@ func TestManager_StartStop(t *testing.T) {
 
 func TestManager_RecoverTransaction(t *testing.T) {
 	logger := logging.MustGetLogger()
-	mockDB := &mock.Storage{}
-	mockHandler := &mock.Handler{}
-	config := recovery.Config{
+	mockDB := &mock2.Storage{}
+	mockHandler := &mock2.Handler{}
+	config := recovery2.Config{
 		Enabled:        true,
 		TTL:            100 * time.Millisecond,
 		ScanInterval:   100 * time.Millisecond,
@@ -111,9 +111,9 @@ func TestManager_RecoverTransaction(t *testing.T) {
 		TxID: "tx123",
 	}
 
-	leadership1 := &mock.Leadership{}
+	leadership1 := &mock2.Leadership{}
 	leadership1.CloseReturns(nil)
-	leadership2 := &mock.Leadership{}
+	leadership2 := &mock2.Leadership{}
 	leadership2.CloseReturns(nil)
 
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadership1, true, nil)
@@ -123,7 +123,7 @@ func TestManager_RecoverTransaction(t *testing.T) {
 	mockHandler.RecoverReturns(nil)
 	mockDB.ReleaseRecoveryClaimReturns(nil)
 
-	manager := recovery.NewManager(
+	manager := recovery2.NewManager(
 		logger,
 		mockDB,
 		mockHandler,
@@ -149,9 +149,9 @@ func TestManager_RecoverTransaction(t *testing.T) {
 
 func TestManager_SkipAlreadyRecovered(t *testing.T) {
 	logger := logging.MustGetLogger()
-	mockDB := &mock.Storage{}
-	mockHandler := &mock.Handler{}
-	config := recovery.Config{
+	mockDB := &mock2.Storage{}
+	mockHandler := &mock2.Handler{}
+	config := recovery2.Config{
 		Enabled:        true,
 		TTL:            50 * time.Millisecond,
 		ScanInterval:   50 * time.Millisecond,
@@ -167,11 +167,11 @@ func TestManager_SkipAlreadyRecovered(t *testing.T) {
 		TxID: "tx456",
 	}
 
-	leadershipA := &mock.Leadership{}
+	leadershipA := &mock2.Leadership{}
 	leadershipA.CloseReturns(nil)
-	leadershipB := &mock.Leadership{}
+	leadershipB := &mock2.Leadership{}
 	leadershipB.CloseReturns(nil)
-	leadershipC := &mock.Leadership{}
+	leadershipC := &mock2.Leadership{}
 	leadershipC.CloseReturns(nil)
 
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadershipA, true, nil)
@@ -182,7 +182,7 @@ func TestManager_SkipAlreadyRecovered(t *testing.T) {
 	mockHandler.RecoverReturns(nil)
 	mockDB.ReleaseRecoveryClaimReturns(nil)
 
-	manager := recovery.NewManager(
+	manager := recovery2.NewManager(
 		logger,
 		mockDB,
 		mockHandler,
@@ -210,9 +210,9 @@ func TestManager_SkipAlreadyRecovered(t *testing.T) {
 // distinguishable from txs the ledger actively rejected.
 func TestManager_PromoteOrphanOnNotFoundPastGracePeriod(t *testing.T) {
 	logger := logging.MustGetLogger()
-	mockDB := &mock.Storage{}
-	mockHandler := &mock.Handler{}
-	config := recovery.Config{
+	mockDB := &mock2.Storage{}
+	mockHandler := &mock2.Handler{}
+	config := recovery2.Config{
 		Enabled:             true,
 		TTL:                 100 * time.Millisecond,
 		ScanInterval:        100 * time.Millisecond,
@@ -230,9 +230,9 @@ func TestManager_PromoteOrphanOnNotFoundPastGracePeriod(t *testing.T) {
 		StoredAt: time.Now().Add(-time.Hour),
 	}
 
-	leadership1 := &mock.Leadership{}
+	leadership1 := &mock2.Leadership{}
 	leadership1.CloseReturns(nil)
-	leadership2 := &mock.Leadership{}
+	leadership2 := &mock2.Leadership{}
 	leadership2.CloseReturns(nil)
 
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadership1, true, nil)
@@ -244,7 +244,7 @@ func TestManager_PromoteOrphanOnNotFoundPastGracePeriod(t *testing.T) {
 	mockDB.ReleaseRecoveryClaimReturns(nil)
 	mockDB.SetStatusReturns(nil)
 
-	manager := recovery.NewManager(logger, mockDB, mockHandler, config)
+	manager := recovery2.NewManager(logger, mockDB, mockHandler, config)
 
 	require.NoError(t, manager.Start())
 	// Wait for the initial sweep (jitter up to 1s + handler invocation).
@@ -266,9 +266,9 @@ func TestManager_PromoteOrphanOnNotFoundPastGracePeriod(t *testing.T) {
 // recovery.Config.NotFoundGracePeriod.
 func TestManager_NoPromotionWhenGracePeriodDisabled(t *testing.T) {
 	logger := logging.MustGetLogger()
-	mockDB := &mock.Storage{}
-	mockHandler := &mock.Handler{}
-	config := recovery.Config{
+	mockDB := &mock2.Storage{}
+	mockHandler := &mock2.Handler{}
+	config := recovery2.Config{
 		Enabled:             true,
 		TTL:                 100 * time.Millisecond,
 		ScanInterval:        100 * time.Millisecond,
@@ -285,9 +285,9 @@ func TestManager_NoPromotionWhenGracePeriodDisabled(t *testing.T) {
 		StoredAt: time.Now().Add(-time.Hour),
 	}
 
-	leadership1 := &mock.Leadership{}
+	leadership1 := &mock2.Leadership{}
 	leadership1.CloseReturns(nil)
-	leadership2 := &mock.Leadership{}
+	leadership2 := &mock2.Leadership{}
 	leadership2.CloseReturns(nil)
 
 	mockDB.AcquireRecoveryLeadershipReturnsOnCall(0, leadership1, true, nil)
@@ -297,7 +297,7 @@ func TestManager_NoPromotionWhenGracePeriodDisabled(t *testing.T) {
 	mockHandler.RecoverReturns(errors.New("rpc error: code = NotFound desc = tx not found"))
 	mockDB.ReleaseRecoveryClaimReturns(nil)
 
-	manager := recovery.NewManager(logger, mockDB, mockHandler, config)
+	manager := recovery2.NewManager(logger, mockDB, mockHandler, config)
 
 	require.NoError(t, manager.Start())
 	time.Sleep(1300 * time.Millisecond)
@@ -307,7 +307,7 @@ func TestManager_NoPromotionWhenGracePeriodDisabled(t *testing.T) {
 }
 
 func TestDefaultConfig(t *testing.T) {
-	config := recovery.DefaultConfig()
+	config := recovery2.DefaultConfig()
 
 	assert.True(t, config.Enabled, "Recovery should be enabled by default")
 	assert.Equal(t, 30*time.Second, config.TTL)

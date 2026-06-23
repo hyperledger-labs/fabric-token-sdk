@@ -16,7 +16,7 @@ import (
 	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
 
-var recoveryLogger = logging.MustGetLogger()
+var advisoryLockLogger = logging.MustGetLogger()
 
 // AdvisoryLock implements RecoveryLeadership using PostgreSQL advisory locks.
 // Advisory locks are session-scoped and automatically released when the connection closes.
@@ -37,7 +37,7 @@ type AdvisoryLock struct {
 // - The connection is closed
 // - The process terminates
 func NewAdvisoryLock(ctx context.Context, db *sql.DB, lockID int64) (*AdvisoryLock, bool, error) {
-	logger := recoveryLogger
+	logger := advisoryLockLogger
 
 	// Get a dedicated connection for this lock
 	// This connection must remain open for the lifetime of the lock
@@ -106,6 +106,18 @@ func (l *AdvisoryLock) Close() error {
 // NewAdvisoryLockFactory returns a recovery leader factory function that uses PostgreSQL advisory locks.
 func NewAdvisoryLockFactory() func(context.Context, *sql.DB, int64) (tokensdriver.RecoveryLeadership, bool, error) {
 	return func(ctx context.Context, db *sql.DB, lockID int64) (tokensdriver.RecoveryLeadership, bool, error) {
+		lock, acquired, err := NewAdvisoryLock(ctx, db, lockID)
+		if err != nil || !acquired {
+			return nil, acquired, err
+		}
+
+		return lock, true, nil
+	}
+}
+
+// NewCleanupLeaderFactory returns a cleanup leader factory function that uses PostgreSQL advisory locks.
+func NewCleanupLeaderFactory() func(context.Context, *sql.DB, int64) (tokensdriver.CleanupLeadership, bool, error) {
+	return func(ctx context.Context, db *sql.DB, lockID int64) (tokensdriver.CleanupLeadership, bool, error) {
 		lock, acquired, err := NewAdvisoryLock(ctx, db, lockID)
 		if err != nil || !acquired {
 			return nil, acquired, err

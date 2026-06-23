@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/qe"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 
@@ -30,6 +31,7 @@ import (
 func NewNetwork(
 	storeServiceManager ttxdb.StoreServiceManager,
 	auditStoreServiceManager auditdb.StoreServiceManager,
+	cleanupServiceManager cleanup.ServiceManager,
 	n *ffabric.NetworkService,
 	ch *ffabric.Channel,
 	configuration common.Configuration,
@@ -69,6 +71,7 @@ func NewNetwork(
 		setupListenerProvider,
 		storeServiceManager,
 		auditStoreServiceManager,
+		cleanupServiceManager,
 		metricsProvider,
 		NewLedger(ch, n.Name(), keyTranslator, queryStateExecutor),
 	)

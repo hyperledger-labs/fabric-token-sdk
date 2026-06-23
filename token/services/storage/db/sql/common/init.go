@@ -35,6 +35,7 @@ type TableNames struct {
 	TokenLocks             string
 	KeyStore               string
 	EIDLeases              string
+	TokenSKICleanups       string
 }
 
 type PersistenceConstructor[V common.DBObject] func(*common.RWDB, TableNames) (V, error)
@@ -64,5 +65,6 @@ func GetTableNames(prefix string, params ...string) (TableNames, error) {
 		Signers:                nc.MustFormat("id_signers", params...),
 		KeyStore:               nc.MustFormat("key_store", params...),
 		EIDLeases:              nc.MustFormat("eid_leases", params...),
+		TokenSKICleanups:       nc.MustFormat("tkn_ski_cleanups", params...),
 	}, nil
 }

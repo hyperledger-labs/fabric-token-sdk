@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/recovery"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/recovery"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 )
 

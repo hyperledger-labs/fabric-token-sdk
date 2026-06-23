@@ -20,9 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	fscconfig "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/dig"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	ftscore "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -54,6 +51,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/sqlite"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/tokenlockdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
@@ -64,6 +62,8 @@ import (
 	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/auditor"
 	wrapper2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/wrapper"
 	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
+	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/dig"
 )
 
 var logger = logging.MustGetLogger()
@@ -114,6 +114,10 @@ func (p *SDK) Install() error {
 			dig.As(new(ftsconfig.Provider), new(sherdlock.ConfigProvider), new(simple.ConfigProvider), new(auditdblocker.ReplicaIDProvider)),
 		),
 		p.Container().Provide(ftsconfig.NewService),
+		p.Container().Provide(
+			digutils.Identity[*ftsconfig.Service](),
+			dig.As(new(cleanup.Configuration)),
+		),
 		p.Container().Provide(tms.NewConfigServiceWrapper),
 		p.Container().Provide(
 			digutils.Identity[*tms.ConfigServiceWrapper](),
@@ -196,6 +200,9 @@ func (p *SDK) Install() error {
 		p.Container().Provide(NewAuditorCheckServiceProvider),
 		p.Container().Provide(digutils.Identity[*db.AuditorCheckServiceProvider](), dig.As(new(auditor.CheckServiceProvider))),
 		p.Container().Provide(NewOwnerCheckServiceProvider),
+
+		// storage services
+		p.Container().Provide(cleanup.NewServiceManager),
 
 		// ttx service
 		p.Container().Provide(wrapper2.NewTokenManagementServiceProvider, dig.As(new(dep.TokenManagementServiceProvider))),

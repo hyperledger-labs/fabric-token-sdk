@@ -63,7 +63,8 @@ The SDK's foundational services have been matured:
     - **Database Indexing:** Added missing indexes for token queries, significantly improving query performance
     - **Query Enhancements:** New `SearchDirection` support in `QueryTransactionsParams` for flexible result ordering
     - **Recovery Service Integration:** Built-in transaction recovery capabilities for handling finality listener failures
-    *   *See also:* [**Storage Service**](services/storage.md)
+    - **Keystore Cleanup Service:** Automatic deletion of cryptographic keys for deleted tokens, improving security and reducing storage overhead
+    *   *See also:* [**Storage Service**](services/storage.md), [**Keystore Cleanup Service**](services/cleanup.md)
 - **Network Service:** Expanded to handle more complex Fabric network interactions and better integration with the Fabric Smart Client. A major change was the **removal of the Orion-based implementation**, which has been replaced by the introduction of **FabricX support**, providing a more modern and integrated approach for advanced ledger interactions.
     *   *See also:* [**Network Service**](services/network.md)
 

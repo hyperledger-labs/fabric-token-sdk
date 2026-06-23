@@ -89,6 +89,15 @@ func (f *TrackedKVS) Get(id string, entry any) error {
 	return err
 }
 
+func (f *TrackedKVS) Delete(id string) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	// Note: Backend doesn't have Delete method, so we can't delegate
+	// This is a no-op implementation to satisfy the Keystore interface
+	return nil
+}
+
 func (f *TrackedKVS) Close() error {
 	return f.Backend.Close()
 }

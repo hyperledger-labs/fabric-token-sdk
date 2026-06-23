@@ -33,6 +33,11 @@ type Keystore interface {
 	// provided `key` parameter.
 	// If no entry exists for id, implementations should return an error describing the missing entry.
 	Get(id string, key any) error
+
+	// Delete removes the key with the given identifier.
+	// If the key does not exist, implementations should return nil (idempotent).
+	Delete(id string) error
+
 	// Close closes the store
 	Close() error
 }

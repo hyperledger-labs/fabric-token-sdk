@@ -42,7 +42,7 @@ token:
 
   # When we are interested in knowing when a transaction reaches finality, we subscribe to the Finality Listener Manager for the finality event of that transaction.
   # This configuration specifies the way the manager is instantiated (i.e., how it gets notified about the finality events, how often it checks).
- finality:
+  finality:
     # Only applicable for fabric networks.
     # The manager subscribes to the delivery service and receives all final transactions.
     #   This manager keeps two structures: an LRU cache of recently finalized transactions, and a list of listeners that are waiting for future transactions.
@@ -96,6 +96,7 @@ token:
         # interval is the polling interval for one-time lookups. Defaults to 2s.
         interval: 2s
         
+  
   tms:
     mytms: # unique name of this token management system
       network: default # the name of the network this TMS refers to (Fabric, etc.)
@@ -445,6 +446,79 @@ Default values:
    - Increase `workerCount` to 8-16 to improve parallel processing
    - Decrease `scanInterval` to 2-3s for faster recovery detection
 
+
+### Optional: token.tms.<name>.services.storage.cleanup
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  tms:
+    <name>:
+      services:
+        storage:
+          cleanup:
+            enabled: false
+            ttl: 24h
+            scanInterval: 1h
+            batchSize: 100
+            workerCount: 4
+            advisoryLockID: 8389190333894887277
+            instanceID:
+```
+
+Default values:
+
+- enabled: false
+- ttl: 24h
+- scanInterval: 1h
+- batchSize: 100
+- workerCount: 4
+- advisoryLockID: 8389190333894887277 (`0x74746b636c65616e`)
+- instanceID: empty, auto-generated when the cleanup manager starts
+
+**Parameter Relationships and Tuning:**
+
+- **Cleanup is disabled by default** and must be explicitly enabled. This is a conservative default to prevent unexpected key deletion in existing deployments.
+- **Only deleted tokens older than `ttl` are considered for cleanup** to ensure tokens are truly finalized before key deletion.
+- **The manager validates** that `ttl`, `scanInterval`, `batchSize`, and `workerCount` are all greater than zero.
+- **`advisoryLockID`** is used to acquire PostgreSQL advisory-lock leadership so that only one replica performs a cleanup sweep at a time. The default value (8389190333894887277 or 0x74746b636c65616e) represents the ASCII string "ttkclean" (Token Transaction Keystore Cleanup) encoded as a 64-bit integer.
+- **`instanceID`** is used to identify this replica in logs and monitoring; if omitted, the manager generates a unique identifier automatically at startup.
+
+**Tuning Recommendations:**
+
+1. **For High-Volume Environments:**
+   - Increase `batchSize` to 200-500 to process more tokens per sweep
+   - Increase `workerCount` to 8-16 to improve parallel key deletion
+   - Decrease `scanInterval` to 30m for more frequent cleanup
+
+2. **For Resource-Constrained Systems:**
+   - Decrease `workerCount` to 2 to reduce CPU usage
+   - Increase `scanInterval` to 2-4h to reduce database load
+   - Keep default `batchSize` to limit memory usage
+
+3. **For Security-Sensitive Deployments:**
+   - Decrease `ttl` to 12h for faster key removal
+   - Decrease `scanInterval` to 30m for more frequent cleanup
+   - Monitor cleanup metrics to ensure timely processing
+
+4. **For Multi-Instance Deployments:**
+   - **PostgreSQL Required**: Multi-instance deployments require PostgreSQL for distributed coordination via advisory locks
+   - Keep default `advisoryLockID` unless running multiple independent cleanup systems
+   - Consider setting explicit `instanceID` values for easier debugging and monitoring
+
+5. **For Single-Node Deployments:**
+   - **SQLite Supported**: SQLite can be used for single-node deployments and handles node restarts gracefully
+   - Cleanup works automatically after node restarts by scanning for eligible tokens
+   - **Important**: Do not use SQLite with multiple replicas as it lacks the advisory lock mechanism for leader election
+
+**Performance Considerations:**
+- Each scan queries the token database, so `scanInterval` directly affects database load
+- `workerCount` affects CPU utilization during cleanup sweeps
+- `batchSize` affects memory usage and the duration of each cleanup sweep
+- The relationship `scanInterval < ttl` ensures timely cleanup without premature processing
+
+---
 ---
 
 ### Optional: token.tms.<name>.auditor.lock

@@ -4,7 +4,7 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/recovery"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/recovery"
 )
 
 type Leadership struct {

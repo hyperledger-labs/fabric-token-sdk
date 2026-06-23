@@ -4,7 +4,7 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
 )
 
 type Keystore struct {
@@ -27,30 +27,6 @@ type Keystore struct {
 		result1 error
 	}
 	deleteReturnsOnCall map[int]struct {
-		result1 error
-	}
-	GetStub        func(string, any) error
-	getMutex       sync.RWMutex
-	getArgsForCall []struct {
-		arg1 string
-		arg2 any
-	}
-	getReturns struct {
-		result1 error
-	}
-	getReturnsOnCall map[int]struct {
-		result1 error
-	}
-	PutStub        func(string, any) error
-	putMutex       sync.RWMutex
-	putArgsForCall []struct {
-		arg1 string
-		arg2 any
-	}
-	putReturns struct {
-		result1 error
-	}
-	putReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
@@ -171,130 +147,6 @@ func (fake *Keystore) DeleteReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *Keystore) Get(arg1 string, arg2 any) error {
-	fake.getMutex.Lock()
-	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
-	fake.getArgsForCall = append(fake.getArgsForCall, struct {
-		arg1 string
-		arg2 any
-	}{arg1, arg2})
-	stub := fake.GetStub
-	fakeReturns := fake.getReturns
-	fake.recordInvocation("Get", []interface{}{arg1, arg2})
-	fake.getMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *Keystore) GetCallCount() int {
-	fake.getMutex.RLock()
-	defer fake.getMutex.RUnlock()
-	return len(fake.getArgsForCall)
-}
-
-func (fake *Keystore) GetCalls(stub func(string, any) error) {
-	fake.getMutex.Lock()
-	defer fake.getMutex.Unlock()
-	fake.GetStub = stub
-}
-
-func (fake *Keystore) GetArgsForCall(i int) (string, any) {
-	fake.getMutex.RLock()
-	defer fake.getMutex.RUnlock()
-	argsForCall := fake.getArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *Keystore) GetReturns(result1 error) {
-	fake.getMutex.Lock()
-	defer fake.getMutex.Unlock()
-	fake.GetStub = nil
-	fake.getReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *Keystore) GetReturnsOnCall(i int, result1 error) {
-	fake.getMutex.Lock()
-	defer fake.getMutex.Unlock()
-	fake.GetStub = nil
-	if fake.getReturnsOnCall == nil {
-		fake.getReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.getReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *Keystore) Put(arg1 string, arg2 any) error {
-	fake.putMutex.Lock()
-	ret, specificReturn := fake.putReturnsOnCall[len(fake.putArgsForCall)]
-	fake.putArgsForCall = append(fake.putArgsForCall, struct {
-		arg1 string
-		arg2 any
-	}{arg1, arg2})
-	stub := fake.PutStub
-	fakeReturns := fake.putReturns
-	fake.recordInvocation("Put", []interface{}{arg1, arg2})
-	fake.putMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *Keystore) PutCallCount() int {
-	fake.putMutex.RLock()
-	defer fake.putMutex.RUnlock()
-	return len(fake.putArgsForCall)
-}
-
-func (fake *Keystore) PutCalls(stub func(string, any) error) {
-	fake.putMutex.Lock()
-	defer fake.putMutex.Unlock()
-	fake.PutStub = stub
-}
-
-func (fake *Keystore) PutArgsForCall(i int) (string, any) {
-	fake.putMutex.RLock()
-	defer fake.putMutex.RUnlock()
-	argsForCall := fake.putArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *Keystore) PutReturns(result1 error) {
-	fake.putMutex.Lock()
-	defer fake.putMutex.Unlock()
-	fake.PutStub = nil
-	fake.putReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *Keystore) PutReturnsOnCall(i int, result1 error) {
-	fake.putMutex.Lock()
-	defer fake.putMutex.Unlock()
-	fake.PutStub = nil
-	if fake.putReturnsOnCall == nil {
-		fake.putReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.putReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *Keystore) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -317,4 +169,4 @@ func (fake *Keystore) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ driver.Keystore = new(Keystore)
+var _ cleanup.Keystore = new(Keystore)

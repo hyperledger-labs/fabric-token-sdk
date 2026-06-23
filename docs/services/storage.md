@@ -153,4 +153,55 @@ The recovery service supports both PostgreSQL and SQLite backends, with differen
 ### Configuration
 
 Recovery behavior is controlled by the `token.tms.<name>.services.network.fabric.recovery` configuration section. 
+
+## Keystore Cleanup Service
+
+The Storage Service includes a **Keystore Cleanup Service** that provides automatic deletion of cryptographic keys from the keystore for tokens that have been deleted (spent, expired, or invalidated). This ensures that the keystore doesn't accumulate stale keys indefinitely, improving security and reducing storage overhead.
+
+For detailed documentation on the cleanup service architecture, configuration, and usage, see [**Keystore Cleanup Service**](cleanup.md).
+
+### Architecture
+
+The cleanup service operates on the token database and keystore, scanning for deleted tokens that are eligible for key cleanup. It uses a distributed locking mechanism (PostgreSQL advisory locks) to ensure only one replica in a multi-instance deployment performs cleanup at a time.
+
+### Cleanup Manager
+
+The cleanup manager runs in the background and periodically scans for deleted tokens whose cryptographic keys can be safely removed from the keystore.
+
+**Key Features:**
+- **Automatic Key Deletion**: Removes keys for deleted tokens after a configurable TTL period
+- **SKI Derivation**: Derives Subject Key Identifiers (SKIs) from owner identities to locate keys
+- **Multi-Database Support**:
+  - **PostgreSQL**: Recommended for production multi-instance deployments. Uses advisory locks for distributed coordination and leader election
+  - **SQLite**: Supported for single-node deployments and development. Handles node restarts gracefully but is not designed for multi-replica scenarios
+- **Configurable Behavior**: Cleanup parameters can be tuned via configuration (see [Configuration](../configuration.md))
+
+### Cleanup Process
+
+The cleanup service follows this workflow:
+
+1. **Leadership Acquisition**: The cleanup manager acquires an advisory lock to become the leader
+2. **Scan Phase**: Scans the token database for deleted tokens older than the configured TTL (default: 24 hours) that haven't had their keys cleaned
+3. **SKI Derivation**: For each eligible token, derives SKIs from the owner identity
+4. **Key Deletion**: Deletes the derived keys from the keystore using parallel workers
+5. **Tracking**: Marks tokens as cleaned in the database to prevent reprocessing
+
+### Database Backend Considerations
+
+The cleanup service supports both PostgreSQL and SQLite backends, with different characteristics:
+
+**PostgreSQL:**
+- **Multi-Instance Support**: Uses advisory locks for distributed coordination
+- **Leader Election**: Only one replica performs cleanup sweeps at a time
+- **High Availability**: Multiple replicas can share the same database
+
+**SQLite:**
+- **Single-Node Only**: Suitable for development and single-node deployments
+- **Node Restart Support**: Cleanup resumes automatically after restart
+- **No Multi-Replica Support**: Lacks advisory lock mechanism for leader election
+
+### Configuration
+
+Cleanup behavior is controlled by the configuration section. See the [Configuration Guide](../configuration.md) for detailed parameter descriptions and tuning recommendations.
+
 See the [Configuration Guide](../configuration.md), Section `Optional: token.tms.<name>.services.network.fabric.recovery`, for detailed parameter descriptions and tuning recommendations.
