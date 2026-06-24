@@ -348,13 +348,8 @@ func (d *StoreService) AppendValidationRecord(ctx context.Context, txID string, 
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
-	// we store the token request, but don't have or care about the application metadata
-	if err := w.AddTokenRequest(ctx, txID, tokenRequest, nil, nil, ppHash); err != nil {
-		w.Rollback()
-
-		return errors.WithMessagef(err, "append token request for txid [%s] failed", txID)
-	}
-	if err := w.AddValidationRecord(ctx, txID, meta); err != nil {
+	// Store the token request directly in the validation record
+	if err := w.AddValidationRecord(ctx, txID, tokenRequest, meta, ppHash); err != nil {
 		w.Rollback()
 
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)

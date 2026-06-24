@@ -41,9 +41,9 @@ type TransactionStoreTransaction interface {
 	// This operation _requires_ a TokenRequest with the same tx_id to exist
 	AddTransaction(ctx context.Context, records ...TransactionRecord) error
 
-	// AddValidationRecord adds a new validation records for the given params
-	// This operation _requires_ a TokenRequest with the same tx_id to exist
-	AddValidationRecord(ctx context.Context, txID string, meta map[string][]byte) error
+	// AddValidationRecord adds a new validation record for the given params.
+	// The token request is stored directly in the validation table.
+	AddValidationRecord(ctx context.Context, txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver.PPHash) error
 
 	// SetStatus sets the status of a TokenRequest
 	// (and with that, the associated ValidationRecord, Movement and Transaction)
