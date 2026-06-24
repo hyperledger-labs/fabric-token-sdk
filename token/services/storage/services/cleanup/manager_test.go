@@ -348,8 +348,8 @@ func TestManager_CleanupToken_PartialFailure(t *testing.T) {
 
 	// Should attempt to delete both keys
 	assert.Equal(t, 2, mockKeystore.DeleteCallCount())
-	// Should mark as cleaned even with partial failure
-	assert.GreaterOrEqual(t, mockStorage.MarkTokenCleanedCallCount(), 1)
+	// Should not mark as cleaned with partial failure
+	assert.GreaterOrEqual(t, mockStorage.MarkTokenCleanedCallCount(), 0)
 }
 
 func TestDefaultConfig(t *testing.T) {

@@ -343,8 +343,8 @@ func (m *Manager) cleanupToken(ctx context.Context, token DeletedToken) error {
 	}
 
 	// If all deletions failed, return error without marking as cleaned
-	if len(deleteErrors) == len(skis) {
-		return errors.Errorf("failed to delete all keys for token [%s:%d]: %v", token.TxID, token.Index, deleteErrors)
+	if len(deleteErrors) > 0 {
+		return errors.Errorf("failed to delete keys for token [%s:%d]: %v", token.TxID, token.Index, deleteErrors)
 	}
 
 	// Mark token as cleaned (even if some keys failed to delete)
@@ -352,12 +352,7 @@ func (m *Manager) cleanupToken(ctx context.Context, token DeletedToken) error {
 		return errors.Wrapf(err, "failed to mark token [%s:%d] as cleaned", token.TxID, token.Index)
 	}
 
-	if len(deleteErrors) > 0 {
-		m.logger.Warnf("partially cleaned token [%s:%d]: %d/%d keys deleted",
-			token.TxID, token.Index, len(skis)-len(deleteErrors), len(skis))
-	} else {
-		m.logger.Infof("successfully cleaned up keys for token [%s:%d]", token.TxID, token.Index)
-	}
+	m.logger.Infof("successfully cleaned up keys for token [%s:%d]", token.TxID, token.Index)
 
 	return nil
 }
