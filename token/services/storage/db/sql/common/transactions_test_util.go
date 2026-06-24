@@ -121,7 +121,8 @@ func TestQueryTransactions(t *testing.T, store transactionsStoreConstructor) {
 
 	info, err := store(db).QueryTransactions(t.Context(),
 		driver.QueryTransactionsParams{
-			IDs: []string{}}, pagination.None())
+			IDs: []string{},
+		}, pagination.None())
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -175,11 +176,11 @@ func TestQueryValidations(t *testing.T, store transactionsStoreConstructor, trai
 		statusClause = "\\(\\(\\(status = \\$3\\)\\) OR \\(\\(status = \\$4\\)\\)\\)"
 	}
 	if traits.MultipleParenthesis {
-		query = "SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at " +
+		query = "SELECT VALIDATIONS.tx_id, VALIDATIONS.request, VALIDATIONS.metadata, REQUESTS.status, VALIDATIONS.stored_at " +
 			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id " +
 			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\) AND " + statusClause
 	} else {
-		query = "SELECT VALIDATIONS.tx_id, REQUESTS.request, metadata, REQUESTS.status, VALIDATIONS.stored_at " +
+		query = "SELECT VALIDATIONS.tx_id, VALIDATIONS.request, VALIDATIONS.metadata, REQUESTS.status, VALIDATIONS.stored_at " +
 			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id " +
 			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\) AND " + statusClause
 	}
@@ -409,18 +410,28 @@ func TestAWAddValidationRecord(t *testing.T, store transactionsStoreConstructor)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 	txID := "txid"
+	tokenRequest := []byte("token_request_data")
+	ppHash := []byte("pp_hash_data")
 	now := sqlmock.AnyArg()
 
 	mockDB.ExpectBegin()
+	// First expect the INSERT into REQUESTS table
 	mockDB.
-		ExpectExec("INSERT INTO VALIDATIONS \\(tx_id, metadata, stored_at\\) VALUES \\(\\$1, \\$2, \\$3\\)").
-		WithArgs(txID, "null", now).
+		ExpectExec("INSERT INTO REQUESTS \\(tx_id, request, status, status_message, application_metadata, public_metadata, pp_hash, stored_at\\) "+
+			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7, \\$8\\)").
+		WithArgs(txID, tokenRequest, driver.Pending, "", []byte("null"), []byte("null"), ppHash, now).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	// Then expect the INSERT into VALIDATIONS table with embedded token request
+	mockDB.
+		ExpectExec("INSERT INTO VALIDATIONS \\(tx_id, request, metadata, pp_hash, stored_at\\) "+
+			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\)").
+		WithArgs(txID, tokenRequest, "null", ppHash, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mockDB.ExpectCommit()
 
 	aw, err := store(db).NewTransactionStoreTransaction()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(aw.AddValidationRecord(t.Context(), txID, nil)).To(gomega.Succeed())
+	gomega.Expect(aw.AddValidationRecord(t.Context(), txID, tokenRequest, nil, ppHash)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())

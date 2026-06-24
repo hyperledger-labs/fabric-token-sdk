@@ -276,7 +276,7 @@ func (db *TransactionStore) QueryValidations(ctx context.Context, params dbdrive
 	validationsTable, requestsTable := q.Table(db.table.Validations), q.Table(db.table.Requests)
 	query, args := q.Select().
 		Fields(
-			validationsTable.Field("tx_id"), requestsTable.Field("request"), common3.FieldName("metadata"),
+			validationsTable.Field("tx_id"), validationsTable.Field("request"), validationsTable.Field("metadata"),
 			requestsTable.Field("status"), validationsTable.Field("stored_at"),
 		).
 		From(validationsTable.Join(requestsTable,
@@ -514,7 +514,9 @@ func (db *TransactionStore) GetSchema() string {
 		-- validations
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL PRIMARY KEY REFERENCES %s,
+			request BYTEA NOT NULL,
 			metadata BYTEA NOT NULL,
+			pp_hash BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
 
@@ -671,7 +673,7 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 	return ttxDBError(err)
 }
 
-func (w *TransactionStoreTransaction) AddValidationRecord(ctx context.Context, txID string, meta map[string][]byte) error {
+func (w *TransactionStoreTransaction) AddValidationRecord(ctx context.Context, txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver2.PPHash) error {
 	logger.DebugfContext(ctx, "adding validation record [%s]", txID)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
@@ -682,11 +684,23 @@ func (w *TransactionStoreTransaction) AddValidationRecord(ctx context.Context, t
 	}
 	now := time.Now().UTC()
 
-	query, args := q.InsertInto(w.table.Validations).
-		Fields("tx_id", "metadata", "stored_at").
-		Row(txID, md, now).
+	// First, insert into Requests table to satisfy foreign key constraint
+	query, args := q.InsertInto(w.table.Requests).
+		Fields("tx_id", "request", "status", "status_message", "application_metadata", "public_metadata", "pp_hash", "stored_at").
+		Row(txID, tokenRequest, dbdriver.Pending, "", []byte("null"), []byte("null"), ppHash, now).
 		Format()
-	logging.Debug(logger, query, txID, len(md), now)
+	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tokenRequest)), len(ppHash))
+	_, err = w.txn.ExecContext(ctx, query, args...)
+	if err != nil {
+		return ttxDBError(err)
+	}
+
+	// Then, insert the validation record with the token request also embedded for easy retrieval
+	query, args = q.InsertInto(w.table.Validations).
+		Fields("tx_id", "request", "metadata", "pp_hash", "stored_at").
+		Row(txID, tokenRequest, md, ppHash, now).
+		Format()
+	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tokenRequest)), len(md), len(ppHash), now)
 
 	_, err = w.txn.ExecContext(ctx, query, args...)
 

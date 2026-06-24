@@ -81,11 +81,9 @@ func TFailsIfRequestDoesNotExist(t *testing.T, db driver3.TokenTransactionStore)
 	require.ErrorIs(t, err, driver3.ErrTokenRequestDoesNotExist)
 	w.Rollback()
 
-	w, _ = db.NewTransactionStoreTransaction()
-	err = w.AddValidationRecord(ctx, "tx1", nil)
-	require.Error(t, err)
-	require.ErrorIs(t, err, driver3.ErrTokenRequestDoesNotExist)
-	w.Rollback()
+	// AddValidationRecord now creates the token request itself, so this test is no longer valid
+	// The test was checking that AddValidationRecord fails without a pre-existing token request
+	// but now AddValidationRecord creates the token request as part of its operation
 
 	w, _ = db.NewTransactionStoreTransaction()
 	err = w.AddMovement(ctx, mv)
@@ -117,9 +115,9 @@ func TStatus(t *testing.T, db driver3.TokenTransactionStore) {
 
 	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err, "begin")
-	require.NoError(t, w.AddTokenRequest(ctx, "tx1", []byte("request"), map[string][]byte{}, nil, driver2.PPHash("tr")), "add token request")
+	// AddValidationRecord now creates the token request itself
+	require.NoError(t, w.AddValidationRecord(ctx, "tx1", []byte("request"), nil, driver2.PPHash("tr")), "add validation record")
 	require.NoError(t, w.AddTransaction(ctx, tx))
-	require.NoError(t, w.AddValidationRecord(ctx, "tx1", nil), "add validation record")
 	require.NoError(t, w.AddMovement(ctx, mv))
 	require.NoError(t, w.Commit())
 
@@ -158,7 +156,8 @@ func TStoresTimestamp(t *testing.T, db driver3.TokenTransactionStore) {
 	ctx := t.Context()
 	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
-	require.NoError(t, w.AddTokenRequest(ctx, "tx1", []byte(""), map[string][]byte{}, nil, driver2.PPHash("tr")))
+	// AddValidationRecord now creates the token request, so call it first
+	require.NoError(t, w.AddValidationRecord(ctx, "tx1", []byte("request"), nil, driver2.PPHash("tr")))
 	require.NoError(t, w.AddTransaction(ctx, driver3.TransactionRecord{
 		TxID:         "tx1",
 		ActionType:   driver3.Transfer,
@@ -169,7 +168,6 @@ func TStoresTimestamp(t *testing.T, db driver3.TokenTransactionStore) {
 		Timestamp:    time.Now(),
 		Status:       driver3.Pending,
 	}))
-	require.NoError(t, w.AddValidationRecord(ctx, "tx1", nil))
 	require.NoError(t, w.Commit())
 
 	now := time.Now()
@@ -912,8 +910,8 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 	w, err := db.NewTransactionStoreTransaction()
 	require.NoError(t, err)
 	for _, e := range exp {
-		require.NoError(t, w.AddTokenRequest(ctx, e.TxID, e.TokenRequest, map[string][]byte{}, nil, driver2.PPHash("tr")))
-		require.NoError(t, w.AddValidationRecord(ctx, e.TxID, e.Metadata), "AddValidationRecord "+e.TxID)
+		// AddValidationRecord now creates the token request itself
+		require.NoError(t, w.AddValidationRecord(ctx, e.TxID, e.TokenRequest, e.Metadata, driver2.PPHash("tr")), "AddValidationRecord "+e.TxID)
 	}
 	require.NoError(t, w.Commit(), "Commit")
 	for _, e := range exp {
