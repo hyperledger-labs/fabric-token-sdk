@@ -58,7 +58,7 @@ SQLite is supported for single-node deployments and development:
 
 ## Configuration
 
-Recovery behavior is controlled via configuration (see [Configuration](../configuration.md)):
+Recovery behavior is controlled via configuration (see [Configuration](../../configuration.md)):
 
 ```yaml
 recovery:

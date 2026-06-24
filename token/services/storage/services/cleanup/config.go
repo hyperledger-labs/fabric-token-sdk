@@ -42,9 +42,9 @@ const (
 // DefaultConfig returns the default cleanup configuration
 func DefaultConfig() Config {
 	return Config{
-		Enabled:        true,                 // Disabled by default - must be explicitly enabled
-		TTL:            1 * time.Millisecond, // Wait 24 hours before cleaning up keys
-		ScanInterval:   1 * time.Second,      // Scan every hour
+		Enabled:        false,          // Disabled by default - must be explicitly enabled
+		TTL:            24 * time.Hour, // Wait 24 hours before cleaning up keys
+		ScanInterval:   1 * time.Hour,  // Scan every hour
 		BatchSize:      100,
 		WorkerCount:    1,
 		AdvisoryLockID: defaultLockID,

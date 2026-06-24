@@ -100,9 +100,11 @@ nav:
       - Network Fabricx: services/network-fabricx.md
       - Network: services/network.md
       - NFT Tx: services/nfttx.md
-      - Recovery: services/recovery.md
       - Selector: services/selector.md
-      - Storage: services/storage.md
+      - Storage:
+          - Overview: services/storage.md
+          - Cleanup Service: services/storage/cleanup.md
+          - Recovery Service: services/storage/recovery.md
       - Tokens: services/tokens.md
       - TTX: services/ttx.md
   - Development:

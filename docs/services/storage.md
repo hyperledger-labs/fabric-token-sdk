@@ -88,7 +88,7 @@ This ensures that the local view of the "Token Landscape" always reflects the gr
 
 The Storage Service includes a **Transaction Recovery Service** that provides the core recovery mechanism for handling pending transactions that may have lost their finality listeners due to node restarts, network interruptions, or other failures.
 
-For detailed documentation on the recovery service architecture, configuration, and usage, see [**Transaction Recovery Service**](recovery.md).
+For detailed documentation on the recovery service architecture, configuration, and usage, see [**Transaction Recovery Service**](storage/recovery.md).
 
 ### Architecture
 
@@ -158,7 +158,7 @@ Recovery behavior is controlled by the `token.tms.<name>.services.network.fabric
 
 The Storage Service includes a **Keystore Cleanup Service** that provides automatic deletion of cryptographic keys from the keystore for tokens that have been deleted (spent, expired, or invalidated). This ensures that the keystore doesn't accumulate stale keys indefinitely, improving security and reducing storage overhead.
 
-For detailed documentation on the cleanup service architecture, configuration, and usage, see [**Keystore Cleanup Service**](cleanup.md).
+For detailed documentation on the cleanup service architecture, configuration, and usage, see [**Keystore Cleanup Service**](storage/cleanup.md).
 
 ### Architecture
 

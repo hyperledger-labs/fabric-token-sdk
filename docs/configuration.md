@@ -96,7 +96,6 @@ token:
         # interval is the polling interval for one-time lookups. Defaults to 2s.
         interval: 2s
         
-  
   tms:
     mytms: # unique name of this token management system
       network: default # the name of the network this TMS refers to (Fabric, etc.)
@@ -462,7 +461,7 @@ token:
             ttl: 24h
             scanInterval: 1h
             batchSize: 100
-            workerCount: 4
+            workerCount: 1
             advisoryLockID: 8389190333894887277
             instanceID:
 ```
