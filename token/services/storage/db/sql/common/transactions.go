@@ -273,15 +273,13 @@ func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (dbdrive
 }
 
 func (db *TransactionStore) QueryValidations(ctx context.Context, params dbdriver.QueryValidationRecordsParams) (dbdriver.ValidationRecordsIterator, error) {
-	validationsTable, requestsTable := q.Table(db.table.Validations), q.Table(db.table.Requests)
+	validationsTable := q.Table(db.table.Validations)
 	query, args := q.Select().
 		Fields(
 			validationsTable.Field("tx_id"), validationsTable.Field("request"), validationsTable.Field("metadata"),
-			requestsTable.Field("status"), validationsTable.Field("stored_at"),
+			validationsTable.Field("stored_at"),
 		).
-		From(validationsTable.Join(requestsTable,
-			cond.Cmp(validationsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
-		).
+		From(validationsTable).
 		Where(HasValidationParams(params, db.table.Validations)).
 		Format(db.ci)
 
@@ -293,7 +291,7 @@ func (db *TransactionStore) QueryValidations(ctx context.Context, params dbdrive
 
 	it := common.NewIterator(rows, func(r *dbdriver.ValidationRecord) error {
 		var meta []byte
-		if err := rows.Scan(&r.TxID, &r.TokenRequest, &meta, &r.Status, &r.Timestamp); err != nil {
+		if err := rows.Scan(&r.TxID, &r.TokenRequest, &meta, &r.Timestamp); err != nil {
 			return err
 		}
 
@@ -513,7 +511,7 @@ func (db *TransactionStore) GetSchema() string {
 
 		-- validations
 		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL PRIMARY KEY REFERENCES %s,
+			tx_id TEXT NOT NULL PRIMARY KEY,
 			request BYTEA NOT NULL,
 			metadata BYTEA NOT NULL,
 			pp_hash BYTEA NOT NULL,
@@ -533,7 +531,7 @@ func (db *TransactionStore) GetSchema() string {
 		db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests,
 		db.table.Transactions, db.table.Requests, db.table.Transactions, db.table.Transactions, db.table.Transactions, db.table.Transactions,
 		db.table.Movements, db.table.Requests, db.table.Movements, db.table.Movements, db.table.Movements, db.table.Movements,
-		db.table.Validations, db.table.Requests,
+		db.table.Validations,
 		db.table.TransactionEndorseAck, db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
 	)
 }
@@ -684,18 +682,18 @@ func (w *TransactionStoreTransaction) AddValidationRecord(ctx context.Context, t
 	}
 	now := time.Now().UTC()
 
-	// First, insert into Requests table to satisfy foreign key constraint
+	// First, ensure the token request exists in the Requests table (for foreign key integrity with Transactions/Movements)
 	query, args := q.InsertInto(w.table.Requests).
 		Fields("tx_id", "request", "status", "status_message", "application_metadata", "public_metadata", "pp_hash", "stored_at").
-		Row(txID, tokenRequest, dbdriver.Pending, "", []byte("null"), []byte("null"), ppHash, now).
+		Row(txID, tokenRequest, dbdriver.Pending, "", []byte("{}"), []byte("{}"), ppHash, now).
 		Format()
-	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tokenRequest)), len(ppHash))
-	_, err = w.txn.ExecContext(ctx, query, args...)
-	if err != nil {
+	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tokenRequest)), len(ppHash), now)
+
+	if _, err = w.txn.ExecContext(ctx, query, args...); err != nil {
 		return ttxDBError(err)
 	}
 
-	// Then, insert the validation record with the token request also embedded for easy retrieval
+	// Then insert the validation record as a self-contained entity (no foreign key to Requests)
 	query, args = q.InsertInto(w.table.Validations).
 		Fields("tx_id", "request", "metadata", "pp_hash", "stored_at").
 		Row(txID, tokenRequest, md, ppHash, now).

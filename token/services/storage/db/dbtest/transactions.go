@@ -129,7 +129,7 @@ func TStatus(t *testing.T, db driver3.TokenTransactionStore) {
 	txn := getTransactions(t, db, driver3.QueryTransactionsParams{})[0]
 	assert.Equal(t, driver3.Pending, txn.Status, "transaction status should be pending")
 	val := getValidationRecords(t, db, driver3.QueryValidationRecordsParams{})[0]
-	assert.Equal(t, driver3.Pending, val.Status, "validation status should be pending")
+	assert.NotNil(t, val, "validation record should exist")
 	mvs, err := db.QueryMovements(ctx, driver3.QueryMovementsParams{})
 	require.NoError(t, err, "error getting movements")
 	assert.Len(t, mvs, 1)
@@ -144,7 +144,7 @@ func TStatus(t *testing.T, db driver3.TokenTransactionStore) {
 	txn = getTransactions(t, db, driver3.QueryTransactionsParams{})[0]
 	assert.Equal(t, driver3.Confirmed, txn.Status, "transaction status should be confirmed")
 	val = getValidationRecords(t, db, driver3.QueryValidationRecordsParams{})[0]
-	assert.Equal(t, driver3.Confirmed, val.Status, "validation status should be confirmed")
+	assert.NotNil(t, val, "validation record should exist")
 	mvs, err = db.QueryMovements(ctx, driver3.QueryMovementsParams{})
 	require.NoError(t, err, "error getting movements")
 	assert.Len(t, mvs, 1)
@@ -882,13 +882,11 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 			Metadata: map[string][]byte{
 				"key": []byte("value"),
 			},
-			Status: driver3.Unknown,
 		},
 		{
 			TxID:         "2",
 			TokenRequest: []byte{},
 			Metadata:     nil,
-			Status:       driver3.Unknown,
 		},
 		{
 			TxID:         "3",
@@ -896,7 +894,6 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 			Metadata: map[string][]byte{
 				"key": []byte("value"),
 			},
-			Status: driver3.Unknown,
 		},
 		{
 			TxID:         "4",
@@ -904,7 +901,6 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 			Metadata: map[string][]byte{
 				"key": []byte("value"),
 			},
-			Status: driver3.Confirmed,
 		},
 	}
 	w, err := db.NewTransactionStoreTransaction()
@@ -914,11 +910,7 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 		require.NoError(t, w.AddValidationRecord(ctx, e.TxID, e.TokenRequest, e.Metadata, driver2.PPHash("tr")), "AddValidationRecord "+e.TxID)
 	}
 	require.NoError(t, w.Commit(), "Commit")
-	for _, e := range exp {
-		if e.Status != driver3.Pending {
-			require.NoError(t, db.SetStatus(t.Context(), e.TxID, e.Status, ""))
-		}
-	}
+
 	all := getValidationRecords(t, db, driver3.QueryValidationRecordsParams{})
 	assert.Len(t, all, 4)
 
@@ -929,7 +921,6 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 		}
 		assert.Equal(t, vr.TokenRequest, all[i].TokenRequest, "%v - %d", all[i], len(all[i].TokenRequest))
 		assert.Equal(t, vr.Metadata, all[i].Metadata, "%v", all[i])
-		assert.Equal(t, vr.Status, all[i].Status, "%v", all[i])
 		assert.WithinDuration(t, beforeTx, all[i].Timestamp, 5*time.Second, "%v", all[i])
 	}
 
@@ -943,14 +934,9 @@ func TValidationRecordQueries(t *testing.T, db driver3.TokenTransactionStore) {
 	})
 	assert.Len(t, from, len(exp), "'From' before creation should include all records'")
 
-	confirmed := getValidationRecords(t, db, driver3.QueryValidationRecordsParams{
-		Statuses: []driver3.TxStatus{driver3.Confirmed},
-	})
-	assert.Len(t, confirmed, 1)
-
 	filtered := getValidationRecords(t, db, driver3.QueryValidationRecordsParams{
 		Filter: func(r *driver3.ValidationRecord) bool {
-			return r.Status == driver3.Unknown
+			return r.TxID == "1" || r.TxID == "2" || r.TxID == "3"
 		},
 	})
 	assert.Len(t, filtered, 3)

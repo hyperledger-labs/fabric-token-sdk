@@ -168,8 +168,6 @@ type ValidationRecord struct {
 	Metadata map[string][]byte
 	// Timestamp is the time the transaction was submitted to the db
 	Timestamp time.Time
-	// Status is the status of the transaction
-	Status TxStatus
 }
 
 type TokenRequestRecord struct {

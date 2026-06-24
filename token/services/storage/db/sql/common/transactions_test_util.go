@@ -163,37 +163,29 @@ func TestQueryValidations(t *testing.T, store transactionsStoreConstructor, trai
 		TxID:         "1234",
 		TokenRequest: []byte("some request"),
 		Timestamp:    timeFrom,
-		Status:       driver.Deleted,
 	}
 	output := []driver2.Value{
-		record.TxID, record.TokenRequest, nil, record.Status, record.Timestamp,
+		record.TxID, record.TokenRequest, nil, record.Timestamp,
 	}
 	var query string
-	var statusClause string
-	if traits.SupportsIN {
-		statusClause = "\\(\\(status\\) IN \\(\\(\\$3\\), \\(\\$4\\)\\)\\)"
-	} else {
-		statusClause = "\\(\\(\\(status = \\$3\\)\\) OR \\(\\(status = \\$4\\)\\)\\)"
-	}
 	if traits.MultipleParenthesis {
-		query = "SELECT VALIDATIONS.tx_id, VALIDATIONS.request, VALIDATIONS.metadata, REQUESTS.status, VALIDATIONS.stored_at " +
-			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id " +
-			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\) AND " + statusClause
+		query = "SELECT VALIDATIONS.tx_id, VALIDATIONS.request, VALIDATIONS.metadata, VALIDATIONS.stored_at " +
+			"FROM VALIDATIONS " +
+			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\)"
 	} else {
-		query = "SELECT VALIDATIONS.tx_id, VALIDATIONS.request, VALIDATIONS.metadata, REQUESTS.status, VALIDATIONS.stored_at " +
-			"FROM VALIDATIONS LEFT JOIN REQUESTS ON VALIDATIONS.tx_id = REQUESTS.tx_id " +
-			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\) AND " + statusClause
+		query = "SELECT VALIDATIONS.tx_id, VALIDATIONS.request, VALIDATIONS.metadata, VALIDATIONS.stored_at " +
+			"FROM VALIDATIONS " +
+			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\)"
 	}
 	mockDB.
 		ExpectQuery(query).
-		WithArgs(timeFrom, timeTo, driver.Deleted, driver.Unknown).
-		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "metadata", "status", "stored_at"}).AddRow(output...))
+		WithArgs(timeFrom, timeTo).
+		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "metadata", "stored_at"}).AddRow(output...))
 
 	it, err := store(db).QueryValidations(t.Context(),
 		driver.QueryValidationRecordsParams{
-			From:     &timeFrom,
-			To:       &timeTo,
-			Statuses: []driver.TxStatus{driver.Deleted, driver.Unknown},
+			From: &timeFrom,
+			To:   &timeTo,
 		},
 	)
 
@@ -419,7 +411,7 @@ func TestAWAddValidationRecord(t *testing.T, store transactionsStoreConstructor)
 	mockDB.
 		ExpectExec("INSERT INTO REQUESTS \\(tx_id, request, status, status_message, application_metadata, public_metadata, pp_hash, stored_at\\) "+
 			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7, \\$8\\)").
-		WithArgs(txID, tokenRequest, driver.Pending, "", []byte("null"), []byte("null"), ppHash, now).
+		WithArgs(txID, tokenRequest, driver.Pending, "", []byte("{}"), []byte("{}"), ppHash, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// Then expect the INSERT into VALIDATIONS table with embedded token request
 	mockDB.
