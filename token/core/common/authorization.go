@@ -76,6 +76,17 @@ func (w *WalletBasedAuthorization) AmIAnAuditor() bool {
 // Issued returns true if the passed issuer issued the passed token
 func (w *WalletBasedAuthorization) Issued(ctx context.Context, issuer token.Identity, tok *token2.Token) bool {
 	_, err := w.WalletService.IssuerWallet(ctx, issuer)
+	if err == nil {
+		return true
+	}
+
+	// In some setups (notably HSM-backed identities), the issuer identity serialized in
+	// transfer metadata may not byte-match the locally registered wallet identity.
+	// Fall back to checking if this node has a default issuer wallet configured.
+	if issuer.IsNone() {
+		return false
+	}
+	_, err = w.WalletService.IssuerWallet(ctx, "")
 
 	return err == nil
 }

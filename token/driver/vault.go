@@ -9,6 +9,7 @@ package driver
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -87,6 +88,20 @@ type QueryEngine interface {
 	ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]*token.Token, error)
 	// ListHistoryIssuedTokens returns a list of all tokens issued by the service.
 	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
+	// IssuedBalance returns the sum of amounts of non-deleted tokens flagged as issued.
+	// If tokenType is non-empty, only tokens of that type are included.
+	// If issuerRaw is non-empty, only tokens issued by that identity are included.
+	IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw Identity, from, to *time.Time) (uint64, error)
+	// ListRedeemedTokens returns issued tokens that were spent by a Redeem action.
+	// If tokenType is non-empty, only tokens of that type are included.
+	// If issuerRaw is non-empty, only tokens issued by that identity are included.
+	// If from/to are non-nil, only tokens stored within that time range are included.
+	ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw Identity, from, to *time.Time, sortBy SortField, sortDirection SortDirection) (*token.IssuedTokens, error)
+	// RedeemedBalance returns the sum of amounts of issued tokens spent by a Redeem action.
+	// If tokenType is non-empty, only tokens of that type are included.
+	// If issuerRaw is non-empty, only tokens issued by that identity are included.
+	// If from/to are non-nil, only tokens stored within that time range are included.
+	RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw Identity, from, to *time.Time) (uint64, error)
 	// PublicParams returns the serialized public parameters used by the driver.
 	PublicParams(ctx context.Context) ([]byte, error)
 	// GetTokenMetadata retrieves the private information (metadata) for the given token IDs.
@@ -105,7 +120,6 @@ type QueryEngine interface {
 }
 
 //go:generate counterfeiter -o mock/token_vault.go -fake-name TokenVault . TokenVault
-
 type TokenVault interface {
 	IsPending(ctx context.Context, id *token.ID) (bool, error)
 	GetTokenOutputsAndMeta(ctx context.Context, ids []*token.ID) ([][]byte, [][]byte, []token.Format, error)
@@ -117,13 +131,11 @@ type TokenVault interface {
 }
 
 //go:generate counterfeiter -o mock/ledger_token.go -fake-name LedgerToken . LedgerToken
-
 type LedgerToken interface {
 	GetOwner() []byte
 }
 
 //go:generate counterfeiter -o mock/token_certification_storage.go -fake-name TokenCertificationStorage . TokenCertificationStorage
-
 type TokenCertificationStorage interface {
 	GetCertifications(ctx context.Context, ids []*token.ID) ([][]byte, error)
 }

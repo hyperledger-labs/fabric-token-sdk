@@ -61,6 +61,10 @@ type IssuedToken struct {
 	Quantity string `json:"quantity,omitempty" protobuf:"bytes,3,opt,name=quantity,proto3"`
 	// Issuer is the issuer of this token
 	Issuer []byte
+	// IsSpent is true if the token has been spent (transferred or redeemed)
+	IsSpent bool `json:"is_spent,omitempty"`
+	// SpentBy is the transaction ID that consumed this token, if any
+	SpentBy string `json:"spent_by,omitempty"`
 }
 
 type IssuedTokens struct {

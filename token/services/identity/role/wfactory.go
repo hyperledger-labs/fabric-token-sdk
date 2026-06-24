@@ -9,6 +9,7 @@ package role
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
@@ -23,6 +24,9 @@ type TokenVault interface {
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token.Type) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)
 	Balance(ctx context.Context, id string, tokenType token.Type) (*big.Int, error)
+	IssuedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time) (uint64, error)
+	ListRedeemedTokens(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time, sortBy driver.SortField, sortDirection driver.SortDirection) (*token.IssuedTokens, error)
+	RedeemedBalance(ctx context.Context, tokenType token.Type, issuerRaw driver.Identity, from, to *time.Time) (uint64, error)
 }
 
 //go:generate counterfeiter -o mock/wc.go -fake-name WalletsConfiguration . WalletsConfiguration

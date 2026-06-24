@@ -89,6 +89,8 @@ jobs:
   itest:
     needs: checks
     runs-on: ubuntu-latest
+    env:
+      FAB_BINS: ${{ github.workspace }}/../fabric/bin
     strategy:
       fail-fast: false
       matrix:
@@ -150,6 +152,18 @@ jobs:
       - name: Download fabric binaries
         run: make download-fabric
 
+      - name: Verify fabric binaries
+        run: |
+          echo "FAB_BINS=${FAB_BINS}"
+          ls -la "${FAB_BINS}"
+          for bin in configtxgen configtxlator cryptogen discover orderer osnadmin peer; do
+            if [ ! -f "${FAB_BINS}/${bin}" ]; then
+              echo "Missing required binary: ${FAB_BINS}/${bin}"
+              exit 1
+            fi
+            chmod +x "${FAB_BINS}/${bin}"
+          done
+
       - name: Docker
         run: make docker-images
 
@@ -161,6 +175,9 @@ jobs:
       - name: Run ${{ matrix.tests }}
 
         run: |
+          export FAB_BINS="${FAB_BINS}"
+          echo "Running integration with FAB_BINS=${FAB_BINS}"
+          ls -la "${FAB_BINS}"
           mkdir -p covdata
           GOCOVERDIR=$(realpath covdata) make integration-tests-${{ matrix.tests }}
           go tool covdata textfmt -i=covdata -o coverage.profile

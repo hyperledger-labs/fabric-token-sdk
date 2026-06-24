@@ -423,6 +423,36 @@ func ListUnspentTokens(network *integration.Infrastructure, id *token3.NodeRefer
 	return ListUnspentTokensForTMSID(network, id, wallet, typ, nil)
 }
 
+func CheckIssuedBalance(network *integration.Infrastructure, issuer *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
+	res, err := network.Client(issuer.ReplicaName()).CallView("issuedBalance", common.JSONMarshall(&views.IssuerBalanceQuery{
+		Wallet:    wallet,
+		TokenType: typ,
+	}))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	balance := JSONUnmarshalUint64(res)
+	gomega.Expect(balance).To(gomega.Equal(expected), "issued balance: got %d, expected %d", balance, expected)
+}
+
+func CheckRedeemedBalance(network *integration.Infrastructure, issuer *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
+	res, err := network.Client(issuer.ReplicaName()).CallView("redeemedBalance", common.JSONMarshall(&views.IssuerBalanceQuery{
+		Wallet:    wallet,
+		TokenType: typ,
+	}))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	balance := JSONUnmarshalUint64(res)
+	gomega.Expect(balance).To(gomega.Equal(expected), "redeemed balance: got %d, expected %d", balance, expected)
+}
+
+func CheckOutstandingBalance(network *integration.Infrastructure, issuer *token3.NodeReference, wallet string, typ token.Type, expected uint64) {
+	res, err := network.Client(issuer.ReplicaName()).CallView("outstandingBalance", common.JSONMarshall(&views.IssuerBalanceQuery{
+		Wallet:    wallet,
+		TokenType: typ,
+	}))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	balance := JSONUnmarshalUint64(res)
+	gomega.Expect(balance).To(gomega.Equal(expected), "outstanding balance: got %d, expected %d", balance, expected)
+}
+
 func ListUnspentTokensForTMSID(network *integration.Infrastructure, id *token3.NodeReference, wallet string, typ token.Type, tmsId *token2.TMSID) *token.UnspentTokens {
 	res, err := network.Client(id.ReplicaName()).CallView("history", common.JSONMarshall(&views.ListUnspentTokens{
 		Wallet:    wallet,
@@ -1223,6 +1253,22 @@ func getIdentity(identities []topology.Identity, id string) []byte {
 
 func JSONUnmarshalFloat64(v any) float64 {
 	var s float64
+	switch v := v.(type) {
+	case []byte:
+		err := json.Unmarshal(v, &s)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	case string:
+		err := json.Unmarshal([]byte(v), &s)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	default:
+		panic(fmt.Sprintf("type not recognized [%T]", v))
+	}
+
+	return s
+}
+
+func JSONUnmarshalUint64(v interface{}) uint64 {
+	var s uint64
 	switch v := v.(type) {
 	case []byte:
 		err := json.Unmarshal(v, &s)
