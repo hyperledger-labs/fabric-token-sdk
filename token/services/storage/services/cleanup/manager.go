@@ -249,7 +249,14 @@ func (m *Manager) cleanupTokens(ctx context.Context, tokens []DeletedToken) erro
 
 	// Fan out work to workers
 	for _, token := range tokens {
-		work <- token
+		select {
+		case work <- token:
+			// continue
+		case <-m.ctx.Done():
+			m.logger.Debugf("cleanup tokens cancelled")
+
+			return errors.Errorf("cleanup tokens cancelled [%w]", m.ctx.Err())
+		}
 	}
 	close(work)
 
@@ -257,17 +264,15 @@ func (m *Manager) cleanupTokens(ctx context.Context, tokens []DeletedToken) erro
 	close(errCh)
 
 	// Collect errors
-	var firstErr error
 	failures := 0
+	errs := make([]error, 0, len(tokens))
 	for err := range errCh {
 		if err == nil {
 			continue
 		}
 		failures++
 		m.logger.Warnf("cleanup failure: %v", err)
-		if firstErr == nil {
-			firstErr = err
-		}
+		errs = append(errs, err)
 	}
 
 	if failures > 0 {
@@ -277,7 +282,7 @@ func (m *Manager) cleanupTokens(ctx context.Context, tokens []DeletedToken) erro
 		m.logger.Debugf("completed cleanup sweep: processed=%d, all succeeded", len(tokens))
 	}
 
-	return firstErr
+	return errors.Join(errs...)
 }
 
 func (m *Manager) worker(ctx context.Context, wg *sync.WaitGroup, work <-chan DeletedToken, errCh chan<- error) {

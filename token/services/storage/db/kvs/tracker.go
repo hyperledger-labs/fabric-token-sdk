@@ -15,6 +15,7 @@ import (
 type Backend interface {
 	Put(ctx context.Context, id string, value any) error
 	Get(ctx context.Context, id string, entry any) error
+	Delete(ctx context.Context, id string) error
 	Close() error
 }
 
@@ -93,9 +94,7 @@ func (f *TrackedKVS) Delete(id string) error {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
-	// Note: Backend doesn't have Delete method, so we can't delegate
-	// This is a no-op implementation to satisfy the Keystore interface
-	return nil
+	return f.Backend.Delete(context.Background(), id)
 }
 
 func (f *TrackedKVS) Close() error {

@@ -1090,8 +1090,6 @@ func (db *TokenStore) GetCertifications(ctx context.Context, ids []*token.ID) ([
 	return certifications, nil
 }
 
-// GetDeletedTokens returns deleted tokens older than the specified duration that haven't had their keys cleaned yet.
-// This is used by the keystore cleanup service to identify tokens whose cryptographic keys can be safely removed.
 // GetDeletedTokensPendingSKICleanup returns deleted tokens older than the specified duration
 // that haven't had their SKI keys cleaned up yet (no record in token_ski_cleanups table).
 func (db *TokenStore) GetDeletedTokensPendingSKICleanup(ctx context.Context, olderThan time.Duration, limit int) ([]driver.DeletedToken, error) {
@@ -1099,6 +1097,10 @@ func (db *TokenStore) GetDeletedTokensPendingSKICleanup(ctx context.Context, old
 
 	tokenTable := q.Table(db.table.Tokens)
 	cleanupTable := q.Table(db.table.TokenSKICleanups)
+
+	if limit == 0 {
+		limit = common3.ZeroLimit
+	}
 
 	// Use LEFT JOIN to find tokens that don't have a cleanup record
 	query, args := q.Select().
@@ -1109,14 +1111,14 @@ func (db *TokenStore) GetDeletedTokensPendingSKICleanup(ctx context.Context, old
 			tokenTable.Field("owner_type"),
 			tokenTable.Field("spent_at"),
 		).
-		From(tokenTable.Join(cleanupTable, cond.And(
+		From(tokenTable.JoinAs(common3.Left, cleanupTable, cond.And(
 			cond.Cmp(tokenTable.Field("tx_id"), "=", cleanupTable.Field("tx_id")),
 			cond.Cmp(tokenTable.Field("idx"), "=", cleanupTable.Field("idx")),
 		))).
 		Where(cond.And(
 			cond.CmpVal(tokenTable.Field("is_deleted"), "=", true),
 			cond.CmpVal(tokenTable.Field("spent_at"), "<", cutoffTime),
-			cond.CmpVal(cleanupTable.Field("tx_id"), "=", nil), // No cleanup record exists (LEFT JOIN returns NULL)
+			cond.IsNil(cleanupTable.Field("tx_id")),
 		)).
 		OrderBy(q.Asc(tokenTable.Field("spent_at"))).
 		Limit(limit).
