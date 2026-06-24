@@ -100,7 +100,7 @@ func (v *KVS) Exists(_ context.Context, id string) bool {
 	return true
 }
 
-func (v *KVS) Delete(id string) error {
+func (v *KVS) Delete(_ context.Context, id string) error {
 	id = v.NormalizeID(id)
 	// Delete the secret from Vault
 	_, err := v.client.Logical().Delete(id)

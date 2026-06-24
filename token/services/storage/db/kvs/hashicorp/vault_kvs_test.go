@@ -92,7 +92,7 @@ func testRound(t *testing.T, client *vault.Client) {
 		}
 	}
 
-	require.NoError(t, kvstore.Delete(k2))
+	require.NoError(t, kvstore.Delete(t.Context(), k2))
 	assert.False(t, kvstore.Exists(ctx, k2))
 
 	results = kvstore.GetExisting(ctx, k1, k2)
@@ -135,7 +135,7 @@ func testRound(t *testing.T, client *vault.Client) {
 		}
 	}
 
-	require.NoError(t, kvstore.Delete(k1))
+	require.NoError(t, kvstore.Delete(t.Context(), k1))
 
 	val = &stuff{
 		S: "hello",
@@ -157,7 +157,7 @@ func testRound(t *testing.T, client *vault.Client) {
 	it, err = kvstore.GetByPartialCompositeID(ctx, k, []string{})
 	require.NoError(t, err)
 	assert.True(t, it == nil)
-	require.NoError(t, kvstore.Delete(k))
+	require.NoError(t, kvstore.Delete(t.Context(), k))
 	assert.False(t, kvstore.Exists(ctx, k))
 
 	k1, err = kvs.CreateCompositeKey(k, []string{"1"})
@@ -177,9 +177,9 @@ func testRound(t *testing.T, client *vault.Client) {
 			assert.Fail(t, "expected 1 entries in the range, found more")
 		}
 	}
-	require.NoError(t, kvstore.Delete(k1))
+	require.NoError(t, kvstore.Delete(t.Context(), k1))
 	assert.False(t, kvstore.Exists(ctx, k1))
-	assert.True(t, kvstore.Delete(k1) == nil)
+	assert.True(t, kvstore.Delete(t.Context(), k1) == nil)
 
 	it, err = kvstore.GetByPartialCompositeID(ctx, k, []string{})
 	require.NoError(t, err)
@@ -197,15 +197,15 @@ func testRound(t *testing.T, client *vault.Client) {
 	err = kvstore.Get(ctx, k3, nil)
 	require.Error(t, err)
 
-	require.NoError(t, kvstore.Delete(k3))
-	require.NoError(t, kvstore.Delete(k3))
+	require.NoError(t, kvstore.Delete(t.Context(), k3))
+	require.NoError(t, kvstore.Delete(t.Context(), k3))
 
 	err = kvstore.Get(ctx, k3, nil)
 	require.NoError(t, err)
 	assert.True(t, it == nil)
 
 	k4, _ := kvs.CreateCompositeKey("k", []string{"4"})
-	require.NoError(t, kvstore.Delete(k4))
+	require.NoError(t, kvstore.Delete(t.Context(), k4))
 
 	results = kvstore.GetExisting(ctx)
 	assert.True(t, len(results) == 0)
@@ -285,7 +285,7 @@ func testParallelWritesReadDelete(t *testing.T, client *vault.Client) {
 			require.NoError(t, err)
 			assert.Equal(t, &stuff{"santa", i}, val)
 
-			require.NoError(t, kvstore.Delete(k))
+			require.NoError(t, kvstore.Delete(t.Context(), k))
 			defer wg.Done()
 		}(i)
 	}
@@ -312,7 +312,7 @@ func testClient(t *testing.T, wg *sync.WaitGroup, prefix string, num int, client
 		require.NoError(t, err)
 		assert.Equal(t, &stuff{"santa", i}, val)
 
-		require.NoError(t, kvstore.Delete(k))
+		require.NoError(t, kvstore.Delete(t.Context(), k))
 	}
 }
 
@@ -351,7 +351,7 @@ func testWithVaultDown(t *testing.T, client *vault.Client) {
 	results := kvstore.GetExisting(ctx, k1, k2)
 	assert.True(t, len(results) == 0)
 
-	require.Error(t, kvstore.Delete(k1))
+	require.Error(t, kvstore.Delete(t.Context(), k1))
 
 	it, err := kvstore.GetByPartialCompositeID(ctx, "k", []string{})
 	require.Error(t, err)
