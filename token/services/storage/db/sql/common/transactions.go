@@ -394,11 +394,7 @@ func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, tx
 
 	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
 
-	// Apply short timeout for endorsement ack storage
-	timeoutCtx, cancel := WithShortTimeout(ctx, nil)
-	defer cancel()
-
-	if _, err = db.writeDB.ExecContext(timeoutCtx, query, args...); err != nil {
+	if _, err = db.writeDB.ExecContext(ctx, query, args...); err != nil {
 		return ttxDBError(err)
 	}
 
@@ -446,10 +442,6 @@ func (db *TransactionStore) Close() error {
 }
 
 func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status dbdriver.TxStatus, message string) error {
-	// Apply short timeout for status update
-	timeoutCtx, cancel := WithShortTimeout(ctx, nil)
-	defer cancel()
-
 	var err error
 	if len(message) != 0 {
 		query, args := q.Update(db.table.Requests).
@@ -459,7 +451,7 @@ func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status d
 			Format(db.ci)
 
 		logging.Debug(logger, query, args)
-		_, err = db.writeDB.ExecContext(timeoutCtx, query, args...)
+		_, err = db.writeDB.ExecContext(ctx, query, args...)
 	} else {
 		query, args := q.Update(db.table.Requests).
 			Set("status", status).
@@ -467,7 +459,7 @@ func (db *TransactionStore) SetStatus(ctx context.Context, txID string, status d
 			Format(db.ci)
 
 		logging.Debug(logger, query, args)
-		_, err = db.writeDB.ExecContext(timeoutCtx, query, args...)
+		_, err = db.writeDB.ExecContext(ctx, query, args...)
 	}
 	if err != nil {
 		return errors.Wrapf(err, "error updating tx [%s]", txID)
@@ -612,11 +604,7 @@ func (w *TransactionStoreTransaction) AddTransaction(ctx context.Context, rs ...
 		Format()
 	logging.Debug(logger, query, args)
 
-	// Apply medium timeout for batch transaction record insertion
-	timeoutCtx, cancel := WithMediumTimeout(ctx, nil)
-	defer cancel()
-
-	_, err := w.txn.ExecContext(timeoutCtx, query, args...)
+	_, err := w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
@@ -647,11 +635,7 @@ func (w *TransactionStoreTransaction) AddTokenRequest(ctx context.Context, txID 
 		Format()
 	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tr)), len(applicationMetadata), len(publicMetadata), len(ppHash))
 
-	// Apply medium timeout for token request insertion
-	timeoutCtx, cancel := WithMediumTimeout(ctx, nil)
-	defer cancel()
-
-	_, err = w.txn.ExecContext(timeoutCtx, query, args...)
+	_, err = w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
@@ -686,11 +670,7 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 		Format()
 	logging.Debug(logger, query, args)
 
-	// Apply medium timeout for batch movement record insertion
-	timeoutCtx, cancel := WithMediumTimeout(ctx, nil)
-	defer cancel()
-
-	_, err := w.txn.ExecContext(timeoutCtx, query, args...)
+	_, err := w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }
