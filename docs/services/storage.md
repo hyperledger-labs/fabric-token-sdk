@@ -159,7 +159,7 @@ Recovery behavior is controlled by the `token.tms.<name>.services.network.fabric
 
 The Storage Service includes a **Keystore Cleanup Service** that provides automatic deletion of cryptographic keys from the keystore for tokens that have been deleted (spent, expired, or invalidated). This ensures that the keystore doesn't accumulate stale keys indefinitely, improving security and reducing storage overhead.
 
-For detailed documentation on the cleanup service architecture, configuration, and usage, see [**Keystore Cleanup Service**](storage/cleanup.md).
+For detailed documentation on the cleanup service architecture, configuration, and usage, see [**Keystore Cleanup Service**](storage/keystore_cleanup.md).
 
 ### Architecture
 
