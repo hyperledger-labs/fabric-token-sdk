@@ -1157,42 +1157,18 @@ func (db *TokenStore) MarkTokenCleaned(ctx context.Context, txID string, index u
 	now := time.Now().UTC()
 
 	// Insert into token_ski_cleanups table
-	insertQuery, insertArgs := q.InsertInto(db.table.TokenSKICleanups).
+	query, args := q.InsertInto(db.table.TokenSKICleanups).
 		Fields("tx_id", "idx", "cleaned_at", "cleaned_by").
 		Rows([]common3.Tuple{{txID, index, now, cleanedBy}}).
 		Format()
 
-	logging.Debug(logger, insertQuery, insertArgs)
-	_, err := db.writeDB.ExecContext(ctx, insertQuery, insertArgs...)
+	logging.Debug(logger, query, args)
+	_, err := db.writeDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		return errors.Wrapf(err, "failed to insert cleanup record for token [%s:%d]", txID, index)
 	}
 
-	// Also update keys_cleaned_at in tokens table for backward compatibility
-	updateQuery, updateArgs := q.Update(db.table.Tokens).
-		Set("keys_cleaned_at", now).
-		Where(cond.And(
-			cond.Eq("tx_id", txID),
-			cond.Eq("idx", index),
-		)).
-		Format(db.ci)
-
-	logging.Debug(logger, updateQuery, updateArgs)
-	result, err := db.writeDB.ExecContext(ctx, updateQuery, updateArgs...)
-	if err != nil {
-		return errors.Wrapf(err, "failed to update keys_cleaned_at for token [%s:%d]", txID, index)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return errors.Wrapf(err, "failed to get rows affected for token [%s:%d]", txID, index)
-	}
-
-	if rowsAffected == 0 {
-		logger.WarnfContext(ctx, "no rows updated when marking token [%s:%d] as cleaned (may not exist)", txID, index)
-	} else {
-		logger.DebugfContext(ctx, "marked token [%s:%d] as cleaned by [%s]", txID, index, cleanedBy)
-	}
+	logger.DebugfContext(ctx, "marked token [%s:%d] as cleaned by [%s]", txID, index, cleanedBy)
 
 	return nil
 }
@@ -1244,15 +1220,14 @@ func (db *TokenStore) GetSchema() string {
 			owner_raw BYTEA NOT NULL,
 			owner_type TEXT NOT NULL,
 			owner_identity BYTEA NOT NULL,
-			owner_wallet_id TEXT, 
+			owner_wallet_id TEXT,
 			ledger BYTEA NOT NULL,
-            ledger_type TEXT DEFAULT '',
+		          ledger_type TEXT DEFAULT '',
 			ledger_metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
 			is_deleted BOOL NOT NULL DEFAULT false,
 			spent_by TEXT NOT NULL DEFAULT '',
 			spent_at TIMESTAMP,
-			keys_cleaned_at TIMESTAMP,
 			owner BOOL NOT NULL DEFAULT false,
 			auditor BOOL NOT NULL DEFAULT false,
 			issuer BOOL NOT NULL DEFAULT false,

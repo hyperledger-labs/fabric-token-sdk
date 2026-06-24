@@ -37,6 +37,7 @@ func TestGetTableNames(t *testing.T) {
 		TokenLocks:             "fsc_tkn_locks",
 		KeyStore:               "fsc_key_store",
 		EIDLeases:              "fsc_eid_leases",
+		TokenSKICleanups:       "fsc_tkn_ski_cleanups",
 	}, names)
 
 	names, err = GetTableNames("valid_prefix")

@@ -39,6 +39,7 @@ This store serves as the authoritative registry for all tokens (UTXOs) known to 
 *   **PublicParameters**: A cache for the network's cryptographic public parameters and their hashes.
 *   **TokenCertifications**: Stores third-party certifications for tokens, often required by privacy-preserving drivers.
 *   **TokenLocks**: Manages short-lived pessimistic locks on tokens to prevent double-spending during transaction assembly.
+*   **TokenSKICleanups**: Tracks keystore cleanup operations for deleted tokens. Records when cryptographic keys were removed from the keystore and which instance performed the cleanup, preventing reprocessing and enabling audit trails in multi-instance deployments.
 
 ### Wallet & Identity Store (WalletDB / IdentityDB)
 Manages the cryptographic identities and logical wallet groupings used by the node.

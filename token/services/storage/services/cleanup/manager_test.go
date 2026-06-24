@@ -355,11 +355,11 @@ func TestManager_CleanupToken_PartialFailure(t *testing.T) {
 func TestDefaultConfig(t *testing.T) {
 	config := cleanup.DefaultConfig()
 
-	assert.True(t, config.Enabled, "Cleanup should be enabled by default")
+	assert.False(t, config.Enabled, "Cleanup should be disabled by default")
 	assert.Equal(t, 24*time.Hour, config.TTL)
 	assert.Equal(t, 1*time.Hour, config.ScanInterval)
 	assert.Equal(t, 100, config.BatchSize)
-	assert.Equal(t, 4, config.WorkerCount)
+	assert.Equal(t, 1, config.WorkerCount)
 }
 
 func TestManager_DisabledConfig(t *testing.T) {

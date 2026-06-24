@@ -255,7 +255,7 @@ cleanupManager := cleanup.NewServiceManager(
 
 1. **Startup**: Manager starts and runs initial sweep immediately
 2. **Leadership Acquisition**: Manager attempts to acquire PostgreSQL advisory lock
-3. **Query Eligible Tokens**: If leadership acquired, query deleted tokens older than TTL with `keys_cleaned_at=NULL`
+3. **Query Eligible Tokens**: If leadership acquired, query deleted tokens older than TTL that haven't been cleaned yet
 4. **Create Worker Pool**: Spawn configured number of workers for this sweep
 5. **Distribute Work**: Fan out tokens to worker pool via channel
 6. **Per Token Processing**:
@@ -303,20 +303,31 @@ A token transitions through the following states related to cleanup:
 
 - **Active**: Token is unspent and in use
 - **Deleted**: Token marked as deleted (`is_deleted=true`, `spent_at` set)
-- **Eligible for Cleanup**: Deleted token older than TTL with `keys_cleaned_at=NULL`
-- **Cleaned**: Keys deleted from keystore (`keys_cleaned_at` set)
+- **Eligible for Cleanup**: Deleted token older than TTL without a cleanup record in `token_ski_cleanups`
+- **Cleaned**: Keys deleted from keystore (record exists in `token_ski_cleanups`)
 
 The cleanup service only processes tokens in the "Eligible for Cleanup" state.
 
 ## Database Schema
 
-The cleanup service extends the tokens table with a new column:
+The cleanup service uses a dedicated tracking table to record cleanup operations:
 
+**Token SKI Cleanups Table:**
 ```sql
-ALTER TABLE tokens ADD COLUMN keys_cleaned_at TIMESTAMP;
+CREATE TABLE IF NOT EXISTS token_ski_cleanups (
+    tx_id TEXT NOT NULL,
+    idx INT NOT NULL,
+    cleaned_at TIMESTAMP NOT NULL,
+    cleaned_by TEXT NOT NULL,
+    PRIMARY KEY (tx_id, idx),
+    FOREIGN KEY (tx_id, idx) REFERENCES tokens
+);
+CREATE INDEX IF NOT EXISTS idx_cleaned_at_token_ski_cleanups ON token_ski_cleanups ( cleaned_at );
 ```
 
-This column tracks when a token's keys were cleaned from the keystore, preventing reprocessing.
+This table tracks when each token's cryptographic keys were cleaned from the keystore, preventing reprocessing. The `cleaned_by` field records which cleanup instance performed the operation, useful for debugging in multi-instance deployments.
+
+The `token_ski_cleanups` table is automatically created by the schema initialization and does not require manual database alterations.
 
 ## Distributed Deployment
 
@@ -391,10 +402,10 @@ Key metrics to monitor:
 
 - **TTL Safety**: 24-hour default ensures tokens are finalized before key deletion
 - **Idempotency**: Safe to retry cleanup operations
-- **Audit Trail**: `keys_cleaned_at` timestamp provides cleanup history
+- **Audit Trail**: `token_ski_cleanups` table provides cleanup history with timestamps and instance tracking
 - **Key Isolation**: Only deletes keys for deleted tokens, never active tokens
 - **Partial Success Handling**: Prevents infinite retries while maintaining audit trail
-- **Instance Tracking**: `cleanedBy` field records which instance performed cleanup
+- **Instance Tracking**: `cleaned_by` field records which instance performed cleanup
 
 ## Comparison with Recovery Service
 
