@@ -103,7 +103,7 @@ nav:
       - Selector: services/selector.md
       - Storage:
           - Overview: services/storage.md
-          - Cleanup Service: services/storage/cleanup.md
+          - Cleanup Service: services/storage/keystore_cleanup.md
           - Recovery Service: services/storage/recovery.md
       - Tokens: services/tokens.md
       - TTX: services/ttx.md
