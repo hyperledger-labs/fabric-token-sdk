@@ -209,6 +209,56 @@ token:
               # on every sweep until it either resolves or an operator intervenes.
               notFoundGracePeriod: 30m
 
+        # storage service configuration
+        storage:
+          # cleanup config controls automatic deletion of cryptographic keys from the keystore
+          # for tokens that have been deleted (spent, expired, or invalidated).
+          # If omitted, the cleanup manager uses its built-in defaults (disabled by default).
+          cleanup:
+            # enabled determines whether keystore cleanup runs. Default: false.
+            # Must be explicitly enabled. This is a conservative default to prevent
+            # unexpected key deletion in existing deployments.
+            enabled: false
+            
+            # ttl is the minimum age of deleted tokens before their keys are eligible for cleanup. Default: 24h.
+            # This ensures tokens are truly finalized before key deletion.
+            # Increase this value for additional safety margin in high-latency networks.
+            # Relationship: Should be significantly greater than transaction finality time.
+            ttl: 24h
+            
+            # scanInterval is how often the cleanup manager scans for deleted tokens. Default: 1h.
+            # Lower values provide faster cleanup but increase database load.
+            # Higher values reduce overhead but delay key removal.
+            # Relationship: Should be less than ttl to ensure timely cleanup.
+            # Performance impact: Each scan queries the token database for deleted tokens.
+            scanInterval: 1h
+            
+            # batchSize is the maximum number of deleted tokens processed per scan. Default: 100.
+            # Limits the number of tokens processed in a single cleanup sweep.
+            # Increase for high-volume environments with many deleted tokens.
+            # Performance impact: Larger batches reduce scan overhead but increase memory usage and processing time per sweep.
+            batchSize: 100
+            
+            # workerCount is the number of local workers that process tokens in parallel. Default: 1.
+            # Increase to improve cleanup throughput in high-volume scenarios.
+            # Decrease to reduce resource consumption on constrained systems.
+            # Performance impact: More workers increase CPU utilization during cleanup sweeps.
+            workerCount: 1
+            
+            # advisoryLockID is the PostgreSQL advisory lock identifier used for cleanup leader election.
+            # This ensures only one replica performs cleanup sweeps at a time in multi-instance deployments.
+            # Default: 8389190333894887277 (hex: 0x74746b636c65616e, ASCII: "ttkclean")
+            # The default value is derived from the ASCII encoding of "ttkclean" (Token Transaction Keystore Cleanup).
+            # Only change this if you need to run multiple independent cleanup managers on the same database.
+            # Note: PostgreSQL advisory locks use 64-bit integers. This value must be unique across your application.
+            advisoryLockID: 8389190333894887277
+            
+            # instanceID identifies this replica in logs and monitoring.
+            # If empty, a unique identifier is generated automatically at startup.
+            # Set this explicitly in containerized environments for consistent identity across restarts.
+            # This helps with debugging and tracking which instance performed cleanup operations.
+            instanceID:
+
       # auditor-specific settings
       auditor:
         # locker configures the distributed locking strategy for the auditor's
@@ -472,7 +522,7 @@ Default values:
 - ttl: 24h
 - scanInterval: 1h
 - batchSize: 100
-- workerCount: 4
+- workerCount: 1
 - advisoryLockID: 8389190333894887277 (`0x74746b636c65616e`)
 - instanceID: empty, auto-generated when the cleanup manager starts
 
