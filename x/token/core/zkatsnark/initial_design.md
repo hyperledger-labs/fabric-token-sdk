@@ -83,60 +83,7 @@ Token Management Service (TMS)
     ▼
 Network Driver (Fabric / FabricX / Ethereum)
 ```
-
-### 2.1 High-Level Flow — Token Transfer
-
-```
-sequenceDiagram
-    participant App as Application
-    participant TMS as Token Management Service
-    participant Prover as gnark Prover (client)
-    participant Fabric as Fabric Network
-    participant Validator as gnark Validator (chaincode)
-    participant Ledger as Fabric Ledger
-
-    Note over App,Ledger: Phase 1 Token Transfer (2-in, 2-out)
-
-    App->>TMS: Transfer(inputs, recipients, amounts)
-    TMS->>Prover: BuildTransferTransaction(inputs, outputs)
-
-    Prover->>Prover: WitnessBuilder: build SpendCircuit{} x2, OutputCircuit{} x2
-
-    par Parallel Proof Generation
-        Prover->>Prover: SpendProver: groth16.Prove(SpendCircuit_0, pk_spend)
-        Prover->>Prover: SpendProver: groth16.Prove(SpendCircuit_1, pk_spend)
-        Prover->>Prover: OutputProver: groth16.Prove(OutputCircuit_0, pk_output)
-        Prover->>Prover: OutputProver: groth16.Prove(OutputCircuit_1, pk_output)
-    end
-
-    Prover->>Prover: BindingSigComputer: bsk = Σrcv_in - Σrcv_out
-    Prover->>Prover: BindingSigComputer: sig = JubjubSchnorr.Sign(bsk, txHash)
-    Prover->>Prover: Orchestrator: assemble GnarkTransferTransaction{}
-    Prover-->>TMS: GnarkTransferTransaction
-
-    TMS->>Fabric: Submit transaction
-
-    Note over Fabric,Ledger: Validation on endorsing peers
-
-    Fabric->>Validator: ValidateTokenActions(tx)
-    Validator->>Validator: Deserialise + structural checks
-    Validator->>Validator: Build public witnesses x4
-    par Parallel Verification
-        Validator->>Validator: groth16.Verify(SpendProof_0, vkSpend, pw_0)
-        Validator->>Validator: groth16.Verify(SpendProof_1, vkSpend, pw_1)
-        Validator->>Validator: groth16.Verify(OutputProof_0, vkOutput, pw_0)
-        Validator->>Validator: groth16.Verify(OutputProof_1, vkOutput, pw_1)
-    end
-    Validator->>Validator: bvk = Σcv_in - Σcv_out
-    Validator->>Validator: JubjubSchnorr.Verify(sig, txHash, bvk)
-    Validator->>Ledger: UTXO checks (existence, double-spend, type, ownership)
-    Validator->>Ledger: Apply state transition
-    Validator-->>Fabric: Valid
-
-    Fabric-->>App: Transaction committed
-```
-
-### 2.2 Component Architecture
+### 2.1 Component Architecture
 
 ```
 token/core/zkatsnark/
