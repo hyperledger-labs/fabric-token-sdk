@@ -1,9 +1,16 @@
 module github.com/hyperledger-labs/fabric-token-sdk/cmd/token_validation_service
 
+replace github.com/hyperledger-labs/fabric-token-sdk => ./../../
+
+replace github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p => github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-20260618115140-04366ada95c8
+
+replace github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query => github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query v0.0.0-20260618115140-04366ada95c8
+
 go 1.26.3
 
 require (
-	github.com/hyperledger-labs/fabric-smart-client v0.12.1
+	github.com/hyperledger-labs/fabric-smart-client v0.13.0
+	github.com/hyperledger-labs/fabric-smart-client/integration v0.0.0-20260618115140-04366ada95c8
 	github.com/hyperledger-labs/fabric-token-sdk v0.0.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/grpc v1.81.1
@@ -21,6 +28,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/alecthomas/kingpin/v2 v2.4.0 // indirect
+	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
@@ -62,8 +71,11 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
+	github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query v0.0.0-00010101000000-000000000000 // indirect
+	github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-00010101000000-000000000000 // indirect
 	github.com/hyperledger/aries-bbs-go v0.0.0-20240528091251-e950615f2e45 // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
+	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.1-0.20260319210430-56968fdc7833 // indirect
 	github.com/hyperledger/fabric-lib-go v1.1.4 // indirect
 	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -78,7 +90,7 @@ require (
 	github.com/jackc/pgxlisten v0.0.0-20250802141604-12b92425684c // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
-	github.com/jaegertracing/jaeger-idl v0.6.0 // indirect
+	github.com/jaegertracing/jaeger-idl v0.9.0 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
@@ -177,6 +189,7 @@ require (
 	github.com/uptrace/opentelemetry-go-extra/otelzap v0.3.2 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
+	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.69.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0 // indirect
@@ -216,6 +229,3 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.51.0 // indirect
 )
-
-// Replace directive to use the parent module during development
-replace github.com/hyperledger-labs/fabric-token-sdk => ../..

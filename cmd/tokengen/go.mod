@@ -2,13 +2,17 @@ module github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen
 
 go 1.26.3
 
+replace github.com/hyperledger-labs/fabric-token-sdk/integration => ./../../integration
+
 replace github.com/hyperledger-labs/fabric-token-sdk => ./../../
 
 require (
 	github.com/IBM/idemix v0.0.2
 	github.com/IBM/mathlib v0.1.0
-	github.com/hyperledger-labs/fabric-smart-client v0.12.1
+	github.com/hyperledger-labs/fabric-smart-client v0.13.0
+	github.com/hyperledger-labs/fabric-smart-client/integration v0.0.0-20260618115140-04366ada95c8
 	github.com/hyperledger-labs/fabric-token-sdk v0.10.1
+	github.com/hyperledger-labs/fabric-token-sdk/integration v0.0.0
 	github.com/onsi/gomega v1.41.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
