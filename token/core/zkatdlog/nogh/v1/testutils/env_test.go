@@ -89,8 +89,8 @@ func TestSaveTransferToFile(t *testing.T) {
 		},
 		Application: nil,
 	}
-	inputs := map[*token.ID]*token.Token{
-		{TxId: "a_transaction_id", Index: 1}: {
+	inputs := map[string]*token.Token{
+		token.ID{TxId: "a_transaction_id", Index: 1}.String(): {
 			Owner:    []byte("an_owner"),
 			Type:     "a_type",
 			Quantity: "a_quantity",

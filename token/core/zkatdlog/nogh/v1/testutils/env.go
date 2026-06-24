@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"maps"
 	"os"
 	"strconv"
 
@@ -560,12 +561,8 @@ func prepareSwapRequest(benchCase *benchmark2.Case, pp *v1setup.PublicParams, au
 	}
 
 	auditTokens := make(map[string]*token2.Token)
-	for tokenID, token := range inputsForTransfer1 {
-		auditTokens[tokenID] = token
-	}
-	for tokenID, token := range inputsForTransfer2 {
-		auditTokens[tokenID] = token
-	}
+	maps.Copy(auditTokens, inputsForTransfer1)
+	maps.Copy(auditTokens, inputsForTransfer2)
 
 	err = auditor.Check(context.Background(), ar, metadata, "2", auditTokens)
 	if err != nil {

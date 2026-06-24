@@ -150,4 +150,3 @@ func TransferAuditValidate(precision uint64) ValidateTransferAuditFunc {
 		return nil
 	}
 }
-
