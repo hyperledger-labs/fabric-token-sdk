@@ -1317,6 +1317,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	query, args := q.InsertInto(t.table.Tokens).
 		Fields("tx_id", "idx", "issuer_raw", "owner_raw", "owner_type", "owner_identity", "owner_wallet_id", "ledger", "ledger_type", "ledger_metadata", "token_type", "quantity", "amount", "stored_at", "owner", "auditor", "issuer").
 		Row(tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.OwnerType, tr.OwnerIdentity, tr.OwnerWalletID, tr.Ledger, tr.LedgerFormat, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, time.Now().UTC(), tr.Owner, tr.Auditor, tr.Issuer).
+		OnConflictDoNothing().
 		Format()
 	logging.Debug(logger, query, args)
 	if _, err := t.tx.ExecContext(ctx, query, args...); err != nil {
@@ -1339,6 +1340,7 @@ func (t *TokenTransaction) StoreToken(ctx context.Context, tr driver.TokenRecord
 	query, args = q.InsertInto(t.table.Ownership).
 		Fields("tx_id", "idx", "wallet_id").
 		Rows(rows).
+		OnConflictDoNothing().
 		Format()
 	logging.Debug(logger, query, args)
 
