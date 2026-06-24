@@ -62,7 +62,7 @@ the performance baseline throughout
 ### 2.0 Driver Position in the SDK
 
 The gnark driver is a token driver, analogous in role to the existing `zkatdlog` driver.
-It sits at `token/core/zkat-snark-driver/` and implements the `driver.TokenDriver` interface.
+It sits at `token/core/zkatsnark/` and implements the `driver.TokenDriver` interface.
 It is independent of the network driver layer - the network driver (Fabric, FabricX,
 Ethereum) handles transaction submission and ledger state, while the token driver handles
 cryptographic validity of token operations.
@@ -73,7 +73,7 @@ Application
     ▼
 Token Management Service (TMS)
     │
-    ├── token/core/zkat-snark-driver/   # this driver (new)
+    ├── token/core/zkatsnark/   # this driver (new)
     │       ├── Prover (client-side)
     │       └── Validator (chaincode-side)
     │
@@ -139,7 +139,7 @@ sequenceDiagram
 ### 2.2 Component Architecture
 
 ```
-token/core/zkat-snark-driver/
+token/core/zkatsnark/
 ├── driver/
 │   └── driver.go              # Driver registration and factory methods
 ├── crypto/
@@ -213,7 +213,7 @@ node = Poseidon(domain, left, right)
 
 **Implementation**:
 ```go
-// token/core/zkat-snark-driver/crypto/poseidon/hash.go
+// token/core/zkatsnark/crypto/poseidon/hash.go
 
 // Hash computes Poseidon over BN254 scalar field elements.
 // inputs must match the capacity of the chosen variant (3 for Phase 1, 5 for Phase 2).
@@ -275,7 +275,7 @@ Since `V` generates a prime-order Jubjub subgroup, this holds iff `Σv_in = Σv_
 
 **Implementation**:
 ```go
-// token/core/zkat-snark-driver/crypto/jubjub/commitment.go
+// token/core/zkatsnark/crypto/jubjub/commitment.go
 
 type PublicParams struct {
     V twistededwards.PointAffine  // Value generator
@@ -305,7 +305,7 @@ The public parameters are distributed via the Fabric channel configuration and l
 by both the prover (client) and the validator (chaincode).
 
 ```go
-// token/core/zkat-snark-driver/pp/pp.go
+// token/core/zkatsnark/pp/pp.go
 
 type PublicParams struct {
     // Curve and field
@@ -391,7 +391,7 @@ commitment already recorded on the ledger. It enforces two constraint groups:
 2. (ValueCommitInX, ValueCommitInY) == Value·V + RCV·R - proves the published value commitment correctly encodes the same value
 
 ```go
-// token/core/zkat-snark-driver/circuit/spend.go
+// token/core/zkatsnark/circuit/spend.go
 
 type SpendCircuit struct {
     // ── Public inputs ──────────────────────────────────────
@@ -436,7 +436,7 @@ additional constraint group:
 
 
 ```go
-// token/core/zkat-snark-driver/circuit/output.go
+// token/core/zkatsnark/circuit/output.go
 
 type OutputCircuit struct {
     // ── Public inputs ──────────────────────────────────────
@@ -480,7 +480,7 @@ Pedersen over BLS12-381 requires emulated arithmetic inside the BN254 circuit, m
 this the most constraint-heavy circuit (~2,480 total).
 
 ```go
-// token/core/zkat-snark-driver/circuit/migration.go
+// token/core/zkatsnark/circuit/migration.go
 
 type MigrationCircuit struct {
     // ── Public inputs ──────────────────────────────────────
@@ -546,7 +546,7 @@ token, i.e., all information needed to spend it.
 
 **Phase 1 Note**:
 ```go
-// token/core/zkat-snark-driver/token/token.go
+// token/core/zkatsnark/token/token.go
 
 type Note struct {
     Value      uint64  // token denomination (hidden)
@@ -643,7 +643,7 @@ when connecting the prover and verifier. Both use fr.Element.SetBytesCanonical()
 additionally rejects byte sequences representing integers ≥ the field modulus.
 
 ```go
-// token/core/zkat-snark-driver/prover/witness.go
+// token/core/zkatsnark/prover/witness.go
 
 func BuildSpendWitness(
     note *token.Note,
@@ -698,7 +698,7 @@ without synchronization, each invocation constructs its own witness object and
 intermediate state locally.
 
 ```go
-// token/core/zkat-snark-driver/prover/spend.go
+// token/core/zkatsnark/prover/spend.go
 
 type SpendProver struct {
     pk groth16.ProvingKey  // loaded once at startup, reused across transactions
@@ -991,7 +991,7 @@ The gnark driver implements the `driver.TokenDriver` interface in the same way a
 the existing `zkatdlog` driver, registering under the driver name `"gnark"`.
 
 ```go
-// token/core/zkat-snark-driver/driver/driver.go
+// token/core/zkatsnark/driver/driver.go
 
 const DriverName = "gnark"
 
@@ -1028,7 +1028,7 @@ commitments in the output tokens are correctly formed without requiring conserva
 Issuance authorization comes from the Fabric MSP endorsement policy, not from a ZK proof.
 
 ```go
-// token/core/zkat-snark-driver/token/issue.go
+// token/core/zkatsnark/token/issue.go
 
 type IssueAction struct {
     Issuer   []byte
@@ -1052,7 +1052,7 @@ to build all proofs in parallel, compute the binding signature, and assemble the
 GnarkTransferTransaction.
 
 ```go
-// token/core/zkat-snark-driver/token/transfer.go
+// token/core/zkatsnark/token/transfer.go
 
 type TransferAction struct {
     Inputs  []*SpendInput   // existing tokens being consumed
@@ -1125,7 +1125,7 @@ stores the leaf position at the time a token is received (from the encrypted not
 recomputes the current Merkle path from the frontier when spending.
 
 ```go
-// token/core/zkat-snark-driver/graph/tree/tree.go
+// token/core/zkatsnark/graph/tree/tree.go
 
 // IncrementalMerkleTree is a binary Merkle tree supporting append-only insertions.
 // Depth 32 gives 2^32 ≈ 4.29 billion leaf slots.
@@ -1160,7 +1160,7 @@ pre-compute the nullifier unless they also know the leaf position, which is encr
 for the current owner in the note ciphertext.
 
 ```go
-// token/core/zkat-snark-driver/graph/nullifier/nullifier.go
+// token/core/zkatsnark/graph/nullifier/nullifier.go
 
 // NullifierHash computes nf = MixingPedersenHash(cm, pos).
 // pos is the leaf position in the Merkle tree.
@@ -1206,7 +1206,7 @@ security property is that `cm` is a single shared circuit variable used in group
 2, 3, and 4 since it is impossible to use data from different tokens for different groups.
 
 ```go
-// token/core/zkat-snark-driver/graph/circuit/extended_spend.go
+// token/core/zkatsnark/graph/circuit/extended_spend.go
 
 type ExtendedSpendCircuit struct {
     // ── Public inputs ────────────────────────────────────────
@@ -1331,7 +1331,7 @@ token:
 ### 10.2 Configuration Structure
 
 ```go
-// token/core/zkat-snark-driver/config/config.go
+// token/core/zkatsnark/config/config.go
 
 type Config struct {
     Phase  int          // 1 (value privacy) or 2 (graph hiding)
@@ -1400,7 +1400,7 @@ All benchmarks use `go test -bench -benchmem` and report:
 
 **Benchmark suite**:
 ```go
-// token/core/zkat-snark-driver/bench/bench_test.go
+// token/core/zkatsnark/bench/bench_test.go
 
 func BenchmarkSpendProve(b *testing.B) {
     // Setup once, benchmark Prove only
@@ -1505,7 +1505,7 @@ var _ = Describe("gnark Token Driver", func() {
 ## 12. Metrics and Monitoring
 
 ```go
-// token/core/zkat-snark-driver/metrics/metrics.go
+// token/core/zkatsnark/metrics/metrics.go
 
 type Metrics struct {
     // Proof generation
@@ -1569,7 +1569,7 @@ alerts:
 ### 13.1 Error Taxonomy
 
 ```go
-// token/core/zkat-snark-driver/errors/errors.go
+// token/core/zkatsnark/errors/errors.go
 
 var (
     // Circuit errors
@@ -1693,7 +1693,7 @@ This test must pass before any circuit is used in a non-development environment.
 
 ### Phase 1: Cryptographic Primitives and Setup (Week 1–2)
 
-- [ ] Package structure under `token/core/zkat-snark-driver/`
+- [ ] Package structure under `token/core/zkatsnark/`
 - [ ] Native Go Poseidon hash (`crypto/poseidon/hash.go`)
 - [ ] gnark Poseidon circuit gadget (`circuit/gadgets/poseidon.go`)
 - [ ] Cross-consistency test suite with shared test vectors
