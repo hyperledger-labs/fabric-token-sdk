@@ -2,7 +2,11 @@ module github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/stor
 
 go 1.26.3
 
-replace github.com/hyperledger-labs/fabric-token-sdk => ./../../../../../../
+replace (
+	github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query => github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query v0.0.0-20260618115140-04366ada95c8
+	github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p => github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-20260618115140-04366ada95c8
+	github.com/hyperledger-labs/fabric-token-sdk => ./../../../../../../
+)
 
 require (
 	github.com/hashicorp/vault/api v1.23.0

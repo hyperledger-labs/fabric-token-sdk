@@ -9,6 +9,7 @@ package fxdlog
 import (
 	"errors"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/support/libp2p"
 	common "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	digutils "github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state"
@@ -28,7 +29,7 @@ type SDK struct {
 }
 
 func NewSDK(registry services.Registry) *SDK {
-	return &SDK{SDK: tokensdk.NewFrom(fabricxsdk.NewSDK(registry))}
+	return &SDK{SDK: libp2p.NewFrom(tokensdk.NewFrom(fabricxsdk.NewSDK(registry)))}
 }
 
 func NewFrom(sdk common.SDK) *SDK {

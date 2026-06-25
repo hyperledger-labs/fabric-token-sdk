@@ -8,6 +8,7 @@ package zkatdlognoghv1
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -119,9 +120,7 @@ func Update(args *UpdateArgs) error {
 	if err != nil {
 		return errors.Wrap(err, "failed loading extras")
 	}
-	for k, v := range extraData {
-		pp.ExtraData[k] = v
-	}
+	maps.Copy(pp.ExtraData, extraData)
 
 	// Store Public Params
 	raw, err := pp.Serialize()

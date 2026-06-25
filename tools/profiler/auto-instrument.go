@@ -34,20 +34,24 @@ func run(args []string) int {
 
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+
 		return 1
 	}
 
 	if *dir == "" {
 		fmt.Fprintln(os.Stderr, "Usage: auto-instrument -dir <directory>")
+
 		return 1
 	}
 
 	if err := instrumentDirectory(*dir); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+
 		return 1
 	}
 
 	fmt.Println("Instrumentation complete!")
+
 	return 0
 }
 
@@ -64,6 +68,7 @@ func instrumentDirectory(dir string) error {
 		}
 
 		fmt.Printf("Processing: %s\n", path)
+
 		return instrumentFile(path)
 	})
 }
@@ -87,6 +92,7 @@ func instrumentFile(filename string) error {
 			if imp.Name != nil {
 				tracerAlias = imp.Name.Name
 			}
+
 			break
 		}
 	}
@@ -104,6 +110,7 @@ func instrumentFile(filename string) error {
 		}
 
 		needsTracer = true
+
 		return true
 	})
 
@@ -158,6 +165,7 @@ func findUniqueAlias(node *ast.File, base string) string {
 		if ident, ok := n.(*ast.Ident); ok {
 			usedNames[ident.Name] = true
 		}
+
 		return true
 	})
 
@@ -197,6 +205,7 @@ func addTracerImport(node *ast.File, alias string) {
 		for _, decl := range node.Decls {
 			if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
 				genDecl.Specs = append(genDecl.Specs, importSpec)
+
 				break
 			}
 		}
@@ -209,6 +218,7 @@ func addTracerImport(node *ast.File, alias string) {
 // Skips: init, main, Test*, Benchmark* functions.
 func shouldSkipFunction(fn *ast.FuncDecl) bool {
 	name := fn.Name.Name
+
 	return name == "init" || name == "main" || strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Benchmark")
 }
 
@@ -235,6 +245,7 @@ func hasTracerCall(fn *ast.FuncDecl, tracerAlias string) bool {
 	}
 
 	ident, ok := selExpr.X.(*ast.Ident)
+
 	return ok && ident.Name == tracerAlias && selExpr.Sel.Name == "Enter"
 }
 

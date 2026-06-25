@@ -31,7 +31,7 @@ type Topologies struct {
 
 // T represents a list of topologies.
 type T struct {
-	Topologies []interface{} `yaml:"topologies,omitempty"`
+	Topologies []any `yaml:"topologies,omitempty"`
 }
 
 var topologyFile string

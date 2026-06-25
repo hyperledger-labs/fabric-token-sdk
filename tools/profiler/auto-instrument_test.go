@@ -456,8 +456,10 @@ func init() {}`
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 
@@ -484,8 +486,10 @@ func main() {}`
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 
@@ -513,8 +517,10 @@ func TestSomething(t *testing.T) {}`
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 
@@ -541,8 +547,10 @@ func MyFunc() {}`
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 
@@ -681,8 +689,10 @@ func (m MyType) MyMethod() {}
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 
@@ -713,8 +723,10 @@ func (m *MyType) MyMethod() {}
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 
@@ -758,8 +770,10 @@ func MyFunc() {
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 
@@ -790,8 +804,10 @@ func MyFunc() {
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 
@@ -824,8 +840,10 @@ func MyFunc() {
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 
@@ -858,8 +876,10 @@ func MyFunc() {
 	ast.Inspect(node, func(n ast.Node) bool {
 		if f, ok := n.(*ast.FuncDecl); ok {
 			fn = f
+
 			return false
 		}
+
 		return true
 	})
 

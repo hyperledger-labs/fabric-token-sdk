@@ -149,7 +149,7 @@ func waitForVault(vaultURL, token string) error {
 			fmt.Printf("vault not ready yet (iteration %d): %s\n", i, err)
 		} else {
 			fmt.Printf("vault not ready yet (iteration %d): status %d\n", i, resp.StatusCode)
-			resp.Body.Close()
+			SilentClose(resp.Body)
 		}
 		time.Sleep(2 * time.Second)
 	}
@@ -171,11 +171,19 @@ func enableKVSecretEngine(vaultURL, token, path string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer SilentClose(resp.Body)
 
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Errorf("failed to enable kv secret engine: %s", resp.Status)
 	}
 
 	return nil
+}
+
+type closer interface {
+	Close() error
+}
+
+func SilentClose(c closer) {
+	_ = c.Close()
 }

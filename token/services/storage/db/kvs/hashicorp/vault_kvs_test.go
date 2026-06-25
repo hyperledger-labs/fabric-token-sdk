@@ -75,7 +75,7 @@ func testRound(t *testing.T, client *vault.Client) {
 
 	it, err := kvstore.GetByPartialCompositeID(ctx, "k", []string{})
 	require.NoError(t, err)
-	defer it.Close()
+	defer hashicorp.SilentClose(it)
 
 	for ctr := 0; it.HasNext(); ctr++ {
 		val = &stuff{}
@@ -123,7 +123,7 @@ func testRound(t *testing.T, client *vault.Client) {
 
 	it, err = kvstore.GetByPartialCompositeID(ctx, "k", []string{})
 	require.NoError(t, err)
-	defer it.Close()
+	defer hashicorp.SilentClose(it)
 	for ctr := 0; it.HasNext(); ctr++ {
 		val = &stuff{}
 		key, err := it.Next(val)
@@ -166,7 +166,7 @@ func testRound(t *testing.T, client *vault.Client) {
 	require.NoError(t, kvstore.Put(ctx, k1, val))
 	it, err = kvstore.GetByPartialCompositeID(ctx, k, []string{})
 	require.NoError(t, err)
-	defer it.Close()
+	defer hashicorp.SilentClose(it)
 	for ctr := 0; it.HasNext(); ctr++ {
 		val = &stuff{}
 		key, err := it.Next(val)
