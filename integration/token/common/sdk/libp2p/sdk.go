@@ -11,8 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	common "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
-	viewsdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p"
@@ -26,22 +24,17 @@ type SDK struct {
 	common.SDK
 }
 
-func NewSDK(registry services.Registry) *SDK {
-	return NewFrom(viewsdk.NewSDK(registry))
-}
-
 func NewFrom(sdk common.SDK) *SDK {
 	return &SDK{SDK: sdk}
 }
 
 func (p *SDK) Install() error {
-	// Call the parent
-	if err := p.SDK.Install(); err != nil {
+	if err := p.Container().Decorate(CustomHostProvider); err != nil {
 		return err
 	}
 
-	// then decorate
-	if err := p.Container().Decorate(CustomHostProvider); err != nil {
+	// Call the parent
+	if err := p.SDK.Install(); err != nil {
 		return err
 	}
 
