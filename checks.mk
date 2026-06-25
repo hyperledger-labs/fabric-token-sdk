@@ -4,33 +4,42 @@ checks: licensecheck gofmt goimports govet gofix misspell ineffassign staticchec
 .PHONY: licensecheck
 licensecheck:
 	@echo Running license check
-	@find . -path './.git' -prune -o -name '*.go' -not -name '*.pb.go' -print | xargs addlicense -check || (echo "Missing license headers"; exit 1)
+	@for dir in $(GO_MODULES); do \
+		echo "  Checking licenses in module: $$dir"; \
+		(cd $$dir && find . -path './.git' -prune -o -name '*.go' -not -name '*.pb.go' -print | xargs addlicense -check) || (echo "Missing license headers in $$dir"; exit 1); \
+	done
 
 .PHONY: gofmt
 gofmt:
 	@echo Running gofmt
-	@{ \
-	OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -not -name '*.pb.go' -print | xargs gofmt -l -s || true)"; \
-	if [ -n "$$OUTPUT" ]; then \
-		echo "The following gofmt issues were flagged:"; \
-		echo "$$OUTPUT"; \
-		echo "The gofmt command 'gofmt -l -s -w' must be run for these files"; \
-		exit 1; \
-	fi \
-	}
+	@for dir in $(GO_MODULES); do \
+		echo "  Checking format in module: $$dir"; \
+		(cd $$dir && { \
+			OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -not -name '*.pb.go' -print | xargs gofmt -l -s || true)"; \
+			if [ -n "$$OUTPUT" ]; then \
+				echo "The following gofmt issues were flagged in $$dir:"; \
+				echo "$$OUTPUT"; \
+				echo "The gofmt command 'gofmt -l -s -w' must be run for these files"; \
+				exit 1; \
+			fi; \
+		}) || exit 1; \
+	done
 
 .PHONY: goimports
 goimports:
 	@echo Running goimports
-	@{ \
-	OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -not -name '*.pb.go' -print | xargs goimports -l || true)"; \
-	if [ -n "$$OUTPUT" ]; then \
-    	echo "The following files contain goimports errors"; \
-    	echo "$$OUTPUT"; \
-    	echo "The goimports command 'goimports -l -w' must be run for these files"; \
-    	exit 1; \
-	fi \
-	}
+	@for dir in $(GO_MODULES); do \
+		echo "  Checking imports in module: $$dir"; \
+		(cd $$dir && { \
+			OUTPUT="$$(find . -path './.git' -prune -o -name '*.go' -not -name '*.pb.go' -print | xargs goimports -l || true)"; \
+			if [ -n "$$OUTPUT" ]; then \
+				echo "The following files contain goimports errors in $$dir:"; \
+				echo "$$OUTPUT"; \
+				echo "The goimports command 'goimports -l -w' must be run for these files"; \
+				exit 1; \
+			fi; \
+		}) || exit 1; \
+	done
 
 .PHONY: govet
 govet:
@@ -46,7 +55,7 @@ gofix:
 	@for dir in $(GO_MODULES); do \
 		echo "  Checking module: $$dir"; \
 		(cd $$dir && { \
-			OUTPUT="$$(go fix -diff ./... 2>&1)"; \
+			OUTPUT="$$(go fix -diff ./... 2>&1 | grep -v '^go: warning:' | grep -v '^no packages to fix')"; \
 			if [ -n "$$OUTPUT" ]; then \
 				echo "go fix found modernization opportunities in $$dir:"; \
 				echo "$$OUTPUT"; \

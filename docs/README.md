@@ -20,7 +20,7 @@ If you are developing *using* the SDK or contributing *to* the SDK, check out th
 *   [General Guidelines](development/general.md)
 *   [Idiomatic Go](development/idiomatic.md)
 *   [Testing](development/testing.md)
-*   [Test & Benchmark Profiler](../tools/profiler/README.md)
+*   [Test & Benchmark Profiler](../cmd/profiler/README.md)
 
 ## Evolution
 

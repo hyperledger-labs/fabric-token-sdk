@@ -19,8 +19,10 @@ TOP = .
 # include the checks target
 include $(TOP)/checks.mk
 
-# Define all Go module directories (matching make tidy)
-GO_MODULES := . tools integration token/services/storage/db/kvs/hashicorp cmd/artifactgen cmd/tokengen cmd/token_validation_service
+# Define all Go module directories
+GO_MODULES := . integration token/services/storage/db/kvs/hashicorp cmd/artifactgen cmd/tokengen cmd/token_validation_service cmd/profiler
+TIDY_GO_MODULES := $(GO_MODULES) tools
+
 # include fabricx target
 include $(TOP)/fabricx.mk
 # include the interop target
@@ -120,13 +122,11 @@ integration-tests-dvp-dlog:
 .PHONY: tidy
 # tidy up go modules
 tidy:
-	@go mod tidy
-	cd tools; go mod tidy
-	cd integration; go mod tidy
-	cd token/services/storage/db/kvs/hashicorp; go mod tidy
-	cd cmd/artifactgen; go mod tidy
-	cd cmd/tokengen; go mod tidy
-	cd cmd/token_validation_service; go mod tidy
+	@echo "Tidying Go modules..."
+	@for dir in $(TIDY_GO_MODULES); do \
+		echo "  Tidying module: $$dir"; \
+		(cd $$dir && go mod tidy); \
+	done
 
 .PHONY: clean
 # clean up docker artifacts and generated files
