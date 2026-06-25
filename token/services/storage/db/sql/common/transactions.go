@@ -41,7 +41,6 @@ type transactionTables struct {
 	Movements             string
 	Transactions          string
 	Requests              string
-	Validations           string
 	TransactionEndorseAck string
 }
 
@@ -99,7 +98,6 @@ func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci com
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
-		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
 	}, ci, pi, nil, nil), nil
 }
@@ -116,7 +114,6 @@ func NewTransactionStoreWithNotifierAndRecovery(
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
-		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
 	}, ci, pi, notifier, recoveryLeaderFactory), nil
 }
@@ -270,38 +267,6 @@ func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (dbdrive
 	}
 
 	return status, statusMessage, nil
-}
-
-func (db *TransactionStore) QueryValidations(ctx context.Context, params dbdriver.QueryValidationRecordsParams) (dbdriver.ValidationRecordsIterator, error) {
-	validationsTable := q.Table(db.table.Validations)
-	query, args := q.Select().
-		Fields(
-			validationsTable.Field("tx_id"), validationsTable.Field("request"), validationsTable.Field("metadata"),
-			validationsTable.Field("stored_at"),
-		).
-		From(validationsTable).
-		Where(HasValidationParams(params, db.table.Validations)).
-		Format(db.ci)
-
-	logging.Debug(logger, query, args)
-	rows, err := db.readDB.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	it := common.NewIterator(rows, func(r *dbdriver.ValidationRecord) error {
-		var meta []byte
-		if err := rows.Scan(&r.TxID, &r.TokenRequest, &meta, &r.Timestamp); err != nil {
-			return err
-		}
-
-		return unmarshal(meta, &r.Metadata)
-	})
-	if params.Filter == nil {
-		return it, nil
-	}
-
-	return iterators.Filter(it, params.Filter), nil
 }
 
 func (db *TransactionStore) Notifier() (dbdriver.TransactionNotifier, error) {
@@ -509,17 +474,6 @@ func (db *TransactionStore) GetSchema() string {
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 		CREATE INDEX IF NOT EXISTS idx_eid_storedat_%s ON %s ( enrollment_id, stored_at );
 
-		-- validations
-		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL PRIMARY KEY,
-			request BYTEA NOT NULL,
-			metadata BYTEA NOT NULL,
-			pp_hash BYTEA NOT NULL,
-			status INT NOT NULL,
-			status_message TEXT NOT NULL,
-			stored_at TIMESTAMP NOT NULL
-		);
-
 		-- tea
 		CREATE TABLE IF NOT EXISTS %s (
 			id CHAR(36) NOT NULL PRIMARY KEY,
@@ -533,7 +487,6 @@ func (db *TransactionStore) GetSchema() string {
 		db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests,
 		db.table.Transactions, db.table.Requests, db.table.Transactions, db.table.Transactions, db.table.Transactions, db.table.Transactions,
 		db.table.Movements, db.table.Requests, db.table.Movements, db.table.Movements, db.table.Movements, db.table.Movements,
-		db.table.Validations,
 		db.table.TransactionEndorseAck, db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
 	)
 }
