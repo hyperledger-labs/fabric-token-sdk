@@ -39,6 +39,7 @@ This store serves as the authoritative registry for all tokens (UTXOs) known to 
 *   **PublicParameters**: A cache for the network's cryptographic public parameters and their hashes.
 *   **TokenCertifications**: Stores third-party certifications for tokens, often required by privacy-preserving drivers.
 *   **TokenLocks**: Manages short-lived pessimistic locks on tokens to prevent double-spending during transaction assembly.
+*   **TokenSKICleanups**: Tracks keystore cleanup operations for deleted tokens. Records when cryptographic keys were removed from the keystore and which instance performed the cleanup, preventing reprocessing and enabling audit trails in multi-instance deployments.
 
 ### Wallet & Identity Store (WalletDB / IdentityDB)
 Manages the cryptographic identities and logical wallet groupings used by the node.
@@ -49,7 +50,7 @@ Manages the cryptographic identities and logical wallet groupings used by the no
 *   **IdentitySigners**: Tracks which identities have locally available signing keys and their associated metadata.
 
 ### Generic Store
-*   **KeyStore**: A secure, generic key-value store used for persisting various cryptographic materials and small sensitive states.
+*   **KeyStore**: A secure, generic key-value store used for persisting various cryptographic materials and small sensitive states. The keystore uses identifiers that are expected to be the hexadecimal representation of the key's Subject Key Identifier (SKI). This convention is relied upon by other packages, particularly for operations like keystore cleanup where SKIs are derived from owner identities to locate and manage keys.
 
 ## Internal Databases
 
@@ -88,7 +89,7 @@ This ensures that the local view of the "Token Landscape" always reflects the gr
 
 The Storage Service includes a **Transaction Recovery Service** that provides the core recovery mechanism for handling pending transactions that may have lost their finality listeners due to node restarts, network interruptions, or other failures.
 
-For detailed documentation on the recovery service architecture, configuration, and usage, see [**Transaction Recovery Service**](recovery.md).
+For detailed documentation on the recovery service architecture, configuration, and usage, see [**Transaction Recovery Service**](storage/recovery.md).
 
 ### Architecture
 
@@ -153,4 +154,55 @@ The recovery service supports both PostgreSQL and SQLite backends, with differen
 ### Configuration
 
 Recovery behavior is controlled by the `token.tms.<name>.services.network.fabric.recovery` configuration section. 
+
+## Keystore Cleanup Service
+
+The Storage Service includes a **Keystore Cleanup Service** that provides automatic deletion of cryptographic keys from the keystore for tokens that have been deleted (spent, expired, or invalidated). This ensures that the keystore doesn't accumulate stale keys indefinitely, improving security and reducing storage overhead.
+
+For detailed documentation on the cleanup service architecture, configuration, and usage, see [**Keystore Cleanup Service**](storage/keystore_cleanup.md).
+
+### Architecture
+
+The cleanup service operates on the token database and keystore, scanning for deleted tokens that are eligible for key cleanup. It uses a distributed locking mechanism (PostgreSQL advisory locks) to ensure only one replica in a multi-instance deployment performs cleanup at a time.
+
+### Cleanup Manager
+
+The cleanup manager runs in the background and periodically scans for deleted tokens whose cryptographic keys can be safely removed from the keystore.
+
+**Key Features:**
+- **Automatic Key Deletion**: Removes keys for deleted tokens after a configurable TTL period
+- **SKI Derivation**: Derives Subject Key Identifiers (SKIs) from owner identities to locate keys
+- **Multi-Database Support**:
+  - **PostgreSQL**: Recommended for production multi-instance deployments. Uses advisory locks for distributed coordination and leader election
+  - **SQLite**: Supported for single-node deployments and development. Handles node restarts gracefully but is not designed for multi-replica scenarios
+- **Configurable Behavior**: Cleanup parameters can be tuned via configuration (see [Configuration](../configuration.md))
+
+### Cleanup Process
+
+The cleanup service follows this workflow:
+
+1. **Leadership Acquisition**: The cleanup manager acquires an advisory lock to become the leader
+2. **Scan Phase**: Scans the token database for deleted tokens older than the configured TTL (default: 24 hours) that haven't had their keys cleaned
+3. **SKI Derivation**: For each eligible token, derives SKIs from the owner identity
+4. **Key Deletion**: Deletes the derived keys from the keystore using parallel workers
+5. **Tracking**: Marks tokens as cleaned in the database to prevent reprocessing
+
+### Database Backend Considerations
+
+The cleanup service supports both PostgreSQL and SQLite backends, with different characteristics:
+
+**PostgreSQL:**
+- **Multi-Instance Support**: Uses advisory locks for distributed coordination
+- **Leader Election**: Only one replica performs cleanup sweeps at a time
+- **High Availability**: Multiple replicas can share the same database
+
+**SQLite:**
+- **Single-Node Only**: Suitable for development and single-node deployments
+- **Node Restart Support**: Cleanup resumes automatically after restart
+- **No Multi-Replica Support**: Lacks advisory lock mechanism for leader election
+
+### Configuration
+
+Cleanup behavior is controlled by the configuration section. See the [Configuration Guide](../configuration.md) for detailed parameter descriptions and tuning recommendations.
+
 See the [Configuration Guide](../configuration.md), Section `Optional: token.tms.<name>.services.network.fabric.recovery`, for detailed parameter descriptions and tuning recommendations.

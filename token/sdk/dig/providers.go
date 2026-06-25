@@ -21,7 +21,8 @@ func newMultiplexedDriver(in struct {
 	dig.In
 	Drivers        []dbdriver.NamedDriver `group:"token-db-drivers"`
 	ConfigProvider driver2.ConfigService
-}) multiplexed.Driver {
+},
+) multiplexed.Driver {
 	return multiplexed.NewDriver(in.ConfigProvider, in.Drivers...)
 }
 
@@ -30,13 +31,15 @@ func newMultiplexedDriver(in struct {
 func newTokenDriverService(in struct {
 	dig.In
 	Drivers []core.NamedFactory[driver.Driver] `group:"token-drivers"`
-}) *core.TokenDriverService {
+},
+) *core.TokenDriverService {
 	return core.NewTokenDriverService(in.Drivers)
 }
 
 func newValidatorDriverService(in struct {
 	dig.In
 	Drivers []core.NamedFactory[driver.ValidatorDriver] `group:"validator-drivers"`
-}) *core.ValidatorDriverService {
+},
+) *core.ValidatorDriverService {
 	return core.NewValidatorDriverService(in.Drivers...)
 }

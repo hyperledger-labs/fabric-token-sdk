@@ -115,9 +115,18 @@ package "Token Store (TokenDB)" {
         created_at : TIMESTAMP
     }
 
+    entity "TokenSKICleanups" as tkn_ski_cleanups {
+        * tx_id : TEXT <<PK, NOT NULL, FK>>
+        * idx : INT <<PK, NOT NULL, FK>>
+        --
+        cleaned_at : TIMESTAMP <<NOT NULL>>
+        cleaned_by : TEXT <<NOT NULL>>
+    }
+
     tkn_own }o--|| tokens : "(tx_id, idx)"
     tkn_crts }o--|| tokens : "(tx_id, idx)"
     tkn_locks |o--o| tokens : "(tx_id, idx)"
+    tkn_ski_cleanups }o--|| tokens : "(tx_id, idx)"
 }
 
 package "Wallet & Identity Store (WalletDB / IdentityDB)" {

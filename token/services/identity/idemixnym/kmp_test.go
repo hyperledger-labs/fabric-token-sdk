@@ -19,7 +19,7 @@ import (
 )
 
 func TestNewKeyManagerProvider(t *testing.T) {
-	testNewKeyManagerProvider(t, "../idemix/testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testNewKeyManagerProvider(t, "../idemix/testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	testNewKeyManagerProvider(t, "../idemix/testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 

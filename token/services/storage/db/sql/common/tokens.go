@@ -33,42 +33,63 @@ import (
 )
 
 type tokenTables struct {
-	Tokens         string
-	Ownership      string
-	PublicParams   string
-	Certifications string
-	Requests       string
+	Tokens           string
+	Ownership        string
+	PublicParams     string
+	Certifications   string
+	Requests         string
+	TokenSKICleanups string
 }
 
 type TokenStore struct {
-	readDB   *sql.DB
-	writeDB  *sql.DB
-	table    tokenTables
-	ci       common3.CondInterpreter
-	notifier driver.TokenNotifier
+	readDB               *sql.DB
+	writeDB              *sql.DB
+	table                tokenTables
+	ci                   common3.CondInterpreter
+	notifier             driver.TokenNotifier
+	cleanupLeaderFactory func(context.Context, *sql.DB, int64) (driver.CleanupLeadership, bool, error)
 
 	sttMutex              sync.RWMutex
 	supportedTokenFormats []token.Format
 }
 
-func newTokenStore(readDB, writeDB *sql.DB, tables tokenTables, ci common3.CondInterpreter, notifier driver.TokenNotifier) *TokenStore {
+func newTokenStore(readDB, writeDB *sql.DB, tables tokenTables, ci common3.CondInterpreter, notifier driver.TokenNotifier, cleanupLeaderFactory func(context.Context, *sql.DB, int64) (driver.CleanupLeadership, bool, error)) *TokenStore {
 	return &TokenStore{
-		readDB:   readDB,
-		writeDB:  writeDB,
-		table:    tables,
-		ci:       ci,
-		notifier: notifier,
+		readDB:               readDB,
+		writeDB:              writeDB,
+		table:                tables,
+		ci:                   ci,
+		notifier:             notifier,
+		cleanupLeaderFactory: cleanupLeaderFactory,
 	}
 }
 
 func NewTokenStoreWithNotifier(readDB, writeDB *sql.DB, tables TableNames, ci common3.CondInterpreter, notifier driver.TokenNotifier) (*TokenStore, error) {
 	return newTokenStore(readDB, writeDB, tokenTables{
-		Tokens:         tables.Tokens,
-		Ownership:      tables.Ownership,
-		PublicParams:   tables.PublicParams,
-		Certifications: tables.Certifications,
-		Requests:       tables.Requests,
-	}, ci, notifier), nil
+		Tokens:           tables.Tokens,
+		Ownership:        tables.Ownership,
+		PublicParams:     tables.PublicParams,
+		Certifications:   tables.Certifications,
+		Requests:         tables.Requests,
+		TokenSKICleanups: tables.TokenSKICleanups,
+	}, ci, notifier, nil), nil
+}
+
+func NewTokenStoreWithNotifierAndCleanup(
+	readDB, writeDB *sql.DB,
+	tables TableNames,
+	ci common3.CondInterpreter,
+	notifier driver.TokenNotifier,
+	cleanupLeaderFactory func(context.Context, *sql.DB, int64) (driver.CleanupLeadership, bool, error),
+) (*TokenStore, error) {
+	return newTokenStore(readDB, writeDB, tokenTables{
+		Tokens:           tables.Tokens,
+		Ownership:        tables.Ownership,
+		PublicParams:     tables.PublicParams,
+		Certifications:   tables.Certifications,
+		Requests:         tables.Requests,
+		TokenSKICleanups: tables.TokenSKICleanups,
+	}, ci, notifier, cleanupLeaderFactory), nil
 }
 
 func (db *TokenStore) CreateSchema() error {
@@ -1069,6 +1090,109 @@ func (db *TokenStore) GetCertifications(ctx context.Context, ids []*token.ID) ([
 	return certifications, nil
 }
 
+// GetDeletedTokensPendingSKICleanup returns deleted tokens older than the specified duration
+// that haven't had their SKI keys cleaned up yet (no record in token_ski_cleanups table).
+func (db *TokenStore) GetDeletedTokensPendingSKICleanup(ctx context.Context, olderThan time.Duration, limit int) ([]driver.DeletedToken, error) {
+	cutoffTime := time.Now().UTC().Add(-olderThan)
+
+	tokenTable := q.Table(db.table.Tokens)
+	cleanupTable := q.Table(db.table.TokenSKICleanups)
+
+	if limit == 0 {
+		limit = common3.ZeroLimit
+	}
+
+	// Use LEFT JOIN to find tokens that don't have a cleanup record
+	query, args := q.Select().
+		Fields(
+			tokenTable.Field("tx_id"),
+			tokenTable.Field("idx"),
+			tokenTable.Field("owner_identity"),
+			tokenTable.Field("owner_type"),
+			tokenTable.Field("spent_at"),
+		).
+		From(tokenTable.JoinAs(common3.Left, cleanupTable, cond.And(
+			cond.Cmp(tokenTable.Field("tx_id"), "=", cleanupTable.Field("tx_id")),
+			cond.Cmp(tokenTable.Field("idx"), "=", cleanupTable.Field("idx")),
+		))).
+		Where(cond.And(
+			cond.CmpVal(tokenTable.Field("is_deleted"), "=", true),
+			cond.CmpVal(tokenTable.Field("spent_at"), "<", cutoffTime),
+			cond.IsNil(cleanupTable.Field("tx_id")),
+		)).
+		OrderBy(q.Asc(tokenTable.Field("spent_at"))).
+		Limit(limit).
+		Format(db.ci)
+
+	logging.Debug(logger, query, args)
+	rows, err := db.readDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to query deleted tokens pending SKI cleanup")
+	}
+	defer Close(rows)
+
+	var tokens []driver.DeletedToken
+	for rows.Next() {
+		var t driver.DeletedToken
+		var spentAt sql.NullTime
+		if err := rows.Scan(&t.TxID, &t.Index, &t.OwnerIdentity, &t.OwnerType, &spentAt); err != nil {
+			return nil, errors.Wrapf(err, "failed to scan deleted token")
+		}
+		if spentAt.Valid {
+			t.DeletedAt = spentAt.Time
+		}
+		tokens = append(tokens, t)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, errors.Wrapf(err, "error iterating deleted tokens")
+	}
+
+	logger.DebugfContext(ctx, "found %d deleted tokens older than %v pending SKI cleanup", len(tokens), olderThan)
+
+	return tokens, nil
+}
+
+// MarkTokenCleaned marks a token as having its cryptographic keys cleaned up.
+// This prevents the cleanup service from processing the same token multiple times.
+// The cleanedBy parameter identifies which instance performed the cleanup.
+func (db *TokenStore) MarkTokenCleaned(ctx context.Context, txID string, index uint64, cleanedBy string) error {
+	now := time.Now().UTC()
+
+	// Insert into token_ski_cleanups table
+	query, args := q.InsertInto(db.table.TokenSKICleanups).
+		Fields("tx_id", "idx", "cleaned_at", "cleaned_by").
+		Rows([]common3.Tuple{{txID, index, now, cleanedBy}}).
+		Format()
+
+	logging.Debug(logger, query, args)
+	_, err := db.writeDB.ExecContext(ctx, query, args...)
+	if err != nil {
+		return errors.Wrapf(err, "failed to insert cleanup record for token [%s:%d]", txID, index)
+	}
+
+	logger.DebugfContext(ctx, "marked token [%s:%d] as cleaned by [%s]", txID, index, cleanedBy)
+
+	return nil
+}
+
+// AcquireCleanupLeadership attempts to acquire leadership for keystore cleanup operations.
+// When no leader factory is configured, leadership is granted locally (for non-distributed deployments).
+// In distributed deployments (PostgreSQL), this uses advisory locks to ensure only one instance performs cleanup.
+// AcquireCleanupLeadership returns a leadership handle for cleanup sweeping.
+// When no leader factory is configured, leadership is granted locally.
+func (db *TokenStore) AcquireCleanupLeadership(ctx context.Context, lockID int64) (driver.CleanupLeadership, bool, error) {
+	if db.cleanupLeaderFactory == nil {
+		return noopCleanupLeadership{}, true, nil
+	}
+
+	return db.cleanupLeaderFactory(ctx, db.writeDB, lockID)
+}
+
+// noopCleanupLeadership is a no-op implementation for non-distributed deployments
+type noopCleanupLeadership struct{}
+
+func (noopCleanupLeadership) Close() error { return nil }
+
 func (db *TokenStore) GetSchema() string {
 	return fmt.Sprintf(`
 		-- Requests
@@ -1098,9 +1222,9 @@ func (db *TokenStore) GetSchema() string {
 			owner_raw BYTEA NOT NULL,
 			owner_type TEXT NOT NULL,
 			owner_identity BYTEA NOT NULL,
-			owner_wallet_id TEXT, 
+			owner_wallet_id TEXT,
 			ledger BYTEA NOT NULL,
-            ledger_type TEXT DEFAULT '',
+		          ledger_type TEXT DEFAULT '',
 			ledger_metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
 			is_deleted BOOL NOT NULL DEFAULT false,
@@ -1143,6 +1267,17 @@ func (db *TokenStore) GetSchema() string {
 			PRIMARY KEY (tx_id, idx),
 			FOREIGN KEY (tx_id, idx) REFERENCES %s
 		);
+
+		-- Token SKI Cleanups
+		CREATE TABLE IF NOT EXISTS %s (
+			tx_id TEXT NOT NULL,
+			idx INT NOT NULL,
+			cleaned_at TIMESTAMP NOT NULL,
+			cleaned_by TEXT NOT NULL,
+			PRIMARY KEY (tx_id, idx),
+			FOREIGN KEY (tx_id, idx) REFERENCES %s
+		);
+		CREATE INDEX IF NOT EXISTS idx_cleaned_at_%s ON %s ( cleaned_at );
 		`,
 		db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests,
 		db.table.Tokens,
@@ -1153,6 +1288,7 @@ func (db *TokenStore) GetSchema() string {
 		db.table.Ownership, db.table.Tokens,
 		db.table.PublicParams, db.table.PublicParams, db.table.PublicParams,
 		db.table.Certifications, db.table.Tokens,
+		db.table.TokenSKICleanups, db.table.Tokens, db.table.TokenSKICleanups, db.table.TokenSKICleanups,
 	)
 }
 

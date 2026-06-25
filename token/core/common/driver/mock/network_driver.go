@@ -42,11 +42,11 @@ type Network struct {
 		result1 []bool
 		result2 error
 	}
-	BroadcastStub        func(context.Context, interface{}) error
+	BroadcastStub        func(context.Context, any) error
 	broadcastMutex       sync.RWMutex
 	broadcastArgsForCall []struct {
 		arg1 context.Context
-		arg2 interface{}
+		arg2 any
 	}
 	broadcastReturns struct {
 		result1 error
@@ -367,12 +367,12 @@ func (fake *Network) AreTokensSpentReturnsOnCall(i int, result1 []bool, result2 
 	}{result1, result2}
 }
 
-func (fake *Network) Broadcast(arg1 context.Context, arg2 interface{}) error {
+func (fake *Network) Broadcast(arg1 context.Context, arg2 any) error {
 	fake.broadcastMutex.Lock()
 	ret, specificReturn := fake.broadcastReturnsOnCall[len(fake.broadcastArgsForCall)]
 	fake.broadcastArgsForCall = append(fake.broadcastArgsForCall, struct {
 		arg1 context.Context
-		arg2 interface{}
+		arg2 any
 	}{arg1, arg2})
 	stub := fake.BroadcastStub
 	fakeReturns := fake.broadcastReturns
@@ -393,13 +393,13 @@ func (fake *Network) BroadcastCallCount() int {
 	return len(fake.broadcastArgsForCall)
 }
 
-func (fake *Network) BroadcastCalls(stub func(context.Context, interface{}) error) {
+func (fake *Network) BroadcastCalls(stub func(context.Context, any) error) {
 	fake.broadcastMutex.Lock()
 	defer fake.broadcastMutex.Unlock()
 	fake.BroadcastStub = stub
 }
 
-func (fake *Network) BroadcastArgsForCall(i int) (context.Context, interface{}) {
+func (fake *Network) BroadcastArgsForCall(i int) (context.Context, any) {
 	fake.broadcastMutex.RLock()
 	defer fake.broadcastMutex.RUnlock()
 	argsForCall := fake.broadcastArgsForCall[i]
